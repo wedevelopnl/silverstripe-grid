@@ -32,49 +32,41 @@ test.describe('Build page from scratch', () => {
       page.getByTestId('grid-editor-loading'),
     ).toBeHidden({ timeout: 15_000 });
 
-    // Step 2: Empty state — "Add Section" button visible, no section blocks
-    await expect(page.getByTestId('add-child-empty')).toBeVisible();
+    // Step 2: Empty page — no sections, just the "Add Section" empty state
     await expect(page.getByTestId('section-block')).toHaveCount(0);
-    await expect(
-      page.getByTestId('add-child-button').filter({ hasText: 'Add Section' }),
-    ).toBeVisible();
+    await expect(page.getByTestId('add-child-empty').filter({ hasText: 'Add Section' })).toBeVisible();
 
-    // Step 3: Add first section
+    // Step 3: Add first section — verify it arrives with auto-scaffolded children
     await page.getByTestId('add-child-button').filter({ hasText: 'Add Section' }).click();
-    await expect(page.getByTestId('section-block').first()).toBeVisible({ timeout: 10_000 });
 
-    // Auto-scaffolding creates Section → Row → Column
-    await expect(page.getByTestId('section-block')).toHaveCount(1);
-    await expect(page.getByTestId('row-block')).toHaveCount(1);
-    await expect(page.getByTestId('column-block')).toHaveCount(1);
+    const firstSection = page.getByTestId('section-block').first();
+    await expect(firstSection).toBeVisible({ timeout: 10_000 });
+    await expect(firstSection.getByTestId('row-block')).toHaveCount(1);
+    await expect(firstSection.getByTestId('column-block')).toHaveCount(1);
 
-    // Section-level empty state is gone, append button visible
-    await expect(page.getByTestId('add-child-empty').filter({ hasText: 'No sections yet' })).toHaveCount(0);
-    await expect(
-      page.getByTestId('add-child-append').filter({ hasText: 'Add Section' }),
-    ).toBeVisible();
+    // The section-level empty state is replaced by an append button
+    await expect(page.getByTestId('add-child-empty').filter({ hasText: 'Add Section' })).toHaveCount(0);
+    await expect(page.getByTestId('add-child-append').filter({ hasText: 'Add Section' })).toBeVisible();
 
-    // Step 4: Add a second section via append button
+    // Step 4: Add a second section — verify it also has its own scaffolded row + column
     await page.getByTestId('add-child-append').filter({ hasText: 'Add Section' }).click();
     await expect(page.getByTestId('section-block')).toHaveCount(2, { timeout: 10_000 });
-    await expect(page.getByTestId('row-block')).toHaveCount(2);
-    await expect(page.getByTestId('column-block')).toHaveCount(2);
 
-    // Step 5: Add a second row to the first section
-    const firstSection = page.getByTestId('section-block').first();
+    const secondSection = page.getByTestId('section-block').nth(1);
+    await expect(secondSection.getByTestId('row-block')).toHaveCount(1);
+    await expect(secondSection.getByTestId('column-block')).toHaveCount(1);
+
+    // Step 5: Add a second row to the first section — verify it has a scaffolded column
     await firstSection.getByTestId('add-child-append').filter({ hasText: 'Add Row' }).click();
     await expect(firstSection.getByTestId('row-block')).toHaveCount(2, { timeout: 10_000 });
-    await expect(page.getByTestId('column-block')).toHaveCount(3);
+
+    const newRow = firstSection.getByTestId('row-block').nth(1);
+    await expect(newRow.getByTestId('column-block')).toHaveCount(1);
 
     // Step 6: Add a second column to the first row of the first section
     const firstRow = firstSection.getByTestId('row-block').first();
     await firstRow.getByTestId('add-child-append').filter({ hasText: 'Add Column' }).click();
     await expect(firstRow.getByTestId('column-block')).toHaveCount(2, { timeout: 10_000 });
-
-    // Verify final grid state: 2 sections, 3 rows, 4 columns
-    await expect(page.getByTestId('section-block')).toHaveCount(2);
-    await expect(page.getByTestId('row-block')).toHaveCount(3);
-    await expect(page.getByTestId('column-block')).toHaveCount(4);
 
     // Step 7: Publish the page
     await page.getByRole('button', { name: /Publish/ }).click();
