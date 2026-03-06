@@ -1,12 +1,12 @@
 import type { Locator, Page } from '@playwright/test';
 
 /**
- * Scrolls a locator into view and returns its center coordinates.
- * Ensures the element is visible in the viewport before computing
- * coordinates, which is required for page.mouse operations.
+ * Returns the viewport-relative center coordinates of a locator.
+ * The element must already be visible in the viewport — call
+ * `scrollIntoViewIfNeeded()` on both source and target before
+ * measuring to avoid scroll-induced coordinate drift.
  */
 async function getCenter(locator: Locator): Promise<{ x: number; y: number }> {
-  await locator.scrollIntoViewIfNeeded();
   const box = await locator.boundingBox();
   if (box === null) {
     throw new Error('Element not visible — cannot compute center for drag');
@@ -55,6 +55,13 @@ export async function startDrag(
   source: Locator,
   target: Locator,
 ): Promise<DragHandle> {
+  // Scroll both elements into view before measuring. Target first (further
+  // down), then source (closer to top) — scrolling the source last ensures
+  // its coordinates are fresh for the imminent mouse-down. Without this,
+  // scrolling the target can shift the source out of its measured position.
+  await target.scrollIntoViewIfNeeded();
+  await source.scrollIntoViewIfNeeded();
+
   const from = await getCenter(source);
   const to = await getCenter(target);
 
