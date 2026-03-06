@@ -365,7 +365,7 @@ final class GridTreeBuilderTest extends SapphireTest
         $pageId = $this->getPageId();
 
         $node = $tree[$pageId][0]->children[0]->children[0]->children[0];
-        $this->assertSame('(untitled)', $node->title);
+        $this->assertSame('Unknown 1', $node->title);
     }
 
     public function testEmptyTitleReturnsFallbackForColumn(): void
@@ -378,7 +378,7 @@ final class GridTreeBuilderTest extends SapphireTest
         $pageId = $this->getPageId();
 
         $node = $tree[$pageId][0]->children[0]->children[0];
-        $this->assertSame('(untitled)', $node->title);
+        $this->assertSame('Column 1', $node->title);
     }
 
     public function testEmptyTitleReturnsFallbackForRow(): void
@@ -391,7 +391,7 @@ final class GridTreeBuilderTest extends SapphireTest
         $pageId = $this->getPageId();
 
         $node = $tree[$pageId][0]->children[0];
-        $this->assertSame('(untitled)', $node->title);
+        $this->assertSame('Row 1', $node->title);
     }
 
     public function testEmptyTitleReturnsFallbackForSection(): void
@@ -404,7 +404,7 @@ final class GridTreeBuilderTest extends SapphireTest
         $pageId = $this->getPageId();
 
         $node = $tree[$pageId][0];
-        $this->assertSame('(untitled)', $node->title);
+        $this->assertSame('Section 1', $node->title);
     }
 
     // ---- Empty states ----
