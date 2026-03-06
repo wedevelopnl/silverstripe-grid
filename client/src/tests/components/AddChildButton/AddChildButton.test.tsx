@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
 import { GridEditorProvider } from '@/hooks/GridEditorContext';
-import { SECTION_FQCN, ROW_FQCN, COLUMN_FQCN } from '@/api/config';
 
 const mockCreateElement = vi.fn();
 
@@ -13,7 +12,7 @@ vi.mock('@/api/endpoints', () => ({
   createElement: (...args: unknown[]) => mockCreateElement(...args),
 }));
 
-function createWrapper(pageId = 1, pageClass = 'Page', zone = 'main') {
+function createWrapper(pageId = 1, zone = 'main') {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -23,7 +22,7 @@ function createWrapper(pageId = 1, pageClass = 'Page', zone = 'main') {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <GridEditorProvider value={{ pageId, pageClass, zone }}>
+        <GridEditorProvider value={{ pageId, zone }}>
           {children}
         </GridEditorProvider>
       </QueryClientProvider>
@@ -40,8 +39,7 @@ describe('AddChildButton', () => {
     render(
       <AddChildButton
         parentId={1}
-        parentClass={SECTION_FQCN}
-        childClass={ROW_FQCN}
+        childType="row"
         childLabel="Row"
         variant="empty-state"
       />,
@@ -57,8 +55,7 @@ describe('AddChildButton', () => {
     render(
       <AddChildButton
         parentId={1}
-        parentClass={ROW_FQCN}
-        childClass={COLUMN_FQCN}
+        childType="column"
         childLabel="Column"
         variant="append"
       />,
@@ -76,21 +73,19 @@ describe('AddChildButton', () => {
     render(
       <AddChildButton
         parentId={5}
-        parentClass={ROW_FQCN}
-        childClass={COLUMN_FQCN}
+        childType="column"
         childLabel="Column"
         variant="append"
       />,
-      { wrapper: createWrapper(10, 'Page', 'main') },
+      { wrapper: createWrapper(10, 'main') },
     );
 
     await user.click(screen.getByTestId('add-child-button'));
 
     expect(mockCreateElement).toHaveBeenCalledWith(
       {
-        elementClass: COLUMN_FQCN,
+        containerType: 'column',
         parentId: 5,
-        parentClass: ROW_FQCN,
       },
       expect.anything(),
     );
@@ -103,21 +98,19 @@ describe('AddChildButton', () => {
     render(
       <AddChildButton
         parentId={42}
-        parentClass="Page"
-        childClass={SECTION_FQCN}
+        childType="section"
         childLabel="Section"
         variant="empty-state"
       />,
-      { wrapper: createWrapper(42, 'Page', 'sidebar') },
+      { wrapper: createWrapper(42, 'sidebar') },
     );
 
     await user.click(screen.getByTestId('add-child-button'));
 
     expect(mockCreateElement).toHaveBeenCalledWith(
       {
-        elementClass: SECTION_FQCN,
+        containerType: 'section',
         parentId: 42,
-        parentClass: 'Page',
         zone: 'sidebar',
       },
       expect.anything(),
@@ -131,8 +124,7 @@ describe('AddChildButton', () => {
     render(
       <AddChildButton
         parentId={1}
-        parentClass={SECTION_FQCN}
-        childClass={ROW_FQCN}
+        childType="row"
         childLabel="Row"
         variant="append"
       />,

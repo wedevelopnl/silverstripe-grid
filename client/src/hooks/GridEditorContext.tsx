@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 
 export interface GridEditorContextValue {
   readonly pageId: number;
-  readonly pageClass: string;
   readonly zone: string;
 }
 

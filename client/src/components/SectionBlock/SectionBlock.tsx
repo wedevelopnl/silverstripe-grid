@@ -7,7 +7,6 @@ import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
-import { SECTION_FQCN, ROW_FQCN } from '@/api/config';
 import RowBlock from '@/components/RowBlock/RowBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
 
@@ -51,8 +50,7 @@ export default function SectionBlock({ section }: SectionBlockProps) {
                 ))}
                 <AddChildButton
                   parentId={section.id}
-                  parentClass={SECTION_FQCN}
-                  childClass={ROW_FQCN}
+                  childType="row"
                   childLabel="Row"
                   variant="append"
                 />
@@ -61,8 +59,7 @@ export default function SectionBlock({ section }: SectionBlockProps) {
             : (
               <AddChildButton
                 parentId={section.id}
-                parentClass={SECTION_FQCN}
-                childClass={ROW_FQCN}
+                childType="row"
                 childLabel="Row"
                 variant="empty-state"
               />

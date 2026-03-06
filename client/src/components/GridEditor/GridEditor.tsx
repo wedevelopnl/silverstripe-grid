@@ -8,7 +8,6 @@ import { useReorderElement } from '@/hooks/useElementMutations';
 import { ViewportProvider } from '@/hooks/ViewportContext';
 import { GridEditorProvider } from '@/hooks/GridEditorContext';
 import { isSectionNode } from '@/types/elements';
-import { SECTION_FQCN } from '@/api/config';
 import { typedCollisionDetection } from '@/utils/collisionDetection';
 import ViewportSwitcher from '@/components/ViewportSwitcher/ViewportSwitcher';
 import SectionBlock from '@/components/SectionBlock/SectionBlock';
@@ -18,7 +17,6 @@ import DragOverlayContent from '@/components/DragOverlayContent/DragOverlayConte
 
 interface GridEditorProps {
   readonly pageId: number | null;
-  readonly pageClass: string;
   readonly zone: string;
 }
 
@@ -30,7 +28,7 @@ interface GridEditorProps {
  * SectionBlock (section > row > column > element card hierarchy)
  * to render the full grid editing interface.
  */
-export default function GridEditor({ pageId, pageClass, zone }: GridEditorProps) {
+export default function GridEditor({ pageId, zone }: GridEditorProps) {
   const { data, isLoading, error } = useElementTree(pageId, zone);
 
   const sections = data === undefined
@@ -67,7 +65,7 @@ export default function GridEditor({ pageId, pageClass, zone }: GridEditorProps)
         </p>
       )}
       {data !== undefined && pageId !== null && (
-        <GridEditorProvider value={{ pageId, pageClass, zone }}>
+        <GridEditorProvider value={{ pageId, zone }}>
           <ViewportProvider>
             <ViewportSwitcher />
             <DndContext
@@ -87,8 +85,7 @@ export default function GridEditor({ pageId, pageClass, zone }: GridEditorProps)
                         ))}
                         <AddChildButton
                           parentId={pageId}
-                          parentClass={pageClass}
-                          childClass={SECTION_FQCN}
+                          childType="section"
                           childLabel="Section"
                           variant="append"
                         />
@@ -97,8 +94,7 @@ export default function GridEditor({ pageId, pageClass, zone }: GridEditorProps)
                     : (
                       <AddChildButton
                         parentId={pageId}
-                        parentClass={pageClass}
-                        childClass={SECTION_FQCN}
+                        childType="section"
                         childLabel="Section"
                         variant="empty-state"
                       />

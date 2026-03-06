@@ -14,7 +14,7 @@ use SilverStripe\Security\SecurityToken;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\Viewport;
@@ -25,9 +25,8 @@ use WeDevelop\Grid\Service\ReorderService;
 
 /**
  * @phpstan-type CreateElementBody array{
- *   elementClass: class-string<GridElement>,
+ *   containerType: ContainerType,
  *   parentId: positive-int,
- *   parentClass: class-string<DataObject>,
  *   insertAfterElementID: positive-int|null,
  *   zone: string,
  * }
@@ -141,7 +140,11 @@ class GridController extends AdminController
         $body = $this->parseCreateBody($request);
 
         /** @var DataObject|null $parent */
-        $parent = $body['parentClass']::get()->byID($body['parentId']);
+        $parent = Versioned::withVersionedMode(function () use ($body): ?DataObject {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            return $this->resolveParentRecord($body['parentId']);
+        });
         if ($parent === null) {
             $this->jsonError(400);
         }
@@ -151,15 +154,15 @@ class GridController extends AdminController
         }
 
         /** @var GridElement $newElement */
-        $newElement = Injector::inst()->create($body['elementClass']);
+        $newElement = Injector::inst()->create($body['containerType']->toElementClass());
         if (!$newElement->canCreate()) {
             $this->jsonError(403);
         }
 
         $newElement->ParentID = $body['parentId'];
-        $newElement->ParentClass = $body['parentClass'];
+        $newElement->ParentClass = $parent::class;
 
-        if ($newElement instanceof Section) {
+        if ($body['containerType'] === ContainerType::Section) {
             $newElement->Zone = $body['zone'];
         }
 
@@ -411,21 +414,21 @@ class GridController extends AdminController
     {
         $data = $this->parseJsonBody($request);
 
-        $elementClass = $data['elementClass'] ?? null;
+        $containerTypeValue = $data['containerType'] ?? null;
         $parentId = $data['parentId'] ?? null;
-        $parentClass = $data['parentClass'] ?? null;
         $afterElementID = $data['insertAfterElementID'] ?? null;
         $zone = $data['zone'] ?? 'main';
 
-        if (!is_string($elementClass) || !is_subclass_of($elementClass, GridElement::class)) {
+        if (!is_string($containerTypeValue)) {
+            $this->jsonError(400);
+        }
+
+        $containerType = ContainerType::tryFrom($containerTypeValue);
+        if ($containerType === null) {
             $this->jsonError(400);
         }
 
         if (!is_int($parentId) || $parentId < 1) {
-            $this->jsonError(400);
-        }
-
-        if (!is_string($parentClass) || !is_subclass_of($parentClass, DataObject::class, true)) {
             $this->jsonError(400);
         }
 
@@ -438,9 +441,8 @@ class GridController extends AdminController
         }
 
         return [
-            'elementClass' => $elementClass,
+            'containerType' => $containerType,
             'parentId' => $parentId,
-            'parentClass' => $parentClass,
             'insertAfterElementID' => $afterElementID,
             'zone' => $zone,
         ];

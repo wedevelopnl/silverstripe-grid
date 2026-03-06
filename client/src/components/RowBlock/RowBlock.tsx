@@ -8,7 +8,6 @@ import { buildBlockClasses } from '@/utils/blockClasses';
 import { getRowClasses } from '@/utils/gridAdapter';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
-import { ROW_FQCN, COLUMN_FQCN } from '@/api/config';
 import ColumnBlock from '@/components/ColumnBlock/ColumnBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
 
@@ -53,8 +52,7 @@ export default function RowBlock({ row }: RowBlockProps) {
                 ))}
                 <AddChildButton
                   parentId={row.id}
-                  parentClass={ROW_FQCN}
-                  childClass={COLUMN_FQCN}
+                  childType="column"
                   childLabel="Column"
                   variant="append"
                 />
@@ -63,8 +61,7 @@ export default function RowBlock({ row }: RowBlockProps) {
             : (
               <AddChildButton
                 parentId={row.id}
-                parentClass={ROW_FQCN}
-                childClass={COLUMN_FQCN}
+                childType="column"
                 childLabel="Column"
                 variant="empty-state"
               />

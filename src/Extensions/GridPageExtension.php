@@ -51,7 +51,7 @@ class GridPageExtension extends Extension
         $fields->removeByName('Sections');
         $fields->addFieldToTab(
             'Root.Main',
-            GridEditorField::create('GridEditor', (int) $owner->ID, $owner::class, 'main'),
+            GridEditorField::create('GridEditor', (int) $owner->ID, 'main'),
         );
     }
 }

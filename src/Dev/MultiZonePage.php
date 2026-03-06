@@ -37,11 +37,11 @@ class MultiZonePage extends Page
 
         $fields->addFieldToTab(
             'Root.Main',
-            GridEditorField::create('GridEditorMain', (int) $this->ID, $this::class, 'main'),
+            GridEditorField::create('GridEditorMain', (int) $this->ID, 'main'),
         );
         $fields->addFieldToTab(
             'Root.Main',
-            GridEditorField::create('GridEditorSidebar', (int) $this->ID, $this::class, 'sidebar'),
+            GridEditorField::create('GridEditorSidebar', (int) $this->ID, 'sidebar'),
         );
 
         return $fields;

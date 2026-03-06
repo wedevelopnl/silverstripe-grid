@@ -19,10 +19,11 @@ export async function fetchElementTree(
   return elementTreeResponseSchema.parse(data);
 }
 
+import type { ContainerType } from '@/types/elements';
+
 export interface CreateElementParams {
-  elementClass: string;
+  containerType: ContainerType;
   parentId: number;
-  parentClass: string;
   insertAfterElementID?: number;
   zone?: string;
 }

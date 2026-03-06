@@ -1,19 +1,17 @@
-import { SECTION_FQCN } from '@/api/config';
+import type { ContainerType } from '@/types/elements';
 import { useGridEditorContext } from '@/hooks/GridEditorContext';
 import { useCreateElement } from '@/hooks/useElementMutations';
 
 interface AddChildButtonProps {
   readonly parentId: number;
-  readonly parentClass: string;
-  readonly childClass: string;
+  readonly childType: ContainerType;
   readonly childLabel: string;
   readonly variant: 'empty-state' | 'append';
 }
 
 export default function AddChildButton({
   parentId,
-  parentClass,
-  childClass,
+  childType,
   childLabel,
   variant,
 }: AddChildButtonProps) {
@@ -22,10 +20,9 @@ export default function AddChildButton({
 
   function handleClick() {
     mutate({
-      elementClass: childClass,
+      containerType: childType,
       parentId,
-      parentClass,
-      ...(childClass === SECTION_FQCN ? { zone } : {}),
+      ...(childType === 'section' ? { zone } : {}),
     });
   }
 

@@ -196,7 +196,7 @@ final class GridControllerTest extends FunctionalTest
 
     // --- apiCreate: validation ------------------------------------------------
 
-    public function testCreateRejects400ForNonSubclassElementClass(): void
+    public function testCreateRejects400ForInvalidContainerType(): void
     {
         $this->logInForHttp();
         Versioned::set_stage(Versioned::DRAFT);
@@ -204,9 +204,8 @@ final class GridControllerTest extends FunctionalTest
         $page = $this->objFromFixture(TestPage::class, 'testpage');
 
         $response = $this->postJson('/admin/grid/api/create', [
-            'elementClass' => \stdClass::class,
+            'containerType' => 'invalid',
             'parentId' => (int) $page->ID,
-            'parentClass' => $page::class,
             'insertAfterElementID' => null,
         ]);
 
@@ -219,9 +218,8 @@ final class GridControllerTest extends FunctionalTest
         Versioned::set_stage(Versioned::DRAFT);
 
         $response = $this->postJson('/admin/grid/api/create', [
-            'elementClass' => Section::class,
+            'containerType' => 'section',
             'parentId' => 5.5,
-            'parentClass' => TestPage::class,
             'insertAfterElementID' => null,
         ]);
 
@@ -236,9 +234,8 @@ final class GridControllerTest extends FunctionalTest
         $page = $this->objFromFixture(TestPage::class, 'testpage');
 
         $response = $this->postJson('/admin/grid/api/create', [
-            'elementClass' => Section::class,
+            'containerType' => 'section',
             'parentId' => (int) $page->ID,
-            'parentClass' => $page::class,
             'insertAfterElementID' => 0,
         ]);
 
@@ -253,9 +250,8 @@ final class GridControllerTest extends FunctionalTest
         $page = $this->objFromFixture(TestPage::class, 'testpage');
 
         $response = $this->postJson('/admin/grid/api/create', [
-            'elementClass' => Section::class,
+            'containerType' => 'section',
             'parentId' => (int) $page->ID,
-            'parentClass' => $page::class,
             'insertAfterElementID' => 5.5,
         ]);
 
@@ -271,9 +267,8 @@ final class GridControllerTest extends FunctionalTest
         $section = $this->objFromFixture(Section::class, 'section1');
 
         $response = $this->postJson('/admin/grid/api/create', [
-            'elementClass' => Section::class,
+            'containerType' => 'section',
             'parentId' => (int) $page->ID,
-            'parentClass' => $page::class,
             'insertAfterElementID' => $section->ID,
         ]);
 
@@ -292,9 +287,8 @@ final class GridControllerTest extends FunctionalTest
 
         // Row has can_be_root: false — placing it in the page area triggers validation
         $response = $this->postJson('/admin/grid/api/create', [
-            'elementClass' => Row::class,
+            'containerType' => 'row',
             'parentId' => (int) $page->ID,
-            'parentClass' => $page::class,
             'insertAfterElementID' => null,
         ]);
 

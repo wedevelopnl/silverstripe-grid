@@ -24,7 +24,7 @@ export function createDndWrapper(
   return function DndWrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <GridEditorProvider value={{ pageId: 1, pageClass: 'Page', zone: 'main' }}>
+        <GridEditorProvider value={{ pageId: 1, zone: 'main' }}>
           <DndContext>
             <DragContext.Provider value={{ activeType }}>
               <SortableContext items={items}>

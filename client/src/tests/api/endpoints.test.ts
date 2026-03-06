@@ -77,18 +77,16 @@ describe('endpoints', () => {
       mockApiPost.mockResolvedValue(undefined);
 
       await createElement({
-        elementClass: 'App\\MyElement',
+        containerType: 'section',
         parentId: 10,
-        parentClass: 'App\\MyContainer',
         insertAfterElementID: 5,
       });
 
       expect(mockApiPost).toHaveBeenCalledWith(
         '/admin/grid/api/create',
         {
-          elementClass: 'App\\MyElement',
+          containerType: 'section',
           parentId: 10,
-          parentClass: 'App\\MyContainer',
           insertAfterElementID: 5,
         },
       );

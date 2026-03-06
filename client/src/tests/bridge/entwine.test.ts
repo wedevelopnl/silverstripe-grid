@@ -81,7 +81,7 @@ describe('entwine bridge', () => {
     const setReactRoot = vi.fn();
 
     const context = {
-      data: vi.fn().mockReturnValue({ 'grid-page-id': 7, 'grid-page-class': 'Page' }),
+      data: vi.fn().mockReturnValue({ 'grid-page-id': 7 }),
       setReactRoot,
       0: domElement,
     };
@@ -99,7 +99,7 @@ describe('entwine bridge', () => {
         createElement(
           MockGridEditorErrorBoundary,
           null,
-          createElement(MockGridEditor, { pageId: 7, pageClass: 'Page', zone: 'main' }),
+          createElement(MockGridEditor, { pageId: 7, zone: 'main' }),
         ),
       ),
     );
