@@ -95,13 +95,10 @@ export function useReorderElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, ReorderMutationVariables, ElementTreeResponse | undefined>({
     mutationFn: ({ params }) => reorderElement(params),
     onMutate: async ({ params, tree }) => {
-      // Cancel in-flight queries to avoid overwriting the optimistic update
       await queryClient.cancelQueries({ queryKey });
 
-      // Snapshot the current cache for rollback
       const snapshot = queryClient.getQueryData<ElementTreeResponse>(queryKey);
 
-      // Apply the optimistic reorder to the tree
       const optimistic = applyReorder(
         tree,
         params.elementID,
@@ -119,8 +116,8 @@ export function useReorderElement(pageId: number, zone: string) {
       }
       showToast(error.message);
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey });
     },
   });
 }

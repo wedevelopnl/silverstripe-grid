@@ -95,14 +95,21 @@ dnd-kit identifies draggables and droppables by string ID. The system uses compo
 
 ### Type-Aware Collision Detection
 
-Before dnd-kit's default `closestCenter` algorithm runs, a filter removes invalid drop targets based on hierarchy rules:
+The active (dragged) item is first excluded from the droppable container list. dnd-kit v6 does not do this automatically — the active item's original-position rect remains registered as a droppable, so `closestCenter` can return it as the nearest target, causing a no-op drop (snap-back).
+
+A two-pass strategy then prevents oscillation between sibling items and their wrapping parent container (which geometrically encloses its children, causing `closestCenter` to oscillate between them):
+
+1. **Pass 1 — Siblings**: Run `pointerWithin` against same-type containers only (e.g. row vs row). This requires the pointer to be geometrically inside the target's bounding box, preventing ghost jumps when only 2 siblings exist at close proximity. If a collision is found, return it immediately.
+2. **Pass 2 — Parent containers**: If no sibling collision exists (e.g. dragging into an empty container), fall back to `closestCenter` against parent-type containers only.
+
+Drop target validity follows hierarchy rules:
 
 - A **section** can only drop on other sections or the root area
 - A **row** can only drop on other rows or into a section
 - A **column** can only drop on other columns or into a row
 - An **element** can only drop on other elements or into a column
 
-This prevents the user from seeing invalid drop indicators. The filtering happens entirely on the client; the backend validates independently.
+This prevents the user from seeing invalid drop indicators and ensures sibling reordering always takes priority over container drops. The filtering happens entirely on the client; the backend validates independently.
 
 ### Nested SortableContexts
 

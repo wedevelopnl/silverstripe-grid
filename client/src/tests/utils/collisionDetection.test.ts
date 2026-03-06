@@ -2,6 +2,8 @@ import type { DroppableContainer } from '@dnd-kit/core';
 
 import {
   filterDroppablesByType,
+  filterParentContainers,
+  filterSiblings,
   typedCollisionDetection,
 } from '@/utils/collisionDetection';
 
@@ -222,10 +224,11 @@ describe('typedCollisionDetection — geometric invalid-drop scenarios', () => {
     const invalidContainer = makeContainer('section-1');
     const validContainer = makeContainer('element-200');
 
+    const siblingRect = { ...rect, top: 500, bottom: 550 };
     const droppableRects = new Map<string, typeof rect>();
     // Both at same rect — but section should be filtered out before proximity calc
     droppableRects.set('section-1', rect);
-    droppableRects.set('element-200', { ...rect, top: 500, bottom: 550 });
+    droppableRects.set('element-200', siblingRect);
 
     const result = typedCollisionDetection({
       active: {
@@ -236,12 +239,87 @@ describe('typedCollisionDetection — geometric invalid-drop scenarios', () => {
       collisionRect: rect,
       droppableRects,
       droppableContainers: [invalidContainer, validContainer],
-      pointerCoordinates: null,
+      pointerCoordinates: { x: 50, y: 525 },
     });
 
     const ids = result.map((c) => c.id);
     expect(ids).not.toContain('section-1');
     expect(ids).toContain('element-200');
+  });
+});
+
+describe('filterSiblings', () => {
+  const containers = [
+    makeContainer('section-1'),
+    makeContainer('section-2'),
+    makeContainer('row-10'),
+    makeContainer('row-20'),
+    makeContainer('column-5'),
+    makeContainer('column-6'),
+    makeContainer('element-100'),
+    makeContainer('element-200'),
+    makeContainer('root'),
+  ];
+
+  it('returns only row containers when dragging a row', () => {
+    const ids = filterSiblings('row-10', containers).map((c) => String(c.id));
+    expect(ids).toEqual(['row-10', 'row-20']);
+  });
+
+  it('returns only section containers when dragging a section', () => {
+    const ids = filterSiblings('section-1', containers).map((c) => String(c.id));
+    expect(ids).toEqual(['section-1', 'section-2']);
+  });
+
+  it('returns only column containers when dragging a column', () => {
+    const ids = filterSiblings('column-5', containers).map((c) => String(c.id));
+    expect(ids).toEqual(['column-5', 'column-6']);
+  });
+
+  it('returns only element containers when dragging an element', () => {
+    const ids = filterSiblings('element-100', containers).map((c) => String(c.id));
+    expect(ids).toEqual(['element-100', 'element-200']);
+  });
+
+  it('returns empty array for invalid active ID', () => {
+    expect(filterSiblings('invalid', containers)).toEqual([]);
+    expect(filterSiblings('', containers)).toEqual([]);
+  });
+});
+
+describe('filterParentContainers', () => {
+  const containers = [
+    makeContainer('section-1'),
+    makeContainer('section-2'),
+    makeContainer('row-10'),
+    makeContainer('row-20'),
+    makeContainer('column-5'),
+    makeContainer('element-100'),
+    makeContainer('root'),
+  ];
+
+  it('returns section containers when dragging a row', () => {
+    const ids = filterParentContainers('row-10', containers).map((c) => String(c.id));
+    expect(ids).toEqual(['section-1', 'section-2']);
+  });
+
+  it('returns row containers when dragging a column', () => {
+    const ids = filterParentContainers('column-5', containers).map((c) => String(c.id));
+    expect(ids).toEqual(['row-10', 'row-20']);
+  });
+
+  it('returns column containers when dragging an element', () => {
+    const ids = filterParentContainers('element-100', containers).map((c) => String(c.id));
+    expect(ids).toEqual(['column-5']);
+  });
+
+  it('returns only root container when dragging a section', () => {
+    const ids = filterParentContainers('section-1', containers).map((c) => String(c.id));
+    expect(ids).toEqual(['root']);
+  });
+
+  it('returns empty array for invalid active ID', () => {
+    expect(filterParentContainers('invalid', containers)).toEqual([]);
   });
 });
 
@@ -269,9 +347,7 @@ describe('typedCollisionDetection', () => {
     expect(result).toEqual([]);
   });
 
-  it('returns collisions for a valid active ID', () => {
-    // When active ID is valid, typedCollisionDetection delegates to closestCenter
-    // with filtered containers. Ensure it does NOT return empty for valid IDs.
+  it('returns collisions for a valid active ID with pointer inside target', () => {
     const container = makeContainer('row-20');
     const rect = { width: 100, height: 50, top: 0, left: 0, right: 100, bottom: 50 };
     const droppableRects = new Map<string, typeof rect>();
@@ -286,11 +362,111 @@ describe('typedCollisionDetection', () => {
       collisionRect: rect,
       droppableRects,
       droppableContainers: [container],
+      pointerCoordinates: { x: 50, y: 25 },
+    });
+
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].id).toBe('row-20');
+  });
+});
+
+describe('typedCollisionDetection — sibling priority', () => {
+  const activeRect = { width: 100, height: 50, top: 0, left: 0, right: 100, bottom: 50 };
+
+  it('prefers sibling over parent container even when parent center is closer', () => {
+    // Parent section is at the exact same position (center distance ~0),
+    // sibling row is further away. Without two-pass, closestCenter picks the section.
+    const siblingRow = makeContainer('row-20');
+    const parentSection = makeContainer('section-1');
+
+    const parentRect = { ...activeRect }; // same position = closest center
+    const siblingRect = { ...activeRect, top: 200, bottom: 250 }; // further away
+
+    const droppableRects = new Map<string, typeof activeRect>();
+    droppableRects.set('section-1', parentRect);
+    droppableRects.set('row-20', siblingRect);
+
+    const result = typedCollisionDetection({
+      active: {
+        id: 'row-10',
+        data: { current: undefined },
+        rect: { current: { initial: activeRect, translated: activeRect } },
+      },
+      collisionRect: activeRect,
+      droppableRects,
+      droppableContainers: [parentSection, siblingRow],
+      pointerCoordinates: { x: 50, y: 225 },
+    });
+
+    const ids = result.map((c) => c.id);
+    expect(ids).toContain('row-20');
+    expect(ids).not.toContain('section-1');
+  });
+
+  it('falls back to parent container when no siblings exist', () => {
+    const parentSection = makeContainer('section-1');
+
+    const droppableRects = new Map<string, typeof activeRect>();
+    droppableRects.set('section-1', activeRect);
+
+    const result = typedCollisionDetection({
+      active: {
+        id: 'row-10',
+        data: { current: undefined },
+        rect: { current: { initial: activeRect, translated: activeRect } },
+      },
+      collisionRect: activeRect,
+      droppableRects,
+      droppableContainers: [parentSection],
       pointerCoordinates: null,
     });
 
-    // closestCenter should find row-20 as a collision target
     expect(result.length).toBeGreaterThan(0);
-    expect(result[0].id).toBe('row-20');
+    expect(result[0].id).toBe('section-1');
+  });
+
+  it('excludes the active item from collision results', () => {
+    // Active row sits at the collision rect (distance 0), sibling is further away.
+    // Without exclusion, the active item is returned first → no-op drop.
+    const activeRow = makeContainer('row-10');
+    const siblingRow = makeContainer('row-20');
+
+    const siblingRect = { ...activeRect, top: 200, bottom: 250 };
+    const droppableRects = new Map<string, typeof activeRect>();
+    droppableRects.set('row-10', activeRect); // distance 0 from collisionRect
+    droppableRects.set('row-20', siblingRect);
+
+    const result = typedCollisionDetection({
+      active: {
+        id: 'row-10',
+        data: { current: undefined },
+        rect: { current: { initial: activeRect, translated: activeRect } },
+      },
+      collisionRect: activeRect,
+      droppableRects,
+      droppableContainers: [activeRow, siblingRow],
+      pointerCoordinates: { x: 50, y: 225 },
+    });
+
+    const ids = result.map((c) => c.id);
+    expect(ids).toContain('row-20');
+    expect(ids).not.toContain('row-10');
+  });
+
+  it('returns empty when neither siblings nor parents produce collisions', () => {
+    // Only an unrelated container type is present
+    const result = typedCollisionDetection({
+      active: {
+        id: 'row-10',
+        data: { current: undefined },
+        rect: { current: { initial: activeRect, translated: activeRect } },
+      },
+      collisionRect: activeRect,
+      droppableRects: new Map([['element-100', activeRect]]),
+      droppableContainers: [makeContainer('element-100')],
+      pointerCoordinates: null,
+    });
+
+    expect(result).toEqual([]);
   });
 });

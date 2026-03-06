@@ -355,56 +355,65 @@ final class GridTreeBuilderTest extends SapphireTest
 
     // ---- Empty title fallback ----
 
-    public function testEmptyTitleReturnsFallbackForLeafElement(): void
+    public function testEmptyTitleAssignsDefaultOnWrite(): void
     {
         $leaf = $this->objFromFixture(GridElement::class, 'leaf1');
         $leaf->Title = '';
         $leaf->write();
 
+        // ensureDefaultTitle counts same-type siblings under the same parent
+        // leaf2 is the only other GridElement under col1 → count 1 + 1 = 2
+        $this->assertSame('Unknown 2', $leaf->Title);
+
         $tree = $this->buildTree();
         $pageId = $this->getPageId();
-
         $node = $tree[$pageId][0]->children[0]->children[0]->children[0];
-        $this->assertSame('Unknown 1', $node->title);
+        $this->assertSame('Unknown 2', $node->title);
     }
 
-    public function testEmptyTitleReturnsFallbackForColumn(): void
+    public function testEmptyTitleAssignsDefaultForColumn(): void
     {
         $col = $this->objFromFixture(Column::class, 'col1');
         $col->Title = '';
         $col->write();
 
+        // col2 is the only other Column under row1 → count 1 + 1 = 2
+        $this->assertSame('Column 2', $col->Title);
+
         $tree = $this->buildTree();
         $pageId = $this->getPageId();
-
         $node = $tree[$pageId][0]->children[0]->children[0];
-        $this->assertSame('Column 1', $node->title);
+        $this->assertSame('Column 2', $node->title);
     }
 
-    public function testEmptyTitleReturnsFallbackForRow(): void
+    public function testEmptyTitleAssignsDefaultForRow(): void
     {
         $row = $this->objFromFixture(Row::class, 'row1');
         $row->Title = '';
         $row->write();
 
+        // row2 + row3 are the other Rows under section1 → count 2 + 1 = 3
+        $this->assertSame('Row 3', $row->Title);
+
         $tree = $this->buildTree();
         $pageId = $this->getPageId();
-
         $node = $tree[$pageId][0]->children[0];
-        $this->assertSame('Row 1', $node->title);
+        $this->assertSame('Row 3', $node->title);
     }
 
-    public function testEmptyTitleReturnsFallbackForSection(): void
+    public function testEmptyTitleAssignsDefaultForSection(): void
     {
         $section = $this->objFromFixture(Section::class, 'section1');
         $section->Title = '';
         $section->write();
 
+        // section2, sidebar_section1, sidebar_section2 share the same parent → count 3 + 1 = 4
+        $this->assertSame('Section 4', $section->Title);
+
         $tree = $this->buildTree();
         $pageId = $this->getPageId();
-
         $node = $tree[$pageId][0];
-        $this->assertSame('Section 1', $node->title);
+        $this->assertSame('Section 4', $node->title);
     }
 
     // ---- Empty states ----

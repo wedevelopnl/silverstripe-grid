@@ -121,17 +121,12 @@ class GridTreeBuilder
     {
         $nodes = [];
 
-        /** @var array<string, int> $typeCounts */
-        $typeCounts = [];
-
         foreach ($elementsByParent[$parentKey] ?? [] as $element) {
             if (!$element->canView()) {
                 continue;
             }
 
-            $typeCounts[$element::class] = ($typeCounts[$element::class] ?? 0) + 1;
-
-            $nodes[] = $this->buildElementNode($element, $elementsByParent, $parentId, $typeCounts[$element::class]);
+            $nodes[] = $this->buildElementNode($element, $elementsByParent, $parentId);
         }
 
         return $nodes;
@@ -143,7 +138,7 @@ class GridTreeBuilder
      * @param array<string, list<GridElement>> $elementsByParent
      * @param positive-int $parentId
      */
-    private function buildElementNode(GridElement $element, array $elementsByParent, int $parentId, int $siblingIndex): GridNode
+    private function buildElementNode(GridElement $element, array $elementsByParent, int $parentId): GridNode
     {
         $containerType = null;
         $allowedTypes = null;
@@ -166,9 +161,8 @@ class GridTreeBuilder
 
         $id = (int) $element->ID;
         $title = $element->Title ?: _t(
-            GridElement::class . '.UNTITLED_FALLBACK',
-            '{type} {count}',
-            ['type' => $element->getType(), 'count' => $siblingIndex],
+            GridElement::class . '.UNTITLED',
+            '(untitled)',
         );
         $obsoleteClassName = $element->getObsoleteClassName();
         $version = (int) $element->Version;

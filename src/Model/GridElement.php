@@ -220,11 +220,39 @@ class GridElement extends DataObject
         $this->Sort = (is_numeric($max) ? (int) $max : 0) + 1;
     }
 
+    /**
+     * Assigns a default "{Type} {N}" title when Title is empty.
+     *
+     * N is the count of same-type siblings under the same parent + 1,
+     * producing a stable, DB-persisted title that survives reordering.
+     */
+    private function ensureDefaultTitle(): void
+    {
+        if ($this->Title !== null && $this->Title !== '') {
+            return;
+        }
+
+        $siblingCount = static::get()
+            ->filter([
+                'ParentID' => $this->ParentID,
+                'ParentClass' => $this->ParentClass,
+            ])
+            ->exclude('ID', $this->ID)
+            ->count();
+
+        $this->Title = _t(
+            static::class . '.DEFAULT_TITLE',
+            '{type} {count}',
+            ['type' => $this->getType(), 'count' => $siblingCount + 1],
+        );
+    }
+
     #[\Override]
     protected function onBeforeWrite(): void
     {
         parent::onBeforeWrite();
 
+        $this->ensureDefaultTitle();
         $this->ensureSortSet();
     }
 }

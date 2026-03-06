@@ -100,18 +100,27 @@ export function useDragAndDrop({
       setDragState(null);
 
       const { active, over } = event;
-      if (!over || active.id === over.id) return;
+
+      if (!over || active.id === over.id) {
+        return;
+      }
 
       const activeParsed = parseDraggableId(String(active.id));
       const overParsed = parseDraggableId(String(over.id));
-      if (!activeParsed || !overParsed) return;
+      if (!activeParsed || !overParsed) {
+        return;
+      }
 
       const activeNode = maps.nodeMap.get(activeParsed.id);
-      if (!activeNode) return;
+      if (!activeNode) {
+        return;
+      }
 
       const sourceParentId = activeNode.parentId;
       const sourceChildren = maps.childrenByParentId.get(sourceParentId);
-      if (!sourceChildren) return;
+      if (!sourceChildren) {
+        return;
+      }
       const sourceIndex = sourceChildren.findIndex((n) => n.id === activeParsed.id);
 
       let targetParentId: number;
@@ -121,11 +130,15 @@ export function useDragAndDrop({
       if (overParsed.type === activeParsed.type) {
         // Over a sibling item — use the sibling's parentId
         const overNode = maps.nodeMap.get(overParsed.id);
-        if (!overNode) return;
+        if (!overNode) {
+          return;
+        }
 
         targetParentId = overNode.parentId;
         const targetChildren = maps.childrenByParentId.get(targetParentId);
-        if (!targetChildren) return;
+        if (!targetChildren) {
+          return;
+        }
 
         containerChildren = targetChildren;
         insertIndex = targetChildren.findIndex((n) => n.id === overParsed.id);
@@ -149,14 +162,16 @@ export function useDragAndDrop({
       const clampedIndex = Math.min(insertIndex, filtered.length);
       filtered.splice(clampedIndex, 0, String(active.id));
 
-      const params = resolveReorderParams({
+      const resolveContext = {
         activeId: String(active.id),
         overContainerParentId: targetParentId,
         overIndex: filtered.indexOf(String(active.id)),
         containerItems: filtered,
         sourceContainerParentId: sourceParentId,
         sourceIndex,
-      });
+      };
+
+      const params = resolveReorderParams(resolveContext);
 
       if (params) {
         onReorder(params.elementID, params.targetParentId, params.afterElementID);
