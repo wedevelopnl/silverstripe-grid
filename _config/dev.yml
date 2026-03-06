@@ -43,6 +43,18 @@ WeDevelop\Grid\Dev\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
+    ghost-jump:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/GhostJump.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
+    cross-container-ghost:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossContainerGhost.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
     complex-page:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/ComplexPage.yml'
       post_actions:

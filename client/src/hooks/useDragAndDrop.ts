@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useRef, useState } from 'react';
 import {
   PointerSensor,
   useSensor,
@@ -7,6 +7,7 @@ import {
 import type {
   DragCancelEvent,
   DragEndEvent,
+  DragOverEvent,
   DragStartEvent,
   SensorDescriptor,
   SensorOptions,
@@ -21,8 +22,9 @@ import type {
   ElementNode,
   ElementTreeResponse,
 } from '@/types/elements';
-import { useElementMaps } from '@/hooks/useElementMaps';
+import { useElementMaps, buildMaps } from '@/hooks/useElementMaps';
 import { resolveReorderParams } from '@/utils/resolveReorderParams';
+import { applyReorder } from '@/utils/applyReorder';
 
 // --- Public types ---
 
@@ -44,7 +46,10 @@ export interface UseDragAndDropOptions {
 export interface UseDragAndDropReturn {
   sensors: SensorDescriptor<SensorOptions>[];
   dragState: DragState | null;
+  /** Tree with any pending cross-container move applied, or null if no move in progress. */
+  pendingTree: ElementTreeResponse | null;
   handleDragStart: (event: DragStartEvent) => void;
+  handleDragOver: (event: DragOverEvent) => void;
   handleDragEnd: (event: DragEndEvent) => void;
   handleDragCancel: (event: DragCancelEvent) => void;
 }
@@ -70,6 +75,8 @@ export function useDragAndDrop({
   onReorder,
 }: UseDragAndDropOptions): UseDragAndDropReturn {
   const [dragState, setDragState] = useState<DragState | null>(null);
+  const [pendingTree, setPendingTree] = useState<ElementTreeResponse | null>(null);
+  const pendingTreeRef = useRef<ElementTreeResponse | null>(null);
   const maps = useElementMaps(tree);
 
   const sensors = useSensors(
@@ -77,6 +84,11 @@ export function useDragAndDrop({
       activationConstraint: { distance: POINTER_DISTANCE_THRESHOLD },
     }),
   );
+
+  const clearPendingTree = useCallback(() => {
+    pendingTreeRef.current = null;
+    setPendingTree(null);
+  }, []);
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
@@ -95,9 +107,57 @@ export function useDragAndDrop({
     [maps],
   );
 
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const activeParsed = parseDraggableId(String(active.id));
+      const overParsed = parseDraggableId(String(over.id));
+      if (!activeParsed || !overParsed) return;
+
+      // Use the effective tree (with any existing pending move applied)
+      const effectiveTree = pendingTreeRef.current ?? tree;
+      const effectiveMaps = buildMaps(effectiveTree);
+
+      const activeNode = effectiveMaps.nodeMap.get(activeParsed.id);
+      if (!activeNode) return;
+
+      let targetParentId: number;
+      let afterElementId: number | null;
+
+      if (overParsed.type === activeParsed.type) {
+        // Over a sibling — use the sibling's parent
+        const overNode = effectiveMaps.nodeMap.get(overParsed.id);
+        if (!overNode) return;
+        targetParentId = overNode.parentId;
+        afterElementId = overParsed.id;
+      } else {
+        // Over a container — append to end
+        const containerNode = effectiveMaps.nodeMap.get(overParsed.id);
+        if (!containerNode || !isContainerNode(containerNode)) return;
+        targetParentId = containerNode.id;
+        const children = containerNode.children ?? [];
+        afterElementId = children.length > 0 ? children[children.length - 1].id : null;
+      }
+
+      // Only apply cross-container moves (same-container reordering is
+      // handled by SortableContext's CSS transforms)
+      if (activeNode.parentId === targetParentId) return;
+
+      const newTree = applyReorder(effectiveTree, activeParsed.id, targetParentId, afterElementId);
+      if (newTree !== effectiveTree) {
+        pendingTreeRef.current = newTree;
+        setPendingTree(newTree);
+      }
+    },
+    [tree],
+  );
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setDragState(null);
+      clearPendingTree();
 
       const { active, over } = event;
 
@@ -177,17 +237,20 @@ export function useDragAndDrop({
         onReorder(params.elementID, params.targetParentId, params.afterElementID);
       }
     },
-    [maps, onReorder],
+    [maps, onReorder, clearPendingTree],
   );
 
   const handleDragCancel = useCallback(() => {
     setDragState(null);
-  }, []);
+    clearPendingTree();
+  }, [clearPendingTree]);
 
   return {
     sensors,
     dragState,
+    pendingTree,
     handleDragStart,
+    handleDragOver,
     handleDragEnd,
     handleDragCancel,
   };

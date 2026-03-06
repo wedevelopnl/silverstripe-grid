@@ -31,15 +31,9 @@ interface GridEditorProps {
 export default function GridEditor({ pageId, zone }: GridEditorProps) {
   const { data, isLoading, error } = useElementTree(pageId, zone);
 
-  const sections = data === undefined
-    ? []
-    : (data[String(pageId)] ?? []).filter(isSectionNode);
-
-  const enrichedSections = useTreeEnrichment(sections, pageId ?? 0);
-
   const reorderMutation = useReorderElement(pageId ?? 0, zone);
 
-  const { sensors, dragState, handleDragStart, handleDragEnd, handleDragCancel } = useDragAndDrop({
+  const { sensors, dragState, pendingTree, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel } = useDragAndDrop({
     tree: data ?? {},
     onReorder: (elementID, targetParentId, afterElementID) => {
       reorderMutation.mutate({
@@ -48,6 +42,15 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
       });
     },
   });
+
+  // Use pending tree during cross-container drags for visual feedback
+  const effectiveData = pendingTree ?? data;
+
+  const sections = effectiveData === undefined
+    ? []
+    : (effectiveData[String(pageId)] ?? []).filter(isSectionNode);
+
+  const enrichedSections = useTreeEnrichment(sections, pageId ?? 0);
 
   const sectionIds = enrichedSections.map((s) => s.sortableId);
 
@@ -72,6 +75,7 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
               sensors={sensors}
               collisionDetection={typedCollisionDetection}
               onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
               onDragCancel={handleDragCancel}
             >

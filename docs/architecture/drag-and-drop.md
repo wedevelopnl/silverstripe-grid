@@ -14,7 +14,7 @@ The drag-and-drop system enables visual reordering of elements within the grid e
 │    ├── DnDContext (dnd-kit)                                 │
 │    │     ├── Sensors (pointer, 8px activation threshold)    │
 │    │     ├── Collision detection (type-aware filtering)      │
-│    │     └── Event handlers (start / end / cancel)          │
+│    │     └── Event handlers (start / over / end / cancel)   │
 │    │                                                        │
 │    ├── SortableContexts (nested, one per container area)    │
 │    │     ├── Section level (root area)                      │
@@ -99,7 +99,7 @@ The active (dragged) item is first excluded from the droppable container list. d
 
 A two-pass strategy then prevents oscillation between sibling items and their wrapping parent container (which geometrically encloses its children, causing `closestCenter` to oscillate between them):
 
-1. **Pass 1 — Siblings**: Run `pointerWithin` against same-type containers only (e.g. row vs row). This requires the pointer to be geometrically inside the target's bounding box, preventing ghost jumps when only 2 siblings exist at close proximity. If a collision is found, return it immediately.
+1. **Pass 1 — Siblings**: Run `centerCrossing` against same-type containers only (e.g. row vs row). This custom strategy detects a collision only when two conditions are met: (a) the collision rect geometrically overlaps the target's bounding rect, and (b) the collision rect center has crossed a direction-aware threshold. The threshold sits at the target's near edge plus half the collision rect height, clamped to the target center. This adapts to DragOverlay measurement asymmetry: when the overlay is similar in size to the target (rows), the threshold equals the target center — preventing ghost jumps. When the overlay is much smaller (sections), the threshold sits near the target edge — remaining reachable by the compact collision rect. The overlap gate ensures that once the collision rect leaves a sibling's area (e.g. when dragging into a different section), that sibling stops being reported as a collision, allowing Pass 2 to fire for cross-container moves. Works on both vertical (Y) and horizontal (X) axes via OR.
 2. **Pass 2 — Parent containers**: If no sibling collision exists (e.g. dragging into an empty container), fall back to `closestCenter` against parent-type containers only.
 
 Drop target validity follows hierarchy rules:
@@ -123,6 +123,10 @@ SortableContext (root area → section IDs)
 ```
 
 On drop, the system determines the target container by comparing the active item's type against the over item's type. Same type means sibling reorder (use parent area). Different type means cross-container move (use container's child area).
+
+### Cross-Container Visual Feedback
+
+During drag, `handleDragOver` provides real-time visual feedback for cross-container moves. When the collision detection returns a target in a different container, `handleDragOver` applies a temporary reorder to the tree via `applyReorder()`, updating the enriched sections so the dragged item visually appears in the target container. This pending tree is stored in component state and cleared on drop or cancel. Same-container reordering uses dnd-kit's built-in CSS transform approach (no tree mutation needed).
 
 ### Optimistic Update Pipeline
 
