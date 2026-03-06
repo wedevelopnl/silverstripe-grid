@@ -6,15 +6,19 @@ import { useTreeEnrichment } from '@/hooks/useTreeEnrichment';
 import { useDragAndDrop, DragContext } from '@/hooks/useDragAndDrop';
 import { useReorderElement } from '@/hooks/useElementMutations';
 import { ViewportProvider } from '@/hooks/ViewportContext';
+import { GridEditorProvider } from '@/hooks/GridEditorContext';
 import { isSectionNode } from '@/types/elements';
+import { SECTION_FQCN } from '@/api/config';
 import { typedCollisionDetection } from '@/utils/collisionDetection';
 import ViewportSwitcher from '@/components/ViewportSwitcher/ViewportSwitcher';
 import SectionBlock from '@/components/SectionBlock/SectionBlock';
+import AddChildButton from '@/components/AddChildButton/AddChildButton';
 import EmptyState from '@/components/EmptyState/EmptyState';
 import DragOverlayContent from '@/components/DragOverlayContent/DragOverlayContent';
 
 interface GridEditorProps {
   readonly pageId: number | null;
+  readonly pageClass: string;
   readonly zone: string;
 }
 
@@ -26,7 +30,7 @@ interface GridEditorProps {
  * SectionBlock (section > row > column > element card hierarchy)
  * to render the full grid editing interface.
  */
-export default function GridEditor({ pageId, zone }: GridEditorProps) {
+export default function GridEditor({ pageId, pageClass, zone }: GridEditorProps) {
   const { data, isLoading, error } = useElementTree(pageId, zone);
 
   const sections = data === undefined
@@ -62,32 +66,56 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
           Failed to load elements: {error.message}
         </p>
       )}
-      {data !== undefined && (
-        <ViewportProvider>
-          <ViewportSwitcher />
-          <DndContext
-            sensors={sensors}
-            collisionDetection={typedCollisionDetection}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
-          >
-            <DragContext.Provider value={dragContextValue}>
-              <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
-                {enrichedSections.length > 0
-                  ? enrichedSections.map((section) => (
-                    <SectionBlock key={section.id} section={section} />
-                  ))
-                  : <EmptyState message="No sections yet" variant="centered" />}
-              </SortableContext>
-            </DragContext.Provider>
-            <DragOverlay>
-              {dragState !== null && (
-                <DragOverlayContent node={dragState.activeNode} type={dragState.activeType} />
-              )}
-            </DragOverlay>
-          </DndContext>
-        </ViewportProvider>
+      {data !== undefined && pageId !== null && (
+        <GridEditorProvider value={{ pageId, pageClass, zone }}>
+          <ViewportProvider>
+            <ViewportSwitcher />
+            <DndContext
+              sensors={sensors}
+              collisionDetection={typedCollisionDetection}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+            >
+              <DragContext.Provider value={dragContextValue}>
+                <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
+                  {enrichedSections.length > 0
+                    ? (
+                      <>
+                        {enrichedSections.map((section) => (
+                          <SectionBlock key={section.id} section={section} />
+                        ))}
+                        <AddChildButton
+                          parentId={pageId}
+                          parentClass={pageClass}
+                          childClass={SECTION_FQCN}
+                          childLabel="Section"
+                          variant="append"
+                        />
+                      </>
+                    )
+                    : (
+                      <AddChildButton
+                        parentId={pageId}
+                        parentClass={pageClass}
+                        childClass={SECTION_FQCN}
+                        childLabel="Section"
+                        variant="empty-state"
+                      />
+                    )}
+                </SortableContext>
+              </DragContext.Provider>
+              <DragOverlay>
+                {dragState !== null && (
+                  <DragOverlayContent node={dragState.activeNode} type={dragState.activeType} />
+                )}
+              </DragOverlay>
+            </DndContext>
+          </ViewportProvider>
+        </GridEditorProvider>
+      )}
+      {data !== undefined && pageId === null && (
+        <EmptyState message="No sections yet" variant="centered" />
       )}
     </div>
   );

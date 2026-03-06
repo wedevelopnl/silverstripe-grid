@@ -7,8 +7,9 @@ import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
+import { SECTION_FQCN, ROW_FQCN } from '@/api/config';
 import RowBlock from '@/components/RowBlock/RowBlock';
-import EmptyState from '@/components/EmptyState/EmptyState';
+import AddChildButton from '@/components/AddChildButton/AddChildButton';
 
 interface SectionBlockProps {
   readonly section: EnrichedSectionNode;
@@ -40,13 +41,32 @@ export default function SectionBlock({ section }: SectionBlockProps) {
       <div className="section-block__body">
         <SortableContext items={section.childSortableIds} strategy={verticalListSortingStrategy}>
           {section.children !== null && section.children.length > 0
-            ? section.children.map((row) => (
-              <RowBlock
-                key={row.id}
-                row={row}
+            ? (
+              <>
+                {section.children.map((row) => (
+                  <RowBlock
+                    key={row.id}
+                    row={row}
+                  />
+                ))}
+                <AddChildButton
+                  parentId={section.id}
+                  parentClass={SECTION_FQCN}
+                  childClass={ROW_FQCN}
+                  childLabel="Row"
+                  variant="append"
+                />
+              </>
+            )
+            : (
+              <AddChildButton
+                parentId={section.id}
+                parentClass={SECTION_FQCN}
+                childClass={ROW_FQCN}
+                childLabel="Row"
+                variant="empty-state"
               />
-            ))
-            : <EmptyState message="No rows" />}
+            )}
         </SortableContext>
       </div>
     </section>

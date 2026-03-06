@@ -41,7 +41,7 @@ final class GridEditorFieldTest extends SapphireTest
         $page->Title = 'Test Page';
         $page->write();
 
-        $field = GridEditorField::create('GridEditor', (int) $page->ID);
+        $field = GridEditorField::create('GridEditor', (int) $page->ID, $page::class);
 
         $this->assertSame('GridEditor', $field->getName());
     }
@@ -52,7 +52,7 @@ final class GridEditorFieldTest extends SapphireTest
         $page->Title = 'Test Page';
         $page->write();
 
-        $field = GridEditorField::create('GridEditor', (int) $page->ID);
+        $field = GridEditorField::create('GridEditor', (int) $page->ID, $page::class);
 
         $this->assertStringContainsString('grid-editor__container', $field->extraClass());
     }
@@ -63,7 +63,7 @@ final class GridEditorFieldTest extends SapphireTest
         $page->Title = 'Test Page';
         $page->write();
 
-        $field = GridEditorField::create('GridEditor', (int) $page->ID);
+        $field = GridEditorField::create('GridEditor', (int) $page->ID, $page::class);
 
         $this->assertStringContainsString('no-change-track', $field->extraClass());
     }
@@ -74,11 +74,24 @@ final class GridEditorFieldTest extends SapphireTest
         $page->Title = 'Test Page';
         $page->write();
 
-        $field = GridEditorField::create('GridEditor', (int) $page->ID);
+        $field = GridEditorField::create('GridEditor', (int) $page->ID, $page::class);
         $schemaData = $field->getSchemaDataDefaults();
 
         $this->assertIsInt($schemaData['grid-page-id']);
         $this->assertSame((int) $page->ID, $schemaData['grid-page-id']);
+    }
+
+    public function testSchemaDataContainsGridPageClass(): void
+    {
+        $page = TestPage::create();
+        $page->Title = 'Test Page';
+        $page->write();
+
+        $field = GridEditorField::create('GridEditor', (int) $page->ID, $page::class);
+        $schemaData = $field->getSchemaDataDefaults();
+
+        $this->assertArrayHasKey('grid-page-class', $schemaData);
+        $this->assertSame($page::class, $schemaData['grid-page-class']);
     }
 
     public function testPerformReadonlyTransformationReturnsLiteralField(): void
@@ -87,7 +100,7 @@ final class GridEditorFieldTest extends SapphireTest
         $page->Title = 'Test Page';
         $page->write();
 
-        $field = GridEditorField::create('GridEditor', (int) $page->ID);
+        $field = GridEditorField::create('GridEditor', (int) $page->ID, $page::class);
 
         $this->assertInstanceOf(LiteralField::class, $field->performReadonlyTransformation());
     }

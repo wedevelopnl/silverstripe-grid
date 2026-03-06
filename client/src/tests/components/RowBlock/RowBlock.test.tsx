@@ -35,6 +35,10 @@ vi.mock('@dnd-kit/sortable', async (importOriginal) => {
   };
 });
 
+vi.mock('@/api/endpoints', () => ({
+  createElement: vi.fn(),
+}));
+
 vi.mock('@/utils/gridAdapter', () => ({
   getColumnCount: vi.fn(() => 12),
   getRowClasses: vi.fn(() => 'row'),
@@ -172,7 +176,7 @@ describe('RowBlock', () => {
     expect(badges.length).toBe(2);
   });
 
-  it('renders EmptyState when children is null', () => {
+  it('renders add child empty state when children is null', () => {
     const row = makeRow({ children: null });
 
     render(
@@ -180,10 +184,11 @@ describe('RowBlock', () => {
       { wrapper: createDndWrapper() },
     );
 
-    expect(screen.getByText('No columns')).toBeDefined();
+    expect(screen.getByText('No columns yet')).toBeDefined();
+    expect(screen.getByText('Add Column')).toBeDefined();
   });
 
-  it('renders EmptyState when children is empty array', () => {
+  it('renders add child empty state when children is empty array', () => {
     const row = makeRow({ children: [] });
 
     render(
@@ -191,7 +196,8 @@ describe('RowBlock', () => {
       { wrapper: createDndWrapper() },
     );
 
-    expect(screen.getByText('No columns')).toBeDefined();
+    expect(screen.getByText('No columns yet')).toBeDefined();
+    expect(screen.getByText('Add Column')).toBeDefined();
   });
 
   it('applies draft publication state modifier class', () => {

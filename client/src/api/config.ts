@@ -5,6 +5,10 @@ import { ConfigError } from './errors';
 const CONTROLLER_FQCN =
   'WeDevelop\\Grid\\Controllers\\GridController';
 
+export const SECTION_FQCN = 'WeDevelop\\Grid\\Model\\Section';
+export const ROW_FQCN = 'WeDevelop\\Grid\\Model\\Row';
+export const COLUMN_FQCN = 'WeDevelop\\Grid\\Model\\Column';
+
 /**
  * Returns the global SilverStripe CMS configuration object.
  *

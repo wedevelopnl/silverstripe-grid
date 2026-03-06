@@ -8,8 +8,11 @@ import type { ElementTreeResponse } from '@/types/elements';
 
 const mockFetchElementTree = vi.fn();
 
+const mockCreateElement = vi.fn();
+
 vi.mock('@/api/endpoints', () => ({
   fetchElementTree: (...args: unknown[]) => mockFetchElementTree(...args),
+  createElement: (...args: unknown[]) => mockCreateElement(...args),
   reorderElement: vi.fn(),
 }));
 
@@ -173,12 +176,13 @@ const noSectionsTree: ElementTreeResponse = {
 describe('GridEditor', () => {
   afterEach(() => {
     mockFetchElementTree.mockReset();
+    mockCreateElement.mockReset();
   });
 
   it('shows loading state when fetching', () => {
     mockFetchElementTree.mockReturnValue(new Promise(() => {}));
 
-    render(<GridEditor pageId={7} zone="main" />, {
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
       wrapper: createWrapper(),
     });
 
@@ -188,7 +192,7 @@ describe('GridEditor', () => {
   it('shows error message when fetch fails', async () => {
     mockFetchElementTree.mockRejectedValue(new Error('Network error'));
 
-    render(<GridEditor pageId={7} zone="main" />, {
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
       wrapper: createWrapper(),
     });
 
@@ -200,7 +204,7 @@ describe('GridEditor', () => {
   it('renders viewport switcher when data loads', async () => {
     mockFetchElementTree.mockResolvedValue(mockTree);
 
-    render(<GridEditor pageId={7} zone="main" />, {
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
       wrapper: createWrapper(),
     });
 
@@ -220,7 +224,7 @@ describe('GridEditor', () => {
   it('renders section blocks when data loads', async () => {
     mockFetchElementTree.mockResolvedValue(mockTree);
 
-    render(<GridEditor pageId={7} zone="main" />, {
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
       wrapper: createWrapper(),
     });
 
@@ -232,34 +236,39 @@ describe('GridEditor', () => {
     expect(sectionBlocks.length).toBe(1);
   });
 
-  it('renders empty state when tree has no sections (empty relation)', async () => {
+  it('renders add child empty state when tree has no sections (empty relation)', async () => {
     mockFetchElementTree.mockResolvedValue(emptyTree);
 
-    render(<GridEditor pageId={7} zone="main" />, {
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => {
-      expect(screen.getByText('No sections yet')).toBeDefined();
+      expect(screen.getByTestId('add-child-empty')).toBeDefined();
     });
+
+    expect(screen.getByText('No sections yet')).toBeDefined();
+    expect(screen.getByTestId('add-child-button')).toBeDefined();
   });
 
-  it('renders empty state when tree has nodes but none are sections', async () => {
+  it('renders add child empty state when tree has nodes but none are sections', async () => {
     mockFetchElementTree.mockResolvedValue(noSectionsTree);
 
-    render(<GridEditor pageId={7} zone="main" />, {
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => {
-      expect(screen.getByText('No sections yet')).toBeDefined();
+      expect(screen.getByTestId('add-child-empty')).toBeDefined();
     });
+
+    expect(screen.getByTestId('add-child-button')).toBeDefined();
   });
 
   it('sets data-page-id attribute from pageId prop', async () => {
     mockFetchElementTree.mockResolvedValue(mockTree);
 
-    render(<GridEditor pageId={7} zone="main" />, {
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
       wrapper: createWrapper(),
     });
 
@@ -270,7 +279,7 @@ describe('GridEditor', () => {
   it('sets data-page-id attribute when pageId is provided', () => {
     mockFetchElementTree.mockReturnValue(new Promise(() => {}));
 
-    render(<GridEditor pageId={7} zone="main" />, {
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
       wrapper: createWrapper(),
     });
 
@@ -279,7 +288,7 @@ describe('GridEditor', () => {
   });
 
   it('omits data-page-id attribute when pageId is null', () => {
-    render(<GridEditor pageId={null} zone="main" />, {
+    render(<GridEditor pageId={null} pageClass="" zone="main" />, {
       wrapper: createWrapper(),
     });
 
@@ -291,7 +300,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockResolvedValue(mockTree);
     const user = userEvent.setup();
 
-    render(<GridEditor pageId={7} zone="main" />, {
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
       wrapper: createWrapper(),
     });
 
@@ -312,37 +321,78 @@ describe('GridEditor', () => {
     expect(badges.length).toBe(2);
   });
 
-  it('renders empty state when pageId is not present in the response', async () => {
+  it('renders add child empty state when pageId is not present in the response', async () => {
     const treeForDifferentArea: ElementTreeResponse = {
       '99': [mockTree['7'][0]],
     };
     mockFetchElementTree.mockResolvedValue(treeForDifferentArea);
 
-    render(<GridEditor pageId={7} zone="main" />, {
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => {
-      expect(screen.getByText('No sections yet')).toBeDefined();
+      expect(screen.getByTestId('add-child-empty')).toBeDefined();
     });
   });
 
   it('does not render content area when still loading', () => {
     mockFetchElementTree.mockReturnValue(new Promise(() => {}));
 
-    render(<GridEditor pageId={7} zone="main" />, {
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
       wrapper: createWrapper(),
     });
 
     expect(screen.queryByTestId('section-block')).toBeNull();
     expect(screen.queryByTestId('viewport-switcher')).toBeNull();
-    expect(screen.queryByText('No sections yet')).toBeNull();
+    expect(screen.queryByTestId('add-child-empty')).toBeNull();
+    expect(screen.queryByTestId('add-child-button')).toBeNull();
+  });
+
+  it('renders add section append button after existing sections', async () => {
+    mockFetchElementTree.mockResolvedValue(mockTree);
+
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Main Section')).toBeDefined();
+    });
+
+    expect(screen.getByText('Add Section')).toBeDefined();
+  });
+
+  it('calls createElement with correct params when add section is clicked', async () => {
+    mockFetchElementTree.mockResolvedValue(emptyTree);
+    mockCreateElement.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('add-child-empty')).toBeDefined();
+    });
+
+    await user.click(screen.getByText('Add Section'));
+
+    expect(mockCreateElement).toHaveBeenCalledWith(
+      {
+        elementClass: 'WeDevelop\\Grid\\Model\\Section',
+        parentId: 7,
+        parentClass: 'Page',
+        zone: 'main',
+      },
+      expect.anything(),
+    );
   });
 
   it('does not render DragOverlayContent when no drag is active', async () => {
     mockFetchElementTree.mockResolvedValue(mockTree);
 
-    render(<GridEditor pageId={7} zone="main" />, {
+    render(<GridEditor pageId={7} pageClass="Page" zone="main" />, {
       wrapper: createWrapper(),
     });
 

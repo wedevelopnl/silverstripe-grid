@@ -8,8 +8,9 @@ import { buildBlockClasses } from '@/utils/blockClasses';
 import { getRowClasses } from '@/utils/gridAdapter';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
+import { ROW_FQCN, COLUMN_FQCN } from '@/api/config';
 import ColumnBlock from '@/components/ColumnBlock/ColumnBlock';
-import EmptyState from '@/components/EmptyState/EmptyState';
+import AddChildButton from '@/components/AddChildButton/AddChildButton';
 
 interface RowBlockProps {
   readonly row: EnrichedRowNode;
@@ -42,13 +43,32 @@ export default function RowBlock({ row }: RowBlockProps) {
       <div className={rowClasses}>
         <SortableContext items={row.childSortableIds} strategy={horizontalListSortingStrategy}>
           {row.children !== null && row.children.length > 0
-            ? row.children.map((column) => (
-              <ColumnBlock
-                key={column.id}
-                column={column}
+            ? (
+              <>
+                {row.children.map((column) => (
+                  <ColumnBlock
+                    key={column.id}
+                    column={column}
+                  />
+                ))}
+                <AddChildButton
+                  parentId={row.id}
+                  parentClass={ROW_FQCN}
+                  childClass={COLUMN_FQCN}
+                  childLabel="Column"
+                  variant="append"
+                />
+              </>
+            )
+            : (
+              <AddChildButton
+                parentId={row.id}
+                parentClass={ROW_FQCN}
+                childClass={COLUMN_FQCN}
+                childLabel="Column"
+                variant="empty-state"
               />
-            ))
-            : <EmptyState message="No columns" />}
+            )}
         </SortableContext>
       </div>
     </div>
