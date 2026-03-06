@@ -143,7 +143,14 @@ class GridController extends AdminController
         $parent = Versioned::withVersionedMode(function () use ($body): ?DataObject {
             Versioned::set_stage(Versioned::DRAFT);
 
-            return $this->resolveParentRecord($body['parentId']);
+            // Sections live under SiteTree pages; rows and columns live under GridElements.
+            // We must query the correct table because page IDs and element IDs share
+            // the same numeric space and can collide.
+            if ($body['containerType'] === ContainerType::Section) {
+                return SiteTree::get()->byID($body['parentId']);
+            }
+
+            return GridElement::get()->byID($body['parentId']);
         });
         if ($parent === null) {
             $this->jsonError(400);

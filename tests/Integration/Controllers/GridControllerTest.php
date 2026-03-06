@@ -283,16 +283,16 @@ final class GridControllerTest extends FunctionalTest
         $this->logInForHttp();
         Versioned::set_stage(Versioned::DRAFT);
 
-        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $section = $this->objFromFixture(Section::class, 'section1');
 
-        // Row has can_be_root: false — placing it in the page area triggers validation
+        // Section only allows Row — placing a Column directly in a Section violates the hierarchy
         $response = $this->postJson('/admin/grid/api/create', [
-            'containerType' => 'row',
-            'parentId' => (int) $page->ID,
+            'containerType' => 'column',
+            'parentId' => (int) $section->ID,
             'insertAfterElementID' => null,
         ]);
 
-        $this->assertJsonError(422, 'Row cannot be placed at page level.', $response);
+        $this->assertJsonError(422, 'Column cannot be placed inside Section.', $response);
     }
 
     // --- apiDuplicate --------------------------------------------------------
