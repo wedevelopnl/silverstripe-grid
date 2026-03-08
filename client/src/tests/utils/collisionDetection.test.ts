@@ -2,6 +2,7 @@ import type { DroppableContainer } from '@dnd-kit/core';
 
 import {
   centerCrossing,
+  createTypedCollisionDetection,
   filterDroppablesByType,
   filterParentContainers,
   filterSiblings,
@@ -629,5 +630,134 @@ describe('centerCrossing', () => {
     });
 
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('createTypedCollisionDetection', () => {
+  const rect = { width: 100, height: 50, top: 0, left: 0, right: 100, bottom: 50 };
+
+  it('hasPendingMove=false behaves identically to static typedCollisionDetection', () => {
+    const hasPendingMoveRef = { current: false };
+    const detect = createTypedCollisionDetection({ hasPendingMoveRef });
+
+    // Active starts below target, dragged up to target position — center crossing
+    const container = makeContainer('row-20');
+    const targetRect = { ...rect, top: 0, bottom: 50 };
+    const initialRect = { ...rect, top: 200, bottom: 250 };
+    const droppableRects = new Map<string, typeof rect>();
+    droppableRects.set('row-20', targetRect);
+
+    const args = {
+      active: {
+        id: 'row-10',
+        data: { current: undefined },
+        rect: { current: { initial: initialRect, translated: targetRect } },
+      },
+      collisionRect: targetRect,
+      droppableRects,
+      droppableContainers: [container],
+      pointerCoordinates: null,
+    };
+
+    const factoryResult = detect(args);
+    const staticResult = typedCollisionDetection(args);
+
+    expect(factoryResult.length).toBeGreaterThan(0);
+    expect(factoryResult.map((c) => c.id)).toEqual(staticResult.map((c) => c.id));
+  });
+
+  it('hasPendingMove=true returns closest sibling even when centerCrossing threshold is not crossed', () => {
+    const hasPendingMoveRef = { current: true };
+    const detect = createTypedCollisionDetection({ hasPendingMoveRef });
+
+    // Sibling at y=0. Active starts at y=100, dragged to y=60 — NOT crossing
+    // the centerCrossing threshold (center at y=85, threshold at y=25).
+    // But closestCenter sees it as the closest target by distance.
+    const sibling = makeContainer('row-20');
+    const siblingRect = { ...rect, top: 0, bottom: 50 }; // center y=25
+    const initialRect = { ...rect, top: 100, bottom: 150 }; // center y=125
+    const collisionRect = { ...rect, top: 60, bottom: 110 }; // center y=85
+
+    const droppableRects = new Map<string, typeof rect>();
+    droppableRects.set('row-20', siblingRect);
+
+    const result = detect({
+      active: {
+        id: 'row-10',
+        data: { current: undefined },
+        rect: { current: { initial: initialRect, translated: collisionRect } },
+      },
+      collisionRect,
+      droppableRects,
+      droppableContainers: [sibling],
+      pointerCoordinates: null,
+    });
+
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].id).toBe('row-20');
+  });
+
+  it('hasPendingMove=true skips overlap guard — sibling overlap without crossing still returns closest', () => {
+    const hasPendingMoveRef = { current: true };
+    const detect = createTypedCollisionDetection({ hasPendingMoveRef });
+
+    // Collision rect overlaps sibling but threshold NOT crossed.
+    // With hasPendingMove=false, overlap guard would return [].
+    // With hasPendingMove=true, closestCenter returns the sibling.
+    const sibling = makeContainer('row-20');
+    const siblingRect = { ...rect, top: 0, bottom: 50 };
+    const initialRect = { ...rect, top: 100, bottom: 150 };
+    // Overlapping but not crossing threshold
+    const collisionRect = { ...rect, top: 30, bottom: 80 };
+
+    const droppableRects = new Map<string, typeof rect>();
+    droppableRects.set('row-20', siblingRect);
+
+    const args = {
+      active: {
+        id: 'row-10',
+        data: { current: undefined },
+        rect: { current: { initial: initialRect, translated: collisionRect } },
+      },
+      collisionRect,
+      droppableRects,
+      droppableContainers: [sibling],
+      pointerCoordinates: null,
+    };
+
+    // Verify that hasPendingMove=false returns empty (overlap guard blocks)
+    const detectDefault = createTypedCollisionDetection({ hasPendingMoveRef: { current: false } });
+    expect(detectDefault(args)).toEqual([]);
+
+    // hasPendingMove=true skips the guard
+    const result = detect(args);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].id).toBe('row-20');
+  });
+
+  it('parent container fallback works in both modes', () => {
+    for (const pending of [false, true]) {
+      const hasPendingMoveRef = { current: pending };
+      const detect = createTypedCollisionDetection({ hasPendingMoveRef });
+
+      const parentSection = makeContainer('section-1');
+      const droppableRects = new Map<string, typeof rect>();
+      droppableRects.set('section-1', rect);
+
+      const result = detect({
+        active: {
+          id: 'row-10',
+          data: { current: undefined },
+          rect: { current: { initial: rect, translated: rect } },
+        },
+        collisionRect: rect,
+        droppableRects,
+        droppableContainers: [parentSection],
+        pointerCoordinates: null,
+      });
+
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].id).toBe('section-1');
+    }
   });
 });

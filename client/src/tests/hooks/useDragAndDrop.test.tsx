@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import type {
   DragStartEvent,
   DragEndEvent,
+  DragOverEvent,
   DragCancelEvent,
   Active,
   Over,
@@ -139,19 +140,31 @@ function createMutableRef<T>(value: T): MutableRefObject<T> {
   return { current: value };
 }
 
-function makeActive(id: string): Active {
+interface RectLike {
+  width: number;
+  height: number;
+  top: number;
+  left: number;
+  right: number;
+  bottom: number;
+}
+
+function makeActive(id: string, options?: { translated?: RectLike }): Active {
   return {
     id,
     data: createMutableRef(undefined),
-    rect: createMutableRef({ initial: null, translated: null }),
+    rect: createMutableRef({
+      initial: null,
+      translated: options?.translated ?? null,
+    }),
   };
 }
 
-function makeOver(id: string): Over {
+function makeOver(id: string, options?: { rect?: RectLike }): Over {
   return {
     id,
     data: createMutableRef(undefined),
-    rect: { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 },
+    rect: options?.rect ?? { width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 },
     disabled: false,
   };
 }
@@ -166,10 +179,24 @@ function makeDragStartEvent(activeId: string): DragStartEvent {
 function makeDragEndEvent(
   activeId: string,
   overId: string | null,
+  options?: { activeTranslated?: RectLike; overRect?: RectLike },
 ): DragEndEvent {
   return {
+    active: makeActive(activeId, { translated: options?.activeTranslated }),
+    over: overId !== null ? makeOver(overId, { rect: options?.overRect }) : null,
+    collisions: [],
+    delta: { x: 0, y: 0 },
+    activatorEvent: new Event('pointerdown'),
+  };
+}
+
+function makeDragOverEvent(
+  activeId: string,
+  overId: string,
+): DragOverEvent {
+  return {
     active: makeActive(activeId),
-    over: overId !== null ? makeOver(overId) : null,
+    over: makeOver(overId),
     collisions: [],
     delta: { x: 0, y: 0 },
     activatorEvent: new Event('pointerdown'),
@@ -224,6 +251,11 @@ describe('useDragAndDrop', () => {
     const { result } = renderHook(() => useDragAndDrop(defaultOptions));
     expect(result.current.sensors).toBeDefined();
     expect(result.current.sensors.length).toBeGreaterThan(0);
+  });
+
+  it('returns a collision detection function', () => {
+    const { result } = renderHook(() => useDragAndDrop(defaultOptions));
+    expect(typeof result.current.collisionDetection).toBe('function');
   });
 
   it('initializes with null dragState', () => {
@@ -480,6 +512,193 @@ describe('useDragAndDrop', () => {
       expect(onReorder).toHaveBeenCalledTimes(1);
     });
   });
+
+    describe('cross-container via pending tree', () => {
+      // Tree with two sections, each with rows:
+      //   Section 2 (id=2): Row 11, Row 12
+      //   Section 3 (id=3): Row 13, Row 14
+      const crossContainerTree: ElementTreeResponse = {
+        '42': [
+          makeSection(2, [
+            makeRow(11, [makeColumn(50, [], 11)], 2),
+            makeRow(12, [makeColumn(51, [], 12)], 2),
+          ], 42),
+          makeSection(3, [
+            makeRow(13, [makeColumn(52, [], 13)], 3),
+            makeRow(14, [makeColumn(53, [], 14)], 3),
+          ], 42),
+        ],
+      };
+
+      it('cross-container move via handleDragOver then drop places at pending position', () => {
+        const onReorder = vi.fn();
+        const { result } = renderHook(() =>
+          useDragAndDrop({ tree: crossContainerTree, onReorder }),
+        );
+
+        // Step 1: handleDragOver moves row-11 (Section 2) into Section 3 after row-14
+        act(() => {
+          result.current.handleDragOver(makeDragOverEvent('row-11', 'row-14'));
+        });
+
+        // Pending tree should be set (cross-container move)
+        expect(result.current.pendingTree).not.toBeNull();
+
+        // Step 2: handleDragEnd — pending tree has row-11 after row-14
+        act(() => {
+          result.current.handleDragEnd(makeDragEndEvent('row-11', 'row-14'));
+        });
+
+        expect(onReorder).toHaveBeenCalledTimes(1);
+        expect(onReorder).toHaveBeenCalledWith(
+          11, // elementID
+          3,  // targetParentId (section 3)
+          14, // afterElementID (placed AFTER row-14)
+        );
+      });
+
+      it('cross-container move + within-container reorder places at correct in-between position', () => {
+        const onReorder = vi.fn();
+        const { result } = renderHook(() =>
+          useDragAndDrop({ tree: crossContainerTree, onReorder }),
+        );
+
+        // Step 1: row-11 enters Section 3 after row-14 (appended at end)
+        act(() => {
+          result.current.handleDragOver(makeDragOverEvent('row-11', 'row-14'));
+        });
+
+        expect(result.current.pendingTree).not.toBeNull();
+
+        // Step 2: user continues dragging upward, over lands on row-13
+        // In the pending tree: Section 3 = [row-13, row-14, row-11]
+        // row-11 is at index 2, row-13 is at index 0 → activeIdx > overIdx → place BEFORE row-13
+        act(() => {
+          result.current.handleDragOver(makeDragOverEvent('row-11', 'row-13'));
+        });
+
+        // Step 3: drop — pending tree now has row-11 at position 0 (before row-13)
+        act(() => {
+          result.current.handleDragEnd(makeDragEndEvent('row-11', 'row-13'));
+        });
+
+        expect(onReorder).toHaveBeenCalledTimes(1);
+        expect(onReorder).toHaveBeenCalledWith(
+          11,   // elementID
+          3,    // targetParentId (section 3)
+          null, // afterElementID (first position, before row-13)
+        );
+      });
+
+      it('cross-container move + reorder to middle position places between siblings', () => {
+        const onReorder = vi.fn();
+        const { result } = renderHook(() =>
+          useDragAndDrop({ tree: crossContainerTree, onReorder }),
+        );
+
+        // Step 1: row-11 enters Section 3 after row-13 (first child)
+        act(() => {
+          result.current.handleDragOver(makeDragOverEvent('row-11', 'row-13'));
+        });
+
+        // Pending tree: Section 3 = [row-13, row-11, row-14]
+        // row-11 is between row-13 and row-14
+
+        // Step 2: drop at current position
+        act(() => {
+          result.current.handleDragEnd(makeDragEndEvent('row-11', 'row-13'));
+        });
+
+        expect(onReorder).toHaveBeenCalledTimes(1);
+        expect(onReorder).toHaveBeenCalledWith(
+          11, // elementID
+          3,  // targetParentId (section 3)
+          13, // afterElementID (between row-13 and row-14)
+        );
+      });
+
+      it('cross-container move then drag back to original container is a no-op', () => {
+        const onReorder = vi.fn();
+        const { result } = renderHook(() =>
+          useDragAndDrop({ tree: crossContainerTree, onReorder }),
+        );
+
+        // Step 1: row-11 enters Section 3
+        act(() => {
+          result.current.handleDragOver(makeDragOverEvent('row-11', 'row-14'));
+        });
+
+        // Step 2: row-11 returns to Section 2 after row-12
+        act(() => {
+          result.current.handleDragOver(makeDragOverEvent('row-11', 'row-12'));
+        });
+
+        // Step 3: user reorders row-11 back to its original position (before row-12)
+        // In pending tree: Section 2 = [row-12, row-11], activeIdx=1 > overIdx=0 of row-12
+        // Wait — row-11 was placed after row-12, so pending = [row-12, row-11].
+        // Now over=row-12 again means activeIdx(1) > overIdx(0) → move before row-12 → [row-11, row-12]
+        act(() => {
+          result.current.handleDragOver(makeDragOverEvent('row-11', 'row-12'));
+        });
+
+        // Drop — pending tree has row-11 at original position (index 0 in Section 2)
+        act(() => {
+          result.current.handleDragEnd(makeDragEndEvent('row-11', 'row-12'));
+        });
+
+        // Same container + same index = no-op
+        expect(onReorder).not.toHaveBeenCalled();
+      });
+
+      it('cross-container drop without handleDragOver falls back to direction check', () => {
+        const onReorder = vi.fn();
+        const { result } = renderHook(() =>
+          useDragAndDrop({ tree: crossContainerTree, onReorder }),
+        );
+
+        // Direct handleDragEnd without handleDragOver (no pending tree)
+        // Fallback direction check: drag center below over center → insert AFTER
+        const activeRect = { width: 100, height: 50, top: 350, left: 0, right: 100, bottom: 400 };
+        const overRect = { width: 100, height: 50, top: 300, left: 0, right: 100, bottom: 350 };
+
+        act(() => {
+          result.current.handleDragEnd(
+            makeDragEndEvent('row-11', 'row-14', {
+              activeTranslated: activeRect,
+              overRect,
+            }),
+          );
+        });
+
+        expect(onReorder).toHaveBeenCalledTimes(1);
+        expect(onReorder).toHaveBeenCalledWith(
+          11, // elementID
+          3,  // targetParentId (section 3)
+          14, // afterElementID (direction check: placed AFTER row-14)
+        );
+      });
+
+      it('translated=null fallback preserves current behavior (insert BEFORE)', () => {
+        const onReorder = vi.fn();
+        const { result } = renderHook(() =>
+          useDragAndDrop({ tree: crossContainerTree, onReorder }),
+        );
+
+        // Cross-container with no translated rect — falls back to no direction adjustment
+        act(() => {
+          result.current.handleDragEnd(
+            makeDragEndEvent('row-11', 'row-13'),
+          );
+        });
+
+        expect(onReorder).toHaveBeenCalledTimes(1);
+        expect(onReorder).toHaveBeenCalledWith(
+          11,   // elementID
+          3,    // targetParentId (section 3)
+          null, // afterElementID (index 0 = first position)
+        );
+      });
+    });
 
   describe('handleDragCancel', () => {
     it('clears dragState without calling onReorder', () => {

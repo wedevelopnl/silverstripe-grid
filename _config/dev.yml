@@ -55,6 +55,12 @@ WeDevelop\Grid\Dev\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
+    cross-container-between:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossContainerBetween.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
     complex-page:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/ComplexPage.yml'
       post_actions:

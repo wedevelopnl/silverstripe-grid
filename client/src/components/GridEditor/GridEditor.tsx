@@ -8,7 +8,6 @@ import { useReorderElement } from '@/hooks/useElementMutations';
 import { ViewportProvider } from '@/hooks/ViewportContext';
 import { GridEditorProvider } from '@/hooks/GridEditorContext';
 import { isSectionNode } from '@/types/elements';
-import { typedCollisionDetection } from '@/utils/collisionDetection';
 import ViewportSwitcher from '@/components/ViewportSwitcher/ViewportSwitcher';
 import SectionBlock from '@/components/SectionBlock/SectionBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
@@ -33,7 +32,7 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
 
   const reorderMutation = useReorderElement(pageId ?? 0, zone);
 
-  const { sensors, dragState, pendingTree, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel } = useDragAndDrop({
+  const { sensors, collisionDetection, dragState, pendingTree, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel } = useDragAndDrop({
     tree: data ?? {},
     onReorder: (elementID, targetParentId, afterElementID) => {
       reorderMutation.mutate({
@@ -73,7 +72,7 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
             <ViewportSwitcher />
             <DndContext
               sensors={sensors}
-              collisionDetection={typedCollisionDetection}
+              collisionDetection={collisionDetection}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}

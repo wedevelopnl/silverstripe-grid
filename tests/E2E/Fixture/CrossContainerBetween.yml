@@ -1,0 +1,94 @@
+# E2E fixture for cross-container "between rows" drop regression test.
+#
+# Structure:
+#   Page (E2E Cross Container Between Test):
+#     Section Alpha (Sort: 1)
+#       Row Alpha-1 (Sort: 1)
+#         Column A1 (Sort: 1) — Block A1
+#     Section Beta (Sort: 2)
+#       Row Beta-1 (Sort: 1)
+#         Column B1 (Sort: 1) — Block B1
+#       Row Beta-2 (Sort: 2)
+#         Column B2 (Sort: 1) — Block B2
+#       Row Beta-3 (Sort: 3)
+#         Column B3 (Sort: 1) — Block B3
+#
+# Alpha has a single row. Beta has 3 rows.
+# Test drags Alpha-1 to land BETWEEN Beta-1 and Beta-2 (or between Beta-2 and Beta-3).
+
+Page:
+  e2e_page:
+    Title: 'E2E Cross Container Between Test'
+    URLSegment: 'e2e-cross-container-between'
+
+WeDevelop\Grid\Model\Section:
+  section_alpha:
+    Title: 'Section Alpha'
+    ShowTitle: 1
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+  section_beta:
+    Title: 'Section Beta'
+    ShowTitle: 1
+    Sort: 2
+    Zone: main
+    Parent: =>Page.e2e_page
+
+WeDevelop\Grid\Model\Row:
+  row_a1:
+    Title: 'Row Alpha-1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.section_alpha
+  row_b1:
+    Title: 'Row Beta-1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.section_beta
+  row_b2:
+    Title: 'Row Beta-2'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Section.section_beta
+  row_b3:
+    Title: 'Row Beta-3'
+    Sort: 3
+    Parent: =>WeDevelop\Grid\Model\Section.section_beta
+
+WeDevelop\Grid\Model\Column:
+  col_a1:
+    Title: 'Column A1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_a1
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+  col_b1:
+    Title: 'Column B1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_b1
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+  col_b2:
+    Title: 'Column B2'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_b2
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+  col_b3:
+    Title: 'Column B3'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_b3
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+
+WeDevelop\Grid\Model\ContentElement:
+  block_a1:
+    Title: 'Block A1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_a1
+  block_b1:
+    Title: 'Block B1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_b1
+  block_b2:
+    Title: 'Block B2'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_b2
+  block_b3:
+    Title: 'Block B3'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_b3
