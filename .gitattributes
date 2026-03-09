@@ -27,6 +27,9 @@
 /src/Dev          export-ignore
 /tests            export-ignore
 
+# Dev-only YAML config (E2E fixtures, test helpers)
+/_config/dev.yml  export-ignore
+
 # Dev and build config files
 /AGENTS.md        export-ignore
 /apm.lock         export-ignore
