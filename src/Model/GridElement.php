@@ -228,7 +228,7 @@ class GridElement extends DataObject
      */
     private function ensureDefaultTitle(): void
     {
-        if ($this->Title !== null && $this->Title !== '') {
+        if ($this->Title !== '') {
             return;
         }
 
