@@ -39,8 +39,10 @@ The project uses a custom HTTP-based fixture system, not Playwright's built-in f
 
 ### Loading Fixtures in Specs
 
+Use `loadAndNavigate` for the common pattern of loading a fixture and navigating to the CMS editor:
+
 ```typescript
-import { loadFixture, resetFixtures } from '../helpers/fixtures';
+import { resetFixtures, loadAndNavigate } from '../helpers/fixtures';
 
 test.describe('Feature area', () => {
   test.afterAll(async ({ request }) => {
@@ -48,12 +50,17 @@ test.describe('Feature area', () => {
   });
 
   test('user journey description', async ({ page }) => {
-    const fixture = await loadFixture(page.request, 'fixture-name');
-    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
-    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
-    // ... multi-step user journey assertions
+    await loadAndNavigate(page, 'fixture-name');
+    // Grid editor is loaded and ready — start asserting
   });
 });
+```
+
+Use `loadFixture` directly only when you need the fixture data (e.g., `fixture.pageId`, `fixture.fixtureMap`) without navigating, or when using `request` without a `page` (e.g., API-only tests):
+
+```typescript
+const fixture = await loadFixture(page.request, 'fixture-name');
+const response = await request.get(`/admin/grid/api/readTree/${fixture.pageId}/main`);
 ```
 
 **Important**: Use `page.request` (not the standalone `request` fixture) when a `page` object is available — this shares browser cookies and avoids `strict_user_agent_check` session invalidation.
@@ -74,7 +81,7 @@ Post-actions run after YAML write, still in DRAFT stage:
 
 ### Available Fixtures
 
-Registered in `_config/dev.yml`: `element-tree`, `empty-page`, `collapse-test`, `drag-and-drop`, `multi-zone`, `complex-page`
+Registered in `_config/dev.yml`: `element-tree`, `empty-page`, `collapse-test`, `drag-and-drop`, `multi-zone`, `complex-page`, `ghost-jump`, `cross-container-ghost`, `cross-section-drop`, `cross-section-drop-single`, `cross-row-column-drop`, `cross-row-column-drop-single`, `cross-column-element-drop`, `cross-column-element-drop-single`
 
 ## Locator Strategy
 
@@ -114,6 +121,32 @@ page.getByRole('textbox', { name: 'Title' })
 ```
 
 If a `data-testid` doesn't exist for an element you need to locate, **add one to the component** rather than reaching for a class selector.
+
+## Drag & Drop Helpers
+
+Shared helpers in `tests/E2E/helpers/drag.ts` for simulating dnd-kit pointer-based drags:
+
+- **`activateDragByTitle(page, title, options?)`** — Locates drag handle by `aria-label="Move {title}"`, presses mouse down, moves 10px on axis to exceed 8px PointerSensor threshold. Options: `{ axis?: 'vertical' | 'horizontal', overlayTestId?: string }`. Returns `{ x, y }` of handle center.
+- **`dropAndSettle(page, x, y)`** — Moves mouse to target coordinates, releases, and awaits mutation settlement (PATCH + refetch + 500ms React reconciliation).
+- **`waitForMutationSettlement(page)`** — Registers response listeners for `/api/reorder` and `/api/readTree/`. Must be called BEFORE the action that triggers the mutation. Returns async settle function.
+
+### DnD Journey Test Pattern
+
+Cross-container drop specs use a journey pattern: 6 sequential drag operations in a single fixture load, then reload to verify persistence. Use `test.step()` for debuggability. Prefix each step with a schematic comment showing the before→after state:
+
+```typescript
+// Col A [A2, A3]           →  Col A [A2, A3]
+// Col B [B1, B2, B3]       →  Col B [*A1*, B1, B2, B3]
+await test.step('Forward, before-first: A1 → Col B before B1', async () => {
+  await activateDragByTitle(page, 'Element A1', { overlayTestId: 'drag-overlay-element' });
+  await enterColumn(page, colB, 4);
+  const pos = await elPosition(colB, { before: 'Element B1' });
+  await dropAndSettle(page, pos.x, pos.y);
+  await expect(colB.getByTestId('element-card-title')).toHaveText([...]);
+});
+```
+
+Keep hierarchy-specific helpers (container locators, enter functions, position calculators) in the spec file. Share only generic helpers via `tests/E2E/helpers/drag.ts`.
 
 ## Playwright Patterns
 

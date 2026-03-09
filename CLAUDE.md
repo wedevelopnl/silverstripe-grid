@@ -294,8 +294,10 @@ The project uses a custom HTTP-based fixture system, not Playwright's built-in f
 
 ### Loading Fixtures in Specs
 
+Use `loadAndNavigate` for the common pattern of loading a fixture and navigating to the CMS editor:
+
 ```typescript
-import { loadFixture, resetFixtures } from '../helpers/fixtures';
+import { resetFixtures, loadAndNavigate } from '../helpers/fixtures';
 
 test.describe('Feature area', () => {
   test.afterAll(async ({ request }) => {
@@ -303,12 +305,17 @@ test.describe('Feature area', () => {
   });
 
   test('user journey description', async ({ page }) => {
-    const fixture = await loadFixture(page.request, 'fixture-name');
-    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
-    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
-    // ... multi-step user journey assertions
+    await loadAndNavigate(page, 'fixture-name');
+    // Grid editor is loaded and ready — start asserting
   });
 });
+```
+
+Use `loadFixture` directly only when you need the fixture data (e.g., `fixture.pageId`, `fixture.fixtureMap`) without navigating, or when using `request` without a `page` (e.g., API-only tests):
+
+```typescript
+const fixture = await loadFixture(page.request, 'fixture-name');
+const response = await request.get(`/admin/grid/api/readTree/${fixture.pageId}/main`);
 ```
 
 **Important**: Use `page.request` (not the standalone `request` fixture) when a `page` object is available — this shares browser cookies and avoids `strict_user_agent_check` session invalidation.
@@ -329,7 +336,7 @@ Post-actions run after YAML write, still in DRAFT stage:
 
 ### Available Fixtures
 
-Registered in `_config/dev.yml`: `element-tree`, `empty-page`, `collapse-test`, `drag-and-drop`, `multi-zone`, `complex-page`
+Registered in `_config/dev.yml`: `element-tree`, `empty-page`, `collapse-test`, `drag-and-drop`, `multi-zone`, `complex-page`, `ghost-jump`, `cross-container-ghost`, `cross-section-drop`, `cross-section-drop-single`, `cross-row-column-drop`, `cross-row-column-drop-single`, `cross-column-element-drop`, `cross-column-element-drop-single`
 
 ## Locator Strategy
 
@@ -370,6 +377,32 @@ page.getByRole('textbox', { name: 'Title' })
 
 If a `data-testid` doesn't exist for an element you need to locate, **add one to the component** rather than reaching for a class selector.
 
+## Drag & Drop Helpers
+
+Shared helpers in `tests/E2E/helpers/drag.ts` for simulating dnd-kit pointer-based drags:
+
+- **`activateDragByTitle(page, title, options?)`** — Locates drag handle by `aria-label="Move {title}"`, presses mouse down, moves 10px on axis to exceed 8px PointerSensor threshold. Options: `{ axis?: 'vertical' | 'horizontal', overlayTestId?: string }`. Returns `{ x, y }` of handle center.
+- **`dropAndSettle(page, x, y)`** — Moves mouse to target coordinates, releases, and awaits mutation settlement (PATCH + refetch + 500ms React reconciliation).
+- **`waitForMutationSettlement(page)`** — Registers response listeners for `/api/reorder` and `/api/readTree/`. Must be called BEFORE the action that triggers the mutation. Returns async settle function.
+
+### DnD Journey Test Pattern
+
+Cross-container drop specs use a journey pattern: 6 sequential drag operations in a single fixture load, then reload to verify persistence. Use `test.step()` for debuggability. Prefix each step with a schematic comment showing the before→after state:
+
+```typescript
+// Col A [A2, A3]           →  Col A [A2, A3]
+// Col B [B1, B2, B3]       →  Col B [*A1*, B1, B2, B3]
+await test.step('Forward, before-first: A1 → Col B before B1', async () => {
+  await activateDragByTitle(page, 'Element A1', { overlayTestId: 'drag-overlay-element' });
+  await enterColumn(page, colB, 4);
+  const pos = await elPosition(colB, { before: 'Element B1' });
+  await dropAndSettle(page, pos.x, pos.y);
+  await expect(colB.getByTestId('element-card-title')).toHaveText([...]);
+});
+```
+
+Keep hierarchy-specific helpers (container locators, enter functions, position calculators) in the spec file. Share only generic helpers via `tests/E2E/helpers/drag.ts`.
+
 ## Playwright Patterns
 
 - **Serial execution**: `fullyParallel: false`, `workers: 1` — tests share database state
@@ -405,6 +438,10 @@ Package: `wedevelopnl/silverstripe-elemental-grid` (type: `silverstripe-vendormo
 - **E2E fixtures**: loaded via HTTP (`/dev/grid-fixtures/{load,reset}`), gated to dev environment only
 - **E2E TypeScript**: `tests/E2E/` has its own `tsconfig.json` (no vitest globals, includes Playwright types)
 - **Polymorphic parent ID collisions**: page IDs and element IDs share the same numeric space — lookup maps must key by composite `"ParentClass:ParentID"` not just ParentID
+- **GridSettings sparse storage**: Column GridSettings uses mobile-first cascade — only store viewport overrides, not all 6 viewports. Defaults (`width=12, offset=0, visible=true`) cascade from smallest viewport. PHP's `json_encode([])` emits `[]` not `{}` for empty settings — handle both in frontend/tests
+- **DnD pointer position**: dnd-kit's `active.rect.current.translated` drifts from the actual pointer when the grab point isn't at the element center. Use the `getPointerPosition()` helper in `useDragAndDrop.ts` which corrects for grab-point offset
+- **DnD stale droppable rects**: After SortableContext applies CSS transforms during a drag, `droppableRects` reflect pre-transform DOM positions. Use `getBoundingClientRect()` (via `closestCenterLive`) for accurate collision detection during pending cross-container moves
+- **E2E drag timing**: dnd-kit processes pointer events synchronously but React state updates are batched. Always include delays between drag steps (activation, move, settlement) to let React reconcile. See `tests/E2E/helpers/drag.ts` for calibrated timings
 
 <!-- Source: local .apm/instructions/code-style.instructions.md -->
 # Code Style
@@ -597,6 +634,45 @@ WeDevelop\Grid\Adapter\YourAdapter:
 - **Query key factory**: `client/src/hooks/queryKeys.ts` provides factories for TanStack Query cache keys. Required for correct cache invalidation across mutations.
 - **API client layers**: 4-file architecture in `client/src/api/` — `client.ts` (HTTP primitives), `endpoints.ts` (business operations), `config.ts` (CMS globals like security token, base URL), `errors.ts` (typed error classes).
 - **Bridge pattern**: entwine in `client/src/bridge/` mounts React components into jQuery DOM. Injector wraps SilverStripe DI. New components registered via `client/src/boot/registerComponents.ts`.
+
+## Drag & Drop (dnd-kit)
+
+Detailed architecture documented in `docs/architecture/drag-and-drop.md`.
+
+### Composite IDs
+
+Draggable/droppable IDs encode hierarchy level: `type-numericId` (e.g., `row-42`, `column-7`). Parse with `parseDraggableId()`, build with `buildDraggableId()`. `PARENT_CONTAINER_TYPE` maps each type to its parent (`element→column→row→section→root`).
+
+### Collision Detection (3-tier)
+
+`createTypedCollisionDetection()` in `client/src/utils/collisionDetection.ts`:
+
+1. **centerCrossing** (siblings, no pending move) — Direction-aware threshold crossing with overlap gate. Prevents ghost jumps by requiring the collision rect center to actually cross a threshold on the target, not just be nearest. Threshold adapts to DragOverlay size asymmetry (compact overlay ≈53px vs full element ≈350px).
+2. **closestCenterLive** (siblings, pending move active) — Reads live DOM rects via `getBoundingClientRect()` because CSS transforms from SortableContext make `droppableRects` stale. Filtered to pending container siblings only.
+3. **closestCenter** (parent containers) — Distance-based fallback for cross-container entry.
+
+### Pending Tree Pattern
+
+During cross-container drags, `handleDragOver` calls `applyReorder()` to produce a mutated tree stored in `pendingTree` state. This provides immediate visual feedback (element appears in target container) without triggering API mutations. `pendingContainerItemsRef` tracks valid sibling IDs for collision filtering. Cleared on drop or cancel.
+
+### Direction-Aware Placement
+
+`handleDragOver` and `handleDragEnd` compare pointer position against the `over` element's center to determine before/after placement. Columns use X-axis (horizontal layout), all other levels use Y-axis (vertical layout).
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `client/src/hooks/useDragAndDrop.ts` | Core hook: sensors, callbacks, pending tree state |
+| `client/src/utils/collisionDetection.ts` | 3-tier collision detection, type filtering |
+| `client/src/utils/applyReorder.ts` | Immutable tree mutation for optimistic updates |
+| `client/src/utils/resolveReorderParams.ts` | Maps dnd-kit event context to API payload |
+| `client/src/hooks/useElementMaps.ts` | O(1) lookup maps: `nodeMap`, `childrenByParentId` |
+| `client/src/types/dnd.ts` | Composite IDs, type constants, parent-type mapping |
+
+### GridSettings (Sparse Storage)
+
+Column grid settings use mobile-first cascade. Only viewport overrides are stored — defaults (`width=12, offset=0, visible=true`) cascade from the smallest viewport. `Column::getColumnClasses()` walks viewports smallest→largest, emitting CSS classes only when the effective value changes from the previous breakpoint.
 
 ---
 *This file was generated by APM CLI. Do not edit manually.*

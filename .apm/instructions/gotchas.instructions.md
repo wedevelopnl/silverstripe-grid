@@ -15,3 +15,7 @@ applyTo: "**/*"
 - **E2E fixtures**: loaded via HTTP (`/dev/grid-fixtures/{load,reset}`), gated to dev environment only
 - **E2E TypeScript**: `tests/E2E/` has its own `tsconfig.json` (no vitest globals, includes Playwright types)
 - **Polymorphic parent ID collisions**: page IDs and element IDs share the same numeric space — lookup maps must key by composite `"ParentClass:ParentID"` not just ParentID
+- **GridSettings sparse storage**: Column GridSettings uses mobile-first cascade — only store viewport overrides, not all 6 viewports. Defaults (`width=12, offset=0, visible=true`) cascade from smallest viewport. PHP's `json_encode([])` emits `[]` not `{}` for empty settings — handle both in frontend/tests
+- **DnD pointer position**: dnd-kit's `active.rect.current.translated` drifts from the actual pointer when the grab point isn't at the element center. Use the `getPointerPosition()` helper in `useDragAndDrop.ts` which corrects for grab-point offset
+- **DnD stale droppable rects**: After SortableContext applies CSS transforms during a drag, `droppableRects` reflect pre-transform DOM positions. Use `getBoundingClientRect()` (via `closestCenterLive`) for accurate collision detection during pending cross-container moves
+- **E2E drag timing**: dnd-kit processes pointer events synchronously but React state updates are batched. Always include delays between drag steps (activation, move, settlement) to let React reconcile. See `tests/E2E/helpers/drag.ts` for calibrated timings
