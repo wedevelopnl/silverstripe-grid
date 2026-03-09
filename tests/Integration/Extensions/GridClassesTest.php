@@ -8,6 +8,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Adapter\BulmaAdapter;
+use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
@@ -64,6 +66,80 @@ final class GridClassesTest extends SapphireTest
         $this->assertInstanceOf(Row::class, $row);
 
         $this->assertSame('row', $row->getRowClasses());
+    }
+
+    // --- Section: getContainerClasses() with Tailwind adapter ---
+
+    public function testContainerClassesWithTailwindAdapter(): void
+    {
+        $section = Section::create();
+        $section->write();
+        $section->gridAdapter = new TailwindAdapter();
+
+        $this->assertSame('container mx-auto', $section->getContainerClasses());
+    }
+
+    public function testFluidContainerClassesWithTailwindAdapter(): void
+    {
+        Config::modify()->set(Section::class, 'fluid_container', true);
+
+        $section = Section::create();
+        $section->write();
+        $section->gridAdapter = new TailwindAdapter();
+
+        $this->assertSame('w-full', $section->getContainerClasses());
+    }
+
+    // --- Section: getContainerClasses() with Bulma adapter ---
+
+    public function testContainerClassesWithBulmaAdapter(): void
+    {
+        $section = Section::create();
+        $section->write();
+        $section->gridAdapter = new BulmaAdapter();
+
+        $this->assertSame('container', $section->getContainerClasses());
+    }
+
+    public function testFluidContainerClassesWithBulmaAdapter(): void
+    {
+        Config::modify()->set(Section::class, 'fluid_container', true);
+
+        $section = Section::create();
+        $section->write();
+        $section->gridAdapter = new BulmaAdapter();
+
+        $this->assertSame('container is-fluid', $section->getContainerClasses());
+    }
+
+    // --- Row: getRowClasses() with Tailwind adapter ---
+
+    public function testRowClassesWithTailwindAdapter(): void
+    {
+        $section = Section::create();
+        $section->write();
+
+        $row = $section->getChildren()->first();
+        $this->assertInstanceOf(Row::class, $row);
+
+        $row->gridAdapter = new TailwindAdapter();
+
+        $this->assertSame('grid grid-cols-12', $row->getRowClasses());
+    }
+
+    // --- Row: getRowClasses() with Bulma adapter ---
+
+    public function testRowClassesWithBulmaAdapter(): void
+    {
+        $section = Section::create();
+        $section->write();
+
+        $row = $section->getChildren()->first();
+        $this->assertInstanceOf(Row::class, $row);
+
+        $row->gridAdapter = new BulmaAdapter();
+
+        $this->assertSame('columns is-multiline', $row->getRowClasses());
     }
 
     // --- Column: getColumnClasses() with sparse settings and mobile-first cascade ---
