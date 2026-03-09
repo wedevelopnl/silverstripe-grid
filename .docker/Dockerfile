@@ -34,6 +34,8 @@ COPY app/infection.json5 /app/infection.json5
 COPY app/phpunit.xml.dist /app/phpunit.xml.dist
 COPY app/phpstan.neon.dist /app/phpstan.neon.dist
 
+COPY assets/css/ /app/public/css/
+
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
