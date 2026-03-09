@@ -24,6 +24,39 @@ function makeContainer(id: string): DroppableContainer {
   };
 }
 
+/**
+ * Creates a DroppableContainer with a mock DOM node that returns the given
+ * bounding rect from getBoundingClientRect(). Required for closestCenterLive
+ * which reads live DOM rects in the hasPendingMove=true path.
+ */
+function makeContainerWithRect(
+  id: string,
+  domRect: { left: number; top: number; width: number; height: number },
+): DroppableContainer {
+  const mockNode = {
+    getBoundingClientRect: () => ({
+      left: domRect.left,
+      top: domRect.top,
+      width: domRect.width,
+      height: domRect.height,
+      right: domRect.left + domRect.width,
+      bottom: domRect.top + domRect.height,
+      x: domRect.left,
+      y: domRect.top,
+      toJSON: () => ({}),
+    }),
+  } as unknown as HTMLElement;
+
+  return {
+    id,
+    key: id,
+    data: { current: undefined },
+    disabled: false,
+    node: { current: mockNode },
+    rect: { current: null },
+  };
+}
+
 describe('filterDroppablesByType', () => {
   const containers = [
     makeContainer('section-1'),
@@ -672,9 +705,9 @@ describe('createTypedCollisionDetection', () => {
 
     // Sibling at y=0. Active starts at y=100, dragged to y=60 — NOT crossing
     // the centerCrossing threshold (center at y=85, threshold at y=25).
-    // But closestCenter sees it as the closest target by distance.
-    const sibling = makeContainer('row-20');
+    // But closestCenterLive sees it as the closest target by distance.
     const siblingRect = { ...rect, top: 0, bottom: 50 }; // center y=25
+    const sibling = makeContainerWithRect('row-20', { left: siblingRect.left, top: siblingRect.top, width: siblingRect.width, height: 50 });
     const initialRect = { ...rect, top: 100, bottom: 150 }; // center y=125
     const collisionRect = { ...rect, top: 60, bottom: 110 }; // center y=85
 
@@ -703,9 +736,9 @@ describe('createTypedCollisionDetection', () => {
 
     // Collision rect overlaps sibling but threshold NOT crossed.
     // With hasPendingMove=false, overlap guard would return [].
-    // With hasPendingMove=true, closestCenter returns the sibling.
-    const sibling = makeContainer('row-20');
+    // With hasPendingMove=true, closestCenterLive returns the sibling.
     const siblingRect = { ...rect, top: 0, bottom: 50 };
+    const sibling = makeContainerWithRect('row-20', { left: siblingRect.left, top: siblingRect.top, width: siblingRect.width, height: 50 });
     const initialRect = { ...rect, top: 100, bottom: 150 };
     // Overlapping but not crossing threshold
     const collisionRect = { ...rect, top: 30, bottom: 80 };

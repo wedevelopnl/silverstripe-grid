@@ -8,6 +8,38 @@ import {
 import { getDraggableType, PARENT_CONTAINER_TYPE } from '@/types/dnd';
 
 /**
+ * Like closestCenter, but reads live DOM rects via getBoundingClientRect()
+ * instead of using dnd-kit's droppableRects (which are pre-CSS-transform
+ * and stale after SortableContext shifts items visually).
+ */
+const closestCenterLive: CollisionDetection = (args) => {
+  const { collisionRect, droppableContainers } = args;
+  const centerX = collisionRect.left + collisionRect.width / 2;
+  const centerY = collisionRect.top + collisionRect.height / 2;
+  const collisions: Collision[] = [];
+
+  for (const container of droppableContainers) {
+    const domNode = container.node.current;
+    if (!domNode) continue;
+
+    const rect = domNode.getBoundingClientRect();
+    const targetCX = rect.left + rect.width / 2;
+    const targetCY = rect.top + rect.height / 2;
+    const dx = centerX - targetCX;
+    const dy = centerY - targetCY;
+
+    collisions.push({
+      id: container.id,
+      data: { droppableContainer: container, value: dx * dx + dy * dy },
+    });
+  }
+
+  return collisions.sort(
+    (a, b) => (a.data?.value as number) - (b.data?.value as number),
+  );
+};
+
+/**
  * Filters droppable containers to only those valid for the given active item.
  *
  * A container is valid if:
@@ -176,8 +208,17 @@ export const centerCrossing: CollisionDetection = (args) => {
   );
 };
 
+export interface OverRectSnapshot {
+  id: string | number;
+  rect: { left: number; top: number; width: number; height: number };
+}
+
 export interface TypedCollisionDetectionOptions {
   hasPendingMoveRef: { current: boolean };
+  /** Set of composite droppable IDs belonging to the active item's pending container. */
+  pendingContainerItemsRef?: { current: ReadonlySet<string | number> | null };
+  /** Updated on every collision detection cycle with the winning element's rect. */
+  overRectRef?: { current: OverRectSnapshot | null };
 }
 
 /**
@@ -205,19 +246,53 @@ export function createTypedCollisionDetection(
       (container) => container.id !== args.active.id,
     );
 
+    /**
+     * Capture the winning collision's live DOM rect via getBoundingClientRect().
+     * Both `over.rect` (from DragEndEvent) and `droppableRects` (from the
+     * measuring system) can be stale after cross-container re-renders shift
+     * element positions — dnd-kit only re-measures when droppable IDs change,
+     * not when existing elements move. Reading the DOM directly ensures the
+     * direction comparison in handleDragEnd uses the element's actual position.
+     */
+    const captureWinnerRect = (collisions: Collision[]) => {
+      if (options.overRectRef && collisions.length > 0) {
+        const winnerId = collisions[0].id;
+        const container = args.droppableContainers.find((c) => c.id === winnerId);
+        const domNode = container?.node.current;
+        if (domNode) {
+          const domRect = domNode.getBoundingClientRect();
+          options.overRectRef.current = {
+            id: winnerId,
+            rect: { left: domRect.left, top: domRect.top, width: domRect.width, height: domRect.height },
+          };
+        }
+      }
+      return collisions;
+    };
+
     const siblings = filterSiblings(activeId, nonActiveContainers);
 
     if (options.hasPendingMoveRef.current) {
-      // After a pending cross-container move, layout shifts invalidate
-      // centerCrossing thresholds. Use closestCenter (distance-based,
-      // unaffected by layout shifts) and skip the overlap guard.
-      const siblingCollisions = closestCenter({
+      // After a pending cross-container move, SortableContext CSS transforms
+      // shift items visually, but droppableRects reflect pre-transform DOM
+      // positions. closestCenter uses these stale rects and picks the wrong
+      // element. Instead, read live DOM rects via getBoundingClientRect()
+      // which includes CSS transforms.
+      //
+      // Also filter to only siblings in the pending container to prevent
+      // wrong-container bouncing.
+      const pendingItems = options.pendingContainerItemsRef?.current;
+      const pendingSiblings = pendingItems !== null && pendingItems !== undefined
+        ? siblings.filter((s) => pendingItems.has(s.id))
+        : siblings;
+
+      const siblingCollisions = closestCenterLive({
         ...args,
-        droppableContainers: siblings,
+        droppableContainers: pendingSiblings,
       });
 
       if (siblingCollisions.length > 0) {
-        return siblingCollisions;
+        return captureWinnerRect(siblingCollisions);
       }
     } else {
       // Pass 1: prefer sibling collisions — centerCrossing requires the dragged
@@ -230,7 +305,7 @@ export function createTypedCollisionDetection(
       });
 
       if (siblingCollisions.length > 0) {
-        return siblingCollisions;
+        return captureWinnerRect(siblingCollisions);
       }
 
       // Guard: if the collision rect overlaps any sibling (but the crossing
@@ -260,10 +335,10 @@ export function createTypedCollisionDetection(
     // entering empty containers triggers at distance)
     const parents = filterParentContainers(activeId, nonActiveContainers);
 
-    return closestCenter({
+    return captureWinnerRect(closestCenter({
       ...args,
       droppableContainers: parents,
-    });
+    }));
   };
 }
 

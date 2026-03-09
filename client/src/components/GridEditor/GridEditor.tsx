@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { DndContext, DragOverlay } from '@dnd-kit/core';
+import { DndContext, DragOverlay, MeasuringStrategy } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useElementTree } from '@/hooks/useElementTree';
 import { useTreeEnrichment } from '@/hooks/useTreeEnrichment';
@@ -73,6 +73,7 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
             <DndContext
               sensors={sensors}
               collisionDetection={collisionDetection}
+              measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}

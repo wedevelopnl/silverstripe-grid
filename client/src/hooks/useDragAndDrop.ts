@@ -27,6 +27,7 @@ import { useElementMaps, buildMaps } from '@/hooks/useElementMaps';
 import { resolveReorderParams } from '@/utils/resolveReorderParams';
 import { applyReorder } from '@/utils/applyReorder';
 import { createTypedCollisionDetection } from '@/utils/collisionDetection';
+import type { OverRectSnapshot } from '@/utils/collisionDetection';
 
 // --- Public types ---
 
@@ -69,6 +70,40 @@ export function useDragContext(): DragContextValue {
   return useContext(DragContext);
 }
 
+// --- Helpers ---
+
+/**
+ * Compute the current pointer viewport position from a dnd-kit drag event.
+ *
+ * `active.rect.current.translated` is scroll-adjusted (viewport-relative) but
+ * uses the original element's dimensions, so its center drifts from the pointer
+ * when the grab point isn't at the element's center.
+ *
+ * Fix: offset `translated` by the grab point distance within the initial rect.
+ * This gives the pointer's true viewport position, consistent with
+ * `getBoundingClientRect()` values used for droppable rects.
+ *
+ * `event.delta` is NOT usable here — dnd-kit adds accumulated scroll offsets
+ * to the translate state (via auto-scroll's `onScrollChange`), so
+ * `pe.clientY + event.delta.y` gives a scroll-inflated value, not viewport Y.
+ */
+function getPointerPosition(event: {
+  activatorEvent: Event;
+  active: { rect: { current: { initial: { left: number; top: number } | null; translated: { left: number; top: number } | null } } };
+}): { x: number; y: number } | null {
+  const pe = event.activatorEvent;
+  if (!(pe instanceof PointerEvent)) return null;
+
+  const initialRect = event.active.rect.current.initial;
+  const translated = event.active.rect.current.translated;
+  if (!initialRect || !translated) return null;
+
+  return {
+    x: translated.left + (pe.clientX - initialRect.left),
+    y: translated.top + (pe.clientY - initialRect.top),
+  };
+}
+
 // --- Hook ---
 
 const POINTER_DISTANCE_THRESHOLD = 8;
@@ -81,11 +116,13 @@ export function useDragAndDrop({
   const [pendingTree, setPendingTree] = useState<ElementTreeResponse | null>(null);
   const pendingTreeRef = useRef<ElementTreeResponse | null>(null);
   const hasPendingMoveRef = useRef(false);
+  const overRectRef = useRef<OverRectSnapshot | null>(null);
+  const pendingContainerItemsRef = useRef<ReadonlySet<string | number> | null>(null);
   const maps = useElementMaps(tree);
 
-  // Stable collision detection instance — the ref is read dynamically per event
+  // Stable collision detection instance — refs are read dynamically per event
   const [collisionDetection] = useState<CollisionDetection>(
-    () => createTypedCollisionDetection({ hasPendingMoveRef }),
+    () => createTypedCollisionDetection({ hasPendingMoveRef, pendingContainerItemsRef, overRectRef }),
   );
 
   const sensors = useSensors(
@@ -97,6 +134,8 @@ export function useDragAndDrop({
   const clearPendingTree = useCallback(() => {
     pendingTreeRef.current = null;
     hasPendingMoveRef.current = false;
+    overRectRef.current = null;
+    pendingContainerItemsRef.current = null;
     setPendingTree(null);
   }, []);
 
@@ -141,7 +180,28 @@ export function useDragAndDrop({
         const overNode = effectiveMaps.nodeMap.get(overParsed.id);
         if (!overNode) return;
         targetParentId = overNode.parentId;
-        afterElementId = overParsed.id;
+
+        // Direction-aware: place before or after based on pointer vs over center.
+        // Columns use X-axis (horizontal layout); all others use Y-axis (vertical).
+        const pointer = getPointerPosition(event);
+        if (pointer !== null) {
+          const useXAxis = activeParsed.type === 'column';
+          const pointerPos = useXAxis ? pointer.x : pointer.y;
+          const overCenter = useXAxis
+            ? over.rect.left + over.rect.width / 2
+            : over.rect.top + over.rect.height / 2;
+
+          if (pointerPos < overCenter) {
+            // Pointer before over's center → place BEFORE over
+            const siblings = effectiveMaps.childrenByParentId.get(targetParentId) ?? [];
+            const overIdx = siblings.findIndex((n) => n.id === overParsed.id);
+            afterElementId = overIdx > 0 ? siblings[overIdx - 1].id : null;
+          } else {
+            afterElementId = overParsed.id;
+          }
+        } else {
+          afterElementId = overParsed.id;
+        }
       } else {
         // Over a container — append to end
         const containerNode = effectiveMaps.nodeMap.get(overParsed.id);
@@ -152,25 +212,9 @@ export function useDragAndDrop({
       }
 
       // Same-container: SortableContext handles visual reordering via transforms.
-      // During a cross-container drag, also track within-container position
-      // in the ref (not state) so handleDragEnd can read the correct final position.
+      // handleDragEnd computes the final position from the pointer direction,
+      // so no ref correction is needed here.
       if (activeNode.parentId === targetParentId) {
-        if (pendingTreeRef.current !== null && overParsed.type === activeParsed.type) {
-          const containerChildren = effectiveMaps.childrenByParentId.get(targetParentId) ?? [];
-          const activeIdx = containerChildren.findIndex((n) => n.id === activeParsed.id);
-          const overIdx = containerChildren.findIndex((n) => n.id === overParsed.id);
-
-          // SortableContext places active at overIdx: when activeIdx > overIdx
-          // the active moves UP (before over), otherwise DOWN (after over).
-          const correctedAfterId = activeIdx > overIdx
-            ? (overIdx > 0 ? containerChildren[overIdx - 1].id : null)
-            : overParsed.id;
-
-          const newTree = applyReorder(effectiveTree, activeParsed.id, targetParentId, correctedAfterId);
-          if (newTree !== effectiveTree) {
-            pendingTreeRef.current = newTree;
-          }
-        }
         return;
       }
 
@@ -178,6 +222,16 @@ export function useDragAndDrop({
       if (newTree !== effectiveTree) {
         pendingTreeRef.current = newTree;
         hasPendingMoveRef.current = true;
+
+        // Compute the set of sibling droppable IDs in the target container
+        // so collision detection can filter out wrong-container siblings
+        // whose stale rects would cause closestCenter to bounce the item back.
+        const newMaps = buildMaps(newTree);
+        const targetSiblings = newMaps.childrenByParentId.get(targetParentId) ?? [];
+        pendingContainerItemsRef.current = new Set(
+          targetSiblings.map((n) => buildDraggableId(activeParsed.type, n.id)),
+        );
+
         setPendingTree(newTree);
       }
     },
@@ -186,8 +240,9 @@ export function useDragAndDrop({
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
-      // Capture pending tree before clearing — used for cross-container position resolution
       const currentPendingTree = pendingTreeRef.current;
+      const currentOverRect = overRectRef.current;
+      const pointer = getPointerPosition(event);
 
       setDragState(null);
       clearPendingTree();
@@ -216,23 +271,68 @@ export function useDragAndDrop({
       }
       const sourceIndex = sourceChildren.findIndex((n) => n.id === activeParsed.id);
 
-      // Cross-container drag: the pending tree tracks the active item's position
-      // through both cross-container moves and within-container reordering.
-      // Read the final position directly from the pending tree.
+      // Cross-container drag: the pending tree knows which container the item
+      // is in, but the final position within that container is computed from
+      // the pointer direction relative to the 'over' element's DOM rect.
+      // This avoids reliance on ref-based corrections that can diverge from
+      // visual DOM positions during cascading within-container events.
       if (currentPendingTree !== null) {
         const pendingMaps = buildMaps(currentPendingTree);
         const pendingNode = pendingMaps.nodeMap.get(activeParsed.id);
         if (pendingNode) {
           const targetParentId = pendingNode.parentId;
           const siblings = pendingMaps.childrenByParentId.get(targetParentId) ?? [];
-          const idx = siblings.findIndex((n) => n.id === activeParsed.id);
+
+          // Build the sibling list without the active item — this is the
+          // baseline order into which we'll insert at the pointer position.
           const compositeIds = siblings.map((n) => buildDraggableId(activeParsed.type, n.id));
+          const filtered = compositeIds.filter((id) => id !== String(active.id));
+
+          let insertIndex: number;
+
+          if (overParsed.type === activeParsed.type) {
+            // Over a sibling — find its position in the filtered list
+            // (excluding the active item) and use pointer direction.
+            const overCompositeId = buildDraggableId(overParsed.type, overParsed.id);
+            const overIdx = filtered.indexOf(overCompositeId);
+            if (overIdx === -1) {
+              // Over element not in this container — append to end
+              insertIndex = filtered.length;
+            } else {
+              insertIndex = overIdx;
+
+              // Use the over element's fresh DOM rect captured during collision
+              // detection. `over.rect` from DragEndEvent can be stale after
+              // cross-container re-renders shift droppable positions.
+              const freshOverRect = String(currentOverRect?.id) === String(over.id)
+                ? currentOverRect!.rect
+                : over.rect;
+
+              if (pointer !== null) {
+                const useXAxis = activeParsed.type === 'column';
+                const pointerPos = useXAxis ? pointer.x : pointer.y;
+                const overCenter = useXAxis
+                  ? freshOverRect.left + freshOverRect.width / 2
+                  : freshOverRect.top + freshOverRect.height / 2;
+
+                if (pointerPos > overCenter) {
+                  insertIndex += 1;
+                }
+              }
+            }
+          } else {
+            // Over a container — append to end
+            insertIndex = filtered.length;
+          }
+
+          const clampedIndex = Math.min(insertIndex, filtered.length);
+          filtered.splice(clampedIndex, 0, String(active.id));
 
           const params = resolveReorderParams({
             activeId: String(active.id),
             overContainerParentId: targetParentId,
-            overIndex: idx,
-            containerItems: compositeIds,
+            overIndex: filtered.indexOf(String(active.id)),
+            containerItems: filtered,
             sourceContainerParentId: sourceParentId,
             sourceIndex,
           });
@@ -267,14 +367,17 @@ export function useDragAndDrop({
 
         // Fallback direction check for cross-container drops without a pending tree
         // (e.g., very fast drag where handleDragOver didn't fire)
-        if (sourceParentId !== targetParentId) {
-          const translated = active.rect.current.translated;
-          if (translated !== null) {
-            const dragCenterY = translated.top + translated.height / 2;
-            const overCenterY = over.rect.top + over.rect.height / 2;
-            if (dragCenterY > overCenterY) {
-              insertIndex += 1;
-            }
+        if (sourceParentId !== targetParentId && pointer !== null) {
+          const freshOverRect = String(currentOverRect?.id) === String(over.id)
+            ? currentOverRect!.rect
+            : over.rect;
+          const useXAxis = activeParsed.type === 'column';
+          const pointerPos = useXAxis ? pointer.x : pointer.y;
+          const overCenter = useXAxis
+            ? freshOverRect.left + freshOverRect.width / 2
+            : freshOverRect.top + freshOverRect.height / 2;
+          if (pointerPos > overCenter) {
+            insertIndex += 1;
           }
         }
       } else {

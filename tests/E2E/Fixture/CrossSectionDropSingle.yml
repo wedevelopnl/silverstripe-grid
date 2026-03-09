@@ -1,25 +1,20 @@
-# E2E fixture for cross-container "between rows" drop regression test.
+# E2E fixture for cross-section row drop — source depletion test.
 #
 # Structure:
-#   Page (E2E Cross Container Between Test):
+#   Page (E2E Cross Section Drop Single):
 #     Section Alpha (Sort: 1)
-#       Row Alpha-1 (Sort: 1)
-#         Column A1 (Sort: 1) — Block A1
+#       Row A1 (Sort: 1) — Col A1 — Block A1
 #     Section Beta (Sort: 2)
-#       Row Beta-1 (Sort: 1)
-#         Column B1 (Sort: 1) — Block B1
-#       Row Beta-2 (Sort: 2)
-#         Column B2 (Sort: 1) — Block B2
-#       Row Beta-3 (Sort: 3)
-#         Column B3 (Sort: 1) — Block B3
+#       Row B1 (Sort: 1) — Col B1 — Block B1
+#       Row B2 (Sort: 2) — Col B2 — Block B2
+#       Row B3 (Sort: 3) — Col B3 — Block B3
 #
-# Alpha has a single row. Beta has 3 rows.
-# Test drags Alpha-1 to land BETWEEN Beta-1 and Beta-2 (or between Beta-2 and Beta-3).
+# Alpha has 1 row. Moving it to Beta empties Alpha.
 
 Page:
   e2e_page:
-    Title: 'E2E Cross Container Between Test'
-    URLSegment: 'e2e-cross-container-between'
+    Title: 'E2E Cross Section Drop Single'
+    URLSegment: 'e2e-cross-section-drop-single'
 
 WeDevelop\Grid\Model\Section:
   section_alpha:
@@ -37,19 +32,19 @@ WeDevelop\Grid\Model\Section:
 
 WeDevelop\Grid\Model\Row:
   row_a1:
-    Title: 'Row Alpha-1'
+    Title: 'Row A1'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Section.section_alpha
   row_b1:
-    Title: 'Row Beta-1'
+    Title: 'Row B1'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Section.section_beta
   row_b2:
-    Title: 'Row Beta-2'
+    Title: 'Row B2'
     Sort: 2
     Parent: =>WeDevelop\Grid\Model\Section.section_beta
   row_b3:
-    Title: 'Row Beta-3'
+    Title: 'Row B3'
     Sort: 3
     Parent: =>WeDevelop\Grid\Model\Section.section_beta
 

@@ -55,8 +55,38 @@ WeDevelop\Grid\Dev\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
-    cross-container-between:
-      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossContainerBetween.yml'
+    cross-section-drop:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossSectionDrop.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
+    cross-section-drop-single:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossSectionDropSingle.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
+    cross-row-column-drop:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossRowColumnDrop.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
+    cross-row-column-drop-single:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossRowColumnDropSingle.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
+    cross-column-element-drop:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossColumnElementDrop.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
+    cross-column-element-drop-single:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossColumnElementDropSingle.yml'
       post_actions:
         - action: publish_recursive
           class: Page

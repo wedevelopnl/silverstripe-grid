@@ -1,0 +1,75 @@
+# E2E fixture for cross-column element drop position tests.
+#
+# Structure:
+#   Page (E2E Cross Column Element Drop):
+#     Section (Sort: 1)
+#       Row (Sort: 1)
+#         Col A (Sort: 1, width: 6)
+#           Element A1 (Sort: 1)
+#           Element A2 (Sort: 2)
+#           Element A3 (Sort: 3)
+#         Col B (Sort: 2, width: 6)
+#           Element B1 (Sort: 1)
+#           Element B2 (Sort: 2)
+#           Element B3 (Sort: 3)
+#
+# Single section, single row, two columns (width:6 = half of 12-col grid).
+# Each column has 3 content elements. Tests cover element drops at all
+# positions between columns.
+
+Page:
+  e2e_page:
+    Title: 'E2E Cross Column Element Drop'
+    URLSegment: 'e2e-cross-column-element-drop'
+
+WeDevelop\Grid\Model\Section:
+  section:
+    Title: 'Section'
+    ShowTitle: 1
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+
+WeDevelop\Grid\Model\Row:
+  row:
+    Title: 'Row'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.section
+
+WeDevelop\Grid\Model\Column:
+  col_a:
+    Title: 'Col A'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":6,"offset":0,"visible":true},"lg":{"width":6,"offset":0,"visible":true},"xl":{"width":6,"offset":0,"visible":true},"xxl":{"width":6,"offset":0,"visible":true}}'
+  col_b:
+    Title: 'Col B'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Row.row
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":6,"offset":0,"visible":true},"lg":{"width":6,"offset":0,"visible":true},"xl":{"width":6,"offset":0,"visible":true},"xxl":{"width":6,"offset":0,"visible":true}}'
+
+WeDevelop\Grid\Model\ContentElement:
+  el_a1:
+    Title: 'Element A1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_a
+  el_a2:
+    Title: 'Element A2'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Column.col_a
+  el_a3:
+    Title: 'Element A3'
+    Sort: 3
+    Parent: =>WeDevelop\Grid\Model\Column.col_a
+  el_b1:
+    Title: 'Element B1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_b
+  el_b2:
+    Title: 'Element B2'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Column.col_b
+  el_b3:
+    Title: 'Element B3'
+    Sort: 3
+    Parent: =>WeDevelop\Grid\Model\Column.col_b

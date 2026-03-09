@@ -1,0 +1,76 @@
+# E2E fixture for cross-row column drop — source depletion test.
+#
+# Structure:
+#   Page (E2E Cross Row Column Drop Single):
+#     Section (Sort: 1)
+#       Row A (Sort: 1)
+#         Col A1 (Sort: 1, width: 3) — Block A1
+#       Row B (Sort: 2)
+#         Col B1 (Sort: 1, width: 3) — Block B1
+#         Col B2 (Sort: 2, width: 3) — Block B2
+#         Col B3 (Sort: 3, width: 3) — Block B3
+#
+# Row A has 1 column. Moving it to Row B empties Row A.
+
+Page:
+  e2e_page:
+    Title: 'E2E Cross Row Column Drop Single'
+    URLSegment: 'e2e-cross-row-column-drop-single'
+
+WeDevelop\Grid\Model\Section:
+  section:
+    Title: 'Section'
+    ShowTitle: 1
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+
+WeDevelop\Grid\Model\Row:
+  row_a:
+    Title: 'Row A'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.section
+  row_b:
+    Title: 'Row B'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Section.section
+
+WeDevelop\Grid\Model\Column:
+  col_a1:
+    Title: 'Col A1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_a
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":3,"offset":0,"visible":true},"lg":{"width":3,"offset":0,"visible":true},"xl":{"width":3,"offset":0,"visible":true},"xxl":{"width":3,"offset":0,"visible":true}}'
+  col_b1:
+    Title: 'Col B1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_b
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":3,"offset":0,"visible":true},"lg":{"width":3,"offset":0,"visible":true},"xl":{"width":3,"offset":0,"visible":true},"xxl":{"width":3,"offset":0,"visible":true}}'
+  col_b2:
+    Title: 'Col B2'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Row.row_b
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":3,"offset":0,"visible":true},"lg":{"width":3,"offset":0,"visible":true},"xl":{"width":3,"offset":0,"visible":true},"xxl":{"width":3,"offset":0,"visible":true}}'
+  col_b3:
+    Title: 'Col B3'
+    Sort: 3
+    Parent: =>WeDevelop\Grid\Model\Row.row_b
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":3,"offset":0,"visible":true},"lg":{"width":3,"offset":0,"visible":true},"xl":{"width":3,"offset":0,"visible":true},"xxl":{"width":3,"offset":0,"visible":true}}'
+
+WeDevelop\Grid\Model\ContentElement:
+  block_a1:
+    Title: 'Block A1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_a1
+  block_b1:
+    Title: 'Block B1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_b1
+  block_b2:
+    Title: 'Block B2'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_b2
+  block_b3:
+    Title: 'Block B3'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_b3
