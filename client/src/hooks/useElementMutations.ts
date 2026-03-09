@@ -86,6 +86,7 @@ export function useUpdateGridSettings(pageId: number, zone: string) {
 interface ReorderMutationVariables {
   params: ReorderElementParams;
   tree: ElementTreeResponse;
+  clearPendingTree?: () => void;
 }
 
 export function useReorderElement(pageId: number, zone: string) {
@@ -94,7 +95,7 @@ export function useReorderElement(pageId: number, zone: string) {
 
   return useMutation<void, ApiError, ReorderMutationVariables, ElementTreeResponse | undefined>({
     mutationFn: ({ params }) => reorderElement(params),
-    onMutate: async ({ params, tree }) => {
+    onMutate: async ({ params, tree, clearPendingTree }) => {
       await queryClient.cancelQueries({ queryKey });
 
       const snapshot = queryClient.getQueryData<ElementTreeResponse>(queryKey);
@@ -108,9 +109,17 @@ export function useReorderElement(pageId: number, zone: string) {
 
       queryClient.setQueryData(queryKey, optimistic);
 
+      // Clear pending tree after optimistic data is in the cache,
+      // preventing a 1-frame snap-back to the original tree.
+      clearPendingTree?.();
+
       return snapshot;
     },
-    onError: (error, _variables, snapshot) => {
+    onError: (error, { clearPendingTree }, snapshot) => {
+      // Safety net: clear pending tree if onMutate threw before reaching
+      // the clearPendingTree call above.
+      clearPendingTree?.();
+
       if (snapshot !== undefined) {
         queryClient.setQueryData(queryKey, snapshot);
       }

@@ -34,10 +34,11 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
 
   const { sensors, collisionDetection, dragState, pendingTree, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel } = useDragAndDrop({
     tree: data ?? {},
-    onReorder: (elementID, targetParentId, afterElementID) => {
+    onReorder: (elementID, targetParentId, afterElementID, clearPendingTree) => {
       reorderMutation.mutate({
         params: { elementID, targetParentId, afterElementID },
         tree: data ?? {},
+        clearPendingTree,
       });
     },
   });

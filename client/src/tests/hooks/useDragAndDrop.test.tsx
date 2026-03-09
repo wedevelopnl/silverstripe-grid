@@ -387,6 +387,7 @@ describe('useDragAndDrop', () => {
         30,   // elementID
         20,   // targetParentId (column 20's id)
         31,   // afterElementID (placed after element 31)
+        expect.any(Function),
       );
     });
 
@@ -406,6 +407,7 @@ describe('useDragAndDrop', () => {
         30,   // elementID
         21,   // targetParentId (column 21's id)
         null, // afterElementID (takes position of element-32, which is index 0)
+        expect.any(Function),
       );
     });
 
@@ -440,6 +442,7 @@ describe('useDragAndDrop', () => {
         30,   // elementID
         21,   // targetParentId (column 21's id)
         null, // afterElementID (appended to empty container = first position)
+        expect.any(Function),
       );
     });
 
@@ -485,6 +488,7 @@ describe('useDragAndDrop', () => {
         31,   // elementID
         21,   // targetParentId (column 21's id)
         null, // afterElementID (takes position of element-32 at index 0)
+        expect.any(Function),
       );
     });
 
@@ -504,6 +508,7 @@ describe('useDragAndDrop', () => {
         31,   // elementID
         20,   // targetParentId (same container)
         null, // afterElementID (moved to front)
+        expect.any(Function),
       );
     });
 
@@ -575,6 +580,7 @@ describe('useDragAndDrop', () => {
           11, // elementID
           3,  // targetParentId (section 3)
           14, // afterElementID (pointer below center → after row-14)
+          expect.any(Function),
         );
       });
 
@@ -607,6 +613,7 @@ describe('useDragAndDrop', () => {
           11,   // elementID
           3,    // targetParentId (section 3)
           null, // afterElementID (pointer above center → before row-13)
+          expect.any(Function),
         );
       });
 
@@ -639,6 +646,7 @@ describe('useDragAndDrop', () => {
           11, // elementID
           3,  // targetParentId (section 3)
           13, // afterElementID (pointer below center → after row-13)
+          expect.any(Function),
         );
       });
 
@@ -698,6 +706,7 @@ describe('useDragAndDrop', () => {
           11, // elementID
           3,  // targetParentId (section 3)
           14, // afterElementID (direction check: placed AFTER row-14)
+          expect.any(Function),
         );
       });
 
@@ -719,6 +728,7 @@ describe('useDragAndDrop', () => {
           11,   // elementID
           3,    // targetParentId (section 3)
           null, // afterElementID (index 0 = first position)
+          expect.any(Function),
         );
       });
     });
@@ -770,6 +780,7 @@ describe('useDragAndDrop', () => {
           11,   // elementID
           3,    // targetParentId (section 3)
           null, // afterElementID (before row-13 = first position)
+          expect.any(Function),
         );
       });
 
@@ -804,6 +815,7 @@ describe('useDragAndDrop', () => {
           11, // elementID
           3,  // targetParentId (section 3)
           13, // afterElementID (after row-13)
+          expect.any(Function),
         );
       });
 
@@ -854,6 +866,7 @@ describe('useDragAndDrop', () => {
           20,   // elementID
           11,   // targetParentId (row 11)
           null, // afterElementID (before column-22 = first position)
+          expect.any(Function),
         );
       });
 
@@ -903,6 +916,7 @@ describe('useDragAndDrop', () => {
           20, // elementID
           11, // targetParentId (row 11)
           22, // afterElementID (after column-22)
+          expect.any(Function),
         );
       });
 
@@ -937,6 +951,7 @@ describe('useDragAndDrop', () => {
           30,   // elementID
           21,   // targetParentId (column 21)
           null, // afterElementID (before element-32 = first position)
+          expect.any(Function),
         );
       });
 
@@ -963,9 +978,98 @@ describe('useDragAndDrop', () => {
           11,   // elementID
           3,    // targetParentId (section 3)
           null, // afterElementID (overIdx=0 → first position, no direction shift)
+          expect.any(Function),
         );
       });
     });
+
+  describe('deferred pendingTree clearing', () => {
+    const crossContainerTree: ElementTreeResponse = {
+      '42': [
+        makeSection(2, [
+          makeRow(11, [makeColumn(50, [], 11)], 2),
+          makeRow(12, [makeColumn(51, [], 12)], 2),
+        ], 42),
+        makeSection(3, [
+          makeRow(13, [makeColumn(52, [], 13)], 3),
+          makeRow(14, [makeColumn(53, [], 14)], 3),
+        ], 42),
+      ],
+    };
+
+    it('pendingTree is NOT cleared until clearPendingTree callback is invoked', () => {
+      const onReorder = vi.fn();
+      const { result } = renderHook(() =>
+        useDragAndDrop({ tree: crossContainerTree, onReorder }),
+      );
+
+      // Cross-container move: row-11 → Section 3
+      act(() => {
+        result.current.handleDragOver(makeDragOverEvent('row-11', 'row-14'));
+      });
+      expect(result.current.pendingTree).not.toBeNull();
+
+      // Drop — onReorder receives clearPendingTree as 4th arg
+      act(() => {
+        result.current.handleDragEnd(makeDragEndEvent('row-11', 'row-14', {
+          activeTranslated: { width: 100, height: 50, top: 350, left: 0, right: 100, bottom: 400 },
+          overRect: { width: 100, height: 50, top: 300, left: 0, right: 100, bottom: 350 },
+        }));
+      });
+
+      // pendingTree should still be set — it hasn't been cleared yet
+      expect(result.current.pendingTree).not.toBeNull();
+      expect(onReorder).toHaveBeenCalledTimes(1);
+
+      // Now invoke the callback
+      const clearFn = onReorder.mock.calls[0][3] as () => void;
+      act(() => {
+        clearFn();
+      });
+
+      expect(result.current.pendingTree).toBeNull();
+    });
+
+    it('pendingTree IS cleared immediately on early return (no over)', () => {
+      const onReorder = vi.fn();
+      const { result } = renderHook(() =>
+        useDragAndDrop({ tree: crossContainerTree, onReorder }),
+      );
+
+      // Build a pending tree
+      act(() => {
+        result.current.handleDragOver(makeDragOverEvent('row-11', 'row-14'));
+      });
+      expect(result.current.pendingTree).not.toBeNull();
+
+      // Drop with no over target → early return
+      act(() => {
+        result.current.handleDragEnd(makeDragEndEvent('row-11', null));
+      });
+
+      expect(result.current.pendingTree).toBeNull();
+      expect(onReorder).not.toHaveBeenCalled();
+    });
+
+    it('pendingTree IS cleared immediately on early return (invalid IDs)', () => {
+      const onReorder = vi.fn();
+      const { result } = renderHook(() =>
+        useDragAndDrop({ tree: crossContainerTree, onReorder }),
+      );
+
+      act(() => {
+        result.current.handleDragOver(makeDragOverEvent('row-11', 'row-14'));
+      });
+      expect(result.current.pendingTree).not.toBeNull();
+
+      act(() => {
+        result.current.handleDragEnd(makeDragEndEvent('invalid', 'row-14'));
+      });
+
+      expect(result.current.pendingTree).toBeNull();
+      expect(onReorder).not.toHaveBeenCalled();
+    });
+  });
 
   describe('handleDragCancel', () => {
     it('clears dragState without calling onReorder', () => {

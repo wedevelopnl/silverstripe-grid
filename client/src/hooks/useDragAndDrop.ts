@@ -24,8 +24,10 @@ import type {
   ElementTreeResponse,
 } from '@/types/elements';
 import { useElementMaps, buildMaps } from '@/hooks/useElementMaps';
+import type { ElementMaps } from '@/hooks/useElementMaps';
 import { resolveReorderParams } from '@/utils/resolveReorderParams';
 import { applyReorder } from '@/utils/applyReorder';
+import { resolveInsertDirection } from '@/utils/resolveInsertDirection';
 import { createTypedCollisionDetection } from '@/utils/collisionDetection';
 import type { OverRectSnapshot } from '@/utils/collisionDetection';
 
@@ -43,6 +45,7 @@ export interface UseDragAndDropOptions {
     elementID: number,
     targetParentId: number,
     afterElementID: number | null,
+    clearPendingTree: () => void,
   ) => void;
 }
 
@@ -118,6 +121,7 @@ export function useDragAndDrop({
   const hasPendingMoveRef = useRef(false);
   const overRectRef = useRef<OverRectSnapshot | null>(null);
   const pendingContainerItemsRef = useRef<ReadonlySet<string | number> | null>(null);
+  const pendingMapsRef = useRef<ElementMaps | null>(null);
   const maps = useElementMaps(tree);
 
   // Stable collision detection instance — refs are read dynamically per event
@@ -133,6 +137,7 @@ export function useDragAndDrop({
 
   const clearPendingTree = useCallback(() => {
     pendingTreeRef.current = null;
+    pendingMapsRef.current = null;
     hasPendingMoveRef.current = false;
     overRectRef.current = null;
     pendingContainerItemsRef.current = null;
@@ -167,7 +172,7 @@ export function useDragAndDrop({
 
       // Use the effective tree (with any existing pending move applied)
       const effectiveTree = pendingTreeRef.current ?? tree;
-      const effectiveMaps = buildMaps(effectiveTree);
+      const effectiveMaps = pendingMapsRef.current ?? maps;
 
       const activeNode = effectiveMaps.nodeMap.get(activeParsed.id);
       if (!activeNode) return;
@@ -182,23 +187,11 @@ export function useDragAndDrop({
         targetParentId = overNode.parentId;
 
         // Direction-aware: place before or after based on pointer vs over center.
-        // Columns use X-axis (horizontal layout); all others use Y-axis (vertical).
         const pointer = getPointerPosition(event);
-        if (pointer !== null) {
-          const useXAxis = activeParsed.type === 'column';
-          const pointerPos = useXAxis ? pointer.x : pointer.y;
-          const overCenter = useXAxis
-            ? over.rect.left + over.rect.width / 2
-            : over.rect.top + over.rect.height / 2;
-
-          if (pointerPos < overCenter) {
-            // Pointer before over's center → place BEFORE over
-            const siblings = effectiveMaps.childrenByParentId.get(targetParentId) ?? [];
-            const overIdx = siblings.findIndex((n) => n.id === overParsed.id);
-            afterElementId = overIdx > 0 ? siblings[overIdx - 1].id : null;
-          } else {
-            afterElementId = overParsed.id;
-          }
+        if (pointer !== null && resolveInsertDirection(pointer, over.rect, activeParsed.type) === 'before') {
+          const siblings = effectiveMaps.childrenByParentId.get(targetParentId) ?? [];
+          const overIdx = siblings.findIndex((n) => n.id === overParsed.id);
+          afterElementId = overIdx > 0 ? siblings[overIdx - 1].id : null;
         } else {
           afterElementId = overParsed.id;
         }
@@ -220,13 +213,14 @@ export function useDragAndDrop({
 
       const newTree = applyReorder(effectiveTree, activeParsed.id, targetParentId, afterElementId);
       if (newTree !== effectiveTree) {
+        const newMaps = buildMaps(newTree);
         pendingTreeRef.current = newTree;
+        pendingMapsRef.current = newMaps;
         hasPendingMoveRef.current = true;
 
         // Compute the set of sibling droppable IDs in the target container
         // so collision detection can filter out wrong-container siblings
         // whose stale rects would cause closestCenter to bounce the item back.
-        const newMaps = buildMaps(newTree);
         const targetSiblings = newMaps.childrenByParentId.get(targetParentId) ?? [];
         pendingContainerItemsRef.current = new Set(
           targetSiblings.map((n) => buildDraggableId(activeParsed.type, n.id)),
@@ -245,28 +239,31 @@ export function useDragAndDrop({
       const pointer = getPointerPosition(event);
 
       setDragState(null);
-      clearPendingTree();
 
       const { active, over } = event;
 
       if (!over || active.id === over.id) {
+        clearPendingTree();
         return;
       }
 
       const activeParsed = parseDraggableId(String(active.id));
       const overParsed = parseDraggableId(String(over.id));
       if (!activeParsed || !overParsed) {
+        clearPendingTree();
         return;
       }
 
       const activeNode = maps.nodeMap.get(activeParsed.id);
       if (!activeNode) {
+        clearPendingTree();
         return;
       }
 
       const sourceParentId = activeNode.parentId;
       const sourceChildren = maps.childrenByParentId.get(sourceParentId);
       if (!sourceChildren) {
+        clearPendingTree();
         return;
       }
       const sourceIndex = sourceChildren.findIndex((n) => n.id === activeParsed.id);
@@ -308,16 +305,8 @@ export function useDragAndDrop({
                 ? currentOverRect!.rect
                 : over.rect;
 
-              if (pointer !== null) {
-                const useXAxis = activeParsed.type === 'column';
-                const pointerPos = useXAxis ? pointer.x : pointer.y;
-                const overCenter = useXAxis
-                  ? freshOverRect.left + freshOverRect.width / 2
-                  : freshOverRect.top + freshOverRect.height / 2;
-
-                if (pointerPos > overCenter) {
-                  insertIndex += 1;
-                }
+              if (pointer !== null && resolveInsertDirection(pointer, freshOverRect, activeParsed.type) === 'after') {
+                insertIndex += 1;
               }
             }
           } else {
@@ -338,7 +327,9 @@ export function useDragAndDrop({
           });
 
           if (params) {
-            onReorder(params.elementID, params.targetParentId, params.afterElementID);
+            onReorder(params.elementID, params.targetParentId, params.afterElementID, clearPendingTree);
+          } else {
+            clearPendingTree();
           }
           return;
         }
@@ -353,12 +344,14 @@ export function useDragAndDrop({
         // Over a sibling item — use the sibling's parentId
         const overNode = maps.nodeMap.get(overParsed.id);
         if (!overNode) {
+          clearPendingTree();
           return;
         }
 
         targetParentId = overNode.parentId;
         const targetChildren = maps.childrenByParentId.get(targetParentId);
         if (!targetChildren) {
+          clearPendingTree();
           return;
         }
 
@@ -371,12 +364,7 @@ export function useDragAndDrop({
           const freshOverRect = String(currentOverRect?.id) === String(over.id)
             ? currentOverRect!.rect
             : over.rect;
-          const useXAxis = activeParsed.type === 'column';
-          const pointerPos = useXAxis ? pointer.x : pointer.y;
-          const overCenter = useXAxis
-            ? freshOverRect.left + freshOverRect.width / 2
-            : freshOverRect.top + freshOverRect.height / 2;
-          if (pointerPos > overCenter) {
+          if (resolveInsertDirection(pointer, freshOverRect, activeParsed.type) === 'after') {
             insertIndex += 1;
           }
         }
@@ -384,6 +372,7 @@ export function useDragAndDrop({
         // Over a container — drop into it (container's own ID is the parent)
         const containerNode = maps.nodeMap.get(overParsed.id);
         if (!containerNode || !isContainerNode(containerNode)) {
+          clearPendingTree();
           return;
         }
 
@@ -412,7 +401,9 @@ export function useDragAndDrop({
       const params = resolveReorderParams(resolveContext);
 
       if (params) {
-        onReorder(params.elementID, params.targetParentId, params.afterElementID);
+        onReorder(params.elementID, params.targetParentId, params.afterElementID, clearPendingTree);
+      } else {
+        clearPendingTree();
       }
     },
     [maps, onReorder, clearPendingTree],

@@ -274,6 +274,78 @@ describe('useReorderElement', () => {
     );
   });
 
+  it('calls clearPendingTree after setQueryData in onMutate', async () => {
+    // Never resolve to keep the mutation pending so we can inspect call order
+    mockReorderElement.mockReturnValue(new Promise(() => {}));
+
+    const wrapper = createWrapper();
+    const tree: ElementTreeResponse = {
+      '100': [
+        makeColumn(1, [makeElement(10, 1), makeElement(11, 1)], 100),
+      ],
+    };
+
+    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), tree);
+
+    const clearPendingTree = vi.fn();
+    const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData');
+
+    const { result } = renderHook(() => useReorderElement(PAGE_ID, 'main'), { wrapper });
+
+    const params: ReorderElementParams = {
+      elementID: 11,
+      targetParentId: 1,
+      afterElementID: null,
+    };
+
+    act(() => {
+      result.current.mutate({ params, tree, clearPendingTree });
+    });
+
+    await waitFor(() => {
+      expect(clearPendingTree).toHaveBeenCalledTimes(1);
+    });
+
+    // Verify setQueryData was called before clearPendingTree
+    const setDataCallOrder = setQueryDataSpy.mock.invocationCallOrder[0];
+    const clearCallOrder = clearPendingTree.mock.invocationCallOrder[0];
+    expect(setDataCallOrder).toBeLessThan(clearCallOrder);
+
+    setQueryDataSpy.mockRestore();
+  });
+
+  it('calls clearPendingTree on error as safety net', async () => {
+    mockReorderElement.mockRejectedValue(new Error('fail'));
+
+    const wrapper = createWrapper();
+    const tree: ElementTreeResponse = {
+      '100': [makeColumn(1, [makeElement(10, 1)], 100)],
+    };
+
+    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), tree);
+
+    const clearPendingTree = vi.fn();
+
+    const { result } = renderHook(() => useReorderElement(PAGE_ID, 'main'), { wrapper });
+
+    await act(async () => {
+      try {
+        await result.current.mutateAsync({
+          params: { elementID: 10, targetParentId: 1, afterElementID: null },
+          tree,
+          clearPendingTree,
+        });
+      } catch {
+        // Expected
+      }
+    });
+
+    // Called in onMutate + onError (idempotent safety net)
+    await waitFor(() => {
+      expect(clearPendingTree).toHaveBeenCalled();
+    });
+  });
+
   it('exposes error state when mutation fails', async () => {
     const error = new Error('Server error');
     mockReorderElement.mockRejectedValue(error);
