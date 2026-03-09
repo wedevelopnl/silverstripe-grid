@@ -30,8 +30,32 @@ vi.mock('@dnd-kit/sortable', async (importOriginal) => {
   };
 });
 
+const { mockViewports, mockResolveViewportSettings } = vi.hoisted(() => {
+  const viewports = [
+    { key: 'xs', label: 'XS' },
+    { key: 'sm', label: 'SM' },
+    { key: 'md', label: 'MD' },
+    { key: 'lg', label: 'LG' },
+    { key: 'xl', label: 'XL' },
+    { key: 'xxl', label: 'XXL' },
+  ];
+
+  const resolve = (gridSettings: Record<string, unknown>, activeViewport: string) => {
+    let effective = { width: 12, offset: 0, visible: true };
+    for (const vp of viewports) {
+      const override = gridSettings[vp.key];
+      if (override) effective = { ...effective, ...(override as typeof effective) };
+      if (vp.key === activeViewport) break;
+    }
+    return effective;
+  };
+
+  return { mockViewports: viewports, mockResolveViewportSettings: resolve };
+});
+
 vi.mock('@/utils/gridAdapter', () => ({
   getColumnCount: vi.fn(() => 12),
+  getViewports: vi.fn(() => mockViewports),
   getWidthClass: vi.fn((width: number) => `col-${width}`),
   getOffsetClass: vi.fn((offset: number) => `offset-${offset}`),
   getDefaultViewport: vi.fn(() => 'md'),
@@ -42,6 +66,7 @@ vi.mock('@/utils/gridAdapter', () => ({
   getOffsetOptions: vi.fn(() =>
     Array.from({ length: 12 }, (_, i) => ({ value: i, label: i === 0 ? 'none' : `+${i}` })),
   ),
+  resolveViewportSettings: vi.fn(mockResolveViewportSettings),
 }));
 
 function makeColumn(overrides: Partial<EnrichedColumnNode> = {}): EnrichedColumnNode {
@@ -306,7 +331,7 @@ describe('ColumnBlock', () => {
     expect(inner?.classList.contains('column-block--modified')).toBe(true);
   });
 
-  it('falls back to full width when viewport key is missing from gridSettings', () => {
+  it('cascades smaller viewport settings to larger viewport', () => {
     const column = makeColumn({
       gridSettings: { md: { width: 6, offset: 0, visible: true } },
     });
@@ -316,13 +341,13 @@ describe('ColumnBlock', () => {
       { wrapper: createDndWrapper('lg') },
     );
 
-    // Falls back to full width (columnCount = 12)
-    expect(screen.getByText('12/12')).toBeDefined();
+    // lg inherits md=6 via cascade
+    expect(screen.getByText('6/12')).toBeDefined();
     const outerDiv = container.firstElementChild;
-    expect(outerDiv?.classList.contains('col-12')).toBe(true);
+    expect(outerDiv?.classList.contains('col-6')).toBe(true);
   });
 
-  it('does not apply offset class when falling back (offset defaults to 0)', () => {
+  it('cascades offset from smaller viewport', () => {
     const column = makeColumn({
       gridSettings: { md: { width: 6, offset: 3, visible: true } },
     });
@@ -333,11 +358,11 @@ describe('ColumnBlock', () => {
     );
 
     const outerDiv = container.firstElementChild;
-    expect(outerDiv?.classList.contains('offset-0')).toBe(false);
-    expect(outerDiv?.classList.contains('offset-3')).toBe(false);
+    // lg inherits md offset=3 via cascade
+    expect(outerDiv?.classList.contains('offset-3')).toBe(true);
   });
 
-  it('falls back to visible when viewport key is missing', () => {
+  it('cascades hidden visibility from smaller viewport', () => {
     const column = makeColumn({
       gridSettings: { md: { width: 6, offset: 0, visible: false } },
     });
@@ -348,8 +373,9 @@ describe('ColumnBlock', () => {
     );
 
     const inner = container.querySelector('.column-block');
-    expect(inner?.classList.contains('column-block--hidden')).toBe(false);
-    expect(screen.getByText('12/12')).toBeDefined();
+    // lg inherits md hidden state via cascade
+    expect(inner?.classList.contains('column-block--hidden')).toBe(true);
+    expect(screen.getByText('hidden')).toBeDefined();
   });
 
   it('calls getWidthClass with the resolved column width', () => {

@@ -1,5 +1,6 @@
 import { getAdapterConfig } from '@/api/config';
 import type { AdapterConfig, ViewportConfig } from '@/types/adapter';
+import type { GridSettings, ViewportSettings } from '@/types/elements';
 import type { GridSettingsOption } from '@/types/gridSettings';
 
 let cachedConfig: AdapterConfig | null = null;
@@ -66,4 +67,38 @@ export function getOffsetOptions(): readonly GridSettingsOption[] {
   }
 
   return cachedOffsetOptions;
+}
+
+/**
+ * Resolve effective viewport settings via mobile-first cascade.
+ *
+ * Walks ordered viewports from smallest up to (and including) activeViewport,
+ * accumulating explicit overrides. Returns the effective settings at the
+ * active viewport. Defaults: full-width, no offset, visible.
+ */
+export function resolveViewportSettings(
+  gridSettings: GridSettings,
+  activeViewport: string,
+): ViewportSettings {
+  const viewports = getViewports();
+  const columnCount = getColumnCount();
+
+  let effective: ViewportSettings = {
+    width: columnCount,
+    offset: 0,
+    visible: true,
+  };
+
+  for (const vp of viewports) {
+    const override = gridSettings[vp.key];
+    if (override !== undefined) {
+      effective = { ...effective, ...override };
+    }
+
+    if (vp.key === activeViewport) {
+      break;
+    }
+  }
+
+  return effective;
 }

@@ -10,7 +10,7 @@ import { useViewportContext } from '@/hooks/ViewportContext';
 import { useUpdateGridSettings } from '@/hooks/useElementMutations';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
-import { getColumnCount, getWidthClass, getOffsetClass, getWidthOptions, getOffsetOptions } from '@/utils/gridAdapter';
+import { getColumnCount, getWidthClass, getOffsetClass, getWidthOptions, getOffsetOptions, resolveViewportSettings } from '@/utils/gridAdapter';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import GridSettingsPicker from '@/components/GridSettingsPicker/GridSettingsPicker';
@@ -21,23 +21,11 @@ interface ColumnBlockProps {
   readonly column: EnrichedColumnNode;
 }
 
-function resolveViewportSettings(
-  column: EnrichedColumnNode,
-  activeViewport: string,
-  columnCount: number,
-): ViewportSettings {
-  return column.gridSettings[activeViewport] ?? {
-    width: columnCount,
-    offset: 0,
-    visible: true,
-  };
-}
-
 export default function ColumnBlock({ column }: ColumnBlockProps) {
   const { activeViewport } = useViewportContext();
   const { pageId, zone } = useGridEditorContext();
   const columnCount = getColumnCount();
-  const settings = resolveViewportSettings(column, activeViewport, columnCount);
+  const settings = resolveViewportSettings(column.gridSettings, activeViewport);
   const status = getElementStatus(column.statusFlags);
   const { isCollapsed, toggle } = column;
   const { activeType } = useDragContext();

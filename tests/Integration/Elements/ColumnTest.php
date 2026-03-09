@@ -138,11 +138,12 @@ final class ColumnTest extends ContainerContractTestCase
         $this->assertSame('0 elements', $column->getSummary());
     }
 
-    public function testGetGridWidthSummaryWithDefaultSettings(): void
+    public function testGetGridWidthSummaryWithEmptySettings(): void
     {
         $column = $this->createContainer();
         /** @var Column $column */
 
+        // Empty sparse settings → full-width default
         $this->assertSame('12/12', $column->getGridWidthSummary());
     }
 
@@ -151,9 +152,9 @@ final class ColumnTest extends ContainerContractTestCase
         $column = $this->createContainer();
         /** @var Column $column */
 
-        $settings = $column->getGridSettingsData();
-        $settings['xs']['width'] = 6;
-        $column->setGridSettingsData($settings);
+        $column->setGridSettingsData([
+            'xs' => ['width' => 6, 'offset' => 0, 'visible' => true],
+        ]);
         $column->write();
 
         $this->assertSame('6/12', $column->getGridWidthSummary());
@@ -181,17 +182,6 @@ final class ColumnTest extends ContainerContractTestCase
         $this->assertSame('1 element', $column->getChildCountSummary());
     }
 
-    public function testGetGridWidthSummaryReturnsEmptyForEmptyGridSettings(): void
-    {
-        $column = $this->createContainer();
-        /** @var Column $column */
-
-        $column->setField('GridSettings', '[]');
-        $column->write();
-
-        $this->assertSame('', $column->getGridWidthSummary());
-    }
-
     public function testSummaryFieldsIncludesContentsAndWidthColumns(): void
     {
         $fields = Column::config()->get('summary_fields');
@@ -202,23 +192,20 @@ final class ColumnTest extends ContainerContractTestCase
         $this->assertSame('Width', $fields['getGridWidthSummary']);
     }
 
-    public function testDefaultGridSettingsAppliedFromConfig(): void
+    public function testNewColumnHasEmptySparseSettings(): void
     {
         $column = $this->createContainer();
         /** @var Column $column */
 
-        $expected = Column::config()->get('default_grid_settings');
-        $this->assertSame($expected, $column->getGridSettingsData());
+        $this->assertSame([], $column->getGridSettingsData());
     }
 
     public function testGridSettingsRoundTrip(): void
     {
         $settings = [
-            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true],
             'sm' => ['width' => 6, 'offset' => 3, 'visible' => true],
             'md' => ['width' => 4, 'offset' => 0, 'visible' => false],
             'lg' => ['width' => 8, 'offset' => 2, 'visible' => true],
-            'xl' => ['width' => 10, 'offset' => 1, 'visible' => true],
         ];
 
         $column = $this->createContainer();
@@ -231,25 +218,7 @@ final class ColumnTest extends ContainerContractTestCase
         $this->assertSame($settings, $reloaded->getGridSettingsData());
     }
 
-    public function testDefaultGridSettingsConfigIsRespected(): void
-    {
-        $custom = [
-            'xs' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            'sm' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            'xl' => ['width' => 6, 'offset' => 0, 'visible' => true],
-        ];
-
-        Column::config()->set('default_grid_settings', $custom);
-
-        $column = Column::create();
-        $column->write();
-
-        $this->assertSame($custom, $column->getGridSettingsData());
-    }
-
-    public function testOnBeforeWritePersistsGridSettingsFieldForNewRecord(): void
+    public function testOnBeforeWritePersistsEmptyJsonForNewRecord(): void
     {
         $column = Column::create();
         $this->assertNull($column->getField('GridSettings'));
@@ -258,17 +227,13 @@ final class ColumnTest extends ContainerContractTestCase
 
         $raw = $column->getField('GridSettings');
         $this->assertIsString($raw);
-        $this->assertJson($raw);
+        $this->assertSame('[]', $raw);
     }
 
     public function testPresetGridSettingsNotOverwrittenOnFirstWrite(): void
     {
         $custom = [
-            'xs' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            'sm' => ['width' => 6, 'offset' => 0, 'visible' => true],
             'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            'xl' => ['width' => 6, 'offset' => 0, 'visible' => true],
         ];
 
         $column = Column::create();

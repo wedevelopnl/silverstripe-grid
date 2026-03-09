@@ -17,15 +17,25 @@ vi.mock('@/api/endpoints', () => ({
   updateGridSettings: vi.fn(),
 }));
 
+const { mockViewports, mockResolveViewportSettings } = vi.hoisted(() => {
+  const viewports = [
+    { key: 'xs', label: 'XS' }, { key: 'sm', label: 'SM' }, { key: 'md', label: 'MD' },
+    { key: 'lg', label: 'LG' }, { key: 'xl', label: 'XL' }, { key: 'xxl', label: 'XXL' },
+  ];
+  const resolve = (gridSettings: Record<string, unknown>, activeViewport: string) => {
+    let effective = { width: 12, offset: 0, visible: true };
+    for (const vp of viewports) {
+      const override = gridSettings[vp.key];
+      if (override) effective = { ...effective, ...(override as typeof effective) };
+      if (vp.key === activeViewport) break;
+    }
+    return effective;
+  };
+  return { mockViewports: viewports, mockResolveViewportSettings: resolve };
+});
+
 vi.mock('@/utils/gridAdapter', () => ({
-  getViewports: vi.fn(() => [
-    { key: 'xs', label: 'XS' },
-    { key: 'sm', label: 'SM' },
-    { key: 'md', label: 'MD' },
-    { key: 'lg', label: 'LG' },
-    { key: 'xl', label: 'XL' },
-    { key: 'xxl', label: 'XXL' },
-  ]),
+  getViewports: vi.fn(() => mockViewports),
   getDefaultViewport: vi.fn(() => 'md'),
   getColumnCount: vi.fn(() => 12),
   getRowClasses: vi.fn(() => 'row'),
@@ -38,6 +48,7 @@ vi.mock('@/utils/gridAdapter', () => ({
   getOffsetOptions: vi.fn(() =>
     Array.from({ length: 12 }, (_, i) => ({ value: i, label: i === 0 ? 'none' : `+${i}` })),
   ),
+  resolveViewportSettings: vi.fn(mockResolveViewportSettings),
 }));
 
 function createWrapper() {

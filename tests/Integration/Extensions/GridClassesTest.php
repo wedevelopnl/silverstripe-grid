@@ -16,6 +16,7 @@ use WeDevelop\Grid\Model\Section;
  * Tests the grid CSS class accessor methods on each container element.
  *
  * Uses the default Bootstrap adapter (wired via Injector in the test environment).
+ * Column tests verify sparse storage with mobile-first cascade class generation.
  */
 #[CoversClass(Section::class)]
 #[CoversClass(Row::class)]
@@ -65,55 +66,65 @@ final class GridClassesTest extends SapphireTest
         $this->assertSame('row', $row->getRowClasses());
     }
 
-    // --- Column: getColumnClasses() ---
+    // --- Column: getColumnClasses() with sparse settings and mobile-first cascade ---
 
-    public function testColumnClassesWithDefaultSettings(): void
+    public function testEmptySettingsProducesOnlyBaseWidthClass(): void
     {
-        $section = Section::create();
-        $section->write();
+        $column = Column::create();
+        $column->write();
 
-        $row = $section->getChildren()->first();
-        $this->assertInstanceOf(Row::class, $row);
-
-        $column = $row->getChildren()->first();
-        $this->assertInstanceOf(Column::class, $column);
-
-        $classes = $column->getColumnClasses();
-
-        $this->assertStringContainsString('col-12', $classes);
-        $this->assertStringContainsString('col-sm-12', $classes);
-        $this->assertStringContainsString('col-md-12', $classes);
-        $this->assertStringContainsString('col-lg-12', $classes);
-        $this->assertStringContainsString('col-xl-12', $classes);
+        // Empty sparse settings → base viewport full-width only
+        $this->assertSame('col-12', $column->getColumnClasses());
     }
 
-    public function testColumnClassesWithCustomWidths(): void
+    public function testSparseWidthChangeEmitsBaseAndBreakpoint(): void
     {
         $column = Column::create();
         $column->setGridSettingsData([
-            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            'md' => ['width' => 8, 'offset' => 0, 'visible' => true],
-            'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            'xl' => ['width' => 6, 'offset' => 0, 'visible' => true],
+            'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
         ]);
         $column->write();
 
         $classes = $column->getColumnClasses();
 
-        $this->assertStringContainsString('col-md-8', $classes);
-        $this->assertStringContainsString('col-lg-6', $classes);
+        // Base viewport inherits default (12), md overrides to 6
+        $this->assertSame('col-12 col-md-6', $classes);
     }
 
-    public function testColumnClassesWithOffset(): void
+    public function testCascadedWidthNotReEmitted(): void
     {
         $column = Column::create();
         $column->setGridSettingsData([
-            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            'md' => ['width' => 8, 'offset' => 2, 'visible' => true],
+            'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
+        ]);
+        $column->write();
+
+        $classes = $column->getColumnClasses();
+
+        // lg, xl, xxl inherit md=6, no extra classes emitted
+        $this->assertStringNotContainsString('col-lg', $classes);
+        $this->assertStringNotContainsString('col-xl', $classes);
+    }
+
+    public function testMultipleWidthChangesEmitAtEachBreakpoint(): void
+    {
+        $column = Column::create();
+        $column->setGridSettingsData([
+            'md' => ['width' => 8, 'offset' => 0, 'visible' => true],
             'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            'xl' => ['width' => 6, 'offset' => 0, 'visible' => true],
+        ]);
+        $column->write();
+
+        $classes = $column->getColumnClasses();
+
+        $this->assertSame('col-12 col-md-8 col-lg-6', $classes);
+    }
+
+    public function testCascadedOffsetEmittedOnceAndInherited(): void
+    {
+        $column = Column::create();
+        $column->setGridSettingsData([
+            'md' => ['width' => 8, 'offset' => 2, 'visible' => true],
         ]);
         $column->write();
 
@@ -121,18 +132,31 @@ final class GridClassesTest extends SapphireTest
 
         $this->assertStringContainsString('col-md-8', $classes);
         $this->assertStringContainsString('offset-md-2', $classes);
+        // Offset is inherited by later viewports, not re-emitted
         $this->assertStringNotContainsString('offset-lg', $classes);
     }
 
-    public function testColumnClassesWithHiddenViewport(): void
+    public function testOffsetResetToZeroEmitsExplicitClass(): void
+    {
+        $column = Column::create();
+        $column->setGridSettingsData([
+            'md' => ['width' => 8, 'offset' => 2, 'visible' => true],
+            'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
+        ]);
+        $column->write();
+
+        $classes = $column->getColumnClasses();
+
+        $this->assertStringContainsString('offset-md-2', $classes);
+        // Explicit reset to 0 at lg
+        $this->assertStringContainsString('offset-lg-0', $classes);
+    }
+
+    public function testHiddenViewportEmitsVisibilityClasses(): void
     {
         $column = Column::create();
         $column->setGridSettingsData([
             'xs' => ['width' => 12, 'offset' => 0, 'visible' => false],
-            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            'md' => ['width' => 8, 'offset' => 0, 'visible' => true],
-            'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            'xl' => ['width' => 6, 'offset' => 0, 'visible' => true],
         ]);
         $column->write();
 
@@ -141,43 +165,49 @@ final class GridClassesTest extends SapphireTest
         // Bootstrap xs hidden: d-none + d-sm-block
         $this->assertStringContainsString('d-none', $classes);
         $this->assertStringContainsString('d-sm-block', $classes);
-        // Hidden viewport should not produce width classes
-        $this->assertStringNotContainsString('col-12 ', $classes);
     }
 
-    public function testColumnClassesPreserveEarlierClassesAfterHiddenViewport(): void
+    public function testHiddenMidViewportEmitsCorrectPairs(): void
     {
         $column = Column::create();
         $column->setGridSettingsData([
-            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
             'md' => ['width' => 8, 'offset' => 0, 'visible' => false],
             'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            'xl' => ['width' => 6, 'offset' => 0, 'visible' => true],
         ]);
         $column->write();
 
         $classes = $column->getColumnClasses();
 
-        // Pre-hidden viewports produce width classes
-        $this->assertStringContainsString('col-sm-12', $classes);
-        // Post-hidden viewports are still processed (not broken by continue)
-        $this->assertStringContainsString('col-lg-6', $classes);
-        // Hidden viewport produces visibility classes
+        // Base viewport is full-width
+        $this->assertStringContainsString('col-12', $classes);
+        // md hidden
         $this->assertStringContainsString('d-md-none', $classes);
         $this->assertStringContainsString('d-lg-block', $classes);
+        // Restoring at lg emits width class
+        $this->assertStringContainsString('col-lg-6', $classes);
     }
 
-    public function testColumnClassesZeroOffsetExcluded(): void
+    public function testConsecutiveHiddenViewportsDoNotConflict(): void
     {
         $column = Column::create();
         $column->setGridSettingsData([
-            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            'md' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            'lg' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            'xl' => ['width' => 12, 'offset' => 0, 'visible' => true],
+            'md' => ['width' => 6, 'offset' => 0, 'visible' => false],
+            'xl' => ['width' => 4, 'offset' => 0, 'visible' => true],
         ]);
+        $column->write();
+
+        $classes = $column->getColumnClasses();
+
+        // md triggers hide, lg inherits hidden so no new classes
+        $this->assertStringContainsString('d-md-none', $classes);
+        $this->assertStringContainsString('d-lg-block', $classes);
+        // xl restores visibility
+        $this->assertStringContainsString('col-xl-4', $classes);
+    }
+
+    public function testZeroOffsetNotEmittedAtBaseViewport(): void
+    {
+        $column = Column::create();
         $column->write();
 
         $classes = $column->getColumnClasses();

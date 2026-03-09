@@ -69,20 +69,6 @@ class Column extends GridElement implements ContainerInterface
         'GridSettings' => 'Text',
     ];
 
-    /**
-     * Default grid settings: full-width (12/12) across all breakpoints.
-     * Override via YAML to change project defaults.
-     *
-     * @var array<string, array{width: int, offset: int, visible: bool}>
-     */
-    private static array $default_grid_settings = [
-        'xs' => ['width' => 12, 'offset' => 0, 'visible' => true],
-        'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
-        'md' => ['width' => 12, 'offset' => 0, 'visible' => true],
-        'lg' => ['width' => 12, 'offset' => 0, 'visible' => true],
-        'xl' => ['width' => 12, 'offset' => 0, 'visible' => true],
-    ];
-
     /** @return HasManyList<GridElement> */
     #[\Override]
     public function getChildren(): HasManyList
@@ -122,25 +108,24 @@ class Column extends GridElement implements ContainerInterface
         return $this->renderWith('WeDevelop/Grid/Model/Column');
     }
 
-    /** Returns the first viewport's width as a fraction, e.g. '6/12'. */
+    /** Returns the smallest viewport's width as a fraction, e.g. '6/12'. */
     public function getGridWidthSummary(): string
     {
         $settings = $this->getGridSettingsData();
-        $defaults = static::config()->get('default_grid_settings');
+        $columnCount = $this->gridAdapter->getColumnCount();
 
         $firstKey = array_key_first($settings);
-        $defaultKey = array_key_first($defaults);
 
-        if ($firstKey === null || $defaultKey === null) {
-            return '';
+        if ($firstKey === null) {
+            return sprintf('%d/%d', $columnCount, $columnCount);
         }
 
-        return sprintf('%d/%d', $settings[$firstKey]['width'], $defaults[$defaultKey]['width']);
+        return sprintf('%d/%d', $settings[$firstKey]['width'], $columnCount);
     }
 
     /**
      * Decode the JSON grid settings into an associative array.
-     * Falls back to `default_grid_settings` config when no stored value exists.
+     * Returns empty array when no stored value exists (sparse storage).
      *
      * @return array<string, array{width: int, offset: int, visible: bool}>
      */
@@ -155,7 +140,7 @@ class Column extends GridElement implements ContainerInterface
             }
         }
 
-        return static::config()->get('default_grid_settings');
+        return [];
     }
 
     /**
@@ -170,26 +155,57 @@ class Column extends GridElement implements ContainerInterface
         return $this;
     }
 
-    /** CSS classes for the grid column wrapper. */
+    /**
+     * CSS classes for the grid column wrapper using mobile-first cascade.
+     *
+     * Walks adapter viewports smallest→largest, resolving effective settings
+     * via cascade. Only emits CSS classes at breakpoints where the effective
+     * value changes from the previous breakpoint. The base viewport always
+     * emits a width class (defaults to full-width when no settings exist).
+     */
     public function getColumnClasses(): string
     {
         $parts = [];
         $settings = $this->getGridSettingsData();
+        $columnCount = $this->gridAdapter->getColumnCount();
+        $viewports = $this->gridAdapter->getViewports();
 
-        foreach ($settings as $viewport => $config) {
-            if (!$config['visible']) {
-                $parts = [
-                    ...$parts,
-                    ...$this->gridAdapter->getVisibilityClasses($viewport),
-                ];
-                continue;
+        // Track effective state for mobile-first cascade (starts at implicit defaults)
+        $prevWidth = $columnCount;
+        $prevOffset = 0;
+        $prevVisible = true;
+        $isFirst = true;
+
+        foreach ($viewports as $viewport) {
+            $key = $viewport->key;
+            $config = $settings[$key] ?? null;
+
+            // Resolve effective values: explicit override or inherited from previous
+            $width = $config['width'] ?? $prevWidth;
+            $offset = $config['offset'] ?? $prevOffset;
+            $visible = $config['visible'] ?? $prevVisible;
+
+            if (!$visible && $prevVisible) {
+                // Transitioning to hidden — emit visibility classes
+                $parts = [...$parts, ...$this->gridAdapter->getVisibilityClasses($key)];
+            } elseif ($visible) {
+                // Emit width when it changes or at the base viewport
+                if ($isFirst || $width !== $prevWidth || (!$prevVisible)) {
+                    $parts[] = $this->gridAdapter->getWidthClass($key, $width);
+                }
+
+                // Emit offset when it changes (including reset to 0)
+                if ($isFirst && $offset > 0) {
+                    $parts[] = $this->gridAdapter->getOffsetClass($key, $offset);
+                } elseif (!$isFirst && $offset !== $prevOffset) {
+                    $parts[] = $this->gridAdapter->getOffsetClass($key, $offset);
+                }
             }
 
-            $parts[] = $this->gridAdapter->getWidthClass($viewport, $config['width']);
-
-            if ($config['offset'] > 0) {
-                $parts[] = $this->gridAdapter->getOffsetClass($viewport, $config['offset']);
-            }
+            $prevWidth = $width;
+            $prevOffset = $offset;
+            $prevVisible = $visible;
+            $isFirst = false;
         }
 
         $classes = implode(' ', $parts);
@@ -204,9 +220,9 @@ class Column extends GridElement implements ContainerInterface
     {
         parent::onBeforeWrite();
 
-        // Apply default grid settings to new records
+        // Initialize empty sparse grid settings for new records
         if (!$this->isInDB() && !$this->getField('GridSettings')) {
-            $this->setGridSettingsData(static::config()->get('default_grid_settings'));
+            $this->setGridSettingsData([]);
         }
     }
 }

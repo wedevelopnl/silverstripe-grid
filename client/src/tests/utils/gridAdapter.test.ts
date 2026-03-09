@@ -7,6 +7,7 @@ import {
   getOffsetClass,
   getWidthOptions,
   getOffsetOptions,
+  resolveViewportSettings,
 } from '@/utils/gridAdapter';
 
 vi.mock('@/api/config', () => ({
@@ -84,5 +85,100 @@ describe('gridAdapter', () => {
     expect(options[0]).toEqual({ value: 0, label: 'none' });
     expect(options[1]).toEqual({ value: 1, label: '+1' });
     expect(options[11]).toEqual({ value: 11, label: '+11' });
+  });
+});
+
+describe('resolveViewportSettings', () => {
+  it('returns defaults for empty settings', () => {
+    expect(resolveViewportSettings({}, 'md')).toEqual({
+      width: 12,
+      offset: 0,
+      visible: true,
+    });
+  });
+
+  it('returns explicit settings for the active viewport', () => {
+    const settings = {
+      md: { width: 6, offset: 2, visible: true },
+    };
+
+    expect(resolveViewportSettings(settings, 'md')).toEqual({
+      width: 6,
+      offset: 2,
+      visible: true,
+    });
+  });
+
+  it('cascades from smaller viewport to larger active viewport', () => {
+    const settings = {
+      sm: { width: 8, offset: 1, visible: true },
+    };
+
+    // lg inherits sm settings via cascade
+    expect(resolveViewportSettings(settings, 'lg')).toEqual({
+      width: 8,
+      offset: 1,
+      visible: true,
+    });
+  });
+
+  it('does not look ahead past active viewport', () => {
+    const settings = {
+      lg: { width: 4, offset: 0, visible: true },
+    };
+
+    // sm is before lg — should not see lg's override
+    expect(resolveViewportSettings(settings, 'sm')).toEqual({
+      width: 12,
+      offset: 0,
+      visible: true,
+    });
+  });
+
+  it('cascades hidden visibility', () => {
+    const settings = {
+      md: { width: 6, offset: 0, visible: false },
+    };
+
+    // lg inherits md's hidden state
+    expect(resolveViewportSettings(settings, 'lg')).toEqual({
+      width: 6,
+      offset: 0,
+      visible: false,
+    });
+  });
+
+  it('accumulates overrides across multiple viewports', () => {
+    const settings = {
+      sm: { width: 8, offset: 0, visible: true },
+      md: { width: 6, offset: 2, visible: true },
+    };
+
+    expect(resolveViewportSettings(settings, 'md')).toEqual({
+      width: 6,
+      offset: 2,
+      visible: true,
+    });
+  });
+
+  it('partially overrides cascaded values', () => {
+    const settings = {
+      sm: { width: 8, offset: 3, visible: true },
+      lg: { width: 4, offset: 3, visible: true },
+    };
+
+    // md inherits sm's settings (cascade stops before lg)
+    expect(resolveViewportSettings(settings, 'md')).toEqual({
+      width: 8,
+      offset: 3,
+      visible: true,
+    });
+
+    // xl inherits lg's width override, with sm's offset still cascaded
+    expect(resolveViewportSettings(settings, 'xl')).toEqual({
+      width: 4,
+      offset: 3,
+      visible: true,
+    });
   });
 });
