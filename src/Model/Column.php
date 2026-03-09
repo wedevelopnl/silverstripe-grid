@@ -88,11 +88,6 @@ class Column extends GridElement implements ContainerInterface
         return ContainerType::Column;
     }
 
-    public function getType(): string
-    {
-        return 'Column';
-    }
-
     /** Render through the holder template. */
     public function forTemplate(): string
     {

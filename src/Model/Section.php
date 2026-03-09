@@ -86,11 +86,6 @@ class Section extends GridElement implements ContainerInterface
 
     private static bool $auto_scaffold = true;
 
-    public function getType(): string
-    {
-        return 'Section';
-    }
-
     /** @return HasManyList<Row> */
     #[\Override] // @phpstan-ignore method.childReturnType, method.childReturnType (covariant narrowing: Row extends GridElement)
     public function getChildren(): HasManyList

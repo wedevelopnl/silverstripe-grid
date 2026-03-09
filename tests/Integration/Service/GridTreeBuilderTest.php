@@ -11,6 +11,7 @@ use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Extensions\GridPageExtension;
@@ -363,12 +364,12 @@ final class GridTreeBuilderTest extends SapphireTest
 
         // ensureDefaultTitle counts same-type siblings under the same parent
         // leaf2 is the only other GridElement under col1 → count 1 + 1 = 2
-        $this->assertSame('Unknown 2', $leaf->Title);
+        $this->assertSame('GridElement 2', $leaf->Title);
 
         $tree = $this->buildTree();
         $pageId = $this->getPageId();
         $node = $tree[$pageId][0]->children[0]->children[0]->children[0];
-        $this->assertSame('Unknown 2', $node->title);
+        $this->assertSame('GridElement 2', $node->title);
     }
 
     public function testEmptyTitleAssignsDefaultForColumn(): void
@@ -414,6 +415,75 @@ final class GridTreeBuilderTest extends SapphireTest
         $pageId = $this->getPageId();
         $node = $tree[$pageId][0];
         $this->assertSame('Section 4', $node->title);
+    }
+
+    // ---- Null title fallback (API creation flow) ----
+
+    public function testFreshElementGetsDefaultTitle(): void
+    {
+        $col = $this->objFromFixture(Column::class, 'col1');
+
+        $element = GridElement::create();
+        $element->ParentID = $col->ID;
+        $element->ParentClass = Column::class;
+        $element->write();
+
+        $this->assertNotEmpty($element->Title, 'Fresh element with null Title should get a default');
+        $this->assertStringContainsString('GridElement', $element->Title);
+    }
+
+    public function testFreshSectionGetsDefaultTitle(): void
+    {
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+
+        $section = Section::create();
+        $section->ParentID = $page->ID;
+        $section->ParentClass = $page::class;
+        $section->Zone = 'main';
+        $section->write();
+
+        $this->assertNotEmpty($section->Title, 'Fresh section with null Title should get a default');
+        $this->assertStringContainsString('Section', $section->Title);
+    }
+
+    public function testFreshContentElementGetsDefaultTitle(): void
+    {
+        $col = $this->objFromFixture(Column::class, 'col1');
+
+        $element = ContentElement::create();
+        $element->ParentID = $col->ID;
+        $element->ParentClass = Column::class;
+        $element->write();
+
+        $this->assertNotEmpty($element->Title, 'Fresh content element with null Title should get a default');
+        $this->assertStringContainsString('ContentElement', $element->Title);
+    }
+
+    // ---- getType() ----
+
+    public function testGetTypeReturnsConfiguredSingularName(): void
+    {
+        $this->assertSame('Section', Section::create()->getType());
+        $this->assertSame('Row', Row::create()->getType());
+        $this->assertSame('Column', Column::create()->getType());
+    }
+
+    public function testGetTypeReturnsFallbackForBaseElement(): void
+    {
+        $type = GridElement::create()->getType();
+
+        $this->assertNotSame('Unknown', $type, 'Base getType() should not return hardcoded "Unknown"');
+        $this->assertNotEmpty($type);
+    }
+
+    public function testContentElementGetTypeReturnsContentElement(): void
+    {
+        $type = ContentElement::create()->getType();
+
+        $this->assertNotSame('Unknown', $type, 'ContentElement should not inherit hardcoded "Unknown"');
+        $this->assertNotEmpty($type);
     }
 
     // ---- Empty states ----

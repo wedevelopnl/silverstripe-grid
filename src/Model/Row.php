@@ -69,11 +69,6 @@ class Row extends GridElement implements ContainerInterface
 
     private static bool $auto_scaffold = true;
 
-    public function getType(): string
-    {
-        return 'Row';
-    }
-
     /** @return HasManyList<Column> */
     #[\Override] // @phpstan-ignore method.childReturnType, method.childReturnType (covariant narrowing: Column extends GridElement)
     public function getChildren(): HasManyList

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Model;
 
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Core\ClassInfo;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
@@ -75,7 +76,9 @@ class GridElement extends DataObject
     /** Human-readable element type identifier (e.g., "Section", "Row", "Text"). */
     public function getType(): string
     {
-        return 'Unknown';
+        $name = static::config()->get('singular_name');
+
+        return is_string($name) && $name !== '' ? $name : ClassInfo::shortName(static::class);
     }
 
     /** Anchor-safe identifier for linking within a page. */
@@ -228,7 +231,7 @@ class GridElement extends DataObject
      */
     private function ensureDefaultTitle(): void
     {
-        if ($this->Title !== '') {
+        if ((string) $this->Title !== '') {
             return;
         }
 
