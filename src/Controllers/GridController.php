@@ -14,6 +14,7 @@ use SilverStripe\Security\SecurityToken;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\Result;
@@ -36,6 +37,11 @@ use WeDevelop\Grid\Service\ReorderService;
  *   elementID: positive-int,
  *   targetParentId: positive-int,
  *   afterElementID: positive-int|null,
+ * }
+ * @phpstan-type CreateContentBody array{
+ *   className: class-string<ContentElement>,
+ *   parentId: positive-int,
+ *   insertAfterElementID: positive-int|null,
  * }
  * @phpstan-type UpdateGridSettingsBody array{
  *   id: positive-int,
@@ -96,6 +102,7 @@ class GridController extends AdminController
     private static array $url_handlers = [
         'GET api/readTree/$PageID!/$Zone!' => 'apiReadTree',
         'POST api/create' => 'apiCreate',
+        'POST api/createContent' => 'apiCreateContent',
         'PATCH api/publish' => 'apiPublish',
         'PATCH api/unpublish' => 'apiUnpublish',
         'DELETE api/delete' => 'apiDelete',
@@ -108,6 +115,7 @@ class GridController extends AdminController
     private static array $allowed_actions = [
         'apiReadTree',
         'apiCreate',
+        'apiCreateContent',
         'apiPublish',
         'apiUnpublish',
         'apiDelete',
@@ -183,6 +191,46 @@ class GridController extends AdminController
             $newElement->Zone = $body['zone'];
         }
 
+        $newElement->ensureSortSet();
+
+        $result = $this->persistenceService->persistNew($newElement, $body['insertAfterElementID']);
+        if ($result->isErr()) {
+            return $this->resultToResponse($result);
+        }
+
+        return $this->jsonSuccess(204);
+    }
+
+    public function apiCreateContent(HTTPRequest $request): HTTPResponse
+    {
+        if (!SecurityToken::inst()->checkRequest($request)) {
+            $this->jsonError(400);
+        }
+
+        $body = $this->parseCreateContentBody($request);
+
+        /** @var GridElement|null $parent */
+        $parent = Versioned::withVersionedMode(static function () use ($body): ?GridElement {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            return GridElement::get()->byID($body['parentId']);
+        });
+        if ($parent === null) {
+            $this->jsonError(400);
+        }
+
+        if (!$parent->canEdit()) {
+            $this->jsonError(403);
+        }
+
+        /** @var ContentElement $newElement */
+        $newElement = Injector::inst()->create($body['className']);
+        if (!$newElement->canCreate()) {
+            $this->jsonError(403);
+        }
+
+        $newElement->ParentID = $body['parentId'];
+        $newElement->ParentClass = $parent::class;
         $newElement->ensureSortSet();
 
         $result = $this->persistenceService->persistNew($newElement, $body['insertAfterElementID']);
@@ -501,6 +549,47 @@ class GridController extends AdminController
             'parentId' => $parentId,
             'insertAfterElementID' => $afterElementID,
             'zone' => $zone,
+        ];
+    }
+
+    /**
+     * Parse and validate the JSON body for content element creation.
+     *
+     * @return CreateContentBody
+     */
+    private function parseCreateContentBody(HTTPRequest $request): array
+    {
+        $data = $this->parseJsonBody($request);
+
+        $className = $data['className'] ?? null;
+        $parentId = $data['parentId'] ?? null;
+        $afterElementID = $data['insertAfterElementID'] ?? null;
+
+        if (!is_string($className)) {
+            $this->jsonError(400);
+        }
+
+        if (!class_exists($className)) {
+            $this->jsonError(400);
+        }
+
+        if (!is_subclass_of($className, ContentElement::class)) {
+            $this->jsonError(400);
+        }
+
+        if (!is_int($parentId) || $parentId < 1) {
+            $this->jsonError(400);
+        }
+
+        if ($afterElementID !== null && (!is_int($afterElementID) || $afterElementID < 1)) {
+            $this->jsonError(400);
+        }
+
+        /** @var class-string<ContentElement> $className */
+        return [
+            'className' => $className,
+            'parentId' => $parentId,
+            'insertAfterElementID' => $afterElementID,
         ];
     }
 

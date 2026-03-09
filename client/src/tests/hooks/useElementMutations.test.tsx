@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import {
   useCreateElement,
+  useCreateContentElement,
   usePublishElement,
   useUnpublishElement,
   useDeleteElement,
@@ -12,6 +13,7 @@ import {
 import { queryKeys } from '@/hooks/queryKeys';
 
 const mockCreateElement = vi.fn();
+const mockCreateContentElement = vi.fn();
 const mockPublishElement = vi.fn();
 const mockUnpublishElement = vi.fn();
 const mockDeleteElement = vi.fn();
@@ -25,6 +27,7 @@ vi.mock('@/utils/toast', () => ({
 
 vi.mock('@/api/endpoints', () => ({
   createElement: (...args: unknown[]) => mockCreateElement(...args),
+  createContentElement: (...args: unknown[]) => mockCreateContentElement(...args),
   publishElement: (...args: unknown[]) => mockPublishElement(...args),
   unpublishElement: (...args: unknown[]) => mockUnpublishElement(...args),
   deleteElement: (...args: unknown[]) => mockDeleteElement(...args),
@@ -86,6 +89,57 @@ describe('useCreateElement', () => {
     await act(() =>
       result.current.mutateAsync({
         containerType: 'section',
+        parentId: 10,
+      }),
+    );
+
+    await waitFor(() =>
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.elementTree.byPage(42, 'main'),
+      }),
+    );
+  });
+});
+
+describe('useCreateContentElement', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockCreateContentElement.mockReset();
+  });
+
+  it('calls createContentElement endpoint with params', async () => {
+    mockCreateContentElement.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useCreateContentElement(42, 'main'), {
+      wrapper: createWrapper(),
+    });
+
+    await act(() =>
+      result.current.mutateAsync({
+        className: 'SilverStripe\\ElementalBlocks\\Block\\ContentBlock',
+        parentId: 10,
+        insertAfterElementID: 5,
+      }),
+    );
+
+    expect(mockCreateContentElement).toHaveBeenCalledWith(
+      {
+        className: 'SilverStripe\\ElementalBlocks\\Block\\ContentBlock',
+        parentId: 10,
+        insertAfterElementID: 5,
+      },
+      expect.anything(),
+    );
+  });
+
+  it('invalidates element tree cache on success', async () => {
+    mockCreateContentElement.mockResolvedValue(undefined);
+    const wrapper = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => useCreateContentElement(42, 'main'), { wrapper });
+
+    await act(() =>
+      result.current.mutateAsync({
+        className: 'SilverStripe\\ElementalBlocks\\Block\\ContentBlock',
         parentId: 10,
       }),
     );

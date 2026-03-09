@@ -1,4 +1,5 @@
 import {
+  createContentElement,
   createElement,
   deleteElement,
   duplicateElement,
@@ -51,6 +52,7 @@ describe('endpoints', () => {
             canPublish: true,
             canUnpublish: false,
             canCreate: true,
+            editLink: null,
             statusFlags: {},
           },
         ],
@@ -141,6 +143,27 @@ describe('endpoints', () => {
       expect(mockApiPost).toHaveBeenCalledWith(
         '/admin/grid/api/duplicate',
         { id: 9 },
+      );
+    });
+  });
+
+  describe('createContentElement', () => {
+    it('sends correct POST body', async () => {
+      mockApiPost.mockResolvedValue(undefined);
+
+      await createContentElement({
+        className: 'SilverStripe\\ElementalBlocks\\Block\\ContentBlock',
+        parentId: 10,
+        insertAfterElementID: 5,
+      });
+
+      expect(mockApiPost).toHaveBeenCalledWith(
+        '/admin/grid/api/createContent',
+        {
+          className: 'SilverStripe\\ElementalBlocks\\Block\\ContentBlock',
+          parentId: 10,
+          insertAfterElementID: 5,
+        },
       );
     });
   });

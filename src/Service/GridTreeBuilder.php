@@ -29,7 +29,7 @@ class GridTreeBuilder
     use Extensible;
     use Injectable;
 
-    /** @var array<class-string, array<class-string, string>> */
+    /** @var array<class-string, array<class-string, array{label: string, icon: string, description: string}>> */
     private array $allowedTypesCache = [];
 
     public function __construct(
@@ -176,6 +176,7 @@ class GridTreeBuilder
         $canPublish = (bool) $element->canPublish();
         $canUnpublish = (bool) $element->canUnpublish();
         $canCreate = (bool) $element->canCreate();
+        $editLink = $element->CMSEditLink();
 
         /** @var array{typeName: string, type: string, title: string, summary: string, label: string} $blockSchema */
         $blockSchema = $element->getBlockSchema();
@@ -200,6 +201,7 @@ class GridTreeBuilder
             canPublish: $canPublish,
             canUnpublish: $canUnpublish,
             canCreate: $canCreate,
+            editLink: $editLink,
             statusFlags: $statusFlags,
             containerType: $containerType,
             allowedTypes: $allowedTypes,
@@ -214,7 +216,7 @@ class GridTreeBuilder
      *
      * Reads allowed_elements / disallowed_elements config directly.
      *
-     * @return array<class-string, string> FQCN → display label
+     * @return array<class-string, array{label: string, icon: string, description: string}>
      */
     private function getAllowedTypes(GridElement $container): array
     {
@@ -240,7 +242,7 @@ class GridTreeBuilder
         if (is_array($allowedElements)) {
             foreach ($allowedElements as $class) {
                 if (is_string($class) && is_subclass_of($class, GridElement::class)) {
-                    $types[$class] = $this->getElementLabel($class);
+                    $types[$class] = $this->getElementTypeInfo($class);
                 }
             }
         } else {
@@ -248,7 +250,7 @@ class GridTreeBuilder
             foreach (ClassInfo::subclassesFor(GridElement::class, false) as $class) {
                 /** @var class-string<GridElement> $class */
                 if (!in_array($class, $disallowedElements, true)) {
-                    $types[$class] = $this->getElementLabel($class);
+                    $types[$class] = $this->getElementTypeInfo($class);
                 }
             }
         }
@@ -259,14 +261,28 @@ class GridTreeBuilder
     }
 
     /**
-     * Get a human-readable label for an element class.
+     * Get display metadata for an element class.
      *
      * @param class-string<GridElement> $class
+     * @return array{label: string, icon: string, description: string}
      */
-    private function getElementLabel(string $class): string
+    private function getElementTypeInfo(string $class): array
     {
-        $name = Config::forClass($class)->get('singular_name');
+        $config = Config::forClass($class);
 
-        return is_string($name) && $name !== '' ? $name : ClassInfo::shortName($class);
+        $name = $config->get('singular_name');
+        $label = is_string($name) && $name !== '' ? $name : ClassInfo::shortName($class);
+
+        $icon = $config->get('icon');
+        $icon = is_string($icon) && $icon !== '' ? $icon : 'font-icon-block-content';
+
+        $description = $config->get('class_description');
+        $description = is_string($description) && $description !== '' ? $description : '';
+
+        return [
+            'label' => $label,
+            'icon' => $icon,
+            'description' => $description,
+        ];
     }
 }

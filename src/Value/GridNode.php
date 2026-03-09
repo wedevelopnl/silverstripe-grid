@@ -21,9 +21,10 @@ namespace WeDevelop\Grid\Value;
  *     canPublish: bool,
  *     canUnpublish: bool,
  *     canCreate: bool,
+ *     editLink: string|null,
  *     statusFlags: \stdClass&object{addedtodraft?: array{text: string, title: string}, modified?: array{text: string, title: string}, removedfromdraft?: array{text: string, title: string}},
  *     containerType?: string,
- *     allowedTypes?: array<class-string, string>|null,
+ *     allowedTypes?: array<class-string, array{label: string, icon: string, description: string}>|null,
  *     children?: list<mixed>|null,
  *     gridSettings?: array<string, array{width: int, offset: int, visible: bool}>,
  *     extensions?: array<string, mixed>,
@@ -35,7 +36,7 @@ final readonly class GridNode implements \JsonSerializable
      * @param positive-int $parentId
      * @param array{typeName: string, type: string, title: string, summary: string, label: string} $blockSchema
      * @param array<string, array{text: string, title: string}> $statusFlags
-     * @param array<class-string, string>|null $allowedTypes
+     * @param array<class-string, array{label: string, icon: string, description: string}>|null $allowedTypes
      * @param list<self>|null $children
      * @param array<string, array{width: int, offset: int, visible: bool}>|null $gridSettings
      * @param array<string, mixed> $extensions
@@ -51,6 +52,7 @@ final readonly class GridNode implements \JsonSerializable
         public bool $canPublish,
         public bool $canUnpublish,
         public bool $canCreate,
+        public ?string $editLink,
         public array $statusFlags,
         public ?ContainerType $containerType = null,
         public ?array $allowedTypes = null,
@@ -89,6 +91,7 @@ final readonly class GridNode implements \JsonSerializable
             'canPublish' => $this->canPublish,
             'canUnpublish' => $this->canUnpublish,
             'canCreate' => $this->canCreate,
+            'editLink' => $this->editLink,
             'statusFlags' => $statusFlags,
         ];
 

@@ -3,6 +3,7 @@ import {
   type ColumnNode,
   type SectionNode,
   type StatusFlags,
+  allowedTypeInfoSchema,
   elementTreeResponseSchema,
 } from '@/types/elements';
 import { loadFixture, resetFixtures } from '../helpers/fixtures';
@@ -174,5 +175,91 @@ test.describe('API contract', () => {
     expect(rightCol, 'Right Column not found').toBeDefined();
     expect(rightCol!.gridSettings['md']).toEqual({ width: 4, offset: 0, visible: true });
     expect(rightCol!.gridSettings['xs']).toEqual({ width: 12, offset: 0, visible: false });
+  });
+
+  test('element nodes include editLink field', async ({ request }) => {
+    const fixture = await loadFixture(request, 'complex-page');
+    const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
+    const body: unknown = await response.json();
+    const tree = elementTreeResponseSchema.parse(body);
+
+    for (const sections of Object.values(tree)) {
+      for (const section of sections) {
+        expect(section).toHaveProperty('editLink');
+        expect(typeof section.editLink === 'string' || section.editLink === null).toBe(true);
+      }
+    }
+  });
+
+  test('container allowedTypes include label, icon, and description', async ({ request }) => {
+    const fixture = await loadFixture(request, 'complex-page');
+    const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
+    const body: unknown = await response.json();
+    const tree = elementTreeResponseSchema.parse(body);
+
+    for (const sections of Object.values(tree)) {
+      for (const section of sections) {
+        if (!('containerType' in section) || section.containerType !== 'section') continue;
+        const sectionNode = section as SectionNode;
+
+        // Section's allowedTypes should have enriched info objects
+        if (sectionNode.allowedTypes !== null) {
+          for (const [, info] of Object.entries(sectionNode.allowedTypes)) {
+            const parsed = allowedTypeInfoSchema.safeParse(info);
+            expect(parsed.success, `allowedTypes value should match {label, icon, description}: ${JSON.stringify(info)}`).toBe(true);
+          }
+        }
+      }
+    }
+  });
+
+  test('createContent rejects invalid className with 400', async ({ page }) => {
+    const fixture = await loadFixture(page.request, 'content-elements');
+
+    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
+    await expect(page.getByTestId('grid-editor-loading')).toHaveCount(0, { timeout: 15_000 });
+
+    const securityId = await page.evaluate(() => (window as any).ss?.config?.SecurityID ?? '');
+    expect(securityId).not.toBe('');
+
+    const colId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\Column']['empty_col'];
+
+    const response = await page.request.post('/admin/grid/api/createContent', {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-SecurityID': securityId,
+      },
+      data: {
+        className: 'NonExistentClass',
+        parentId: colId,
+      },
+    });
+
+    expect(response.status()).toBe(400);
+  });
+
+  test('createContent accepts valid ContentElement className with 204', async ({ page }) => {
+    const fixture = await loadFixture(page.request, 'content-elements');
+
+    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
+    await expect(page.getByTestId('grid-editor-loading')).toHaveCount(0, { timeout: 15_000 });
+
+    const securityId = await page.evaluate(() => (window as any).ss?.config?.SecurityID ?? '');
+    expect(securityId).not.toBe('');
+
+    const colId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\Column']['empty_col'];
+
+    const response = await page.request.post('/admin/grid/api/createContent', {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-SecurityID': securityId,
+      },
+      data: {
+        className: 'WeDevelop\\Grid\\Model\\ContentElement',
+        parentId: colId,
+      },
+    });
+
+    expect(response.status()).toBe(204);
   });
 });

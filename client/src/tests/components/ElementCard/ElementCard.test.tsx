@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import ElementCard from '@/components/ElementCard/ElementCard';
 import type { EnrichedSimpleElementNode } from '@/types/enriched';
@@ -23,6 +24,7 @@ function makeElement(overrides: Partial<EnrichedSimpleElementNode> = {}): Enrich
     canPublish: true,
     canUnpublish: false,
     canCreate: true,
+    editLink: null,
     statusFlags: {},
     sortableId: `element-${id}`,
     ...overrides,
@@ -176,5 +178,81 @@ describe('ElementCard', () => {
     const handle = screen.getByTestId('drag-handle');
     expect(handle).toBeDefined();
     expect(handle.getAttribute('aria-label')).toBe('Move Hero Banner');
+  });
+
+  describe('edit link', () => {
+    let originalLocation: Location;
+
+    beforeEach(() => {
+      originalLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        value: { href: '' },
+        writable: true,
+      });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(window, 'location', {
+        value: originalLocation,
+        writable: true,
+      });
+    });
+
+    it('applies "element-card--clickable" class when editLink is present', () => {
+      const element = makeElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
+
+      const { container } = render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      const card = container.querySelector('.element-card');
+      expect(card?.classList.contains('element-card--clickable')).toBe(true);
+    });
+
+    it('does not apply "element-card--clickable" class when editLink is null', () => {
+      const element = makeElement({ editLink: null });
+
+      const { container } = render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      const card = container.querySelector('.element-card');
+      expect(card?.classList.contains('element-card--clickable')).toBe(false);
+    });
+
+    it('sets role="link" when editLink is present', () => {
+      const element = makeElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
+
+      render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      const card = screen.getByTestId('element-card');
+      expect(card.getAttribute('role')).toBe('link');
+    });
+
+    it('does not set role attribute when editLink is null', () => {
+      const element = makeElement({ editLink: null });
+
+      render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      const card = screen.getByTestId('element-card');
+      expect(card.getAttribute('role')).toBeNull();
+    });
+
+    it('navigates to editLink on click', async () => {
+      const element = makeElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
+      const user = userEvent.setup();
+
+      render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      const card = screen.getByTestId('element-card');
+      await user.click(card);
+      expect(window.location.href).toBe('/admin/grid-elements/EditForm/field/1/item/42');
+    });
   });
 });

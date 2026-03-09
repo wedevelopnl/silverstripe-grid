@@ -1,4 +1,5 @@
 import {
+  type ContainerType,
   type ElementTreeResponse,
   elementTreeResponseSchema,
 } from '@/types/elements';
@@ -18,8 +19,6 @@ export async function fetchElementTree(
 
   return elementTreeResponseSchema.parse(data);
 }
-
-import type { ContainerType } from '@/types/elements';
 
 export interface CreateElementParams {
   containerType: ContainerType;
@@ -66,6 +65,19 @@ export async function reorderElement(
 ): Promise<void> {
   const base = getControllerLink();
   await apiPatch(`${base}/api/reorder`, params);
+}
+
+export interface CreateContentElementParams {
+  className: string;
+  parentId: number;
+  insertAfterElementID?: number;
+}
+
+export async function createContentElement(
+  params: CreateContentElementParams,
+): Promise<void> {
+  const base = getControllerLink();
+  await apiPost(`${base}/api/createContent`, params);
 }
 
 export interface UpdateGridSettingsParams {

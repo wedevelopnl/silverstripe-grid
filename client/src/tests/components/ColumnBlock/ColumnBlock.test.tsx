@@ -14,6 +14,12 @@ const { getIsOver, setIsOver } = vi.hoisted(() => {
   };
 });
 
+vi.mock('@/api/endpoints', () => ({
+  createElement: vi.fn(),
+  createContentElement: vi.fn(),
+  updateGridSettings: vi.fn(),
+}));
+
 vi.mock('@dnd-kit/sortable', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@dnd-kit/sortable')>();
   return {
@@ -89,6 +95,7 @@ function makeColumn(overrides: Partial<EnrichedColumnNode> = {}): EnrichedColumn
     canPublish: true,
     canUnpublish: false,
     canCreate: true,
+    editLink: null,
     statusFlags: {},
     containerType: 'column',
     allowedTypes: null,
@@ -190,6 +197,7 @@ describe('ColumnBlock', () => {
           canPublish: true,
           canUnpublish: false,
           canCreate: true,
+          editLink: null,
           statusFlags: {},
           sortableId: 'element-100',
         },
@@ -210,6 +218,7 @@ describe('ColumnBlock', () => {
           canPublish: true,
           canUnpublish: false,
           canCreate: true,
+          editLink: null,
           statusFlags: {},
           sortableId: 'element-101',
         },
@@ -523,5 +532,72 @@ describe('ColumnBlock', () => {
     const handle = screen.getByTestId('drag-handle');
     expect(handle).toBeDefined();
     expect(handle.getAttribute('aria-label')).toBe('Move Left Column');
+  });
+
+  describe('add content button', () => {
+    beforeEach(() => {
+      HTMLDialogElement.prototype.showModal = vi.fn();
+      HTMLDialogElement.prototype.close = vi.fn();
+    });
+
+    it('shows "Add content" button when allowedTypes has entries', () => {
+      const column = makeColumn({
+        allowedTypes: { 'App\\Model\\Text': { label: 'Text', icon: 'font-icon-block-content', description: '' } },
+      });
+
+      render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      expect(screen.getByTestId('add-content-button')).toBeDefined();
+    });
+
+    it('does not show "Add content" button when allowedTypes is null', () => {
+      const column = makeColumn({ allowedTypes: null });
+
+      render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      expect(screen.queryByTestId('add-content-button')).toBeNull();
+    });
+
+    it('does not show "Add content" button when allowedTypes is empty object', () => {
+      const column = makeColumn({ allowedTypes: {} });
+
+      render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      expect(screen.queryByTestId('add-content-button')).toBeNull();
+    });
+
+    it('shows EmptyState when children is empty and allowedTypes is null', () => {
+      const column = makeColumn({ children: [], allowedTypes: null });
+
+      render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      expect(screen.getByText('No content blocks')).toBeDefined();
+    });
+
+    it('does not show EmptyState when children is empty but allowedTypes has entries', () => {
+      const column = makeColumn({
+        children: [],
+        allowedTypes: { 'App\\Model\\Text': { label: 'Text', icon: 'font-icon-block-content', description: '' } },
+      });
+
+      render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      expect(screen.queryByText('No content blocks')).toBeNull();
+    });
   });
 });

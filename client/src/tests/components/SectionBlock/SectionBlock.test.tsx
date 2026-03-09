@@ -36,6 +36,7 @@ vi.mock('@dnd-kit/sortable', async (importOriginal) => {
 
 vi.mock('@/api/endpoints', () => ({
   createElement: vi.fn(),
+  createContentElement: vi.fn(),
   updateGridSettings: vi.fn(),
 }));
 
@@ -91,6 +92,7 @@ function makeRow(id: number, title: string, overrides: Partial<EnrichedRowNode> 
     canPublish: true,
     canUnpublish: false,
     canCreate: true,
+    editLink: null,
     statusFlags: {},
     containerType: 'row',
     allowedTypes: null,
@@ -123,6 +125,7 @@ function makeSection(overrides: Partial<EnrichedSectionNode> = {}): EnrichedSect
     canPublish: true,
     canUnpublish: false,
     canCreate: true,
+    editLink: null,
     statusFlags: {},
     containerType: 'section',
     allowedTypes: null,
@@ -305,6 +308,7 @@ describe('SectionBlock', () => {
               canPublish: true,
               canUnpublish: false,
               canCreate: true,
+              editLink: null,
               statusFlags: {},
               containerType: 'column' as const,
               allowedTypes: null,

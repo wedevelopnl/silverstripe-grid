@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   createElement,
+  createContentElement,
   deleteElement,
   duplicateElement,
   publishElement,
@@ -8,7 +9,7 @@ import {
   unpublishElement,
   updateGridSettings,
 } from '@/api/endpoints';
-import type { CreateElementParams, ReorderElementParams, UpdateGridSettingsParams } from '@/api/endpoints';
+import type { CreateElementParams, CreateContentElementParams, ReorderElementParams, UpdateGridSettingsParams } from '@/api/endpoints';
 import type { ApiError } from '@/api/errors';
 import type { ElementTreeResponse } from '@/types/elements';
 import { applyReorder } from '@/utils/applyReorder';
@@ -30,6 +31,13 @@ function useInvalidateOnSuccess(pageId: number, zone: string) {
 export function useCreateElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, CreateElementParams>({
     mutationFn: createElement,
+    ...useInvalidateOnSuccess(pageId, zone),
+  });
+}
+
+export function useCreateContentElement(pageId: number, zone: string) {
+  return useMutation<void, ApiError, CreateContentElementParams>({
+    mutationFn: createContentElement,
     ...useInvalidateOnSuccess(pageId, zone),
   });
 }

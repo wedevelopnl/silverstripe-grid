@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { ViewportSettings } from '@/types/elements';
@@ -7,7 +7,7 @@ import { getElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { useGridEditorContext } from '@/hooks/GridEditorContext';
 import { useViewportContext } from '@/hooks/ViewportContext';
-import { useUpdateGridSettings } from '@/hooks/useElementMutations';
+import { useUpdateGridSettings, useCreateContentElement } from '@/hooks/useElementMutations';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
 import { getColumnCount, getWidthClass, getOffsetClass, getWidthOptions, getOffsetOptions, resolveViewportSettings } from '@/utils/gridAdapter';
@@ -16,6 +16,7 @@ import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import GridSettingsPicker from '@/components/GridSettingsPicker/GridSettingsPicker';
 import ElementCard from '@/components/ElementCard/ElementCard';
 import EmptyState from '@/components/EmptyState/EmptyState';
+import ElementTypePicker from '@/components/ElementTypePicker/ElementTypePicker';
 
 interface ColumnBlockProps {
   readonly column: EnrichedColumnNode;
@@ -30,6 +31,8 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
   const { isCollapsed, toggle } = column;
   const { activeType } = useDragContext();
   const updateGridSettings = useUpdateGridSettings(pageId, zone);
+  const createContentElement = useCreateContentElement(pageId, zone);
+  const [isPickerOpen, setPickerOpen] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: column.sortableId });
 
@@ -94,6 +97,27 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
     [updateSettings],
   );
 
+  const handleOpenPicker = useCallback(() => {
+    setPickerOpen(true);
+  }, []);
+
+  const handleClosePicker = useCallback(() => {
+    setPickerOpen(false);
+  }, []);
+
+  const handleTypeSelect = useCallback(
+    (className: string) => {
+      createContentElement.mutate({
+        className,
+        parentId: column.id,
+      });
+    },
+    [createContentElement, column.id],
+  );
+
+  const hasAllowedTypes = column.allowedTypes !== null && Object.keys(column.allowedTypes).length > 0;
+  const hasChildren = column.children !== null && column.children.length > 0;
+
   return (
     <div ref={setNodeRef} style={sortableStyle} className={outerClasses.join(' ')}>
       <div className={innerClasses} data-testid="column-block">
@@ -119,14 +143,32 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
         </div>
         <div className="column-block__body">
           <SortableContext items={column.childSortableIds} strategy={verticalListSortingStrategy}>
-            {column.children !== null && column.children.length > 0
-              ? column.children.map((child) => (
+            {hasChildren
+              ? column.children!.map((child) => (
                 <ElementCard key={child.id} element={child} />
               ))
-              : <EmptyState message="No content blocks" />}
+              : !hasAllowedTypes && <EmptyState message="No content blocks" />}
           </SortableContext>
+          {hasAllowedTypes && (
+            <button
+              type="button"
+              className="column-block__add-button"
+              data-testid="add-content-button"
+              onClick={handleOpenPicker}
+            >
+              + Add content
+            </button>
+          )}
         </div>
       </div>
+      {hasAllowedTypes && (
+        <ElementTypePicker
+          allowedTypes={column.allowedTypes!}
+          isOpen={isPickerOpen}
+          onClose={handleClosePicker}
+          onSelect={handleTypeSelect}
+        />
+      )}
     </div>
   );
 }

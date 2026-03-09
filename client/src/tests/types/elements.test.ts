@@ -36,6 +36,7 @@ function makeSimpleNode(overrides: Record<string, unknown> = {}) {
     canPublish: true,
     canUnpublish: true,
     canCreate: true,
+    editLink: null,
     statusFlags: {},
     ...overrides,
   };
@@ -51,7 +52,7 @@ function makeColumnNode(
     parentId: 200,
     title: 'Column',
     containerType: 'column',
-    allowedTypes: { 'App\\Model\\ElementContent': 'Content' },
+    allowedTypes: { 'App\\Model\\ElementContent': { label: 'Content', icon: 'font-icon-block-content', description: '' } },
     children,
     gridSettings: {
       xs: { width: 12, offset: 0, visible: true },
@@ -182,6 +183,7 @@ describe('columnNodeSchema', () => {
       canPublish: true,
       canUnpublish: false,
       canCreate: true,
+      editLink: null,
       statusFlags: {},
     };
 

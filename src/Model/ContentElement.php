@@ -16,6 +16,10 @@ class ContentElement extends GridElement
 {
     private static string $table_name = 'ContentElement';
 
+    private static string $icon = 'font-icon-block-content';
+
+    private static string $class_description = '';
+
     /** Whether content of this type should be included in search indexes. */
     private static bool $search_indexable = true;
 

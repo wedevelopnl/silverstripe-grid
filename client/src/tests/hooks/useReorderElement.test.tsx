@@ -31,6 +31,7 @@ function makeElement(id: number, parentId: number): SimpleElementNode {
     canPublish: true,
     canUnpublish: false,
     canCreate: true,
+    editLink: null,
     statusFlags: {},
   };
 }
@@ -57,6 +58,7 @@ function makeColumn(
     canPublish: true,
     canUnpublish: false,
     canCreate: true,
+    editLink: null,
     statusFlags: {},
     containerType: 'column',
     allowedTypes: null,

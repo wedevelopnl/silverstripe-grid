@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import type { EnrichedSimpleElementNode } from '@/types/enriched';
 import { getElementStatus } from '@/types/status';
@@ -17,11 +18,31 @@ export default function ElementCard({ element }: ElementCardProps) {
   const status = getElementStatus(element.statusFlags);
   const label = element.blockSchema.label;
   const content = element.blockSchema.summary;
+  const editLink = 'editLink' in element ? (element.editLink as string | null) : null;
 
   const style = buildSortableStyle(transform, transition, isDragging);
 
+  const handleClick = useCallback(() => {
+    if (editLink !== null) {
+      window.location.href = editLink;
+    }
+  }, [editLink]);
+
+  const cardClasses = [
+    'element-card',
+    `element-card--${status}`,
+    ...(editLink !== null ? ['element-card--clickable'] : []),
+  ].join(' ');
+
   return (
-    <div ref={setNodeRef} style={style} className={`element-card element-card--${status}`} data-testid="element-card">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cardClasses}
+      data-testid="element-card"
+      onClick={handleClick}
+      role={editLink !== null ? 'link' : undefined}
+    >
       <div className="element-card__header">
         <DragHandle listeners={listeners} attributes={attributes} label={`Move ${element.title}`} />
         <span className="element-card__type">{label}</span>

@@ -25,6 +25,7 @@ final class GridNodeTest extends TestCase
             canPublish: true,
             canUnpublish: false,
             canCreate: true,
+            editLink: null,
             statusFlags: [],
         );
     }
@@ -45,9 +46,10 @@ final class GridNodeTest extends TestCase
             canPublish: true,
             canUnpublish: true,
             canCreate: true,
+            editLink: null,
             statusFlags: ['modified' => ['text' => 'Modified', 'title' => 'Item has unpublished changes']],
             containerType: $containerType,
-            allowedTypes: ['App\\Elements\\Row' => 'Row'],
+            allowedTypes: ['App\\Elements\\Row' => ['label' => 'Row', 'icon' => 'font-icon-block-layout', 'description' => '']],
             children: $children,
         );
     }
@@ -76,6 +78,7 @@ final class GridNodeTest extends TestCase
         $this->assertTrue($data['canPublish']);
         $this->assertFalse($data['canUnpublish']);
         $this->assertTrue($data['canCreate']);
+        $this->assertNull($data['editLink']);
         $this->assertEquals(new \stdClass(), $data['statusFlags']);
     }
 
@@ -89,7 +92,7 @@ final class GridNodeTest extends TestCase
         $this->assertArrayHasKey('children', $data);
 
         $this->assertSame('section', $data['containerType']);
-        $this->assertSame(['App\\Elements\\Row' => 'Row'], $data['allowedTypes']);
+        $this->assertSame(['App\\Elements\\Row' => ['label' => 'Row', 'icon' => 'font-icon-block-layout', 'description' => '']], $data['allowedTypes']);
         $this->assertSame([], $data['children']);
     }
 
@@ -155,6 +158,7 @@ final class GridNodeTest extends TestCase
             canPublish: true,
             canUnpublish: false,
             canCreate: true,
+            editLink: null,
             statusFlags: [],
         );
     }
@@ -175,6 +179,7 @@ final class GridNodeTest extends TestCase
             canPublish: true,
             canUnpublish: false,
             canCreate: true,
+            editLink: null,
             statusFlags: [],
         );
     }
@@ -192,6 +197,7 @@ final class GridNodeTest extends TestCase
             canPublish: true,
             canUnpublish: false,
             canCreate: true,
+            editLink: null,
             statusFlags: [],
             extensions: ['gridSettings' => ['span' => 6, 'offset' => 0]],
         );
@@ -223,6 +229,7 @@ final class GridNodeTest extends TestCase
             canPublish: true,
             canUnpublish: false,
             canCreate: true,
+            editLink: null,
             statusFlags: [],
             extensions: ['custom' => 'value'],
         );
@@ -249,9 +256,10 @@ final class GridNodeTest extends TestCase
             canPublish: true,
             canUnpublish: true,
             canCreate: true,
+            editLink: null,
             statusFlags: [],
             containerType: ContainerType::Section,
-            allowedTypes: ['App\\Elements\\Row' => 'Row'],
+            allowedTypes: ['App\\Elements\\Row' => ['label' => 'Row', 'icon' => 'font-icon-block-layout', 'description' => '']],
             children: [],
             extensions: ['layout' => 'fluid'],
         );
@@ -283,9 +291,10 @@ final class GridNodeTest extends TestCase
             canPublish: true,
             canUnpublish: false,
             canCreate: true,
+            editLink: null,
             statusFlags: [],
             containerType: ContainerType::Row,
-            allowedTypes: ['App\\Elements\\Column' => 'Column'],
+            allowedTypes: ['App\\Elements\\Column' => ['label' => 'Column', 'icon' => 'font-icon-block-layout', 'description' => '']],
             children: [$innerContainer],
 
 
@@ -326,6 +335,7 @@ final class GridNodeTest extends TestCase
             canPublish: true,
             canUnpublish: false,
             canCreate: true,
+            editLink: null,
             statusFlags: [],
             containerType: ContainerType::Column,
             allowedTypes: null,
@@ -356,6 +366,7 @@ final class GridNodeTest extends TestCase
             canPublish: true,
             canUnpublish: false,
             canCreate: true,
+            editLink: null,
             statusFlags: [],
             containerType: ContainerType::Row,
             allowedTypes: null,
@@ -379,6 +390,7 @@ final class GridNodeTest extends TestCase
             canPublish: true,
             canUnpublish: false,
             canCreate: true,
+            editLink: null,
             statusFlags: [],
             containerType: ContainerType::Column,
             allowedTypes: null,
@@ -405,6 +417,7 @@ final class GridNodeTest extends TestCase
             canPublish: true,
             canUnpublish: false,
             canCreate: true,
+            editLink: null,
             statusFlags: [],
             containerType: ContainerType::Row,
             allowedTypes: null,

@@ -10,6 +10,7 @@ use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Admin\GridElementAdmin;
 
 /**
  * Abstract base for all grid elements (containers and content).
@@ -65,6 +66,11 @@ class GridElement extends DataObject
             'columns' => ['Sort'],
         ],
     ];
+
+    public function CMSEditLink(): string
+    {
+        return GridElementAdmin::singleton()->getCMSEditLinkForManagedDataObject($this);
+    }
 
     /** Human-readable element type identifier (e.g., "Section", "Row", "Text"). */
     public function getType(): string

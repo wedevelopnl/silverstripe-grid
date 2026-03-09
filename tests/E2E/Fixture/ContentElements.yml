@@ -1,0 +1,54 @@
+# E2E fixture for content element creation and editing flows.
+#
+# Structure:
+#   Page → Section → Row → 2 Columns
+#     Column 1: empty (tests add-to-empty flow)
+#     Column 2: 2 ContentElement leaves (tests add-to-existing + edit link)
+#
+# Top-down ordering: parents before children. Auto-scaffolding suppressed by FixtureLoader.
+# All pages use the 'e2e-' URLSegment prefix for cleanup identification.
+
+Page:
+  e2e_page:
+    Title: 'E2E Content Elements Page'
+    URLSegment: 'e2e-content-elements'
+
+# --- Section (into page) ---
+WeDevelop\Grid\Model\Section:
+  content_section:
+    Title: 'Content Section'
+    ShowTitle: 1
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+
+# --- Row (into section) ---
+WeDevelop\Grid\Model\Row:
+  content_row:
+    Title: 'Content Row'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.content_section
+
+# --- Columns (into row) ---
+WeDevelop\Grid\Model\Column:
+  empty_col:
+    Title: 'Empty Column'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.content_row
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":6,"offset":0,"visible":true},"lg":{"width":6,"offset":0,"visible":true},"xl":{"width":6,"offset":0,"visible":true},"xxl":{"width":6,"offset":0,"visible":true}}'
+  populated_col:
+    Title: 'Populated Column'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Row.content_row
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":6,"offset":0,"visible":true},"lg":{"width":6,"offset":0,"visible":true},"xl":{"width":6,"offset":0,"visible":true},"xxl":{"width":6,"offset":0,"visible":true}}'
+
+# --- Leaves (into populated column) ---
+WeDevelop\Grid\Model\ContentElement:
+  existing_leaf1:
+    Title: 'Existing Text Block'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.populated_col
+  existing_leaf2:
+    Title: 'Existing Image Block'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Column.populated_col

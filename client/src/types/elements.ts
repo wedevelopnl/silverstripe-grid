@@ -38,6 +38,7 @@ const baseFieldsSchema = z.object({
   canPublish: z.boolean(),
   canUnpublish: z.boolean(),
   canCreate: z.boolean(),
+  editLink: z.string().nullable(),
   statusFlags: statusFlagsSchema,
   extensions: z.record(z.string(), z.unknown()).optional(),
 });
@@ -58,24 +59,34 @@ const viewportSettingsSchema = z.object({
 
 export const gridSettingsSchema = z.record(z.string(), viewportSettingsSchema);
 
+// --- Allowed type info schema ---
+
+export const allowedTypeInfoSchema = z.object({
+  label: z.string(),
+  icon: z.string(),
+  description: z.string(),
+});
+
+export type AllowedTypeInfo = z.infer<typeof allowedTypeInfoSchema>;
+
 // --- Container node schemas (bottom-up: column → row → section) ---
 
 export const columnNodeSchema = baseFieldsSchema.extend({
   containerType: z.literal('column'),
-  allowedTypes: z.record(z.string(), z.string()).nullable(),
+  allowedTypes: z.record(z.string(), allowedTypeInfoSchema).nullable(),
   children: z.array(simpleElementNodeSchema).nullable(),
   gridSettings: gridSettingsSchema,
 });
 
 export const rowNodeSchema = baseFieldsSchema.extend({
   containerType: z.literal('row'),
-  allowedTypes: z.record(z.string(), z.string()).nullable(),
+  allowedTypes: z.record(z.string(), allowedTypeInfoSchema).nullable(),
   children: z.array(columnNodeSchema).nullable(),
 });
 
 export const sectionNodeSchema = baseFieldsSchema.extend({
   containerType: z.literal('section'),
-  allowedTypes: z.record(z.string(), z.string()).nullable(),
+  allowedTypes: z.record(z.string(), allowedTypeInfoSchema).nullable(),
   children: z.array(rowNodeSchema).nullable(),
 });
 

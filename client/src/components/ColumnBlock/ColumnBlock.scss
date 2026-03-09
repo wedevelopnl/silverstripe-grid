@@ -45,6 +45,23 @@
     display: none;
   }
 
+  &__add-button {
+    width: 100%;
+    padding: 8px;
+    border: 1px dashed vars.$color-text-muted;
+    border-radius: 4px;
+    background: transparent;
+    color: vars.$color-text-muted;
+    cursor: pointer;
+    font-size: 13px;
+    transition: border-color 0.15s, color 0.15s;
+
+    &:hover {
+      border-color: vars.$color-drop-indicator;
+      color: vars.$color-drop-indicator;
+    }
+  }
+
   &--drop-target {
     outline: 2px solid vars.$color-drop-indicator;
     background: vars.$color-drop-zone-highlight;

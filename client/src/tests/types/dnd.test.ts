@@ -76,6 +76,7 @@ describe('getDraggableTypeForNode', () => {
     canPublish: true,
     canUnpublish: false,
     canCreate: true,
+    editLink: null,
     statusFlags: {},
   };
 

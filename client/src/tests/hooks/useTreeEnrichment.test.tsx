@@ -54,6 +54,7 @@ function makeElement(id: number, parentId: number): SimpleElementNode {
     canPublish: true,
     canUnpublish: false,
     canCreate: true,
+    editLink: null,
     statusFlags: {},
   };
 }
@@ -76,6 +77,7 @@ function makeColumn(id: number, overrides: Partial<ColumnNode> = {}, parentId: n
     canPublish: true,
     canUnpublish: false,
     canCreate: true,
+    editLink: null,
     statusFlags: {},
     containerType: 'column',
     allowedTypes: null,
@@ -103,6 +105,7 @@ function makeRow(id: number, overrides: Partial<RowNode> = {}, parentId: number 
     canPublish: true,
     canUnpublish: false,
     canCreate: true,
+    editLink: null,
     statusFlags: {},
     containerType: 'row',
     allowedTypes: null,
@@ -129,6 +132,7 @@ function makeSection(id: number, overrides: Partial<SectionNode> = {}, parentId:
     canPublish: true,
     canUnpublish: false,
     canCreate: true,
+    editLink: null,
     statusFlags: {},
     containerType: 'section',
     allowedTypes: null,
