@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { loadFixture, resetFixtures } from '../helpers/fixtures';
+import { resetFixtures, loadAndNavigate } from '../helpers/fixtures';
 
 /**
  * Regression test for ghost-jump bug: with exactly 2 sibling rows, starting
@@ -20,9 +20,7 @@ test.describe('Ghost jump regression', () => {
   });
 
   test('row does not swap until dragged center crosses sibling center', async ({ page }) => {
-    const fixture = await loadFixture(page.request, 'ghost-jump');
-    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
-    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+    await loadAndNavigate(page, 'ghost-jump');
 
     // Verify initial order: Row 1 first, Row 2 second
     const rows = page.getByTestId('row-block');
