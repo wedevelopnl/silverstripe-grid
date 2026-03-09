@@ -7,6 +7,7 @@ import {
   useUnpublishElement,
   useDeleteElement,
   useDuplicateElement,
+  useUpdateGridSettings,
 } from '@/hooks/useElementMutations';
 import { queryKeys } from '@/hooks/queryKeys';
 
@@ -15,6 +16,7 @@ const mockPublishElement = vi.fn();
 const mockUnpublishElement = vi.fn();
 const mockDeleteElement = vi.fn();
 const mockDuplicateElement = vi.fn();
+const mockUpdateGridSettings = vi.fn();
 
 vi.mock('@/api/endpoints', () => ({
   createElement: (...args: unknown[]) => mockCreateElement(...args),
@@ -22,7 +24,7 @@ vi.mock('@/api/endpoints', () => ({
   unpublishElement: (...args: unknown[]) => mockUnpublishElement(...args),
   deleteElement: (...args: unknown[]) => mockDeleteElement(...args),
   duplicateElement: (...args: unknown[]) => mockDuplicateElement(...args),
-  updateGridSettings: vi.fn(),
+  updateGridSettings: (...args: unknown[]) => mockUpdateGridSettings(...args),
 }));
 
 let queryClient: QueryClient;
@@ -179,5 +181,40 @@ describe('useDuplicateElement', () => {
     });
 
     await waitFor(() => expect(result.current.error).toBe(error));
+  });
+});
+
+describe('useUpdateGridSettings', () => {
+  afterEach(() => {
+    mockUpdateGridSettings.mockReset();
+  });
+
+  it('calls updateGridSettings endpoint with params', async () => {
+    mockUpdateGridSettings.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useUpdateGridSettings(42, 'main'), {
+      wrapper: createWrapper(),
+    });
+
+    const params = { id: 5, viewport: 'md', width: 6, offset: 0, visible: true };
+    await act(() => result.current.mutateAsync(params));
+
+    expect(mockUpdateGridSettings).toHaveBeenCalledWith(params, expect.anything());
+  });
+
+  it('invalidates element tree cache on success', async () => {
+    mockUpdateGridSettings.mockResolvedValue(undefined);
+    const wrapper = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => useUpdateGridSettings(42, 'main'), { wrapper });
+
+    await act(() =>
+      result.current.mutateAsync({ id: 5, viewport: 'md', width: 6, offset: 0, visible: true }),
+    );
+
+    await waitFor(() =>
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.elementTree.byPage(42, 'main'),
+      }),
+    );
   });
 });
