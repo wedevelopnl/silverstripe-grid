@@ -6,7 +6,7 @@ test.describe('Content elements', () => {
     await resetFixtures(request);
   });
 
-  test('content editor adds elements to columns and navigates to edit page', async ({ page }) => {
+  test('content editor adds elements, edits content, publishes, and verifies frontend rendering', async ({ page }) => {
     const fixture = await loadFixture(page.request, 'content-elements');
     await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
     await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
@@ -60,5 +60,53 @@ test.describe('Content elements', () => {
 
     // Should navigate to the ModelAdmin edit page
     await expect(page).toHaveURL(/grid-elements/);
+
+    // --- Step 5: Fill in the edit form ---
+    // Wait for the form to be ready
+    await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 });
+    await page.getByRole('textbox', { name: 'Title' }).fill('My Edited Element');
+
+    // Set HTML content — try TinyMCE API first, fall back to textarea
+    const hasTinyMce = await page.waitForFunction(
+      () => (window as any).tinymce?.activeEditor?.initialized,
+      null,
+      { timeout: 5_000 },
+    ).then(() => true).catch(() => false);
+
+    if (hasTinyMce) {
+      await page.evaluate(() => {
+        (window as any).tinymce.activeEditor.setContent('<p>Hello from the grid</p>');
+        (window as any).tinymce.activeEditor.fire('change');
+      });
+    } else {
+      const htmlField = page.locator('textarea[name="HTML"]');
+      await htmlField.fill('<p>Hello from the grid</p>');
+    }
+
+    // Save the element
+    await page.getByRole('button', { name: /Save/ }).first().click();
+
+    // Wait for save to complete — toast notification confirms success
+    await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
+
+    // --- Step 6: Navigate back to page editor ---
+    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
+    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+
+    // --- Step 7: Publish the page ---
+    await page.getByRole('button', { name: /Publish/ }).click();
+    await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 15_000 });
+
+    // --- Step 8: Verify frontend rendering ---
+    // Strip ?stage=Stage from the fixture URL to get the live URL
+    const liveUrl = fixture.pageUrl.split('?')[0];
+    await page.goto(liveUrl);
+
+    // Verify the edited element renders its content
+    await expect(page.locator('.content-element')).toContainText(['Hello from the grid']);
+
+    // Verify pre-populated elements render their body content
+    await expect(page.locator('.content-element').filter({ hasText: 'Text block body content' })).toBeVisible();
+    await expect(page.locator('.content-element').filter({ hasText: 'Image block body content' })).toBeVisible();
   });
 });

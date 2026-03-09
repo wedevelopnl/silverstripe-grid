@@ -219,6 +219,10 @@ class GridController extends AdminController
             $this->jsonError(400);
         }
 
+        if (!$parent instanceof Column) {
+            $this->jsonError(400);
+        }
+
         if (!$parent->canEdit()) {
             $this->jsonError(403);
         }

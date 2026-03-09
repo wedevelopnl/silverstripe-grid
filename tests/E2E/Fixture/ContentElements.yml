@@ -5,7 +5,7 @@
 #     Column 1: empty (tests add-to-empty flow)
 #     Column 2: 2 ContentElement leaves (tests add-to-existing + edit link)
 #
-# Top-down ordering: parents before children. Auto-scaffolding suppressed by FixtureLoader.
+# Top-down ordering: parents before children. FixtureLoader suppresses auto-scaffolding.
 # All pages use the 'e2e-' URLSegment prefix for cleanup identification.
 
 Page:
@@ -46,9 +46,11 @@ WeDevelop\Grid\Model\Column:
 WeDevelop\Grid\Model\ContentElement:
   existing_leaf1:
     Title: 'Existing Text Block'
+    HTML: '<p>Text block body content</p>'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Column.populated_col
   existing_leaf2:
     Title: 'Existing Image Block'
+    HTML: '<p>Image block body content</p>'
     Sort: 2
     Parent: =>WeDevelop\Grid\Model\Column.populated_col

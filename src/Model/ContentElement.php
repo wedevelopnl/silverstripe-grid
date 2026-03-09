@@ -18,6 +18,11 @@ class ContentElement extends GridElement
 
     private static string $icon = 'font-icon-block-content';
 
+    /** @var array<string, string> */
+    private static array $db = [
+        'HTML' => 'HTMLText',
+    ];
+
     private static string $class_description = '';
 
     /** Whether content of this type should be included in search indexes. */

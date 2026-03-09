@@ -39,6 +39,9 @@ export function useCreateContentElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, CreateContentElementParams>({
     mutationFn: createContentElement,
     ...useInvalidateOnSuccess(pageId, zone),
+    onError: (error) => {
+      showToast(error.message);
+    },
   });
 }
 

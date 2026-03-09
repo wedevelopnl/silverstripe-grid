@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import type { KeyboardEvent } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import type { EnrichedSimpleElementNode } from '@/types/enriched';
 import { getElementStatus } from '@/types/status';
@@ -18,15 +19,21 @@ export default function ElementCard({ element }: ElementCardProps) {
   const status = getElementStatus(element.statusFlags);
   const label = element.blockSchema.label;
   const content = element.blockSchema.summary;
-  const editLink = 'editLink' in element ? (element.editLink as string | null) : null;
+  const editLink = element.editLink;
 
   const style = buildSortableStyle(transform, transition, isDragging);
 
-  const handleClick = useCallback(() => {
+  const navigateToEdit = useCallback(() => {
     if (editLink !== null) {
       window.location.href = editLink;
     }
   }, [editLink]);
+
+  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter') {
+      navigateToEdit();
+    }
+  }, [navigateToEdit]);
 
   const cardClasses = [
     'element-card',
@@ -40,8 +47,10 @@ export default function ElementCard({ element }: ElementCardProps) {
       style={style}
       className={cardClasses}
       data-testid="element-card"
-      onClick={handleClick}
+      onClick={navigateToEdit}
+      onKeyDown={editLink !== null ? handleKeyDown : undefined}
       role={editLink !== null ? 'link' : undefined}
+      tabIndex={editLink !== null ? 0 : undefined}
     >
       <div className="element-card__header">
         <DragHandle listeners={listeners} attributes={attributes} label={`Move ${element.title}`} />
