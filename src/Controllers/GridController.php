@@ -124,6 +124,17 @@ class GridController extends AdminController
         'apiUpdateGridSettings',
     ];
 
+    protected function init(): void
+    {
+        parent::init();
+
+        if ($this->getRequest()->httpMethod() !== 'GET'
+            && !SecurityToken::inst()->checkRequest($this->getRequest())
+        ) {
+            $this->jsonError(400);
+        }
+    }
+
     public function apiReadTree(HTTPRequest $request): HTTPResponse
     {
         $pageId = (int) $request->param('PageID');
@@ -151,10 +162,6 @@ class GridController extends AdminController
 
     public function apiCreate(HTTPRequest $request): HTTPResponse
     {
-        if (!SecurityToken::inst()->checkRequest($request)) {
-            $this->jsonError(400);
-        }
-
         $body = $this->parseCreateBody($request);
 
         /** @var DataObject|null $parent */
@@ -203,10 +210,6 @@ class GridController extends AdminController
 
     public function apiCreateContent(HTTPRequest $request): HTTPResponse
     {
-        if (!SecurityToken::inst()->checkRequest($request)) {
-            $this->jsonError(400);
-        }
-
         $body = $this->parseCreateContentBody($request);
 
         /** @var GridElement|null $parent */
@@ -247,20 +250,10 @@ class GridController extends AdminController
 
     public function apiPublish(HTTPRequest $request): HTTPResponse
     {
-        if (!SecurityToken::inst()->checkRequest($request)) {
-            $this->jsonError(400);
-        }
-
-        $id = $this->requireElementId($request);
-
-        $element = $this->elementRepository->findById($id);
-        if ($element === null) {
-            $this->jsonError(400);
-        }
-
-        if (!$element->canPublish()) {
-            $this->jsonError(403);
-        }
+        $element = $this->requireElementWithPermission(
+            $request,
+            static fn (GridElement $e): bool => (bool) $e->canPublish(),
+        );
 
         $element->publishRecursive();
 
@@ -269,20 +262,10 @@ class GridController extends AdminController
 
     public function apiUnpublish(HTTPRequest $request): HTTPResponse
     {
-        if (!SecurityToken::inst()->checkRequest($request)) {
-            $this->jsonError(400);
-        }
-
-        $id = $this->requireElementId($request);
-
-        $element = $this->elementRepository->findById($id);
-        if ($element === null) {
-            $this->jsonError(400);
-        }
-
-        if (!$element->canUnpublish()) {
-            $this->jsonError(403);
-        }
+        $element = $this->requireElementWithPermission(
+            $request,
+            static fn (GridElement $e): bool => (bool) $e->canUnpublish(),
+        );
 
         $element->doUnpublish();
 
@@ -291,20 +274,10 @@ class GridController extends AdminController
 
     public function apiDelete(HTTPRequest $request): HTTPResponse
     {
-        if (!SecurityToken::inst()->checkRequest($request)) {
-            $this->jsonError(400);
-        }
-
-        $id = $this->requireElementId($request);
-
-        $element = $this->elementRepository->findById($id);
-        if ($element === null) {
-            $this->jsonError(400);
-        }
-
-        if (!$element->canDelete()) {
-            $this->jsonError(403);
-        }
+        $element = $this->requireElementWithPermission(
+            $request,
+            static fn (GridElement $e): bool => (bool) $e->canDelete(),
+        );
 
         $element->doArchive();
 
@@ -313,20 +286,10 @@ class GridController extends AdminController
 
     public function apiDuplicate(HTTPRequest $request): HTTPResponse
     {
-        if (!SecurityToken::inst()->checkRequest($request)) {
-            $this->jsonError(400);
-        }
-
-        $id = $this->requireElementId($request);
-
-        $element = $this->elementRepository->findById($id);
-        if ($element === null) {
-            $this->jsonError(400);
-        }
-
-        if (!$element->canCreate()) {
-            $this->jsonError(403);
-        }
+        $element = $this->requireElementWithPermission(
+            $request,
+            static fn (GridElement $e): bool => (bool) $e->canCreate(),
+        );
 
         $parent = $element->Parent();
         if ($parent === null || !$parent->exists() || !$parent->canEdit()) { // @phpstan-ignore identical.alwaysFalse
@@ -339,7 +302,10 @@ class GridController extends AdminController
         $clone->ParentID = $element->ParentID;
         $clone->ParentClass = $element->ParentClass;
 
-        $result = $this->persistenceService->persistDuplicate($clone, $id);
+        /** @var positive-int $elementId */
+        $elementId = (int) $element->ID;
+
+        $result = $this->persistenceService->persistDuplicate($clone, $elementId);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
@@ -349,10 +315,6 @@ class GridController extends AdminController
 
     public function apiReorder(HTTPRequest $request): HTTPResponse
     {
-        if (!SecurityToken::inst()->checkRequest($request)) {
-            $this->jsonError(400);
-        }
-
         $body = $this->parseReorderBody($request);
 
         $element = $this->elementRepository->findById($body['elementID']);
@@ -394,23 +356,15 @@ class GridController extends AdminController
 
     public function apiUpdateGridSettings(HTTPRequest $request): HTTPResponse
     {
-        if (!SecurityToken::inst()->checkRequest($request)) {
-            $this->jsonError(400);
-        }
-
         $body = $this->parseUpdateGridSettingsBody($request);
 
-        $element = $this->elementRepository->findById($body['id']);
-        if ($element === null) {
-            $this->jsonError(400);
-        }
+        $element = $this->requireElementWithPermission(
+            $request,
+            static fn (GridElement $e): bool => (bool) $e->canEdit(),
+        );
 
         if (!$element instanceof Column) {
             $this->jsonError(400);
-        }
-
-        if (!$element->canEdit()) {
-            $this->jsonError(403);
         }
 
         $settings = $element->getGridSettingsData();
@@ -645,6 +599,27 @@ class GridController extends AdminController
         }
 
         return $id;
+    }
+
+    /**
+     * Load a grid element by the `id` in the request body, or 400/403 on failure.
+     *
+     * @param callable(GridElement): bool $permissionCheck
+     */
+    private function requireElementWithPermission(HTTPRequest $request, callable $permissionCheck): GridElement
+    {
+        $id = $this->requireElementId($request);
+
+        $element = $this->elementRepository->findById($id);
+        if ($element === null) {
+            $this->jsonError(400);
+        }
+
+        if (!$permissionCheck($element)) {
+            $this->jsonError(403);
+        }
+
+        return $element;
     }
 
     /**
