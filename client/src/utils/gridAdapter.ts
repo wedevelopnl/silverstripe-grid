@@ -1,6 +1,6 @@
 import { getAdapterConfig } from '@/api/config';
 import type { AdapterConfig, ViewportConfig } from '@/types/adapter';
-import type { GridSettingsOption } from '@/components/GridSettingsPicker/GridSettingsPicker';
+import type { GridSettingsOption } from '@/types/gridSettings';
 
 let cachedConfig: AdapterConfig | null = null;
 let cachedWidthOptions: readonly GridSettingsOption[] | null = null;

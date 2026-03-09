@@ -363,14 +363,9 @@ class GridController extends AdminController
 
         $settings = $element->getGridSettingsData();
 
-        // Clamp offset so width + offset never exceeds column count
-        $columnCount = $this->gridAdapter->getColumnCount();
-        $maxOffset = $columnCount - $body['width'];
-        $offset = min($body['offset'], $maxOffset);
-
         $settings[$body['viewport']] = [
             'width' => $body['width'],
-            'offset' => $offset,
+            'offset' => $body['offset'],
             'visible' => $body['visible'],
         ];
 
@@ -598,6 +593,10 @@ class GridController extends AdminController
         }
 
         if (!is_int($offset) || $offset < 0 || $offset > $columnCount - 1) {
+            $this->jsonError(400);
+        }
+
+        if ($width + $offset > $columnCount) {
             $this->jsonError(400);
         }
 

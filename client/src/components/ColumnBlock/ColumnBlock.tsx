@@ -98,7 +98,11 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
   );
 
   const handleOffsetSelect = useCallback(
-    (value: number | 'hidden') => updateSettings({ offset: value as number }),
+    (value: number | 'hidden') => {
+      if (typeof value === 'number') {
+        updateSettings({ offset: value });
+      }
+    },
     [updateSettings],
   );
 

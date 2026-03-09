@@ -66,6 +66,9 @@ export function useUpdateGridSettings(pageId: number, zone: string) {
   return useMutation<void, ApiError, UpdateGridSettingsParams>({
     mutationFn: updateGridSettings,
     ...useInvalidateOnSuccess(pageId, zone),
+    onError: (error) => {
+      showToast(error.message);
+    },
   });
 }
 

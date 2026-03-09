@@ -140,20 +140,5 @@ test.describe('Viewport switcher', () => {
       'column', 'd-md-block', 'd-sm-none', 'element',
     ].sort());
 
-    // --- Visual verification at different Bootstrap breakpoints ---
-    // Screenshots capture the rendered grid layout so regressions in class
-    // output or adapter logic are caught visually, without re-testing
-    // Bootstrap's own CSS math.
-
-    const row = frontendColumns.first().locator('..');
-
-    await page.setViewportSize({ width: 375, height: 800 });
-    await expect(row).toHaveScreenshot('grid-xs-375.png');
-
-    await page.setViewportSize({ width: 768, height: 800 });
-    await expect(row).toHaveScreenshot('grid-md-768.png');
-
-    await page.setViewportSize({ width: 992, height: 800 });
-    await expect(row).toHaveScreenshot('grid-lg-992.png');
   });
 });

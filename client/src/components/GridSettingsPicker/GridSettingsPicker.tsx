@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { GridSettingsOption } from '@/types/gridSettings';
 import './GridSettingsPicker.scss';
 
-export interface GridSettingsOption {
-  readonly value: number | 'hidden';
-  readonly label: string;
-}
+export type { GridSettingsOption } from '@/types/gridSettings';
 
 interface GridSettingsPickerProps {
   readonly label: string;

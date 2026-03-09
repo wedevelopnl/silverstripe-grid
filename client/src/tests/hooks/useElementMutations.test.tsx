@@ -17,6 +17,11 @@ const mockUnpublishElement = vi.fn();
 const mockDeleteElement = vi.fn();
 const mockDuplicateElement = vi.fn();
 const mockUpdateGridSettings = vi.fn();
+const mockShowToast = vi.fn();
+
+vi.mock('@/utils/toast', () => ({
+  showToast: (...args: unknown[]) => mockShowToast(...args),
+}));
 
 vi.mock('@/api/endpoints', () => ({
   createElement: (...args: unknown[]) => mockCreateElement(...args),
@@ -187,6 +192,7 @@ describe('useDuplicateElement', () => {
 describe('useUpdateGridSettings', () => {
   afterEach(() => {
     mockUpdateGridSettings.mockReset();
+    mockShowToast.mockReset();
   });
 
   it('calls updateGridSettings endpoint with params', async () => {
@@ -216,5 +222,23 @@ describe('useUpdateGridSettings', () => {
         queryKey: queryKeys.elementTree.byPage(42, 'main'),
       }),
     );
+  });
+
+  it('shows toast on mutation error', async () => {
+    const error = new Error('Bad Request');
+    mockUpdateGridSettings.mockRejectedValue(error);
+    const { result } = renderHook(() => useUpdateGridSettings(42, 'main'), {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      try {
+        await result.current.mutateAsync({ id: 5, viewport: 'md', width: 6, offset: 0, visible: true });
+      } catch {
+        // Expected — error captured by TanStack Query
+      }
+    });
+
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith('Bad Request'));
   });
 });
