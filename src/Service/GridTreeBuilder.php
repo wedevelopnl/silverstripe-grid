@@ -176,7 +176,7 @@ class GridTreeBuilder
         $canPublish = (bool) $element->canPublish();
         $canUnpublish = (bool) $element->canUnpublish();
         $canCreate = (bool) $element->canCreate();
-        $editLink = $element->CMSEditLink();
+        $editLink = $element->getCMSEditLink();
 
         /** @var array{typeName: string, type: string, title: string, summary: string, label: string} $blockSchema */
         $blockSchema = $element->getBlockSchema();

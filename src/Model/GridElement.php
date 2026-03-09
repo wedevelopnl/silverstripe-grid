@@ -67,7 +67,7 @@ class GridElement extends DataObject
         ],
     ];
 
-    public function CMSEditLink(): string
+    public function getCMSEditLink(): string
     {
         return GridElementAdmin::singleton()->getCMSEditLinkForManagedDataObject($this);
     }

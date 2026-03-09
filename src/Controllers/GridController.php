@@ -573,7 +573,7 @@ class GridController extends AdminController
             $this->jsonError(400);
         }
 
-        if (!is_subclass_of($className, ContentElement::class)) {
+        if ($className !== ContentElement::class && !is_subclass_of($className, ContentElement::class)) {
             $this->jsonError(400);
         }
 

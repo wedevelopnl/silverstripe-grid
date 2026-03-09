@@ -25,12 +25,12 @@ test.describe('Content elements', () => {
     // Click the first add button (empty column)
     await addButtons.first().click();
 
-    // Modal should open
-    const picker = page.getByTestId('element-type-picker');
+    // Modal should open — use getByRole('dialog') since only one dialog is open at a time
+    const picker = page.getByRole('dialog');
     await expect(picker).toBeVisible();
 
     // At least one type tile should be available
-    const tiles = page.getByTestId('element-type-tile');
+    const tiles = picker.getByTestId('element-type-tile');
     await expect(tiles.first()).toBeVisible();
 
     // Select the first type
