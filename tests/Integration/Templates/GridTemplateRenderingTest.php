@@ -15,6 +15,7 @@ use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 
@@ -25,6 +26,7 @@ use WeDevelop\Grid\Model\Section;
 #[CoversClass(Section::class)]
 #[CoversClass(Row::class)]
 #[CoversClass(Column::class)]
+#[CoversClass(ContentElement::class)]
 final class GridTemplateRenderingTest extends SapphireTest
 {
     protected $usesDatabase = true;
@@ -343,5 +345,105 @@ final class GridTemplateRenderingTest extends SapphireTest
         $html = $this->render($column);
 
         $this->assertStringContainsString($expected, $html);
+    }
+
+    // --- Title tag and class rendering ---
+
+    public function testSectionRendersCustomTitleTag(): void
+    {
+        $section = Section::create();
+        $section->Title = 'Custom Tag';
+        $section->TitleTag = 'h3';
+        $section->ShowTitle = true;
+        $section->write();
+
+        $html = $this->render($section);
+
+        $this->assertStringContainsString('<h3', $html);
+        $this->assertStringContainsString('Custom Tag', $html);
+        $this->assertStringContainsString('</h3>', $html);
+    }
+
+    public function testSectionRendersWithTitleSizeClass(): void
+    {
+        $section = Section::create();
+        $section->Title = 'Styled Title';
+        $section->TitleTag = 'h2';
+        $section->TitleClass = 'display-1';
+        $section->ShowTitle = true;
+        $section->write();
+
+        $html = $this->render($section);
+
+        $this->assertStringContainsString('display-1', $html);
+    }
+
+    public function testSectionRendersDefaultH2WhenTitleTagEmpty(): void
+    {
+        $section = Section::create();
+        $section->Title = 'Default Tag';
+        $section->ShowTitle = true;
+        $section->write();
+
+        $html = $this->render($section);
+
+        $this->assertStringContainsString('<h2', $html);
+        $this->assertStringContainsString('</h2>', $html);
+    }
+
+    public function testRowRendersTitleWhenShowTitleTrue(): void
+    {
+        $section = Section::create();
+        $section->write();
+
+        $row = $section->getChildren()->first();
+        $this->assertInstanceOf(Row::class, $row);
+
+        $row->Title = 'Row Title';
+        $row->TitleTag = 'h4';
+        $row->ShowTitle = true;
+        $row->write();
+
+        $html = $this->render($row);
+
+        $this->assertStringContainsString('<h4', $html);
+        $this->assertStringContainsString('Row Title', $html);
+    }
+
+    public function testColumnRendersTitleWhenShowTitleTrue(): void
+    {
+        $section = Section::create();
+        $section->write();
+
+        $row = $section->getChildren()->first();
+        $this->assertInstanceOf(Row::class, $row);
+
+        $column = $row->getChildren()->first();
+        $this->assertInstanceOf(Column::class, $column);
+
+        $column->Title = 'Column Title';
+        $column->TitleTag = 'h5';
+        $column->ShowTitle = true;
+        $column->write();
+
+        $html = $this->render($column);
+
+        $this->assertStringContainsString('<h5', $html);
+        $this->assertStringContainsString('Column Title', $html);
+    }
+
+    public function testContentElementRendersWithCustomTitleTag(): void
+    {
+        $element = ContentElement::create();
+        $element->Title = 'Content Title';
+        $element->TitleTag = 'h4';
+        $element->ShowTitle = true;
+        $element->write();
+
+        $html = $element->forTemplate();
+
+        $this->assertStringContainsString('<h4', $html);
+        $this->assertStringContainsString('Content Title', $html);
+        $this->assertStringContainsString('</h4>', $html);
     }
 }

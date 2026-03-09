@@ -8,11 +8,17 @@ use SilverStripe\CMS\Controllers\CMSPageEditController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Controller;
 use SilverStripe\Core\ClassInfo;
+use SilverStripe\Forms\CheckboxField;
+use SilverStripe\Forms\DropdownField;
+use SilverStripe\Forms\FieldGroup;
+use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\TextField;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Contract\GridAdapterInterface;
 
 /**
  * Abstract base for all grid elements (containers and content).
@@ -22,6 +28,8 @@ use SilverStripe\Versioned\Versioned;
  *
  * @property string $Title
  * @property bool $ShowTitle
+ * @property 'h1'|'h2'|'h3'|'h4'|'h5'|'h6' $TitleTag
+ * @property string $TitleClass
  * @property int $Sort
  * @property string $ExtraClass
  * @property string $Style
@@ -34,10 +42,21 @@ class GridElement extends DataObject
 {
     private static string $table_name = 'GridElement';
 
+    private static bool $enable_custom_title_classes = false;
+
+    /** @var array<string, string> */
+    private static array $dependencies = [
+        'gridAdapter' => '%$' . GridAdapterInterface::class,
+    ];
+
+    public GridAdapterInterface $gridAdapter;
+
     /** @var array<string, string> */
     private static array $db = [
         'Title' => 'Varchar(255)',
         'ShowTitle' => 'Boolean',
+        'TitleTag' => "Enum('h1,h2,h3,h4,h5,h6', 'h2')",
+        'TitleClass' => 'Varchar(255)',
         'Sort' => 'Int',
         'ExtraClass' => 'Varchar(255)',
         'Style' => 'Varchar(255)',
@@ -51,6 +70,7 @@ class GridElement extends DataObject
     /** @var array<string, string> */
     private static array $defaults = [
         'ShowTitle' => '0',
+        'TitleTag' => 'h2',
     ];
 
     /** @var list<class-string> */
@@ -141,6 +161,59 @@ class GridElement extends DataObject
     protected function provideBlockSchema(): array
     {
         return [];
+    }
+
+    /** CSS class for title styling, sourced from the TitleClass DB field. */
+    public function getTitleSizeClass(): string
+    {
+        $class = (string) $this->TitleClass;
+        $this->extend('updateTitleSizeClass', $class);
+
+        return $class;
+    }
+
+    #[\Override]
+    public function getCMSFields(): FieldList
+    {
+        $fields = parent::getCMSFields();
+        $fields->removeByName(['Title', 'TitleTag', 'TitleClass', 'ShowTitle']);
+
+        $titleGroup = FieldGroup::create(
+            TextField::create('Title', _t(self::class . '.TITLE', 'Title text')),
+            DropdownField::create(
+                'TitleTag',
+                _t(self::class . '.TITLE_TAG', 'Title tag'),
+                array_combine(
+                    ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+                    ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+                ),
+            ),
+        );
+        $titleGroup->setName('TitleSettings');
+        $titleGroup->setTitle(_t(self::class . '.TITLE_SETTINGS', 'Title'));
+
+        if (static::config()->get('enable_custom_title_classes')) {
+            /** @var array<string, string> $options */
+            $options = $this->gridAdapter->getTitleClassOptions();
+            $this->extend('updateTitleClassOptions', $options);
+
+            $titleGroup->push(
+                DropdownField::create(
+                    'TitleClass',
+                    _t(self::class . '.TITLE_CLASS', 'Display as'),
+                    $options,
+                )->setEmptyString(_t(self::class . '.TITLE_CLASS_DEFAULT', 'Default')),
+            );
+        }
+
+        $titleGroup->push(
+            CheckboxField::create('ShowTitle', _t(self::class . '.SHOW_TITLE', 'Displayed')),
+        );
+
+        $mainTab = $fields->findOrMakeTab('Root.Main');
+        $mainTab->unshift($titleGroup);
+
+        return $fields;
     }
 
     /**
