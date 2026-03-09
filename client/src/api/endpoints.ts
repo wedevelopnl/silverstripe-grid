@@ -67,3 +67,18 @@ export async function reorderElement(
   const base = getControllerLink();
   await apiPatch(`${base}/api/reorder`, params);
 }
+
+export interface UpdateGridSettingsParams {
+  id: number;
+  viewport: string;
+  width: number;
+  offset: number;
+  visible: boolean;
+}
+
+export async function updateGridSettings(
+  params: UpdateGridSettingsParams,
+): Promise<void> {
+  const base = getControllerLink();
+  await apiPatch(`${base}/api/updateGridSettings`, params);
+}

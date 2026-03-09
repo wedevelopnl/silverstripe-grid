@@ -6,8 +6,9 @@ import {
   publishElement,
   reorderElement,
   unpublishElement,
+  updateGridSettings,
 } from '@/api/endpoints';
-import type { CreateElementParams, ReorderElementParams } from '@/api/endpoints';
+import type { CreateElementParams, ReorderElementParams, UpdateGridSettingsParams } from '@/api/endpoints';
 import type { ApiError } from '@/api/errors';
 import type { ElementTreeResponse } from '@/types/elements';
 import { applyReorder } from '@/utils/applyReorder';
@@ -57,6 +58,13 @@ export function useDeleteElement(pageId: number, zone: string) {
 export function useDuplicateElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, number>({
     mutationFn: duplicateElement,
+    ...useInvalidateOnSuccess(pageId, zone),
+  });
+}
+
+export function useUpdateGridSettings(pageId: number, zone: string) {
+  return useMutation<void, ApiError, UpdateGridSettingsParams>({
+    mutationFn: updateGridSettings,
     ...useInvalidateOnSuccess(pageId, zone),
   });
 }

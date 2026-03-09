@@ -76,6 +76,7 @@ vi.mock('@/api/endpoints', () => ({
   unpublishElement: vi.fn(),
   deleteElement: vi.fn(),
   duplicateElement: vi.fn(),
+  updateGridSettings: vi.fn(),
   reorderElement: (...args: unknown[]) => mockReorderElement(...args),
 }));
 

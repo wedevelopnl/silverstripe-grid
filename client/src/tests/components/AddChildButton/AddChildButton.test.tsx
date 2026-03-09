@@ -10,6 +10,7 @@ const mockCreateElement = vi.fn();
 
 vi.mock('@/api/endpoints', () => ({
   createElement: (...args: unknown[]) => mockCreateElement(...args),
+  updateGridSettings: vi.fn(),
 }));
 
 function createWrapper(pageId = 1, zone = 'main') {

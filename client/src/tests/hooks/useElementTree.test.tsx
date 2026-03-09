@@ -8,6 +8,7 @@ const mockFetchElementTree = vi.fn();
 
 vi.mock('@/api/endpoints', () => ({
   fetchElementTree: (...args: unknown[]) => mockFetchElementTree(...args),
+  updateGridSettings: vi.fn(),
 }));
 
 function createWrapper() {

@@ -13,6 +13,7 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\SecurityToken;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\Result;
@@ -35,6 +36,13 @@ use WeDevelop\Grid\Service\ReorderService;
  *   elementID: positive-int,
  *   targetParentId: positive-int,
  *   afterElementID: positive-int|null,
+ * }
+ * @phpstan-type UpdateGridSettingsBody array{
+ *   id: positive-int,
+ *   viewport: string,
+ *   width: positive-int,
+ *   offset: int<0, max>,
+ *   visible: bool,
  * }
  * @phpstan-type AdapterConfig array{
  *   viewports: list<array{key: string, label: string}>,
@@ -93,6 +101,7 @@ class GridController extends AdminController
         'DELETE api/delete' => 'apiDelete',
         'POST api/duplicate' => 'apiDuplicate',
         'PATCH api/reorder' => 'apiReorder',
+        'PATCH api/updateGridSettings' => 'apiUpdateGridSettings',
     ];
 
     /** @var list<string> */
@@ -104,6 +113,7 @@ class GridController extends AdminController
         'apiDelete',
         'apiDuplicate',
         'apiReorder',
+        'apiUpdateGridSettings',
     ];
 
     public function apiReadTree(HTTPRequest $request): HTTPResponse
@@ -330,6 +340,50 @@ class GridController extends AdminController
         return $this->jsonSuccess(204);
     }
 
+    public function apiUpdateGridSettings(HTTPRequest $request): HTTPResponse
+    {
+        if (!SecurityToken::inst()->checkRequest($request)) {
+            $this->jsonError(400);
+        }
+
+        $body = $this->parseUpdateGridSettingsBody($request);
+
+        $element = $this->elementRepository->findById($body['id']);
+        if ($element === null) {
+            $this->jsonError(400);
+        }
+
+        if (!$element instanceof Column) {
+            $this->jsonError(400);
+        }
+
+        if (!$element->canEdit()) {
+            $this->jsonError(403);
+        }
+
+        $settings = $element->getGridSettingsData();
+
+        // Clamp offset so width + offset never exceeds column count
+        $columnCount = $this->gridAdapter->getColumnCount();
+        $maxOffset = $columnCount - $body['width'];
+        $offset = min($body['offset'], $maxOffset);
+
+        $settings[$body['viewport']] = [
+            'width' => $body['width'],
+            'offset' => $offset,
+            'visible' => $body['visible'],
+        ];
+
+        $element->setGridSettingsData($settings);
+
+        $result = $this->persistenceService->persistBatch([$element]);
+        if ($result->isErr()) {
+            return $this->resultToResponse($result);
+        }
+
+        return $this->jsonSuccess(204);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -503,6 +557,61 @@ class GridController extends AdminController
         }
 
         return $id;
+    }
+
+    /**
+     * Parse and validate the JSON body for grid settings updates.
+     *
+     * @return UpdateGridSettingsBody
+     */
+    private function parseUpdateGridSettingsBody(HTTPRequest $request): array
+    {
+        $data = $this->parseJsonBody($request);
+
+        $id = $data['id'] ?? null;
+        $viewport = $data['viewport'] ?? null;
+        $width = $data['width'] ?? null;
+        $offset = $data['offset'] ?? null;
+        $visible = $data['visible'] ?? null;
+
+        if (!is_int($id) || $id < 1) {
+            $this->jsonError(400);
+        }
+
+        if (!is_string($viewport)) {
+            $this->jsonError(400);
+        }
+
+        // Validate viewport against the adapter's known viewports
+        $validKeys = array_map(
+            static fn (Viewport $vp): string => $vp->key,
+            $this->gridAdapter->getViewports(),
+        );
+        if (!in_array($viewport, $validKeys, true)) {
+            $this->jsonError(400);
+        }
+
+        $columnCount = $this->gridAdapter->getColumnCount();
+
+        if (!is_int($width) || $width < 1 || $width > $columnCount) {
+            $this->jsonError(400);
+        }
+
+        if (!is_int($offset) || $offset < 0 || $offset > $columnCount - 1) {
+            $this->jsonError(400);
+        }
+
+        if (!is_bool($visible)) {
+            $this->jsonError(400);
+        }
+
+        return [
+            'id' => $id,
+            'viewport' => $viewport,
+            'width' => $width,
+            'offset' => $offset,
+            'visible' => $visible,
+        ];
     }
 
     /**

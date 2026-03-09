@@ -22,6 +22,7 @@ vi.mock('@/api/endpoints', () => ({
   unpublishElement: (...args: unknown[]) => mockUnpublishElement(...args),
   deleteElement: (...args: unknown[]) => mockDeleteElement(...args),
   duplicateElement: (...args: unknown[]) => mockDuplicateElement(...args),
+  updateGridSettings: vi.fn(),
 }));
 
 let queryClient: QueryClient;

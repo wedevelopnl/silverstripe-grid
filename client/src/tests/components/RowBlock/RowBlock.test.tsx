@@ -37,6 +37,7 @@ vi.mock('@dnd-kit/sortable', async (importOriginal) => {
 
 vi.mock('@/api/endpoints', () => ({
   createElement: vi.fn(),
+  updateGridSettings: vi.fn(),
 }));
 
 vi.mock('@/utils/gridAdapter', () => ({
@@ -172,7 +173,7 @@ describe('RowBlock', () => {
       { wrapper: createDndWrapper() },
     );
 
-    const badges = container.querySelectorAll('.column-block__badge');
+    const badges = screen.getAllByTestId('column-badge');
     expect(badges.length).toBe(2);
   });
 
@@ -260,8 +261,8 @@ describe('RowBlock', () => {
     );
 
     // When activeViewport is "lg", the ColumnBlock should use lg settings (width 4)
-    const badge = container.querySelector('.column-block__badge');
-    expect(badge?.textContent).toBe('4/12');
+    const badge = screen.getByTestId('column-badge');
+    expect(badge.textContent).toBe('4/12');
   });
 
   it('child columns use getWidthClass and getOffsetClass from gridAdapter', () => {
@@ -306,8 +307,8 @@ describe('RowBlock', () => {
     );
 
     // ColumnBlock shows width/columnCount, so with columnCount=16 and width=6
-    const badge = container.querySelector('.column-block__badge');
-    expect(badge?.textContent).toBe('6/16');
+    const badge = screen.getByTestId('column-badge');
+    expect(badge.textContent).toBe('6/16');
   });
 
   it('applies --drop-target modifier when isOver is true and activeType is row', () => {

@@ -35,16 +35,6 @@
     margin-bottom: 8px;
   }
 
-  &__badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: vars.$color-border-light;
-    font-size: 0.75em;
-    font-weight: 600;
-    line-height: 1.4;
-  }
-
   &__body {
     display: flex;
     flex-direction: column;

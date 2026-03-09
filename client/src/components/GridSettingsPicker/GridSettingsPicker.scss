@@ -1,0 +1,66 @@
+@use '../../styles/variables' as vars;
+
+.grid-settings-picker {
+  position: relative;
+
+  &__trigger {
+    display: inline-block;
+    padding: 2px 8px;
+    border: none;
+    border-radius: 10px;
+    background: vars.$color-border-light;
+    font-size: 0.75em;
+    font-weight: 600;
+    line-height: 1.4;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      filter: brightness(0.95);
+    }
+
+    &--disabled,
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 100;
+    margin: 4px 0 0;
+    padding: 4px 0;
+    list-style: none;
+    background: vars.$color-bg-white;
+    border: 1px solid vars.$color-border-light;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    max-height: 200px;
+    overflow-y: auto;
+    min-width: 80px;
+  }
+
+  &__option {
+    padding: 4px 12px;
+    cursor: pointer;
+    font-size: 0.75em;
+    white-space: nowrap;
+
+    &:hover {
+      background: vars.$color-bg-section;
+    }
+
+    &--selected {
+      font-weight: 600;
+      background: vars.$color-bg-section;
+    }
+
+    &--separator {
+      border-top: 1px solid vars.$color-border-light;
+      margin-top: 4px;
+      padding-top: 8px;
+    }
+  }
+}
