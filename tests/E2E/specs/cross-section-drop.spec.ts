@@ -1,17 +1,15 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import { loadFixture, resetFixtures } from '../helpers/fixtures';
+import { resetFixtures, loadAndNavigate } from '../helpers/fixtures';
+import { activateDragByTitle, dropAndSettle } from '../helpers/drag';
 
 /**
- * Cross-section row drop positions — comprehensive permutation test.
+ * Cross-section row drop positions — journey tests.
  *
  * Verifies that rows dragged between sections land at the exact target
  * position (before first, between any pair, after last) in both directions.
- * Each test asserts exact title order after drop and persistence after reload.
- *
- * Drop positioning relies on direction-aware placement at DragEnd: the pointer
- * position relative to the 'over' element's center determines before/after.
- * This is independent of entry position or intermediate corrections.
+ * Uses sequential drag operations within a single fixture load to cover
+ * all drop positions and directions efficiently.
  */
 test.describe('Cross-section row drop positions', () => {
   test.use({ viewport: { width: 1280, height: 1400 } });
@@ -20,23 +18,7 @@ test.describe('Cross-section row drop positions', () => {
     await resetFixtures(request);
   });
 
-  // --- Helpers ---
-
-  async function startDrag(page: Page, rowTitle: string) {
-    const handle = page.locator(`[data-testid="drag-handle"][aria-label="Move ${rowTitle}"]`);
-    await handle.scrollIntoViewIfNeeded();
-    const box = await handle.boundingBox();
-    expect(box).not.toBeNull();
-    const x = box!.x + box!.width / 2;
-    const y = box!.y + box!.height / 2;
-
-    await page.mouse.move(x, y);
-    await page.mouse.down();
-    await page.mouse.move(x, y + 10, { steps: 3 });
-    await page.waitForTimeout(150);
-
-    await expect(page.getByTestId('drag-overlay-row')).toBeVisible();
-  }
+  // --- Hierarchy-specific helpers ---
 
   function getSection(page: Page, sectionTitle: string) {
     return page.getByTestId('section-block').filter({ hasText: sectionTitle });
@@ -79,11 +61,7 @@ test.describe('Cross-section row drop positions', () => {
    * Positioning strategy:
    * - "before": top quarter of the named row (above center → "before" direction)
    * - "after": bottom quarter of the named row (below center → "after" direction)
-   * - "between": top quarter of the second (lower) row — ensures closestCenter
-   *   picks the lower row, and pointer < center gives "before" placement.
-   *
-   * Using quarters instead of edge midpoints avoids ambiguity at row borders
-   * and prevents the pointer from exiting the section's collision zone.
+   * - "between": bottom 85% of the first (upper) row — stable position above insertion point
    */
   async function rowPosition(
     targetSection: Locator,
@@ -103,187 +81,124 @@ test.describe('Cross-section row drop positions', () => {
       const row = targetSection.getByTestId('row-block').filter({ hasText: position.after });
       const box = await row.boundingBox();
       expect(box).not.toBeNull();
-      // Use 65% (below center, above bottom) to stay within the row's collision
-      // zone. 85% risks crossing into adjacent section boundaries during
-      // cross-container drags where closestCenter uses stale measurements.
       return { x: centerX, y: box!.y + box!.height * 0.65 };
     }
-    // Use the first row's bottom area rather than the second row's top area.
-    // During cross-container drags, SortableContext transforms shift the second
-    // row's visual position, making its pre-measured coordinates unreliable.
-    // The first row's position is stable (above the insertion point).
     const row1 = targetSection.getByTestId('row-block').filter({ hasText: position.between[0] });
     const box1 = await row1.boundingBox();
     expect(box1).not.toBeNull();
     return { x: centerX, y: box1!.y + box1!.height * 0.85 };
   }
 
-  async function dropAndSettle(page: Page, targetX: number, targetY: number) {
-    await page.mouse.move(targetX, targetY, { steps: 15 });
-    await page.waitForTimeout(200);
+  // --- Journey tests ---
 
-    const reorderDone = page.waitForResponse(
-      (resp) => resp.url().includes('/api/reorder') && resp.ok(),
-    );
-    const refetchDone = page.waitForResponse(
-      (resp) => resp.url().includes('/api/readTree/') && resp.ok(),
-    );
+  test('moves rows across sections in both directions', async ({ page }) => {
+    await loadAndNavigate(page, 'cross-section-drop');
+    const sectionAlpha = getSection(page, 'Section Alpha');
+    const sectionBeta = getSection(page, 'Section Beta');
 
-    await page.mouse.up();
-    await reorderDone;
-    await refetchDone;
-    await page.waitForTimeout(500);
-  }
+    // Alpha [A1, A2, A3]   Beta [B1, B2, B3]
+    await expect(sectionAlpha.getByTestId('row-title')).toHaveText(['Row A1', 'Row A2', 'Row A3']);
+    await expect(sectionBeta.getByTestId('row-title')).toHaveText(['Row B1', 'Row B2', 'Row B3']);
 
-  async function assertOrderAndPersistence(
-    page: Page,
-    sectionLocator: Locator,
-    expectedTitles: string[],
-    sectionFilterText: string,
-  ) {
-    await expect(sectionLocator.getByTestId('row-title')).toHaveText(expectedTitles);
-
-    await page.reload();
-    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
-
-    const reloaded = page.getByTestId('section-block').filter({ hasText: sectionFilterText });
-    await expect(reloaded.getByTestId('row-title')).toHaveText(expectedTitles);
-  }
-
-  async function loadAndNavigate(page: Page, fixtureName: string) {
-    const fixture = await loadFixture(page.request, fixtureName);
-    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
-    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
-  }
-
-  // --- Down (Alpha -> Beta) ---
-
-  test.describe('Down (Alpha -> Beta)', () => {
-    test('before first item in Beta', async ({ page }) => {
-      await loadAndNavigate(page, 'cross-section-drop');
-      const sectionBeta = getSection(page, 'Section Beta');
-
-      await startDrag(page, 'Row A1');
+    // Alpha [A1, A2, A3]  →  Alpha [A2, A3]
+    // Beta  [B1, B2, B3]  →  Beta  [*A1*, B1, B2, B3]
+    await test.step('Forward, before-first: A1 → Beta before B1', async () => {
+      await activateDragByTitle(page, 'Row A1', { overlayTestId: 'drag-overlay-row' });
       await enterAtFirst(page, sectionBeta, 4);
       const pos = await rowPosition(sectionBeta, { before: 'Row B1' });
       await dropAndSettle(page, pos.x, pos.y);
-
-      await assertOrderAndPersistence(page, sectionBeta, ['Row A1', 'Row B1', 'Row B2', 'Row B3'], 'Section Beta');
+      await expect(sectionBeta.getByTestId('row-title')).toHaveText(['Row A1', 'Row B1', 'Row B2', 'Row B3']);
     });
 
-    test('between first and second items in Beta', async ({ page }) => {
-      await loadAndNavigate(page, 'cross-section-drop');
-      const sectionBeta = getSection(page, 'Section Beta');
-
-      await startDrag(page, 'Row A1');
-      await enterAtFirst(page, sectionBeta, 4);
-      const pos = await rowPosition(sectionBeta, { between: ['Row B1', 'Row B2'] });
-      await dropAndSettle(page, pos.x, pos.y);
-
-      await assertOrderAndPersistence(page, sectionBeta, ['Row B1', 'Row A1', 'Row B2', 'Row B3'], 'Section Beta');
-    });
-
-    test('between second and third items in Beta', async ({ page }) => {
-      await loadAndNavigate(page, 'cross-section-drop');
-      const sectionBeta = getSection(page, 'Section Beta');
-
-      await startDrag(page, 'Row A1');
-      await enterAtFirst(page, sectionBeta, 4);
-      const pos = await rowPosition(sectionBeta, { between: ['Row B2', 'Row B3'] });
-      await dropAndSettle(page, pos.x, pos.y);
-
-      await assertOrderAndPersistence(page, sectionBeta, ['Row B1', 'Row B2', 'Row A1', 'Row B3'], 'Section Beta');
-    });
-
-    test('after last item in Beta', async ({ page }) => {
-      await loadAndNavigate(page, 'cross-section-drop');
-      const sectionBeta = getSection(page, 'Section Beta');
-
-      await startDrag(page, 'Row A1');
-      await enterAtFirst(page, sectionBeta, 4);
-      const pos = await rowPosition(sectionBeta, { after: 'Row B3' });
-      await dropAndSettle(page, pos.x, pos.y);
-
-      await assertOrderAndPersistence(page, sectionBeta, ['Row B1', 'Row B2', 'Row B3', 'Row A1'], 'Section Beta');
-    });
-  });
-
-  // --- Up (Beta -> Alpha) ---
-
-  test.describe('Up (Beta -> Alpha)', () => {
-    test('before first item in Alpha', async ({ page }) => {
-      await loadAndNavigate(page, 'cross-section-drop');
-      const sectionAlpha = getSection(page, 'Section Alpha');
-
-      await startDrag(page, 'Row B1');
-      await enterFromBelow(page, sectionAlpha, 4);
-      const pos = await rowPosition(sectionAlpha, { before: 'Row A1' });
-      await dropAndSettle(page, pos.x, pos.y);
-
-      await assertOrderAndPersistence(page, sectionAlpha, ['Row B1', 'Row A1', 'Row A2', 'Row A3'], 'Section Alpha');
-    });
-
-    test('between first and second items in Alpha', async ({ page }) => {
-      await loadAndNavigate(page, 'cross-section-drop');
-      const sectionAlpha = getSection(page, 'Section Alpha');
-
-      await startDrag(page, 'Row B1');
-      await enterFromBelow(page, sectionAlpha, 4);
-      const pos = await rowPosition(sectionAlpha, { between: ['Row A1', 'Row A2'] });
-      await dropAndSettle(page, pos.x, pos.y);
-
-      await assertOrderAndPersistence(page, sectionAlpha, ['Row A1', 'Row B1', 'Row A2', 'Row A3'], 'Section Alpha');
-    });
-
-    test('between second and third items in Alpha', async ({ page }) => {
-      await loadAndNavigate(page, 'cross-section-drop');
-      const sectionAlpha = getSection(page, 'Section Alpha');
-
-      await startDrag(page, 'Row B1');
-      await enterFromBelow(page, sectionAlpha, 4);
+    // Beta  [A1, B1, B2, B3]  →  Beta  [A1, B1, B2]
+    // Alpha [A2, A3]           →  Alpha [A2, *B3*, A3]
+    await test.step('Reverse, between: B3 → Alpha between A2,A3', async () => {
+      await activateDragByTitle(page, 'Row B3', { overlayTestId: 'drag-overlay-row' });
+      await enterFromBelow(page, sectionAlpha, 3);
       const pos = await rowPosition(sectionAlpha, { between: ['Row A2', 'Row A3'] });
       await dropAndSettle(page, pos.x, pos.y);
-
-      await assertOrderAndPersistence(page, sectionAlpha, ['Row A1', 'Row A2', 'Row B1', 'Row A3'], 'Section Alpha');
+      await expect(sectionAlpha.getByTestId('row-title')).toHaveText(['Row A2', 'Row B3', 'Row A3']);
     });
 
-    test('after last item in Alpha', async ({ page }) => {
-      await loadAndNavigate(page, 'cross-section-drop');
-      const sectionAlpha = getSection(page, 'Section Alpha');
-
-      await startDrag(page, 'Row B1');
+    // Beta  [A1, B1, B2]        →  Beta  [A1, B1]
+    // Alpha [A2, B3, A3]        →  Alpha [A2, B3, A3, *B2*]
+    await test.step('Reverse, after-last: B2 → Alpha after A3', async () => {
+      await activateDragByTitle(page, 'Row B2', { overlayTestId: 'drag-overlay-row' });
       await enterFromBelow(page, sectionAlpha, 4);
       const pos = await rowPosition(sectionAlpha, { after: 'Row A3' });
       await dropAndSettle(page, pos.x, pos.y);
-
-      await assertOrderAndPersistence(page, sectionAlpha, ['Row A1', 'Row A2', 'Row A3', 'Row B1'], 'Section Alpha');
+      await expect(sectionAlpha.getByTestId('row-title')).toHaveText(['Row A2', 'Row B3', 'Row A3', 'Row B2']);
     });
+
+    // Alpha [A2, B3, A3, B2]  →  Alpha [A2, B3, A3]
+    // Beta  [A1, B1]           →  Beta  [A1, *B2*, B1]
+    await test.step('Forward, between: B2 → Beta between A1,B1', async () => {
+      await activateDragByTitle(page, 'Row B2', { overlayTestId: 'drag-overlay-row' });
+      await enterAtFirst(page, sectionBeta, 3);
+      const pos = await rowPosition(sectionBeta, { between: ['Row A1', 'Row B1'] });
+      await dropAndSettle(page, pos.x, pos.y);
+      await expect(sectionBeta.getByTestId('row-title')).toHaveText(['Row A1', 'Row B2', 'Row B1']);
+    });
+
+    // Alpha [A2, B3, A3]     →  Alpha [A2, B3]
+    // Beta  [A1, B2, B1]     →  Beta  [A1, B2, B1, *A3*]
+    await test.step('Forward, after-last: A3 → Beta after B1', async () => {
+      await activateDragByTitle(page, 'Row A3', { overlayTestId: 'drag-overlay-row' });
+      await enterAtFirst(page, sectionBeta, 4);
+      const pos = await rowPosition(sectionBeta, { after: 'Row B1' });
+      await dropAndSettle(page, pos.x, pos.y);
+      await expect(sectionBeta.getByTestId('row-title')).toHaveText(['Row A1', 'Row B2', 'Row B1', 'Row A3']);
+    });
+
+    // Alpha [A2, B3]  →  Alpha [*B3*, A2]
+    await test.step('Intra-container: B3 before A2 in Alpha', async () => {
+      await activateDragByTitle(page, 'Row B3', { overlayTestId: 'drag-overlay-row' });
+      const pos = await rowPosition(sectionAlpha, { before: 'Row A2' });
+      await dropAndSettle(page, pos.x, pos.y);
+      await expect(sectionAlpha.getByTestId('row-title')).toHaveText(['Row B3', 'Row A2']);
+    });
+
+    // Verify persistence after reload
+    await page.reload();
+    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+
+    const alphaReloaded = getSection(page, 'Section Alpha');
+    const betaReloaded = getSection(page, 'Section Beta');
+    await expect(alphaReloaded.getByTestId('row-title')).toHaveText(['Row B3', 'Row A2']);
+    await expect(betaReloaded.getByTestId('row-title')).toHaveText(['Row A1', 'Row B2', 'Row B1', 'Row A3']);
   });
 
-  // --- Edge cases ---
-
-  test.describe('Edge cases', () => {
-    test('source container becomes empty after move', async ({ page }) => {
+  test('handles edge cases: source depletion and cancel mid-drag', async ({ page }) => {
+    // Alpha [A1]           →  Alpha []
+    // Beta  [B1, B2, B3]  →  Beta  [B1, *A1*, B2, B3]
+    await test.step('Source depletion: move lone row to target', async () => {
       await loadAndNavigate(page, 'cross-section-drop-single');
       const sectionAlpha = getSection(page, 'Section Alpha');
       const sectionBeta = getSection(page, 'Section Beta');
       await expect(sectionAlpha.getByTestId('row-block')).toHaveCount(1);
 
-      await startDrag(page, 'Row A1');
+      await activateDragByTitle(page, 'Row A1', { overlayTestId: 'drag-overlay-row' });
       await enterAtFirst(page, sectionBeta, 4);
       const pos = await rowPosition(sectionBeta, { between: ['Row B1', 'Row B2'] });
       await dropAndSettle(page, pos.x, pos.y);
 
       await expect(sectionAlpha.getByTestId('row-block')).toHaveCount(0);
-      await assertOrderAndPersistence(page, sectionBeta, ['Row B1', 'Row A1', 'Row B2', 'Row B3'], 'Section Beta');
+      await expect(sectionBeta.getByTestId('row-title')).toHaveText(['Row B1', 'Row A1', 'Row B2', 'Row B3']);
+
+      // Verify persistence
+      await page.reload();
+      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+      const betaReloaded = getSection(page, 'Section Beta');
+      await expect(betaReloaded.getByTestId('row-title')).toHaveText(['Row B1', 'Row A1', 'Row B2', 'Row B3']);
     });
 
-    test('cancel mid-drag reverts to original state', async ({ page }) => {
+    // Drag A1 into Beta, press Escape → both containers revert to initial state
+    await test.step('Cancel mid-drag reverts to original state', async () => {
       await loadAndNavigate(page, 'cross-section-drop');
       const sectionAlpha = getSection(page, 'Section Alpha');
       const sectionBeta = getSection(page, 'Section Beta');
 
-      await startDrag(page, 'Row A1');
+      await activateDragByTitle(page, 'Row A1', { overlayTestId: 'drag-overlay-row' });
       await enterAtFirst(page, sectionBeta, 4);
 
       await page.keyboard.press('Escape');

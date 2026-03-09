@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loadFixture, resetFixtures } from '../helpers/fixtures';
-import { performDrag, startDrag } from '../helpers/drag';
+import { performDrag, startDrag, waitForMutationSettlement } from '../helpers/drag';
 
 /** Get a drag handle by its aria-label (e.g. "Move Block 1"). */
 function dragHandle(page: import('@playwright/test').Page, name: string) {
@@ -26,35 +26,6 @@ function elementCards(container: import('@playwright/test').Locator) {
 /** Get all element card title locators within a container. */
 function elementTitleLocators(container: import('@playwright/test').Locator) {
   return container.getByTestId('element-card-title');
-}
-
-/**
- * Register response listeners for the reorder mutation lifecycle.
- * Must be called BEFORE the action that triggers the mutation (drag release).
- *
- * Returns an async settle function that awaits both the PATCH /api/reorder
- * and the subsequent GET /api/readTree/ refetch, then pauses for React to
- * reconcile TanStack Query's cache update and dnd-kit to re-register
- * droppable rects. Without this, the next drag can start while droppable
- * positions are stale, causing collision detection to resolve incorrectly.
- */
-function waitForMutationSettlement(page: import('@playwright/test').Page) {
-  const reorderDone = page.waitForResponse(
-    (resp) => resp.url().includes('/api/reorder') && resp.ok(),
-  );
-  const refetchDone = page.waitForResponse(
-    (resp) => resp.url().includes('/api/readTree/') && resp.ok(),
-  );
-
-  return async () => {
-    await reorderDone;
-    await refetchDone;
-    // After the refetch response arrives, TanStack Query updates its
-    // cache asynchronously, React batches a re-render, and dnd-kit
-    // re-registers droppable rects. A 500ms pause lets this full
-    // chain settle before the next drag measures element positions.
-    await page.waitForTimeout(500);
-  };
 }
 
 test.describe('Drag and drop', () => {

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { loadFixture, resetFixtures } from '../helpers/fixtures';
+import { resetFixtures, loadAndNavigate } from '../helpers/fixtures';
+import { activateDragByTitle, waitForMutationSettlement } from '../helpers/drag';
 
 /**
  * Regression test for cross-container ghost sticking: when dragging a row
@@ -19,9 +20,7 @@ test.describe('Cross container ghost', () => {
   });
 
   test('ghost leaves source container and arrives in target during cross-section drag', async ({ page }) => {
-    const fixture = await loadFixture(page.request, 'cross-container-ghost');
-    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
-    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+    await loadAndNavigate(page, 'cross-container-ghost');
 
     // Verify initial state: Alpha has 2 rows, Beta has 1 row
     const sectionAlpha = page.getByTestId('section-block').filter({ hasText: 'Section Alpha' });
@@ -32,22 +31,10 @@ test.describe('Cross container ghost', () => {
     // Record Beta-1's bounding box to compute the drag target
     const betaRow1 = sectionBeta.getByTestId('row-block').first();
 
-    // Locate Alpha-2's drag handle and start drag
-    const alpha2Handle = page.locator('[data-testid="drag-handle"][aria-label="Move Row Alpha-2"]');
-    await alpha2Handle.scrollIntoViewIfNeeded();
-    const handleBox = await alpha2Handle.boundingBox();
-    expect(handleBox).not.toBeNull();
-    const fromX = handleBox!.x + handleBox!.width / 2;
-    const fromY = handleBox!.y + handleBox!.height / 2;
-
-    // Activate drag: press and move 10px downward to exceed 8px threshold
-    await page.mouse.move(fromX, fromY);
-    await page.mouse.down();
-    await page.mouse.move(fromX, fromY + 10, { steps: 3 });
-    await page.waitForTimeout(150);
-
-    // Assert activation: overlay visible
-    await expect(page.getByTestId('drag-overlay-row')).toBeVisible();
+    // Activate drag on Alpha-2 and get handle center for subsequent moves
+    const { x: fromX } = await activateDragByTitle(page, 'Row Alpha-2', {
+      overlayTestId: 'drag-overlay-row',
+    });
 
     // Move pointer into Beta's area — at Beta-1's vertical center
     const betaRow1Box = await betaRow1.boundingBox();
@@ -66,18 +53,10 @@ test.describe('Cross container ghost', () => {
     // Beta now has 2 rows (Beta-1 + Alpha-2 placeholder appended at end).
     await expect(sectionBeta.getByTestId('row-block')).toHaveCount(2);
 
-    // Register mutation settlement listeners, release mouse
-    const reorderDone = page.waitForResponse(
-      (resp) => resp.url().includes('/api/reorder') && resp.ok(),
-    );
-    const refetchDone = page.waitForResponse(
-      (resp) => resp.url().includes('/api/readTree/') && resp.ok(),
-    );
-
+    // Release and await mutation settlement
+    const settle = waitForMutationSettlement(page);
     await page.mouse.up();
-    await reorderDone;
-    await refetchDone;
-    await page.waitForTimeout(500);
+    await settle();
 
     // Verify: Alpha has 1 row and Beta has 2 rows
     await expect(sectionAlpha.getByTestId('row-block')).toHaveCount(1);

@@ -1,3 +1,4 @@
+import { expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
 /**
@@ -110,4 +111,93 @@ export async function performDrag(
 ): Promise<void> {
   const handle = await startDrag(page, source, target);
   await handle.release();
+}
+
+/**
+ * Register response listeners for the reorder mutation lifecycle.
+ * Must be called BEFORE the action that triggers the mutation (drag release).
+ *
+ * Returns an async settle function that awaits both the PATCH /api/reorder
+ * and the subsequent GET /api/readTree/ refetch, then pauses for React to
+ * reconcile TanStack Query's cache update and dnd-kit to re-register
+ * droppable rects. Without this, the next drag can start while droppable
+ * positions are stale, causing collision detection to resolve incorrectly.
+ */
+export function waitForMutationSettlement(page: Page) {
+  const reorderDone = page.waitForResponse(
+    (resp) => resp.url().includes('/api/reorder') && resp.ok(),
+  );
+  const refetchDone = page.waitForResponse(
+    (resp) => resp.url().includes('/api/readTree/') && resp.ok(),
+  );
+
+  return async () => {
+    await reorderDone;
+    await refetchDone;
+    // After the refetch response arrives, TanStack Query updates its
+    // cache asynchronously, React batches a re-render, and dnd-kit
+    // re-registers droppable rects. A 500ms pause lets this full
+    // chain settle before the next drag measures element positions.
+    await page.waitForTimeout(500);
+  };
+}
+
+/**
+ * Move the mouse to target coordinates, release, and await mutation settlement.
+ * Combines the final positioning move, mouse release, and API round-trip wait
+ * into a single call for cross-container drop tests.
+ */
+export async function dropAndSettle(page: Page, targetX: number, targetY: number) {
+  await page.mouse.move(targetX, targetY, { steps: 15 });
+  await page.waitForTimeout(200);
+
+  const settle = waitForMutationSettlement(page);
+  await page.mouse.up();
+  await settle();
+}
+
+interface ActivateDragOptions {
+  /** Axis for the 10px activation move. Default: 'vertical' (y+10). */
+  axis?: 'vertical' | 'horizontal';
+  /** If provided, asserts this overlay test ID is visible after activation. */
+  overlayTestId?: string;
+}
+
+/**
+ * Activate a drag by locating the drag handle for the given title,
+ * pressing mouse down, and moving 10px on the specified axis to exceed
+ * dnd-kit's 8px PointerSensor activation threshold.
+ *
+ * Returns the handle's center coordinates, useful for computing
+ * subsequent mouse moves relative to the drag origin.
+ */
+export async function activateDragByTitle(
+  page: Page,
+  title: string,
+  options: ActivateDragOptions = {},
+): Promise<{ x: number; y: number }> {
+  const { axis = 'vertical', overlayTestId } = options;
+
+  const handle = page.locator(`[data-testid="drag-handle"][aria-label="Move ${title}"]`);
+  await handle.scrollIntoViewIfNeeded();
+  const box = await handle.boundingBox();
+  if (box === null) {
+    throw new Error(`Drag handle for "${title}" not visible — cannot activate drag`);
+  }
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+
+  const moveX = axis === 'horizontal' ? x + 10 : x;
+  const moveY = axis === 'vertical' ? y + 10 : y;
+  await page.mouse.move(moveX, moveY, { steps: 3 });
+  await page.waitForTimeout(150);
+
+  if (overlayTestId) {
+    await expect(page.getByTestId(overlayTestId)).toBeVisible();
+  }
+
+  return { x, y };
 }

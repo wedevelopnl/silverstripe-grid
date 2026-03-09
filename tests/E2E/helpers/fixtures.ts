@@ -1,4 +1,5 @@
-import type { APIRequestContext } from '@playwright/test';
+import { expect } from '@playwright/test';
+import type { APIRequestContext, Page } from '@playwright/test';
 
 /** Maps class FQCN → fixture identifier → database ID. */
 export interface FixtureMap {
@@ -70,4 +71,18 @@ export async function resetFixtures(
     const error = 'error' in body ? body.error : `HTTP ${response.status()}`;
     throw new Error(`Failed to reset fixtures: ${error}`);
   }
+}
+
+/**
+ * Load a fixture and navigate to its CMS page editor.
+ * Waits for the grid editor to finish loading before returning.
+ */
+export async function loadAndNavigate(
+  page: Page,
+  fixtureName: string,
+): Promise<FixtureLoadResponse['data']> {
+  const fixture = await loadFixture(page.request, fixtureName);
+  await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
+  await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+  return fixture;
 }
