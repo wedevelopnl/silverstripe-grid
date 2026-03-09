@@ -46,6 +46,13 @@ vi.mock('@/utils/gridAdapter', () => ({
   getWidthClass: vi.fn((width: number) => `col-${width}`),
   getOffsetClass: vi.fn((offset: number) => `offset-${offset}`),
   getDefaultViewport: vi.fn(() => 'md'),
+  getWidthOptions: vi.fn(() => [
+    ...Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}/12` })),
+    { value: 'hidden', label: 'hidden' },
+  ]),
+  getOffsetOptions: vi.fn(() =>
+    Array.from({ length: 12 }, (_, i) => ({ value: i, label: i === 0 ? 'none' : `+${i}` })),
+  ),
 }));
 
 function makeColumn(id: number, title: string, overrides: Partial<EnrichedColumnNode> = {}): EnrichedColumnNode {

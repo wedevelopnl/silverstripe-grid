@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { ViewportSettings } from '@/types/elements';
@@ -10,11 +10,10 @@ import { useViewportContext } from '@/hooks/ViewportContext';
 import { useUpdateGridSettings } from '@/hooks/useElementMutations';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
-import { getColumnCount, getWidthClass, getOffsetClass } from '@/utils/gridAdapter';
+import { getColumnCount, getWidthClass, getOffsetClass, getWidthOptions, getOffsetOptions } from '@/utils/gridAdapter';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import GridSettingsPicker from '@/components/GridSettingsPicker/GridSettingsPicker';
-import type { GridSettingsOption } from '@/components/GridSettingsPicker/GridSettingsPicker';
 import ElementCard from '@/components/ElementCard/ElementCard';
 import EmptyState from '@/components/EmptyState/EmptyState';
 
@@ -32,28 +31,6 @@ function resolveViewportSettings(
     offset: 0,
     visible: true,
   };
-}
-
-function buildWidthOptions(columnCount: number): readonly GridSettingsOption[] {
-  const options: GridSettingsOption[] = [];
-
-  for (let n = 1; n <= columnCount; n++) {
-    options.push({ value: n, label: `${n}/${columnCount}` });
-  }
-
-  options.push({ value: 'hidden', label: 'hidden', separator: true });
-
-  return options;
-}
-
-function buildOffsetOptions(columnCount: number): readonly GridSettingsOption[] {
-  const options: GridSettingsOption[] = [];
-
-  for (let n = 0; n < columnCount; n++) {
-    options.push({ value: n, label: n === 0 ? 'none' : `+${n}` });
-  }
-
-  return options;
 }
 
 export default function ColumnBlock({ column }: ColumnBlockProps) {
@@ -85,8 +62,8 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
 
   const sortableStyle = buildSortableStyle(transform, transition, isDragging);
 
-  const widthOptions = useMemo(() => buildWidthOptions(columnCount), [columnCount]);
-  const offsetOptions = useMemo(() => buildOffsetOptions(columnCount), [columnCount]);
+  const widthOptions = getWidthOptions();
+  const offsetOptions = getOffsetOptions();
 
   const widthLabel = settings.visible
     ? `${settings.width}/${columnCount}`

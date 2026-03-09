@@ -4,7 +4,6 @@ import './GridSettingsPicker.scss';
 export interface GridSettingsOption {
   readonly value: number | 'hidden';
   readonly label: string;
-  readonly separator?: boolean;
 }
 
 interface GridSettingsPickerProps {
@@ -94,7 +93,7 @@ export default function GridSettingsPicker({
           {options.map((option) => (
             <li
               key={option.value}
-              className={`grid-settings-picker__option${option.value === selectedValue ? ' grid-settings-picker__option--selected' : ''}${option.separator ? ' grid-settings-picker__option--separator' : ''}`}
+              className={`grid-settings-picker__option${option.value === selectedValue ? ' grid-settings-picker__option--selected' : ''}${option.value === 'hidden' ? ' grid-settings-picker__option--separator' : ''}`}
               role="option"
               aria-selected={option.value === selectedValue}
               onClick={() => handleOptionClick(option.value)}

@@ -5,6 +5,8 @@ import {
   getRowClasses,
   getWidthClass,
   getOffsetClass,
+  getWidthOptions,
+  getOffsetOptions,
 } from '@/utils/gridAdapter';
 
 vi.mock('@/api/config', () => ({
@@ -66,5 +68,21 @@ describe('gridAdapter', () => {
 
   it('returns empty string for unmapped offset key', () => {
     expect(getOffsetClass(99)).toBe('');
+  });
+
+  it('returns width options with columnCount + 1 entries including hidden', () => {
+    const options = getWidthOptions();
+    expect(options).toHaveLength(13);
+    expect(options[0]).toEqual({ value: 1, label: '1/12' });
+    expect(options[11]).toEqual({ value: 12, label: '12/12' });
+    expect(options[12]).toEqual({ value: 'hidden', label: 'hidden' });
+  });
+
+  it('returns offset options with columnCount entries', () => {
+    const options = getOffsetOptions();
+    expect(options).toHaveLength(12);
+    expect(options[0]).toEqual({ value: 0, label: 'none' });
+    expect(options[1]).toEqual({ value: 1, label: '+1' });
+    expect(options[11]).toEqual({ value: 11, label: '+11' });
   });
 });
