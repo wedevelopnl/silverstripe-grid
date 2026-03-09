@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import './GridSettingsPicker.scss';
 
 export interface GridSettingsOption {
-  readonly value: number;
+  readonly value: number | 'hidden';
   readonly label: string;
   readonly separator?: boolean;
 }
@@ -10,10 +10,10 @@ export interface GridSettingsOption {
 interface GridSettingsPickerProps {
   readonly label: string;
   readonly options: readonly GridSettingsOption[];
-  readonly selectedValue: number;
+  readonly selectedValue: number | 'hidden';
   readonly disabled: boolean;
   readonly testId: string;
-  readonly onSelect: (value: number) => void;
+  readonly onSelect: (value: number | 'hidden') => void;
 }
 
 export default function GridSettingsPicker({
@@ -65,7 +65,7 @@ export default function GridSettingsPicker({
     }
   }
 
-  function handleOptionClick(value: number) {
+  function handleOptionClick(value: number | 'hidden') {
     onSelect(value);
     close();
   }

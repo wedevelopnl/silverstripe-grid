@@ -22,8 +22,6 @@ interface ColumnBlockProps {
   readonly column: EnrichedColumnNode;
 }
 
-const VIEWPORT_HIDDEN_LABEL = 'hidden';
-
 function resolveViewportSettings(
   column: EnrichedColumnNode,
   activeViewport: string,
@@ -43,7 +41,7 @@ function buildWidthOptions(columnCount: number): readonly GridSettingsOption[] {
     options.push({ value: n, label: `${n}/${columnCount}` });
   }
 
-  options.push({ value: -1, label: VIEWPORT_HIDDEN_LABEL, separator: true });
+  options.push({ value: 'hidden', label: 'hidden', separator: true });
 
   return options;
 }
@@ -92,44 +90,40 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
 
   const widthLabel = settings.visible
     ? `${settings.width}/${columnCount}`
-    : VIEWPORT_HIDDEN_LABEL;
+    : 'hidden';
 
-  // -1 sentinel when hidden, so no width option appears selected
-  const widthSelectedValue = settings.visible ? settings.width : -1;
+  const widthSelectedValue = settings.visible ? settings.width : 'hidden' as const;
 
   const offsetLabel = settings.offset === 0 ? 'none' : `+${settings.offset}`;
   const isOffsetDisabled = isPickerDisabled || settings.width === columnCount || !settings.visible;
 
-  const handleWidthSelect = useCallback((value: number) => {
-    if (value === -1) {
-      // "hidden" selected: preserve width/offset, set visible=false
+  const updateSettings = useCallback(
+    (patch: Partial<ViewportSettings>) => {
       updateGridSettings.mutate({
         id: column.id,
         viewport: activeViewport,
-        width: settings.width,
-        offset: settings.offset,
-        visible: false,
+        ...settings,
+        ...patch,
       });
-    } else {
-      updateGridSettings.mutate({
-        id: column.id,
-        viewport: activeViewport,
-        width: value,
-        offset: settings.offset,
-        visible: true,
-      });
-    }
-  }, [column.id, activeViewport, settings.width, settings.offset, updateGridSettings]);
+    },
+    [column.id, activeViewport, settings, updateGridSettings],
+  );
 
-  const handleOffsetSelect = useCallback((value: number) => {
-    updateGridSettings.mutate({
-      id: column.id,
-      viewport: activeViewport,
-      width: settings.width,
-      offset: value,
-      visible: settings.visible,
-    });
-  }, [column.id, activeViewport, settings.width, settings.visible, updateGridSettings]);
+  const handleWidthSelect = useCallback(
+    (value: number | 'hidden') => {
+      if (value === 'hidden') {
+        updateSettings({ visible: false });
+      } else {
+        updateSettings({ width: value, visible: true });
+      }
+    },
+    [updateSettings],
+  );
+
+  const handleOffsetSelect = useCallback(
+    (value: number | 'hidden') => updateSettings({ offset: value as number }),
+    [updateSettings],
+  );
 
   return (
     <div ref={setNodeRef} style={sortableStyle} className={outerClasses.join(' ')}>
