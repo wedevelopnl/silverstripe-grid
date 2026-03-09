@@ -18,6 +18,7 @@ WeDevelop\Grid\Model\Section:
   content_section:
     Title: 'Content Section'
     ShowTitle: 1
+    TitleTag: h3
     Sort: 1
     Zone: main
     Parent: =>Page.e2e_page

@@ -6,7 +6,7 @@ test.describe('Content elements', () => {
     await resetFixtures(request);
   });
 
-  test('content editor adds elements, edits content, publishes, and verifies frontend rendering', async ({ page }) => {
+  test('content editor adds elements, configures titles, edits content, publishes, and verifies frontend rendering', async ({ page }) => {
     const fixture = await loadFixture(page.request, 'content-elements');
     await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
     await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
@@ -61,10 +61,14 @@ test.describe('Content elements', () => {
     // Should navigate to the element edit page via the page editor
     await expect(page).toHaveURL(/\/admin\/pages\/edit\/EditForm\/\d+\/field\/GridEditor\/item\/\d+\/edit/);
 
-    // --- Step 5: Fill in the edit form ---
+    // --- Step 5: Fill in the edit form including title settings ---
     // Wait for the form to be ready
     await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 });
     await page.getByRole('textbox', { name: 'Title' }).fill('My Edited Element');
+
+    // Configure title display: set heading level to h4 and enable visibility
+    await page.locator('select[name="TitleTag"]').selectOption('h4');
+    await page.locator('input[name="ShowTitle"]').check();
 
     // Set HTML content — try TinyMCE API first, fall back to textarea
     const hasTinyMce = await page.waitForFunction(
@@ -108,5 +112,11 @@ test.describe('Content elements', () => {
     // Verify pre-populated elements render their body content
     await expect(page.locator('.content-element').filter({ hasText: 'Text block body content' })).toBeVisible();
     await expect(page.locator('.content-element').filter({ hasText: 'Image block body content' })).toBeVisible();
+
+    // Verify title configuration: section title renders as h3 (set in fixture)
+    await expect(page.getByRole('heading', { level: 3, name: 'Content Section' })).toBeVisible();
+
+    // Verify title configuration: edited element title renders as h4 (set in CMS form)
+    await expect(page.getByRole('heading', { level: 4, name: 'My Edited Element' })).toBeVisible();
   });
 });

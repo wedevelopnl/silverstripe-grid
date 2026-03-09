@@ -179,7 +179,7 @@ class GridElement extends DataObject
         $fields->removeByName(['Title', 'TitleTag', 'TitleClass', 'ShowTitle']);
 
         $titleGroup = FieldGroup::create(
-            TextField::create('Title', _t(self::class . '.TITLE', 'Title text')),
+            TextField::create('Title', _t(self::class . '.TITLE', 'Title')),
             DropdownField::create(
                 'TitleTag',
                 _t(self::class . '.TITLE_TAG', 'Title tag'),
