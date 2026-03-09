@@ -151,30 +151,37 @@ test.describe('API contract', () => {
 
     expect(columns.length).toBeGreaterThanOrEqual(2);
 
-    const expectedViewports = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl'];
-
     for (const col of columns) {
-      // gridSettings must exist (enforced by Zod, but verify structure)
+      // gridSettings is sparse — only override viewports are present.
+      // The frontend cascades from defaults (width=12, offset=0, visible=true).
       expect(col.gridSettings).toBeDefined();
+      expect(typeof col.gridSettings).toBe('object');
 
-      for (const vp of expectedViewports) {
-        const settings = col.gridSettings[vp];
-        expect(settings, `Missing viewport "${vp}" in column "${col.title}"`).toBeDefined();
-        expect(typeof settings.width).toBe('number');
-        expect(typeof settings.offset).toBe('number');
-        expect(typeof settings.visible).toBe('boolean');
+      for (const [vp, settings] of Object.entries(col.gridSettings)) {
+        expect(typeof vp).toBe('string');
+        expect(typeof settings.width, `Invalid width type in viewport "${vp}" of column "${col.title}"`).toBe('number');
+        expect(typeof settings.offset, `Invalid offset type in viewport "${vp}" of column "${col.title}"`).toBe('number');
+        expect(typeof settings.visible, `Invalid visible type in viewport "${vp}" of column "${col.title}"`).toBe('boolean');
       }
     }
 
-    // Verify specific values from ComplexPage.yml for the left column (md viewport)
+    // Verify specific override values from ComplexPage.yml
     const leftCol = columns.find((c) => c.title === 'Left Column');
     expect(leftCol, 'Left Column not found').toBeDefined();
     expect(leftCol!.gridSettings['md']).toEqual({ width: 8, offset: 0, visible: true });
+    expect(leftCol!.gridSettings['lg']).toEqual({ width: 6, offset: 0, visible: true });
 
     const rightCol = columns.find((c) => c.title === 'Right Column');
     expect(rightCol, 'Right Column not found').toBeDefined();
-    expect(rightCol!.gridSettings['md']).toEqual({ width: 4, offset: 0, visible: true });
     expect(rightCol!.gridSettings['xs']).toEqual({ width: 12, offset: 0, visible: false });
+    expect(rightCol!.gridSettings['md']).toEqual({ width: 4, offset: 0, visible: true });
+    expect(rightCol!.gridSettings['lg']).toEqual({ width: 6, offset: 0, visible: true });
+
+    // Default column has empty gridSettings (all defaults cascade).
+    // PHP's json_encode([]) emits [] not {} — Zod's z.record() accepts both.
+    const defaultCol = columns.find((c) => c.title === 'Draft Section Column');
+    expect(defaultCol, 'Draft Section Column not found').toBeDefined();
+    expect(Object.keys(defaultCol!.gridSettings)).toHaveLength(0);
   });
 
   test('element nodes include editLink field', async ({ request }) => {

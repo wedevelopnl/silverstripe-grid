@@ -36,12 +36,12 @@ WeDevelop\Grid\Model\Column:
     Title: 'Column 1'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row1
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{}'
   col2:
     Title: 'Column 2'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row2
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{}'
 
 WeDevelop\Grid\Model\ContentElement:
   block1:

@@ -64,32 +64,32 @@ WeDevelop\Grid\Model\Column:
     Title: 'Column A1'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_a1
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{}'
   col_a2:
     Title: 'Column A2'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_a2
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{}'
   col_a3:
     Title: 'Column A3'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_a3
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{}'
   col_b1:
     Title: 'Column B1'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_b1
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{}'
   col_b2:
     Title: 'Column B2'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_b2
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{}'
   col_b3:
     Title: 'Column B3'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_b3
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{}'
 
 WeDevelop\Grid\Model\ContentElement:
   block_a1:

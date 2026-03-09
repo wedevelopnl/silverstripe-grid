@@ -76,22 +76,22 @@ WeDevelop\Grid\Model\Column:
     Title: 'Col Main-Alpha'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.mz_row_ma
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{}'
   mz_col_mb:
     Title: 'Col Main-Beta'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.mz_row_mb
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{}'
   mz_col_sa:
     Title: 'Col Sidebar-Alpha'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.mz_row_sa
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{}'
   mz_col_sb:
     Title: 'Col Sidebar-Beta'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.mz_row_sb
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":12,"offset":0,"visible":true},"lg":{"width":12,"offset":0,"visible":true},"xl":{"width":12,"offset":0,"visible":true},"xxl":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{}'
 
 # --- Leaves ---
 WeDevelop\Grid\Model\ContentElement:

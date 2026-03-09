@@ -44,32 +44,32 @@ WeDevelop\Grid\Model\Column:
     Title: 'Col A1'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_a
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":3,"offset":0,"visible":true},"lg":{"width":3,"offset":0,"visible":true},"xl":{"width":3,"offset":0,"visible":true},"xxl":{"width":3,"offset":0,"visible":true}}'
+    GridSettings: '{"md":{"width":3,"offset":0,"visible":true}}'
   col_a2:
     Title: 'Col A2'
     Sort: 2
     Parent: =>WeDevelop\Grid\Model\Row.row_a
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":3,"offset":0,"visible":true},"lg":{"width":3,"offset":0,"visible":true},"xl":{"width":3,"offset":0,"visible":true},"xxl":{"width":3,"offset":0,"visible":true}}'
+    GridSettings: '{"md":{"width":3,"offset":0,"visible":true}}'
   col_a3:
     Title: 'Col A3'
     Sort: 3
     Parent: =>WeDevelop\Grid\Model\Row.row_a
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":3,"offset":0,"visible":true},"lg":{"width":3,"offset":0,"visible":true},"xl":{"width":3,"offset":0,"visible":true},"xxl":{"width":3,"offset":0,"visible":true}}'
+    GridSettings: '{"md":{"width":3,"offset":0,"visible":true}}'
   col_b1:
     Title: 'Col B1'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_b
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":3,"offset":0,"visible":true},"lg":{"width":3,"offset":0,"visible":true},"xl":{"width":3,"offset":0,"visible":true},"xxl":{"width":3,"offset":0,"visible":true}}'
+    GridSettings: '{"md":{"width":3,"offset":0,"visible":true}}'
   col_b2:
     Title: 'Col B2'
     Sort: 2
     Parent: =>WeDevelop\Grid\Model\Row.row_b
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":3,"offset":0,"visible":true},"lg":{"width":3,"offset":0,"visible":true},"xl":{"width":3,"offset":0,"visible":true},"xxl":{"width":3,"offset":0,"visible":true}}'
+    GridSettings: '{"md":{"width":3,"offset":0,"visible":true}}'
   col_b3:
     Title: 'Col B3'
     Sort: 3
     Parent: =>WeDevelop\Grid\Model\Row.row_b
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":3,"offset":0,"visible":true},"lg":{"width":3,"offset":0,"visible":true},"xl":{"width":3,"offset":0,"visible":true},"xxl":{"width":3,"offset":0,"visible":true}}'
+    GridSettings: '{"md":{"width":3,"offset":0,"visible":true}}'
 
 WeDevelop\Grid\Model\ContentElement:
   block_a1:
