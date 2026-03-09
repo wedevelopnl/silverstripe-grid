@@ -109,35 +109,33 @@ test.describe('Viewport switcher', () => {
     const frontendColumns = page.locator('div.element.column');
     await expect(frontendColumns).toHaveCount(2);
 
-    // Left column after edits:
-    //   xs: width 12 (unchanged)  → col-12
-    //   sm: width 12 (unchanged)  → col-sm-12
-    //   md: width 6, offset 2     → col-md-6 offset-md-2  (was col-md-8, no offset)
-    //   lg: width 6 (unchanged)   → col-lg-6
-    //   xl: width 6 (unchanged)   → col-xl-6
-    //   xxl: width 6 (unchanged)  → col-xxl-6
+    // Left column after edits (sparse mobile-first cascade):
+    //   xs: width 12 (default)         → col-12 (base viewport always emits)
+    //   sm: inherits xs (no change)    → (no class)
+    //   md: width 6, offset 2 (edited) → col-md-6 offset-md-2
+    //   lg: width 6, offset 0 (resets) → offset-lg-0 (width unchanged, offset changed)
+    //   xl–xxl: inherit lg (no change) → (no class)
     const leftFrontend = frontendColumns.first();
     const leftClasses = (await leftFrontend.getAttribute('class'))!.split(/\s+/).sort();
     expect(leftClasses).toEqual([
-      'col-12', 'col-lg-6', 'col-md-6', 'col-sm-12', 'col-xl-6', 'col-xxl-6',
-      'column', 'element', 'offset-md-2',
+      'col-12', 'col-md-6',
+      'column', 'element', 'offset-lg-0', 'offset-md-2',
     ].sort());
 
-    // Right column after edits:
-    //   xs: width 12, visible     → col-12         (was hidden: d-none d-sm-block)
-    //   sm: width 12 (unchanged)  → col-sm-12      (was hidden: d-sm-none d-md-block)
-    //   md: width 4 (unchanged)   → col-md-4
-    //   lg: width 6 (unchanged)   → col-lg-6
-    //   xl: width 6 (unchanged)   → col-xl-6
-    //   xxl: width 6 (unchanged)  → col-xxl-6
+    // Right column after edits (sparse mobile-first cascade):
+    //   xs: width 12, visible (unhidden) → col-12 (base viewport always emits)
+    //   sm: inherits xs (visible)         → (no class — cascade from xs, no sm override)
+    //   md: width 4 (fixture)             → col-md-4 (width changed from 12)
+    //   lg: width 6 (fixture)             → col-lg-6 (width changed from 4)
+    //   xl–xxl: inherit lg (no change)    → (no class)
     //
-    // Note: xs and sm were both hidden in the fixture. We only unhid xs,
-    // so sm remains hidden (d-sm-none d-md-block).
+    // With sparse storage xs hidden cascades to sm. Unhiding xs also unhides sm
+    // (no explicit sm override), so no visibility classes remain.
     const rightFrontend = frontendColumns.nth(1);
     const rightClasses = (await rightFrontend.getAttribute('class'))!.split(/\s+/).sort();
     expect(rightClasses).toEqual([
-      'col-12', 'col-md-4', 'col-lg-6', 'col-xl-6', 'col-xxl-6',
-      'column', 'd-md-block', 'd-sm-none', 'element',
+      'col-12', 'col-lg-6', 'col-md-4',
+      'column', 'element',
     ].sort());
 
   });
