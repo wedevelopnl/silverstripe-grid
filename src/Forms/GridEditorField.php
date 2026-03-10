@@ -31,12 +31,12 @@ class GridEditorField extends GridField
 
         parent::__construct(
             $name,
-            _t(__CLASS__ . '.TITLE', 'Content'),
+            '',
             GridElement::get(),
             GridFieldConfig::create()->addComponent(GridFieldDetailForm::create()),
         );
 
-        $this->addExtraClass('grid-editor__container no-change-track form__field-holder');
+        $this->addExtraClass('grid-editor__container no-change-track form__field-holder form__field-holder--no-label');
     }
 
     /**

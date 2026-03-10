@@ -1,5 +1,4 @@
-<div id="$HolderID" class="form-group field">
-    <% if $Title %><label class="form__field-label">$Title</label><% end_if %>
+<div id="$HolderID" class="form-group form-group--no-label field">
     <div $AttributesHTML $SchemaAttributesHtml>
         <%-- Rendered by React grid editor --%>
     </div>
