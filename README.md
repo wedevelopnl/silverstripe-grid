@@ -4,22 +4,24 @@
 
 A grid-based content block system for SilverStripe CMS, enabling structured Section → Row → Column layouts with configurable CSS framework adapters (Bootstrap, Tailwind, Bulma).
 
-> **Note**: This is a ground-up rewrite for SilverStripe 6, developed on the orphaned `6` branch. The `main` branch contains the legacy SS5 version for architectural reference only — do not base new work on it.
-
 ## Requirements
 
 * PHP ^8.3
 * silverstripe/framework ^6.0
+* silverstripe/cms ^6.0
 * silverstripe/admin ^3.0
+* silverstripe/versioned ^3.0
 * silverstripe/vendor-plugin ^3.0
 * Node >=24 (for frontend build)
 
-> **Conflict**: This module conflicts with `dnadesign/silverstripe-elemental-list` and replaces its functionality.
+> **Optional**: `silverstripe/reports` enables the Grid Elements report in CMS Reports.
+
+> **Conflict**: This module conflicts with `dnadesign/silverstripe-elemental` and replaces its functionality.
 
 ## Installation
 
 ```
-composer require wedevelopnl/silverstripe-elemental-grid
+composer require wedevelopnl/silverstripe-grid
 ```
 
 ## Development
@@ -44,7 +46,7 @@ npm run build            # Vite production build
 
 | Command | Description |
 |---------|-------------|
-| `make test` | Run all PHP tests (unit + integration) |
+| `make test` | Run all tests (PHP unit + integration + JS) |
 | `make test-unit` | PHP unit tests only (no database/framework) |
 | `make test-integration` | PHP integration tests (full SilverStripe env) |
 | `npm run test` | Run JavaScript tests (Vitest) |
@@ -55,7 +57,7 @@ npm run build            # Vite production build
 | Command | Description |
 |---------|-------------|
 | `make analyse` | PHPStan static analysis (level max) |
-| `npm run lint` | ESLint + Stylelint |
+| `npm run lint` | oxlint + Stylelint |
 | `npm run typecheck` | TypeScript type checking |
 | `make qa` | Full QA suite (PHPStan + PHP tests + JS QA) |
 
@@ -94,6 +96,10 @@ bd sync                               # Sync issues with git remote
 ```
 
 Issues are stored in `.beads/` and committed alongside code. No external services or web UIs needed.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
