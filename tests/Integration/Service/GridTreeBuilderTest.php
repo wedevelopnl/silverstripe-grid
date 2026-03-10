@@ -206,6 +206,9 @@ final class GridTreeBuilderTest extends SapphireTest
 
         $this->assertNotNull($section->children);
         $this->assertIsArray($section->children);
+
+        // gridSettings is only for Column nodes, null on Section
+        $this->assertNull($section->gridSettings);
     }
 
     public function testLeafNodeExcludesContainerFields(): void
@@ -225,42 +228,55 @@ final class GridTreeBuilderTest extends SapphireTest
     {
         $tree = $this->buildTree();
         $pageId = $this->getPageId();
-        $leaf = $tree[$pageId][0]->children[0]->children[0]->children[0];
-        $fixtureId = $this->idFromFixture(GridElement::class, 'leaf1');
+        $section = $tree[$pageId][0];
 
-        $this->assertSame($fixtureId, $leaf->id);
-        $this->assertSame('Text Block', $leaf->title);
-        $this->assertIsInt($leaf->version);
-        $this->assertGreaterThan(0, $leaf->version);
-        $this->assertNull($leaf->obsoleteClassName);
-        $this->assertIsBool($leaf->canDelete);
-        $this->assertIsBool($leaf->canPublish);
-        $this->assertIsBool($leaf->canUnpublish);
-        $this->assertIsBool($leaf->canCreate);
-        $this->assertIsArray($leaf->statusFlags);
+        // Verify on a section node for richer coverage (containers have more fields)
+        $this->assertSame($this->idFromFixture(Section::class, 'section1'), $section->id);
+        $this->assertSame($pageId, $section->parentId);
+        $this->assertSame('First Section', $section->title);
+        $this->assertIsInt($section->version);
+        $this->assertGreaterThan(0, $section->version);
+        $this->assertNull($section->obsoleteClassName);
+
+        // Permission booleans must be true for admin user (default test identity)
+        $this->assertTrue($section->canDelete);
+        $this->assertTrue($section->canPublish);
+        $this->assertTrue($section->canUnpublish);
+        $this->assertTrue($section->canCreate);
+
+        // editLink contains the page ID so the CMS can route to the editor
+        $this->assertNotNull($section->editLink);
+        $this->assertStringContainsString((string) $pageId, $section->editLink);
+
+        $this->assertIsArray($section->statusFlags);
     }
 
     public function testBlockSchemaStructure(): void
     {
         $tree = $this->buildTree();
         $pageId = $this->getPageId();
-        $leaf = $tree[$pageId][0]->children[0]->children[0]->children[0];
+        $section = $tree[$pageId][0];
 
-        $schema = $leaf->blockSchema;
+        $schema = $section->blockSchema;
 
-        $this->assertArrayHasKey('typeName', $schema);
+        // All 6 expected keys present
+        $expectedKeys = ['typeName', 'type', 'title', 'summary', 'label', 'icon'];
+        foreach ($expectedKeys as $key) {
+            $this->assertArrayHasKey($key, $schema, "blockSchema missing key: $key");
+        }
+
         $this->assertIsString($schema['typeName']);
         $this->assertNotEmpty($schema['typeName']);
 
-        $this->assertArrayHasKey('type', $schema);
         $this->assertIsString($schema['type']);
 
-        $this->assertArrayHasKey('summary', $schema);
         $this->assertIsString($schema['summary']);
 
-        $this->assertArrayHasKey('label', $schema);
-        $this->assertIsString($schema['label']);
-        $this->assertNotEmpty($schema['label']);
+        // label equals the element's getType() value
+        $this->assertSame('Section', $schema['label']);
+
+        // icon matches the Section's configured icon (not the fallback)
+        $this->assertSame('font-icon-block-layout', $schema['icon']);
     }
 
     // ---- Empty containers ----
@@ -484,6 +500,91 @@ final class GridTreeBuilderTest extends SapphireTest
 
         $this->assertNotSame('Unknown', $type, 'ContentElement should not inherit hardcoded "Unknown"');
         $this->assertNotEmpty($type);
+    }
+
+    // ---- Row icon ----
+
+    public function testRowBlockSchemaIconMatchesConfig(): void
+    {
+        $tree = $this->buildTree();
+        $pageId = $this->getPageId();
+        $row = $tree[$pageId][0]->children[0];
+
+        // Row has a configured icon different from the fallback
+        $this->assertSame('font-icon-columns', $row->blockSchema['icon']);
+    }
+
+    // ---- Column grid settings ----
+
+    public function testColumnHasGridSettings(): void
+    {
+        $tree = $this->buildTree();
+        $pageId = $this->getPageId();
+
+        // Navigate to first column: Section 1 → Row 1 → Col 1
+        $column = $tree[$pageId][0]->children[0]->children[0];
+
+        $this->assertNotNull($column->containerType);
+        $this->assertSame('column', $column->containerType->value);
+        $this->assertIsArray($column->gridSettings);
+    }
+
+    // ---- Zone filtering ----
+
+    public function testZoneFilteringExcludesOtherZones(): void
+    {
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+        /** @var GridTreeBuilder $builder */
+        $builder = Injector::inst()->get(GridTreeBuilder::class);
+        $tree = $builder->buildForPage($page, 'sidebar');
+
+        $pageId = (int) $page->ID;
+        $this->assertArrayHasKey($pageId, $tree);
+
+        $sections = $tree[$pageId];
+        $this->assertCount(2, $sections);
+
+        $titles = array_map(static fn (GridNode $n): string => $n->title, $sections);
+        $this->assertContains('Sidebar Section 1', $titles);
+        $this->assertContains('Sidebar Section 2', $titles);
+
+        // Main-zone sections must not appear in sidebar tree
+        $this->assertNotContains('First Section', $titles);
+        $this->assertNotContains('Second Section', $titles);
+    }
+
+    // ---- Allowed types config ----
+
+    public function testAllowedTypesReflectsConfig(): void
+    {
+        $tree = $this->buildTree();
+        $pageId = $this->getPageId();
+
+        // Section's allowedTypes must contain Row with exact metadata
+        $section = $tree[$pageId][0];
+        $this->assertNotNull($section->allowedTypes);
+        $this->assertArrayHasKey(Row::class, $section->allowedTypes);
+
+        $rowTypeInfo = $section->allowedTypes[Row::class];
+        $this->assertSame('Row', $rowTypeInfo['label']);
+        $this->assertSame('font-icon-columns', $rowTypeInfo['icon']);
+        $this->assertSame(
+            'Horizontal container that holds columns within a section',
+            $rowTypeInfo['description'],
+        );
+
+        // Column's allowedTypes must NOT contain container classes
+        // but MUST contain at least one allowed element type
+        $column = $tree[$pageId][0]->children[0]->children[0];
+        $this->assertNotNull($column->allowedTypes);
+        $this->assertNotEmpty($column->allowedTypes);
+        $this->assertArrayNotHasKey(Section::class, $column->allowedTypes);
+        $this->assertArrayNotHasKey(Row::class, $column->allowedTypes);
+        $this->assertArrayNotHasKey(Column::class, $column->allowedTypes);
+
+        // Column's allowedTypes should include ContentElement
+        $this->assertArrayHasKey(ContentElement::class, $column->allowedTypes);
     }
 
     // ---- Empty states ----
