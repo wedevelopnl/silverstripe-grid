@@ -15,6 +15,7 @@
 /.claude          export-ignore
 /.docker          export-ignore
 /.editorconfig    export-ignore
+/.github          export-ignore
 /.gitattributes   export-ignore
 /.gitignore       export-ignore
 /.nvmrc           export-ignore
@@ -31,14 +32,16 @@
 /_config/dev.yml  export-ignore
 
 # Dev and build config files
-/AGENTS.md        export-ignore
-/apm.lock         export-ignore
-/apm.yml          export-ignore
-/CLAUDE.md        export-ignore
-/Makefile         export-ignore
-/package.json     export-ignore
+/AGENTS.md              export-ignore
+/apm.lock               export-ignore
+/apm.yml                export-ignore
+/CLAUDE.md              export-ignore
+/Makefile               export-ignore
+/oxlintrc.json          export-ignore
+/package.json           export-ignore
 /playwright.config.ts   export-ignore
 /stryker.config.mjs     export-ignore
-/tsconfig.json    export-ignore
-/vite.config.ts   export-ignore
+/stylelint.config.mjs   export-ignore
+/tsconfig.json          export-ignore
+/vite.config.ts         export-ignore
 
