@@ -92,5 +92,4 @@ dev-build: ensure-up
 
 ## Run JavaScript QA (lint + typecheck + test)
 qa-js:
-  # Not setup yet
-	# npm run qa
+	npm run qa

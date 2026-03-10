@@ -48,4 +48,4 @@ applyTo: "**/*"
 | `make test-e2e` | Run Playwright E2E tests (requires Docker) |
 | `make test-e2e-ui` | Playwright E2E with interactive UI |
 | `make qa` | Full QA suite (PHPStan + PHP tests + JS QA) |
-| `make qa-js` | JavaScript QA — **not yet functional** (target body commented out; use `npm run qa` directly) |
+| `make qa-js` | JavaScript QA (oxlint + Stylelint + typecheck + Vitest) |
