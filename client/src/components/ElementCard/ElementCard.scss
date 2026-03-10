@@ -5,7 +5,7 @@
   @include mixins.status-indicator;
 
   background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
   border-radius: 4px;
   padding: 8px 12px;
 
@@ -41,7 +41,7 @@
     cursor: pointer;
 
     &:hover {
-      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 1px 6px rgb(0 0 0 / 15%);
     }
   }
 
