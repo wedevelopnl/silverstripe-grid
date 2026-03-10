@@ -9,6 +9,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Forms\GridSettingsField;
+use WeDevelop\Grid\Service\GridSettingsCompactor;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
@@ -18,6 +19,7 @@ use WeDevelop\Grid\Value\Viewport;
  * Uses reflection to bypass the FormField constructor (which requires SilverStripe's config manifest).
  */
 #[CoversClass(GridSettingsField::class)]
+#[CoversClass(GridSettingsCompactor::class)]
 final class GridSettingsFieldTest extends TestCase
 {
     private GridAdapterInterface&MockObject $adapter;
@@ -41,9 +43,12 @@ final class GridSettingsFieldTest extends TestCase
         $field = $ref->newInstanceWithoutConstructor();
         $this->field = $field;
 
-        // Inject the adapter dependency
+        // Inject the adapter and compactor dependencies
         $adapterProp = $ref->getProperty('adapter');
         $adapterProp->setValue($this->field, $this->adapter);
+
+        $compactorProp = $ref->getProperty('compactor');
+        $compactorProp->setValue($this->field, new GridSettingsCompactor($this->adapter));
     }
 
     // --- Expand tests ---

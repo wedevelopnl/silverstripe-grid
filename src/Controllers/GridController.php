@@ -24,6 +24,7 @@ use WeDevelop\Grid\Value\Viewport;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Service\ElementPersistenceService;
 use WeDevelop\Grid\Service\GridTreeBuilder;
+use WeDevelop\Grid\Service\GridSettingsCompactor;
 use WeDevelop\Grid\Service\ReorderService;
 
 /**
@@ -369,15 +370,14 @@ class GridController extends AdminController
             $this->jsonError(400);
         }
 
-        $settings = $element->getGridSettingsData();
+        $compactor = new GridSettingsCompactor($this->gridAdapter);
+        $sparse = $compactor->applyViewportUpdate(
+            $element->getGridSettingsData(),
+            $body['viewport'],
+            ['width' => $body['width'], 'offset' => $body['offset'], 'visible' => $body['visible']],
+        );
 
-        $settings[$body['viewport']] = [
-            'width' => $body['width'],
-            'offset' => $body['offset'],
-            'visible' => $body['visible'],
-        ];
-
-        $element->setGridSettingsData($settings);
+        $element->setGridSettingsData($sparse);
 
         $result = $this->persistenceService->persistBatch([$element]);
         if ($result->isErr()) {
