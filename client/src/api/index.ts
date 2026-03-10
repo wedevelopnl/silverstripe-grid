@@ -6,7 +6,7 @@ export {
   createElement,
   publishElement,
   unpublishElement,
-  deleteElement,
+  archiveElement,
   duplicateElement,
 } from './endpoints';
 export type { CreateElementParams } from './endpoints';

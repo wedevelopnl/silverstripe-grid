@@ -7,7 +7,7 @@ import { GridEditorProvider } from '@/hooks/GridEditorContext';
 import type { SimpleElementNode, SectionNode, ColumnNode, RowNode } from '@/types/elements';
 
 vi.mock('@/api/endpoints', () => ({
-  deleteElement: vi.fn(),
+  archiveElement: vi.fn(),
 }));
 
 function createWrapper() {

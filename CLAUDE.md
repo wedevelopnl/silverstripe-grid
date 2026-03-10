@@ -333,7 +333,7 @@ Post-actions run after YAML write, still in DRAFT stage:
 
 ### Available Fixtures
 
-Registered in `_config/dev.yml`: `element-tree`, `empty-page`, `collapse-test`, `drag-and-drop`, `multi-zone`, `complex-page`, `ghost-jump`, `cross-container-ghost`, `cross-section-drop`, `cross-section-drop-single`, `cross-row-column-drop`, `cross-row-column-drop-single`, `cross-column-element-drop`, `cross-column-element-drop-single`
+Registered in `_config/dev.yml`: `element-tree`, `empty-page`, `collapse-test`, `drag-and-drop`, `multi-zone`, `complex-page`, `ghost-jump`, `cross-container-ghost`, `cross-section-drop`, `cross-section-drop-single`, `cross-row-column-drop`, `cross-row-column-drop-single`, `cross-column-element-drop`, `cross-column-element-drop-single`, `archive-test`
 
 ## Locator Strategy
 

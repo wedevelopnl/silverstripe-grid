@@ -52,7 +52,7 @@ test.describe('Archive element actions', () => {
     await test.step('Archive entire Section A', async () => {
       const sectionA = page.getByTestId('section-block').filter({ hasText: 'Section A' });
       // Use the section header's actions menu (first trigger within the section)
-      await sectionA.locator('.section-block__header').getByTestId('actions-menu-trigger').click();
+      await sectionA.getByTestId('section-header').getByTestId('actions-menu-trigger').click();
       await page.getByRole('menuitem', { name: 'Archive' }).click();
 
       const dialog = page.locator('dialog[open][data-testid="confirm-dialog"]');

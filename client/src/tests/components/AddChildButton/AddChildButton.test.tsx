@@ -10,7 +10,7 @@ const mockCreateElement = vi.fn();
 
 vi.mock('@/api/endpoints', () => ({
   createElement: (...args: unknown[]) => mockCreateElement(...args),
-  deleteElement: vi.fn(),
+  archiveElement: vi.fn(),
   updateGridSettings: vi.fn(),
 }));
 

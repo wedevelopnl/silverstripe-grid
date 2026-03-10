@@ -19,7 +19,7 @@ const mockUpdateGridSettings = vi.fn().mockResolvedValue(undefined);
 vi.mock('@/api/endpoints', () => ({
   createElement: vi.fn(),
   createContentElement: vi.fn(),
-  deleteElement: vi.fn(),
+  archiveElement: vi.fn(),
   updateGridSettings: (...args: unknown[]) => mockUpdateGridSettings(...args),
 }));
 

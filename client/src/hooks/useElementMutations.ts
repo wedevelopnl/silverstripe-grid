@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   createElement,
   createContentElement,
-  deleteElement,
+  archiveElement,
   duplicateElement,
   publishElement,
   reorderElement,
@@ -59,9 +59,9 @@ export function useUnpublishElement(pageId: number, zone: string) {
   });
 }
 
-export function useDeleteElement(pageId: number, zone: string) {
+export function useArchiveElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, number>({
-    mutationFn: deleteElement,
+    mutationFn: archiveElement,
     ...useInvalidateOnSuccess(pageId, zone),
   });
 }

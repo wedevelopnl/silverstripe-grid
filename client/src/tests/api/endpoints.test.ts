@@ -1,7 +1,7 @@
 import {
   createContentElement,
   createElement,
-  deleteElement,
+  archiveElement,
   duplicateElement,
   fetchElementTree,
   publishElement,
@@ -121,11 +121,11 @@ describe('endpoints', () => {
     });
   });
 
-  describe('deleteElement', () => {
+  describe('archiveElement', () => {
     it('sends correct DELETE body', async () => {
       mockApiDelete.mockResolvedValue(undefined);
 
-      await deleteElement(3);
+      await archiveElement(3);
 
       expect(mockApiDelete).toHaveBeenCalledWith(
         '/admin/grid/api/delete',

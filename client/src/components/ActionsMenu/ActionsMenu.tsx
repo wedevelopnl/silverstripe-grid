@@ -56,6 +56,15 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
     close();
   }
 
+  function handleItemKeyDown(e: React.KeyboardEvent, onAction: () => void) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      onAction();
+      close();
+    }
+  }
+
   if (actions.length === 0) {
     return null;
   }
@@ -88,7 +97,9 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
               key={action.key}
               className={`actions-menu__item${action.destructive ? ' actions-menu__item--destructive' : ''}`}
               role="menuitem"
+              tabIndex={0}
               onClick={(e) => handleItemClick(e, action.onAction)}
+              onKeyDown={(e) => handleItemKeyDown(e, action.onAction)}
             >
               {action.label}
             </li>

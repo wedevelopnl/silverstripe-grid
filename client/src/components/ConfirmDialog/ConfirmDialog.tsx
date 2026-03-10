@@ -28,8 +28,6 @@ export default function ConfirmDialog({
 
     if (isOpen && !dialog.open) {
       dialog.showModal();
-    } else if (!isOpen && dialog.open) {
-      dialog.close();
     }
   }, [isOpen]);
 

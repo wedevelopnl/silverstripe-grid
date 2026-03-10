@@ -87,6 +87,32 @@ describe('ActionsMenu', () => {
     expect(item.classList.contains('actions-menu__item--destructive')).toBe(true);
   });
 
+  it('calls onAction when Enter is pressed on a menu item', async () => {
+    const onAction = vi.fn();
+    render(<ActionsMenu actions={[makeAction({ onAction })]} />);
+
+    await userEvent.click(screen.getByTestId('actions-menu-trigger'));
+    const item = screen.getByRole('menuitem', { name: 'Archive' });
+    item.focus();
+    await userEvent.keyboard('{Enter}');
+
+    expect(onAction).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('calls onAction when Space is pressed on a menu item', async () => {
+    const onAction = vi.fn();
+    render(<ActionsMenu actions={[makeAction({ onAction })]} />);
+
+    await userEvent.click(screen.getByTestId('actions-menu-trigger'));
+    const item = screen.getByRole('menuitem', { name: 'Archive' });
+    item.focus();
+    await userEvent.keyboard(' ');
+
+    expect(onAction).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
   it('does not apply destructive class to non-destructive menu items', async () => {
     render(<ActionsMenu actions={[makeAction({ destructive: false, label: 'Duplicate' })]} />);
     await userEvent.click(screen.getByTestId('actions-menu-trigger'));

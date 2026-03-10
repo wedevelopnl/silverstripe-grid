@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import type { ActionItem } from '@/components/ActionsMenu/ActionsMenu';
 import type { ElementNode } from '@/types/elements';
 import { useGridEditorContext } from './GridEditorContext';
-import { useDeleteElement } from './useElementMutations';
+import { useArchiveElement } from './useElementMutations';
 import { countDescendants } from '@/utils/countDescendants';
 import { showToast } from '@/utils/toast';
 
@@ -30,7 +30,7 @@ function buildArchiveMessage(title: string, descendantCount: number): string {
 
 export function useArchiveAction(node: ElementNode): UseArchiveActionResult {
   const { pageId, zone } = useGridEditorContext();
-  const deleteElement = useDeleteElement(pageId, zone);
+  const archiveElement = useArchiveElement(pageId, zone);
   const [isDialogOpen, setDialogOpen] = useState(false);
 
   const descendantCount = countDescendants(node);
@@ -45,12 +45,12 @@ export function useArchiveAction(node: ElementNode): UseArchiveActionResult {
 
   const handleConfirm = useCallback(() => {
     setDialogOpen(false);
-    deleteElement.mutate(node.id, {
+    archiveElement.mutate(node.id, {
       onError: (error) => {
         showToast(error.message);
       },
     });
-  }, [deleteElement, node.id]);
+  }, [archiveElement, node.id]);
 
   if (!node.canDelete) {
     return { action: null, dialog: null };

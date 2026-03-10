@@ -7,7 +7,7 @@ export {
   useCreateElement,
   usePublishElement,
   useUnpublishElement,
-  useDeleteElement,
+  useArchiveElement,
   useDuplicateElement,
   useReorderElement,
 } from './useElementMutations';

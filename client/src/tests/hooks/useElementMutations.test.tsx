@@ -6,7 +6,7 @@ import {
   useCreateContentElement,
   usePublishElement,
   useUnpublishElement,
-  useDeleteElement,
+  useArchiveElement,
   useDuplicateElement,
   useUpdateGridSettings,
 } from '@/hooks/useElementMutations';
@@ -16,7 +16,7 @@ const mockCreateElement = vi.fn();
 const mockCreateContentElement = vi.fn();
 const mockPublishElement = vi.fn();
 const mockUnpublishElement = vi.fn();
-const mockDeleteElement = vi.fn();
+const mockArchiveElement = vi.fn();
 const mockDuplicateElement = vi.fn();
 const mockUpdateGridSettings = vi.fn();
 const mockShowToast = vi.fn();
@@ -30,7 +30,7 @@ vi.mock('@/api/endpoints', () => ({
   createContentElement: (...args: unknown[]) => mockCreateContentElement(...args),
   publishElement: (...args: unknown[]) => mockPublishElement(...args),
   unpublishElement: (...args: unknown[]) => mockUnpublishElement(...args),
-  deleteElement: (...args: unknown[]) => mockDeleteElement(...args),
+  archiveElement: (...args: unknown[]) => mockArchiveElement(...args),
   duplicateElement: (...args: unknown[]) => mockDuplicateElement(...args),
   updateGridSettings: (...args: unknown[]) => mockUpdateGridSettings(...args),
 }));
@@ -186,20 +186,20 @@ describe('useUnpublishElement', () => {
   });
 });
 
-describe('useDeleteElement', () => {
+describe('useArchiveElement', () => {
   afterEach(() => {
-    mockDeleteElement.mockReset();
+    mockArchiveElement.mockReset();
   });
 
-  it('calls deleteElement endpoint', async () => {
-    mockDeleteElement.mockResolvedValue(undefined);
-    const { result } = renderHook(() => useDeleteElement(42, 'main'), {
+  it('calls archiveElement endpoint', async () => {
+    mockArchiveElement.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useArchiveElement(42, 'main'), {
       wrapper: createWrapper(),
     });
 
     await act(() => result.current.mutateAsync(3));
 
-    expect(mockDeleteElement).toHaveBeenCalledWith(3, expect.anything());
+    expect(mockArchiveElement).toHaveBeenCalledWith(3, expect.anything());
   });
 });
 

@@ -44,7 +44,7 @@ export async function unpublishElement(id: number): Promise<void> {
   await apiPatch(`${base}/api/unpublish`, { id });
 }
 
-export async function deleteElement(id: number): Promise<void> {
+export async function archiveElement(id: number): Promise<void> {
   const base = getControllerLink();
   await apiDelete(`${base}/api/delete`, { id });
 }
