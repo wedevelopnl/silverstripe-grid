@@ -12,10 +12,10 @@ use WeDevelop\Grid\Forms\GridSettingsField;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
- * Unit tests for GridSettingsField expand/compact logic.
+ * Unit tests for GridSettingsField expand/compact logic with default-viewport-anchored semantics.
  *
- * Uses reflection to bypass the FormField constructor (which requires
- * SilverStripe's config manifest, unavailable in pure unit tests).
+ * Uses `sm` as the default viewport (mid-list) to verify that non-first defaults work correctly.
+ * Uses reflection to bypass the FormField constructor (which requires SilverStripe's config manifest).
  */
 #[CoversClass(GridSettingsField::class)]
 final class GridSettingsFieldTest extends TestCase
@@ -33,6 +33,7 @@ final class GridSettingsFieldTest extends TestCase
             new Viewport('md', 'Medium'),
         ]);
         $this->adapter->method('getColumnCount')->willReturn(12);
+        $this->adapter->method('getDefaultViewport')->willReturn(new Viewport('sm', 'Small'));
 
         // Create instance without calling FormField::__construct() (needs config manifest)
         $ref = new \ReflectionClass(GridSettingsField::class);
@@ -45,58 +46,93 @@ final class GridSettingsFieldTest extends TestCase
         $adapterProp->setValue($this->field, $this->adapter);
     }
 
+    // --- Expand tests ---
+
     public function testExpandEmptyJsonProducesAllDefaults(): void
     {
         $result = $this->field->expandFromSparse([]);
 
+        // All viewports get implicit defaults (12, 0, true)
+        // Default viewport (sm): override=false (it IS the anchor)
+        // Non-default viewports: override=false (they match the default viewport's effective values)
         $this->assertSame([
-            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => false],
-            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => true],
-            'md' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => true],
+            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true, 'override' => false],
+            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true, 'override' => false],
+            'md' => ['width' => 12, 'offset' => 0, 'visible' => true, 'override' => false],
         ], $result);
     }
 
-    public function testExpandPartialSparseMarksOverridesAsNotInherited(): void
+    public function testExpandDefaultViewportOverride(): void
     {
+        // Default viewport (sm) has explicit value different from implicit defaults
         $sparse = [
-            'md' => ['width' => 6, 'offset' => 2, 'visible' => true],
+            'sm' => ['width' => 6, 'offset' => 1, 'visible' => true],
         ];
 
         $result = $this->field->expandFromSparse($sparse);
 
-        // xs: defaults, not inherited (first viewport)
-        $this->assertFalse($result['xs']['inherit']);
+        // xs: cascades from implicit defaults (12, 0, true) — differs from sm → override=true
+        $this->assertTrue($result['xs']['override']);
         $this->assertSame(12, $result['xs']['width']);
 
-        // sm: inherits from xs
-        $this->assertTrue($result['sm']['inherit']);
-        $this->assertSame(12, $result['sm']['width']);
+        // sm: default viewport, override is always false
+        $this->assertFalse($result['sm']['override']);
+        $this->assertSame(6, $result['sm']['width']);
+        $this->assertSame(1, $result['sm']['offset']);
 
-        // md: explicit override, not inherited
-        $this->assertFalse($result['md']['inherit']);
+        // md: cascades from sm (6, 1, true) — matches default viewport values → override=false
+        $this->assertFalse($result['md']['override']);
         $this->assertSame(6, $result['md']['width']);
-        $this->assertSame(2, $result['md']['offset']);
     }
 
-    public function testExpandFirstViewportOverride(): void
+    public function testExpandNonDefaultViewportOverride(): void
     {
+        // md has an explicit override in sparse, different from default viewport's effective values
         $sparse = [
-            'xs' => ['width' => 6, 'offset' => 0, 'visible' => true],
+            'md' => ['width' => 4, 'offset' => 2, 'visible' => false],
         ];
 
         $result = $this->field->expandFromSparse($sparse);
 
-        $this->assertSame(6, $result['xs']['width']);
-        $this->assertFalse($result['xs']['inherit']);
+        // xs: implicit defaults (12, 0, true) — matches default sm's effective (12, 0, true) → no override
+        $this->assertFalse($result['xs']['override']);
 
-        // sm and md inherit the xs override
-        $this->assertTrue($result['sm']['inherit']);
-        $this->assertSame(6, $result['sm']['width']);
-        $this->assertTrue($result['md']['inherit']);
-        $this->assertSame(6, $result['md']['width']);
+        // sm: cascades from xs (12, 0, true) — default viewport → override=false
+        $this->assertFalse($result['sm']['override']);
+        $this->assertSame(12, $result['sm']['width']);
+
+        // md: explicit override, differs from sm → override=true
+        $this->assertTrue($result['md']['override']);
+        $this->assertSame(4, $result['md']['width']);
+        $this->assertSame(2, $result['md']['offset']);
+        $this->assertFalse($result['md']['visible']);
     }
 
-    public function testExpandFullSparseHasNoInherits(): void
+    public function testExpandCascadeProducesOverrideFlags(): void
+    {
+        // xs has explicit value that cascades to sm (default viewport)
+        // This means sm gets a different value than implicit defaults,
+        // and md cascades from sm
+        $sparse = [
+            'xs' => ['width' => 8, 'offset' => 0, 'visible' => true],
+        ];
+
+        $result = $this->field->expandFromSparse($sparse);
+
+        // xs: effective (8, 0, true). sm default is (8, 0, true) via cascade.
+        // xs differs from sm's effective? No — sm cascades from xs, so sm=(8,0,true), xs=(8,0,true) → same
+        $this->assertFalse($result['xs']['override']);
+
+        // sm: default viewport, cascade from xs → (8, 0, true) → override=false
+        $this->assertFalse($result['sm']['override']);
+        $this->assertSame(8, $result['sm']['width']);
+
+        // md: cascade from sm → (8, 0, true), matches default → override=false
+        $this->assertFalse($result['md']['override']);
+        $this->assertSame(8, $result['md']['width']);
+    }
+
+    public function testExpandFullSparseWithMixedOverrides(): void
     {
         $sparse = [
             'xs' => ['width' => 12, 'offset' => 0, 'visible' => true],
@@ -106,17 +142,44 @@ final class GridSettingsFieldTest extends TestCase
 
         $result = $this->field->expandFromSparse($sparse);
 
-        $this->assertFalse($result['xs']['inherit']);
-        $this->assertFalse($result['sm']['inherit']);
-        $this->assertFalse($result['md']['inherit']);
+        // xs: (12, 0, true) differs from default sm (6, 1, true) → override=true
+        $this->assertTrue($result['xs']['override']);
+        // sm: default viewport → override=false
+        $this->assertFalse($result['sm']['override']);
+        // md: (4, 2, false) differs from default sm (6, 1, true) → override=true
+        $this->assertTrue($result['md']['override']);
     }
 
-    public function testCompactAllInheritProducesEmptySparse(): void
+    public function testExpandVisibilityCascadeToDefault(): void
+    {
+        // xs explicitly hidden, cascades to sm (default viewport)
+        $sparse = [
+            'xs' => ['width' => 12, 'offset' => 0, 'visible' => false],
+        ];
+
+        $result = $this->field->expandFromSparse($sparse);
+
+        // xs: (12, 0, false), default sm effective is (12, 0, false) via cascade
+        // xs differs from sm? No, they're the same → override=false
+        $this->assertFalse($result['xs']['override']);
+
+        // sm: default viewport, cascades hidden from xs → (12, 0, false) → override=false
+        $this->assertFalse($result['sm']['override']);
+        $this->assertFalse($result['sm']['visible']);
+
+        // md: cascades from sm → (12, 0, false), matches default → override=false
+        $this->assertFalse($result['md']['override']);
+        $this->assertFalse($result['md']['visible']);
+    }
+
+    // --- Compact tests ---
+
+    public function testCompactAllDefaultsProducesEmptySparse(): void
     {
         $full = [
-            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => false],
-            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => true],
-            'md' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => true],
+            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true, 'override' => false],
+            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true, 'override' => false],
+            'md' => ['width' => 12, 'offset' => 0, 'visible' => true, 'override' => false],
         ];
 
         $result = $this->field->compactToSparse($full);
@@ -124,77 +187,87 @@ final class GridSettingsFieldTest extends TestCase
         $this->assertSame([], $result);
     }
 
-    public function testCompactFirstViewportDiffersFromDefaults(): void
+    public function testCompactDefaultViewportDiffersFromImplicitDefaults(): void
     {
+        // Default viewport sm has values that differ from implicit defaults (12, 0, true)
+        // Non-overridden xs and md use default viewport values
         $full = [
-            'xs' => ['width' => 6, 'offset' => 0, 'visible' => true, 'inherit' => false],
-            'sm' => ['width' => 6, 'offset' => 0, 'visible' => true, 'inherit' => true],
-            'md' => ['width' => 6, 'offset' => 0, 'visible' => true, 'inherit' => true],
+            'xs' => ['width' => 6, 'offset' => 1, 'visible' => true, 'override' => false],
+            'sm' => ['width' => 6, 'offset' => 1, 'visible' => true, 'override' => false],
+            'md' => ['width' => 6, 'offset' => 1, 'visible' => true, 'override' => false],
         ];
 
         $result = $this->field->compactToSparse($full);
 
+        // xs is not overridden → uses default viewport values (6, 1, true)
+        // xs effective (6, 1, true) differs from prev (12, 0, true) → stored
+        // sm is default viewport → uses own values (6, 1, true)
+        // sm effective same as xs effective → not stored
+        // md is not overridden → uses default viewport values (6, 1, true)
+        // md effective same as sm effective → not stored
+        $this->assertSame([
+            'xs' => ['width' => 6, 'offset' => 1, 'visible' => true],
+        ], $result);
+    }
+
+    public function testCompactWithNonDefaultOverride(): void
+    {
+        // md overrides with different values
+        $full = [
+            'xs' => ['width' => 6, 'offset' => 0, 'visible' => true, 'override' => false],
+            'sm' => ['width' => 6, 'offset' => 0, 'visible' => true, 'override' => false],
+            'md' => ['width' => 4, 'offset' => 2, 'visible' => true, 'override' => true],
+        ];
+
+        $result = $this->field->compactToSparse($full);
+
+        // xs: not overridden → eff=(6,0,true), diff from prev (12,0,true) → stored
+        // sm: default → eff=(6,0,true), same as xs → not stored
+        // md: overridden → eff=(4,2,true), diff from sm → stored
         $this->assertSame([
             'xs' => ['width' => 6, 'offset' => 0, 'visible' => true],
+            'md' => ['width' => 4, 'offset' => 2, 'visible' => true],
         ], $result);
     }
 
-    public function testCompactMiddleViewportOverride(): void
+    public function testCompactNonOverriddenBreaksCascade(): void
     {
+        // xs overrides with different values, sm is default, md is not overridden
+        // md must explicitly store to "break" cascade back to default values
         $full = [
-            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => false],
-            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => true],
-            'md' => ['width' => 6, 'offset' => 2, 'visible' => true, 'inherit' => false],
+            'xs' => ['width' => 8, 'offset' => 0, 'visible' => true, 'override' => true],
+            'sm' => ['width' => 6, 'offset' => 0, 'visible' => true, 'override' => false],
+            'md' => ['width' => 6, 'offset' => 0, 'visible' => true, 'override' => false],
         ];
 
         $result = $this->field->compactToSparse($full);
 
+        // xs: overridden → eff=(8,0,true), diff from prev (12,0,true) → stored
+        // sm: default → eff=(6,0,true), diff from xs (8,0,true) → stored
+        // md: not overridden → eff=(6,0,true), same as sm → not stored
         $this->assertSame([
-            'md' => ['width' => 6, 'offset' => 2, 'visible' => true],
+            'xs' => ['width' => 8, 'offset' => 0, 'visible' => true],
+            'sm' => ['width' => 6, 'offset' => 0, 'visible' => true],
         ], $result);
     }
 
-    public function testCompactUninheritedButSameValuesNotStored(): void
+    public function testCompactVisibilityOverride(): void
     {
         $full = [
-            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => false],
-            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => false],
-            'md' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => true],
+            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true, 'override' => false],
+            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true, 'override' => false],
+            'md' => ['width' => 12, 'offset' => 0, 'visible' => false, 'override' => true],
         ];
 
         $result = $this->field->compactToSparse($full);
 
-        $this->assertSame([], $result);
-    }
-
-    public function testCompactVisibilityChange(): void
-    {
-        $full = [
-            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => false],
-            'sm' => ['width' => 12, 'offset' => 0, 'visible' => false, 'inherit' => false],
-            'md' => ['width' => 12, 'offset' => 0, 'visible' => true, 'inherit' => false],
-        ];
-
-        $result = $this->field->compactToSparse($full);
-
+        // md: overridden, visible=false differs from sm → stored
         $this->assertSame([
-            'sm' => ['width' => 12, 'offset' => 0, 'visible' => false],
-            'md' => ['width' => 12, 'offset' => 0, 'visible' => true],
+            'md' => ['width' => 12, 'offset' => 0, 'visible' => false],
         ], $result);
     }
 
-    public function testRoundTripPreservesSemantics(): void
-    {
-        $sparse = [
-            'xs' => ['width' => 6, 'offset' => 1, 'visible' => true],
-            'md' => ['width' => 4, 'offset' => 0, 'visible' => false],
-        ];
-
-        $expanded = $this->field->expandFromSparse($sparse);
-        $compacted = $this->field->compactToSparse($expanded);
-
-        $this->assertSame($sparse, $compacted);
-    }
+    // --- Round-trip tests ---
 
     public function testRoundTripEmptySparse(): void
     {
@@ -204,23 +277,26 @@ final class GridSettingsFieldTest extends TestCase
         $this->assertSame([], $compacted);
     }
 
-    public function testRoundTripAllViewportsSet(): void
+    public function testRoundTripDefaultViewportOnly(): void
     {
         $sparse = [
-            'xs' => ['width' => 8, 'offset' => 2, 'visible' => true],
             'sm' => ['width' => 6, 'offset' => 1, 'visible' => true],
-            'md' => ['width' => 4, 'offset' => 2, 'visible' => false],
         ];
 
         $expanded = $this->field->expandFromSparse($sparse);
         $compacted = $this->field->compactToSparse($expanded);
 
-        $this->assertSame($sparse, $compacted);
+        // After expand: xs=(12,0,true) override=true (differs from sm), sm=(6,1,true), md=(6,1,true)
+        // After compact: xs stored (differs from implicit defaults),
+        //   sm stored (differs from xs), md not stored (same as sm)
+        // The sparse output differs from input but produces identical effective values
+        // when read back through mobile-first cascade
+        $reExpanded = $this->field->expandFromSparse($compacted);
+        $this->assertSame($expanded, $reExpanded);
     }
 
-    public function testRoundTripFirstViewportDefaultsAreOmitted(): void
+    public function testRoundTripWithOverrides(): void
     {
-        // First viewport with default values gets stripped in compact
         $sparse = [
             'xs' => ['width' => 12, 'offset' => 0, 'visible' => true],
             'sm' => ['width' => 6, 'offset' => 1, 'visible' => true],
@@ -230,29 +306,47 @@ final class GridSettingsFieldTest extends TestCase
         $expanded = $this->field->expandFromSparse($sparse);
         $compacted = $this->field->compactToSparse($expanded);
 
-        // xs is omitted because it matches defaults
-        $this->assertArrayNotHasKey('xs', $compacted);
-        $this->assertSame(6, $compacted['sm']['width']);
-        $this->assertSame(4, $compacted['md']['width']);
+        // Verify semantic round-trip: expand(compact(expand(sparse))) === expand(sparse)
+        $reExpanded = $this->field->expandFromSparse($compacted);
+        $this->assertSame($expanded, $reExpanded);
     }
 
-    public function testExpandVisibilityInheritsCascade(): void
+    public function testRoundTripAllMatchingDefaults(): void
     {
+        // All viewports at implicit defaults → empty sparse → all defaults again
         $sparse = [
-            'sm' => ['width' => 12, 'offset' => 0, 'visible' => false],
+            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true],
+            'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
+            'md' => ['width' => 12, 'offset' => 0, 'visible' => true],
         ];
 
-        $result = $this->field->expandFromSparse($sparse);
+        $expanded = $this->field->expandFromSparse($sparse);
+        $compacted = $this->field->compactToSparse($expanded);
 
-        // xs: defaults (visible)
-        $this->assertTrue($result['xs']['visible']);
+        $this->assertSame([], $compacted);
 
-        // sm: explicitly hidden
-        $this->assertFalse($result['sm']['visible']);
-        $this->assertFalse($result['sm']['inherit']);
+        // And re-expand produces same result
+        $reExpanded = $this->field->expandFromSparse($compacted);
+        $this->assertSame($expanded, $reExpanded);
+    }
 
-        // md: inherits hidden state from sm
-        $this->assertFalse($result['md']['visible']);
-        $this->assertTrue($result['md']['inherit']);
+    public function testRoundTripPreservesEffectiveValuesWhenSparseChanges(): void
+    {
+        // Only xs override in sparse — after round-trip through default-viewport model,
+        // the effective values must be preserved even if sparse representation changes
+        $sparse = [
+            'xs' => ['width' => 8, 'offset' => 0, 'visible' => true],
+        ];
+
+        $expanded = $this->field->expandFromSparse($sparse);
+        $compacted = $this->field->compactToSparse($expanded);
+
+        // Verify effective values are identical
+        $reExpanded = $this->field->expandFromSparse($compacted);
+        foreach (['xs', 'sm', 'md'] as $key) {
+            $this->assertSame($expanded[$key]['width'], $reExpanded[$key]['width'], "Width mismatch for $key");
+            $this->assertSame($expanded[$key]['offset'], $reExpanded[$key]['offset'], "Offset mismatch for $key");
+            $this->assertSame($expanded[$key]['visible'], $reExpanded[$key]['visible'], "Visible mismatch for $key");
+        }
     }
 }

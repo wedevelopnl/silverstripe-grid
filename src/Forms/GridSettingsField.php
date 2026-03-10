@@ -9,17 +9,20 @@ use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\Model\ArrayData;
 use SilverStripe\Model\List\ArrayList;
 use SilverStripe\ORM\DataObjectInterface;
+use SilverStripe\View\Requirements;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 
 /**
  * Per-viewport grid settings field for Column elements.
  *
+ * Uses a default-viewport-anchored model: the adapter's default viewport is
+ * the primary configuration; other viewports only store overrides that differ.
  * Handles the full lifecycle: JSON decode on load (expand sparse → full),
  * per-viewport controls in the template, sparse JSON encode on save (compact).
  */
 class GridSettingsField extends FormField
 {
-    /** @var array<string, array{width: int, offset: int, visible: bool, inherit: bool}> */
+    /** @var array<string, array{width: int, offset: int, visible: bool, override: bool}> */
     private array $viewportData = [];
 
     private GridAdapterInterface $adapter;
@@ -68,14 +71,31 @@ class GridSettingsField extends FormField
     /**
      * Viewport data for the template, as an ArrayList of ArrayData.
      *
+     * Also injects the entwine toggle script for override checkboxes.
+     *
      * @return ArrayList<ArrayData>
      */
     public function getViewportData(): ArrayList
     {
+        Requirements::customScript(<<<'JS'
+        (function($) {
+          $.entwine('ss', function($) {
+            $('.grid-settings-field .grid-settings-field__override-toggle').entwine({
+              onchange: function() {
+                var row = this.closest('tr');
+                var enabled = this.is(':checked');
+                row.find('select, input').not('.grid-settings-field__override-toggle').prop('disabled', !enabled);
+                row.toggleClass('is-overridden', enabled);
+              }
+            });
+          });
+        })(jQuery);
+        JS, 'GridSettingsFieldToggle');
+
         $list = ArrayList::create();
         $viewports = $this->adapter->getViewports();
         $columnCount = $this->adapter->getColumnCount();
-        $firstKey = $viewports[0]->key;
+        $defaultKey = $this->adapter->getDefaultViewport()->key;
 
         foreach ($viewports as $viewport) {
             $key = $viewport->key;
@@ -87,10 +107,10 @@ class GridSettingsField extends FormField
                 'Width' => $data['width'],
                 'Offset' => $data['offset'],
                 'Visible' => $data['visible'],
-                'Inherit' => $data['inherit'],
-                'IsFirst' => $key === $firstKey,
+                'Override' => $data['override'],
+                'IsDefault' => $key === $defaultKey,
                 'FieldName' => $this->getName(),
-                'WidthOptions' => $this->buildOptions(1, $columnCount, $data['width']),
+                'WidthOptions' => $this->buildWidthOptions($columnCount, $data['width']),
                 'OffsetOptions' => $this->buildOptions(0, $columnCount - 1, $data['offset']),
             ]));
         }
@@ -107,24 +127,24 @@ class GridSettingsField extends FormField
     }
 
     /**
-     * Expand sparse grid settings into a full viewport array with inherit flags.
+     * Expand sparse grid settings into a full viewport array with override flags.
      *
-     * Previous effective values are seeded with implicit defaults, so the first
-     * viewport follows the same code path as all others — override or inherit.
-     * The only special case: the first viewport's inherit flag is forced to false
-     * (inheriting from "nothing" is meaningless in the UI).
+     * Walks viewports smallest→largest with mobile-first cascade to determine
+     * each viewport's effective values from sparse data, then compares each
+     * non-default viewport against the default viewport's effective values.
      *
      * @param array<string, array{width: int, offset: int, visible: bool}> $sparse
-     * @return array<string, array{width: int, offset: int, visible: bool, inherit: bool}>
+     * @return array<string, array{width: int, offset: int, visible: bool, override: bool}>
      */
     public function expandFromSparse(array $sparse): array
     {
         $viewports = $this->adapter->getViewports();
-        $firstKey = $viewports[0]->key;
-        $result = [];
+        $defaultKey = $this->adapter->getDefaultViewport()->key;
+        $columnCount = $this->adapter->getColumnCount();
 
-        // Seed with implicit defaults so the first viewport needs no special case
-        $prevWidth = $this->adapter->getColumnCount();
+        // Pass 1: mobile-first cascade to determine effective values per viewport
+        $effective = [];
+        $prevWidth = $columnCount;
         $prevOffset = 0;
         $prevVisible = true;
 
@@ -132,16 +152,36 @@ class GridSettingsField extends FormField
             $key = $viewport->key;
             $hasOverride = array_key_exists($key, $sparse);
 
-            $result[$key] = [
+            $effective[$key] = [
                 'width' => $hasOverride ? $sparse[$key]['width'] : $prevWidth,
                 'offset' => $hasOverride ? $sparse[$key]['offset'] : $prevOffset,
                 'visible' => $hasOverride ? $sparse[$key]['visible'] : $prevVisible,
-                'inherit' => !$hasOverride && $key !== $firstKey,
             ];
 
-            $prevWidth = $result[$key]['width'];
-            $prevOffset = $result[$key]['offset'];
-            $prevVisible = $result[$key]['visible'];
+            $prevWidth = $effective[$key]['width'];
+            $prevOffset = $effective[$key]['offset'];
+            $prevVisible = $effective[$key]['visible'];
+        }
+
+        // Pass 2: compare each viewport against the default viewport's effective values
+        $defaultValues = $effective[$defaultKey];
+        $result = [];
+
+        foreach ($viewports as $viewport) {
+            $key = $viewport->key;
+            $isDefault = $key === $defaultKey;
+            $vals = $effective[$key];
+
+            $result[$key] = [
+                'width' => $vals['width'],
+                'offset' => $vals['offset'],
+                'visible' => $vals['visible'],
+                'override' => !$isDefault && (
+                    $vals['width'] !== $defaultValues['width']
+                    || $vals['offset'] !== $defaultValues['offset']
+                    || $vals['visible'] !== $defaultValues['visible']
+                ),
+            ];
         }
 
         return $result;
@@ -150,44 +190,72 @@ class GridSettingsField extends FormField
     /**
      * Compact full viewport data back to sparse storage.
      *
-     * Inheriting viewports are skipped. Non-inheriting viewports are stored
-     * only when their values differ from the previous effective values.
-     * Previous values are seeded with implicit defaults, so the first viewport
-     * (which always has inherit=false) compares against defaults naturally.
+     * Walks smallest→largest. For each viewport, resolves the effective value
+     * (own values if override=true or default viewport, else default viewport's
+     * values). Stores only when effective differs from prev. This produces
+     * sparse JSON that makes Column::getColumnClasses()'s mobile-first cascade
+     * yield the correct results.
      *
-     * @param array<string, array{width: int, offset: int, visible: bool, inherit: bool}> $full
+     * @param array<string, array{width: int, offset: int, visible: bool, override: bool}> $full
      * @return array<string, array{width: int, offset: int, visible: bool}>
      */
     public function compactToSparse(array $full): array
     {
         $viewports = $this->adapter->getViewports();
+        $defaultKey = $this->adapter->getDefaultViewport()->key;
+        $columnCount = $this->adapter->getColumnCount();
         $sparse = [];
 
-        // Seed with implicit defaults so the first viewport needs no special case
-        $prevWidth = $this->adapter->getColumnCount();
+        // Read the default viewport's values (always present in full data)
+        $defaultValues = isset($full[$defaultKey]) ? [
+            'width' => $full[$defaultKey]['width'],
+            'offset' => $full[$defaultKey]['offset'],
+            'visible' => $full[$defaultKey]['visible'],
+        ] : [
+            'width' => $columnCount,
+            'offset' => 0,
+            'visible' => true,
+        ];
+
+        // Seed with implicit defaults for mobile-first cascade comparison
+        $prevWidth = $columnCount;
         $prevOffset = 0;
         $prevVisible = true;
 
         foreach ($viewports as $viewport) {
             $key = $viewport->key;
 
-            if (!isset($full[$key]) || $full[$key]['inherit']) {
+            if (!isset($full[$key])) {
                 continue;
             }
 
             $entry = $full[$key];
+            $isDefault = $key === $defaultKey;
 
-            if ($entry['width'] !== $prevWidth || $entry['offset'] !== $prevOffset || $entry['visible'] !== $prevVisible) {
+            // Resolve effective value for this viewport
+            if ($isDefault || $entry['override']) {
+                $effWidth = $entry['width'];
+                $effOffset = $entry['offset'];
+                $effVisible = $entry['visible'];
+            } else {
+                // Non-overridden: uses default viewport values
+                $effWidth = $defaultValues['width'];
+                $effOffset = $defaultValues['offset'];
+                $effVisible = $defaultValues['visible'];
+            }
+
+            // Store only if effective differs from previous in the cascade
+            if ($effWidth !== $prevWidth || $effOffset !== $prevOffset || $effVisible !== $prevVisible) {
                 $sparse[$key] = [
-                    'width' => $entry['width'],
-                    'offset' => $entry['offset'],
-                    'visible' => $entry['visible'],
+                    'width' => $effWidth,
+                    'offset' => $effOffset,
+                    'visible' => $effVisible,
                 ];
             }
 
-            $prevWidth = $entry['width'];
-            $prevOffset = $entry['offset'];
-            $prevVisible = $entry['visible'];
+            $prevWidth = $effWidth;
+            $prevOffset = $effOffset;
+            $prevVisible = $effVisible;
         }
 
         return $sparse;
@@ -217,36 +285,102 @@ class GridSettingsField extends FormField
     /**
      * Normalize form submission data (string values) into typed array.
      *
-     * HTML checkboxes don't submit when unchecked — absence means false.
+     * Two-pass: first extract default viewport values, then for each non-default
+     * viewport use submitted values if override is checked, else copy default values.
      *
      * @param array<string, mixed> $formData
-     * @return array<string, array{width: int, offset: int, visible: bool, inherit: bool}>
+     * @return array<string, array{width: int, offset: int, visible: bool, override: bool}>
      */
     private function normalizeFormData(array $formData): array
     {
-        $result = [];
         $viewports = $this->adapter->getViewports();
+        $defaultKey = $this->adapter->getDefaultViewport()->key;
+        $columnCount = $this->adapter->getColumnCount();
+
+        // Pass 1: extract default viewport values
+        $defaultEntry = $formData[$defaultKey] ?? null;
+        $defaultWidth = is_array($defaultEntry) && is_numeric($defaultEntry['width'] ?? null)
+            ? (int) $defaultEntry['width']
+            : $columnCount;
+        $defaultOffset = is_array($defaultEntry) && is_numeric($defaultEntry['offset'] ?? null)
+            ? (int) $defaultEntry['offset']
+            : 0;
+        $defaultVisible = is_array($defaultEntry) && isset($defaultEntry['visible']);
+
+        // Pass 2: build full data
+        $result = [];
 
         foreach ($viewports as $viewport) {
             $key = $viewport->key;
+            $isDefault = $key === $defaultKey;
+
+            if ($isDefault) {
+                $result[$key] = [
+                    'width' => $defaultWidth,
+                    'offset' => $defaultOffset,
+                    'visible' => $defaultVisible,
+                    'override' => false,
+                ];
+                continue;
+            }
 
             if (!isset($formData[$key]) || !is_array($formData[$key])) {
+                // Non-default viewport with no form data: use default values, no override
+                $result[$key] = [
+                    'width' => $defaultWidth,
+                    'offset' => $defaultOffset,
+                    'visible' => $defaultVisible,
+                    'override' => false,
+                ];
                 continue;
             }
 
             $entry = $formData[$key];
-            $width = $entry['width'] ?? null;
-            $offset = $entry['offset'] ?? null;
+            $hasOverride = isset($entry['override']);
 
-            $result[$key] = [
-                'width' => is_numeric($width) ? (int) $width : $this->adapter->getColumnCount(),
-                'offset' => is_numeric($offset) ? (int) $offset : 0,
-                'visible' => isset($entry['visible']),
-                'inherit' => isset($entry['inherit']),
-            ];
+            if ($hasOverride) {
+                $width = $entry['width'] ?? null;
+                $offset = $entry['offset'] ?? null;
+
+                $result[$key] = [
+                    'width' => is_numeric($width) ? (int) $width : $columnCount,
+                    'offset' => is_numeric($offset) ? (int) $offset : 0,
+                    'visible' => isset($entry['visible']),
+                    'override' => true,
+                ];
+            } else {
+                // Disabled controls don't submit — use default viewport values
+                $result[$key] = [
+                    'width' => $defaultWidth,
+                    'offset' => $defaultOffset,
+                    'visible' => $defaultVisible,
+                    'override' => false,
+                ];
+            }
         }
 
         return $result;
+    }
+
+    /**
+     * Build width select options with "x/total" labels.
+     *
+     * @param positive-int $columnCount
+     * @return ArrayList<ArrayData>
+     */
+    private function buildWidthOptions(int $columnCount, int $selected): ArrayList
+    {
+        $options = ArrayList::create();
+
+        for ($i = 1; $i <= $columnCount; $i++) {
+            $options->push(ArrayData::create([
+                'Value' => $i,
+                'Label' => $i . '/' . $columnCount,
+                'Selected' => $i === $selected,
+            ]));
+        }
+
+        return $options;
     }
 
     /**
@@ -269,23 +403,24 @@ class GridSettingsField extends FormField
         return $options;
     }
 
-    /** @return array{width: int, offset: int, visible: bool, inherit: bool} */
+    /** @return array{width: int, offset: int, visible: bool, override: bool} */
     private function getDefaults(): array
     {
         return [
             'width' => $this->adapter->getColumnCount(),
             'offset' => 0,
             'visible' => true,
-            'inherit' => false,
+            'override' => false,
         ];
     }
 
     private function buildReadonlySummary(): string
     {
+        $defaultKey = $this->adapter->getDefaultViewport()->key;
         $parts = [];
 
         foreach ($this->viewportData as $key => $data) {
-            if ($data['inherit']) {
+            if ($key !== $defaultKey && !$data['override']) {
                 continue;
             }
 
