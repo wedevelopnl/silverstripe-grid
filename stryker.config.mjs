@@ -15,9 +15,9 @@ export default {
     fileName: 'reports/mutation/mutation.json',
   },
   thresholds: {
-    high: 80,
-    low: 60,
-    break: 70,
+    high: 85,
+    low: 75,
+    break: 77,
   },
   // Allow clean exit when no source files exist to mutate yet
   allowEmpty: true,
