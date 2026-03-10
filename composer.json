@@ -37,6 +37,9 @@
       "lang"
     ]
   },
+  "suggest": {
+    "silverstripe/reports": "Enables the Grid Elements report in CMS → Reports"
+  },
   "require-dev": {
     "cambis/silverstan": "^2.1",
     "infection/infection": "^0.32",

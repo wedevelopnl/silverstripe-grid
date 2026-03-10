@@ -18,6 +18,8 @@ infection/
 
 # Stryker
 reports/
+!src/Reports/
+!tests/Integration/Reports/
 .stryker-tmp/
 
 # Playwright
