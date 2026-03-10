@@ -55,7 +55,13 @@ The allowlist approach on Section and Row is strict: only the listed classes are
 
 ### Zone-Scoped Sections
 
-Sections carry a `Zone` field (e.g., `"main"`, `"sidebar"`) that scopes them within a page. Sort values are independent per zone per parent — the main zone has Sort 1, 2, 3 and the sidebar zone independently has Sort 1, 2, 3. All queries (tree loading, sort assignment, reorder) filter by zone at the root level.
+Sections carry a `Zone` field (`Varchar(50)`, e.g., `"main"`, `"sidebar"`) that partitions them within a page. Sort values are independent per zone per parent — the main zone has Sort 1, 2, 3 and the sidebar zone independently has Sort 1, 2, 3. All queries (tree loading, sort assignment, reorder) filter by zone at the root level.
+
+**Why a string field, not a model.** Zone is a partition key — a named slot on a page, not an entity with its own lifecycle. The structural relationship between elements and pages is handled by the polymorphic parent (`ParentID + ParentClass`); Zone simply subdivides that parent's children into independent groups. A separate `Zone` model or intermediary table (as SS5's `ElementalArea` was) would add a DB table, extra writes on every page save, and more complex tree queries — all to accomplish what a simple string field does.
+
+**CMS field exposure.** Zone is an internal system field, never exposed in the CMS edit form. `GridElement::getCMSFields()` explicitly removes it from the scaffolded field list. The zone value is set programmatically when a Section is created via the API — the `GridEditorField` passes its configured zone to the controller, which applies it to new Sections.
+
+**Multi-zone pages.** A page supports multiple zones by adding multiple `GridEditorField` instances, each configured with a different zone string. Each editor mounts as an independent React application with its own API calls, query cache, and tree state. See `MultiZonePage` for the dev environment example.
 
 ### Grid Settings
 

@@ -176,7 +176,12 @@ class GridElement extends DataObject
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
-        $fields->removeByName(['Title', 'TitleTag', 'TitleClass', 'ShowTitle']);
+        $fields->removeByName([
+            'Title', 'TitleTag', 'TitleClass', 'ShowTitle',
+            'Sort', 'ExtraClass', 'Style',
+            'ParentID', 'ParentClass',
+            'Zone',
+        ]);
 
         $titleGroup = FieldGroup::create(
             TextField::create('Title', _t(self::class . '.TITLE', 'Title')),
