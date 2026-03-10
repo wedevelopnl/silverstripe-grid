@@ -59,12 +59,7 @@ class GridSettingsField extends FormField
     public function saveInto(DataObjectInterface $record): void
     {
         $sparse = $this->compactToSparse($this->viewportData);
-        $record->{$this->name} = json_encode($sparse, JSON_FORCE_OBJECT & 0) ?: '{}';
-
-        // json_encode on empty array produces '[]', but we want '{}'
-        if ($sparse === []) {
-            $record->{$this->name} = '{}';
-        }
+        $record->{$this->name} = $sparse === [] ? '{}' : json_encode($sparse, JSON_FORCE_OBJECT);
     }
 
     /**
