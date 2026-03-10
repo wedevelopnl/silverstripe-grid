@@ -34,6 +34,7 @@ interface InjectorGlobal {
 interface EntwineRules {
   onmatch?(this: JQueryEntwineElement): void;
   onunmatch?(this: JQueryEntwineElement): void;
+  onchange?(this: JQueryEntwineElement): void;
   [key: string]: unknown;
 }
 
@@ -42,11 +43,18 @@ interface JQueryEntwineElement {
   entwine(rules: EntwineRules): void;
   getReactRoot(): import('react-dom/client').Root | null;
   setReactRoot(root: import('react-dom/client').Root | null): void;
+  closest(selector: string): JQueryEntwineElement;
+  find(selector: string): JQueryEntwineElement;
+  not(selector: string): JQueryEntwineElement;
+  is(selector: string): boolean;
+  prop(name: string, value: unknown): JQueryEntwineElement;
+  toggleClass(className: string, state: boolean): JQueryEntwineElement;
   [index: number]: HTMLElement;
 }
 
 interface JQueryStatic {
   (selector: string): JQueryEntwineElement;
+  (element: JQueryEntwineElement): JQueryEntwineElement;
   entwine(namespace: string, callback: ($: JQueryStatic) => void): void;
 }
 

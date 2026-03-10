@@ -1,5 +1,6 @@
 // Entwine bridge first — registers jQuery hooks before DOM matching triggers
 import '../bridge/entwine';
+import '../bridge/gridSettingsField';
 
 // Boot system — registers components with Injector on DOMContentLoaded
 import '../boot';

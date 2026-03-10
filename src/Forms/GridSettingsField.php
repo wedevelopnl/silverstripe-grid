@@ -9,7 +9,6 @@ use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\Model\ArrayData;
 use SilverStripe\Model\List\ArrayList;
 use SilverStripe\ORM\DataObjectInterface;
-use SilverStripe\View\Requirements;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 
 /**
@@ -71,27 +70,10 @@ class GridSettingsField extends FormField
     /**
      * Viewport data for the template, as an ArrayList of ArrayData.
      *
-     * Also injects the entwine toggle script for override checkboxes.
-     *
      * @return ArrayList<ArrayData>
      */
     public function getViewportData(): ArrayList
     {
-        Requirements::customScript(<<<'JS'
-        (function($) {
-          $.entwine('ss', function($) {
-            $('.grid-settings-field .grid-settings-field__override-toggle').entwine({
-              onchange: function() {
-                var row = this.closest('tr');
-                var enabled = this.is(':checked');
-                row.find('select, input').not('.grid-settings-field__override-toggle').prop('disabled', !enabled);
-                row.toggleClass('is-overridden', enabled);
-              }
-            });
-          });
-        })(jQuery);
-        JS, 'GridSettingsFieldToggle');
-
         $list = ArrayList::create();
         $viewports = $this->adapter->getViewports();
         $columnCount = $this->adapter->getColumnCount();
