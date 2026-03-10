@@ -31,7 +31,7 @@ class GridEditorField extends GridField
 
         parent::__construct(
             $name,
-            '',
+            _t(__CLASS__ . '.TITLE', 'Content'),
             GridElement::get(),
             GridFieldConfig::create()->addComponent(GridFieldDetailForm::create()),
         );
