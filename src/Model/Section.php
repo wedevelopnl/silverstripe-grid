@@ -19,9 +19,11 @@ use WeDevelop\Grid\Value\ContainerType;
  *
  * @property string $Zone
  * @method HasManyList<Row> Rows()
+ * @implements ContainerInterface<Row>
  */
 class Section extends GridElement implements ContainerInterface
 {
+    /** @use ContainerElementTrait<Row> */
     use ContainerElementTrait;
 
     private static string $table_name = 'Section';
@@ -87,7 +89,7 @@ class Section extends GridElement implements ContainerInterface
     private static bool $auto_scaffold = true;
 
     /** @return HasManyList<Row> */
-    #[\Override] // @phpstan-ignore method.childReturnType, method.childReturnType (covariant narrowing: Row extends GridElement)
+    #[\Override]
     public function getChildren(): HasManyList
     {
         return $this->Rows();

@@ -19,10 +19,12 @@ use WeDevelop\Grid\Value\ContainerType;
  * cannot handle intermediate DataObject classes that add no DB columns:
  * abstract classes crash TableBuilder, and concrete classes create
  * empty tables with table-name conflicts.
+ *
+ * @template T of \SilverStripe\ORM\DataObject
  */
 trait ContainerElementTrait
 {
-    /** @return HasManyList<GridElement> */
+    /** @return HasManyList<T> */
     abstract public function getChildren(): HasManyList;
 
     abstract public function getContainerType(): ContainerType;

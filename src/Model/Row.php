@@ -17,9 +17,11 @@ use WeDevelop\Grid\Value\ContainerType;
  * a child Column when no children exist.
  *
  * @method HasManyList<Column> Columns()
+ * @implements ContainerInterface<Column>
  */
 class Row extends GridElement implements ContainerInterface
 {
+    /** @use ContainerElementTrait<Column> */
     use ContainerElementTrait;
 
     private static string $table_name = 'Row';
@@ -70,7 +72,7 @@ class Row extends GridElement implements ContainerInterface
     private static bool $auto_scaffold = true;
 
     /** @return HasManyList<Column> */
-    #[\Override] // @phpstan-ignore method.childReturnType, method.childReturnType (covariant narrowing: Column extends GridElement)
+    #[\Override]
     public function getChildren(): HasManyList
     {
         return $this->Columns();

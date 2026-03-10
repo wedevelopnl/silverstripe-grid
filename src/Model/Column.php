@@ -17,9 +17,11 @@ use WeDevelop\Grid\Value\ContainerType;
  * Holds responsive grid settings and non-container content elements.
  *
  * @method HasManyList<GridElement> Elements()
+ * @implements ContainerInterface<GridElement>
  */
 class Column extends GridElement implements ContainerInterface
 {
+    /** @use ContainerElementTrait<GridElement> */
     use ContainerElementTrait;
 
     private static string $table_name = 'Column';
