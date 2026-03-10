@@ -186,6 +186,93 @@ final class GridElementReportTest extends SapphireTest
         $this->assertNotNull($fields->fieldByName('ClassName'));
     }
 
+    public function testPageTitleColumnFormattingRendersLinkForPageElement(): void
+    {
+        $page = $this->createPage('Linked Page');
+
+        $section = Section::create();
+        $section->ParentID = $page->ID;
+        $section->ParentClass = $page::class;
+        $section->write();
+
+        $records = $this->report->sourceRecords();
+        $sectionRecord = $this->findRecordById($records, $section->ID);
+        $this->assertNotNull($sectionRecord);
+
+        $columns = $this->report->columns();
+        $formatting = $columns['PageTitle']['formatting'];
+        $output = $formatting($sectionRecord->PageTitle, $sectionRecord);
+
+        $this->assertStringContainsString('<a href=', $output);
+        $this->assertStringContainsString('Linked Page', $output);
+    }
+
+    public function testPageTitleColumnFormattingRendersEmForOrphan(): void
+    {
+        $section = Section::create();
+        $section->Title = 'Orphan';
+        $section->write();
+
+        $records = $this->report->sourceRecords();
+        $sectionRecord = $this->findRecordById($records, $section->ID);
+        $this->assertNotNull($sectionRecord);
+
+        $columns = $this->report->columns();
+        $formatting = $columns['PageTitle']['formatting'];
+        $output = $formatting($sectionRecord->PageTitle, $sectionRecord);
+
+        $this->assertStringContainsString('<em>', $output);
+        $this->assertStringContainsString('Orphaned', $output);
+    }
+
+    public function testTypeColumnFormattingReturnsElementType(): void
+    {
+        $page = $this->createPage('Type Test');
+
+        $section = Section::create();
+        $section->ParentID = $page->ID;
+        $section->ParentClass = $page::class;
+        $section->write();
+
+        $records = $this->report->sourceRecords();
+        $sectionRecord = $this->findRecordById($records, $section->ID);
+        $this->assertNotNull($sectionRecord);
+
+        $columns = $this->report->columns();
+        $formatting = $columns['Type']['formatting'];
+        $output = $formatting(null, $sectionRecord);
+
+        $this->assertSame('Section', $output);
+    }
+
+    public function testFilterBySpecificPageExcludesOtherPages(): void
+    {
+        $pageA = $this->createPage('Page A Filter');
+        $pageB = $this->createPage('Page B Filter');
+
+        $sectionA = Section::create();
+        $sectionA->ParentID = $pageA->ID;
+        $sectionA->ParentClass = $pageA::class;
+        $sectionA->write();
+
+        $sectionB = Section::create();
+        $sectionB->ParentID = $pageB->ID;
+        $sectionB->ParentClass = $pageB::class;
+        $sectionB->write();
+
+        $records = $this->report->sourceRecords(['PageID' => (string) $pageA->ID]);
+
+        // Count elements under page A (section + auto-scaffolded row + column)
+        $count = 0;
+        foreach ($records as $record) {
+            $count++;
+            $this->assertSame('Page A Filter', $record->PageTitle);
+        }
+
+        // Section + Row + Column = 3 auto-scaffolded elements
+        $this->assertSame(3, $count);
+    }
+
     private function createPage(string $title): TestPage
     {
         $page = TestPage::create();

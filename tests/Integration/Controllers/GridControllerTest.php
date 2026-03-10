@@ -350,6 +350,28 @@ final class GridControllerTest extends FunctionalTest
         $this->assertSame('Block copy 2', $clone->Title);
     }
 
+    public function testDuplicateIncrementsExistingCopyNumber(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $section = Section::create();
+        $section->Title = 'Block copy 3';
+        $section->ParentID = $page->ID;
+        $section->ParentClass = $page::class;
+        $section->write();
+
+        $response = $this->postJson('/admin/grid/api/duplicate', [
+            'id' => $section->ID,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        $clone = Section::get()->sort('ID', 'DESC')->first();
+        $this->assertSame('Block copy 4', $clone->Title);
+    }
+
     public function testDuplicateReturns422WhenValidationFails(): void
     {
         $this->logInForHttp();

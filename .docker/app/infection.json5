@@ -15,6 +15,39 @@
                 "WeDevelop\\ElementalGrid\\Forms\\GridEditorField::getSchemaDataDefaults",
                 "WeDevelop\\ElementalGrid\\Controllers\\ElementalGridController::apiReadTree"
             ]
+        },
+        "ProtectedVisibility": false,
+        "PublicVisibility": false,
+        "ConcatOperandRemoval": {
+            "ignore": [
+                "WeDevelop\\Grid\\Model\\GridElement::getCMSFields",
+                "WeDevelop\\Grid\\Model\\GridElement::ensureDefaultTitle",
+                "WeDevelop\\Grid\\Model\\GridElement::getTitleSizeClass",
+                "WeDevelop\\Grid\\Model\\GridElement::getType",
+                "WeDevelop\\Grid\\Model\\ContentElement::getRenderTemplates",
+                "WeDevelop\\Grid\\Model\\Section::getContainerClasses",
+                "WeDevelop\\Grid\\Model\\Section::forTemplate",
+                "WeDevelop\\Grid\\Model\\Section::Element",
+                "WeDevelop\\Grid\\Model\\Row::forTemplate",
+                "WeDevelop\\Grid\\Model\\Row::Element",
+                "WeDevelop\\Grid\\Model\\Row::getRowClasses",
+                "WeDevelop\\Grid\\Model\\Column::forTemplate",
+                "WeDevelop\\Grid\\Model\\Column::Element",
+                "WeDevelop\\Grid\\Model\\Column::getColumnClasses",
+                "WeDevelop\\Grid\\Reports\\GridElementReport::title",
+                "WeDevelop\\Grid\\Reports\\GridElementReport::description",
+                "WeDevelop\\Grid\\Reports\\GridElementReport::sourceRecords",
+                "WeDevelop\\Grid\\Reports\\GridElementReport::parameterFields",
+                "WeDevelop\\Grid\\Forms\\GridEditorField::getSchemaDataDefaults"
+            ]
+        },
+        "MethodCallRemoval": {
+            "ignore": [
+                "WeDevelop\\Grid\\Model\\GridElement::getTitleSizeClass",
+                "WeDevelop\\Grid\\Model\\GridElement::getCMSFields",
+                "WeDevelop\\Grid\\Model\\Section::getContainerClasses",
+                "WeDevelop\\Grid\\Model\\Row::getRowClasses"
+            ]
         }
     },
     "minMsi": 70,
