@@ -12,7 +12,7 @@ use WeDevelop\Grid\Value\ContainerType;
  * Shared behavior for structural container elements (Section, Row, Column).
  *
  * Provides default implementations for ContainerInterface methods that
- * depend on getChildren() and getChildTypeName(), which each container
+ * depend on getChildren() and getContainerType(), which each container
  * must define itself.
  *
  * This is a trait rather than a base class because SilverStripe's ORM
@@ -25,8 +25,6 @@ trait ContainerElementTrait
     /** @return HasManyList<GridElement> */
     abstract public function getChildren(): HasManyList;
 
-    abstract public function getChildTypeName(): string;
-
     abstract public function getContainerType(): ContainerType;
 
     public function hasChildren(): bool
@@ -38,7 +36,7 @@ trait ContainerElementTrait
     public function getChildCountSummary(): string
     {
         $count = $this->getChildren()->count();
-        $typeName = $this->getChildTypeName();
+        $typeName = $this->getContainerType()->childTypeName();
 
         return sprintf('%d %s', $count, $count === 1 ? $typeName : $typeName . 's');
     }

@@ -94,12 +94,6 @@ class Section extends GridElement implements ContainerInterface
     }
 
     #[\Override]
-    public function getChildTypeName(): string
-    {
-        return 'row';
-    }
-
-    #[\Override]
     public function getContainerType(): ContainerType
     {
         return ContainerType::Section;

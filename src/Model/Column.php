@@ -77,12 +77,6 @@ class Column extends GridElement implements ContainerInterface
     }
 
     #[\Override]
-    public function getChildTypeName(): string
-    {
-        return 'element';
-    }
-
-    #[\Override]
     public function getContainerType(): ContainerType
     {
         return ContainerType::Column;
