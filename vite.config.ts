@@ -50,5 +50,13 @@ export default defineConfig({
     globals: true,
     include: ['client/src/**/*.{test,spec}.{ts,tsx}'],
     css: true,
+    coverage: {
+      thresholds: {
+        statements: 90,
+        branches: 84,
+        functions: 92,
+        lines: 92,
+      },
+    },
   },
 });

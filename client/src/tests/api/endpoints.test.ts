@@ -7,6 +7,7 @@ import {
   publishElement,
   reorderElement,
   unpublishElement,
+  updateGridSettings,
 } from '@/api/endpoints';
 
 const mockApiGet = vi.fn();
@@ -163,6 +164,31 @@ describe('endpoints', () => {
           className: 'SilverStripe\\ElementalBlocks\\Block\\ContentBlock',
           parentId: 10,
           insertAfterElementID: 5,
+        },
+      );
+    });
+  });
+
+  describe('updateGridSettings', () => {
+    it('sends correct PATCH body', async () => {
+      mockApiPatch.mockResolvedValue(undefined);
+
+      await updateGridSettings({
+        id: 4,
+        viewport: 'md',
+        width: 6,
+        offset: 1,
+        visible: true,
+      });
+
+      expect(mockApiPatch).toHaveBeenCalledWith(
+        '/admin/grid/api/updateGridSettings',
+        {
+          id: 4,
+          viewport: 'md',
+          width: 6,
+          offset: 1,
+          visible: true,
         },
       );
     });
