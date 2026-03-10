@@ -1,5 +1,7 @@
+@use '../components/ActionsMenu/ActionsMenu';
 @use '../components/AddChildButton/AddChildButton';
 @use '../components/CollapseToggle/CollapseToggle';
+@use '../components/ConfirmDialog/ConfirmDialog';
 @use '../components/ColumnBlock/ColumnBlock';
 @use '../components/DragHandle/DragHandle';
 @use '../components/DragOverlayContent/DragOverlayContent';

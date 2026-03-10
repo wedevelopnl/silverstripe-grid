@@ -165,12 +165,19 @@ describe('ElementCard', () => {
     expect(card?.classList.contains('element-card--modified')).toBe(true);
   });
 
-  it('renders only the drag handle button as an interactive element', () => {
+  it('renders drag handle and actions menu as interactive elements', () => {
     const { container } = render(<ElementCard element={makeElement()} />, {
       wrapper: createDndWrapper(),
     });
 
-    expect(container.querySelectorAll('button').length).toBe(1);
+    const buttons = container.querySelectorAll('button');
+    const dragHandle = screen.getByRole('button', { name: /move/i });
+    const actionsMenuTrigger = screen.getByTestId('actions-menu-trigger');
+
+    expect(dragHandle).toBeDefined();
+    expect(actionsMenuTrigger).toBeDefined();
+    // Drag handle + actions menu trigger (dialog not rendered when closed)
+    expect(buttons.length).toBe(2);
     expect(container.querySelectorAll('a').length).toBe(0);
     expect(container.querySelectorAll('input').length).toBe(0);
     expect(container.querySelectorAll('select').length).toBe(0);

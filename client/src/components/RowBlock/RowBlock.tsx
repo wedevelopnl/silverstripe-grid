@@ -8,8 +8,11 @@ import { buildBlockClasses } from '@/utils/blockClasses';
 import { getOffsetStrategy, getColumnCount } from '@/utils/gridAdapter';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
+import ActionsMenu from '@/components/ActionsMenu/ActionsMenu';
+import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
 import ColumnBlock from '@/components/ColumnBlock/ColumnBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
+import { useArchiveAction } from '@/hooks/useArchiveAction';
 
 interface RowBlockProps {
   readonly row: EnrichedRowNode;
@@ -20,6 +23,9 @@ export default function RowBlock({ row }: RowBlockProps) {
   const status = getElementStatus(row.statusFlags);
   const { isCollapsed, toggle } = row;
   const { activeType } = useDragContext();
+
+  const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(row);
+  const actions = archiveAction !== null ? [archiveAction] : [];
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: row.sortableId });
 
@@ -43,7 +49,19 @@ export default function RowBlock({ row }: RowBlockProps) {
             ? <a href={row.editLink} data-testid="row-edit-link">{row.title}</a>
             : row.title}
         </h3>
+        <ActionsMenu actions={actions} />
       </div>
+      {archiveDialog !== null && (
+        <ConfirmDialog
+          isOpen={archiveDialog.isOpen}
+          title={archiveDialog.title}
+          message={archiveDialog.message}
+          confirmLabel="Archive"
+          onConfirm={archiveDialog.onConfirm}
+          onCancel={archiveDialog.onCancel}
+          destructive
+        />
+      )}
       <div
         className={`row-block__columns row-block__columns--${layoutMode}`}
         style={layoutMode === 'grid' ? { '--grid-columns': String(getColumnCount()) } as React.CSSProperties : undefined}

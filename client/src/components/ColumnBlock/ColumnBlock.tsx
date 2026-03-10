@@ -13,10 +13,13 @@ import { buildBlockClasses } from '@/utils/blockClasses';
 import { getColumnCount, getOffsetStrategy, getWidthOptions, getOffsetOptions, resolveViewportSettings } from '@/utils/gridAdapter';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
+import ActionsMenu from '@/components/ActionsMenu/ActionsMenu';
+import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
 import GridSettingsPicker from '@/components/GridSettingsPicker/GridSettingsPicker';
 import ElementCard from '@/components/ElementCard/ElementCard';
 import EmptyState from '@/components/EmptyState/EmptyState';
 import ElementTypePicker from '@/components/ElementTypePicker/ElementTypePicker';
+import { useArchiveAction } from '@/hooks/useArchiveAction';
 
 interface ColumnBlockProps {
   readonly column: EnrichedColumnNode;
@@ -32,6 +35,8 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
   const { activeType } = useDragContext();
   const updateGridSettings = useUpdateGridSettings(pageId, zone);
   const createContentElement = useCreateContentElement(pageId, zone);
+  const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(column);
+  const actions = archiveAction !== null ? [archiveAction] : [];
   const [isPickerOpen, setPickerOpen] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: column.sortableId });
@@ -157,7 +162,19 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
             testId="column-offset-badge"
             onSelect={handleOffsetSelect}
           />
+          <ActionsMenu actions={actions} />
         </div>
+        {archiveDialog !== null && (
+          <ConfirmDialog
+            isOpen={archiveDialog.isOpen}
+            title={archiveDialog.title}
+            message={archiveDialog.message}
+            confirmLabel="Archive"
+            onConfirm={archiveDialog.onConfirm}
+            onCancel={archiveDialog.onCancel}
+            destructive
+          />
+        )}
         <div className="column-block__body">
           <SortableContext items={column.childSortableIds} strategy={verticalListSortingStrategy}>
             {hasChildren

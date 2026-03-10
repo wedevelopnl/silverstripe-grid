@@ -1,0 +1,61 @@
+# E2E fixture for archive action tests.
+#
+# Two sections with nested content to test archiving at each hierarchy level.
+# Auto-scaffolding is suppressed by FixtureLoader.
+
+Page:
+  e2e_page:
+    Title: 'E2E Archive Test Page'
+    URLSegment: 'e2e-archive-test'
+
+# --- Sections ---
+WeDevelop\Grid\Model\Section:
+  section_a:
+    Title: 'Section A'
+    ShowTitle: 1
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+  section_b:
+    Title: 'Section B'
+    ShowTitle: 1
+    Sort: 2
+    Zone: main
+    Parent: =>Page.e2e_page
+
+# --- Rows ---
+WeDevelop\Grid\Model\Row:
+  row_a1:
+    Title: 'Row A1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.section_a
+  row_b1:
+    Title: 'Row B1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.section_b
+
+# --- Columns ---
+WeDevelop\Grid\Model\Column:
+  col_a1a:
+    Title: 'Column A1a'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_a1
+  col_a1b:
+    Title: 'Column A1b'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Row.row_a1
+  col_b1a:
+    Title: 'Column B1a'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_b1
+
+# --- Content elements ---
+WeDevelop\Grid\Model\ContentElement:
+  content_x:
+    Title: 'Content Element X'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_a1a
+  content_y:
+    Title: 'Content Element Y'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_b1a

@@ -1,0 +1,79 @@
+@use '../../styles/variables' as vars;
+
+.actions-menu {
+  position: relative;
+  margin-left: auto;
+
+  &__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+
+    &:hover {
+      background: vars.$color-border-light;
+    }
+  }
+
+  &__dots {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    &::before,
+    &::after {
+      content: '';
+      display: block;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: vars.$color-text-muted;
+    }
+
+    // Middle dot via box-shadow on the element itself
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: vars.$color-text-muted;
+  }
+
+  &__dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 100;
+    margin: 4px 0 0;
+    padding: 4px 0;
+    list-style: none;
+    background: vars.$color-bg-white;
+    border: 1px solid vars.$color-border-light;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+    min-width: 120px;
+  }
+
+  &__item {
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+
+    &:hover {
+      background: vars.$color-bg-section;
+    }
+
+    &--destructive {
+      color: #c4183c;
+
+      &:hover {
+        background: #fdf0f2;
+      }
+    }
+  }
+}

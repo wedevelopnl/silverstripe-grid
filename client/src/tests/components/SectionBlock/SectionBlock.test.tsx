@@ -35,6 +35,7 @@ vi.mock('@dnd-kit/sortable', async (importOriginal) => {
 vi.mock('@/api/endpoints', () => ({
   createElement: vi.fn(),
   createContentElement: vi.fn(),
+  deleteElement: vi.fn(),
   updateGridSettings: vi.fn(),
 }));
 
