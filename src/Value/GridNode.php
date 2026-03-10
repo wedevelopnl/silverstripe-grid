@@ -34,7 +34,7 @@ final readonly class GridNode implements \JsonSerializable
 {
     /**
      * @param positive-int $parentId
-     * @param array{typeName: string, type: string, title: string, summary: string, label: string} $blockSchema
+     * @param array{typeName: string, type: string, title: string, summary: string, label: string, icon: string} $blockSchema
      * @param array<string, array{text: string, title: string}> $statusFlags
      * @param array<class-string, array{label: string, icon: string, description: string}>|null $allowedTypes
      * @param list<self>|null $children
