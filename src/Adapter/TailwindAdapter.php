@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Adapter;
 
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
@@ -137,6 +138,12 @@ final class TailwindAdapter implements GridAdapterInterface
     public function getBaseOffsetClass(int $offset): string
     {
         return sprintf('col-start-%d', $offset + 1);
+    }
+
+    #[\Override]
+    public function getOffsetStrategy(): OffsetStrategy
+    {
+        return OffsetStrategy::GridPlacement;
     }
 
     #[\Override]

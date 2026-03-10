@@ -10,7 +10,7 @@ import { useViewportContext } from '@/hooks/ViewportContext';
 import { useUpdateGridSettings, useCreateContentElement } from '@/hooks/useElementMutations';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
-import { getColumnCount, getWidthClass, getOffsetClass, getWidthOptions, getOffsetOptions, resolveViewportSettings } from '@/utils/gridAdapter';
+import { getColumnCount, getOffsetStrategy, getWidthOptions, getOffsetOptions, resolveViewportSettings } from '@/utils/gridAdapter';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import GridSettingsPicker from '@/components/GridSettingsPicker/GridSettingsPicker';
@@ -36,10 +36,7 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: column.sortableId });
 
-  const outerClasses = [getWidthClass(settings.width)];
-  if (settings.offset > 0) {
-    outerClasses.push(getOffsetClass(settings.offset));
-  }
+  const strategy = getOffsetStrategy();
 
   const showDropTarget = isOver && activeType === 'column';
   const isDragActive = activeType !== null;
@@ -52,6 +49,18 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
   });
 
   const sortableStyle = buildSortableStyle(transform, transition, isDragging);
+
+  const columnStyle = strategy === 'margin'
+    ? {
+      ...sortableStyle,
+      '--col-width': `${(settings.width / columnCount) * 100}%`,
+      ...(settings.offset > 0 ? { '--col-offset': `${(settings.offset / columnCount) * 100}%` } : {}),
+    } as React.CSSProperties
+    : {
+      ...sortableStyle,
+      '--col-span': String(settings.width),
+      ...(settings.offset > 0 ? { '--col-start': String(settings.offset + 1) } : {}),
+    } as React.CSSProperties;
 
   const widthOptions = getWidthOptions();
   const offsetOptions = getOffsetOptions(settings.width);
@@ -121,7 +130,7 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
   const hasChildren = column.children !== null && column.children.length > 0;
 
   return (
-    <div ref={setNodeRef} style={sortableStyle} className={outerClasses.join(' ')}>
+    <div ref={setNodeRef} style={columnStyle} className="row-block__column">
       <div className={innerClasses} data-testid="column-block">
         <div className="column-block__header" data-testid="column-header">
           <DragHandle listeners={listeners} attributes={attributes} label={`Move ${column.title}`} />

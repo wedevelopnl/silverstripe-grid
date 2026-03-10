@@ -5,7 +5,7 @@ import { getElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
-import { getRowClasses } from '@/utils/gridAdapter';
+import { getOffsetStrategy, getColumnCount } from '@/utils/gridAdapter';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import ColumnBlock from '@/components/ColumnBlock/ColumnBlock';
@@ -16,7 +16,7 @@ interface RowBlockProps {
 }
 
 export default function RowBlock({ row }: RowBlockProps) {
-  const rowClasses = getRowClasses();
+  const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid';
   const status = getElementStatus(row.statusFlags);
   const { isCollapsed, toggle } = row;
   const { activeType } = useDragContext();
@@ -44,7 +44,10 @@ export default function RowBlock({ row }: RowBlockProps) {
             : row.title}
         </h3>
       </div>
-      <div className={rowClasses}>
+      <div
+        className={`row-block__columns row-block__columns--${layoutMode}`}
+        style={layoutMode === 'grid' ? { '--grid-columns': String(getColumnCount()) } as React.CSSProperties : undefined}
+      >
         <SortableContext items={row.childSortableIds} strategy={horizontalListSortingStrategy}>
           {row.children !== null && row.children.length > 0
             ? (

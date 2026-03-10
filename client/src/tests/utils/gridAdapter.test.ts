@@ -3,6 +3,7 @@ import {
   getDefaultViewport,
   getColumnCount,
   getRowClasses,
+  getOffsetStrategy,
   getWidthClass,
   getOffsetClass,
   getWidthOptions,
@@ -23,6 +24,7 @@ vi.mock('@/api/config', () => ({
     defaultViewport: 'md',
     columnCount: 12,
     rowClasses: 'row',
+    offsetStrategy: 'margin',
     baseWidthClasses: Object.fromEntries(
       Array.from({ length: 12 }, (_, i) => [String(i + 1), `col-${i + 1}`]),
     ),
@@ -49,6 +51,10 @@ describe('gridAdapter', () => {
 
   it('returns row classes from adapter config', () => {
     expect(getRowClasses()).toBe('row');
+  });
+
+  it('returns offset strategy from adapter config', () => {
+    expect(getOffsetStrategy()).toBe('margin');
   });
 
   it('looks up base width class by column width', () => {

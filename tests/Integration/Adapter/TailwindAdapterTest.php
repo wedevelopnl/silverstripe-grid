@@ -10,6 +10,7 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
 
@@ -287,6 +288,13 @@ final class TailwindAdapterTest extends SapphireTest
         yield 'h4 equivalent' => ['text-xl', 'Heading 4'];
         yield 'h5 equivalent' => ['text-lg', 'Heading 5'];
         yield 'h6 equivalent' => ['text-base', 'Heading 6'];
+    }
+
+    // ── Offset strategy ─────────────────────────────────────────
+
+    public function testGetOffsetStrategyReturnsGridPlacement(): void
+    {
+        $this->assertSame(OffsetStrategy::GridPlacement, $this->adapter->getOffsetStrategy());
     }
 
     // ── CSS path ───────────────────────────────────────────────

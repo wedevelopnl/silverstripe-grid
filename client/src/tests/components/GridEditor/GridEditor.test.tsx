@@ -40,6 +40,7 @@ vi.mock('@/utils/gridAdapter', () => ({
   getDefaultViewport: vi.fn(() => 'md'),
   getColumnCount: vi.fn(() => 12),
   getRowClasses: vi.fn(() => 'row'),
+  getOffsetStrategy: vi.fn(() => 'margin'),
   getWidthClass: vi.fn((width: number) => `col-${width}`),
   getOffsetClass: vi.fn((offset: number) => `offset-${offset}`),
   getWidthOptions: vi.fn(() => [

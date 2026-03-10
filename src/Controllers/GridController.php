@@ -17,6 +17,7 @@ use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\Viewport;
@@ -55,6 +56,7 @@ use WeDevelop\Grid\Service\ReorderService;
  *   defaultViewport: string,
  *   columnCount: positive-int,
  *   rowClasses: string,
+ *   offsetStrategy: 'margin'|'grid-placement',
  *   baseWidthClasses: \stdClass&object{
  *     '1': string, '2': string, '3': string, '4': string,
  *     '5': string, '6': string, '7': string, '8': string,
@@ -445,6 +447,7 @@ class GridController extends AdminController
             'defaultViewport' => $adapter->getDefaultViewport()->key,
             'columnCount' => $columnCount,
             'rowClasses' => $adapter->getRowClasses(),
+            'offsetStrategy' => $adapter->getOffsetStrategy()->value,
             'baseWidthClasses' => $baseWidthClasses,
             'baseOffsetClasses' => $baseOffsetClasses,
         ];

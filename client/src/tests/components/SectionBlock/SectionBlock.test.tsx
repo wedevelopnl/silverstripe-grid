@@ -5,9 +5,7 @@ import SectionBlock from '@/components/SectionBlock/SectionBlock';
 import type { EnrichedSectionNode, EnrichedRowNode } from '@/types/enriched';
 import { createDndWrapper } from '@/tests/helpers/dndTestUtils';
 import {
-  getRowClasses,
-  getWidthClass,
-  getOffsetClass,
+  getOffsetStrategy,
 } from '@/utils/gridAdapter';
 
 const { getIsOver, setIsOver } = vi.hoisted(() => {
@@ -61,6 +59,7 @@ vi.mock('@/utils/gridAdapter', () => ({
   getColumnCount: vi.fn(() => 12),
   getViewports: vi.fn(() => mockViewports),
   getRowClasses: vi.fn(() => 'row'),
+  getOffsetStrategy: vi.fn(() => 'margin'),
   getWidthClass: vi.fn((width: number) => `col-${width}`),
   getOffsetClass: vi.fn((offset: number) => `offset-${offset}`),
   getDefaultViewport: vi.fn(() => 'md'),
@@ -144,9 +143,7 @@ describe('SectionBlock', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setIsOver(false);
-    vi.mocked(getRowClasses).mockReturnValue('row');
-    vi.mocked(getWidthClass).mockImplementation((width: number) => `col-${width}`);
-    vi.mocked(getOffsetClass).mockImplementation((offset: number) => `offset-${offset}`);
+    vi.mocked(getOffsetStrategy).mockReturnValue('margin');
   });
 
   it('renders as a <section> element', () => {
@@ -269,9 +266,7 @@ describe('SectionBlock', () => {
     expect(rowBlocks.length).toBe(1);
   });
 
-  it('rows apply rowClasses from gridAdapter', () => {
-    vi.mocked(getRowClasses).mockReturnValue('columns is-multiline');
-
+  it('rows apply flex layout class from offsetStrategy', () => {
     const section = makeSection({
       children: [makeRow(10, 'Row')],
     });
@@ -281,14 +276,11 @@ describe('SectionBlock', () => {
       { wrapper: createDndWrapper() },
     );
 
-    const columnContainer = container.querySelector('.columns.is-multiline');
+    const columnContainer = container.querySelector('.row-block__columns--flex');
     expect(columnContainer).not.toBeNull();
   });
 
-  it('nested columns use getWidthClass and getOffsetClass from gridAdapter', () => {
-    vi.mocked(getWidthClass).mockReturnValue('custom-w-8');
-    vi.mocked(getOffsetClass).mockReturnValue('custom-o-2');
-
+  it('nested columns set CSS custom properties for layout', () => {
     const section = makeSection({
       children: [
         makeRow(10, 'Row', {
@@ -329,13 +321,14 @@ describe('SectionBlock', () => {
       ],
     });
 
-    render(
+    const { container } = render(
       <SectionBlock section={section} />,
       { wrapper: createDndWrapper() },
     );
 
-    expect(getWidthClass).toHaveBeenCalledWith(8);
-    expect(getOffsetClass).toHaveBeenCalledWith(2);
+    const columnOuter = container.querySelector('.row-block__column') as HTMLElement;
+    expect(columnOuter.style.getPropertyValue('--col-width')).toBe(`${(8 / 12) * 100}%`);
+    expect(columnOuter.style.getPropertyValue('--col-offset')).toBe(`${(2 / 12) * 100}%`);
   });
 
   it('renders rows in the body area within section-block__body', () => {

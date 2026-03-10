@@ -29,6 +29,10 @@ export function getRowClasses(): string {
   return config().rowClasses;
 }
 
+export function getOffsetStrategy(): 'margin' | 'grid-placement' {
+  return config().offsetStrategy;
+}
+
 export function getWidthClass(width: number): string {
   return config().baseWidthClasses[String(width)] ?? '';
 }

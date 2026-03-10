@@ -122,11 +122,12 @@ export function useDragAndDrop({
   const overRectRef = useRef<OverRectSnapshot | null>(null);
   const pendingContainerItemsRef = useRef<ReadonlySet<string | number> | null>(null);
   const pendingMapsRef = useRef<ElementMaps | null>(null);
+  const sourceContainerItemsRef = useRef<ReadonlySet<string | number> | null>(null);
   const maps = useElementMaps(tree);
 
   // Stable collision detection instance — refs are read dynamically per event
   const [collisionDetection] = useState<CollisionDetection>(
-    () => createTypedCollisionDetection({ hasPendingMoveRef, pendingContainerItemsRef, overRectRef }),
+    () => createTypedCollisionDetection({ hasPendingMoveRef, pendingContainerItemsRef, sourceContainerItemsRef, overRectRef }),
   );
 
   const sensors = useSensors(
@@ -141,6 +142,7 @@ export function useDragAndDrop({
     hasPendingMoveRef.current = false;
     overRectRef.current = null;
     pendingContainerItemsRef.current = null;
+    sourceContainerItemsRef.current = null;
     setPendingTree(null);
   }, []);
 
@@ -151,6 +153,16 @@ export function useDragAndDrop({
 
       const node = maps.nodeMap.get(parsed.id);
       if (!node) return;
+
+      // Track source container siblings so the guard in collision detection
+      // only blocks parent-container fallback when the pointer is inside a
+      // same-container sibling, not when entering a different container.
+      const siblings = maps.childrenByParentId.get(node.parentId) ?? [];
+      sourceContainerItemsRef.current = new Set(
+        siblings
+          .filter((n) => n.id !== parsed.id)
+          .map((n) => buildDraggableId(parsed.type, n.id)),
+      );
 
       setDragState({
         activeId: String(event.active.id),

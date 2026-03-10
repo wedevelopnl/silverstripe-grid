@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Contract;
 
+use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
@@ -119,6 +120,15 @@ interface GridAdapterInterface
      * @example Bulma:     getBaseOffsetClass(3) → 'is-offset-3'
      */
     public function getBaseOffsetClass(int $offset): string;
+
+    /**
+     * How the CSS framework implements column offsets.
+     *
+     * Margin-based frameworks (Bootstrap, Bulma) use flow-relative `margin-left`.
+     * Grid-placement frameworks (Tailwind) use `grid-column-start`.
+     * The CMS editor uses this to choose between flex and grid layout for preview.
+     */
+    public function getOffsetStrategy(): OffsetStrategy;
 
     /**
      * Filesystem path to a fallback CSS file for CMS preview rendering.

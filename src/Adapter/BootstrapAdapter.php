@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Adapter;
 
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
@@ -154,6 +155,12 @@ final class BootstrapAdapter implements GridAdapterInterface
     public function getBaseOffsetClass(int $offset): string
     {
         return $this->getOffsetClass('xs', $offset);
+    }
+
+    #[\Override]
+    public function getOffsetStrategy(): OffsetStrategy
+    {
+        return OffsetStrategy::Margin;
     }
 
     #[\Override]

@@ -18,6 +18,7 @@ const validAdapterConfig = {
   defaultViewport: 'md',
   columnCount: 12,
   rowClasses: 'row',
+  offsetStrategy: 'margin',
   baseWidthClasses: { '1': 'col-1', '12': 'col-12' },
   baseOffsetClasses: { '0': 'offset-0', '1': 'offset-1' },
 };

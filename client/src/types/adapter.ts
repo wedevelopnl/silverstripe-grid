@@ -10,6 +10,7 @@ export const adapterConfigSchema = z.object({
   defaultViewport: z.string(),
   columnCount: z.number().int().positive(),
   rowClasses: z.string(),
+  offsetStrategy: z.enum(['margin', 'grid-placement']),
   baseWidthClasses: z.record(z.string(), z.string()),
   baseOffsetClasses: z.record(z.string(), z.string()),
 });

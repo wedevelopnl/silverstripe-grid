@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
 use WeDevelop\Grid\Controllers\GridController;
+use WeDevelop\Grid\Value\OffsetStrategy;
 
 /**
  * Tests {@see GridController::buildAdapterConfig()} in isolation.
@@ -38,13 +39,14 @@ final class BuildAdapterConfigTest extends SapphireTest
         self::assertArrayHasKey('defaultViewport', $this->config);
         self::assertArrayHasKey('columnCount', $this->config);
         self::assertArrayHasKey('rowClasses', $this->config);
+        self::assertArrayHasKey('offsetStrategy', $this->config);
         self::assertArrayHasKey('baseWidthClasses', $this->config);
         self::assertArrayHasKey('baseOffsetClasses', $this->config);
     }
 
-    public function testConfigContainsExactlySixKeys(): void
+    public function testConfigContainsExactlySevenKeys(): void
     {
-        self::assertCount(6, $this->config);
+        self::assertCount(7, $this->config);
     }
 
     // --- viewports -----------------------------------------------------------
@@ -97,6 +99,13 @@ final class BuildAdapterConfigTest extends SapphireTest
     public function testRowClassesIsRow(): void
     {
         self::assertSame('row', $this->config['rowClasses']);
+    }
+
+    // --- offsetStrategy ------------------------------------------------------
+
+    public function testOffsetStrategyIsMarginForBootstrapAdapter(): void
+    {
+        self::assertSame('margin', $this->config['offsetStrategy']);
     }
 
     // --- baseWidthClasses ----------------------------------------------------
@@ -243,6 +252,11 @@ final class BuildAdapterConfigTest extends SapphireTest
                 return 'row';
             }
 
+            public function getOffsetStrategy(): \WeDevelop\Grid\Value\OffsetStrategy
+            {
+                return \WeDevelop\Grid\Value\OffsetStrategy::Margin;
+            }
+
             public function getContainerClass(bool $fluid): string
             {
                 return 'container';
@@ -313,6 +327,11 @@ final class BuildAdapterConfigTest extends SapphireTest
             public function getRowClasses(): string
             {
                 return 'row';
+            }
+
+            public function getOffsetStrategy(): \WeDevelop\Grid\Value\OffsetStrategy
+            {
+                return \WeDevelop\Grid\Value\OffsetStrategy::Margin;
             }
 
             public function getContainerClass(bool $fluid): string

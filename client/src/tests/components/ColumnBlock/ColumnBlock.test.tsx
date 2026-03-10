@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import ColumnBlock from '@/components/ColumnBlock/ColumnBlock';
 import type { EnrichedColumnNode } from '@/types/enriched';
 import { createDndWrapper } from '@/tests/helpers/dndTestUtils';
-import { getWidthClass, getOffsetClass, getColumnCount, getOffsetOptions } from '@/utils/gridAdapter';
+import { getColumnCount, getOffsetStrategy, getOffsetOptions } from '@/utils/gridAdapter';
 
 const { getIsOver, setIsOver } = vi.hoisted(() => {
   let value = false;
@@ -64,8 +64,7 @@ const { mockViewports, mockResolveViewportSettings } = vi.hoisted(() => {
 vi.mock('@/utils/gridAdapter', () => ({
   getColumnCount: vi.fn(() => 12),
   getViewports: vi.fn(() => mockViewports),
-  getWidthClass: vi.fn((width: number) => `col-${width}`),
-  getOffsetClass: vi.fn((offset: number) => `offset-${offset}`),
+  getOffsetStrategy: vi.fn(() => 'margin'),
   getDefaultViewport: vi.fn(() => 'md'),
   getWidthOptions: vi.fn(() => [
     ...Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}/12` })),
@@ -120,8 +119,7 @@ describe('ColumnBlock', () => {
     vi.clearAllMocks();
     setIsOver(false);
     vi.mocked(getColumnCount).mockReturnValue(12);
-    vi.mocked(getWidthClass).mockImplementation((width: number) => `col-${width}`);
-    vi.mocked(getOffsetClass).mockImplementation((offset: number) => `offset-${offset}`);
+    vi.mocked(getOffsetStrategy).mockReturnValue('margin');
   });
 
   it('renders fraction badge for the active viewport', () => {
@@ -137,46 +135,101 @@ describe('ColumnBlock', () => {
     expect(screen.getByText('6/12')).toBeDefined();
   });
 
-  it('applies width class from getWidthClass()', () => {
-    const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 0, visible: true } },
+  describe('layout: flex (margin offset strategy)', () => {
+    beforeEach(() => {
+      vi.mocked(getOffsetStrategy).mockReturnValue('margin');
     });
 
-    const { container } = render(
-      <ColumnBlock column={column} />,
-      { wrapper: createDndWrapper() },
-    );
+    it('sets --col-width as percentage', () => {
+      const column = makeColumn({
+        gridSettings: { md: { width: 6, offset: 0, visible: true } },
+      });
 
-    const outerDiv = container.firstElementChild;
-    expect(outerDiv?.classList.contains('col-6')).toBe(true);
+      const { container } = render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      const outerDiv = container.firstElementChild as HTMLElement;
+      expect(outerDiv.style.getPropertyValue('--col-width')).toBe('50%');
+    });
+
+    it('sets --col-offset when offset > 0', () => {
+      const column = makeColumn({
+        gridSettings: { md: { width: 4, offset: 2, visible: true } },
+      });
+
+      const { container } = render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      const outerDiv = container.firstElementChild as HTMLElement;
+      const expected = `${(2 / 12) * 100}%`;
+      expect(outerDiv.style.getPropertyValue('--col-offset')).toBe(expected);
+    });
+
+    it('does not set --col-offset when offset is 0', () => {
+      const column = makeColumn({
+        gridSettings: { md: { width: 6, offset: 0, visible: true } },
+      });
+
+      const { container } = render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      const outerDiv = container.firstElementChild as HTMLElement;
+      expect(outerDiv.style.getPropertyValue('--col-offset')).toBe('');
+    });
   });
 
-  it('applies offset class from getOffsetClass() when offset > 0', () => {
-    const column = makeColumn({
-      gridSettings: { md: { width: 4, offset: 2, visible: true } },
+  describe('layout: grid (grid-placement offset strategy)', () => {
+    beforeEach(() => {
+      vi.mocked(getOffsetStrategy).mockReturnValue('grid-placement');
     });
 
-    const { container } = render(
-      <ColumnBlock column={column} />,
-      { wrapper: createDndWrapper() },
-    );
+    it('sets --col-span as integer string', () => {
+      const column = makeColumn({
+        gridSettings: { md: { width: 6, offset: 0, visible: true } },
+      });
 
-    const outerDiv = container.firstElementChild;
-    expect(outerDiv?.classList.contains('offset-2')).toBe(true);
-  });
+      const { container } = render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
 
-  it('does not apply offset class when offset is 0', () => {
-    const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 0, visible: true } },
+      const outerDiv = container.firstElementChild as HTMLElement;
+      expect(outerDiv.style.getPropertyValue('--col-span')).toBe('6');
     });
 
-    const { container } = render(
-      <ColumnBlock column={column} />,
-      { wrapper: createDndWrapper() },
-    );
+    it('sets --col-start when offset > 0', () => {
+      const column = makeColumn({
+        gridSettings: { md: { width: 4, offset: 2, visible: true } },
+      });
 
-    const outerDiv = container.firstElementChild;
-    expect(outerDiv?.classList.contains('offset-0')).toBe(false);
+      const { container } = render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      const outerDiv = container.firstElementChild as HTMLElement;
+      expect(outerDiv.style.getPropertyValue('--col-start')).toBe('3');
+    });
+
+    it('does not set --col-start when offset is 0', () => {
+      const column = makeColumn({
+        gridSettings: { md: { width: 6, offset: 0, visible: true } },
+      });
+
+      const { container } = render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      const outerDiv = container.firstElementChild as HTMLElement;
+      expect(outerDiv.style.getPropertyValue('--col-start')).toBe('');
+    });
   });
 
   it('renders child elements as ElementCards', () => {
@@ -358,8 +411,8 @@ describe('ColumnBlock', () => {
 
     // lg inherits md=6 via cascade
     expect(screen.getByText('6/12')).toBeDefined();
-    const outerDiv = container.firstElementChild;
-    expect(outerDiv?.classList.contains('col-6')).toBe(true);
+    const outerDiv = container.firstElementChild as HTMLElement;
+    expect(outerDiv.style.getPropertyValue('--col-width')).toBe('50%');
   });
 
   it('cascades offset from smaller viewport', () => {
@@ -372,9 +425,9 @@ describe('ColumnBlock', () => {
       { wrapper: createDndWrapper('lg') },
     );
 
-    const outerDiv = container.firstElementChild;
+    const outerDiv = container.firstElementChild as HTMLElement;
     // lg inherits md offset=3 via cascade
-    expect(outerDiv?.classList.contains('offset-3')).toBe(true);
+    expect(outerDiv.style.getPropertyValue('--col-offset')).toBe('25%');
   });
 
   it('cascades hidden visibility from smaller viewport', () => {
@@ -391,51 +444,6 @@ describe('ColumnBlock', () => {
     // lg inherits md hidden state via cascade
     expect(inner?.classList.contains('column-block--hidden')).toBe(true);
     expect(screen.getByText('hidden')).toBeDefined();
-  });
-
-  it('calls getWidthClass with the resolved column width', () => {
-    vi.mocked(getWidthClass).mockReturnValue('custom-col-8');
-    const column = makeColumn({
-      gridSettings: { md: { width: 8, offset: 0, visible: true } },
-    });
-
-    const { container } = render(
-      <ColumnBlock column={column} />,
-      { wrapper: createDndWrapper() },
-    );
-
-    expect(getWidthClass).toHaveBeenCalledWith(8);
-    const outerDiv = container.firstElementChild;
-    expect(outerDiv?.classList.contains('custom-col-8')).toBe(true);
-  });
-
-  it('calls getOffsetClass with the resolved column offset', () => {
-    vi.mocked(getOffsetClass).mockReturnValue('custom-offset-3');
-    const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 3, visible: true } },
-    });
-
-    const { container } = render(
-      <ColumnBlock column={column} />,
-      { wrapper: createDndWrapper() },
-    );
-
-    expect(getOffsetClass).toHaveBeenCalledWith(3);
-    const outerDiv = container.firstElementChild;
-    expect(outerDiv?.classList.contains('custom-offset-3')).toBe(true);
-  });
-
-  it('does not call getOffsetClass when offset is 0', () => {
-    const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 0, visible: true } },
-    });
-
-    render(
-      <ColumnBlock column={column} />,
-      { wrapper: createDndWrapper() },
-    );
-
-    expect(getOffsetClass).not.toHaveBeenCalled();
   });
 
   it('applies --drop-target modifier when isOver is true and activeType is column', () => {

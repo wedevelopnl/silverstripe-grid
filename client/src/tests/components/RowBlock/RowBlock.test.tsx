@@ -5,10 +5,8 @@ import RowBlock from '@/components/RowBlock/RowBlock';
 import type { EnrichedRowNode, EnrichedColumnNode } from '@/types/enriched';
 import { createDndWrapper } from '@/tests/helpers/dndTestUtils';
 import {
-  getRowClasses,
+  getOffsetStrategy,
   getColumnCount,
-  getWidthClass,
-  getOffsetClass,
 } from '@/utils/gridAdapter';
 
 const { getIsOver, setIsOver } = vi.hoisted(() => {
@@ -61,9 +59,7 @@ const { mockViewports, mockResolveViewportSettings } = vi.hoisted(() => {
 vi.mock('@/utils/gridAdapter', () => ({
   getColumnCount: vi.fn(() => 12),
   getViewports: vi.fn(() => mockViewports),
-  getRowClasses: vi.fn(() => 'row'),
-  getWidthClass: vi.fn((width: number) => `col-${width}`),
-  getOffsetClass: vi.fn((offset: number) => `offset-${offset}`),
+  getOffsetStrategy: vi.fn(() => 'margin'),
   getDefaultViewport: vi.fn(() => 'md'),
   getWidthOptions: vi.fn(() => [
     ...Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}/12` })),
@@ -148,10 +144,8 @@ describe('RowBlock', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setIsOver(false);
-    vi.mocked(getRowClasses).mockReturnValue('row');
+    vi.mocked(getOffsetStrategy).mockReturnValue('margin');
     vi.mocked(getColumnCount).mockReturnValue(12);
-    vi.mocked(getWidthClass).mockImplementation((width: number) => `col-${width}`);
-    vi.mocked(getOffsetClass).mockImplementation((offset: number) => `offset-${offset}`);
   });
 
   it('renders title as an h3 heading', () => {
@@ -166,7 +160,8 @@ describe('RowBlock', () => {
     expect(heading.textContent).toBe('Main Row');
   });
 
-  it('applies rowClasses from gridAdapter on the column container div', () => {
+  it('applies flex layout class when offsetStrategy is margin', () => {
+    vi.mocked(getOffsetStrategy).mockReturnValue('margin');
     const row = makeRow();
 
     const { container } = render(
@@ -174,12 +169,12 @@ describe('RowBlock', () => {
       { wrapper: createDndWrapper() },
     );
 
-    const columnContainer = container.querySelector('.row');
+    const columnContainer = container.querySelector('.row-block__columns--flex');
     expect(columnContainer).not.toBeNull();
   });
 
-  it('applies custom rowClasses value from gridAdapter', () => {
-    vi.mocked(getRowClasses).mockReturnValue('columns is-multiline');
+  it('applies grid layout class when offsetStrategy is grid-placement', () => {
+    vi.mocked(getOffsetStrategy).mockReturnValue('grid-placement');
     const row = makeRow();
 
     const { container } = render(
@@ -187,7 +182,7 @@ describe('RowBlock', () => {
       { wrapper: createDndWrapper() },
     );
 
-    const columnContainer = container.querySelector('.columns.is-multiline');
+    const columnContainer = container.querySelector('.row-block__columns--grid');
     expect(columnContainer).not.toBeNull();
   });
 
@@ -294,29 +289,6 @@ describe('RowBlock', () => {
     // When activeViewport is "lg", the ColumnBlock should use lg settings (width 4)
     const badge = screen.getByTestId('column-badge');
     expect(badge.textContent).toBe('4/12');
-  });
-
-  it('child columns use getWidthClass and getOffsetClass from gridAdapter', () => {
-    vi.mocked(getWidthClass).mockReturnValue('custom-w-8');
-    vi.mocked(getOffsetClass).mockReturnValue('custom-o-2');
-
-    const row = makeRow({
-      children: [
-        makeColumn(10, 'Column', {
-          gridSettings: {
-            md: { width: 8, offset: 2, visible: true },
-          },
-        }),
-      ],
-    });
-
-    render(
-      <RowBlock row={row} />,
-      { wrapper: createDndWrapper() },
-    );
-
-    expect(getWidthClass).toHaveBeenCalledWith(8);
-    expect(getOffsetClass).toHaveBeenCalledWith(2);
   });
 
   it('child columns use getColumnCount from gridAdapter for badge display', () => {

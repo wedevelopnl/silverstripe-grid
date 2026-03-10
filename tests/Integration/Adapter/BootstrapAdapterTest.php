@@ -10,6 +10,7 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
 
@@ -362,6 +363,13 @@ final class BootstrapAdapterTest extends SapphireTest
         yield 'h4' => ['h4', 'Heading 4'];
         yield 'h5' => ['h5', 'Heading 5'];
         yield 'h6' => ['h6', 'Heading 6'];
+    }
+
+    // ─── getOffsetStrategy ────────────────────────────────────────────
+
+    public function testGetOffsetStrategyReturnsMargin(): void
+    {
+        $this->assertSame(OffsetStrategy::Margin, $this->adapter->getOffsetStrategy());
     }
 
     // ─── getCssPath ──────────────────────────────────────────────────

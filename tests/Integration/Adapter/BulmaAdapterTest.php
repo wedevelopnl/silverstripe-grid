@@ -10,6 +10,7 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
 
@@ -267,6 +268,13 @@ final class BulmaAdapterTest extends SapphireTest
         yield 'is-4 — Title 4' => ['is-4', 'Title 4'];
         yield 'is-5 — Title 5' => ['is-5', 'Title 5'];
         yield 'is-6 — Title 6' => ['is-6', 'Title 6'];
+    }
+
+    // ─── getOffsetStrategy ────────────────────────────────────────────
+
+    public function testGetOffsetStrategyReturnsMargin(): void
+    {
+        $this->assertSame(OffsetStrategy::Margin, $this->adapter->getOffsetStrategy());
     }
 
     public function testGetCssPathReturnsNonNullString(): void

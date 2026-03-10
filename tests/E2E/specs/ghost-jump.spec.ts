@@ -31,16 +31,19 @@ test.describe('Ghost jump regression', () => {
     await expect(row1Title).toHaveText('Row 1');
     await expect(row2Title).toHaveText('Row 2');
 
-    // Record Row 1's initial vertical position
-    const row1Box = await rows.nth(0).boundingBox();
-    expect(row1Box).not.toBeNull();
-    const initialY = row1Box!.y;
-
-    // Locate Row 2's drag handle
+    // Locate Row 2's drag handle and ensure it's visible. scrollIntoViewIfNeeded
+    // can scroll the CMS content panel when the handle is at the viewport edge,
+    // so we measure Row 1's baseline position AFTER scrolling to avoid a false
+    // positive from scroll-induced Y shift.
     const row2Handle = page.locator('[data-testid="drag-handle"][aria-label="Move Row 2"]');
     await row2Handle.scrollIntoViewIfNeeded();
     const handleBox = await row2Handle.boundingBox();
     expect(handleBox).not.toBeNull();
+
+    // Record Row 1's vertical position after any scroll has settled
+    const row1Box = await rows.nth(0).boundingBox();
+    expect(row1Box).not.toBeNull();
+    const initialY = row1Box!.y;
 
     const fromX = handleBox!.x + handleBox!.width / 2;
     const fromY = handleBox!.y + handleBox!.height / 2;

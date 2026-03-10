@@ -54,4 +54,42 @@
   &[style*="transform"] {
     z-index: 1;
   }
+
+  &__columns {
+    &--flex {
+      display: flex;
+      flex-wrap: wrap;
+      row-gap: 8px;
+    }
+
+    &--grid {
+      display: grid;
+      grid-template-columns: repeat(var(--grid-columns, 12), 1fr);
+      gap: 8px;
+    }
+  }
+
+  &__column {
+    box-sizing: border-box;
+  }
+
+  &__columns--flex > &__column {
+    flex: 0 0 var(--col-width);
+    max-width: var(--col-width);
+    margin-left: var(--col-offset, 0);
+    padding: 0 4px;
+  }
+
+  &__columns--grid > &__column {
+    grid-column: var(--col-start, auto) / span var(--col-span);
+  }
+
+  &__columns--flex > .add-child-button {
+    flex: 0 0 100%;
+    padding: 0 4px;
+  }
+
+  &__columns--grid > .add-child-button {
+    grid-column: 1 / -1;
+  }
 }

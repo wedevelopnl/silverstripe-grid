@@ -10,6 +10,7 @@ describe('adapterConfigSchema', () => {
       defaultViewport: 'md',
       columnCount: 12,
       rowClasses: 'row',
+      offsetStrategy: 'margin',
       baseWidthClasses: { '1': 'col-1', '2': 'col-2', '12': 'col-12' },
       baseOffsetClasses: { '0': 'offset-0', '1': 'offset-1', '11': 'offset-11' },
     };
@@ -30,6 +31,7 @@ describe('adapterConfigSchema', () => {
       defaultViewport: 'md',
       columnCount: 12.5,
       rowClasses: 'row',
+      offsetStrategy: 'margin',
       baseWidthClasses: {},
       baseOffsetClasses: {},
     };
@@ -43,6 +45,7 @@ describe('adapterConfigSchema', () => {
       defaultViewport: 'md',
       columnCount: 0,
       rowClasses: 'row',
+      offsetStrategy: 'margin',
       baseWidthClasses: {},
       baseOffsetClasses: {},
     };
@@ -56,6 +59,36 @@ describe('adapterConfigSchema', () => {
       defaultViewport: 'md',
       columnCount: 12,
       rowClasses: 'row',
+      offsetStrategy: 'margin',
+      baseWidthClasses: {},
+      baseOffsetClasses: {},
+    };
+
+    expect(() => adapterConfigSchema.parse(input)).toThrow();
+  });
+
+  it('parses grid-placement offset strategy', () => {
+    const input = {
+      viewports: [{ key: 'sm', label: 'Small' }],
+      defaultViewport: 'sm',
+      columnCount: 12,
+      rowClasses: 'grid grid-cols-12',
+      offsetStrategy: 'grid-placement',
+      baseWidthClasses: { '1': 'col-span-1' },
+      baseOffsetClasses: { '0': 'col-start-1' },
+    };
+
+    const result = adapterConfigSchema.parse(input);
+    expect(result.offsetStrategy).toBe('grid-placement');
+  });
+
+  it('rejects invalid offset strategy value', () => {
+    const input = {
+      viewports: [],
+      defaultViewport: 'md',
+      columnCount: 12,
+      rowClasses: 'row',
+      offsetStrategy: 'absolute',
       baseWidthClasses: {},
       baseOffsetClasses: {},
     };

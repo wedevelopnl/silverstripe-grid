@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Adapter;
 
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
@@ -143,6 +144,12 @@ final class BulmaAdapter implements GridAdapterInterface
     public function getBaseOffsetClass(int $offset): string
     {
         return $this->getOffsetClass('mobile', $offset);
+    }
+
+    #[\Override]
+    public function getOffsetStrategy(): OffsetStrategy
+    {
+        return OffsetStrategy::Margin;
     }
 
     #[\Override]
