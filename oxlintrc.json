@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "unicorn"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "nursery": "off"
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "react/jsx-no-duplicate-props": "error",
+    "react/no-direct-mutation-state": "error",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "unicorn/no-unnecessary-await": "error"
+  },
+  "includes": ["client/src/**/*.{ts,tsx}"],
+  "settings": {
+    "react": {
+      "runtime": "automatic"
+    }
+  }
+}

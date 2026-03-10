@@ -12,9 +12,9 @@ applyTo: "**/*"
 | `npm run build` | Vite production build |
 | `npm run dev` | Vite watch mode for development |
 | `npm run test` | Run Vitest tests |
-| `npm run lint` | ESLint + Stylelint |
-| `npm run lint:js` | ESLint only (no fix) |
-| `npm run lint:js:fix` | ESLint with auto-fix |
+| `npm run lint` | oxlint + Stylelint |
+| `npm run lint:js` | oxlint only (no fix) |
+| `npm run lint:js:fix` | oxlint with auto-fix |
 | `npm run lint:css` | Stylelint only (no fix) |
 | `npm run lint:css:fix` | Stylelint with auto-fix |
 | `npm run typecheck` | TypeScript type checking |
