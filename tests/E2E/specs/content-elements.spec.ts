@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { loadAndNavigate, loadFixture, resetFixtures } from '../helpers/fixtures';
+import { loadFixture, resetFixtures } from '../helpers/fixtures';
 
 test.describe('Content elements', () => {
   test.afterAll(async ({ request }) => {
@@ -121,7 +121,16 @@ test.describe('Content elements', () => {
   });
 
   test('content editor navigates to container edit forms via title links and updates titles', async ({ page }) => {
-    await loadAndNavigate(page, 'content-elements');
+    const fixture = await loadFixture(page.request, 'content-elements');
+    const pageEditorUrl = `/admin/pages/edit/show/${fixture.pageId}`;
+    await page.goto(pageEditorUrl);
+    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+
+    // Helper: navigate back to page editor and wait for grid to load
+    const returnToGridEditor = async () => {
+      await page.goto(pageEditorUrl);
+      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+    };
 
     // --- Step 1: Click section title to navigate to edit form ---
     await test.step('Edit section title via title link', async () => {
@@ -133,9 +142,7 @@ test.describe('Content elements', () => {
       await page.getByRole('button', { name: /Save/ }).first().click();
       await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
 
-      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click();
-      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
-
+      await returnToGridEditor();
       await expect(page.getByTestId('section-title')).toContainText('Updated Section Title');
     });
 
@@ -149,9 +156,7 @@ test.describe('Content elements', () => {
       await page.getByRole('button', { name: /Save/ }).first().click();
       await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
 
-      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click();
-      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
-
+      await returnToGridEditor();
       await expect(page.getByTestId('row-title').first()).toContainText('Updated Row Title');
     });
 
@@ -165,9 +170,7 @@ test.describe('Content elements', () => {
       await page.getByRole('button', { name: /Save/ }).first().click();
       await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
 
-      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click();
-      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
-
+      await returnToGridEditor();
       await expect(page.getByTestId('column-title').first()).toContainText('Updated Column Title');
     });
   });
