@@ -1,6 +1,6 @@
 COMPOSE := docker compose -f .docker/compose.yml
 
-.PHONY: up down destroy build test test-unit test-integration test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-js mutate mutate-js analyse qa qa-js
+.PHONY: up down destroy build test test-unit test-integration test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-js mutate mutate-js analyse qa qa-js flush dev-build
 
 ## Start services (build if needed)
 up:
@@ -81,6 +81,14 @@ test-e2e: ensure-up
 ## Run E2E tests with interactive UI
 test-e2e-ui: ensure-up
 	npx playwright test --ui
+
+## Clear SilverStripe cache
+flush: ensure-up
+	$(COMPOSE) exec app vendor/bin/sake flush
+
+## Run dev/build to rebuild the database and manifest
+dev-build: ensure-up
+	$(COMPOSE) exec app vendor/bin/sake dev/build flush=1
 
 ## Run JavaScript QA (lint + typecheck + test)
 qa-js:
