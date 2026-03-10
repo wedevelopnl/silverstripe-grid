@@ -16,6 +16,10 @@ class ContentElement extends GridElement
 {
     private static string $table_name = 'ContentElement';
 
+    private static string $singular_name = 'Content element';
+
+    private static string $plural_name = 'Content elements';
+
     private static string $icon = 'font-icon-block-content';
 
     /** @var array<string, string> */

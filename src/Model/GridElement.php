@@ -42,6 +42,10 @@ class GridElement extends DataObject
 {
     private static string $table_name = 'GridElement';
 
+    private static string $singular_name = 'Grid element';
+
+    private static string $plural_name = 'Grid elements';
+
     private static bool $enable_custom_title_classes = false;
 
     /** @var array<string, string> */
