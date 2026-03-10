@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { loadFixture, resetFixtures } from '../helpers/fixtures';
+import { loadFixture, loadAndNavigate, resetFixtures } from '../helpers/fixtures';
 
 test.describe('Content elements', () => {
   test.afterAll(async ({ request }) => {
@@ -121,16 +121,7 @@ test.describe('Content elements', () => {
   });
 
   test('content editor navigates to container edit forms via title links and updates titles', async ({ page }) => {
-    const fixture = await loadFixture(page.request, 'content-elements');
-    const pageEditorUrl = `/admin/pages/edit/show/${fixture.pageId}`;
-    await page.goto(pageEditorUrl);
-    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
-
-    // Helper: navigate back to page editor and wait for grid to load
-    const returnToGridEditor = async () => {
-      await page.goto(pageEditorUrl);
-      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
-    };
+    await loadAndNavigate(page, 'content-elements');
 
     // --- Step 1: Click section title to navigate to edit form ---
     await test.step('Edit section title via title link', async () => {
@@ -140,9 +131,10 @@ test.describe('Content elements', () => {
       await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 });
       await page.getByRole('textbox', { name: 'Title' }).fill('Updated Section Title');
       await page.getByRole('button', { name: /Save/ }).first().click();
-      await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
+      await expect(page.getByText('Saved Section "Updated Section Title" successfully.')).toBeVisible({ timeout: 15_000 });
 
-      await returnToGridEditor();
+      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click();
+      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
       await expect(page.getByTestId('section-title')).toContainText('Updated Section Title');
     });
 
@@ -154,9 +146,10 @@ test.describe('Content elements', () => {
       await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 });
       await page.getByRole('textbox', { name: 'Title' }).fill('Updated Row Title');
       await page.getByRole('button', { name: /Save/ }).first().click();
-      await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
+      await expect(page.getByText('Saved Row "Updated Row Title" successfully.')).toBeVisible({ timeout: 15_000 });
 
-      await returnToGridEditor();
+      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click();
+      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
       await expect(page.getByTestId('row-title').first()).toContainText('Updated Row Title');
     });
 
@@ -168,9 +161,10 @@ test.describe('Content elements', () => {
       await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 });
       await page.getByRole('textbox', { name: 'Title' }).fill('Updated Column Title');
       await page.getByRole('button', { name: /Save/ }).first().click();
-      await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
+      await expect(page.getByText('Saved Column "Updated Column Title" successfully.')).toBeVisible({ timeout: 15_000 });
 
-      await returnToGridEditor();
+      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click();
+      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
       await expect(page.getByTestId('column-title').first()).toContainText('Updated Column Title');
     });
   });
