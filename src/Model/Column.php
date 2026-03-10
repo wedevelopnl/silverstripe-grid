@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Model;
 
+use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Forms\GridSettingsField;
 use WeDevelop\Grid\Value\ContainerType;
 
 /**
@@ -80,6 +82,20 @@ class Column extends GridElement implements ContainerInterface
     public function getContainerType(): ContainerType
     {
         return ContainerType::Column;
+    }
+
+    #[\Override]
+    public function getCMSFields(): FieldList
+    {
+        $fields = parent::getCMSFields();
+        $fields->removeByName('GridSettings');
+
+        $fields->addFieldToTab(
+            'Root.Grid',
+            GridSettingsField::create('GridSettings', $this->gridAdapter),
+        );
+
+        return $fields;
     }
 
     /** Render through the holder template. */
