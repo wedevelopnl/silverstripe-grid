@@ -69,7 +69,7 @@ describe('DRAGGABLE_TYPES', () => {
 describe('getDraggableTypeForNode', () => {
   const baseFields = {
     title: 'Test',
-    blockSchema: { typeName: 'Test', label: 'Test', type: 'Test', title: '', summary: '' },
+    blockSchema: { typeName: 'Test', label: 'Test', icon: 'font-icon-block-content', type: 'Test', title: '', summary: '' },
     obsoleteClassName: null,
     version: 1,
     canDelete: true,

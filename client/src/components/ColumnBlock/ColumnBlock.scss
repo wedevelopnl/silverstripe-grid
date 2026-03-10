@@ -35,6 +35,11 @@
     margin-bottom: 8px;
   }
 
+  &__icon {
+    font-size: 0.75em;
+    color: vars.$color-text-muted;
+  }
+
   &__title {
     font-size: 0.75em;
     font-weight: 600;

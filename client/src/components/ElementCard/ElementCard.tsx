@@ -17,7 +17,6 @@ interface ElementCardProps {
 export default function ElementCard({ element }: ElementCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: element.sortableId });
   const status = getElementStatus(element.statusFlags);
-  const label = element.blockSchema.label;
   const content = element.blockSchema.summary;
   const editLink = element.editLink;
 
@@ -54,7 +53,7 @@ export default function ElementCard({ element }: ElementCardProps) {
     >
       <div className="element-card__header">
         <DragHandle listeners={listeners} attributes={attributes} label={`Move ${element.title}`} />
-        <span className="element-card__type">{label}</span>
+        <i className={`element-card__icon ${element.blockSchema.icon}`} />
         <h4 className="element-card__title" data-testid="element-card-title">{element.title}</h4>
       </div>
       <div className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}>

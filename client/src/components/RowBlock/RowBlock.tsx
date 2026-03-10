@@ -37,6 +37,7 @@ export default function RowBlock({ row }: RowBlockProps) {
       <div className="row-block__header" data-testid="row-header">
         <DragHandle listeners={listeners} attributes={attributes} label={`Move ${row.title}`} />
         <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={row.title} />
+        <i className={`row-block__icon ${row.blockSchema.icon}`} />
         <h3 className="row-block__title" data-testid="row-title">
           {row.editLink !== null
             ? <a href={row.editLink} data-testid="row-edit-link">{row.title}</a>

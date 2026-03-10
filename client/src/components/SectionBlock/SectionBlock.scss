@@ -17,11 +17,15 @@
     margin-bottom: 12px;
   }
 
+  &__icon {
+    font-size: 0.75em;
+    color: vars.$color-text-muted;
+  }
+
   &__title {
     margin: 0;
-    font-weight: 700;
-    font-variant: small-caps;
-    font-size: 0.85em;
+    font-size: 0.75em;
+    font-weight: 600;
     color: vars.$color-text-section-title;
 
     a {

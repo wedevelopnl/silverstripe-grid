@@ -17,6 +17,7 @@ function makeElement(id: number, parentId: number): SimpleElementNode {
     blockSchema: {
       typeName: 'Element',
       label: 'Element',
+      icon: 'font-icon-block-content',
       type: 'Element',
       title: '',
       summary: '',
@@ -44,6 +45,7 @@ function makeColumn(
     blockSchema: {
       typeName: 'Column',
       label: 'Column',
+      icon: 'font-icon-block-content',
       type: 'Column',
       title: '',
       summary: '',
@@ -75,6 +77,7 @@ function makeRow(
     blockSchema: {
       typeName: 'Row',
       label: 'Row',
+      icon: 'font-icon-block-content',
       type: 'Row',
       title: '',
       summary: '',
@@ -105,6 +108,7 @@ function makeSection(
     blockSchema: {
       typeName: 'Section',
       label: 'Section',
+      icon: 'font-icon-block-content',
       type: 'Section',
       title: '',
       summary: '',

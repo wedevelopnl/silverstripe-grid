@@ -14,7 +14,7 @@ namespace WeDevelop\Grid\Value;
  *     id: int,
  *     parentId: positive-int,
  *     title: string,
- *     blockSchema: array{typeName: string, type: string, title: string, summary: string, label: string},
+ *     blockSchema: array{typeName: string, type: string, title: string, summary: string, label: string, icon: string},
  *     obsoleteClassName: string|null,
  *     version: int,
  *     canDelete: bool,

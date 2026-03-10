@@ -44,6 +44,7 @@ function makeElement(id: number, parentId: number): SimpleElementNode {
     blockSchema: {
       typeName: 'Content',
       label: 'Content',
+      icon: 'font-icon-block-content',
       type: 'Content',
       title: '',
       summary: '',
@@ -67,6 +68,7 @@ function makeColumn(id: number, overrides: Partial<ColumnNode> = {}, parentId: n
     blockSchema: {
       typeName: 'Column',
       label: 'Column',
+      icon: 'font-icon-block-content',
       type: 'Column',
       title: '',
       summary: '',
@@ -95,6 +97,7 @@ function makeRow(id: number, overrides: Partial<RowNode> = {}, parentId: number 
     blockSchema: {
       typeName: 'Row',
       label: 'Row',
+      icon: 'font-icon-block-content',
       type: 'Row',
       title: '',
       summary: '',
@@ -122,6 +125,7 @@ function makeSection(id: number, overrides: Partial<SectionNode> = {}, parentId:
     blockSchema: {
       typeName: 'Section',
       label: 'Section',
+      icon: 'font-icon-block-content',
       type: 'Section',
       title: '',
       summary: '',

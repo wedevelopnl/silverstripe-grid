@@ -45,7 +45,7 @@ describe('endpoints', () => {
             containerType: 'section',
             allowedTypes: null,
             children: null,
-            blockSchema: { typeName: 'Section', label: 'Section', type: 'Section', title: '', summary: '' },
+            blockSchema: { typeName: 'Section', label: 'Section', icon: 'font-icon-block-content', type: 'Section', title: '', summary: '' },
             obsoleteClassName: null,
             version: 1,
             canDelete: true,

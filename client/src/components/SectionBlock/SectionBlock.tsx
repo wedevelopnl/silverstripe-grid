@@ -35,6 +35,7 @@ export default function SectionBlock({ section }: SectionBlockProps) {
       <div className="section-block__header">
         <DragHandle listeners={listeners} attributes={attributes} label={`Move ${section.title}`} />
         <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={section.title} />
+        <i className={`section-block__icon ${section.blockSchema.icon}`} />
         <h2 className="section-block__title" data-testid="section-title">
           {section.editLink !== null
             ? <a href={section.editLink} data-testid="section-edit-link">{section.title}</a>

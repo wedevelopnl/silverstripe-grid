@@ -14,6 +14,7 @@ function makeElement(overrides: Partial<EnrichedSimpleElementNode> = {}): Enrich
     blockSchema: {
       typeName: String.raw`WeDevelop\Grid\Model\ContentElement`,
       label: 'Base Element',
+      icon: 'font-icon-block-content',
       type: 'Base Element',
       title: 'My Element',
       summary: 'Some preview text',
@@ -46,6 +47,7 @@ describe('ElementCard', () => {
       blockSchema: {
         typeName: 'Content',
         label: 'Content',
+        icon: 'font-icon-block-content',
         type: 'Content',
         title: '',
         summary: 'A detailed paragraph about widgets.',
@@ -64,6 +66,7 @@ describe('ElementCard', () => {
       blockSchema: {
         typeName: 'Content',
         label: 'Content',
+        icon: 'font-icon-block-content',
         type: 'Content',
         title: '',
         summary: '',
@@ -77,22 +80,25 @@ describe('ElementCard', () => {
     expect(screen.getByText('No preview available')).toBeDefined();
   });
 
-  it('renders blockSchema.label as the type display name', () => {
+  it('renders blockSchema.icon as the element type icon', () => {
     const element = makeElement({
       blockSchema: {
         typeName: String.raw`WeDevelop\Grid\Model\ContentElement`,
         label: 'Content Block',
+        icon: 'font-icon-block-content',
         type: 'Content',
         title: '',
         summary: 'preview',
       },
     });
 
-    render(<ElementCard element={element} />, {
+    const { container } = render(<ElementCard element={element} />, {
       wrapper: createDndWrapper(),
     });
 
-    expect(screen.getByText('Content Block')).toBeDefined();
+    const icon = container.querySelector('.element-card__icon.font-icon-block-content');
+    expect(icon).toBeDefined();
+    expect(icon?.tagName.toLowerCase()).toBe('i');
   });
 
   it('applies element-card__content--empty class when content is empty', () => {
@@ -100,6 +106,7 @@ describe('ElementCard', () => {
       blockSchema: {
         typeName: 'Content',
         label: 'Content',
+        icon: 'font-icon-block-content',
         type: 'Content',
         title: '',
         summary: '',

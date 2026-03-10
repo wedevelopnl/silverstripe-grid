@@ -17,12 +17,12 @@
 
   &__title {
     margin: 0;
-    font-size: inherit;
+    font-size: 0.75em;
     font-weight: 600;
   }
 
-  &__type {
-    font-size: 0.8em;
+  &__icon {
+    font-size: 0.75em;
     color: vars.$color-text-muted;
   }
 

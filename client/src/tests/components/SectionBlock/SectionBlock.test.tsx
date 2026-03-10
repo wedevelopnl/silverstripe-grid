@@ -82,6 +82,7 @@ function makeRow(id: number, title: string, overrides: Partial<EnrichedRowNode> 
     blockSchema: {
       typeName: 'WeDevelop\\Grid\\Elements\\Row',
       label: 'Row',
+      icon: 'font-icon-block-content',
       type: 'Row',
       title: '',
       summary: '',
@@ -115,6 +116,7 @@ function makeSection(overrides: Partial<EnrichedSectionNode> = {}): EnrichedSect
     blockSchema: {
       typeName: 'WeDevelop\\Grid\\Elements\\Section',
       label: 'Section',
+      icon: 'font-icon-block-content',
       type: 'Section',
       title: '',
       summary: '',
@@ -298,6 +300,7 @@ describe('SectionBlock', () => {
               blockSchema: {
                 typeName: 'WeDevelop\\Grid\\Elements\\Column',
                 label: 'Column',
+                icon: 'font-icon-block-content',
                 type: 'Column',
                 title: '',
                 summary: '',

@@ -21,6 +21,7 @@ function makeElement(id: number, parentId: number): SimpleElementNode {
     blockSchema: {
       typeName: 'Element',
       label: 'Element',
+      icon: 'font-icon-block-content',
       type: 'Element',
       title: '',
       summary: '',
@@ -48,6 +49,7 @@ function makeColumn(
     blockSchema: {
       typeName: 'Column',
       label: 'Column',
+      icon: 'font-icon-block-content',
       type: 'Column',
       title: '',
       summary: '',

@@ -16,6 +16,7 @@ function makeElement(id: number, overrides: Partial<SimpleElementNode> = {}): Si
     blockSchema: {
       typeName: 'TextBlock',
       label: 'Text Block',
+      icon: 'font-icon-block-content',
       type: 'Text Block',
       title: '',
       summary: '',
@@ -40,6 +41,7 @@ function makeColumn(id: number, overrides: Partial<ColumnNode> = {}): ColumnNode
     blockSchema: {
       typeName: 'Column',
       label: 'Column',
+      icon: 'font-icon-block-content',
       type: 'Column',
       title: '',
       summary: '',
@@ -68,6 +70,7 @@ function makeRow(id: number, overrides: Partial<RowNode> = {}): RowNode {
     blockSchema: {
       typeName: 'Row',
       label: 'Row',
+      icon: 'font-icon-block-content',
       type: 'Row',
       title: '',
       summary: '',
@@ -95,6 +98,7 @@ function makeSection(id: number, overrides: Partial<SectionNode> = {}): SectionN
     blockSchema: {
       typeName: 'Section',
       label: 'Section',
+      icon: 'font-icon-block-content',
       type: 'Section',
       title: '',
       summary: '',
@@ -169,21 +173,24 @@ describe('DragOverlayContent', () => {
     expect(screen.getByText('Sidebar Column')).toBeDefined();
   });
 
-  it('renders element preview with type label and title', () => {
+  it('renders element preview with icon and title', () => {
     const element = makeElement(1, {
       title: 'Welcome Text',
       blockSchema: {
         typeName: 'TextBlock',
         label: 'Text Block',
+        icon: 'font-icon-block-content',
         type: 'Text Block',
         title: '',
         summary: '',
       },
     });
 
-    render(<DragOverlayContent node={element} type="element" />);
+    const { container } = render(<DragOverlayContent node={element} type="element" />);
 
-    expect(screen.getByText('Text Block')).toBeDefined();
+    const icon = container.querySelector('.drag-overlay-content__icon.font-icon-block-content');
+    expect(icon).toBeDefined();
+    expect(icon?.tagName.toLowerCase()).toBe('i');
     expect(screen.getByText('Welcome Text')).toBeDefined();
   });
 

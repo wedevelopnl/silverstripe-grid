@@ -172,9 +172,12 @@ class GridTreeBuilder
         $canCreate = (bool) $element->canCreate();
         $editLink = $element->getCMSEditLink();
 
-        /** @var array{typeName: string, type: string, title: string, summary: string, label: string} $blockSchema */
+        /** @var array{typeName: string, type: string, title: string, summary: string, label: string, icon: string} $blockSchema */
         $blockSchema = $element->getBlockSchema();
         $blockSchema['label'] = $element->getType();
+
+        $icon = Config::forClass($element::class)->get('icon');
+        $blockSchema['icon'] = is_string($icon) && $icon !== '' ? $icon : 'font-icon-block-content';
 
         /** @var array<string, array{text: string, title: string}> $statusFlags */
         $statusFlags = $element->getStatusFlags();

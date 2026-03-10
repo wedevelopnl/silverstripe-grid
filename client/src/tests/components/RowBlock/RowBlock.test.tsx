@@ -83,6 +83,7 @@ function makeColumn(id: number, title: string, overrides: Partial<EnrichedColumn
     blockSchema: {
       typeName: 'WeDevelop\\Grid\\Elements\\Column',
       label: 'Column',
+      icon: 'font-icon-block-content',
       type: 'Column',
       title: '',
       summary: '',
@@ -119,6 +120,7 @@ function makeRow(overrides: Partial<EnrichedRowNode> = {}): EnrichedRowNode {
     blockSchema: {
       typeName: 'WeDevelop\\Grid\\Elements\\Row',
       label: 'Row',
+      icon: 'font-icon-block-content',
       type: 'Row',
       title: '',
       summary: '',

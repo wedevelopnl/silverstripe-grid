@@ -88,6 +88,7 @@ function makeColumn(overrides: Partial<EnrichedColumnNode> = {}): EnrichedColumn
     blockSchema: {
       typeName: 'WeDevelop\\Grid\\Elements\\Column',
       label: 'Column',
+      icon: 'font-icon-block-content',
       type: 'Column',
       title: '',
       summary: '',
@@ -188,6 +189,7 @@ describe('ColumnBlock', () => {
           blockSchema: {
             typeName: 'Content',
             label: 'Content',
+            icon: 'font-icon-block-content',
             type: 'Content',
             title: '',
             summary: 'Hero content',
@@ -211,6 +213,7 @@ describe('ColumnBlock', () => {
           blockSchema: {
             typeName: 'Content',
             label: 'Content',
+            icon: 'font-icon-block-content',
             type: 'Content',
             title: '',
             summary: 'Text content',

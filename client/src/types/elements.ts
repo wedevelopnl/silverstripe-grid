@@ -11,6 +11,7 @@ export type ContainerType = (typeof CONTAINER_TYPES)[number];
 export const blockSchemaSchema = z.object({
   typeName: z.string(),
   label: z.string(),
+  icon: z.string(),
   type: z.string(),
   title: z.string(),
   summary: z.string(),

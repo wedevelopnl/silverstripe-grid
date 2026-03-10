@@ -19,6 +19,7 @@ import type { ColumnNode } from '@/types/elements';
 const validBlockSchema = {
   typeName: String.raw`WeDevelop\Grid\Model\ContentElement`,
   label: 'Content',
+  icon: 'font-icon-block-content',
   type: 'Content',
   title: '',
   summary: '<p>Hello world</p>',
@@ -176,7 +177,7 @@ describe('columnNodeSchema', () => {
         xs: { width: 12, offset: 0, visible: true },
         md: { width: 6, offset: 0, visible: true },
       },
-      blockSchema: { typeName: 'Column', label: 'Column', type: 'Column', title: '', summary: '' },
+      blockSchema: { typeName: 'Column', label: 'Column', icon: 'font-icon-block-content', type: 'Column', title: '', summary: '' },
       obsoleteClassName: null,
       version: 1,
       canDelete: true,

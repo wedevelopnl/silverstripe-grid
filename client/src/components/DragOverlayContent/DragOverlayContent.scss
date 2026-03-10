@@ -2,8 +2,9 @@
 
 .drag-overlay-content {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 4px;
   padding: 8px 12px;
   background: vars.$color-bg-white;
   border-radius: 4px;
@@ -19,14 +20,13 @@
   }
 
   &__meta {
+    flex-basis: 100%;
     font-size: 12px;
     color: vars.$color-text-muted;
   }
 
-  &__type {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: vars.$color-text-secondary;
+  &__icon {
+    font-size: 12px;
+    color: vars.$color-text-muted;
   }
 }
