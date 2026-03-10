@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Forms;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\Control\Controller;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
@@ -14,6 +13,7 @@ use SilverStripe\Forms\LiteralField;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Extensions\GridPageExtension;
 use WeDevelop\Grid\Forms\GridEditorField;
+use WeDevelop\Grid\Tests\Integration\Fixture\TestController;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
 #[CoversClass(GridEditorField::class)]
@@ -139,7 +139,7 @@ final class GridEditorFieldTest extends SapphireTest
     /** Attach a field to a minimal form so GridField::Link() doesn't throw. */
     private function attachToForm(GridEditorField $field): void
     {
-        $form = Form::create(Controller::create(), 'TestForm', FieldList::create($field), FieldList::create());
+        $form = Form::create(TestController::create(), 'TestForm', FieldList::create($field), FieldList::create());
         $field->setForm($form);
     }
 }
