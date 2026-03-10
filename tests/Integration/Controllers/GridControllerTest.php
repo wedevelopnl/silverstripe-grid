@@ -482,4 +482,168 @@ final class GridControllerTest extends FunctionalTest
 
         $this->assertSame($expected, $actual);
     }
+
+    // --- apiCreate: zero/empty validation ----------------------------------------
+
+    public function testCreateRejects400ForZeroParentId(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 'section',
+            'parentId' => 0,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testCreateRejects400ForEmptyZone(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 'section',
+            'parentId' => (int) $page->ID,
+            'insertAfterElementID' => null,
+            'zone' => '',
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testCreateSectionUsesExplicitZone(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 'section',
+            'parentId' => (int) $page->ID,
+            'insertAfterElementID' => null,
+            'zone' => 'sidebar',
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        // The newest section should have Zone='sidebar'
+        $newSection = Section::get()->sort('ID', 'DESC')->first();
+        $this->assertSame('sidebar', $newSection->Zone);
+    }
+
+    // --- apiReorder: zero/invalid validation ------------------------------------
+
+    public function testReorderRejects400ForZeroElementId(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => 0,
+            'targetParentId' => (int) $page->ID,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testReorderRejects400ForZeroTargetParentId(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => $section1->ID,
+            'targetParentId' => 0,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testReorderRejects400ForFloatAfterElementId(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => $section1->ID,
+            'targetParentId' => (int) $page->ID,
+            'afterElementID' => 5.5,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testReorderRejects400ForStringAfterElementId(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => $section1->ID,
+            'targetParentId' => (int) $page->ID,
+            'afterElementID' => 'invalid',
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testReorderSucceedsWithNullAfterElementId(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        // Move section to first position (afterElementID=null)
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => $section1->ID,
+            'targetParentId' => (int) $page->ID,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+    }
+
+    // --- apiReorder: cross-parent with GridElement target -------------------------
+
+    public function testReorderRowBetweenSectionsSucceeds(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $row1 = $this->objFromFixture(Row::class, 'row1');
+        $section2 = $this->objFromFixture(Section::class, 'section2');
+
+        // Move row1 from section1 to section2 (cross-parent, GridElement target)
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => $row1->ID,
+            'targetParentId' => (int) $section2->ID,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        // Verify the row is now under section2
+        $row1 = Row::get()->byID($row1->ID);
+        $this->assertSame((int) $section2->ID, (int) $row1->ParentID);
+    }
 }

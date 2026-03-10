@@ -13,7 +13,33 @@
         "CastInt": {
             "ignore": [
                 "WeDevelop\\ElementalGrid\\Forms\\GridEditorField::getSchemaDataDefaults",
-                "WeDevelop\\ElementalGrid\\Controllers\\ElementalGridController::apiReadTree"
+                "WeDevelop\\ElementalGrid\\Controllers\\ElementalGridController::apiReadTree",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiReadTree",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicate",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiReorder",
+                "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle"
+            ]
+        },
+        "CastString": {
+            "ignore": [
+                "WeDevelop\\Grid\\Controllers\\GridController::apiReadTree",
+                "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle"
+            ]
+        },
+        "CastBool": {
+            "ignore": [
+                "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicate"
+            ]
+        },
+        "DecrementInteger": {
+            "ignore": [
+                "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicate",
+                "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle"
+            ]
+        },
+        "IncrementInteger": {
+            "ignore": [
+                "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle"
             ]
         },
         "ProtectedVisibility": false,
@@ -46,7 +72,33 @@
                 "WeDevelop\\Grid\\Model\\GridElement::getTitleSizeClass",
                 "WeDevelop\\Grid\\Model\\GridElement::getCMSFields",
                 "WeDevelop\\Grid\\Model\\Section::getContainerClasses",
-                "WeDevelop\\Grid\\Model\\Row::getRowClasses"
+                "WeDevelop\\Grid\\Model\\Row::getRowClasses",
+                "WeDevelop\\Grid\\Controllers\\GridController::parseCreateBody",
+                "WeDevelop\\Grid\\Controllers\\GridController::parseReorderBody"
+            ]
+        },
+        "LogicalOr": {
+            "ignore": [
+                "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicate",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiReorder",
+                "WeDevelop\\Grid\\Controllers\\GridController::parseCreateBody",
+                "WeDevelop\\Grid\\Controllers\\GridController::parseReorderBody"
+            ]
+        },
+        "LessThan": {
+            "ignore": [
+                "WeDevelop\\Grid\\Controllers\\GridController::parseReorderBody"
+            ]
+        },
+        "NotIdentical": {
+            "ignore": [
+                "WeDevelop\\Grid\\Controllers\\GridController::init",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiReorder"
+            ]
+        },
+        "IfNegation": {
+            "ignore": [
+                "WeDevelop\\Grid\\Controllers\\GridController::apiReorder"
             ]
         }
     },
