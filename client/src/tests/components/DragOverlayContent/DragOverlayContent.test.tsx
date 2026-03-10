@@ -125,10 +125,11 @@ describe('DragOverlayContent', () => {
       children: [makeRow(10), makeRow(11)],
     });
 
-    render(<DragOverlayContent node={section} type="section" />);
+    const { container } = render(<DragOverlayContent node={section} type="section" />);
 
     expect(screen.getByText('Hero Section')).toBeDefined();
     expect(screen.getByText('2 rows')).toBeDefined();
+    expect(container.querySelector('.drag-overlay-content__icon.font-icon-block-content')).not.toBeNull();
   });
 
   it('renders section with singular "row" for single child', () => {
@@ -148,10 +149,11 @@ describe('DragOverlayContent', () => {
       children: [makeColumn(10), makeColumn(11), makeColumn(12)],
     });
 
-    render(<DragOverlayContent node={row} type="row" />);
+    const { container } = render(<DragOverlayContent node={row} type="row" />);
 
     expect(screen.getByText('Content Row')).toBeDefined();
     expect(screen.getByText('3 columns')).toBeDefined();
+    expect(container.querySelector('.drag-overlay-content__icon.font-icon-block-content')).not.toBeNull();
   });
 
   it('renders row with singular "column" for single child', () => {
@@ -168,9 +170,10 @@ describe('DragOverlayContent', () => {
   it('renders column preview with title', () => {
     const column = makeColumn(1, { title: 'Sidebar Column' });
 
-    render(<DragOverlayContent node={column} type="column" />);
+    const { container } = render(<DragOverlayContent node={column} type="column" />);
 
     expect(screen.getByText('Sidebar Column')).toBeDefined();
+    expect(container.querySelector('.drag-overlay-content__icon.font-icon-block-content')).not.toBeNull();
   });
 
   it('renders element preview with icon and title', () => {

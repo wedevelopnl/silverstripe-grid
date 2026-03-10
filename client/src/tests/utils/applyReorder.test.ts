@@ -141,6 +141,8 @@ describe('applyReorder', () => {
 
       const children = (result['100'][0] as ColumnNode).children!;
       expect(children.map((c) => c.id)).toEqual([11, 10, 12]);
+      const movedElement = children.find((c) => c.id === 10)!;
+      expect(movedElement.parentId).toBe(1);
     });
 
     it('moves an element to the start when afterElementId is null', () => {

@@ -151,13 +151,14 @@ describe('RowBlock', () => {
   it('renders title as an h3 heading', () => {
     const row = makeRow({ title: 'Main Row' });
 
-    render(
+    const { container } = render(
       <RowBlock row={row} />,
       { wrapper: createDndWrapper() },
     );
 
     const heading = screen.getByRole('heading', { level: 3 });
     expect(heading.textContent).toBe('Main Row');
+    expect(container.querySelector('.row-block__icon.font-icon-block-content')).not.toBeNull();
   });
 
   it('applies flex layout class when offsetStrategy is margin', () => {
@@ -171,6 +172,7 @@ describe('RowBlock', () => {
 
     const columnContainer = container.querySelector('.row-block__columns--flex');
     expect(columnContainer).not.toBeNull();
+    expect((columnContainer as HTMLElement).style.getPropertyValue('--grid-columns')).toBe('');
   });
 
   it('applies grid layout class when offsetStrategy is grid-placement', () => {
@@ -184,6 +186,7 @@ describe('RowBlock', () => {
 
     const columnContainer = container.querySelector('.row-block__columns--grid');
     expect(columnContainer).not.toBeNull();
+    expect((columnContainer as HTMLElement).style.getPropertyValue('--grid-columns')).toBe('12');
   });
 
   it('renders column children as ColumnBlocks', () => {

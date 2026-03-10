@@ -225,6 +225,7 @@ describe('ElementCard', () => {
 
       const card = container.querySelector('.element-card');
       expect(card?.classList.contains('element-card--clickable')).toBe(false);
+      expect(card?.className).toBe('element-card element-card--published');
     });
 
     it('sets role="link" when editLink is present', () => {
@@ -260,6 +261,56 @@ describe('ElementCard', () => {
       const card = screen.getByTestId('element-card');
       await user.click(card);
       expect(window.location.href).toBe('/admin/grid-elements/EditForm/field/1/item/42');
+    });
+
+    it('navigates to editLink on Enter key press', async () => {
+      const element = makeElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
+      const user = userEvent.setup();
+
+      render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      const card = screen.getByTestId('element-card');
+      card.focus();
+      await user.keyboard('{Enter}');
+      expect(window.location.href).toBe('/admin/grid-elements/EditForm/field/1/item/42');
+    });
+
+    it('does not navigate on Enter key press when editLink is null', async () => {
+      const element = makeElement({ editLink: null });
+      const user = userEvent.setup();
+
+      render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      const card = screen.getByTestId('element-card');
+      card.focus();
+      await user.keyboard('{Enter}');
+      expect(window.location.href).toBe('');
+    });
+
+    it('sets tabIndex=0 when editLink is present', () => {
+      const element = makeElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
+
+      render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      const card = screen.getByTestId('element-card');
+      expect(card.getAttribute('tabindex')).toBe('0');
+    });
+
+    it('does not set tabIndex when editLink is null', () => {
+      const element = makeElement({ editLink: null });
+
+      render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      const card = screen.getByTestId('element-card');
+      expect(card.getAttribute('tabindex')).toBeNull();
     });
   });
 });

@@ -71,6 +71,34 @@ describe('apiGet', () => {
 
     await expect(apiGet('/invalid')).rejects.toThrow('API error 400: Bad Request');
   });
+
+  it('falls back to statusText when JSON body has empty message', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: () => Promise.resolve({ message: '' }),
+      }),
+    );
+
+    await expect(apiGet('/invalid')).rejects.toThrow('API error 400: Bad Request');
+  });
+
+  it('falls back to statusText when JSON body has empty errorMessage', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: () => Promise.resolve({ errorMessage: '' }),
+      }),
+    );
+
+    await expect(apiGet('/invalid')).rejects.toThrow('API error 400: Bad Request');
+  });
 });
 
 describe.each([
