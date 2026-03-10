@@ -126,6 +126,11 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
         <div className="column-block__header" data-testid="column-header">
           <DragHandle listeners={listeners} attributes={attributes} label={`Move ${column.title}`} />
           <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={column.title} />
+          <span className="column-block__title" data-testid="column-title">
+            {column.editLink !== null
+              ? <a href={column.editLink} data-testid="column-edit-link">{column.title}</a>
+              : column.title}
+          </span>
           <GridSettingsPicker
             label={widthLabel}
             options={widthOptions}

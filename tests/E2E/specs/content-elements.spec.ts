@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { loadFixture, resetFixtures } from '../helpers/fixtures';
+import { loadAndNavigate, loadFixture, resetFixtures } from '../helpers/fixtures';
 
 test.describe('Content elements', () => {
   test.afterAll(async ({ request }) => {
@@ -118,5 +118,57 @@ test.describe('Content elements', () => {
 
     // Verify title configuration: edited element title renders as h4 (set in CMS form)
     await expect(page.getByRole('heading', { level: 4, name: 'My Edited Element' })).toBeVisible();
+  });
+
+  test('content editor navigates to container edit forms via title links and updates titles', async ({ page }) => {
+    await loadAndNavigate(page, 'content-elements');
+
+    // --- Step 1: Click section title to navigate to edit form ---
+    await test.step('Edit section title via title link', async () => {
+      await page.getByTestId('section-edit-link').click();
+      await expect(page).toHaveURL(/\/admin\/pages\/edit\/EditForm\/\d+\/field\/GridEditor\/item\/\d+\/edit/);
+
+      await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 });
+      await page.getByRole('textbox', { name: 'Title' }).fill('Updated Section Title');
+      await page.getByRole('button', { name: /Save/ }).first().click();
+      await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
+
+      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click();
+      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+
+      await expect(page.getByTestId('section-title')).toContainText('Updated Section Title');
+    });
+
+    // --- Step 2: Click row title to navigate to edit form ---
+    await test.step('Edit row title via title link', async () => {
+      await page.getByTestId('row-edit-link').first().click();
+      await expect(page).toHaveURL(/\/admin\/pages\/edit\/EditForm\/\d+\/field\/GridEditor\/item\/\d+\/edit/);
+
+      await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 });
+      await page.getByRole('textbox', { name: 'Title' }).fill('Updated Row Title');
+      await page.getByRole('button', { name: /Save/ }).first().click();
+      await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
+
+      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click();
+      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+
+      await expect(page.getByTestId('row-title').first()).toContainText('Updated Row Title');
+    });
+
+    // --- Step 3: Click column title to navigate to edit form ---
+    await test.step('Edit column title via title link', async () => {
+      await page.getByTestId('column-edit-link').first().click();
+      await expect(page).toHaveURL(/\/admin\/pages\/edit\/EditForm\/\d+\/field\/GridEditor\/item\/\d+\/edit/);
+
+      await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 });
+      await page.getByRole('textbox', { name: 'Title' }).fill('Updated Column Title');
+      await page.getByRole('button', { name: /Save/ }).first().click();
+      await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
+
+      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click();
+      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+
+      await expect(page.getByTestId('column-title').first()).toContainText('Updated Column Title');
+    });
   });
 });

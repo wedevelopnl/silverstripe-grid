@@ -524,6 +524,50 @@ describe('ColumnBlock', () => {
     });
   });
 
+  describe('edit link', () => {
+    it('renders title as a link when editLink is present', () => {
+      const column = makeColumn({
+        title: 'Left Column',
+        editLink: '/admin/pages/edit/EditForm/42/field/GridEditor/item/10/edit',
+      });
+
+      render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      const link = screen.getByTestId('column-edit-link');
+      expect(link.tagName).toBe('A');
+      expect(link.getAttribute('href')).toBe('/admin/pages/edit/EditForm/42/field/GridEditor/item/10/edit');
+      expect(link.textContent).toBe('Left Column');
+    });
+
+    it('renders plain title text without link when editLink is null', () => {
+      const column = makeColumn({ title: 'Left Column', editLink: null });
+
+      render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      const titleEl = screen.getByTestId('column-title');
+      expect(titleEl.textContent).toBe('Left Column');
+      expect(screen.queryByTestId('column-edit-link')).toBeNull();
+    });
+
+    it('renders visible title text in header', () => {
+      const column = makeColumn({ title: 'My Column' });
+
+      render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      const header = screen.getByTestId('column-header');
+      expect(header.textContent).toContain('My Column');
+    });
+  });
+
   it('renders a drag handle', () => {
     const column = makeColumn({ title: 'Left Column' });
 

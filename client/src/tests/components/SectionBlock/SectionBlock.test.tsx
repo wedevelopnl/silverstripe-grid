@@ -447,6 +447,38 @@ describe('SectionBlock', () => {
     });
   });
 
+  describe('edit link', () => {
+    it('renders title as a link when editLink is present', () => {
+      const section = makeSection({
+        title: 'Hero Section',
+        editLink: '/admin/pages/edit/EditForm/42/field/GridEditor/item/1/edit',
+      });
+
+      render(
+        <SectionBlock section={section} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      const link = screen.getByTestId('section-edit-link');
+      expect(link.tagName).toBe('A');
+      expect(link.getAttribute('href')).toBe('/admin/pages/edit/EditForm/42/field/GridEditor/item/1/edit');
+      expect(link.textContent).toBe('Hero Section');
+    });
+
+    it('renders plain heading without link when editLink is null', () => {
+      const section = makeSection({ title: 'Hero Section', editLink: null });
+
+      render(
+        <SectionBlock section={section} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      const heading = screen.getByRole('heading', { level: 2 });
+      expect(heading.textContent).toBe('Hero Section');
+      expect(screen.queryByTestId('section-edit-link')).toBeNull();
+    });
+  });
+
   it('renders a drag handle', () => {
     const section = makeSection({ title: 'Hero Section' });
 

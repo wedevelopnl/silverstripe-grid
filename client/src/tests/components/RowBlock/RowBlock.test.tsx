@@ -429,6 +429,38 @@ describe('RowBlock', () => {
     });
   });
 
+  describe('edit link', () => {
+    it('renders title as a link when editLink is present', () => {
+      const row = makeRow({
+        title: 'Main Row',
+        editLink: '/admin/pages/edit/EditForm/42/field/GridEditor/item/20/edit',
+      });
+
+      render(
+        <RowBlock row={row} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      const link = screen.getByTestId('row-edit-link');
+      expect(link.tagName).toBe('A');
+      expect(link.getAttribute('href')).toBe('/admin/pages/edit/EditForm/42/field/GridEditor/item/20/edit');
+      expect(link.textContent).toBe('Main Row');
+    });
+
+    it('renders plain heading without link when editLink is null', () => {
+      const row = makeRow({ title: 'Main Row', editLink: null });
+
+      render(
+        <RowBlock row={row} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      const heading = screen.getByRole('heading', { level: 3 });
+      expect(heading.textContent).toBe('Main Row');
+      expect(screen.queryByTestId('row-edit-link')).toBeNull();
+    });
+  });
+
   it('renders a drag handle', () => {
     const row = makeRow({ title: 'Main Row' });
 
