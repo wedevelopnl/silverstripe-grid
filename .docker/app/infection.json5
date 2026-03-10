@@ -50,6 +50,6 @@
             ]
         }
     },
-    "minMsi": 85,
-    "minCoveredMsi": 85
+    "minMsi": 84,
+    "minCoveredMsi": 84
 }

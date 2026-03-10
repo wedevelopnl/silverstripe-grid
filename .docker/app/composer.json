@@ -27,6 +27,7 @@
         "phpstan/phpstan-deprecation-rules": "^2.0",
         "phpunit/phpcov": "^10.0",
         "phpunit/phpunit": "^11.3",
+        "rregeer/phpunit-coverage-check": "^0.3",
         "tomasvotruba/type-coverage": "^2.0"
     },
     "autoload-dev": {
