@@ -36,7 +36,7 @@ class GridEditorField extends GridField
             GridFieldConfig::create()->addComponent(GridFieldDetailForm::create()),
         );
 
-        $this->addExtraClass('grid-editor__container no-change-track');
+        $this->addExtraClass('grid-editor__container no-change-track form__field-holder');
     }
 
     /**
