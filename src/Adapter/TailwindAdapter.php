@@ -43,23 +43,25 @@ final class TailwindAdapter implements GridAdapterInterface
         $this->defaultViewport = $this->resolveDefaultViewport(self::DEFAULT_VIEWPORT_KEY, $this->viewports);
     }
 
-    /** @return list<Viewport> */
+    #[\Override]
     public function getViewports(): array
     {
         return array_values($this->viewports);
     }
 
-    /** @return positive-int */
+    #[\Override]
     public function getColumnCount(): int
     {
         return $this->columnCount;
     }
 
+    #[\Override]
     public function getDefaultViewport(): Viewport
     {
         return $this->defaultViewport;
     }
 
+    #[\Override]
     public function getWidthClass(string $viewport, int $width): string
     {
         return sprintf('%s:col-span-%d', $viewport, $width);
@@ -68,19 +70,17 @@ final class TailwindAdapter implements GridAdapterInterface
     /**
      * Tailwind's col-start is 1-based, so an offset of N columns means col-start-(N+1).
      */
+    #[\Override]
     public function getOffsetClass(string $viewport, int $offset): string
     {
         return sprintf('%s:col-start-%d', $viewport, $offset + 1);
     }
 
     /**
-     * Visibility classes that hide an element at the given viewport.
-     *
      * Tailwind uses `{vp}:hidden` to hide and `{next}:block` to restore.
      * "Next" means the next enabled viewport. Last has no restore.
-     *
-     * @return list<string>
      */
+    #[\Override]
     public function getVisibilityClasses(string $viewport): array
     {
         $keys = array_keys($this->viewports);
@@ -99,17 +99,19 @@ final class TailwindAdapter implements GridAdapterInterface
         ];
     }
 
+    #[\Override]
     public function getRowClasses(): string
     {
         return sprintf('grid grid-cols-%d', $this->columnCount);
     }
 
+    #[\Override]
     public function getContainerClass(bool $fluid): string
     {
         return $fluid ? 'w-full' : 'container mx-auto';
     }
 
-    /** @return array<string, string> */
+    #[\Override]
     public function getTitleClassOptions(): array
     {
         return [
@@ -122,6 +124,7 @@ final class TailwindAdapter implements GridAdapterInterface
         ];
     }
 
+    #[\Override]
     public function getBaseWidthClass(int $width): string
     {
         return sprintf('col-span-%d', $width);
@@ -130,11 +133,13 @@ final class TailwindAdapter implements GridAdapterInterface
     /**
      * Tailwind's col-start is 1-based, so an offset of N columns means col-start-(N+1).
      */
+    #[\Override]
     public function getBaseOffsetClass(int $offset): string
     {
         return sprintf('col-start-%d', $offset + 1);
     }
 
+    #[\Override]
     public function getCssPath(): ?string
     {
         return null;

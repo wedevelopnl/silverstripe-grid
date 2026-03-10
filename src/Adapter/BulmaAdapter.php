@@ -60,23 +60,25 @@ final class BulmaAdapter implements GridAdapterInterface
         $this->defaultViewport = $this->resolveDefaultViewport(self::DEFAULT_VIEWPORT_KEY, $this->viewports);
     }
 
-    /** @return list<Viewport> */
+    #[\Override]
     public function getViewports(): array
     {
         return array_values($this->viewports);
     }
 
-    /** @return positive-int */
+    #[\Override]
     public function getColumnCount(): int
     {
         return $this->columnCount;
     }
 
+    #[\Override]
     public function getDefaultViewport(): Viewport
     {
         return $this->defaultViewport;
     }
 
+    #[\Override]
     public function getWidthClass(string $viewport, int $width): string
     {
         if ($viewport === 'mobile') {
@@ -86,6 +88,7 @@ final class BulmaAdapter implements GridAdapterInterface
         return sprintf('is-%d-%s', $width, $viewport);
     }
 
+    #[\Override]
     public function getOffsetClass(string $viewport, int $offset): string
     {
         if ($viewport === 'mobile') {
@@ -95,17 +98,19 @@ final class BulmaAdapter implements GridAdapterInterface
         return sprintf('is-offset-%d-%s', $offset, $viewport);
     }
 
-    /** @return list<string> */
+    #[\Override]
     public function getVisibilityClasses(string $viewport): array
     {
         return $this->visibilityMap[$viewport];
     }
 
+    #[\Override]
     public function getRowClasses(): string
     {
         return 'columns is-multiline';
     }
 
+    #[\Override]
     public function getContainerClass(bool $fluid): string
     {
         if ($fluid) {
@@ -115,7 +120,7 @@ final class BulmaAdapter implements GridAdapterInterface
         return 'container';
     }
 
-    /** @return array<string, string> */
+    #[\Override]
     public function getTitleClassOptions(): array
     {
         return [
@@ -128,16 +133,19 @@ final class BulmaAdapter implements GridAdapterInterface
         ];
     }
 
+    #[\Override]
     public function getBaseWidthClass(int $width): string
     {
         return $this->getWidthClass('mobile', $width);
     }
 
+    #[\Override]
     public function getBaseOffsetClass(int $offset): string
     {
         return $this->getOffsetClass('mobile', $offset);
     }
 
+    #[\Override]
     public function getCssPath(): string
     {
         return 'client/dist/bulma-grid.css';
