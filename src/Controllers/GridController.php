@@ -247,8 +247,9 @@ class GridController extends AdminController
 
     public function apiPublish(HTTPRequest $request): HTTPResponse
     {
+        $id = $this->requireElementIdFromRequest($request);
         $element = $this->requireElementWithPermission(
-            $request,
+            $id,
             static fn (GridElement $e): bool => (bool) $e->canPublish(),
         );
 
@@ -259,8 +260,9 @@ class GridController extends AdminController
 
     public function apiUnpublish(HTTPRequest $request): HTTPResponse
     {
+        $id = $this->requireElementIdFromRequest($request);
         $element = $this->requireElementWithPermission(
-            $request,
+            $id,
             static fn (GridElement $e): bool => (bool) $e->canUnpublish(),
         );
 
@@ -271,8 +273,9 @@ class GridController extends AdminController
 
     public function apiDelete(HTTPRequest $request): HTTPResponse
     {
+        $id = $this->requireElementIdFromRequest($request);
         $element = $this->requireElementWithPermission(
-            $request,
+            $id,
             static fn (GridElement $e): bool => (bool) $e->canDelete(),
         );
 
@@ -283,8 +286,9 @@ class GridController extends AdminController
 
     public function apiDuplicate(HTTPRequest $request): HTTPResponse
     {
+        $id = $this->requireElementIdFromRequest($request);
         $element = $this->requireElementWithPermission(
-            $request,
+            $id,
             static fn (GridElement $e): bool => (bool) $e->canCreate(),
         );
 
@@ -368,7 +372,7 @@ class GridController extends AdminController
         $body = $parseResult->unwrap();
 
         $element = $this->requireElementWithPermission(
-            $request,
+            $body->id,
             static fn (GridElement $e): bool => (bool) $e->canEdit(),
         );
 
@@ -477,11 +481,11 @@ class GridController extends AdminController
     }
 
     /**
-     * Load a grid element by the `id` in the request body, or 400/403 on failure.
+     * Parse and validate the element ID from the JSON request body.
      *
-     * @param callable(GridElement): bool $permissionCheck
+     * @return positive-int
      */
-    private function requireElementWithPermission(HTTPRequest $request, callable $permissionCheck): GridElement
+    private function requireElementIdFromRequest(HTTPRequest $request): int
     {
         $data = $this->parseJsonBody($request);
         $parseResult = $this->requestBodyParser->parseElementId($data);
@@ -489,8 +493,17 @@ class GridController extends AdminController
             $this->jsonError(400);
         }
 
-        $id = $parseResult->unwrap();
+        return $parseResult->unwrap();
+    }
 
+    /**
+     * Load a grid element by ID, or 400/403 on failure.
+     *
+     * @param positive-int $id
+     * @param callable(GridElement): bool $permissionCheck
+     */
+    private function requireElementWithPermission(int $id, callable $permissionCheck): GridElement
+    {
         $element = $this->elementRepository->findById($id);
         if ($element === null) {
             $this->jsonError(400);
