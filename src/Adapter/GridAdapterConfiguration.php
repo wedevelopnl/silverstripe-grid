@@ -36,6 +36,9 @@ trait GridAdapterConfiguration
     /** @config */
     private static ?string $default_viewport = null;
 
+    /** @config */
+    private static ?int $container_max_width = null;
+
     /**
      * Filter the full viewport map to only enabled viewports.
      *
@@ -109,5 +112,29 @@ trait GridAdapterConfiguration
         }
 
         return $viewports[$key];
+    }
+
+    /**
+     * Resolve the effective container max width, applying any YAML override.
+     *
+     * @param positive-int $adapterDefault The adapter's built-in container max width
+     * @return positive-int
+     * @throws InvalidGridValueException If the override is zero or negative
+     */
+    protected function resolveContainerMaxWidth(int $adapterDefault): int
+    {
+        /** @var int|null $override */
+        $override = static::config()->get('container_max_width');
+
+        if ($override === null) {
+            return $adapterDefault;
+        }
+
+        if ($override <= 0) {
+            throw InvalidGridValueException::forContainerMaxWidth($override);
+        }
+
+        /** @var positive-int $override */
+        return $override;
     }
 }

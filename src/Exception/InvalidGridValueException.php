@@ -44,6 +44,15 @@ final class InvalidGridValueException extends GridDomainException
         );
     }
 
+    public static function forContainerMaxWidth(int $value): self
+    {
+        return new self(
+            userMessage: 'The configured container max width is invalid.',
+            detailedMessage: sprintf('Container max width must be positive, got %d.', $value),
+            statusCode: self::STATUS_CODE,
+        );
+    }
+
     public static function forColumnCount(mixed $value): self
     {
         return new self(

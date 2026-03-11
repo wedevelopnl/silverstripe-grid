@@ -24,6 +24,7 @@ final class BulmaAdapter implements GridAdapterInterface
     use GridAdapterConfiguration;
 
     private const int DEFAULT_COLUMNS = 12;
+    private const int DEFAULT_CONTAINER_MAX_WIDTH = 1344;
     private const string DEFAULT_VIEWPORT_KEY = 'desktop';
 
     /** @var array<string, Viewport> */
@@ -43,6 +44,9 @@ final class BulmaAdapter implements GridAdapterInterface
     /** @var positive-int */
     private int $columnCount;
 
+    /** @var positive-int */
+    private int $containerMaxWidth;
+
     private Viewport $defaultViewport;
 
     public function __construct()
@@ -58,6 +62,7 @@ final class BulmaAdapter implements GridAdapterInterface
         $this->viewports = $this->applyViewportFilter($allViewports);
         $this->visibilityMap = $this->buildVisibilityMap();
         $this->columnCount = $this->resolveColumnCount(self::DEFAULT_COLUMNS);
+        $this->containerMaxWidth = $this->resolveContainerMaxWidth(self::DEFAULT_CONTAINER_MAX_WIDTH);
         $this->defaultViewport = $this->resolveDefaultViewport(self::DEFAULT_VIEWPORT_KEY, $this->viewports);
     }
 
@@ -150,6 +155,12 @@ final class BulmaAdapter implements GridAdapterInterface
     public function getOffsetStrategy(): OffsetStrategy
     {
         return OffsetStrategy::Margin;
+    }
+
+    #[\Override]
+    public function getContainerMaxWidth(): int
+    {
+        return $this->containerMaxWidth;
     }
 
     #[\Override]

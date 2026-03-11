@@ -290,6 +290,37 @@ final class TailwindAdapterTest extends SapphireTest
         yield 'h6 equivalent' => ['text-base', 'Heading 6'];
     }
 
+    // ── Container max width ─────────────────────────────────────
+
+    public function testGetContainerMaxWidthReturns1536(): void
+    {
+        $this->assertSame(1536, $this->adapter->getContainerMaxWidth());
+    }
+
+    public function testContainerMaxWidthOverrideReturnsConfiguredValue(): void
+    {
+        Config::modify()->set(TailwindAdapter::class, 'container_max_width', 1280);
+        $adapter = new TailwindAdapter();
+
+        $this->assertSame(1280, $adapter->getContainerMaxWidth());
+    }
+
+    public function testContainerMaxWidthOverrideZeroThrows(): void
+    {
+        Config::modify()->set(TailwindAdapter::class, 'container_max_width', 0);
+
+        $this->expectException(InvalidGridValueException::class);
+        new TailwindAdapter();
+    }
+
+    public function testContainerMaxWidthOverrideNegativeThrows(): void
+    {
+        Config::modify()->set(TailwindAdapter::class, 'container_max_width', -100);
+
+        $this->expectException(InvalidGridValueException::class);
+        new TailwindAdapter();
+    }
+
     // ── Offset strategy ─────────────────────────────────────────
 
     public function testGetOffsetStrategyReturnsGridPlacement(): void

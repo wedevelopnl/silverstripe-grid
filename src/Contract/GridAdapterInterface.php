@@ -131,6 +131,16 @@ interface GridAdapterInterface
     public function getOffsetStrategy(): OffsetStrategy;
 
     /**
+     * Maximum container width in pixels at the largest viewport.
+     *
+     * Used for responsive image sizing calculations. Returns the pixel width
+     * of the outermost container at the framework's widest breakpoint.
+     *
+     * @return positive-int
+     */
+    public function getContainerMaxWidth(): int;
+
+    /**
      * Filesystem path to a fallback CSS file for CMS preview rendering.
      *
      * Returns null if the framework does not require a bundled fallback

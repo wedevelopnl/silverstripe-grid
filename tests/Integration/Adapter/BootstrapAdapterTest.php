@@ -365,6 +365,13 @@ final class BootstrapAdapterTest extends SapphireTest
         yield 'h6' => ['h6', 'Heading 6'];
     }
 
+    // ─── getContainerMaxWidth ─────────────────────────────────────────
+
+    public function testGetContainerMaxWidthReturns1320(): void
+    {
+        $this->assertSame(1320, $this->adapter->getContainerMaxWidth());
+    }
+
     // ─── getOffsetStrategy ────────────────────────────────────────────
 
     public function testGetOffsetStrategyReturnsMargin(): void
@@ -451,6 +458,32 @@ final class BootstrapAdapterTest extends SapphireTest
     public function testColumnCountOverrideNegativeThrows(): void
     {
         Config::modify()->set(BootstrapAdapter::class, 'total_columns', -4);
+
+        $this->expectException(InvalidGridValueException::class);
+        new BootstrapAdapter();
+    }
+
+    // ─── Container max width override ─────────────────────────────────
+
+    public function testContainerMaxWidthOverrideReturnsConfiguredValue(): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'container_max_width', 1400);
+        $adapter = new BootstrapAdapter();
+
+        $this->assertSame(1400, $adapter->getContainerMaxWidth());
+    }
+
+    public function testContainerMaxWidthOverrideZeroThrows(): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'container_max_width', 0);
+
+        $this->expectException(InvalidGridValueException::class);
+        new BootstrapAdapter();
+    }
+
+    public function testContainerMaxWidthOverrideNegativeThrows(): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'container_max_width', -100);
 
         $this->expectException(InvalidGridValueException::class);
         new BootstrapAdapter();

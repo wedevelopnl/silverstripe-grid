@@ -270,6 +270,37 @@ final class BulmaAdapterTest extends SapphireTest
         yield 'is-6 — Title 6' => ['is-6', 'Title 6'];
     }
 
+    // ─── getContainerMaxWidth ─────────────────────────────────────────
+
+    public function testGetContainerMaxWidthReturns1344(): void
+    {
+        $this->assertSame(1344, $this->adapter->getContainerMaxWidth());
+    }
+
+    public function testContainerMaxWidthOverrideReturnsConfiguredValue(): void
+    {
+        Config::modify()->set(BulmaAdapter::class, 'container_max_width', 1200);
+        $adapter = new BulmaAdapter();
+
+        $this->assertSame(1200, $adapter->getContainerMaxWidth());
+    }
+
+    public function testContainerMaxWidthOverrideZeroThrows(): void
+    {
+        Config::modify()->set(BulmaAdapter::class, 'container_max_width', 0);
+
+        $this->expectException(InvalidGridValueException::class);
+        new BulmaAdapter();
+    }
+
+    public function testContainerMaxWidthOverrideNegativeThrows(): void
+    {
+        Config::modify()->set(BulmaAdapter::class, 'container_max_width', -100);
+
+        $this->expectException(InvalidGridValueException::class);
+        new BulmaAdapter();
+    }
+
     // ─── getOffsetStrategy ────────────────────────────────────────────
 
     public function testGetOffsetStrategyReturnsMargin(): void

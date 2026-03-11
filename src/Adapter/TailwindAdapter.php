@@ -19,6 +19,7 @@ final class TailwindAdapter implements GridAdapterInterface
     use GridAdapterConfiguration;
 
     private const int DEFAULT_COLUMNS = 12;
+    private const int DEFAULT_CONTAINER_MAX_WIDTH = 1536;
     private const string DEFAULT_VIEWPORT_KEY = 'sm';
 
     /** @var array<string, Viewport> */
@@ -26,6 +27,9 @@ final class TailwindAdapter implements GridAdapterInterface
 
     /** @var positive-int */
     private int $columnCount;
+
+    /** @var positive-int */
+    private int $containerMaxWidth;
 
     private Viewport $defaultViewport;
 
@@ -41,6 +45,7 @@ final class TailwindAdapter implements GridAdapterInterface
 
         $this->viewports = $this->applyViewportFilter($allViewports);
         $this->columnCount = $this->resolveColumnCount(self::DEFAULT_COLUMNS);
+        $this->containerMaxWidth = $this->resolveContainerMaxWidth(self::DEFAULT_CONTAINER_MAX_WIDTH);
         $this->defaultViewport = $this->resolveDefaultViewport(self::DEFAULT_VIEWPORT_KEY, $this->viewports);
     }
 
@@ -144,6 +149,12 @@ final class TailwindAdapter implements GridAdapterInterface
     public function getOffsetStrategy(): OffsetStrategy
     {
         return OffsetStrategy::GridPlacement;
+    }
+
+    #[\Override]
+    public function getContainerMaxWidth(): int
+    {
+        return $this->containerMaxWidth;
     }
 
     #[\Override]

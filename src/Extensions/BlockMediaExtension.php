@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Extensions;
 
+use SilverStripe\AssetAdmin\Forms\UploadField;
 use SilverStripe\Assets\Image;
 use SilverStripe\Core\Extension;
 use SilverStripe\Forms\DropdownField;
@@ -66,11 +67,23 @@ class BlockMediaExtension extends Extension
         'VideoCustomThumbnail',
     ];
 
+    /** @var list<string> */
+    private static array $cascade_deletes = [
+        'MediaImage',
+        'VideoCustomThumbnail',
+    ];
+
+    /** @var list<string> */
+    private static array $cascade_duplicates = [
+        'MediaImage',
+        'VideoCustomThumbnail',
+    ];
+
     /** @var array<string, string> */
     private static array $defaults = [
-        'MediaPosition' => 'first',
-        'VerticalAlignment' => 'center',
-        'MediaRatio' => 'auto',
+        'MediaPosition' => MediaPosition::First->value,
+        'VerticalAlignment' => VerticalAlignment::Center->value,
+        'MediaRatio' => AspectRatio::Auto->value,
     ];
 
     /** @var array<string, string> */
@@ -190,7 +203,7 @@ class BlockMediaExtension extends Extension
     }
 
     /**
-     * Resized image URL using FocusFill (with aspect ratio) or ScaleWidth (auto).
+     * Resized image URL using Fill (with aspect ratio) or ScaleWidth (auto).
      * Null when no image is attached.
      */
     public function getMediaImageSourceURL(): ?string
@@ -208,6 +221,10 @@ class BlockMediaExtension extends Extension
         $resized = $ratio === AspectRatio::Auto
             ? $image->ScaleWidth($width)
             : $image->Fill($width, $height);
+
+        if ($resized === null) { // @phpstan-ignore identical.alwaysFalse (ScaleWidth/Fill return null when file missing from filesystem)
+            return null;
+        }
 
         return $resized->getURL();
     }
@@ -264,6 +281,18 @@ class BlockMediaExtension extends Extension
         $mediaTab->push($mediaField);
 
         $mediaTab->push(
+            UploadField::create(
+                'VideoCustomThumbnail',
+                _t(self::class . '.CUSTOM_VIDEO_THUMBNAIL', 'Custom video thumbnail'),
+            )
+                ->setFolderName('MediaUploads')
+                ->setDescription(_t(
+                    self::class . '.OVERWRITES_DEFAULT_THUMBNAIL',
+                    'This overwrites the default thumbnail provided by the video platform',
+                )),
+        );
+
+        $mediaTab->push(
             TextField::create(
                 'MediaCaption',
                 _t(self::class . '.MEDIA_CAPTION', 'Caption'),
@@ -316,7 +345,9 @@ class BlockMediaExtension extends Extension
 
         // Show video embed data as readonly when available
         /** @var string $embedName */
-        $embedName = $this->getOwner()->VideoEmbedName ?? '';        if ($embedName !== '') {
+        $embedName = $this->getOwner()->VideoEmbedName ?? '';
+
+        if ($embedName !== '') {
             $embedTab = $fields->findOrMakeTab(
                 'Root.VideoEmbed',
                 _t(self::class . '.VIDEO_EMBED_TAB', 'Video Embed'),
@@ -403,13 +434,12 @@ class BlockMediaExtension extends Extension
 
     private function getCalculatedMediaImageWidth(): int
     {
+        $adapter = $this->getOwner()->gridAdapter;
         $colSize = $this->getColSize();
+        $totalColumns = $adapter->getColumnCount();
+        $containerWidth = $adapter->getContainerMaxWidth();
 
-        return match (true) {
-            $colSize > 10 => 1440,
-            $colSize > 6 => 1200,
-            default => 720,
-        };
+        return (int) round($containerWidth * $colSize / $totalColumns);
     }
 
     /** Effective column span for the media side. */

@@ -6,7 +6,6 @@ namespace WeDevelop\Grid\Tests\Integration\Extensions;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use SilverStripe\Assets\Image;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Extensions\BlockMediaExtension;
@@ -262,8 +261,8 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element->ContentColumns = 8;
         $element->write();
 
-        // colSize = 12 - 8 = 4 → <= 6 → 720px
-        $this->assertSame(720, $element->getMediaImageWidth());
+        // colSize = 12 - 8 = 4, Bootstrap: round(1320 * 4 / 12) = 440
+        $this->assertSame(440, $element->getMediaImageWidth());
     }
 
     public function testMediaImageWidthForMediumMediaColumn(): void
@@ -272,8 +271,8 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element->ContentColumns = 4;
         $element->write();
 
-        // colSize = 12 - 4 = 8 → > 6, <= 10 → 1200px
-        $this->assertSame(1200, $element->getMediaImageWidth());
+        // colSize = 12 - 4 = 8, Bootstrap: round(1320 * 8 / 12) = 880
+        $this->assertSame(880, $element->getMediaImageWidth());
     }
 
     public function testMediaImageWidthForFullWidth(): void
@@ -282,8 +281,8 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element->ContentColumns = 0;
         $element->write();
 
-        // colSize = 12 (full) → > 10 → 1440px
-        $this->assertSame(1440, $element->getMediaImageWidth());
+        // colSize = 12 (full), Bootstrap: round(1320 * 12 / 12) = 1320
+        $this->assertSame(1320, $element->getMediaImageWidth());
     }
 
     public function testMediaImageHeightForSquareRatio(): void

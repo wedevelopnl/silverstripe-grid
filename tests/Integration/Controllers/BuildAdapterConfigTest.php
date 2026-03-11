@@ -267,6 +267,11 @@ final class BuildAdapterConfigTest extends SapphireTest
                 return [];
             }
 
+            public function getContainerMaxWidth(): int
+            {
+                return 1320;
+            }
+
             public function getCssPath(): ?string
             {
                 return null;
@@ -342,6 +347,11 @@ final class BuildAdapterConfigTest extends SapphireTest
             public function getTitleClassOptions(): array
             {
                 return [];
+            }
+
+            public function getContainerMaxWidth(): int
+            {
+                return 1320;
             }
 
             public function getCssPath(): ?string
