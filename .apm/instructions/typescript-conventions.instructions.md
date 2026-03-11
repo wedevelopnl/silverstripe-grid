@@ -50,19 +50,22 @@ Draggable/droppable IDs encode hierarchy level: `type-numericId` (e.g., `row-42`
 
 ### Pending Tree Pattern
 
-During cross-container drags, `handleDragOver` calls `applyReorder()` to produce a mutated tree stored in `pendingTree` state. This provides immediate visual feedback (element appears in target container) without triggering API mutations. `pendingContainerItemsRef` tracks valid sibling IDs for collision filtering. Cleared on drop or cancel.
+During cross-container drags, `handleDragOver` calls `applyReorder()` via `usePendingTree` to produce a mutated tree stored in `pendingTree` state. This provides immediate visual feedback (element appears in target container) without triggering API mutations. `pendingContainerItemsRef` tracks valid sibling IDs for collision filtering. `collisionRefs` are shared between collision detection (reads all refs each cycle) and the orchestrator (reads only `overRectRef` at drag end for fresh rect resolution). Cleared on drop or cancel.
 
 ### Direction-Aware Placement
 
-`handleDragOver` and `handleDragEnd` compare pointer position against the `over` element's center to determine before/after placement. Columns use X-axis (horizontal layout), all other levels use Y-axis (vertical layout).
+`resolveDropPlacement()` and `resolveInsertDirection()` compare pointer position against the `over` element's center to determine before/after placement. Columns use X-axis (horizontal layout), all other levels use Y-axis (vertical layout).
 
 ### Key Files
 
 | File | Purpose |
 |------|---------|
-| `client/src/hooks/useDragAndDrop.ts` | Core hook: sensors, callbacks, pending tree state |
+| `client/src/hooks/useDragAndDrop.ts` | Orchestrator hook: sensors, drag event callbacks, wires sub-hooks |
+| `client/src/hooks/usePendingTree.ts` | Pending tree state, collision refs for cross-container drags |
 | `client/src/utils/collisionDetection.ts` | 3-tier collision detection, type filtering |
 | `client/src/utils/applyReorder.ts` | Immutable tree mutation for optimistic updates |
+| `client/src/utils/resolveDropPlacement.ts` | Maps drag end context to reorder params with direction |
+| `client/src/utils/resolveInsertDirection.ts` | Pointer vs rect center comparison for before/after |
 | `client/src/utils/resolveReorderParams.ts` | Maps dnd-kit event context to API payload |
 | `client/src/hooks/useElementMaps.ts` | O(1) lookup maps: `nodeMap`, `childrenByParentId` |
 | `client/src/types/dnd.ts` | Composite IDs, type constants, parent-type mapping |
