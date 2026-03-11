@@ -130,9 +130,15 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 ├──────────────────── Rendering ──────────────────────────────┤
 │                                                             │
 │  Grid Adapter System                                        │
-│    ├── GridAdapterInterface (12 methods)                    │
+│    ├── GridAdapterInterface (15 methods)                    │
 │    ├── GridAdapterConfiguration trait (YAML overrides)      │
 │    └── Adapters: Bootstrap, Tailwind, Bulma                 │
+│                                                             │
+│  Content Layout System                                      │
+│    ├── ContentLayoutAdapterInterface (8 methods)            │
+│    ├── ContentLayoutAdapter (data-driven, unified)          │
+│    ├── ContentLayoutClassMap (per-framework CSS strings)    │
+│    └── BlockMediaExtension (media/video on content elts)   │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -324,7 +330,7 @@ The controller maps `Result::ok()` to HTTP 204 and `Result::fail()` to HTTP 422 
 
 Grid adapters translate the abstract layout model (viewports, column widths, offsets, visibility) into CSS framework-specific class names. All consumers depend on `GridAdapterInterface`, never on a concrete adapter.
 
-### Interface Contract (12 methods)
+### Interface Contract (15 methods)
 
 | Method | Returns | Purpose |
 |--------|---------|---------|
@@ -339,7 +345,10 @@ Grid adapters translate the abstract layout model (viewports, column widths, off
 | `getRowClasses()` | `string` | Row container classes |
 | `getContainerClass(fluid)` | `string` | Container wrapper classes |
 | `getTitleClassOptions()` | `array<string, string>` | CSS class to label mapping |
+| `getOffsetStrategy()` | `OffsetStrategy` | Margin-based vs grid-placement |
+| `getContainerMaxWidth()` | `positive-int` | Max container width in px (for responsive images) |
 | `getCssPath()` | `?string` | Path to bundled CSS, or null |
+| `getContentLayoutClassMap()` | `ContentLayoutClassMap` | CSS class mappings for content layout |
 
 ### Configuration Trait
 
@@ -369,6 +378,87 @@ SilverStripe\Core\Injector\Injector:
     class: WeDevelop\Grid\Adapter\BootstrapAdapter
 ```
 
+## Content Layout System
+
+The content layout system adds media (image/video) capability with side-by-side layout to content elements. It complements the grid adapter system: grid handles column widths and offsets, content layout handles aspect ratios, ordering, alignment, and directional padding.
+
+### Architecture
+
+```
+BlockMediaExtension (applied to ContentElement via YAML)
+  └── ContentLayoutAdapterInterface (8 methods)
+        └── ContentLayoutAdapter (unified, data-driven)
+              └── ContentLayoutClassMap (per-framework CSS strings)
+                    └── GridAdapterInterface::getContentLayoutClassMap()
+```
+
+The design avoids per-framework adapter classes. Instead, each grid adapter provides a `ContentLayoutClassMap` via `getContentLayoutClassMap()`, and the single `ContentLayoutAdapter` uses those mappings to generate CSS classes. Adding a new CSS framework only requires adding a new static factory on `ContentLayoutClassMap`.
+
+### ContentLayoutAdapterInterface (8 methods)
+
+| Method | Returns | Purpose |
+|--------|---------|---------|
+| `getAspectRatioClass(AspectRatio)` | `?string` | Aspect ratio constraint (null for Auto) |
+| `getVerticalAlignmentClass(VerticalAlignment)` | `string` | Flex/grid row alignment |
+| `getMediaOrderClasses(MediaPosition)` | `string` | CSS order for media column |
+| `getContentOrderClasses(MediaPosition)` | `string` | CSS order for content column |
+| `getMediaWidthClass(int)` | `string` | Width class for media column |
+| `getContentWidthClass(int)` | `string` | Width class for content column |
+| `getPaddingClass(direction, size)` | `string` | Directional padding/margin for gap |
+| `getBaseColumnClass()` | `?string` | Framework base class (e.g. Bulma's `column`) |
+
+Width classes delegate to the grid adapter — `getMediaWidthClass()` computes `totalColumns - contentColumns` and calls `GridAdapterInterface::getWidthClass()`. Order classes use the adapter's default viewport for responsive breakpoint resolution.
+
+### ContentLayoutClassMap
+
+A `final readonly class` with static factories for each framework. Holds all CSS strings as structured data:
+
+| Property | Type | Example (Bootstrap) |
+|----------|------|---------------------|
+| `aspectRatioClasses` | `array<string, ?string>` | `'1x1' => 'ratio ratio-1x1'` |
+| `verticalAlignmentClasses` | `array<string, string>` | `'center' => 'align-items-center'` |
+| `orderClass1` / `orderClass2` | `string` | `'order-1'` / `'order-2'` |
+| `responsiveOrderFormat` | `string` (sprintf) | `'order-%1$s-%2$d'` |
+| `paddingDirectionMap` | `array<string, string>` | `'left' => 'ps'`, `'right' => 'pe'` |
+| `paddingFormat` | `string` (sprintf) | `'%1$s-%2$s-%3$d'` |
+| `baseColumnClass` | `?string` | `null` (Bulma: `'column'`) |
+
+### BlockMediaExtension
+
+Applied to `ContentElement` by default via YAML (`_config/content-layout.yml`). Adds media attachment and layout controls to any `GridElement`.
+
+**Database fields** (16 fields via `$db`):
+
+| Group | Fields |
+|-------|--------|
+| Layout | `ContentColumns` (int), `VerticalAlignment`, `GapSize` (int), `MediaPosition` |
+| Image | `MediaImage` (has_one → Image), `MediaCaption`, `MediaRatio` |
+| Video | `VideoURL`, `VideoProvider`, `VideoHasOverlay`, `VideoEmbedName`, `VideoEmbedURL`, `VideoEmbedDescription`, `VideoEmbedThumbnail`, `VideoEmbedCreated` |
+| Media type | `MediaType` (image/video discriminator) |
+
+**Relationships**: `has_one` to `MediaImage` and `VideoCustomThumbnail` (both `Image`), with `owns`, `cascade_deletes`, and `cascade_duplicates`.
+
+**Responsive image sizing**: Calculates pixel width from the ratio of content columns to total grid columns, multiplied by `GridAdapterInterface::getContainerMaxWidth()`. Resizes images via SilverStripe's `Fill()` (when aspect ratio set) or `ScaleWidth()` (auto ratio).
+
+**Template integration**: The `WeDevelop/Grid/Includes/MediaBlock` template renders the side-by-side layout with content and media columns, aspect ratio wrapper, and `<figure>/<figcaption>` markup.
+
+### DI Configuration
+
+```yaml
+# _config/content-layout.yml
+SilverStripe\Core\Injector\Injector:
+  WeDevelop\Grid\Contract\ContentLayoutAdapterInterface:
+    class: WeDevelop\Grid\Adapter\ContentLayoutAdapter
+    constructor:
+      gridAdapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
+
+WeDevelop\Grid\Model\ContentElement:
+  extensions:
+    BlockMedia: WeDevelop\Grid\Extensions\BlockMediaExtension
+```
+
+The adapter receives the active grid adapter via constructor injection, reads its class map, and uses it for all CSS class generation.
+
 ## Value Objects
 
 | Class | Purpose |
@@ -379,6 +469,10 @@ SilverStripe\Core\Injector\Injector:
 | `Result<T>` | Generic success/failure container |
 | `ValidationError` | Structured error with message, field, severity |
 | `ValidationSeverity` | Enum: Error, Warning |
+| `AspectRatio` | Enum: Auto, Square (1x1), FourByThree (4x3), SixteenByNine (16x9) |
+| `MediaPosition` | Enum: First, Last, LastOnDesktop |
+| `VerticalAlignment` | Enum: Top, Center, Bottom |
+| `ContentLayoutClassMap` | Per-framework CSS string mappings for content layout |
 
 ## Dependency Injection
 
@@ -422,3 +516,4 @@ WeDevelop\Grid\Service\ReorderService:
 | `updateElementData` | GridTreeBuilder | Inject extra data into tree nodes |
 | `extendedCan` | GridElement | Override permission checks |
 | `updateValidate` | HierarchyValidationExtension | Intercept validation lifecycle |
+| `updateCMSFields` | BlockMediaExtension | Inject media/layout fields into CMS form |

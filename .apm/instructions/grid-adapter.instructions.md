@@ -11,11 +11,15 @@ Grid adapters translate the abstract grid model (viewports, column widths, offse
 
 ### Key Files
 
-- `src/Contract/GridAdapterInterface.php` — 12 methods defining the adapter contract
+- `src/Contract/GridAdapterInterface.php` — 15 methods defining the adapter contract
 - `src/Adapter/GridAdapterConfiguration.php` — Trait providing YAML-configurable overrides
 - `src/Value/Viewport.php` — Value object (`final readonly class`, not an enum)
 - `src/Value/ContainerType.php` — Enum: `Section`, `Row`, `Column`
 - `_config/grid.yml` — DI binding (default: `BootstrapAdapter`)
+- `src/Contract/ContentLayoutAdapterInterface.php` — 8 methods for content layout CSS
+- `src/Adapter/ContentLayoutAdapter.php` — Unified, data-driven content layout adapter
+- `src/Value/ContentLayoutClassMap.php` — Per-framework CSS class mappings
+- `_config/content-layout.yml` — DI binding for content layout adapter + BlockMediaExtension
 
 ### Existing Adapters
 
@@ -60,7 +64,7 @@ final class YourAdapter implements GridAdapterInterface
         $this->defaultViewport = $this->resolveDefaultViewport(self::DEFAULT_VIEWPORT_KEY, $this->viewports);
     }
 
-    // Implement all 12 interface methods...
+    // Implement all 15 interface methods...
 }
 ```
 
@@ -95,7 +99,10 @@ The trait provides three helper methods to call in `__construct()`:
 | `getRowClasses()` | `string` | Row container classes |
 | `getContainerClass($fluid)` | `string` | Container wrapper classes |
 | `getTitleClassOptions()` | `array<string, string>` | CSS class → human label mapping |
+| `getOffsetStrategy()` | `OffsetStrategy` | Margin-based vs grid-placement offset |
+| `getContainerMaxWidth()` | `positive-int` | Max container width in px (for responsive images) |
 | `getCssPath()` | `?string` | Path to bundled CSS, or `null` if framework handles it |
+| `getContentLayoutClassMap()` | `ContentLayoutClassMap` | CSS class mappings for content layout adapter |
 
 ### 4. Visibility Classes Pattern
 
@@ -128,3 +135,75 @@ WeDevelop\Grid\Adapter\YourAdapter:
   total_columns: 16
   default_viewport: md
 ```
+
+### 7. Provide Content Layout Class Map
+
+Implement `getContentLayoutClassMap()` by adding a static factory to `ContentLayoutClassMap`:
+
+```php
+public function getContentLayoutClassMap(): ContentLayoutClassMap
+{
+    return ContentLayoutClassMap::yourFramework();
+}
+```
+
+The `ContentLayoutClassMap` factory defines framework-specific CSS strings for aspect ratios, vertical alignment, ordering, padding direction, and base column classes. See `ContentLayoutClassMap::bootstrap()` for reference.
+
+## Content Layout Adapter System
+
+Complements the grid adapter for content-level layout concerns: aspect ratios, media ordering, vertical alignment, and directional padding. Unlike grid adapters (one class per framework), the content layout system uses a single `ContentLayoutAdapter` driven by per-framework data in `ContentLayoutClassMap`.
+
+### Architecture
+
+```
+GridAdapterInterface::getContentLayoutClassMap()
+  └── ContentLayoutClassMap (per-framework CSS strings)
+        └── ContentLayoutAdapter (unified implementation)
+              └── ContentLayoutAdapterInterface (8 methods)
+```
+
+### ContentLayoutAdapterInterface (8 methods)
+
+| Method | Returns | Purpose |
+|--------|---------|---------|
+| `getAspectRatioClass(AspectRatio)` | `?string` | Aspect ratio constraint (null for Auto) |
+| `getVerticalAlignmentClass(VerticalAlignment)` | `string` | Flex/grid row alignment |
+| `getMediaOrderClasses(MediaPosition)` | `string` | CSS order for media column |
+| `getContentOrderClasses(MediaPosition)` | `string` | CSS order for content column |
+| `getMediaWidthClass(int)` | `string` | Width class for media column |
+| `getContentWidthClass(int)` | `string` | Width class for content column |
+| `getPaddingClass(direction, size)` | `string` | Directional padding/margin for gap |
+| `getBaseColumnClass()` | `?string` | Framework base class (e.g. Bulma's `column`) |
+
+### ContentLayoutClassMap
+
+`final readonly class` with static factories per framework. Each factory returns all CSS strings needed for content layout:
+
+- `aspectRatioClasses` — enum value → CSS class (null for Auto)
+- `verticalAlignmentClasses` — enum value → CSS class
+- `orderClass1` / `orderClass2` — fixed order classes
+- `responsiveOrderFormat` — sprintf format for responsive order (`%1$s`=viewport, `%2$d`=order)
+- `paddingDirectionMap` — `'left'|'right'` → CSS prefix
+- `paddingFormat` — sprintf format for padding (`%1$s`=prefix, `%2$s`=viewport, `%3$d`=size)
+- `baseColumnClass` — base column class or null
+
+### Value Objects
+
+| Class | Purpose |
+|-------|---------|
+| `AspectRatio` | Enum: Auto, Square (1x1), FourByThree (4x3), SixteenByNine (16x9) |
+| `MediaPosition` | Enum: First, Last, LastOnDesktop (mobile-first default, responsive on desktop) |
+| `VerticalAlignment` | Enum: Top, Center, Bottom |
+
+### DI Configuration
+
+```yaml
+# _config/content-layout.yml
+SilverStripe\Core\Injector\Injector:
+  WeDevelop\Grid\Contract\ContentLayoutAdapterInterface:
+    class: WeDevelop\Grid\Adapter\ContentLayoutAdapter
+    constructor:
+      gridAdapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
+```
+
+The adapter receives the active grid adapter via constructor injection and calls `getContentLayoutClassMap()` to obtain framework-specific CSS strings.
