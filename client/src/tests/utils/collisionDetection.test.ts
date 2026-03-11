@@ -1121,6 +1121,116 @@ describe('createTypedCollisionDetection — source container filtering', () => {
     expect(result2[0].id).toBe('row-20');
   });
 
+  it('skips pointer-inside-source guard when source is depleted, allowing parent fallback', () => {
+    // Bug scenario: dragging the ONLY row from section B (depleted) into section A
+    // which has rows. Pointer is inside a target-container sibling but centerCrossing
+    // threshold is NOT crossed (approaching from below, pointer below center).
+    // The guard should be skipped (sourceItems.size === 0), allowing parent-container
+    // fallback to fire for "enter at end" placement.
+    const sourceContainerItemsRef = { current: new Set<string | number>() }; // depleted
+    const detect = createTypedCollisionDetection({
+      hasPendingMoveRef: { current: false },
+      sourceContainerItemsRef,
+    });
+
+    // Two target siblings at y=0 and y=60, plus a parent section
+    const targetRow1 = makeContainer('row-10');
+    const targetRow2 = makeContainer('row-20');
+    const parentSection = makeContainerWithRect('section-1', { left: 0, top: 0, width: 100, height: 120 });
+
+    const row1Rect = { ...rect, top: 0, bottom: 50 };
+    const row2Rect = { ...rect, top: 60, bottom: 110 };
+    const sectionRect = { ...rect, top: 0, bottom: 120 };
+
+    // Active starts far below (section B), dragged up into row-20 area
+    // but NOT crossing centerCrossing threshold (pointer below row-20 center)
+    const initialRect = { ...rect, top: 400, bottom: 450 }; // center y=425
+    const collisionRect = { ...rect, top: 70, bottom: 120 }; // center y=95
+
+    const droppableRects = new Map([
+      ['row-10', row1Rect],
+      ['row-20', row2Rect],
+      ['section-1', sectionRect],
+    ]);
+
+    // Pointer at y=100, inside row-20's rect (60-110) but below center (85)
+    // centerCrossing: initialCY=425 > targetCY=85, so dragging UP toward target.
+    // threshold = Math.min(60+50-25, 85) = 85. currentCY = Math.min(95, 100) = 95.
+    // crossedY = (425 > 85 && 95 <= 85) → false. No crossing.
+    //
+    // Without fix: pointer is inside row-20 (a "sameContainerSibling" because
+    // depleted source falls back to all siblings), guard blocks → returns [].
+    // With fix: guard is skipped (sourceItems.size === 0) → parent fallback fires.
+    const result = detect({
+      active: {
+        id: 'row-30',
+        data: { current: undefined },
+        rect: { current: { initial: initialRect, translated: collisionRect } },
+      },
+      collisionRect,
+      droppableRects,
+      droppableContainers: [targetRow1, targetRow2, parentSection],
+      pointerCoordinates: { x: 50, y: 100 },
+    });
+
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].id).toBe('section-1');
+  });
+
+  it('parent fallback prefers containing section over closer-center section (containment-first)', () => {
+    // Bug scenario: dragging the only row from Beta (short section, 1 row) upward
+    // into Alpha (tall section, 3 rows). Pointer is near Alpha's bottom edge.
+    // Alpha is tall (0-300, center=150), Beta is short (310-410, center=360).
+    // Pointer at y=280 is inside Alpha's rect but closer to Beta's center (distance=80)
+    // than Alpha's center (distance=130). closestCenter would pick Beta → no-op.
+    // Containment-first should pick Alpha.
+    const sourceContainerItemsRef = { current: new Set<string | number>() }; // depleted
+    const detect = createTypedCollisionDetection({
+      hasPendingMoveRef: { current: false },
+      sourceContainerItemsRef,
+    });
+
+    // Two target siblings (rows in Alpha) that centerCrossing won't fire on
+    const targetRow1 = makeContainer('row-10');
+    const targetRow2 = makeContainer('row-20');
+
+    // Two parent sections: Alpha (tall) and Beta (short)
+    const sectionAlpha = makeContainer('section-1');
+    const sectionBeta = makeContainer('section-2');
+
+    const row1Rect = { ...rect, top: 50, bottom: 100 };
+    const row2Rect = { ...rect, top: 110, bottom: 160 };
+    const alphaRect = { ...rect, top: 0, bottom: 300, height: 300 }; // center y=150
+    const betaRect = { ...rect, top: 310, bottom: 410, height: 100 }; // center y=360
+
+    // Active starts in Beta (far below Alpha), dragged up near Alpha's bottom edge
+    const initialRect = { ...rect, top: 350, bottom: 400 }; // center y=375
+    const collisionRect = { ...rect, top: 255, bottom: 305 }; // center y=280
+
+    const droppableRects = new Map([
+      ['row-10', row1Rect],
+      ['row-20', row2Rect],
+      ['section-1', alphaRect],
+      ['section-2', betaRect],
+    ]);
+
+    const result = detect({
+      active: {
+        id: 'row-30',
+        data: { current: undefined },
+        rect: { current: { initial: initialRect, translated: collisionRect } },
+      },
+      collisionRect,
+      droppableRects,
+      droppableContainers: [targetRow1, targetRow2, sectionAlpha, sectionBeta],
+      pointerCoordinates: { x: 50, y: 280 },
+    });
+
+    expect(result.length).toBeGreaterThan(0);
+    // Containment-first: pointer at y=280 is inside Alpha (0-300), not Beta (310-410)
+    expect(result[0].id).toBe('section-1');
+  });
+
   it('resets hadSiblingHit when sourceContainerItemsRef changes', () => {
     // Verify that changing sourceContainerItemsRef resets hadSiblingHit,
     // so the fallback path (closestCenterLive) is NOT used on the new drag.

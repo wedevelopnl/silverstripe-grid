@@ -391,7 +391,7 @@ export function createTypedCollisionDetection(
       // from the droppable rect coordinate space after panel scrolling.
       const { pointerCoordinates, droppableRects } = args;
 
-      if (pointerCoordinates && sourceItems) {
+      if (pointerCoordinates && sourceItems && sourceItems.size > 0) {
         const pointerInsideSourceSibling = sameContainerSiblings.some((sibling) => {
           const rect = droppableRects.get(sibling.id);
           if (rect === undefined) return false;
@@ -426,10 +426,35 @@ export function createTypedCollisionDetection(
       }
     }
 
-    // Pass 2: fall back to parent container collisions (closestCenter so
-    // entering empty containers triggers at distance)
+    // Pass 2: fall back to parent container collisions.
+    // Containment-first: prefer the parent whose rect contains the pointer.
+    // closestCenter uses center distance, which biases toward smaller
+    // containers when the cursor is near the boundary between a tall and
+    // short section — the short section's center is closer even though the
+    // cursor is visually inside the tall section.
     const parents = filterParentContainers(activeId, nonActiveContainers);
 
+    if (args.pointerCoordinates) {
+      const containingParent = parents.find((parent) => {
+        const rect = args.droppableRects.get(parent.id);
+        if (rect === undefined) return false;
+        return (
+          args.pointerCoordinates!.x >= rect.left &&
+          args.pointerCoordinates!.x <= rect.left + rect.width &&
+          args.pointerCoordinates!.y >= rect.top &&
+          args.pointerCoordinates!.y <= rect.top + rect.height
+        );
+      });
+      if (containingParent) {
+        return captureWinnerRect([{
+          id: containingParent.id,
+          data: { droppableContainer: containingParent, value: 0 },
+        }]);
+      }
+    }
+
+    // Distance fallback: entering empty containers at distance when pointer
+    // is not inside any parent rect (e.g. in the gap between sections).
     return captureWinnerRect(closestCenter({
       ...args,
       droppableContainers: parents,
