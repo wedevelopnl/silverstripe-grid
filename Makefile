@@ -18,9 +18,9 @@ destroy:
 build:
 	$(COMPOSE) build
 
-## Ensure services are running
+## Ensure services are running and ready
 ensure-up:
-	@$(COMPOSE) exec app true 2>/dev/null || $(MAKE) up
+	@$(COMPOSE) exec app true 2>/dev/null || $(COMPOSE) up -d --build --wait
 
 ## Run all tests (PHP unit + integration + JS)
 test: ensure-up test-unit test-integration test-js

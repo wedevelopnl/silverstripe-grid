@@ -25,4 +25,6 @@ mkdir -p "$_res/client"
 
 vendor/bin/sake dev/build flush=1
 
+touch /tmp/.app-ready
+
 exec frankenphp run --config /etc/caddy/Caddyfile
