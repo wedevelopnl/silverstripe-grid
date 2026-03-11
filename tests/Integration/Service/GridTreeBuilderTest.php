@@ -380,12 +380,12 @@ final class GridTreeBuilderTest extends SapphireTest
 
         // ensureDefaultTitle counts same-type siblings under the same parent
         // leaf2 is the only other GridElement under col1 → count 1 + 1 = 2
-        $this->assertSame('GridElement 2', $leaf->Title);
+        $this->assertSame('Grid element 2', $leaf->Title);
 
         $tree = $this->buildTree();
         $pageId = $this->getPageId();
         $node = $tree[$pageId][0]->children[0]->children[0]->children[0];
-        $this->assertSame('GridElement 2', $node->title);
+        $this->assertSame('Grid element 2', $node->title);
     }
 
     public function testEmptyTitleAssignsDefaultForColumn(): void
@@ -445,7 +445,7 @@ final class GridTreeBuilderTest extends SapphireTest
         $element->write();
 
         $this->assertNotEmpty($element->Title, 'Fresh element with null Title should get a default');
-        $this->assertStringContainsString('GridElement', $element->Title);
+        $this->assertStringContainsString('Grid element', $element->Title);
     }
 
     public function testFreshSectionGetsDefaultTitle(): void
@@ -474,7 +474,7 @@ final class GridTreeBuilderTest extends SapphireTest
         $element->write();
 
         $this->assertNotEmpty($element->Title, 'Fresh content element with null Title should get a default');
-        $this->assertStringContainsString('ContentElement', $element->Title);
+        $this->assertStringContainsString('Content element', $element->Title);
     }
 
     // ---- getType() ----
