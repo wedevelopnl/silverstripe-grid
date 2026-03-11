@@ -1,0 +1,15 @@
+---
+Name: grid-content-layout
+After:
+  - '#grid-adapter'
+---
+
+SilverStripe\Core\Injector\Injector:
+  WeDevelop\Grid\Contract\ContentLayoutAdapterInterface:
+    class: WeDevelop\Grid\Adapter\BootstrapContentLayoutAdapter
+    constructor:
+      gridAdapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
+
+WeDevelop\Grid\Model\ContentElement:
+  extensions:
+    BlockMedia: WeDevelop\Grid\Extensions\BlockMediaExtension
