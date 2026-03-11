@@ -118,7 +118,7 @@ class GridElement extends DataObject
     {
         $name = static::config()->get('singular_name');
 
-        return is_string($name) && $name !== '' ? $name : ClassInfo::shortName(static::class);
+        return $name !== '' ? $name : ClassInfo::shortName(static::class);
     }
 
     /** Anchor-safe identifier for linking within a page. */
