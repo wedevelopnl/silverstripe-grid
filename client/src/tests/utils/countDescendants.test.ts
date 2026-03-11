@@ -1,76 +1,33 @@
 import { countDescendants } from '@/utils/countDescendants';
-import type { SimpleElementNode, ColumnNode, RowNode, SectionNode } from '@/types/elements';
-
-function makeLeaf(id: number): SimpleElementNode {
-  return {
-    id,
-    parentId: 1,
-    title: `Leaf ${id}`,
-    blockSchema: { typeName: 'Content', label: 'Content', icon: '', type: 'Content', title: `Leaf ${id}`, summary: '' },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-  };
-}
-
-function makeColumn(id: number, children: SimpleElementNode[] | null): ColumnNode {
-  return {
-    ...makeLeaf(id),
-    containerType: 'column' as const,
-    allowedTypes: null,
-    children,
-    gridSettings: {},
-  };
-}
-
-function makeRow(id: number, children: ColumnNode[] | null): RowNode {
-  return {
-    ...makeLeaf(id),
-    containerType: 'row' as const,
-    allowedTypes: null,
-    children,
-  };
-}
-
-function makeSection(id: number, children: RowNode[] | null): SectionNode {
-  return {
-    ...makeLeaf(id),
-    containerType: 'section' as const,
-    allowedTypes: null,
-    children,
-  };
-}
+import type { ColumnNode } from '@/types/elements';
+import { makeElement, makeColumn, makeRow, makeSection } from '../helpers/elementFactories';
 
 describe('countDescendants', () => {
   it('returns 0 for a leaf element', () => {
-    expect(countDescendants(makeLeaf(1))).toBe(0);
+    expect(countDescendants(makeElement(1, 1))).toBe(0);
   });
 
   it('returns 0 for a container with null children', () => {
-    expect(countDescendants(makeColumn(1, null))).toBe(0);
+    const column: ColumnNode = { ...makeColumn(1, [], 1), children: null };
+    expect(countDescendants(column)).toBe(0);
   });
 
   it('returns 0 for a container with empty children', () => {
-    expect(countDescendants(makeColumn(1, []))).toBe(0);
+    expect(countDescendants(makeColumn(1, [], 1))).toBe(0);
   });
 
   it('counts direct children of a column', () => {
-    const column = makeColumn(1, [makeLeaf(2), makeLeaf(3)]);
+    const column = makeColumn(1, [makeElement(2, 1), makeElement(3, 1)], 1);
     expect(countDescendants(column)).toBe(2);
   });
 
   it('counts nested descendants in a full section tree', () => {
     const section = makeSection(1, [
       makeRow(2, [
-        makeColumn(3, [makeLeaf(4), makeLeaf(5)]),
-        makeColumn(6, [makeLeaf(7)]),
-      ]),
-    ]);
+        makeColumn(3, [makeElement(4, 3), makeElement(5, 3)], 2),
+        makeColumn(6, [makeElement(7, 6)], 2),
+      ], 1),
+    ], 1);
     // row(1) + column(2) + leaf(3) + column(1) + leaf(1) = 6
     expect(countDescendants(section)).toBe(6);
   });
@@ -78,12 +35,12 @@ describe('countDescendants', () => {
   it('counts deeply nested structure correctly', () => {
     const section = makeSection(1, [
       makeRow(2, [
-        makeColumn(3, [makeLeaf(4)]),
-      ]),
+        makeColumn(3, [makeElement(4, 3)], 2),
+      ], 1),
       makeRow(5, [
-        makeColumn(6, []),
-      ]),
-    ]);
+        makeColumn(6, [], 5),
+      ], 1),
+    ], 1);
     // row + column + leaf + row + column = 5
     expect(countDescendants(section)).toBe(5);
   });

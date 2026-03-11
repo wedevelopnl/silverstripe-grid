@@ -3,8 +3,8 @@ import type { MutableRefObject } from 'react';
 import type { ParsedDraggableId } from '@/types/dnd';
 import { buildDraggableId } from '@/types/dnd';
 import type { ElementTreeResponse } from '@/types/elements';
-import type { ElementMaps } from '@/hooks/useElementMaps';
 import { buildMaps } from '@/hooks/useElementMaps';
+import type { ElementMaps } from '@/hooks/useElementMaps';
 import { applyReorder } from '@/utils/applyReorder';
 import type { OverRectSnapshot } from '@/utils/collisionDetection';
 
@@ -28,7 +28,6 @@ export interface UsePendingTreeReturn {
     targetParentId: number,
     afterElementId: number | null,
     effectiveTree: ElementTreeResponse,
-    effectiveMaps: ElementMaps,
   ): { tree: ElementTreeResponse; maps: ElementMaps } | null;
 
   /** Set source container siblings (called on drag start). */
@@ -69,7 +68,6 @@ export function usePendingTree(): UsePendingTreeReturn {
     targetParentId: number,
     afterElementId: number | null,
     effectiveTree: ElementTreeResponse,
-    _effectiveMaps: ElementMaps,
   ): { tree: ElementTreeResponse; maps: ElementMaps } | null => {
     const newTree = applyReorder(effectiveTree, activeParsed.id, targetParentId, afterElementId);
     if (newTree === effectiveTree) return null;

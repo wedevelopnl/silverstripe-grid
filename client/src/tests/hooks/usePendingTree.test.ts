@@ -1,41 +1,8 @@
 import { renderHook, act } from '@testing-library/react';
 import { usePendingTree } from '@/hooks/usePendingTree';
 import { buildMaps } from '@/hooks/useElementMaps';
-import type {
-  ColumnNode,
-  RowNode,
-  SectionNode,
-  ElementTreeResponse,
-} from '@/types/elements';
-
-// --- Minimal factories ---
-
-function makeColumn(id: number, children: never[], parentId: number): ColumnNode {
-  return {
-    id, parentId, title: `Column ${id}`,
-    blockSchema: { typeName: 'Column', label: 'Column', icon: 'font-icon-block-content', type: 'Column', title: '', summary: '' },
-    obsoleteClassName: null, version: 1, canDelete: true, canPublish: true, canUnpublish: false, canCreate: true, editLink: null, statusFlags: {},
-    containerType: 'column', allowedTypes: null, children, gridSettings: { md: { width: 6, offset: 0, visible: true } },
-  };
-}
-
-function makeRow(id: number, children: ColumnNode[], parentId: number): RowNode {
-  return {
-    id, parentId, title: `Row ${id}`,
-    blockSchema: { typeName: 'Row', label: 'Row', icon: 'font-icon-block-content', type: 'Row', title: '', summary: '' },
-    obsoleteClassName: null, version: 1, canDelete: true, canPublish: true, canUnpublish: false, canCreate: true, editLink: null, statusFlags: {},
-    containerType: 'row', allowedTypes: null, children,
-  };
-}
-
-function makeSection(id: number, children: RowNode[], parentId: number): SectionNode {
-  return {
-    id, parentId, title: `Section ${id}`,
-    blockSchema: { typeName: 'Section', label: 'Section', icon: 'font-icon-block-content', type: 'Section', title: '', summary: '' },
-    obsoleteClassName: null, version: 1, canDelete: true, canPublish: true, canUnpublish: false, canCreate: true, editLink: null, statusFlags: {},
-    containerType: 'section', allowedTypes: null, children,
-  };
-}
+import type { ElementTreeResponse } from '@/types/elements';
+import { makeColumn, makeRow, makeSection } from '../helpers/elementFactories';
 
 const testTree: ElementTreeResponse = {
   '42': [
@@ -66,7 +33,6 @@ describe('usePendingTree', () => {
   describe('applyPendingMove', () => {
     it('sets pendingTree for a cross-container move', () => {
       const { result } = renderHook(() => usePendingTree());
-      const maps = buildMaps(testTree);
 
       act(() => {
         result.current.applyPendingMove(
@@ -74,7 +40,6 @@ describe('usePendingTree', () => {
           3,    // target: section 3
           14,   // after row-14
           testTree,
-          maps,
         );
       });
 
@@ -85,7 +50,6 @@ describe('usePendingTree', () => {
 
     it('returns new tree and maps on success', () => {
       const { result } = renderHook(() => usePendingTree());
-      const maps = buildMaps(testTree);
 
       let moveResult: ReturnType<typeof result.current.applyPendingMove>;
       act(() => {
@@ -94,7 +58,6 @@ describe('usePendingTree', () => {
           3,
           14,
           testTree,
-          maps,
         );
       });
 
@@ -105,7 +68,6 @@ describe('usePendingTree', () => {
 
     it('returns null when move is a no-op', () => {
       const { result } = renderHook(() => usePendingTree());
-      const maps = buildMaps(testTree);
 
       let moveResult: ReturnType<typeof result.current.applyPendingMove>;
       act(() => {
@@ -115,7 +77,6 @@ describe('usePendingTree', () => {
           2,    // same parent
           null, // first position (same as current)
           testTree,
-          maps,
         );
       });
 
@@ -144,7 +105,6 @@ describe('usePendingTree', () => {
           3,
           14,
           testTree,
-          maps,
         );
       });
 
@@ -157,12 +117,11 @@ describe('usePendingTree', () => {
   describe('clear', () => {
     it('resets pendingTree to null', () => {
       const { result } = renderHook(() => usePendingTree());
-      const maps = buildMaps(testTree);
 
       act(() => {
         result.current.applyPendingMove(
           { type: 'row', id: 11 },
-          3, 14, testTree, maps,
+          3, 14, testTree,
         );
       });
       expect(result.current.pendingTree).not.toBeNull();

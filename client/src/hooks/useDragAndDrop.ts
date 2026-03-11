@@ -198,7 +198,7 @@ export function useDragAndDrop({
       // Same-container: SortableContext handles visual reordering via transforms
       if (activeNode.parentId === targetParentId) return;
 
-      pending.applyPendingMove(activeParsed, targetParentId, afterElementId, effectiveTree, effectiveMaps);
+      pending.applyPendingMove(activeParsed, targetParentId, afterElementId, effectiveTree);
     },
     [tree, maps, pending],
   );
@@ -236,6 +236,8 @@ export function useDragAndDrop({
 
       const { maps: effectiveMaps } = pending.getEffective(tree, maps);
 
+      // collisionRefs are shared: collision detection reads all refs each cycle,
+      // but the orchestrator only reads overRectRef here for fresh rect resolution at drag end.
       const overRectSnapshot = pending.collisionRefs.overRectRef.current;
       const effectiveOverRect = String(overRectSnapshot?.id) === String(over.id)
         ? overRectSnapshot!.rect
