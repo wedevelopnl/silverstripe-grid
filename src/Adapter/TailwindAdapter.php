@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Adapter;
 
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
@@ -161,5 +162,11 @@ final class TailwindAdapter implements GridAdapterInterface
     public function getCssPath(): ?string
     {
         return null;
+    }
+
+    #[\Override]
+    public function getContentLayoutClassMap(): ContentLayoutClassMap
+    {
+        return ContentLayoutClassMap::tailwind();
     }
 }

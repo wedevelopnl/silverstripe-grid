@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Adapter;
 
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
@@ -167,6 +168,12 @@ final class BulmaAdapter implements GridAdapterInterface
     public function getCssPath(): string
     {
         return 'client/dist/bulma-grid.css';
+    }
+
+    #[\Override]
+    public function getContentLayoutClassMap(): ContentLayoutClassMap
+    {
+        return ContentLayoutClassMap::bulma();
     }
 
     /**

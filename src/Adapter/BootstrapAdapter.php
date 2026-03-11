@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Adapter;
 
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
@@ -178,6 +179,12 @@ final class BootstrapAdapter implements GridAdapterInterface
     public function getCssPath(): string
     {
         return 'client/dist/bootstrap-grid.css';
+    }
+
+    #[\Override]
+    public function getContentLayoutClassMap(): ContentLayoutClassMap
+    {
+        return ContentLayoutClassMap::bootstrap();
     }
 
     /**

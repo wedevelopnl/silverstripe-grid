@@ -7,41 +7,38 @@ namespace WeDevelop\Grid\Adapter;
 use WeDevelop\Grid\Contract\ContentLayoutAdapterInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Value\AspectRatio;
+use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\MediaPosition;
 use WeDevelop\Grid\Value\VerticalAlignment;
 
 /**
- * Bootstrap 5 implementation of content layout CSS class generation.
+ * Data-driven content layout adapter that replaces per-framework classes.
  *
- * Uses Bootstrap's flex utilities for ordering, alignment, and spacing.
- * Column width classes delegate to {@see GridAdapterInterface::getWidthClass()}.
+ * All framework-specific CSS strings live in {@see ContentLayoutClassMap},
+ * provided by the active {@see GridAdapterInterface}. This class contains
+ * only the shared logic: enum lookups, order inversion, sprintf formatting,
+ * and width delegation to the grid adapter.
  */
-final class BootstrapContentLayoutAdapter implements ContentLayoutAdapterInterface
+final class ContentLayoutAdapter implements ContentLayoutAdapterInterface
 {
+    private readonly ContentLayoutClassMap $classMap;
+
     public function __construct(
         private readonly GridAdapterInterface $gridAdapter,
     ) {
+        $this->classMap = $gridAdapter->getContentLayoutClassMap();
     }
 
     #[\Override]
     public function getAspectRatioClass(AspectRatio $ratio): ?string
     {
-        return match ($ratio) {
-            AspectRatio::Auto => null,
-            AspectRatio::Square => 'ratio ratio-1x1',
-            AspectRatio::FourByThree => 'ratio ratio-4x3',
-            AspectRatio::SixteenByNine => 'ratio ratio-16x9',
-        };
+        return $this->classMap->aspectRatioClasses[$ratio->value];
     }
 
     #[\Override]
     public function getVerticalAlignmentClass(VerticalAlignment $alignment): string
     {
-        return match ($alignment) {
-            VerticalAlignment::Top => 'align-items-start',
-            VerticalAlignment::Center => 'align-items-center',
-            VerticalAlignment::Bottom => 'align-items-end',
-        };
+        return $this->classMap->verticalAlignmentClasses[$alignment->value];
     }
 
     #[\Override]
@@ -50,9 +47,13 @@ final class BootstrapContentLayoutAdapter implements ContentLayoutAdapterInterfa
         $viewport = $this->gridAdapter->getDefaultViewport()->key;
 
         return match ($position) {
-            MediaPosition::First => 'order-1',
-            MediaPosition::Last => 'order-2',
-            MediaPosition::LastOnDesktop => sprintf('order-1 order-%s-2', $viewport),
+            MediaPosition::First => $this->classMap->orderClass1,
+            MediaPosition::Last => $this->classMap->orderClass2,
+            MediaPosition::LastOnDesktop => sprintf(
+                '%s %s',
+                $this->classMap->orderClass1,
+                sprintf($this->classMap->responsiveOrderFormat, $viewport, 2),
+            ),
         };
     }
 
@@ -62,9 +63,13 @@ final class BootstrapContentLayoutAdapter implements ContentLayoutAdapterInterfa
         $viewport = $this->gridAdapter->getDefaultViewport()->key;
 
         return match ($position) {
-            MediaPosition::First => 'order-2',
-            MediaPosition::Last => 'order-1',
-            MediaPosition::LastOnDesktop => sprintf('order-2 order-%s-1', $viewport),
+            MediaPosition::First => $this->classMap->orderClass2,
+            MediaPosition::Last => $this->classMap->orderClass1,
+            MediaPosition::LastOnDesktop => sprintf(
+                '%s %s',
+                $this->classMap->orderClass2,
+                sprintf($this->classMap->responsiveOrderFormat, $viewport, 1),
+            ),
         };
     }
 
@@ -89,14 +94,14 @@ final class BootstrapContentLayoutAdapter implements ContentLayoutAdapterInterfa
     public function getPaddingClass(string $direction, int $size): string
     {
         $viewport = $this->gridAdapter->getDefaultViewport()->key;
-        $prefix = $direction === 'left' ? 'ps' : 'pe';
+        $prefix = $this->classMap->paddingDirectionMap[$direction];
 
-        return sprintf('%s-%s-%d', $prefix, $viewport, $size);
+        return sprintf($this->classMap->paddingFormat, $prefix, $viewport, $size);
     }
 
     #[\Override]
     public function getBaseColumnClass(): ?string
     {
-        return null;
+        return $this->classMap->baseColumnClass;
     }
 }

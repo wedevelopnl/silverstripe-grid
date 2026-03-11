@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Contract;
 
+use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
@@ -147,4 +148,13 @@ interface GridAdapterInterface
      * (e.g. when the CMS already loads the framework).
      */
     public function getCssPath(): ?string;
+
+    /**
+     * CSS class mappings for content layout adapters.
+     *
+     * Returns the framework-specific class map that the unified
+     * {@see \WeDevelop\Grid\Adapter\ContentLayoutAdapter} uses for
+     * aspect ratios, ordering, alignment, and directional padding.
+     */
+    public function getContentLayoutClassMap(): ContentLayoutClassMap;
 }

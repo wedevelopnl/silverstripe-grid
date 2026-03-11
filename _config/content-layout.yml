@@ -6,7 +6,7 @@ After:
 
 SilverStripe\Core\Injector\Injector:
   WeDevelop\Grid\Contract\ContentLayoutAdapterInterface:
-    class: WeDevelop\Grid\Adapter\BootstrapContentLayoutAdapter
+    class: WeDevelop\Grid\Adapter\ContentLayoutAdapter
     constructor:
       gridAdapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
 

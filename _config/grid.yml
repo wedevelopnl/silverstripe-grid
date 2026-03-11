@@ -15,3 +15,4 @@ SilverStripe\Core\Injector\Injector:
 #     - lg
 #   total_columns: 16
 #   default_viewport: lg
+#   container_max_width: 1400

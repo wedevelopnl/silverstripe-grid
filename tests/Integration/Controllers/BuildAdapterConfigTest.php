@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
 use WeDevelop\Grid\Controllers\GridController;
+use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
 
 /**
@@ -276,6 +277,11 @@ final class BuildAdapterConfigTest extends SapphireTest
             {
                 return null;
             }
+
+            public function getContentLayoutClassMap(): ContentLayoutClassMap
+            {
+                return ContentLayoutClassMap::bootstrap();
+            }
         };
 
         $config = GridController::buildAdapterConfig($adapter);
@@ -357,6 +363,11 @@ final class BuildAdapterConfigTest extends SapphireTest
             public function getCssPath(): ?string
             {
                 return null;
+            }
+
+            public function getContentLayoutClassMap(): ContentLayoutClassMap
+            {
+                return ContentLayoutClassMap::bootstrap();
             }
         };
 
