@@ -29,35 +29,6 @@ interface InjectorGlobal {
   loadComponent(name: string, context?: Record<string, unknown>): ComponentType<any>;
 }
 
-// --- jQuery + entwine ---
-
-interface EntwineRules {
-  onmatch?(this: JQueryEntwineElement): void;
-  onunmatch?(this: JQueryEntwineElement): void;
-  onchange?(this: JQueryEntwineElement): void;
-  [key: string]: unknown;
-}
-
-interface JQueryEntwineElement {
-  data(key: string): unknown;
-  entwine(rules: EntwineRules): void;
-  getReactRoot(): import('react-dom/client').Root | null;
-  setReactRoot(root: import('react-dom/client').Root | null): void;
-  closest(selector: string): JQueryEntwineElement;
-  find(selector: string): JQueryEntwineElement;
-  not(selector: string): JQueryEntwineElement;
-  is(selector: string): boolean;
-  prop(name: string, value: unknown): JQueryEntwineElement;
-  toggleClass(className: string, state: boolean): JQueryEntwineElement;
-  [index: number]: HTMLElement;
-}
-
-interface JQueryStatic {
-  (selector: string): JQueryEntwineElement;
-  (element: JQueryEntwineElement): JQueryEntwineElement;
-  entwine(namespace: string, callback: ($: JQueryStatic) => void): void;
-}
-
 // --- CMS config (window.ss.config) ---
 
 export interface SilverStripeSectionConfig {
@@ -73,9 +44,44 @@ export interface SilverStripeConfig {
   sections: SilverStripeSectionConfig[];
 }
 
-// --- Window augmentation ---
+// --- Window augmentation (jQuery, entwine, Injector, CMS config) ---
 
 declare global {
+  interface EntwineRules {
+    onmatch?(this: JQueryEntwineElement): void;
+    onunmatch?(this: JQueryEntwineElement): void;
+    onchange?(this: JQueryEntwineElement): void;
+    onclick?(this: JQueryEntwineElement): void;
+    [key: string]: unknown;
+  }
+
+  interface JQueryEntwineElement {
+    data(key: string): unknown;
+    entwine(rules: EntwineRules): void;
+    getReactRoot(): import('react-dom/client').Root | null;
+    setReactRoot(root: import('react-dom/client').Root | null): void;
+    closest(selector: string): JQueryEntwineElement;
+    find(selector: string): JQueryEntwineElement;
+    not(selector: string): JQueryEntwineElement;
+    is(selector: string): boolean;
+    prop(name: string, value: unknown): JQueryEntwineElement;
+    val(): string | number | string[] | undefined;
+    toggle(showOrHide: boolean): JQueryEntwineElement;
+    trigger(eventType: string): JQueryEntwineElement;
+    addClass(className: string): JQueryEntwineElement;
+    removeClass(className: string): JQueryEntwineElement;
+    toggleClass(className: string, state: boolean): JQueryEntwineElement;
+    length: number;
+    _super(): void;
+    [index: number]: HTMLElement;
+  }
+
+  interface JQueryStatic {
+    (selector: string): JQueryEntwineElement;
+    (element: JQueryEntwineElement): JQueryEntwineElement;
+    entwine(namespace: string, callback: ($: JQueryStatic) => void): void;
+  }
+
   interface Window {
     Injector: InjectorGlobal;
     jQuery: JQueryStatic;

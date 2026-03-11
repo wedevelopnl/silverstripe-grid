@@ -9,11 +9,11 @@ use SilverStripe\Assets\Image;
 use SilverStripe\Core\Extension;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
-use SilverStripe\Forms\NumericField;
 use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\Forms\TextField;
 use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Contract\ContentLayoutAdapterInterface;
+use WeDevelop\Grid\Forms\ColumnWidthPickerField;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\AspectRatio;
 use WeDevelop\Grid\Value\MediaPosition;
@@ -77,6 +77,16 @@ class BlockMediaExtension extends Extension
     private static array $cascade_duplicates = [
         'MediaImage',
         'VideoCustomThumbnail',
+    ];
+
+    /** @var array<int, string> Named gap size presets (value → label). Configurable via YAML. */
+    private static array $gap_sizes = [
+        0 => 'None',
+        1 => 'Smallest',
+        2 => 'Small',
+        3 => 'Medium',
+        4 => 'Large',
+        5 => 'Largest',
     ];
 
     /** @var array<string, string> */
@@ -312,12 +322,17 @@ class BlockMediaExtension extends Extension
             _t(self::class . '.LAYOUT_TAB', 'Layout'),
         );
 
+        $totalColumns = $this->getOwner()->gridAdapter->getColumnCount();
+        $columnOptions = [0 => _t(self::class . '.FULL_WIDTH', 'Full width (no side-by-side)')]
+            + $this->getContentColumnOptions();
+
         $layoutTab->push(
-            DropdownField::create(
+            ColumnWidthPickerField::create(
                 'ContentColumns',
                 _t(self::class . '.CONTENT_COLUMNS', 'Content column width'),
-                $this->getContentColumnOptions(),
-            )->setEmptyString(_t(self::class . '.FULL_WIDTH', 'Full width (no side-by-side)')),
+                $columnOptions,
+                $totalColumns,
+            ),
         );
 
         $layoutTab->push(
@@ -336,10 +351,13 @@ class BlockMediaExtension extends Extension
             ),
         );
 
+        /** @var array<int, string> $gapSizes */
+        $gapSizes = $this->getOwner()->config()->get('gap_sizes');
         $layoutTab->push(
-            NumericField::create(
+            DropdownField::create(
                 'GapSize',
                 _t(self::class . '.GAP_SIZE', 'Gap size'),
+                $gapSizes,
             ),
         );
 
@@ -415,7 +433,7 @@ class BlockMediaExtension extends Extension
     }
 
     /**
-     * Content column width options from 4 to 10 (of total grid columns).
+     * Content column width options from 4 to 8 (of total grid columns).
      *
      * @return array<int, string>
      */
@@ -424,7 +442,7 @@ class BlockMediaExtension extends Extension
         $total = $this->getOwner()->gridAdapter->getColumnCount();
         $options = [];
 
-        for ($i = 4; $i <= min(10, $total - 2); $i++) {
+        for ($i = 4; $i <= min(8, $total - 2); $i++) {
             $media = $total - $i;
             $options[$i] = sprintf('%d/%d (content/media)', $i, $media);
         }

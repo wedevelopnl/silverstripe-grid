@@ -31,14 +31,61 @@ test.describe('Media elements', () => {
       await expect(uploadField).toBeVisible({ timeout: 10_000 });
     });
 
-    // --- Step 2: Configure layout settings ---
-    await test.step('Configure layout settings', async () => {
+    // --- Step 2: Verify picker visual feedback and conditional field visibility ---
+    await test.step('Verify column width picker UX behavior', async () => {
       await page.getByRole('tab', { name: 'Layout' }).click();
 
-      await page.locator('select[name="ContentColumns"]').selectOption('8');
+      const picker = page.locator('.column-width-picker');
+      await expect(picker).toBeVisible();
+
+      const fullWidthOption = picker.locator('label:has(input[value="0"])');
+      const splitOption8 = picker.locator('label:has(input[value="8"])');
+      const splitOption6 = picker.locator('label:has(input[value="6"])');
+
+      // Holder IDs are form-prefixed — match by suffix
+      const mediaPositionHolder = page.locator('[id$="_MediaPosition_Holder"]');
+      const verticalAlignmentHolder = page.locator('[id$="_VerticalAlignment_Holder"]');
+      const gapSizeHolder = page.locator('[id$="_GapSize_Holder"]');
+
+      // Initial state: full width is selected, dependent fields are hidden
+      await expect(fullWidthOption).toHaveClass(/--selected/);
+      await expect(mediaPositionHolder).toBeHidden();
+      await expect(verticalAlignmentHolder).toBeHidden();
+      await expect(gapSizeHolder).toBeHidden();
+
+      // Select a column split — dependent fields appear, selected state moves
+      await splitOption8.click();
+      await expect(splitOption8).toHaveClass(/--selected/);
+      await expect(fullWidthOption).not.toHaveClass(/--selected/);
+      await expect(mediaPositionHolder).toBeVisible();
+      await expect(verticalAlignmentHolder).toBeVisible();
+      await expect(gapSizeHolder).toBeVisible();
+
+      // Switch to a different split — selected state follows
+      await splitOption6.click();
+      await expect(splitOption6).toHaveClass(/--selected/);
+      await expect(splitOption8).not.toHaveClass(/--selected/);
+      // Dependent fields remain visible for any non-zero split
+      await expect(mediaPositionHolder).toBeVisible();
+
+      // Switch back to full width — dependent fields hide again
+      await fullWidthOption.click();
+      await expect(fullWidthOption).toHaveClass(/--selected/);
+      await expect(splitOption6).not.toHaveClass(/--selected/);
+      await expect(mediaPositionHolder).toBeHidden();
+      await expect(verticalAlignmentHolder).toBeHidden();
+      await expect(gapSizeHolder).toBeHidden();
+    });
+
+    // --- Step 3: Configure layout settings and save ---
+    await test.step('Configure layout settings', async () => {
+      // Select 8/4 split for the save+render test
+      const picker = page.locator('.column-width-picker');
+      await picker.locator('label:has(input[value="8"])').click();
+
       await page.locator('select[name="MediaPosition"]').selectOption('last');
       await page.locator('select[name="VerticalAlignment"]').selectOption('center');
-      await page.locator('input[name="GapSize"]').fill('3');
+      await page.locator('select[name="GapSize"]').selectOption('3');
 
       await page.getByRole('button', { name: /Save/ }).first().click();
       await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });

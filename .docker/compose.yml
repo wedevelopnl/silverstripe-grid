@@ -12,6 +12,7 @@ services:
       - ../_config:/module/_config:ro
       - ../phpstan:/module/phpstan:ro
       - ../client/dist:/module/client/dist:ro
+      - ../client/images:/module/client/images:ro
       - ../templates:/module/templates:ro
       - vendor:/app/vendor
     healthcheck:
