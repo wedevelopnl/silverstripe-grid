@@ -14,11 +14,15 @@ use WeDevelop\Grid\Controllers\GridController;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Extensions\GridPageExtension;
+use WeDevelop\Grid\Service\RequestBodyParser;
+use WeDevelop\Grid\Service\TitleGenerator;
 use SilverStripe\Control\HTTPResponse;
 use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
 #[CoversClass(GridController::class)]
+#[CoversClass(RequestBodyParser::class)]
+#[CoversClass(TitleGenerator::class)]
 final class GridControllerTest extends FunctionalTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/ElementTreeTest.yml';
@@ -196,68 +200,6 @@ final class GridControllerTest extends FunctionalTest
 
     // --- apiCreate: validation ------------------------------------------------
 
-    public function testCreateRejects400ForInvalidContainerType(): void
-    {
-        $this->logInForHttp();
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $page = $this->objFromFixture(TestPage::class, 'testpage');
-
-        $response = $this->postJson('/admin/grid/api/create', [
-            'containerType' => 'invalid',
-            'parentId' => (int) $page->ID,
-            'insertAfterElementID' => null,
-        ]);
-
-        $this->assertSame(400, $response->getStatusCode());
-    }
-
-    public function testCreateRejects400ForFloatParentId(): void
-    {
-        $this->logInForHttp();
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $response = $this->postJson('/admin/grid/api/create', [
-            'containerType' => 'section',
-            'parentId' => 5.5,
-            'insertAfterElementID' => null,
-        ]);
-
-        $this->assertSame(400, $response->getStatusCode());
-    }
-
-    public function testCreateRejects400ForZeroAfterElementId(): void
-    {
-        $this->logInForHttp();
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $page = $this->objFromFixture(TestPage::class, 'testpage');
-
-        $response = $this->postJson('/admin/grid/api/create', [
-            'containerType' => 'section',
-            'parentId' => (int) $page->ID,
-            'insertAfterElementID' => 0,
-        ]);
-
-        $this->assertSame(400, $response->getStatusCode());
-    }
-
-    public function testCreateRejects400ForFloatAfterElementId(): void
-    {
-        $this->logInForHttp();
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $page = $this->objFromFixture(TestPage::class, 'testpage');
-
-        $response = $this->postJson('/admin/grid/api/create', [
-            'containerType' => 'section',
-            'parentId' => (int) $page->ID,
-            'insertAfterElementID' => 5.5,
-        ]);
-
-        $this->assertSame(400, $response->getStatusCode());
-    }
-
     public function testCreateAcceptsAfterElementIdOne(): void
     {
         $this->logInForHttp();
@@ -296,18 +238,6 @@ final class GridControllerTest extends FunctionalTest
     }
 
     // --- apiDuplicate --------------------------------------------------------
-
-    public function testDuplicateRejects400ForFloatId(): void
-    {
-        $this->logInForHttp();
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $response = $this->postJson('/admin/grid/api/duplicate', [
-            'id' => 5.5,
-        ]);
-
-        $this->assertSame(400, $response->getStatusCode());
-    }
 
     public function testDuplicateAssignsCorrectCopyTitle(): void
     {
@@ -483,38 +413,7 @@ final class GridControllerTest extends FunctionalTest
         $this->assertSame($expected, $actual);
     }
 
-    // --- apiCreate: zero/empty validation ----------------------------------------
-
-    public function testCreateRejects400ForZeroParentId(): void
-    {
-        $this->logInForHttp();
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $response = $this->postJson('/admin/grid/api/create', [
-            'containerType' => 'section',
-            'parentId' => 0,
-            'insertAfterElementID' => null,
-        ]);
-
-        $this->assertSame(400, $response->getStatusCode());
-    }
-
-    public function testCreateRejects400ForEmptyZone(): void
-    {
-        $this->logInForHttp();
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $page = $this->objFromFixture(TestPage::class, 'testpage');
-
-        $response = $this->postJson('/admin/grid/api/create', [
-            'containerType' => 'section',
-            'parentId' => (int) $page->ID,
-            'insertAfterElementID' => null,
-            'zone' => '',
-        ]);
-
-        $this->assertSame(400, $response->getStatusCode());
-    }
+    // --- apiCreate: zone handling ------------------------------------------------
 
     public function testCreateSectionUsesExplicitZone(): void
     {
@@ -537,73 +436,7 @@ final class GridControllerTest extends FunctionalTest
         $this->assertSame('sidebar', $newSection->Zone);
     }
 
-    // --- apiReorder: zero/invalid validation ------------------------------------
-
-    public function testReorderRejects400ForZeroElementId(): void
-    {
-        $this->logInForHttp();
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $page = $this->objFromFixture(TestPage::class, 'testpage');
-
-        $response = $this->patchJson('/admin/grid/api/reorder', [
-            'elementID' => 0,
-            'targetParentId' => (int) $page->ID,
-            'afterElementID' => null,
-        ]);
-
-        $this->assertSame(400, $response->getStatusCode());
-    }
-
-    public function testReorderRejects400ForZeroTargetParentId(): void
-    {
-        $this->logInForHttp();
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $section1 = $this->objFromFixture(Section::class, 'section1');
-
-        $response = $this->patchJson('/admin/grid/api/reorder', [
-            'elementID' => $section1->ID,
-            'targetParentId' => 0,
-            'afterElementID' => null,
-        ]);
-
-        $this->assertSame(400, $response->getStatusCode());
-    }
-
-    public function testReorderRejects400ForFloatAfterElementId(): void
-    {
-        $this->logInForHttp();
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $page = $this->objFromFixture(TestPage::class, 'testpage');
-        $section1 = $this->objFromFixture(Section::class, 'section1');
-
-        $response = $this->patchJson('/admin/grid/api/reorder', [
-            'elementID' => $section1->ID,
-            'targetParentId' => (int) $page->ID,
-            'afterElementID' => 5.5,
-        ]);
-
-        $this->assertSame(400, $response->getStatusCode());
-    }
-
-    public function testReorderRejects400ForStringAfterElementId(): void
-    {
-        $this->logInForHttp();
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $page = $this->objFromFixture(TestPage::class, 'testpage');
-        $section1 = $this->objFromFixture(Section::class, 'section1');
-
-        $response = $this->patchJson('/admin/grid/api/reorder', [
-            'elementID' => $section1->ID,
-            'targetParentId' => (int) $page->ID,
-            'afterElementID' => 'invalid',
-        ]);
-
-        $this->assertSame(400, $response->getStatusCode());
-    }
+    // --- apiReorder: valid operations -------------------------------------------
 
     public function testReorderSucceedsWithNullAfterElementId(): void
     {
@@ -645,5 +478,34 @@ final class GridControllerTest extends FunctionalTest
         // Verify the row is now under section2
         $row1 = Row::get()->byID($row1->ID);
         $this->assertSame((int) $section2->ID, (int) $row1->ParentID);
+    }
+
+    // --- Smoke test: parse failure → HTTP 400 wiring -------------------------
+
+    public function testInvalidJsonBodyReturns400(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        // Completely invalid body — all fields wrong types
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 123,
+            'parentId' => 'not-an-int',
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testInvalidReorderBodyReturns400(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => 'bad',
+            'targetParentId' => null,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
     }
 }

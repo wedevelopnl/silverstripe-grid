@@ -26,32 +26,10 @@ use WeDevelop\Grid\Service\ElementPersistenceService;
 use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Service\GridSettingsCompactor;
 use WeDevelop\Grid\Service\ReorderService;
+use WeDevelop\Grid\Service\RequestBodyParser;
+use WeDevelop\Grid\Service\TitleGenerator;
 
 /**
- * @phpstan-type CreateElementBody array{
- *   containerType: ContainerType,
- *   parentId: positive-int,
- *   insertAfterElementID: positive-int|null,
- *   zone: string,
- * }
- * @phpstan-type ElementIdBody array{id: positive-int}
- * @phpstan-type ReorderBody array{
- *   elementID: positive-int,
- *   targetParentId: positive-int,
- *   afterElementID: positive-int|null,
- * }
- * @phpstan-type CreateContentBody array{
- *   className: class-string<ContentElement>,
- *   parentId: positive-int,
- *   insertAfterElementID: positive-int|null,
- * }
- * @phpstan-type UpdateGridSettingsBody array{
- *   id: positive-int,
- *   viewport: string,
- *   width: positive-int,
- *   offset: int<0, max>,
- *   visible: bool,
- * }
  * @phpstan-type AdapterConfig array{
  *   viewports: list<array{key: string, label: string}>,
  *   defaultViewport: string,
@@ -75,6 +53,7 @@ use WeDevelop\Grid\Service\ReorderService;
  * @property ElementPersistenceService $persistenceService
  * @property ReorderService $reorderService
  * @property GridAdapterInterface $gridAdapter
+ * @property RequestBodyParser $requestBodyParser
  */
 class GridController extends AdminController
 {
@@ -89,6 +68,7 @@ class GridController extends AdminController
         'persistenceService' => '%$' . ElementPersistenceService::class,
         'reorderService' => '%$' . ReorderService::class,
         'gridAdapter' => '%$' . GridAdapterInterface::class,
+        'requestBodyParser' => '%$' . RequestBodyParser::class,
     ];
 
     public GridElementRepositoryInterface $elementRepository;
@@ -100,6 +80,8 @@ class GridController extends AdminController
     public ReorderService $reorderService;
 
     public GridAdapterInterface $gridAdapter;
+
+    public RequestBodyParser $requestBodyParser;
 
     /** @var array<string, string> */
     private static array $url_handlers = [
@@ -165,20 +147,26 @@ class GridController extends AdminController
 
     public function apiCreate(HTTPRequest $request): HTTPResponse
     {
-        $body = $this->parseCreateBody($request);
+        $data = $this->parseJsonBody($request);
+        $parseResult = $this->requestBodyParser->parseCreateBody($data);
+        if ($parseResult->isErr()) {
+            return $this->resultToResponse($parseResult, 400);
+        }
+
+        $body = $parseResult->unwrap();
 
         /** @var DataObject|null $parent */
-        $parent = Versioned::withVersionedMode(function () use ($body): ?DataObject {
+        $parent = Versioned::withVersionedMode(static function () use ($body): ?DataObject {
             Versioned::set_stage(Versioned::DRAFT);
 
             // Sections live under SiteTree pages; rows and columns live under GridElements.
             // We must query the correct table because page IDs and element IDs share
             // the same numeric space and can collide.
-            if ($body['containerType'] === ContainerType::Section) {
-                return SiteTree::get()->byID($body['parentId']);
+            if ($body->containerType === ContainerType::Section) {
+                return SiteTree::get()->byID($body->parentId);
             }
 
-            return GridElement::get()->byID($body['parentId']);
+            return GridElement::get()->byID($body->parentId);
         });
         if ($parent === null) {
             $this->jsonError(400);
@@ -189,21 +177,21 @@ class GridController extends AdminController
         }
 
         /** @var GridElement $newElement */
-        $newElement = Injector::inst()->create($body['containerType']->toElementClass());
+        $newElement = Injector::inst()->create($body->containerType->toElementClass());
         if (!$newElement->canCreate()) {
             $this->jsonError(403);
         }
 
-        $newElement->ParentID = $body['parentId'];
+        $newElement->ParentID = $body->parentId;
         $newElement->ParentClass = $parent::class;
 
-        if ($body['containerType'] === ContainerType::Section) {
-            $newElement->Zone = $body['zone'];
+        if ($body->containerType === ContainerType::Section) {
+            $newElement->Zone = $body->zone;
         }
 
         $newElement->ensureSortSet();
 
-        $result = $this->persistenceService->persistNew($newElement, $body['insertAfterElementID']);
+        $result = $this->persistenceService->persistNew($newElement, $body->insertAfterElementID);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
@@ -213,13 +201,19 @@ class GridController extends AdminController
 
     public function apiCreateContent(HTTPRequest $request): HTTPResponse
     {
-        $body = $this->parseCreateContentBody($request);
+        $data = $this->parseJsonBody($request);
+        $parseResult = $this->requestBodyParser->parseCreateContentBody($data);
+        if ($parseResult->isErr()) {
+            return $this->resultToResponse($parseResult, 400);
+        }
+
+        $body = $parseResult->unwrap();
 
         /** @var GridElement|null $parent */
         $parent = Versioned::withVersionedMode(static function () use ($body): ?GridElement {
             Versioned::set_stage(Versioned::DRAFT);
 
-            return GridElement::get()->byID($body['parentId']);
+            return GridElement::get()->byID($body->parentId);
         });
         if ($parent === null) {
             $this->jsonError(400);
@@ -234,16 +228,16 @@ class GridController extends AdminController
         }
 
         /** @var ContentElement $newElement */
-        $newElement = Injector::inst()->create($body['className']);
+        $newElement = Injector::inst()->create($body->className);
         if (!$newElement->canCreate()) {
             $this->jsonError(403);
         }
 
-        $newElement->ParentID = $body['parentId'];
+        $newElement->ParentID = $body->parentId;
         $newElement->ParentClass = $parent::class;
         $newElement->ensureSortSet();
 
-        $result = $this->persistenceService->persistNew($newElement, $body['insertAfterElementID']);
+        $result = $this->persistenceService->persistNew($newElement, $body->insertAfterElementID);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
@@ -300,7 +294,7 @@ class GridController extends AdminController
         }
 
         $clone = $element->duplicate(false);
-        $clone->Title = $this->generateCopyTitle($clone->Title ?? '');
+        $clone->Title = TitleGenerator::generateCopyTitle($clone->Title ?? '');
         $clone->Sort = 0;
         $clone->ParentID = $element->ParentID;
         $clone->ParentClass = $element->ParentClass;
@@ -318,9 +312,15 @@ class GridController extends AdminController
 
     public function apiReorder(HTTPRequest $request): HTTPResponse
     {
-        $body = $this->parseReorderBody($request);
+        $data = $this->parseJsonBody($request);
+        $parseResult = $this->requestBodyParser->parseReorderBody($data);
+        if ($parseResult->isErr()) {
+            return $this->resultToResponse($parseResult, 400);
+        }
 
-        $element = $this->elementRepository->findById($body['elementID']);
+        $body = $parseResult->unwrap();
+
+        $element = $this->elementRepository->findById($body->elementID);
         if ($element === null) {
             $this->jsonError(400);
         }
@@ -329,7 +329,7 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        $targetParent = $this->resolveParentRecord($body['targetParentId']);
+        $targetParent = $this->resolveParentRecord($body->targetParentId);
         if ($targetParent === null) {
             $this->jsonError(400);
         }
@@ -340,7 +340,7 @@ class GridController extends AdminController
 
         /** @var positive-int $sourceParentId */
         $sourceParentId = (int) $element->ParentID;
-        $isCrossParent = $sourceParentId !== $body['targetParentId'];
+        $isCrossParent = $sourceParentId !== $body->targetParentId;
 
         if ($isCrossParent) {
             $sourceParent = $element->Parent();
@@ -349,7 +349,7 @@ class GridController extends AdminController
             }
         }
 
-        $result = $this->reorderService->reorder($element, $targetParent, $body['afterElementID']);
+        $result = $this->reorderService->reorder($element, $targetParent, $body->afterElementID);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
@@ -359,7 +359,13 @@ class GridController extends AdminController
 
     public function apiUpdateGridSettings(HTTPRequest $request): HTTPResponse
     {
-        $body = $this->parseUpdateGridSettingsBody($request);
+        $data = $this->parseJsonBody($request);
+        $parseResult = $this->requestBodyParser->parseUpdateGridSettingsBody($data);
+        if ($parseResult->isErr()) {
+            return $this->resultToResponse($parseResult, 400);
+        }
+
+        $body = $parseResult->unwrap();
 
         $element = $this->requireElementWithPermission(
             $request,
@@ -373,8 +379,8 @@ class GridController extends AdminController
         $compactor = new GridSettingsCompactor($this->gridAdapter);
         $sparse = $compactor->applyViewportUpdate(
             $element->getGridSettingsData(),
-            $body['viewport'],
-            ['width' => $body['width'], 'offset' => $body['offset'], 'visible' => $body['visible']],
+            $body->viewport,
+            ['width' => $body->width, 'offset' => $body->offset, 'visible' => $body->visible],
         );
 
         $element->setGridSettingsData($sparse);
@@ -471,147 +477,19 @@ class GridController extends AdminController
     }
 
     /**
-     * Parse and validate the JSON body for element creation.
-     *
-     * @return CreateElementBody
-     */
-    private function parseCreateBody(HTTPRequest $request): array
-    {
-        $data = $this->parseJsonBody($request);
-
-        $containerTypeValue = $data['containerType'] ?? null;
-        $parentId = $data['parentId'] ?? null;
-        $afterElementID = $data['insertAfterElementID'] ?? null;
-        $zone = $data['zone'] ?? 'main';
-
-        if (!is_string($containerTypeValue)) {
-            $this->jsonError(400);
-        }
-
-        $containerType = ContainerType::tryFrom($containerTypeValue);
-        if ($containerType === null) {
-            $this->jsonError(400);
-        }
-
-        if (!is_int($parentId) || $parentId < 1) {
-            $this->jsonError(400);
-        }
-
-        if ($afterElementID !== null && (!is_int($afterElementID) || $afterElementID < 1)) {
-            $this->jsonError(400);
-        }
-
-        if (!is_string($zone) || $zone === '') {
-            $this->jsonError(400);
-        }
-
-        return [
-            'containerType' => $containerType,
-            'parentId' => $parentId,
-            'insertAfterElementID' => $afterElementID,
-            'zone' => $zone,
-        ];
-    }
-
-    /**
-     * Parse and validate the JSON body for content element creation.
-     *
-     * @return CreateContentBody
-     */
-    private function parseCreateContentBody(HTTPRequest $request): array
-    {
-        $data = $this->parseJsonBody($request);
-
-        $className = $data['className'] ?? null;
-        $parentId = $data['parentId'] ?? null;
-        $afterElementID = $data['insertAfterElementID'] ?? null;
-
-        if (!is_string($className)) {
-            $this->jsonError(400);
-        }
-
-        if (!class_exists($className)) {
-            $this->jsonError(400);
-        }
-
-        if ($className !== ContentElement::class && !is_subclass_of($className, ContentElement::class)) {
-            $this->jsonError(400);
-        }
-
-        if (!is_int($parentId) || $parentId < 1) {
-            $this->jsonError(400);
-        }
-
-        if ($afterElementID !== null && (!is_int($afterElementID) || $afterElementID < 1)) {
-            $this->jsonError(400);
-        }
-
-        /** @var class-string<ContentElement> $className */
-        return [
-            'className' => $className,
-            'parentId' => $parentId,
-            'insertAfterElementID' => $afterElementID,
-        ];
-    }
-
-    /**
-     * Parse and validate the JSON body for element reordering.
-     *
-     * @return ReorderBody
-     */
-    private function parseReorderBody(HTTPRequest $request): array
-    {
-        $data = $this->parseJsonBody($request);
-
-        $elementID = $data['elementID'] ?? null;
-        $targetParentId = $data['targetParentId'] ?? null;
-        $afterElementID = $data['afterElementID'] ?? null;
-
-        if (!is_int($elementID) || $elementID < 1) {
-            $this->jsonError(400);
-        }
-
-        if (!is_int($targetParentId) || $targetParentId < 1) {
-            $this->jsonError(400);
-        }
-
-        if ($afterElementID !== null && (!is_int($afterElementID) || $afterElementID < 1)) {
-            $this->jsonError(400);
-        }
-
-        return [
-            'elementID' => $elementID,
-            'targetParentId' => $targetParentId,
-            'afterElementID' => $afterElementID,
-        ];
-    }
-
-    /**
-     * Extract and validate a required integer `id` from the JSON request body.
-     *
-     * @return positive-int
-     */
-    private function requireElementId(HTTPRequest $request): int
-    {
-        $data = $this->parseJsonBody($request);
-
-        $id = $data['id'] ?? null;
-
-        if (!is_int($id) || $id < 1) {
-            $this->jsonError(400);
-        }
-
-        return $id;
-    }
-
-    /**
      * Load a grid element by the `id` in the request body, or 400/403 on failure.
      *
      * @param callable(GridElement): bool $permissionCheck
      */
     private function requireElementWithPermission(HTTPRequest $request, callable $permissionCheck): GridElement
     {
-        $id = $this->requireElementId($request);
+        $data = $this->parseJsonBody($request);
+        $parseResult = $this->requestBodyParser->parseElementId($data);
+        if ($parseResult->isErr()) {
+            $this->jsonError(400);
+        }
+
+        $id = $parseResult->unwrap();
 
         $element = $this->elementRepository->findById($id);
         if ($element === null) {
@@ -623,70 +501,6 @@ class GridController extends AdminController
         }
 
         return $element;
-    }
-
-    /**
-     * Parse and validate the JSON body for grid settings updates.
-     *
-     * @return UpdateGridSettingsBody
-     */
-    private function parseUpdateGridSettingsBody(HTTPRequest $request): array
-    {
-        $data = $this->parseJsonBody($request);
-
-        $id = $data['id'] ?? null;
-        $viewport = $data['viewport'] ?? null;
-        $width = $data['width'] ?? null;
-        $offset = $data['offset'] ?? null;
-        $visible = $data['visible'] ?? null;
-
-        if (!is_int($id) || $id < 1) {
-            $this->jsonError(400);
-        }
-
-        if (!is_string($viewport)) {
-            $this->jsonError(400);
-        }
-
-        // Validate viewport against the adapter's known viewports
-        $validKeys = array_map(
-            static fn (Viewport $vp): string => $vp->key,
-            $this->gridAdapter->getViewports(),
-        );
-        if (!in_array($viewport, $validKeys, true)) {
-            $this->jsonError(400);
-        }
-
-        $columnCount = $this->gridAdapter->getColumnCount();
-
-        if (!is_int($width) || $width < 1 || $width > $columnCount) {
-            $this->jsonError(400, sprintf('Width must be between 1 and %d.', $columnCount));
-        }
-
-        if (!is_int($offset) || $offset < 0 || $offset > $columnCount - 1) {
-            $this->jsonError(400, sprintf('Offset must be between 0 and %d.', $columnCount - 1));
-        }
-
-        if ($width + $offset > $columnCount) {
-            $this->jsonError(400, sprintf(
-                'Width (%d) plus offset (%d) exceeds the maximum of %d columns.',
-                $width,
-                $offset,
-                $columnCount,
-            ));
-        }
-
-        if (!is_bool($visible)) {
-            $this->jsonError(400);
-        }
-
-        return [
-            'id' => $id,
-            'viewport' => $viewport,
-            'width' => $width,
-            'offset' => $offset,
-            'visible' => $visible,
-        ];
     }
 
     /**
@@ -705,46 +519,18 @@ class GridController extends AdminController
     }
 
     /**
-     * Convert a failed Result into a 422 JSON error response.
+     * Convert a failed Result into a JSON error response.
      *
      * @template T
      * @param Result<T> $result
      */
-    private function resultToResponse(Result $result): never
+    private function resultToResponse(Result $result, int $statusCode = 422): never
     {
         $messages = array_map(
             static fn (ValidationError $error): string => $error->message,
             $result->errors(),
         );
 
-        $this->jsonError(422, implode(' ', $messages));
-    }
-
-    /**
-     * Generate a "copy" title for a duplicated element.
-     *
-     * "My Block" → "My Block copy"
-     * "My Block copy" → "My Block copy 2"
-     * "My Block copy 2" → "My Block copy 3"
-     */
-    private function generateCopyTitle(string $title): string
-    {
-        $hasCopyPattern = '/^.*(\scopy($|\s[0-9]+$))/';
-        $hasNumPattern = '/^.*(\s[0-9]+$)/';
-
-        if (preg_match($hasCopyPattern, $title, $parts) === 1) {
-            $copy = $parts[1];
-
-            if (preg_match($hasNumPattern, $copy, $numParts) === 1) {
-                $num = trim($numParts[1]);
-                $inc = (int) $num + 1;
-
-                return substr($title, 0, -strlen($num)) . (string) $inc;
-            }
-
-            return $title . ' 2';
-        }
-
-        return $title . ' copy';
+        $this->jsonError($statusCode, implode(' ', $messages));
     }
 }

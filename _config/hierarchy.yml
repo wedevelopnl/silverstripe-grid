@@ -62,6 +62,9 @@ SilverStripe\Core\Injector\Injector:
     class: WeDevelop\Grid\Service\ReorderExecutor
     constructor:
       elementRepository: '%$WeDevelop\Grid\Repository\GridElementRepositoryInterface'
+  WeDevelop\Grid\Service\RequestBodyParser:
+    constructor:
+      gridAdapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
   WeDevelop\Grid\Service\ReorderService:
     constructor:
       validator: '%$WeDevelop\Grid\Contract\ReorderValidatorInterface'
