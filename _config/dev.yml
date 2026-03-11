@@ -97,6 +97,18 @@ WeDevelop\Grid\Dev\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
+    media-elements:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/MediaElements.yml'
+      post_actions:
+        - action: attach_image
+          class: 'WeDevelop\Grid\Model\ContentElement'
+          identifier: media_element
+          fields:
+            relation: MediaImage
+            source: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/assets/test-image.png'
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
     complex-page:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/ComplexPage.yml'
       post_actions:

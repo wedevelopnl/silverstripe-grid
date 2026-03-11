@@ -1,0 +1,53 @@
+# E2E fixture for media content element layout and rendering flows.
+#
+# Structure:
+#   Page → Section → Row → Column → 2 ContentElements
+#     - media_element: MediaType='image', image attached via post-action
+#     - text_element: plain text (side-by-side layout context)
+#
+# Top-down ordering: parents before children. FixtureLoader suppresses auto-scaffolding.
+# All pages use the 'e2e-' URLSegment prefix for cleanup identification.
+
+Page:
+  e2e_page:
+    Title: 'E2E Media Elements Page'
+    URLSegment: 'e2e-media-elements'
+
+# --- Section (into page) ---
+WeDevelop\Grid\Model\Section:
+  media_section:
+    Title: 'Media Section'
+    ShowTitle: 1
+    TitleTag: h3
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+
+# --- Row (into section) ---
+WeDevelop\Grid\Model\Row:
+  media_row:
+    Title: 'Media Row'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.media_section
+
+# --- Column (into row) ---
+WeDevelop\Grid\Model\Column:
+  media_col:
+    Title: 'Media Column'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.media_row
+    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true}}'
+
+# --- Leaves (into column) ---
+WeDevelop\Grid\Model\ContentElement:
+  media_element:
+    Title: 'Media Element'
+    HTML: '<p>Media element body content</p>'
+    MediaType: image
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.media_col
+  text_element:
+    Title: 'Text Element'
+    HTML: '<p>Text element body content</p>'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Column.media_col
