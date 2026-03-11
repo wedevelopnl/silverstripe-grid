@@ -31,6 +31,9 @@ blob-report/
 # APM
 apm_modules/
 
+# Docker generated env (worktree-specific ports)
+.docker/.env
+
 # Dolt database files (added by bd init)
 .dolt/
 *.db
