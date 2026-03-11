@@ -247,7 +247,12 @@ export const centerCrossing: CollisionDetection = (args) => {
 
 export interface OverRectSnapshot {
   id: string | number;
-  rect: { left: number; top: number; width: number; height: number };
+  /** DOM node ref — dereference at consumption time and call
+   * getBoundingClientRect() for a rect that's always in sync with
+   * pointer viewport coordinates (including SortableContext CSS transforms).
+   * Stored as a ref (not raw HTMLElement) so React re-renders that replace
+   * the DOM element are reflected automatically. */
+  nodeRef: { readonly current: HTMLElement | null };
 }
 
 export interface TypedCollisionDetectionOptions {
@@ -300,24 +305,19 @@ export function createTypedCollisionDetection(
     );
 
     /**
-     * Capture the winning collision's live DOM rect via getBoundingClientRect().
-     * Both `over.rect` (from DragEndEvent) and `droppableRects` (from the
-     * measuring system) can be stale after cross-container re-renders shift
-     * element positions — dnd-kit only re-measures when droppable IDs change,
-     * not when existing elements move. Reading the DOM directly ensures the
-     * direction comparison in handleDragEnd uses the element's actual position.
+     * Store the winning collision's DOM node for direction comparison at drop time.
+     *
+     * Stores the node reference rather than a static rect snapshot. The consumer
+     * reads getBoundingClientRect() at the moment of comparison (drop time),
+     * guaranteeing the rect and pointer are always in the same viewport
+     * coordinate space — including any SortableContext CSS transforms.
      */
-    const captureWinnerRect = (collisions: Collision[]) => {
+    const captureWinnerNode = (collisions: Collision[]) => {
       if (options.overRectRef && collisions.length > 0) {
         const winnerId = collisions[0].id;
         const container = args.droppableContainers.find((c) => c.id === winnerId);
-        const domNode = container?.node.current;
-        if (domNode) {
-          const domRect = domNode.getBoundingClientRect();
-          options.overRectRef.current = {
-            id: winnerId,
-            rect: { left: domRect.left, top: domRect.top, width: domRect.width, height: domRect.height },
-          };
+        if (container?.node.current) {
+          options.overRectRef.current = { id: winnerId, nodeRef: container.node as { readonly current: HTMLElement | null } };
         }
       }
       return collisions;
@@ -345,7 +345,16 @@ export function createTypedCollisionDetection(
       });
 
       if (siblingCollisions.length > 0) {
-        return captureWinnerRect(siblingCollisions);
+        // Skip overRectRef capture for pending-path siblings. At drop time,
+        // handleDragEnd falls back to over.rect (pre-transform, from dnd-kit's
+        // measuring system). This works because getPointerPosition and over.rect
+        // both use dnd-kit's coordinate system which accounts for auto-scroll
+        // consistently. Capturing a live DOM rect (getBoundingClientRect) here
+        // would introduce a coordinate space mismatch: the pointer position
+        // includes dnd-kit's scroll adjustments, but getBoundingClientRect
+        // reflects the viewport-relative position which shifts oppositely
+        // during auto-scroll.
+        return siblingCollisions;
       }
     } else {
       // Pass 1: prefer sibling collisions — centerCrossing requires the
@@ -373,7 +382,7 @@ export function createTypedCollisionDetection(
 
       if (siblingCollisions.length > 0) {
         hadSiblingHit = true;
-        return captureWinnerRect(siblingCollisions);
+        return captureWinnerNode(siblingCollisions);
       }
 
       // Guard: if the pointer is inside a SOURCE-container sibling rect (but
@@ -417,7 +426,7 @@ export function createTypedCollisionDetection(
             });
 
             if (liveCollisions.length > 0) {
-              return captureWinnerRect(liveCollisions);
+              return captureWinnerNode(liveCollisions);
             }
           }
 
@@ -446,7 +455,7 @@ export function createTypedCollisionDetection(
         );
       });
       if (containingParent) {
-        return captureWinnerRect([{
+        return captureWinnerNode([{
           id: containingParent.id,
           data: { droppableContainer: containingParent, value: 0 },
         }]);
@@ -455,7 +464,7 @@ export function createTypedCollisionDetection(
 
     // Distance fallback: entering empty containers at distance when pointer
     // is not inside any parent rect (e.g. in the gap between sections).
-    return captureWinnerRect(closestCenter({
+    return captureWinnerNode(closestCenter({
       ...args,
       droppableContainers: parents,
     }));

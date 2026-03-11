@@ -236,17 +236,24 @@ export function useDragAndDrop({
 
       const { maps: effectiveMaps } = pending.getEffective(tree, maps);
 
-      // collisionRefs are shared: collision detection reads all refs each cycle,
-      // but the orchestrator only reads overRectRef here for fresh rect resolution at drag end.
-      const overRectSnapshot = pending.collisionRefs.overRectRef.current;
-      const effectiveOverRect = String(overRectSnapshot?.id) === String(over.id)
-        ? overRectSnapshot!.rect
+      // Read the over element's live DOM rect at drop time. Both pointer and
+      // getBoundingClientRect() are in viewport space (including SortableContext
+      // CSS transforms), so comparing them gives the correct before/after
+      // direction. Using a cached rect from collision detection or over.rect
+      // (pre-transform from dnd-kit) can produce wrong directions when
+      // SortableContext transforms shift the element between capture and drop.
+      const overSnapshot = pending.collisionRefs.overRectRef.current;
+      const overNode = overSnapshot?.nodeRef.current;
+      const effectiveOverRect = String(overSnapshot?.id) === String(over.id) && overNode
+        ? overNode.getBoundingClientRect()
         : over.rect;
+
+      const pointer = getPointerPosition(event);
 
       const placement = resolveDropPlacement({
         activeParsed,
         overParsed,
-        pointer: getPointerPosition(event),
+        pointer,
         maps: effectiveMaps,
         sourceParentId,
         sourceIndex,

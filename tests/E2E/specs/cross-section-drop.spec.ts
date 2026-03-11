@@ -202,30 +202,9 @@ test.describe('Cross-section row drop positions', () => {
       await expect(sectionBeta.getByTestId('row-block')).toHaveCount(1);
 
       await activateDragByTitle(page, 'Row B1', { overlayTestId: 'drag-overlay-row' });
-
-      // Move upward from Beta into Alpha's bottom area (below A3's center).
-      // This triggers the containment-first parent fallback (depleted source),
-      // placing B1 at the end of Alpha via handleDragOver's container path.
-      const a3 = sectionAlpha.getByTestId('row-block').last();
-      await a3.scrollIntoViewIfNeeded();
-      const a3Box = await a3.boundingBox();
-      expect(a3Box).not.toBeNull();
-      const entryX = a3Box!.x + a3Box!.width / 2;
-      const entryY = a3Box!.y + a3Box!.height - 10;
-      await page.mouse.move(entryX, entryY, { steps: 30 });
-      await page.waitForTimeout(300);
-      await expect(sectionAlpha.getByTestId('row-block')).toHaveCount(4);
-
-      // After the pending move, B1's DOM element (opacity 0.3) occupies space
-      // in Alpha, pushing A3 down. Re-read A3's shifted position and move the
-      // cursor past its new center to achieve "after A3" placement.
-      const a3Shifted = sectionAlpha.getByTestId('row-block').filter({ hasText: 'Row A3' });
-      await a3Shifted.scrollIntoViewIfNeeded();
-      const a3ShiftedBox = await a3Shifted.boundingBox();
-      expect(a3ShiftedBox).not.toBeNull();
-      const dropX = a3ShiftedBox!.x + a3ShiftedBox!.width / 2;
-      const dropY = a3ShiftedBox!.y + a3ShiftedBox!.height - 10;
-      await dropAndSettle(page, dropX, dropY);
+      await enterFromBelow(page, sectionAlpha, 4);
+      const pos = await rowPosition(sectionAlpha, { after: 'Row A3' });
+      await dropAndSettle(page, pos.x, pos.y);
 
       await expect(sectionAlpha.getByTestId('row-title')).toHaveText(['Row A1', 'Row A2', 'Row A3', 'Row B1']);
       await expect(sectionBeta.getByTestId('row-block')).toHaveCount(0);

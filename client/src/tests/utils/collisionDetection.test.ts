@@ -1417,6 +1417,76 @@ describe('createTypedCollisionDetection', () => {
     expect(result[0].id).toBe('row-20');
   });
 
+  it('hasPendingMove=true skips overRectRef capture for sibling collisions', () => {
+    // During a pending cross-container move, getPointerPosition and over.rect
+    // (pre-transform from dnd-kit) are both in dnd-kit's coordinate system.
+    // Capturing a live DOM rect would introduce a coordinate space mismatch
+    // with getPointerPosition during auto-scroll. By skipping capture,
+    // handleDragEnd falls back to over.rect for correct direction detection.
+    const overRectRef = { current: null as { id: string | number; nodeRef: { readonly current: HTMLElement | null } } | null };
+    const hasPendingMoveRef = { current: true };
+    const detect = createTypedCollisionDetection({ hasPendingMoveRef, overRectRef });
+
+    const sibling = makeContainerWithRect('row-20', { left: 0, top: 80, width: 100, height: 50 });
+    const preTransformRect = { ...rect, top: 0, bottom: 50 };
+
+    const initialRect = { ...rect, top: 200, bottom: 250 };
+    const collisionRect = { ...rect, top: 0, bottom: 50 };
+    const droppableRects = new Map([['row-20', preTransformRect]]);
+
+    const result = detect({
+      active: {
+        id: 'row-10',
+        data: { current: undefined },
+        rect: { current: { initial: initialRect, translated: collisionRect } },
+      },
+      collisionRect,
+      droppableRects,
+      droppableContainers: [sibling],
+      pointerCoordinates: null,
+    });
+
+    // Collision detected but overRectRef NOT captured
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe('row-20');
+    expect(overRectRef.current).toBeNull();
+  });
+
+  it('hasPendingMove=false captures live DOM node ref in overRectRef', () => {
+    // For same-container reordering (no pending move), capture the node ref
+    // so the consumer can read getBoundingClientRect() at drop time.
+    const overRectRef = { current: null as { id: string | number; nodeRef: { readonly current: HTMLElement | null } } | null };
+    const hasPendingMoveRef = { current: false };
+    const detect = createTypedCollisionDetection({ hasPendingMoveRef, overRectRef });
+
+    const sibling = makeContainerWithRect('row-20', { left: 0, top: 80, width: 100, height: 50 });
+    const preTransformRect = { ...rect, top: 0, bottom: 50 };
+
+    // Active starts far below, dragged up to sibling's pre-transform position.
+    // centerCrossing threshold: target center = 25, initial center = 225.
+    // Threshold = min(0+50-25, 25) = 25. CollisionRect center = 25 → crosses.
+    const initialRect = { ...rect, top: 200, bottom: 250 };
+    const collisionRect = { ...rect, top: 0, bottom: 50 };
+    const droppableRects = new Map([['row-20', preTransformRect]]);
+
+    detect({
+      active: {
+        id: 'row-10',
+        data: { current: undefined },
+        rect: { current: { initial: initialRect, translated: collisionRect } },
+      },
+      collisionRect,
+      droppableRects,
+      droppableContainers: [sibling],
+      pointerCoordinates: { x: 50, y: 25 },
+    });
+
+    expect(overRectRef.current).not.toBeNull();
+    expect(overRectRef.current!.id).toBe('row-20');
+    expect(overRectRef.current!.nodeRef).toBe(sibling.node);
+    expect(overRectRef.current!.nodeRef.current!.getBoundingClientRect().top).toBe(80);
+  });
+
   it('parent container fallback works in both modes', () => {
     for (const pending of [false, true]) {
       const hasPendingMoveRef = { current: pending };
