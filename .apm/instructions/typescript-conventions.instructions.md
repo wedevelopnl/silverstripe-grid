@@ -50,7 +50,7 @@ Draggable/droppable IDs encode hierarchy level: `type-numericId` (e.g., `row-42`
 
 ### Pending Tree Pattern
 
-During cross-container drags, `handleDragOver` calls `applyReorder()` via `usePendingTree` to produce a mutated tree stored in `pendingTree` state. This provides immediate visual feedback (element appears in target container) without triggering API mutations. `pendingContainerItemsRef` tracks valid sibling IDs for collision filtering. `collisionRefs` are shared between collision detection (reads all refs each cycle) and the orchestrator (reads only `overRectRef` at drag end for fresh rect resolution). Cleared on drop or cancel.
+During cross-container drags, `handleDragOver` calls `applyReorder()` via `usePendingTree` to produce a mutated tree stored in `pendingTree` state. This provides immediate visual feedback (element appears in target container) without triggering API mutations. `pendingContainerItemsRef` tracks valid sibling IDs for collision filtering. `collisionRefs` are shared between collision detection and the orchestrator. For pending-path siblings, `overRectRef` is NOT captured — `handleDragEnd` falls back to `over.rect` (pre-transform, from dnd-kit) for direction detection. For same-container siblings, `overRectRef` stores the DOM node ref and reads `getBoundingClientRect()` at drop time. Cleared on drop or cancel.
 
 ### Direction-Aware Placement
 

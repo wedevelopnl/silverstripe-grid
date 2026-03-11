@@ -438,7 +438,7 @@ Package: `wedevelopnl/silverstripe-elemental-grid` (type: `silverstripe-vendormo
 - **Polymorphic parent ID collisions**: page IDs and element IDs share the same numeric space — lookup maps must key by composite `"ParentClass:ParentID"` not just ParentID
 - **GridSettings sparse storage**: Column GridSettings uses mobile-first cascade — only store viewport overrides, not all 6 viewports. Defaults (`width=12, offset=0, visible=true`) cascade from smallest viewport. PHP's `json_encode([])` emits `[]` not `{}` for empty settings — handle both in frontend/tests
 - **DnD pointer position**: dnd-kit's `active.rect.current.translated` drifts from the actual pointer when the grab point isn't at the element center. Use the `getPointerPosition()` helper in `useDragAndDrop.ts` which corrects for grab-point offset
-- **DnD stale droppable rects**: After SortableContext applies CSS transforms during a drag, `droppableRects` reflect pre-transform DOM positions. Use `getBoundingClientRect()` (via `closestCenterLive`) for accurate collision detection during pending cross-container moves
+- **DnD stale droppable rects**: After SortableContext applies CSS transforms during a drag, `droppableRects` reflect pre-transform DOM positions. Use `getBoundingClientRect()` (via `closestCenterLive`) for accurate collision detection during pending cross-container moves. However, do NOT use `getBoundingClientRect()` for drop-time direction detection during pending moves — `getPointerPosition()` uses dnd-kit's coordinate system (includes auto-scroll adjustments), while `getBoundingClientRect()` returns viewport-relative coordinates that shift oppositely during auto-scroll. Use `over.rect` (pre-transform, from dnd-kit) for direction comparison instead
 - **E2E drag timing**: dnd-kit processes pointer events synchronously but React state updates are batched. Always include delays between drag steps (activation, move, settlement) to let React reconcile. See `tests/E2E/helpers/drag.ts` for calibrated timings
 
 <!-- Source: local .apm/instructions/code-style.instructions.md -->
@@ -651,7 +651,7 @@ Draggable/droppable IDs encode hierarchy level: `type-numericId` (e.g., `row-42`
 
 ### Pending Tree Pattern
 
-During cross-container drags, `handleDragOver` calls `applyReorder()` via `usePendingTree` to produce a mutated tree stored in `pendingTree` state. This provides immediate visual feedback (element appears in target container) without triggering API mutations. `pendingContainerItemsRef` tracks valid sibling IDs for collision filtering. `collisionRefs` are shared between collision detection (reads all refs each cycle) and the orchestrator (reads only `overRectRef` at drag end for fresh rect resolution). Cleared on drop or cancel.
+During cross-container drags, `handleDragOver` calls `applyReorder()` via `usePendingTree` to produce a mutated tree stored in `pendingTree` state. This provides immediate visual feedback (element appears in target container) without triggering API mutations. `pendingContainerItemsRef` tracks valid sibling IDs for collision filtering. `collisionRefs` are shared between collision detection and the orchestrator. For pending-path siblings, `overRectRef` is NOT captured — `handleDragEnd` falls back to `over.rect` (pre-transform, from dnd-kit) for direction detection. For same-container siblings, `overRectRef` stores the DOM node ref and reads `getBoundingClientRect()` at drop time. Cleared on drop or cancel.
 
 ### Direction-Aware Placement
 
