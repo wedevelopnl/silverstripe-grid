@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import {
   PointerSensor,
   useSensor,
@@ -23,13 +23,11 @@ import type {
   ElementNode,
   ElementTreeResponse,
 } from '@/types/elements';
-import { useElementMaps, buildMaps } from '@/hooks/useElementMaps';
-import type { ElementMaps } from '@/hooks/useElementMaps';
-import { resolveReorderParams } from '@/utils/resolveReorderParams';
-import { applyReorder } from '@/utils/applyReorder';
+import { useElementMaps } from '@/hooks/useElementMaps';
+import { usePendingTree } from '@/hooks/usePendingTree';
+import { resolveDropPlacement } from '@/utils/resolveDropPlacement';
 import { resolveInsertDirection } from '@/utils/resolveInsertDirection';
 import { createTypedCollisionDetection } from '@/utils/collisionDetection';
-import type { OverRectSnapshot } from '@/utils/collisionDetection';
 
 // --- Public types ---
 
@@ -49,16 +47,22 @@ export interface UseDragAndDropOptions {
   ) => void;
 }
 
-export interface UseDragAndDropReturn {
+export interface DndContextProps {
   sensors: SensorDescriptor<SensorOptions>[];
   collisionDetection: CollisionDetection;
+  onDragStart: (event: DragStartEvent) => void;
+  onDragOver: (event: DragOverEvent) => void;
+  onDragEnd: (event: DragEndEvent) => void;
+  onDragCancel: (event: DragCancelEvent) => void;
+}
+
+export interface UseDragAndDropReturn {
+  /** Spread directly onto DndContext. */
+  dndContextProps: DndContextProps;
+  /** Current drag state for DragOverlay rendering. */
   dragState: DragState | null;
-  /** Tree with any pending cross-container move applied, or null if no move in progress. */
+  /** Tree with pending cross-container move applied, or null. */
   pendingTree: ElementTreeResponse | null;
-  handleDragStart: (event: DragStartEvent) => void;
-  handleDragOver: (event: DragOverEvent) => void;
-  handleDragEnd: (event: DragEndEvent) => void;
-  handleDragCancel: (event: DragCancelEvent) => void;
 }
 
 // --- Drag context ---
@@ -116,18 +120,11 @@ export function useDragAndDrop({
   onReorder,
 }: UseDragAndDropOptions): UseDragAndDropReturn {
   const [dragState, setDragState] = useState<DragState | null>(null);
-  const [pendingTree, setPendingTree] = useState<ElementTreeResponse | null>(null);
-  const pendingTreeRef = useRef<ElementTreeResponse | null>(null);
-  const hasPendingMoveRef = useRef(false);
-  const overRectRef = useRef<OverRectSnapshot | null>(null);
-  const pendingContainerItemsRef = useRef<ReadonlySet<string | number> | null>(null);
-  const pendingMapsRef = useRef<ElementMaps | null>(null);
-  const sourceContainerItemsRef = useRef<ReadonlySet<string | number> | null>(null);
   const maps = useElementMaps(tree);
+  const pending = usePendingTree();
 
-  // Stable collision detection instance — refs are read dynamically per event
   const [collisionDetection] = useState<CollisionDetection>(
-    () => createTypedCollisionDetection({ hasPendingMoveRef, pendingContainerItemsRef, sourceContainerItemsRef, overRectRef }),
+    () => createTypedCollisionDetection(pending.collisionRefs),
   );
 
   const sensors = useSensors(
@@ -135,16 +132,6 @@ export function useDragAndDrop({
       activationConstraint: { distance: POINTER_DISTANCE_THRESHOLD },
     }),
   );
-
-  const clearPendingTree = useCallback(() => {
-    pendingTreeRef.current = null;
-    pendingMapsRef.current = null;
-    hasPendingMoveRef.current = false;
-    overRectRef.current = null;
-    pendingContainerItemsRef.current = null;
-    sourceContainerItemsRef.current = null;
-    setPendingTree(null);
-  }, []);
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
@@ -154,15 +141,12 @@ export function useDragAndDrop({
       const node = maps.nodeMap.get(parsed.id);
       if (!node) return;
 
-      // Track source container siblings so the guard in collision detection
-      // only blocks parent-container fallback when the pointer is inside a
-      // same-container sibling, not when entering a different container.
       const siblings = maps.childrenByParentId.get(node.parentId) ?? [];
-      sourceContainerItemsRef.current = new Set(
+      pending.setSourceSiblings(new Set(
         siblings
           .filter((n) => n.id !== parsed.id)
           .map((n) => buildDraggableId(parsed.type, n.id)),
-      );
+      ));
 
       setDragState({
         activeId: String(event.active.id),
@@ -170,7 +154,7 @@ export function useDragAndDrop({
         activeNode: node,
       });
     },
-    [maps],
+    [maps, pending],
   );
 
   const handleDragOver = useCallback(
@@ -182,9 +166,7 @@ export function useDragAndDrop({
       const overParsed = parseDraggableId(String(over.id));
       if (!activeParsed || !overParsed) return;
 
-      // Use the effective tree (with any existing pending move applied)
-      const effectiveTree = pendingTreeRef.current ?? tree;
-      const effectiveMaps = pendingMapsRef.current ?? maps;
+      const { tree: effectiveTree, maps: effectiveMaps } = pending.getEffective(tree, maps);
 
       const activeNode = effectiveMaps.nodeMap.get(activeParsed.id);
       if (!activeNode) return;
@@ -193,12 +175,10 @@ export function useDragAndDrop({
       let afterElementId: number | null;
 
       if (overParsed.type === activeParsed.type) {
-        // Over a sibling — use the sibling's parent
         const overNode = effectiveMaps.nodeMap.get(overParsed.id);
         if (!overNode) return;
         targetParentId = overNode.parentId;
 
-        // Direction-aware: place before or after based on pointer vs over center.
         const pointer = getPointerPosition(event);
         if (pointer !== null && resolveInsertDirection(pointer, over.rect, activeParsed.type) === 'before') {
           const siblings = effectiveMaps.childrenByParentId.get(targetParentId) ?? [];
@@ -208,7 +188,6 @@ export function useDragAndDrop({
           afterElementId = overParsed.id;
         }
       } else {
-        // Over a container — append to end
         const containerNode = effectiveMaps.nodeMap.get(overParsed.id);
         if (!containerNode || !isContainerNode(containerNode)) return;
         targetParentId = containerNode.id;
@@ -216,224 +195,88 @@ export function useDragAndDrop({
         afterElementId = children.length > 0 ? children[children.length - 1].id : null;
       }
 
-      // Same-container: SortableContext handles visual reordering via transforms.
-      // handleDragEnd computes the final position from the pointer direction,
-      // so no ref correction is needed here.
-      if (activeNode.parentId === targetParentId) {
-        return;
-      }
+      // Same-container: SortableContext handles visual reordering via transforms
+      if (activeNode.parentId === targetParentId) return;
 
-      const newTree = applyReorder(effectiveTree, activeParsed.id, targetParentId, afterElementId);
-      if (newTree !== effectiveTree) {
-        const newMaps = buildMaps(newTree);
-        pendingTreeRef.current = newTree;
-        pendingMapsRef.current = newMaps;
-        hasPendingMoveRef.current = true;
-
-        // Compute the set of sibling droppable IDs in the target container
-        // so collision detection can filter out wrong-container siblings
-        // whose stale rects would cause closestCenter to bounce the item back.
-        const targetSiblings = newMaps.childrenByParentId.get(targetParentId) ?? [];
-        pendingContainerItemsRef.current = new Set(
-          targetSiblings.map((n) => buildDraggableId(activeParsed.type, n.id)),
-        );
-
-        setPendingTree(newTree);
-      }
+      pending.applyPendingMove(activeParsed, targetParentId, afterElementId, effectiveTree, effectiveMaps);
     },
-    [tree],
+    [tree, maps, pending],
   );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
-      const currentPendingTree = pendingTreeRef.current;
-      const currentOverRect = overRectRef.current;
-      const pointer = getPointerPosition(event);
-
       setDragState(null);
 
       const { active, over } = event;
-
       if (!over || active.id === over.id) {
-        clearPendingTree();
+        pending.clear();
         return;
       }
 
       const activeParsed = parseDraggableId(String(active.id));
       const overParsed = parseDraggableId(String(over.id));
       if (!activeParsed || !overParsed) {
-        clearPendingTree();
+        pending.clear();
         return;
       }
 
       const activeNode = maps.nodeMap.get(activeParsed.id);
       if (!activeNode) {
-        clearPendingTree();
+        pending.clear();
         return;
       }
 
       const sourceParentId = activeNode.parentId;
       const sourceChildren = maps.childrenByParentId.get(sourceParentId);
       if (!sourceChildren) {
-        clearPendingTree();
+        pending.clear();
         return;
       }
       const sourceIndex = sourceChildren.findIndex((n) => n.id === activeParsed.id);
 
-      // Cross-container drag: the pending tree knows which container the item
-      // is in, but the final position within that container is computed from
-      // the pointer direction relative to the 'over' element's DOM rect.
-      // This avoids reliance on ref-based corrections that can diverge from
-      // visual DOM positions during cascading within-container events.
-      if (currentPendingTree !== null) {
-        const pendingMaps = buildMaps(currentPendingTree);
-        const pendingNode = pendingMaps.nodeMap.get(activeParsed.id);
-        if (pendingNode) {
-          const targetParentId = pendingNode.parentId;
-          const siblings = pendingMaps.childrenByParentId.get(targetParentId) ?? [];
+      const { maps: effectiveMaps } = pending.getEffective(tree, maps);
 
-          // Build the sibling list without the active item — this is the
-          // baseline order into which we'll insert at the pointer position.
-          const compositeIds = siblings.map((n) => buildDraggableId(activeParsed.type, n.id));
-          const filtered = compositeIds.filter((id) => id !== String(active.id));
+      const overRectSnapshot = pending.collisionRefs.overRectRef.current;
+      const effectiveOverRect = String(overRectSnapshot?.id) === String(over.id)
+        ? overRectSnapshot!.rect
+        : over.rect;
 
-          let insertIndex: number;
-
-          if (overParsed.type === activeParsed.type) {
-            // Over a sibling — find its position in the filtered list
-            // (excluding the active item) and use pointer direction.
-            const overCompositeId = buildDraggableId(overParsed.type, overParsed.id);
-            const overIdx = filtered.indexOf(overCompositeId);
-            if (overIdx === -1) {
-              // Over element not in this container — append to end
-              insertIndex = filtered.length;
-            } else {
-              insertIndex = overIdx;
-
-              // Use the over element's fresh DOM rect captured during collision
-              // detection. `over.rect` from DragEndEvent can be stale after
-              // cross-container re-renders shift droppable positions.
-              const freshOverRect = String(currentOverRect?.id) === String(over.id)
-                ? currentOverRect!.rect
-                : over.rect;
-
-              if (pointer !== null && resolveInsertDirection(pointer, freshOverRect, activeParsed.type) === 'after') {
-                insertIndex += 1;
-              }
-            }
-          } else {
-            // Over a container — append to end
-            insertIndex = filtered.length;
-          }
-
-          const clampedIndex = Math.min(insertIndex, filtered.length);
-          filtered.splice(clampedIndex, 0, String(active.id));
-
-          const params = resolveReorderParams({
-            activeId: String(active.id),
-            overContainerParentId: targetParentId,
-            overIndex: filtered.indexOf(String(active.id)),
-            containerItems: filtered,
-            sourceContainerParentId: sourceParentId,
-            sourceIndex,
-          });
-
-          if (params) {
-            onReorder(params.elementID, params.targetParentId, params.afterElementID, clearPendingTree);
-          } else {
-            clearPendingTree();
-          }
-          return;
-        }
-      }
-
-      // Same-container reorder (no pending tree): original logic
-      let targetParentId: number;
-      let containerChildren: ElementNode[];
-      let insertIndex: number;
-
-      if (overParsed.type === activeParsed.type) {
-        // Over a sibling item — use the sibling's parentId
-        const overNode = maps.nodeMap.get(overParsed.id);
-        if (!overNode) {
-          clearPendingTree();
-          return;
-        }
-
-        targetParentId = overNode.parentId;
-        const targetChildren = maps.childrenByParentId.get(targetParentId);
-        if (!targetChildren) {
-          clearPendingTree();
-          return;
-        }
-
-        containerChildren = targetChildren;
-        insertIndex = targetChildren.findIndex((n) => n.id === overParsed.id);
-
-        // Fallback direction check for cross-container drops without a pending tree
-        // (e.g., very fast drag where handleDragOver didn't fire)
-        if (sourceParentId !== targetParentId && pointer !== null) {
-          const freshOverRect = String(currentOverRect?.id) === String(over.id)
-            ? currentOverRect!.rect
-            : over.rect;
-          if (resolveInsertDirection(pointer, freshOverRect, activeParsed.type) === 'after') {
-            insertIndex += 1;
-          }
-        }
-      } else {
-        // Over a container — drop into it (container's own ID is the parent)
-        const containerNode = maps.nodeMap.get(overParsed.id);
-        if (!containerNode || !isContainerNode(containerNode)) {
-          clearPendingTree();
-          return;
-        }
-
-        targetParentId = containerNode.id;
-        containerChildren = containerNode.children ?? [];
-        insertIndex = containerChildren.length;
-      }
-
-      // Build the ordered ID list with the active item placed at the target position
-      const compositeIds = containerChildren.map((n) =>
-        buildDraggableId(activeParsed.type, n.id),
-      );
-      const filtered = compositeIds.filter((id) => id !== String(active.id));
-      const clampedIndex = Math.min(insertIndex, filtered.length);
-      filtered.splice(clampedIndex, 0, String(active.id));
-
-      const resolveContext = {
-        activeId: String(active.id),
-        overContainerParentId: targetParentId,
-        overIndex: filtered.indexOf(String(active.id)),
-        containerItems: filtered,
-        sourceContainerParentId: sourceParentId,
+      const placement = resolveDropPlacement({
+        activeParsed,
+        overParsed,
+        pointer: getPointerPosition(event),
+        maps: effectiveMaps,
+        sourceParentId,
         sourceIndex,
-      };
+        overRect: effectiveOverRect,
+      });
 
-      const params = resolveReorderParams(resolveContext);
-
-      if (params) {
-        onReorder(params.elementID, params.targetParentId, params.afterElementID, clearPendingTree);
+      if (placement) {
+        onReorder(placement.elementID, placement.targetParentId, placement.afterElementID, pending.clear);
       } else {
-        clearPendingTree();
+        pending.clear();
       }
     },
-    [maps, onReorder, clearPendingTree],
+    [tree, maps, onReorder, pending],
   );
 
   const handleDragCancel = useCallback(() => {
     setDragState(null);
-    clearPendingTree();
-  }, [clearPendingTree]);
+    pending.clear();
+  }, [pending]);
 
-  return {
+  const dndContextProps = useMemo<DndContextProps>(() => ({
     sensors,
     collisionDetection,
+    onDragStart: handleDragStart,
+    onDragOver: handleDragOver,
+    onDragEnd: handleDragEnd,
+    onDragCancel: handleDragCancel,
+  }), [sensors, collisionDetection, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel]);
+
+  return {
+    dndContextProps,
     dragState,
-    pendingTree,
-    handleDragStart,
-    handleDragOver,
-    handleDragEnd,
-    handleDragCancel,
+    pendingTree: pending.pendingTree,
   };
 }
