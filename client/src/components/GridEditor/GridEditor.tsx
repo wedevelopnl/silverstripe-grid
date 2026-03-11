@@ -32,7 +32,7 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
 
   const reorderMutation = useReorderElement(pageId ?? 0, zone);
 
-  const { sensors, collisionDetection, dragState, pendingTree, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel } = useDragAndDrop({
+  const { dndContextProps, dragState, pendingTree } = useDragAndDrop({
     tree: data ?? {},
     onReorder: (elementID, targetParentId, afterElementID, clearPendingTree) => {
       reorderMutation.mutate({
@@ -72,13 +72,8 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
           <ViewportProvider>
             <ViewportSwitcher />
             <DndContext
-              sensors={sensors}
-              collisionDetection={collisionDetection}
+              {...dndContextProps}
               measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragEnd={handleDragEnd}
-              onDragCancel={handleDragCancel}
             >
               <DragContext.Provider value={dragContextValue}>
                 <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>

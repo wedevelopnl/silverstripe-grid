@@ -2,7 +2,6 @@ import { renderHook, act } from '@testing-library/react';
 import { usePendingTree } from '@/hooks/usePendingTree';
 import { buildMaps } from '@/hooks/useElementMaps';
 import type {
-  SimpleElementNode,
   ColumnNode,
   RowNode,
   SectionNode,
@@ -11,15 +10,7 @@ import type {
 
 // --- Minimal factories ---
 
-function makeElement(id: number, parentId: number): SimpleElementNode {
-  return {
-    id, parentId, title: `Element ${id}`,
-    blockSchema: { typeName: 'Element', label: 'Element', icon: 'font-icon-block-content', type: 'Element', title: '', summary: '' },
-    obsoleteClassName: null, version: 1, canDelete: true, canPublish: true, canUnpublish: false, canCreate: true, editLink: null, statusFlags: {},
-  };
-}
-
-function makeColumn(id: number, children: SimpleElementNode[], parentId: number): ColumnNode {
+function makeColumn(id: number, children: never[], parentId: number): ColumnNode {
   return {
     id, parentId, title: `Column ${id}`,
     blockSchema: { typeName: 'Column', label: 'Column', icon: 'font-icon-block-content', type: 'Column', title: '', summary: '' },

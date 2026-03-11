@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import type { RefObject } from 'react';
+import type { MutableRefObject } from 'react';
 import type { ParsedDraggableId } from '@/types/dnd';
 import { buildDraggableId } from '@/types/dnd';
 import type { ElementTreeResponse } from '@/types/elements';
@@ -9,10 +9,10 @@ import { applyReorder } from '@/utils/applyReorder';
 import type { OverRectSnapshot } from '@/utils/collisionDetection';
 
 export interface CollisionRefs {
-  readonly hasPendingMoveRef: RefObject<boolean>;
-  readonly pendingContainerItemsRef: RefObject<ReadonlySet<string | number> | null>;
-  readonly sourceContainerItemsRef: RefObject<ReadonlySet<string | number> | null>;
-  readonly overRectRef: RefObject<OverRectSnapshot | null>;
+  readonly hasPendingMoveRef: MutableRefObject<boolean>;
+  readonly pendingContainerItemsRef: MutableRefObject<ReadonlySet<string | number> | null>;
+  readonly sourceContainerItemsRef: MutableRefObject<ReadonlySet<string | number> | null>;
+  readonly overRectRef: MutableRefObject<OverRectSnapshot | null>;
 }
 
 export interface UsePendingTreeReturn {
@@ -69,7 +69,7 @@ export function usePendingTree(): UsePendingTreeReturn {
     targetParentId: number,
     afterElementId: number | null,
     effectiveTree: ElementTreeResponse,
-    effectiveMaps: ElementMaps,
+    _effectiveMaps: ElementMaps,
   ): { tree: ElementTreeResponse; maps: ElementMaps } | null => {
     const newTree = applyReorder(effectiveTree, activeParsed.id, targetParentId, afterElementId);
     if (newTree === effectiveTree) return null;
