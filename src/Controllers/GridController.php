@@ -178,7 +178,7 @@ class GridController extends AdminController
 
         /** @var GridElement $newElement */
         $newElement = Injector::inst()->create($body->containerType->toElementClass());
-        if (!$newElement->canCreate()) {
+        if (!$newElement->canCreate(null, ['Parent' => $parent])) {
             $this->jsonError(403);
         }
 
@@ -229,7 +229,7 @@ class GridController extends AdminController
 
         /** @var ContentElement $newElement */
         $newElement = Injector::inst()->create($body->className);
-        if (!$newElement->canCreate()) {
+        if (!$newElement->canCreate(null, ['Parent' => $parent])) {
             $this->jsonError(403);
         }
 
@@ -333,7 +333,7 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        $targetParent = $this->resolveParentRecord($body->targetParentId);
+        $targetParent = $this->resolveParentRecord($body->targetParentId, $element);
         if ($targetParent === null) {
             $this->jsonError(400);
         }
@@ -517,18 +517,22 @@ class GridController extends AdminController
     }
 
     /**
-     * Resolve a parent record by ID, trying GridElement first then SiteTree.
+     * Resolve a parent record by ID, querying the correct table based on the
+     * element's hierarchy level to avoid ID collisions between GridElement and SiteTree.
      *
-     * Parent can be a container element (Section, Row, Column) or a page.
+     * Sections live under SiteTree pages; all other elements live under GridElements.
      */
-    private function resolveParentRecord(int $parentId): ?DataObject
+    private function resolveParentRecord(int $parentId, GridElement $element): ?DataObject
     {
-        $element = GridElement::get()->byID($parentId);
-        if ($element !== null) {
-            return $element;
-        }
+        return Versioned::withVersionedMode(static function () use ($parentId, $element): ?DataObject {
+            Versioned::set_stage(Versioned::DRAFT);
 
-        return SiteTree::get()->byID($parentId);
+            if (is_a($element->ParentClass, SiteTree::class, true)) {
+                return SiteTree::get()->byID($parentId);
+            }
+
+            return GridElement::get()->byID($parentId);
+        });
     }
 
     /**

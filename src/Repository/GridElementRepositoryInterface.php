@@ -12,12 +12,13 @@ interface GridElementRepositoryInterface
     public function findById(int $id): ?GridElement;
 
     /**
-     * Find all elements belonging to the given parent IDs, ordered by Sort ASC, ID ASC.
+     * Find all elements belonging to the given parent IDs and class, ordered by Sort ASC, ID ASC.
      *
      * @param list<positive-int> $parentIds
+     * @param class-string $parentClass
      * @return list<GridElement>
      */
-    public function findByParentIds(array $parentIds): array;
+    public function findByParentIds(array $parentIds, string $parentClass): array;
 
     /**
      * Find all elements matching the given parent ID+class pairs, ordered by Sort ASC, ID ASC.

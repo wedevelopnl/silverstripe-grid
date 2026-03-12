@@ -80,7 +80,9 @@ class ElementPersistenceService
                 'ParentID' => $element->ParentID,
                 'ParentClass' => $element->ParentClass,
             ])
-            ->where(sprintf('"Sort" >= %d AND "GridElement"."ID" != %d', $newSort, (int) $element->ID))
+            ->where([
+                '"Sort" >= ? AND "GridElement"."ID" != ?' => [$newSort, (int) $element->ID],
+            ])
             ->sort('Sort', 'ASC') as $sibling
         ) {
             $sibling->Sort = (int) $sibling->Sort + 1;

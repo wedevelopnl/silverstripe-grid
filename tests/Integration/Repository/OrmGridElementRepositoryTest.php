@@ -76,7 +76,7 @@ final class OrmGridElementRepositoryTest extends SapphireTest
     {
         $col1Id = $this->idFromFixture(Column::class, 'col1');
 
-        $elements = $this->repository->findByParentIds([$col1Id]);
+        $elements = $this->repository->findByParentIds([$col1Id], Column::class);
 
         $this->assertCount(2, $elements);
         $this->assertSame('Text Block', $elements[0]->Title);
@@ -88,7 +88,7 @@ final class OrmGridElementRepositoryTest extends SapphireTest
         $col1Id = $this->idFromFixture(Column::class, 'col1');
         $col2Id = $this->idFromFixture(Column::class, 'col2');
 
-        $elements = $this->repository->findByParentIds([$col1Id, $col2Id]);
+        $elements = $this->repository->findByParentIds([$col1Id, $col2Id], Column::class);
 
         $this->assertCount(3, $elements);
 
@@ -111,7 +111,7 @@ final class OrmGridElementRepositoryTest extends SapphireTest
 
         $col1Id = $this->idFromFixture(Column::class, 'col1');
 
-        $elements = $this->repository->findByParentIds([$col1Id]);
+        $elements = $this->repository->findByParentIds([$col1Id], Column::class);
 
         $this->assertCount(2, $elements);
         // leaf2 (Sort=1) should come first despite having a higher ID than leaf1
@@ -121,14 +121,14 @@ final class OrmGridElementRepositoryTest extends SapphireTest
 
     public function testFindByParentIdsReturnsEmptyArrayForEmptyInput(): void
     {
-        $elements = $this->repository->findByParentIds([]);
+        $elements = $this->repository->findByParentIds([], Column::class);
 
         $this->assertSame([], $elements);
     }
 
     public function testFindByParentIdsReturnsEmptyArrayForNonExistentParent(): void
     {
-        $elements = $this->repository->findByParentIds([999999]);
+        $elements = $this->repository->findByParentIds([999999], Column::class);
 
         $this->assertSame([], $elements);
     }

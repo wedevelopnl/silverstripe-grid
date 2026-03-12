@@ -37,7 +37,7 @@ class ReorderExecutor implements ReorderExecutorInterface
         // For Sections, scope to the element's zone. Sort values are per-zone-per-parent:
         // main zone has Sort 1,2,3 and sidebar zone independently has Sort 1,2,3.
         // This is safe because all queries (readTree, ensureSortSet) filter by zone.
-        $allTargetSiblings = $this->elementRepository->findByParentIds([$targetParentId]);
+        $allTargetSiblings = $this->elementRepository->findByParentIds([$targetParentId], $targetParent::class);
         $targetSiblings = $element instanceof Section
             ? $this->filterByZone($allTargetSiblings, $element->Zone ?: '')
             : $allTargetSiblings;
@@ -58,12 +58,14 @@ class ReorderExecutor implements ReorderExecutorInterface
         }
 
         // Cross-parent: reassign ParentID and ParentClass, reindex target, then reindex source to close gaps
+        /** @var class-string $sourceParentClass */
+        $sourceParentClass = $element->ParentClass;
         $element->ParentID = $targetParentId;
         $element->ParentClass = $targetParent::class;
 
         $dirty = $this->reindex($targetSiblings, $element);
 
-        $allSourceSiblings = $this->elementRepository->findByParentIds([$sourceParentId]);
+        $allSourceSiblings = $this->elementRepository->findByParentIds([$sourceParentId], $sourceParentClass);
         $sourceSiblings = $element instanceof Section
             ? $this->filterByZone($allSourceSiblings, $element->Zone ?: '')
             : $allSourceSiblings;

@@ -38,7 +38,7 @@ final class ReorderExecutorTest extends TestCase
             ['id' => 5, 'sort' => 5, 'parentId' => 10],
         ]);
 
-        $this->repository->method('findByParentIds')->with([10])->willReturn([$a, $b, $c, $d, $e]);
+        $this->repository->method('findByParentIds')->with([10], $this->anything())->willReturn([$a, $b, $c, $d, $e]);
 
         $result = $this->executor->execute($d, $area, $a->ID);
 
@@ -66,7 +66,7 @@ final class ReorderExecutorTest extends TestCase
             ['id' => 5, 'sort' => 5, 'parentId' => 10],
         ]);
 
-        $this->repository->method('findByParentIds')->with([10])->willReturn([$a, $b, $c, $d, $e]);
+        $this->repository->method('findByParentIds')->with([10], $this->anything())->willReturn([$a, $b, $c, $d, $e]);
 
         $result = $this->executor->execute($b, $area, $d->ID);
 
@@ -91,7 +91,7 @@ final class ReorderExecutorTest extends TestCase
             ['id' => 3, 'sort' => 3, 'parentId' => 10],
         ]);
 
-        $this->repository->method('findByParentIds')->with([10])->willReturn([$a, $b, $c]);
+        $this->repository->method('findByParentIds')->with([10], $this->anything())->willReturn([$a, $b, $c]);
 
         $result = $this->executor->execute($b, $area, $a->ID);
 
@@ -112,7 +112,7 @@ final class ReorderExecutorTest extends TestCase
         $y = $this->createElementMock(4, 2, 20);
 
         $this->repository->method('findByParentIds')->willReturnCallback(
-            static fn (array $ids): array => match ($ids) {
+            static fn (array $ids, string $parentClass): array => match ($ids) {
                 [20] => [$x, $y],
                 [10] => [$a, $b],
                 default => [],
@@ -142,7 +142,7 @@ final class ReorderExecutorTest extends TestCase
             ['id' => 2, 'sort' => 2, 'parentId' => 10],
         ]);
 
-        $this->repository->method('findByParentIds')->with([10])->willReturn([$a, $b]);
+        $this->repository->method('findByParentIds')->with([10], $this->anything())->willReturn([$a, $b]);
 
         $result = $this->executor->execute($a, $area, $b->ID);
 
@@ -162,7 +162,7 @@ final class ReorderExecutorTest extends TestCase
         $element = $this->createElementMock(1, 1, 10);
 
         $this->repository->method('findByParentIds')->willReturnCallback(
-            static fn (array $ids): array => match ($ids) {
+            static fn (array $ids, string $parentClass): array => match ($ids) {
                 [20] => [],
                 [10] => [$element],
                 default => [],
@@ -190,7 +190,7 @@ final class ReorderExecutorTest extends TestCase
             ['id' => 3, 'sort' => 3, 'parentId' => 10],
         ]);
 
-        $this->repository->method('findByParentIds')->with([10])->willReturn([$a, $b, $c]);
+        $this->repository->method('findByParentIds')->with([10], $this->anything())->willReturn([$a, $b, $c]);
 
         $result = $this->executor->execute($c, $area, null);
 
@@ -216,7 +216,7 @@ final class ReorderExecutorTest extends TestCase
         $y = $this->createElementMock(4, 2, 20);
 
         $this->repository->method('findByParentIds')->willReturnCallback(
-            static fn (array $ids): array => match ($ids) {
+            static fn (array $ids, string $parentClass): array => match ($ids) {
                 [20] => [$x, $y],
                 [10] => [$a, $b],
                 default => [],
@@ -242,7 +242,7 @@ final class ReorderExecutorTest extends TestCase
         $area = $this->createParentMock(10);
         $a = $this->createElementMock(1, 1, 10);
 
-        $this->repository->method('findByParentIds')->with([10])->willReturn([$a]);
+        $this->repository->method('findByParentIds')->with([10], $this->anything())->willReturn([$a]);
 
         $result = $this->executor->execute($a, $area, null);
 
@@ -263,7 +263,7 @@ final class ReorderExecutorTest extends TestCase
         // the container's child area (50) or any other area.
         $this->repository->expects($this->once())
             ->method('findByParentIds')
-            ->with([10])
+            ->with([10], $this->anything())
             ->willReturn([$a, $section]);
 
         $result = $this->executor->execute($section, $area, null);
@@ -291,7 +291,7 @@ final class ReorderExecutorTest extends TestCase
         $this->repository->expects($this->exactly(2))
             ->method('findByParentIds')
             ->willReturnCallback(
-                static fn (array $ids): array => match ($ids) {
+                static fn (array $ids, string $parentClass): array => match ($ids) {
                     [20] => [$x],
                     [10] => [$section],
                     default => [],
@@ -318,7 +318,7 @@ final class ReorderExecutorTest extends TestCase
             ['id' => 2, 'sort' => 2, 'parentId' => 10],
         ]);
 
-        $this->repository->method('findByParentIds')->with([10])->willReturn([$a, $b]);
+        $this->repository->method('findByParentIds')->with([10], $this->anything())->willReturn([$a, $b]);
 
         $result = $this->executor->execute($a, $area, 999);
 
@@ -338,7 +338,7 @@ final class ReorderExecutorTest extends TestCase
         $c = $this->createElementMock(3, 3, 10);
 
         $this->repository->method('findByParentIds')->willReturnCallback(
-            static fn (array $ids): array => match ($ids) {
+            static fn (array $ids, string $parentClass): array => match ($ids) {
                 [20] => [],
                 [10] => [$a, $b, $c],
                 default => [],
@@ -373,7 +373,7 @@ final class ReorderExecutorTest extends TestCase
             ['id' => 5, 'sort' => 5, 'parentId' => 10],
         ]);
 
-        $this->repository->method('findByParentIds')->with([10])->willReturn([$a, $b, $c, $d, $e]);
+        $this->repository->method('findByParentIds')->with([10], $this->anything())->willReturn([$a, $b, $c, $d, $e]);
 
         $result = $this->executor->execute($b, $area, $c->ID);
 
@@ -401,11 +401,11 @@ final class ReorderExecutorTest extends TestCase
         );
     }
 
-    private function createElementMock(int $id, int $sort, int $parentId): GridElement&MockObject
+    private function createElementMock(int $id, int $sort, int $parentId, string $parentClass = DataObject::class): GridElement&MockObject
     {
         $element = $this->createMock(GridElement::class);
 
-        $fields = ['ID' => $id, 'Sort' => $sort, 'ParentID' => $parentId];
+        $fields = ['ID' => $id, 'Sort' => $sort, 'ParentID' => $parentId, 'ParentClass' => $parentClass];
 
         $element->method('__get')->willReturnCallback(
             static function (string $prop) use (&$fields): mixed {

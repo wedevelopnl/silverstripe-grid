@@ -15,7 +15,7 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
         return GridElement::get()->byID($id);
     }
 
-    public function findByParentIds(array $parentIds): array
+    public function findByParentIds(array $parentIds, string $parentClass): array
     {
         if ($parentIds === []) {
             return [];
@@ -23,7 +23,10 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
 
         /** @var list<GridElement> */
         return GridElement::get()
-            ->filter('ParentID', $parentIds)
+            ->filter([
+                'ParentID' => $parentIds,
+                'ParentClass' => $parentClass,
+            ])
             ->sort(['Sort' => 'ASC', 'ID' => 'ASC'])
             ->toArray();
     }
