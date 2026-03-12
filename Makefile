@@ -65,7 +65,7 @@ coverage-js:
 
 ## Check PHP coverage meets minimum threshold
 coverage-check: coverage
-	$(COMPOSE) exec app vendor/bin/coverage-check coverage/combined/clover.xml 69
+	$(COMPOSE) exec app vendor/bin/coverage-check coverage/combined/clover.xml 90
 
 ## Run PHP mutation testing (Infection)
 mutate: ensure-up
