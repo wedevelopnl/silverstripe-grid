@@ -5,9 +5,6 @@ node_modules/
 public/
 vendor/
 
-# bv (beads viewer) local config and caches
-.bv/
-
 # PHPUnit
 phpunit.xml
 .phpunit.cache/
@@ -37,7 +34,3 @@ apm_modules/
 # Claude Code local config
 .claude/*.local.md
 .claude/*.local.json
-
-# Dolt database files (added by bd init)
-.dolt/
-*.db

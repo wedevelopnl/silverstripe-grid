@@ -68,35 +68,6 @@ See the [architecture documentation](docs/architecture/) for detailed design doc
 - [Backend Architecture](docs/architecture/backend.md) — data model, API layer, service design, validation, grid adapters
 - [Drag and Drop](docs/architecture/drag-and-drop.md) — frontend dnd-kit integration and backend reorder pipeline
 
-### Issue Tracking with Beads
-
-This project uses [Beads](https://github.com/steveyegge/beads) for issue tracking. Beads is a git-backed issue tracker that lives in the repository, designed for AI-assisted development workflows.
-
-#### Quick Start
-
-Install beads (one-time setup):
-
-```bash
-# Pick one:
-npm install -g @beads/bd
-brew install beads
-go install github.com/steveyegge/beads/cmd/bd@latest
-```
-
-For other installation methods, see the [official documentation](https://github.com/steveyegge/beads).
-
-Common commands:
-
-```bash
-bd ready                              # Find issues ready to work on
-bd show <id>                          # View issue details
-bd update <id> --status=in_progress   # Claim an issue
-bd close <id>                         # Mark issue as done
-bd sync                               # Sync issues with git remote
-```
-
-Issues are stored in `.beads/` and committed alongside code. No external services or web UIs needed.
-
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for release history.

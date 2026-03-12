@@ -1,9 +1,6 @@
 # Enforce LF line endings
 * text=auto eol=lf
 
-# Use bd merge for beads JSONL files
-/.beads/issues.jsonl merge=beads
-
 # Mark generated build output
 /client/dist/**   linguist-generated
 
@@ -11,7 +8,6 @@
 
 # Dotfiles and dotdirs
 /.apm             export-ignore
-/.beads           export-ignore
 /.claude          export-ignore
 /.docker          export-ignore
 /.editorconfig    export-ignore
