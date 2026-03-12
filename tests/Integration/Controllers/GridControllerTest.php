@@ -11,18 +11,17 @@ use SilverStripe\Dev\FunctionalTest;
 use SilverStripe\Security\SecurityToken;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Controllers\GridController;
+use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Extensions\GridPageExtension;
-use WeDevelop\Grid\Service\RequestBodyParser;
-use WeDevelop\Grid\Service\TitleGenerator;
 use SilverStripe\Control\HTTPResponse;
 use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
 #[CoversClass(GridController::class)]
-#[CoversClass(RequestBodyParser::class)]
-#[CoversClass(TitleGenerator::class)]
 final class GridControllerTest extends FunctionalTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/ElementTreeTest.yml';
@@ -349,6 +348,28 @@ final class GridControllerTest extends FunctionalTest
         }
     }
 
+    /**
+     * DELETE a JSON body to an API endpoint with security token disabled.
+     *
+     * @param array<string, mixed> $body
+     */
+    private function deleteJson(string $url, array $body): HTTPResponse
+    {
+        SecurityToken::disable();
+
+        try {
+            return $this->mainSession->sendRequest(
+                'DELETE',
+                $url,
+                data: [],
+                headers: ['Content-Type' => 'application/json'],
+                body: json_encode($body, JSON_THROW_ON_ERROR),
+            );
+        } finally {
+            SecurityToken::enable();
+        }
+    }
+
     // --- apiReorder: cross-zone enforcement -----------------------------------
 
     public function testReorderRejects422ForCrossZoneSectionMove(): void
@@ -507,5 +528,617 @@ final class GridControllerTest extends FunctionalTest
         ]);
 
         $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // --- apiCreate: edge cases ------------------------------------------------
+
+    public function testCreateReturns400ForMissingSiteTreeParent(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 'section',
+            'parentId' => 999999,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testCreateReturns400ForMissingGridElementParent(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 'row',
+            'parentId' => 999999,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // --- apiPublish -----------------------------------------------------------
+
+    public function testPublishSucceeds(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->patchJson('/admin/grid/api/publish', [
+            'id' => $section->ID,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        // Verify element exists on LIVE stage
+        $liveElement = Versioned::withVersionedMode(static function () use ($section): ?GridElement {
+            Versioned::set_stage(Versioned::LIVE);
+
+            return GridElement::get()->byID($section->ID);
+        });
+
+        $this->assertNotNull($liveElement);
+    }
+
+    public function testPublishReturns400ForMissingElement(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->patchJson('/admin/grid/api/publish', [
+            'id' => 999999,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testPublishReturns400ForInvalidBody(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->patchJson('/admin/grid/api/publish', [
+            'id' => 'bad',
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // --- apiUnpublish ---------------------------------------------------------
+
+    public function testUnpublishSucceeds(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section = $this->objFromFixture(Section::class, 'section1');
+        $section->publishRecursive();
+
+        $response = $this->patchJson('/admin/grid/api/unpublish', [
+            'id' => $section->ID,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        // Verify element is gone from LIVE stage
+        $liveElement = Versioned::withVersionedMode(static function () use ($section): ?GridElement {
+            Versioned::set_stage(Versioned::LIVE);
+
+            return GridElement::get()->byID($section->ID);
+        });
+
+        $this->assertNull($liveElement);
+    }
+
+    public function testUnpublishReturns400ForMissingElement(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->patchJson('/admin/grid/api/unpublish', [
+            'id' => 999999,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testUnpublishReturns400ForInvalidBody(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->patchJson('/admin/grid/api/unpublish', [
+            'id' => null,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // --- apiDelete ------------------------------------------------------------
+
+    public function testDeleteSucceeds(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $leaf3 = $this->objFromFixture(GridElement::class, 'leaf3');
+
+        $response = $this->deleteJson('/admin/grid/api/delete', [
+            'id' => $leaf3->ID,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        // doArchive() removes from both stages
+        $archived = GridElement::get()->byID($leaf3->ID);
+        $this->assertNull($archived);
+    }
+
+    public function testDeleteReturns400ForMissingElement(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->deleteJson('/admin/grid/api/delete', [
+            'id' => 999999,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testDeleteReturns400ForInvalidBody(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->deleteJson('/admin/grid/api/delete', [
+            'id' => -1,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // --- apiCreateContent -----------------------------------------------------
+
+    public function testCreateContentSucceeds(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+
+        $response = $this->postJson('/admin/grid/api/createContent', [
+            'className' => ContentElement::class,
+            'parentId' => (int) $col1->ID,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        // Verify a ContentElement was created under col1
+        $newElement = ContentElement::get()->filter('ParentID', $col1->ID)->sort('ID', 'DESC')->first();
+        $this->assertNotNull($newElement);
+        $this->assertSame(Column::class, $newElement->ParentClass);
+    }
+
+    public function testCreateContentSucceedsWithInsertAfter(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+        $leaf1 = $this->objFromFixture(GridElement::class, 'leaf1');
+
+        $response = $this->postJson('/admin/grid/api/createContent', [
+            'className' => ContentElement::class,
+            'parentId' => (int) $col1->ID,
+            'insertAfterElementID' => $leaf1->ID,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+    }
+
+    public function testCreateContentReturns400ForNonColumnParent(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->postJson('/admin/grid/api/createContent', [
+            'className' => ContentElement::class,
+            'parentId' => (int) $section1->ID,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testCreateContentReturns400ForMissingParent(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->postJson('/admin/grid/api/createContent', [
+            'className' => ContentElement::class,
+            'parentId' => 999999,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testCreateContentReturns400ForInvalidClassName(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+
+        $response = $this->postJson('/admin/grid/api/createContent', [
+            'className' => Section::class,
+            'parentId' => (int) $col1->ID,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // --- apiUpdateGridSettings ------------------------------------------------
+
+    public function testUpdateGridSettingsSucceeds(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+
+        // Use a non-default viewport (lg) so the override is stored in sparse settings
+        $response = $this->patchJson('/admin/grid/api/updateGridSettings', [
+            'id' => (int) $col1->ID,
+            'viewport' => 'lg',
+            'width' => 6,
+            'offset' => 0,
+            'visible' => true,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        // Verify GridSettings JSON was updated — lg differs from md default (12) so it's stored
+        /** @var Column $updatedCol */
+        $updatedCol = Column::get()->byID($col1->ID);
+        $settings = $updatedCol->getGridSettingsData();
+        $this->assertArrayHasKey('lg', $settings);
+        $this->assertSame(6, $settings['lg']['width']);
+    }
+
+    public function testUpdateGridSettingsReturns400ForNonColumn(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->patchJson('/admin/grid/api/updateGridSettings', [
+            'id' => (int) $section1->ID,
+            'viewport' => 'md',
+            'width' => 6,
+            'offset' => 0,
+            'visible' => true,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testUpdateGridSettingsReturns400ForInvalidViewport(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+
+        $response = $this->patchJson('/admin/grid/api/updateGridSettings', [
+            'id' => (int) $col1->ID,
+            'viewport' => 'invalid',
+            'width' => 6,
+            'offset' => 0,
+            'visible' => true,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testUpdateGridSettingsReturns400ForInvalidBody(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->patchJson('/admin/grid/api/updateGridSettings', [
+            'id' => 'bad',
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // --- getClientConfig ------------------------------------------------------
+
+    public function testGetClientConfigIncludesGridAdapterAndLink(): void
+    {
+        $this->logInForHttp();
+
+        $controller = GridController::create();
+        $config = $controller->getClientConfig();
+
+        $this->assertArrayHasKey('controllerLink', $config);
+        $this->assertStringContainsString('grid', $config['controllerLink']);
+
+        $this->assertArrayHasKey('gridAdapter', $config);
+        $this->assertArrayHasKey('viewports', $config['gridAdapter']);
+        $this->assertArrayHasKey('columnCount', $config['gridAdapter']);
+        $this->assertArrayHasKey('defaultViewport', $config['gridAdapter']);
+    }
+
+    // --- CSRF enforcement -----------------------------------------------------
+
+    public function testMutatingRequestWithoutCsrfTokenReturns400(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        // Ensure the token is explicitly enabled — the test framework may disable it
+        SecurityToken::enable();
+
+        $response = $this->post(
+            '/admin/grid/api/create',
+            data: null,
+            headers: ['Content-Type' => 'application/json'],
+            body: json_encode(['containerType' => 'section', 'parentId' => 1], JSON_THROW_ON_ERROR),
+        );
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // --- Malformed JSON body -------------------------------------------------
+
+    public function testMalformedJsonBodyReturns400(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        SecurityToken::disable();
+
+        try {
+            $response = $this->post(
+                '/admin/grid/api/create',
+                data: null,
+                headers: ['Content-Type' => 'application/json'],
+                body: 'not-valid-json{',
+            );
+        } finally {
+            SecurityToken::enable();
+        }
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // --- Reorder: missing target parent --------------------------------------
+
+    public function testReorderReturns400WhenTargetParentNotFound(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => $section1->ID,
+            'targetParentId' => 999999,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // --- Permission enforcement (403) ----------------------------------------
+
+    /**
+     * Restrict a page so only ADMIN can view or edit it.
+     *
+     * With CanViewType/CanEditType set to 'OnlyTheseUsers' and no groups
+     * assigned, a member with CMS_ACCESS_LeftAndMain (but not ADMIN) will
+     * fail all page-delegated permission checks.
+     */
+    private function restrictPagePermissions(SiteTree $page): void
+    {
+        $page->CanViewType = 'OnlyTheseUsers';
+        $page->CanEditType = 'OnlyTheseUsers';
+        $page->write();
+    }
+
+    public function testReadTreeReturns403ForRestrictedPage(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $this->restrictPagePermissions($page);
+
+        $response = $this->get($this->apiUrl($page->ID));
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testCreateReturns403WhenParentNotEditable(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $this->restrictPagePermissions($page);
+
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 'section',
+            'parentId' => (int) $page->ID,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testCreateContentReturns403WhenParentNotEditable(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $this->restrictPagePermissions($page);
+
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+
+        $response = $this->postJson('/admin/grid/api/createContent', [
+            'className' => ContentElement::class,
+            'parentId' => (int) $col1->ID,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testPublishReturns403WhenNotPermitted(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $this->restrictPagePermissions($page);
+
+        $section = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->patchJson('/admin/grid/api/publish', [
+            'id' => $section->ID,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testUnpublishReturns403WhenNotPermitted(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $this->restrictPagePermissions($page);
+
+        $section = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->patchJson('/admin/grid/api/unpublish', [
+            'id' => $section->ID,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testDeleteReturns403WhenNotPermitted(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $this->restrictPagePermissions($page);
+
+        $leaf3 = $this->objFromFixture(GridElement::class, 'leaf3');
+
+        $response = $this->deleteJson('/admin/grid/api/delete', [
+            'id' => $leaf3->ID,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testDuplicateReturns403WhenParentNotEditable(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $this->restrictPagePermissions($page);
+
+        // canCreate() checks CMS_ACCESS (passes), but Parent()->canEdit()
+        // delegates to the restricted page (fails).
+        $section = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->postJson('/admin/grid/api/duplicate', [
+            'id' => $section->ID,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testReorderReturns403WhenElementNotEditable(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $this->restrictPagePermissions($page);
+
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => $section1->ID,
+            'targetParentId' => (int) $page->ID,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testReorderReturns403WhenTargetParentNotEditable(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        // Target is a different restricted page — element's own canEdit passes
+        // (its page is unrestricted) but targetParent->canEdit fails.
+        $restrictedPage = TestPage::create();
+        $restrictedPage->Title = 'Restricted Target';
+        $restrictedPage->CanEditType = 'OnlyTheseUsers';
+        $restrictedPage->write();
+
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => $section1->ID,
+            'targetParentId' => (int) $restrictedPage->ID,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testUpdateGridSettingsReturns403WhenNotEditable(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $this->restrictPagePermissions($page);
+
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+
+        $response = $this->patchJson('/admin/grid/api/updateGridSettings', [
+            'id' => (int) $col1->ID,
+            'viewport' => 'lg',
+            'width' => 6,
+            'offset' => 0,
+            'visible' => true,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
     }
 }
