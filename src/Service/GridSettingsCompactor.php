@@ -139,8 +139,13 @@ final class GridSettingsCompactor
                 $effVisible = $defaultValues['visible'];
             }
 
-            // Store only if effective differs from previous in the cascade
-            if ($effWidth !== $prevWidth || $effOffset !== $prevOffset || $effVisible !== $prevVisible) {
+            // Store when the cascade breaks (effective differs from previous),
+            // or when the entry is an explicit override — even if it matches the
+            // cascade. Overrides represent user intent; dropping them would let
+            // future default-viewport changes silently replace their values.
+            $cascadeBreak = $effWidth !== $prevWidth || $effOffset !== $prevOffset || $effVisible !== $prevVisible;
+
+            if ($cascadeBreak || (!$isDefault && $entry['override'])) {
                 $sparse[$key] = [
                     'width' => $effWidth,
                     'offset' => $effOffset,
@@ -174,12 +179,79 @@ final class GridSettingsCompactor
 
         $full = $this->expandFromSparse($currentSparse);
 
+        // For non-default viewports, only mark as override when the new values
+        // actually differ from the default. Setting a viewport to match the
+        // default is effectively a reset — no override entry needed.
+        $defaultEntry = $full[$defaultKey];
         $full[$viewport] = [
             'width' => $values['width'],
             'offset' => $values['offset'],
             'visible' => $values['visible'],
-            'override' => !$isDefault,
+            'override' => !$isDefault && (
+                $values['width'] !== $defaultEntry['width']
+                || $values['offset'] !== $defaultEntry['offset']
+                || $values['visible'] !== $defaultEntry['visible']
+            ),
         ];
+
+        // Re-cascade: viewports between the target and the next explicit sparse
+        // entry inherited their values from the OLD cascade. After the update,
+        // they must inherit from the NEW values. Walk forward from the target,
+        // updating non-sparse viewports until hitting one with its own entry.
+        // The default viewport is the cascade "anchor" — skip it to preserve
+        // its expand-derived values, but continue cascading past it.
+        $viewports = $this->adapter->getViewports();
+        $pastTarget = false;
+        $prev = $full[$viewport];
+
+        foreach ($viewports as $vp) {
+            $key = $vp->key;
+
+            if ($key === $viewport) {
+                $pastTarget = true;
+
+                continue;
+            }
+
+            if (!$pastTarget) {
+                continue;
+            }
+
+            if (array_key_exists($key, $currentSparse)) {
+                break;
+            }
+
+            // Skip the default viewport — its values are authoritative
+            if ($key === $defaultKey) {
+                $prev = $full[$key];
+
+                continue;
+            }
+
+            $full[$key] = [
+                ...$full[$key],
+                'width' => $prev['width'],
+                'offset' => $prev['offset'],
+                'visible' => $prev['visible'],
+            ];
+            $prev = $full[$key];
+        }
+
+        // When the default viewport changes, non-default viewports that had
+        // explicit sparse entries represent user intent. Mark them as overrides
+        // so compactToSparse preserves them — even if expandFromSparse marked
+        // them override=false (because their cascade values matched the OLD
+        // default). Without this, their values would be silently replaced by
+        // the new default.
+        if ($isDefault) {
+            foreach ($full as $key => &$entry) {
+                if ($key !== $defaultKey && array_key_exists($key, $currentSparse)) {
+                    $entry['override'] = true;
+                }
+            }
+
+            unset($entry);
+        }
 
         return $this->compactToSparse($full);
     }

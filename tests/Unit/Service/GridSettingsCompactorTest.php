@@ -392,4 +392,160 @@ final class GridSettingsCompactorTest extends TestCase
         $this->assertSame(8, $expanded['md']['width']);
         $this->assertFalse($expanded['md']['override']);
     }
+
+    /**
+     * When a non-default viewport's cascade values match the current default,
+     * changing the default must promote that viewport to an override so its
+     * original values are preserved — not silently replaced by the new default.
+     *
+     * Regression: without re-evaluating override flags after updating the default
+     * viewport, md stays override=false and compactToSparse uses the new default
+     * values for md, losing its original offset=0.
+     */
+    public function testDefaultUpdatePromotesMatchingNonOverriddenViewportToOverride(): void
+    {
+        // md's values match sm's — expandFromSparse will mark md as override=false
+        $sparse = [
+            'sm' => ['width' => 6, 'offset' => 0, 'visible' => true],
+            'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
+        ];
+
+        // Change sm (default) offset to 2 — md should keep offset=0
+        $result = $this->compactor->applyViewportUpdate(
+            $sparse,
+            'sm',
+            ['width' => 6, 'offset' => 2, 'visible' => true],
+        );
+
+        $expanded = $this->compactor->expandFromSparse($result);
+
+        $this->assertSame(6, $expanded['sm']['width']);
+        $this->assertSame(2, $expanded['sm']['offset']);
+        $this->assertSame(6, $expanded['md']['width']);
+        $this->assertSame(0, $expanded['md']['offset'], 'md must preserve original offset, not inherit new default');
+        $this->assertTrue($expanded['md']['override'], 'md must be promoted to override');
+    }
+
+    /**
+     * Same scenario with visibility: a non-default viewport is visible and matches
+     * the current default, then the default is changed to hidden. The non-default
+     * viewport must remain visible.
+     */
+    public function testDefaultUpdatePromotesViewportWhenVisibilityChanges(): void
+    {
+        $sparse = [
+            'sm' => ['width' => 6, 'offset' => 0, 'visible' => true],
+            'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
+        ];
+
+        // Change sm (default) to hidden — md should stay visible
+        $result = $this->compactor->applyViewportUpdate(
+            $sparse,
+            'sm',
+            ['width' => 6, 'offset' => 0, 'visible' => false],
+        );
+
+        $expanded = $this->compactor->expandFromSparse($result);
+
+        $this->assertFalse($expanded['sm']['visible']);
+        $this->assertTrue($expanded['md']['visible'], 'md must stay visible, not inherit hidden from new default');
+        $this->assertTrue($expanded['md']['override']);
+    }
+
+    /**
+     * When the default viewport changes and a non-default viewport had an explicit
+     * sparse entry, its values are preserved even when the new default differs.
+     */
+    public function testDefaultUpdatePreservesExplicitSparseEntryWidth(): void
+    {
+        // md matches sm at (6, 0, true) — both have explicit sparse entries
+        $sparse = [
+            'sm' => ['width' => 6, 'offset' => 0, 'visible' => true],
+            'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
+        ];
+
+        // Change sm width to 8 — md had explicit width=6, must keep it
+        $result = $this->compactor->applyViewportUpdate(
+            $sparse,
+            'sm',
+            ['width' => 8, 'offset' => 0, 'visible' => true],
+        );
+
+        $expanded = $this->compactor->expandFromSparse($result);
+
+        $this->assertSame(8, $expanded['sm']['width']);
+        $this->assertSame(6, $expanded['md']['width']);
+        $this->assertTrue($expanded['md']['override']);
+    }
+
+    /**
+     * When updating a below-default viewport, non-sparse viewports between the
+     * target and the next sparse entry must re-cascade from the updated values.
+     *
+     * Regression: without re-cascade, intermediate viewports retain stale values
+     * from the old expansion. E.g., changing xs from hidden→visible should also
+     * make sm visible (via cascade), but sm's stale visible=false persisted.
+     *
+     * Uses a 4-viewport adapter (xs, sm, md[default], lg) to model the scenario.
+     */
+    public function testUpdateBelowDefaultReCascadesIntermediateViewports(): void
+    {
+        $adapter = $this->createMock(GridAdapterInterface::class);
+        $adapter->method('getViewports')->willReturn([
+            new Viewport('xs', 'Extra Small'),
+            new Viewport('sm', 'Small'),
+            new Viewport('md', 'Medium'),
+            new Viewport('lg', 'Large'),
+        ]);
+        $adapter->method('getColumnCount')->willReturn(12);
+        $adapter->method('getDefaultViewport')->willReturn(new Viewport('md', 'Medium'));
+
+        $compactor = new GridSettingsCompactor($adapter);
+
+        // xs=hidden, md has width=4, lg has width=6
+        // sm has NO explicit entry — it cascades from xs (hidden)
+        $sparse = [
+            'xs' => ['width' => 12, 'offset' => 0, 'visible' => false],
+            'md' => ['width' => 4, 'offset' => 0, 'visible' => true],
+            'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
+        ];
+
+        // Unhide xs — sm should inherit visible=true via re-cascade
+        $result = $compactor->applyViewportUpdate(
+            $sparse,
+            'xs',
+            ['width' => 12, 'offset' => 0, 'visible' => true],
+        );
+
+        $expanded = $compactor->expandFromSparse($result);
+
+        $this->assertTrue($expanded['xs']['visible']);
+        $this->assertTrue($expanded['sm']['visible'], 'sm must inherit visible=true from updated xs');
+        $this->assertTrue($expanded['md']['visible']);
+    }
+
+    /**
+     * Viewports without explicit sparse entries should follow the new default
+     * when the default viewport is updated — they were never user-customized.
+     */
+    public function testDefaultUpdateLetsImplicitViewportsFollowNewDefault(): void
+    {
+        // Only sm has an explicit entry; md inherits via cascade
+        $sparse = [
+            'sm' => ['width' => 6, 'offset' => 0, 'visible' => true],
+        ];
+
+        // Change sm width to 8 — md was never set, should follow
+        $result = $this->compactor->applyViewportUpdate(
+            $sparse,
+            'sm',
+            ['width' => 8, 'offset' => 0, 'visible' => true],
+        );
+
+        $expanded = $this->compactor->expandFromSparse($result);
+
+        $this->assertSame(8, $expanded['sm']['width']);
+        $this->assertSame(8, $expanded['md']['width']);
+        $this->assertFalse($expanded['md']['override']);
+    }
 }
