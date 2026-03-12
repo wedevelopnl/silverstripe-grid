@@ -273,7 +273,7 @@ class BlockMediaExtension extends Extension
             'VideoProvider', 'VideoHasOverlay',
             'VideoEmbedName', 'VideoEmbedURL', 'VideoEmbedDescription',
             'VideoEmbedThumbnail', 'VideoEmbedCreated',
-            'VideoCustomThumbnailID',
+            'VideoCustomThumbnailID', 'VideoCustomThumbnail',
         ]);
 
         $mediaTab = $fields->findOrMakeTab(
