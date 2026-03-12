@@ -233,7 +233,7 @@ class BlockMediaExtension extends Extension
             ? $image->ScaleWidth($width)
             : $image->Fill($width, $height);
 
-        if ($resized === null) { // @phpstan-ignore identical.alwaysFalse (ScaleWidth/Fill return null when file missing from filesystem)
+        if ($resized === null) {
             return null;
         }
 

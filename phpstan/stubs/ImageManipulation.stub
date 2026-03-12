@@ -1,0 +1,18 @@
+<?php
+
+namespace SilverStripe\Assets;
+
+use SilverStripe\Assets\Storage\AssetContainer;
+
+/**
+ * Stub for ImageManipulation — corrects return types that are nullable at runtime
+ * (file missing from filesystem, backend unavailable, generation disabled).
+ */
+trait ImageManipulation
+{
+    /** @return AssetContainer|null */
+    public function ScaleWidth($width) {}
+
+    /** @return AssetContainer|null */
+    public function Fill($width, $height) {}
+}
