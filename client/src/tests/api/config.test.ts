@@ -5,7 +5,7 @@ import {
   getSecurityId,
 } from '@/api/config';
 import { ConfigError } from '@/api/errors';
-import { ZodError } from 'zod';
+import { $ZodError } from 'zod/v4/core';
 
 const CONTROLLER_FQCN =
   'WeDevelop\\Grid\\Controllers\\GridController';
@@ -146,7 +146,7 @@ describe('config accessors', () => {
       expect(() => getAdapterConfig()).toThrow('Controller section');
     });
 
-    it('throws ZodError when gridAdapter is undefined', () => {
+    it('throws $ZodError when gridAdapter is undefined', () => {
       window.ss = {
         config: {
           SecurityID: 'x',
@@ -154,10 +154,10 @@ describe('config accessors', () => {
         },
       };
 
-      expect(() => getAdapterConfig()).toThrow(ZodError);
+      expect(() => getAdapterConfig()).toThrow($ZodError);
     });
 
-    it('throws ZodError when gridAdapter has invalid shape', () => {
+    it('throws $ZodError when gridAdapter has invalid shape', () => {
       window.ss = {
         config: {
           SecurityID: 'x',
@@ -167,7 +167,7 @@ describe('config accessors', () => {
         },
       };
 
-      expect(() => getAdapterConfig()).toThrow(ZodError);
+      expect(() => getAdapterConfig()).toThrow($ZodError);
     });
   });
 });

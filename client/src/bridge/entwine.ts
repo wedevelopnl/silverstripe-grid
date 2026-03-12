@@ -1,14 +1,14 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { z } from 'zod';
+import { z } from 'zod/v4-mini';
 
 import GridEditorErrorBoundary from '@/components/GridEditorErrorBoundary/GridEditorErrorBoundary';
 import GridQueryProvider from '@/hooks/QueryProvider';
 import { loadComponent } from './Injector';
 
 const bridgeSchemaSchema = z.object({
-  'grid-page-id': z.number().int().nullable(),
-  'grid-zone': z.string().default('main'),
+  'grid-page-id': z.nullable(z.int()),
+  'grid-zone': z._default(z.string(), 'main'),
 });
 
 /**
@@ -23,7 +23,7 @@ window.jQuery.entwine('ss', ($) => {
     onmatch() {
       try {
         const GridEditor = loadComponent('GridEditor');
-        const schema = bridgeSchemaSchema.parse(this.data('schema'));
+        const schema = z.parse(bridgeSchemaSchema, this.data('schema'));
         const pageId = schema['grid-page-id'] ?? null;
         const zone = schema['grid-zone'];
 

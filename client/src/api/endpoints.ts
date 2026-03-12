@@ -1,3 +1,4 @@
+import { z } from 'zod/v4-mini';
 import {
   type ContainerType,
   type ElementTreeResponse,
@@ -17,7 +18,7 @@ export async function fetchElementTree(
   const base = getControllerLink();
   const data = await apiGet<unknown>(`${base}/api/readTree/${pageId}/${encodeURIComponent(zone)}`);
 
-  return elementTreeResponseSchema.parse(data);
+  return z.parse(elementTreeResponseSchema, data);
 }
 
 export interface CreateElementParams {

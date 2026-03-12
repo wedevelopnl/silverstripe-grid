@@ -1,3 +1,4 @@
+import { z } from 'zod/v4-mini';
 import {
   blockSchemaSchema,
   simpleElementNodeSchema,
@@ -102,12 +103,12 @@ function makeSectionNode(
 
 describe('blockSchemaSchema', () => {
   it('parses a valid block schema', () => {
-    expect(blockSchemaSchema.parse(validBlockSchema)).toEqual(validBlockSchema);
+    expect(z.parse(blockSchemaSchema, validBlockSchema)).toEqual(validBlockSchema);
   });
 
   it('rejects a block schema missing typeName', () => {
     expect(() =>
-      blockSchemaSchema.parse({ type: 'Test', title: '', summary: '' }),
+      z.parse(blockSchemaSchema, { type: 'Test', title: '', summary: '' }),
     ).toThrow();
   });
 });
@@ -117,22 +118,22 @@ describe('blockSchemaSchema', () => {
 describe('simpleElementNodeSchema', () => {
   it('parses a valid simple element', () => {
     const node = makeSimpleNode();
-    expect(simpleElementNodeSchema.parse(node)).toEqual(node);
+    expect(z.parse(simpleElementNodeSchema,node)).toEqual(node);
   });
 
   it('rejects a node with missing required field (id)', () => {
     const { id: _, ...noId } = makeSimpleNode();
-    expect(() => simpleElementNodeSchema.parse(noId)).toThrow();
+    expect(() => z.parse(simpleElementNodeSchema,noId)).toThrow();
   });
 
   it('rejects a node with wrong field type (id as string)', () => {
     expect(() =>
-      simpleElementNodeSchema.parse(makeSimpleNode({ id: 'abc' })),
+      z.parse(simpleElementNodeSchema,makeSimpleNode({ id: 'abc' })),
     ).toThrow();
   });
 
   it('rejects a node with empty title', () => {
-    expect(() => simpleElementNodeSchema.parse(makeSimpleNode({ title: '' }))).toThrow();
+    expect(() => z.parse(simpleElementNodeSchema,makeSimpleNode({ title: '' }))).toThrow();
   });
 });
 
@@ -141,19 +142,19 @@ describe('simpleElementNodeSchema', () => {
 describe('columnNodeSchema', () => {
   it('parses a column with simple element children', () => {
     const column = makeColumnNode([makeSimpleNode()]);
-    expect(columnNodeSchema.parse(column).children).toHaveLength(1);
+    expect(z.parse(columnNodeSchema,column).children).toHaveLength(1);
   });
 
   it('parses a column with null children', () => {
-    expect(columnNodeSchema.parse(makeColumnNode(null)).children).toBeNull();
+    expect(z.parse(columnNodeSchema,makeColumnNode(null)).children).toBeNull();
   });
 
   it('parses a column with empty children', () => {
-    expect(columnNodeSchema.parse(makeColumnNode([])).children).toEqual([]);
+    expect(z.parse(columnNodeSchema,makeColumnNode([])).children).toEqual([]);
   });
 
   it('rejects a column with empty title', () => {
-    expect(() => columnNodeSchema.parse(makeColumnNode([], { title: '' }))).toThrow();
+    expect(() => z.parse(columnNodeSchema,makeColumnNode([], { title: '' }))).toThrow();
   });
 
   it('accepts row children via passthrough (extra keys not rejected)', () => {
@@ -161,7 +162,7 @@ describe('columnNodeSchema', () => {
     // fields and passes through — containerType/children are extra keys.
     // Hierarchy enforcement happens at the application level, not schema level.
     const column = makeColumnNode([makeRowNode()]);
-    const result = columnNodeSchema.parse(column);
+    const result = z.parse(columnNodeSchema,column);
     expect(result.children).toHaveLength(1);
   });
 
@@ -188,7 +189,7 @@ describe('columnNodeSchema', () => {
       statusFlags: {},
     };
 
-    const result = columnNodeSchema.parse(input);
+    const result = z.parse(columnNodeSchema,input);
     expect(result.gridSettings).toEqual(input.gridSettings);
   });
 });
@@ -196,42 +197,42 @@ describe('columnNodeSchema', () => {
 describe('rowNodeSchema', () => {
   it('parses a row with column children', () => {
     const row = makeRowNode([makeColumnNode([makeSimpleNode()])]);
-    expect(rowNodeSchema.parse(row).children).toHaveLength(1);
+    expect(z.parse(rowNodeSchema,row).children).toHaveLength(1);
   });
 
   it('rejects a row with empty title', () => {
-    expect(() => rowNodeSchema.parse(makeRowNode([], { title: '' }))).toThrow();
+    expect(() => z.parse(rowNodeSchema,makeRowNode([], { title: '' }))).toThrow();
   });
 
   it('parses a row with null children', () => {
-    expect(rowNodeSchema.parse(makeRowNode(null)).children).toBeNull();
+    expect(z.parse(rowNodeSchema,makeRowNode(null)).children).toBeNull();
   });
 
   it('rejects a row with simple element children', () => {
     const row = makeRowNode([makeSimpleNode()]);
-    expect(() => rowNodeSchema.parse(row)).toThrow();
+    expect(() => z.parse(rowNodeSchema,row)).toThrow();
   });
 });
 
 describe('sectionNodeSchema', () => {
   it('parses a section with row children', () => {
     const section = makeSectionNode([makeRowNode([makeColumnNode()])]);
-    expect(sectionNodeSchema.parse(section).children).toHaveLength(1);
+    expect(z.parse(sectionNodeSchema,section).children).toHaveLength(1);
   });
 
   it('rejects a section with empty title', () => {
-    expect(() => sectionNodeSchema.parse(makeSectionNode([], { title: '' }))).toThrow();
+    expect(() => z.parse(sectionNodeSchema,makeSectionNode([], { title: '' }))).toThrow();
   });
 
   it('parses a section with null children', () => {
     expect(
-      sectionNodeSchema.parse(makeSectionNode(null)).children,
+      z.parse(sectionNodeSchema,makeSectionNode(null)).children,
     ).toBeNull();
   });
 
   it('rejects a section with column children', () => {
     const section = makeSectionNode([makeColumnNode()]);
-    expect(() => sectionNodeSchema.parse(section)).toThrow();
+    expect(() => z.parse(sectionNodeSchema,section)).toThrow();
   });
 });
 
@@ -242,7 +243,7 @@ describe('extensions field', () => {
     const node = makeSimpleNode({
       extensions: { gridSettings: { span: 6, offset: 0 } },
     });
-    const result = simpleElementNodeSchema.parse(node);
+    const result = z.parse(simpleElementNodeSchema,node);
     expect(result.extensions).toEqual({
       gridSettings: { span: 6, offset: 0 },
     });
@@ -250,13 +251,13 @@ describe('extensions field', () => {
 
   it('parses a node without extensions key', () => {
     const node = makeSimpleNode();
-    const result = simpleElementNodeSchema.parse(node);
+    const result = z.parse(simpleElementNodeSchema,node);
     expect(result.extensions).toBeUndefined();
   });
 
   it('accepts extra keys on simple element via passthrough', () => {
     const node = makeSimpleNode({ futureField: 'hello' });
-    const result = simpleElementNodeSchema.parse(node);
+    const result = z.parse(simpleElementNodeSchema,node);
     expect((result as Record<string, unknown>).futureField).toBe('hello');
   });
 });
@@ -265,22 +266,22 @@ describe('extensions field', () => {
 
 describe('elementNodeSchema', () => {
   it('parses a simple element', () => {
-    const result = elementNodeSchema.parse(makeSimpleNode());
+    const result = z.parse(elementNodeSchema,makeSimpleNode());
     expect(result.id).toBe(1);
   });
 
   it('parses a section', () => {
-    const result = elementNodeSchema.parse(makeSectionNode());
+    const result = z.parse(elementNodeSchema,makeSectionNode());
     expect('containerType' in result && result.containerType).toBe('section');
   });
 
   it('parses a row', () => {
-    const result = elementNodeSchema.parse(makeRowNode());
+    const result = z.parse(elementNodeSchema,makeRowNode());
     expect('containerType' in result && result.containerType).toBe('row');
   });
 
   it('parses a column', () => {
-    const result = elementNodeSchema.parse(makeColumnNode());
+    const result = z.parse(elementNodeSchema,makeColumnNode());
     expect('containerType' in result && result.containerType).toBe('column');
   });
 
@@ -291,7 +292,7 @@ describe('elementNodeSchema', () => {
         makeColumnNode([], { id: 11 }),
       ]),
     ]);
-    const result = elementNodeSchema.parse(tree);
+    const result = z.parse(elementNodeSchema,tree);
     expect('containerType' in result && result.containerType).toBe('section');
   });
 });
@@ -304,22 +305,22 @@ describe('elementTreeResponseSchema', () => {
       '42': [makeSectionNode([makeRowNode([makeColumnNode()])])],
       '99': [makeSimpleNode()],
     };
-    const result = elementTreeResponseSchema.parse(response);
+    const result = z.parse(elementTreeResponseSchema,response);
     expect(Object.keys(result)).toEqual(['42', '99']);
   });
 
   it('parses an empty record', () => {
-    expect(elementTreeResponseSchema.parse({})).toEqual({});
+    expect(z.parse(elementTreeResponseSchema,{})).toEqual({});
   });
 });
 
 // --- Type guards ---
 
 describe('type guards', () => {
-  const simple = simpleElementNodeSchema.parse(makeSimpleNode());
-  const column = columnNodeSchema.parse(makeColumnNode());
-  const row = rowNodeSchema.parse(makeRowNode());
-  const section = sectionNodeSchema.parse(makeSectionNode());
+  const simple = z.parse(simpleElementNodeSchema,makeSimpleNode());
+  const column = z.parse(columnNodeSchema,makeColumnNode());
+  const row = z.parse(rowNodeSchema,makeRowNode());
+  const section = z.parse(sectionNodeSchema,makeSectionNode());
 
   describe('isContainerNode', () => {
     it('returns true for container nodes', () => {
@@ -379,7 +380,7 @@ describe('type guards', () => {
     });
 
     it('narrows to ColumnNode with correct children type', () => {
-      const col: ColumnNode = columnNodeSchema.parse(
+      const col: ColumnNode = z.parse(columnNodeSchema,
         makeColumnNode([makeSimpleNode()]),
       );
       if (isColumnNode(col)) {

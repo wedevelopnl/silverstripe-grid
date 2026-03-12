@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4-mini';
 
 const viewportConfigSchema = z.object({
   key: z.string(),
@@ -8,7 +8,7 @@ const viewportConfigSchema = z.object({
 export const adapterConfigSchema = z.object({
   viewports: z.array(viewportConfigSchema),
   defaultViewport: z.string(),
-  columnCount: z.number().int().positive(),
+  columnCount: z.int().check(z.positive()),
   rowClasses: z.string(),
   offsetStrategy: z.enum(['margin', 'grid-placement']),
   baseWidthClasses: z.record(z.string(), z.string()),

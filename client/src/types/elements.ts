@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4-mini';
 
 // --- Container type constants ---
 
@@ -23,38 +23,38 @@ const statusFlagValueSchema = z.object({
 });
 
 export const statusFlagsSchema = z.object({
-  addedtodraft: statusFlagValueSchema.optional(),
-  modified: statusFlagValueSchema.optional(),
-  removedfromdraft: statusFlagValueSchema.optional(),
+  addedtodraft: z.optional(statusFlagValueSchema),
+  modified: z.optional(statusFlagValueSchema),
+  removedfromdraft: z.optional(statusFlagValueSchema),
 });
 
 const baseFieldsSchema = z.object({
-  id: z.number().int(),
-  parentId: z.number().int().positive(),
-  title: z.string().min(1),
+  id: z.int(),
+  parentId: z.int().check(z.positive()),
+  title: z.string().check(z.minLength(1)),
   blockSchema: blockSchemaSchema,
-  obsoleteClassName: z.string().nullable(),
-  version: z.number().int(),
+  obsoleteClassName: z.nullable(z.string()),
+  version: z.int(),
   canDelete: z.boolean(),
   canPublish: z.boolean(),
   canUnpublish: z.boolean(),
   canCreate: z.boolean(),
-  editLink: z.string().nullable(),
+  editLink: z.nullable(z.string()),
   statusFlags: statusFlagsSchema,
-  extensions: z.record(z.string(), z.unknown()).optional(),
+  extensions: z.optional(z.record(z.string(), z.unknown())),
 });
 
 // --- Leaf node schema (no containerType field) ---
 // Passthrough allows extra keys from extension enrichers while still
 // rejecting container nodes via the discriminated union ordering.
 
-export const simpleElementNodeSchema = baseFieldsSchema.passthrough();
+export const simpleElementNodeSchema = z.looseObject(baseFieldsSchema.shape);
 
 // --- Grid settings schema (column-specific) ---
 
 const viewportSettingsSchema = z.object({
-  width: z.number().int(),
-  offset: z.number().int(),
+  width: z.int(),
+  offset: z.int(),
   visible: z.boolean(),
 });
 
@@ -72,23 +72,23 @@ export type AllowedTypeInfo = z.infer<typeof allowedTypeInfoSchema>;
 
 // --- Container node schemas (bottom-up: column → row → section) ---
 
-export const columnNodeSchema = baseFieldsSchema.extend({
+export const columnNodeSchema = z.extend(baseFieldsSchema, {
   containerType: z.literal('column'),
-  allowedTypes: z.record(z.string(), allowedTypeInfoSchema).nullable(),
-  children: z.array(simpleElementNodeSchema).nullable(),
+  allowedTypes: z.nullable(z.record(z.string(), allowedTypeInfoSchema)),
+  children: z.nullable(z.array(simpleElementNodeSchema)),
   gridSettings: gridSettingsSchema,
 });
 
-export const rowNodeSchema = baseFieldsSchema.extend({
+export const rowNodeSchema = z.extend(baseFieldsSchema, {
   containerType: z.literal('row'),
-  allowedTypes: z.record(z.string(), allowedTypeInfoSchema).nullable(),
-  children: z.array(columnNodeSchema).nullable(),
+  allowedTypes: z.nullable(z.record(z.string(), allowedTypeInfoSchema)),
+  children: z.nullable(z.array(columnNodeSchema)),
 });
 
-export const sectionNodeSchema = baseFieldsSchema.extend({
+export const sectionNodeSchema = z.extend(baseFieldsSchema, {
   containerType: z.literal('section'),
-  allowedTypes: z.record(z.string(), allowedTypeInfoSchema).nullable(),
-  children: z.array(rowNodeSchema).nullable(),
+  allowedTypes: z.nullable(z.record(z.string(), allowedTypeInfoSchema)),
+  children: z.nullable(z.array(rowNodeSchema)),
 });
 
 // --- Union schema ---

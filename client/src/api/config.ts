@@ -1,3 +1,4 @@
+import { z } from 'zod/v4-mini';
 import type { SilverStripeConfig } from '@/types/silverstripe';
 import { adapterConfigSchema, type AdapterConfig } from '@/types/adapter';
 import { ConfigError } from './errors';
@@ -69,5 +70,5 @@ export function getControllerLink(): string {
  * @throws ZodError if the adapter config does not match the expected shape
  */
 export function getAdapterConfig(): AdapterConfig {
-  return adapterConfigSchema.parse(getControllerSection().gridAdapter);
+  return z.parse(adapterConfigSchema, getControllerSection().gridAdapter);
 }

@@ -1,3 +1,4 @@
+import { z } from 'zod/v4-mini';
 import { adapterConfigSchema } from '@/types/adapter';
 
 describe('adapterConfigSchema', () => {
@@ -15,14 +16,14 @@ describe('adapterConfigSchema', () => {
       baseOffsetClasses: { '0': 'offset-0', '1': 'offset-1', '11': 'offset-11' },
     };
 
-    const result = adapterConfigSchema.parse(input);
+    const result = z.parse(adapterConfigSchema,input);
     expect(result.defaultViewport).toBe('md');
     expect(result.columnCount).toBe(12);
     expect(result.baseWidthClasses['12']).toBe('col-12');
   });
 
   it('rejects missing required fields', () => {
-    expect(() => adapterConfigSchema.parse({})).toThrow();
+    expect(() => z.parse(adapterConfigSchema,{})).toThrow();
   });
 
   it('rejects non-integer columnCount', () => {
@@ -36,7 +37,7 @@ describe('adapterConfigSchema', () => {
       baseOffsetClasses: {},
     };
 
-    expect(() => adapterConfigSchema.parse(input)).toThrow();
+    expect(() => z.parse(adapterConfigSchema,input)).toThrow();
   });
 
   it('rejects non-positive columnCount', () => {
@@ -50,7 +51,7 @@ describe('adapterConfigSchema', () => {
       baseOffsetClasses: {},
     };
 
-    expect(() => adapterConfigSchema.parse(input)).toThrow();
+    expect(() => z.parse(adapterConfigSchema,input)).toThrow();
   });
 
   it('validates viewport items have key and label', () => {
@@ -64,7 +65,7 @@ describe('adapterConfigSchema', () => {
       baseOffsetClasses: {},
     };
 
-    expect(() => adapterConfigSchema.parse(input)).toThrow();
+    expect(() => z.parse(adapterConfigSchema,input)).toThrow();
   });
 
   it('parses grid-placement offset strategy', () => {
@@ -78,7 +79,7 @@ describe('adapterConfigSchema', () => {
       baseOffsetClasses: { '0': 'col-start-1' },
     };
 
-    const result = adapterConfigSchema.parse(input);
+    const result = z.parse(adapterConfigSchema,input);
     expect(result.offsetStrategy).toBe('grid-placement');
   });
 
@@ -93,6 +94,6 @@ describe('adapterConfigSchema', () => {
       baseOffsetClasses: {},
     };
 
-    expect(() => adapterConfigSchema.parse(input)).toThrow();
+    expect(() => z.parse(adapterConfigSchema,input)).toThrow();
   });
 });

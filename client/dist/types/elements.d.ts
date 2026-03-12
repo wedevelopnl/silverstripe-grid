@@ -1,1240 +1,1240 @@
-import { z } from 'zod';
+import { z } from 'zod/v4-mini';
 export declare const CONTAINER_TYPES: readonly ["section", "row", "column"];
 export type ContainerType = (typeof CONTAINER_TYPES)[number];
-export declare const blockSchemaSchema: z.ZodObject<{
-    typeName: z.ZodString;
-    label: z.ZodString;
-    icon: z.ZodString;
-    type: z.ZodString;
-    title: z.ZodString;
-    summary: z.ZodString;
+export declare const blockSchemaSchema: z.ZodMiniObject<{
+    typeName: z.ZodMiniString<string>;
+    label: z.ZodMiniString<string>;
+    icon: z.ZodMiniString<string>;
+    type: z.ZodMiniString<string>;
+    title: z.ZodMiniString<string>;
+    summary: z.ZodMiniString<string>;
 }, z.core.$strip>;
-export declare const statusFlagsSchema: z.ZodObject<{
-    addedtodraft: z.ZodOptional<z.ZodObject<{
-        text: z.ZodString;
-        title: z.ZodString;
+export declare const statusFlagsSchema: z.ZodMiniObject<{
+    addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+        text: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
     }, z.core.$strip>>;
-    modified: z.ZodOptional<z.ZodObject<{
-        text: z.ZodString;
-        title: z.ZodString;
+    modified: z.ZodMiniOptional<z.ZodMiniObject<{
+        text: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
     }, z.core.$strip>>;
-    removedfromdraft: z.ZodOptional<z.ZodObject<{
-        text: z.ZodString;
-        title: z.ZodString;
+    removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+        text: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
-export declare const simpleElementNodeSchema: z.ZodObject<{
-    id: z.ZodNumber;
-    parentId: z.ZodNumber;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-        summary: z.ZodString;
+export declare const simpleElementNodeSchema: z.ZodMiniObject<{
+    id: z.ZodMiniNumberFormat;
+    parentId: z.ZodMiniNumberFormat;
+    title: z.ZodMiniString<string>;
+    blockSchema: z.ZodMiniObject<{
+        typeName: z.ZodMiniString<string>;
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        type: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
+        summary: z.ZodMiniString<string>;
     }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    statusFlags: z.ZodObject<{
-        addedtodraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+    obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    version: z.ZodMiniNumberFormat;
+    canDelete: z.ZodMiniBoolean<boolean>;
+    canPublish: z.ZodMiniBoolean<boolean>;
+    canUnpublish: z.ZodMiniBoolean<boolean>;
+    canCreate: z.ZodMiniBoolean<boolean>;
+    editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    statusFlags: z.ZodMiniObject<{
+        addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        modified: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        modified: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        removedfromdraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
 }, z.core.$loose>;
-declare const viewportSettingsSchema: z.ZodObject<{
-    width: z.ZodNumber;
-    offset: z.ZodNumber;
-    visible: z.ZodBoolean;
+declare const viewportSettingsSchema: z.ZodMiniObject<{
+    width: z.ZodMiniNumberFormat;
+    offset: z.ZodMiniNumberFormat;
+    visible: z.ZodMiniBoolean<boolean>;
 }, z.core.$strip>;
-export declare const gridSettingsSchema: z.ZodRecord<z.ZodString, z.ZodObject<{
-    width: z.ZodNumber;
-    offset: z.ZodNumber;
-    visible: z.ZodBoolean;
+export declare const gridSettingsSchema: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+    width: z.ZodMiniNumberFormat;
+    offset: z.ZodMiniNumberFormat;
+    visible: z.ZodMiniBoolean<boolean>;
 }, z.core.$strip>>;
-export declare const allowedTypeInfoSchema: z.ZodObject<{
-    label: z.ZodString;
-    icon: z.ZodString;
-    description: z.ZodString;
+export declare const allowedTypeInfoSchema: z.ZodMiniObject<{
+    label: z.ZodMiniString<string>;
+    icon: z.ZodMiniString<string>;
+    description: z.ZodMiniString<string>;
 }, z.core.$strip>;
 export type AllowedTypeInfo = z.infer<typeof allowedTypeInfoSchema>;
-export declare const columnNodeSchema: z.ZodObject<{
-    id: z.ZodNumber;
-    parentId: z.ZodNumber;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-        summary: z.ZodString;
+export declare const columnNodeSchema: z.ZodMiniObject<{
+    id: z.ZodMiniNumberFormat;
+    parentId: z.ZodMiniNumberFormat;
+    title: z.ZodMiniString<string>;
+    blockSchema: z.ZodMiniObject<{
+        typeName: z.ZodMiniString<string>;
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        type: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
+        summary: z.ZodMiniString<string>;
     }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    statusFlags: z.ZodObject<{
-        addedtodraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+    obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    version: z.ZodMiniNumberFormat;
+    canDelete: z.ZodMiniBoolean<boolean>;
+    canPublish: z.ZodMiniBoolean<boolean>;
+    canUnpublish: z.ZodMiniBoolean<boolean>;
+    canCreate: z.ZodMiniBoolean<boolean>;
+    editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    statusFlags: z.ZodMiniObject<{
+        addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        modified: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        modified: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        removedfromdraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    containerType: z.ZodLiteral<"column">;
-    allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-        label: z.ZodString;
-        icon: z.ZodString;
-        description: z.ZodString;
+    extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+    containerType: z.ZodMiniLiteral<"column">;
+    allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        description: z.ZodMiniString<string>;
     }, z.core.$strip>>>;
-    children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-        id: z.ZodNumber;
-        parentId: z.ZodNumber;
-        title: z.ZodString;
-        blockSchema: z.ZodObject<{
-            typeName: z.ZodString;
-            label: z.ZodString;
-            icon: z.ZodString;
-            type: z.ZodString;
-            title: z.ZodString;
-            summary: z.ZodString;
+    children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+        id: z.ZodMiniNumberFormat;
+        parentId: z.ZodMiniNumberFormat;
+        title: z.ZodMiniString<string>;
+        blockSchema: z.ZodMiniObject<{
+            typeName: z.ZodMiniString<string>;
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            type: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
+            summary: z.ZodMiniString<string>;
         }, z.core.$strip>;
-        obsoleteClassName: z.ZodNullable<z.ZodString>;
-        version: z.ZodNumber;
-        canDelete: z.ZodBoolean;
-        canPublish: z.ZodBoolean;
-        canUnpublish: z.ZodBoolean;
-        canCreate: z.ZodBoolean;
-        editLink: z.ZodNullable<z.ZodString>;
-        statusFlags: z.ZodObject<{
-            addedtodraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+        obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        version: z.ZodMiniNumberFormat;
+        canDelete: z.ZodMiniBoolean<boolean>;
+        canPublish: z.ZodMiniBoolean<boolean>;
+        canUnpublish: z.ZodMiniBoolean<boolean>;
+        canCreate: z.ZodMiniBoolean<boolean>;
+        editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        statusFlags: z.ZodMiniObject<{
+            addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            modified: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            removedfromdraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
         }, z.core.$strip>;
-        extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
     }, z.core.$loose>>>;
-    gridSettings: z.ZodRecord<z.ZodString, z.ZodObject<{
-        width: z.ZodNumber;
-        offset: z.ZodNumber;
-        visible: z.ZodBoolean;
+    gridSettings: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+        width: z.ZodMiniNumberFormat;
+        offset: z.ZodMiniNumberFormat;
+        visible: z.ZodMiniBoolean<boolean>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
-export declare const rowNodeSchema: z.ZodObject<{
-    id: z.ZodNumber;
-    parentId: z.ZodNumber;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-        summary: z.ZodString;
+export declare const rowNodeSchema: z.ZodMiniObject<{
+    id: z.ZodMiniNumberFormat;
+    parentId: z.ZodMiniNumberFormat;
+    title: z.ZodMiniString<string>;
+    blockSchema: z.ZodMiniObject<{
+        typeName: z.ZodMiniString<string>;
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        type: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
+        summary: z.ZodMiniString<string>;
     }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    statusFlags: z.ZodObject<{
-        addedtodraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+    obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    version: z.ZodMiniNumberFormat;
+    canDelete: z.ZodMiniBoolean<boolean>;
+    canPublish: z.ZodMiniBoolean<boolean>;
+    canUnpublish: z.ZodMiniBoolean<boolean>;
+    canCreate: z.ZodMiniBoolean<boolean>;
+    editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    statusFlags: z.ZodMiniObject<{
+        addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        modified: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        modified: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        removedfromdraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    containerType: z.ZodLiteral<"row">;
-    allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-        label: z.ZodString;
-        icon: z.ZodString;
-        description: z.ZodString;
+    extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+    containerType: z.ZodMiniLiteral<"row">;
+    allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        description: z.ZodMiniString<string>;
     }, z.core.$strip>>>;
-    children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-        id: z.ZodNumber;
-        parentId: z.ZodNumber;
-        title: z.ZodString;
-        blockSchema: z.ZodObject<{
-            typeName: z.ZodString;
-            label: z.ZodString;
-            icon: z.ZodString;
-            type: z.ZodString;
-            title: z.ZodString;
-            summary: z.ZodString;
+    children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+        id: z.ZodMiniNumberFormat;
+        parentId: z.ZodMiniNumberFormat;
+        title: z.ZodMiniString<string>;
+        blockSchema: z.ZodMiniObject<{
+            typeName: z.ZodMiniString<string>;
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            type: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
+            summary: z.ZodMiniString<string>;
         }, z.core.$strip>;
-        obsoleteClassName: z.ZodNullable<z.ZodString>;
-        version: z.ZodNumber;
-        canDelete: z.ZodBoolean;
-        canPublish: z.ZodBoolean;
-        canUnpublish: z.ZodBoolean;
-        canCreate: z.ZodBoolean;
-        editLink: z.ZodNullable<z.ZodString>;
-        statusFlags: z.ZodObject<{
-            addedtodraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+        obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        version: z.ZodMiniNumberFormat;
+        canDelete: z.ZodMiniBoolean<boolean>;
+        canPublish: z.ZodMiniBoolean<boolean>;
+        canUnpublish: z.ZodMiniBoolean<boolean>;
+        canCreate: z.ZodMiniBoolean<boolean>;
+        editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        statusFlags: z.ZodMiniObject<{
+            addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            modified: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            removedfromdraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
         }, z.core.$strip>;
-        extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        containerType: z.ZodLiteral<"column">;
-        allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-            label: z.ZodString;
-            icon: z.ZodString;
-            description: z.ZodString;
+        extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+        containerType: z.ZodMiniLiteral<"column">;
+        allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            description: z.ZodMiniString<string>;
         }, z.core.$strip>>>;
-        children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-            id: z.ZodNumber;
-            parentId: z.ZodNumber;
-            title: z.ZodString;
-            blockSchema: z.ZodObject<{
-                typeName: z.ZodString;
-                label: z.ZodString;
-                icon: z.ZodString;
-                type: z.ZodString;
-                title: z.ZodString;
-                summary: z.ZodString;
+        children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+            id: z.ZodMiniNumberFormat;
+            parentId: z.ZodMiniNumberFormat;
+            title: z.ZodMiniString<string>;
+            blockSchema: z.ZodMiniObject<{
+                typeName: z.ZodMiniString<string>;
+                label: z.ZodMiniString<string>;
+                icon: z.ZodMiniString<string>;
+                type: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
+                summary: z.ZodMiniString<string>;
             }, z.core.$strip>;
-            obsoleteClassName: z.ZodNullable<z.ZodString>;
-            version: z.ZodNumber;
-            canDelete: z.ZodBoolean;
-            canPublish: z.ZodBoolean;
-            canUnpublish: z.ZodBoolean;
-            canCreate: z.ZodBoolean;
-            editLink: z.ZodNullable<z.ZodString>;
-            statusFlags: z.ZodObject<{
-                addedtodraft: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+            obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+            version: z.ZodMiniNumberFormat;
+            canDelete: z.ZodMiniBoolean<boolean>;
+            canPublish: z.ZodMiniBoolean<boolean>;
+            canUnpublish: z.ZodMiniBoolean<boolean>;
+            canCreate: z.ZodMiniBoolean<boolean>;
+            editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+            statusFlags: z.ZodMiniObject<{
+                addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
-                modified: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+                modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
-                removedfromdraft: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+                removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
             }, z.core.$strip>;
-            extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
         }, z.core.$loose>>>;
-        gridSettings: z.ZodRecord<z.ZodString, z.ZodObject<{
-            width: z.ZodNumber;
-            offset: z.ZodNumber;
-            visible: z.ZodBoolean;
+        gridSettings: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+            width: z.ZodMiniNumberFormat;
+            offset: z.ZodMiniNumberFormat;
+            visible: z.ZodMiniBoolean<boolean>;
         }, z.core.$strip>>;
     }, z.core.$strip>>>;
 }, z.core.$strip>;
-export declare const sectionNodeSchema: z.ZodObject<{
-    id: z.ZodNumber;
-    parentId: z.ZodNumber;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-        summary: z.ZodString;
+export declare const sectionNodeSchema: z.ZodMiniObject<{
+    id: z.ZodMiniNumberFormat;
+    parentId: z.ZodMiniNumberFormat;
+    title: z.ZodMiniString<string>;
+    blockSchema: z.ZodMiniObject<{
+        typeName: z.ZodMiniString<string>;
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        type: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
+        summary: z.ZodMiniString<string>;
     }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    statusFlags: z.ZodObject<{
-        addedtodraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+    obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    version: z.ZodMiniNumberFormat;
+    canDelete: z.ZodMiniBoolean<boolean>;
+    canPublish: z.ZodMiniBoolean<boolean>;
+    canUnpublish: z.ZodMiniBoolean<boolean>;
+    canCreate: z.ZodMiniBoolean<boolean>;
+    editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    statusFlags: z.ZodMiniObject<{
+        addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        modified: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        modified: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        removedfromdraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    containerType: z.ZodLiteral<"section">;
-    allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-        label: z.ZodString;
-        icon: z.ZodString;
-        description: z.ZodString;
+    extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+    containerType: z.ZodMiniLiteral<"section">;
+    allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        description: z.ZodMiniString<string>;
     }, z.core.$strip>>>;
-    children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-        id: z.ZodNumber;
-        parentId: z.ZodNumber;
-        title: z.ZodString;
-        blockSchema: z.ZodObject<{
-            typeName: z.ZodString;
-            label: z.ZodString;
-            icon: z.ZodString;
-            type: z.ZodString;
-            title: z.ZodString;
-            summary: z.ZodString;
+    children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+        id: z.ZodMiniNumberFormat;
+        parentId: z.ZodMiniNumberFormat;
+        title: z.ZodMiniString<string>;
+        blockSchema: z.ZodMiniObject<{
+            typeName: z.ZodMiniString<string>;
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            type: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
+            summary: z.ZodMiniString<string>;
         }, z.core.$strip>;
-        obsoleteClassName: z.ZodNullable<z.ZodString>;
-        version: z.ZodNumber;
-        canDelete: z.ZodBoolean;
-        canPublish: z.ZodBoolean;
-        canUnpublish: z.ZodBoolean;
-        canCreate: z.ZodBoolean;
-        editLink: z.ZodNullable<z.ZodString>;
-        statusFlags: z.ZodObject<{
-            addedtodraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+        obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        version: z.ZodMiniNumberFormat;
+        canDelete: z.ZodMiniBoolean<boolean>;
+        canPublish: z.ZodMiniBoolean<boolean>;
+        canUnpublish: z.ZodMiniBoolean<boolean>;
+        canCreate: z.ZodMiniBoolean<boolean>;
+        editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        statusFlags: z.ZodMiniObject<{
+            addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            modified: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            removedfromdraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
         }, z.core.$strip>;
-        extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        containerType: z.ZodLiteral<"row">;
-        allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-            label: z.ZodString;
-            icon: z.ZodString;
-            description: z.ZodString;
+        extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+        containerType: z.ZodMiniLiteral<"row">;
+        allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            description: z.ZodMiniString<string>;
         }, z.core.$strip>>>;
-        children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-            id: z.ZodNumber;
-            parentId: z.ZodNumber;
-            title: z.ZodString;
-            blockSchema: z.ZodObject<{
-                typeName: z.ZodString;
-                label: z.ZodString;
-                icon: z.ZodString;
-                type: z.ZodString;
-                title: z.ZodString;
-                summary: z.ZodString;
+        children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+            id: z.ZodMiniNumberFormat;
+            parentId: z.ZodMiniNumberFormat;
+            title: z.ZodMiniString<string>;
+            blockSchema: z.ZodMiniObject<{
+                typeName: z.ZodMiniString<string>;
+                label: z.ZodMiniString<string>;
+                icon: z.ZodMiniString<string>;
+                type: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
+                summary: z.ZodMiniString<string>;
             }, z.core.$strip>;
-            obsoleteClassName: z.ZodNullable<z.ZodString>;
-            version: z.ZodNumber;
-            canDelete: z.ZodBoolean;
-            canPublish: z.ZodBoolean;
-            canUnpublish: z.ZodBoolean;
-            canCreate: z.ZodBoolean;
-            editLink: z.ZodNullable<z.ZodString>;
-            statusFlags: z.ZodObject<{
-                addedtodraft: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+            obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+            version: z.ZodMiniNumberFormat;
+            canDelete: z.ZodMiniBoolean<boolean>;
+            canPublish: z.ZodMiniBoolean<boolean>;
+            canUnpublish: z.ZodMiniBoolean<boolean>;
+            canCreate: z.ZodMiniBoolean<boolean>;
+            editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+            statusFlags: z.ZodMiniObject<{
+                addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
-                modified: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+                modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
-                removedfromdraft: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+                removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
             }, z.core.$strip>;
-            extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-            containerType: z.ZodLiteral<"column">;
-            allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-                label: z.ZodString;
-                icon: z.ZodString;
-                description: z.ZodString;
+            extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+            containerType: z.ZodMiniLiteral<"column">;
+            allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+                label: z.ZodMiniString<string>;
+                icon: z.ZodMiniString<string>;
+                description: z.ZodMiniString<string>;
             }, z.core.$strip>>>;
-            children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-                id: z.ZodNumber;
-                parentId: z.ZodNumber;
-                title: z.ZodString;
-                blockSchema: z.ZodObject<{
-                    typeName: z.ZodString;
-                    label: z.ZodString;
-                    icon: z.ZodString;
-                    type: z.ZodString;
-                    title: z.ZodString;
-                    summary: z.ZodString;
+            children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+                id: z.ZodMiniNumberFormat;
+                parentId: z.ZodMiniNumberFormat;
+                title: z.ZodMiniString<string>;
+                blockSchema: z.ZodMiniObject<{
+                    typeName: z.ZodMiniString<string>;
+                    label: z.ZodMiniString<string>;
+                    icon: z.ZodMiniString<string>;
+                    type: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
+                    summary: z.ZodMiniString<string>;
                 }, z.core.$strip>;
-                obsoleteClassName: z.ZodNullable<z.ZodString>;
-                version: z.ZodNumber;
-                canDelete: z.ZodBoolean;
-                canPublish: z.ZodBoolean;
-                canUnpublish: z.ZodBoolean;
-                canCreate: z.ZodBoolean;
-                editLink: z.ZodNullable<z.ZodString>;
-                statusFlags: z.ZodObject<{
-                    addedtodraft: z.ZodOptional<z.ZodObject<{
-                        text: z.ZodString;
-                        title: z.ZodString;
+                obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+                version: z.ZodMiniNumberFormat;
+                canDelete: z.ZodMiniBoolean<boolean>;
+                canPublish: z.ZodMiniBoolean<boolean>;
+                canUnpublish: z.ZodMiniBoolean<boolean>;
+                canCreate: z.ZodMiniBoolean<boolean>;
+                editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+                statusFlags: z.ZodMiniObject<{
+                    addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                        text: z.ZodMiniString<string>;
+                        title: z.ZodMiniString<string>;
                     }, z.core.$strip>>;
-                    modified: z.ZodOptional<z.ZodObject<{
-                        text: z.ZodString;
-                        title: z.ZodString;
+                    modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                        text: z.ZodMiniString<string>;
+                        title: z.ZodMiniString<string>;
                     }, z.core.$strip>>;
-                    removedfromdraft: z.ZodOptional<z.ZodObject<{
-                        text: z.ZodString;
-                        title: z.ZodString;
+                    removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                        text: z.ZodMiniString<string>;
+                        title: z.ZodMiniString<string>;
                     }, z.core.$strip>>;
                 }, z.core.$strip>;
-                extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
             }, z.core.$loose>>>;
-            gridSettings: z.ZodRecord<z.ZodString, z.ZodObject<{
-                width: z.ZodNumber;
-                offset: z.ZodNumber;
-                visible: z.ZodBoolean;
+            gridSettings: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+                width: z.ZodMiniNumberFormat;
+                offset: z.ZodMiniNumberFormat;
+                visible: z.ZodMiniBoolean<boolean>;
             }, z.core.$strip>>;
         }, z.core.$strip>>>;
     }, z.core.$strip>>>;
 }, z.core.$strip>;
-export declare const elementNodeSchema: z.ZodUnion<readonly [z.ZodObject<{
-    id: z.ZodNumber;
-    parentId: z.ZodNumber;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-        summary: z.ZodString;
+export declare const elementNodeSchema: z.ZodMiniUnion<readonly [z.ZodMiniObject<{
+    id: z.ZodMiniNumberFormat;
+    parentId: z.ZodMiniNumberFormat;
+    title: z.ZodMiniString<string>;
+    blockSchema: z.ZodMiniObject<{
+        typeName: z.ZodMiniString<string>;
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        type: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
+        summary: z.ZodMiniString<string>;
     }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    statusFlags: z.ZodObject<{
-        addedtodraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+    obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    version: z.ZodMiniNumberFormat;
+    canDelete: z.ZodMiniBoolean<boolean>;
+    canPublish: z.ZodMiniBoolean<boolean>;
+    canUnpublish: z.ZodMiniBoolean<boolean>;
+    canCreate: z.ZodMiniBoolean<boolean>;
+    editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    statusFlags: z.ZodMiniObject<{
+        addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        modified: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        modified: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        removedfromdraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    containerType: z.ZodLiteral<"section">;
-    allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-        label: z.ZodString;
-        icon: z.ZodString;
-        description: z.ZodString;
+    extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+    containerType: z.ZodMiniLiteral<"section">;
+    allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        description: z.ZodMiniString<string>;
     }, z.core.$strip>>>;
-    children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-        id: z.ZodNumber;
-        parentId: z.ZodNumber;
-        title: z.ZodString;
-        blockSchema: z.ZodObject<{
-            typeName: z.ZodString;
-            label: z.ZodString;
-            icon: z.ZodString;
-            type: z.ZodString;
-            title: z.ZodString;
-            summary: z.ZodString;
+    children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+        id: z.ZodMiniNumberFormat;
+        parentId: z.ZodMiniNumberFormat;
+        title: z.ZodMiniString<string>;
+        blockSchema: z.ZodMiniObject<{
+            typeName: z.ZodMiniString<string>;
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            type: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
+            summary: z.ZodMiniString<string>;
         }, z.core.$strip>;
-        obsoleteClassName: z.ZodNullable<z.ZodString>;
-        version: z.ZodNumber;
-        canDelete: z.ZodBoolean;
-        canPublish: z.ZodBoolean;
-        canUnpublish: z.ZodBoolean;
-        canCreate: z.ZodBoolean;
-        editLink: z.ZodNullable<z.ZodString>;
-        statusFlags: z.ZodObject<{
-            addedtodraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+        obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        version: z.ZodMiniNumberFormat;
+        canDelete: z.ZodMiniBoolean<boolean>;
+        canPublish: z.ZodMiniBoolean<boolean>;
+        canUnpublish: z.ZodMiniBoolean<boolean>;
+        canCreate: z.ZodMiniBoolean<boolean>;
+        editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        statusFlags: z.ZodMiniObject<{
+            addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            modified: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            removedfromdraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
         }, z.core.$strip>;
-        extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        containerType: z.ZodLiteral<"row">;
-        allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-            label: z.ZodString;
-            icon: z.ZodString;
-            description: z.ZodString;
+        extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+        containerType: z.ZodMiniLiteral<"row">;
+        allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            description: z.ZodMiniString<string>;
         }, z.core.$strip>>>;
-        children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-            id: z.ZodNumber;
-            parentId: z.ZodNumber;
-            title: z.ZodString;
-            blockSchema: z.ZodObject<{
-                typeName: z.ZodString;
-                label: z.ZodString;
-                icon: z.ZodString;
-                type: z.ZodString;
-                title: z.ZodString;
-                summary: z.ZodString;
+        children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+            id: z.ZodMiniNumberFormat;
+            parentId: z.ZodMiniNumberFormat;
+            title: z.ZodMiniString<string>;
+            blockSchema: z.ZodMiniObject<{
+                typeName: z.ZodMiniString<string>;
+                label: z.ZodMiniString<string>;
+                icon: z.ZodMiniString<string>;
+                type: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
+                summary: z.ZodMiniString<string>;
             }, z.core.$strip>;
-            obsoleteClassName: z.ZodNullable<z.ZodString>;
-            version: z.ZodNumber;
-            canDelete: z.ZodBoolean;
-            canPublish: z.ZodBoolean;
-            canUnpublish: z.ZodBoolean;
-            canCreate: z.ZodBoolean;
-            editLink: z.ZodNullable<z.ZodString>;
-            statusFlags: z.ZodObject<{
-                addedtodraft: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+            obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+            version: z.ZodMiniNumberFormat;
+            canDelete: z.ZodMiniBoolean<boolean>;
+            canPublish: z.ZodMiniBoolean<boolean>;
+            canUnpublish: z.ZodMiniBoolean<boolean>;
+            canCreate: z.ZodMiniBoolean<boolean>;
+            editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+            statusFlags: z.ZodMiniObject<{
+                addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
-                modified: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+                modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
-                removedfromdraft: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+                removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
             }, z.core.$strip>;
-            extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-            containerType: z.ZodLiteral<"column">;
-            allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-                label: z.ZodString;
-                icon: z.ZodString;
-                description: z.ZodString;
+            extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+            containerType: z.ZodMiniLiteral<"column">;
+            allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+                label: z.ZodMiniString<string>;
+                icon: z.ZodMiniString<string>;
+                description: z.ZodMiniString<string>;
             }, z.core.$strip>>>;
-            children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-                id: z.ZodNumber;
-                parentId: z.ZodNumber;
-                title: z.ZodString;
-                blockSchema: z.ZodObject<{
-                    typeName: z.ZodString;
-                    label: z.ZodString;
-                    icon: z.ZodString;
-                    type: z.ZodString;
-                    title: z.ZodString;
-                    summary: z.ZodString;
+            children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+                id: z.ZodMiniNumberFormat;
+                parentId: z.ZodMiniNumberFormat;
+                title: z.ZodMiniString<string>;
+                blockSchema: z.ZodMiniObject<{
+                    typeName: z.ZodMiniString<string>;
+                    label: z.ZodMiniString<string>;
+                    icon: z.ZodMiniString<string>;
+                    type: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
+                    summary: z.ZodMiniString<string>;
                 }, z.core.$strip>;
-                obsoleteClassName: z.ZodNullable<z.ZodString>;
-                version: z.ZodNumber;
-                canDelete: z.ZodBoolean;
-                canPublish: z.ZodBoolean;
-                canUnpublish: z.ZodBoolean;
-                canCreate: z.ZodBoolean;
-                editLink: z.ZodNullable<z.ZodString>;
-                statusFlags: z.ZodObject<{
-                    addedtodraft: z.ZodOptional<z.ZodObject<{
-                        text: z.ZodString;
-                        title: z.ZodString;
+                obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+                version: z.ZodMiniNumberFormat;
+                canDelete: z.ZodMiniBoolean<boolean>;
+                canPublish: z.ZodMiniBoolean<boolean>;
+                canUnpublish: z.ZodMiniBoolean<boolean>;
+                canCreate: z.ZodMiniBoolean<boolean>;
+                editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+                statusFlags: z.ZodMiniObject<{
+                    addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                        text: z.ZodMiniString<string>;
+                        title: z.ZodMiniString<string>;
                     }, z.core.$strip>>;
-                    modified: z.ZodOptional<z.ZodObject<{
-                        text: z.ZodString;
-                        title: z.ZodString;
+                    modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                        text: z.ZodMiniString<string>;
+                        title: z.ZodMiniString<string>;
                     }, z.core.$strip>>;
-                    removedfromdraft: z.ZodOptional<z.ZodObject<{
-                        text: z.ZodString;
-                        title: z.ZodString;
+                    removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                        text: z.ZodMiniString<string>;
+                        title: z.ZodMiniString<string>;
                     }, z.core.$strip>>;
                 }, z.core.$strip>;
-                extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
             }, z.core.$loose>>>;
-            gridSettings: z.ZodRecord<z.ZodString, z.ZodObject<{
-                width: z.ZodNumber;
-                offset: z.ZodNumber;
-                visible: z.ZodBoolean;
+            gridSettings: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+                width: z.ZodMiniNumberFormat;
+                offset: z.ZodMiniNumberFormat;
+                visible: z.ZodMiniBoolean<boolean>;
             }, z.core.$strip>>;
         }, z.core.$strip>>>;
     }, z.core.$strip>>>;
-}, z.core.$strip>, z.ZodObject<{
-    id: z.ZodNumber;
-    parentId: z.ZodNumber;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-        summary: z.ZodString;
+}, z.core.$strip>, z.ZodMiniObject<{
+    id: z.ZodMiniNumberFormat;
+    parentId: z.ZodMiniNumberFormat;
+    title: z.ZodMiniString<string>;
+    blockSchema: z.ZodMiniObject<{
+        typeName: z.ZodMiniString<string>;
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        type: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
+        summary: z.ZodMiniString<string>;
     }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    statusFlags: z.ZodObject<{
-        addedtodraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+    obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    version: z.ZodMiniNumberFormat;
+    canDelete: z.ZodMiniBoolean<boolean>;
+    canPublish: z.ZodMiniBoolean<boolean>;
+    canUnpublish: z.ZodMiniBoolean<boolean>;
+    canCreate: z.ZodMiniBoolean<boolean>;
+    editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    statusFlags: z.ZodMiniObject<{
+        addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        modified: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        modified: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        removedfromdraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    containerType: z.ZodLiteral<"row">;
-    allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-        label: z.ZodString;
-        icon: z.ZodString;
-        description: z.ZodString;
+    extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+    containerType: z.ZodMiniLiteral<"row">;
+    allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        description: z.ZodMiniString<string>;
     }, z.core.$strip>>>;
-    children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-        id: z.ZodNumber;
-        parentId: z.ZodNumber;
-        title: z.ZodString;
-        blockSchema: z.ZodObject<{
-            typeName: z.ZodString;
-            label: z.ZodString;
-            icon: z.ZodString;
-            type: z.ZodString;
-            title: z.ZodString;
-            summary: z.ZodString;
+    children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+        id: z.ZodMiniNumberFormat;
+        parentId: z.ZodMiniNumberFormat;
+        title: z.ZodMiniString<string>;
+        blockSchema: z.ZodMiniObject<{
+            typeName: z.ZodMiniString<string>;
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            type: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
+            summary: z.ZodMiniString<string>;
         }, z.core.$strip>;
-        obsoleteClassName: z.ZodNullable<z.ZodString>;
-        version: z.ZodNumber;
-        canDelete: z.ZodBoolean;
-        canPublish: z.ZodBoolean;
-        canUnpublish: z.ZodBoolean;
-        canCreate: z.ZodBoolean;
-        editLink: z.ZodNullable<z.ZodString>;
-        statusFlags: z.ZodObject<{
-            addedtodraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+        obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        version: z.ZodMiniNumberFormat;
+        canDelete: z.ZodMiniBoolean<boolean>;
+        canPublish: z.ZodMiniBoolean<boolean>;
+        canUnpublish: z.ZodMiniBoolean<boolean>;
+        canCreate: z.ZodMiniBoolean<boolean>;
+        editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        statusFlags: z.ZodMiniObject<{
+            addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            modified: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            removedfromdraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
         }, z.core.$strip>;
-        extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        containerType: z.ZodLiteral<"column">;
-        allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-            label: z.ZodString;
-            icon: z.ZodString;
-            description: z.ZodString;
+        extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+        containerType: z.ZodMiniLiteral<"column">;
+        allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            description: z.ZodMiniString<string>;
         }, z.core.$strip>>>;
-        children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-            id: z.ZodNumber;
-            parentId: z.ZodNumber;
-            title: z.ZodString;
-            blockSchema: z.ZodObject<{
-                typeName: z.ZodString;
-                label: z.ZodString;
-                icon: z.ZodString;
-                type: z.ZodString;
-                title: z.ZodString;
-                summary: z.ZodString;
+        children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+            id: z.ZodMiniNumberFormat;
+            parentId: z.ZodMiniNumberFormat;
+            title: z.ZodMiniString<string>;
+            blockSchema: z.ZodMiniObject<{
+                typeName: z.ZodMiniString<string>;
+                label: z.ZodMiniString<string>;
+                icon: z.ZodMiniString<string>;
+                type: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
+                summary: z.ZodMiniString<string>;
             }, z.core.$strip>;
-            obsoleteClassName: z.ZodNullable<z.ZodString>;
-            version: z.ZodNumber;
-            canDelete: z.ZodBoolean;
-            canPublish: z.ZodBoolean;
-            canUnpublish: z.ZodBoolean;
-            canCreate: z.ZodBoolean;
-            editLink: z.ZodNullable<z.ZodString>;
-            statusFlags: z.ZodObject<{
-                addedtodraft: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+            obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+            version: z.ZodMiniNumberFormat;
+            canDelete: z.ZodMiniBoolean<boolean>;
+            canPublish: z.ZodMiniBoolean<boolean>;
+            canUnpublish: z.ZodMiniBoolean<boolean>;
+            canCreate: z.ZodMiniBoolean<boolean>;
+            editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+            statusFlags: z.ZodMiniObject<{
+                addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
-                modified: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+                modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
-                removedfromdraft: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+                removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
             }, z.core.$strip>;
-            extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
         }, z.core.$loose>>>;
-        gridSettings: z.ZodRecord<z.ZodString, z.ZodObject<{
-            width: z.ZodNumber;
-            offset: z.ZodNumber;
-            visible: z.ZodBoolean;
+        gridSettings: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+            width: z.ZodMiniNumberFormat;
+            offset: z.ZodMiniNumberFormat;
+            visible: z.ZodMiniBoolean<boolean>;
         }, z.core.$strip>>;
     }, z.core.$strip>>>;
-}, z.core.$strip>, z.ZodObject<{
-    id: z.ZodNumber;
-    parentId: z.ZodNumber;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-        summary: z.ZodString;
+}, z.core.$strip>, z.ZodMiniObject<{
+    id: z.ZodMiniNumberFormat;
+    parentId: z.ZodMiniNumberFormat;
+    title: z.ZodMiniString<string>;
+    blockSchema: z.ZodMiniObject<{
+        typeName: z.ZodMiniString<string>;
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        type: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
+        summary: z.ZodMiniString<string>;
     }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    statusFlags: z.ZodObject<{
-        addedtodraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+    obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    version: z.ZodMiniNumberFormat;
+    canDelete: z.ZodMiniBoolean<boolean>;
+    canPublish: z.ZodMiniBoolean<boolean>;
+    canUnpublish: z.ZodMiniBoolean<boolean>;
+    canCreate: z.ZodMiniBoolean<boolean>;
+    editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    statusFlags: z.ZodMiniObject<{
+        addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        modified: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        modified: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        removedfromdraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    containerType: z.ZodLiteral<"column">;
-    allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-        label: z.ZodString;
-        icon: z.ZodString;
-        description: z.ZodString;
+    extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+    containerType: z.ZodMiniLiteral<"column">;
+    allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        description: z.ZodMiniString<string>;
     }, z.core.$strip>>>;
-    children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-        id: z.ZodNumber;
-        parentId: z.ZodNumber;
-        title: z.ZodString;
-        blockSchema: z.ZodObject<{
-            typeName: z.ZodString;
-            label: z.ZodString;
-            icon: z.ZodString;
-            type: z.ZodString;
-            title: z.ZodString;
-            summary: z.ZodString;
+    children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+        id: z.ZodMiniNumberFormat;
+        parentId: z.ZodMiniNumberFormat;
+        title: z.ZodMiniString<string>;
+        blockSchema: z.ZodMiniObject<{
+            typeName: z.ZodMiniString<string>;
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            type: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
+            summary: z.ZodMiniString<string>;
         }, z.core.$strip>;
-        obsoleteClassName: z.ZodNullable<z.ZodString>;
-        version: z.ZodNumber;
-        canDelete: z.ZodBoolean;
-        canPublish: z.ZodBoolean;
-        canUnpublish: z.ZodBoolean;
-        canCreate: z.ZodBoolean;
-        editLink: z.ZodNullable<z.ZodString>;
-        statusFlags: z.ZodObject<{
-            addedtodraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+        obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        version: z.ZodMiniNumberFormat;
+        canDelete: z.ZodMiniBoolean<boolean>;
+        canPublish: z.ZodMiniBoolean<boolean>;
+        canUnpublish: z.ZodMiniBoolean<boolean>;
+        canCreate: z.ZodMiniBoolean<boolean>;
+        editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        statusFlags: z.ZodMiniObject<{
+            addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            modified: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            removedfromdraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
         }, z.core.$strip>;
-        extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
     }, z.core.$loose>>>;
-    gridSettings: z.ZodRecord<z.ZodString, z.ZodObject<{
-        width: z.ZodNumber;
-        offset: z.ZodNumber;
-        visible: z.ZodBoolean;
+    gridSettings: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+        width: z.ZodMiniNumberFormat;
+        offset: z.ZodMiniNumberFormat;
+        visible: z.ZodMiniBoolean<boolean>;
     }, z.core.$strip>>;
-}, z.core.$strip>, z.ZodObject<{
-    id: z.ZodNumber;
-    parentId: z.ZodNumber;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-        summary: z.ZodString;
+}, z.core.$strip>, z.ZodMiniObject<{
+    id: z.ZodMiniNumberFormat;
+    parentId: z.ZodMiniNumberFormat;
+    title: z.ZodMiniString<string>;
+    blockSchema: z.ZodMiniObject<{
+        typeName: z.ZodMiniString<string>;
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        type: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
+        summary: z.ZodMiniString<string>;
     }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    statusFlags: z.ZodObject<{
-        addedtodraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+    obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    version: z.ZodMiniNumberFormat;
+    canDelete: z.ZodMiniBoolean<boolean>;
+    canPublish: z.ZodMiniBoolean<boolean>;
+    canUnpublish: z.ZodMiniBoolean<boolean>;
+    canCreate: z.ZodMiniBoolean<boolean>;
+    editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    statusFlags: z.ZodMiniObject<{
+        addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        modified: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        modified: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        removedfromdraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
 }, z.core.$loose>]>;
-export declare const elementTreeResponseSchema: z.ZodRecord<z.ZodString, z.ZodArray<z.ZodUnion<readonly [z.ZodObject<{
-    id: z.ZodNumber;
-    parentId: z.ZodNumber;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-        summary: z.ZodString;
+export declare const elementTreeResponseSchema: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniArray<z.ZodMiniUnion<readonly [z.ZodMiniObject<{
+    id: z.ZodMiniNumberFormat;
+    parentId: z.ZodMiniNumberFormat;
+    title: z.ZodMiniString<string>;
+    blockSchema: z.ZodMiniObject<{
+        typeName: z.ZodMiniString<string>;
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        type: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
+        summary: z.ZodMiniString<string>;
     }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    statusFlags: z.ZodObject<{
-        addedtodraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+    obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    version: z.ZodMiniNumberFormat;
+    canDelete: z.ZodMiniBoolean<boolean>;
+    canPublish: z.ZodMiniBoolean<boolean>;
+    canUnpublish: z.ZodMiniBoolean<boolean>;
+    canCreate: z.ZodMiniBoolean<boolean>;
+    editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    statusFlags: z.ZodMiniObject<{
+        addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        modified: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        modified: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        removedfromdraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    containerType: z.ZodLiteral<"section">;
-    allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-        label: z.ZodString;
-        icon: z.ZodString;
-        description: z.ZodString;
+    extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+    containerType: z.ZodMiniLiteral<"section">;
+    allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        description: z.ZodMiniString<string>;
     }, z.core.$strip>>>;
-    children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-        id: z.ZodNumber;
-        parentId: z.ZodNumber;
-        title: z.ZodString;
-        blockSchema: z.ZodObject<{
-            typeName: z.ZodString;
-            label: z.ZodString;
-            icon: z.ZodString;
-            type: z.ZodString;
-            title: z.ZodString;
-            summary: z.ZodString;
+    children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+        id: z.ZodMiniNumberFormat;
+        parentId: z.ZodMiniNumberFormat;
+        title: z.ZodMiniString<string>;
+        blockSchema: z.ZodMiniObject<{
+            typeName: z.ZodMiniString<string>;
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            type: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
+            summary: z.ZodMiniString<string>;
         }, z.core.$strip>;
-        obsoleteClassName: z.ZodNullable<z.ZodString>;
-        version: z.ZodNumber;
-        canDelete: z.ZodBoolean;
-        canPublish: z.ZodBoolean;
-        canUnpublish: z.ZodBoolean;
-        canCreate: z.ZodBoolean;
-        editLink: z.ZodNullable<z.ZodString>;
-        statusFlags: z.ZodObject<{
-            addedtodraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+        obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        version: z.ZodMiniNumberFormat;
+        canDelete: z.ZodMiniBoolean<boolean>;
+        canPublish: z.ZodMiniBoolean<boolean>;
+        canUnpublish: z.ZodMiniBoolean<boolean>;
+        canCreate: z.ZodMiniBoolean<boolean>;
+        editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        statusFlags: z.ZodMiniObject<{
+            addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            modified: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            removedfromdraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
         }, z.core.$strip>;
-        extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        containerType: z.ZodLiteral<"row">;
-        allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-            label: z.ZodString;
-            icon: z.ZodString;
-            description: z.ZodString;
+        extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+        containerType: z.ZodMiniLiteral<"row">;
+        allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            description: z.ZodMiniString<string>;
         }, z.core.$strip>>>;
-        children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-            id: z.ZodNumber;
-            parentId: z.ZodNumber;
-            title: z.ZodString;
-            blockSchema: z.ZodObject<{
-                typeName: z.ZodString;
-                label: z.ZodString;
-                icon: z.ZodString;
-                type: z.ZodString;
-                title: z.ZodString;
-                summary: z.ZodString;
+        children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+            id: z.ZodMiniNumberFormat;
+            parentId: z.ZodMiniNumberFormat;
+            title: z.ZodMiniString<string>;
+            blockSchema: z.ZodMiniObject<{
+                typeName: z.ZodMiniString<string>;
+                label: z.ZodMiniString<string>;
+                icon: z.ZodMiniString<string>;
+                type: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
+                summary: z.ZodMiniString<string>;
             }, z.core.$strip>;
-            obsoleteClassName: z.ZodNullable<z.ZodString>;
-            version: z.ZodNumber;
-            canDelete: z.ZodBoolean;
-            canPublish: z.ZodBoolean;
-            canUnpublish: z.ZodBoolean;
-            canCreate: z.ZodBoolean;
-            editLink: z.ZodNullable<z.ZodString>;
-            statusFlags: z.ZodObject<{
-                addedtodraft: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+            obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+            version: z.ZodMiniNumberFormat;
+            canDelete: z.ZodMiniBoolean<boolean>;
+            canPublish: z.ZodMiniBoolean<boolean>;
+            canUnpublish: z.ZodMiniBoolean<boolean>;
+            canCreate: z.ZodMiniBoolean<boolean>;
+            editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+            statusFlags: z.ZodMiniObject<{
+                addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
-                modified: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+                modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
-                removedfromdraft: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+                removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
             }, z.core.$strip>;
-            extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-            containerType: z.ZodLiteral<"column">;
-            allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-                label: z.ZodString;
-                icon: z.ZodString;
-                description: z.ZodString;
+            extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+            containerType: z.ZodMiniLiteral<"column">;
+            allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+                label: z.ZodMiniString<string>;
+                icon: z.ZodMiniString<string>;
+                description: z.ZodMiniString<string>;
             }, z.core.$strip>>>;
-            children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-                id: z.ZodNumber;
-                parentId: z.ZodNumber;
-                title: z.ZodString;
-                blockSchema: z.ZodObject<{
-                    typeName: z.ZodString;
-                    label: z.ZodString;
-                    icon: z.ZodString;
-                    type: z.ZodString;
-                    title: z.ZodString;
-                    summary: z.ZodString;
+            children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+                id: z.ZodMiniNumberFormat;
+                parentId: z.ZodMiniNumberFormat;
+                title: z.ZodMiniString<string>;
+                blockSchema: z.ZodMiniObject<{
+                    typeName: z.ZodMiniString<string>;
+                    label: z.ZodMiniString<string>;
+                    icon: z.ZodMiniString<string>;
+                    type: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
+                    summary: z.ZodMiniString<string>;
                 }, z.core.$strip>;
-                obsoleteClassName: z.ZodNullable<z.ZodString>;
-                version: z.ZodNumber;
-                canDelete: z.ZodBoolean;
-                canPublish: z.ZodBoolean;
-                canUnpublish: z.ZodBoolean;
-                canCreate: z.ZodBoolean;
-                editLink: z.ZodNullable<z.ZodString>;
-                statusFlags: z.ZodObject<{
-                    addedtodraft: z.ZodOptional<z.ZodObject<{
-                        text: z.ZodString;
-                        title: z.ZodString;
+                obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+                version: z.ZodMiniNumberFormat;
+                canDelete: z.ZodMiniBoolean<boolean>;
+                canPublish: z.ZodMiniBoolean<boolean>;
+                canUnpublish: z.ZodMiniBoolean<boolean>;
+                canCreate: z.ZodMiniBoolean<boolean>;
+                editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+                statusFlags: z.ZodMiniObject<{
+                    addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                        text: z.ZodMiniString<string>;
+                        title: z.ZodMiniString<string>;
                     }, z.core.$strip>>;
-                    modified: z.ZodOptional<z.ZodObject<{
-                        text: z.ZodString;
-                        title: z.ZodString;
+                    modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                        text: z.ZodMiniString<string>;
+                        title: z.ZodMiniString<string>;
                     }, z.core.$strip>>;
-                    removedfromdraft: z.ZodOptional<z.ZodObject<{
-                        text: z.ZodString;
-                        title: z.ZodString;
+                    removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                        text: z.ZodMiniString<string>;
+                        title: z.ZodMiniString<string>;
                     }, z.core.$strip>>;
                 }, z.core.$strip>;
-                extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
             }, z.core.$loose>>>;
-            gridSettings: z.ZodRecord<z.ZodString, z.ZodObject<{
-                width: z.ZodNumber;
-                offset: z.ZodNumber;
-                visible: z.ZodBoolean;
+            gridSettings: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+                width: z.ZodMiniNumberFormat;
+                offset: z.ZodMiniNumberFormat;
+                visible: z.ZodMiniBoolean<boolean>;
             }, z.core.$strip>>;
         }, z.core.$strip>>>;
     }, z.core.$strip>>>;
-}, z.core.$strip>, z.ZodObject<{
-    id: z.ZodNumber;
-    parentId: z.ZodNumber;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-        summary: z.ZodString;
+}, z.core.$strip>, z.ZodMiniObject<{
+    id: z.ZodMiniNumberFormat;
+    parentId: z.ZodMiniNumberFormat;
+    title: z.ZodMiniString<string>;
+    blockSchema: z.ZodMiniObject<{
+        typeName: z.ZodMiniString<string>;
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        type: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
+        summary: z.ZodMiniString<string>;
     }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    statusFlags: z.ZodObject<{
-        addedtodraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+    obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    version: z.ZodMiniNumberFormat;
+    canDelete: z.ZodMiniBoolean<boolean>;
+    canPublish: z.ZodMiniBoolean<boolean>;
+    canUnpublish: z.ZodMiniBoolean<boolean>;
+    canCreate: z.ZodMiniBoolean<boolean>;
+    editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    statusFlags: z.ZodMiniObject<{
+        addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        modified: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        modified: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        removedfromdraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    containerType: z.ZodLiteral<"row">;
-    allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-        label: z.ZodString;
-        icon: z.ZodString;
-        description: z.ZodString;
+    extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+    containerType: z.ZodMiniLiteral<"row">;
+    allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        description: z.ZodMiniString<string>;
     }, z.core.$strip>>>;
-    children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-        id: z.ZodNumber;
-        parentId: z.ZodNumber;
-        title: z.ZodString;
-        blockSchema: z.ZodObject<{
-            typeName: z.ZodString;
-            label: z.ZodString;
-            icon: z.ZodString;
-            type: z.ZodString;
-            title: z.ZodString;
-            summary: z.ZodString;
+    children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+        id: z.ZodMiniNumberFormat;
+        parentId: z.ZodMiniNumberFormat;
+        title: z.ZodMiniString<string>;
+        blockSchema: z.ZodMiniObject<{
+            typeName: z.ZodMiniString<string>;
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            type: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
+            summary: z.ZodMiniString<string>;
         }, z.core.$strip>;
-        obsoleteClassName: z.ZodNullable<z.ZodString>;
-        version: z.ZodNumber;
-        canDelete: z.ZodBoolean;
-        canPublish: z.ZodBoolean;
-        canUnpublish: z.ZodBoolean;
-        canCreate: z.ZodBoolean;
-        editLink: z.ZodNullable<z.ZodString>;
-        statusFlags: z.ZodObject<{
-            addedtodraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+        obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        version: z.ZodMiniNumberFormat;
+        canDelete: z.ZodMiniBoolean<boolean>;
+        canPublish: z.ZodMiniBoolean<boolean>;
+        canUnpublish: z.ZodMiniBoolean<boolean>;
+        canCreate: z.ZodMiniBoolean<boolean>;
+        editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        statusFlags: z.ZodMiniObject<{
+            addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            modified: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            removedfromdraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
         }, z.core.$strip>;
-        extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        containerType: z.ZodLiteral<"column">;
-        allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-            label: z.ZodString;
-            icon: z.ZodString;
-            description: z.ZodString;
+        extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+        containerType: z.ZodMiniLiteral<"column">;
+        allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            description: z.ZodMiniString<string>;
         }, z.core.$strip>>>;
-        children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-            id: z.ZodNumber;
-            parentId: z.ZodNumber;
-            title: z.ZodString;
-            blockSchema: z.ZodObject<{
-                typeName: z.ZodString;
-                label: z.ZodString;
-                icon: z.ZodString;
-                type: z.ZodString;
-                title: z.ZodString;
-                summary: z.ZodString;
+        children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+            id: z.ZodMiniNumberFormat;
+            parentId: z.ZodMiniNumberFormat;
+            title: z.ZodMiniString<string>;
+            blockSchema: z.ZodMiniObject<{
+                typeName: z.ZodMiniString<string>;
+                label: z.ZodMiniString<string>;
+                icon: z.ZodMiniString<string>;
+                type: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
+                summary: z.ZodMiniString<string>;
             }, z.core.$strip>;
-            obsoleteClassName: z.ZodNullable<z.ZodString>;
-            version: z.ZodNumber;
-            canDelete: z.ZodBoolean;
-            canPublish: z.ZodBoolean;
-            canUnpublish: z.ZodBoolean;
-            canCreate: z.ZodBoolean;
-            editLink: z.ZodNullable<z.ZodString>;
-            statusFlags: z.ZodObject<{
-                addedtodraft: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+            obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+            version: z.ZodMiniNumberFormat;
+            canDelete: z.ZodMiniBoolean<boolean>;
+            canPublish: z.ZodMiniBoolean<boolean>;
+            canUnpublish: z.ZodMiniBoolean<boolean>;
+            canCreate: z.ZodMiniBoolean<boolean>;
+            editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+            statusFlags: z.ZodMiniObject<{
+                addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
-                modified: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+                modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
-                removedfromdraft: z.ZodOptional<z.ZodObject<{
-                    text: z.ZodString;
-                    title: z.ZodString;
+                removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                    text: z.ZodMiniString<string>;
+                    title: z.ZodMiniString<string>;
                 }, z.core.$strip>>;
             }, z.core.$strip>;
-            extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
         }, z.core.$loose>>>;
-        gridSettings: z.ZodRecord<z.ZodString, z.ZodObject<{
-            width: z.ZodNumber;
-            offset: z.ZodNumber;
-            visible: z.ZodBoolean;
+        gridSettings: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+            width: z.ZodMiniNumberFormat;
+            offset: z.ZodMiniNumberFormat;
+            visible: z.ZodMiniBoolean<boolean>;
         }, z.core.$strip>>;
     }, z.core.$strip>>>;
-}, z.core.$strip>, z.ZodObject<{
-    id: z.ZodNumber;
-    parentId: z.ZodNumber;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-        summary: z.ZodString;
+}, z.core.$strip>, z.ZodMiniObject<{
+    id: z.ZodMiniNumberFormat;
+    parentId: z.ZodMiniNumberFormat;
+    title: z.ZodMiniString<string>;
+    blockSchema: z.ZodMiniObject<{
+        typeName: z.ZodMiniString<string>;
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        type: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
+        summary: z.ZodMiniString<string>;
     }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    statusFlags: z.ZodObject<{
-        addedtodraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+    obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    version: z.ZodMiniNumberFormat;
+    canDelete: z.ZodMiniBoolean<boolean>;
+    canPublish: z.ZodMiniBoolean<boolean>;
+    canUnpublish: z.ZodMiniBoolean<boolean>;
+    canCreate: z.ZodMiniBoolean<boolean>;
+    editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    statusFlags: z.ZodMiniObject<{
+        addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        modified: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        modified: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        removedfromdraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    containerType: z.ZodLiteral<"column">;
-    allowedTypes: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
-        label: z.ZodString;
-        icon: z.ZodString;
-        description: z.ZodString;
+    extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
+    containerType: z.ZodMiniLiteral<"column">;
+    allowedTypes: z.ZodMiniNullable<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        description: z.ZodMiniString<string>;
     }, z.core.$strip>>>;
-    children: z.ZodNullable<z.ZodArray<z.ZodObject<{
-        id: z.ZodNumber;
-        parentId: z.ZodNumber;
-        title: z.ZodString;
-        blockSchema: z.ZodObject<{
-            typeName: z.ZodString;
-            label: z.ZodString;
-            icon: z.ZodString;
-            type: z.ZodString;
-            title: z.ZodString;
-            summary: z.ZodString;
+    children: z.ZodMiniNullable<z.ZodMiniArray<z.ZodMiniObject<{
+        id: z.ZodMiniNumberFormat;
+        parentId: z.ZodMiniNumberFormat;
+        title: z.ZodMiniString<string>;
+        blockSchema: z.ZodMiniObject<{
+            typeName: z.ZodMiniString<string>;
+            label: z.ZodMiniString<string>;
+            icon: z.ZodMiniString<string>;
+            type: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
+            summary: z.ZodMiniString<string>;
         }, z.core.$strip>;
-        obsoleteClassName: z.ZodNullable<z.ZodString>;
-        version: z.ZodNumber;
-        canDelete: z.ZodBoolean;
-        canPublish: z.ZodBoolean;
-        canUnpublish: z.ZodBoolean;
-        canCreate: z.ZodBoolean;
-        editLink: z.ZodNullable<z.ZodString>;
-        statusFlags: z.ZodObject<{
-            addedtodraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+        obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        version: z.ZodMiniNumberFormat;
+        canDelete: z.ZodMiniBoolean<boolean>;
+        canPublish: z.ZodMiniBoolean<boolean>;
+        canUnpublish: z.ZodMiniBoolean<boolean>;
+        canCreate: z.ZodMiniBoolean<boolean>;
+        editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+        statusFlags: z.ZodMiniObject<{
+            addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            modified: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            modified: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
-            removedfromdraft: z.ZodOptional<z.ZodObject<{
-                text: z.ZodString;
-                title: z.ZodString;
+            removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+                text: z.ZodMiniString<string>;
+                title: z.ZodMiniString<string>;
             }, z.core.$strip>>;
         }, z.core.$strip>;
-        extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
     }, z.core.$loose>>>;
-    gridSettings: z.ZodRecord<z.ZodString, z.ZodObject<{
-        width: z.ZodNumber;
-        offset: z.ZodNumber;
-        visible: z.ZodBoolean;
+    gridSettings: z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniObject<{
+        width: z.ZodMiniNumberFormat;
+        offset: z.ZodMiniNumberFormat;
+        visible: z.ZodMiniBoolean<boolean>;
     }, z.core.$strip>>;
-}, z.core.$strip>, z.ZodObject<{
-    id: z.ZodNumber;
-    parentId: z.ZodNumber;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-        summary: z.ZodString;
+}, z.core.$strip>, z.ZodMiniObject<{
+    id: z.ZodMiniNumberFormat;
+    parentId: z.ZodMiniNumberFormat;
+    title: z.ZodMiniString<string>;
+    blockSchema: z.ZodMiniObject<{
+        typeName: z.ZodMiniString<string>;
+        label: z.ZodMiniString<string>;
+        icon: z.ZodMiniString<string>;
+        type: z.ZodMiniString<string>;
+        title: z.ZodMiniString<string>;
+        summary: z.ZodMiniString<string>;
     }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    statusFlags: z.ZodObject<{
-        addedtodraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+    obsoleteClassName: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    version: z.ZodMiniNumberFormat;
+    canDelete: z.ZodMiniBoolean<boolean>;
+    canPublish: z.ZodMiniBoolean<boolean>;
+    canUnpublish: z.ZodMiniBoolean<boolean>;
+    canCreate: z.ZodMiniBoolean<boolean>;
+    editLink: z.ZodMiniNullable<z.ZodMiniString<string>>;
+    statusFlags: z.ZodMiniObject<{
+        addedtodraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        modified: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        modified: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
-        removedfromdraft: z.ZodOptional<z.ZodObject<{
-            text: z.ZodString;
-            title: z.ZodString;
+        removedfromdraft: z.ZodMiniOptional<z.ZodMiniObject<{
+            text: z.ZodMiniString<string>;
+            title: z.ZodMiniString<string>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    extensions: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniUnknown>>;
 }, z.core.$loose>]>>>;
 export type SimpleElementNode = z.infer<typeof simpleElementNodeSchema>;
 export type ColumnNode = z.infer<typeof columnNodeSchema>;
