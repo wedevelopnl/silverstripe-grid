@@ -71,7 +71,6 @@ class Row extends GridElement implements ContainerInterface
 
     private static bool $auto_scaffold = true;
 
-    /** @return HasManyList<Column> */
     #[\Override]
     public function getChildren(): HasManyList
     {

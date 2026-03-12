@@ -73,7 +73,6 @@ class Column extends GridElement implements ContainerInterface
         'GridSettings' => 'Text',
     ];
 
-    /** @return HasManyList<GridElement> */
     #[\Override]
     public function getChildren(): HasManyList
     {

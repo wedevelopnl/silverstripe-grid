@@ -88,7 +88,6 @@ class Section extends GridElement implements ContainerInterface
 
     private static bool $auto_scaffold = true;
 
-    /** @return HasManyList<Row> */
     #[\Override]
     public function getChildren(): HasManyList
     {
