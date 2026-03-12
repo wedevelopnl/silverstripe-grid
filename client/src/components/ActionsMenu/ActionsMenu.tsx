@@ -37,6 +37,7 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
+        e.stopPropagation();
         close();
       }
     }

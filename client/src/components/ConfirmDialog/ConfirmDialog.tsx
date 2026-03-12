@@ -28,6 +28,8 @@ export default function ConfirmDialog({
 
     if (isOpen && !dialog.open) {
       dialog.showModal();
+    } else if (!isOpen && dialog.open) {
+      dialog.close();
     }
   }, [isOpen]);
 
@@ -38,10 +40,6 @@ export default function ConfirmDialog({
   const handleConfirm = useCallback(() => {
     onConfirm();
   }, [onConfirm]);
-
-  if (!isOpen) {
-    return null;
-  }
 
   return (
     <dialog

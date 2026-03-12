@@ -6,4 +6,5 @@
   &--draft { border-left-color: vars.$color-status-draft; }
   &--published { border-left-color: vars.$color-status-published; }
   &--modified { border-left-color: vars.$color-status-modified; }
+  &--removed { border-left-color: vars.$color-status-removed; }
 }

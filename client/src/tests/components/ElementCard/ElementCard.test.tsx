@@ -176,8 +176,8 @@ describe('ElementCard', () => {
 
     expect(dragHandle).toBeDefined();
     expect(actionsMenuTrigger).toBeDefined();
-    // Drag handle + actions menu trigger (dialog not rendered when closed)
-    expect(buttons.length).toBe(2);
+    // Drag handle + actions menu trigger + dialog cancel/confirm buttons
+    expect(buttons.length).toBe(4);
     expect(container.querySelectorAll('a').length).toBe(0);
     expect(container.querySelectorAll('input').length).toBe(0);
     expect(container.querySelectorAll('select').length).toBe(0);

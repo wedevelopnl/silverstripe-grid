@@ -6,6 +6,11 @@ import type { GridSettingsOption } from '@/types/gridSettings';
 let cachedConfig: AdapterConfig | null = null;
 let cachedWidthOptions: readonly GridSettingsOption[] | null = null;
 
+export function resetAdapterCache(): void {
+  cachedConfig = null;
+  cachedWidthOptions = null;
+}
+
 function config(): AdapterConfig {
   if (cachedConfig === null) {
     cachedConfig = getAdapterConfig();

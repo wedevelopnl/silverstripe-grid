@@ -47,6 +47,7 @@ export default function GridSettingsPicker({
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
+        e.stopPropagation();
         close();
       }
     }

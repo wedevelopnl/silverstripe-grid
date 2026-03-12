@@ -9,6 +9,7 @@ import {
   getWidthOptions,
   getOffsetOptions,
   resolveViewportSettings,
+  resetAdapterCache,
 } from '@/utils/gridAdapter';
 
 vi.mock('@/api/config', () => ({
@@ -33,6 +34,10 @@ vi.mock('@/api/config', () => ({
     ),
   }),
 }));
+
+beforeEach(() => {
+  resetAdapterCache();
+});
 
 describe('gridAdapter', () => {
   it('returns the list of viewports from adapter config', () => {

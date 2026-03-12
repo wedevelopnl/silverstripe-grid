@@ -28,7 +28,7 @@ export default function ElementCard({ element }: ElementCardProps) {
   const style = buildSortableStyle(transform, transition, isDragging);
 
   const navigateToEdit = useCallback(() => {
-    if (editLink !== null) {
+    if (editLink !== null && editLink.startsWith('/')) {
       window.location.href = editLink;
     }
   }, [editLink]);
