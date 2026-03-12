@@ -44,8 +44,8 @@ test-js:
 ## Run all tests with merged coverage (HTML + Clover XML)
 coverage: ensure-up
 	$(COMPOSE) exec app vendor/bin/phpunit \
-		--coverage-html coverage/unit/html \
-		--coverage-clover coverage/unit/clover.xml
+		--coverage-html coverage/combined/html \
+		--coverage-clover coverage/combined/clover.xml
 
 ## Run unit tests with coverage (individual report)
 coverage-unit: ensure-up
@@ -65,7 +65,7 @@ coverage-js:
 
 ## Check PHP coverage meets minimum threshold
 coverage-check: coverage
-	$(COMPOSE) exec app vendor/bin/coverage-check coverage/unit/clover.xml 69
+	$(COMPOSE) exec app vendor/bin/coverage-check coverage/combined/clover.xml 69
 
 ## Run PHP mutation testing (Infection)
 mutate: ensure-up
