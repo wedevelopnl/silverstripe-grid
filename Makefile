@@ -1,6 +1,6 @@
 COMPOSE := docker compose -f .docker/compose.yml
 
-.PHONY: up down destroy build test test-unit test-integration test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-js coverage-check mutate mutate-js analyse qa qa-js flush dev-build
+.PHONY: up down destroy build test test-unit test-integration test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build
 
 ## Generate .docker/.env with deterministic ports (auto-runs if missing)
 .docker/.env:
@@ -78,6 +78,14 @@ mutate-js:
 ## Run PHPStan static analysis
 analyse: ensure-up
 	$(COMPOSE) exec app vendor/bin/phpstan analyse -c phpstan.neon.dist --memory-limit=512M
+
+## Run Rector refactoring (applies changes)
+rector: ensure-up
+	$(COMPOSE) exec app vendor/bin/rector process
+
+## Run Rector in dry-run mode (preview only)
+rector-dry: ensure-up
+	$(COMPOSE) exec app vendor/bin/rector process --dry-run
 
 ## Run full QA suite (PHPStan + PHP tests with coverage check + JS QA)
 qa: analyse coverage-check qa-js
