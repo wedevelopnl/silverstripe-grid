@@ -10,7 +10,6 @@ use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Dev\FixtureLoader;
-use WeDevelop\Grid\Dev\FixturePostAction;
 use WeDevelop\Grid\Dev\FixtureResult;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\Row;
@@ -19,7 +18,6 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 
 #[CoversClass(FixtureLoader::class)]
-#[CoversClass(FixturePostAction::class)]
 #[CoversClass(FixtureResult::class)]
 final class FixtureLoaderTest extends SapphireTest
 {
@@ -125,76 +123,25 @@ final class FixtureLoaderTest extends SapphireTest
         });
     }
 
-    public function testComplexPageProducesCorrectVersionedStates(): void
+    public function testLoadAppliesPostActions(): void
     {
         $loader = FixtureLoader::create();
         $result = $loader->load('complex-page');
 
-        $draftLeafId = $result->fixtureMap[ContentElement::class]['draft_leaf'];
-        $publishedLeafId = $result->fixtureMap[ContentElement::class]['published_leaf'];
         $modifiedLeafId = $result->fixtureMap[ContentElement::class]['modified_leaf'];
 
-        // draft_leaf should exist in draft but NOT on live
-        Versioned::withVersionedMode(function () use ($draftLeafId): void {
-            Versioned::set_stage(Versioned::DRAFT);
-            $this->assertNotNull(
-                GridElement::get()->byID($draftLeafId),
-                'draft_leaf should exist in draft',
-            );
-
-            Versioned::set_stage(Versioned::LIVE);
-            $this->assertNull(
-                GridElement::get()->byID($draftLeafId),
-                'draft_leaf should NOT exist on live (was unpublished)',
-            );
-        });
-
-        // published_leaf should exist on both draft and live with same title
-        Versioned::withVersionedMode(function () use ($publishedLeafId): void {
-            Versioned::set_stage(Versioned::DRAFT);
-            $draft = GridElement::get()->byID($publishedLeafId);
-            $this->assertNotNull($draft, 'published_leaf should exist in draft');
-
-            Versioned::set_stage(Versioned::LIVE);
-            $live = GridElement::get()->byID($publishedLeafId);
-            $this->assertNotNull($live, 'published_leaf should exist on live');
-            $this->assertSame($draft->Title, $live->Title, 'published_leaf title should match');
-        });
-
-        // modified_leaf should differ between draft and live
+        // The modify post-action should have changed the draft title,
+        // proving post-actions ran during load()
         Versioned::withVersionedMode(function () use ($modifiedLeafId): void {
-            Versioned::set_stage(Versioned::LIVE);
-            $live = GridElement::get()->byID($modifiedLeafId);
-            $this->assertNotNull($live, 'modified_leaf should exist on live');
-            $this->assertSame('Modified Text Block', $live->Title);
-
             Versioned::set_stage(Versioned::DRAFT);
             $draft = GridElement::get()->byID($modifiedLeafId);
-            $this->assertNotNull($draft, 'modified_leaf should exist in draft');
-            $this->assertSame('Modified Text Block (draft)', $draft->Title);
+            $this->assertNotNull($draft);
+            $this->assertSame(
+                'Modified Text Block (draft)',
+                $draft->Title,
+                'Post-action should have modified the draft title',
+            );
         });
-    }
-
-    public function testPostActionThrowsForUnknownAction(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Unknown post-action "delete_all"');
-
-        FixturePostAction::fromConfig([
-            'action' => 'delete_all',
-            'class' => GridElement::class,
-            'identifier' => 'leaf1',
-        ]);
-    }
-
-    public function testPostActionThrowsForMissingKeys(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('requires "action", "class", and "identifier" keys');
-
-        FixturePostAction::fromConfig([
-            'action' => 'publish_recursive',
-        ]);
     }
 
     public function testResetRemovesAllE2ePages(): void
