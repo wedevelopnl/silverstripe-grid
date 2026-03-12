@@ -31,7 +31,30 @@ test.describe('Media elements', () => {
       await expect(uploadField).toBeVisible({ timeout: 10_000 });
     });
 
-    // --- Step 2: Verify picker visual feedback and conditional field visibility ---
+    // --- Step 2: Verify MediaType toggles VideoCustomThumbnail visibility ---
+    await test.step('Verify MediaType toggles VideoCustomThumbnail visibility', async () => {
+      // We're already on the Media tab from Step 1
+      // Native <select> is hidden by Chosen.js — interact with the Chosen widget
+      const mediaTypeHolder = page.locator('[id$="_MediaType_Holder"]');
+      const chosenContainer = mediaTypeHolder.locator('.chosen-container');
+      const videoThumbnailHolder = page.locator('[id$="_VideoCustomThumbnail_Holder"]');
+
+      // Initial state: MediaType=image, VideoCustomThumbnail is hidden
+      await expect(page.locator('select[name="MediaType"]')).toHaveValue('image');
+      await expect(videoThumbnailHolder).toBeHidden();
+
+      // Switch to video — VideoCustomThumbnail becomes visible
+      await chosenContainer.click();
+      await mediaTypeHolder.locator('.chosen-results li').filter({ hasText: 'Video' }).click();
+      await expect(videoThumbnailHolder).toBeVisible();
+
+      // Switch back to image — VideoCustomThumbnail is hidden again
+      await chosenContainer.click();
+      await mediaTypeHolder.locator('.chosen-results li').filter({ hasText: 'Image' }).click();
+      await expect(videoThumbnailHolder).toBeHidden();
+    });
+
+    // --- Step 3: Verify picker visual feedback and conditional field visibility ---
     await test.step('Verify column width picker UX behavior', async () => {
       await page.getByRole('tab', { name: 'Layout' }).click();
 
@@ -77,7 +100,7 @@ test.describe('Media elements', () => {
       await expect(gapSizeHolder).toBeHidden();
     });
 
-    // --- Step 3: Configure layout settings and save ---
+    // --- Step 4: Configure layout settings and save ---
     await test.step('Configure layout settings', async () => {
       // Select 8/4 split for the save+render test
       const picker = page.locator('.column-width-picker');
@@ -91,7 +114,7 @@ test.describe('Media elements', () => {
       await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
     });
 
-    // --- Step 3: Configure media settings ---
+    // --- Step 5: Configure media settings ---
     await test.step('Configure media settings', async () => {
       await page.getByRole('tab', { name: 'Media' }).click();
 
@@ -102,7 +125,7 @@ test.describe('Media elements', () => {
       await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
     });
 
-    // --- Step 4: Navigate back and publish ---
+    // --- Step 6: Navigate back and publish ---
     await test.step('Navigate back and publish page', async () => {
       await page.getByRole('link', { name: 'E2E Media Elements Page' }).click();
       await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
@@ -111,7 +134,7 @@ test.describe('Media elements', () => {
       await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 15_000 });
     });
 
-    // --- Step 5: Verify frontend rendering ---
+    // --- Step 7: Verify frontend rendering ---
     await test.step('Verify frontend rendering with media layout', async () => {
       const liveUrl = fixture.pageUrl.split('?')[0];
       await page.goto(liveUrl);
