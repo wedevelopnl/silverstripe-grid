@@ -48,30 +48,30 @@ test.describe('Media elements', () => {
       const gapSizeHolder = page.locator('[id$="_GapSize_Holder"]');
 
       // Initial state: full width is selected, dependent fields are hidden
-      await expect(fullWidthOption).toHaveClass(/--selected/);
+      await expect(fullWidthOption.locator('input')).toBeChecked();
       await expect(mediaPositionHolder).toBeHidden();
       await expect(verticalAlignmentHolder).toBeHidden();
       await expect(gapSizeHolder).toBeHidden();
 
       // Select a column split — dependent fields appear, selected state moves
       await splitOption8.click();
-      await expect(splitOption8).toHaveClass(/--selected/);
-      await expect(fullWidthOption).not.toHaveClass(/--selected/);
+      await expect(splitOption8.locator('input')).toBeChecked();
+      await expect(fullWidthOption.locator('input')).not.toBeChecked();
       await expect(mediaPositionHolder).toBeVisible();
       await expect(verticalAlignmentHolder).toBeVisible();
       await expect(gapSizeHolder).toBeVisible();
 
       // Switch to a different split — selected state follows
       await splitOption6.click();
-      await expect(splitOption6).toHaveClass(/--selected/);
-      await expect(splitOption8).not.toHaveClass(/--selected/);
+      await expect(splitOption6.locator('input')).toBeChecked();
+      await expect(splitOption8.locator('input')).not.toBeChecked();
       // Dependent fields remain visible for any non-zero split
       await expect(mediaPositionHolder).toBeVisible();
 
       // Switch back to full width — dependent fields hide again
       await fullWidthOption.click();
-      await expect(fullWidthOption).toHaveClass(/--selected/);
-      await expect(splitOption6).not.toHaveClass(/--selected/);
+      await expect(fullWidthOption.locator('input')).toBeChecked();
+      await expect(splitOption6.locator('input')).not.toBeChecked();
       await expect(mediaPositionHolder).toBeHidden();
       await expect(verticalAlignmentHolder).toBeHidden();
       await expect(gapSizeHolder).toBeHidden();

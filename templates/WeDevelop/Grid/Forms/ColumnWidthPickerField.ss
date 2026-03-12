@@ -19,7 +19,7 @@
     border-color: #0d6efd;
     background-color: #f8f9fa;
   }
-  .column-width-picker__option--selected {
+  .column-width-picker__option:has(:checked) {
     border-color: #0d6efd;
     background-color: #e7f1ff;
   }
@@ -63,7 +63,7 @@
 
 <div class="column-width-picker" id="$ID" $AttributesHTML>
   <% loop $PickerOptions %>
-    <label class="column-width-picker__option<% if $isChecked %> column-width-picker__option--selected<% end_if %><% if $isDisabled %> column-width-picker__option--disabled<% end_if %>">
+    <label class="column-width-picker__option<% if $isDisabled %> column-width-picker__option--disabled<% end_if %>">
       <input
         type="radio"
         id="$ID"

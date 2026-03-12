@@ -25,6 +25,7 @@
     "silverstripe/framework": "^6.0",
     "silverstripe/vendor-plugin": "^3.0",
     "silverstripe/versioned": "^3.0",
+    "unclecheese/display-logic": "^4.0",
     "wedevelopnl/silverstripe-media-field": "^6.0"
   },
   "conflict": {

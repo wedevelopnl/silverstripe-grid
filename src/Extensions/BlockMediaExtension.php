@@ -12,6 +12,7 @@ use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\Forms\TextField;
 use SilverStripe\ORM\DataObject;
+use UncleCheese\DisplayLogic\Forms\Wrapper;
 use WeDevelop\Grid\Contract\ContentLayoutAdapterInterface;
 use WeDevelop\Grid\Forms\ColumnWidthPickerField;
 use WeDevelop\Grid\Model\GridElement;
@@ -290,7 +291,7 @@ class BlockMediaExtension extends Extension
         );
         $mediaTab->push($mediaField);
 
-        $mediaTab->push(
+        $thumbnailWrapper = Wrapper::create(
             UploadField::create(
                 'VideoCustomThumbnail',
                 _t(self::class . '.CUSTOM_VIDEO_THUMBNAIL', 'Custom video thumbnail'),
@@ -301,6 +302,8 @@ class BlockMediaExtension extends Extension
                     'This overwrites the default thumbnail provided by the video platform',
                 )),
         );
+        $thumbnailWrapper->displayIf('MediaType')->isEqualTo(MediaType::Video->value);
+        $mediaTab->push($thumbnailWrapper);
 
         $mediaTab->push(
             TextField::create(
@@ -335,31 +338,31 @@ class BlockMediaExtension extends Extension
             ),
         );
 
-        $layoutTab->push(
-            DropdownField::create(
-                'MediaPosition',
-                _t(self::class . '.MEDIA_POSITION', 'Media position'),
-                $this->getMediaPositionOptions(),
-            ),
+        $mediaPositionField = DropdownField::create(
+            'MediaPosition',
+            _t(self::class . '.MEDIA_POSITION', 'Media position'),
+            $this->getMediaPositionOptions(),
         );
+        $mediaPositionField->displayIf('ContentColumns')->isGreaterThan(0);
+        $layoutTab->push($mediaPositionField);
 
-        $layoutTab->push(
-            DropdownField::create(
-                'VerticalAlignment',
-                _t(self::class . '.VERTICAL_ALIGNMENT', 'Vertical alignment'),
-                $this->getVerticalAlignmentOptions(),
-            ),
+        $verticalAlignmentField = DropdownField::create(
+            'VerticalAlignment',
+            _t(self::class . '.VERTICAL_ALIGNMENT', 'Vertical alignment'),
+            $this->getVerticalAlignmentOptions(),
         );
+        $verticalAlignmentField->displayIf('ContentColumns')->isGreaterThan(0);
+        $layoutTab->push($verticalAlignmentField);
 
         /** @var array<int, string> $gapSizes */
         $gapSizes = $this->getOwner()->config()->get('gap_sizes');
-        $layoutTab->push(
-            DropdownField::create(
-                'GapSize',
-                _t(self::class . '.GAP_SIZE', 'Gap size'),
-                $gapSizes,
-            ),
+        $gapSizeField = DropdownField::create(
+            'GapSize',
+            _t(self::class . '.GAP_SIZE', 'Gap size'),
+            $gapSizes,
         );
+        $gapSizeField->displayIf('ContentColumns')->isGreaterThan(0);
+        $layoutTab->push($gapSizeField);
 
         // Show video embed data as readonly when available
         /** @var string $embedName */
