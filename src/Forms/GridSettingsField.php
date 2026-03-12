@@ -8,6 +8,7 @@ use SilverStripe\Forms\FormField;
 use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\Model\ArrayData;
 use SilverStripe\Model\List\ArrayList;
+use SilverStripe\Model\ModelData;
 use SilverStripe\ORM\DataObjectInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Service\GridSettingsCompactor;
@@ -41,7 +42,7 @@ class GridSettingsField extends FormField
      * Accept value from DB (JSON string) or form submission (nested array).
      *
      * @param mixed $value
-     * @param array<string, mixed>|DataObjectInterface|null $data
+     * @param array<string, mixed>|ModelData|null $data
      */
     #[\Override]
     public function setValue(mixed $value, mixed $data = null): static
@@ -53,7 +54,7 @@ class GridSettingsField extends FormField
             $this->viewportData = $this->normalizeFormData($value);
         }
 
-        return parent::setValue($value, $data); // @phpstan-ignore argument.type (DataObjectInterface is a ModelData in SS6)
+        return parent::setValue($value, $data);
     }
 
     /**

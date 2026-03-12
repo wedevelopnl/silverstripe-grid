@@ -35,7 +35,7 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
  * @property string $Style
  * @property int $ParentID
  * @property string $ParentClass
- * @method DataObject Parent()
+ * @method DataObject|null Parent()
  * @mixin Versioned
  */
 class GridElement extends DataObject
@@ -233,7 +233,7 @@ class GridElement extends DataObject
     {
         $parent = $this->Parent();
 
-        if ($parent === null || !$parent->exists()) { // @phpstan-ignore identical.alwaysFalse (polymorphic has_one returns null when ParentClass is empty)
+        if ($parent === null || !$parent->exists()) {
             return null;
         }
 

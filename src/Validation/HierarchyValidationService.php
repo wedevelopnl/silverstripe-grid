@@ -18,7 +18,7 @@ class HierarchyValidationService implements HierarchyValidatorInterface
     public function validate(GridElement $element): Result
     {
         $parent = $element->Parent();
-        if ($parent === null || !$parent->exists()) { // @phpstan-ignore identical.alwaysFalse (polymorphic has_one returns null when ParentClass is empty)
+        if ($parent === null || !$parent->exists()) {
             return Result::ok($element);
         }
 

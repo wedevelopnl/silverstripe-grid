@@ -293,7 +293,7 @@ class GridController extends AdminController
         );
 
         $parent = $element->Parent();
-        if ($parent === null || !$parent->exists() || !$parent->canEdit()) { // @phpstan-ignore identical.alwaysFalse
+        if ($parent === null || !$parent->exists() || !$parent->canEdit()) {
             $this->jsonError(403);
         }
 
@@ -348,7 +348,7 @@ class GridController extends AdminController
 
         if ($isCrossParent) {
             $sourceParent = $element->Parent();
-            if ($sourceParent === null || !$sourceParent->exists() || !$sourceParent->canEdit()) { // @phpstan-ignore identical.alwaysFalse
+            if ($sourceParent === null || !$sourceParent->exists() || !$sourceParent->canEdit()) {
                 $this->jsonError(403);
             }
         }
