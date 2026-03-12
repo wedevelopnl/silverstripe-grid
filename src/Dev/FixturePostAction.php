@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Dev;
 
+use InvalidArgumentException;
 use SilverStripe\Assets\Image;
 use SilverStripe\Control\Director;
 use SilverStripe\Core\Manifest\ModuleResourceLoader;
@@ -55,7 +56,7 @@ final readonly class FixturePostAction
             !in_array($this->action, self::NON_VERSIONED_ACTIONS, true)
             && !$record->hasExtension(Versioned::class)
         ) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'Post-action "%s" requires Versioned extension, but %s does not have it.',
                 $this->action,
                 $record::class,
@@ -81,14 +82,14 @@ final readonly class FixturePostAction
             || !is_string($config['class'] ?? null)
             || !is_string($config['identifier'] ?? null)
         ) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Post-action config requires "action", "class", and "identifier" keys',
             );
         }
 
         $action = $config['action'];
         if (!in_array($action, self::VALID_ACTIONS, true)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf(
                     'Unknown post-action "%s". Valid actions: %s',
                     $action,
@@ -131,21 +132,21 @@ final readonly class FixturePostAction
         $source = $this->fields['source'] ?? '';
 
         if ($relation === '' || $source === '') {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'attach_image requires "relation" and "source" in fields',
             );
         }
 
         $resolved = ModuleResourceLoader::singleton()->resolvePath($source);
         if ($resolved === null) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf('Could not resolve image source path: %s', $source),
             );
         }
 
         $absolutePath = Director::baseFolder() . '/' . $resolved;
         if (!file_exists($absolutePath)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf('Image file not found: %s (resolved from "%s")', $absolutePath, $source),
             );
         }

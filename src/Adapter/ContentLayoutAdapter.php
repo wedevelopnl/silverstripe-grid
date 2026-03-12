@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Adapter;
 
+use Override;
 use WeDevelop\Grid\Contract\ContentLayoutAdapterInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Value\AspectRatio;
@@ -19,29 +20,29 @@ use WeDevelop\Grid\Value\VerticalAlignment;
  * only the shared logic: enum lookups, order inversion, sprintf formatting,
  * and width delegation to the grid adapter.
  */
-final class ContentLayoutAdapter implements ContentLayoutAdapterInterface
+final readonly class ContentLayoutAdapter implements ContentLayoutAdapterInterface
 {
-    private readonly ContentLayoutClassMap $classMap;
+    private ContentLayoutClassMap $classMap;
 
     public function __construct(
-        private readonly GridAdapterInterface $gridAdapter,
+        private GridAdapterInterface $gridAdapter,
     ) {
         $this->classMap = $gridAdapter->getContentLayoutClassMap();
     }
 
-    #[\Override]
+    #[Override]
     public function getAspectRatioClass(AspectRatio $ratio): ?string
     {
         return $this->classMap->aspectRatioClasses[$ratio->value];
     }
 
-    #[\Override]
+    #[Override]
     public function getVerticalAlignmentClass(VerticalAlignment $alignment): string
     {
         return $this->classMap->verticalAlignmentClasses[$alignment->value];
     }
 
-    #[\Override]
+    #[Override]
     public function getMediaOrderClasses(MediaPosition $position): string
     {
         $viewport = $this->gridAdapter->getDefaultViewport()->key;
@@ -57,7 +58,7 @@ final class ContentLayoutAdapter implements ContentLayoutAdapterInterface
         };
     }
 
-    #[\Override]
+    #[Override]
     public function getContentOrderClasses(MediaPosition $position): string
     {
         $viewport = $this->gridAdapter->getDefaultViewport()->key;
@@ -73,7 +74,7 @@ final class ContentLayoutAdapter implements ContentLayoutAdapterInterface
         };
     }
 
-    #[\Override]
+    #[Override]
     public function getMediaWidthClass(int $contentColumns): string
     {
         $viewport = $this->gridAdapter->getDefaultViewport()->key;
@@ -82,7 +83,7 @@ final class ContentLayoutAdapter implements ContentLayoutAdapterInterface
         return $this->gridAdapter->getWidthClass($viewport, $mediaColumns);
     }
 
-    #[\Override]
+    #[Override]
     public function getContentWidthClass(int $contentColumns): string
     {
         $viewport = $this->gridAdapter->getDefaultViewport()->key;
@@ -90,7 +91,7 @@ final class ContentLayoutAdapter implements ContentLayoutAdapterInterface
         return $this->gridAdapter->getWidthClass($viewport, $contentColumns);
     }
 
-    #[\Override]
+    #[Override]
     public function getPaddingClass(string $direction, int $size): string
     {
         $viewport = $this->gridAdapter->getDefaultViewport()->key;
@@ -99,7 +100,7 @@ final class ContentLayoutAdapter implements ContentLayoutAdapterInterface
         return sprintf($this->classMap->paddingFormat, $prefix, $viewport, $size);
     }
 
-    #[\Override]
+    #[Override]
     public function getBaseColumnClass(): ?string
     {
         return $this->classMap->baseColumnClass;

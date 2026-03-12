@@ -445,7 +445,7 @@ class BlockMediaExtension extends Extension
         $total = $this->getOwner()->gridAdapter->getColumnCount();
         $options = [];
 
-        for ($i = 4; $i <= min(8, $total - 2); $i++) {
+        for ($i = 4; $i <= min(8, $total - 2); ++$i) {
             $media = $total - $i;
             $options[$i] = sprintf('%d/%d (content/media)', $i, $media);
         }

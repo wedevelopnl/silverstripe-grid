@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Value;
 
+use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Model\Row;
+use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model;
 
 enum ContainerType: string
@@ -26,9 +29,9 @@ enum ContainerType: string
     public function toElementClass(): string
     {
         return match ($this) {
-            self::Section => Model\Section::class,
-            self::Row => Model\Row::class,
-            self::Column => Model\Column::class,
+            self::Section => Section::class,
+            self::Row => Row::class,
+            self::Column => Column::class,
         };
     }
 }

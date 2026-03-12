@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Controllers;
 
+use Override;
+use InvalidArgumentException;
+use stdClass;
 use SilverStripe\Admin\AdminController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPRequest;
@@ -30,23 +33,7 @@ use WeDevelop\Grid\Service\RequestBodyParser;
 use WeDevelop\Grid\Service\TitleGenerator;
 
 /**
- * @phpstan-type AdapterConfig array{
- *   viewports: list<array{key: string, label: string}>,
- *   defaultViewport: string,
- *   columnCount: positive-int,
- *   rowClasses: string,
- *   offsetStrategy: 'margin'|'grid-placement',
- *   baseWidthClasses: \stdClass&object{
- *     '1': string, '2': string, '3': string, '4': string,
- *     '5': string, '6': string, '7': string, '8': string,
- *     '9': string, '10': string, '11': string, '12': string,
- *   },
- *   baseOffsetClasses: \stdClass&object{
- *     '0': string, '1': string, '2': string, '3': string,
- *     '4': string, '5': string, '6': string, '7': string,
- *     '8': string, '9': string, '10': string, '11': string,
- *   },
- * }
+ * @phpstan-type AdapterConfig array{viewports: list<array{key: string, label: string}>, defaultViewport: string, columnCount: positive-int, rowClasses: string, offsetStrategy: 'margin'|'grid-placement', baseWidthClasses: stdClass&object{'1': string, '2': string, '3': string, '4': string, '5': string, '6': string, '7': string, '8': string, '9': string, '10': string, '11': string, '12': string}, baseOffsetClasses: stdClass&object{'0': string, '1': string, '2': string, '3': string, '4': string, '5': string, '6': string, '7': string, '8': string, '9': string, '10': string, '11': string}}
  *
  * @property GridElementRepositoryInterface $elementRepository
  * @property GridTreeBuilder $treeBuilder
@@ -109,6 +96,7 @@ class GridController extends AdminController
         'apiUpdateGridSettings',
     ];
 
+    #[Override]
     protected function init(): void
     {
         parent::init();
@@ -334,7 +322,7 @@ class GridController extends AdminController
         }
 
         $targetParent = $this->resolveParentRecord($body->targetParentId, $element);
-        if ($targetParent === null) {
+        if (!$targetParent instanceof DataObject) {
             $this->jsonError(400);
         }
 
@@ -400,7 +388,7 @@ class GridController extends AdminController
     /**
      * @return array<string, mixed>
      */
-    #[\Override]
+    #[Override]
     public function getClientConfig(): array
     {
         /** @var array<string, mixed> $clientConfig */
@@ -425,18 +413,18 @@ class GridController extends AdminController
         $viewports = $adapter->getViewports();
 
         if ($viewports === []) {
-            throw new \InvalidArgumentException('Adapter must define at least one viewport.');
+            throw new InvalidArgumentException('Adapter must define at least one viewport.');
         }
 
         $columnCount = $adapter->getColumnCount();
 
         $widthClasses = [];
-        for ($width = 1; $width <= $columnCount; $width++) {
+        for ($width = 1; $width <= $columnCount; ++$width) {
             $widthClasses[$width] = $adapter->getBaseWidthClass($width);
         }
 
         $offsetClasses = [];
-        for ($offset = 0; $offset < $columnCount; $offset++) {
+        for ($offset = 0; $offset < $columnCount; ++$offset) {
             $offsetClasses[$offset] = $adapter->getBaseOffsetClass($offset);
         }
 

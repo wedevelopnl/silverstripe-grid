@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Model;
 
+use Override;
 use SilverStripe\CMS\Controllers\CMSPageEditController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Controller;
@@ -82,7 +83,6 @@ class GridElement extends DataObject
         Versioned::class,
     ];
 
-    /** @var string */
     private static string $default_sort = '"Sort" ASC';
 
     /** @var array<string, array<string, string|list<string>>> */
@@ -93,7 +93,7 @@ class GridElement extends DataObject
         ],
     ];
 
-    #[\Override]
+    #[Override]
     public function getCMSEditLink(): ?string
     {
         $page = $this->getPage();
@@ -176,7 +176,7 @@ class GridElement extends DataObject
         return $class;
     }
 
-    #[\Override]
+    #[Override]
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
@@ -251,8 +251,8 @@ class GridElement extends DataObject
 
     /**
      * @param Member|null $member
-     * @return bool|null
      */
+    #[Override]
     public function canView(mixed $member = null): bool|null
     {
         $member = $member ?: Security::getCurrentUser();
@@ -266,36 +266,36 @@ class GridElement extends DataObject
 
         $page = $this->getPage();
 
-        return $page !== null ? (bool) $page->canView($member) : (bool) Permission::check('CMS_ACCESS', 'any', $member);
+        return $page instanceof DataObject ? (bool) $page->canView($member) : (bool) Permission::check('CMS_ACCESS', 'any', $member);
     }
 
     /**
      * @param Member|null $member
-     * @return bool|null
      */
+    #[Override]
     public function canEdit(mixed $member = null): bool|null
     {
         $page = $this->getPage();
 
-        return $page !== null ? (bool) $page->canEdit($member) : (bool) Permission::check('CMS_ACCESS', 'any', $member);
+        return $page instanceof DataObject ? (bool) $page->canEdit($member) : (bool) Permission::check('CMS_ACCESS', 'any', $member);
     }
 
     /**
      * @param Member|null $member
-     * @return bool|null
      */
+    #[Override]
     public function canDelete(mixed $member = null): bool|null
     {
         $page = $this->getPage();
 
-        return $page !== null ? (bool) $page->canDelete($member) : (bool) Permission::check('CMS_ACCESS', 'any', $member);
+        return $page instanceof DataObject ? (bool) $page->canDelete($member) : (bool) Permission::check('CMS_ACCESS', 'any', $member);
     }
 
     /**
      * @param Member|null $member
      * @param array<string, mixed> $context
-     * @return bool|null
      */
+    #[Override]
     public function canCreate(mixed $member = null, mixed $context = []): bool|null
     {
         return (bool) Permission::check('CMS_ACCESS', 'any', $member);
@@ -337,8 +337,7 @@ class GridElement extends DataObject
             ->filter([
                 'ParentID' => $this->ParentID,
                 'ParentClass' => $this->ParentClass,
-            ])
-            ->exclude('ID', $this->ID)
+            ])->exclude(['ID' => $this->ID])
             ->count();
 
         $this->Title = _t(
@@ -348,7 +347,7 @@ class GridElement extends DataObject
         );
     }
 
-    #[\Override]
+    #[Override]
     protected function onBeforeWrite(): void
     {
         parent::onBeforeWrite();

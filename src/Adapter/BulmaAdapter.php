@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Adapter;
 
+use Override;
 use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
@@ -37,7 +38,7 @@ final class BulmaAdapter extends AbstractGridAdapter
         );
     }
 
-    #[\Override]
+    #[Override]
     public function getWidthClass(string $viewport, int $width): string
     {
         if ($viewport === 'mobile') {
@@ -47,7 +48,7 @@ final class BulmaAdapter extends AbstractGridAdapter
         return sprintf('is-%d-%s', $width, $viewport);
     }
 
-    #[\Override]
+    #[Override]
     public function getOffsetClass(string $viewport, int $offset): string
     {
         if ($viewport === 'mobile') {
@@ -57,13 +58,13 @@ final class BulmaAdapter extends AbstractGridAdapter
         return sprintf('is-offset-%d-%s', $offset, $viewport);
     }
 
-    #[\Override]
+    #[Override]
     public function getRowClasses(): string
     {
         return 'columns is-multiline';
     }
 
-    #[\Override]
+    #[Override]
     public function getContainerClass(bool $fluid): string
     {
         if ($fluid) {
@@ -73,7 +74,7 @@ final class BulmaAdapter extends AbstractGridAdapter
         return 'container';
     }
 
-    #[\Override]
+    #[Override]
     public function getTitleClassOptions(): array
     {
         return [
@@ -86,37 +87,37 @@ final class BulmaAdapter extends AbstractGridAdapter
         ];
     }
 
-    #[\Override]
+    #[Override]
     public function getBaseWidthClass(int $width): string
     {
         return $this->getWidthClass('mobile', $width);
     }
 
-    #[\Override]
+    #[Override]
     public function getBaseOffsetClass(int $offset): string
     {
         return $this->getOffsetClass('mobile', $offset);
     }
 
-    #[\Override]
+    #[Override]
     public function getOffsetStrategy(): OffsetStrategy
     {
         return OffsetStrategy::Margin;
     }
 
-    #[\Override]
+    #[Override]
     public function getContentLayoutClassMap(): ContentLayoutClassMap
     {
         return ContentLayoutClassMap::bulma();
     }
 
-    #[\Override]
+    #[Override]
     protected function formatHideClass(string $viewportKey): string
     {
         return sprintf('is-hidden-%s', $viewportKey);
     }
 
-    #[\Override]
+    #[Override]
     protected function formatRestoreClass(string $viewportKey): string
     {
         return sprintf('is-block-%s', $viewportKey);

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Dev;
 
+use RuntimeException;
+use InvalidArgumentException;
 use Page;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Director;
@@ -74,7 +76,7 @@ class FixtureLoader
 
         [$pageClass, $pageId] = $this->findPageInFactory($factory);
         if ($pageClass === null || $pageId === null) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 sprintf('Fixture "%s" did not create any SiteTree records', $name),
             );
         }
@@ -87,7 +89,7 @@ class FixtureLoader
         });
 
         if ($page === null) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 sprintf('Page ID %d from fixture "%s" not found after write', $pageId, $name),
             );
         }
@@ -114,10 +116,7 @@ class FixtureLoader
         Versioned::withVersionedMode(static function (): void {
             Versioned::set_stage(Versioned::DRAFT);
 
-            $pages = SiteTree::get()->filter(
-                'URLSegment:StartsWith',
-                self::URL_SEGMENT_PREFIX,
-            );
+            $pages = SiteTree::get()->filter(['URLSegment:StartsWith' => self::URL_SEGMENT_PREFIX]);
 
             foreach ($pages as $page) {
                 $page->doArchive();
@@ -151,10 +150,12 @@ class FixtureLoader
         $fallbackId = null;
 
         foreach ($fixtures as $class => $ids) {
-            if (!is_a($class, SiteTree::class, true) || $ids === []) {
+            if (!is_a($class, SiteTree::class, true)) {
                 continue;
             }
-
+            if ($ids === []) {
+                continue;
+            }
             $firstId = $ids[array_key_first($ids)];
 
             if ($class === Page::class) {
@@ -193,7 +194,7 @@ class FixtureLoader
      * Accepts both string config ('path.yml') and array config
      * ({ path: 'path.yml', post_actions: [...] }).
      *
-     * @throws \InvalidArgumentException If the fixture name is not registered or the file doesn't exist
+     * @throws InvalidArgumentException If the fixture name is not registered or the file doesn't exist
      */
     private function resolveFixturePath(string $name): string
     {
@@ -201,7 +202,7 @@ class FixtureLoader
         $fixtures = static::config()->get('fixtures');
 
         if (!isset($fixtures[$name])) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf(
                     'Unknown fixture "%s". Available: %s',
                     $name,
@@ -214,7 +215,7 @@ class FixtureLoader
         $resourcePath = is_array($config) ? ($config['path'] ?? null) : $config;
 
         if (!is_string($resourcePath) || $resourcePath === '') {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf('Fixture "%s" has no path configured', $name),
             );
         }
@@ -222,7 +223,7 @@ class FixtureLoader
         // Resolve module resource syntax (vendor/package:path)
         $resolved = ModuleResourceLoader::singleton()->resolvePath($resourcePath);
         if ($resolved === null) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf('Could not resolve fixture path "%s" for fixture "%s"', $resourcePath, $name),
             );
         }
@@ -231,7 +232,7 @@ class FixtureLoader
         $absolutePath = Director::baseFolder() . '/' . $resolved;
 
         if (!file_exists($absolutePath)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf('Fixture file not found: %s (resolved from "%s")', $absolutePath, $resourcePath),
             );
         }
@@ -258,7 +259,7 @@ class FixtureLoader
         $rawActions = $config['post_actions'];
 
         return array_map(
-            static fn (array $actionConfig): FixturePostAction => FixturePostAction::fromConfig($actionConfig),
+            FixturePostAction::fromConfig(...),
             $rawActions,
         );
     }
@@ -277,7 +278,7 @@ class FixtureLoader
             foreach ($actions as $action) {
                 $id = $factory->getId($action->class, $action->identifier);
                 if ($id === false || $id === 0) {
-                    throw new \RuntimeException(
+                    throw new RuntimeException(
                         sprintf(
                             'Post-action references unknown fixture: %s.%s',
                             $action->class,
@@ -288,7 +289,7 @@ class FixtureLoader
 
                 $record = DataObject::get($action->class)->byID($id);
                 if ($record === null) {
-                    throw new \RuntimeException(
+                    throw new RuntimeException(
                         sprintf(
                             'Record not found for post-action: %s #%d (%s)',
                             $action->class,

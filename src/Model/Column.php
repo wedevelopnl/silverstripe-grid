@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Model;
 
+use Override;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\ORM\HasManyList;
@@ -73,19 +74,19 @@ class Column extends GridElement implements ContainerInterface
         'GridSettings' => 'Text',
     ];
 
-    #[\Override]
+    #[Override]
     public function getChildren(): HasManyList
     {
         return $this->Elements();
     }
 
-    #[\Override]
+    #[Override]
     public function getContainerType(): ContainerType
     {
         return ContainerType::Column;
     }
 
-    #[\Override]
+    #[Override]
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
@@ -100,6 +101,7 @@ class Column extends GridElement implements ContainerInterface
     }
 
     /** Render through the holder template. */
+    #[Override]
     public function forTemplate(): string
     {
         /** @var DBHTMLText $result */
@@ -221,7 +223,7 @@ class Column extends GridElement implements ContainerInterface
         return $classes;
     }
 
-    #[\Override]
+    #[Override]
     protected function onBeforeWrite(): void
     {
         parent::onBeforeWrite();

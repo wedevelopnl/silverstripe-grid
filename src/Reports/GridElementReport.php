@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Reports;
 
+use Override;
 use SilverStripe\CMS\Controllers\CMSPageEditController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Controller;
@@ -23,13 +24,13 @@ class GridElementReport extends Report
 {
     private const string ORPHANED_FILTER = 'orphaned';
 
-    #[\Override]
+    #[Override]
     public function title(): string
     {
         return _t(self::class . '.TITLE', 'Grid Elements');
     }
 
-    #[\Override]
+    #[Override]
     public function description(): string
     {
         return _t(
@@ -48,7 +49,7 @@ class GridElementReport extends Report
 
         $classFilter = $this->extractStringParam($params, 'ClassName');
         if ($classFilter !== null) {
-            $elements = $elements->filter('ClassName', $classFilter);
+            $elements = $elements->filter(['ClassName' => $classFilter]);
         }
 
         $pageFilter = $this->extractStringParam($params, 'PageID');
@@ -74,7 +75,10 @@ class GridElementReport extends Report
                     continue;
                 }
             } elseif ($pageFilter !== null) {
-                if (!$page instanceof SiteTree || (string) $page->ID !== $pageFilter) {
+                if (!$page instanceof SiteTree) {
+                    continue;
+                }
+                if ((string) $page->ID !== $pageFilter) {
                     continue;
                 }
             }
@@ -88,7 +92,7 @@ class GridElementReport extends Report
     /**
      * @return array<string, array<string, string|callable>>
      */
-    #[\Override]
+    #[Override]
     public function columns(): array
     {
         return [

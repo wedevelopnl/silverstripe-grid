@@ -4,33 +4,20 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Value;
 
+use JsonSerializable;
+use InvalidArgumentException;
+use Override;
+use stdClass;
+
 /**
  * Readonly DTO representing a single element in the tree.
  *
  * Leaf nodes omit container-only fields (containerType, allowedTypes, children)
  * from the serialized output; container nodes include all three.
  *
- * @phpstan-type SerializedNode array{
- *     id: int,
- *     parentId: positive-int,
- *     title: string,
- *     blockSchema: array{typeName: string, type: string, title: string, summary: string, label: string, icon: string},
- *     obsoleteClassName: string|null,
- *     version: int,
- *     canDelete: bool,
- *     canPublish: bool,
- *     canUnpublish: bool,
- *     canCreate: bool,
- *     editLink: string|null,
- *     statusFlags: \stdClass&object{addedtodraft?: array{text: string, title: string}, modified?: array{text: string, title: string}, removedfromdraft?: array{text: string, title: string}},
- *     containerType?: string,
- *     allowedTypes?: array<class-string, array{label: string, icon: string, description: string}>|null,
- *     children?: list<mixed>|null,
- *     gridSettings?: array<string, array{width: int, offset: int, visible: bool}>,
- *     extensions?: array<string, mixed>,
- * }
+ * @phpstan-type SerializedNode array{id: int, parentId: positive-int, title: string, blockSchema: array{typeName: string, type: string, title: string, summary: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, statusFlags: stdClass&object{addedtodraft?: array{text: string, title: string}, modified?: array{text: string, title: string}, removedfromdraft?: array{text: string, title: string}}, containerType?: string, allowedTypes?: array<class-string, array{label: string, icon: string, description: string}>|null, children?: list<mixed>|null, gridSettings?: array<string, array{width: int, offset: int, visible: bool}>, extensions?: array<string, mixed>}
  */
-final readonly class GridNode implements \JsonSerializable
+final readonly class GridNode implements JsonSerializable
 {
     /**
      * @param positive-int $parentId
@@ -61,20 +48,20 @@ final readonly class GridNode implements \JsonSerializable
         public array $extensions = [],
     ) {
         if ($parentId <= 0) { // @phpstan-ignore smallerOrEqual.alwaysFalse (runtime guard: native type is int)
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'parentId must be a positive integer',
             );
         }
 
         if ($gridSettings !== null && $containerType !== ContainerType::Column) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'gridSettings may only be provided for Column container type',
             );
         }
     }
 
     /** @return SerializedNode */
-    #[\Override]
+    #[Override]
     public function jsonSerialize(): array
     {
         /** @var SerializedNode['statusFlags'] $statusFlags */
@@ -95,7 +82,7 @@ final readonly class GridNode implements \JsonSerializable
             'statusFlags' => $statusFlags,
         ];
 
-        if ($this->containerType !== null) {
+        if ($this->containerType instanceof ContainerType) {
             $data['containerType'] = $this->containerType->value;
             $data['allowedTypes'] = $this->allowedTypes;
             // Widen list<self> to list<mixed> for the serialized return type

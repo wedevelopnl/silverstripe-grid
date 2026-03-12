@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Adapter;
 
+use Override;
 use SilverStripe\Core\Config\Configurable;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
@@ -77,34 +78,34 @@ abstract class AbstractGridAdapter implements GridAdapterInterface
     // ─── Final getters (identical across all adapters) ──────────────
 
     /** @return list<Viewport> */
-    #[\Override]
+    #[Override]
     final public function getViewports(): array
     {
         return array_values($this->viewports);
     }
 
     /** @return positive-int */
-    #[\Override]
+    #[Override]
     final public function getColumnCount(): int
     {
         return $this->columnCount;
     }
 
-    #[\Override]
+    #[Override]
     final public function getDefaultViewport(): Viewport
     {
         return $this->defaultViewport;
     }
 
     /** @return positive-int */
-    #[\Override]
+    #[Override]
     final public function getContainerMaxWidth(): int
     {
         return $this->containerMaxWidth;
     }
 
     /** @return list<string> */
-    #[\Override]
+    #[Override]
     final public function getVisibilityClasses(string $viewport): array
     {
         return $this->visibilityMap[$viewport];
@@ -157,6 +158,7 @@ abstract class AbstractGridAdapter implements GridAdapterInterface
             if (!isset($allViewports[$key])) {
                 throw InvalidGridValueException::forViewport($key);
             }
+
             $filtered[$key] = $allViewports[$key];
         }
 

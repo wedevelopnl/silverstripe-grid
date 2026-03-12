@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Model;
 
+use Override;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\Versioned\Versioned;
@@ -71,19 +72,20 @@ class Row extends GridElement implements ContainerInterface
 
     private static bool $auto_scaffold = true;
 
-    #[\Override]
+    #[Override]
     public function getChildren(): HasManyList
     {
         return $this->Columns();
     }
 
-    #[\Override]
+    #[Override]
     public function getContainerType(): ContainerType
     {
         return ContainerType::Row;
     }
 
     /** Render through the holder template. */
+    #[Override]
     public function forTemplate(): string
     {
         /** @var DBHTMLText $result */
@@ -108,7 +110,7 @@ class Row extends GridElement implements ContainerInterface
         return $classes;
     }
 
-    #[\Override]
+    #[Override]
     protected function onAfterWrite(): void
     {
         parent::onAfterWrite();

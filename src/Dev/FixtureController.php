@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Dev;
 
+use Override;
+use InvalidArgumentException;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
@@ -44,7 +46,7 @@ class FixtureController extends Controller
      * Defense-in-depth: block non-dev access even if DevelopmentAdmin
      * config gating is somehow bypassed.
      */
-    #[\Override]
+    #[Override]
     protected function init(): void
     {
         parent::init();
@@ -68,10 +70,10 @@ class FixtureController extends Controller
 
         try {
             $result = $loader->load($fixtureName);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $invalidArgumentException) {
             return $this->jsonResponse(400, [
                 'success' => false,
-                'error' => $e->getMessage(),
+                'error' => $invalidArgumentException->getMessage(),
             ]);
         }
 

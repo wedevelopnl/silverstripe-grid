@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Validation;
 
+use Override;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
@@ -14,8 +15,9 @@ use WeDevelop\Grid\Value\ValidationError;
 class ReorderValidator implements ReorderValidatorInterface
 {
     use ElementAllowanceTrait;
+
     /** @return Result<GridElement> */
-    #[\Override]
+    #[Override]
     public function validate(GridElement $element, DataObject $targetParent): Result
     {
         if ((int) $element->ParentID === (int) $targetParent->ID) {

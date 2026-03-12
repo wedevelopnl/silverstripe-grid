@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Dev;
 
+use Override;
 use JsonSerializable;
 
 /**
@@ -28,7 +29,7 @@ final readonly class FixtureResult implements JsonSerializable
     /**
      * @return array{pageId: int, pageUrl: string, fixtureMap: array<string, array<string, int>>}
      */
-    #[\Override]
+    #[Override]
     public function jsonSerialize(): array
     {
         return [

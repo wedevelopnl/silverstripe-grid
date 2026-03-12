@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Validation;
 
+use WeDevelop\Grid\Model\GridElement;
 use SilverStripe\Core\Extension;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Core\Validation\ValidationResult;
@@ -13,7 +14,7 @@ use SilverStripe\Core\Validation\ValidationResult;
  * to the centralized HierarchyValidationService, then translates
  * Result errors into the framework's ValidationResult.
  *
- * @extends Extension<\WeDevelop\Grid\Model\GridElement>
+ * @extends Extension<GridElement>
  */
 class HierarchyValidationExtension extends Extension
 {
@@ -21,7 +22,7 @@ class HierarchyValidationExtension extends Extension
     {
         /** @var HierarchyValidatorInterface $service */
         $service = Injector::inst()->get(HierarchyValidatorInterface::class);
-        $serviceResult = $service->validate($this->owner);
+        $serviceResult = $service->validate($this->getOwner());
 
         if ($serviceResult->isOk()) {
             return;

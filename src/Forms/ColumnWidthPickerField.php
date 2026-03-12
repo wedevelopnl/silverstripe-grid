@@ -20,18 +20,12 @@ final class ColumnWidthPickerField extends OptionsetField
 {
     private const string IMAGE_BASE = 'wedevelopnl/silverstripe-grid:client/images/alignments/';
 
-    /** @var int<1, max> */
-    private int $totalColumns;
-
     /**
-     * @param string $name
-     * @param string|null $title
      * @param array<int, string> $source
      * @param int<1, max> $totalColumns
      */
-    public function __construct(string $name, ?string $title, array $source, int $totalColumns)
+    public function __construct(string $name, ?string $title, array $source, private readonly int $totalColumns)
     {
-        $this->totalColumns = $totalColumns;
         parent::__construct($name, $title, $source);
     }
 
@@ -84,11 +78,7 @@ final class ColumnWidthPickerField extends OptionsetField
      */
     private function resolveImageUrl(bool $isFullWidth, int $contentColumns, int $mediaColumns): string
     {
-        if ($isFullWidth) {
-            $filename = 'vertical.png';
-        } else {
-            $filename = sprintf('horizontal_%d-%d.png', $contentColumns, $mediaColumns);
-        }
+        $filename = $isFullWidth ? 'vertical.png' : sprintf('horizontal_%d-%d.png', $contentColumns, $mediaColumns);
 
         $resourcePath = self::IMAGE_BASE . $filename;
         $loader = ModuleResourceLoader::singleton();

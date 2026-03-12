@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Service;
 
 use WeDevelop\Grid\Contract\GridAdapterInterface;
-use WeDevelop\Grid\Value\Viewport;
 
 /**
  * Handles expand/compact lifecycle for sparse GridSettings storage.
@@ -15,10 +14,10 @@ use WeDevelop\Grid\Value\Viewport;
  * provides the expand (sparse → full) and compact (full → sparse) operations,
  * plus an atomic applyViewportUpdate that correctly handles cascade resets.
  */
-final class GridSettingsCompactor
+final readonly class GridSettingsCompactor
 {
     public function __construct(
-        private readonly GridAdapterInterface $adapter,
+        private GridAdapterInterface $adapter,
     ) {}
 
     /**

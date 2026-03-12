@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Adapter;
 
+use Override;
 use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
@@ -32,7 +33,7 @@ final class TailwindAdapter extends AbstractGridAdapter
         );
     }
 
-    #[\Override]
+    #[Override]
     public function getWidthClass(string $viewport, int $width): string
     {
         return sprintf('%s:col-span-%d', $viewport, $width);
@@ -41,25 +42,25 @@ final class TailwindAdapter extends AbstractGridAdapter
     /**
      * Tailwind's col-start is 1-based, so an offset of N columns means col-start-(N+1).
      */
-    #[\Override]
+    #[Override]
     public function getOffsetClass(string $viewport, int $offset): string
     {
         return sprintf('%s:col-start-%d', $viewport, $offset + 1);
     }
 
-    #[\Override]
+    #[Override]
     public function getRowClasses(): string
     {
         return sprintf('grid grid-cols-%d', $this->getColumnCount());
     }
 
-    #[\Override]
+    #[Override]
     public function getContainerClass(bool $fluid): string
     {
         return $fluid ? 'w-full' : 'container mx-auto';
     }
 
-    #[\Override]
+    #[Override]
     public function getTitleClassOptions(): array
     {
         return [
@@ -72,7 +73,7 @@ final class TailwindAdapter extends AbstractGridAdapter
         ];
     }
 
-    #[\Override]
+    #[Override]
     public function getBaseWidthClass(int $width): string
     {
         return sprintf('col-span-%d', $width);
@@ -81,31 +82,31 @@ final class TailwindAdapter extends AbstractGridAdapter
     /**
      * Tailwind's col-start is 1-based, so an offset of N columns means col-start-(N+1).
      */
-    #[\Override]
+    #[Override]
     public function getBaseOffsetClass(int $offset): string
     {
         return sprintf('col-start-%d', $offset + 1);
     }
 
-    #[\Override]
+    #[Override]
     public function getOffsetStrategy(): OffsetStrategy
     {
         return OffsetStrategy::GridPlacement;
     }
 
-    #[\Override]
+    #[Override]
     public function getContentLayoutClassMap(): ContentLayoutClassMap
     {
         return ContentLayoutClassMap::tailwind();
     }
 
-    #[\Override]
+    #[Override]
     protected function formatHideClass(string $viewportKey): string
     {
         return sprintf('%s:hidden', $viewportKey);
     }
 
-    #[\Override]
+    #[Override]
     protected function formatRestoreClass(string $viewportKey): string
     {
         return sprintf('%s:block', $viewportKey);

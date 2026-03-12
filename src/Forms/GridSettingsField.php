@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Forms;
 
+use Override;
 use SilverStripe\Forms\FormField;
 use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\Model\ArrayData;
@@ -26,14 +27,11 @@ class GridSettingsField extends FormField
     /** @var array<string, array{width: int, offset: int, visible: bool, override: bool}> */
     private array $viewportData = [];
 
-    private GridAdapterInterface $adapter;
+    private readonly GridSettingsCompactor $compactor;
 
-    private GridSettingsCompactor $compactor;
-
-    public function __construct(string $name, GridAdapterInterface $adapter, ?string $title = null)
+    public function __construct(string $name, private readonly GridAdapterInterface $adapter, ?string $title = null)
     {
-        $this->adapter = $adapter;
-        $this->compactor = new GridSettingsCompactor($adapter);
+        $this->compactor = new GridSettingsCompactor($this->adapter);
 
         parent::__construct($name, $title ?? 'Grid Settings');
     }
@@ -41,10 +39,9 @@ class GridSettingsField extends FormField
     /**
      * Accept value from DB (JSON string) or form submission (nested array).
      *
-     * @param mixed $value
      * @param array<string, mixed>|ModelData|null $data
      */
-    #[\Override]
+    #[Override]
     public function setValue(mixed $value, mixed $data = null): static
     {
         if (is_string($value)) {
@@ -60,7 +57,7 @@ class GridSettingsField extends FormField
     /**
      * Compact viewport data back to sparse JSON and write into the record.
      */
-    #[\Override]
+    #[Override]
     public function saveInto(DataObjectInterface $record): void
     {
         $sparse = $this->compactToSparse($this->viewportData);
@@ -100,7 +97,7 @@ class GridSettingsField extends FormField
         return $list;
     }
 
-    #[\Override]
+    #[Override]
     public function performReadonlyTransformation(): ReadonlyField
     {
         $summary = $this->buildReadonlySummary();
@@ -137,7 +134,7 @@ class GridSettingsField extends FormField
      */
     private function decodeSparse(string $json): array
     {
-        if ($json === '' || $json === '{}' || $json === '[]') {
+        if (in_array($json, ['', '{}', '[]'], true)) {
             return [];
         }
 
@@ -241,7 +238,7 @@ class GridSettingsField extends FormField
     {
         $options = ArrayList::create();
 
-        for ($i = 1; $i <= $columnCount; $i++) {
+        for ($i = 1; $i <= $columnCount; ++$i) {
             $options->push(ArrayData::create([
                 'Value' => $i,
                 'Label' => $i . '/' . $columnCount,
@@ -261,7 +258,7 @@ class GridSettingsField extends FormField
     {
         $options = ArrayList::create();
 
-        for ($i = $min; $i <= $max; $i++) {
+        for ($i = $min; $i <= $max; ++$i) {
             $options->push(ArrayData::create([
                 'Value' => $i,
                 'Label' => (string) $i,

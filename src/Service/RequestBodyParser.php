@@ -15,10 +15,10 @@ use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\Viewport;
 
-final class RequestBodyParser
+final readonly class RequestBodyParser
 {
     public function __construct(
-        private readonly GridAdapterInterface $gridAdapter,
+        private GridAdapterInterface $gridAdapter,
     ) {
     }
 
@@ -34,24 +34,24 @@ final class RequestBodyParser
         $zone = $data['zone'] ?? 'main';
 
         if (!is_string($containerTypeValue)) {
-            return self::fail('Invalid or missing containerType.');
+            return $this->fail('Invalid or missing containerType.');
         }
 
         $containerType = ContainerType::tryFrom($containerTypeValue);
         if ($containerType === null) {
-            return self::fail('Invalid or missing containerType.');
+            return $this->fail('Invalid or missing containerType.');
         }
 
         if (!is_int($parentId) || $parentId < 1) {
-            return self::fail('parentId must be a positive integer.');
+            return $this->fail('parentId must be a positive integer.');
         }
 
         if ($afterElementID !== null && (!is_int($afterElementID) || $afterElementID < 1)) {
-            return self::fail('insertAfterElementID must be a positive integer or null.');
+            return $this->fail('insertAfterElementID must be a positive integer or null.');
         }
 
         if (!is_string($zone) || $zone === '') {
-            return self::fail('zone must be a non-empty string.');
+            return $this->fail('zone must be a non-empty string.');
         }
 
         return Result::ok(new CreateElementRequest($containerType, $parentId, $afterElementID, $zone));
@@ -68,23 +68,23 @@ final class RequestBodyParser
         $afterElementID = $data['insertAfterElementID'] ?? null;
 
         if (!is_string($className)) {
-            return self::fail('className must be a string.');
+            return $this->fail('className must be a string.');
         }
 
         if (!class_exists($className)) {
-            return self::fail('className does not refer to an existing class.');
+            return $this->fail('className does not refer to an existing class.');
         }
 
         if ($className !== ContentElement::class && !is_subclass_of($className, ContentElement::class)) {
-            return self::fail('className must be a ContentElement subclass.');
+            return $this->fail('className must be a ContentElement subclass.');
         }
 
         if (!is_int($parentId) || $parentId < 1) {
-            return self::fail('parentId must be a positive integer.');
+            return $this->fail('parentId must be a positive integer.');
         }
 
         if ($afterElementID !== null && (!is_int($afterElementID) || $afterElementID < 1)) {
-            return self::fail('insertAfterElementID must be a positive integer or null.');
+            return $this->fail('insertAfterElementID must be a positive integer or null.');
         }
 
         /** @var class-string<ContentElement> $className */
@@ -102,15 +102,15 @@ final class RequestBodyParser
         $afterElementID = $data['afterElementID'] ?? null;
 
         if (!is_int($elementID) || $elementID < 1) {
-            return self::fail('elementID must be a positive integer.');
+            return $this->fail('elementID must be a positive integer.');
         }
 
         if (!is_int($targetParentId) || $targetParentId < 1) {
-            return self::fail('targetParentId must be a positive integer.');
+            return $this->fail('targetParentId must be a positive integer.');
         }
 
         if ($afterElementID !== null && (!is_int($afterElementID) || $afterElementID < 1)) {
-            return self::fail('afterElementID must be a positive integer or null.');
+            return $this->fail('afterElementID must be a positive integer or null.');
         }
 
         return Result::ok(new ReorderRequest($elementID, $targetParentId, $afterElementID));
@@ -129,11 +129,11 @@ final class RequestBodyParser
         $visible = $data['visible'] ?? null;
 
         if (!is_int($id) || $id < 1) {
-            return self::fail('id must be a positive integer.');
+            return $this->fail('id must be a positive integer.');
         }
 
         if (!is_string($viewport)) {
-            return self::fail('viewport must be a string.');
+            return $this->fail('viewport must be a string.');
         }
 
         $validKeys = array_map(
@@ -141,21 +141,21 @@ final class RequestBodyParser
             $this->gridAdapter->getViewports(),
         );
         if (!in_array($viewport, $validKeys, true)) {
-            return self::fail('viewport is not a valid viewport key.');
+            return $this->fail('viewport is not a valid viewport key.');
         }
 
         $columnCount = $this->gridAdapter->getColumnCount();
 
         if (!is_int($width) || $width < 1 || $width > $columnCount) {
-            return self::fail(sprintf('Width must be between 1 and %d.', $columnCount));
+            return $this->fail(sprintf('Width must be between 1 and %d.', $columnCount));
         }
 
         if (!is_int($offset) || $offset < 0 || $offset > $columnCount - 1) {
-            return self::fail(sprintf('Offset must be between 0 and %d.', $columnCount - 1));
+            return $this->fail(sprintf('Offset must be between 0 and %d.', $columnCount - 1));
         }
 
         if ($width + $offset > $columnCount) {
-            return self::fail(sprintf(
+            return $this->fail(sprintf(
                 'Width (%d) plus offset (%d) exceeds the maximum of %d columns.',
                 $width,
                 $offset,
@@ -164,7 +164,7 @@ final class RequestBodyParser
         }
 
         if (!is_bool($visible)) {
-            return self::fail('visible must be a boolean.');
+            return $this->fail('visible must be a boolean.');
         }
 
         return Result::ok(new UpdateGridSettingsRequest($id, $viewport, $width, $offset, $visible));
@@ -179,7 +179,7 @@ final class RequestBodyParser
         $id = $data['id'] ?? null;
 
         if (!is_int($id) || $id < 1) {
-            return self::fail('id must be a positive integer.');
+            return $this->fail('id must be a positive integer.');
         }
 
         return Result::ok($id);
@@ -188,7 +188,7 @@ final class RequestBodyParser
     /**
      * @return Result<never>
      */
-    private static function fail(string $message): Result
+    private function fail(string $message): Result
     {
         return Result::fail(new ValidationError($message));
     }

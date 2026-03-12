@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Forms;
 
+use Override;
+use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldConfig;
 use SilverStripe\Forms\GridField\GridFieldDetailForm;
@@ -20,15 +22,8 @@ use WeDevelop\Grid\Model\GridElement;
  */
 class GridEditorField extends GridField
 {
-    private int $pageId;
-
-    private string $zone;
-
-    public function __construct(string $name, int $pageId, string $zone = 'main')
+    public function __construct(string $name, private readonly int $pageId, private readonly string $zone = 'main')
     {
-        $this->pageId = $pageId;
-        $this->zone = $zone;
-
         parent::__construct(
             $name,
             '',
@@ -45,9 +40,9 @@ class GridEditorField extends GridField
      * which outputs the React mount <div>.
      *
      * @param array<string, mixed> $properties
-     * @return \SilverStripe\ORM\FieldType\DBHTMLText
+     * @return DBHTMLText
      */
-    #[\Override] // @phpstan-ignore method.childReturnType, typeCoverage.returnTypeCoverage (matching untyped parent signature; renderWith returns DBHTMLText, not string)
+    #[Override] // @phpstan-ignore method.childReturnType, typeCoverage.returnTypeCoverage (matching untyped parent signature; renderWith returns DBHTMLText, not string)
     public function FieldHolder($properties = []) // @phpstan-ignore typeCoverage.paramTypeCoverage (matching untyped parent signature)
     {
         $context = $this;
@@ -70,7 +65,7 @@ class GridEditorField extends GridField
     }
 
     /** @return array<string, mixed> */
-    #[\Override]
+    #[Override]
     public function getSchemaDataDefaults(): array
     {
         /** @var array<string, mixed> $schemaData */
@@ -88,13 +83,13 @@ class GridEditorField extends GridField
      * setCastedField on the record — which we don't want because the
      * grid editor submits no POST data for this field.
      */
-    #[\Override]
+    #[Override]
     public function saveInto(DataObjectInterface $record): void
     {
         // Intentionally empty
     }
 
-    #[\Override] // @phpstan-ignore method.childReturnType (GridField returns self but we intentionally return a LiteralField to strip all grid functionality in read-only mode)
+    #[Override] // @phpstan-ignore method.childReturnType (GridField returns self but we intentionally return a LiteralField to strip all grid functionality in read-only mode)
     public function performReadonlyTransformation(): LiteralField
     {
         return LiteralField::create($this->name, '');

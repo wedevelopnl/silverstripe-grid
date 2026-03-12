@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Model;
 
+use Override;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 
 /**
@@ -33,6 +34,7 @@ class ContentElement extends GridElement
     private static bool $search_indexable = true;
 
     /** Render this element using the SilverStripe template engine. */
+    #[Override]
     public function forTemplate(): string
     {
         $templates = $this->getRenderTemplates();

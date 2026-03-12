@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Validation;
 
+use Override;
 use SilverStripe\CMS\Model\SiteTree;
-use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
@@ -13,8 +13,9 @@ use WeDevelop\Grid\Value\ValidationError;
 class HierarchyValidationService implements HierarchyValidatorInterface
 {
     use ElementAllowanceTrait;
+
     /** @return Result<GridElement> */
-    #[\Override]
+    #[Override]
     public function validate(GridElement $element): Result
     {
         $parent = $element->Parent();

@@ -34,8 +34,8 @@ class ElementPersistenceService
             if ($afterElementId !== null) {
                 $this->insertAfter($element, $afterElementId);
             }
-        } catch (ValidationException $e) {
-            return Result::fail(...$this->translateValidationException($e));
+        } catch (ValidationException $validationException) {
+            return Result::fail(...$this->translateValidationException($validationException));
         }
 
         return Result::ok($element);
@@ -52,8 +52,8 @@ class ElementPersistenceService
         try {
             $element->write();
             $this->insertAfter($element, $afterElementId);
-        } catch (ValidationException $e) {
-            return Result::fail(...$this->translateValidationException($e));
+        } catch (ValidationException $validationException) {
+            return Result::fail(...$this->translateValidationException($validationException));
         }
 
         return Result::ok($element);
@@ -82,8 +82,7 @@ class ElementPersistenceService
             ])
             ->where([
                 '"Sort" >= ? AND "GridElement"."ID" != ?' => [$newSort, (int) $element->ID],
-            ])
-            ->sort('Sort', 'ASC') as $sibling
+            ])->sort(['Sort' => 'ASC']) as $sibling
         ) {
             $sibling->Sort = (int) $sibling->Sort + 1;
             $sibling->write();
@@ -105,8 +104,8 @@ class ElementPersistenceService
             foreach ($elements as $element) {
                 $element->write();
             }
-        } catch (ValidationException $e) {
-            return Result::fail(...$this->translateValidationException($e));
+        } catch (ValidationException $validationException) {
+            return Result::fail(...$this->translateValidationException($validationException));
         }
 
         return Result::ok(null);

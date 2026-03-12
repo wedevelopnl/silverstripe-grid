@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Value;
 
+use LogicException;
+
 /**
  * Generic success/failure container for validation flows.
  *
@@ -60,12 +62,12 @@ final readonly class Result
      * Returns the success value.
      *
      * @return T
-     * @throws \LogicException If called on a failed Result (programmer bug)
+     * @throws LogicException If called on a failed Result (programmer bug)
      */
     public function unwrap(): mixed
     {
         if (!$this->ok) {
-            throw new \LogicException('Cannot unwrap a failed Result');
+            throw new LogicException('Cannot unwrap a failed Result');
         }
 
         return $this->value;

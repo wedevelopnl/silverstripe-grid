@@ -45,7 +45,7 @@ class GridPageExtension extends Extension
     public function updateCMSFields(FieldList $fields): void
     {
         /** @var SiteTree $owner */
-        $owner = $this->owner;
+        $owner = $this->getOwner();
 
         $fields->removeByName('Content');
         $fields->removeByName('Sections');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Adapter;
 
+use Override;
 use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
@@ -39,7 +40,7 @@ final class BootstrapAdapter extends AbstractGridAdapter
         );
     }
 
-    #[\Override]
+    #[Override]
     public function getWidthClass(string $viewport, int $width): string
     {
         if ($viewport === 'xs') {
@@ -49,7 +50,7 @@ final class BootstrapAdapter extends AbstractGridAdapter
         return sprintf('col-%s-%d', $viewport, $width);
     }
 
-    #[\Override]
+    #[Override]
     public function getOffsetClass(string $viewport, int $offset): string
     {
         if ($viewport === 'xs') {
@@ -59,13 +60,13 @@ final class BootstrapAdapter extends AbstractGridAdapter
         return sprintf('offset-%s-%d', $viewport, $offset);
     }
 
-    #[\Override]
+    #[Override]
     public function getRowClasses(): string
     {
         return 'row';
     }
 
-    #[\Override]
+    #[Override]
     public function getContainerClass(bool $fluid): string
     {
         if ($fluid) {
@@ -75,7 +76,7 @@ final class BootstrapAdapter extends AbstractGridAdapter
         return 'container';
     }
 
-    #[\Override]
+    #[Override]
     public function getTitleClassOptions(): array
     {
         return [
@@ -94,31 +95,31 @@ final class BootstrapAdapter extends AbstractGridAdapter
         ];
     }
 
-    #[\Override]
+    #[Override]
     public function getBaseWidthClass(int $width): string
     {
         return $this->getWidthClass('xs', $width);
     }
 
-    #[\Override]
+    #[Override]
     public function getBaseOffsetClass(int $offset): string
     {
         return $this->getOffsetClass('xs', $offset);
     }
 
-    #[\Override]
+    #[Override]
     public function getOffsetStrategy(): OffsetStrategy
     {
         return OffsetStrategy::Margin;
     }
 
-    #[\Override]
+    #[Override]
     public function getContentLayoutClassMap(): ContentLayoutClassMap
     {
         return ContentLayoutClassMap::bootstrap();
     }
 
-    #[\Override]
+    #[Override]
     protected function formatHideClass(string $viewportKey): string
     {
         // Bootstrap: xs uses no-infix `d-none`, all others use `d-{vp}-none`
@@ -129,7 +130,7 @@ final class BootstrapAdapter extends AbstractGridAdapter
         return sprintf('d-%s-none', $viewportKey);
     }
 
-    #[\Override]
+    #[Override]
     protected function formatRestoreClass(string $viewportKey): string
     {
         return sprintf('d-%s-block', $viewportKey);

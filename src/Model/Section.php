@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Model;
 
+use Override;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\Versioned\Versioned;
@@ -88,19 +89,20 @@ class Section extends GridElement implements ContainerInterface
 
     private static bool $auto_scaffold = true;
 
-    #[\Override]
+    #[Override]
     public function getChildren(): HasManyList
     {
         return $this->Rows();
     }
 
-    #[\Override]
+    #[Override]
     public function getContainerType(): ContainerType
     {
         return ContainerType::Section;
     }
 
     /** Render through the holder template. */
+    #[Override]
     public function forTemplate(): string
     {
         /** @var DBHTMLText $result */
@@ -127,7 +129,7 @@ class Section extends GridElement implements ContainerInterface
         return $classes;
     }
 
-    #[\Override]
+    #[Override]
     public function ensureSortSet(): void
     {
         if ($this->Sort > 0) {
@@ -145,7 +147,7 @@ class Section extends GridElement implements ContainerInterface
         $this->Sort = (is_numeric($max) ? (int) $max : 0) + 1;
     }
 
-    #[\Override]
+    #[Override]
     protected function onAfterWrite(): void
     {
         parent::onAfterWrite();

@@ -4,25 +4,23 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Exception;
 
+use RuntimeException;
+use Throwable;
+
 /**
  * Base exception for all grid domain errors.
  * Carries a user-safe message (no IDs or internals) and an HTTP status code.
  */
-abstract class GridDomainException extends \RuntimeException
+abstract class GridDomainException extends RuntimeException
 {
-    private readonly string $userMessage;
-    private readonly int $statusCode;
 
     public function __construct(
-        string $userMessage,
+        private readonly string $userMessage,
         string $detailedMessage,
-        int $statusCode,
-        ?\Throwable $previous = null,
+        private readonly int $statusCode,
+        ?Throwable $previous = null,
     ) {
         parent::__construct($detailedMessage, 0, $previous);
-
-        $this->userMessage = $userMessage;
-        $this->statusCode = $statusCode;
     }
 
     /** Safe for API responses — contains no IDs or internals. */

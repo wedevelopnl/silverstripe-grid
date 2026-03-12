@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Service;
 
+use Override;
 use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Contract\ReorderExecutorInterface;
 use WeDevelop\Grid\Model\GridElement;
@@ -23,7 +24,7 @@ class ReorderExecutor implements ReorderExecutorInterface
      * @param positive-int|null $afterElementId
      * @return Result<list<GridElement>>
      */
-    #[\Override]
+    #[Override]
     public function execute(GridElement $element, DataObject $targetParent, ?int $afterElementId): Result
     {
         /** @var positive-int $targetParentId */
@@ -143,7 +144,7 @@ class ReorderExecutor implements ReorderExecutorInterface
             if ($sibling->Sort !== $newSort) {
                 $sibling->Sort = $newSort;
                 $dirty[] = $sibling;
-            } elseif ($alwaysDirty !== null && $sibling->ID === $alwaysDirty->ID) {
+            } elseif ($alwaysDirty instanceof GridElement && $sibling->ID === $alwaysDirty->ID) {
                 $dirty[] = $sibling;
             }
         }

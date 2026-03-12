@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Dev;
 
+use Override;
 use Page;
 use SilverStripe\Forms\FieldList;
 use WeDevelop\Grid\Forms\GridEditorField;
@@ -23,12 +24,12 @@ class MultiZonePage extends Page
 
     private static string $singular_name = 'Multi-Zone Page';
 
-    private static string $description = 'Dev-only page with main + sidebar grid zones';
+    private static string $class_description = 'Dev-only page with main + sidebar grid zones';
 
     /** Prevent this page type from appearing in the CMS "Add new page" dropdown. */
     private static string $hide_ancestor = self::class;
 
-    #[\Override]
+    #[Override]
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
