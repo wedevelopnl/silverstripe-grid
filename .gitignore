@@ -34,6 +34,10 @@ apm_modules/
 # Docker generated env (worktree-specific ports)
 .docker/.env
 
+# Claude Code local config
+.claude/*.local.md
+.claude/*.local.json
+
 # Dolt database files (added by bd init)
 .dolt/
 *.db
