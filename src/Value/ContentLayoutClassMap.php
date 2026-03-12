@@ -10,10 +10,6 @@ namespace WeDevelop\Grid\Value;
  * Each static factory produces the complete class map for a CSS framework.
  * The unified {@see \WeDevelop\Grid\Adapter\ContentLayoutAdapter} uses these
  * mappings to generate framework-specific output without per-framework classes.
- *
- * @param array<string, ?string> $aspectRatioClasses      AspectRatio::value => CSS class (null for Auto)
- * @param array<string, string>  $verticalAlignmentClasses VerticalAlignment::value => CSS class
- * @param array<string, string>  $paddingDirectionMap      'left'|'right' => CSS prefix
  */
 final readonly class ContentLayoutClassMap
 {
