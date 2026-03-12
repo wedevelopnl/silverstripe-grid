@@ -102,6 +102,49 @@ final class InvalidGridValueExceptionTest extends TestCase
         $this->assertSame("Column count must be a positive integer, got 0 (int).", $exception->getMessage());
     }
 
+    public function testForEmptyViewportsStatusCode(): void
+    {
+        $exception = InvalidGridValueException::forEmptyViewports();
+
+        $this->assertSame(422, $exception->getStatusCode());
+    }
+
+    public function testForEmptyViewportsUserMessageContainsNoInternals(): void
+    {
+        $exception = InvalidGridValueException::forEmptyViewports();
+
+        $this->assertSame('At least one viewport must be enabled.', $exception->getUserMessage());
+    }
+
+    public function testForEmptyViewportsDetailedMessage(): void
+    {
+        $exception = InvalidGridValueException::forEmptyViewports();
+
+        $this->assertSame('The enabled_viewports configuration cannot be an empty array.', $exception->getMessage());
+    }
+
+    public function testForContainerMaxWidthStatusCode(): void
+    {
+        $exception = InvalidGridValueException::forContainerMaxWidth(-100);
+
+        $this->assertSame(422, $exception->getStatusCode());
+    }
+
+    public function testForContainerMaxWidthUserMessageContainsNoValues(): void
+    {
+        $exception = InvalidGridValueException::forContainerMaxWidth(0);
+
+        $this->assertSame('The configured container max width is invalid.', $exception->getUserMessage());
+        $this->assertStringNotContainsString('0', $exception->getUserMessage());
+    }
+
+    public function testForContainerMaxWidthDetailedMessageContainsValue(): void
+    {
+        $exception = InvalidGridValueException::forContainerMaxWidth(-50);
+
+        $this->assertSame('Container max width must be positive, got -50.', $exception->getMessage());
+    }
+
     public function testPreviousThrowablePropagates(): void
     {
         $cause = new \LogicException('validation root');
