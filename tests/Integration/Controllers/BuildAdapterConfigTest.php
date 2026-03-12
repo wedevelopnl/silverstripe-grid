@@ -273,11 +273,6 @@ final class BuildAdapterConfigTest extends SapphireTest
                 return 1320;
             }
 
-            public function getCssPath(): ?string
-            {
-                return null;
-            }
-
             public function getContentLayoutClassMap(): ContentLayoutClassMap
             {
                 return ContentLayoutClassMap::bootstrap();
@@ -358,11 +353,6 @@ final class BuildAdapterConfigTest extends SapphireTest
             public function getContainerMaxWidth(): int
             {
                 return 1320;
-            }
-
-            public function getCssPath(): ?string
-            {
-                return null;
             }
 
             public function getContentLayoutClassMap(): ContentLayoutClassMap

@@ -10,9 +10,9 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
-use WeDevelop\Grid\Exception\InvalidGridValueException;
 
 #[CoversClass(BootstrapAdapter::class)]
 final class BootstrapAdapterTest extends SapphireTest
@@ -377,24 +377,6 @@ final class BootstrapAdapterTest extends SapphireTest
     public function testGetOffsetStrategyReturnsMargin(): void
     {
         $this->assertSame(OffsetStrategy::Margin, $this->adapter->getOffsetStrategy());
-    }
-
-    // ─── getCssPath ──────────────────────────────────────────────────
-
-    public function testGetCssPathReturnsNonNullString(): void
-    {
-        $path = $this->adapter->getCssPath();
-
-        $this->assertNotNull($path);
-        $this->assertIsString($path);
-    }
-
-    public function testGetCssPathContainsBootstrapReference(): void
-    {
-        $path = $this->adapter->getCssPath();
-
-        $this->assertNotNull($path);
-        $this->assertStringContainsString('bootstrap', strtolower($path));
     }
 
     // ─── Viewport filtering ─────────────────────────────────────────

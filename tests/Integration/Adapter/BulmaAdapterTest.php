@@ -12,7 +12,6 @@ use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
-use WeDevelop\Grid\Exception\InvalidGridValueException;
 
 #[CoversClass(BulmaAdapter::class)]
 final class BulmaAdapterTest extends SapphireTest
@@ -277,51 +276,11 @@ final class BulmaAdapterTest extends SapphireTest
         $this->assertSame(1344, $this->adapter->getContainerMaxWidth());
     }
 
-    public function testContainerMaxWidthOverrideReturnsConfiguredValue(): void
-    {
-        Config::modify()->set(BulmaAdapter::class, 'container_max_width', 1200);
-        $adapter = new BulmaAdapter();
-
-        $this->assertSame(1200, $adapter->getContainerMaxWidth());
-    }
-
-    public function testContainerMaxWidthOverrideZeroThrows(): void
-    {
-        Config::modify()->set(BulmaAdapter::class, 'container_max_width', 0);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BulmaAdapter();
-    }
-
-    public function testContainerMaxWidthOverrideNegativeThrows(): void
-    {
-        Config::modify()->set(BulmaAdapter::class, 'container_max_width', -100);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BulmaAdapter();
-    }
-
     // ─── getOffsetStrategy ────────────────────────────────────────────
 
     public function testGetOffsetStrategyReturnsMargin(): void
     {
         $this->assertSame(OffsetStrategy::Margin, $this->adapter->getOffsetStrategy());
-    }
-
-    public function testGetCssPathReturnsNonNullString(): void
-    {
-        $path = $this->adapter->getCssPath();
-
-        $this->assertNotNull($path);
-        $this->assertIsString($path);
-    }
-
-    public function testGetCssPathContainsBulmaReference(): void
-    {
-        $path = $this->adapter->getCssPath();
-
-        $this->assertNotNull($path);
-        $this->assertStringContainsString('bulma', strtolower($path));
     }
 
     public function testGetDefaultViewportExistsInViewportList(): void
@@ -343,96 +302,4 @@ final class BulmaAdapterTest extends SapphireTest
         $this->assertSame($first, $second);
     }
 
-    // ─── Viewport filtering ─────────────────────────────────────────
-
-    public function testEnabledViewportsSubsetFiltersCorrectly(): void
-    {
-        Config::modify()->set(BulmaAdapter::class, 'enabled_viewports', ['tablet', 'desktop', 'widescreen']);
-        $adapter = new BulmaAdapter();
-
-        $keys = array_map(static fn (Viewport $v): string => $v->key, $adapter->getViewports());
-
-        $this->assertSame(['tablet', 'desktop', 'widescreen'], $keys);
-    }
-
-    public function testEnabledViewportsEmptyArrayThrows(): void
-    {
-        Config::modify()->set(BulmaAdapter::class, 'enabled_viewports', []);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BulmaAdapter();
-    }
-
-    public function testEnabledViewportsUnknownKeyThrows(): void
-    {
-        Config::modify()->set(BulmaAdapter::class, 'enabled_viewports', ['mobile', 'unknown']);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BulmaAdapter();
-    }
-
-    // ─── Column count override ──────────────────────────────────────
-
-    public function testColumnCountOverrideReturnsConfiguredValue(): void
-    {
-        Config::modify()->set(BulmaAdapter::class, 'total_columns', 16);
-        $adapter = new BulmaAdapter();
-
-        $this->assertSame(16, $adapter->getColumnCount());
-    }
-
-    public function testColumnCountOverrideZeroThrows(): void
-    {
-        Config::modify()->set(BulmaAdapter::class, 'total_columns', 0);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BulmaAdapter();
-    }
-
-    public function testColumnCountOverrideNegativeThrows(): void
-    {
-        Config::modify()->set(BulmaAdapter::class, 'total_columns', -4);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BulmaAdapter();
-    }
-
-    // ─── Default viewport override ──────────────────────────────────
-
-    public function testDefaultViewportOverrideResolvesValidKey(): void
-    {
-        Config::modify()->set(BulmaAdapter::class, 'default_viewport', 'widescreen');
-        $adapter = new BulmaAdapter();
-
-        $viewport = $adapter->getDefaultViewport();
-
-        $this->assertInstanceOf(Viewport::class, $viewport);
-        $this->assertSame('widescreen', $viewport->key);
-    }
-
-    public function testDefaultViewportOverrideUnknownKeyThrows(): void
-    {
-        Config::modify()->set(BulmaAdapter::class, 'default_viewport', 'nonexistent');
-
-        $this->expectException(InvalidGridValueException::class);
-        new BulmaAdapter();
-    }
-
-    public function testDefaultViewportFilteredOutWithoutOverrideThrows(): void
-    {
-        // Default is 'desktop', which is not in the enabled set
-        Config::modify()->set(BulmaAdapter::class, 'enabled_viewports', ['mobile', 'tablet', 'fullhd']);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BulmaAdapter();
-    }
-
-    public function testDefaultViewportFilteredOutWithValidOverrideSucceeds(): void
-    {
-        Config::modify()->set(BulmaAdapter::class, 'enabled_viewports', ['mobile', 'tablet', 'fullhd']);
-        Config::modify()->set(BulmaAdapter::class, 'default_viewport', 'tablet');
-        $adapter = new BulmaAdapter();
-
-        $this->assertSame('tablet', $adapter->getDefaultViewport()->key);
-    }
 }

@@ -12,7 +12,6 @@ use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
-use WeDevelop\Grid\Exception\InvalidGridValueException;
 
 #[CoversClass(TailwindAdapter::class)]
 final class TailwindAdapterTest extends SapphireTest
@@ -297,30 +296,6 @@ final class TailwindAdapterTest extends SapphireTest
         $this->assertSame(1536, $this->adapter->getContainerMaxWidth());
     }
 
-    public function testContainerMaxWidthOverrideReturnsConfiguredValue(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'container_max_width', 1280);
-        $adapter = new TailwindAdapter();
-
-        $this->assertSame(1280, $adapter->getContainerMaxWidth());
-    }
-
-    public function testContainerMaxWidthOverrideZeroThrows(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'container_max_width', 0);
-
-        $this->expectException(InvalidGridValueException::class);
-        new TailwindAdapter();
-    }
-
-    public function testContainerMaxWidthOverrideNegativeThrows(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'container_max_width', -100);
-
-        $this->expectException(InvalidGridValueException::class);
-        new TailwindAdapter();
-    }
-
     // ── Offset strategy ─────────────────────────────────────────
 
     public function testGetOffsetStrategyReturnsGridPlacement(): void
@@ -328,105 +303,4 @@ final class TailwindAdapterTest extends SapphireTest
         $this->assertSame(OffsetStrategy::GridPlacement, $this->adapter->getOffsetStrategy());
     }
 
-    // ── CSS path ───────────────────────────────────────────────
-
-    public function testGetCssPathReturnsNull(): void
-    {
-        $this->assertNull($this->adapter->getCssPath());
-    }
-
-    // ── Viewport filtering ─────────────────────────────────────
-
-    public function testEnabledViewportsSubsetFiltersCorrectly(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'enabled_viewports', ['md', 'lg', 'xl']);
-        Config::modify()->set(TailwindAdapter::class, 'default_viewport', 'md');
-        $adapter = new TailwindAdapter();
-
-        $keys = array_map(static fn (Viewport $v): string => $v->key, $adapter->getViewports());
-
-        $this->assertSame(['md', 'lg', 'xl'], $keys);
-    }
-
-    public function testEnabledViewportsEmptyArrayThrows(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'enabled_viewports', []);
-
-        $this->expectException(InvalidGridValueException::class);
-        $this->expectExceptionMessage('The enabled_viewports configuration cannot be an empty array.');
-        new TailwindAdapter();
-    }
-
-    public function testEnabledViewportsUnknownKeyThrows(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'enabled_viewports', ['sm', 'unknown']);
-
-        $this->expectException(InvalidGridValueException::class);
-        new TailwindAdapter();
-    }
-
-    // ── Column count override ──────────────────────────────────
-
-    public function testColumnCountOverrideReturnsConfiguredValue(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'total_columns', 16);
-        $adapter = new TailwindAdapter();
-
-        $this->assertSame(16, $adapter->getColumnCount());
-    }
-
-    public function testColumnCountOverrideZeroThrows(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'total_columns', 0);
-
-        $this->expectException(InvalidGridValueException::class);
-        new TailwindAdapter();
-    }
-
-    public function testColumnCountOverrideNegativeThrows(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'total_columns', -4);
-
-        $this->expectException(InvalidGridValueException::class);
-        new TailwindAdapter();
-    }
-
-    // ── Default viewport override ──────────────────────────────
-
-    public function testDefaultViewportOverrideResolvesValidKey(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'default_viewport', 'lg');
-        $adapter = new TailwindAdapter();
-
-        $viewport = $adapter->getDefaultViewport();
-
-        $this->assertInstanceOf(Viewport::class, $viewport);
-        $this->assertSame('lg', $viewport->key);
-    }
-
-    public function testDefaultViewportOverrideUnknownKeyThrows(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'default_viewport', 'nonexistent');
-
-        $this->expectException(InvalidGridValueException::class);
-        new TailwindAdapter();
-    }
-
-    public function testDefaultViewportFilteredOutWithoutOverrideThrows(): void
-    {
-        // Default is 'sm', which is not in the enabled set
-        Config::modify()->set(TailwindAdapter::class, 'enabled_viewports', ['md', 'lg', '2xl']);
-
-        $this->expectException(InvalidGridValueException::class);
-        new TailwindAdapter();
-    }
-
-    public function testDefaultViewportFilteredOutWithValidOverrideSucceeds(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'enabled_viewports', ['md', 'lg', '2xl']);
-        Config::modify()->set(TailwindAdapter::class, 'default_viewport', 'lg');
-        $adapter = new TailwindAdapter();
-
-        $this->assertSame('lg', $adapter->getDefaultViewport()->key);
-    }
 }

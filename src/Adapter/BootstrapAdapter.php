@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Adapter;
 
-use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
@@ -21,73 +20,23 @@ use WeDevelop\Grid\Value\Viewport;
  * instead of `offset-xs-{n}`, and visibility uses `d-none` instead of
  * `d-xs-none`. All other viewports include the viewport infix.
  */
-final class BootstrapAdapter implements GridAdapterInterface
+final class BootstrapAdapter extends AbstractGridAdapter
 {
-    use GridAdapterConfiguration;
-
-    private const int DEFAULT_COLUMNS = 12;
-    private const int DEFAULT_CONTAINER_MAX_WIDTH = 1320;
-    private const string DEFAULT_VIEWPORT_KEY = 'md';
-
-    /** @var array<string, Viewport> */
-    private array $viewports;
-
-    /**
-     * Visibility class pairs keyed by viewport.
-     *
-     * Bootstrap's responsive display utilities:
-     * - xs viewport: `d-none` + `d-{next}-block` — no viewport infix for the
-     *   mobile-first default, restore at the next enabled breakpoint.
-     * - Other non-last viewports: `d-{vp}-none` + `d-{next}-block` — the infix
-     *   scopes hiding from that breakpoint upward, restore at next enabled.
-     * - Last enabled viewport: `d-{vp}-none` — no restore needed.
-     *
-     * @var array<string, list<string>>
-     */
-    private array $visibilityMap;
-
-    /** @var positive-int */
-    private int $columnCount;
-
-    /** @var positive-int */
-    private int $containerMaxWidth;
-
-    private Viewport $defaultViewport;
-
     public function __construct()
     {
-        $allViewports = [
-            'xs' => new Viewport('xs', 'Extra Small'),
-            'sm' => new Viewport('sm', 'Small'),
-            'md' => new Viewport('md', 'Medium'),
-            'lg' => new Viewport('lg', 'Large'),
-            'xl' => new Viewport('xl', 'Extra Large'),
-            'xxl' => new Viewport('xxl', 'Extra Extra Large'),
-        ];
-
-        $this->viewports = $this->applyViewportFilter($allViewports);
-        $this->visibilityMap = $this->buildVisibilityMap();
-        $this->columnCount = $this->resolveColumnCount(self::DEFAULT_COLUMNS);
-        $this->containerMaxWidth = $this->resolveContainerMaxWidth(self::DEFAULT_CONTAINER_MAX_WIDTH);
-        $this->defaultViewport = $this->resolveDefaultViewport(self::DEFAULT_VIEWPORT_KEY, $this->viewports);
-    }
-
-    #[\Override]
-    public function getViewports(): array
-    {
-        return array_values($this->viewports);
-    }
-
-    #[\Override]
-    public function getColumnCount(): int
-    {
-        return $this->columnCount;
-    }
-
-    #[\Override]
-    public function getDefaultViewport(): Viewport
-    {
-        return $this->defaultViewport;
+        parent::__construct(
+            allViewports: [
+                'xs' => new Viewport('xs', 'Extra Small'),
+                'sm' => new Viewport('sm', 'Small'),
+                'md' => new Viewport('md', 'Medium'),
+                'lg' => new Viewport('lg', 'Large'),
+                'xl' => new Viewport('xl', 'Extra Large'),
+                'xxl' => new Viewport('xxl', 'Extra Extra Large'),
+            ],
+            defaultColumns: 12,
+            defaultContainerMaxWidth: 1320,
+            defaultViewportKey: 'md',
+        );
     }
 
     #[\Override]
@@ -108,12 +57,6 @@ final class BootstrapAdapter implements GridAdapterInterface
         }
 
         return sprintf('offset-%s-%d', $viewport, $offset);
-    }
-
-    #[\Override]
-    public function getVisibilityClasses(string $viewport): array
-    {
-        return $this->visibilityMap[$viewport];
     }
 
     #[\Override]
@@ -170,57 +113,25 @@ final class BootstrapAdapter implements GridAdapterInterface
     }
 
     #[\Override]
-    public function getContainerMaxWidth(): int
-    {
-        return $this->containerMaxWidth;
-    }
-
-    #[\Override]
-    public function getCssPath(): string
-    {
-        return 'client/dist/bootstrap-grid.css';
-    }
-
-    #[\Override]
     public function getContentLayoutClassMap(): ContentLayoutClassMap
     {
         return ContentLayoutClassMap::bootstrap();
     }
 
-    /**
-     * Builds the visibility class map from the active (possibly filtered) viewport set.
-     *
-     * Bootstrap's xs viewport is special: it uses the no-infix `d-none` form.
-     * All other viewports use `d-{vp}-none`. Restore always targets the next
-     * *enabled* viewport. The last enabled viewport has no restore class.
-     *
-     * @return array<string, list<string>>
-     */
-    private function buildVisibilityMap(): array
+    #[\Override]
+    protected function formatHideClass(string $viewportKey): string
     {
-        $map = [];
-        $keys = array_keys($this->viewports);
-        $count = count($keys);
-
-        foreach ($keys as $index => $key) {
-            $isLast = $index === $count - 1;
-
-            // Bootstrap: xs uses no-infix `d-none`, all others use `d-{vp}-none`
-            $hideClass = $key === 'xs'
-                ? 'd-none'
-                : sprintf('d-%s-none', $key);
-
-            if ($isLast) {
-                $map[$key] = [$hideClass];
-            } else {
-                $nextKey = $keys[$index + 1];
-                $map[$key] = [
-                    $hideClass,
-                    sprintf('d-%s-block', $nextKey),
-                ];
-            }
+        // Bootstrap: xs uses no-infix `d-none`, all others use `d-{vp}-none`
+        if ($viewportKey === 'xs') {
+            return 'd-none';
         }
 
-        return $map;
+        return sprintf('d-%s-none', $viewportKey);
+    }
+
+    #[\Override]
+    protected function formatRestoreClass(string $viewportKey): string
+    {
+        return sprintf('d-%s-block', $viewportKey);
     }
 }

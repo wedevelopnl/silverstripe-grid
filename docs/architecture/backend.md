@@ -130,8 +130,8 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 ├──────────────────── Rendering ──────────────────────────────┤
 │                                                             │
 │  Grid Adapter System                                        │
-│    ├── GridAdapterInterface (15 methods)                    │
-│    ├── GridAdapterConfiguration trait (YAML overrides)      │
+│    ├── GridAdapterInterface (14 methods)                    │
+│    ├── AbstractGridAdapter (shared config + visibility)     │
 │    └── Adapters: Bootstrap, Tailwind, Bulma                 │
 │                                                             │
 │  Content Layout System                                      │
@@ -330,7 +330,7 @@ The controller maps `Result::ok()` to HTTP 204 and `Result::fail()` to HTTP 422 
 
 Grid adapters translate the abstract layout model (viewports, column widths, offsets, visibility) into CSS framework-specific class names. All consumers depend on `GridAdapterInterface`, never on a concrete adapter.
 
-### Interface Contract (15 methods)
+### Interface Contract (14 methods)
 
 | Method | Returns | Purpose |
 |--------|---------|---------|
@@ -347,20 +347,22 @@ Grid adapters translate the abstract layout model (viewports, column widths, off
 | `getTitleClassOptions()` | `array<string, string>` | CSS class to label mapping |
 | `getOffsetStrategy()` | `OffsetStrategy` | Margin-based vs grid-placement |
 | `getContainerMaxWidth()` | `positive-int` | Max container width in px (for responsive images) |
-| `getCssPath()` | `?string` | Path to bundled CSS, or null |
 | `getContentLayoutClassMap()` | `ContentLayoutClassMap` | CSS class mappings for content layout |
 
-### Configuration Trait
+### Abstract Base Class
 
-`GridAdapterConfiguration` provides three YAML-configurable properties applied to any adapter:
+`AbstractGridAdapter` provides shared configuration, viewport management, and visibility map generation. Concrete adapters extend it and provide framework-specific CSS class generation.
+
+YAML-configurable properties (set on the concrete adapter class):
 
 | Property | Type | Effect |
 |----------|------|--------|
 | `enabled_viewports` | `list<string>\|null` | Restrict active viewports |
 | `total_columns` | `int\|null` | Override column count |
 | `default_viewport` | `string\|null` | Override default viewport |
+| `container_max_width` | `int\|null` | Override container max width |
 
-The trait provides helper methods (`applyViewportFilter`, `resolveColumnCount`, `resolveDefaultViewport`) called in the adapter constructor. Invalid configuration throws `InvalidGridValueException`.
+The base class provides helper methods (`applyViewportFilter`, `resolveColumnCount`, `resolveDefaultViewport`, `resolveContainerMaxWidth`) called in the constructor, plus a pre-computed visibility map built from two abstract format hooks (`formatHideClass`, `formatRestoreClass`). Invalid configuration throws `InvalidGridValueException`.
 
 ### Adapters
 

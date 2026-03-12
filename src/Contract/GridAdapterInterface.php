@@ -142,14 +142,6 @@ interface GridAdapterInterface
     public function getContainerMaxWidth(): int;
 
     /**
-     * Filesystem path to a fallback CSS file for CMS preview rendering.
-     *
-     * Returns null if the framework does not require a bundled fallback
-     * (e.g. when the CMS already loads the framework).
-     */
-    public function getCssPath(): ?string;
-
-    /**
      * CSS class mappings for content layout adapters.
      *
      * Returns the framework-specific class map that the unified
