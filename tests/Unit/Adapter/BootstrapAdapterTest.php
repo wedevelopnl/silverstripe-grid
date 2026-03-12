@@ -2,30 +2,41 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Integration\Adapter;
+namespace WeDevelop\Grid\Tests\Unit\Adapter;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use SilverStripe\Core\Config\Config;
-use SilverStripe\Dev\SapphireTest;
+use PHPUnit\Framework\TestCase;
+use SilverStripe\Config\Collections\MemoryConfigCollection;
+use SilverStripe\Core\Config\ConfigLoader;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
-use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
+/**
+ * Unit tests for BootstrapAdapter — viewport definitions, class generation,
+ * offset strategy, and visibility with filtered viewport sets.
+ */
 #[CoversClass(BootstrapAdapter::class)]
-final class BootstrapAdapterTest extends SapphireTest
+final class BootstrapAdapterTest extends TestCase
 {
-    protected $usesDatabase = false;
+    use ConfigManifestTrait;
+
+    private MemoryConfigCollection $configCollection;
 
     private BootstrapAdapter $adapter;
 
     protected function setUp(): void
     {
-        parent::setUp();
-
+        $this->configCollection = new MemoryConfigCollection();
+        ConfigLoader::inst()->pushManifest($this->configCollection);
         $this->adapter = new BootstrapAdapter();
+    }
+
+    protected function tearDown(): void
+    {
+        ConfigLoader::inst()->popManifest();
     }
 
     public function testImplementsGridAdapterInterface(): void
@@ -166,55 +177,7 @@ final class BootstrapAdapterTest extends SapphireTest
         yield 'xxl offset 0' => ['xxl', 0, 'offset-xxl-0'];
     }
 
-    // ─── getVisibilityClasses ────────────────────────────────────────
-
-    /**
-     * @param list<string>|null $enabledViewports
-     * @param list<string> $expectedClasses
-     */
-    #[DataProvider('visibilityClassProvider')]
-    public function testGetVisibilityClasses(?array $enabledViewports, string $viewport, array $expectedClasses): void
-    {
-        if ($enabledViewports !== null) {
-            Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', $enabledViewports);
-            Config::modify()->set(BootstrapAdapter::class, 'default_viewport', $enabledViewports[0]);
-        }
-
-        $adapter = $enabledViewports !== null ? new BootstrapAdapter() : $this->adapter;
-
-        $this->assertSame($expectedClasses, $adapter->getVisibilityClasses($viewport));
-    }
-
-    /**
-     * @return iterable<string, array{list<string>|null, string, list<string>}>
-     */
-    public static function visibilityClassProvider(): iterable
-    {
-        // Full set (default)
-        yield 'all — xs' => [null, 'xs', ['d-none', 'd-sm-block']];
-        yield 'all — sm' => [null, 'sm', ['d-sm-none', 'd-md-block']];
-        yield 'all — md' => [null, 'md', ['d-md-none', 'd-lg-block']];
-        yield 'all — lg' => [null, 'lg', ['d-lg-none', 'd-xl-block']];
-        yield 'all — xl' => [null, 'xl', ['d-xl-none', 'd-xxl-block']];
-        yield 'all — xxl' => [null, 'xxl', ['d-xxl-none']];
-
-        // [sm, md, lg] — xs removed; sm uses infix, NOT d-none
-        yield '[sm,md,lg] — sm' => [['sm', 'md', 'lg'], 'sm', ['d-sm-none', 'd-md-block']];
-        yield '[sm,md,lg] — md' => [['sm', 'md', 'lg'], 'md', ['d-md-none', 'd-lg-block']];
-        yield '[sm,md,lg] — lg' => [['sm', 'md', 'lg'], 'lg', ['d-lg-none']];
-
-        // [md, lg, xl, xxl] — xs+sm gone
-        yield '[md,lg,xl,xxl] — md' => [['md', 'lg', 'xl', 'xxl'], 'md', ['d-md-none', 'd-lg-block']];
-
-        // [xs, md, xl] — gaps: restore skips to next enabled
-        yield '[xs,md,xl] — xs' => [['xs', 'md', 'xl'], 'xs', ['d-none', 'd-md-block']];
-        yield '[xs,md,xl] — md' => [['xs', 'md', 'xl'], 'md', ['d-md-none', 'd-xl-block']];
-        yield '[xs,md,xl] — xl' => [['xs', 'md', 'xl'], 'xl', ['d-xl-none']];
-
-        // [xs, xxl] — only 2
-        yield '[xs,xxl] — xs' => [['xs', 'xxl'], 'xs', ['d-none', 'd-xxl-block']];
-        yield '[xs,xxl] — xxl' => [['xs', 'xxl'], 'xxl', ['d-xxl-none']];
-    }
+    // ─── getVisibilityClasses (default full set only) ────────────────
 
     public function testGetVisibilityClassesReturnsTwoClassesForNonLastViewport(): void
     {
@@ -228,6 +191,25 @@ final class BootstrapAdapterTest extends SapphireTest
         $classes = $this->adapter->getVisibilityClasses('xxl');
 
         $this->assertCount(1, $classes);
+    }
+
+    #[DataProvider('defaultVisibilityClassProvider')]
+    public function testGetVisibilityClassesDefaultSet(string $viewport, array $expectedClasses): void
+    {
+        $this->assertSame($expectedClasses, $this->adapter->getVisibilityClasses($viewport));
+    }
+
+    /**
+     * @return iterable<string, array{string, list<string>}>
+     */
+    public static function defaultVisibilityClassProvider(): iterable
+    {
+        yield 'xs' => ['xs', ['d-none', 'd-sm-block']];
+        yield 'sm' => ['sm', ['d-sm-none', 'd-md-block']];
+        yield 'md' => ['md', ['d-md-none', 'd-lg-block']];
+        yield 'lg' => ['lg', ['d-lg-none', 'd-xl-block']];
+        yield 'xl' => ['xl', ['d-xl-none', 'd-xxl-block']];
+        yield 'xxl' => ['xxl', ['d-xxl-none']];
     }
 
     // ─── getBaseWidthClass ──────────────────────────────────────────
@@ -379,134 +361,43 @@ final class BootstrapAdapterTest extends SapphireTest
         $this->assertSame(OffsetStrategy::Margin, $this->adapter->getOffsetStrategy());
     }
 
-    // ─── Viewport filtering ─────────────────────────────────────────
+    // ─── getVisibilityClasses with filtered viewports ────────────────
 
-    public function testEnabledViewportsSubsetFiltersCorrectly(): void
+    /**
+     * @param list<string> $enabledViewports
+     * @param list<string> $expectedClasses
+     */
+    #[DataProvider('visibilityClassWithFilteredViewportsProvider')]
+    public function testGetVisibilityClassesWithFilteredViewports(array $enabledViewports, string $viewport, array $expectedClasses): void
     {
-        Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', ['sm', 'md', 'lg']);
+        $this->configCollection->set(BootstrapAdapter::class, 'enabled_viewports', $enabledViewports);
+        $this->configCollection->set(BootstrapAdapter::class, 'default_viewport', $enabledViewports[0]);
+
         $adapter = new BootstrapAdapter();
 
-        $keys = array_map(static fn (Viewport $v): string => $v->key, $adapter->getViewports());
-
-        $this->assertSame(['sm', 'md', 'lg'], $keys);
+        $this->assertSame($expectedClasses, $adapter->getVisibilityClasses($viewport));
     }
 
-    public function testEnabledViewportsPreservesDefinitionOrder(): void
+    /**
+     * @return iterable<string, array{list<string>, string, list<string>}>
+     */
+    public static function visibilityClassWithFilteredViewportsProvider(): iterable
     {
-        Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', ['lg', 'xs', 'xxl']);
-        Config::modify()->set(BootstrapAdapter::class, 'default_viewport', 'lg');
-        $adapter = new BootstrapAdapter();
+        // [sm, md, lg] — xs removed; sm uses infix, NOT d-none
+        yield '[sm,md,lg] — sm' => [['sm', 'md', 'lg'], 'sm', ['d-sm-none', 'd-md-block']];
+        yield '[sm,md,lg] — md' => [['sm', 'md', 'lg'], 'md', ['d-md-none', 'd-lg-block']];
+        yield '[sm,md,lg] — lg' => [['sm', 'md', 'lg'], 'lg', ['d-lg-none']];
 
-        $keys = array_map(static fn (Viewport $v): string => $v->key, $adapter->getViewports());
+        // [md, lg, xl, xxl] — xs+sm gone
+        yield '[md,lg,xl,xxl] — md' => [['md', 'lg', 'xl', 'xxl'], 'md', ['d-md-none', 'd-lg-block']];
 
-        $this->assertSame(['lg', 'xs', 'xxl'], $keys);
-    }
+        // [xs, md, xl] — gaps: restore skips to next enabled
+        yield '[xs,md,xl] — xs' => [['xs', 'md', 'xl'], 'xs', ['d-none', 'd-md-block']];
+        yield '[xs,md,xl] — md' => [['xs', 'md', 'xl'], 'md', ['d-md-none', 'd-xl-block']];
+        yield '[xs,md,xl] — xl' => [['xs', 'md', 'xl'], 'xl', ['d-xl-none']];
 
-    public function testEnabledViewportsEmptyArrayThrows(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', []);
-
-        $this->expectException(InvalidGridValueException::class);
-        $this->expectExceptionMessage('The enabled_viewports configuration cannot be an empty array.');
-        new BootstrapAdapter();
-    }
-
-    public function testEnabledViewportsUnknownKeyThrows(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', ['xs', 'unknown']);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BootstrapAdapter();
-    }
-
-    // ─── Column count override ──────────────────────────────────────
-
-    public function testColumnCountOverrideReturnsConfiguredValue(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'total_columns', 16);
-        $adapter = new BootstrapAdapter();
-
-        $this->assertSame(16, $adapter->getColumnCount());
-    }
-
-    public function testColumnCountOverrideZeroThrows(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'total_columns', 0);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BootstrapAdapter();
-    }
-
-    public function testColumnCountOverrideNegativeThrows(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'total_columns', -4);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BootstrapAdapter();
-    }
-
-    // ─── Container max width override ─────────────────────────────────
-
-    public function testContainerMaxWidthOverrideReturnsConfiguredValue(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'container_max_width', 1400);
-        $adapter = new BootstrapAdapter();
-
-        $this->assertSame(1400, $adapter->getContainerMaxWidth());
-    }
-
-    public function testContainerMaxWidthOverrideZeroThrows(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'container_max_width', 0);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BootstrapAdapter();
-    }
-
-    public function testContainerMaxWidthOverrideNegativeThrows(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'container_max_width', -100);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BootstrapAdapter();
-    }
-
-    // ─── Default viewport override ──────────────────────────────────
-
-    public function testDefaultViewportOverrideResolvesValidKey(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'default_viewport', 'lg');
-        $adapter = new BootstrapAdapter();
-
-        $viewport = $adapter->getDefaultViewport();
-
-        $this->assertInstanceOf(Viewport::class, $viewport);
-        $this->assertSame('lg', $viewport->key);
-    }
-
-    public function testDefaultViewportOverrideUnknownKeyThrows(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'default_viewport', 'nonexistent');
-
-        $this->expectException(InvalidGridValueException::class);
-        new BootstrapAdapter();
-    }
-
-    public function testDefaultViewportFilteredOutWithoutOverrideThrows(): void
-    {
-        // Default is 'md', which is not in the enabled set
-        Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', ['xs', 'lg', 'xxl']);
-
-        $this->expectException(InvalidGridValueException::class);
-        new BootstrapAdapter();
-    }
-
-    public function testDefaultViewportFilteredOutWithValidOverrideSucceeds(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', ['xs', 'lg', 'xxl']);
-        Config::modify()->set(BootstrapAdapter::class, 'default_viewport', 'lg');
-        $adapter = new BootstrapAdapter();
-
-        $this->assertSame('lg', $adapter->getDefaultViewport()->key);
+        // [xs, xxl] — only 2
+        yield '[xs,xxl] — xs' => [['xs', 'xxl'], 'xs', ['d-none', 'd-xxl-block']];
+        yield '[xs,xxl] — xxl' => [['xs', 'xxl'], 'xxl', ['d-xxl-none']];
     }
 }

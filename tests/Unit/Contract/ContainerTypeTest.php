@@ -50,4 +50,40 @@ final class ContainerTypeTest extends TestCase
         yield 'Row' => [ContainerType::Row, 'row'];
         yield 'Column' => [ContainerType::Column, 'column'];
     }
+
+    // ─── childTypeName ──────────────────────────────────────────────
+
+    #[DataProvider('childTypeNameProvider')]
+    public function testChildTypeNameReturnsExpectedValue(ContainerType $case, string $expected): void
+    {
+        $this->assertSame($expected, $case->childTypeName());
+    }
+
+    /**
+     * @return iterable<string, array{ContainerType, string}>
+     */
+    public static function childTypeNameProvider(): iterable
+    {
+        yield 'Section → row' => [ContainerType::Section, 'row'];
+        yield 'Row → column' => [ContainerType::Row, 'column'];
+        yield 'Column → element' => [ContainerType::Column, 'element'];
+    }
+
+    // ─── toElementClass ─────────────────────────────────────────────
+
+    #[DataProvider('toElementClassProvider')]
+    public function testToElementClassReturnsExpectedClass(ContainerType $case, string $expected): void
+    {
+        $this->assertSame($expected, $case->toElementClass());
+    }
+
+    /**
+     * @return iterable<string, array{ContainerType, string}>
+     */
+    public static function toElementClassProvider(): iterable
+    {
+        yield 'Section' => [ContainerType::Section, \WeDevelop\Grid\Model\Section::class];
+        yield 'Row' => [ContainerType::Row, \WeDevelop\Grid\Model\Row::class];
+        yield 'Column' => [ContainerType::Column, \WeDevelop\Grid\Model\Column::class];
+    }
 }

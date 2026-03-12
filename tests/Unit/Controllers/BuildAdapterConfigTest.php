@@ -2,34 +2,39 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Integration\Controllers;
+namespace WeDevelop\Grid\Tests\Unit\Controllers;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\Dev\SapphireTest;
+use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
 use WeDevelop\Grid\Controllers\GridController;
+use WeDevelop\Grid\Tests\Unit\Adapter\ConfigManifestTrait;
 use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
 
 /**
  * Tests {@see GridController::buildAdapterConfig()} in isolation.
  *
- * Requires the SilverStripe config system because adapters now use
- * the Configurable trait (instantiation reads from config).
+ * Pure logic — no SilverStripe database dependency. A minimal config manifest
+ * is pushed so adapters using the Configurable trait can be instantiated.
  */
 #[CoversClass(GridController::class)]
-final class BuildAdapterConfigTest extends SapphireTest
+final class BuildAdapterConfigTest extends TestCase
 {
-    protected $usesDatabase = false;
+    use ConfigManifestTrait;
 
     /** @var array<string, mixed> */
     private array $config;
 
     protected function setUp(): void
     {
-        parent::setUp();
-
+        $this->pushConfigManifest();
         $this->config = GridController::buildAdapterConfig(new BootstrapAdapter());
+    }
+
+    protected function tearDown(): void
+    {
+        $this->popConfigManifest();
     }
 
     // --- Structure -----------------------------------------------------------

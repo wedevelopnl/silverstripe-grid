@@ -2,29 +2,41 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Integration\Adapter;
+namespace WeDevelop\Grid\Tests\Unit\Adapter;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use SilverStripe\Core\Config\Config;
-use SilverStripe\Dev\SapphireTest;
+use PHPUnit\Framework\TestCase;
+use SilverStripe\Config\Collections\MemoryConfigCollection;
+use SilverStripe\Core\Config\ConfigLoader;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
+/**
+ * Unit tests for TailwindAdapter — viewport definitions, class generation,
+ * offset strategy, and visibility with filtered viewport sets.
+ */
 #[CoversClass(TailwindAdapter::class)]
-final class TailwindAdapterTest extends SapphireTest
+final class TailwindAdapterTest extends TestCase
 {
-    protected $usesDatabase = false;
+    use ConfigManifestTrait;
+
+    private MemoryConfigCollection $configCollection;
 
     private TailwindAdapter $adapter;
 
     protected function setUp(): void
     {
-        parent::setUp();
-
+        $this->configCollection = new MemoryConfigCollection();
+        ConfigLoader::inst()->pushManifest($this->configCollection);
         $this->adapter = new TailwindAdapter();
+    }
+
+    protected function tearDown(): void
+    {
+        ConfigLoader::inst()->popManifest();
     }
 
     public function testImplementsGridAdapterInterface(): void
@@ -142,45 +154,24 @@ final class TailwindAdapterTest extends SapphireTest
         yield '2xl, offset 5' => ['2xl', 5, '2xl:col-start-6'];
     }
 
-    // ── Visibility classes ─────────────────────────────────────
+    // ── Visibility classes (default full set) ──────────────────
 
-    /**
-     * @param list<string>|null $enabledViewports
-     * @param list<string> $expectedClasses
-     */
-    #[DataProvider('visibilityClassProvider')]
-    public function testGetVisibilityClasses(?array $enabledViewports, string $viewport, array $expectedClasses): void
+    #[DataProvider('defaultVisibilityClassProvider')]
+    public function testGetVisibilityClassesDefaultSet(string $viewport, array $expectedClasses): void
     {
-        if ($enabledViewports !== null) {
-            Config::modify()->set(TailwindAdapter::class, 'enabled_viewports', $enabledViewports);
-            Config::modify()->set(TailwindAdapter::class, 'default_viewport', $enabledViewports[0]);
-        }
-
-        $adapter = $enabledViewports !== null ? new TailwindAdapter() : $this->adapter;
-
-        $this->assertSame($expectedClasses, $adapter->getVisibilityClasses($viewport));
+        $this->assertSame($expectedClasses, $this->adapter->getVisibilityClasses($viewport));
     }
 
     /**
-     * @return iterable<string, array{list<string>|null, string, list<string>}>
+     * @return iterable<string, array{string, list<string>}>
      */
-    public static function visibilityClassProvider(): iterable
+    public static function defaultVisibilityClassProvider(): iterable
     {
-        // Full set (default)
-        yield 'all — sm' => [null, 'sm', ['sm:hidden', 'md:block']];
-        yield 'all — md' => [null, 'md', ['md:hidden', 'lg:block']];
-        yield 'all — lg' => [null, 'lg', ['lg:hidden', 'xl:block']];
-        yield 'all — xl' => [null, 'xl', ['xl:hidden', '2xl:block']];
-        yield 'all — 2xl' => [null, '2xl', ['2xl:hidden']];
-
-        // [md, lg, xl] — sm removed
-        yield '[md,lg,xl] — md' => [['md', 'lg', 'xl'], 'md', ['md:hidden', 'lg:block']];
-        yield '[md,lg,xl] — xl' => [['md', 'lg', 'xl'], 'xl', ['xl:hidden']];
-
-        // [sm, lg, 2xl] — gaps
-        yield '[sm,lg,2xl] — sm' => [['sm', 'lg', '2xl'], 'sm', ['sm:hidden', 'lg:block']];
-        yield '[sm,lg,2xl] — lg' => [['sm', 'lg', '2xl'], 'lg', ['lg:hidden', '2xl:block']];
-        yield '[sm,lg,2xl] — 2xl' => [['sm', 'lg', '2xl'], '2xl', ['2xl:hidden']];
+        yield 'sm' => ['sm', ['sm:hidden', 'md:block']];
+        yield 'md' => ['md', ['md:hidden', 'lg:block']];
+        yield 'lg' => ['lg', ['lg:hidden', 'xl:block']];
+        yield 'xl' => ['xl', ['xl:hidden', '2xl:block']];
+        yield '2xl' => ['2xl', ['2xl:hidden']];
     }
 
     // ── Base width classes ─────────────────────────────────────
@@ -262,7 +253,6 @@ final class TailwindAdapterTest extends SapphireTest
         foreach ($options as $class => $label) {
             $this->assertIsString($label);
             $this->assertNotEmpty($label);
-            // Labels should describe heading level
             $this->assertMatchesRegularExpression('/Heading \d/', $label);
         }
     }
@@ -303,4 +293,35 @@ final class TailwindAdapterTest extends SapphireTest
         $this->assertSame(OffsetStrategy::GridPlacement, $this->adapter->getOffsetStrategy());
     }
 
+    // ─── getVisibilityClasses with filtered viewports ────────────────
+
+    /**
+     * @param list<string> $enabledViewports
+     * @param list<string> $expectedClasses
+     */
+    #[DataProvider('visibilityClassWithFilteredViewportsProvider')]
+    public function testGetVisibilityClassesWithFilteredViewports(array $enabledViewports, string $viewport, array $expectedClasses): void
+    {
+        $this->configCollection->set(TailwindAdapter::class, 'enabled_viewports', $enabledViewports);
+        $this->configCollection->set(TailwindAdapter::class, 'default_viewport', $enabledViewports[0]);
+
+        $adapter = new TailwindAdapter();
+
+        $this->assertSame($expectedClasses, $adapter->getVisibilityClasses($viewport));
+    }
+
+    /**
+     * @return iterable<string, array{list<string>, string, list<string>}>
+     */
+    public static function visibilityClassWithFilteredViewportsProvider(): iterable
+    {
+        // [md, lg, xl] — sm removed
+        yield '[md,lg,xl] — md' => [['md', 'lg', 'xl'], 'md', ['md:hidden', 'lg:block']];
+        yield '[md,lg,xl] — xl' => [['md', 'lg', 'xl'], 'xl', ['xl:hidden']];
+
+        // [sm, lg, 2xl] — gaps
+        yield '[sm,lg,2xl] — sm' => [['sm', 'lg', '2xl'], 'sm', ['sm:hidden', 'lg:block']];
+        yield '[sm,lg,2xl] — lg' => [['sm', 'lg', '2xl'], 'lg', ['lg:hidden', '2xl:block']];
+        yield '[sm,lg,2xl] — 2xl' => [['sm', 'lg', '2xl'], '2xl', ['2xl:hidden']];
+    }
 }

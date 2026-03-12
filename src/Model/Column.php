@@ -11,6 +11,7 @@ use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Forms\GridSettingsField;
+use WeDevelop\Grid\Service\ColumnClassResolver;
 use WeDevelop\Grid\Value\ContainerType;
 
 /**
@@ -166,60 +167,14 @@ class Column extends GridElement implements ContainerInterface
     /**
      * CSS classes for the grid column wrapper using mobile-first cascade.
      *
-     * Walks adapter viewports smallest→largest, resolving effective settings
-     * via cascade. Only emits CSS classes at breakpoints where the effective
-     * value changes from the previous breakpoint. The base viewport always
-     * emits a width class (defaults to full-width when no settings exist).
+     * @see ColumnClassResolver::resolve() for the cascade algorithm.
      */
     public function getColumnClasses(): string
     {
-        $parts = [];
-        $settings = $this->getGridSettingsData();
-        $columnCount = $this->gridAdapter->getColumnCount();
-        $viewports = $this->gridAdapter->getViewports();
-
-        // Track effective state for mobile-first cascade (starts at implicit defaults)
-        $prevWidth = $columnCount;
-        $prevOffset = 0;
-        $prevVisible = true;
-        $isFirst = true;
-
-        foreach ($viewports as $viewport) {
-            $key = $viewport->key;
-            $config = $settings[$key] ?? null;
-
-            // Resolve effective values: explicit override or inherited from previous
-            $width = $config['width'] ?? $prevWidth;
-            $offset = $config['offset'] ?? $prevOffset;
-            $visible = $config['visible'] ?? $prevVisible;
-
-            if (!$visible && $prevVisible) {
-                // Transitioning to hidden — emit visibility classes
-                $parts = [...$parts, ...$this->gridAdapter->getVisibilityClasses($key)];
-            } elseif ($visible) {
-                /** @var positive-int $width Grid settings width is always >= 1 */
-                /** @var int<0, max> $offset Grid settings offset is always >= 0 */
-
-                // Emit width when it changes or at the base viewport
-                if ($isFirst || $width !== $prevWidth || (!$prevVisible)) {
-                    $parts[] = $this->gridAdapter->getWidthClass($key, $width);
-                }
-
-                // Emit offset when it changes (including reset to 0)
-                if ($isFirst && $offset > 0) {
-                    $parts[] = $this->gridAdapter->getOffsetClass($key, $offset);
-                } elseif (!$isFirst && $offset !== $prevOffset) {
-                    $parts[] = $this->gridAdapter->getOffsetClass($key, $offset);
-                }
-            }
-
-            $prevWidth = $width;
-            $prevOffset = $offset;
-            $prevVisible = $visible;
-            $isFirst = false;
-        }
-
-        $classes = implode(' ', $parts);
+        $classes = ColumnClassResolver::resolve(
+            $this->getGridSettingsData(),
+            $this->gridAdapter,
+        );
 
         $this->extend('updateColumnClasses', $classes);
 

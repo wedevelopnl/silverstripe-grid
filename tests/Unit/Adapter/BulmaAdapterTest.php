@@ -2,29 +2,41 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Integration\Adapter;
+namespace WeDevelop\Grid\Tests\Unit\Adapter;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use SilverStripe\Core\Config\Config;
-use SilverStripe\Dev\SapphireTest;
+use PHPUnit\Framework\TestCase;
+use SilverStripe\Config\Collections\MemoryConfigCollection;
+use SilverStripe\Core\Config\ConfigLoader;
 use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
+/**
+ * Unit tests for BulmaAdapter — viewport definitions, class generation,
+ * offset strategy, and visibility with filtered viewport sets.
+ */
 #[CoversClass(BulmaAdapter::class)]
-final class BulmaAdapterTest extends SapphireTest
+final class BulmaAdapterTest extends TestCase
 {
-    protected $usesDatabase = false;
+    use ConfigManifestTrait;
+
+    private MemoryConfigCollection $configCollection;
 
     private BulmaAdapter $adapter;
 
     protected function setUp(): void
     {
-        parent::setUp();
-
+        $this->configCollection = new MemoryConfigCollection();
+        ConfigLoader::inst()->pushManifest($this->configCollection);
         $this->adapter = new BulmaAdapter();
+    }
+
+    protected function tearDown(): void
+    {
+        ConfigLoader::inst()->popManifest();
     }
 
     public function testImplementsGridAdapterInterface(): void
@@ -141,52 +153,24 @@ final class BulmaAdapterTest extends SapphireTest
         yield 'fullhd offset 11' => ['fullhd', 11, 'is-offset-11-fullhd'];
     }
 
-    // ─── getVisibilityClasses ────────────────────────────────────────
+    // ─── getVisibilityClasses (default full set) ─────────────────────
 
-    /**
-     * @param list<string>|null $enabledViewports
-     * @param list<string> $expectedClasses
-     */
-    #[DataProvider('visibilityClassProvider')]
-    public function testGetVisibilityClasses(?array $enabledViewports, string $viewport, array $expectedClasses): void
+    #[DataProvider('defaultVisibilityClassProvider')]
+    public function testGetVisibilityClassesDefaultSet(string $viewport, array $expectedClasses): void
     {
-        if ($enabledViewports !== null) {
-            Config::modify()->set(BulmaAdapter::class, 'enabled_viewports', $enabledViewports);
-            Config::modify()->set(BulmaAdapter::class, 'default_viewport', $enabledViewports[0]);
-        }
-
-        $adapter = $enabledViewports !== null ? new BulmaAdapter() : $this->adapter;
-
-        $this->assertSame($expectedClasses, $adapter->getVisibilityClasses($viewport));
+        $this->assertSame($expectedClasses, $this->adapter->getVisibilityClasses($viewport));
     }
 
     /**
-     * @return iterable<string, array{list<string>|null, string, list<string>}>
+     * @return iterable<string, array{string, list<string>}>
      */
-    public static function visibilityClassProvider(): iterable
+    public static function defaultVisibilityClassProvider(): iterable
     {
-        // Full set (default) — upward-scoped hiding, no -only suffix
-        yield 'all — mobile' => [null, 'mobile', ['is-hidden-mobile', 'is-block-tablet']];
-        yield 'all — tablet' => [null, 'tablet', ['is-hidden-tablet', 'is-block-desktop']];
-        yield 'all — desktop' => [null, 'desktop', ['is-hidden-desktop', 'is-block-widescreen']];
-        yield 'all — widescreen' => [null, 'widescreen', ['is-hidden-widescreen', 'is-block-fullhd']];
-        yield 'all — fullhd' => [null, 'fullhd', ['is-hidden-fullhd']];
-
-        // [tablet, desktop, widescreen] — mobile removed
-        yield '[tablet,desktop,widescreen] — tablet' => [['tablet', 'desktop', 'widescreen'], 'tablet', ['is-hidden-tablet', 'is-block-desktop']];
-        yield '[tablet,desktop,widescreen] — widescreen' => [['tablet', 'desktop', 'widescreen'], 'widescreen', ['is-hidden-widescreen']];
-
-        // [desktop, widescreen, fullhd] — mobile+tablet removed
-        yield '[desktop,widescreen,fullhd] — desktop' => [['desktop', 'widescreen', 'fullhd'], 'desktop', ['is-hidden-desktop', 'is-block-widescreen']];
-
-        // [mobile, desktop, fullhd] — gaps
-        yield '[mobile,desktop,fullhd] — mobile' => [['mobile', 'desktop', 'fullhd'], 'mobile', ['is-hidden-mobile', 'is-block-desktop']];
-        yield '[mobile,desktop,fullhd] — desktop' => [['mobile', 'desktop', 'fullhd'], 'desktop', ['is-hidden-desktop', 'is-block-fullhd']];
-        yield '[mobile,desktop,fullhd] — fullhd' => [['mobile', 'desktop', 'fullhd'], 'fullhd', ['is-hidden-fullhd']];
-
-        // [mobile, fullhd] — only 2
-        yield '[mobile,fullhd] — mobile' => [['mobile', 'fullhd'], 'mobile', ['is-hidden-mobile', 'is-block-fullhd']];
-        yield '[mobile,fullhd] — fullhd' => [['mobile', 'fullhd'], 'fullhd', ['is-hidden-fullhd']];
+        yield 'mobile' => ['mobile', ['is-hidden-mobile', 'is-block-tablet']];
+        yield 'tablet' => ['tablet', ['is-hidden-tablet', 'is-block-desktop']];
+        yield 'desktop' => ['desktop', ['is-hidden-desktop', 'is-block-widescreen']];
+        yield 'widescreen' => ['widescreen', ['is-hidden-widescreen', 'is-block-fullhd']];
+        yield 'fullhd' => ['fullhd', ['is-hidden-fullhd']];
     }
 
     // ─── getBaseWidthClass ──────────────────────────────────────────
@@ -302,4 +286,42 @@ final class BulmaAdapterTest extends SapphireTest
         $this->assertSame($first, $second);
     }
 
+    // ─── getVisibilityClasses with filtered viewports ────────────────
+
+    /**
+     * @param list<string> $enabledViewports
+     * @param list<string> $expectedClasses
+     */
+    #[DataProvider('visibilityClassWithFilteredViewportsProvider')]
+    public function testGetVisibilityClassesWithFilteredViewports(array $enabledViewports, string $viewport, array $expectedClasses): void
+    {
+        $this->configCollection->set(BulmaAdapter::class, 'enabled_viewports', $enabledViewports);
+        $this->configCollection->set(BulmaAdapter::class, 'default_viewport', $enabledViewports[0]);
+
+        $adapter = new BulmaAdapter();
+
+        $this->assertSame($expectedClasses, $adapter->getVisibilityClasses($viewport));
+    }
+
+    /**
+     * @return iterable<string, array{list<string>, string, list<string>}>
+     */
+    public static function visibilityClassWithFilteredViewportsProvider(): iterable
+    {
+        // [tablet, desktop, widescreen] — mobile removed
+        yield '[tablet,desktop,widescreen] — tablet' => [['tablet', 'desktop', 'widescreen'], 'tablet', ['is-hidden-tablet', 'is-block-desktop']];
+        yield '[tablet,desktop,widescreen] — widescreen' => [['tablet', 'desktop', 'widescreen'], 'widescreen', ['is-hidden-widescreen']];
+
+        // [desktop, widescreen, fullhd] — mobile+tablet removed
+        yield '[desktop,widescreen,fullhd] — desktop' => [['desktop', 'widescreen', 'fullhd'], 'desktop', ['is-hidden-desktop', 'is-block-widescreen']];
+
+        // [mobile, desktop, fullhd] — gaps
+        yield '[mobile,desktop,fullhd] — mobile' => [['mobile', 'desktop', 'fullhd'], 'mobile', ['is-hidden-mobile', 'is-block-desktop']];
+        yield '[mobile,desktop,fullhd] — desktop' => [['mobile', 'desktop', 'fullhd'], 'desktop', ['is-hidden-desktop', 'is-block-fullhd']];
+        yield '[mobile,desktop,fullhd] — fullhd' => [['mobile', 'desktop', 'fullhd'], 'fullhd', ['is-hidden-fullhd']];
+
+        // [mobile, fullhd] — only 2
+        yield '[mobile,fullhd] — mobile' => [['mobile', 'fullhd'], 'mobile', ['is-hidden-mobile', 'is-block-fullhd']];
+        yield '[mobile,fullhd] — fullhd' => [['mobile', 'fullhd'], 'fullhd', ['is-hidden-fullhd']];
+    }
 }

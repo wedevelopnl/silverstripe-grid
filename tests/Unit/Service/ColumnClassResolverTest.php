@@ -2,46 +2,36 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Integration\Extensions;
+namespace WeDevelop\Grid\Tests\Unit\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use SilverStripe\Dev\SapphireTest;
-use SilverStripe\Versioned\Versioned;
+use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
 use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
-use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Service\ColumnClassResolver;
+use WeDevelop\Grid\Tests\Unit\Adapter\ConfigManifestTrait;
 
 /**
- * Verifies the Column cascade class generation produces correct output
- * for each adapter. The cascade logic in getColumnClasses() is adapter-agnostic
- * but the CSS class strings differ per framework.
+ * Unit tests for ColumnClassResolver — the mobile-first cascade algorithm
+ * that generates CSS classes from sparse grid settings.
+ *
+ * Tests all three adapters without database or SilverStripe model dependency.
  */
-#[CoversClass(Column::class)]
-final class ColumnClassesByAdapterTest extends SapphireTest
+#[CoversClass(ColumnClassResolver::class)]
+final class ColumnClassResolverTest extends TestCase
 {
-    protected $usesDatabase = true;
+    use ConfigManifestTrait;
 
     protected function setUp(): void
     {
-        parent::setUp();
-
-        Versioned::set_stage(Versioned::DRAFT);
+        $this->pushConfigManifest();
     }
 
-    /**
-     * @param class-string $adapterClass
-     * @param array<string, array{width: int, offset: int, visible: bool}> $settings
-     */
-    private function getClassesForAdapter(string $adapterClass, array $settings): string
+    protected function tearDown(): void
     {
-        $column = Column::create();
-        $column->gridAdapter = new $adapterClass();
-        $column->setGridSettingsData($settings);
-        $column->write();
-
-        return $column->getColumnClasses();
+        $this->popConfigManifest();
     }
 
     // ─── Empty settings → base width ────────────────────────────────
@@ -52,7 +42,7 @@ final class ColumnClassesByAdapterTest extends SapphireTest
     #[DataProvider('emptySettingsProvider')]
     public function testEmptySettingsProducesBaseWidthClass(string $adapterClass, string $expected): void
     {
-        $classes = $this->getClassesForAdapter($adapterClass, []);
+        $classes = ColumnClassResolver::resolve([], new $adapterClass());
 
         $this->assertSame($expected, $classes);
     }
@@ -76,7 +66,7 @@ final class ColumnClassesByAdapterTest extends SapphireTest
     #[DataProvider('widthChangeAtMidViewportProvider')]
     public function testWidthChangeAtMidViewport(string $adapterClass, array $settings, string $expected): void
     {
-        $classes = $this->getClassesForAdapter($adapterClass, $settings);
+        $classes = ColumnClassResolver::resolve($settings, new $adapterClass());
 
         $this->assertSame($expected, $classes);
     }
@@ -112,7 +102,7 @@ final class ColumnClassesByAdapterTest extends SapphireTest
     #[DataProvider('multipleWidthChangesProvider')]
     public function testMultipleWidthChanges(string $adapterClass, array $settings, string $expected): void
     {
-        $classes = $this->getClassesForAdapter($adapterClass, $settings);
+        $classes = ColumnClassResolver::resolve($settings, new $adapterClass());
 
         $this->assertSame($expected, $classes);
     }
@@ -158,7 +148,7 @@ final class ColumnClassesByAdapterTest extends SapphireTest
     #[DataProvider('offsetAtMidViewportProvider')]
     public function testOffsetAtMidViewport(string $adapterClass, array $settings, array $expectedContains): void
     {
-        $classes = $this->getClassesForAdapter($adapterClass, $settings);
+        $classes = ColumnClassResolver::resolve($settings, new $adapterClass());
 
         foreach ($expectedContains as $expected) {
             $this->assertStringContainsString($expected, $classes);
@@ -197,7 +187,7 @@ final class ColumnClassesByAdapterTest extends SapphireTest
     #[DataProvider('hiddenFirstViewportProvider')]
     public function testHiddenFirstViewport(string $adapterClass, array $settings, array $expectedContains): void
     {
-        $classes = $this->getClassesForAdapter($adapterClass, $settings);
+        $classes = ColumnClassResolver::resolve($settings, new $adapterClass());
 
         foreach ($expectedContains as $expected) {
             $this->assertStringContainsString($expected, $classes);
@@ -236,7 +226,7 @@ final class ColumnClassesByAdapterTest extends SapphireTest
     #[DataProvider('hiddenMidViewportProvider')]
     public function testHiddenMidViewportWithRestore(string $adapterClass, array $settings, array $expectedContains): void
     {
-        $classes = $this->getClassesForAdapter($adapterClass, $settings);
+        $classes = ColumnClassResolver::resolve($settings, new $adapterClass());
 
         foreach ($expectedContains as $expected) {
             $this->assertStringContainsString($expected, $classes);
@@ -272,5 +262,83 @@ final class ColumnClassesByAdapterTest extends SapphireTest
             ],
             ['is-hidden-desktop', 'is-block-widescreen', 'is-6-widescreen'],
         ];
+    }
+
+    // ─── Cascade behavior (Bootstrap, detailed) ─────────────────────
+
+    public function testCascadedWidthNotReEmitted(): void
+    {
+        $classes = ColumnClassResolver::resolve(
+            ['md' => ['width' => 6, 'offset' => 0, 'visible' => true]],
+            new BootstrapAdapter(),
+        );
+
+        // lg, xl, xxl inherit md=6, no extra classes emitted
+        $this->assertStringNotContainsString('col-lg', $classes);
+        $this->assertStringNotContainsString('col-xl', $classes);
+    }
+
+    public function testCascadedOffsetEmittedOnceAndInherited(): void
+    {
+        $classes = ColumnClassResolver::resolve(
+            ['md' => ['width' => 8, 'offset' => 2, 'visible' => true]],
+            new BootstrapAdapter(),
+        );
+
+        $this->assertStringContainsString('col-md-8', $classes);
+        $this->assertStringContainsString('offset-md-2', $classes);
+        $this->assertStringNotContainsString('offset-lg', $classes);
+    }
+
+    public function testOffsetResetToZeroEmitsExplicitClass(): void
+    {
+        $classes = ColumnClassResolver::resolve(
+            [
+                'md' => ['width' => 8, 'offset' => 2, 'visible' => true],
+                'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
+            ],
+            new BootstrapAdapter(),
+        );
+
+        $this->assertStringContainsString('offset-md-2', $classes);
+        $this->assertStringContainsString('offset-lg-0', $classes);
+    }
+
+    public function testHiddenMidViewportEmitsCorrectPairsDetailed(): void
+    {
+        $classes = ColumnClassResolver::resolve(
+            [
+                'md' => ['width' => 8, 'offset' => 0, 'visible' => false],
+                'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
+            ],
+            new BootstrapAdapter(),
+        );
+
+        $this->assertStringContainsString('col-12', $classes);
+        $this->assertStringContainsString('d-md-none', $classes);
+        $this->assertStringContainsString('d-lg-block', $classes);
+        $this->assertStringContainsString('col-lg-6', $classes);
+    }
+
+    public function testConsecutiveHiddenViewportsDoNotConflict(): void
+    {
+        $classes = ColumnClassResolver::resolve(
+            [
+                'md' => ['width' => 6, 'offset' => 0, 'visible' => false],
+                'xl' => ['width' => 4, 'offset' => 0, 'visible' => true],
+            ],
+            new BootstrapAdapter(),
+        );
+
+        $this->assertStringContainsString('d-md-none', $classes);
+        $this->assertStringContainsString('d-lg-block', $classes);
+        $this->assertStringContainsString('col-xl-4', $classes);
+    }
+
+    public function testZeroOffsetNotEmittedAtBaseViewport(): void
+    {
+        $classes = ColumnClassResolver::resolve([], new BootstrapAdapter());
+
+        $this->assertStringNotContainsString('offset', $classes);
     }
 }
