@@ -132,4 +132,137 @@ final class OrmGridElementRepositoryTest extends SapphireTest
 
         $this->assertSame([], $elements);
     }
+
+    // ---- findByParents (without zone) ----
+
+    public function testFindByParentsReturnsSortedChildrenForSingleClassSingleParent(): void
+    {
+        $section1Id = $this->idFromFixture(Section::class, 'section1');
+
+        $elements = $this->repository->findByParents([Section::class => [$section1Id]]);
+
+        $this->assertCount(3, $elements);
+        $titles = array_map(static fn (GridElement $e): string => $e->Title, $elements);
+        $this->assertSame(['First Row', 'Second Row', 'Empty Row'], $titles);
+    }
+
+    public function testFindByParentsReturnsSortedChildrenForSingleClassMultipleParents(): void
+    {
+        $row1Id = $this->idFromFixture(Row::class, 'row1');
+        $row2Id = $this->idFromFixture(Row::class, 'row2');
+
+        $elements = $this->repository->findByParents([Row::class => [$row1Id, $row2Id]]);
+
+        $this->assertCount(3, $elements);
+        $titles = array_map(static fn (GridElement $e): string => $e->Title, $elements);
+        $this->assertContains('Left Column', $titles);
+        $this->assertContains('Right Column', $titles);
+        $this->assertContains('Full Width Column', $titles);
+    }
+
+    public function testFindByParentsReturnsChildrenForMultipleClasses(): void
+    {
+        $section1Id = $this->idFromFixture(Section::class, 'section1');
+        $row1Id = $this->idFromFixture(Row::class, 'row1');
+
+        $elements = $this->repository->findByParents([
+            Section::class => [$section1Id],
+            Row::class => [$row1Id],
+        ]);
+
+        $titles = array_map(static fn (GridElement $e): string => $e->Title, $elements);
+        // Rows under section1 + columns under row1
+        $this->assertContains('First Row', $titles);
+        $this->assertContains('Left Column', $titles);
+        $this->assertContains('Right Column', $titles);
+    }
+
+    public function testFindByParentsReturnsEmptyArrayForEmptyInput(): void
+    {
+        $elements = $this->repository->findByParents([]);
+
+        $this->assertSame([], $elements);
+    }
+
+    public function testFindByParentsReturnsEmptyArrayForNonExistentParent(): void
+    {
+        $elements = $this->repository->findByParents([Section::class => [999999]]);
+
+        $this->assertSame([], $elements);
+    }
+
+    public function testFindByParentsSortsBySortFieldNotId(): void
+    {
+        $row1 = $this->objFromFixture(Row::class, 'row1');
+        $row2 = $this->objFromFixture(Row::class, 'row2');
+
+        $row1->Sort = 2;
+        $row1->write();
+        $row2->Sort = 1;
+        $row2->write();
+
+        $section1Id = $this->idFromFixture(Section::class, 'section1');
+
+        $elements = $this->repository->findByParents([Section::class => [$section1Id]]);
+
+        // row2 (Sort=1) should come before row1 (Sort=2)
+        $this->assertSame('Second Row', $elements[0]->Title);
+        $this->assertSame('First Row', $elements[1]->Title);
+    }
+
+    // ---- findByParents (with zone) ----
+
+    public function testFindByParentsWithZoneReturnsMatchingSections(): void
+    {
+        $pageId = $this->idFromFixture(TestPage::class, 'testpage');
+
+        $elements = $this->repository->findByParents(
+            [TestPage::class => [$pageId]],
+            'main',
+        );
+
+        $titles = array_map(static fn (GridElement $e): string => $e->Title, $elements);
+        $this->assertCount(2, $elements);
+        $this->assertSame(['First Section', 'Second Section'], $titles);
+    }
+
+    public function testFindByParentsWithZoneExcludesOtherZones(): void
+    {
+        $pageId = $this->idFromFixture(TestPage::class, 'testpage');
+
+        $elements = $this->repository->findByParents(
+            [TestPage::class => [$pageId]],
+            'main',
+        );
+
+        $titles = array_map(static fn (GridElement $e): string => $e->Title, $elements);
+        $this->assertNotContains('Sidebar Section 1', $titles);
+        $this->assertNotContains('Sidebar Section 2', $titles);
+    }
+
+    public function testFindByParentsWithNonExistentZoneReturnsEmptyArray(): void
+    {
+        $pageId = $this->idFromFixture(TestPage::class, 'testpage');
+
+        $elements = $this->repository->findByParents(
+            [TestPage::class => [$pageId]],
+            'nonexistent',
+        );
+
+        $this->assertSame([], $elements);
+    }
+
+    public function testFindByParentsWithSidebarZoneReturnsSidebarSections(): void
+    {
+        $pageId = $this->idFromFixture(TestPage::class, 'testpage');
+
+        $elements = $this->repository->findByParents(
+            [TestPage::class => [$pageId]],
+            'sidebar',
+        );
+
+        $titles = array_map(static fn (GridElement $e): string => $e->Title, $elements);
+        $this->assertCount(2, $elements);
+        $this->assertSame(['Sidebar Section 1', 'Sidebar Section 2'], $titles);
+    }
 }
