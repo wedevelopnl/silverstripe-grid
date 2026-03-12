@@ -13,6 +13,7 @@ use SilverStripe\Core\Injector\Injectable;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 
@@ -159,18 +160,29 @@ class GridTreeBuilder
             $gridSettings = $element->getGridSettingsData();
         }
 
-        $id = (int) $element->ID;
+        return $this->createNode($element, $parentId, $containerType, $allowedTypes, $children, $gridSettings);
+    }
+
+    /**
+     * Map a GridElement to a GridNode DTO.
+     *
+     * @param positive-int $parentId
+     * @param array<class-string, array{label: string, icon: string, description: string}>|null $allowedTypes
+     * @param list<GridNode>|null $children
+     * @param array<string, array{width: int, offset: int, visible: bool}>|null $gridSettings
+     */
+    private function createNode(
+        GridElement $element,
+        int $parentId,
+        ?ContainerType $containerType,
+        ?array $allowedTypes,
+        ?array $children,
+        ?array $gridSettings,
+    ): GridNode {
         $title = $element->Title ?: _t(
             GridElement::class . '.UNTITLED',
             '(untitled)',
         );
-        $obsoleteClassName = $element->getObsoleteClassName();
-        $version = (int) $element->Version;
-        $canDelete = (bool) $element->canDelete();
-        $canPublish = (bool) $element->canPublish();
-        $canUnpublish = (bool) $element->canUnpublish();
-        $canCreate = (bool) $element->canCreate();
-        $editLink = $element->getCMSEditLink();
 
         /** @var array{typeName: string, type: string, title: string, summary: string, label: string} $blockSchema */
         $blockSchema = $element->getBlockSchema();
@@ -189,20 +201,21 @@ class GridTreeBuilder
         /** @var array<string, mixed> $extensions */
         $extensions = [];
         $this->extend('updateElementData', $element, $extensions);
+        assert($element instanceof GridElement); // extend() passes by-ref, widening the type
         /** @var array<string, mixed> $extensions PHPStan: extend() widens by-ref params */
 
         return new GridNode(
-            id: $id,
+            id: (int) $element->ID,
             parentId: $parentId,
             title: $title,
             blockSchema: $blockSchemaWithIcon,
-            obsoleteClassName: $obsoleteClassName,
-            version: $version,
-            canDelete: $canDelete,
-            canPublish: $canPublish,
-            canUnpublish: $canUnpublish,
-            canCreate: $canCreate,
-            editLink: $editLink,
+            obsoleteClassName: $element->getObsoleteClassName(),
+            version: (int) $element->Version,
+            canDelete: (bool) $element->canDelete(),
+            canPublish: (bool) $element->canPublish(),
+            canUnpublish: (bool) $element->canUnpublish(),
+            canCreate: (bool) $element->canCreate(),
+            editLink: $element->getCMSEditLink(),
             statusFlags: $statusFlags,
             containerType: $containerType,
             allowedTypes: $allowedTypes,
