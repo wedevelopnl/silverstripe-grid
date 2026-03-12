@@ -1,10 +1,20 @@
 /// <reference types="vitest/config" />
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
+import dts from 'vite-plugin-dts';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    dts({
+      include: ['client/src/types/**/*.ts'],
+      exclude: ['client/src/types/silverstripe.d.ts'],
+      outDir: 'client/dist',
+      // Resolve @/* path aliases to relative imports in .d.ts output
+      tsconfigPath: './tsconfig.json',
+    }),
+  ],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'client/src'),
