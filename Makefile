@@ -1,6 +1,6 @@
 COMPOSE := docker compose -f .docker/compose.yml
 
-.PHONY: up down destroy build test test-unit test-integration test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build
+.PHONY: up down destroy build test test-unit test-integration test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-typecheck _qa-test-js
 
 ## Generate .docker/.env with deterministic ports (auto-runs if missing)
 .docker/.env:
@@ -88,8 +88,28 @@ rector: ensure-up
 rector-dry: ensure-up
 	$(COMPOSE) exec app vendor/bin/rector process --dry-run
 
-## Run full QA suite (PHPStan + PHP tests with coverage check + JS QA)
-qa: analyse coverage-check qa-js
+## Run full QA suite (all checks in parallel)
+qa: ensure-up
+	$(MAKE) -j5 _qa-analyse _qa-coverage _qa-lint _qa-typecheck _qa-test-js
+
+## QA sub-targets (not intended to be called directly)
+_qa-analyse:
+	$(COMPOSE) exec app vendor/bin/phpstan analyse -c phpstan.neon.dist --memory-limit=512M
+
+_qa-coverage:
+	$(COMPOSE) exec app vendor/bin/phpunit \
+		--coverage-html coverage/combined/html \
+		--coverage-clover coverage/combined/clover.xml
+	$(COMPOSE) exec app vendor/bin/coverage-check coverage/combined/clover.xml 90
+
+_qa-lint:
+	npm run lint
+
+_qa-typecheck:
+	npm run typecheck
+
+_qa-test-js:
+	npm run test
 
 ## Run E2E tests (Playwright, requires running Docker services)
 test-e2e: ensure-up
@@ -107,6 +127,6 @@ flush: ensure-up
 dev-build: ensure-up
 	$(COMPOSE) exec app vendor/bin/sake dev/build flush=1
 
-## Run JavaScript QA (lint + typecheck + test)
+## Run JavaScript QA (lint + typecheck + test, in parallel)
 qa-js:
-	npm run qa
+	$(MAKE) -j3 _qa-lint _qa-typecheck _qa-test-js
