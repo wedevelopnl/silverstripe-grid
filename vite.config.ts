@@ -40,10 +40,11 @@ export default defineConfig({
       fileName: () => 'js/bundle.js',
     },
     rollupOptions: {
-      external: ['react', 'react-dom/client'],
+      external: ['react', 'react-dom', 'react-dom/client'],
       output: {
         globals: {
           react: 'React',
+          'react-dom': 'ReactDom',
           'react-dom/client': 'ReactDomClient',
         },
         assetFileNames: (assetInfo) => {
