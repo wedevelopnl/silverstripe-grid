@@ -62,7 +62,7 @@ export default function ElementCard({ element }: ElementCardProps) {
         <h4 className="element-card__title" data-testid="element-card-title">{element.title}</h4>
         <ActionsMenu actions={actions} />
       </div>
-      {archiveDialog !== null && (
+      {archiveDialog !== null && archiveDialog.isOpen && (
         <ConfirmDialog
           isOpen={archiveDialog.isOpen}
           title={archiveDialog.title}

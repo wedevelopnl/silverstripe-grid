@@ -51,7 +51,7 @@ export default function RowBlock({ row }: RowBlockProps) {
         </h3>
         <ActionsMenu actions={actions} />
       </div>
-      {archiveDialog !== null && (
+      {archiveDialog !== null && archiveDialog.isOpen && (
         <ConfirmDialog
           isOpen={archiveDialog.isOpen}
           title={archiveDialog.title}

@@ -49,7 +49,7 @@ export default function SectionBlock({ section }: SectionBlockProps) {
         </h2>
         <ActionsMenu actions={actions} />
       </div>
-      {archiveDialog !== null && (
+      {archiveDialog !== null && archiveDialog.isOpen && (
         <ConfirmDialog
           isOpen={archiveDialog.isOpen}
           title={archiveDialog.title}

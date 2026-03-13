@@ -105,6 +105,7 @@ test.describe('Media elements', () => {
       // Select 8/4 split for the save+render test
       const picker = page.locator('.column-width-picker');
       await picker.locator('label:has(input[value="8"])').click();
+      await expect(page.locator('[id$="_MediaPosition_Holder"]')).toBeVisible();
 
       await page.locator('select[name="MediaPosition"]').selectOption('last');
       await page.locator('select[name="VerticalAlignment"]').selectOption('center');

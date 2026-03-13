@@ -8,6 +8,7 @@ use Override;
 use SilverStripe\CMS\Controllers\CMSPageEditController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Controller;
+use SilverStripe\Control\Director;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\DropdownField;
@@ -103,6 +104,7 @@ class GridElement extends DataObject
         }
 
         return Controller::join_links(
+            Director::baseURL(),
             CMSPageEditController::singleton()->Link('EditForm'),
             $page->ID,
             'field',

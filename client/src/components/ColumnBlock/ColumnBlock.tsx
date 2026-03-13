@@ -164,7 +164,7 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
           />
           <ActionsMenu actions={actions} />
         </div>
-        {archiveDialog !== null && (
+        {archiveDialog !== null && archiveDialog.isOpen && (
           <ConfirmDialog
             isOpen={archiveDialog.isOpen}
             title={archiveDialog.title}
