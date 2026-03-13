@@ -44,7 +44,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^5.0.0",
     "@vitest/coverage-v8": "^4.0.18",
-    "jsdom": "^26.0.0",
+    "jsdom": "^28.1.0",
     "oxlint": "^1.0.0",
     "sass-embedded": "^1.77.0",
     "stylelint": "^17.0.0",
