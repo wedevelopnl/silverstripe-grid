@@ -4,6 +4,13 @@ import {
   type ElementTreeResponse,
   elementTreeResponseSchema,
 } from '@/types/elements';
+import {
+  type AcceptableContainer,
+  type PageEntry,
+  acceptableContainersResponseSchema,
+  pagesResponseSchema,
+  zonesResponseSchema,
+} from '@/types/duplicateTo';
 import { apiDelete, apiGet, apiPatch, apiPost } from './client';
 import { getControllerLink } from './config';
 
@@ -114,11 +121,7 @@ export async function duplicateToElement(
 
 // --- Acceptable Containers ---
 
-export interface AcceptableContainer {
-  id: number;
-  title: string;
-  type: string;
-}
+export type { AcceptableContainer } from '@/types/duplicateTo';
 
 export async function fetchAcceptableContainers(
   pageId: number,
@@ -126,29 +129,30 @@ export async function fetchAcceptableContainers(
   elementType: string,
 ): Promise<AcceptableContainer[]> {
   const base = getControllerLink();
-  return apiGet<AcceptableContainer[]>(
+  const data = await apiGet<unknown>(
     `${base}/api/acceptableContainers/${pageId}/${encodeURIComponent(zone)}/${encodeURIComponent(elementType)}`,
   );
+
+  return z.parse(acceptableContainersResponseSchema, data);
 }
 
 // --- Zones ---
 
 export async function fetchZones(pageId: number): Promise<string[]> {
   const base = getControllerLink();
-  return apiGet<string[]>(`${base}/api/zones/${pageId}`);
+  const data = await apiGet<unknown>(`${base}/api/zones/${pageId}`);
+
+  return z.parse(zonesResponseSchema, data);
 }
 
 // --- Pages ---
 
-export interface PageEntry {
-  id: number;
-  title: string;
-  parentId: number;
-  hasGridZones: boolean;
-}
+export type { PageEntry } from '@/types/duplicateTo';
 
 export async function fetchPages(search?: string): Promise<PageEntry[]> {
   const base = getControllerLink();
   const params = search ? `?search=${encodeURIComponent(search)}` : '';
-  return apiGet<PageEntry[]>(`${base}/api/pages${params}`);
+  const data = await apiGet<unknown>(`${base}/api/pages${params}`);
+
+  return z.parse(pagesResponseSchema, data);
 }

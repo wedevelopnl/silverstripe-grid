@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePages, useZones, useAcceptableContainers } from '@/hooks/useDuplicateToQueries';
 import './DuplicateToDialog.scss';
 
-type Step = 'page' | 'zone' | 'container';
+type Step = 'page' | 'zone' | 'container' | 'confirm';
 
 interface DuplicateToDialogProps {
   readonly isOpen: boolean;
@@ -81,20 +81,18 @@ export default function DuplicateToDialog({
     setStep('zone');
   }, []);
 
-  // Auto-skip zone step when there is exactly one zone
+  // Auto-select zone and advance when there is exactly one zone
   useEffect(() => {
-    if (step === 'zone' && zones.data !== undefined) {
-      if (zones.data.length === 1) {
-        setSelectedZone(zones.data[0]);
-        if (elementType === 'section') {
-          // Sections go directly into the zone; the page is the parent
-          onConfirm(selectedPageId, zones.data[0], selectedPageId);
-        } else {
-          setStep('container');
-        }
+    if (step === 'zone' && zones.data !== undefined && zones.data.length === 1) {
+      setSelectedZone(zones.data[0]);
+      if (elementType === 'section') {
+        // Sections need no container selection — show confirmation step
+        setStep('confirm');
+      } else {
+        setStep('container');
       }
     }
-  }, [step, zones.data, elementType, selectedPageId, onConfirm]);
+  }, [step, zones.data, elementType]);
 
   const handleZoneSelect = useCallback((zone: string) => {
     setSelectedZone(zone);
@@ -104,20 +102,26 @@ export default function DuplicateToDialog({
     if (selectedZone === null) return;
 
     if (elementType === 'section') {
-      onConfirm(selectedPageId, selectedZone, selectedPageId);
+      setStep('confirm');
     } else {
       setStep('container');
     }
-  }, [elementType, selectedPageId, selectedZone, onConfirm]);
+  }, [elementType, selectedZone]);
 
   const handleContainerSelect = useCallback((containerId: number) => {
     setSelectedContainerId(containerId);
   }, []);
 
   const handleConfirm = useCallback(() => {
-    if (selectedZone === null || selectedContainerId === null) return;
-    onConfirm(selectedPageId, selectedZone, selectedContainerId);
-  }, [onConfirm, selectedPageId, selectedZone, selectedContainerId]);
+    if (selectedZone === null) return;
+
+    if (step === 'confirm') {
+      // Section duplication — page is the parent
+      onConfirm(selectedPageId, selectedZone, selectedPageId);
+    } else if (selectedContainerId !== null) {
+      onConfirm(selectedPageId, selectedZone, selectedContainerId);
+    }
+  }, [onConfirm, selectedPageId, selectedZone, selectedContainerId, step]);
 
   const goBack = useCallback(() => {
     if (step === 'zone') {
@@ -126,6 +130,9 @@ export default function DuplicateToDialog({
     } else if (step === 'container') {
       setStep('zone');
       setSelectedContainerId(null);
+    } else if (step === 'confirm') {
+      setStep('zone');
+      setSelectedZone(null);
     }
   }, [step]);
 
@@ -142,6 +149,7 @@ export default function DuplicateToDialog({
           {step === 'page' && 'Select target page'}
           {step === 'zone' && 'Select zone'}
           {step === 'container' && 'Select container'}
+          {step === 'confirm' && 'Confirm duplication'}
         </h3>
       </div>
 
@@ -240,6 +248,14 @@ export default function DuplicateToDialog({
             )}
           </div>
         )}
+
+        {step === 'confirm' && (
+          <div data-testid="duplicate-to-step-confirm">
+            <p className="duplicate-to-dialog__summary">
+              Duplicate section to zone <strong>{selectedZone}</strong>?
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="duplicate-to-dialog__footer">
@@ -283,7 +299,7 @@ export default function DuplicateToDialog({
               disabled={selectedZone === null}
               onClick={advanceFromZone}
             >
-              {elementType === 'section' ? 'Confirm' : 'Next'}
+              Next
             </button>
           )}
           {step === 'container' && (
@@ -292,6 +308,16 @@ export default function DuplicateToDialog({
               className="duplicate-to-dialog__button duplicate-to-dialog__button--confirm"
               data-testid="duplicate-to-confirm"
               disabled={selectedContainerId === null}
+              onClick={handleConfirm}
+            >
+              Confirm
+            </button>
+          )}
+          {step === 'confirm' && (
+            <button
+              type="button"
+              className="duplicate-to-dialog__button duplicate-to-dialog__button--confirm"
+              data-testid="duplicate-to-confirm"
               onClick={handleConfirm}
             >
               Confirm
