@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0-alpha.2] - 2026-03-13
+
+### Added
+
+- **BlockMediaExtension** — opt-in extension for content elements that pairs media (image/video) with text in a responsive two-column layout. Supports aspect ratios, vertical alignment, media positioning, and per-framework CSS output via the content layout adapter system
+- **Content layout adapter system** — `ContentLayoutAdapterInterface` + data-driven `ContentLayoutClassMap` for framework-specific content layout CSS (aspect ratios, ordering, padding, alignment). Each grid adapter provides its class map via `getContentLayoutClassMap()`
+- **ColumnWidthPickerField** — visual column-width picker with illustrated layout previews for the BlockMediaExtension admin UI
+- **TypeScript type declarations** shipped in `client/dist/types/` for downstream consumers
+- `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`
+
+### Changed
+
+- **`GridAdapterConfiguration` trait replaced with `AbstractGridAdapter` base class** — custom adapters must now extend `AbstractGridAdapter` instead of using the trait. The base class handles viewport filtering, column count resolution, default viewport resolution, container max width, and visibility map generation. Adapter implementations are significantly simpler as a result
+- **Per-framework content layout adapters consolidated** — `BootstrapContentLayoutAdapter`, `TailwindContentLayoutAdapter`, and `BulmaContentLayoutAdapter` replaced by a single `ContentLayoutAdapter` driven by `ContentLayoutClassMap` factory methods on each grid adapter
+- **Custom JS field toggling replaced with `display-logic`** — BlockMediaExtension form field visibility now uses the `display-logic` SilverStripe module instead of custom entwine JS (`composer.json` gains `silverstripe/display-logic` dependency)
+- `GridController` validation and request deserialization extracted into `RequestBodyParser` and `TitleGenerator` services
+- `useDragAndDrop` hook decomposed into focused sub-hooks (`usePendingTree`, `resolveDropPlacement`)
+
+### Fixed
+
+- Cross-container drop direction incorrect during pending moves — pointer position was compared against viewport-relative `getBoundingClientRect()` instead of dnd-kit's coordinate system
+- Cross-container drop at last position blocked when source container would be depleted
+- `GridSettings` sparse cascade not preserving explicit user overrides that match the cascaded default
+- PHPStan stub conflicts with Silverstan resolved
+- ESM compatibility: replaced `__dirname` with `import.meta.url`
+
+### Performance
+
+- Migrated from `zod` to `zod/v4-mini` reducing validation library bundle size
+- Externalized `react-dom` to avoid bundling it twice
+
+### Developer Experience
+
+- `make up` auto-generates `.docker/.env` if missing — no manual step needed
+- `make qa` and `make qa-js` now run in parallel for faster feedback
+- Testbed URL printed after `make up` completes
+- PHP code coverage threshold raised from 69% to 90%
+- Rector with `silverstripe-rector` added for automated refactoring
+
 ## [6.0.0-alpha.1] - 2026-03-10
 
 Ground-up rewrite for SilverStripe 6. This is a new package (`wedevelopnl/silverstripe-grid`) that replaces the SS5 `wedevelopnl/silverstripe-elemental-grid` module with an independent architecture — no dependency on `dnadesign/silverstripe-elemental`.
@@ -75,4 +114,5 @@ Ground-up rewrite for SilverStripe 6. This is a new package (`wedevelopnl/silver
 - Makefile with targets for testing, coverage, static analysis, and mutation testing
 - Pre-push QA gate hook
 
+[6.0.0-alpha.2]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.2
 [6.0.0-alpha.1]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.1
