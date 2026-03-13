@@ -4,12 +4,13 @@ import {
   createContentElement,
   archiveElement,
   duplicateElement,
+  duplicateToElement,
   publishElement,
   reorderElement,
   unpublishElement,
   updateGridSettings,
 } from '@/api/endpoints';
-import type { CreateElementParams, CreateContentElementParams, ReorderElementParams, UpdateGridSettingsParams } from '@/api/endpoints';
+import type { CreateElementParams, CreateContentElementParams, DuplicateToParams, ReorderElementParams, UpdateGridSettingsParams } from '@/api/endpoints';
 import type { ApiError } from '@/api/errors';
 import type { ElementTreeResponse } from '@/types/elements';
 import { applyReorder } from '@/utils/applyReorder';
@@ -69,6 +70,13 @@ export function useArchiveElement(pageId: number, zone: string) {
 export function useDuplicateElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, number>({
     mutationFn: duplicateElement,
+    ...useInvalidateOnSuccess(pageId, zone),
+  });
+}
+
+export function useDuplicateToElement(pageId: number, zone: string) {
+  return useMutation<void, ApiError, DuplicateToParams>({
+    mutationFn: duplicateToElement,
     ...useInvalidateOnSuccess(pageId, zone),
   });
 }

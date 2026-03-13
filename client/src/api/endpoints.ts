@@ -95,3 +95,60 @@ export async function updateGridSettings(
   const base = getControllerLink();
   await apiPatch(`${base}/api/updateGridSettings`, params);
 }
+
+// --- Duplicate To ---
+
+export interface DuplicateToParams {
+  id: number;
+  targetPageId: number;
+  targetZone: string;
+  targetParentId: number;
+}
+
+export async function duplicateToElement(
+  params: DuplicateToParams,
+): Promise<void> {
+  const base = getControllerLink();
+  await apiPost(`${base}/api/duplicateTo`, params);
+}
+
+// --- Acceptable Containers ---
+
+export interface AcceptableContainer {
+  id: number;
+  title: string;
+  type: string;
+}
+
+export async function fetchAcceptableContainers(
+  pageId: number,
+  zone: string,
+  elementType: string,
+): Promise<AcceptableContainer[]> {
+  const base = getControllerLink();
+  return apiGet<AcceptableContainer[]>(
+    `${base}/api/acceptableContainers/${pageId}/${encodeURIComponent(zone)}/${encodeURIComponent(elementType)}`,
+  );
+}
+
+// --- Zones ---
+
+export async function fetchZones(pageId: number): Promise<string[]> {
+  const base = getControllerLink();
+  return apiGet<string[]>(`${base}/api/zones/${pageId}`);
+}
+
+// --- Pages ---
+
+export interface PageEntry {
+  id: number;
+  title: string;
+  parentId: number;
+  hasGridZones: boolean;
+}
+
+export async function fetchPages(search?: string): Promise<PageEntry[]> {
+  const base = getControllerLink();
+  const params = search ? `?search=${encodeURIComponent(search)}` : '';
+  return apiGet<PageEntry[]>(`${base}/api/pages${params}`);
+}
