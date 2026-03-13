@@ -35,6 +35,7 @@
 /Makefile               export-ignore
 /oxlintrc.json          export-ignore
 /package.json           export-ignore
+/package-lock.json      export-ignore
 /playwright.config.ts   export-ignore
 /stryker.config.mjs     export-ignore
 /stylelint.config.mjs   export-ignore
