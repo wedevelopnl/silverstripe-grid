@@ -15,7 +15,9 @@ use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\SecurityToken;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Extensions\GridPageExtension;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
@@ -359,6 +361,52 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
+        // C1: Validate target parent belongs to the claimed page/zone
+        if ($isSection) {
+            // For sections, the target parent IS the page
+            if ($body->targetParentId !== $body->targetPageId) {
+                $this->jsonError(400);
+            }
+        } else {
+            // For non-section elements, walk up to the page and verify ownership
+            assert($targetParent instanceof GridElement);
+            $owningPage = $targetParent->getPage();
+
+            if (!$owningPage instanceof SiteTree || (int) $owningPage->ID !== $body->targetPageId) {
+                $this->jsonError(400);
+            }
+
+            // Find the root section and verify its zone matches
+            $ancestor = $targetParent;
+            while ($ancestor instanceof GridElement && !$ancestor instanceof Section) {
+                $parent = $ancestor->Parent();
+                $ancestor = $parent instanceof GridElement ? $parent : null;
+            }
+            if ($ancestor instanceof Section && $ancestor->Zone !== $body->targetZone) {
+                $this->jsonError(400);
+            }
+        }
+
+        // C2: Validate hierarchy rules before deep copy
+        if ($targetParent instanceof ContainerInterface) {
+            $containerType = $targetParent->getContainerType();
+            if (!$containerType->isChildAllowed($element::class)) {
+                $this->jsonError(422, sprintf(
+                    '%s cannot be placed inside %s.',
+                    $element->singular_name(),
+                    $targetParent->singular_name(),
+                ));
+            }
+        }
+        if ($targetParent instanceof SiteTree && $element instanceof ContainerInterface) {
+            if (!$element->getContainerType()->canBeRoot()) {
+                $this->jsonError(422, sprintf(
+                    '%s cannot be placed at page level.',
+                    $element->singular_name(),
+                ));
+            }
+        }
+
         // Deep-duplicate the entire subtree (follows cascade_duplicates)
         $clone = $element->duplicate(true);
 
@@ -576,13 +624,7 @@ class GridController extends AdminController
                     continue;
                 }
 
-                $hasGridZones = false;
-                foreach ($page->getCMSFields()->flattenFields() as $field) {
-                    if ($field instanceof GridEditorField) {
-                        $hasGridZones = true;
-                        break;
-                    }
-                }
+                $hasGridZones = $page->hasExtension(GridPageExtension::class);
 
                 /** @var positive-int $id */
                 $id = (int) $page->ID;

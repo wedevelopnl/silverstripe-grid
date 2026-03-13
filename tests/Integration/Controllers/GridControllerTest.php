@@ -1443,6 +1443,72 @@ final class GridControllerTest extends FunctionalTest
         $this->assertSame(404, $response->getStatusCode());
     }
 
+    public function testDuplicateToReturns422ForHierarchyViolation(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $row1 = $this->objFromFixture(Row::class, 'row1');
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+
+        // Attempt to duplicate a Row into a Column (hierarchy violation — Row can only go in Section)
+        $response = $this->postJson('/admin/grid/api/duplicateTo', [
+            'id' => $row1->ID,
+            'targetPageId' => (int) $page->ID,
+            'targetZone' => 'main',
+            'targetParentId' => (int) $col1->ID,
+        ]);
+
+        $this->assertSame(422, $response->getStatusCode());
+    }
+
+    public function testDuplicateToReturns403WhenTargetNotEditable(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        // Create a restricted target page
+        $targetPage = TestPage::create();
+        $targetPage->Title = 'Restricted Target';
+        $targetPage->write();
+        $this->restrictPagePermissions($targetPage);
+
+        $response = $this->postJson('/admin/grid/api/duplicateTo', [
+            'id' => $section1->ID,
+            'targetPageId' => (int) $targetPage->ID,
+            'targetZone' => 'main',
+            'targetParentId' => (int) $targetPage->ID,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testDuplicateToReturns400WhenTargetParentNotOnClaimedPage(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $row1 = $this->objFromFixture(Row::class, 'row1');
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        // Create a different page and claim the row belongs there
+        $otherPage = TestPage::create();
+        $otherPage->Title = 'Other Page';
+        $otherPage->write();
+
+        $response = $this->postJson('/admin/grid/api/duplicateTo', [
+            'id' => $row1->ID,
+            'targetPageId' => (int) $otherPage->ID,
+            'targetZone' => 'main',
+            'targetParentId' => (int) $section1->ID,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
     public function testUpdateGridSettingsReturns403WhenNotEditable(): void
     {
         $this->logInForHttp();
