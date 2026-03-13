@@ -1121,6 +1121,115 @@ final class GridControllerTest extends FunctionalTest
         $this->assertSame(403, $response->getStatusCode());
     }
 
+    // --- Versioned stage: controller must switch to DRAFT internally --------
+
+    public function testCreateContainerFindsParentRegardlessOfAmbientStage(): void
+    {
+        $this->logInForHttp();
+
+        $pageId = Versioned::withVersionedMode(function (): int {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            return (int) $this->objFromFixture(TestPage::class, 'testpage')->ID;
+        });
+
+        // Ambient stage is LIVE — the controller must internally switch to DRAFT
+        Versioned::set_stage(Versioned::LIVE);
+
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 'section',
+            'parentId' => $pageId,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+    }
+
+    public function testCreateContentElementFindsParentRegardlessOfAmbientStage(): void
+    {
+        $this->logInForHttp();
+
+        $colId = Versioned::withVersionedMode(function (): int {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            return (int) $this->objFromFixture(Column::class, 'col1')->ID;
+        });
+
+        Versioned::set_stage(Versioned::LIVE);
+
+        $response = $this->postJson('/admin/grid/api/createContent', [
+            'className' => ContentElement::class,
+            'parentId' => $colId,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+    }
+
+    public function testReorderFindsParentRegardlessOfAmbientStage(): void
+    {
+        $this->logInForHttp();
+
+        [$sectionId, $pageId] = Versioned::withVersionedMode(function (): array {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            $section = $this->objFromFixture(Section::class, 'section1');
+            $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+            return [(int) $section->ID, (int) $page->ID];
+        });
+
+        Versioned::set_stage(Versioned::LIVE);
+
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => $sectionId,
+            'targetParentId' => $pageId,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+    }
+
+    // --- Sort assignment on creation -----------------------------------------
+
+    public function testCreateContainerAssignsSortValue(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 'section',
+            'parentId' => (int) $page->ID,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        $newSection = Section::get()->sort('ID', 'DESC')->first();
+        $this->assertGreaterThan(0, (int) $newSection->Sort);
+    }
+
+    public function testCreateContentElementAssignsSortValue(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+
+        $response = $this->postJson('/admin/grid/api/createContent', [
+            'className' => ContentElement::class,
+            'parentId' => (int) $col1->ID,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        $newElement = ContentElement::get()->filter('ParentID', $col1->ID)->sort('ID', 'DESC')->first();
+        $this->assertGreaterThan(0, (int) $newElement->Sort);
+    }
+
     public function testUpdateGridSettingsReturns403WhenNotEditable(): void
     {
         $this->logInForHttp();

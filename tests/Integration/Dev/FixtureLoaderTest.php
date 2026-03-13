@@ -123,6 +123,28 @@ final class FixtureLoaderTest extends SapphireTest
         });
     }
 
+    public function testLoadSuppressesAutoScaffolding(): void
+    {
+        $loader = FixtureLoader::create();
+        $result = $loader->load('element-tree');
+
+        Versioned::withVersionedMode(function () use ($result): void {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            $sectionId = $result->fixtureMap[Section::class]['section1'];
+            $section = Section::get()->byID($sectionId);
+
+            // Fixture defines exactly 1 row under section — no auto-scaffolded duplicates
+            $this->assertCount(1, $section->getChildren());
+
+            $rowId = $result->fixtureMap[Row::class]['row1'];
+            $row = Row::get()->byID($rowId);
+
+            // Fixture defines exactly 2 columns under row — no auto-scaffolded duplicates
+            $this->assertCount(2, $row->getChildren());
+        });
+    }
+
     public function testLoadAppliesPostActions(): void
     {
         $loader = FixtureLoader::create();

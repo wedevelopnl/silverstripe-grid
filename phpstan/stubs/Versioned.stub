@@ -1,0 +1,9 @@
+<?php
+
+namespace SilverStripe\Versioned;
+
+class Versioned
+{
+    public function canPublish($member = null): bool {}
+    public function canUnpublish($member = null): bool {}
+}

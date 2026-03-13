@@ -210,6 +210,10 @@ class GridTreeBuilder
         /** @var positive-int $id */
         $id = (int) $element->ID;
 
+        $canUnpublish = $element->canUnpublish();
+        assert(is_bool($canUnpublish));
+
+
         return new GridNode(
             id: $id,
             parentId: $parentId,
@@ -217,10 +221,10 @@ class GridTreeBuilder
             blockSchema: $blockSchemaWithIcon,
             obsoleteClassName: $element->getObsoleteClassName(),
             version: (int) $element->Version,
-            canDelete: (bool) $element->canDelete(),
+            canDelete: $element->canDelete(),
             canPublish: $element->canPublish(),
-            canUnpublish: (bool) $element->canUnpublish(),
-            canCreate: (bool) $element->canCreate(),
+            canUnpublish: $canUnpublish,
+            canCreate: $element->canCreate(),
             editLink: $element->getCMSEditLink(),
             statusFlags: $statusFlags,
             containerType: $containerType,

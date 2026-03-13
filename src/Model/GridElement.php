@@ -255,7 +255,7 @@ class GridElement extends DataObject
      * @param Member|null $member
      */
     #[Override]
-    public function canView(mixed $member = null): bool|null
+    public function canView(mixed $member = null): bool
     {
         $member = $member ?: Security::getCurrentUser();
 
@@ -268,29 +268,50 @@ class GridElement extends DataObject
 
         $page = $this->getPage();
 
-        return $page instanceof DataObject ? (bool) $page->canView($member) : (bool) Permission::check('CMS_ACCESS', 'any', $member);
+        if ($page instanceof DataObject) {
+            return $page->canView($member);
+        }
+
+        $result = Permission::check('CMS_ACCESS', 'any', $member);
+        assert(is_bool($result));
+
+        return $result;
     }
 
     /**
      * @param Member|null $member
      */
     #[Override]
-    public function canEdit(mixed $member = null): bool|null
+    public function canEdit(mixed $member = null): bool
     {
         $page = $this->getPage();
 
-        return $page instanceof DataObject ? (bool) $page->canEdit($member) : (bool) Permission::check('CMS_ACCESS', 'any', $member);
+        if ($page instanceof DataObject) {
+            return $page->canEdit($member);
+        }
+
+        $result = Permission::check('CMS_ACCESS', 'any', $member);
+        assert(is_bool($result));
+
+        return $result;
     }
 
     /**
      * @param Member|null $member
      */
     #[Override]
-    public function canDelete(mixed $member = null): bool|null
+    public function canDelete(mixed $member = null): bool
     {
         $page = $this->getPage();
 
-        return $page instanceof DataObject ? (bool) $page->canDelete($member) : (bool) Permission::check('CMS_ACCESS', 'any', $member);
+        if ($page instanceof DataObject) {
+            return $page->canDelete($member);
+        }
+
+        $result = Permission::check('CMS_ACCESS', 'any', $member);
+        assert(is_bool($result));
+
+        return $result;
     }
 
     /**
@@ -298,9 +319,12 @@ class GridElement extends DataObject
      * @param array<string, mixed> $context
      */
     #[Override]
-    public function canCreate(mixed $member = null, mixed $context = []): bool|null
+    public function canCreate(mixed $member = null, mixed $context = []): bool
     {
-        return (bool) Permission::check('CMS_ACCESS', 'any', $member);
+        $result = Permission::check('CMS_ACCESS', 'any', $member);
+        assert(is_bool($result));
+
+        return $result;
     }
 
     /**

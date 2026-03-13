@@ -26,9 +26,10 @@
                 "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle"
             ]
         },
-        "CastBool": {
+        "ArrayItemRemoval": {
             "ignore": [
-                "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicate"
+                "WeDevelop\\Grid\\Controllers\\GridController::apiCreate",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiCreateContent"
             ]
         },
         "DecrementInteger": {
@@ -74,7 +75,9 @@
                 "WeDevelop\\Grid\\Model\\Section::getContainerClasses",
                 "WeDevelop\\Grid\\Model\\Row::getRowClasses",
                 "WeDevelop\\Grid\\Controllers\\GridController::parseCreateBody",
-                "WeDevelop\\Grid\\Controllers\\GridController::parseReorderBody"
+                "WeDevelop\\Grid\\Controllers\\GridController::parseReorderBody",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiCreateContent",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiReorder"
             ]
         },
         "LogicalOr": {

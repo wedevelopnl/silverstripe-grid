@@ -252,7 +252,12 @@ class GridController extends AdminController
         $id = $this->requireElementIdFromRequest($request);
         $element = $this->requireElementWithPermission(
             $id,
-            static fn (GridElement $e): bool => (bool) $e->canUnpublish(),
+            static function (GridElement $e): bool {
+                $result = $e->canUnpublish();
+                assert(is_bool($result));
+
+                return $result;
+            },
         );
 
         $element->doUnpublish();
@@ -265,7 +270,7 @@ class GridController extends AdminController
         $id = $this->requireElementIdFromRequest($request);
         $element = $this->requireElementWithPermission(
             $id,
-            static fn (GridElement $e): bool => (bool) $e->canDelete(),
+            static fn (GridElement $e): bool => $e->canDelete(),
         );
 
         $element->doArchive();
@@ -278,7 +283,7 @@ class GridController extends AdminController
         $id = $this->requireElementIdFromRequest($request);
         $element = $this->requireElementWithPermission(
             $id,
-            static fn (GridElement $e): bool => (bool) $e->canCreate(),
+            static fn (GridElement $e): bool => $e->canCreate(),
         );
 
         $parent = $element->Parent();
@@ -364,7 +369,7 @@ class GridController extends AdminController
 
         $element = $this->requireElementWithPermission(
             $body->id,
-            static fn (GridElement $e): bool => (bool) $e->canEdit(),
+            static fn (GridElement $e): bool => $e->canEdit(),
         );
 
         if (!$element instanceof Column) {

@@ -6,6 +6,8 @@ namespace WeDevelop\Grid\Tests\Integration\Dev;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Dev\FunctionalTest;
+use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Dev\FixtureController;
 use WeDevelop\Grid\Dev\FixtureLoader;
 
@@ -76,6 +78,34 @@ final class FixtureControllerTest extends FunctionalTest
 
         $body = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
         $this->assertTrue($body['success']);
+    }
+
+    public function testResetDeletesFixtureData(): void
+    {
+        $this->post(self::BASE_URL . '/load', ['fixture' => 'element-tree']);
+
+        // Verify page exists
+        Versioned::withVersionedMode(static function (): void {
+            Versioned::set_stage(Versioned::DRAFT);
+            self::assertGreaterThan(
+                0,
+                SiteTree::get()->filter('URLSegment:StartsWith', 'e2e-')->count(),
+            );
+        });
+
+        $response = $this->post(self::BASE_URL . '/reset', []);
+
+        $this->assertSame(200, $response->getStatusCode());
+
+        // Verify all E2E pages are gone after reset
+        Versioned::withVersionedMode(static function (): void {
+            Versioned::set_stage(Versioned::DRAFT);
+            self::assertCount(
+                0,
+                SiteTree::get()->filter('URLSegment:StartsWith', 'e2e-'),
+                'reset endpoint should remove all E2E pages',
+            );
+        });
     }
 
     /**

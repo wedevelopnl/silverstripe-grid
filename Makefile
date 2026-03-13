@@ -69,7 +69,7 @@ coverage-check: coverage
 
 ## Run PHP mutation testing (Infection)
 mutate: ensure-up
-	$(COMPOSE) exec app vendor/bin/infection --threads=4
+	$(COMPOSE) exec app php -d memory_limit=256M vendor/bin/infection --threads=4
 
 ## Run JavaScript mutation testing (Stryker)
 mutate-js:
