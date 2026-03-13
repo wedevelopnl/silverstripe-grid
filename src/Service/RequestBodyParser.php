@@ -9,6 +9,7 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\CreateContentRequest;
 use WeDevelop\Grid\Value\CreateElementRequest;
+use WeDevelop\Grid\Value\DuplicateToRequest;
 use WeDevelop\Grid\Value\ReorderRequest;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
@@ -170,6 +171,37 @@ final readonly class RequestBodyParser
         }
 
         return Result::ok(new UpdateGridSettingsRequest($id, $viewport, $width, $offset, $visible));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return Result<DuplicateToRequest>
+     */
+    public function parseDuplicateToBody(array $data): Result
+    {
+        $id = $data['id'] ?? null;
+        $targetPageId = $data['targetPageId'] ?? null;
+        $targetZone = $data['targetZone'] ?? null;
+        $targetParentId = $data['targetParentId'] ?? null;
+
+        if (!is_int($id) || $id < 1) {
+            return $this->fail('id must be a positive integer.');
+        }
+
+        if (!is_int($targetPageId) || $targetPageId < 1) {
+            return $this->fail('targetPageId must be a positive integer.');
+        }
+
+        if (!is_string($targetZone) || $targetZone === '') {
+            return $this->fail('targetZone must be a non-empty string.');
+        }
+
+        if (!is_int($targetParentId) || $targetParentId < 1) {
+            return $this->fail('targetParentId must be a positive integer.');
+        }
+
+        /** @var non-empty-string $targetZone Narrowed by === '' guard */
+        return Result::ok(new DuplicateToRequest($id, $targetPageId, $targetZone, $targetParentId));
     }
 
     /**
