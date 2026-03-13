@@ -21,7 +21,11 @@ vi.mock('@/api/endpoints', () => ({
   createContentElement: vi.fn(),
   archiveElement: vi.fn(),
   duplicateElement: vi.fn(),
+  duplicateToElement: vi.fn(),
   updateGridSettings: (...args: unknown[]) => mockUpdateGridSettings(...args),
+  fetchPages: vi.fn().mockResolvedValue([]),
+  fetchZones: vi.fn().mockResolvedValue([]),
+  fetchAcceptableContainers: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@dnd-kit/sortable', async (importOriginal) => {

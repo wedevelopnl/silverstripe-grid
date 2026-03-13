@@ -13,6 +13,9 @@ import RowBlock from '@/components/RowBlock/RowBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
 import { useArchiveAction } from '@/hooks/useArchiveAction';
 import { useDuplicateAction } from '@/hooks/useDuplicateAction';
+import { useDuplicateToAction } from '@/hooks/useDuplicateToAction';
+import { useGridEditorContext } from '@/hooks/GridEditorContext';
+import DuplicateToDialog from '@/components/DuplicateToDialog/DuplicateToDialog';
 
 interface SectionBlockProps {
   readonly section: EnrichedSectionNode;
@@ -23,10 +26,13 @@ export default function SectionBlock({ section }: SectionBlockProps) {
   const { isCollapsed, toggle } = section;
   const { activeType } = useDragContext();
 
+  const { pageId } = useGridEditorContext();
   const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(section);
   const { action: duplicateAction } = useDuplicateAction(section);
+  const { action: duplicateToAction, dialog: duplicateToDialog } = useDuplicateToAction(section);
   const actions = [
     ...(duplicateAction !== null ? [duplicateAction] : []),
+    ...(duplicateToAction !== null ? [duplicateToAction] : []),
     ...(archiveAction !== null ? [archiveAction] : []),
   ];
 
@@ -63,6 +69,16 @@ export default function SectionBlock({ section }: SectionBlockProps) {
           onConfirm={archiveDialog.onConfirm}
           onCancel={archiveDialog.onCancel}
           destructive
+        />
+      )}
+      {duplicateToDialog !== null && duplicateToDialog.isOpen && (
+        <DuplicateToDialog
+          isOpen={duplicateToDialog.isOpen}
+          elementType={duplicateToDialog.elementType}
+          currentPageId={pageId}
+          onConfirm={duplicateToDialog.onConfirm}
+          onCancel={duplicateToDialog.onCancel}
+          error={duplicateToDialog.error}
         />
       )}
       <div className="section-block__body">

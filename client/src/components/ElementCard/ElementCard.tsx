@@ -9,6 +9,9 @@ import ActionsMenu from '@/components/ActionsMenu/ActionsMenu';
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
 import { useArchiveAction } from '@/hooks/useArchiveAction';
 import { useDuplicateAction } from '@/hooks/useDuplicateAction';
+import { useDuplicateToAction } from '@/hooks/useDuplicateToAction';
+import { useGridEditorContext } from '@/hooks/GridEditorContext';
+import DuplicateToDialog from '@/components/DuplicateToDialog/DuplicateToDialog';
 
 interface ElementCardProps {
   readonly element: EnrichedSimpleElementNode;
@@ -20,10 +23,13 @@ interface ElementCardProps {
  */
 export default function ElementCard({ element }: ElementCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: element.sortableId });
+  const { pageId } = useGridEditorContext();
   const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(element);
   const { action: duplicateAction } = useDuplicateAction(element);
+  const { action: duplicateToAction, dialog: duplicateToDialog } = useDuplicateToAction(element);
   const actions = [
     ...(duplicateAction !== null ? [duplicateAction] : []),
+    ...(duplicateToAction !== null ? [duplicateToAction] : []),
     ...(archiveAction !== null ? [archiveAction] : []),
   ];
   const status = getElementStatus(element.statusFlags);
@@ -76,6 +82,16 @@ export default function ElementCard({ element }: ElementCardProps) {
           onConfirm={archiveDialog.onConfirm}
           onCancel={archiveDialog.onCancel}
           destructive
+        />
+      )}
+      {duplicateToDialog !== null && duplicateToDialog.isOpen && (
+        <DuplicateToDialog
+          isOpen={duplicateToDialog.isOpen}
+          elementType={duplicateToDialog.elementType}
+          currentPageId={pageId}
+          onConfirm={duplicateToDialog.onConfirm}
+          onCancel={duplicateToDialog.onCancel}
+          error={duplicateToDialog.error}
         />
       )}
       <div className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}>

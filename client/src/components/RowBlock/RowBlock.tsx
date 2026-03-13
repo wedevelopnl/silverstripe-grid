@@ -14,6 +14,9 @@ import ColumnBlock from '@/components/ColumnBlock/ColumnBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
 import { useArchiveAction } from '@/hooks/useArchiveAction';
 import { useDuplicateAction } from '@/hooks/useDuplicateAction';
+import { useDuplicateToAction } from '@/hooks/useDuplicateToAction';
+import { useGridEditorContext } from '@/hooks/GridEditorContext';
+import DuplicateToDialog from '@/components/DuplicateToDialog/DuplicateToDialog';
 
 interface RowBlockProps {
   readonly row: EnrichedRowNode;
@@ -25,10 +28,13 @@ export default function RowBlock({ row }: RowBlockProps) {
   const { isCollapsed, toggle } = row;
   const { activeType } = useDragContext();
 
+  const { pageId } = useGridEditorContext();
   const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(row);
   const { action: duplicateAction } = useDuplicateAction(row);
+  const { action: duplicateToAction, dialog: duplicateToDialog } = useDuplicateToAction(row);
   const actions = [
     ...(duplicateAction !== null ? [duplicateAction] : []),
+    ...(duplicateToAction !== null ? [duplicateToAction] : []),
     ...(archiveAction !== null ? [archiveAction] : []),
   ];
 
@@ -65,6 +71,16 @@ export default function RowBlock({ row }: RowBlockProps) {
           onConfirm={archiveDialog.onConfirm}
           onCancel={archiveDialog.onCancel}
           destructive
+        />
+      )}
+      {duplicateToDialog !== null && duplicateToDialog.isOpen && (
+        <DuplicateToDialog
+          isOpen={duplicateToDialog.isOpen}
+          elementType={duplicateToDialog.elementType}
+          currentPageId={pageId}
+          onConfirm={duplicateToDialog.onConfirm}
+          onCancel={duplicateToDialog.onCancel}
+          error={duplicateToDialog.error}
         />
       )}
       <div

@@ -16,8 +16,12 @@ vi.mock('@/api/endpoints', () => ({
   createContentElement: vi.fn(),
   archiveElement: vi.fn(),
   duplicateElement: vi.fn(),
+  duplicateToElement: vi.fn(),
   reorderElement: vi.fn(),
   updateGridSettings: vi.fn(),
+  fetchPages: vi.fn().mockResolvedValue([]),
+  fetchZones: vi.fn().mockResolvedValue([]),
+  fetchAcceptableContainers: vi.fn().mockResolvedValue([]),
 }));
 
 const { mockViewports, mockResolveViewportSettings } = vi.hoisted(() => {

@@ -8,6 +8,7 @@ import type { SimpleElementNode } from '@/types/elements';
 
 vi.mock('@/api/endpoints', () => ({
   duplicateElement: vi.fn(),
+  duplicateToElement: vi.fn(),
 }));
 
 function createWrapper() {
