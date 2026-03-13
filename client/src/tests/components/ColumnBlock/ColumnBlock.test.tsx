@@ -687,7 +687,7 @@ describe('ColumnBlock', () => {
   it('applies isDragging class when any drag is active', () => {
     const column = makeColumn();
 
-    const { container } = render(
+    render(
       <ColumnBlock column={column} />,
       { wrapper: createDndWrapper('md', [], 'row') },
     );

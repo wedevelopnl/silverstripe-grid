@@ -198,7 +198,7 @@ describe('RowBlock', () => {
       ],
     });
 
-    const { container } = render(
+    render(
       <RowBlock row={row} />,
       { wrapper: createDndWrapper() },
     );
@@ -285,7 +285,7 @@ describe('RowBlock', () => {
       ],
     });
 
-    const { container } = render(
+    render(
       <RowBlock row={row} />,
       { wrapper: createDndWrapper('lg') },
     );
@@ -308,7 +308,7 @@ describe('RowBlock', () => {
       ],
     });
 
-    const { container } = render(
+    render(
       <RowBlock row={row} />,
       { wrapper: createDndWrapper() },
     );
