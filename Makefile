@@ -9,6 +9,7 @@ COMPOSE := docker compose -f .docker/compose.yml
 ## Start services (build if needed)
 up: .docker/.env
 	$(COMPOSE) up -d --build
+	@echo "\n  Testbed running at https://localhost:$$(grep WEB_PORT .docker/.env | cut -d= -f2)\n"
 
 ## Stop services
 down:
