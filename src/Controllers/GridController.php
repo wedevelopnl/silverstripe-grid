@@ -19,6 +19,7 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Result;
@@ -79,6 +80,7 @@ class GridController extends AdminController
         'PATCH api/unpublish' => 'apiUnpublish',
         'DELETE api/delete' => 'apiDelete',
         'POST api/duplicate' => 'apiDuplicate',
+        'POST api/duplicateTo' => 'apiDuplicateTo',
         'PATCH api/reorder' => 'apiReorder',
         'PATCH api/updateGridSettings' => 'apiUpdateGridSettings',
     ];
@@ -92,6 +94,7 @@ class GridController extends AdminController
         'apiUnpublish',
         'apiDelete',
         'apiDuplicate',
+        'apiDuplicateTo',
         'apiReorder',
         'apiUpdateGridSettings',
     ];
@@ -303,6 +306,71 @@ class GridController extends AdminController
         $elementId = (int) $element->ID;
 
         $result = $this->persistenceService->persistDuplicate($clone, $elementId);
+        if ($result->isErr()) {
+            return $this->resultToResponse($result);
+        }
+
+        return $this->jsonSuccess(204);
+    }
+
+    public function apiDuplicateTo(HTTPRequest $request): HTTPResponse
+    {
+        $data = $this->parseJsonBody($request);
+        $parseResult = $this->requestBodyParser->parseDuplicateToBody($data);
+        if ($parseResult->isErr()) {
+            return $this->resultToResponse($parseResult, 400);
+        }
+
+        $body = $parseResult->unwrap();
+
+        $element = $this->requireElementWithPermission(
+            $body->id,
+            static fn (GridElement $e): bool => $e->canCreate(),
+        );
+
+        // Sections target pages (SiteTree), all others target GridElements.
+        // Must query the correct table due to ID namespace collisions.
+        $isSection = $element instanceof Section;
+
+        /** @var DataObject|null $targetParent */
+        $targetParent = Versioned::withVersionedMode(static function () use ($body, $isSection): ?DataObject {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            if ($isSection) {
+                return SiteTree::get()->byID($body->targetParentId);
+            }
+
+            return GridElement::get()->byID($body->targetParentId);
+        });
+
+        if ($targetParent === null || !$targetParent->exists()) {
+            $this->jsonError(404);
+        }
+
+        if (!$targetParent->canEdit()) {
+            $this->jsonError(403);
+        }
+
+        // Deep-duplicate the entire subtree (follows cascade_duplicates)
+        $clone = $element->duplicate(true);
+
+        // Re-parent to target
+        $clone->ParentID = $body->targetParentId;
+        $clone->ParentClass = $targetParent::class;
+
+        // Set zone for sections
+        if ($clone instanceof Section) {
+            $clone->Zone = $body->targetZone;
+        }
+
+        // Generate copy title (top-level only — children keep originals)
+        /** @var non-empty-string $cloneTitle */
+        $cloneTitle = $clone->Title ?: $element->Title ?: 'Untitled';
+        $clone->Title = TitleGenerator::generateCopyTitle($cloneTitle);
+
+        $clone->Sort = 0;
+
+        $result = $this->persistenceService->persistAppend($clone);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }

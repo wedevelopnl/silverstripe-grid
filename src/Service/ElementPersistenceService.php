@@ -93,6 +93,23 @@ class ElementPersistenceService
     }
 
     /**
+     * Persist a duplicated element at the end of its parent's children.
+     *
+     * @return Result<GridElement>
+     */
+    public function persistAppend(GridElement $element): Result
+    {
+        try {
+            $element->ensureSortSet();
+            $element->write();
+        } catch (ValidationException $validationException) {
+            return Result::fail(...$this->translateValidationException($validationException));
+        }
+
+        return Result::ok($element);
+    }
+
+    /**
      * Write a batch of elements. Stops on first failure.
      *
      * @param list<GridElement> $elements

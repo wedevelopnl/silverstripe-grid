@@ -1309,6 +1309,140 @@ final class GridControllerTest extends FunctionalTest
         $this->assertSame(Column::class, $newElement->ParentClass);
     }
 
+    // --- apiDuplicateTo ---
+
+    public function testDuplicateToAppendsSectionAtEndOfTargetZone(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        // Create a target page with an existing section in the 'content' zone
+        $targetPage = TestPage::create();
+        $targetPage->Title = 'Target Page';
+        $targetPage->write();
+
+        $existingSection = Section::create();
+        $existingSection->Title = 'Existing';
+        $existingSection->ParentID = $targetPage->ID;
+        $existingSection->ParentClass = $targetPage::class;
+        $existingSection->Zone = 'content';
+        $existingSection->Sort = 1;
+        $existingSection->write();
+
+        $response = $this->postJson('/admin/grid/api/duplicateTo', [
+            'id' => $section1->ID,
+            'targetPageId' => (int) $targetPage->ID,
+            'targetZone' => 'content',
+            'targetParentId' => (int) $targetPage->ID,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        // Find the clone (newest section)
+        $clone = Section::get()->sort('ID', 'DESC')->first();
+        $this->assertStringContainsString('copy', $clone->Title);
+        $this->assertSame((int) $targetPage->ID, (int) $clone->ParentID);
+        $this->assertSame($targetPage::class, $clone->ParentClass);
+        $this->assertSame('content', $clone->Zone);
+        // Sort should be after the existing section
+        $this->assertGreaterThan((int) $existingSection->Sort, (int) $clone->Sort);
+    }
+
+    public function testDuplicateToDeepCopiesSectionSubtree(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+        $originalRowCount = $section1->getChildren()->count();
+        $this->assertGreaterThan(0, $originalRowCount);
+
+        $targetPage = TestPage::create();
+        $targetPage->Title = 'Deep Copy Target';
+        $targetPage->write();
+
+        $response = $this->postJson('/admin/grid/api/duplicateTo', [
+            'id' => $section1->ID,
+            'targetPageId' => (int) $targetPage->ID,
+            'targetZone' => 'main',
+            'targetParentId' => (int) $targetPage->ID,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        $clone = Section::get()->sort('ID', 'DESC')->first();
+        // Deep copy should have duplicated the child rows
+        $this->assertSame($originalRowCount, $clone->getChildren()->count());
+
+        // Cloned rows should be different records from the originals
+        $originalRowIds = $section1->getChildren()->column('ID');
+        $clonedRowIds = $clone->getChildren()->column('ID');
+        $this->assertEmpty(array_intersect($originalRowIds, $clonedRowIds));
+    }
+
+    public function testDuplicateToChildrenRetainOriginalTitles(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        $targetPage = TestPage::create();
+        $targetPage->Title = 'Title Check Target';
+        $targetPage->write();
+
+        $response = $this->postJson('/admin/grid/api/duplicateTo', [
+            'id' => $section1->ID,
+            'targetPageId' => (int) $targetPage->ID,
+            'targetZone' => 'main',
+            'targetParentId' => (int) $targetPage->ID,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        $clone = Section::get()->sort('ID', 'DESC')->first();
+        // Top-level clone gets "copy" in title
+        $this->assertStringContainsString('copy', $clone->Title);
+
+        // Child rows should retain their original titles (no "copy" suffix)
+        $originalRowTitles = $section1->getChildren()->column('Title');
+        $clonedRowTitles = $clone->getChildren()->sort('Sort', 'ASC')->column('Title');
+        $this->assertSame($originalRowTitles, $clonedRowTitles);
+    }
+
+    public function testDuplicateToReturns400WhenIdMissing(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->postJson('/admin/grid/api/duplicateTo', [
+            'targetPageId' => 1,
+            'targetZone' => 'main',
+            'targetParentId' => 1,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testDuplicateToReturns404WhenTargetParentNotFound(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->postJson('/admin/grid/api/duplicateTo', [
+            'id' => $section1->ID,
+            'targetPageId' => 999999,
+            'targetZone' => 'main',
+            'targetParentId' => 999999,
+        ]);
+
+        $this->assertSame(404, $response->getStatusCode());
+    }
+
     public function testUpdateGridSettingsReturns403WhenNotEditable(): void
     {
         $this->logInForHttp();
