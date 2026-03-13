@@ -3,9 +3,12 @@
 namespace SilverStripe\Versioned;
 
 use SilverStripe\Core\Extension;
+use SilverStripe\ORM\DataObject;
 
 /**
  * Corrects missing return type on publishRecursive().
+ *
+ * @extends Extension<DataObject>
  */
 class RecursivePublishable extends Extension
 {

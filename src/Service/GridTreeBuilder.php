@@ -213,7 +213,6 @@ class GridTreeBuilder
         $canUnpublish = $element->canUnpublish();
         assert(is_bool($canUnpublish));
 
-
         return new GridNode(
             id: $id,
             parentId: $parentId,
