@@ -12,8 +12,6 @@
         "@default": true,
         "CastInt": {
             "ignore": [
-                "WeDevelop\\ElementalGrid\\Forms\\GridEditorField::getSchemaDataDefaults",
-                "WeDevelop\\ElementalGrid\\Controllers\\ElementalGridController::apiReadTree",
                 "WeDevelop\\Grid\\Controllers\\GridController::apiReadTree",
                 "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicate",
                 "WeDevelop\\Grid\\Controllers\\GridController::apiReorder",
@@ -28,7 +26,6 @@
         },
         "ArrayItemRemoval": {
             "ignore": [
-                "WeDevelop\\Grid\\Controllers\\GridController::apiCreate",
                 "WeDevelop\\Grid\\Controllers\\GridController::apiCreateContent"
             ]
         },
@@ -49,59 +46,27 @@
             "ignore": [
                 "WeDevelop\\Grid\\Model\\GridElement::getCMSFields",
                 "WeDevelop\\Grid\\Model\\GridElement::ensureDefaultTitle",
-                "WeDevelop\\Grid\\Model\\GridElement::getTitleSizeClass",
                 "WeDevelop\\Grid\\Model\\GridElement::getType",
                 "WeDevelop\\Grid\\Model\\ContentElement::getRenderTemplates",
-                "WeDevelop\\Grid\\Model\\Section::getContainerClasses",
-                "WeDevelop\\Grid\\Model\\Section::forTemplate",
-                "WeDevelop\\Grid\\Model\\Section::Element",
-                "WeDevelop\\Grid\\Model\\Row::forTemplate",
-                "WeDevelop\\Grid\\Model\\Row::Element",
-                "WeDevelop\\Grid\\Model\\Row::getRowClasses",
-                "WeDevelop\\Grid\\Model\\Column::forTemplate",
-                "WeDevelop\\Grid\\Model\\Column::Element",
-                "WeDevelop\\Grid\\Model\\Column::getColumnClasses",
                 "WeDevelop\\Grid\\Reports\\GridElementReport::title",
                 "WeDevelop\\Grid\\Reports\\GridElementReport::description",
                 "WeDevelop\\Grid\\Reports\\GridElementReport::sourceRecords",
-                "WeDevelop\\Grid\\Reports\\GridElementReport::parameterFields",
-                "WeDevelop\\Grid\\Forms\\GridEditorField::getSchemaDataDefaults"
+                "WeDevelop\\Grid\\Reports\\GridElementReport::parameterFields"
             ]
         },
         "MethodCallRemoval": {
             "ignore": [
-                "WeDevelop\\Grid\\Model\\GridElement::getTitleSizeClass",
-                "WeDevelop\\Grid\\Model\\GridElement::getCMSFields",
-                "WeDevelop\\Grid\\Model\\Section::getContainerClasses",
-                "WeDevelop\\Grid\\Model\\Row::getRowClasses",
-                "WeDevelop\\Grid\\Controllers\\GridController::parseCreateBody",
-                "WeDevelop\\Grid\\Controllers\\GridController::parseReorderBody",
-                "WeDevelop\\Grid\\Controllers\\GridController::apiCreateContent",
-                "WeDevelop\\Grid\\Controllers\\GridController::apiReorder"
+                "WeDevelop\\Grid\\Controllers\\GridController::apiCreateContent"
             ]
         },
         "LogicalOr": {
             "ignore": [
-                "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicate",
-                "WeDevelop\\Grid\\Controllers\\GridController::apiReorder",
-                "WeDevelop\\Grid\\Controllers\\GridController::parseCreateBody",
-                "WeDevelop\\Grid\\Controllers\\GridController::parseReorderBody"
-            ]
-        },
-        "LessThan": {
-            "ignore": [
-                "WeDevelop\\Grid\\Controllers\\GridController::parseReorderBody"
+                "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicate"
             ]
         },
         "NotIdentical": {
             "ignore": [
-                "WeDevelop\\Grid\\Controllers\\GridController::init",
-                "WeDevelop\\Grid\\Controllers\\GridController::apiReorder"
-            ]
-        },
-        "IfNegation": {
-            "ignore": [
-                "WeDevelop\\Grid\\Controllers\\GridController::apiReorder"
+                "WeDevelop\\Grid\\Controllers\\GridController::init"
             ]
         }
     },

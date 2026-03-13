@@ -11,8 +11,13 @@ use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Fixture\UpdateContainerClassesExtension;
+use WeDevelop\Grid\Tests\Integration\Fixture\UpdateRowClassesExtension;
+use WeDevelop\Grid\Tests\Integration\Fixture\UpdateTitleClassOptionsExtension;
+use WeDevelop\Grid\Tests\Integration\Fixture\UpdateTitleSizeClassExtension;
 
 /**
  * Tests the grid CSS class accessor methods on each container element.
@@ -289,5 +294,66 @@ final class GridClassesTest extends SapphireTest
         $classes = $column->getColumnClasses();
 
         $this->assertStringNotContainsString('offset', $classes);
+    }
+
+    // --- Extension hooks: getTitleSizeClass ---
+
+    public function testUpdateTitleSizeClassExtensionModifiesResult(): void
+    {
+        Config::modify()->merge(GridElement::class, 'extensions', [UpdateTitleSizeClassExtension::class]);
+
+        $section = Section::create();
+        $section->TitleClass = 'original-class';
+        $section->write();
+
+        $this->assertSame('custom-title-size', $section->getTitleSizeClass());
+    }
+
+    // --- Extension hooks: getContainerClasses ---
+
+    public function testUpdateContainerClassesExtensionAppendsClass(): void
+    {
+        Config::modify()->merge(Section::class, 'extensions', [UpdateContainerClassesExtension::class]);
+
+        $section = Section::create();
+        $section->write();
+
+        $this->assertSame('container test-container-extra', $section->getContainerClasses());
+    }
+
+    // --- Extension hooks: getRowClasses ---
+
+    public function testUpdateRowClassesExtensionAppendsClass(): void
+    {
+        Config::modify()->merge(Row::class, 'extensions', [UpdateRowClassesExtension::class]);
+
+        $section = Section::create();
+        $section->write();
+
+        $row = $section->getChildren()->first();
+        $this->assertInstanceOf(Row::class, $row);
+
+        $this->assertSame('row test-row-extra', $row->getRowClasses());
+    }
+
+    // --- Extension hooks: getCMSFields updateTitleClassOptions ---
+
+    public function testUpdateTitleClassOptionsExtensionAddsOption(): void
+    {
+        Config::modify()->merge(GridElement::class, 'extensions', [UpdateTitleClassOptionsExtension::class]);
+        Config::modify()->set(Section::class, 'enable_custom_title_classes', true);
+
+        $section = Section::create();
+        $section->write();
+
+        $fields = $section->getCMSFields();
+
+        $titleClassField = $fields->dataFieldByName('TitleClass');
+        $this->assertNotNull($titleClassField, 'TitleClass field should exist when custom classes enabled');
+
+        /** @var \SilverStripe\Forms\DropdownField $titleClassField */
+        $source = $titleClassField->getSource();
+        $this->assertArrayHasKey('test-injected-class', $source);
+        $this->assertSame('Injected by extension', $source['test-injected-class']);
     }
 }

@@ -173,6 +173,30 @@ final class RequestBodyParserTest extends TestCase
         $this->assertTrue($result->isErr());
     }
 
+    public function testParseCreateBodyRejectsNonStringZone(): void
+    {
+        $result = $this->parser->parseCreateBody([
+            'containerType' => 'section',
+            'parentId' => 1,
+            'insertAfterElementID' => null,
+            'zone' => 123,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseCreateBodyRejectsBooleanZone(): void
+    {
+        $result = $this->parser->parseCreateBody([
+            'containerType' => 'section',
+            'parentId' => 1,
+            'insertAfterElementID' => null,
+            'zone' => false,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
     // ---- parseCreateContentBody: success ------------------------------------
 
     public function testParseCreateContentBodyReturnsValueObject(): void
@@ -276,6 +300,39 @@ final class RequestBodyParserTest extends TestCase
         $result = $this->parser->parseReorderBody([
             'elementID' => 0,
             'targetParentId' => 1,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseReorderBodyRejectsStringElementId(): void
+    {
+        $result = $this->parser->parseReorderBody([
+            'elementID' => 'not-an-int',
+            'targetParentId' => 1,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseReorderBodyRejectsNegativeElementId(): void
+    {
+        $result = $this->parser->parseReorderBody([
+            'elementID' => -5,
+            'targetParentId' => 1,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseReorderBodyRejectsStringTargetParentId(): void
+    {
+        $result = $this->parser->parseReorderBody([
+            'elementID' => 1,
+            'targetParentId' => 'bad',
             'afterElementID' => null,
         ]);
 

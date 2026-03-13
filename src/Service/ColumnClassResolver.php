@@ -17,7 +17,7 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
 final class ColumnClassResolver
 {
     /**
-     * @param array<string, array{width: int, offset: int, visible: bool}> $settings
+     * @param array<string, array{width: positive-int, offset: int<0, max>, visible: bool}> $settings
      */
     public static function resolve(array $settings, GridAdapterInterface $adapter): string
     {

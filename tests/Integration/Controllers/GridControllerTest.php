@@ -1230,6 +1230,85 @@ final class GridControllerTest extends FunctionalTest
         $this->assertGreaterThan(0, (int) $newElement->Sort);
     }
 
+    // --- apiReorder: cross-parent source permission --------------------------
+
+    public function testReorderReturns403WhenSourceParentNotEditableOnCrossParentMove(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        // Create a second page (unrestricted) with its own section
+        $targetPage = TestPage::create();
+        $targetPage->Title = 'Target Page';
+        $targetPage->write();
+
+        $targetSection = Section::create();
+        $targetSection->Title = 'Target Section';
+        $targetSection->ParentID = $targetPage->ID;
+        $targetSection->ParentClass = $targetPage::class;
+        $targetSection->write();
+
+        // The source page is restricted — source parent canEdit() fails
+        $sourcePage = $this->objFromFixture(TestPage::class, 'testpage');
+        $this->restrictPagePermissions($sourcePage);
+
+        $row1 = $this->objFromFixture(Row::class, 'row1');
+
+        // Cross-parent move: row1 (under restricted section1) → targetSection (editable)
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => $row1->ID,
+            'targetParentId' => (int) $targetSection->ID,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    // --- apiDuplicate: sort initialization ------------------------------------
+
+    public function testDuplicateSetsCloneSortToZeroBeforePersistence(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section = $this->objFromFixture(Section::class, 'section1');
+        $originalSort = (int) $section->Sort;
+        $this->assertGreaterThan(0, $originalSort);
+
+        $response = $this->postJson('/admin/grid/api/duplicate', [
+            'id' => $section->ID,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        // The clone's Sort should be reassigned by persistDuplicate (placed after original)
+        $clone = Section::get()->sort('ID', 'DESC')->first();
+        $this->assertGreaterThan($originalSort, (int) $clone->Sort);
+    }
+
+    // --- apiCreateContent: ParentClass assignment ----------------------------
+
+    public function testCreateContentSetsParentClassCorrectly(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+
+        $response = $this->postJson('/admin/grid/api/createContent', [
+            'className' => ContentElement::class,
+            'parentId' => (int) $col1->ID,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        $newElement = ContentElement::get()->filter('ParentID', $col1->ID)->sort('ID', 'DESC')->first();
+        $this->assertNotNull($newElement);
+        $this->assertSame((int) $col1->ID, (int) $newElement->ParentID);
+        $this->assertSame(Column::class, $newElement->ParentClass);
+    }
+
     public function testUpdateGridSettingsReturns403WhenNotEditable(): void
     {
         $this->logInForHttp();
