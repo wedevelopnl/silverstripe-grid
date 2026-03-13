@@ -1463,4 +1463,122 @@ final class GridControllerTest extends FunctionalTest
 
         $this->assertSame(403, $response->getStatusCode());
     }
+
+    // --- apiAcceptableContainers ------------------------------------------------
+
+    public function testAcceptableContainersReturnsSectionsForRowType(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $response = $this->get('/admin/grid/api/acceptableContainers/' . $page->ID . '/main/row');
+
+        $this->assertSame(200, $response->getStatusCode());
+
+        $body = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+        $this->assertIsArray($body);
+        $this->assertNotEmpty($body);
+
+        // All returned containers should be sections
+        foreach ($body as $container) {
+            $this->assertArrayHasKey('id', $container);
+            $this->assertArrayHasKey('title', $container);
+            $this->assertArrayHasKey('type', $container);
+            $this->assertSame('section', $container['type']);
+        }
+
+        // The fixture has two sections in the 'main' zone
+        $titles = array_column($body, 'title');
+        $this->assertContains('First Section', $titles);
+        $this->assertContains('Second Section', $titles);
+    }
+
+    public function testAcceptableContainersReturnsEmptyForSectionType(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $response = $this->get('/admin/grid/api/acceptableContainers/' . $page->ID . '/main/section');
+
+        $this->assertSame(200, $response->getStatusCode());
+
+        $body = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+        $this->assertSame([], $body);
+    }
+
+    // --- apiZones ---------------------------------------------------------------
+
+    public function testZonesReturnsPageZones(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $response = $this->get('/admin/grid/api/zones/' . $page->ID);
+
+        $this->assertSame(200, $response->getStatusCode());
+
+        $body = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+        $this->assertIsArray($body);
+        // TestPage with GridPageExtension adds a 'main' zone
+        $this->assertContains('main', $body);
+    }
+
+    public function testZonesReturns404ForNonExistentPage(): void
+    {
+        $this->logInForHttp();
+
+        $response = $this->get('/admin/grid/api/zones/999999');
+
+        $this->assertJsonError(
+            404,
+            "Sorry, it seems you were trying to access a section or object that doesn't exist.",
+            $response,
+        );
+    }
+
+    // --- apiPages ---------------------------------------------------------------
+
+    public function testPagesReturnsEditablePages(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->get('/admin/grid/api/pages');
+
+        $this->assertSame(200, $response->getStatusCode());
+
+        $body = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+        $this->assertIsArray($body);
+        $this->assertNotEmpty($body);
+
+        // Verify correct shape
+        $first = $body[0];
+        $this->assertArrayHasKey('id', $first);
+        $this->assertArrayHasKey('title', $first);
+        $this->assertArrayHasKey('parentId', $first);
+        $this->assertArrayHasKey('hasGridZones', $first);
+        $this->assertIsBool($first['hasGridZones']);
+    }
+
+    public function testPagesSearchFiltersResults(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $response = $this->get('/admin/grid/api/pages?search=Tree+Test');
+
+        $this->assertSame(200, $response->getStatusCode());
+
+        $body = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+        $this->assertIsArray($body);
+        $this->assertNotEmpty($body);
+
+        // All results should match the search term
+        foreach ($body as $page) {
+            $this->assertStringContainsString('Tree Test', $page['title']);
+        }
+    }
 }

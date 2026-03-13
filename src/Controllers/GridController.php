@@ -32,6 +32,8 @@ use WeDevelop\Grid\Service\GridSettingsCompactor;
 use WeDevelop\Grid\Service\ReorderService;
 use WeDevelop\Grid\Service\RequestBodyParser;
 use WeDevelop\Grid\Service\TitleGenerator;
+use WeDevelop\Grid\Forms\GridEditorField;
+use WeDevelop\Grid\Value\GridNode;
 
 /**
  * @phpstan-type AdapterConfig array{viewports: list<array{key: string, label: string}>, defaultViewport: string, columnCount: positive-int, rowClasses: string, offsetStrategy: 'margin'|'grid-placement', baseWidthClasses: stdClass&object{'1': string, '2': string, '3': string, '4': string, '5': string, '6': string, '7': string, '8': string, '9': string, '10': string, '11': string, '12': string}, baseOffsetClasses: stdClass&object{'0': string, '1': string, '2': string, '3': string, '4': string, '5': string, '6': string, '7': string, '8': string, '9': string, '10': string, '11': string}}
@@ -83,6 +85,9 @@ class GridController extends AdminController
         'POST api/duplicateTo' => 'apiDuplicateTo',
         'PATCH api/reorder' => 'apiReorder',
         'PATCH api/updateGridSettings' => 'apiUpdateGridSettings',
+        'GET api/acceptableContainers/$PageID!/$Zone!/$ElementType!' => 'apiAcceptableContainers',
+        'GET api/zones/$PageID!' => 'apiZones',
+        'GET api/pages' => 'apiPages',
     ];
 
     /** @var list<string> */
@@ -97,6 +102,9 @@ class GridController extends AdminController
         'apiDuplicateTo',
         'apiReorder',
         'apiUpdateGridSettings',
+        'apiAcceptableContainers',
+        'apiZones',
+        'apiPages',
     ];
 
     #[Override]
@@ -459,6 +467,161 @@ class GridController extends AdminController
         }
 
         return $this->jsonSuccess(204);
+    }
+
+    public function apiAcceptableContainers(HTTPRequest $request): HTTPResponse
+    {
+        $pageId = (int) $request->param('PageID');
+        $elementType = (string) $request->param('ElementType');
+
+        // Map element type to the container type that holds it
+        $targetContainerType = match ($elementType) {
+            'row' => ContainerType::Section,
+            'column' => ContainerType::Row,
+            'element' => ContainerType::Column,
+            'section' => null,
+            default => null,
+        };
+
+        if ($elementType !== 'section' && $targetContainerType === null) {
+            $this->jsonError(400);
+        }
+
+        // Sections are root-level — no container needed
+        if ($elementType === 'section') {
+            return $this->jsonSuccess(200, []);
+        }
+
+        /** @var SiteTree|null $page */
+        $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            return SiteTree::get()->byID($pageId);
+        });
+
+        if ($page === null) {
+            $this->jsonError(404);
+        }
+
+        if (!$page->canView()) {
+            $this->jsonError(403);
+        }
+
+        /** @var non-empty-string $zone Route pattern guarantees non-empty zone segment */
+        $zone = (string) $request->param('Zone');
+        $tree = $this->treeBuilder->buildForPage($page, $zone);
+
+        $rootNodes = $tree[(int) $page->ID] ?? [];
+
+        /** @var list<array{id: positive-int, title: string, type: string}> $containers */
+        $containers = [];
+        assert($targetContainerType instanceof ContainerType);
+        $this->collectContainersOfType($rootNodes, $targetContainerType, $containers);
+
+        return $this->jsonSuccess(200, $containers);
+    }
+
+    public function apiZones(HTTPRequest $request): HTTPResponse
+    {
+        $pageId = (int) $request->param('PageID');
+
+        /** @var SiteTree|null $page */
+        $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            return SiteTree::get()->byID($pageId);
+        });
+
+        if ($page === null) {
+            $this->jsonError(404);
+        }
+
+        if (!$page->canView()) {
+            $this->jsonError(403);
+        }
+
+        $fields = $page->getCMSFields();
+
+        /** @var list<non-empty-string> $zones */
+        $zones = [];
+        foreach ($fields->flattenFields() as $field) {
+            if ($field instanceof GridEditorField) {
+                $zones[] = $field->getZone();
+            }
+        }
+
+        return $this->jsonSuccess(200, array_values(array_unique($zones)));
+    }
+
+    public function apiPages(HTTPRequest $request): HTTPResponse
+    {
+        $search = $request->getVar('search');
+
+        /** @var list<array{id: positive-int, title: string, parentId: int, hasGridZones: bool}> $results */
+        $results = Versioned::withVersionedMode(static function () use ($search): array {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            $pages = SiteTree::get()->sort('Title', 'ASC');
+
+            if (is_string($search) && $search !== '') {
+                $pages = $pages->filter('Title:PartialMatch', $search);
+            }
+
+            $pages = $pages->limit(50);
+
+            /** @var list<array{id: positive-int, title: string, parentId: int, hasGridZones: bool}> $items */
+            $items = [];
+            foreach ($pages as $page) {
+                if (!$page->canEdit()) {
+                    continue;
+                }
+
+                $hasGridZones = false;
+                foreach ($page->getCMSFields()->flattenFields() as $field) {
+                    if ($field instanceof GridEditorField) {
+                        $hasGridZones = true;
+                        break;
+                    }
+                }
+
+                /** @var positive-int $id */
+                $id = (int) $page->ID;
+
+                $items[] = [
+                    'id' => $id,
+                    'title' => (string) $page->Title,
+                    'parentId' => (int) $page->ParentID,
+                    'hasGridZones' => $hasGridZones,
+                ];
+            }
+
+            return $items;
+        });
+
+        return $this->jsonSuccess(200, $results);
+    }
+
+    /**
+     * Recursively collect containers matching the target type from the tree.
+     *
+     * @param list<GridNode> $nodes
+     * @param list<array{id: positive-int, title: string, type: string}> $containers Collected results (by reference)
+     */
+    private function collectContainersOfType(array $nodes, ContainerType $targetType, array &$containers): void
+    {
+        foreach ($nodes as $node) {
+            if ($node->containerType === $targetType) {
+                $containers[] = [
+                    'id' => $node->id,
+                    'title' => $node->title,
+                    'type' => $targetType->value,
+                ];
+            }
+
+            if ($node->children !== null) {
+                $this->collectContainersOfType($node->children, $targetType, $containers);
+            }
+        }
     }
 
     /**
