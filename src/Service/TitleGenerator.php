@@ -13,6 +13,10 @@ namespace WeDevelop\Grid\Service;
  */
 final class TitleGenerator
 {
+    /**
+     * @param non-empty-string $title
+     * @return non-empty-string
+     */
     public static function generateCopyTitle(string $title): string
     {
         $hasCopyPattern = '/^.*(\scopy($|\s\d+$))/';

@@ -51,6 +51,7 @@ interface ContentLayoutAdapterInterface
      * Directional padding/margin class for gap between columns.
      *
      * @param 'left'|'right' $direction
+     * @param positive-int $size
      */
     public function getPaddingClass(string $direction, int $size): string;
 

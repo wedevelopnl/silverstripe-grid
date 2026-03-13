@@ -116,6 +116,8 @@ abstract class AbstractGridAdapter implements GridAdapterInterface
     /**
      * Format the CSS class that hides an element from the given viewport upward.
      *
+     * @param non-empty-string $viewportKey
+     *
      * @example Bootstrap xs: 'd-none', Bootstrap md: 'd-md-none'
      * @example Tailwind: 'md:hidden'
      * @example Bulma: 'is-hidden-desktop'
@@ -124,6 +126,8 @@ abstract class AbstractGridAdapter implements GridAdapterInterface
 
     /**
      * Format the CSS class that restores visibility at the given viewport.
+     *
+     * @param non-empty-string $viewportKey
      *
      * @example Bootstrap: 'd-md-block'
      * @example Tailwind: 'md:block'
@@ -245,6 +249,7 @@ abstract class AbstractGridAdapter implements GridAdapterInterface
     private function buildVisibilityMap(): array
     {
         $map = [];
+        /** @var list<non-empty-string> $keys Viewport keys are always non-empty */
         $keys = array_keys($this->viewports);
         $count = count($keys);
 

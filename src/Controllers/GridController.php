@@ -127,6 +127,7 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
+        /** @var non-empty-string $zone Route pattern guarantees non-empty zone segment */
         $zone = (string) $request->param('Zone');
         $tree = $this->treeBuilder->buildForPage($page, $zone);
 
@@ -286,7 +287,9 @@ class GridController extends AdminController
         }
 
         $clone = $element->duplicate(false);
-        $clone->Title = TitleGenerator::generateCopyTitle($clone->Title ?? '');
+        /** @var non-empty-string $cloneTitle Elements always have a title after write */
+        $cloneTitle = $clone->Title ?: $element->Title ?: 'Untitled';
+        $clone->Title = TitleGenerator::generateCopyTitle($cloneTitle);
         $clone->Sort = 0;
         $clone->ParentID = $element->ParentID;
         $clone->ParentClass = $element->ParentClass;

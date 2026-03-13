@@ -54,6 +54,7 @@ final readonly class RequestBodyParser
             return $this->fail('zone must be a non-empty string.');
         }
 
+        /** @var non-empty-string $zone Narrowed by === '' guard above */
         return Result::ok(new CreateElementRequest($containerType, $parentId, $afterElementID, $zone));
     }
 
@@ -144,6 +145,7 @@ final readonly class RequestBodyParser
             return $this->fail('viewport is not a valid viewport key.');
         }
 
+        /** @var non-empty-string $viewport Validated against adapter viewport keys */
         $columnCount = $this->gridAdapter->getColumnCount();
 
         if (!is_int($width) || $width < 1 || $width > $columnCount) {
@@ -186,6 +188,7 @@ final readonly class RequestBodyParser
     }
 
     /**
+     * @param non-empty-string $message
      * @return Result<never>
      */
     private function fail(string $message): Result

@@ -24,7 +24,7 @@ use WeDevelop\Grid\Service\GridSettingsCompactor;
  */
 class GridSettingsField extends FormField
 {
-    /** @var array<string, array{width: int, offset: int, visible: bool, override: bool}> */
+    /** @var array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool, override: bool}> */
     private array $viewportData = [];
 
     private readonly GridSettingsCompactor $compactor;
@@ -108,8 +108,8 @@ class GridSettingsField extends FormField
     /**
      * Expand sparse grid settings into a full viewport array with override flags.
      *
-     * @param array<string, array{width: int, offset: int, visible: bool}> $sparse
-     * @return array<string, array{width: int, offset: int, visible: bool, override: bool}>
+     * @param array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}> $sparse
+     * @return array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool, override: bool}>
      */
     public function expandFromSparse(array $sparse): array
     {
@@ -119,8 +119,8 @@ class GridSettingsField extends FormField
     /**
      * Compact full viewport data back to sparse storage.
      *
-     * @param array<string, array{width: int, offset: int, visible: bool, override: bool}> $full
-     * @return array<string, array{width: int, offset: int, visible: bool}>
+     * @param array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool, override: bool}> $full
+     * @return array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}>
      */
     public function compactToSparse(array $full): array
     {
@@ -130,7 +130,7 @@ class GridSettingsField extends FormField
     /**
      * Decode JSON string into sparse settings array.
      *
-     * @return array<string, array{width: int, offset: int, visible: bool}>
+     * @return array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}>
      */
     private function decodeSparse(string $json): array
     {
@@ -144,7 +144,7 @@ class GridSettingsField extends FormField
             return [];
         }
 
-        /** @var array<string, array{width: int, offset: int, visible: bool}> $decoded */
+        /** @var array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}> $decoded */
         return $decoded;
     }
 
@@ -155,7 +155,7 @@ class GridSettingsField extends FormField
      * viewport use submitted values if override is checked, else copy default values.
      *
      * @param array<string, mixed> $formData
-     * @return array<string, array{width: int, offset: int, visible: bool, override: bool}>
+     * @return array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool, override: bool}>
      */
     private function normalizeFormData(array $formData): array
     {
@@ -225,6 +225,7 @@ class GridSettingsField extends FormField
             }
         }
 
+        /** @var array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool, override: bool}> $result Form values are validated by select options */
         return $result;
     }
 
@@ -269,7 +270,7 @@ class GridSettingsField extends FormField
         return $options;
     }
 
-    /** @return array{width: int, offset: int, visible: bool, override: bool} */
+    /** @return array{width: positive-int, offset: int<0, max>, visible: bool, override: bool} */
     private function getDefaults(): array
     {
         return [

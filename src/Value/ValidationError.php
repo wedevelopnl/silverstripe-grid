@@ -9,6 +9,10 @@ namespace WeDevelop\Grid\Value;
  */
 final readonly class ValidationError
 {
+    /**
+     * @param non-empty-string $message
+     * @param non-empty-string|null $field
+     */
     public function __construct(
         public string $message,
         public ?string $field = null,

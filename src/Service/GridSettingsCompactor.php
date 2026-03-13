@@ -27,8 +27,8 @@ final readonly class GridSettingsCompactor
      * each viewport's effective values from sparse data, then compares each
      * non-default viewport against the default viewport's effective values.
      *
-     * @param array<string, array{width: int, offset: int, visible: bool}> $sparse
-     * @return array<string, array{width: int, offset: int, visible: bool, override: bool}>
+     * @param array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}> $sparse
+     * @return array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool, override: bool}>
      */
     public function expandFromSparse(array $sparse): array
     {
@@ -90,8 +90,8 @@ final readonly class GridSettingsCompactor
      * sparse JSON that makes Column::getColumnClasses()'s mobile-first cascade
      * yield the correct results.
      *
-     * @param array<string, array{width: int, offset: int, visible: bool, override: bool}> $full
-     * @return array<string, array{width: int, offset: int, visible: bool}>
+     * @param array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool, override: bool}> $full
+     * @return array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}>
      */
     public function compactToSparse(array $full): array
     {
@@ -167,9 +167,10 @@ final readonly class GridSettingsCompactor
      * sets override=true for non-default viewports, then compacts back to sparse.
      * This ensures cascade "reset" entries are generated where needed.
      *
-     * @param array<string, array{width: int, offset: int, visible: bool}> $currentSparse
-     * @param array{width: int, offset: int, visible: bool} $values
-     * @return array<string, array{width: int, offset: int, visible: bool}>
+     * @param array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}> $currentSparse
+     * @param non-empty-string $viewport
+     * @param array{width: positive-int, offset: int<0, max>, visible: bool} $values
+     * @return array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}>
      */
     public function applyViewportUpdate(array $currentSparse, string $viewport, array $values): array
     {

@@ -42,6 +42,9 @@ interface GridAdapterInterface
     /**
      * Width class for the given viewport and column span.
      *
+     * @param non-empty-string $viewport
+     * @param positive-int $width
+     *
      * @example Bootstrap: getWidthClass('md', 6) → 'col-md-6'
      * @example Tailwind:  getWidthClass('md', 6) → 'md:col-span-6'
      * @example Bulma:     getWidthClass('desktop', 6) → 'is-6-desktop'
@@ -50,6 +53,9 @@ interface GridAdapterInterface
 
     /**
      * Offset class for the given viewport and column offset.
+     *
+     * @param non-empty-string $viewport
+     * @param int<0, max> $offset
      *
      * @example Bootstrap: getOffsetClass('md', 3) → 'offset-md-3'
      * @example Tailwind:  getOffsetClass('md', 3) → 'md:col-start-4'
@@ -67,6 +73,7 @@ interface GridAdapterInterface
      * @example Bootstrap xs: ['d-none', 'd-sm-block']
      * @example Bootstrap xl: ['d-xl-none']
      *
+     * @param non-empty-string $viewport
      * @return list<string>
      */
     public function getVisibilityClasses(string $viewport): array;
@@ -107,6 +114,8 @@ interface GridAdapterInterface
      * size the panel happens to be. Base classes ensure columns always apply
      * without requiring a specific screen width.
      *
+     * @param positive-int $width
+     *
      * @example Bootstrap: getBaseWidthClass(6) → 'col-6'
      * @example Tailwind:  getBaseWidthClass(6) → 'col-span-6'
      * @example Bulma:     getBaseWidthClass(6) → 'is-6'
@@ -115,6 +124,8 @@ interface GridAdapterInterface
 
     /**
      * Base offset class that applies regardless of viewport (for CMS editor preview).
+     *
+     * @param int<0, max> $offset
      *
      * @example Bootstrap: getBaseOffsetClass(3) → 'offset-3'
      * @example Tailwind:  getBaseOffsetClass(3) → 'col-start-4'

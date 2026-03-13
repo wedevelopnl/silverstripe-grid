@@ -54,6 +54,8 @@ class FixtureLoader
      * Resets existing E2E data first to guarantee idempotency,
      * then writes the YAML fixture, applies any post-actions,
      * and returns a result with the page ID and full fixture map.
+     *
+     * @param non-empty-string $name
      */
     public function load(string $name): FixtureResult
     {
@@ -97,10 +99,15 @@ class FixtureLoader
         /** @var array<string, array<string, int>> $fixtureMap */
         $fixtureMap = $factory->getFixtures();
 
+        /** @var non-empty-string $name Already validated by resolveFixturePath() */
+        /** @var positive-int $pageId From findPageInFactory() after null check */
+        /** @var non-empty-string $pageUrl SiteTree::Link() always returns non-empty */
+        $pageUrl = $page->Link();
+
         return new FixtureResult(
             fixtureName: $name,
             pageId: $pageId,
-            pageUrl: $page->Link(),
+            pageUrl: $pageUrl,
             fixtureMap: $fixtureMap,
         );
     }

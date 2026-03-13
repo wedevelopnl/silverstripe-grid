@@ -78,6 +78,7 @@ final readonly class ContentLayoutAdapter implements ContentLayoutAdapterInterfa
     public function getMediaWidthClass(int $contentColumns): string
     {
         $viewport = $this->gridAdapter->getDefaultViewport()->key;
+        /** @var positive-int $mediaColumns Caller guarantees contentColumns < columnCount */
         $mediaColumns = $this->gridAdapter->getColumnCount() - $contentColumns;
 
         return $this->gridAdapter->getWidthClass($viewport, $mediaColumns);
@@ -87,6 +88,7 @@ final readonly class ContentLayoutAdapter implements ContentLayoutAdapterInterfa
     public function getContentWidthClass(int $contentColumns): string
     {
         $viewport = $this->gridAdapter->getDefaultViewport()->key;
+        /** @var positive-int $contentColumns Caller guarantees > 0 */
 
         return $this->gridAdapter->getWidthClass($viewport, $contentColumns);
     }

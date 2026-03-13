@@ -135,7 +135,7 @@ class Column extends GridElement implements ContainerInterface
      * Decode the JSON grid settings into an associative array.
      * Returns empty array when no stored value exists (sparse storage).
      *
-     * @return array<string, array{width: int, offset: int, visible: bool}>
+     * @return array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}>
      */
     public function getGridSettingsData(): array
     {
@@ -143,7 +143,7 @@ class Column extends GridElement implements ContainerInterface
         if (is_string($raw)) {
             $decoded = json_decode($raw, true);
             if (is_array($decoded)) {
-                /** @var array<string, array{width: int, offset: int, visible: bool}> $decoded */
+                /** @var array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}> $decoded */
                 return $decoded;
             }
         }
@@ -154,7 +154,7 @@ class Column extends GridElement implements ContainerInterface
     /**
      * Encode an associative array of grid settings into JSON for storage.
      *
-     * @param array<string, array{width: int, offset: int, visible: bool}> $settings
+     * @param array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}> $settings
      */
     public function setGridSettingsData(array $settings): static
     {
@@ -197,6 +197,9 @@ class Column extends GridElement implements ContainerInterface
                 // Transitioning to hidden — emit visibility classes
                 $parts = [...$parts, ...$this->gridAdapter->getVisibilityClasses($key)];
             } elseif ($visible) {
+                /** @var positive-int $width Grid settings width is always >= 1 */
+                /** @var int<0, max> $offset Grid settings offset is always >= 0 */
+
                 // Emit width when it changes or at the base viewport
                 if ($isFirst || $width !== $prevWidth || (!$prevVisible)) {
                     $parts[] = $this->gridAdapter->getWidthClass($key, $width);

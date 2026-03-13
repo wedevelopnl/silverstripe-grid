@@ -16,6 +16,9 @@ use JsonSerializable;
 final readonly class FixtureResult implements JsonSerializable
 {
     /**
+     * @param non-empty-string $fixtureName
+     * @param positive-int $pageId
+     * @param non-empty-string $pageUrl
      * @param array<string, array<string, int>> $fixtureMap Class → identifier → DB ID
      */
     public function __construct(
@@ -27,7 +30,7 @@ final readonly class FixtureResult implements JsonSerializable
     }
 
     /**
-     * @return array{pageId: int, pageUrl: string, fixtureMap: array<string, array<string, int>>}
+     * @return array{pageId: positive-int, pageUrl: non-empty-string, fixtureMap: array<string, array<string, int>>}
      */
     #[Override]
     public function jsonSerialize(): array

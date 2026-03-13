@@ -41,6 +41,7 @@ class GridTreeBuilder
     /**
      * Build the full element tree for a page, keyed by parent ID.
      *
+     * @param non-empty-string $zone
      * @return array<int, list<GridNode>>
      */
     public function buildForPage(SiteTree $page, string $zone = 'main'): array
@@ -74,6 +75,7 @@ class GridTreeBuilder
      *
      * @param positive-int $rootParentId
      * @param class-string $rootParentClass
+     * @param non-empty-string $zone
      * @return array<string, list<GridElement>> Map of "ParentClass:ParentID" → elements
      */
     private function loadAllElements(int $rootParentId, string $rootParentClass, string $zone): array
@@ -169,7 +171,7 @@ class GridTreeBuilder
      * @param positive-int $parentId
      * @param array<class-string, array{label: string, icon: string, description: string}>|null $allowedTypes
      * @param list<GridNode>|null $children
-     * @param array<string, array{width: int, offset: int, visible: bool}>|null $gridSettings
+     * @param array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}>|null $gridSettings
      */
     private function createNode(
         GridElement $element,
@@ -179,6 +181,7 @@ class GridTreeBuilder
         ?array $children,
         ?array $gridSettings,
     ): GridNode {
+        /** @var non-empty-string $title Fallback '(untitled)' guarantees non-empty */
         $title = $element->Title ?: _t(
             GridElement::class . '.UNTITLED',
             '(untitled)',
@@ -204,8 +207,11 @@ class GridTreeBuilder
         assert($element instanceof GridElement); // extend() passes by-ref, widening the type
         /** @var array<string, mixed> $extensions PHPStan: extend() widens by-ref params */
 
+        /** @var positive-int $id */
+        $id = (int) $element->ID;
+
         return new GridNode(
-            id: (int) $element->ID,
+            id: $id,
             parentId: $parentId,
             title: $title,
             blockSchema: $blockSchemaWithIcon,

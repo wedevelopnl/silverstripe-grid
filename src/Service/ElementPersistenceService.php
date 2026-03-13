@@ -118,7 +118,7 @@ class ElementPersistenceService
      */
     private function translateValidationException(ValidationException $e): array
     {
-        /** @var array<array{message: string, fieldName: string}> $messages */
+        /** @var array<array{message: non-empty-string, fieldName: string}> $messages */
         $messages = $e->getResult()->getMessages();
 
         if ($messages === []) {

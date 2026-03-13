@@ -16,8 +16,8 @@ namespace WeDevelop\Grid\Value;
 final readonly class Viewport
 {
     /**
-     * @param string $key   Adapter-defined key, e.g. 'md', 'desktop', '2xl'
-     * @param string $label Human-readable label, e.g. 'Medium', 'Desktop'
+     * @param non-empty-string $key   Adapter-defined key, e.g. 'md', 'desktop', '2xl'
+     * @param non-empty-string $label Human-readable label, e.g. 'Medium', 'Desktop'
      */
     public function __construct(
         public string $key,

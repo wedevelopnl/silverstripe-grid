@@ -68,6 +68,7 @@ class FixtureController extends Controller
 
         $loader = FixtureLoader::create();
 
+        /** @var non-empty-string $fixtureName Narrowed by is_string + === '' guard above */
         try {
             $result = $loader->load($fixtureName);
         } catch (InvalidArgumentException $invalidArgumentException) {

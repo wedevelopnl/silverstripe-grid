@@ -8,6 +8,7 @@ final readonly class UpdateGridSettingsRequest
 {
     /**
      * @param positive-int $id
+     * @param non-empty-string $viewport
      * @param int<1, max> $width
      * @param int<0, max> $offset
      */

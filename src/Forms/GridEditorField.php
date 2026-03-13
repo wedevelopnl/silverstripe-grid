@@ -22,6 +22,10 @@ use WeDevelop\Grid\Model\GridElement;
  */
 class GridEditorField extends GridField
 {
+    /**
+     * @param positive-int $pageId
+     * @param non-empty-string $zone
+     */
     public function __construct(string $name, private readonly int $pageId, private readonly string $zone = 'main')
     {
         parent::__construct(
@@ -54,11 +58,13 @@ class GridEditorField extends GridField
         return $context->renderWith($this->getFieldHolderTemplates());
     }
 
+    /** @return positive-int */
     public function getPageId(): int
     {
         return $this->pageId;
     }
 
+    /** @return non-empty-string */
     public function getZone(): string
     {
         return $this->zone;
