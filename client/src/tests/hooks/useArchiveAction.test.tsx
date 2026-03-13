@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
@@ -163,5 +163,57 @@ describe('useArchiveAction', () => {
     });
 
     expect(result.current.dialog!.isOpen).toBe(false);
+  });
+
+  it('uses singular "child element" when container has exactly 1 descendant', () => {
+    const leaf = makeLeaf();
+    const singleChildSection: SectionNode = {
+      ...leaf,
+      title: 'Wrapper',
+      containerType: 'section' as const,
+      allowedTypes: null,
+      children: [{ ...leaf, id: 50 } as RowNode],
+    };
+
+    const { result } = renderHook(
+      () => useArchiveAction(singleChildSection),
+      { wrapper: createWrapper() },
+    );
+
+    expect(result.current.dialog!.message).toBe('Archive "Wrapper" and all 1 child element?');
+  });
+
+  it('dialog title is "Confirm archive"', () => {
+    const { result } = renderHook(
+      () => useArchiveAction(makeLeaf()),
+      { wrapper: createWrapper() },
+    );
+
+    expect(result.current.dialog!.title).toBe('Confirm archive');
+  });
+
+  it('calls archiveElement endpoint with the node id on confirm', async () => {
+    const { archiveElement: mockArchive } = await import('@/api/endpoints');
+    const archiveFn = mockArchive as ReturnType<typeof vi.fn>;
+    archiveFn.mockClear();
+    archiveFn.mockResolvedValue(undefined);
+
+    const { result } = renderHook(
+      () => useArchiveAction(makeLeaf({ id: 77 })),
+      { wrapper: createWrapper() },
+    );
+
+    act(() => {
+      result.current.action!.onAction();
+    });
+
+    act(() => {
+      result.current.dialog!.onConfirm();
+    });
+
+    // The mutation is async — wait for TanStack Query to invoke mutationFn
+    await waitFor(() => {
+      expect(archiveFn).toHaveBeenCalledWith(77, expect.anything());
+    });
   });
 });

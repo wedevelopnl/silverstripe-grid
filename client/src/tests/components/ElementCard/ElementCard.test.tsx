@@ -319,5 +319,64 @@ describe('ElementCard', () => {
       const card = screen.getByTestId('element-card');
       expect(card.getAttribute('tabindex')).toBeNull();
     });
+
+    it('does not navigate on non-Enter key press when editLink is present', async () => {
+      const element = makeElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
+      const user = userEvent.setup();
+
+      render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      const card = screen.getByTestId('element-card');
+      card.focus();
+      await user.keyboard('{Tab}');
+      expect(window.location.href).toBe('');
+    });
+
+    it('does not set onKeyDown handler when editLink is null', () => {
+      const element = makeElement({ editLink: null });
+
+      const { container } = render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      const card = container.querySelector('.element-card') as HTMLElement;
+      // When editLink is null, onKeyDown should be undefined (no handler attached)
+      // We verify this by checking the element doesn't have a keydown listener
+      // by checking that the role is not 'link'
+      expect(card.getAttribute('role')).toBeNull();
+    });
+  });
+
+  describe('archive dialog', () => {
+    beforeEach(() => {
+      HTMLDialogElement.prototype.showModal = vi.fn();
+      HTMLDialogElement.prototype.close = vi.fn();
+    });
+
+    it('does not render ConfirmDialog when archive dialog is not triggered', () => {
+      const element = makeElement({ canDelete: true });
+
+      render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+    });
+
+    it('renders ConfirmDialog when archive action is triggered', async () => {
+      const element = makeElement({ canDelete: true });
+      const user = userEvent.setup();
+
+      render(<ElementCard element={element} />, {
+        wrapper: createDndWrapper(),
+      });
+
+      await user.click(screen.getByTestId('actions-menu-trigger'));
+      await user.click(screen.getByRole('menuitem', { name: 'Archive' }));
+
+      expect(screen.getByTestId('confirm-dialog')).toBeDefined();
+    });
   });
 });

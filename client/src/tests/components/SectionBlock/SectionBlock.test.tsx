@@ -444,6 +444,51 @@ describe('SectionBlock', () => {
     });
   });
 
+  it('passes archiveAction to ActionsMenu when canDelete is true', () => {
+    const section = makeSection({ canDelete: true });
+
+    render(
+      <SectionBlock section={section} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    expect(screen.getByTestId('actions-menu-trigger')).toBeDefined();
+  });
+
+  it('does not render ActionsMenu trigger when canDelete is false', () => {
+    const section = makeSection({ canDelete: false });
+
+    const { container } = render(
+      <SectionBlock section={section} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    // ActionsMenu returns null when actions array is empty
+    expect(container.querySelector('.actions-menu')).toBeNull();
+  });
+
+  it('renders the block schema icon class on the icon element', () => {
+    const section = makeSection({
+      blockSchema: {
+        typeName: 'WeDevelop\\Grid\\Elements\\Section',
+        label: 'Section',
+        icon: 'font-icon-block-layout',
+        type: 'Section',
+        title: '',
+        summary: '',
+      },
+    });
+
+    const { container } = render(
+      <SectionBlock section={section} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    const icon = container.querySelector('.section-block__icon.font-icon-block-layout');
+    expect(icon).not.toBeNull();
+    expect(icon?.tagName.toLowerCase()).toBe('i');
+  });
+
   describe('edit link', () => {
     it('renders title as a link when editLink is present', () => {
       const section = makeSection({

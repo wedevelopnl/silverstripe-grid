@@ -80,4 +80,33 @@ describe('ConfirmDialog', () => {
 
     expect(screen.getByTestId('confirm-dialog')).toBeDefined();
   });
+
+  it('calls close when isOpen changes from true to false', () => {
+    const { rerender } = render(<ConfirmDialog {...defaultProps} isOpen />);
+
+    vi.mocked(HTMLDialogElement.prototype.close).mockClear();
+
+    rerender(<ConfirmDialog {...defaultProps} isOpen={false} />);
+
+    expect(HTMLDialogElement.prototype.close).toHaveBeenCalledOnce();
+  });
+
+  it('stops propagation on dialog click', () => {
+    render(<ConfirmDialog {...defaultProps} />);
+
+    const dialog = screen.getByTestId('confirm-dialog');
+    const clickEvent = new MouseEvent('click', { bubbles: true });
+    const stopPropSpy = vi.spyOn(clickEvent, 'stopPropagation');
+
+    dialog.dispatchEvent(clickEvent);
+
+    expect(stopPropSpy).toHaveBeenCalledOnce();
+  });
+
+  it('applies confirm--confirm class to the confirm button', () => {
+    render(<ConfirmDialog {...defaultProps} />);
+
+    const confirmButton = screen.getByRole('button', { name: 'Archive' });
+    expect(confirmButton.classList.contains('confirm-dialog__button--confirm')).toBe(true);
+  });
 });

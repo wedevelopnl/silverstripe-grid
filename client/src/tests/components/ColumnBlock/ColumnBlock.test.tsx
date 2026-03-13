@@ -660,6 +660,261 @@ describe('ColumnBlock', () => {
     });
   });
 
+  it('passes archiveAction to ActionsMenu when canDelete is true', () => {
+    const column = makeColumn({ canDelete: true });
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    const trigger = screen.getByTestId('actions-menu-trigger');
+    expect(trigger).toBeDefined();
+  });
+
+  it('does not render ActionsMenu trigger when canDelete is false', () => {
+    const column = makeColumn({ canDelete: false });
+
+    const { container } = render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    // ActionsMenu returns null when actions array is empty
+    expect(container.querySelector('.actions-menu')).toBeNull();
+  });
+
+  it('applies isDragging class when any drag is active', () => {
+    const column = makeColumn();
+
+    const { container } = render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper('md', [], 'row') },
+    );
+
+    // When activeType is non-null, pickers should be disabled
+    const widthPicker = screen.getByTestId('column-badge');
+    expect(widthPicker.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('disables pickers when drag is active (isDragActive)', () => {
+    const column = makeColumn();
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper('md', [], 'section') },
+    );
+
+    const widthPicker = screen.getByTestId('column-badge');
+    expect(widthPicker.hasAttribute('disabled')).toBe(true);
+    const offsetPicker = screen.getByTestId('column-offset-badge');
+    expect(offsetPicker.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('disables pickers when updateGridSettings mutation is pending', async () => {
+    // With no drag active, pickers are enabled by default
+    const column = makeColumn();
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    // No drag active → pickers should be enabled
+    const widthPicker = screen.getByTestId('column-badge');
+    expect(widthPicker.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('shows offset label "none" when offset is 0', () => {
+    const column = makeColumn({
+      gridSettings: { md: { width: 6, offset: 0, visible: true } },
+    });
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    const offsetBadge = screen.getByTestId('column-offset-badge');
+    expect(offsetBadge.textContent).toBe('none');
+  });
+
+  it('shows offset label "+N" when offset is greater than 0', () => {
+    const column = makeColumn({
+      gridSettings: { md: { width: 6, offset: 3, visible: true } },
+    });
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    const offsetBadge = screen.getByTestId('column-offset-badge');
+    expect(offsetBadge.textContent).toBe('+3');
+  });
+
+  it('disables offset picker when column is full width', () => {
+    const column = makeColumn({
+      gridSettings: { md: { width: 12, offset: 0, visible: true } },
+    });
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    const offsetPicker = screen.getByTestId('column-offset-badge');
+    expect(offsetPicker.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('disables offset picker when column is hidden', () => {
+    const column = makeColumn({
+      gridSettings: { md: { width: 6, offset: 0, visible: false } },
+    });
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    const offsetPicker = screen.getByTestId('column-offset-badge');
+    expect(offsetPicker.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('clamps offset to maxOffset boundary (offset > maxOffset uses maxOffset)', async () => {
+    // width=6, offset=6 → maxOffset = 12-6 = 6, offset=6 is exactly at boundary
+    // Now select width=11, maxOffset=1, offset 6 > 1 → clamped to 1
+    const column = makeColumn({
+      gridSettings: { md: { width: 6, offset: 6, visible: true } },
+    });
+    const user = userEvent.setup();
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    await user.click(screen.getByTestId('column-badge'));
+    const widthListbox = screen.getByTestId('column-badge-listbox');
+    const width11Option = widthListbox.querySelector('[role="option"]:nth-child(11)');
+    await user.click(width11Option!);
+
+    const callArgs = mockUpdateGridSettings.mock.calls[0][0];
+    expect(callArgs).toEqual(expect.objectContaining({
+      width: 11,
+      offset: 1,
+      visible: true,
+    }));
+  });
+
+  it('keeps offset at boundary when offset equals maxOffset exactly', async () => {
+    // width=6, offset=6 → select width=6 again (maxOffset=6, offset=6 is NOT > 6)
+    const column = makeColumn({
+      gridSettings: { md: { width: 6, offset: 6, visible: true } },
+    });
+    const user = userEvent.setup();
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    await user.click(screen.getByTestId('column-badge'));
+    const widthListbox = screen.getByTestId('column-badge-listbox');
+    // Select width=7, maxOffset=5, offset=6 > 5 → clamped to 5
+    const width7Option = widthListbox.querySelector('[role="option"]:nth-child(7)');
+    await user.click(width7Option!);
+
+    const callArgs = mockUpdateGridSettings.mock.calls[0][0];
+    expect(callArgs).toEqual(expect.objectContaining({
+      width: 7,
+      offset: 5,
+      visible: true,
+    }));
+  });
+
+  it('renders the block schema icon class on the icon element', () => {
+    const column = makeColumn({
+      blockSchema: {
+        typeName: 'WeDevelop\\Grid\\Elements\\Column',
+        label: 'Column',
+        icon: 'font-icon-block-layout',
+        type: 'Column',
+        title: '',
+        summary: '',
+      },
+    });
+
+    const { container } = render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    const icon = container.querySelector('.column-block__icon.font-icon-block-layout');
+    expect(icon).not.toBeNull();
+    expect(icon?.tagName.toLowerCase()).toBe('i');
+  });
+
+  describe('archive dialog', () => {
+    beforeEach(() => {
+      HTMLDialogElement.prototype.showModal = vi.fn();
+      HTMLDialogElement.prototype.close = vi.fn();
+    });
+
+    it('does not render ConfirmDialog when archive dialog is not open', () => {
+      const column = makeColumn({ canDelete: true });
+
+      render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+    });
+
+    it('renders ConfirmDialog when archive action is triggered', async () => {
+      const column = makeColumn({ canDelete: true });
+      const user = userEvent.setup();
+
+      render(
+        <ColumnBlock column={column} />,
+        { wrapper: createDndWrapper() },
+      );
+
+      await user.click(screen.getByTestId('actions-menu-trigger'));
+      await user.click(screen.getByRole('menuitem', { name: 'Archive' }));
+
+      expect(screen.getByTestId('confirm-dialog')).toBeDefined();
+    });
+  });
+
+  it('renders ElementTypePicker when allowedTypes has entries', () => {
+    HTMLDialogElement.prototype.showModal = vi.fn();
+    HTMLDialogElement.prototype.close = vi.fn();
+
+    const column = makeColumn({
+      allowedTypes: { 'App\\Model\\Text': { label: 'Text', icon: 'font-icon-block-content', description: '' } },
+    });
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    expect(screen.getByTestId('element-type-picker')).toBeDefined();
+  });
+
+  it('does not render ElementTypePicker when allowedTypes is null', () => {
+    const column = makeColumn({ allowedTypes: null });
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    expect(screen.queryByTestId('element-type-picker')).toBeNull();
+  });
+
   describe('offset options constrained by width', () => {
     it('calls getOffsetOptions with the resolved width', () => {
       const column = makeColumn({

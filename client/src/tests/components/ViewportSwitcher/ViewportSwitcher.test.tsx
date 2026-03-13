@@ -111,4 +111,22 @@ describe('ViewportSwitcher', () => {
     // Still active after clicking
     expect(screen.getByText('Small').getAttribute('aria-pressed')).toBe('true');
   });
+
+  it('does not call setActiveViewport when clicking the already-active button', async () => {
+    const user = userEvent.setup();
+
+    render(<ViewportSwitcher />, { wrapper: createWrapper('sm') });
+
+    // Click an inactive button first to verify switching works
+    await user.click(screen.getByText('Medium'));
+    expect(screen.getByText('Medium').getAttribute('aria-pressed')).toBe('true');
+
+    // Now click the now-active Medium button again — should be a no-op
+    await user.click(screen.getByText('Medium'));
+
+    // Medium should still be active, not toggled off
+    expect(screen.getByText('Medium').getAttribute('aria-pressed')).toBe('true');
+    // And no other button should have become active
+    expect(screen.getByText('Small').getAttribute('aria-pressed')).toBe('false');
+  });
 });

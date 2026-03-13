@@ -435,4 +435,53 @@ describe('useDragAndDrop', () => {
       expect(result.current.pendingTree).toBeNull();
     });
   });
+
+  describe('sensor configuration', () => {
+    it('sensors have activation constraint with distance threshold', () => {
+      const { result } = renderHook(() => useDragAndDrop(defaultOptions));
+      const sensors = result.current.dndContextProps.sensors;
+
+      // The sensor descriptor should carry options with an activationConstraint
+      expect(sensors).toHaveLength(1);
+      const sensorDescriptor = sensors[0];
+      expect(sensorDescriptor.options).toBeDefined();
+      expect(sensorDescriptor.options).toHaveProperty('activationConstraint');
+      expect((sensorDescriptor.options as { activationConstraint: { distance: number } }).activationConstraint.distance).toBe(8);
+    });
+  });
+
+  describe('handleDragOver early return', () => {
+    it('does not set pendingTree when over is null', () => {
+      const { result } = renderHook(() =>
+        useDragAndDrop({ tree: crossContainerTree, onReorder: vi.fn() }),
+      );
+
+      // Create a DragOverEvent with null over
+      const event: DragOverEvent = {
+        active: makeActive('row-11'),
+        over: null,
+        collisions: [],
+        delta: { x: 0, y: 0 },
+        activatorEvent: new PointerEvent('pointerdown', { clientX: 0, clientY: 0 }),
+      };
+
+      act(() => {
+        result.current.dndContextProps.onDragOver(event);
+      });
+
+      expect(result.current.pendingTree).toBeNull();
+    });
+
+    it('does not set pendingTree when active === over', () => {
+      const { result } = renderHook(() =>
+        useDragAndDrop({ tree: crossContainerTree, onReorder: vi.fn() }),
+      );
+
+      act(() => {
+        result.current.dndContextProps.onDragOver(makeDragOverEvent('row-11', 'row-11'));
+      });
+
+      expect(result.current.pendingTree).toBeNull();
+    });
+  });
 });

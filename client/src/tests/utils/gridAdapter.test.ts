@@ -12,31 +12,35 @@ import {
   resetAdapterCache,
 } from '@/utils/gridAdapter';
 
-vi.mock('@/api/config', () => ({
-  getAdapterConfig: () => ({
-    viewports: [
-      { key: 'xs', label: 'Extra Small' },
-      { key: 'sm', label: 'Small' },
-      { key: 'md', label: 'Medium' },
-      { key: 'lg', label: 'Large' },
-      { key: 'xl', label: 'Extra Large' },
-      { key: 'xxl', label: 'Extra Extra Large' },
-    ],
-    defaultViewport: 'md',
-    columnCount: 12,
-    rowClasses: 'row',
-    offsetStrategy: 'margin',
-    baseWidthClasses: Object.fromEntries(
-      Array.from({ length: 12 }, (_, i) => [String(i + 1), `col-${i + 1}`]),
-    ),
-    baseOffsetClasses: Object.fromEntries(
-      Array.from({ length: 12 }, (_, i) => [String(i), `offset-${i}`]),
-    ),
-  }),
+const mockGetAdapterConfig = vi.fn(() => ({
+  viewports: [
+    { key: 'xs', label: 'Extra Small' },
+    { key: 'sm', label: 'Small' },
+    { key: 'md', label: 'Medium' },
+    { key: 'lg', label: 'Large' },
+    { key: 'xl', label: 'Extra Large' },
+    { key: 'xxl', label: 'Extra Extra Large' },
+  ],
+  defaultViewport: 'md',
+  columnCount: 12,
+  rowClasses: 'row',
+  offsetStrategy: 'margin',
+  baseWidthClasses: Object.fromEntries(
+    Array.from({ length: 12 }, (_, i) => [String(i + 1), `col-${i + 1}`]),
+  ),
+  baseOffsetClasses: Object.fromEntries(
+    Array.from({ length: 12 }, (_, i) => [String(i), `offset-${i}`]),
+  ),
 }));
+
+vi.mock('@/api/config', () => ({
+  getAdapterConfig: () => mockGetAdapterConfig(),
+}));
+
 
 beforeEach(() => {
   resetAdapterCache();
+  mockGetAdapterConfig.mockClear();
 });
 
 describe('gridAdapter', () => {
@@ -204,5 +208,44 @@ describe('resolveViewportSettings', () => {
       offset: 3,
       visible: true,
     });
+  });
+});
+
+describe('adapter config caching', () => {
+  it('caches config — getAdapterConfig is called only once across multiple reads', () => {
+    getViewports();
+    getDefaultViewport();
+    getColumnCount();
+
+    expect(mockGetAdapterConfig).toHaveBeenCalledTimes(1);
+  });
+
+  it('resetAdapterCache forces a fresh read on next access', () => {
+    getViewports();
+    expect(mockGetAdapterConfig).toHaveBeenCalledTimes(1);
+
+    resetAdapterCache();
+    getViewports();
+    expect(mockGetAdapterConfig).toHaveBeenCalledTimes(2);
+  });
+
+  it('caches width options — repeated calls do not rebuild', () => {
+    const first = getWidthOptions();
+    const second = getWidthOptions();
+
+    // Same reference proves the cached value was returned
+    expect(first).toBe(second);
+  });
+
+  it('resetAdapterCache also clears width options cache', () => {
+    const first = getWidthOptions();
+
+    resetAdapterCache();
+
+    const second = getWidthOptions();
+    // After reset, a new array is built (different reference)
+    expect(first).not.toBe(second);
+    // But the content is the same
+    expect(first).toEqual(second);
   });
 });

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import ActionsMenu from '@/components/ActionsMenu/ActionsMenu';
@@ -133,5 +133,67 @@ describe('ActionsMenu', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
     await userEvent.click(trigger);
     expect(trigger.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('uses default testId "actions-menu" for dropdown', async () => {
+    render(<ActionsMenu actions={[makeAction()]} />);
+    await userEvent.click(screen.getByTestId('actions-menu-trigger'));
+
+    expect(screen.getByTestId('actions-menu-dropdown')).toBeDefined();
+  });
+
+  it('uses custom testId for dropdown when provided', async () => {
+    render(<ActionsMenu actions={[makeAction()]} testId="custom-menu" />);
+    await userEvent.click(screen.getByTestId('actions-menu-trigger'));
+
+    expect(screen.getByTestId('custom-menu-dropdown')).toBeDefined();
+  });
+
+  it('closes on outside click', async () => {
+    render(<ActionsMenu actions={[makeAction()]} />);
+    await userEvent.click(screen.getByTestId('actions-menu-trigger'));
+    expect(screen.getByRole('menu')).toBeDefined();
+
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('does not close on non-Escape keys when open', async () => {
+    render(<ActionsMenu actions={[makeAction()]} />);
+    await userEvent.click(screen.getByTestId('actions-menu-trigger'));
+    expect(screen.getByRole('menu')).toBeDefined();
+
+    await userEvent.keyboard('{Tab}');
+    expect(screen.getByRole('menu')).toBeDefined();
+  });
+
+  it('does not call onAction when a non-Enter/Space key is pressed on item', async () => {
+    const onAction = vi.fn();
+    render(<ActionsMenu actions={[makeAction({ onAction })]} />);
+
+    await userEvent.click(screen.getByTestId('actions-menu-trigger'));
+    const item = screen.getByRole('menuitem', { name: 'Archive' });
+    item.focus();
+    await userEvent.keyboard('{Tab}');
+
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it('sets aria-controls to menu id when open', async () => {
+    render(<ActionsMenu actions={[makeAction()]} />);
+    const trigger = screen.getByTestId('actions-menu-trigger');
+
+    expect(trigger.getAttribute('aria-controls')).toBeNull();
+
+    await userEvent.click(trigger);
+    expect(trigger.getAttribute('aria-controls')).toBe('actions-menu-menu');
+  });
+
+  it('assigns correct id to the menu element', async () => {
+    render(<ActionsMenu actions={[makeAction()]} testId="my-actions" />);
+    await userEvent.click(screen.getByTestId('actions-menu-trigger'));
+
+    const menu = screen.getByRole('menu');
+    expect(menu.getAttribute('id')).toBe('my-actions-menu');
   });
 });

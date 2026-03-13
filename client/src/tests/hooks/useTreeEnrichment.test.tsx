@@ -501,4 +501,28 @@ describe('useTreeEnrichment', () => {
       expect(result.current[0].children![0].children![0].childSortableIds).toEqual([]);
     });
   });
+
+  describe('non-number filtering in localStorage', () => {
+    it('does not persist non-number values from corrupted localStorage after toggle', () => {
+      // Seed with mixed types including non-numbers
+      mockStorage.setItem(storageKey(), JSON.stringify([1, 'stale-string', null, true]));
+
+      const sections = [makeSection(1)];
+      const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));
+
+      // Section 1 should be collapsed (ID 1 is a valid number in the set)
+      expect(result.current[0].isCollapsed).toBe(true);
+
+      // Toggle section 1 off (uncollapse)
+      act(() => { result.current[0].toggle(); });
+
+      // After toggle, the persisted data should only contain numbers.
+      // If the filter were removed, non-number values would survive into
+      // the new Set and get serialized back to localStorage.
+      const stored = JSON.parse(mockStorage.getItem(storageKey())!) as unknown[];
+      for (const value of stored) {
+        expect(typeof value).toBe('number');
+      }
+    });
+  });
 });

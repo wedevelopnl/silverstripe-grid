@@ -130,6 +130,62 @@ describe('ElementTypePicker', () => {
     expect(screen.queryAllByTestId('element-type-tile')).toHaveLength(0);
   });
 
+  it('calls showModal when isOpen changes from false to true', () => {
+    const { rerender } = render(
+      <ElementTypePicker
+        allowedTypes={sampleTypes}
+        isOpen={false}
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    vi.mocked(HTMLDialogElement.prototype.showModal).mockClear();
+
+    rerender(
+      <ElementTypePicker
+        allowedTypes={sampleTypes}
+        isOpen={true}
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalledOnce();
+  });
+
+  it('calls close when isOpen changes from true to false', () => {
+    // Override showModal to set `open` attribute so the close guard works
+    HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
+      this.setAttribute('open', '');
+    });
+    HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
+      this.removeAttribute('open');
+    });
+
+    const { rerender } = render(
+      <ElementTypePicker
+        allowedTypes={sampleTypes}
+        isOpen={true}
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    vi.mocked(HTMLDialogElement.prototype.close).mockClear();
+
+    rerender(
+      <ElementTypePicker
+        allowedTypes={sampleTypes}
+        isOpen={false}
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(HTMLDialogElement.prototype.close).toHaveBeenCalledOnce();
+  });
+
   it('hides description span when description is empty string', () => {
     const typesWithEmptyDescription: Record<string, AllowedTypeInfo> = {
       'App\\Model\\Spacer': {

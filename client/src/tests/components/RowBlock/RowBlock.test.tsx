@@ -407,6 +407,29 @@ describe('RowBlock', () => {
     });
   });
 
+  it('passes archiveAction to ActionsMenu when canDelete is true', () => {
+    const row = makeRow({ canDelete: true });
+
+    render(
+      <RowBlock row={row} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    expect(screen.getByTestId('actions-menu-trigger')).toBeDefined();
+  });
+
+  it('does not render ActionsMenu trigger when canDelete is false', () => {
+    const row = makeRow({ canDelete: false });
+
+    const { container } = render(
+      <RowBlock row={row} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    // ActionsMenu returns null when actions array is empty
+    expect(container.querySelector('.actions-menu')).toBeNull();
+  });
+
   describe('edit link', () => {
     it('renders title as a link when editLink is present', () => {
       const row = makeRow({
