@@ -5,13 +5,19 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Unit\Validation\Stub;
 
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\HasManyList;
+use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Value\ContainerType;
 
 /**
- * Lightweight stub for elements with can_be_root = true (default).
+ * Lightweight stub for root elements (Section-like, canBeRoot = true).
+ * Implements ContainerInterface with ContainerType::Section.
  * Bypasses DataObject constructor to avoid framework boot.
+ *
+ * @implements ContainerInterface<DataObject>
  */
-class RootElementStub extends GridElement
+class RootElementStub extends GridElement implements ContainerInterface
 {
     private static string $singular_name = 'Section';
 
@@ -53,6 +59,27 @@ class RootElementStub extends GridElement
     public function exists(): bool
     {
         return $this->ID > 0;
+    }
+
+    public function singular_name(): string
+    {
+        return 'Section';
+    }
+
+    public function getContainerType(): ContainerType
+    {
+        return ContainerType::Section;
+    }
+
+    /** @return HasManyList<DataObject> */
+    public function getChildren(): HasManyList
+    {
+        throw new \RuntimeException('Not implemented in stub');
+    }
+
+    public function hasChildren(): bool
+    {
+        return false;
     }
 
     /**

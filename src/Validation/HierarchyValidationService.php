@@ -6,14 +6,13 @@ namespace WeDevelop\Grid\Validation;
 
 use Override;
 use SilverStripe\CMS\Model\SiteTree;
+use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
 
 class HierarchyValidationService implements HierarchyValidatorInterface
 {
-    use ElementAllowanceTrait;
-
     /** @return Result<GridElement> */
     #[Override]
     public function validate(GridElement $element): Result
@@ -23,9 +22,9 @@ class HierarchyValidationService implements HierarchyValidatorInterface
             return Result::ok($element);
         }
 
-        // Page-level: parent is a SiteTree — check can_be_root
+        // Page-level: parent is a SiteTree — check canBeRoot via ContainerType
         if ($parent instanceof SiteTree) {
-            if ($element->config()->get('can_be_root') === false) {
+            if (!$this->canPlaceAtPageLevel($element)) {
                 return Result::fail(new ValidationError(
                     message: sprintf(
                         '%s cannot be placed at page level.',
@@ -38,8 +37,8 @@ class HierarchyValidationService implements HierarchyValidatorInterface
             return Result::ok($element);
         }
 
-        // Container-level: check allowed_elements / disallowed_elements on parent
-        if ($this->isElementAllowed($element::class, $parent)) {
+        // Container-level: delegate to parent's ContainerType
+        if ($parent instanceof ContainerInterface && $parent->getContainerType()->isChildAllowed($element::class)) {
             return Result::ok($element);
         }
 
@@ -53,4 +52,9 @@ class HierarchyValidationService implements HierarchyValidatorInterface
         ));
     }
 
+    private function canPlaceAtPageLevel(GridElement $element): bool
+    {
+        return $element instanceof ContainerInterface
+            && $element->getContainerType()->canBeRoot();
+    }
 }

@@ -12,11 +12,9 @@ use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
-use WeDevelop\Grid\Validation\ElementAllowanceTrait;
 use WeDevelop\Grid\Validation\ReorderValidator;
 
 #[CoversClass(ReorderValidator::class)]
-#[CoversClass(ElementAllowanceTrait::class)]
 final class ReorderValidatorTest extends SapphireTest
 {
     protected $usesDatabase = true;

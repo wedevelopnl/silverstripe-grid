@@ -237,8 +237,6 @@ class GridTreeBuilder
     /**
      * Get allowed child element types for a container, cached by class name.
      *
-     * Reads allowed_elements / disallowed_elements config directly.
-     *
      * @return array<class-string, array{label: string, icon: string, description: string}>
      */
     private function getAllowedTypes(GridElement $container): array
@@ -249,30 +247,23 @@ class GridTreeBuilder
             return $this->allowedTypesCache[$className];
         }
 
-        $config = Config::forClass($className);
-        $stopInheritance = (bool) $config->get('stop_element_inheritance');
-
-        $allowedElements = $stopInheritance
-            ? $config->get('allowed_elements', Config::UNINHERITED)
-            : $config->get('allowed_elements');
-
-        $disallowedElements = $stopInheritance
-            ? (array) $config->get('disallowed_elements', Config::UNINHERITED)
-            : (array) $config->get('disallowed_elements');
+        assert($container instanceof ContainerInterface);
+        $containerType = $container->getContainerType();
+        $allowedChild = $containerType->allowedChildClass();
 
         $types = [];
 
-        if (is_array($allowedElements)) {
-            foreach ($allowedElements as $class) {
-                if (is_string($class) && is_subclass_of($class, GridElement::class)) {
-                    $types[$class] = $this->getElementTypeInfo($class);
-                }
+        if ($allowedChild !== null) {
+            // Section/Row: single allowed child class (+ subclasses)
+            foreach (ClassInfo::subclassesFor($allowedChild, true) as $class) {
+                /** @var class-string<GridElement> $class */
+                $types[$class] = $this->getElementTypeInfo($class);
             }
         } else {
-            // No allowlist — all GridElement subclasses except disallowed
+            // Column: any GridElement except containers
             foreach (ClassInfo::subclassesFor(GridElement::class, false) as $class) {
                 /** @var class-string<GridElement> $class */
-                if (!in_array($class, $disallowedElements, true)) {
+                if ($containerType->isChildAllowed($class)) {
                     $types[$class] = $this->getElementTypeInfo($class);
                 }
             }

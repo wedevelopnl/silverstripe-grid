@@ -34,4 +34,47 @@ enum ContainerType: string
             self::Column => Column::class,
         };
     }
+
+    /** Whether elements of this container type can be placed at page level. */
+    public function canBeRoot(): bool
+    {
+        return $this === self::Section;
+    }
+
+    /**
+     * The single allowed child class for this container type, or null if
+     * the container accepts any non-container GridElement (Column).
+     *
+     * @return class-string<Model\GridElement>|null
+     */
+    public function allowedChildClass(): ?string
+    {
+        return match ($this) {
+            self::Section => Row::class,
+            self::Row => Column::class,
+            self::Column => null,
+        };
+    }
+
+    /**
+     * Whether the given element class is allowed as a child of this container type.
+     *
+     * Section/Row: only the specific child class (or subclasses) is allowed.
+     * Column: any non-container GridElement is allowed.
+     *
+     * @param class-string $elementClass
+     */
+    public function isChildAllowed(string $elementClass): bool
+    {
+        $allowed = $this->allowedChildClass();
+
+        if ($allowed !== null) {
+            return is_a($elementClass, $allowed, true);
+        }
+
+        // Column: any non-container GridElement
+        return !is_a($elementClass, Section::class, true)
+            && !is_a($elementClass, Row::class, true)
+            && !is_a($elementClass, Column::class, true);
+    }
 }
