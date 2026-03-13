@@ -20,6 +20,7 @@ vi.mock('@/api/endpoints', () => ({
   createElement: vi.fn(),
   createContentElement: vi.fn(),
   archiveElement: vi.fn(),
+  duplicateElement: vi.fn(),
   updateGridSettings: (...args: unknown[]) => mockUpdateGridSettings(...args),
 }));
 
@@ -672,8 +673,8 @@ describe('ColumnBlock', () => {
     expect(trigger).toBeDefined();
   });
 
-  it('does not render ActionsMenu trigger when canDelete is false', () => {
-    const column = makeColumn({ canDelete: false });
+  it('does not render ActionsMenu trigger when all actions are disabled', () => {
+    const column = makeColumn({ canDelete: false, canCreate: false });
 
     const { container } = render(
       <ColumnBlock column={column} />,

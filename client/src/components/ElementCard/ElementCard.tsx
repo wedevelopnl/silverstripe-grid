@@ -8,6 +8,7 @@ import DragHandle from '@/components/DragHandle/DragHandle';
 import ActionsMenu from '@/components/ActionsMenu/ActionsMenu';
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
 import { useArchiveAction } from '@/hooks/useArchiveAction';
+import { useDuplicateAction } from '@/hooks/useDuplicateAction';
 
 interface ElementCardProps {
   readonly element: EnrichedSimpleElementNode;
@@ -20,7 +21,11 @@ interface ElementCardProps {
 export default function ElementCard({ element }: ElementCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: element.sortableId });
   const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(element);
-  const actions = archiveAction !== null ? [archiveAction] : [];
+  const { action: duplicateAction } = useDuplicateAction(element);
+  const actions = [
+    ...(duplicateAction !== null ? [duplicateAction] : []),
+    ...(archiveAction !== null ? [archiveAction] : []),
+  ];
   const status = getElementStatus(element.statusFlags);
   const content = element.blockSchema.summary;
   const editLink = element.editLink;

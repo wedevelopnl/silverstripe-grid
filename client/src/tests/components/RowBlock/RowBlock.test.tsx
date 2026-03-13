@@ -37,6 +37,7 @@ vi.mock('@/api/endpoints', () => ({
   createElement: vi.fn(),
   createContentElement: vi.fn(),
   archiveElement: vi.fn(),
+  duplicateElement: vi.fn(),
   updateGridSettings: vi.fn(),
 }));
 
@@ -418,8 +419,8 @@ describe('RowBlock', () => {
     expect(screen.getByTestId('actions-menu-trigger')).toBeDefined();
   });
 
-  it('does not render ActionsMenu trigger when canDelete is false', () => {
-    const row = makeRow({ canDelete: false });
+  it('does not render ActionsMenu trigger when all actions are disabled', () => {
+    const row = makeRow({ canDelete: false, canCreate: false });
 
     const { container } = render(
       <RowBlock row={row} />,

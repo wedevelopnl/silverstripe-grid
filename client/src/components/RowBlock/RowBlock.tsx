@@ -13,6 +13,7 @@ import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
 import ColumnBlock from '@/components/ColumnBlock/ColumnBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
 import { useArchiveAction } from '@/hooks/useArchiveAction';
+import { useDuplicateAction } from '@/hooks/useDuplicateAction';
 
 interface RowBlockProps {
   readonly row: EnrichedRowNode;
@@ -25,7 +26,11 @@ export default function RowBlock({ row }: RowBlockProps) {
   const { activeType } = useDragContext();
 
   const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(row);
-  const actions = archiveAction !== null ? [archiveAction] : [];
+  const { action: duplicateAction } = useDuplicateAction(row);
+  const actions = [
+    ...(duplicateAction !== null ? [duplicateAction] : []),
+    ...(archiveAction !== null ? [archiveAction] : []),
+  ];
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: row.sortableId });
 

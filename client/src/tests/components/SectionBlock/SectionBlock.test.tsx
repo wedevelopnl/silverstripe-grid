@@ -36,6 +36,7 @@ vi.mock('@/api/endpoints', () => ({
   createElement: vi.fn(),
   createContentElement: vi.fn(),
   archiveElement: vi.fn(),
+  duplicateElement: vi.fn(),
   updateGridSettings: vi.fn(),
 }));
 
@@ -455,8 +456,8 @@ describe('SectionBlock', () => {
     expect(screen.getByTestId('actions-menu-trigger')).toBeDefined();
   });
 
-  it('does not render ActionsMenu trigger when canDelete is false', () => {
-    const section = makeSection({ canDelete: false });
+  it('does not render ActionsMenu trigger when all actions are disabled', () => {
+    const section = makeSection({ canDelete: false, canCreate: false });
 
     const { container } = render(
       <SectionBlock section={section} />,

@@ -12,6 +12,7 @@ import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
 import RowBlock from '@/components/RowBlock/RowBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
 import { useArchiveAction } from '@/hooks/useArchiveAction';
+import { useDuplicateAction } from '@/hooks/useDuplicateAction';
 
 interface SectionBlockProps {
   readonly section: EnrichedSectionNode;
@@ -23,7 +24,11 @@ export default function SectionBlock({ section }: SectionBlockProps) {
   const { activeType } = useDragContext();
 
   const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(section);
-  const actions = archiveAction !== null ? [archiveAction] : [];
+  const { action: duplicateAction } = useDuplicateAction(section);
+  const actions = [
+    ...(duplicateAction !== null ? [duplicateAction] : []),
+    ...(archiveAction !== null ? [archiveAction] : []),
+  ];
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: section.sortableId });
 

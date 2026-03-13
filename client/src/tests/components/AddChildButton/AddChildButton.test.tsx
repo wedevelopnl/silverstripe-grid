@@ -11,6 +11,7 @@ const mockCreateElement = vi.fn();
 vi.mock('@/api/endpoints', () => ({
   createElement: (...args: unknown[]) => mockCreateElement(...args),
   archiveElement: vi.fn(),
+  duplicateElement: vi.fn(),
   updateGridSettings: vi.fn(),
 }));
 

@@ -15,6 +15,7 @@ vi.mock('@/api/endpoints', () => ({
   createElement: (...args: unknown[]) => mockCreateElement(...args),
   createContentElement: vi.fn(),
   archiveElement: vi.fn(),
+  duplicateElement: vi.fn(),
   reorderElement: vi.fn(),
   updateGridSettings: vi.fn(),
 }));

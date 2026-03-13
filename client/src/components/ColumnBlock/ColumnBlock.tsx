@@ -20,6 +20,7 @@ import ElementCard from '@/components/ElementCard/ElementCard';
 import EmptyState from '@/components/EmptyState/EmptyState';
 import ElementTypePicker from '@/components/ElementTypePicker/ElementTypePicker';
 import { useArchiveAction } from '@/hooks/useArchiveAction';
+import { useDuplicateAction } from '@/hooks/useDuplicateAction';
 
 interface ColumnBlockProps {
   readonly column: EnrichedColumnNode;
@@ -36,7 +37,11 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
   const updateGridSettings = useUpdateGridSettings(pageId, zone);
   const createContentElement = useCreateContentElement(pageId, zone);
   const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(column);
-  const actions = archiveAction !== null ? [archiveAction] : [];
+  const { action: duplicateAction } = useDuplicateAction(column);
+  const actions = [
+    ...(duplicateAction !== null ? [duplicateAction] : []),
+    ...(archiveAction !== null ? [archiveAction] : []),
+  ];
   const [isPickerOpen, setPickerOpen] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: column.sortableId });
