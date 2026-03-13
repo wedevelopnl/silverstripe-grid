@@ -1,0 +1,14 @@
+<?php
+
+namespace SilverStripe\Versioned;
+
+use SilverStripe\Core\Extension;
+
+/**
+ * Corrects missing return type on publishRecursive().
+ */
+class RecursivePublishable extends Extension
+{
+    /** @return bool */
+    public function publishRecursive() {}
+}

@@ -5,6 +5,7 @@ parameters:
     stubFiles:
         - /module/phpstan/stubs/AdminController.stub
         - /module/phpstan/stubs/ImageManipulation.stub
+        - /module/phpstan/stubs/RecursivePublishable.stub
     type_coverage:
         return_type: 100
         param_type: 100

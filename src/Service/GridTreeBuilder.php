@@ -218,7 +218,7 @@ class GridTreeBuilder
             obsoleteClassName: $element->getObsoleteClassName(),
             version: (int) $element->Version,
             canDelete: (bool) $element->canDelete(),
-            canPublish: (bool) $element->canPublish(),
+            canPublish: $element->canPublish(),
             canUnpublish: (bool) $element->canUnpublish(),
             canCreate: (bool) $element->canCreate(),
             editLink: $element->getCMSEditLink(),

@@ -239,7 +239,7 @@ class GridController extends AdminController
         $id = $this->requireElementIdFromRequest($request);
         $element = $this->requireElementWithPermission(
             $id,
-            static fn (GridElement $e): bool => (bool) $e->canPublish(),
+            static fn (GridElement $e): bool => $e->canPublish(),
         );
 
         $element->publishRecursive();
