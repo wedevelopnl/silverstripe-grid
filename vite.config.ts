@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import dts from 'vite-plugin-dts';
-import { defineConfig } from 'vite';
+import { defineConfig, esmExternalRequirePlugin } from 'vite';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -42,11 +42,12 @@ export default defineConfig({
       formats: ['iife'],
       fileName: () => 'js/bundle.js',
     },
-    rollupOptions: {
-      external: ['react', 'react-dom', 'react-dom/client'],
+    rolldownOptions: {
+      external: ['react-dom', 'react-dom/client'],
+      plugins: [esmExternalRequirePlugin({ external: ['react'] })],
       output: {
         globals: {
-          react: 'React',
+          'react': 'React',
           'react-dom': 'ReactDom',
           'react-dom/client': 'ReactDomClient',
         },
