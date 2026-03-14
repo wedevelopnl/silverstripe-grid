@@ -10,7 +10,7 @@ _config/              # YAML config (DI bindings, element hierarchy, grid adapte
 templates/            # SilverStripe .ss templates (element holders + form fields)
 src/                  # PHP source (PSR-4: WeDevelop\Grid\)
 src/Adapter/          # Grid framework adapters (Tailwind, Bootstrap, Bulma) + GridAdapterConfiguration trait + ContentLayoutAdapter
-src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderExecutorInterface, ReorderValidatorInterface, HierarchyValidatorInterface)
+src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderExecutorInterface, ReorderValidatorInterface)
 src/Controllers/      # API controllers (GridController)
 src/Dev/              # Fixture loading for E2E tests (controller, loader, post-actions, result)
 src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement) + ContainerElementTrait

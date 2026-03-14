@@ -32,7 +32,7 @@ The drag-and-drop system enables visual reordering of elements within the grid e
 │                                                             │
 │ Backend (PHP)                                               │
 │                                                             │
-│  ElementalGridController                                    │
+│  GridController                                             │
 │    ├── Request validation (CSRF, payload shape)             │
 │    ├── Permission checks (canEdit on element + areas)       │
 │    └── Delegates to ReorderService                          │

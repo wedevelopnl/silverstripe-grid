@@ -73,7 +73,7 @@ _config/              # YAML config (DI bindings, element hierarchy, grid adapte
 templates/            # SilverStripe .ss templates (element holders + form fields)
 src/                  # PHP source (PSR-4: WeDevelop\Grid\)
 src/Adapter/          # Grid framework adapters (Tailwind, Bootstrap, Bulma) + GridAdapterConfiguration trait + ContentLayoutAdapter
-src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderExecutorInterface, ReorderValidatorInterface, HierarchyValidatorInterface)
+src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderExecutorInterface, ReorderValidatorInterface)
 src/Controllers/      # API controllers (GridController)
 src/Dev/              # Fixture loading for E2E tests (controller, loader, post-actions, result)
 src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement) + ContainerElementTrait
@@ -332,10 +332,11 @@ Post-actions run after YAML write, still in DRAFT stage:
 - `publish_recursive` — calls `publishRecursive()` on the record
 - `unpublish` — calls `doUnpublish()` on the record
 - `modify` — sets specific fields and writes (creates draft-modified state)
+- `attach_image` — copies a source image file to the assets folder, creates an `Image` record, and attaches it to the specified `has_one` relation (requires `relation` and `source` in fields)
 
 ### Available Fixtures
 
-Registered in `_config/dev.yml`: `element-tree`, `empty-page`, `collapse-test`, `drag-and-drop`, `multi-zone`, `content-elements`, `complex-page`, `ghost-jump`, `cross-container-ghost`, `cross-section-drop`, `cross-section-drop-single`, `cross-row-column-drop`, `cross-row-column-drop-single`, `cross-column-element-drop`, `cross-column-element-drop-single`, `archive-test`, `media-elements`
+Registered in `_config/dev.yml`: `element-tree`, `empty-page`, `collapse-test`, `drag-and-drop`, `multi-zone`, `content-elements`, `complex-page`, `ghost-jump`, `cross-container-ghost`, `cross-section-drop`, `cross-section-drop-single`, `cross-section-drop-single-reverse`, `cross-row-column-drop`, `cross-row-column-drop-single`, `cross-column-element-drop`, `cross-column-element-drop-single`, `archive-test`, `media-elements`
 
 ## Locator Strategy
 
@@ -422,7 +423,7 @@ Package: `wedevelopnl/silverstripe-elemental-grid` (type: `silverstripe-vendormo
 
 - PHP ^8.3
 - `silverstripe/framework` ^6.0, `silverstripe/admin` ^3.0, `silverstripe/vendor-plugin` ^3.0
-- Conflicts with `dnadesign/silverstripe-elemental-list` (replaces its functionality)
+- Conflicts with `dnadesign/silverstripe-elemental` (replaces its functionality)
 
 <!-- Source: local .apm/instructions/gotchas.instructions.md -->
 # Gotchas

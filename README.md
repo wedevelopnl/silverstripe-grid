@@ -36,8 +36,7 @@ composer require wedevelopnl/silverstripe-grid
 
 ```bash
 composer install
-.docker/env.sh          # Generate .docker/.env with auto-assigned ports
-make up                  # Start Docker services
+make up                  # Start Docker services (auto-generates .docker/.env)
 npm install
 npm run build            # Vite production build
 ```
