@@ -115,6 +115,15 @@ WeDevelop\Grid\Dev\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
+    duplicate-test:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/DuplicateTest.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_source_page
+        - action: publish_recursive
+          class: 'WeDevelop\Grid\Dev\MultiZonePage'
+          identifier: e2e_target_page
     complex-page:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/ComplexPage.yml'
       post_actions:

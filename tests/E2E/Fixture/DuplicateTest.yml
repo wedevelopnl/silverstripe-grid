@@ -1,0 +1,114 @@
+# E2E fixture for duplicate element tests.
+#
+# Two pages: a regular Page (source) and a MultiZonePage (target).
+# Each has a full Section→Row→Column→ContentElement tree published
+# so elements appear in the CMS editor.
+#
+# Structure:
+#   Page (e2e-duplicate-source):
+#     Zone "main":
+#       Section "Source Section" (Sort: 1, ShowTitle: 1)
+#         Row "Source Row"
+#           Column "Col A"
+#             ContentElement "Element Alpha"
+#           Column "Col B"
+#             ContentElement "Element Beta"
+#
+#   MultiZonePage (e2e-duplicate-target):
+#     Zone "main":
+#       Section "Target Main Section" (Sort: 1, ShowTitle: 1)
+#         Row "Target Main Row"
+#           Column "Target Main Col"
+#             ContentElement "Target Element"
+#     Zone "sidebar":
+#       Section "Target Sidebar Section" (Sort: 1, ShowTitle: 1)
+#         Row "Target Sidebar Row"
+#           Column "Target Sidebar Col"
+#
+# Top-down ordering (auto-scaffolding suppressed by FixtureLoader).
+# All pages use 'e2e-' URLSegment prefix for cleanup identification.
+# Elements parent directly to their container via polymorphic has_one (Parent).
+
+Page:
+  e2e_source_page:
+    Title: 'E2E Duplicate Source Page'
+    URLSegment: 'e2e-duplicate-source'
+
+WeDevelop\Grid\Dev\MultiZonePage:
+  e2e_target_page:
+    Title: 'E2E Duplicate Target Page'
+    URLSegment: 'e2e-duplicate-target'
+
+# --- Source page sections ---
+WeDevelop\Grid\Model\Section:
+  source_section:
+    Title: 'Source Section'
+    ShowTitle: 1
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_source_page
+  target_main_section:
+    Title: 'Target Main Section'
+    ShowTitle: 1
+    Sort: 1
+    Zone: main
+    Parent: =>WeDevelop\Grid\Dev\MultiZonePage.e2e_target_page
+  target_sidebar_section:
+    Title: 'Target Sidebar Section'
+    ShowTitle: 1
+    Sort: 1
+    Zone: sidebar
+    Parent: =>WeDevelop\Grid\Dev\MultiZonePage.e2e_target_page
+
+# --- Rows ---
+WeDevelop\Grid\Model\Row:
+  source_row:
+    Title: 'Source Row'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.source_section
+  target_main_row:
+    Title: 'Target Main Row'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.target_main_section
+  target_sidebar_row:
+    Title: 'Target Sidebar Row'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.target_sidebar_section
+
+# --- Columns ---
+WeDevelop\Grid\Model\Column:
+  col_a:
+    Title: 'Col A'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.source_row
+    GridSettings: '{}'
+  col_b:
+    Title: 'Col B'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Row.source_row
+    GridSettings: '{}'
+  target_main_col:
+    Title: 'Target Main Col'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.target_main_row
+    GridSettings: '{}'
+  target_sidebar_col:
+    Title: 'Target Sidebar Col'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.target_sidebar_row
+    GridSettings: '{}'
+
+# --- Content elements ---
+WeDevelop\Grid\Model\ContentElement:
+  element_alpha:
+    Title: 'Element Alpha'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_a
+  element_beta:
+    Title: 'Element Beta'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_b
+  target_element:
+    Title: 'Target Element'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.target_main_col
