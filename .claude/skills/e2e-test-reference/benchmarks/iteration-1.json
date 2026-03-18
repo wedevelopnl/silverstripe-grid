@@ -1,0 +1,92 @@
+{
+  "skill_name": "e2e-test-scaffold",
+  "iteration": 1,
+  "configs": [
+    {
+      "name": "with_skill",
+      "evals": [
+        {
+          "eval_name": "spec-creation",
+          "pass_rate": 1.0,
+          "passed": 8,
+          "total": 8,
+          "tokens": 39291,
+          "duration_seconds": 85.9
+        },
+        {
+          "eval_name": "fixture-reference",
+          "pass_rate": 1.0,
+          "passed": 8,
+          "total": 8,
+          "tokens": 33686,
+          "duration_seconds": 76.6
+        },
+        {
+          "eval_name": "selector-lookup",
+          "pass_rate": 1.0,
+          "passed": 5,
+          "total": 5,
+          "tokens": 30476,
+          "duration_seconds": 54.3
+        }
+      ],
+      "aggregate": {
+        "mean_pass_rate": 1.0,
+        "stddev_pass_rate": 0.0,
+        "mean_tokens": 34484,
+        "stddev_tokens": 3618,
+        "mean_duration_seconds": 72.3,
+        "stddev_duration_seconds": 13.1
+      }
+    },
+    {
+      "name": "without_skill",
+      "evals": [
+        {
+          "eval_name": "spec-creation",
+          "pass_rate": 0.75,
+          "passed": 6,
+          "total": 8,
+          "tokens": 43392,
+          "duration_seconds": 100.5
+        },
+        {
+          "eval_name": "fixture-reference",
+          "pass_rate": 1.0,
+          "passed": 8,
+          "total": 8,
+          "tokens": 39301,
+          "duration_seconds": 104.3
+        },
+        {
+          "eval_name": "selector-lookup",
+          "pass_rate": 1.0,
+          "passed": 5,
+          "total": 5,
+          "tokens": 32155,
+          "duration_seconds": 77.9
+        }
+      ],
+      "aggregate": {
+        "mean_pass_rate": 0.917,
+        "stddev_pass_rate": 0.118,
+        "mean_tokens": 38283,
+        "stddev_tokens": 4677,
+        "mean_duration_seconds": 94.2,
+        "stddev_duration_seconds": 11.8
+      }
+    }
+  ],
+  "delta": {
+    "pass_rate": "+8.3pp (1.0 vs 0.917)",
+    "tokens": "-10% (34484 vs 38283)",
+    "duration": "-23% (72.3s vs 94.2s)"
+  },
+  "analyst_observations": [
+    "The skill's main advantage is in spec-creation: it produced correct test.step() structure and import paths, while the baseline used comment-based steps and a wrong deep relative import path.",
+    "For fixture-reference, both produced identical quality — the baseline explored the codebase thoroughly enough to match the skill's output. This assertion set is non-discriminating for this eval.",
+    "For selector-lookup, both scored perfectly — the baseline agent grepped data-testid from source and produced equally comprehensive results. This assertion set is also non-discriminating.",
+    "The skill saved ~22s on average per run (72.3s vs 94.2s) and used ~10% fewer tokens (34.5k vs 38.3k), likely because it didn't need to explore the codebase for conventions.",
+    "The biggest qualitative win: the with-skill spec is directly usable as a real spec file (correct imports, correct structure). The without-skill spec would need manual fixes before it could run."
+  ]
+}

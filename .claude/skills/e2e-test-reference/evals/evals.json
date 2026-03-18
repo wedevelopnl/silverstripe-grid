@@ -1,0 +1,23 @@
+{
+  "skill_name": "e2e-test-reference",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "I need to write an E2E test for the column width editing feature — the user changes column widths via the badge picker across different viewports and verifies the changes persist after reload",
+      "expected_output": "A complete Playwright spec file with fixture loading, test.step structure, correct selectors for badge/viewport interaction, and reload persistence check",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "How do I create a new fixture that has a published page with two sections, where the second section has draft-only content?",
+      "expected_output": "A fixture YAML file with correct class names and hierarchy, plus dev.yml registration with publish_recursive and unpublish post-actions in correct order",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "What test IDs can I use to interact with the drag and drop system in my E2E test?",
+      "expected_output": "Comprehensive list of drag-related test IDs including drag-handle, drag overlays, aria-label patterns, and reference to drag helpers",
+      "files": []
+    }
+  ]
+}
