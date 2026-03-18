@@ -118,4 +118,4 @@ All container integration tests must call `Versioned::set_stage(Versioned::DRAFT
 
 ## E2E Fixture Ordering
 
-YAML fixtures must list elements **bottom-up** (leaf → column → row → section → page) to prevent auto-scaffolding from creating duplicate children. See `e2e-conventions` instructions for details.
+YAML fixtures must list elements **bottom-up** (leaf → column → row → section → page) to prevent auto-scaffolding from creating duplicate children.

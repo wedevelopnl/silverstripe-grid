@@ -1,0 +1,173 @@
+{
+  "metadata": {
+    "skill_name": "e2e-test-discipline",
+    "skill_path": "/Users/erikfrerejean/Development/Projects/WeDevelop/silverstripe-grid/.claude/skills/e2e-test-discipline",
+    "executor_model": "claude-opus-4-6",
+    "analyzer_model": "claude-opus-4-6",
+    "timestamp": "2026-03-18T00:00:00Z",
+    "evals_run": [1, 2, 3],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "UI Feature — Duplicate Row",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 255.8,
+        "tokens": 60636,
+        "tool_calls": 36,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Agent reads existing E2E specs before writing", "passed": true, "evidence": "Read archive.spec.ts and build-page.spec.ts in Step 5"},
+        {"text": "Agent creates E2E spec file", "passed": true, "evidence": "Wrote duplicate-row.spec.ts with full user journey"},
+        {"text": "E2E spec uses test.step() pattern", "passed": true, "evidence": "Single test() with 5 test.step() blocks"},
+        {"text": "Agent attempts npx playwright test", "passed": true, "evidence": "Step 16: ran npx playwright test"},
+        {"text": "Agent attempts make test-e2e", "passed": true, "evidence": "Step 17: ran make test-e2e"},
+        {"text": "Spec uses getByTestId/getByRole locators", "passed": true, "evidence": "Confirmed in transcript"}
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "UI Feature — Duplicate Row",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.0,
+        "passed": 0,
+        "failed": 6,
+        "total": 6,
+        "time_seconds": 352.0,
+        "tokens": 80349,
+        "tool_calls": 58,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Agent reads existing E2E specs before writing", "passed": false, "evidence": "Read unit test files only, never E2E specs"},
+        {"text": "Agent creates E2E spec file", "passed": false, "evidence": "No E2E spec created, only unit tests"},
+        {"text": "E2E spec uses test.step() pattern", "passed": false, "evidence": "No E2E spec created"},
+        {"text": "Agent attempts npx playwright test", "passed": false, "evidence": "Ran npm run test (Vitest) only"},
+        {"text": "Agent attempts make test-e2e", "passed": false, "evidence": "Never attempted"},
+        {"text": "Spec uses getByTestId/getByRole locators", "passed": false, "evidence": "No E2E spec created"}
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "Backend Refactor — No UI Changes",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 3,
+        "failed": 0,
+        "total": 3,
+        "time_seconds": 177.3,
+        "tokens": 58353,
+        "tool_calls": 15,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Agent does NOT create/modify E2E specs", "passed": true, "evidence": "Explicitly skipped E2E with documented reasoning"},
+        {"text": "Agent does NOT run playwright/test-e2e", "passed": true, "evidence": "Ran make test-integration only"},
+        {"text": "Agent focuses on integration tests", "passed": true, "evidence": "Attempted make test-integration"}
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "Backend Refactor — No UI Changes",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 3,
+        "failed": 0,
+        "total": 3,
+        "time_seconds": 229.0,
+        "tokens": 54856,
+        "tool_calls": 17,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Agent does NOT create/modify E2E specs", "passed": true, "evidence": "No E2E specs touched"},
+        {"text": "Agent does NOT run playwright/test-e2e", "passed": true, "evidence": "Ran make analyse and make test-integration"},
+        {"text": "Agent focuses on integration tests", "passed": true, "evidence": "Relied on existing 20 integration tests"}
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "Bug Fix — Extend Existing Spec",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 287.1,
+        "tokens": 66002,
+        "tool_calls": 33,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Agent reads existing E2E specs before writing", "passed": true, "evidence": "Globbed 16 specs, read collapse.spec.ts"},
+        {"text": "Agent modifies collapse.spec.ts (not new file)", "passed": true, "evidence": "Extended existing spec with second-reload persistence steps"},
+        {"text": "Extended spec uses test.step() pattern", "passed": true, "evidence": "Added test.step() blocks within existing journey"},
+        {"text": "Agent attempts npx playwright test on collapse.spec.ts", "passed": true, "evidence": "Step 12: ran npx playwright test"},
+        {"text": "Agent attempts make test-e2e", "passed": true, "evidence": "Step 13: ran make test-e2e"}
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "Bug Fix — Extend Existing Spec",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.0,
+        "passed": 0,
+        "failed": 5,
+        "total": 5,
+        "time_seconds": 645.3,
+        "tokens": 133838,
+        "tool_calls": 70,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Agent reads existing E2E specs before writing", "passed": false, "evidence": "Read collapse.spec.ts for investigation but never wrote E2E"},
+        {"text": "Agent modifies collapse.spec.ts (not new file)", "passed": false, "evidence": "Did not modify any E2E spec, wrote unit tests and SCSS only"},
+        {"text": "Extended spec uses test.step() pattern", "passed": false, "evidence": "No E2E spec modified"},
+        {"text": "Agent attempts npx playwright test on collapse.spec.ts", "passed": false, "evidence": "Ran vitest only, never attempted playwright"},
+        {"text": "Agent attempts make test-e2e", "passed": false, "evidence": "Never attempted make test-e2e"}
+      ]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0},
+      "time_seconds": {"mean": 240.1, "stddev": 46.8, "min": 177.3, "max": 287.1},
+      "tokens": {"mean": 61664, "stddev": 3261, "min": 58353, "max": 66002}
+    },
+    "without_skill": {
+      "pass_rate": {"mean": 0.33, "stddev": 0.47, "min": 0.0, "max": 1.0},
+      "time_seconds": {"mean": 408.8, "stddev": 176.2, "min": 229.0, "max": 645.3},
+      "tokens": {"mean": 89681, "stddev": 33194, "min": 54856, "max": 133838}
+    },
+    "delta": {
+      "pass_rate": "+0.67",
+      "time_seconds": "-168.7",
+      "tokens": "-28017"
+    }
+  },
+  "notes": [
+    "Eval 2 (backend refactor) passes 100% in both configurations — both correctly skip E2E for non-UI changes. This is expected: the skill adds value for UI changes, not backend-only work.",
+    "The skill's primary value shows in Eval 1 and Eval 3: without the skill, no E2E coverage was created for UI-impacting changes (0% pass rate).",
+    "With-skill runs were faster and used fewer tokens on average — the skill provides clear direction, reducing exploratory work.",
+    "The without-skill Eval 3 run spent 645s and 134K tokens doing thorough investigation + SCSS improvements but still missed E2E coverage entirely.",
+    "Eval 1 without-skill wrote comprehensive unit tests (734 tests passing) but zero E2E specs — demonstrating the exact gap the skill addresses."
+  ]
+}
