@@ -1,0 +1,117 @@
+{
+  "skill_name": "dnd-guide",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "When I drag a column to the left, it sometimes ends up on the right side of the target column. Can you investigate and suggest a fix?",
+      "expected_output": "Identifies the coordinate space mismatch between pending-path over.rect and pointer position as root cause. Explains that columns use X-axis direction detection. References the overRectRef capture rules and why tier 2 skips capture. Proposes a fix that respects coordinate space boundaries.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "identifies-coordinate-space-mismatch",
+          "text": "Identifies the root cause as a coordinate space issue — stale/wrong-space over.rect compared to pointer position during pending cross-container moves",
+          "type": "content_check"
+        },
+        {
+          "id": "explains-overRectRef-capture-rules",
+          "text": "Explains WHY overRectRef is not captured for pending-path siblings (coordinate space mismatch between getBoundingClientRect and getPointerPosition during auto-scroll)",
+          "type": "content_check"
+        },
+        {
+          "id": "distinguishes-same-vs-cross-container",
+          "text": "Notes that same-container column reordering is NOT affected because it uses index-based placement, not direction detection",
+          "type": "content_check"
+        },
+        {
+          "id": "fix-respects-coordinate-spaces",
+          "text": "Proposed fix either avoids mixing coordinate spaces or explains why the specific mix is safe (e.g., X-axis safe during vertical auto-scroll)",
+          "type": "content_check"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "I want to add the ability to drag content elements (like text blocks, images) between different columns. What files need to change and what's the approach?",
+      "expected_output": "Correctly identifies this is already implemented. References PARENT_CONTAINER_TYPE mapping, collision detection type filtering, and backend ContainerType::isChildAllowed(). Identifies E2E test coverage.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "identifies-already-implemented",
+          "text": "Correctly identifies that cross-column content element dragging is already implemented, not a new feature to build",
+          "type": "content_check"
+        },
+        {
+          "id": "explains-type-system-support",
+          "text": "References the PARENT_CONTAINER_TYPE mapping (element → column) and collision detection type filtering as evidence",
+          "type": "content_check"
+        },
+        {
+          "id": "mentions-source-depletion-edge-case",
+          "text": "Identifies source depletion (dragging the only element from a column) as an edge case to test or verify works correctly",
+          "type": "content_check"
+        },
+        {
+          "id": "mentions-pending-tree-for-cross-column",
+          "text": "Explains that cross-column moves use the pending tree pattern for visual feedback during the drag",
+          "type": "content_check"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "There's a visual flicker when dragging a row between sections — the row briefly snaps back to its original position before appearing in the target. What's causing this?",
+      "expected_output": "Identifies the await cancelQueries() timing gap in onMutate as the root cause. Explains the clearing order requirement (setQueryData before clearPendingTree). Proposes a fix that eliminates the async yield point from the critical path.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "identifies-await-timing-gap",
+          "text": "Identifies the await cancelQueries() in onMutate as creating the timing gap that causes the flicker",
+          "type": "content_check"
+        },
+        {
+          "id": "explains-effectiveData-fallback",
+          "text": "Explains the effectiveData = pendingTree ?? data pattern and how clearing pendingTree while data is stale causes the snap-back",
+          "type": "content_check"
+        },
+        {
+          "id": "explains-clearing-order-requirement",
+          "text": "States that setQueryData must happen before or simultaneously with clearPendingTree, not after an async gap",
+          "type": "content_check"
+        },
+        {
+          "id": "fix-eliminates-async-gap",
+          "text": "Proposes a fix that moves the synchronous operations (setQueryData + clearPendingTree) before the await, or makes onMutate synchronous",
+          "type": "content_check"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "What happens when the backend rejects a drop — for example, trying to drop a section inside a column? How does the error flow from the API back to the UI, and how does the optimistic update get rolled back?",
+      "expected_output": "Traces the full error path through both frontend and backend. Explains the double restoration (snapshot + refetch). Notes that collision detection type filtering prevents most invalid drops but hierarchy rules are backend-only.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "traces-validation-chain",
+          "text": "Traces ReorderValidator → ContainerType::isChildAllowed() → Result::fail() → resultToResponse → HTTP 422",
+          "type": "content_check"
+        },
+        {
+          "id": "explains-double-restoration",
+          "text": "Explains the belt-and-suspenders pattern: onError restores snapshot (instant rollback) AND onSettled invalidates/refetches (authoritative correction)",
+          "type": "content_check"
+        },
+        {
+          "id": "explains-frontend-type-filtering-as-defense",
+          "text": "Notes that collision detection's type filtering (siblings + parent containers only) acts as a first line of defense, preventing many invalid drops from reaching the backend",
+          "type": "content_check"
+        },
+        {
+          "id": "explains-pending-tree-safety-net",
+          "text": "Notes that clearPendingTree is called in both onMutate (normal path) and onError (safety net for early throws), and explains why both are needed",
+          "type": "content_check"
+        }
+      ]
+    }
+  ]
+}

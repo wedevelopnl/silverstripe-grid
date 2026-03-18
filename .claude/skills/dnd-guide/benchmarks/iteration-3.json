@@ -1,0 +1,108 @@
+{
+  "skill_name": "dnd-guide",
+  "iteration": 3,
+  "configurations": [
+    {
+      "name": "with_skill",
+      "pass_rate": {
+        "mean": 0.9375,
+        "stddev": 0.125,
+        "per_eval": {
+          "direction-detection-bug": 0.75,
+          "extending-dnd-system": 1.0,
+          "pending-tree-flicker": 1.0,
+          "backend-rejection": 1.0
+        }
+      },
+      "tokens": {
+        "mean": 57400,
+        "stddev": 13627,
+        "per_eval": {
+          "direction-detection-bug": 78334,
+          "extending-dnd-system": 79327,
+          "pending-tree-flicker": 46574,
+          "backend-rejection": 59485
+        }
+      },
+      "duration_seconds": {
+        "mean": 134.1,
+        "stddev": 75.6,
+        "per_eval": {
+          "direction-detection-bug": 276.7,
+          "extending-dnd-system": 130.0,
+          "pending-tree-flicker": 98.3,
+          "backend-rejection": 131.8
+        }
+      },
+      "tool_uses": {
+        "mean": 20.5,
+        "stddev": 7.1,
+        "per_eval": {
+          "direction-detection-bug": 21,
+          "extending-dnd-system": 28,
+          "pending-tree-flicker": 11,
+          "backend-rejection": 22
+        }
+      }
+    },
+    {
+      "name": "without_skill",
+      "pass_rate": {
+        "mean": 0.8125,
+        "stddev": 0.125,
+        "per_eval": {
+          "direction-detection-bug": 1.0,
+          "extending-dnd-system": 0.75,
+          "pending-tree-flicker": 1.0,
+          "backend-rejection": 0.75
+        }
+      },
+      "tokens": {
+        "mean": 56015,
+        "stddev": 17637,
+        "per_eval": {
+          "direction-detection-bug": 66881,
+          "extending-dnd-system": 76765,
+          "pending-tree-flicker": 38479,
+          "backend-rejection": 52015
+        }
+      },
+      "duration_seconds": {
+        "mean": 197.5,
+        "stddev": 113.4,
+        "per_eval": {
+          "direction-detection-bug": 382.9,
+          "extending-dnd-system": 195.2,
+          "pending-tree-flicker": 110.1,
+          "backend-rejection": 131.8
+        }
+      },
+      "tool_uses": {
+        "mean": 24.5,
+        "stddev": 14.5,
+        "per_eval": {
+          "direction-detection-bug": 16,
+          "extending-dnd-system": 45,
+          "pending-tree-flicker": 11,
+          "backend-rejection": 30
+        }
+      }
+    }
+  ],
+  "delta": {
+    "pass_rate": "+12.5pp (93.75% vs 81.25%)",
+    "tokens": "+2.5% (57.4k vs 56.0k)",
+    "duration": "-32.1% (134s vs 198s)",
+    "tool_uses": "-16.3% (20.5 vs 24.5)"
+  },
+  "analyst_observations": [
+    "REGRESSION on direction bug with-skill: scored 3/4 (was 4/4 in iter 2). The diagnostic map and Two Code Paths framing steered the agent toward handleDragOver threshold timing rather than the overRectRef capture mechanism. The agent missed explaining WHY overRectRef is not captured for pending-path siblings — the very thing the skill documents in System Invariant #5.",
+    "SURPRISE: without-skill direction bug scored 4/4 — HIGHER than with-skill (3/4). The without-skill agent independently found the overRectRef capture skip by reading the code comments at line 347-357 and correctly identified the coordinate space mismatch. This suggests the without-skill agent was less constrained in its investigation path.",
+    "Extending DnD with-skill continues to correctly identify the feature as already implemented (4/4). Without-skill incorrectly claims 2 code changes needed (3/4), missing the existing E2E tests. This eval consistently discriminates.",
+    "Pending flicker: both scored 4/4 across all iterations. This eval is no longer discriminating — both configurations reliably find the await timing gap.",
+    "Backend rejection: with-skill 4/4, without-skill 3/4. The same assertion (frontend type filtering as defense) continues to discriminate. Without-skill agents consistently describe type filtering as 'not preventing' rather than as a partial defense.",
+    "Duration advantage maintained: with-skill 134s vs without-skill 198s (-32%). The Two Code Paths framing helped the agent narrow the search space quickly on most evals.",
+    "The direction bug regression suggests the skill's diagnostic map entry for 'Element lands on wrong side' may be too prescriptive, leading agents to a specific investigation path rather than letting them follow the code. Consider making the diagnostic map point to code locations rather than hypothesized causes.",
+    "Cross-iteration comparison: iter 1 with-skill 100% (easy assertions), iter 2 with-skill 100% (hard assertions), iter 3 with-skill 93.75% (same assertions, different agent exploration). The variance across runs for the same skill version suggests single-run benchmarks are insufficient for confident skill evaluation."
+  ]
+}

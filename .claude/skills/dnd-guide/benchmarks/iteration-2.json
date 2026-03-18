@@ -1,0 +1,107 @@
+{
+  "skill_name": "dnd-guide",
+  "iteration": 2,
+  "configurations": [
+    {
+      "name": "with_skill",
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "per_eval": {
+          "direction-detection-bug": 1.0,
+          "extending-dnd-system": 1.0,
+          "pending-tree-flicker": 1.0,
+          "backend-rejection": 1.0
+        }
+      },
+      "tokens": {
+        "mean": 58071,
+        "stddev": 10034,
+        "per_eval": {
+          "direction-detection-bug": 59213,
+          "extending-dnd-system": 71897,
+          "pending-tree-flicker": 45253,
+          "backend-rejection": 55921
+        }
+      },
+      "duration_seconds": {
+        "mean": 103.4,
+        "stddev": 21.6,
+        "per_eval": {
+          "direction-detection-bug": 109.1,
+          "extending-dnd-system": 106.1,
+          "pending-tree-flicker": 70.2,
+          "backend-rejection": 128.3
+        }
+      },
+      "tool_uses": {
+        "mean": 19.0,
+        "stddev": 6.4,
+        "per_eval": {
+          "direction-detection-bug": 16,
+          "extending-dnd-system": 27,
+          "pending-tree-flicker": 10,
+          "backend-rejection": 23
+        }
+      }
+    },
+    {
+      "name": "without_skill",
+      "pass_rate": {
+        "mean": 0.75,
+        "stddev": 0.17,
+        "per_eval": {
+          "direction-detection-bug": 0.25,
+          "extending-dnd-system": 1.0,
+          "pending-tree-flicker": 0.75,
+          "backend-rejection": 1.0
+        }
+      },
+      "tokens": {
+        "mean": 63592,
+        "stddev": 19052,
+        "per_eval": {
+          "direction-detection-bug": 77734,
+          "extending-dnd-system": 86929,
+          "pending-tree-flicker": 37883,
+          "backend-rejection": 51821
+        }
+      },
+      "duration_seconds": {
+        "mean": 228.3,
+        "stddev": 169.5,
+        "per_eval": {
+          "direction-detection-bug": 509.7,
+          "extending-dnd-system": 166.0,
+          "pending-tree-flicker": 90.3,
+          "backend-rejection": 147.0
+        }
+      },
+      "tool_uses": {
+        "mean": 30.5,
+        "stddev": 14.9,
+        "per_eval": {
+          "direction-detection-bug": 24,
+          "extending-dnd-system": 52,
+          "pending-tree-flicker": 13,
+          "backend-rejection": 33
+        }
+      }
+    }
+  ],
+  "delta": {
+    "pass_rate": "+25pp (100% vs 75%)",
+    "tokens": "-8.7% (58k vs 64k)",
+    "duration": "-54.7% (103s vs 228s)",
+    "tool_uses": "-37.7% (19 vs 30.5)"
+  },
+  "analyst_observations": [
+    "Direction detection bug shows the LARGEST improvement from iteration 1: with-skill went from 352s to 109s (3.2x faster). The coordinate space mental model in the rewritten skill let the agent frame the problem correctly on first approach, avoiding the 595s exploration the without-skill agent needed.",
+    "Direction detection bug is now the strongest discriminator: with-skill scored 4/4, without-skill scored 1/4. The without-skill agent identified a plausible but different root cause (overlay center drift in distance sorting) and explicitly dismissed coordinate space issues. The skill's 'Three Coordinate Spaces' section prevented this misdiagnosis.",
+    "Pending tree flicker with-skill improved from 164s (iter 1) to 70s (iter 2) — 2.3x faster. The skill's explicit warning about the await cancelQueries timing gap let the agent go directly to the root cause.",
+    "Backend rejection results are close between with/without skill (both 4/4). The without-skill baseline improved from iteration 1 (3/4 → 4/4), likely because the codebase comments are detailed enough for this scenario.",
+    "Extending DnD results are identical between configurations (both 4/4). This eval does not discriminate — the codebase is self-documenting for feature discovery. Consider replacing with a harder eval.",
+    "Overall with-skill duration variance is dramatically lower: stddev 22s vs 170s. The skill provides a predictable exploration path regardless of task difficulty.",
+    "Iteration 2 vs iteration 1 delta: with-skill pass rate unchanged (100%), but duration dropped 47% (197s → 103s) and the assertions are harder. The skill rewrite's 'Lessons From Past Bugs' table and coordinate space section drove the biggest improvements."
+  ]
+}

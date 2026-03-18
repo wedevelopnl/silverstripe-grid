@@ -1,0 +1,107 @@
+{
+  "skill_name": "dnd-guide",
+  "iteration": 4,
+  "configurations": [
+    {
+      "name": "with_skill",
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "per_eval": {
+          "direction-detection-bug": 1.0,
+          "extending-dnd-system": 1.0,
+          "pending-tree-flicker": 1.0,
+          "backend-rejection": 1.0
+        }
+      },
+      "tokens": {
+        "mean": 63967,
+        "stddev": 11851,
+        "per_eval": {
+          "direction-detection-bug": 64114,
+          "extending-dnd-system": 78553,
+          "pending-tree-flicker": 45911,
+          "backend-rejection": 67288
+        }
+      },
+      "duration_seconds": {
+        "mean": 112.5,
+        "stddev": 26.1,
+        "per_eval": {
+          "direction-detection-bug": 115.9,
+          "extending-dnd-system": 116.3,
+          "pending-tree-flicker": 82.7,
+          "backend-rejection": 155.2
+        }
+      },
+      "tool_uses": {
+        "mean": 21.0,
+        "stddev": 7.0,
+        "per_eval": {
+          "direction-detection-bug": 20,
+          "extending-dnd-system": 27,
+          "pending-tree-flicker": 10,
+          "backend-rejection": 27
+        }
+      }
+    },
+    {
+      "name": "without_skill",
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "per_eval": {
+          "direction-detection-bug": 1.0,
+          "extending-dnd-system": 1.0,
+          "pending-tree-flicker": 1.0,
+          "backend-rejection": 1.0
+        }
+      },
+      "tokens": {
+        "mean": 67808,
+        "stddev": 17017,
+        "per_eval": {
+          "direction-detection-bug": 81291,
+          "extending-dnd-system": 87356,
+          "pending-tree-flicker": 41563,
+          "backend-rejection": 61023
+        }
+      },
+      "duration_seconds": {
+        "mean": 276.2,
+        "stddev": 228.9,
+        "per_eval": {
+          "direction-detection-bug": 655.1,
+          "extending-dnd-system": 198.2,
+          "pending-tree-flicker": 102.1,
+          "backend-rejection": 149.2
+        }
+      },
+      "tool_uses": {
+        "mean": 28.0,
+        "stddev": 15.5,
+        "per_eval": {
+          "direction-detection-bug": 19,
+          "extending-dnd-system": 53,
+          "pending-tree-flicker": 10,
+          "backend-rejection": 30
+        }
+      }
+    }
+  ],
+  "delta": {
+    "pass_rate": "0pp (both 100%)",
+    "tokens": "-5.7% (64k vs 68k)",
+    "duration": "-59.3% (113s vs 276s)",
+    "tool_uses": "-25.0% (21 vs 28)"
+  },
+  "analyst_observations": [
+    "REGRESSION FIXED: Direction bug with-skill scored 4/4 (was 3/4 in iter 3). The agent explicitly referenced 'invariant #5 trade-off' and traced the exact overRectRef capture skip → stale over.rect → wrong direction mechanism. The updated invariant text with the explicit trade-off description prevented the agent from treating the skip as 'correct by design'.",
+    "Both configurations scored 100% this iteration — the without-skill baseline also improved across the board. The direction bug without-skill agent found the overRectRef skip independently (4/4 for 2nd consecutive iteration). The extending DnD without-skill correctly identified the feature as already implemented (was wrong in iter 3). Backend rejection without-skill identified the two-layer defense (was missing in iters 1-3).",
+    "The skill's primary value in iter 4 is SPEED: 113s vs 276s average (-59%). The direction bug shows the starkest gap: 116s with-skill vs 655s without-skill (5.6x faster). The skill provides a mental model that eliminates dead-end exploration paths.",
+    "Duration consistency: with-skill stddev 26s vs without-skill stddev 229s. The skill makes investigation time predictable regardless of task difficulty.",
+    "Tool use efficiency: 21 vs 28 average (-25%). The file map and diagnostic map reduce exploratory searches. Extending DnD shows the largest gap: 27 vs 53 tool uses.",
+    "Cross-iteration direction bug with-skill: iter 1: 352s, iter 2: 109s, iter 3: 277s (regression), iter 4: 116s (fixed). The iter 3 regression was caused by the skill framing the overRectRef skip as 'correct' without explaining the trade-off. The fix (adding 'Known trade-off' to invariant #5) directly resolved it.",
+    "The without-skill baseline reaching 100% on hard assertions suggests the codebase itself is well-documented — code comments explain the WHY behind decisions. The skill's value is in providing the mental model upfront (avoiding dead-end exploration) rather than containing knowledge that can't be discovered from code."
+  ]
+}

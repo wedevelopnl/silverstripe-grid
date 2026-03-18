@@ -1,0 +1,106 @@
+{
+  "skill_name": "dnd-guide",
+  "iteration": 1,
+  "configurations": [
+    {
+      "name": "with_skill",
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "per_eval": {
+          "direction-detection-bug": 1.0,
+          "extending-dnd-system": 1.0,
+          "pending-tree-flicker": 1.0,
+          "backend-rejection": 1.0
+        }
+      },
+      "tokens": {
+        "mean": 60704,
+        "stddev": 9205,
+        "per_eval": {
+          "direction-detection-bug": 67060,
+          "extending-dnd-system": 71286,
+          "pending-tree-flicker": 50781,
+          "backend-rejection": 53688
+        }
+      },
+      "duration_seconds": {
+        "mean": 197.1,
+        "stddev": 100.7,
+        "per_eval": {
+          "direction-detection-bug": 352.0,
+          "extending-dnd-system": 142.6,
+          "pending-tree-flicker": 164.5,
+          "backend-rejection": 129.7
+        }
+      },
+      "tool_uses": {
+        "mean": 19,
+        "stddev": 5.2,
+        "per_eval": {
+          "direction-detection-bug": 15,
+          "extending-dnd-system": 27,
+          "pending-tree-flicker": 15,
+          "backend-rejection": 19
+        }
+      }
+    },
+    {
+      "name": "without_skill",
+      "pass_rate": {
+        "mean": 0.933,
+        "stddev": 0.133,
+        "per_eval": {
+          "direction-detection-bug": 1.0,
+          "extending-dnd-system": 1.0,
+          "pending-tree-flicker": 1.0,
+          "backend-rejection": 0.75
+        }
+      },
+      "tokens": {
+        "mean": 65667,
+        "stddev": 18329,
+        "per_eval": {
+          "direction-detection-bug": 89334,
+          "extending-dnd-system": 76456,
+          "pending-tree-flicker": 40015,
+          "backend-rejection": 56863
+        }
+      },
+      "duration_seconds": {
+        "mean": 259.3,
+        "stddev": 216.8,
+        "per_eval": {
+          "direction-detection-bug": 594.6,
+          "extending-dnd-system": 173.4,
+          "pending-tree-flicker": 132.7,
+          "backend-rejection": 136.6
+        }
+      },
+      "tool_uses": {
+        "mean": 30.8,
+        "stddev": 15.3,
+        "per_eval": {
+          "direction-detection-bug": 24,
+          "extending-dnd-system": 52,
+          "pending-tree-flicker": 12,
+          "backend-rejection": 35
+        }
+      }
+    }
+  ],
+  "delta": {
+    "pass_rate": "+6.7%",
+    "tokens": "-7.6% (60.7k vs 65.7k)",
+    "duration": "-24.0% (197s vs 259s)",
+    "tool_uses": "-38.3% (19 vs 30.8)"
+  },
+  "analyst_observations": [
+    "Direction detection bug showed the largest efficiency gain: with-skill used 67k tokens in 352s (15 tool uses) vs without-skill 89k tokens in 595s (24 tool uses) — 40% faster, 25% fewer tokens",
+    "Extending DnD showed the strongest tool-use reduction: 27 vs 52 tool calls — the skill provided a file map that eliminated exploratory searches",
+    "Pending tree flicker was the closest result: both identified the same root cause (await cancelQueries timing gap). Without-skill was slightly faster here (133s vs 165s) and used fewer tokens (40k vs 51k) — the skill's context didn't provide a shortcut for this specific investigation",
+    "Backend rejection was the only eval where pass rates differed: without-skill missed the frontend prevention layer (collision detection type filtering). The skill's architecture overview helped the with-skill agent recognize this defense-in-depth design",
+    "Non-discriminating assertions: 14 of 15 assertions passed for both configurations — the assertions may be too easy. Only 'mentions-frontend-prevention' in eval 3 discriminated. Consider harder assertions that test depth of understanding (e.g., 'explains WHY centerCrossing uses overlap gate margins' rather than just 'mentions collisionDetection.ts')",
+    "The with-skill runs show lower variance in duration (stddev 101s vs 217s) suggesting more predictable exploration paths"
+  ]
+}
