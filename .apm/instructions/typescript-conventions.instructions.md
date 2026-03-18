@@ -34,41 +34,7 @@ applyTo: "**/*.{ts,tsx}"
 
 ## Drag & Drop (dnd-kit)
 
-Detailed architecture documented in `docs/architecture/drag-and-drop.md`.
-
-### Composite IDs
-
-Draggable/droppable IDs encode hierarchy level: `type-numericId` (e.g., `row-42`, `column-7`). Parse with `parseDraggableId()`, build with `buildDraggableId()`. `PARENT_CONTAINER_TYPE` maps each type to its parent (`element→column→row→section→root`).
-
-### Collision Detection (3-tier)
-
-`createTypedCollisionDetection()` in `client/src/utils/collisionDetection.ts`:
-
-1. **centerCrossing** (siblings, no pending move) — Direction-aware threshold crossing with overlap gate. Prevents ghost jumps by requiring the collision rect center to actually cross a threshold on the target, not just be nearest. Threshold adapts to DragOverlay size asymmetry (compact overlay ≈53px vs full element ≈350px).
-2. **closestCenterLive** (siblings, pending move active) — Reads live DOM rects via `getBoundingClientRect()` because CSS transforms from SortableContext make `droppableRects` stale. Filtered to pending container siblings only.
-3. **closestCenter** (parent containers) — Distance-based fallback for cross-container entry.
-
-### Pending Tree Pattern
-
-During cross-container drags, `handleDragOver` calls `applyReorder()` via `usePendingTree` to produce a mutated tree stored in `pendingTree` state. This provides immediate visual feedback (element appears in target container) without triggering API mutations. `pendingContainerItemsRef` tracks valid sibling IDs for collision filtering. `collisionRefs` are shared between collision detection and the orchestrator. For pending-path siblings, `overRectRef` is NOT captured — `handleDragEnd` falls back to `over.rect` (pre-transform, from dnd-kit) for direction detection. For same-container siblings, `overRectRef` stores the DOM node ref and reads `getBoundingClientRect()` at drop time. Cleared on drop or cancel.
-
-### Direction-Aware Placement
-
-`resolveDropPlacement()` and `resolveInsertDirection()` compare pointer position against the `over` element's center to determine before/after placement. Columns use X-axis (horizontal layout), all other levels use Y-axis (vertical layout).
-
-### Key Files
-
-| File | Purpose |
-|------|---------|
-| `client/src/hooks/useDragAndDrop.ts` | Orchestrator hook: sensors, drag event callbacks, wires sub-hooks |
-| `client/src/hooks/usePendingTree.ts` | Pending tree state, collision refs for cross-container drags |
-| `client/src/utils/collisionDetection.ts` | 3-tier collision detection, type filtering |
-| `client/src/utils/applyReorder.ts` | Immutable tree mutation for optimistic updates |
-| `client/src/utils/resolveDropPlacement.ts` | Maps drag end context to reorder params with direction |
-| `client/src/utils/resolveInsertDirection.ts` | Pointer vs rect center comparison for before/after |
-| `client/src/utils/resolveReorderParams.ts` | Maps dnd-kit event context to API payload |
-| `client/src/hooks/useElementMaps.ts` | O(1) lookup maps: `nodeMap`, `childrenByParentId` |
-| `client/src/types/dnd.ts` | Composite IDs, type constants, parent-type mapping |
+See the `dnd-guide` skill for the full reference — coordinate spaces, collision detection, pending tree, diagnostics, and system invariants. The skill is triggered automatically when working on DnD files.
 
 ### GridSettings (Sparse Storage)
 
