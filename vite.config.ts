@@ -12,10 +12,13 @@ export default defineConfig({
     react(),
     dts({
       include: ['client/src/types/**/*.ts'],
-      exclude: ['client/src/types/silverstripe.d.ts'],
+      exclude: ['client/src/types/silverstripe.d.ts', 'client/src/types/styles.d.ts'],
       outDir: 'client/dist',
       // Resolve @/* path aliases to relative imports in .d.ts output
       tsconfigPath: './tsconfig.json',
+      // TypeScript 6 changed rootDir inference — pin it so .d.ts files
+      // emit to client/dist/types/ instead of client/dist/client/src/types/
+      compilerOptions: { rootDir: resolve(__dirname, 'client/src') },
     }),
   ],
   resolve: {
