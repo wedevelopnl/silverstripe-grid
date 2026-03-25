@@ -127,13 +127,9 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 │    ├── GridTreeBuilder (read path)                          │
 │    │     └── GridElementRepositoryInterface                 │
 │    │                                                        │
-│    ├── ReorderService (reorder orchestration)               │
+│    ├── ReorderService (validate + reorder + persist)        │
 │    │     ├── ReorderValidatorInterface                      │
-│    │     ├── ReorderExecutorInterface                       │
-│    │     └── ElementPersistenceService                      │
-│    │                                                        │
-│    ├── ElementPersistenceService (write path)               │
-│    │     └── ORM write + ValidationException translation    │
+│    │     └── GridElementRepositoryInterface                 │
 │    │                                                        │
 │    └── GridSettingsResolver (grid settings resolution)      │
 │          └── Resolves ViewportConfig per viewport           │
@@ -255,23 +251,23 @@ The builder provides an `updateElementData` extension point, allowing other modu
 Orchestrates element reordering through three phases:
 
 ```
-reorder(element, targetParent, afterElementId)
+ReorderService.reorder(element, targetParent, afterElementId)
   │
-  ├─ Phase 1: ReorderValidator.validate()
+  ├─ Validate (ReorderValidator)
   │    └─ Hierarchy rule check (cross-parent only)
   │
-  ├─ Phase 2: ReorderExecutor.execute()
-  │    └─ Sort calculation (in-memory, no writes)
+  ├─ Compute sort order (in-memory)
+  │    └─ Load siblings, splice, reindex
   │
-  └─ Phase 3: ElementPersistenceService.persistBatch()
-       └─ Write only dirty elements
+  └─ Persist dirty elements
+       └─ WriteResult catches ValidationException → Result
 ```
 
-Each phase returns a `Result`. If any phase fails, the pipeline short-circuits and the failure propagates to the controller.
+Each step returns a `Result`. If any step fails, the service short-circuits and the failure propagates to the controller.
 
-### ReorderExecutor
+### Sort Computation
 
-Computes new Sort values entirely in memory:
+`ReorderService` computes new Sort values entirely in memory:
 
 1. Load target siblings (zone-filtered for Sections)
 2. Exclude the moved element from the sibling list
@@ -282,17 +278,9 @@ Computes new Sort values entirely in memory:
 
 For cross-parent moves, the source parent's siblings are also reindexed to close the gap left by the moved element. The moved element is marked always-dirty even if its Sort value happens to stay the same, because its `ParentID` has changed.
 
-### ElementPersistenceService
+### WriteResult
 
-The single boundary where SilverStripe's `ValidationException` becomes a domain `Result`. Three write operations:
-
-| Method | Use case |
-|--------|----------|
-| `persistNew()` | Create element, optionally insert after reference |
-| `persistDuplicate()` | Duplicate element, insert after original |
-| `persistBatch()` | Write multiple elements (reorder), stop on first failure |
-
-The `insertAfter()` helper bumps Sort values of downstream siblings to make room for the new element.
+The boundary where SilverStripe's `ValidationException` becomes a domain `Result`. Used by `ReorderService` to persist dirty elements and by other write operations throughout the codebase.
 
 ### GridSettingsResolver
 
@@ -531,8 +519,7 @@ public GridAdapterInterface $gridAdapter;
 WeDevelop\Grid\Service\ReorderService:
   constructor:
     validator: '%$WeDevelop\Grid\Contract\ReorderValidatorInterface'
-    executor: '%$WeDevelop\Grid\Contract\ReorderExecutorInterface'
-    persistenceService: '%$WeDevelop\Grid\Service\ElementPersistenceService'
+    elementRepository: '%$WeDevelop\Grid\Repository\GridElementRepositoryInterface'
 ```
 
 ## CMS Integration

@@ -13,7 +13,7 @@ applyTo: "**/*.php"
 ## Result Pattern
 
 - Service-layer validation returns `Result` objects via `Result::ok($value)` / `Result::fail($errors)` — never throws for expected validation failures.
-- Used in `ReorderService`, `ElementPersistenceService`, `ReorderExecutor`, and controller response flows.
+- Used in `ReorderService`, `WriteResult`, and controller response flows.
 - Check with `$result->isOk()` / `$result->isErr()`, access value via `$result->unwrap()`, errors via `$result->errors()`.
 
 ## Container Auto-Scaffolding

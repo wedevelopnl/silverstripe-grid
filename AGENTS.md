@@ -72,14 +72,14 @@ _config/              # YAML config (DI bindings, element hierarchy, grid adapte
 templates/            # SilverStripe .ss templates (element holders + form fields)
 src/                  # PHP source (PSR-4: WeDevelop\Grid\)
 src/Adapter/          # Grid framework adapters (Tailwind, Bootstrap, Bulma) + GridAdapterConfiguration trait + ContentLayoutAdapter
-src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderExecutorInterface, ReorderValidatorInterface)
+src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderValidatorInterface)
 src/Controllers/      # API controllers (GridController)
 src/Dev/              # Fixture loading for E2E tests (controller, loader, post-actions, result)
 src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement) + ContainerElementTrait
 src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaExtension)
 src/Forms/            # Form field implementations (GridEditorField)
 src/Value/            # Value objects and DTOs (GridNode, Result, ValidationError, ValidationSeverity, ContainerType, Viewport, ViewportConfig, GridSettings, OverrideStrategy, ContentLayoutClassMap, AspectRatio, MediaPosition, VerticalAlignment)
-src/Service/          # Domain services (GridTreeBuilder, ElementPersistenceService, ReorderService, ReorderExecutor, GridSettingsResolver)
+src/Service/          # Domain services (GridTreeBuilder, ReorderService, GridSettingsResolver)
 src/Validation/       # Hierarchy validation, reorder validation, and field validators (HierarchyValidationService, ReorderValidator, ElementAllowanceTrait, GridSettingsFieldValidator)
 src/Exception/        # Domain exceptions (GridDomainException, InvalidGridValueException)
 src/ORM/FieldType/    # Custom DB field types (DBGridSettings composite field)
@@ -503,7 +503,7 @@ The adapter receives the active grid adapter via constructor injection and calls
 ## Result Pattern
 
 - Service-layer validation returns `Result` objects via `Result::ok($value)` / `Result::fail($errors)` — never throws for expected validation failures.
-- Used in `ReorderService`, `ElementPersistenceService`, `ReorderExecutor`, and controller response flows.
+- Used in `ReorderService`, `WriteResult`, and controller response flows.
 - Check with `$result->isOk()` / `$result->isErr()`, access value via `$result->unwrap()`, errors via `$result->errors()`.
 
 ## Container Auto-Scaffolding
