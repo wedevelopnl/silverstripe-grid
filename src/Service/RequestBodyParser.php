@@ -160,8 +160,6 @@ final readonly class RequestBodyParser
             return $this->fail('visible must be a boolean.');
         }
 
-        /** @var positive-int $width Structural check only — range validated by GridSettingsFieldValidator */
-        /** @var non-negative-int $offset Structural check only — range validated by GridSettingsFieldValidator */
         return Result::ok(new UpdateGridSettingsRequest($id, $viewport, $width, $offset, $visible));
     }
 

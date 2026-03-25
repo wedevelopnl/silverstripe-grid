@@ -144,6 +144,76 @@ class DBGridSettingsTest extends SapphireTest
         $this->assertFalse($field->getField('DefaultVisible'));
     }
 
+    // ─── setValue with JSON string (fixture compatibility) ────
+
+    public function testSetValueFromJsonStringWithDefaultAndOverrides(): void
+    {
+        $field = $this->createField();
+        $field->setValue('{"default":{"width":8,"offset":1,"visible":true},"overrides":{"lg":{"width":6,"offset":0,"visible":false}}}');
+
+        $settings = $field->getValue();
+
+        $this->assertNotNull($settings);
+        $this->assertSame(8, $settings->default->width);
+        $this->assertSame(1, $settings->default->offset);
+        $this->assertTrue($settings->default->visible);
+        $this->assertCount(1, $settings->overrides);
+        $this->assertSame(6, $settings->overrides['lg']->width);
+        $this->assertFalse($settings->overrides['lg']->visible);
+    }
+
+    public function testSetValueFromJsonStringWithDefaultOnly(): void
+    {
+        $field = $this->createField();
+        $field->setValue('{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}');
+
+        $settings = $field->getValue();
+
+        $this->assertNotNull($settings);
+        $this->assertSame(12, $settings->default->width);
+        $this->assertSame([], $settings->overrides);
+    }
+
+    public function testSetValueFromEmptyJsonStringProducesNoData(): void
+    {
+        $field = $this->createField();
+        $field->setValue('');
+
+        $this->assertNull($field->getValue());
+    }
+
+    public function testSetValueFromEmptyObjectJsonProducesNoData(): void
+    {
+        $field = $this->createField();
+        $field->setValue('{}');
+
+        $this->assertNull($field->getValue());
+    }
+
+    public function testSetValueFromInvalidJsonProducesNoData(): void
+    {
+        $field = $this->createField();
+        $field->setValue('not valid json');
+
+        $this->assertNull($field->getValue());
+    }
+
+    public function testSetValueFromJsonMissingDefaultKeyProducesNoData(): void
+    {
+        $field = $this->createField();
+        $field->setValue('{"foo":"bar"}');
+
+        $this->assertNull($field->getValue());
+    }
+
+    public function testSetValueFromJsonWithInvalidWidthProducesNoData(): void
+    {
+        $field = $this->createField();
+        $field->setValue('{"default":{"width":0,"offset":0,"visible":true}}');
+
+        $this->assertNull($field->getValue());
+    }
+
     // ─── Round-trip ─────────────────────────────────────────────
 
     public function testSetValueThenGetValueRoundTrips(): void

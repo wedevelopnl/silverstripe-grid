@@ -9,10 +9,6 @@ namespace WeDevelop\Grid\Value;
  */
 final readonly class ViewportConfig
 {
-    /**
-     * @param positive-int $width
-     * @param non-negative-int $offset
-     */
     public function __construct(
         public int $width,
         public int $offset,
@@ -30,7 +26,7 @@ final readonly class ViewportConfig
     }
 
     /**
-     * @param array{width: positive-int, offset: non-negative-int, visible: bool} $data
+     * @param array{width: int, offset: int, visible: bool} $data
      */
     public static function fromArray(array $data): self
     {
@@ -41,7 +37,9 @@ final readonly class ViewportConfig
         );
     }
 
-    /** @return array{width: positive-int, offset: non-negative-int, visible: bool} */
+    /**
+     * @return array{width: int, offset: int, visible: bool}
+     */
     public function toArray(): array
     {
         return [

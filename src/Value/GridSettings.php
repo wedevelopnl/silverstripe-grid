@@ -86,7 +86,7 @@ final readonly class GridSettings
     /**
      * Convert to array representation for API responses.
      *
-     * @return array{default: array{width: positive-int, offset: non-negative-int, visible: bool}, overrides: array<non-empty-string, array{width: positive-int, offset: non-negative-int, visible: bool}>}
+     * @return array{default: array{width: int, offset: int, visible: bool}, overrides: array<non-empty-string, array{width: int, offset: int, visible: bool}>}
      */
     public function toArray(): array
     {
@@ -95,7 +95,7 @@ final readonly class GridSettings
             $overrides[$key] = $config->toArray();
         }
 
-        /** @var array<non-empty-string, array{width: positive-int, offset: non-negative-int, visible: bool}> $overrides */
+        /** @var array<non-empty-string, array{width: int, offset: int, visible: bool}> $overrides */
         return [
             'default' => $this->default->toArray(),
             'overrides' => $overrides,

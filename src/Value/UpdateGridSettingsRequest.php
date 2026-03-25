@@ -9,8 +9,6 @@ final readonly class UpdateGridSettingsRequest
     /**
      * @param positive-int $id
      * @param non-empty-string $viewport
-     * @param positive-int $width
-     * @param non-negative-int $offset
      */
     public function __construct(
         public int $id,

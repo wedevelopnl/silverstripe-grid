@@ -38,7 +38,9 @@ final class ColumnClassResolver
                 continue;
             }
 
+            /** @var positive-int $width Validated by GridSettingsFieldValidator at write time */
             $width = $config->width;
+            /** @var non-negative-int $offset Validated by GridSettingsFieldValidator at write time */
             $offset = $config->offset;
             $visible = $config->visible;
 

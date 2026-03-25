@@ -58,7 +58,7 @@ final class DBGridSettings extends DBComposite
             return null;
         }
 
-        /** @var non-negative-int $offset */
+        /** @var int $offset */
         $offset = $this->getField('DefaultOffset') ?? 0;
         $visible = (bool) ($this->getField('DefaultVisible') ?? true);
 
@@ -139,7 +139,7 @@ final class DBGridSettings extends DBComposite
             return null;
         }
 
-        /** @var array{width: positive-int, offset: non-negative-int, visible: bool} $defaultData */
+        /** @var array{width: int, offset: int, visible: bool} $defaultData */
         $default = ViewportConfig::fromArray($defaultData);
         $overrides = $this->deserializeOverrides(
             isset($decoded['overrides']) && is_array($decoded['overrides'])
@@ -236,7 +236,7 @@ final class DBGridSettings extends DBComposite
         $overrides = [];
         foreach ($decoded as $key => $data) {
             if (is_string($key) && $key !== '' && is_array($data)) {
-                /** @var array{width: positive-int, offset: non-negative-int, visible: bool} $data */
+                /** @var array{width: int, offset: int, visible: bool} $data */
                 $overrides[$key] = ViewportConfig::fromArray($data);
             }
         }

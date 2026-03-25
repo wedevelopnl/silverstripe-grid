@@ -20,8 +20,8 @@ use WeDevelop\Grid\Value\ViewportConfig;
  *
  * Uses a default-viewport-anchored model: the adapter's default viewport is
  * the primary configuration; other viewports store independent overrides.
- * Handles the full lifecycle: JSON decode on load, per-viewport controls
- * in the template, JSON encode on save.
+ * Receives a GridSettings VO on load (via DBGridSettings), provides per-viewport
+ * controls in the template, and writes back via setCastedField on save.
  */
 class GridSettingsField extends FormField
 {
@@ -35,7 +35,7 @@ class GridSettingsField extends FormField
     }
 
     /**
-     * Accept value from DB (JSON string) or form submission (nested array).
+     * Accept value from DB (GridSettings VO via DBGridSettings) or form submission (nested array).
      *
      * @param array<string, mixed>|ModelData|null $data
      */
@@ -125,8 +125,6 @@ class GridSettingsField extends FormField
             : 0;
         $defaultVisible = is_array($defaultEntry) && isset($defaultEntry['visible']);
 
-        /** @var positive-int $defaultWidth */
-        /** @var non-negative-int $defaultOffset */
         $default = new ViewportConfig($defaultWidth, $defaultOffset, $defaultVisible);
         $overrides = [];
 
@@ -151,9 +149,7 @@ class GridSettingsField extends FormField
             $width = $entry['width'] ?? null;
             $offset = $entry['offset'] ?? null;
 
-            /** @var positive-int $parsedWidth */
             $parsedWidth = is_numeric($width) ? (int) $width : $columnCount;
-            /** @var non-negative-int $parsedOffset */
             $parsedOffset = is_numeric($offset) ? (int) $offset : 0;
 
             $overrides[$key] = new ViewportConfig(
