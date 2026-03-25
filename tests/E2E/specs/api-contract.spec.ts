@@ -1,10 +1,9 @@
 import { expect, test } from '@playwright/test';
-import {
-  type ColumnNode,
-  type SectionNode,
-  type StatusFlags,
-  allowedTypeInfoSchema,
-  elementTreeResponseSchema,
+import type {
+  ColumnNode,
+  ElementTreeResponse,
+  SectionNode,
+  StatusFlags,
 } from '@/types/elements';
 import { loadFixture, resetFixtures } from '../helpers/fixtures';
 
@@ -15,35 +14,26 @@ test.describe('API contract', () => {
     await resetFixtures(request);
   });
 
-  test('readTree response validates against the Zod schema', async ({ request }) => {
+  test('readTree response returns a valid element tree', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
 
     expect(response.ok()).toBe(true);
 
-    const body: unknown = await response.json();
-    const result = elementTreeResponseSchema.safeParse(body);
-
-    if (!result.success) {
-      // Surface the Zod error for easy debugging
-      throw new Error(
-        `Schema validation failed:\n${JSON.stringify(result.error.issues, null, 2)}`,
-      );
-    }
+    const tree = await response.json() as ElementTreeResponse;
 
     // Sanity: at least one section exists
-    const areaKeys = Object.keys(result.data);
+    const areaKeys = Object.keys(tree);
     expect(areaKeys.length).toBeGreaterThan(0);
 
-    const firstArea = result.data[areaKeys[0]];
+    const firstArea = tree[areaKeys[0]];
     expect(firstArea.length).toBeGreaterThan(0);
   });
 
   test('versioned state flags reflect fixture post-actions', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
-    const body: unknown = await response.json();
-    const tree = elementTreeResponseSchema.parse(body);
+    const tree = await response.json() as ElementTreeResponse;
 
     // Collect all containers and leaf elements across the tree
     type FlaggedNode = { title: string; statusFlags: StatusFlags };
@@ -132,8 +122,7 @@ test.describe('API contract', () => {
   test('column nodes include gridSettings with per-viewport structure', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
-    const body: unknown = await response.json();
-    const tree = elementTreeResponseSchema.parse(body);
+    const tree = await response.json() as ElementTreeResponse;
 
     // Collect all column nodes
     const columns: ColumnNode[] = [];
@@ -178,7 +167,7 @@ test.describe('API contract', () => {
     expect(rightCol!.gridSettings['lg']).toEqual({ width: 6, offset: 0, visible: true });
 
     // Default column has empty gridSettings (all defaults cascade).
-    // PHP's json_encode([]) emits [] not {} — Zod's z.record() accepts both.
+    // PHP's json_encode([]) emits [] not {} — both deserialize to an empty object/array.
     const defaultCol = columns.find((c) => c.title === 'Draft Section Column');
     expect(defaultCol, 'Draft Section Column not found').toBeDefined();
     expect(Object.keys(defaultCol!.gridSettings)).toHaveLength(0);
@@ -187,8 +176,7 @@ test.describe('API contract', () => {
   test('element nodes include editLink field', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
-    const body: unknown = await response.json();
-    const tree = elementTreeResponseSchema.parse(body);
+    const tree = await response.json() as ElementTreeResponse;
 
     for (const sections of Object.values(tree)) {
       for (const section of sections) {
@@ -201,8 +189,7 @@ test.describe('API contract', () => {
   test('container allowedTypes include label, icon, and description', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
-    const body: unknown = await response.json();
-    const tree = elementTreeResponseSchema.parse(body);
+    const tree = await response.json() as ElementTreeResponse;
 
     for (const sections of Object.values(tree)) {
       for (const section of sections) {
@@ -211,9 +198,10 @@ test.describe('API contract', () => {
 
         // Section's allowedTypes should have enriched info objects
         if (sectionNode.allowedTypes !== null) {
-          for (const [, info] of Object.entries(sectionNode.allowedTypes)) {
-            const parsed = allowedTypeInfoSchema.safeParse(info);
-            expect(parsed.success, `allowedTypes value should match {label, icon, description}: ${JSON.stringify(info)}`).toBe(true);
+          for (const [className, info] of Object.entries(sectionNode.allowedTypes)) {
+            expect(typeof info.label, `allowedTypes[${className}].label should be a string`).toBe('string');
+            expect(typeof info.icon, `allowedTypes[${className}].icon should be a string`).toBe('string');
+            expect(typeof info.description, `allowedTypes[${className}].description should be a string`).toBe('string');
           }
         }
       }

@@ -68,10 +68,11 @@ describe('endpoints', () => {
       expect(result).toEqual(mockTree);
     });
 
-    it('throws on invalid response shape', async () => {
+    it('returns raw response without runtime validation', async () => {
       mockApiGet.mockResolvedValue('not-an-object');
 
-      await expect(fetchElementTree(1, 'main')).rejects.toThrow();
+      const result = await fetchElementTree(1, 'main');
+      expect(result).toBe('not-an-object');
     });
   });
 

@@ -1,31 +1,23 @@
-import { z } from 'zod/v4-mini';
-import {
-  type ContainerType,
-  type ElementTreeResponse,
-  elementTreeResponseSchema,
+import type {
+  ContainerType,
+  ElementTreeResponse,
 } from '@/types/elements';
-import {
-  type AcceptableContainer,
-  type PageEntry,
-  acceptableContainersResponseSchema,
-  pagesResponseSchema,
-  zonesResponseSchema,
+import type {
+  AcceptableContainer,
+  PageEntry,
 } from '@/types/duplicateTo';
 import { apiDelete, apiGet, apiPatch, apiPost } from './client';
 import { getControllerLink } from './config';
 
 /**
  * Fetch the full element tree for a CMS page.
- * Response is validated through the Zod schema.
  */
 export async function fetchElementTree(
   pageId: number,
   zone: string,
 ): Promise<ElementTreeResponse> {
   const base = getControllerLink();
-  const data = await apiGet<unknown>(`${base}/api/readTree/${pageId}/${encodeURIComponent(zone)}`);
-
-  return z.parse(elementTreeResponseSchema, data);
+  return apiGet<ElementTreeResponse>(`${base}/api/readTree/${pageId}/${encodeURIComponent(zone)}`);
 }
 
 export interface CreateElementParams {
@@ -129,20 +121,16 @@ export async function fetchAcceptableContainers(
   elementType: string,
 ): Promise<AcceptableContainer[]> {
   const base = getControllerLink();
-  const data = await apiGet<unknown>(
+  return apiGet<AcceptableContainer[]>(
     `${base}/api/acceptableContainers/${pageId}/${encodeURIComponent(zone)}/${encodeURIComponent(elementType)}`,
   );
-
-  return z.parse(acceptableContainersResponseSchema, data);
 }
 
 // --- Zones ---
 
 export async function fetchZones(pageId: number): Promise<string[]> {
   const base = getControllerLink();
-  const data = await apiGet<unknown>(`${base}/api/zones/${pageId}`);
-
-  return z.parse(zonesResponseSchema, data);
+  return apiGet<string[]>(`${base}/api/zones/${pageId}`);
 }
 
 // --- Pages ---
@@ -152,7 +140,5 @@ export type { PageEntry } from '@/types/duplicateTo';
 export async function fetchPages(search?: string): Promise<PageEntry[]> {
   const base = getControllerLink();
   const params = search ? `?search=${encodeURIComponent(search)}` : '';
-  const data = await apiGet<unknown>(`${base}/api/pages${params}`);
-
-  return z.parse(pagesResponseSchema, data);
+  return apiGet<PageEntry[]>(`${base}/api/pages${params}`);
 }

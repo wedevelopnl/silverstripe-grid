@@ -4,13 +4,13 @@ import {
   getControllerLink,
   getSecurityId,
 } from '@/api/config';
+import type { AdapterConfig } from '@/types/adapter';
 import { ConfigError } from '@/api/errors';
-import { $ZodError } from 'zod/v4/core';
 
 const CONTROLLER_FQCN =
   'WeDevelop\\Grid\\Controllers\\GridController';
 
-const validAdapterConfig = {
+const validAdapterConfig: AdapterConfig = {
   viewports: [
     { key: 'xs', label: 'Extra Small' },
     { key: 'md', label: 'Medium' },
@@ -25,7 +25,7 @@ const validAdapterConfig = {
 
 function gridSection(
   controllerLink: string,
-  gridAdapter?: unknown,
+  gridAdapter?: AdapterConfig,
 ) {
   return {
     name: CONTROLLER_FQCN,
@@ -146,7 +146,7 @@ describe('config accessors', () => {
       expect(() => getAdapterConfig()).toThrow('Controller section');
     });
 
-    it('throws $ZodError when gridAdapter is undefined', () => {
+    it('throws ConfigError when gridAdapter is undefined', () => {
       window.ss = {
         config: {
           SecurityID: 'x',
@@ -154,20 +154,9 @@ describe('config accessors', () => {
         },
       };
 
-      expect(() => getAdapterConfig()).toThrow($ZodError);
+      expect(() => getAdapterConfig()).toThrow(ConfigError);
+      expect(() => getAdapterConfig()).toThrow('adapter configuration is missing');
     });
 
-    it('throws $ZodError when gridAdapter has invalid shape', () => {
-      window.ss = {
-        config: {
-          SecurityID: 'x',
-          sections: [
-            gridSection('/admin/grid/', { columnCount: 'not-a-number' }),
-          ],
-        },
-      };
-
-      expect(() => getAdapterConfig()).toThrow($ZodError);
-    });
   });
 });

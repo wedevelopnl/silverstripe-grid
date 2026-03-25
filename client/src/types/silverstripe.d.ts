@@ -9,6 +9,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type { ComponentType } from 'react';
+import type { AdapterConfig } from './adapter';
 
 // --- Injector (lib/Injector) ---
 
@@ -35,7 +36,7 @@ export interface SilverStripeSectionConfig {
   name: string;
   url: string;
   controllerLink: string;
-  gridAdapter?: unknown; // Validated via Zod at runtime
+  gridAdapter?: AdapterConfig;
   [key: string]: unknown;
 }
 

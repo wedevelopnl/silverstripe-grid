@@ -255,8 +255,7 @@ describe('ColumnBlock', () => {
           },
           obsoleteClassName: null,
           version: 1,
-          isPublished: true,
-          isLiveVersion: true,
+
           canDelete: true,
           canPublish: true,
           canUnpublish: false,

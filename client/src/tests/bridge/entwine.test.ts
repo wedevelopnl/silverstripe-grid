@@ -131,44 +131,45 @@ describe('entwine bridge', () => {
     expect(setReactRoot).not.toHaveBeenCalled();
   });
 
-  it('onmatch warns when schema has wrong types', () => {
-    mockLoadComponent.mockReturnValue(vi.fn());
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('onmatch falls back to defaults when schema has wrong types', () => {
+    const MockGridEditor = vi.fn(() => null);
+    mockLoadComponent.mockReturnValue(MockGridEditor);
 
+    const setReactRoot = vi.fn();
     const context = {
       data: vi.fn().mockReturnValue({ 'grid-page-id': 'not-a-number' }),
-      setReactRoot: vi.fn(),
+      setReactRoot,
       0: document.createElement('div'),
     };
 
     expect(() => capturedRules.onmatch!.call(context as never)).not.toThrow();
-    expect(warnSpy).toHaveBeenCalledWith(
-      '[GridEditor] Failed to mount grid editor.',
-      expect.any(Error),
-    );
-    expect(mockRoot.render).not.toHaveBeenCalled();
+    expect(mockRoot.render).toHaveBeenCalled();
 
-    warnSpy.mockRestore();
+    // Non-numeric pageId falls back to null, missing zone falls back to 'main'
+    const renderCall = mockRoot.render.mock.calls[0][0];
+    const gridEditorProps = renderCall.props.children.props.children.props;
+    expect(gridEditorProps.pageId).toBeNull();
+    expect(gridEditorProps.zone).toBe('main');
   });
 
-  it('onmatch warns when schema has missing keys', () => {
-    mockLoadComponent.mockReturnValue(vi.fn());
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('onmatch falls back to defaults when schema has missing keys', () => {
+    const MockGridEditor = vi.fn(() => null);
+    mockLoadComponent.mockReturnValue(MockGridEditor);
 
+    const setReactRoot = vi.fn();
     const context = {
       data: vi.fn().mockReturnValue({}),
-      setReactRoot: vi.fn(),
+      setReactRoot,
       0: document.createElement('div'),
     };
 
     expect(() => capturedRules.onmatch!.call(context as never)).not.toThrow();
-    expect(warnSpy).toHaveBeenCalledWith(
-      '[GridEditor] Failed to mount grid editor.',
-      expect.any(Error),
-    );
-    expect(mockRoot.render).not.toHaveBeenCalled();
+    expect(mockRoot.render).toHaveBeenCalled();
 
-    warnSpy.mockRestore();
+    const renderCall = mockRoot.render.mock.calls[0][0];
+    const gridEditorProps = renderCall.props.children.props.children.props;
+    expect(gridEditorProps.pageId).toBeNull();
+    expect(gridEditorProps.zone).toBe('main');
   });
 
   it('onmatch catches loadComponent failures and warns', () => {

@@ -1,6 +1,4 @@
-import { z } from 'zod/v4-mini';
 import type { SilverStripeConfig } from '@/types/silverstripe';
-import { adapterConfigSchema, type AdapterConfig } from '@/types/adapter';
 import { ConfigError } from './errors';
 
 const CONTROLLER_FQCN =
@@ -64,11 +62,18 @@ export function getControllerLink(): string {
 
 /**
  * Returns the grid adapter configuration from the CMS controller section.
- * The raw config is validated through the Zod schema at runtime.
  *
- * @throws ConfigError if config is not available or the controller section is missing
- * @throws ZodError if the adapter config does not match the expected shape
+ * @throws ConfigError if config is not available or the adapter config is missing
  */
-export function getAdapterConfig(): AdapterConfig {
-  return z.parse(adapterConfigSchema, getControllerSection().gridAdapter);
+export function getAdapterConfig() {
+  const config = getControllerSection().gridAdapter;
+
+  if (config === undefined) {
+    throw new ConfigError(
+      'Grid adapter configuration is missing. ' +
+        'Ensure the grid module is installed and configured.',
+    );
+  }
+
+  return config;
 }

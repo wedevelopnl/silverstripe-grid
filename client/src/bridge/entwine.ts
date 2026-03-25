@@ -1,15 +1,25 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { z } from 'zod/v4-mini';
 
 import GridEditorErrorBoundary from '@/components/GridEditorErrorBoundary/GridEditorErrorBoundary';
 import GridQueryProvider from '@/hooks/QueryProvider';
 import { loadComponent } from './Injector';
 
-const bridgeSchemaSchema = z.object({
-  'grid-page-id': z.nullable(z.int()),
-  'grid-zone': z._default(z.string(), 'main'),
-});
+interface BridgeSchema {
+  pageId: number | null;
+  zone: string;
+}
+
+function parseBridgeData(data: unknown): BridgeSchema {
+  const record = (typeof data === 'object' && data !== null ? data : {}) as Record<string, unknown>;
+  const rawPageId = record['grid-page-id'];
+  const rawZone = record['grid-zone'];
+
+  return {
+    pageId: typeof rawPageId === 'number' ? rawPageId : null,
+    zone: typeof rawZone === 'string' && rawZone !== '' ? rawZone : 'main',
+  };
+}
 
 /**
  * jQuery entwine bridge that mounts the React grid editor inside CMS pages.
@@ -23,9 +33,7 @@ window.jQuery.entwine('ss', ($) => {
     onmatch() {
       try {
         const GridEditor = loadComponent('GridEditor');
-        const schema = z.parse(bridgeSchemaSchema, this.data('schema'));
-        const pageId = schema['grid-page-id'] ?? null;
-        const zone = schema['grid-zone'];
+        const { pageId, zone } = parseBridgeData(this.data('schema'));
 
         const root = createRoot(this[0]);
         this.setReactRoot(root);

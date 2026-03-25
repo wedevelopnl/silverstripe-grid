@@ -1,19 +1,16 @@
-import { z } from 'zod/v4-mini';
+export interface ViewportConfig {
+  key: string;
+  label: string;
+}
 
-const viewportConfigSchema = z.object({
-  key: z.string(),
-  label: z.string(),
-});
+export type OffsetStrategy = 'margin' | 'grid-placement';
 
-export const adapterConfigSchema = z.object({
-  viewports: z.array(viewportConfigSchema),
-  defaultViewport: z.string(),
-  columnCount: z.int().check(z.positive()),
-  rowClasses: z.string(),
-  offsetStrategy: z.enum(['margin', 'grid-placement']),
-  baseWidthClasses: z.record(z.string(), z.string()),
-  baseOffsetClasses: z.record(z.string(), z.string()),
-});
-
-export type ViewportConfig = z.infer<typeof viewportConfigSchema>;
-export type AdapterConfig = z.infer<typeof adapterConfigSchema>;
+export interface AdapterConfig {
+  viewports: ViewportConfig[];
+  defaultViewport: string;
+  columnCount: number;
+  rowClasses: string;
+  offsetStrategy: OffsetStrategy;
+  baseWidthClasses: Record<string, string>;
+  baseOffsetClasses: Record<string, string>;
+}
