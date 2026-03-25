@@ -220,4 +220,26 @@ final class GridSettingsResolverTest extends TestCase
 
         $this->assertSame($expectedKeys, array_keys($effective));
     }
+
+    public function testCascadeResultKeysMatchAdapterViewportOrder(): void
+    {
+        $this->configCollection->set(BootstrapAdapter::class, 'override_strategy', 'cascade');
+        $adapter = new BootstrapAdapter();
+        $resolver = new GridSettingsResolver($adapter);
+        $settings = new GridSettings(
+            ViewportConfig::default(12),
+            ['md' => new ViewportConfig(6, 0, true)],
+        );
+
+        $effective = $resolver->resolveEffective($settings);
+
+        // Keys must be in adapter viewport order (smallest to largest).
+        // Without array_reverse in resolveCascade, keys would be largest to smallest.
+        $expectedKeys = array_map(
+            static fn ($vp) => $vp->key,
+            $adapter->getViewports(),
+        );
+
+        $this->assertSame($expectedKeys, array_keys($effective));
+    }
 }

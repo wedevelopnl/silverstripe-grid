@@ -246,6 +246,61 @@ final class ColumnTest extends ContainerContractTestCase
         $this->assertTrue($settings->default->visible);
     }
 
+    public function testGetColumnClassesReturnsString(): void
+    {
+        $column = $this->createContainer();
+        /** @var Column $column */
+
+        $classes = $column->getColumnClasses();
+
+        // Verifies the method executes fully including the extend() call
+        $this->assertIsString($classes);
+        $this->assertNotEmpty($classes);
+    }
+
+    public function testOnBeforeWriteDoesNotReinitializeSettingsForPersistedRecord(): void
+    {
+        $column = $this->createContainer();
+        /** @var Column $column */
+
+        // Set custom settings on the persisted record
+        $custom = new GridSettings(
+            new ViewportConfig(6, 2, false),
+        );
+        $column->setGridSettings($custom);
+        $column->write();
+
+        // Re-write the persisted record (triggers onBeforeWrite again)
+        $column->Title = 'Updated Title';
+        $column->write();
+
+        // Settings must NOT be reset to initial — the record is already in DB
+        $settings = $column->getGridSettings();
+        $this->assertSame(6, $settings->default->width);
+        $this->assertSame(2, $settings->default->offset);
+        $this->assertFalse($settings->default->visible);
+    }
+
+    public function testNewColumnGetsInitialGridSettingsAfterWrite(): void
+    {
+        $column = Column::create();
+
+        // Before write, the composite field has no data
+        /** @var \WeDevelop\Grid\ORM\FieldType\DBGridSettings $fieldBefore */
+        $fieldBefore = $column->dbObject('GridSettings');
+        $this->assertFalse($fieldBefore->exists());
+
+        $column->write();
+
+        // After write, onBeforeWrite must have initialized GridSettings
+        /** @var \WeDevelop\Grid\ORM\FieldType\DBGridSettings $fieldAfter */
+        $fieldAfter = $column->dbObject('GridSettings');
+        $this->assertTrue($fieldAfter->exists());
+
+        $settings = $column->getGridSettings();
+        $this->assertSame(12, $settings->default->width);
+    }
+
     public function testPresetGridSettingsNotOverwrittenOnFirstWrite(): void
     {
         $custom = new GridSettings(

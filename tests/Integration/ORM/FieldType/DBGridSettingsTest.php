@@ -255,6 +255,151 @@ class DBGridSettingsTest extends SapphireTest
         $this->assertTrue($field->exists());
     }
 
+    // ─── getValue edge cases for DefaultOffset and DefaultVisible ──
+
+    public function testGetValueWithDefaultOffsetExplicitlyZero(): void
+    {
+        $field = $this->createField();
+        $field->setField('DefaultWidth', 12);
+        $field->setField('DefaultOffset', 0);
+        $field->setField('DefaultVisible', true);
+
+        $settings = $field->getValue();
+
+        $this->assertNotNull($settings);
+        // Offset must be exactly 0, not incremented/decremented by mutant
+        $this->assertSame(0, $settings->default->offset);
+    }
+
+    public function testGetValueWithDefaultOffsetNull(): void
+    {
+        $field = $this->createField();
+        $field->setField('DefaultWidth', 12);
+        // DefaultOffset deliberately not set (null) — coalesces to 0
+        $field->setField('DefaultVisible', true);
+
+        $settings = $field->getValue();
+
+        $this->assertNotNull($settings);
+        $this->assertSame(0, $settings->default->offset);
+    }
+
+    public function testGetValueWithDefaultVisibleExplicitlyFalse(): void
+    {
+        $field = $this->createField();
+        $field->setField('DefaultWidth', 12);
+        $field->setField('DefaultOffset', 0);
+        $field->setField('DefaultVisible', false);
+
+        $settings = $field->getValue();
+
+        $this->assertNotNull($settings);
+        // Visible must be false, not coerced to true by mutant
+        $this->assertFalse($settings->default->visible);
+    }
+
+    public function testGetValueWithDefaultVisibleNull(): void
+    {
+        $field = $this->createField();
+        $field->setField('DefaultWidth', 12);
+        $field->setField('DefaultOffset', 0);
+        // DefaultVisible deliberately not set (null) — coalesces to true
+        $field->setField('Overrides', null);
+
+        $settings = $field->getValue();
+
+        $this->assertNotNull($settings);
+        $this->assertTrue($settings->default->visible);
+    }
+
+    // ─── setValue marks field as changed ─────────────────────────
+
+    public function testSetValueWithGridSettingsMarksFieldAsChanged(): void
+    {
+        $field = $this->createField();
+        $settings = GridSettings::initial(12);
+
+        $this->assertFalse($field->isChanged());
+
+        $field->setValue($settings);
+
+        $this->assertTrue($field->isChanged());
+    }
+
+    // ─── setValue with unparseable string returns cleanly ────────
+
+    public function testSetValueWithEmptyArrayJsonReturnsCleanly(): void
+    {
+        $field = $this->createField();
+        $result = $field->setValue('[]');
+
+        // Must return the field instance (fluent), not null/void
+        $this->assertSame($field, $result);
+        // '[]' is not parseable as GridSettings, so getValue returns null
+        $this->assertNull($field->getValue());
+    }
+
+    // ─── parseJsonString edge cases ─────────────────────────────
+
+    public function testSetValueFromEmptyArrayJsonProducesNoData(): void
+    {
+        $field = $this->createField();
+        $field->setValue('[]');
+
+        // '[]' must be treated as empty, same as '{}' and ''
+        $this->assertNull($field->getValue());
+    }
+
+    public function testSetValueFromValidJsonMissingDefaultKeyProducesNoData(): void
+    {
+        $field = $this->createField();
+        $field->setValue('{"width":12,"offset":0,"visible":true}');
+
+        // Valid JSON but missing 'default' key — not a valid GridSettings structure
+        $this->assertNull($field->getValue());
+    }
+
+    public function testSetValueFromJsonWithNonIntWidthProducesNoData(): void
+    {
+        $field = $this->createField();
+        $field->setValue('{"default":{"width":"not_int","offset":0,"visible":true}}');
+
+        $this->assertNull($field->getValue());
+    }
+
+    public function testSetValueFromJsonWithMissingWidthProducesNoData(): void
+    {
+        $field = $this->createField();
+        $field->setValue('{"default":{"offset":0,"visible":true}}');
+
+        // 'width' key missing from default — fails width validation
+        $this->assertNull($field->getValue());
+    }
+
+    // ─── deserializeOverrides edge cases ────────────────────────
+
+    public function testOverridesWithEmptyStringKeyAreDiscarded(): void
+    {
+        $field = $this->createField();
+        $field->setField('DefaultWidth', 12);
+        $field->setField('DefaultOffset', 0);
+        $field->setField('DefaultVisible', true);
+        // Override with empty-string key should be discarded
+        $field->setField('Overrides', json_encode([
+            '' => ['width' => 6, 'offset' => 0, 'visible' => true],
+            'lg' => ['width' => 4, 'offset' => 0, 'visible' => true],
+        ]));
+
+        $settings = $field->getValue();
+
+        $this->assertNotNull($settings);
+        // Empty-string key must be excluded
+        $this->assertArrayNotHasKey('', $settings->overrides);
+        // Valid key must be included
+        $this->assertCount(1, $settings->overrides);
+        $this->assertArrayHasKey('lg', $settings->overrides);
+    }
+
     // ─── scaffoldFormField ──────────────────────────────────────
 
     public function testScaffoldFormFieldReturnsNull(): void

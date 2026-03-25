@@ -129,6 +129,24 @@ final class GridSettingsTest extends TestCase
         $this->assertTrue($newOverride->equals($updated->overrides['sm']));
     }
 
+    public function testWithOverridePreservesOtherOverrides(): void
+    {
+        $smOverride = new ViewportConfig(6, 0, true);
+        $lgOverride = new ViewportConfig(4, 2, false);
+        $settings = new GridSettings(
+            ViewportConfig::default(12),
+            ['sm' => $smOverride, 'lg' => $lgOverride],
+        );
+
+        $xlOverride = new ViewportConfig(3, 1, true);
+        $updated = $settings->withOverride('xl', $xlOverride);
+
+        $this->assertCount(3, $updated->overrides);
+        $this->assertTrue($smOverride->equals($updated->overrides['sm']));
+        $this->assertTrue($lgOverride->equals($updated->overrides['lg']));
+        $this->assertTrue($xlOverride->equals($updated->overrides['xl']));
+    }
+
     public function testWithoutOverrideRemovesExistingOverride(): void
     {
         $settings = new GridSettings(

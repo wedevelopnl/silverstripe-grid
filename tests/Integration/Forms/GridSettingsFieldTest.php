@@ -377,6 +377,186 @@ final class GridSettingsFieldTest extends SapphireTest
         $this->assertTrue($smEntry->Visible);
     }
 
+    // --- constructor title coalesce ---
+
+    public function testConstructorUsesExplicitTitle(): void
+    {
+        $field = new GridSettingsField('GridSettings', $this->adapter, 'Custom Title');
+
+        $this->assertSame('Custom Title', $field->Title());
+    }
+
+    public function testConstructorDefaultsTitleWhenNull(): void
+    {
+        $field = new GridSettingsField('GridSettings', $this->adapter);
+
+        $this->assertSame('Grid Settings', $field->Title());
+    }
+
+    // --- getViewportData WidthOptions count ---
+
+    public function testGetViewportDataWidthOptionsCountMatchesColumnCount(): void
+    {
+        $field = $this->createField();
+
+        $viewportData = $field->getViewportData();
+
+        foreach ($viewportData as $entry) {
+            $this->assertCount(12, $entry->WidthOptions, "WidthOptions for {$entry->Key} should have exactly 12 items");
+        }
+    }
+
+    // --- getViewportData Override flag ---
+
+    public function testGetViewportDataOverrideIsFalseForDefaultViewport(): void
+    {
+        $field = $this->createField();
+        $field->setValue(new GridSettings(
+            new ViewportConfig(6, 0, true),
+            ['sm' => new ViewportConfig(4, 0, true)],
+        ));
+
+        $viewportData = $field->getViewportData();
+        $smEntry = $viewportData->find('Key', 'sm');
+
+        // sm is the default viewport — Override must always be false
+        $this->assertFalse($smEntry->Override);
+    }
+
+    public function testGetViewportDataOverrideIsTrueForNonDefaultWithOverride(): void
+    {
+        $field = $this->createField();
+        $field->setValue(new GridSettings(
+            new ViewportConfig(6, 0, true),
+            ['md' => new ViewportConfig(4, 0, true)],
+        ));
+
+        $viewportData = $field->getViewportData();
+        $mdEntry = $viewportData->find('Key', 'md');
+
+        // md is not default and has an override → Override must be true
+        $this->assertTrue($mdEntry->Override);
+    }
+
+    public function testGetViewportDataOverrideIsFalseForNonDefaultWithoutOverride(): void
+    {
+        $field = $this->createField();
+        $field->setValue(new GridSettings(
+            new ViewportConfig(6, 0, true),
+        ));
+
+        $viewportData = $field->getViewportData();
+        $xsEntry = $viewportData->find('Key', 'xs');
+
+        // xs is not default and has no override → Override must be false
+        $this->assertFalse($xsEntry->Override);
+    }
+
+    // --- getViewportData FieldName ---
+
+    public function testGetViewportDataFieldNameMatchesFieldName(): void
+    {
+        $field = $this->createField();
+
+        $viewportData = $field->getViewportData();
+
+        foreach ($viewportData as $entry) {
+            $this->assertSame('GridSettings', $entry->FieldName, "FieldName should match the field's name");
+        }
+    }
+
+    // --- normalizeFormData: viewport without override checkbox excluded ---
+
+    public function testNormalizeViewportWithoutOverrideCheckboxExcludedFromOverrides(): void
+    {
+        $field = $this->createField();
+        $field->setValue([
+            'sm' => ['width' => '6', 'offset' => '0', 'visible' => '1'],
+            'xs' => ['width' => '4', 'offset' => '0', 'visible' => '1'],
+            // xs has no 'override' key → must be excluded
+        ]);
+
+        $saved = $this->saveAndCapture($field);
+
+        $this->assertArrayNotHasKey('xs', $saved->overrides);
+    }
+
+    // --- normalizeFormData: non-numeric width defaults to column count ---
+
+    public function testNormalizeNonNumericWidthDefaultsToColumnCount(): void
+    {
+        $field = $this->createField();
+        $field->setValue([
+            'sm' => ['width' => 'abc', 'offset' => '0', 'visible' => '1'],
+        ]);
+
+        $saved = $this->saveAndCapture($field);
+
+        // Non-numeric width falls back to column count (12)
+        $this->assertSame(12, $saved->default->width);
+    }
+
+    // --- buildOptions label format and selected ---
+
+    public function testBuildOptionsLabelIsCastToString(): void
+    {
+        $field = $this->createField();
+        $viewportData = $field->getViewportData();
+        $smEntry = $viewportData->find('Key', 'sm');
+
+        // OffsetOptions uses buildOptions which casts label to string
+        $firstOption = $smEntry->OffsetOptions->first();
+        $this->assertSame('0', $firstOption->Label);
+    }
+
+    public function testBuildOptionsSelectedMatchesCurrentValue(): void
+    {
+        $field = $this->createField();
+        $field->setValue(new GridSettings(
+            new ViewportConfig(12, 3, true),
+        ));
+
+        $viewportData = $field->getViewportData();
+        $smEntry = $viewportData->find('Key', 'sm');
+
+        // Only offset=3 should be selected
+        foreach ($smEntry->OffsetOptions as $option) {
+            if ($option->Value === 3) {
+                $this->assertTrue($option->Selected, 'Offset 3 should be selected');
+            } else {
+                $this->assertFalse($option->Selected, "Offset {$option->Value} should not be selected");
+            }
+        }
+    }
+
+    // --- readonly summary shows (hidden) ---
+
+    public function testReadonlySummaryShowsHiddenForInvisibleDefault(): void
+    {
+        $field = $this->createField();
+        $field->setValue(new GridSettings(
+            new ViewportConfig(12, 0, false),
+        ));
+
+        $readonly = $field->performReadonlyTransformation();
+        $value = $readonly->getValue();
+
+        $this->assertStringContainsString('(hidden)', $value);
+    }
+
+    public function testReadonlySummaryDoesNotShowHiddenForVisibleDefault(): void
+    {
+        $field = $this->createField();
+        $field->setValue(new GridSettings(
+            new ViewportConfig(12, 0, true),
+        ));
+
+        $readonly = $field->performReadonlyTransformation();
+        $value = $readonly->getValue();
+
+        $this->assertStringNotContainsString('(hidden)', $value);
+    }
+
     // --- normalizeFormData missing-offset branches ---
 
     public function testNormalizeMissingOffsetDefaultsToZero(): void

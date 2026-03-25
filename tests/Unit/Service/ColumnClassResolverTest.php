@@ -396,4 +396,50 @@ final class ColumnClassResolverTest extends TestCase
 
         $this->assertStringNotContainsString('offset', $classes);
     }
+
+    public function testFirstViewportAlwaysEmitsWidthClass(): void
+    {
+        $adapter = new BootstrapAdapter();
+        // Default width=12 at base viewport — must always emit width class
+        // even though prevWidth (0) differs from 12, the $isFirst flag ensures emission
+        $settings = GridSettings::initial(12);
+        $effective = self::resolve($settings, $adapter);
+        $classes = ColumnClassResolver::resolve($effective, $adapter);
+
+        $this->assertStringContainsString('col-12', $classes);
+    }
+
+    public function testNonFirstViewportWithSameOffsetDoesNotEmitOffsetClass(): void
+    {
+        $adapter = new BootstrapAdapter();
+        // Set offset=2 at md viewport. At lg, offset cascades back to 0 (default),
+        // which differs from prevOffset=2, so offset IS emitted.
+        // But at xl, offset=0 same as lg's 0, so no offset class at xl.
+        $settings = new GridSettings(
+            ViewportConfig::default(12),
+            ['md' => new ViewportConfig(8, 2, true)],
+        );
+        $effective = self::resolve($settings, $adapter);
+        $classes = ColumnClassResolver::resolve($effective, $adapter);
+
+        $this->assertStringContainsString('offset-md-2', $classes);
+        $this->assertStringContainsString('offset-lg-0', $classes);
+        // xl inherits lg's offset (both 0), no offset class emitted
+        $this->assertStringNotContainsString('offset-xl', $classes);
+    }
+
+    public function testFirstViewportWithPositiveOffsetEmitsOffsetExactlyOnce(): void
+    {
+        $adapter = new BootstrapAdapter();
+        // Override base viewport (xs) with offset > 0
+        $settings = new GridSettings(
+            ViewportConfig::default(12),
+            ['xs' => new ViewportConfig(10, 1, true)],
+        );
+        $effective = self::resolve($settings, $adapter);
+        $classes = ColumnClassResolver::resolve($effective, $adapter);
+
+        // First viewport offset > 0 should be emitted exactly once
+        $this->assertSame(1, substr_count($classes, 'offset-1'));
+    }
 }
