@@ -198,6 +198,8 @@ class GridController extends AdminController
             return $this->resultToResponse($result);
         }
 
+        $this->touchOwningPage($newElement);
+
         return $this->jsonSuccess(204);
     }
 
@@ -244,6 +246,8 @@ class GridController extends AdminController
             return $this->resultToResponse($result);
         }
 
+        $this->touchOwningPage($newElement);
+
         return $this->jsonSuccess(204);
     }
 
@@ -286,7 +290,12 @@ class GridController extends AdminController
             static fn (GridElement $e): bool => $e->canDelete(),
         );
 
+        $page = $element->getPage();
         $element->doArchive();
+
+        if ($page instanceof SiteTree) {
+            $this->touchOwningPage($page);
+        }
 
         return $this->jsonSuccess(204);
     }
@@ -319,6 +328,8 @@ class GridController extends AdminController
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
+
+        $this->touchOwningPage($clone);
 
         return $this->jsonSuccess(204);
     }
@@ -431,6 +442,8 @@ class GridController extends AdminController
             return $this->resultToResponse($result);
         }
 
+        $this->touchOwningPage($clone);
+
         return $this->jsonSuccess(204);
     }
 
@@ -478,6 +491,8 @@ class GridController extends AdminController
             return $this->resultToResponse($result);
         }
 
+        $this->touchOwningPage($element);
+
         return $this->jsonSuccess(204);
     }
 
@@ -513,6 +528,8 @@ class GridController extends AdminController
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
+
+        $this->touchOwningPage($element);
 
         return $this->jsonSuccess(204);
     }
@@ -730,6 +747,26 @@ class GridController extends AdminController
             'baseWidthClasses' => $baseWidthClasses,
             'baseOffsetClasses' => $baseOffsetClasses,
         ];
+    }
+
+    /**
+     * Write the owning page to DRAFT so it appears as "modified" in the CMS.
+     *
+     * Accepts either a GridElement (walks parent chain) or a pre-resolved SiteTree
+     * (for delete operations where the element is already archived).
+     */
+    private function touchOwningPage(GridElement|SiteTree $subject): void
+    {
+        $page = $subject instanceof SiteTree ? $subject : $subject->getPage();
+
+        if (!$page instanceof SiteTree) {
+            return;
+        }
+
+        // writeToStage calls forceChange() + write() within the correct
+        // reading mode and creates a new draft version even when no page
+        // fields have changed
+        $page->writeToStage(Versioned::DRAFT);
     }
 
     /**

@@ -1530,6 +1530,139 @@ final class GridControllerTest extends FunctionalTest
         $this->assertSame(403, $response->getStatusCode());
     }
 
+    // --- Page modified status (touchOwningPage) ---------------------------------
+
+    /**
+     * Helper: publish the fixture page and all its elements, then verify it is in sync.
+     */
+    private function publishFixturePage(): TestPage
+    {
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $page->publishRecursive();
+
+        // Re-fetch draft to get correct Version
+        /** @var TestPage $page */
+        $page = TestPage::get()->byID($page->ID);
+        $this->assertFalse($page->stagesDiffer(), 'Page should be in sync after publishRecursive');
+
+        return $page;
+    }
+
+    public function testCreateSectionMarksPageAsModified(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->publishFixturePage();
+
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 'section',
+            'parentId' => (int) $page->ID,
+            'insertAfterElementID' => null,
+            'zone' => 'main',
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        /** @var TestPage $page */
+        $page = TestPage::get()->byID($page->ID);
+        $this->assertTrue($page->stagesDiffer(), 'Page should be modified after creating a section');
+    }
+
+    public function testDuplicateToMarksTargetPageAsModified(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+
+        $targetPage = TestPage::create();
+        $targetPage->Title = 'Published Target';
+        $targetPage->write();
+        $targetPage->publishRecursive();
+
+        /** @var TestPage $targetPage */
+        $targetPage = TestPage::get()->byID($targetPage->ID);
+        $this->assertFalse($targetPage->stagesDiffer(), 'Target page should start in sync');
+
+        $response = $this->postJson('/admin/grid/api/duplicateTo', [
+            'id' => $section1->ID,
+            'targetPageId' => (int) $targetPage->ID,
+            'targetZone' => 'main',
+            'targetParentId' => (int) $targetPage->ID,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        /** @var TestPage $targetPage */
+        $targetPage = TestPage::get()->byID($targetPage->ID);
+        $this->assertTrue($targetPage->stagesDiffer(), 'Target page should be modified after duplicateTo');
+    }
+
+    public function testDeleteMarksPageAsModified(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->publishFixturePage();
+        $leaf3 = $this->objFromFixture(GridElement::class, 'leaf3');
+
+        $response = $this->deleteJson('/admin/grid/api/delete', [
+            'id' => $leaf3->ID,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        /** @var TestPage $page */
+        $page = TestPage::get()->byID($page->ID);
+        $this->assertTrue($page->stagesDiffer(), 'Page should be modified after deleting an element');
+    }
+
+    public function testReorderMarksPageAsModified(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->publishFixturePage();
+        $section1 = $this->objFromFixture(Section::class, 'section1');
+        $section2 = $this->objFromFixture(Section::class, 'section2');
+
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => $section1->ID,
+            'targetParentId' => (int) $page->ID,
+            'afterElementID' => $section2->ID,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        /** @var TestPage $page */
+        $page = TestPage::get()->byID($page->ID);
+        $this->assertTrue($page->stagesDiffer(), 'Page should be modified after reordering');
+    }
+
+    public function testUpdateGridSettingsMarksPageAsModified(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->publishFixturePage();
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+
+        $response = $this->patchJson('/admin/grid/api/updateGridSettings', [
+            'id' => (int) $col1->ID,
+            'viewport' => 'lg',
+            'width' => 6,
+            'offset' => 0,
+            'visible' => true,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        /** @var TestPage $page */
+        $page = TestPage::get()->byID($page->ID);
+        $this->assertTrue($page->stagesDiffer(), 'Page should be modified after updating grid settings');
+    }
+
     // --- apiAcceptableContainers ------------------------------------------------
 
     public function testAcceptableContainersReturnsSectionsForRowType(): void
