@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0-alpha.3] - 2026-03-25
+
+### Added
+
+- **Duplicate-to feature** — deep-copy any grid element to a different container, zone, or page via a multi-step dialog. Includes `apiDuplicateTo` endpoint with hierarchy validation, `DuplicateToRequest` value object, `DuplicateToDialog` React component, `acceptableContainers`/`zones`/`pages` GET endpoints, and E2E test coverage
+- **`DBGridSettings` composite field** — `GridSettings` is now stored as a `DBComposite` (`DBGridSettings`) with dedicated `GridSettingsDefault` and `GridSettingsOverrides` database columns, replacing the single JSON Text column. Includes `GridSettingsFieldValidator` for field-level validation
+- **`OverrideStrategy` enum** — configurable per-adapter override strategy (`isolated` or `cascade`) controlling how viewport overrides are resolved. Set via YAML `override_strategy` on the adapter class; defaults to `isolated`
+- **`WriteResult` utility** — lightweight result wrapper for element write operations, replacing the heavier `ElementPersistenceService`
+
+### Changed
+
+- **GridSettings model replaced with intent-based default+overrides** — the sparse mobile-first cascade is replaced by an explicit `{ default, overrides }` model where the default holds base layout settings and overrides store only per-viewport deviations. `resolveViewportSettings` resolves effective settings by checking for an override then falling back to the default
+- **`ElementPersistenceService` removed** — CRUD operations now use `WriteResult` directly, reducing indirection
+- **`ReorderExecutor` and `ReorderService` merged into `ReorderService`** — the separate `ReorderExecutor` class and `ReorderExecutorInterface` are removed. `ReorderService` now handles both validation and execution directly, reducing indirection in the reorder pipeline
+- **Zod removed from frontend runtime** — all Zod schemas replaced with plain TypeScript interfaces and type guards, eliminating the `zod` runtime dependency entirely
+- **`ElementActions` extracted** — shared action menu component extracted from individual block components, reducing duplication
+- **Grid hierarchy rules hardcoded in `ContainerType` enum** — `allowed_elements` / `disallowed_elements` / `can_be_root` moved from YAML config into `ContainerType`, making the hierarchy statically analysable
+
+### Fixed
+
+- Grid editor not spanning full width in CMS edit form
+- Owning page not touched after grid element mutations (stale cache in CMS page list)
+- Vite 8 IIFE bundle emitting `require()` for externalized React
+- 346 false-positive lint warnings from dist output files
+- SCSS module declaration and `.d.ts` output paths broken under TypeScript 6
+- TS2882 warnings for SCSS imports during build
+
+### Performance
+
+- Upgraded Vite from 7.x to 8.x
+
+### Dependencies
+
+- TypeScript 5.9 → 6.0
+- Vite 7.3 → 8.0
+- `@vitejs/plugin-react` 5.2 → 6.0
+- `@tanstack/react-query` 5.90 → 5.95
+- jsdom 26.1 → 29.0
+- oxlint 1.55 → 1.57
+- Stylelint 17.4 → 17.5
+- Vitest 4.1.0 → 4.1.1
+
+### Developer Experience
+
+- Dependabot configured for npm, Composer, and Docker dependencies
+- `package-lock.json` committed for reproducible builds
+
 ## [6.0.0-alpha.2] - 2026-03-13
 
 ### Added
@@ -114,5 +161,6 @@ Ground-up rewrite for SilverStripe 6. This is a new package (`wedevelopnl/silver
 - Makefile with targets for testing, coverage, static analysis, and mutation testing
 - Pre-push QA gate hook
 
+[6.0.0-alpha.3]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.3
 [6.0.0-alpha.2]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.2
 [6.0.0-alpha.1]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.1
