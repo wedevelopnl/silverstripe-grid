@@ -11,7 +11,7 @@ final readonly class ViewportConfig
 {
     /**
      * @param positive-int $width
-     * @param int<0, max> $offset
+     * @param non-negative-int $offset
      */
     public function __construct(
         public int $width,
@@ -30,7 +30,7 @@ final readonly class ViewportConfig
     }
 
     /**
-     * @param array{width: positive-int, offset: int<0, max>, visible: bool} $data
+     * @param array{width: positive-int, offset: non-negative-int, visible: bool} $data
      */
     public static function fromArray(array $data): self
     {
@@ -41,7 +41,7 @@ final readonly class ViewportConfig
         );
     }
 
-    /** @return array{width: positive-int, offset: int<0, max>, visible: bool} */
+    /** @return array{width: positive-int, offset: non-negative-int, visible: bool} */
     public function toArray(): array
     {
         return [

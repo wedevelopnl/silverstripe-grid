@@ -65,26 +65,34 @@ Sections carry a `Zone` field (`Varchar(50)`, e.g., `"main"`, `"sidebar"`) that 
 
 ### Grid Settings
 
-Column stores viewport-specific layout as a JSON `Text` field using an intent-based default+overrides model:
+Column stores viewport-specific layout using a `DBComposite` field (`DBGridSettings`) with an intent-based default+overrides model. The composite field maps to four database columns:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `GridSettingsDefaultWidth` | `Int` | Default column span (applies to all viewports) |
+| `GridSettingsDefaultOffset` | `Int` | Default column offset (applies to all viewports) |
+| `GridSettingsDefaultVisible` | `Boolean` | Default visibility (applies to all viewports) |
+| `GridSettingsOverrides` | `Text` | JSON map of per-viewport deviations from the default |
+
+The overrides column holds only the viewports that differ from the default:
 
 ```json
 {
-  "default": { "width": 8, "offset": 0, "visible": true },
-  "overrides": {
-    "lg": { "width": 6, "offset": 2, "visible": false }
-  }
+  "lg": { "width": 6, "offset": 2, "visible": false }
 }
 ```
 
-The `default` key holds the base layout applied to all viewports. The `overrides` key holds per-viewport deviations from the default. Each entry defines width (column span), offset (column start), and visibility.
+Two value objects model this data: `ViewportConfig` (readonly record of width/offset/visible) and `GridSettings` (default `ViewportConfig` + map of viewport overrides). `GridSettings` provides `toArray()` for API responses. Serialization to/from database columns is handled entirely by `DBGridSettings` — the value objects have no storage concerns.
 
-Two value objects model this data: `ViewportConfig` (readonly record of width/offset/visible) and `GridSettings` (default `ViewportConfig` + map of viewport overrides). `GridSettings` implements `JsonSerializable` for storage and provides `GridSettings::fromArray()` for hydration from decoded JSON.
+`DBGridSettings` extends SilverStripe's `DBComposite` and handles the boundary between the domain model and storage. It converts between `GridSettings` value objects and the four database columns, including parsing legacy JSON strings in the overrides column for fixture compatibility.
 
 `GridSettingsResolver` resolves the effective `ViewportConfig` for each active viewport by applying overrides on top of the default. The resolver supports two strategies via `OverrideStrategy`:
 - **Isolated** (default): each viewport uses the default unless it has an explicit override.
 - **Cascade**: overrides carry forward to subsequent viewports (mobile-first), configurable via `override_strategy: cascade` on the grid adapter.
 
-The Column model exposes `getGridSettings(): GridSettings` and `setGridSettings(GridSettings|string)` for typed access.
+The Column model exposes `getGridSettings(): GridSettings` and `setGridSettings(GridSettings)` for typed access, routing through `DBGridSettings` via `dbObject()`.
+
+`GridSettingsFieldValidator` validates business rules at the storage layer — width and offset within the adapter's column count, and their combination. Registered on `DBGridSettings` via `$field_validators`, it runs during `DataObject::write()` and blocks writes with invalid settings.
 
 ### Auto-Scaffolding
 
@@ -133,6 +141,8 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 │  Validation Layer                                           │
 │    ├── HierarchyValidationExtension (write-time hook)       │
 │    │     └── HierarchyValidatorInterface                    │
+│    ├── GridSettingsFieldValidator (DBField validator)        │
+│    │     └── Width/offset/combination range checks          │
 │    └── ElementAllowanceTrait (shared allowlist/blocklist)   │
 │                                                             │
 │  Repository Layer                                           │

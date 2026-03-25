@@ -13,7 +13,7 @@ The grid enforces a strict three-level hierarchy using polymorphic parent relati
 Page (SiteTree)
   └── Section   [ContainerType::Section]    — can_be_root: true (default), zone-scoped
         └── Row   [ContainerType::Row]       — can_be_root: false
-              └── Column  [ContainerType::Column]  — can_be_root: false, stores GridSettings JSON
+              └── Column  [ContainerType::Column]  — can_be_root: false, stores GridSettings (DBComposite)
                     └── (any non-container content element)
 ```
 
@@ -52,7 +52,7 @@ Writing a container element automatically creates its required child structure o
 
 1. `Section::onAfterWrite()` → creates a `Row` if no children exist
 2. `Row::onAfterWrite()` → creates a `Column` if no children exist
-3. `Column` does NOT auto-scaffold (only initializes `GridSettings` JSON on first write)
+3. `Column` does NOT auto-scaffold (only initializes `GridSettings` on first write)
 
 **Result**: A single `Section::create()->write()` produces the full `Section → Row → Column` tree.
 

@@ -410,58 +410,8 @@ final class RequestBodyParserTest extends TestCase
         $this->assertTrue($result->isErr());
     }
 
-    public function testParseUpdateGridSettingsBodyRejectsWidthExceedingColumnCount(): void
-    {
-        $result = $this->parser->parseUpdateGridSettingsBody([
-            'id' => 1,
-            'viewport' => 'md',
-            'width' => 13,
-            'offset' => 0,
-            'visible' => true,
-        ]);
-
-        $this->assertTrue($result->isErr());
-    }
-
-    public function testParseUpdateGridSettingsBodyRejectsZeroWidth(): void
-    {
-        $result = $this->parser->parseUpdateGridSettingsBody([
-            'id' => 1,
-            'viewport' => 'md',
-            'width' => 0,
-            'offset' => 0,
-            'visible' => true,
-        ]);
-
-        $this->assertTrue($result->isErr());
-    }
-
-    public function testParseUpdateGridSettingsBodyRejectsNegativeOffset(): void
-    {
-        $result = $this->parser->parseUpdateGridSettingsBody([
-            'id' => 1,
-            'viewport' => 'md',
-            'width' => 6,
-            'offset' => -1,
-            'visible' => true,
-        ]);
-
-        $this->assertTrue($result->isErr());
-    }
-
-    public function testParseUpdateGridSettingsBodyRejectsWidthPlusOffsetOverflow(): void
-    {
-        $result = $this->parser->parseUpdateGridSettingsBody([
-            'id' => 1,
-            'viewport' => 'md',
-            'width' => 8,
-            'offset' => 5,
-            'visible' => true,
-        ]);
-
-        $this->assertTrue($result->isErr());
-        $this->assertStringContainsString('exceeds', $result->errors()[0]->message);
-    }
+    // Range validation (width/offset bounds, width+offset overflow) is now
+    // enforced by GridSettingsFieldValidator on the DBField, not the parser.
 
     public function testParseUpdateGridSettingsBodyRejectsNonBoolVisible(): void
     {

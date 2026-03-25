@@ -29,14 +29,8 @@ const { mockViewports, mockResolveViewportSettings } = vi.hoisted(() => {
     { key: 'xs', label: 'XS' }, { key: 'sm', label: 'SM' }, { key: 'md', label: 'MD' },
     { key: 'lg', label: 'LG' }, { key: 'xl', label: 'XL' }, { key: 'xxl', label: 'XXL' },
   ];
-  const resolve = (gridSettings: Record<string, unknown>, activeViewport: string) => {
-    let effective = { width: 12, offset: 0, visible: true };
-    for (const vp of viewports) {
-      const override = gridSettings[vp.key];
-      if (override) effective = { ...effective, ...(override as typeof effective) };
-      if (vp.key === activeViewport) break;
-    }
-    return effective;
+  const resolve = (gridSettings: { default: { width: number; offset: number; visible: boolean }; overrides: Record<string, { width: number; offset: number; visible: boolean }> }, activeViewport: string) => {
+    return gridSettings.overrides[activeViewport] ?? gridSettings.default;
   };
   return { mockViewports: viewports, mockResolveViewportSettings: resolve };
 });
@@ -114,9 +108,8 @@ const mockTree: ElementTreeResponse = {
                 },
               ],
               gridSettings: {
-                xs: { width: 12, offset: 0, visible: true },
-                md: { width: 8, offset: 0, visible: true },
-                lg: { width: 6, offset: 0, visible: true },
+                default: { width: 8, offset: 0, visible: true },
+                overrides: { lg: { width: 6, offset: 0, visible: true } },
               },
               blockSchema: { typeName: 'Column', label: 'Column', icon: 'font-icon-block-content', type: 'Column', title: '', summary: '' },
               obsoleteClassName: null,
@@ -137,9 +130,8 @@ const mockTree: ElementTreeResponse = {
               allowedTypes: null,
               children: null,
               gridSettings: {
-                xs: { width: 12, offset: 0, visible: true },
-                md: { width: 4, offset: 0, visible: true },
-                lg: { width: 6, offset: 0, visible: true },
+                default: { width: 4, offset: 0, visible: true },
+                overrides: { lg: { width: 6, offset: 0, visible: true } },
               },
               blockSchema: { typeName: 'Column', label: 'Column', icon: 'font-icon-block-content', type: 'Column', title: '', summary: '' },
               obsoleteClassName: null,

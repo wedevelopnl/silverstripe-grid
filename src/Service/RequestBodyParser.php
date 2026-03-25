@@ -147,29 +147,21 @@ final readonly class RequestBodyParser
         }
 
         /** @var non-empty-string $viewport Validated against adapter viewport keys */
-        $columnCount = $this->gridAdapter->getColumnCount();
 
-        if (!is_int($width) || $width < 1 || $width > $columnCount) {
-            return $this->fail(sprintf('Width must be between 1 and %d.', $columnCount));
+        if (!is_int($width)) {
+            return $this->fail('width must be an integer.');
         }
 
-        if (!is_int($offset) || $offset < 0 || $offset > $columnCount - 1) {
-            return $this->fail(sprintf('Offset must be between 0 and %d.', $columnCount - 1));
-        }
-
-        if ($width + $offset > $columnCount) {
-            return $this->fail(sprintf(
-                'Width (%d) plus offset (%d) exceeds the maximum of %d columns.',
-                $width,
-                $offset,
-                $columnCount,
-            ));
+        if (!is_int($offset)) {
+            return $this->fail('offset must be an integer.');
         }
 
         if (!is_bool($visible)) {
             return $this->fail('visible must be a boolean.');
         }
 
+        /** @var positive-int $width Structural check only — range validated by GridSettingsFieldValidator */
+        /** @var non-negative-int $offset Structural check only — range validated by GridSettingsFieldValidator */
         return Result::ok(new UpdateGridSettingsRequest($id, $viewport, $width, $offset, $visible));
     }
 

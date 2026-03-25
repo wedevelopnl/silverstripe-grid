@@ -84,8 +84,9 @@ src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaEx
 src/Forms/            # Form field implementations (GridEditorField)
 src/Value/            # Value objects and DTOs (GridNode, Result, ValidationError, ValidationSeverity, ContainerType, Viewport, ViewportConfig, GridSettings, OverrideStrategy, ContentLayoutClassMap, AspectRatio, MediaPosition, VerticalAlignment)
 src/Service/          # Domain services (GridTreeBuilder, ElementPersistenceService, ReorderService, ReorderExecutor, GridSettingsResolver)
-src/Validation/       # Hierarchy validation and reorder validation (HierarchyValidationService, ReorderValidator, ElementAllowanceTrait)
+src/Validation/       # Hierarchy validation, reorder validation, and field validators (HierarchyValidationService, ReorderValidator, ElementAllowanceTrait, GridSettingsFieldValidator)
 src/Exception/        # Domain exceptions (GridDomainException, InvalidGridValueException)
+src/ORM/FieldType/    # Custom DB field types (DBGridSettings composite field)
 src/Repository/       # Repository interfaces + ORM implementations (GridElementRepositoryInterface, OrmGridElementRepository)
 tests/Unit/           # PHPUnit unit tests (no DB/framework)
 tests/Integration/    # PHPUnit integration tests (full SS env)
@@ -152,7 +153,7 @@ The grid enforces a strict three-level hierarchy using polymorphic parent relati
 Page (SiteTree)
   └── Section   [ContainerType::Section]    — can_be_root: true (default), zone-scoped
         └── Row   [ContainerType::Row]       — can_be_root: false
-              └── Column  [ContainerType::Column]  — can_be_root: false, stores GridSettings JSON
+              └── Column  [ContainerType::Column]  — can_be_root: false, stores GridSettings (DBComposite)
                     └── (any non-container content element)
 ```
 
@@ -191,7 +192,7 @@ Writing a container element automatically creates its required child structure o
 
 1. `Section::onAfterWrite()` → creates a `Row` if no children exist
 2. `Row::onAfterWrite()` → creates a `Column` if no children exist
-3. `Column` does NOT auto-scaffold (only initializes `GridSettings` JSON on first write)
+3. `Column` does NOT auto-scaffold (only initializes `GridSettings` on first write)
 
 **Result**: A single `Section::create()->write()` produces the full `Section → Row → Column` tree.
 
@@ -282,7 +283,7 @@ Package: `wedevelopnl/silverstripe-grid` (type: `silverstripe-vendormodule`)
 - `make test-js` and `make coverage-js` run locally (no Docker), unlike PHP targets
 - JS linting uses oxlint (`oxlintrc.json`), CSS/SCSS linting uses Stylelint (`stylelint.config.mjs`)
 - **Polymorphic parent ID collisions**: page IDs and element IDs share the same numeric space — lookup maps must key by composite `"ParentClass:ParentID"` not just ParentID
-- **GridSettings empty overrides JSON**: PHP's `json_encode([])` emits `[]` not `{}` for empty overrides — handle both in frontend/tests
+- **GridSettings overrides column**: The `GridSettingsOverrides` Text column stores `null` when no overrides exist (not empty string or `{}`). `DBGridSettings::serializeOverrides()` enforces this — any non-null value is valid JSON with at least one viewport key
 - **DnD coordinate spaces and gotchas**: See the `dnd-guide` skill — covers three coordinate spaces, overRectRef capture rules, auto-scroll traps, and the full diagnostic map for DnD bugs
 
 <!-- Source: local .apm/instructions/code-style.instructions.md -->

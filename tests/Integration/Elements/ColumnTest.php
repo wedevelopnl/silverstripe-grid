@@ -233,19 +233,17 @@ final class ColumnTest extends ContainerContractTestCase
         $this->assertTrue($reloadedSettings->overrides['lg']->equals($settings->overrides['lg']));
     }
 
-    public function testOnBeforeWritePersistsInitialJsonForNewRecord(): void
+    public function testOnBeforeWritePersistsInitialSettingsForNewRecord(): void
     {
         $column = Column::create();
-        $this->assertNull($column->getField('GridSettings'));
-
         $column->write();
 
-        $raw = $column->getField('GridSettings');
-        $this->assertIsString($raw);
-
-        $decoded = json_decode($raw, true);
-        $this->assertArrayHasKey('default', $decoded);
-        $this->assertSame(12, $decoded['default']['width']);
+        // After write, the composite sub-fields should be populated
+        $settings = $column->getGridSettings();
+        $this->assertInstanceOf(GridSettings::class, $settings);
+        $this->assertSame(12, $settings->default->width);
+        $this->assertSame(0, $settings->default->offset);
+        $this->assertTrue($settings->default->visible);
     }
 
     public function testPresetGridSettingsNotOverwrittenOnFirstWrite(): void

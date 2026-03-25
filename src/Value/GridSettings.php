@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Value;
 
-use JsonSerializable;
-
 /**
  * Immutable value object for column grid settings.
  *
@@ -13,8 +11,9 @@ use JsonSerializable;
  * The default maps to the adapter's default viewport; overrides are
  * keyed by viewport key and represent explicit user customizations.
  *
+ * Storage serialization is handled by {@see \WeDevelop\Grid\ORM\FieldType\DBGridSettings}.
  */
-final readonly class GridSettings implements JsonSerializable
+final readonly class GridSettings
 {
     /**
      * @param array<non-empty-string, ViewportConfig> $overrides
@@ -34,44 +33,6 @@ final readonly class GridSettings implements JsonSerializable
     public static function initial(int $columnCount): self
     {
         return new self(ViewportConfig::default($columnCount));
-    }
-
-    /**
-     * Decode from a JSON string (database storage).
-     *
-     * Handles the new format (`{"default": ..., "overrides": ...}`)
-     * and falls back to initial defaults for empty/invalid input.
-     *
-     * @param positive-int $columnCount Fallback column count when JSON is empty/invalid
-     */
-    public static function fromJson(string $json, int $columnCount): self
-    {
-        if (in_array($json, ['', '{}', '[]'], true)) {
-            return self::initial($columnCount);
-        }
-
-        $decoded = json_decode($json, true);
-
-        if (!is_array($decoded) || !isset($decoded['default'])) {
-            return self::initial($columnCount);
-        }
-
-        /** @var array{width: positive-int, offset: int<0, max>, visible: bool} $defaultData */
-        $defaultData = $decoded['default'];
-        $default = ViewportConfig::fromArray($defaultData);
-
-        $overrides = [];
-        if (isset($decoded['overrides']) && is_array($decoded['overrides'])) {
-            foreach ($decoded['overrides'] as $key => $data) {
-                if (is_string($key) && $key !== '' && is_array($data)) {
-                    /** @var array{width: positive-int, offset: int<0, max>, visible: bool} $data */
-                    $overrides[$key] = ViewportConfig::fromArray($data);
-                }
-            }
-        }
-
-        /** @var array<non-empty-string, ViewportConfig> $overrides */
-        return new self($default, $overrides);
     }
 
     // ─── Queries ───────────────────────────────────────────────
@@ -120,24 +81,21 @@ final readonly class GridSettings implements JsonSerializable
         return new self($this->default, $overrides);
     }
 
-    // ─── Persistence ───────────────────────────────────────────
-
-    public function toJson(): string
-    {
-        return json_encode($this, JSON_THROW_ON_ERROR);
-    }
+    // ─── Serialization ─────────────────────────────────────────
 
     /**
-     * @return array{default: array{width: positive-int, offset: int<0, max>, visible: bool}, overrides: array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}>}
+     * Convert to array representation for API responses.
+     *
+     * @return array{default: array{width: positive-int, offset: non-negative-int, visible: bool}, overrides: array<non-empty-string, array{width: positive-int, offset: non-negative-int, visible: bool}>}
      */
-    public function jsonSerialize(): array
+    public function toArray(): array
     {
         $overrides = [];
         foreach ($this->overrides as $key => $config) {
             $overrides[$key] = $config->toArray();
         }
 
-        /** @var array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}> $overrides */
+        /** @var array<non-empty-string, array{width: positive-int, offset: non-negative-int, visible: bool}> $overrides */
         return [
             'default' => $this->default->toArray(),
             'overrides' => $overrides,

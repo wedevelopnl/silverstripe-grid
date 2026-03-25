@@ -13,6 +13,7 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Forms\GridSettingsField;
 use WeDevelop\Grid\Service\ColumnClassResolver;
 use WeDevelop\Grid\Service\GridSettingsResolver;
+use WeDevelop\Grid\ORM\FieldType\DBGridSettings;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridSettings;
 
@@ -72,9 +73,9 @@ class Column extends GridElement implements ContainerInterface
         'Elements',
     ];
 
-    /** @var array<string, string> */
+    /** @var array<string, class-string> */
     private static array $db = [
-        'GridSettings' => 'Text',
+        'GridSettings' => DBGridSettings::class,
     ];
 
     #[Override]
@@ -128,34 +129,27 @@ class Column extends GridElement implements ContainerInterface
         return sprintf('%d/%d', $settings->default->width, $columnCount);
     }
 
-    /** Decode the JSON grid settings into a GridSettings value object. */
+    /** Retrieve grid settings from the composite DB field. */
     public function getGridSettings(): GridSettings
     {
-        $raw = $this->getField('GridSettings');
-        $columnCount = $this->gridAdapter->getColumnCount();
+        /** @var DBGridSettings $field */
+        $field = $this->dbObject('GridSettings');
 
-        if (is_string($raw)) {
-            return GridSettings::fromJson($raw, $columnCount);
-        }
-
-        return GridSettings::initial($columnCount);
+        return $field->getValue() ?? GridSettings::initial($this->gridAdapter->getColumnCount());
     }
 
     /**
-     * Encode a GridSettings value object into JSON for storage.
+     * Write grid settings into the composite DB field.
      *
-     * Also accepts a raw JSON string for SilverStripe fixture/ORM compatibility
-     * (ModelData::__set dispatches to setGridSettings when setting the DB field).
+     * Accepts a GridSettings VO (primary API) or a JSON string for backward
+     * compatibility with YAML fixture loading, where the framework passes
+     * raw field values through the setter.
      */
     public function setGridSettings(GridSettings|string $settings): static
     {
-        if (is_string($settings)) {
-            $this->setField('GridSettings', $settings);
-
-            return $this;
-        }
-
-        $this->setField('GridSettings', $settings->toJson());
+        /** @var DBGridSettings $field */
+        $field = $this->dbObject('GridSettings');
+        $field->setValue($settings);
 
         return $this;
     }
@@ -177,7 +171,9 @@ class Column extends GridElement implements ContainerInterface
     {
         parent::onBeforeWrite();
 
-        if (!$this->isInDB() && !$this->getField('GridSettings')) {
+        /** @var DBGridSettings $gridSettings */
+        $gridSettings = $this->dbObject('GridSettings');
+        if (!$this->isInDB() && !$gridSettings->exists()) {
             $this->setGridSettings(GridSettings::initial($this->gridAdapter->getColumnCount()));
         }
     }

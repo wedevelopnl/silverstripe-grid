@@ -24,94 +24,6 @@ final class GridSettingsTest extends TestCase
         $this->assertSame([], $settings->overrides);
     }
 
-    public function testFromJsonWithValidNewFormat(): void
-    {
-        $json = json_encode([
-            'default' => ['width' => 8, 'offset' => 1, 'visible' => true],
-            'overrides' => [
-                'sm' => ['width' => 12, 'offset' => 0, 'visible' => false],
-            ],
-        ]);
-
-        $settings = GridSettings::fromJson($json, 12);
-
-        $this->assertSame(8, $settings->default->width);
-        $this->assertSame(1, $settings->default->offset);
-        $this->assertTrue($settings->default->visible);
-        $this->assertCount(1, $settings->overrides);
-        $this->assertSame(12, $settings->overrides['sm']->width);
-        $this->assertFalse($settings->overrides['sm']->visible);
-    }
-
-    public function testFromJsonWithEmptyStringReturnsInitial(): void
-    {
-        $settings = GridSettings::fromJson('', 12);
-
-        $this->assertSame(12, $settings->default->width);
-        $this->assertSame([], $settings->overrides);
-    }
-
-    public function testFromJsonWithEmptyObjectReturnsInitial(): void
-    {
-        $settings = GridSettings::fromJson('{}', 12);
-
-        $this->assertSame(12, $settings->default->width);
-        $this->assertSame([], $settings->overrides);
-    }
-
-    public function testFromJsonWithEmptyArrayReturnsInitial(): void
-    {
-        $settings = GridSettings::fromJson('[]', 12);
-
-        $this->assertSame(12, $settings->default->width);
-        $this->assertSame([], $settings->overrides);
-    }
-
-    public function testFromJsonWithInvalidJsonReturnsInitial(): void
-    {
-        $settings = GridSettings::fromJson('not json', 12);
-
-        $this->assertSame(12, $settings->default->width);
-        $this->assertSame([], $settings->overrides);
-    }
-
-    public function testFromJsonWithMissingDefaultKeyReturnsInitial(): void
-    {
-        $settings = GridSettings::fromJson('{"foo": "bar"}', 12);
-
-        $this->assertSame(12, $settings->default->width);
-        $this->assertSame([], $settings->overrides);
-    }
-
-    public function testFromJsonWithNoOverridesKey(): void
-    {
-        $json = json_encode([
-            'default' => ['width' => 6, 'offset' => 0, 'visible' => true],
-        ]);
-
-        $settings = GridSettings::fromJson($json, 12);
-
-        $this->assertSame(6, $settings->default->width);
-        $this->assertSame([], $settings->overrides);
-    }
-
-    public function testFromJsonWithMultipleOverrides(): void
-    {
-        $json = json_encode([
-            'default' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            'overrides' => [
-                'sm' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                'lg' => ['width' => 4, 'offset' => 2, 'visible' => false],
-            ],
-        ]);
-
-        $settings = GridSettings::fromJson($json, 12);
-
-        $this->assertCount(2, $settings->overrides);
-        $this->assertSame(6, $settings->overrides['sm']->width);
-        $this->assertSame(4, $settings->overrides['lg']->width);
-    }
-
     // ─── Queries ───────────────────────────────────────────────
 
     public function testHasOverrideReturnsTrueForExistingOverride(): void
@@ -238,50 +150,30 @@ final class GridSettingsTest extends TestCase
         $this->assertSame([], $updated->overrides);
     }
 
-    // ─── Persistence ───────────────────────────────────────────
+    // ─── toArray ────────────────────────────────────────────────
 
-    public function testToJsonProducesValidJson(): void
+    public function testToArrayProducesCorrectStructure(): void
     {
         $settings = new GridSettings(
             new ViewportConfig(8, 1, true),
             ['sm' => new ViewportConfig(12, 0, false)],
         );
 
-        $json = $settings->toJson();
-        $decoded = json_decode($json, true);
+        $array = $settings->toArray();
 
-        $this->assertIsArray($decoded);
-        $this->assertSame(8, $decoded['default']['width']);
-        $this->assertSame(1, $decoded['default']['offset']);
-        $this->assertTrue($decoded['default']['visible']);
-        $this->assertSame(12, $decoded['overrides']['sm']['width']);
-        $this->assertFalse($decoded['overrides']['sm']['visible']);
+        $this->assertSame(8, $array['default']['width']);
+        $this->assertSame(1, $array['default']['offset']);
+        $this->assertTrue($array['default']['visible']);
+        $this->assertSame(12, $array['overrides']['sm']['width']);
+        $this->assertFalse($array['overrides']['sm']['visible']);
     }
 
-    public function testToJsonWithNoOverridesProducesEmptyOverridesObject(): void
+    public function testToArrayWithNoOverridesProducesEmptyOverrides(): void
     {
         $settings = GridSettings::initial(12);
-        $json = $settings->toJson();
-        $decoded = json_decode($json, true);
 
-        $this->assertSame([], $decoded['overrides']);
-    }
+        $array = $settings->toArray();
 
-    public function testJsonRoundTrip(): void
-    {
-        $original = new GridSettings(
-            new ViewportConfig(8, 1, true),
-            [
-                'sm' => new ViewportConfig(12, 0, false),
-                'lg' => new ViewportConfig(4, 2, true),
-            ],
-        );
-
-        $restored = GridSettings::fromJson($original->toJson(), 12);
-
-        $this->assertTrue($original->default->equals($restored->default));
-        $this->assertCount(2, $restored->overrides);
-        $this->assertTrue($original->overrides['sm']->equals($restored->overrides['sm']));
-        $this->assertTrue($original->overrides['lg']->equals($restored->overrides['lg']));
+        $this->assertSame([], $array['overrides']);
     }
 }

@@ -44,8 +44,6 @@ class GridSettingsField extends FormField
     {
         if ($value instanceof GridSettings) {
             $this->gridSettings = $value;
-        } elseif (is_string($value)) {
-            $this->gridSettings = GridSettings::fromJson($value, $this->adapter->getColumnCount());
         } elseif (is_array($value)) {
             /** @var array<string, mixed> $value */
             $this->gridSettings = $this->normalizeFormData($value);
@@ -55,12 +53,12 @@ class GridSettingsField extends FormField
     }
 
     /**
-     * Encode grid settings as JSON and write into the record.
+     * Write grid settings into the record via the composite DB field.
      */
     #[Override]
     public function saveInto(DataObjectInterface $record): void
     {
-        $record->{$this->name} = $this->gridSettings->toJson();
+        $record->setCastedField($this->name, $this->gridSettings);
     }
 
     /**
@@ -128,7 +126,7 @@ class GridSettingsField extends FormField
         $defaultVisible = is_array($defaultEntry) && isset($defaultEntry['visible']);
 
         /** @var positive-int $defaultWidth */
-        /** @var int<0, max> $defaultOffset */
+        /** @var non-negative-int $defaultOffset */
         $default = new ViewportConfig($defaultWidth, $defaultOffset, $defaultVisible);
         $overrides = [];
 
@@ -155,7 +153,7 @@ class GridSettingsField extends FormField
 
             /** @var positive-int $parsedWidth */
             $parsedWidth = is_numeric($width) ? (int) $width : $columnCount;
-            /** @var int<0, max> $parsedOffset */
+            /** @var non-negative-int $parsedOffset */
             $parsedOffset = is_numeric($offset) ? (int) $offset : 0;
 
             $overrides[$key] = new ViewportConfig(
