@@ -9,13 +9,13 @@ use WeDevelop\Grid\Contract\ReorderExecutorInterface;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\Result;
+use WeDevelop\Grid\Value\WriteResult;
 
 class ReorderService
 {
     public function __construct(
         private readonly ReorderValidatorInterface $validator,
         private readonly ReorderExecutorInterface $executor,
-        private readonly ElementPersistenceService $persistenceService,
     ) {
     }
 
@@ -37,7 +37,12 @@ class ReorderService
 
         $dirtyElements = $executeResult->unwrap();
 
-        $persistResult = $this->persistenceService->persistBatch($dirtyElements);
+        $persistResult = WriteResult::from(static function () use ($dirtyElements): null {
+            foreach ($dirtyElements as $dirtyElement) {
+                $dirtyElement->write();
+            }
+            return null;
+        });
         if ($persistResult->isErr()) {
             return Result::fail(...$persistResult->errors());
         }

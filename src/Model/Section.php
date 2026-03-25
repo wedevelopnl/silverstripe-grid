@@ -130,7 +130,7 @@ class Section extends GridElement implements ContainerInterface
     }
 
     #[Override]
-    public function ensureSortSet(): void
+    protected function ensureSortSet(): void
     {
         if ($this->Sort > 0) {
             return;

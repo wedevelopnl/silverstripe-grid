@@ -328,10 +328,46 @@ class GridElement extends DataObject
     }
 
     /**
+     * Insert this element after a reference sibling by adjusting Sort values.
+     *
+     * Bumps the Sort of all elements after the reference, then sets this
+     * element's Sort to one past the reference. Requires this element to
+     * have been written (needs an ID to exclude itself from the bump query).
+     *
+     * @param positive-int $afterElementId
+     */
+    public function insertAfterSibling(int $afterElementId): void
+    {
+        $afterElement = GridElement::get()->byID($afterElementId);
+        if (!$afterElement instanceof GridElement) {
+            return;
+        }
+
+        $newSort = (int) $afterElement->Sort + 1;
+
+        /** @var GridElement $sibling */
+        foreach (GridElement::get()
+            ->filter([
+                'ParentID' => $this->ParentID,
+                'ParentClass' => $this->ParentClass,
+            ])
+            ->where([
+                '"Sort" >= ? AND "GridElement"."ID" != ?' => [$newSort, (int) $this->ID],
+            ])->sort(['Sort' => 'ASC']) as $sibling
+        ) {
+            $sibling->Sort = (int) $sibling->Sort + 1;
+            $sibling->write();
+        }
+
+        $this->Sort = $newSort;
+        $this->write();
+    }
+
+    /**
      * Sets Sort to one past the current maximum for this parent
      * when no explicit Sort has been assigned.
      */
-    public function ensureSortSet(): void
+    protected function ensureSortSet(): void
     {
         if ($this->Sort > 0) {
             return;

@@ -7,13 +7,14 @@ namespace WeDevelop\Grid\Tests\Unit\Service;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use SilverStripe\Core\Validation\ValidationException;
+use SilverStripe\Core\Validation\ValidationResult;
 use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Contract\ReorderExecutorInterface;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
-use WeDevelop\Grid\Service\ElementPersistenceService;
 use WeDevelop\Grid\Service\ReorderService;
 
 #[CoversClass(ReorderService::class)]
@@ -23,23 +24,22 @@ final class ReorderServiceTest extends TestCase
 
     private ReorderExecutorInterface&MockObject $executor;
 
-    private ElementPersistenceService&MockObject $persistenceService;
-
     private ReorderService $service;
 
     protected function setUp(): void
     {
         $this->validator = $this->createMock(ReorderValidatorInterface::class);
         $this->executor = $this->createMock(ReorderExecutorInterface::class);
-        $this->persistenceService = $this->createMock(ElementPersistenceService::class);
-        $this->service = new ReorderService($this->validator, $this->executor, $this->persistenceService);
+        $this->service = new ReorderService($this->validator, $this->executor);
     }
 
-    public function testHappyPathCallsValidatorThenExecutorThenPersist(): void
+    public function testHappyPathCallsValidatorThenExecutorThenWritesDirtyElements(): void
     {
         $element = $this->createMock(GridElement::class);
         $area = $this->createMock(DataObject::class);
-        $dirtyElements = [$element];
+
+        $dirtyElement = $this->createMock(GridElement::class);
+        $dirtyElement->expects($this->once())->method('write');
 
         $this->validator->expects($this->once())
             ->method('validate')
@@ -49,12 +49,7 @@ final class ReorderServiceTest extends TestCase
         $this->executor->expects($this->once())
             ->method('execute')
             ->with($element, $area, 42)
-            ->willReturn(Result::ok($dirtyElements));
-
-        $this->persistenceService->expects($this->once())
-            ->method('persistBatch')
-            ->with($dirtyElements)
-            ->willReturn(Result::ok(null));
+            ->willReturn(Result::ok([$dirtyElement]));
 
         $result = $this->service->reorder($element, $area, 42);
 
@@ -71,7 +66,6 @@ final class ReorderServiceTest extends TestCase
             ->willReturn(Result::fail(new ValidationError(message: 'Not allowed.')));
 
         $this->executor->expects($this->never())->method('execute');
-        $this->persistenceService->expects($this->never())->method('persistBatch');
 
         $result = $this->service->reorder($element, $area, null);
 
@@ -99,16 +93,24 @@ final class ReorderServiceTest extends TestCase
         self::assertSame('Second error.', $result->errors()[1]->message);
     }
 
-    public function testPersistenceFailurePropagated(): void
+    public function testWriteFailurePropagated(): void
     {
         $element = $this->createMock(GridElement::class);
         $area = $this->createMock(DataObject::class);
 
-        $this->validator->method('validate')->willReturn(Result::ok($element));
-        $this->executor->method('execute')->willReturn(Result::ok([$element]));
+        $dirtyElement = $this->createMock(GridElement::class);
 
-        $this->persistenceService->method('persistBatch')
-            ->willReturn(Result::fail(new ValidationError(message: 'Write failed.')));
+        $validationResult = $this->createMock(ValidationResult::class);
+        $validationResult->method('getMessages')->willReturn([
+            ['message' => 'Write failed.', 'fieldName' => ''],
+        ]);
+        $exception = $this->createMock(ValidationException::class);
+        $exception->method('getResult')->willReturn($validationResult);
+
+        $dirtyElement->method('write')->willThrowException($exception);
+
+        $this->validator->method('validate')->willReturn(Result::ok($element));
+        $this->executor->method('execute')->willReturn(Result::ok([$dirtyElement]));
 
         $result = $this->service->reorder($element, $area, null);
 
@@ -116,18 +118,13 @@ final class ReorderServiceTest extends TestCase
         self::assertSame('Write failed.', $result->errors()[0]->message);
     }
 
-    public function testEmptyDirtyListStillCallsPersistBatch(): void
+    public function testEmptyDirtyListReturnsOk(): void
     {
         $element = $this->createMock(GridElement::class);
         $area = $this->createMock(DataObject::class);
 
         $this->validator->method('validate')->willReturn(Result::ok($element));
         $this->executor->method('execute')->willReturn(Result::ok([]));
-
-        $this->persistenceService->expects($this->once())
-            ->method('persistBatch')
-            ->with([])
-            ->willReturn(Result::ok(null));
 
         $result = $this->service->reorder($element, $area, 5);
 
@@ -147,8 +144,6 @@ final class ReorderServiceTest extends TestCase
                 message: 'The reference element no longer exists in the target area.',
                 field: 'afterElementID',
             )));
-
-        $this->persistenceService->expects($this->never())->method('persistBatch');
 
         $result = $this->service->reorder($element, $area, 999);
 

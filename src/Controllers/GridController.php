@@ -27,8 +27,8 @@ use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\Viewport;
+use WeDevelop\Grid\Value\WriteResult;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
-use WeDevelop\Grid\Service\ElementPersistenceService;
 use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Service\GridSettingsCompactor;
 use WeDevelop\Grid\Service\ReorderService;
@@ -42,7 +42,6 @@ use WeDevelop\Grid\Value\GridNode;
  *
  * @property GridElementRepositoryInterface $elementRepository
  * @property GridTreeBuilder $treeBuilder
- * @property ElementPersistenceService $persistenceService
  * @property ReorderService $reorderService
  * @property GridAdapterInterface $gridAdapter
  * @property RequestBodyParser $requestBodyParser
@@ -57,7 +56,6 @@ class GridController extends AdminController
     private static array $dependencies = [
         'elementRepository' => '%$' . GridElementRepositoryInterface::class,
         'treeBuilder' => '%$' . GridTreeBuilder::class,
-        'persistenceService' => '%$' . ElementPersistenceService::class,
         'reorderService' => '%$' . ReorderService::class,
         'gridAdapter' => '%$' . GridAdapterInterface::class,
         'requestBodyParser' => '%$' . RequestBodyParser::class,
@@ -66,8 +64,6 @@ class GridController extends AdminController
     public GridElementRepositoryInterface $elementRepository;
 
     public GridTreeBuilder $treeBuilder;
-
-    public ElementPersistenceService $persistenceService;
 
     public ReorderService $reorderService;
 
@@ -191,9 +187,13 @@ class GridController extends AdminController
             $newElement->Zone = $body->zone;
         }
 
-        $newElement->ensureSortSet();
-
-        $result = $this->persistenceService->persistNew($newElement, $body->insertAfterElementID);
+        $result = WriteResult::from(function () use ($newElement, $body): GridElement {
+            $newElement->write();
+            if ($body->insertAfterElementID !== null) {
+                $newElement->insertAfterSibling($body->insertAfterElementID);
+            }
+            return $newElement;
+        });
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
@@ -239,9 +239,14 @@ class GridController extends AdminController
 
         $newElement->ParentID = $body->parentId;
         $newElement->ParentClass = $parent::class;
-        $newElement->ensureSortSet();
 
-        $result = $this->persistenceService->persistNew($newElement, $body->insertAfterElementID);
+        $result = WriteResult::from(function () use ($newElement, $body): GridElement {
+            $newElement->write();
+            if ($body->insertAfterElementID !== null) {
+                $newElement->insertAfterSibling($body->insertAfterElementID);
+            }
+            return $newElement;
+        });
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
@@ -324,7 +329,11 @@ class GridController extends AdminController
         /** @var positive-int $elementId */
         $elementId = (int) $element->ID;
 
-        $result = $this->persistenceService->persistDuplicate($clone, $elementId);
+        $result = WriteResult::from(function () use ($clone, $elementId): GridElement {
+            $clone->write();
+            $clone->insertAfterSibling($elementId);
+            return $clone;
+        });
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
@@ -437,7 +446,10 @@ class GridController extends AdminController
 
         $clone->Sort = 0;
 
-        $result = $this->persistenceService->persistAppend($clone);
+        $result = WriteResult::from(function () use ($clone): GridElement {
+            $clone->write();
+            return $clone;
+        });
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
@@ -524,7 +536,10 @@ class GridController extends AdminController
 
         $element->setGridSettingsData($sparse);
 
-        $result = $this->persistenceService->persistBatch([$element]);
+        $result = WriteResult::from(function () use ($element): GridElement {
+            $element->write();
+            return $element;
+        });
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }

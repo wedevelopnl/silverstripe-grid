@@ -30,7 +30,6 @@ SilverStripe\Core\Injector\Injector:
   WeDevelop\Grid\Service\GridTreeBuilder:
     constructor:
       elementRepository: '%$WeDevelop\Grid\Repository\GridElementRepositoryInterface'
-  WeDevelop\Grid\Service\ElementPersistenceService: ~
   WeDevelop\Grid\Contract\ReorderValidatorInterface:
     class: WeDevelop\Grid\Validation\ReorderValidator
   WeDevelop\Grid\Contract\ReorderExecutorInterface:
@@ -44,4 +43,3 @@ SilverStripe\Core\Injector\Injector:
     constructor:
       validator: '%$WeDevelop\Grid\Contract\ReorderValidatorInterface'
       executor: '%$WeDevelop\Grid\Contract\ReorderExecutorInterface'
-      persistenceService: '%$WeDevelop\Grid\Service\ElementPersistenceService'
