@@ -12,7 +12,7 @@ export default defineConfig({
     react(),
     dts({
       include: ['client/src/types/**/*.ts'],
-      exclude: ['client/src/types/silverstripe.d.ts', 'client/src/types/styles.d.ts'],
+      exclude: ['client/src/types/silverstripe.d.ts'],
       outDir: 'client/dist',
       // Resolve @/* path aliases to relative imports in .d.ts output
       tsconfigPath: './tsconfig.json',
