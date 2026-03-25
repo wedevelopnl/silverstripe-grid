@@ -12,6 +12,12 @@
 @use '../components/SectionBlock/SectionBlock';
 @use '../components/ViewportSwitcher/ViewportSwitcher';
 
+.grid-editor-holder > .grid-editor__container {
+  flex: 0 0 100%;
+  max-width: 100%;
+  margin-left: 0;
+}
+
 .grid-editor {
   position: relative;
 }
