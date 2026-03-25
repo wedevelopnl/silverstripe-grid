@@ -412,7 +412,7 @@ describe('RowBlock', () => {
     });
   });
 
-  it('passes archiveAction to ActionsMenu when canDelete is true', () => {
+  it('renders ElementActions with actions menu', () => {
     const row = makeRow({ canDelete: true });
 
     render(
@@ -421,18 +421,6 @@ describe('RowBlock', () => {
     );
 
     expect(screen.getByTestId('actions-menu-trigger')).toBeDefined();
-  });
-
-  it('does not render ActionsMenu trigger when all actions are disabled', () => {
-    const row = makeRow({ canDelete: false, canCreate: false });
-
-    const { container } = render(
-      <RowBlock row={row} />,
-      { wrapper: createDndWrapper() },
-    );
-
-    // ActionsMenu returns null when actions array is empty
-    expect(container.querySelector('.actions-menu')).toBeNull();
   });
 
   describe('edit link', () => {

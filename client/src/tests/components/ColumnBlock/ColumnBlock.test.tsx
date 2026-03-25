@@ -665,7 +665,7 @@ describe('ColumnBlock', () => {
     });
   });
 
-  it('passes archiveAction to ActionsMenu when canDelete is true', () => {
+  it('renders ElementActions with actions menu', () => {
     const column = makeColumn({ canDelete: true });
 
     render(
@@ -673,20 +673,7 @@ describe('ColumnBlock', () => {
       { wrapper: createDndWrapper() },
     );
 
-    const trigger = screen.getByTestId('actions-menu-trigger');
-    expect(trigger).toBeDefined();
-  });
-
-  it('does not render ActionsMenu trigger when all actions are disabled', () => {
-    const column = makeColumn({ canDelete: false, canCreate: false });
-
-    const { container } = render(
-      <ColumnBlock column={column} />,
-      { wrapper: createDndWrapper() },
-    );
-
-    // ActionsMenu returns null when actions array is empty
-    expect(container.querySelector('.actions-menu')).toBeNull();
+    expect(screen.getByTestId('actions-menu-trigger')).toBeDefined();
   });
 
   it('applies isDragging class when any drag is active', () => {
@@ -858,39 +845,6 @@ describe('ColumnBlock', () => {
     const icon = container.querySelector('.column-block__icon.font-icon-block-layout');
     expect(icon).not.toBeNull();
     expect(icon?.tagName.toLowerCase()).toBe('i');
-  });
-
-  describe('archive dialog', () => {
-    beforeEach(() => {
-      HTMLDialogElement.prototype.showModal = vi.fn();
-      HTMLDialogElement.prototype.close = vi.fn();
-    });
-
-    it('does not render ConfirmDialog when archive dialog is not open', () => {
-      const column = makeColumn({ canDelete: true });
-
-      render(
-        <ColumnBlock column={column} />,
-        { wrapper: createDndWrapper() },
-      );
-
-      expect(screen.queryByTestId('confirm-dialog')).toBeNull();
-    });
-
-    it('renders ConfirmDialog when archive action is triggered', async () => {
-      const column = makeColumn({ canDelete: true });
-      const user = userEvent.setup();
-
-      render(
-        <ColumnBlock column={column} />,
-        { wrapper: createDndWrapper() },
-      );
-
-      await user.click(screen.getByTestId('actions-menu-trigger'));
-      await user.click(screen.getByRole('menuitem', { name: 'Archive' }));
-
-      expect(screen.getByTestId('confirm-dialog')).toBeDefined();
-    });
   });
 
   it('renders ElementTypePicker when allowedTypes has entries', () => {

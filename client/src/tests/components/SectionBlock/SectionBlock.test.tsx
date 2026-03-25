@@ -449,7 +449,7 @@ describe('SectionBlock', () => {
     });
   });
 
-  it('passes archiveAction to ActionsMenu when canDelete is true', () => {
+  it('renders ElementActions with actions menu', () => {
     const section = makeSection({ canDelete: true });
 
     render(
@@ -458,18 +458,6 @@ describe('SectionBlock', () => {
     );
 
     expect(screen.getByTestId('actions-menu-trigger')).toBeDefined();
-  });
-
-  it('does not render ActionsMenu trigger when all actions are disabled', () => {
-    const section = makeSection({ canDelete: false, canCreate: false });
-
-    const { container } = render(
-      <SectionBlock section={section} />,
-      { wrapper: createDndWrapper() },
-    );
-
-    // ActionsMenu returns null when actions array is empty
-    expect(container.querySelector('.actions-menu')).toBeNull();
   });
 
   it('renders the block schema icon class on the icon element', () => {

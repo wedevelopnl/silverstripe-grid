@@ -5,13 +5,7 @@ import type { EnrichedSimpleElementNode } from '@/types/enriched';
 import { getElementStatus } from '@/types/status';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import DragHandle from '@/components/DragHandle/DragHandle';
-import ActionsMenu from '@/components/ActionsMenu/ActionsMenu';
-import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
-import { useArchiveAction } from '@/hooks/useArchiveAction';
-import { useDuplicateAction } from '@/hooks/useDuplicateAction';
-import { useDuplicateToAction } from '@/hooks/useDuplicateToAction';
-import { useGridEditorContext } from '@/hooks/GridEditorContext';
-import DuplicateToDialog from '@/components/DuplicateToDialog/DuplicateToDialog';
+import ElementActions from '@/components/ElementActions/ElementActions';
 
 interface ElementCardProps {
   readonly element: EnrichedSimpleElementNode;
@@ -23,15 +17,6 @@ interface ElementCardProps {
  */
 export default function ElementCard({ element }: ElementCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: element.sortableId });
-  const { pageId } = useGridEditorContext();
-  const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(element);
-  const { action: duplicateAction } = useDuplicateAction(element);
-  const { action: duplicateToAction, dialog: duplicateToDialog } = useDuplicateToAction(element);
-  const actions = [
-    ...(duplicateAction !== null ? [duplicateAction] : []),
-    ...(duplicateToAction !== null ? [duplicateToAction] : []),
-    ...(archiveAction !== null ? [archiveAction] : []),
-  ];
   const status = getElementStatus(element.statusFlags);
   const content = element.blockSchema.summary;
   const editLink = element.editLink;
@@ -71,29 +56,8 @@ export default function ElementCard({ element }: ElementCardProps) {
         <DragHandle listeners={listeners} attributes={attributes} label={`Move ${element.title}`} />
         <i className={`element-card__icon ${element.blockSchema.icon}`} />
         <h4 className="element-card__title" data-testid="element-card-title">{element.title}</h4>
-        <ActionsMenu actions={actions} />
+        <ElementActions node={element} />
       </div>
-      {archiveDialog !== null && archiveDialog.isOpen && (
-        <ConfirmDialog
-          isOpen={archiveDialog.isOpen}
-          title={archiveDialog.title}
-          message={archiveDialog.message}
-          confirmLabel="Archive"
-          onConfirm={archiveDialog.onConfirm}
-          onCancel={archiveDialog.onCancel}
-          destructive
-        />
-      )}
-      {duplicateToDialog !== null && duplicateToDialog.isOpen && (
-        <DuplicateToDialog
-          isOpen={duplicateToDialog.isOpen}
-          elementType={duplicateToDialog.elementType}
-          currentPageId={pageId}
-          onConfirm={duplicateToDialog.onConfirm}
-          onCancel={duplicateToDialog.onCancel}
-          error={duplicateToDialog.error}
-        />
-      )}
       <div className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}>
         {content || 'No preview available'}
       </div>

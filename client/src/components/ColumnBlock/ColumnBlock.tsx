@@ -13,16 +13,11 @@ import { buildBlockClasses } from '@/utils/blockClasses';
 import { getColumnCount, getOffsetStrategy, getWidthOptions, getOffsetOptions, resolveViewportSettings } from '@/utils/gridAdapter';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
-import ActionsMenu from '@/components/ActionsMenu/ActionsMenu';
-import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
+import ElementActions from '@/components/ElementActions/ElementActions';
 import GridSettingsPicker from '@/components/GridSettingsPicker/GridSettingsPicker';
 import ElementCard from '@/components/ElementCard/ElementCard';
 import EmptyState from '@/components/EmptyState/EmptyState';
 import ElementTypePicker from '@/components/ElementTypePicker/ElementTypePicker';
-import { useArchiveAction } from '@/hooks/useArchiveAction';
-import { useDuplicateAction } from '@/hooks/useDuplicateAction';
-import { useDuplicateToAction } from '@/hooks/useDuplicateToAction';
-import DuplicateToDialog from '@/components/DuplicateToDialog/DuplicateToDialog';
 
 interface ColumnBlockProps {
   readonly column: EnrichedColumnNode;
@@ -38,14 +33,6 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
   const { activeType } = useDragContext();
   const updateGridSettings = useUpdateGridSettings(pageId, zone);
   const createContentElement = useCreateContentElement(pageId, zone);
-  const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(column);
-  const { action: duplicateAction } = useDuplicateAction(column);
-  const { action: duplicateToAction, dialog: duplicateToDialog } = useDuplicateToAction(column);
-  const actions = [
-    ...(duplicateAction !== null ? [duplicateAction] : []),
-    ...(duplicateToAction !== null ? [duplicateToAction] : []),
-    ...(archiveAction !== null ? [archiveAction] : []),
-  ];
   const [isPickerOpen, setPickerOpen] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: column.sortableId });
@@ -171,29 +158,8 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
             testId="column-offset-badge"
             onSelect={handleOffsetSelect}
           />
-          <ActionsMenu actions={actions} />
+          <ElementActions node={column} />
         </div>
-        {archiveDialog !== null && archiveDialog.isOpen && (
-          <ConfirmDialog
-            isOpen={archiveDialog.isOpen}
-            title={archiveDialog.title}
-            message={archiveDialog.message}
-            confirmLabel="Archive"
-            onConfirm={archiveDialog.onConfirm}
-            onCancel={archiveDialog.onCancel}
-            destructive
-          />
-        )}
-        {duplicateToDialog !== null && duplicateToDialog.isOpen && (
-          <DuplicateToDialog
-            isOpen={duplicateToDialog.isOpen}
-            elementType={duplicateToDialog.elementType}
-            currentPageId={pageId}
-            onConfirm={duplicateToDialog.onConfirm}
-            onCancel={duplicateToDialog.onCancel}
-            error={duplicateToDialog.error}
-          />
-        )}
         <div className="column-block__body">
           <SortableContext items={column.childSortableIds} strategy={verticalListSortingStrategy}>
             {hasChildren

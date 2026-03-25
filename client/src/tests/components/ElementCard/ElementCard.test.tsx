@@ -349,34 +349,4 @@ describe('ElementCard', () => {
     });
   });
 
-  describe('archive dialog', () => {
-    beforeEach(() => {
-      HTMLDialogElement.prototype.showModal = vi.fn();
-      HTMLDialogElement.prototype.close = vi.fn();
-    });
-
-    it('does not render ConfirmDialog when archive dialog is not triggered', () => {
-      const element = makeElement({ canDelete: true });
-
-      render(<ElementCard element={element} />, {
-        wrapper: createDndWrapper(),
-      });
-
-      expect(screen.queryByTestId('confirm-dialog')).toBeNull();
-    });
-
-    it('renders ConfirmDialog when archive action is triggered', async () => {
-      const element = makeElement({ canDelete: true });
-      const user = userEvent.setup();
-
-      render(<ElementCard element={element} />, {
-        wrapper: createDndWrapper(),
-      });
-
-      await user.click(screen.getByTestId('actions-menu-trigger'));
-      await user.click(screen.getByRole('menuitem', { name: 'Archive' }));
-
-      expect(screen.getByTestId('confirm-dialog')).toBeDefined();
-    });
-  });
 });
