@@ -13,24 +13,13 @@ use Throwable;
  */
 abstract class GridDomainException extends RuntimeException
 {
-
     public function __construct(
-        private readonly string $userMessage,
+        /** Safe for API responses — contains no IDs or internals. */
+        public readonly string $userMessage,
         string $detailedMessage,
-        private readonly int $statusCode,
+        public readonly int $statusCode,
         ?Throwable $previous = null,
     ) {
         parent::__construct($detailedMessage, 0, $previous);
-    }
-
-    /** Safe for API responses — contains no IDs or internals. */
-    public function getUserMessage(): string
-    {
-        return $this->userMessage;
-    }
-
-    public function getStatusCode(): int
-    {
-        return $this->statusCode;
     }
 }

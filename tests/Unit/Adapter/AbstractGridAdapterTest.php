@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use SilverStripe\Config\Collections\MemoryConfigCollection;
 use SilverStripe\Core\Config\ConfigLoader;
 use WeDevelop\Grid\Adapter\AbstractGridAdapter;
+use WeDevelop\Grid\Exception\GridDomainException;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
@@ -21,6 +22,8 @@ use WeDevelop\Grid\Value\Viewport;
  * container max width resolution, and visibility map building.
  */
 #[CoversClass(AbstractGridAdapter::class)]
+#[CoversClass(GridDomainException::class)]
+#[CoversClass(InvalidGridValueException::class)]
 final class AbstractGridAdapterTest extends TestCase
 {
     use ConfigManifestTrait;
