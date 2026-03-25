@@ -30,7 +30,7 @@ use WeDevelop\Grid\Value\Viewport;
 use WeDevelop\Grid\Value\WriteResult;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Service\GridTreeBuilder;
-use WeDevelop\Grid\Service\GridSettingsCompactor;
+use WeDevelop\Grid\Value\ViewportConfig;
 use WeDevelop\Grid\Service\ReorderService;
 use WeDevelop\Grid\Service\RequestBodyParser;
 use WeDevelop\Grid\Service\TitleGenerator;
@@ -527,14 +527,19 @@ class GridController extends AdminController
             $this->jsonError(400);
         }
 
-        $compactor = new GridSettingsCompactor($this->gridAdapter);
-        $sparse = $compactor->applyViewportUpdate(
-            $element->getGridSettingsData(),
-            $body->viewport,
-            ['width' => $body->width, 'offset' => $body->offset, 'visible' => $body->visible],
-        );
+        $settings = $element->getGridSettings();
+        $defaultKey = $this->gridAdapter->getDefaultViewport()->key;
+        $values = new ViewportConfig($body->width, $body->offset, $body->visible);
 
-        $element->setGridSettingsData($sparse);
+        if ($body->viewport === $defaultKey) {
+            $settings = $settings->withDefault($values);
+        } else {
+            $settings = $values->equals($settings->default)
+                ? $settings->withoutOverride($body->viewport)
+                : $settings->withOverride($body->viewport, $values);
+        }
+
+        $element->setGridSettings($settings);
 
         $result = WriteResult::from(function () use ($element): GridElement {
             $element->write();

@@ -47,4 +47,16 @@ final class InvalidGridValueException extends GridDomainException
             statusCode: self::STATUS_CODE,
         );
     }
+
+    public static function forOverrideStrategy(string $value): self
+    {
+        return new self(
+            userMessage: 'The configured override strategy is invalid.',
+            detailedMessage: sprintf(
+                'Override strategy must be "isolated" or "cascade", got "%s".',
+                $value,
+            ),
+            statusCode: self::STATUS_CODE,
+        );
+    }
 }

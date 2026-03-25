@@ -36,7 +36,7 @@ WeDevelop\Grid\Model\Column:
     Title: 'Media Column'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.media_row
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true}}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
 
 # --- Leaves (into column) ---
 WeDevelop\Grid\Model\ContentElement:

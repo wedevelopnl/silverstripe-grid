@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Contract;
 
 use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
+use WeDevelop\Grid\Value\OverrideStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
@@ -151,6 +152,15 @@ interface GridAdapterInterface
      * @return positive-int
      */
     public function getContainerMaxWidth(): int;
+
+    /**
+     * How viewport overrides are applied when resolving grid settings.
+     *
+     * Isolated: an override applies ONLY to that specific viewport.
+     * Cascade: an override applies from the smallest viewport up to
+     * (and including) the overridden viewport.
+     */
+    public function getOverrideStrategy(): OverrideStrategy;
 
     /**
      * CSS class mappings for content layout adapters.

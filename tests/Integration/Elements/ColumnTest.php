@@ -7,6 +7,8 @@ namespace WeDevelop\Grid\Tests\Integration\Elements;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Validation\ValidationException;
 use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Value\ViewportConfig;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\Row;
@@ -152,9 +154,9 @@ final class ColumnTest extends ContainerContractTestCase
         $column = $this->createContainer();
         /** @var Column $column */
 
-        $column->setGridSettingsData([
-            'xs' => ['width' => 6, 'offset' => 0, 'visible' => true],
-        ]);
+        $column->setGridSettings(new GridSettings(
+            new ViewportConfig(6, 0, true),
+        ));
         $column->write();
 
         $this->assertSame('6/12', $column->getGridWidthSummary());
@@ -192,33 +194,46 @@ final class ColumnTest extends ContainerContractTestCase
         $this->assertSame('Width', $fields['getGridWidthSummary']);
     }
 
-    public function testNewColumnHasEmptySparseSettings(): void
+    public function testNewColumnHasInitialSettings(): void
     {
         $column = $this->createContainer();
         /** @var Column $column */
 
-        $this->assertSame([], $column->getGridSettingsData());
+        $settings = $column->getGridSettings();
+        $this->assertInstanceOf(GridSettings::class, $settings);
+        $this->assertSame(12, $settings->default->width);
+        $this->assertSame(0, $settings->default->offset);
+        $this->assertTrue($settings->default->visible);
+        $this->assertSame([], $settings->overrides);
     }
 
     public function testGridSettingsRoundTrip(): void
     {
-        $settings = [
-            'sm' => ['width' => 6, 'offset' => 3, 'visible' => true],
-            'md' => ['width' => 4, 'offset' => 0, 'visible' => false],
-            'lg' => ['width' => 8, 'offset' => 2, 'visible' => true],
-        ];
+        $settings = new GridSettings(
+            new ViewportConfig(6, 3, true),
+            [
+                'md' => new ViewportConfig(4, 0, false),
+                'lg' => new ViewportConfig(8, 2, true),
+            ],
+        );
 
         $column = $this->createContainer();
         /** @var Column $column */
-        $column->setGridSettingsData($settings);
+        $column->setGridSettings($settings);
         $column->write();
 
         // Re-fetch from DB to verify persistence
+        /** @var Column $reloaded */
         $reloaded = Column::get()->byID($column->ID);
-        $this->assertSame($settings, $reloaded->getGridSettingsData());
+        $reloadedSettings = $reloaded->getGridSettings();
+
+        $this->assertTrue($reloadedSettings->default->equals($settings->default));
+        $this->assertCount(2, $reloadedSettings->overrides);
+        $this->assertTrue($reloadedSettings->overrides['md']->equals($settings->overrides['md']));
+        $this->assertTrue($reloadedSettings->overrides['lg']->equals($settings->overrides['lg']));
     }
 
-    public function testOnBeforeWritePersistsEmptyJsonForNewRecord(): void
+    public function testOnBeforeWritePersistsInitialJsonForNewRecord(): void
     {
         $column = Column::create();
         $this->assertNull($column->getField('GridSettings'));
@@ -227,20 +242,29 @@ final class ColumnTest extends ContainerContractTestCase
 
         $raw = $column->getField('GridSettings');
         $this->assertIsString($raw);
-        $this->assertSame('[]', $raw);
+
+        $decoded = json_decode($raw, true);
+        $this->assertArrayHasKey('default', $decoded);
+        $this->assertSame(12, $decoded['default']['width']);
     }
 
     public function testPresetGridSettingsNotOverwrittenOnFirstWrite(): void
     {
-        $custom = [
-            'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
-        ];
+        $custom = new GridSettings(
+            new ViewportConfig(12, 0, true),
+            ['md' => new ViewportConfig(6, 0, true)],
+        );
 
         $column = Column::create();
-        $column->setGridSettingsData($custom);
+        $column->setGridSettings($custom);
         $column->write();
 
+        /** @var Column $reloaded */
         $reloaded = Column::get()->byID($column->ID);
-        $this->assertSame($custom, $reloaded->getGridSettingsData());
+        $reloadedSettings = $reloaded->getGridSettings();
+
+        $this->assertTrue($reloadedSettings->default->equals($custom->default));
+        $this->assertCount(1, $reloadedSettings->overrides);
+        $this->assertTrue($reloadedSettings->overrides['md']->equals($custom->overrides['md']));
     }
 }

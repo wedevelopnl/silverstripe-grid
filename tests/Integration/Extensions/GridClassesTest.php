@@ -18,6 +18,8 @@ use WeDevelop\Grid\Tests\Integration\Fixture\UpdateContainerClassesExtension;
 use WeDevelop\Grid\Tests\Integration\Fixture\UpdateRowClassesExtension;
 use WeDevelop\Grid\Tests\Integration\Fixture\UpdateTitleClassOptionsExtension;
 use WeDevelop\Grid\Tests\Integration\Fixture\UpdateTitleSizeClassExtension;
+use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Value\ViewportConfig;
 
 /**
  * Tests the grid CSS class accessor methods on each container element.
@@ -158,31 +160,40 @@ final class GridClassesTest extends SapphireTest
         $this->assertSame('col-12', $column->getColumnClasses());
     }
 
-    public function testSparseWidthChangeEmitsBaseAndBreakpoint(): void
+    public function testWidthChangeEmitsBaseAndBreakpoint(): void
     {
         $column = Column::create();
-        $column->setGridSettingsData([
-            'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
-        ]);
+        // default=6 for md onward, overrides xs/sm to 12
+        $column->setGridSettings(new GridSettings(
+            new ViewportConfig(6, 0, true),
+            [
+                'xs' => new ViewportConfig(12, 0, true),
+                'sm' => new ViewportConfig(12, 0, true),
+            ],
+        ));
         $column->write();
 
         $classes = $column->getColumnClasses();
 
-        // Base viewport inherits default (12), md overrides to 6
+        // Base viewport (xs) emits col-12, md changes to 6
         $this->assertSame('col-12 col-md-6', $classes);
     }
 
-    public function testCascadedWidthNotReEmitted(): void
+    public function testUnchangedWidthNotReEmitted(): void
     {
         $column = Column::create();
-        $column->setGridSettingsData([
-            'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
-        ]);
+        $column->setGridSettings(new GridSettings(
+            new ViewportConfig(6, 0, true),
+            [
+                'xs' => new ViewportConfig(12, 0, true),
+                'sm' => new ViewportConfig(12, 0, true),
+            ],
+        ));
         $column->write();
 
         $classes = $column->getColumnClasses();
 
-        // lg, xl, xxl inherit md=6, no extra classes emitted
+        // lg, xl, xxl share default=6, no extra classes emitted
         $this->assertStringNotContainsString('col-lg', $classes);
         $this->assertStringNotContainsString('col-xl', $classes);
     }
@@ -190,10 +201,15 @@ final class GridClassesTest extends SapphireTest
     public function testMultipleWidthChangesEmitAtEachBreakpoint(): void
     {
         $column = Column::create();
-        $column->setGridSettingsData([
-            'md' => ['width' => 8, 'offset' => 0, 'visible' => true],
-            'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
-        ]);
+        // xs/sm=12, md=8, lg onward=6
+        $column->setGridSettings(new GridSettings(
+            new ViewportConfig(6, 0, true),
+            [
+                'xs' => new ViewportConfig(12, 0, true),
+                'sm' => new ViewportConfig(12, 0, true),
+                'md' => new ViewportConfig(8, 0, true),
+            ],
+        ));
         $column->write();
 
         $classes = $column->getColumnClasses();
@@ -201,29 +217,39 @@ final class GridClassesTest extends SapphireTest
         $this->assertSame('col-12 col-md-8 col-lg-6', $classes);
     }
 
-    public function testCascadedOffsetEmittedOnceAndInherited(): void
+    public function testOffsetEmittedOnceAndNotReEmitted(): void
     {
         $column = Column::create();
-        $column->setGridSettingsData([
-            'md' => ['width' => 8, 'offset' => 2, 'visible' => true],
-        ]);
+        // xs/sm=12/0, md onward=8/2
+        $column->setGridSettings(new GridSettings(
+            new ViewportConfig(8, 2, true),
+            [
+                'xs' => new ViewportConfig(12, 0, true),
+                'sm' => new ViewportConfig(12, 0, true),
+            ],
+        ));
         $column->write();
 
         $classes = $column->getColumnClasses();
 
         $this->assertStringContainsString('col-md-8', $classes);
         $this->assertStringContainsString('offset-md-2', $classes);
-        // Offset is inherited by later viewports, not re-emitted
+        // Offset stays 2 for later viewports, not re-emitted
         $this->assertStringNotContainsString('offset-lg', $classes);
     }
 
     public function testOffsetResetToZeroEmitsExplicitClass(): void
     {
         $column = Column::create();
-        $column->setGridSettingsData([
-            'md' => ['width' => 8, 'offset' => 2, 'visible' => true],
-            'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
-        ]);
+        // xs/sm=12/0, md=8/2, lg onward=6/0
+        $column->setGridSettings(new GridSettings(
+            new ViewportConfig(6, 0, true),
+            [
+                'xs' => new ViewportConfig(12, 0, true),
+                'sm' => new ViewportConfig(12, 0, true),
+                'md' => new ViewportConfig(8, 2, true),
+            ],
+        ));
         $column->write();
 
         $classes = $column->getColumnClasses();
@@ -236,9 +262,13 @@ final class GridClassesTest extends SapphireTest
     public function testHiddenViewportEmitsVisibilityClasses(): void
     {
         $column = Column::create();
-        $column->setGridSettingsData([
-            'xs' => ['width' => 12, 'offset' => 0, 'visible' => false],
-        ]);
+        // xs=hidden, sm onward=visible/12
+        $column->setGridSettings(new GridSettings(
+            new ViewportConfig(12, 0, true),
+            [
+                'xs' => new ViewportConfig(12, 0, false),
+            ],
+        ));
         $column->write();
 
         $classes = $column->getColumnClasses();
@@ -251,10 +281,15 @@ final class GridClassesTest extends SapphireTest
     public function testHiddenMidViewportEmitsCorrectPairs(): void
     {
         $column = Column::create();
-        $column->setGridSettingsData([
-            'md' => ['width' => 8, 'offset' => 0, 'visible' => false],
-            'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
-        ]);
+        // xs/sm=12/visible, md=hidden, lg onward=6/visible
+        $column->setGridSettings(new GridSettings(
+            new ViewportConfig(6, 0, true),
+            [
+                'xs' => new ViewportConfig(12, 0, true),
+                'sm' => new ViewportConfig(12, 0, true),
+                'md' => new ViewportConfig(8, 0, false),
+            ],
+        ));
         $column->write();
 
         $classes = $column->getColumnClasses();
@@ -271,17 +306,23 @@ final class GridClassesTest extends SapphireTest
     public function testConsecutiveHiddenViewportsDoNotConflict(): void
     {
         $column = Column::create();
-        $column->setGridSettingsData([
-            'md' => ['width' => 6, 'offset' => 0, 'visible' => false],
-            'xl' => ['width' => 4, 'offset' => 0, 'visible' => true],
-        ]);
+        // xs/sm=12/visible, md/lg=hidden, xl onward=4/visible
+        $column->setGridSettings(new GridSettings(
+            new ViewportConfig(4, 0, true),
+            [
+                'xs' => new ViewportConfig(12, 0, true),
+                'sm' => new ViewportConfig(12, 0, true),
+                'md' => new ViewportConfig(6, 0, false),
+                'lg' => new ViewportConfig(6, 0, false),
+            ],
+        ));
         $column->write();
 
         $classes = $column->getColumnClasses();
 
-        // md triggers hide, lg inherits hidden so no new classes
+        // md triggers hide
         $this->assertStringContainsString('d-md-none', $classes);
-        $this->assertStringContainsString('d-lg-block', $classes);
+        // lg is still hidden, no new hide class but restore happens at xl
         // xl restores visibility
         $this->assertStringContainsString('col-xl-4', $classes);
     }

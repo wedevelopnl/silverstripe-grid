@@ -54,11 +54,8 @@ function makeColumnNode(
     allowedTypes: { 'App\\Model\\ElementContent': { label: 'Content', icon: 'font-icon-block-content', description: '' } },
     children,
     gridSettings: {
-      xs: { width: 12, offset: 0, visible: true },
-      sm: { width: 12, offset: 0, visible: true },
-      md: { width: 12, offset: 0, visible: true },
-      lg: { width: 12, offset: 0, visible: true },
-      xl: { width: 12, offset: 0, visible: true },
+      default: { width: 12, offset: 0, visible: true },
+      overrides: {},
     },
     ...overrides,
   };

@@ -65,7 +65,7 @@ function makeColumn(
     containerType: 'column',
     allowedTypes: null,
     children,
-    gridSettings: { md: { width: 6, offset: 0, visible: true } },
+    gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
   };
 }
 

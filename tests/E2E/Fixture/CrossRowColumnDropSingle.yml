@@ -40,22 +40,22 @@ WeDevelop\Grid\Model\Column:
     Title: 'Col A1'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_a
-    GridSettings: '{"md":{"width":3,"offset":0,"visible":true}}'
+    GridSettings: '{"default":{"width":3,"offset":0,"visible":true},"overrides":{}}'
   col_b1:
     Title: 'Col B1'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_b
-    GridSettings: '{"md":{"width":3,"offset":0,"visible":true}}'
+    GridSettings: '{"default":{"width":3,"offset":0,"visible":true},"overrides":{}}'
   col_b2:
     Title: 'Col B2'
     Sort: 2
     Parent: =>WeDevelop\Grid\Model\Row.row_b
-    GridSettings: '{"md":{"width":3,"offset":0,"visible":true}}'
+    GridSettings: '{"default":{"width":3,"offset":0,"visible":true},"overrides":{}}'
   col_b3:
     Title: 'Col B3'
     Sort: 3
     Parent: =>WeDevelop\Grid\Model\Row.row_b
-    GridSettings: '{"md":{"width":3,"offset":0,"visible":true}}'
+    GridSettings: '{"default":{"width":3,"offset":0,"visible":true},"overrides":{}}'
 
 WeDevelop\Grid\Model\ContentElement:
   block_a1:

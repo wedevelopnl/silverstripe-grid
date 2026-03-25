@@ -117,17 +117,18 @@ describe('gridAdapter', () => {
 });
 
 describe('resolveViewportSettings', () => {
-  it('returns defaults for empty settings', () => {
-    expect(resolveViewportSettings({}, 'md')).toEqual({
-      width: 12,
-      offset: 0,
-      visible: true,
-    });
+  const defaults = { width: 12, offset: 0, visible: true };
+
+  it('returns default settings when no overrides exist', () => {
+    const settings = { default: defaults, overrides: {} };
+
+    expect(resolveViewportSettings(settings, 'md')).toEqual(defaults);
   });
 
-  it('returns explicit settings for the active viewport', () => {
+  it('returns override when one exists for the active viewport', () => {
     const settings = {
-      md: { width: 6, offset: 2, visible: true },
+      default: defaults,
+      overrides: { md: { width: 6, offset: 2, visible: true } },
     };
 
     expect(resolveViewportSettings(settings, 'md')).toEqual({
@@ -137,77 +138,68 @@ describe('resolveViewportSettings', () => {
     });
   });
 
-  it('cascades from smaller viewport to larger active viewport', () => {
+  it('returns default when override exists for a different viewport', () => {
     const settings = {
-      sm: { width: 8, offset: 1, visible: true },
+      default: defaults,
+      overrides: { lg: { width: 4, offset: 0, visible: true } },
     };
 
-    // lg inherits sm settings via cascade
-    expect(resolveViewportSettings(settings, 'lg')).toEqual({
-      width: 8,
-      offset: 1,
-      visible: true,
-    });
+    expect(resolveViewportSettings(settings, 'md')).toEqual(defaults);
   });
 
-  it('does not look ahead past active viewport', () => {
+  it('returns override with hidden visibility', () => {
     const settings = {
-      lg: { width: 4, offset: 0, visible: true },
+      default: defaults,
+      overrides: { md: { width: 6, offset: 0, visible: false } },
     };
 
-    // sm is before lg — should not see lg's override
-    expect(resolveViewportSettings(settings, 'sm')).toEqual({
-      width: 12,
-      offset: 0,
-      visible: true,
-    });
-  });
-
-  it('cascades hidden visibility', () => {
-    const settings = {
-      md: { width: 6, offset: 0, visible: false },
-    };
-
-    // lg inherits md's hidden state
-    expect(resolveViewportSettings(settings, 'lg')).toEqual({
+    expect(resolveViewportSettings(settings, 'md')).toEqual({
       width: 6,
       offset: 0,
       visible: false,
     });
   });
 
-  it('accumulates overrides across multiple viewports', () => {
+  it('returns the correct override when multiple overrides exist', () => {
     const settings = {
-      sm: { width: 8, offset: 0, visible: true },
-      md: { width: 6, offset: 2, visible: true },
+      default: defaults,
+      overrides: {
+        sm: { width: 8, offset: 0, visible: true },
+        md: { width: 6, offset: 2, visible: true },
+        lg: { width: 4, offset: 1, visible: false },
+      },
     };
+
+    expect(resolveViewportSettings(settings, 'sm')).toEqual({
+      width: 8,
+      offset: 0,
+      visible: true,
+    });
 
     expect(resolveViewportSettings(settings, 'md')).toEqual({
       width: 6,
       offset: 2,
       visible: true,
     });
+
+    expect(resolveViewportSettings(settings, 'lg')).toEqual({
+      width: 4,
+      offset: 1,
+      visible: false,
+    });
   });
 
-  it('partially overrides cascaded values', () => {
+  it('returns default for a viewport without an override even when other overrides exist', () => {
     const settings = {
-      sm: { width: 8, offset: 3, visible: true },
-      lg: { width: 4, offset: 3, visible: true },
+      default: defaults,
+      overrides: {
+        sm: { width: 8, offset: 0, visible: true },
+        lg: { width: 4, offset: 3, visible: true },
+      },
     };
 
-    // md inherits sm's settings (cascade stops before lg)
-    expect(resolveViewportSettings(settings, 'md')).toEqual({
-      width: 8,
-      offset: 3,
-      visible: true,
-    });
-
-    // xl inherits lg's width override, with sm's offset still cascaded
-    expect(resolveViewportSettings(settings, 'xl')).toEqual({
-      width: 4,
-      offset: 3,
-      visible: true,
-    });
+    expect(resolveViewportSettings(settings, 'md')).toEqual(defaults);
+    expect(resolveViewportSettings(settings, 'xl')).toEqual(defaults);
   });
 });
 

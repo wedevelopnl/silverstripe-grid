@@ -18,6 +18,8 @@ use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Value\ViewportConfig;
 
 /**
  * Tests the full template rendering pipeline (element -> holder -> HTML output)
@@ -175,55 +177,47 @@ final class GridTemplateRenderingTest extends SapphireTest
 
     public static function columnWidthClassProvider(): \Generator
     {
+        // Bootstrap: default viewport=md. xs/sm/lg/xl/xxl=12, md=8
         yield 'Bootstrap' => [
             BootstrapAdapter::class,
-            [
-                'xs' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'md' => ['width' => 8, 'offset' => 0, 'visible' => true],
-                'lg' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'xl' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'xxl' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            ],
+            new GridSettings(
+                new ViewportConfig(12, 0, true),
+                ['md' => new ViewportConfig(8, 0, true)],
+            ),
             'col-md-8',
         ];
 
+        // Tailwind: default viewport=sm. md=8, rest=12
         yield 'Tailwind' => [
             TailwindAdapter::class,
-            [
-                'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'md' => ['width' => 8, 'offset' => 0, 'visible' => true],
-                'lg' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'xl' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                '2xl' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            ],
+            new GridSettings(
+                new ViewportConfig(12, 0, true),
+                ['md' => new ViewportConfig(8, 0, true)],
+            ),
             'md:col-span-8',
         ];
 
+        // Bulma: default viewport=desktop. desktop=8, rest=12
         yield 'Bulma' => [
             BulmaAdapter::class,
-            [
-                'mobile' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'tablet' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'desktop' => ['width' => 8, 'offset' => 0, 'visible' => true],
-                'widescreen' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'fullhd' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            ],
+            new GridSettings(
+                new ViewportConfig(12, 0, true),
+                ['desktop' => new ViewportConfig(8, 0, true)],
+            ),
             'is-8-desktop',
         ];
     }
 
     /**
      * @param class-string<GridAdapterInterface> $adapterClass
-     * @param array<string, array{width: int, offset: int, visible: bool}> $settings
      */
     #[DataProvider('columnWidthClassProvider')]
-    public function testColumnRendersWidthClassesPerAdapter(string $adapterClass, array $settings, string $expected): void
+    public function testColumnRendersWidthClassesPerAdapter(string $adapterClass, GridSettings $settings, string $expected): void
     {
         $this->useAdapter($adapterClass);
 
         $column = Column::create();
-        $column->setGridSettingsData($settings);
+        $column->setGridSettings($settings);
         $column->write();
 
         $html = $this->render($column);
@@ -233,55 +227,47 @@ final class GridTemplateRenderingTest extends SapphireTest
 
     public static function columnOffsetClassProvider(): \Generator
     {
+        // Bootstrap: xs/sm=6/0, md=6/3, lg/xl/xxl=6/0
         yield 'Bootstrap' => [
             BootstrapAdapter::class,
-            [
-                'xs' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                'sm' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                'md' => ['width' => 6, 'offset' => 3, 'visible' => true],
-                'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                'xl' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                'xxl' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            ],
+            new GridSettings(
+                new ViewportConfig(6, 0, true),
+                ['md' => new ViewportConfig(6, 3, true)],
+            ),
             'offset-md-3',
         ];
 
+        // Tailwind: sm=6/0, md=6/3, lg/xl/2xl=6/0
         yield 'Tailwind' => [
             TailwindAdapter::class,
-            [
-                'sm' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                'md' => ['width' => 6, 'offset' => 3, 'visible' => true],
-                'lg' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                'xl' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                '2xl' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            ],
+            new GridSettings(
+                new ViewportConfig(6, 0, true),
+                ['md' => new ViewportConfig(6, 3, true)],
+            ),
             'md:col-start-4',
         ];
 
+        // Bulma: mobile/tablet=6/0, desktop=6/3, widescreen/fullhd=6/0
         yield 'Bulma' => [
             BulmaAdapter::class,
-            [
-                'mobile' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                'tablet' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                'desktop' => ['width' => 6, 'offset' => 3, 'visible' => true],
-                'widescreen' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                'fullhd' => ['width' => 6, 'offset' => 0, 'visible' => true],
-            ],
+            new GridSettings(
+                new ViewportConfig(6, 0, true),
+                ['desktop' => new ViewportConfig(6, 3, true)],
+            ),
             'is-offset-3-desktop',
         ];
     }
 
     /**
      * @param class-string<GridAdapterInterface> $adapterClass
-     * @param array<string, array{width: int, offset: int, visible: bool}> $settings
      */
     #[DataProvider('columnOffsetClassProvider')]
-    public function testColumnRendersOffsetClassesPerAdapter(string $adapterClass, array $settings, string $expected): void
+    public function testColumnRendersOffsetClassesPerAdapter(string $adapterClass, GridSettings $settings, string $expected): void
     {
         $this->useAdapter($adapterClass);
 
         $column = Column::create();
-        $column->setGridSettingsData($settings);
+        $column->setGridSettings($settings);
         $column->write();
 
         $html = $this->render($column);
@@ -291,55 +277,47 @@ final class GridTemplateRenderingTest extends SapphireTest
 
     public static function columnVisibilityClassProvider(): \Generator
     {
+        // Bootstrap: xs=hidden, sm onward=visible/12
         yield 'Bootstrap' => [
             BootstrapAdapter::class,
-            [
-                'xs' => ['width' => 12, 'offset' => 0, 'visible' => false],
-                'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'md' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'lg' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'xl' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'xxl' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            ],
+            new GridSettings(
+                new ViewportConfig(12, 0, true),
+                ['xs' => new ViewportConfig(12, 0, false)],
+            ),
             'd-none',
         ];
 
+        // Tailwind: sm=hidden, md onward=visible/12
         yield 'Tailwind' => [
             TailwindAdapter::class,
-            [
-                'sm' => ['width' => 12, 'offset' => 0, 'visible' => false],
-                'md' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'lg' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'xl' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                '2xl' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            ],
+            new GridSettings(
+                new ViewportConfig(12, 0, true),
+                ['sm' => new ViewportConfig(12, 0, false)],
+            ),
             'sm:hidden',
         ];
 
+        // Bulma: mobile=hidden, tablet onward=visible/12
         yield 'Bulma' => [
             BulmaAdapter::class,
-            [
-                'mobile' => ['width' => 12, 'offset' => 0, 'visible' => false],
-                'tablet' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'desktop' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'widescreen' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                'fullhd' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            ],
+            new GridSettings(
+                new ViewportConfig(12, 0, true),
+                ['mobile' => new ViewportConfig(12, 0, false)],
+            ),
             'is-hidden-mobile',
         ];
     }
 
     /**
      * @param class-string<GridAdapterInterface> $adapterClass
-     * @param array<string, array{width: int, offset: int, visible: bool}> $settings
      */
     #[DataProvider('columnVisibilityClassProvider')]
-    public function testColumnRendersVisibilityClassesForHiddenViewport(string $adapterClass, array $settings, string $expected): void
+    public function testColumnRendersVisibilityClassesForHiddenViewport(string $adapterClass, GridSettings $settings, string $expected): void
     {
         $this->useAdapter($adapterClass);
 
         $column = Column::create();
-        $column->setGridSettingsData($settings);
+        $column->setGridSettings($settings);
         $column->write();
 
         $html = $this->render($column);

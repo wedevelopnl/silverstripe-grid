@@ -15,7 +15,7 @@ use stdClass;
  * Leaf nodes omit container-only fields (containerType, allowedTypes, children)
  * from the serialized output; container nodes include all three.
  *
- * @phpstan-type SerializedNode array{id: positive-int, parentId: positive-int, title: non-empty-string, blockSchema: array{typeName: string, type: string, title: string, summary: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, statusFlags: stdClass&object{addedtodraft?: array{text: string, title: string}, modified?: array{text: string, title: string}, removedfromdraft?: array{text: string, title: string}}, containerType?: string, allowedTypes?: array<class-string, array{label: string, icon: string, description: string}>|null, children?: list<mixed>|null, gridSettings?: array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}>, extensions?: array<string, mixed>}
+ * @phpstan-type SerializedNode array{id: positive-int, parentId: positive-int, title: non-empty-string, blockSchema: array{typeName: string, type: string, title: string, summary: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, statusFlags: stdClass&object{addedtodraft?: array{text: string, title: string}, modified?: array{text: string, title: string}, removedfromdraft?: array{text: string, title: string}}, containerType?: string, allowedTypes?: array<class-string, array{label: string, icon: string, description: string}>|null, children?: list<mixed>|null, gridSettings?: array{default: array{width: positive-int, offset: int<0, max>, visible: bool}, overrides: array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}>}, extensions?: array<string, mixed>}
  */
 final readonly class GridNode implements JsonSerializable
 {
@@ -27,7 +27,6 @@ final readonly class GridNode implements JsonSerializable
      * @param array<string, array{text: string, title: string}> $statusFlags
      * @param array<class-string, array{label: string, icon: string, description: string}>|null $allowedTypes
      * @param list<self>|null $children
-     * @param array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}>|null $gridSettings
      * @param array<string, mixed> $extensions
      */
     public function __construct(
@@ -46,7 +45,7 @@ final readonly class GridNode implements JsonSerializable
         public ?ContainerType $containerType = null,
         public ?array $allowedTypes = null,
         public ?array $children = null,
-        public ?array $gridSettings = null,
+        public ?GridSettings $gridSettings = null,
         public array $extensions = [],
     ) {
         if ($parentId <= 0) { // @phpstan-ignore smallerOrEqual.alwaysFalse (runtime guard: native type is int)
@@ -94,7 +93,7 @@ final readonly class GridNode implements JsonSerializable
         }
 
         if ($this->containerType === ContainerType::Column && $this->gridSettings !== null) {
-            $data['gridSettings'] = $this->gridSettings;
+            $data['gridSettings'] = $this->gridSettings->jsonSerialize();
         }
 
         if ($this->extensions !== []) {

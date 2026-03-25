@@ -36,6 +36,6 @@ applyTo: "**/*.{ts,tsx}"
 
 See the `dnd-guide` skill for the full reference — coordinate spaces, collision detection, pending tree, diagnostics, and system invariants. The skill is triggered automatically when working on DnD files.
 
-### GridSettings (Sparse Storage)
+### GridSettings (Default + Overrides)
 
-Column grid settings use mobile-first cascade. Only viewport overrides are stored — defaults (`width=12, offset=0, visible=true`) cascade from the smallest viewport. `Column::getColumnClasses()` walks viewports smallest→largest, emitting CSS classes only when the effective value changes from the previous breakpoint.
+Column grid settings use an intent-based model: `{ default: ViewportSettings, overrides: Record<string, ViewportSettings> }`. The `default` holds the base layout (width, offset, visible) applied to all viewports. The `overrides` map holds per-viewport deviations. `resolveViewportSettings` resolves the effective settings for a given viewport by checking for an override, falling back to the default.

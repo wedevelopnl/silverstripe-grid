@@ -36,12 +36,12 @@ WeDevelop\Grid\Model\Column:
     Title: 'Empty Column'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.content_row
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":6,"offset":0,"visible":true},"lg":{"width":6,"offset":0,"visible":true},"xl":{"width":6,"offset":0,"visible":true},"xxl":{"width":6,"offset":0,"visible":true}}'
+    GridSettings: '{"default":{"width":6,"offset":0,"visible":true},"overrides":{}}'
   populated_col:
     Title: 'Populated Column'
     Sort: 2
     Parent: =>WeDevelop\Grid\Model\Row.content_row
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":true},"sm":{"width":12,"offset":0,"visible":true},"md":{"width":6,"offset":0,"visible":true},"lg":{"width":6,"offset":0,"visible":true},"xl":{"width":6,"offset":0,"visible":true},"xxl":{"width":6,"offset":0,"visible":true}}'
+    GridSettings: '{"default":{"width":6,"offset":0,"visible":true},"overrides":{}}'
 
 # --- Leaves (into populated column) ---
 WeDevelop\Grid\Model\ContentElement:

@@ -17,6 +17,7 @@ use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Extensions\GridPageExtension;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\GridNode;
+use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
@@ -526,7 +527,7 @@ final class GridTreeBuilderTest extends SapphireTest
 
         $this->assertNotNull($column->containerType);
         $this->assertSame('column', $column->containerType->value);
-        $this->assertIsArray($column->gridSettings);
+        $this->assertInstanceOf(GridSettings::class, $column->gridSettings);
     }
 
     // ---- Zone filtering ----

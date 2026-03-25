@@ -10,14 +10,15 @@ use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Forms\GridSettingsField;
 use WeDevelop\Grid\Tests\Integration\Forms\Stub\GridSettingsRecordStub;
+use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Value\ViewportConfig;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
- * Integration tests for GridSettingsField's own logic: decodeSparse, normalizeFormData, buildReadonlySummary.
+ * Integration tests for GridSettingsField with GridSettings VO.
  *
  * Uses a mocked GridAdapterInterface with 3 viewports (xs, sm=default, md; 12 columns).
- * Tests exercise the field's public API (setValue → saveInto, performReadonlyTransformation)
- * rather than the compactor delegation which is covered by GridSettingsCompactorTest.
+ * Tests exercise the field's public API (setValue → saveInto, performReadonlyTransformation).
  */
 #[CoversClass(GridSettingsField::class)]
 final class GridSettingsFieldTest extends SapphireTest
@@ -51,67 +52,110 @@ final class GridSettingsFieldTest extends SapphireTest
         return (string) $record->GridSettings;
     }
 
-    // --- setValue(string) → saveInto round-trips (exercises decodeSparse) ---
+    // --- setValue(string) → saveInto round-trips ---
 
-    public function testSetValueEmptyStringProducesEmptySparse(): void
+    public function testSetValueEmptyStringProducesInitialSettings(): void
     {
         $field = $this->createField();
         $field->setValue('');
 
-        $this->assertSame('{}', $this->saveAndCapture($field));
+        $saved = $this->saveAndCapture($field);
+        $decoded = json_decode($saved, true);
+
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('default', $decoded);
+        $this->assertSame(12, $decoded['default']['width']);
+        $this->assertSame(0, $decoded['default']['offset']);
+        $this->assertTrue($decoded['default']['visible']);
+        $this->assertSame([], $decoded['overrides']);
     }
 
-    public function testSetValueEmptyObjectProducesEmptySparse(): void
+    public function testSetValueEmptyObjectProducesInitialSettings(): void
     {
         $field = $this->createField();
         $field->setValue('{}');
 
-        $this->assertSame('{}', $this->saveAndCapture($field));
+        $saved = $this->saveAndCapture($field);
+        $decoded = json_decode($saved, true);
+
+        $this->assertIsArray($decoded);
+        $this->assertSame(12, $decoded['default']['width']);
     }
 
-    public function testSetValueEmptyArrayProducesEmptySparse(): void
+    public function testSetValueEmptyArrayProducesInitialSettings(): void
     {
         $field = $this->createField();
         $field->setValue('[]');
 
-        $this->assertSame('{}', $this->saveAndCapture($field));
+        $saved = $this->saveAndCapture($field);
+        $decoded = json_decode($saved, true);
+
+        $this->assertIsArray($decoded);
+        $this->assertSame(12, $decoded['default']['width']);
     }
 
-    public function testSetValueInvalidJsonProducesEmptySparse(): void
+    public function testSetValueInvalidJsonProducesInitialSettings(): void
     {
         $field = $this->createField();
         $field->setValue('not json');
 
-        $this->assertSame('{}', $this->saveAndCapture($field));
+        $saved = $this->saveAndCapture($field);
+        $decoded = json_decode($saved, true);
+
+        $this->assertIsArray($decoded);
+        $this->assertSame(12, $decoded['default']['width']);
     }
 
-    public function testSetValueNullJsonProducesEmptySparse(): void
+    public function testSetValueNullJsonProducesInitialSettings(): void
     {
         $field = $this->createField();
         $field->setValue('null');
 
-        $this->assertSame('{}', $this->saveAndCapture($field));
+        $saved = $this->saveAndCapture($field);
+        $decoded = json_decode($saved, true);
+
+        $this->assertIsArray($decoded);
+        $this->assertSame(12, $decoded['default']['width']);
     }
 
     public function testSetValueValidJsonRoundTrips(): void
     {
         $field = $this->createField();
-        $input = '{"sm":{"width":6,"offset":1,"visible":true}}';
+        $input = '{"default":{"width":6,"offset":1,"visible":true},"overrides":{}}';
         $field->setValue($input);
 
         $saved = $this->saveAndCapture($field);
         $decoded = json_decode($saved, true);
 
         $this->assertIsArray($decoded);
+        $this->assertSame(6, $decoded['default']['width']);
+        $this->assertSame(1, $decoded['default']['offset']);
+        $this->assertTrue($decoded['default']['visible']);
 
-        // Re-expand to verify effective values match: sm should be 6/1/true
+        // Round-trip: re-set from saved output must produce identical JSON
         $reField = $this->createField();
         $reField->setValue($saved);
         $reRecord = new GridSettingsRecordStub();
         $reField->saveInto($reRecord);
 
-        // Round-trip through expand→compact→expand must preserve effective values
         $this->assertSame($saved, (string) $reRecord->GridSettings);
+    }
+
+    public function testSetValueValidJsonWithOverridesRoundTrips(): void
+    {
+        $field = $this->createField();
+        $input = '{"default":{"width":6,"offset":0,"visible":true},"overrides":{"md":{"width":4,"offset":1,"visible":false}}}';
+        $field->setValue($input);
+
+        $saved = $this->saveAndCapture($field);
+        $decoded = json_decode($saved, true);
+
+        $this->assertIsArray($decoded);
+        $this->assertSame(6, $decoded['default']['width']);
+        $this->assertArrayHasKey('md', $decoded['overrides']);
+        $this->assertSame(4, $decoded['overrides']['md']['width']);
+        $this->assertSame(1, $decoded['overrides']['md']['offset']);
+        $this->assertFalse($decoded['overrides']['md']['visible']);
     }
 
     // --- setValue(array) → saveInto round-trips (exercises normalizeFormData) ---
@@ -127,10 +171,12 @@ final class GridSettingsFieldTest extends SapphireTest
         $decoded = json_decode($saved, true);
 
         $this->assertIsArray($decoded);
-        // xs is missing from form data → normalizeFormData copies default viewport values (6,1,true)
-        // xs effective (6,1,true) differs from implicit cascade seed (12,0,true) → stored in sparse
-        $this->assertArrayHasKey('xs', $decoded);
-        $this->assertSame(6, $decoded['xs']['width']);
+        // Default viewport (sm) values stored in 'default'
+        $this->assertSame(6, $decoded['default']['width']);
+        $this->assertSame(1, $decoded['default']['offset']);
+        $this->assertTrue($decoded['default']['visible']);
+        // No overrides when only default viewport submitted
+        $this->assertSame([], $decoded['overrides']);
     }
 
     public function testNormalizeWithOverride(): void
@@ -145,32 +191,29 @@ final class GridSettingsFieldTest extends SapphireTest
         $decoded = json_decode($saved, true);
 
         $this->assertIsArray($decoded);
-        $this->assertArrayHasKey('md', $decoded);
-        $this->assertSame(4, $decoded['md']['width']);
+        $this->assertSame(6, $decoded['default']['width']);
+        $this->assertArrayHasKey('md', $decoded['overrides']);
+        $this->assertSame(4, $decoded['overrides']['md']['width']);
     }
 
-    public function testNormalizeNoOverrideUsesDefault(): void
+    public function testNormalizeNoOverrideFlagExcludesViewport(): void
     {
         $field = $this->createField();
         $field->setValue([
             'sm' => ['width' => '6', 'offset' => '0', 'visible' => '1'],
             'md' => ['width' => '4', 'offset' => '0', 'visible' => '1'],
-            // no 'override' key for md → uses default viewport values
+            // no 'override' key for md → not stored as override
         ]);
 
         $saved = $this->saveAndCapture($field);
         $decoded = json_decode($saved, true);
 
-        // md has no override → inherits sm values → no md entry in sparse
-        // (unless xs cascade forces it)
         $this->assertIsArray($decoded);
-        if (isset($decoded['md'])) {
-            // If md appears, it should match sm values (the default viewport)
-            $this->assertSame(6, $decoded['md']['width']);
-        }
+        // md has no override flag → excluded from overrides
+        $this->assertArrayNotHasKey('md', $decoded['overrides'] ?? []);
     }
 
-    public function testNormalizeMissingViewportUsesDefault(): void
+    public function testNormalizeMissingViewportNotStored(): void
     {
         $field = $this->createField();
         // Only sm submitted — xs and md missing from form data
@@ -182,9 +225,10 @@ final class GridSettingsFieldTest extends SapphireTest
         $decoded = json_decode($saved, true);
 
         $this->assertIsArray($decoded);
-        // Missing viewports use default viewport values (6,1,true)
-        // xs gets (6,1,true) which differs from implicit (12,0,true) → stored
-        $this->assertArrayHasKey('xs', $decoded);
+        // Default viewport values stored
+        $this->assertSame(6, $decoded['default']['width']);
+        // Missing non-default viewports without override flag are not stored
+        $this->assertSame([], $decoded['overrides']);
     }
 
     public function testNormalizeMissingWidthDefaultsToColumnCount(): void
@@ -196,9 +240,10 @@ final class GridSettingsFieldTest extends SapphireTest
         ]);
 
         $saved = $this->saveAndCapture($field);
+        $decoded = json_decode($saved, true);
 
-        // All defaults (12,0,true) → empty sparse
-        $this->assertSame('{}', $saved);
+        $this->assertIsArray($decoded);
+        $this->assertSame(12, $decoded['default']['width']);
     }
 
     public function testNormalizeVisibleAbsenceMeansFalse(): void
@@ -213,11 +258,10 @@ final class GridSettingsFieldTest extends SapphireTest
         $decoded = json_decode($saved, true);
 
         $this->assertIsArray($decoded);
-        // visible=false differs from implicit defaults → sparse entry for xs with visible=false
-        $this->assertNotSame('{}', $saved);
+        $this->assertFalse($decoded['default']['visible']);
     }
 
-    public function testNormalizeNonArrayViewportEntryTreatedAsMissing(): void
+    public function testNormalizeNonArrayViewportEntryIgnored(): void
     {
         $field = $this->createField();
         $field->setValue([
@@ -229,22 +273,22 @@ final class GridSettingsFieldTest extends SapphireTest
         $decoded = json_decode($saved, true);
 
         $this->assertIsArray($decoded);
-        // xs is non-array → treated as missing → gets default viewport values (6,0,true)
-        // xs effective (6,0,true) differs from implicit (12,0,true) → stored
-        $this->assertArrayHasKey('xs', $decoded);
-        $this->assertSame(6, $decoded['xs']['width']);
+        // Default viewport (sm) stored correctly
+        $this->assertSame(6, $decoded['default']['width']);
+        // xs is non-array and not the default viewport → ignored (no override stored)
+        $this->assertArrayNotHasKey('xs', $decoded['overrides'] ?? []);
     }
 
     // --- performReadonlyTransformation (exercises buildReadonlySummary) ---
 
-    public function testReadonlySummaryNoValueShowsFullWidth(): void
+    public function testReadonlySummaryInitialSettingsShowsDefaultViewport(): void
     {
         $field = $this->createField();
-        // No setValue call → viewportData is empty → fallback message
+        // No setValue call → initial settings (12/0/visible)
 
         $readonly = $field->performReadonlyTransformation();
 
-        $this->assertSame('Default (full width)', $readonly->getValue());
+        $this->assertStringContainsString('sm: 12/12+0', $readonly->getValue());
     }
 
     public function testReadonlySummaryAllDefaultsShowsDefaultViewport(): void
@@ -254,14 +298,14 @@ final class GridSettingsFieldTest extends SapphireTest
 
         $readonly = $field->performReadonlyTransformation();
 
-        // Even with all defaults, sm (default viewport) is shown
+        // Initial settings, sm (default viewport) is shown
         $this->assertStringContainsString('sm: 12/12+0', $readonly->getValue());
     }
 
-    public function testReadonlySummaryShowsDefaultViewport(): void
+    public function testReadonlySummaryShowsDefaultViewportValues(): void
     {
         $field = $this->createField();
-        $field->setValue('{"sm":{"width":6,"offset":1,"visible":true}}');
+        $field->setValue('{"default":{"width":6,"offset":1,"visible":true},"overrides":{}}');
 
         $readonly = $field->performReadonlyTransformation();
         $value = $readonly->getValue();
@@ -272,7 +316,7 @@ final class GridSettingsFieldTest extends SapphireTest
     public function testReadonlySummaryShowsHiddenOverride(): void
     {
         $field = $this->createField();
-        $field->setValue('{"md":{"width":12,"offset":0,"visible":false}}');
+        $field->setValue('{"default":{"width":12,"offset":0,"visible":true},"overrides":{"md":{"width":12,"offset":0,"visible":false}}}');
 
         $readonly = $field->performReadonlyTransformation();
         $value = $readonly->getValue();
@@ -280,12 +324,10 @@ final class GridSettingsFieldTest extends SapphireTest
         $this->assertStringContainsString('(hidden)', $value);
     }
 
-    public function testReadonlySummarySkipsNonOverriddenNonDefault(): void
+    public function testReadonlySummaryShowsOverrides(): void
     {
         $field = $this->createField();
-        // xs has cascade value matching sm → not an override → should be skipped
-        // md has explicit override → should appear
-        $field->setValue('{"xs":{"width":6,"offset":0,"visible":true},"sm":{"width":6,"offset":0,"visible":true},"md":{"width":4,"offset":0,"visible":true}}');
+        $field->setValue('{"default":{"width":6,"offset":0,"visible":true},"overrides":{"md":{"width":4,"offset":0,"visible":true}}}');
 
         $readonly = $field->performReadonlyTransformation();
         $value = $readonly->getValue();
@@ -294,7 +336,7 @@ final class GridSettingsFieldTest extends SapphireTest
         $this->assertStringContainsString('sm:', $value);
         // md has override → should appear
         $this->assertStringContainsString('md:', $value);
-        // xs matches sm → not an override → should be skipped
+        // xs is not an override → should be absent
         $this->assertStringNotContainsString('xs:', $value);
     }
 
@@ -369,7 +411,7 @@ final class GridSettingsFieldTest extends SapphireTest
     public function testGetViewportDataSelectedWidthMatchesSetValue(): void
     {
         $field = $this->createField();
-        $field->setValue('{"sm":{"width":6,"offset":0,"visible":true}}');
+        $field->setValue('{"default":{"width":6,"offset":0,"visible":true},"overrides":{}}');
 
         $viewportData = $field->getViewportData();
         $smEntry = $viewportData->find('Key', 'sm');
@@ -388,7 +430,7 @@ final class GridSettingsFieldTest extends SapphireTest
     public function testGetViewportDataReflectsSetValue(): void
     {
         $field = $this->createField();
-        $field->setValue('{"sm":{"width":6,"offset":2,"visible":true}}');
+        $field->setValue('{"default":{"width":6,"offset":2,"visible":true},"overrides":{}}');
 
         $viewportData = $field->getViewportData();
         $smEntry = $viewportData->find('Key', 'sm');
@@ -413,8 +455,9 @@ final class GridSettingsFieldTest extends SapphireTest
         $decoded = json_decode($saved, true);
 
         $this->assertIsArray($decoded);
+        $this->assertSame(0, $decoded['default']['offset']);
 
-        // Re-expand to verify effective sm offset is 0
+        // Verify via re-expansion
         $verifyField = $this->createField();
         $verifyField->setValue($saved);
         $smEntry = $verifyField->getViewportData()->find('Key', 'sm');
@@ -436,8 +479,8 @@ final class GridSettingsFieldTest extends SapphireTest
         $decoded = json_decode($saved, true);
 
         $this->assertIsArray($decoded);
-        $this->assertArrayHasKey('md', $decoded);
-        $this->assertSame(4, $decoded['md']['width']);
+        $this->assertArrayHasKey('md', $decoded['overrides']);
+        $this->assertSame(4, $decoded['overrides']['md']['width']);
 
         // Verify md offset is 0 via re-expansion
         $verifyField = $this->createField();

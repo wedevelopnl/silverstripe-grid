@@ -39,7 +39,10 @@ export interface ViewportSettings {
     offset: number;
     visible: boolean;
 }
-export type GridSettings = Record<string, ViewportSettings>;
+export interface GridSettings {
+    default: ViewportSettings;
+    overrides: Record<string, ViewportSettings>;
+}
 export interface AllowedTypeInfo {
     label: string;
     icon: string;

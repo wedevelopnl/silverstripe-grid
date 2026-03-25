@@ -8,6 +8,7 @@ use Override;
 use SilverStripe\Core\Config\Configurable;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
+use WeDevelop\Grid\Value\OverrideStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
@@ -24,6 +25,7 @@ use WeDevelop\Grid\Value\Viewport;
  * - `total_columns` (int|null): Override column count. Null defers to adapter.
  * - `default_viewport` (string|null): Override default viewport key. Null defers to adapter.
  * - `container_max_width` (int|null): Override container max width. Null defers to adapter.
+ * - `override_strategy` (string|null): Override strategy ("isolated" or "cascade"). Null defaults to isolated.
  */
 abstract class AbstractGridAdapter implements GridAdapterInterface
 {
@@ -37,6 +39,8 @@ abstract class AbstractGridAdapter implements GridAdapterInterface
     private static ?string $default_viewport = null;
 
     private static ?int $container_max_width = null;
+
+    private static ?string $override_strategy = null;
 
     /** @var array<string, Viewport> */
     protected readonly array $viewports;
@@ -56,6 +60,8 @@ abstract class AbstractGridAdapter implements GridAdapterInterface
 
     private readonly Viewport $defaultViewport;
 
+    private readonly OverrideStrategy $overrideStrategy;
+
     /**
      * @param array<string, Viewport> $allViewports Full viewport definitions keyed by viewport key
      * @param positive-int $defaultColumns Default column count for this adapter
@@ -73,6 +79,7 @@ abstract class AbstractGridAdapter implements GridAdapterInterface
         $this->columnCount = $this->resolveColumnCount($defaultColumns);
         $this->containerMaxWidth = $this->resolveContainerMaxWidth($defaultContainerMaxWidth);
         $this->defaultViewport = $this->resolveDefaultViewport($defaultViewportKey, $this->viewports);
+        $this->overrideStrategy = $this->resolveOverrideStrategy();
     }
 
     // ─── Final getters (identical across all adapters) ──────────────
@@ -102,6 +109,12 @@ abstract class AbstractGridAdapter implements GridAdapterInterface
     final public function getContainerMaxWidth(): int
     {
         return $this->containerMaxWidth;
+    }
+
+    #[Override]
+    final public function getOverrideStrategy(): OverrideStrategy
+    {
+        return $this->overrideStrategy;
     }
 
     /** @return list<string> */
@@ -235,6 +248,29 @@ abstract class AbstractGridAdapter implements GridAdapterInterface
 
         /** @var positive-int $override */
         return $override;
+    }
+
+    /**
+     * Resolve the effective override strategy, applying any YAML override.
+     *
+     * @throws InvalidGridValueException If the override value is not a valid strategy
+     */
+    protected function resolveOverrideStrategy(): OverrideStrategy
+    {
+        /** @var string|null $override */
+        $override = static::config()->get('override_strategy');
+
+        if ($override === null) {
+            return OverrideStrategy::Isolated;
+        }
+
+        $strategy = OverrideStrategy::tryFrom($override);
+
+        if ($strategy === null) {
+            throw InvalidGridValueException::forOverrideStrategy($override);
+        }
+
+        return $strategy;
     }
 
     /**

@@ -13,6 +13,7 @@ use WeDevelop\Grid\Exception\GridDomainException;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
+use WeDevelop\Grid\Value\OverrideStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
@@ -222,6 +223,39 @@ final class AbstractGridAdapterTest extends TestCase
     public function testDefaultViewportOverrideNotInActiveSetThrows(): void
     {
         $this->configCollection->set(TestableAdapter::class, 'default_viewport', 'nonexistent');
+
+        $this->expectException(InvalidGridValueException::class);
+        new TestableAdapter();
+    }
+
+    // ─── Override strategy ──────────────────────────────────────────
+
+    public function testDefaultOverrideStrategy(): void
+    {
+        $adapter = new TestableAdapter();
+
+        $this->assertSame(OverrideStrategy::Isolated, $adapter->getOverrideStrategy());
+    }
+
+    public function testOverrideStrategyCascadeOverride(): void
+    {
+        $this->configCollection->set(TestableAdapter::class, 'override_strategy', 'cascade');
+        $adapter = new TestableAdapter();
+
+        $this->assertSame(OverrideStrategy::Cascade, $adapter->getOverrideStrategy());
+    }
+
+    public function testOverrideStrategyIsolatedOverride(): void
+    {
+        $this->configCollection->set(TestableAdapter::class, 'override_strategy', 'isolated');
+        $adapter = new TestableAdapter();
+
+        $this->assertSame(OverrideStrategy::Isolated, $adapter->getOverrideStrategy());
+    }
+
+    public function testOverrideStrategyInvalidThrows(): void
+    {
+        $this->configCollection->set(TestableAdapter::class, 'override_strategy', 'invalid');
 
         $this->expectException(InvalidGridValueException::class);
         new TestableAdapter();

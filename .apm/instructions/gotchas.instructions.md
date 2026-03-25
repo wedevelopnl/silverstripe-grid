@@ -12,5 +12,5 @@ applyTo: "**/*"
 - `make test-js` and `make coverage-js` run locally (no Docker), unlike PHP targets
 - JS linting uses oxlint (`oxlintrc.json`), CSS/SCSS linting uses Stylelint (`stylelint.config.mjs`)
 - **Polymorphic parent ID collisions**: page IDs and element IDs share the same numeric space — lookup maps must key by composite `"ParentClass:ParentID"` not just ParentID
-- **GridSettings sparse storage**: Column GridSettings uses mobile-first cascade — only store viewport overrides, not all 6 viewports. Defaults (`width=12, offset=0, visible=true`) cascade from smallest viewport. PHP's `json_encode([])` emits `[]` not `{}` for empty settings — handle both in frontend/tests
+- **GridSettings empty overrides JSON**: PHP's `json_encode([])` emits `[]` not `{}` for empty overrides — handle both in frontend/tests
 - **DnD coordinate spaces and gotchas**: See the `dnd-guide` skill — covers three coordinate spaces, overRectRef capture rules, auto-scroll traps, and the full diagnostic map for DnD bugs

@@ -64,32 +64,32 @@ WeDevelop\Grid\Model\Column:
     Title: 'Column A1'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_a1
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
   col_a2:
     Title: 'Column A2'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_a2
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
   col_a3:
     Title: 'Column A3'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_a3
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
   col_b1:
     Title: 'Column B1'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_b1
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
   col_b2:
     Title: 'Column B2'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_b2
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
   col_b3:
     Title: 'Column B3'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row_b3
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
 
 WeDevelop\Grid\Model\ContentElement:
   block_a1:

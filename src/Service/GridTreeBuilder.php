@@ -15,6 +15,7 @@ use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridNode;
+use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 
 /**
@@ -159,7 +160,7 @@ class GridTreeBuilder
         }
 
         if ($element instanceof Column) {
-            $gridSettings = $element->getGridSettingsData();
+            $gridSettings = $element->getGridSettings();
         }
 
         return $this->createNode($element, $parentId, $containerType, $allowedTypes, $children, $gridSettings);
@@ -171,7 +172,6 @@ class GridTreeBuilder
      * @param positive-int $parentId
      * @param array<class-string, array{label: string, icon: string, description: string}>|null $allowedTypes
      * @param list<GridNode>|null $children
-     * @param array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}>|null $gridSettings
      */
     private function createNode(
         GridElement $element,
@@ -179,7 +179,7 @@ class GridTreeBuilder
         ?ContainerType $containerType,
         ?array $allowedTypes,
         ?array $children,
-        ?array $gridSettings,
+        ?GridSettings $gridSettings,
     ): GridNode {
         /** @var non-empty-string $title Fallback '(untitled)' guarantees non-empty */
         $title = $element->Title ?: _t(

@@ -25,7 +25,7 @@ test.describe('Grid settings tab', () => {
     await expect(rows).toHaveCount(6);
 
     // --- Step 4: Verify default viewport (md) has "default" badge and no override toggle ---
-    // col1 fixture: {"md":{"width":8,"offset":0,"visible":true},"lg":{"width":6,"offset":0,"visible":true}}
+    // col1 fixture: default={width:8,offset:0,visible:true}, overrides={xs:{width:12,...},lg:{width:6,...}}
     // md is the default viewport — rendered with is-default class, no override checkbox
     const mdRow = rows.nth(2); // xs=0, sm=1, md=2
     await expect(mdRow.locator('.badge')).toHaveText('default');

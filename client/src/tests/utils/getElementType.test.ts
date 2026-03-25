@@ -47,7 +47,7 @@ describe('getElementType', () => {
       containerType: 'column',
       allowedTypes: null,
       children: null,
-      gridSettings: {},
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
     };
 
     expect(getElementType(node)).toBe('column');

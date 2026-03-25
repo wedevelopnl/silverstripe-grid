@@ -809,12 +809,14 @@ final class GridControllerTest extends FunctionalTest
 
         $this->assertSame(204, $response->getStatusCode());
 
-        // Verify GridSettings JSON was updated — lg differs from md default (12) so it's stored
+        // Verify GridSettings was updated — lg override differs from default (12) so it's stored
         /** @var Column $updatedCol */
         $updatedCol = Column::get()->byID($col1->ID);
-        $settings = $updatedCol->getGridSettingsData();
-        $this->assertArrayHasKey('lg', $settings);
-        $this->assertSame(6, $settings['lg']['width']);
+        $settings = $updatedCol->getGridSettings();
+        $this->assertTrue($settings->hasOverride('lg'));
+        $override = $settings->getOverride('lg');
+        $this->assertNotNull($override);
+        $this->assertSame(6, $override->width);
     }
 
     public function testUpdateGridSettingsReturns400ForNonColumn(): void

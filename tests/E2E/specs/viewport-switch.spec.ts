@@ -109,32 +109,31 @@ test.describe('Viewport switcher', () => {
     const frontendColumns = page.locator('div.element.column');
     await expect(frontendColumns).toHaveCount(2);
 
-    // Left column after edits (sparse mobile-first cascade):
-    //   xs: width 12 (default)         → col-12 (base viewport always emits)
-    //   sm: inherits xs (no change)    → (no class)
-    //   md: width 6, offset 2 (edited) → col-md-6 offset-md-2
-    //   lg: width 6, offset 0 (resets) → offset-lg-0 (width unchanged, offset changed)
-    //   xl–xxl: inherit lg (no change) → (no class)
+    // Left column after edits (isolated strategy, default=md={6,2,true}):
+    //   xs: {12, 0, true} (override)   → col-12 (first viewport, always emits)
+    //   sm: {6, 2, true} (default)     → col-sm-6 offset-sm-2 (width 12→6, offset 0→2)
+    //   md: {6, 2, true} (default)     → (no change from sm)
+    //   lg: {6, 0, true} (override)    → offset-lg-0 (width same, offset 2→0)
+    //   xl: {6, 2, true} (default)     → offset-xl-2 (width same, offset 0→2)
+    //   xxl: {6, 2, true} (default)    → (no change from xl)
     const leftFrontend = frontendColumns.first();
     const leftClasses = (await leftFrontend.getAttribute('class'))!.split(/\s+/).sort();
     expect(leftClasses).toEqual([
-      'col-12', 'col-md-6',
-      'column', 'element', 'offset-lg-0', 'offset-md-2',
+      'col-12', 'col-sm-6',
+      'column', 'element', 'offset-lg-0', 'offset-sm-2', 'offset-xl-2',
     ].sort());
 
-    // Right column after edits (sparse mobile-first cascade):
-    //   xs: width 12, visible (unhidden) → col-12 (base viewport always emits)
-    //   sm: inherits xs (visible)         → (no class — cascade from xs, no sm override)
-    //   md: width 4 (fixture)             → col-md-4 (width changed from 12)
-    //   lg: width 6 (fixture)             → col-lg-6 (width changed from 4)
-    //   xl–xxl: inherit lg (no change)    → (no class)
-    //
-    // With sparse storage xs hidden cascades to sm. Unhiding xs also unhides sm
-    // (no explicit sm override), so no visibility classes remain.
+    // Right column after edits (isolated strategy, default=md={4,0,true}):
+    //   xs: {12, 0, true} (override, was hidden, now visible) → col-12 (first viewport)
+    //   sm: {4, 0, true} (default)                            → col-sm-4 (width 12→4)
+    //   md: {4, 0, true} (default)                            → (no change from sm)
+    //   lg: {6, 0, true} (override)                           → col-lg-6 (width 4→6)
+    //   xl: {4, 0, true} (default)                            → col-xl-4 (width 6→4)
+    //   xxl: {4, 0, true} (default)                           → (no change from xl)
     const rightFrontend = frontendColumns.nth(1);
     const rightClasses = (await rightFrontend.getAttribute('class'))!.split(/\s+/).sort();
     expect(rightClasses).toEqual([
-      'col-12', 'col-lg-6', 'col-md-4',
+      'col-12', 'col-lg-6', 'col-sm-4', 'col-xl-4',
       'column', 'element',
     ].sort());
 

@@ -282,6 +282,11 @@ final class BuildAdapterConfigTest extends TestCase
             {
                 return ContentLayoutClassMap::bootstrap();
             }
+
+            public function getOverrideStrategy(): \WeDevelop\Grid\Value\OverrideStrategy
+            {
+                return \WeDevelop\Grid\Value\OverrideStrategy::Isolated;
+            }
         };
 
         $config = GridController::buildAdapterConfig($adapter);
@@ -363,6 +368,11 @@ final class BuildAdapterConfigTest extends TestCase
             public function getContentLayoutClassMap(): ContentLayoutClassMap
             {
                 return ContentLayoutClassMap::bootstrap();
+            }
+
+            public function getOverrideStrategy(): \WeDevelop\Grid\Value\OverrideStrategy
+            {
+                return \WeDevelop\Grid\Value\OverrideStrategy::Isolated;
             }
         };
 

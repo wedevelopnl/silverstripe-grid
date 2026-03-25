@@ -65,17 +65,26 @@ Sections carry a `Zone` field (`Varchar(50)`, e.g., `"main"`, `"sidebar"`) that 
 
 ### Grid Settings
 
-Column stores viewport-specific layout as a JSON `Text` field:
+Column stores viewport-specific layout as a JSON `Text` field using an intent-based default+overrides model:
 
 ```json
 {
-  "xs": { "width": 12, "offset": 0, "visible": true },
-  "md": { "width": 6,  "offset": 0, "visible": true },
-  "lg": { "width": 4,  "offset": 2, "visible": false }
+  "default": { "width": 8, "offset": 0, "visible": true },
+  "overrides": {
+    "lg": { "width": 6, "offset": 2, "visible": false }
+  }
 }
 ```
 
-Each viewport entry defines width (column span), offset (column start), and visibility. The adapter translates these into framework-specific CSS classes at render time. Defaults are configurable per project via YAML on `Column.default_grid_settings`.
+The `default` key holds the base layout applied to all viewports. The `overrides` key holds per-viewport deviations from the default. Each entry defines width (column span), offset (column start), and visibility.
+
+Two value objects model this data: `ViewportConfig` (readonly record of width/offset/visible) and `GridSettings` (default `ViewportConfig` + map of viewport overrides). `GridSettings` implements `JsonSerializable` for storage and provides `GridSettings::fromArray()` for hydration from decoded JSON.
+
+`GridSettingsResolver` resolves the effective `ViewportConfig` for each active viewport by applying overrides on top of the default. The resolver supports two strategies via `OverrideStrategy`:
+- **Isolated** (default): each viewport uses the default unless it has an explicit override.
+- **Cascade**: overrides carry forward to subsequent viewports (mobile-first), configurable via `override_strategy: cascade` on the grid adapter.
+
+The Column model exposes `getGridSettings(): GridSettings` and `setGridSettings(GridSettings|string)` for typed access.
 
 ### Auto-Scaffolding
 
@@ -115,8 +124,11 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 │    │     ├── ReorderExecutorInterface                       │
 │    │     └── ElementPersistenceService                      │
 │    │                                                        │
-│    └── ElementPersistenceService (write path)               │
-│          └── ORM write + ValidationException translation    │
+│    ├── ElementPersistenceService (write path)               │
+│    │     └── ORM write + ValidationException translation    │
+│    │                                                        │
+│    └── GridSettingsResolver (grid settings resolution)      │
+│          └── Resolves ViewportConfig per viewport           │
 │                                                             │
 │  Validation Layer                                           │
 │    ├── HierarchyValidationExtension (write-time hook)       │
@@ -130,7 +142,7 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 ├──────────────────── Rendering ──────────────────────────────┤
 │                                                             │
 │  Grid Adapter System                                        │
-│    ├── GridAdapterInterface (14 methods)                    │
+│    ├── GridAdapterInterface (15 methods)                    │
 │    ├── AbstractGridAdapter (shared config + visibility)     │
 │    └── Adapters: Bootstrap, Tailwind, Bulma                 │
 │                                                             │
@@ -272,6 +284,15 @@ The single boundary where SilverStripe's `ValidationException` becomes a domain 
 
 The `insertAfter()` helper bumps Sort values of downstream siblings to make room for the new element.
 
+### GridSettingsResolver
+
+Resolves the effective `ViewportConfig` for each active viewport from a `GridSettings` value object. The resolver applies the adapter's `OverrideStrategy`:
+
+- **Isolated** (default): each viewport gets the default config unless it has an explicit override entry.
+- **Cascade**: overrides carry forward to subsequent viewports in order, implementing mobile-first inheritance.
+
+`ColumnClassResolver` calls the resolver to obtain a `array<string, ViewportConfig>` map, then generates CSS classes by comparing each viewport's effective config to the previous one.
+
 ## Validation Layer
 
 Hierarchy validation runs in two contexts with shared logic:
@@ -330,7 +351,7 @@ The controller maps `Result::ok()` to HTTP 204 and `Result::fail()` to HTTP 422 
 
 Grid adapters translate the abstract layout model (viewports, column widths, offsets, visibility) into CSS framework-specific class names. All consumers depend on `GridAdapterInterface`, never on a concrete adapter.
 
-### Interface Contract (14 methods)
+### Interface Contract (15 methods)
 
 | Method | Returns | Purpose |
 |--------|---------|---------|
@@ -346,6 +367,7 @@ Grid adapters translate the abstract layout model (viewports, column widths, off
 | `getContainerClass(fluid)` | `string` | Container wrapper classes |
 | `getTitleClassOptions()` | `array<string, string>` | CSS class to label mapping |
 | `getOffsetStrategy()` | `OffsetStrategy` | Margin-based vs grid-placement |
+| `getOverrideStrategy()` | `OverrideStrategy` | Isolated vs cascade override resolution |
 | `getContainerMaxWidth()` | `positive-int` | Max container width in px (for responsive images) |
 | `getContentLayoutClassMap()` | `ContentLayoutClassMap` | CSS class mappings for content layout |
 
@@ -361,6 +383,7 @@ YAML-configurable properties (set on the concrete adapter class):
 | `total_columns` | `int\|null` | Override column count |
 | `default_viewport` | `string\|null` | Override default viewport |
 | `container_max_width` | `int\|null` | Override container max width |
+| `override_strategy` | `string\|null` | Override strategy: `isolated` (default) or `cascade` |
 
 The base class provides helper methods (`applyViewportFilter`, `resolveColumnCount`, `resolveDefaultViewport`, `resolveContainerMaxWidth`) called in the constructor, plus a pre-computed visibility map built from two abstract format hooks (`formatHideClass`, `formatRestoreClass`). Invalid configuration throws `InvalidGridValueException`.
 
@@ -475,6 +498,9 @@ The adapter receives the active grid adapter via constructor injection, reads it
 | `MediaPosition` | Enum: First, Last, LastOnDesktop |
 | `VerticalAlignment` | Enum: Top, Center, Bottom |
 | `ContentLayoutClassMap` | Per-framework CSS string mappings for content layout |
+| `ViewportConfig` | Readonly record: width, offset, visible for a single viewport |
+| `GridSettings` | Default `ViewportConfig` + map of per-viewport overrides |
+| `OverrideStrategy` | Enum: Isolated (per-viewport), Cascade (mobile-first carry-forward) |
 
 ## Dependency Injection
 

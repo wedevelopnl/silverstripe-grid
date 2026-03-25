@@ -76,22 +76,22 @@ WeDevelop\Grid\Model\Column:
     Title: 'Col Main-Alpha'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.mz_row_ma
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
   mz_col_mb:
     Title: 'Col Main-Beta'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.mz_row_mb
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
   mz_col_sa:
     Title: 'Col Sidebar-Alpha'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.mz_row_sa
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
   mz_col_sb:
     Title: 'Col Sidebar-Beta'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.mz_row_sb
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
 
 # --- Leaves ---
 WeDevelop\Grid\Model\ContentElement:

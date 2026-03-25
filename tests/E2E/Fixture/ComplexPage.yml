@@ -52,17 +52,17 @@ WeDevelop\Grid\Model\Column:
     Title: 'Left Column'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row1
-    GridSettings: '{"md":{"width":8,"offset":0,"visible":true},"lg":{"width":6,"offset":0,"visible":true}}'
+    GridSettings: '{"default":{"width":8,"offset":0,"visible":true},"overrides":{"lg":{"width":6,"offset":0,"visible":true}}}'
   col2:
     Title: 'Right Column'
     Sort: 2
     Parent: =>WeDevelop\Grid\Model\Row.row1
-    GridSettings: '{"xs":{"width":12,"offset":0,"visible":false},"md":{"width":4,"offset":0,"visible":true},"lg":{"width":6,"offset":0,"visible":true}}'
+    GridSettings: '{"default":{"width":4,"offset":0,"visible":true},"overrides":{"xs":{"width":12,"offset":0,"visible":false},"lg":{"width":6,"offset":0,"visible":true}}}'
   col3:
     Title: 'Draft Section Column'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row2
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
 
 # --- Leaves (into columns) ---
 WeDevelop\Grid\Model\ContentElement:

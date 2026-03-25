@@ -141,36 +141,45 @@ test.describe('API contract', () => {
     expect(columns.length).toBeGreaterThanOrEqual(2);
 
     for (const col of columns) {
-      // gridSettings is sparse — only override viewports are present.
-      // The frontend cascades from defaults (width=12, offset=0, visible=true).
+      // gridSettings uses default+overrides structure.
+      // default holds the base values; overrides holds per-viewport deviations.
       expect(col.gridSettings).toBeDefined();
       expect(typeof col.gridSettings).toBe('object');
+      expect(col.gridSettings).toHaveProperty('default');
+      expect(col.gridSettings).toHaveProperty('overrides');
 
-      for (const [vp, settings] of Object.entries(col.gridSettings)) {
+      const { default: defaults, overrides } = col.gridSettings;
+      expect(typeof defaults.width, `Invalid default width type in column "${col.title}"`).toBe('number');
+      expect(typeof defaults.offset, `Invalid default offset type in column "${col.title}"`).toBe('number');
+      expect(typeof defaults.visible, `Invalid default visible type in column "${col.title}"`).toBe('boolean');
+
+      for (const [vp, settings] of Object.entries(overrides)) {
         expect(typeof vp).toBe('string');
-        expect(typeof settings.width, `Invalid width type in viewport "${vp}" of column "${col.title}"`).toBe('number');
-        expect(typeof settings.offset, `Invalid offset type in viewport "${vp}" of column "${col.title}"`).toBe('number');
-        expect(typeof settings.visible, `Invalid visible type in viewport "${vp}" of column "${col.title}"`).toBe('boolean');
+        expect(typeof settings.width, `Invalid width type in override "${vp}" of column "${col.title}"`).toBe('number');
+        expect(typeof settings.offset, `Invalid offset type in override "${vp}" of column "${col.title}"`).toBe('number');
+        expect(typeof settings.visible, `Invalid visible type in override "${vp}" of column "${col.title}"`).toBe('boolean');
       }
     }
 
     // Verify specific override values from ComplexPage.yml
     const leftCol = columns.find((c) => c.title === 'Left Column');
     expect(leftCol, 'Left Column not found').toBeDefined();
-    expect(leftCol!.gridSettings['md']).toEqual({ width: 8, offset: 0, visible: true });
-    expect(leftCol!.gridSettings['lg']).toEqual({ width: 6, offset: 0, visible: true });
+    expect(leftCol!.gridSettings.default).toEqual({ width: 8, offset: 0, visible: true });
+    expect(leftCol!.gridSettings.overrides['lg']).toEqual({ width: 6, offset: 0, visible: true });
+    expect(Object.keys(leftCol!.gridSettings.overrides)).toEqual(['lg']);
 
     const rightCol = columns.find((c) => c.title === 'Right Column');
     expect(rightCol, 'Right Column not found').toBeDefined();
-    expect(rightCol!.gridSettings['xs']).toEqual({ width: 12, offset: 0, visible: false });
-    expect(rightCol!.gridSettings['md']).toEqual({ width: 4, offset: 0, visible: true });
-    expect(rightCol!.gridSettings['lg']).toEqual({ width: 6, offset: 0, visible: true });
+    expect(rightCol!.gridSettings.default).toEqual({ width: 4, offset: 0, visible: true });
+    expect(rightCol!.gridSettings.overrides['xs']).toEqual({ width: 12, offset: 0, visible: false });
+    expect(rightCol!.gridSettings.overrides['lg']).toEqual({ width: 6, offset: 0, visible: true });
+    expect(Object.keys(rightCol!.gridSettings.overrides)).toEqual(['xs', 'lg']);
 
-    // Default column has empty gridSettings (all defaults cascade).
-    // PHP's json_encode([]) emits [] not {} — both deserialize to an empty object/array.
+    // Default column has empty overrides (all defaults apply as-is).
     const defaultCol = columns.find((c) => c.title === 'Draft Section Column');
     expect(defaultCol, 'Draft Section Column not found').toBeDefined();
-    expect(Object.keys(defaultCol!.gridSettings)).toHaveLength(0);
+    expect(defaultCol!.gridSettings.default).toEqual({ width: 12, offset: 0, visible: true });
+    expect(Object.keys(defaultCol!.gridSettings.overrides)).toHaveLength(0);
   });
 
   test('element nodes include editLink field', async ({ request }) => {

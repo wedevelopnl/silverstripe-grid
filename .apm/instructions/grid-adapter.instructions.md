@@ -11,7 +11,7 @@ Grid adapters translate the abstract grid model (viewports, column widths, offse
 
 ### Key Files
 
-- `src/Contract/GridAdapterInterface.php` — 14 methods defining the adapter contract
+- `src/Contract/GridAdapterInterface.php` — 15 methods defining the adapter contract
 - `src/Adapter/AbstractGridAdapter.php` — Abstract base class with shared config, viewport management, and visibility map
 - `src/Value/Viewport.php` — Value object (`final readonly class`, not an enum)
 - `src/Value/ContainerType.php` — Enum: `Section`, `Row`, `Column`
@@ -70,6 +70,7 @@ The base class provides YAML-configurable properties (set on the concrete adapte
 | `$total_columns` | `int\|null` | `null` (adapter default) | Override total column count |
 | `$default_viewport` | `string\|null` | `null` (adapter default) | Override default viewport key |
 | `$container_max_width` | `int\|null` | `null` (adapter default) | Override container max width |
+| `$override_strategy` | `string\|null` | `null` (isolated) | Override strategy: `isolated` or `cascade` |
 
 The base class handles in its constructor:
 - `applyViewportFilter()` — Filters the full viewport map to only enabled viewports. Throws `InvalidGridValueException` if empty array or unknown key.
@@ -79,7 +80,7 @@ The base class handles in its constructor:
 - `buildVisibilityMap()` — Pre-computes visibility class pairs using `formatHideClass()` and `formatRestoreClass()`.
 
 Final getters provided by the base class (no need to implement):
-- `getViewports()`, `getColumnCount()`, `getDefaultViewport()`, `getContainerMaxWidth()`, `getVisibilityClasses()`
+- `getViewports()`, `getColumnCount()`, `getDefaultViewport()`, `getContainerMaxWidth()`, `getVisibilityClasses()`, `getOverrideStrategy()`
 
 ### 3. Methods to Implement
 
@@ -127,6 +128,7 @@ WeDevelop\Grid\Adapter\YourAdapter:
     - lg
   total_columns: 16
   default_viewport: md
+  override_strategy: cascade
 ```
 
 ### 7. Provide Content Layout Class Map

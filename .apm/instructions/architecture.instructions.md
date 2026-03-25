@@ -16,8 +16,8 @@ src/Dev/              # Fixture loading for E2E tests (controller, loader, post-
 src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement) + ContainerElementTrait
 src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaExtension)
 src/Forms/            # Form field implementations (GridEditorField)
-src/Value/            # Value objects and DTOs (GridNode, Result, ValidationError, ValidationSeverity, ContainerType, Viewport, ContentLayoutClassMap, AspectRatio, MediaPosition, VerticalAlignment)
-src/Service/          # Domain services (GridTreeBuilder, ElementPersistenceService, ReorderService, ReorderExecutor)
+src/Value/            # Value objects and DTOs (GridNode, Result, ValidationError, ValidationSeverity, ContainerType, Viewport, ViewportConfig, GridSettings, OverrideStrategy, ContentLayoutClassMap, AspectRatio, MediaPosition, VerticalAlignment)
+src/Service/          # Domain services (GridTreeBuilder, ElementPersistenceService, ReorderService, ReorderExecutor, GridSettingsResolver)
 src/Validation/       # Hierarchy validation and reorder validation (HierarchyValidationService, ReorderValidator, ElementAllowanceTrait)
 src/Exception/        # Domain exceptions (GridDomainException, InvalidGridValueException)
 src/Repository/       # Repository interfaces + ORM implementations (GridElementRepositoryInterface, OrmGridElementRepository)

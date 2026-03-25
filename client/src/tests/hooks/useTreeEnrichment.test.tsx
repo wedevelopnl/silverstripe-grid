@@ -84,7 +84,7 @@ function makeColumn(id: number, overrides: Partial<ColumnNode> = {}, parentId: n
     containerType: 'column',
     allowedTypes: null,
     children: null,
-    gridSettings: { md: { width: 6, offset: 0, visible: true } },
+    gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
     ...overrides,
   };
 }

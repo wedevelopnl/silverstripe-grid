@@ -319,10 +319,10 @@ final class GridNodeTest extends TestCase
 
     public function testColumnNodeIncludesGridSettings(): void
     {
-        $gridSettings = [
-            'xs' => ['width' => 12, 'offset' => 0, 'visible' => true],
-            'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
-        ];
+        $gridSettings = new \WeDevelop\Grid\Value\GridSettings(
+            new \WeDevelop\Grid\Value\ViewportConfig(12, 0, true),
+            ['md' => new \WeDevelop\Grid\Value\ViewportConfig(6, 0, true)],
+        );
 
         $node = new GridNode(
             id: 1,
@@ -341,13 +341,12 @@ final class GridNodeTest extends TestCase
             allowedTypes: null,
             children: [],
             gridSettings: $gridSettings,
-
-
         );
 
         $serialized = $node->jsonSerialize();
         self::assertArrayHasKey('gridSettings', $serialized);
-        self::assertSame($gridSettings, $serialized['gridSettings']);
+        self::assertSame(12, $serialized['gridSettings']['default']['width']);
+        self::assertSame(6, $serialized['gridSettings']['overrides']['md']['width']);
     }
 
     public function testConstructorRejectsGridSettingsForNonColumnType(): void
@@ -371,9 +370,9 @@ final class GridNodeTest extends TestCase
             containerType: ContainerType::Row,
             allowedTypes: null,
             children: [],
-            gridSettings: ['xs' => ['width' => 12, 'offset' => 0, 'visible' => true]],
-
-
+            gridSettings: new \WeDevelop\Grid\Value\GridSettings(
+                new \WeDevelop\Grid\Value\ViewportConfig(12, 0, true),
+            ),
         );
     }
 

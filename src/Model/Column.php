@@ -12,7 +12,9 @@ use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Forms\GridSettingsField;
 use WeDevelop\Grid\Service\ColumnClassResolver;
+use WeDevelop\Grid\Service\GridSettingsResolver;
 use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\GridSettings;
 
 /**
  * Leaf container in the Section > Row > Column hierarchy.
@@ -117,64 +119,53 @@ class Column extends GridElement implements ContainerInterface
         return $this->renderWith('WeDevelop/Grid/Model/Column');
     }
 
-    /** Returns the smallest viewport's width as a fraction, e.g. '6/12'. */
+    /** Returns the default viewport's width as a fraction, e.g. '6/12'. */
     public function getGridWidthSummary(): string
     {
-        $settings = $this->getGridSettingsData();
+        $settings = $this->getGridSettings();
         $columnCount = $this->gridAdapter->getColumnCount();
 
-        $firstKey = array_key_first($settings);
-
-        if ($firstKey === null) {
-            return sprintf('%d/%d', $columnCount, $columnCount);
-        }
-
-        return sprintf('%d/%d', $settings[$firstKey]['width'], $columnCount);
+        return sprintf('%d/%d', $settings->default->width, $columnCount);
     }
 
-    /**
-     * Decode the JSON grid settings into an associative array.
-     * Returns empty array when no stored value exists (sparse storage).
-     *
-     * @return array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}>
-     */
-    public function getGridSettingsData(): array
+    /** Decode the JSON grid settings into a GridSettings value object. */
+    public function getGridSettings(): GridSettings
     {
         $raw = $this->getField('GridSettings');
+        $columnCount = $this->gridAdapter->getColumnCount();
+
         if (is_string($raw)) {
-            $decoded = json_decode($raw, true);
-            if (is_array($decoded)) {
-                /** @var array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}> $decoded */
-                return $decoded;
-            }
+            return GridSettings::fromJson($raw, $columnCount);
         }
 
-        return [];
+        return GridSettings::initial($columnCount);
     }
 
     /**
-     * Encode an associative array of grid settings into JSON for storage.
+     * Encode a GridSettings value object into JSON for storage.
      *
-     * @param array<non-empty-string, array{width: positive-int, offset: int<0, max>, visible: bool}> $settings
+     * Also accepts a raw JSON string for SilverStripe fixture/ORM compatibility
+     * (ModelData::__set dispatches to setGridSettings when setting the DB field).
      */
-    public function setGridSettingsData(array $settings): static
+    public function setGridSettings(GridSettings|string $settings): static
     {
-        $this->setField('GridSettings', json_encode($settings));
+        if (is_string($settings)) {
+            $this->setField('GridSettings', $settings);
+
+            return $this;
+        }
+
+        $this->setField('GridSettings', $settings->toJson());
 
         return $this;
     }
 
-    /**
-     * CSS classes for the grid column wrapper using mobile-first cascade.
-     *
-     * @see ColumnClassResolver::resolve() for the cascade algorithm.
-     */
+    /** CSS classes for the grid column wrapper. */
     public function getColumnClasses(): string
     {
-        $classes = ColumnClassResolver::resolve(
-            $this->getGridSettingsData(),
-            $this->gridAdapter,
-        );
+        $resolver = new GridSettingsResolver($this->gridAdapter);
+        $effective = $resolver->resolveEffective($this->getGridSettings());
+        $classes = ColumnClassResolver::resolve($effective, $this->gridAdapter);
 
         $this->extend('updateColumnClasses', $classes);
 
@@ -186,9 +177,8 @@ class Column extends GridElement implements ContainerInterface
     {
         parent::onBeforeWrite();
 
-        // Initialize empty sparse grid settings for new records
         if (!$this->isInDB() && !$this->getField('GridSettings')) {
-            $this->setGridSettingsData([]);
+            $this->setGridSettings(GridSettings::initial($this->gridAdapter->getColumnCount()));
         }
     }
 }

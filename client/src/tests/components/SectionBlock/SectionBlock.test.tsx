@@ -49,14 +49,8 @@ const { mockViewports, mockResolveViewportSettings } = vi.hoisted(() => {
     { key: 'xs', label: 'XS' }, { key: 'sm', label: 'SM' }, { key: 'md', label: 'MD' },
     { key: 'lg', label: 'LG' }, { key: 'xl', label: 'XL' }, { key: 'xxl', label: 'XXL' },
   ];
-  const resolve = (gridSettings: Record<string, unknown>, activeViewport: string) => {
-    let effective = { width: 12, offset: 0, visible: true };
-    for (const vp of viewports) {
-      const override = gridSettings[vp.key];
-      if (override) effective = { ...effective, ...(override as typeof effective) };
-      if (vp.key === activeViewport) break;
-    }
-    return effective;
+  const resolve = (gridSettings: { default: { width: number; offset: number; visible: boolean }; overrides: Record<string, { width: number; offset: number; visible: boolean }> }, activeViewport: string) => {
+    return gridSettings.overrides[activeViewport] ?? gridSettings.default;
   };
   return { mockViewports: viewports, mockResolveViewportSettings: resolve };
 });
@@ -315,7 +309,8 @@ describe('SectionBlock', () => {
               allowedTypes: null,
               children: null,
               gridSettings: {
-                md: { width: 8, offset: 2, visible: true },
+                default: { width: 12, offset: 0, visible: true },
+                overrides: { md: { width: 8, offset: 2, visible: true } },
               },
               isCollapsed: false,
               toggle: vi.fn(),

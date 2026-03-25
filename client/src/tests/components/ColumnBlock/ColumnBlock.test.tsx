@@ -54,14 +54,8 @@ const { mockViewports, mockResolveViewportSettings } = vi.hoisted(() => {
     { key: 'xxl', label: 'XXL' },
   ];
 
-  const resolve = (gridSettings: Record<string, unknown>, activeViewport: string) => {
-    let effective = { width: 12, offset: 0, visible: true };
-    for (const vp of viewports) {
-      const override = gridSettings[vp.key];
-      if (override) effective = { ...effective, ...(override as typeof effective) };
-      if (vp.key === activeViewport) break;
-    }
-    return effective;
+  const resolve = (gridSettings: { default: { width: number; offset: number; visible: boolean }; overrides: Record<string, { width: number; offset: number; visible: boolean }> }, activeViewport: string) => {
+    return gridSettings.overrides[activeViewport] ?? gridSettings.default;
   };
 
   return { mockViewports: viewports, mockResolveViewportSettings: resolve };
@@ -109,7 +103,8 @@ function makeColumn(overrides: Partial<EnrichedColumnNode> = {}): EnrichedColumn
     containerType: 'column',
     allowedTypes: null,
     gridSettings: {
-      md: { width: 6, offset: 0, visible: true },
+      default: { width: 12, offset: 0, visible: true },
+      overrides: { md: { width: 6, offset: 0, visible: true } },
     },
     isCollapsed: false,
     toggle: vi.fn(),
@@ -130,7 +125,7 @@ describe('ColumnBlock', () => {
 
   it('renders fraction badge for the active viewport', () => {
     const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 0, visible: true } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
     });
 
     render(
@@ -148,7 +143,7 @@ describe('ColumnBlock', () => {
 
     it('sets --col-width as percentage', () => {
       const column = makeColumn({
-        gridSettings: { md: { width: 6, offset: 0, visible: true } },
+        gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
       });
 
       const { container } = render(
@@ -162,7 +157,7 @@ describe('ColumnBlock', () => {
 
     it('sets --col-offset when offset > 0', () => {
       const column = makeColumn({
-        gridSettings: { md: { width: 4, offset: 2, visible: true } },
+        gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 4, offset: 2, visible: true } } },
       });
 
       const { container } = render(
@@ -177,7 +172,7 @@ describe('ColumnBlock', () => {
 
     it('does not set --col-offset when offset is 0', () => {
       const column = makeColumn({
-        gridSettings: { md: { width: 6, offset: 0, visible: true } },
+        gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
       });
 
       const { container } = render(
@@ -197,7 +192,7 @@ describe('ColumnBlock', () => {
 
     it('sets --col-span as integer string', () => {
       const column = makeColumn({
-        gridSettings: { md: { width: 6, offset: 0, visible: true } },
+        gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
       });
 
       const { container } = render(
@@ -211,7 +206,7 @@ describe('ColumnBlock', () => {
 
     it('sets --col-start when offset > 0', () => {
       const column = makeColumn({
-        gridSettings: { md: { width: 4, offset: 2, visible: true } },
+        gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 4, offset: 2, visible: true } } },
       });
 
       const { container } = render(
@@ -225,7 +220,7 @@ describe('ColumnBlock', () => {
 
     it('does not set --col-start when offset is 0', () => {
       const column = makeColumn({
-        gridSettings: { md: { width: 6, offset: 0, visible: true } },
+        gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
       });
 
       const { container } = render(
@@ -322,7 +317,7 @@ describe('ColumnBlock', () => {
 
   it('applies hidden modifier when visible is false', () => {
     const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 0, visible: false } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: false } } },
     });
 
     const { container } = render(
@@ -336,7 +331,7 @@ describe('ColumnBlock', () => {
 
   it('does not apply hidden modifier when visible is true', () => {
     const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 0, visible: true } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
     });
 
     const { container } = render(
@@ -350,7 +345,7 @@ describe('ColumnBlock', () => {
 
   it('shows "hidden" instead of fraction badge when not visible', () => {
     const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 0, visible: false } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: false } } },
     });
 
     render(
@@ -404,9 +399,9 @@ describe('ColumnBlock', () => {
     expect(inner?.classList.contains('column-block--modified')).toBe(true);
   });
 
-  it('cascades smaller viewport settings to larger viewport', () => {
+  it('uses override for the active viewport', () => {
     const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 0, visible: true } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { lg: { width: 6, offset: 0, visible: true } } },
     });
 
     const { container } = render(
@@ -414,15 +409,14 @@ describe('ColumnBlock', () => {
       { wrapper: createDndWrapper('lg') },
     );
 
-    // lg inherits md=6 via cascade
     expect(screen.getByText('6/12')).toBeDefined();
     const outerDiv = container.firstElementChild as HTMLElement;
     expect(outerDiv.style.getPropertyValue('--col-width')).toBe('50%');
   });
 
-  it('cascades offset from smaller viewport', () => {
+  it('falls back to default when no override exists for viewport', () => {
     const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 3, visible: true } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 3, visible: true } } },
     });
 
     const { container } = render(
@@ -431,13 +425,14 @@ describe('ColumnBlock', () => {
     );
 
     const outerDiv = container.firstElementChild as HTMLElement;
-    // lg inherits md offset=3 via cascade
-    expect(outerDiv.style.getPropertyValue('--col-offset')).toBe('25%');
+    // lg has no override, falls back to default (width=12, offset=0)
+    expect(screen.getByText('12/12')).toBeDefined();
+    expect(outerDiv.style.getPropertyValue('--col-offset')).toBe('');
   });
 
-  it('cascades hidden visibility from smaller viewport', () => {
+  it('uses override with hidden visibility for active viewport', () => {
     const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 0, visible: false } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { lg: { width: 6, offset: 0, visible: false } } },
     });
 
     const { container } = render(
@@ -446,7 +441,6 @@ describe('ColumnBlock', () => {
     );
 
     const inner = container.querySelector('.column-block');
-    // lg inherits md hidden state via cascade
     expect(inner?.classList.contains('column-block--hidden')).toBe(true);
     expect(screen.getByText('hidden')).toBeDefined();
   });
@@ -718,7 +712,7 @@ describe('ColumnBlock', () => {
 
   it('shows offset label "none" when offset is 0', () => {
     const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 0, visible: true } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
     });
 
     render(
@@ -732,7 +726,7 @@ describe('ColumnBlock', () => {
 
   it('shows offset label "+N" when offset is greater than 0', () => {
     const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 3, visible: true } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 3, visible: true } } },
     });
 
     render(
@@ -746,7 +740,7 @@ describe('ColumnBlock', () => {
 
   it('disables offset picker when column is full width', () => {
     const column = makeColumn({
-      gridSettings: { md: { width: 12, offset: 0, visible: true } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 12, offset: 0, visible: true } } },
     });
 
     render(
@@ -760,7 +754,7 @@ describe('ColumnBlock', () => {
 
   it('disables offset picker when column is hidden', () => {
     const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 0, visible: false } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: false } } },
     });
 
     render(
@@ -776,7 +770,7 @@ describe('ColumnBlock', () => {
     // width=6, offset=6 → maxOffset = 12-6 = 6, offset=6 is exactly at boundary
     // Now select width=11, maxOffset=1, offset 6 > 1 → clamped to 1
     const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 6, visible: true } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 6, visible: true } } },
     });
     const user = userEvent.setup();
 
@@ -801,7 +795,7 @@ describe('ColumnBlock', () => {
   it('keeps offset at boundary when offset equals maxOffset exactly', async () => {
     // width=6, offset=6 → select width=6 again (maxOffset=6, offset=6 is NOT > 6)
     const column = makeColumn({
-      gridSettings: { md: { width: 6, offset: 6, visible: true } },
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 6, visible: true } } },
     });
     const user = userEvent.setup();
 
@@ -876,7 +870,7 @@ describe('ColumnBlock', () => {
   describe('offset options constrained by width', () => {
     it('calls getOffsetOptions with the resolved width', () => {
       const column = makeColumn({
-        gridSettings: { md: { width: 8, offset: 0, visible: true } },
+        gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 8, offset: 0, visible: true } } },
       });
 
       render(
@@ -889,7 +883,7 @@ describe('ColumnBlock', () => {
 
     it('shows only valid offset options in the dropdown', async () => {
       const column = makeColumn({
-        gridSettings: { md: { width: 11, offset: 0, visible: true } },
+        gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 11, offset: 0, visible: true } } },
       });
       const user = userEvent.setup();
 
@@ -909,7 +903,7 @@ describe('ColumnBlock', () => {
 
     it('auto-clamps offset when width change makes current offset invalid', async () => {
       const column = makeColumn({
-        gridSettings: { md: { width: 6, offset: 5, visible: true } },
+        gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 5, visible: true } } },
       });
       const user = userEvent.setup();
 
@@ -935,7 +929,7 @@ describe('ColumnBlock', () => {
 
     it('preserves offset when width change keeps it valid', async () => {
       const column = makeColumn({
-        gridSettings: { md: { width: 6, offset: 2, visible: true } },
+        gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 2, visible: true } } },
       });
       const user = userEvent.setup();
 

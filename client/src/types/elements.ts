@@ -54,7 +54,10 @@ export interface ViewportSettings {
   visible: boolean;
 }
 
-export type GridSettings = Record<string, ViewportSettings>;
+export interface GridSettings {
+  default: ViewportSettings;
+  overrides: Record<string, ViewportSettings>;
+}
 
 // --- Allowed type info ---
 

@@ -81,22 +81,22 @@ WeDevelop\Grid\Model\Column:
     Title: 'Col A'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.source_row
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
   col_b:
     Title: 'Col B'
     Sort: 2
     Parent: =>WeDevelop\Grid\Model\Row.source_row
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
   target_main_col:
     Title: 'Target Main Col'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.target_main_row
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
   target_sidebar_col:
     Title: 'Target Sidebar Col'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.target_sidebar_row
-    GridSettings: '{}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
 
 # --- Content elements ---
 WeDevelop\Grid\Model\ContentElement:

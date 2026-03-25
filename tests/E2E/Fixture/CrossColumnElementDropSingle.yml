@@ -37,12 +37,12 @@ WeDevelop\Grid\Model\Column:
     Title: 'Col A'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row
-    GridSettings: '{"md":{"width":6,"offset":0,"visible":true}}'
+    GridSettings: '{"default":{"width":6,"offset":0,"visible":true},"overrides":{}}'
   col_b:
     Title: 'Col B'
     Sort: 2
     Parent: =>WeDevelop\Grid\Model\Row.row
-    GridSettings: '{"md":{"width":6,"offset":0,"visible":true}}'
+    GridSettings: '{"default":{"width":6,"offset":0,"visible":true},"overrides":{}}'
 
 WeDevelop\Grid\Model\ContentElement:
   el_a1:
