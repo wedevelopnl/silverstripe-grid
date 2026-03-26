@@ -13,6 +13,7 @@ use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
 
 #[CoversClass(GridSettingsResolver::class)]
+#[CoversClass(InvalidGridValueException::class)]
 final class GridSettingsResolverTest extends SapphireTest
 {
     protected $usesDatabase = false;

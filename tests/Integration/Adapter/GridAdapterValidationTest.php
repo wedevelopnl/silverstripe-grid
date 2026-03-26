@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
 use WeDevelop\Grid\Adapter\GridAdapter;
+use WeDevelop\Grid\Exception\GridDomainException;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
 
 /**
@@ -15,6 +16,8 @@ use WeDevelop\Grid\Exception\InvalidGridValueException;
  * intentionally bad config overrides.
  */
 #[CoversClass(GridAdapter::class)]
+#[CoversClass(InvalidGridValueException::class)]
+#[CoversClass(GridDomainException::class)]
 final class GridAdapterValidationTest extends SapphireTest
 {
     protected $usesDatabase = false;
