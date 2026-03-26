@@ -12,6 +12,12 @@ use SilverStripe\Security\SecurityToken;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Controllers\GridController;
 use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\CreateContentRequest;
+use WeDevelop\Grid\Value\CreateElementRequest;
+use WeDevelop\Grid\Value\DuplicateToRequest;
+use WeDevelop\Grid\Value\ReorderRequest;
+use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
@@ -22,6 +28,12 @@ use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
 #[CoversClass(GridController::class)]
+#[CoversClass(ContainerType::class)]
+#[CoversClass(CreateElementRequest::class)]
+#[CoversClass(CreateContentRequest::class)]
+#[CoversClass(ReorderRequest::class)]
+#[CoversClass(UpdateGridSettingsRequest::class)]
+#[CoversClass(DuplicateToRequest::class)]
 final class GridControllerTest extends FunctionalTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/ElementTreeTest.yml';

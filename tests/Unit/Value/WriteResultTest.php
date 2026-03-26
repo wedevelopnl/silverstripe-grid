@@ -8,9 +8,11 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Core\Validation\ValidationResult;
+use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\WriteResult;
 
 #[CoversClass(WriteResult::class)]
+#[CoversClass(ValidationError::class)]
 final class WriteResultTest extends TestCase
 {
     public function testFromReturnsOkOnSuccess(): void

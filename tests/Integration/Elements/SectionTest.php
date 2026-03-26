@@ -17,6 +17,7 @@ use WeDevelop\Grid\Tests\Integration\Fixture\OnAfterWriteSpy;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
 #[CoversClass(Section::class)]
+#[CoversClass(ContainerType::class)]
 final class SectionTest extends ContainerContractTestCase
 {
     /** @var list<class-string> */

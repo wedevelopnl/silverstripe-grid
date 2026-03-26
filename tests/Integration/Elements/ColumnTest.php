@@ -16,6 +16,9 @@ use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Model\GridElement;
 
 #[CoversClass(Column::class)]
+#[CoversClass(ContainerType::class)]
+#[CoversClass(GridSettings::class)]
+#[CoversClass(ViewportConfig::class)]
 final class ColumnTest extends ContainerContractTestCase
 {
     protected function createContainer(): ContainerInterface

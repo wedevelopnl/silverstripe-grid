@@ -16,10 +16,20 @@ use WeDevelop\Grid\Value\CreateContentRequest;
 use WeDevelop\Grid\Value\CreateElementRequest;
 use WeDevelop\Grid\Value\DuplicateToRequest;
 use WeDevelop\Grid\Value\ReorderRequest;
+use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
+use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\Viewport;
 
 #[CoversClass(RequestBodyParser::class)]
+#[CoversClass(CreateContentRequest::class)]
+#[CoversClass(CreateElementRequest::class)]
+#[CoversClass(DuplicateToRequest::class)]
+#[CoversClass(ReorderRequest::class)]
+#[CoversClass(Result::class)]
+#[CoversClass(UpdateGridSettingsRequest::class)]
+#[CoversClass(ValidationError::class)]
+#[CoversClass(Viewport::class)]
 final class RequestBodyParserTest extends TestCase
 {
     private GridAdapterInterface&MockObject $adapter;

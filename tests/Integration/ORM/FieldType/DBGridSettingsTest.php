@@ -11,6 +11,8 @@ use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
 
 #[CoversClass(DBGridSettings::class)]
+#[CoversClass(GridSettings::class)]
+#[CoversClass(ViewportConfig::class)]
 class DBGridSettingsTest extends SapphireTest
 {
     protected $usesDatabase = false;

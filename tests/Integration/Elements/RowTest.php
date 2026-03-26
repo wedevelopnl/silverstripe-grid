@@ -15,6 +15,7 @@ use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Fixture\OnAfterWriteSpy;
 
 #[CoversClass(Row::class)]
+#[CoversClass(ContainerType::class)]
 final class RowTest extends ContainerContractTestCase
 {
     protected function createContainer(): ContainerInterface
