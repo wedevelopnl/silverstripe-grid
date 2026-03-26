@@ -2,12 +2,19 @@ $viewport-switcher-active-bg: #0071c4;
 $viewport-switcher-border-color: #ccc;
 $viewport-switcher-hover-bg: #f0f0f0;
 $viewport-switcher-radius: 4px;
+$viewport-switcher-reset-color: #c44;
 
 .viewport-switcher {
   display: flex;
-  border: 1px solid $viewport-switcher-border-color;
-  border-radius: $viewport-switcher-radius;
-  overflow: hidden;
+  align-items: center;
+  gap: 12px;
+
+  [role="group"] {
+    display: flex;
+    border: 1px solid $viewport-switcher-border-color;
+    border-radius: $viewport-switcher-radius;
+    overflow: hidden;
+  }
 }
 
 .viewport-switcher__button {
@@ -30,6 +37,23 @@ $viewport-switcher-radius: 4px;
 
   &--active {
     background-color: $viewport-switcher-active-bg;
+    color: #fff;
+  }
+}
+
+.viewport-switcher__reset {
+  padding: 4px 12px;
+  border: 1px solid $viewport-switcher-reset-color;
+  border-radius: $viewport-switcher-radius;
+  background: transparent;
+  color: $viewport-switcher-reset-color;
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background-color: $viewport-switcher-reset-color;
     color: #fff;
   }
 }

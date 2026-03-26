@@ -1,6 +1,6 @@
 import type {
   ContainerType,
-  ElementTreeResponse,
+  TreeApiResponse,
 } from '@/types/elements';
 import type {
   AcceptableContainer,
@@ -15,9 +15,9 @@ import { getControllerLink } from './config';
 export async function fetchElementTree(
   pageId: number,
   zone: string,
-): Promise<ElementTreeResponse> {
+): Promise<TreeApiResponse> {
   const base = getControllerLink();
-  return apiGet<ElementTreeResponse>(`${base}/api/readTree/${pageId}/${encodeURIComponent(zone)}`);
+  return apiGet<TreeApiResponse>(`${base}/api/readTree/${pageId}/${encodeURIComponent(zone)}`);
 }
 
 export interface CreateElementParams {
@@ -93,6 +93,21 @@ export async function updateGridSettings(
 ): Promise<void> {
   const base = getControllerLink();
   await apiPatch(`${base}/api/updateGridSettings`, params);
+}
+
+// --- Reset Grid Settings Overrides ---
+
+export interface ResetGridSettingsOverridesParams {
+  pageId: number;
+  zone: string;
+  viewport?: string;
+}
+
+export async function resetGridSettingsOverrides(
+  params: ResetGridSettingsOverridesParams,
+): Promise<void> {
+  const base = getControllerLink();
+  await apiDelete(`${base}/api/resetGridSettingsOverrides`, params);
 }
 
 // --- Duplicate To ---

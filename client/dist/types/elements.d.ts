@@ -67,6 +67,10 @@ export interface SectionNode extends BaseFields {
 export type ElementNode = SectionNode | RowNode | ColumnNode | SimpleElementNode;
 export type ContainerNode = SectionNode | RowNode | ColumnNode;
 export type ElementTreeResponse = Record<string, ElementNode[]>;
+export interface TreeApiResponse {
+    tree: ElementTreeResponse;
+    overrideCounts: Record<string, number>;
+}
 export declare function isContainerNode(node: ElementNode): node is ContainerNode;
 export declare function isSectionNode(node: ElementNode): node is SectionNode;
 export declare function isRowNode(node: ElementNode): node is RowNode;

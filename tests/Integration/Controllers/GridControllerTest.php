@@ -115,12 +115,18 @@ final class GridControllerTest extends FunctionalTest
 
         $body = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
 
-        // Response is keyed by area ID (numeric), not relation name
-        $areaKeys = array_keys($body);
+        // Response wraps tree + overrideCounts
+        $this->assertArrayHasKey('tree', $body);
+        $this->assertArrayHasKey('overrideCounts', $body);
+
+        $tree = $body['tree'];
+
+        // Tree is keyed by area ID (numeric), not relation name
+        $areaKeys = array_keys($tree);
         $this->assertNotEmpty($areaKeys);
         $this->assertIsInt($areaKeys[0]);
 
-        $firstArea = $body[$areaKeys[0]];
+        $firstArea = $tree[$areaKeys[0]];
         $this->assertNotEmpty($firstArea);
 
         // Verify nested structure exists
@@ -173,8 +179,10 @@ final class GridControllerTest extends FunctionalTest
 
         $body = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
         $pageId = (int) $page->ID;
-        $this->assertArrayHasKey($pageId, $body);
-        $this->assertSame([], $body[$pageId]);
+        $this->assertArrayHasKey('tree', $body);
+        $this->assertArrayHasKey($pageId, $body['tree']);
+        $this->assertSame([], $body['tree'][$pageId]);
+        $this->assertArrayHasKey('overrideCounts', $body);
     }
 
     public function testReadTreeFindsPageRegardlessOfAmbientStage(): void
@@ -441,7 +449,7 @@ final class GridControllerTest extends FunctionalTest
 
         // Build tree directly
         $tree = GridTreeBuilder::create()->buildForPage($page);
-        $expected = json_decode(
+        $expectedTree = json_decode(
             json_encode($tree, JSON_THROW_ON_ERROR),
             associative: true,
             flags: JSON_THROW_ON_ERROR,
@@ -451,7 +459,9 @@ final class GridControllerTest extends FunctionalTest
         $response = $this->get($this->apiUrl($page->ID));
         $actual = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
 
-        $this->assertSame($expected, $actual);
+        $this->assertArrayHasKey('tree', $actual);
+        $this->assertArrayHasKey('overrideCounts', $actual);
+        $this->assertSame($expectedTree, $actual['tree']);
     }
 
     // --- apiCreate: zone handling ------------------------------------------------

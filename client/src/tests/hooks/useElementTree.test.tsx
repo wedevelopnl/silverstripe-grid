@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { useElementTree } from '@/hooks/useElementTree';
-import type { ElementTreeResponse } from '@/types/elements';
+import type { ElementTreeResponse, TreeApiResponse } from '@/types/elements';
 import { createQueryWrapper } from '../helpers/dndTestUtils';
 
 const mockFetchElementTree = vi.fn();
@@ -9,6 +9,10 @@ vi.mock('@/api/endpoints', () => ({
   fetchElementTree: (...args: unknown[]) => mockFetchElementTree(...args),
   updateGridSettings: vi.fn(),
 }));
+
+function wrapTree(tree: ElementTreeResponse, overrideCounts: Record<string, number> = {}): TreeApiResponse {
+  return { tree, overrideCounts };
+}
 
 describe('useElementTree', () => {
   afterEach(() => {
@@ -19,7 +23,7 @@ describe('useElementTree', () => {
     const mockTree: ElementTreeResponse = {
       '42': [],
     };
-    mockFetchElementTree.mockResolvedValue(mockTree);
+    mockFetchElementTree.mockResolvedValue(wrapTree(mockTree));
 
     const { result } = renderHook(() => useElementTree(42, 'main'), {
       wrapper: createQueryWrapper().wrapper,
@@ -32,7 +36,7 @@ describe('useElementTree', () => {
   });
 
   it('does not fetch when pageId is null', () => {
-    mockFetchElementTree.mockResolvedValue({});
+    mockFetchElementTree.mockResolvedValue(wrapTree({}));
 
     const { result } = renderHook(() => useElementTree(null, 'main'), {
       wrapper: createQueryWrapper().wrapper,
@@ -58,8 +62,8 @@ describe('useElementTree', () => {
     const tree42: ElementTreeResponse = { '42': [] };
     const tree99: ElementTreeResponse = { '99': [] };
     mockFetchElementTree
-      .mockResolvedValueOnce(tree42)
-      .mockResolvedValueOnce(tree99);
+      .mockResolvedValueOnce(wrapTree(tree42))
+      .mockResolvedValueOnce(wrapTree(tree99));
 
     const wrapper = createQueryWrapper().wrapper;
 
@@ -77,7 +81,7 @@ describe('useElementTree', () => {
 
   it('uses a stable disabled key when pageId is null (does not interfere with real queries)', async () => {
     const tree1: ElementTreeResponse = { '1': [] };
-    mockFetchElementTree.mockResolvedValue(tree1);
+    mockFetchElementTree.mockResolvedValue(wrapTree(tree1));
 
     const wrapper = createQueryWrapper().wrapper;
 

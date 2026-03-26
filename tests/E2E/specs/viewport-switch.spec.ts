@@ -6,6 +6,67 @@ test.describe('Viewport switcher', () => {
     await resetFixtures(request);
   });
 
+  test('editor resets viewport overrides via the viewport switcher', async ({ page }) => {
+    const fixture = await loadFixture(page.request, 'element-tree');
+
+    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
+    await expect(
+      page.getByTestId('grid-editor-loading'),
+    ).toBeHidden({ timeout: 15_000 });
+
+    const leftColumn = page.getByTestId('column-block').first();
+    const rightColumn = page.getByTestId('column-block').nth(1);
+    const leftBadge = leftColumn.getByTestId('column-badge');
+    const rightBadge = rightColumn.getByTestId('column-badge');
+    const resetButton = page.getByTestId('reset-overrides-button');
+
+    // --- Step 1: On default viewport (md), "Reset all" should appear ---
+    // Both columns have xs and lg overrides
+    await expect(resetButton).toBeVisible();
+    await expect(resetButton).toHaveText('Reset all');
+
+    // --- Step 2: Switch to xs viewport → "Reset viewport" appears ---
+    const xsButton = page.getByRole('button', { name: 'Extra Small', exact: true });
+    await xsButton.click();
+    await expect(resetButton).toHaveText('Reset viewport');
+
+    // Verify xs overrides are active: col1=12/12, col2=hidden
+    await expect(leftBadge).toHaveText('12/12');
+    await expect(rightBadge).toHaveText('hidden');
+
+    // --- Step 3: Click reset → confirm dialog → confirm ---
+    await resetButton.click();
+    const confirmDialog = page.getByTestId('confirm-dialog');
+    await expect(confirmDialog).toBeVisible();
+    await confirmDialog.getByRole('button', { name: 'Reset' }).click();
+
+    // --- Step 4: xs overrides cleared — columns now inherit md defaults ---
+    // col1 default: width=8, col2 default: width=4
+    await expect(leftBadge).toHaveText('8/12');
+    await expect(rightBadge).toHaveText('4/12');
+
+    // --- Step 5: Switch to md → "Reset all" still visible (lg overrides remain) ---
+    const mediumButton = page.getByRole('button', { name: 'Medium', exact: true });
+    await mediumButton.click();
+    await expect(resetButton).toBeVisible();
+    await expect(resetButton).toHaveText('Reset all');
+
+    // --- Step 6: Click "Reset all" → confirm → all overrides cleared ---
+    await resetButton.click();
+    await expect(confirmDialog).toBeVisible();
+    await confirmDialog.getByRole('button', { name: 'Reset' }).click();
+
+    // --- Step 7: Switch to lg → columns show md defaults (overrides gone) ---
+    const lgButton = page.getByRole('button', { name: 'Large', exact: true });
+    await lgButton.click();
+    await expect(leftBadge).toHaveText('8/12');
+    await expect(rightBadge).toHaveText('4/12');
+
+    // --- Step 8: Switch back to md → reset button gone (no overrides left) ---
+    await mediumButton.click();
+    await expect(resetButton).toBeHidden();
+  });
+
   test('editor adjusts responsive layout across viewports, publishes, and frontend renders correct grid classes', async ({ page }) => {
     const fixture = await loadFixture(page.request, 'element-tree');
 

@@ -2,8 +2,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import GridEditor from '@/components/GridEditor/GridEditor';
-import type { ElementTreeResponse } from '@/types/elements';
+import type { ElementTreeResponse, TreeApiResponse } from '@/types/elements';
 import { createQueryWrapper } from '../../helpers/dndTestUtils';
+
+function wrapTree(tree: ElementTreeResponse): TreeApiResponse {
+  return { tree, overrideCounts: {} };
+}
 
 const mockFetchElementTree = vi.fn();
 
@@ -18,6 +22,7 @@ vi.mock('@/api/endpoints', () => ({
   duplicateToElement: vi.fn(),
   reorderElement: vi.fn(),
   updateGridSettings: vi.fn(),
+  resetGridSettingsOverrides: vi.fn(),
   fetchPages: vi.fn().mockResolvedValue([]),
   fetchZones: vi.fn().mockResolvedValue([]),
   fetchAcceptableContainers: vi.fn().mockResolvedValue([]),
@@ -191,7 +196,7 @@ describe('GridEditor', () => {
   });
 
   it('renders viewport switcher when data loads', async () => {
-    mockFetchElementTree.mockResolvedValue(mockTree);
+    mockFetchElementTree.mockResolvedValue(wrapTree(mockTree));
 
     render(<GridEditor pageId={7} zone="main" />, {
       wrapper: createQueryWrapper().wrapper,
@@ -211,7 +216,7 @@ describe('GridEditor', () => {
   });
 
   it('renders section blocks when data loads', async () => {
-    mockFetchElementTree.mockResolvedValue(mockTree);
+    mockFetchElementTree.mockResolvedValue(wrapTree(mockTree));
 
     render(<GridEditor pageId={7} zone="main" />, {
       wrapper: createQueryWrapper().wrapper,
@@ -226,7 +231,7 @@ describe('GridEditor', () => {
   });
 
   it('renders add child empty state when tree has no sections (empty relation)', async () => {
-    mockFetchElementTree.mockResolvedValue(emptyTree);
+    mockFetchElementTree.mockResolvedValue(wrapTree(emptyTree));
 
     render(<GridEditor pageId={7} zone="main" />, {
       wrapper: createQueryWrapper().wrapper,
@@ -241,7 +246,7 @@ describe('GridEditor', () => {
   });
 
   it('renders add child empty state when tree has nodes but none are sections', async () => {
-    mockFetchElementTree.mockResolvedValue(noSectionsTree);
+    mockFetchElementTree.mockResolvedValue(wrapTree(noSectionsTree));
 
     render(<GridEditor pageId={7} zone="main" />, {
       wrapper: createQueryWrapper().wrapper,
@@ -255,7 +260,7 @@ describe('GridEditor', () => {
   });
 
   it('sets data-page-id attribute from pageId prop', async () => {
-    mockFetchElementTree.mockResolvedValue(mockTree);
+    mockFetchElementTree.mockResolvedValue(wrapTree(mockTree));
 
     render(<GridEditor pageId={7} zone="main" />, {
       wrapper: createQueryWrapper().wrapper,
@@ -286,7 +291,7 @@ describe('GridEditor', () => {
   });
 
   it('updates column fraction badges when viewport is switched', async () => {
-    mockFetchElementTree.mockResolvedValue(mockTree);
+    mockFetchElementTree.mockResolvedValue(wrapTree(mockTree));
     const user = userEvent.setup();
 
     render(<GridEditor pageId={7} zone="main" />, {
@@ -314,7 +319,7 @@ describe('GridEditor', () => {
     const treeForDifferentArea: ElementTreeResponse = {
       '99': [mockTree['7'][0]],
     };
-    mockFetchElementTree.mockResolvedValue(treeForDifferentArea);
+    mockFetchElementTree.mockResolvedValue(wrapTree(treeForDifferentArea));
 
     render(<GridEditor pageId={7} zone="main" />, {
       wrapper: createQueryWrapper().wrapper,
@@ -339,7 +344,7 @@ describe('GridEditor', () => {
   });
 
   it('renders add section append button after existing sections', async () => {
-    mockFetchElementTree.mockResolvedValue(mockTree);
+    mockFetchElementTree.mockResolvedValue(wrapTree(mockTree));
 
     render(<GridEditor pageId={7} zone="main" />, {
       wrapper: createQueryWrapper().wrapper,
@@ -353,7 +358,7 @@ describe('GridEditor', () => {
   });
 
   it('calls createElement with correct params when add section is clicked', async () => {
-    mockFetchElementTree.mockResolvedValue(emptyTree);
+    mockFetchElementTree.mockResolvedValue(wrapTree(emptyTree));
     mockCreateElement.mockResolvedValue(undefined);
     const user = userEvent.setup();
 
@@ -378,7 +383,7 @@ describe('GridEditor', () => {
   });
 
   it('does not render DragOverlayContent when no drag is active', async () => {
-    mockFetchElementTree.mockResolvedValue(mockTree);
+    mockFetchElementTree.mockResolvedValue(wrapTree(mockTree));
 
     render(<GridEditor pageId={7} zone="main" />, {
       wrapper: createQueryWrapper().wrapper,

@@ -83,6 +83,7 @@ class GridController extends AdminController
         'POST api/duplicateTo' => 'apiDuplicateTo',
         'PATCH api/reorder' => 'apiReorder',
         'PATCH api/updateGridSettings' => 'apiUpdateGridSettings',
+        'DELETE api/resetGridSettingsOverrides' => 'apiResetGridSettingsOverrides',
         'GET api/acceptableContainers/$PageID!/$Zone!/$ElementType!' => 'apiAcceptableContainers',
         'GET api/zones/$PageID!' => 'apiZones',
         'GET api/pages' => 'apiPages',
@@ -100,6 +101,7 @@ class GridController extends AdminController
         'apiDuplicateTo',
         'apiReorder',
         'apiUpdateGridSettings',
+        'apiResetGridSettingsOverrides',
         'apiAcceptableContainers',
         'apiZones',
         'apiPages',
@@ -140,7 +142,15 @@ class GridController extends AdminController
         $zone = (string) $request->param('Zone');
         $tree = $this->treeBuilder->buildForPage($page, $zone);
 
-        return $this->jsonSuccess(200, $tree);
+        /** @var array<non-empty-string, int> $overrideCounts */
+        $overrideCounts = [];
+        $rootNodes = $tree[(int) $page->ID] ?? [];
+        $this->countOverridesInTree($rootNodes, $overrideCounts);
+
+        return $this->jsonSuccess(200, [
+            'tree' => $tree,
+            'overrideCounts' => (object) $overrideCounts,
+        ]);
     }
 
     public function apiCreate(HTTPRequest $request): HTTPResponse
@@ -554,6 +564,69 @@ class GridController extends AdminController
         return $this->jsonSuccess(204);
     }
 
+    public function apiResetGridSettingsOverrides(HTTPRequest $request): HTTPResponse
+    {
+        $data = $this->parseJsonBody($request);
+        $parseResult = $this->requestBodyParser->parseResetGridSettingsOverridesBody($data);
+        if ($parseResult->isErr()) {
+            return $this->resultToResponse($parseResult, 400);
+        }
+
+        $body = $parseResult->unwrap();
+
+        /** @var SiteTree|null $page */
+        $page = Versioned::withVersionedMode(static function () use ($body): ?SiteTree {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            return SiteTree::get()->byID($body->pageId);
+        });
+
+        if ($page === null) {
+            $this->jsonError(404);
+        }
+
+        if (!$page->canEdit()) {
+            $this->jsonError(403);
+        }
+
+        $columns = $this->findColumnsForPage($page, $body->zone);
+
+        $affected = 0;
+        foreach ($columns as $column) {
+            $settings = $column->getGridSettings();
+
+            if ($body->viewport !== null) {
+                if (!$settings->hasOverride($body->viewport)) {
+                    continue;
+                }
+                $settings = $settings->withoutOverride($body->viewport);
+            } else {
+                if ($settings->overrides === []) {
+                    continue;
+                }
+                $settings = $settings->withoutOverrides();
+            }
+
+            $column->setGridSettings($settings);
+
+            $result = WriteResult::from(function () use ($column): GridElement {
+                $column->write();
+                return $column;
+            });
+            if ($result->isErr()) {
+                return $this->resultToResponse($result);
+            }
+
+            ++$affected;
+        }
+
+        if ($affected > 0) {
+            $this->touchOwningPage($page);
+        }
+
+        return $this->jsonSuccess(204);
+    }
+
     public function apiAcceptableContainers(HTTPRequest $request): HTTPResponse
     {
         $pageId = (int) $request->param('PageID');
@@ -767,6 +840,88 @@ class GridController extends AdminController
             'baseWidthClasses' => $baseWidthClasses,
             'baseOffsetClasses' => $baseOffsetClasses,
         ];
+    }
+
+    /**
+     * Walk the tree and count how many columns have overrides per viewport,
+     * plus a total count of columns with any overrides.
+     *
+     * @param list<GridNode> $nodes
+     * @param array<non-empty-string|'_total', int> $counts Accumulated counts (by reference)
+     */
+    private function countOverridesInTree(array $nodes, array &$counts): void
+    {
+        foreach ($nodes as $node) {
+            if ($node->gridSettings !== null && $node->gridSettings->overrides !== []) {
+                $counts['_total'] = ($counts['_total'] ?? 0) + 1;
+
+                foreach (array_keys($node->gridSettings->overrides) as $viewport) {
+                    $counts[$viewport] = ($counts[$viewport] ?? 0) + 1;
+                }
+            }
+
+            if ($node->children !== null) {
+                $this->countOverridesInTree($node->children, $counts);
+            }
+        }
+    }
+
+    /**
+     * Find all Column elements for a page + zone using breadth-first batch loading.
+     *
+     * Walks Section → Row → Column using the element repository, mirroring
+     * the same batch-loading approach as GridTreeBuilder but returning only
+     * the Column model instances needed for grid settings updates.
+     *
+     * @param non-empty-string $zone
+     * @return list<Column>
+     */
+    private function findColumnsForPage(SiteTree $page, string $zone): array
+    {
+        // Level 1: Sections under this page + zone
+        /** @var array<class-string, list<positive-int>> $sectionParents */
+        $sectionParents = [$page::class => [(int) $page->ID]];
+        $sections = $this->elementRepository->findByParents($sectionParents, $zone);
+
+        if ($sections === []) {
+            return [];
+        }
+
+        // Level 2: Rows under those sections
+        /** @var array<class-string, list<positive-int>> $rowParents */
+        $rowParents = [];
+        foreach ($sections as $section) {
+            /** @var positive-int $sectionId */
+            $sectionId = (int) $section->ID;
+            $rowParents[$section::class] ??= [];
+            $rowParents[$section::class][] = $sectionId;
+        }
+        $rows = $this->elementRepository->findByParents($rowParents);
+
+        if ($rows === []) {
+            return [];
+        }
+
+        // Level 3: Columns under those rows
+        /** @var array<class-string, list<positive-int>> $columnParents */
+        $columnParents = [];
+        foreach ($rows as $row) {
+            /** @var positive-int $rowId */
+            $rowId = (int) $row->ID;
+            $columnParents[$row::class] ??= [];
+            $columnParents[$row::class][] = $rowId;
+        }
+        $allElements = $this->elementRepository->findByParents($columnParents);
+
+        /** @var list<Column> $columns */
+        $columns = [];
+        foreach ($allElements as $element) {
+            if ($element instanceof Column) {
+                $columns[] = $element;
+            }
+        }
+
+        return $columns;
     }
 
     /**

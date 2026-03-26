@@ -94,6 +94,13 @@ export type ElementNode = SectionNode | RowNode | ColumnNode | SimpleElementNode
 export type ContainerNode = SectionNode | RowNode | ColumnNode;
 export type ElementTreeResponse = Record<string, ElementNode[]>;
 
+// --- API response wrapper ---
+
+export interface TreeApiResponse {
+  tree: ElementTreeResponse;
+  overrideCounts: Record<string, number>;
+}
+
 // --- Type guards ---
 
 export function isContainerNode(node: ElementNode): node is ContainerNode {

@@ -17,6 +17,7 @@ use WeDevelop\Grid\Value\CreateElementRequest;
 use WeDevelop\Grid\Value\DuplicateToRequest;
 use WeDevelop\Grid\Value\ReorderRequest;
 use WeDevelop\Grid\Value\Result;
+use WeDevelop\Grid\Value\ResetGridSettingsOverridesRequest;
 use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\Viewport;
@@ -27,6 +28,7 @@ use WeDevelop\Grid\Value\Viewport;
 #[CoversClass(DuplicateToRequest::class)]
 #[CoversClass(ReorderRequest::class)]
 #[CoversClass(Result::class)]
+#[CoversClass(ResetGridSettingsOverridesRequest::class)]
 #[CoversClass(UpdateGridSettingsRequest::class)]
 #[CoversClass(ValidationError::class)]
 #[CoversClass(Viewport::class)]
@@ -44,6 +46,7 @@ final class RequestBodyParserTest extends TestCase
             new Viewport('md', 'Medium'),
             new Viewport('lg', 'Large'),
         ]);
+        $this->adapter->method('getDefaultViewport')->willReturn(new Viewport('md', 'Medium'));
         $this->adapter->method('getColumnCount')->willReturn(12);
 
         $this->parser = new RequestBodyParser($this->adapter);
@@ -854,6 +857,129 @@ final class RequestBodyParserTest extends TestCase
             'targetPageId' => 10,
             'targetZone' => 'main',
             'targetParentId' => 0,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    // ---- parseResetGridSettingsOverridesBody: success ------------------------
+
+    public function testParseResetGridSettingsOverridesBodyReturnsValueObjectWithViewport(): void
+    {
+        $result = $this->parser->parseResetGridSettingsOverridesBody([
+            'pageId' => 5,
+            'zone' => 'main',
+            'viewport' => 'sm',
+        ]);
+
+        $this->assertTrue($result->isOk());
+
+        $body = $result->unwrap();
+        $this->assertInstanceOf(ResetGridSettingsOverridesRequest::class, $body);
+        $this->assertSame(5, $body->pageId);
+        $this->assertSame('main', $body->zone);
+        $this->assertSame('sm', $body->viewport);
+    }
+
+    public function testParseResetGridSettingsOverridesBodyReturnsValueObjectWithoutViewport(): void
+    {
+        $result = $this->parser->parseResetGridSettingsOverridesBody([
+            'pageId' => 5,
+            'zone' => 'main',
+        ]);
+
+        $this->assertTrue($result->isOk());
+
+        $body = $result->unwrap();
+        $this->assertInstanceOf(ResetGridSettingsOverridesRequest::class, $body);
+        $this->assertSame(5, $body->pageId);
+        $this->assertSame('main', $body->zone);
+        $this->assertNull($body->viewport);
+    }
+
+    public function testParseResetGridSettingsOverridesBodyAcceptsNullViewport(): void
+    {
+        $result = $this->parser->parseResetGridSettingsOverridesBody([
+            'pageId' => 5,
+            'zone' => 'main',
+            'viewport' => null,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertNull($result->unwrap()->viewport);
+    }
+
+    // ---- parseResetGridSettingsOverridesBody: failures -----------------------
+
+    public function testParseResetGridSettingsOverridesBodyRejectsZeroPageId(): void
+    {
+        $result = $this->parser->parseResetGridSettingsOverridesBody([
+            'pageId' => 0,
+            'zone' => 'main',
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseResetGridSettingsOverridesBodyRejectsStringPageId(): void
+    {
+        $result = $this->parser->parseResetGridSettingsOverridesBody([
+            'pageId' => '5',
+            'zone' => 'main',
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseResetGridSettingsOverridesBodyRejectsEmptyZone(): void
+    {
+        $result = $this->parser->parseResetGridSettingsOverridesBody([
+            'pageId' => 5,
+            'zone' => '',
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseResetGridSettingsOverridesBodyRejectsInvalidViewport(): void
+    {
+        $result = $this->parser->parseResetGridSettingsOverridesBody([
+            'pageId' => 5,
+            'zone' => 'main',
+            'viewport' => 'nonexistent',
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseResetGridSettingsOverridesBodyRejectsDefaultViewport(): void
+    {
+        $result = $this->parser->parseResetGridSettingsOverridesBody([
+            'pageId' => 5,
+            'zone' => 'main',
+            'viewport' => 'md',
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseResetGridSettingsOverridesBodyRejectsEmptyStringViewport(): void
+    {
+        $result = $this->parser->parseResetGridSettingsOverridesBody([
+            'pageId' => 5,
+            'zone' => 'main',
+            'viewport' => '',
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseResetGridSettingsOverridesBodyRejectsIntegerViewport(): void
+    {
+        $result = $this->parser->parseResetGridSettingsOverridesBody([
+            'pageId' => 5,
+            'zone' => 'main',
+            'viewport' => 123,
         ]);
 
         $this->assertTrue($result->isErr());

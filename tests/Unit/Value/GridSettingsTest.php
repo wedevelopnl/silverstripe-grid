@@ -168,6 +168,33 @@ final class GridSettingsTest extends TestCase
         $this->assertSame([], $updated->overrides);
     }
 
+    public function testWithoutOverridesClearsAllOverrides(): void
+    {
+        $settings = new GridSettings(
+            ViewportConfig::default(12),
+            [
+                'sm' => new ViewportConfig(6, 0, true),
+                'lg' => new ViewportConfig(4, 2, false),
+            ],
+        );
+
+        $updated = $settings->withoutOverrides();
+
+        $this->assertNotSame($settings, $updated);
+        $this->assertSame([], $updated->overrides);
+        $this->assertTrue($settings->default->equals($updated->default));
+    }
+
+    public function testWithoutOverridesOnEmptyOverridesReturnsNewInstance(): void
+    {
+        $settings = GridSettings::initial(12);
+
+        $updated = $settings->withoutOverrides();
+
+        $this->assertNotSame($settings, $updated);
+        $this->assertSame([], $updated->overrides);
+    }
+
     // ─── toArray ────────────────────────────────────────────────
 
     public function testToArrayProducesCorrectStructure(): void

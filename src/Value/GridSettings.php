@@ -81,6 +81,11 @@ final readonly class GridSettings
         return new self($this->default, $overrides);
     }
 
+    public function withoutOverrides(): self
+    {
+        return new self($this->default);
+    }
+
     // ─── Serialization ─────────────────────────────────────────
 
     /**

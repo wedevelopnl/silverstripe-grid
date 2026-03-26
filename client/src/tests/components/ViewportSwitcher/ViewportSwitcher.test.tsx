@@ -14,6 +14,20 @@ vi.mock('@/utils/gridAdapter', () => ({
   getDefaultViewport: vi.fn(() => 'md'),
 }));
 
+vi.mock('@/hooks/useResetOverridesAction', () => ({
+  useResetOverridesAction: vi.fn(() => ({
+    showReset: false,
+    label: '',
+    affectedCount: 0,
+    isDialogOpen: false,
+    dialogTitle: '',
+    dialogMessage: '',
+    onResetClick: vi.fn(),
+    onConfirm: vi.fn(),
+    onCancel: vi.fn(),
+  })),
+}));
+
 describe('ViewportSwitcher', () => {
   it('renders a button per viewport', () => {
     render(<ViewportSwitcher />, { wrapper: createViewportWrapper('xs') });
@@ -117,5 +131,49 @@ describe('ViewportSwitcher', () => {
     expect(screen.getByText('Medium').getAttribute('aria-pressed')).toBe('true');
     // And no other button should have become active
     expect(screen.getByText('Small').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('shows reset button when overrides exist', async () => {
+    const { useResetOverridesAction } = vi.mocked(
+      await import('@/hooks/useResetOverridesAction'),
+    );
+    useResetOverridesAction.mockReturnValue({
+      showReset: true,
+      label: 'Reset viewport',
+      affectedCount: 3,
+      isDialogOpen: false,
+      dialogTitle: 'Reset Small overrides',
+      dialogMessage: 'Reset 3 columns override for Small?',
+      onResetClick: vi.fn(),
+      onConfirm: vi.fn(),
+      onCancel: vi.fn(),
+    });
+
+    render(<ViewportSwitcher />, { wrapper: createViewportWrapper('sm') });
+
+    const resetButton = screen.getByTestId('reset-overrides-button');
+    expect(resetButton).toBeDefined();
+    expect(resetButton.textContent).toBe('Reset viewport');
+  });
+
+  it('hides reset button when no overrides exist', async () => {
+    const { useResetOverridesAction } = vi.mocked(
+      await import('@/hooks/useResetOverridesAction'),
+    );
+    useResetOverridesAction.mockReturnValue({
+      showReset: false,
+      label: '',
+      affectedCount: 0,
+      isDialogOpen: false,
+      dialogTitle: '',
+      dialogMessage: '',
+      onResetClick: vi.fn(),
+      onConfirm: vi.fn(),
+      onCancel: vi.fn(),
+    });
+
+    render(<ViewportSwitcher />, { wrapper: createViewportWrapper('sm') });
+
+    expect(screen.queryByTestId('reset-overrides-button')).toBeNull();
   });
 });

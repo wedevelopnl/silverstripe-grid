@@ -9,8 +9,9 @@ import {
   reorderElement,
   unpublishElement,
   updateGridSettings,
+  resetGridSettingsOverrides,
 } from '@/api/endpoints';
-import type { CreateElementParams, CreateContentElementParams, DuplicateToParams, ReorderElementParams, UpdateGridSettingsParams } from '@/api/endpoints';
+import type { CreateElementParams, CreateContentElementParams, DuplicateToParams, ReorderElementParams, UpdateGridSettingsParams, ResetGridSettingsOverridesParams } from '@/api/endpoints';
 import type { ApiError } from '@/api/errors';
 import type { ElementTreeResponse } from '@/types/elements';
 import { applyReorder } from '@/utils/applyReorder';
@@ -86,6 +87,16 @@ export function useDuplicateToElement(pageId: number, zone: string) {
 export function useUpdateGridSettings(pageId: number, zone: string) {
   return useMutation<void, ApiError, UpdateGridSettingsParams>({
     mutationFn: updateGridSettings,
+    ...useInvalidateOnSuccess(pageId, zone),
+    onError: (error) => {
+      showToast(error.message);
+    },
+  });
+}
+
+export function useResetGridSettingsOverrides(pageId: number, zone: string) {
+  return useMutation<void, ApiError, ResetGridSettingsOverridesParams>({
+    mutationFn: resetGridSettingsOverrides,
     ...useInvalidateOnSuccess(pageId, zone),
     onError: (error) => {
       showToast(error.message);
