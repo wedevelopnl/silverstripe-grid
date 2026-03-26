@@ -68,7 +68,7 @@ declare global {
     prop(name: string, value: unknown): JQueryEntwineElement;
     val(): string | number | string[] | undefined;
     toggle(showOrHide: boolean): JQueryEntwineElement;
-    trigger(eventType: string): JQueryEntwineElement;
+    trigger(eventType: string, extraParameters?: unknown): JQueryEntwineElement;
     addClass(className: string): JQueryEntwineElement;
     removeClass(className: string): JQueryEntwineElement;
     toggleClass(className: string, state: boolean): JQueryEntwineElement;

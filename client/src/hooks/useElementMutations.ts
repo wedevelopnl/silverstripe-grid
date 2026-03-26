@@ -14,6 +14,7 @@ import type { CreateElementParams, CreateContentElementParams, DuplicateToParams
 import type { ApiError } from '@/api/errors';
 import type { ElementTreeResponse } from '@/types/elements';
 import { applyReorder } from '@/utils/applyReorder';
+import { refreshPreview } from '@/utils/refreshPreview';
 import { showToast } from '@/utils/toast';
 import { queryKeys } from './queryKeys';
 
@@ -25,6 +26,7 @@ function useInvalidateOnSuccess(pageId: number, zone: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.elementTree.byPage(pageId, zone),
       });
+      refreshPreview();
     },
   };
 }
@@ -135,6 +137,7 @@ export function useReorderElement(pageId: number, zone: string) {
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey });
+      refreshPreview();
     },
   });
 }

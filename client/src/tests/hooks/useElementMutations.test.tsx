@@ -23,9 +23,14 @@ const mockUpdateGridSettings = vi.fn();
 const mockReorderElement = vi.fn();
 const mockShowToast = vi.fn();
 const mockApplyReorder = vi.fn();
+const mockRefreshPreview = vi.fn();
 
 vi.mock('@/utils/toast', () => ({
   showToast: (...args: unknown[]) => mockShowToast(...args),
+}));
+
+vi.mock('@/utils/refreshPreview', () => ({
+  refreshPreview: () => mockRefreshPreview(),
 }));
 
 vi.mock('@/api/endpoints', () => ({
@@ -66,6 +71,7 @@ describe('useCreateElement', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockCreateElement.mockReset();
+    mockRefreshPreview.mockReset();
   });
 
   it('calls createElement endpoint with params as first argument', async () => {
@@ -106,6 +112,22 @@ describe('useCreateElement', () => {
         queryKey: queryKeys.elementTree.byPage(42, 'main'),
       }),
     );
+  });
+
+  it('refreshes CMS preview on success', async () => {
+    mockCreateElement.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useCreateElement(42, 'main'), {
+      wrapper: createWrapper(),
+    });
+
+    await act(() =>
+      result.current.mutateAsync({
+        containerType: 'section',
+        parentId: 10,
+      }),
+    );
+
+    await waitFor(() => expect(mockRefreshPreview).toHaveBeenCalledOnce());
   });
 });
 
@@ -310,6 +332,7 @@ describe('useReorderElement', () => {
     mockReorderElement.mockReset();
     mockApplyReorder.mockReset();
     mockShowToast.mockReset();
+    mockRefreshPreview.mockReset();
   });
 
   const tree = { '42': [] };
@@ -403,5 +426,19 @@ describe('useReorderElement', () => {
       (call) => JSON.stringify(call[0]) === JSON.stringify(queryKeys.elementTree.byPage(42, 'main')),
     );
     expect(setDataCalls).toHaveLength(1);
+  });
+
+  it('refreshes CMS preview on settlement', async () => {
+    mockReorderElement.mockResolvedValue(undefined);
+    mockApplyReorder.mockReturnValue(optimisticTree);
+    const { result } = renderHook(() => useReorderElement(42, 'main'), {
+      wrapper: createWrapper(),
+    });
+
+    await act(() =>
+      result.current.mutateAsync({ params, tree }),
+    );
+
+    await waitFor(() => expect(mockRefreshPreview).toHaveBeenCalledOnce());
   });
 });

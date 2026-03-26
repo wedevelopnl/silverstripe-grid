@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { resetFixtures, loadAndNavigate } from '../helpers/fixtures';
+import { enablePreviewMode, waitForPreviewRefresh } from '../helpers/preview';
 
 test.describe('Archive element actions', () => {
   test.afterAll(async ({ request }) => {
@@ -8,8 +9,11 @@ test.describe('Archive element actions', () => {
 
   test('content editor archives elements at different hierarchy levels', async ({ page }) => {
     const fixture = await loadAndNavigate(page, 'archive-test');
+    await enablePreviewMode(page);
 
     await test.step('Archive a content element from Column A1a', async () => {
+      const previewRefresh = waitForPreviewRefresh(page);
+
       const columnA1a = page.getByTestId('column-block').filter({ hasText: 'Column A1a' });
       const elementX = columnA1a.getByTestId('element-card').filter({ hasText: 'Content Element X' });
 
@@ -28,6 +32,9 @@ test.describe('Archive element actions', () => {
       await expect(
         columnA1a.getByTestId('element-card').filter({ hasText: 'Content Element X' }),
       ).toHaveCount(0, { timeout: 10_000 });
+
+      // Preview pane must refresh to reflect the archived element
+      await previewRefresh;
     });
 
     await test.step('Archive Column A1b', async () => {

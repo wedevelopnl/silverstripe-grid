@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loadAndNavigate, resetFixtures } from '../helpers/fixtures';
+import { enablePreviewMode, waitForPreviewRefresh } from '../helpers/preview';
 
 test.describe('Duplicate element', () => {
   test.afterAll(async ({ request }) => {
@@ -8,14 +9,20 @@ test.describe('Duplicate element', () => {
 
   test('duplicate section in same zone creates a full copy with subtree', async ({ page }) => {
     const fixture = await loadAndNavigate(page, 'duplicate-test');
+    await enablePreviewMode(page);
 
     await test.step('Duplicate "Source Section" via actions menu', async () => {
+      const previewRefresh = waitForPreviewRefresh(page);
+
       const section = page.getByTestId('section-block').filter({ hasText: 'Source Section' });
       await section.getByTestId('section-header').getByTestId('actions-menu-trigger').click();
       await page.getByRole('menuitem', { name: 'Duplicate', exact: true }).click();
 
       // Wait for the duplicate to appear
       await expect(page.getByTestId('section-block')).toHaveCount(2, { timeout: 10_000 });
+
+      // Preview pane must refresh to reflect the new section
+      await previewRefresh;
     });
 
     await test.step('Verify the copy appears after the original with correct title', async () => {
