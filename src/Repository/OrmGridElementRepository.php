@@ -50,19 +50,15 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
             'ParentClass' => array_unique($allParentClasses),
         ];
 
-        // Zone only exists on the Section table — query Section directly when zone-filtering
         if ($zone !== null) {
             $filter['Zone'] = $zone;
-
-            /** @var list<GridElement> */
-            return Section::get()
-                ->filter($filter)
-                ->sort(['Sort' => 'ASC', 'ID' => 'ASC'])
-                ->toArray();
+            $list = Section::get();
+        } else {
+            $list = GridElement::get();
         }
 
         /** @var list<GridElement> */
-        return GridElement::get()
+        return $list
             ->filter($filter)
             ->sort(['Sort' => 'ASC', 'ID' => 'ASC'])
             ->toArray();

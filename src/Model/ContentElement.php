@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Model;
 
-use Override;
-use SilverStripe\ORM\FieldType\DBHTMLText;
-
 /**
  * Base class for leaf content elements that render visible content.
  *
@@ -32,37 +29,6 @@ class ContentElement extends GridElement
 
     /** Whether content of this type should be included in search indexes. */
     private static bool $search_indexable = true;
-
-    /** Render this element using the SilverStripe template engine. */
-    #[Override]
-    public function forTemplate(): string
-    {
-        $templates = $this->getRenderTemplates();
-
-        /** @var DBHTMLText $result */
-        $result = $this->renderWith($templates);
-
-        return (string) $result;
-    }
-
-    /**
-     * Build the template hierarchy for rendering.
-     * Walks the class ancestry to provide fallback templates.
-     *
-     * @return list<string>
-     */
-    public function getRenderTemplates(string $suffix = ''): array
-    {
-        $templates = [];
-        $class = static::class;
-
-        while ($class !== GridElement::class && $class !== false) {
-            $templates[] = str_replace('\\', '/', $class) . $suffix;
-            $class = get_parent_class($class);
-        }
-
-        return $templates;
-    }
 
     /** Whether this element type should be indexed for site search. */
     public function getSearchIndexable(): bool
