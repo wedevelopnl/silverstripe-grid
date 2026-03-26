@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Integration\Elements;
+namespace WeDevelop\Grid\Tests\Integration\Model;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Validation\ValidationException;
@@ -16,6 +16,7 @@ use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Model\GridElement;
 
 #[CoversClass(Column::class)]
+#[CoversClass(GridElement::class)]
 #[CoversClass(ContainerType::class)]
 #[CoversClass(GridSettings::class)]
 #[CoversClass(ViewportConfig::class)]

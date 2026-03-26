@@ -22,6 +22,7 @@ use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
 #[CoversClass(GridTreeBuilder::class)]
+#[CoversClass(GridElement::class)]
 final class GridTreeBuilderTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/ElementTreeTest.yml';

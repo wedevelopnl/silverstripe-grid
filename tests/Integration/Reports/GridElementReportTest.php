@@ -17,6 +17,7 @@ use WeDevelop\Grid\Reports\GridElementReport;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
 #[CoversClass(GridElementReport::class)]
+#[CoversClass(GridElement::class)]
 final class GridElementReportTest extends SapphireTest
 {
     protected $usesDatabase = true;

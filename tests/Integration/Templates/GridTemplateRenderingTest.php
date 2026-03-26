@@ -16,6 +16,7 @@ use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Value\GridSettings;
@@ -25,6 +26,7 @@ use WeDevelop\Grid\Value\ViewportConfig;
  * Tests the full template rendering pipeline (element -> holder -> HTML output)
  * for each grid adapter. Uses the element's controller forTemplate() to render.
  */
+#[CoversClass(GridElement::class)]
 #[CoversClass(Section::class)]
 #[CoversClass(Row::class)]
 #[CoversClass(Column::class)]

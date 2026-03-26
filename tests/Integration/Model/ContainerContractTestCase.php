@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Integration\Elements;
+namespace WeDevelop\Grid\Tests\Integration\Model;
 
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;

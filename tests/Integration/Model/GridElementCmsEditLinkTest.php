@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Model;
 
-use PHPUnit\Framework\Attributes\CoversMethod;
+use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Extensions\GridPageExtension;
@@ -12,7 +12,7 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
-#[CoversMethod(GridElement::class, 'getCMSEditLink')]
+#[CoversClass(GridElement::class)]
 final class GridElementCmsEditLinkTest extends SapphireTest
 {
     protected $usesDatabase = true;

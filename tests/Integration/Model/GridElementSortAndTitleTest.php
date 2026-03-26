@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Model;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\CoversMethod;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Extensions\GridPageExtension;
+use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
+#[CoversClass(GridElement::class)]
 #[CoversMethod(GridElement::class, 'ensureSortSet')]
 #[CoversMethod(GridElement::class, 'ensureDefaultTitle')]
+#[CoversMethod(GridElement::class, 'insertAfterSibling')]
 #[CoversMethod(Section::class, 'ensureSortSet')]
 final class GridElementSortAndTitleTest extends SapphireTest
 {
@@ -199,5 +203,60 @@ final class GridElementSortAndTitleTest extends SapphireTest
 
         // Both are first in their parent → both get count=1
         $this->assertSame($rowA->Title, $rowB->Title);
+    }
+
+    // --- insertAfterSibling ---
+
+    public function testInsertAfterSiblingBumpsSubsequentSortValues(): void
+    {
+        $page = $this->createPage();
+        $section = $this->createSection($page);
+
+        $row1 = $this->createRow($section);
+        $row2 = $this->createRow($section);
+        $row3 = $this->createRow($section);
+
+        $this->assertSame(1, $row1->Sort);
+        $this->assertSame(2, $row2->Sort);
+        $this->assertSame(3, $row3->Sort);
+
+        // Create a new column inside section's first row (need a sibling context)
+        $newRow = Row::create();
+        $newRow->Title = 'Inserted';
+        $newRow->ParentID = $section->ID;
+        $newRow->ParentClass = $section::class;
+        $newRow->write();
+
+        // Insert after row1 — should push row2 and row3 down
+        $newRow->insertAfterSibling($row1->ID);
+
+        /** @var Row $row1 */
+        $row1 = Row::get()->byID($row1->ID);
+        /** @var Row $row2 */
+        $row2 = Row::get()->byID($row2->ID);
+        /** @var Row $row3 */
+        $row3 = Row::get()->byID($row3->ID);
+        /** @var Row $newRow */
+        $newRow = Row::get()->byID($newRow->ID);
+
+        $this->assertSame(1, $row1->Sort);
+        $this->assertSame(2, $newRow->Sort);
+        $this->assertSame(3, $row2->Sort);
+        $this->assertSame(4, $row3->Sort);
+    }
+
+    public function testInsertAfterNonExistentSiblingIsNoOp(): void
+    {
+        $page = $this->createPage();
+        $section = $this->createSection($page);
+
+        $row = $this->createRow($section);
+        $originalSort = $row->Sort;
+
+        $row->insertAfterSibling(999999);
+
+        /** @var Row $row */
+        $row = Row::get()->byID($row->ID);
+        $this->assertSame($originalSort, $row->Sort);
     }
 }

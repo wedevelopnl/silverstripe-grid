@@ -10,11 +10,15 @@ use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldGroup;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Forms\GridSettingsField;
+use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 
 #[CoversClass(GridElement::class)]
-final class GridElementTitleFieldsTest extends SapphireTest
+#[CoversClass(Column::class)]
+final class GridElementCmsFieldsTest extends SapphireTest
 {
     protected $usesDatabase = true;
 
@@ -122,5 +126,24 @@ final class GridElementTitleFieldsTest extends SapphireTest
             $reloaded = Section::get()->byID($section->ID);
             $this->assertSame($tag, $reloaded->TitleTag);
         }
+    }
+
+    // --- Column CMS fields ---
+
+    public function testColumnCmsFieldsIncludesGridSettingsField(): void
+    {
+        $section = Section::create();
+        $section->write();
+
+        $row = $section->getChildren()->first();
+        $this->assertInstanceOf(Row::class, $row);
+
+        $column = $row->getChildren()->first();
+        $this->assertInstanceOf(Column::class, $column);
+
+        $fields = $column->getCMSFields();
+        $gridSettings = $fields->fieldByName('Root.Grid.GridSettings');
+
+        $this->assertInstanceOf(GridSettingsField::class, $gridSettings);
     }
 }

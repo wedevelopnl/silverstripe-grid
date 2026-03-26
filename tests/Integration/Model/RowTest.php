@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Integration\Elements;
+namespace WeDevelop\Grid\Tests\Integration\Model;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Validation\ValidationException;
@@ -10,11 +10,13 @@ use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Fixture\OnAfterWriteSpy;
 
 #[CoversClass(Row::class)]
+#[CoversClass(GridElement::class)]
 #[CoversClass(ContainerType::class)]
 final class RowTest extends ContainerContractTestCase
 {

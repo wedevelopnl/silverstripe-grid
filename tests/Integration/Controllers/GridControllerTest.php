@@ -28,6 +28,8 @@ use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
 #[CoversClass(GridController::class)]
+#[CoversClass(GridElement::class)]
+#[CoversClass(ContentElement::class)]
 #[CoversClass(ContainerType::class)]
 #[CoversClass(CreateElementRequest::class)]
 #[CoversClass(CreateContentRequest::class)]
