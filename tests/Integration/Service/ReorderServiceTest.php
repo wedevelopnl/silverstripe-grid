@@ -199,4 +199,48 @@ final class ReorderServiceTest extends SapphireTest
         $this->assertSame($originalSort1, $row1->Sort);
         $this->assertSame($originalSort2, $row2->Sort);
     }
+
+    public function testSameZoneSectionReorderFiltersByZone(): void
+    {
+        $page = TestPage::create();
+        $page->Title = 'Test';
+        $page->write();
+
+        // Create 2 sections in 'main' zone and 1 in 'sidebar' zone
+        $main1 = Section::create();
+        $main1->ParentID = $page->ID;
+        $main1->ParentClass = $page::class;
+        $main1->Zone = 'main';
+        $main1->write();
+
+        $main2 = Section::create();
+        $main2->ParentID = $page->ID;
+        $main2->ParentClass = $page::class;
+        $main2->Zone = 'main';
+        $main2->write();
+
+        $sidebar1 = Section::create();
+        $sidebar1->ParentID = $page->ID;
+        $sidebar1->ParentClass = $page::class;
+        $sidebar1->Zone = 'sidebar';
+        $sidebar1->write();
+
+        // Reorder main1 after main2 — should only affect 'main' zone siblings
+        $result = $this->service->reorder($main1, $page, $main2->ID);
+
+        $this->assertTrue($result->isOk());
+
+        // Reload and verify
+        /** @var Section $main1 */
+        $main1 = Section::get()->byID($main1->ID);
+        /** @var Section $main2 */
+        $main2 = Section::get()->byID($main2->ID);
+        /** @var Section $sidebar1 */
+        $sidebar1 = Section::get()->byID($sidebar1->ID);
+
+        $this->assertSame(1, $main2->Sort);
+        $this->assertSame(2, $main1->Sort);
+        // Sidebar section unaffected
+        $this->assertSame(1, $sidebar1->Sort);
+    }
 }

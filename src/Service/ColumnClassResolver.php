@@ -32,11 +32,7 @@ final class ColumnClassResolver
 
         foreach ($viewports as $viewport) {
             $key = $viewport->key;
-            $config = $effective[$key] ?? null;
-
-            if ($config === null) {
-                continue;
-            }
+            $config = $effective[$key];
 
             /** @var positive-int $width Validated by GridSettingsFieldValidator at write time */
             $width = $config->width;

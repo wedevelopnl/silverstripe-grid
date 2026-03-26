@@ -25,6 +25,9 @@ use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Extensions\GridPageExtension;
 use SilverStripe\Control\HTTPResponse;
 use WeDevelop\Grid\Service\GridTreeBuilder;
+use WeDevelop\Grid\Service\ReorderService;
+use WeDevelop\Grid\Service\RequestBodyParser;
+use WeDevelop\Grid\Service\TitleGenerator;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
 #[CoversClass(GridController::class)]
@@ -36,6 +39,9 @@ use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 #[CoversClass(ReorderRequest::class)]
 #[CoversClass(UpdateGridSettingsRequest::class)]
 #[CoversClass(DuplicateToRequest::class)]
+#[CoversClass(ReorderService::class)]
+#[CoversClass(TitleGenerator::class)]
+#[CoversClass(RequestBodyParser::class)]
 final class GridControllerTest extends FunctionalTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/ElementTreeTest.yml';

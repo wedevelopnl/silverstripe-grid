@@ -807,4 +807,55 @@ final class RequestBodyParserTest extends TestCase
         $this->assertTrue($result->isOk());
         $this->assertSame(PHP_INT_MAX, $result->unwrap()->parentId);
     }
+
+    // ---- Missing rejection paths --------------------------------------------
+
+    public function testParseCreateContentBodyRejectsNonPositiveAfterElementId(): void
+    {
+        $result = $this->parser->parseCreateContentBody([
+            'className' => ContentElement::class,
+            'parentId' => 1,
+            'insertAfterElementID' => 0,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseUpdateGridSettingsBodyRejectsNonStringViewport(): void
+    {
+        $result = $this->parser->parseUpdateGridSettingsBody([
+            'id' => 1,
+            'viewport' => 123,
+            'width' => 6,
+            'offset' => 0,
+            'visible' => true,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseUpdateGridSettingsBodyRejectsNonIntegerOffset(): void
+    {
+        $result = $this->parser->parseUpdateGridSettingsBody([
+            'id' => 1,
+            'viewport' => 'md',
+            'width' => 6,
+            'offset' => '0',
+            'visible' => true,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseDuplicateToBodyRejectsNonPositiveTargetParentId(): void
+    {
+        $result = $this->parser->parseDuplicateToBody([
+            'id' => 5,
+            'targetPageId' => 10,
+            'targetZone' => 'main',
+            'targetParentId' => 0,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
 }
