@@ -1213,6 +1213,64 @@ final class GridControllerTest extends FunctionalTest
         $this->assertGreaterThan(0, (int) $newSection->Sort);
     }
 
+    public function testCreateSectionInstantiatesCorrectClass(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 'section',
+            'parentId' => (int) $page->ID,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        $created = Section::get()->sort('ID', 'DESC')->first();
+        $this->assertInstanceOf(Section::class, $created);
+        $this->assertSame((int) $page->ID, $created->ParentID);
+    }
+
+    public function testCreateRowInstantiatesCorrectClass(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $section = $this->objFromFixture(Section::class, 'section1');
+
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 'row',
+            'parentId' => (int) $section->ID,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        $created = Row::get()->filter('ParentID', $section->ID)->sort('ID', 'DESC')->first();
+        $this->assertInstanceOf(Row::class, $created);
+    }
+
+    public function testCreateColumnInstantiatesCorrectClass(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $row = $this->objFromFixture(Row::class, 'row1');
+
+        $response = $this->postJson('/admin/grid/api/create', [
+            'containerType' => 'column',
+            'parentId' => (int) $row->ID,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        $created = Column::get()->filter('ParentID', $row->ID)->sort('ID', 'DESC')->first();
+        $this->assertInstanceOf(Column::class, $created);
+    }
+
     public function testCreateContentElementAssignsSortValue(): void
     {
         $this->logInForHttp();
