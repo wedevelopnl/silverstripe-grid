@@ -7,9 +7,14 @@ import { ApiError } from '@/api/errors';
 import type {
   ColumnNode,
   ElementTreeResponse,
+  TreeApiResponse,
 } from '@/types/elements';
 import type { ReorderElementParams } from '@/api/endpoints';
 import { makeElement, makeColumn } from '../helpers/elementFactories';
+
+function wrapTree(tree: ElementTreeResponse): TreeApiResponse {
+  return { tree, overrideCounts: {} };
+}
 
 // --- Mocks ---
 
@@ -91,7 +96,7 @@ describe('useReorderElement', () => {
     };
 
     // Seed the query cache with initial tree data
-    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), tree);
+    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), wrapTree(tree));
 
     const { result } = renderHook(() => useReorderElement(PAGE_ID, 'main'), { wrapper });
 
@@ -107,12 +112,12 @@ describe('useReorderElement', () => {
     });
 
     await waitFor(() => {
-      const cached = queryClient.getQueryData<ElementTreeResponse>(
+      const cached = queryClient.getQueryData<TreeApiResponse>(
         queryKeys.elementTree.byPage(PAGE_ID, 'main'),
       );
       expect(cached).toBeDefined();
 
-      const children = (cached!['100'][0] as ColumnNode).children!;
+      const children = (cached!.tree['100'][0] as ColumnNode).children!;
       // Element 11 should now be at the start
       expect(children.map((c) => c.id)).toEqual([11, 10]);
     });
@@ -130,7 +135,7 @@ describe('useReorderElement', () => {
     };
 
     // Seed the cache
-    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), tree);
+    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), wrapTree(tree));
 
     const { result } = renderHook(() => useReorderElement(PAGE_ID, 'main'), { wrapper });
 
@@ -150,12 +155,12 @@ describe('useReorderElement', () => {
 
     // Cache should be restored to original order
     await waitFor(() => {
-      const cached = queryClient.getQueryData<ElementTreeResponse>(
+      const cached = queryClient.getQueryData<TreeApiResponse>(
         queryKeys.elementTree.byPage(PAGE_ID, 'main'),
       );
       expect(cached).toBeDefined();
 
-      const children = (cached!['100'][0] as ColumnNode).children!;
+      const children = (cached!.tree['100'][0] as ColumnNode).children!;
       expect(children.map((c) => c.id)).toEqual([10, 11]);
     });
   });
@@ -169,7 +174,7 @@ describe('useReorderElement', () => {
       '100': [makeColumn(1, [makeElement(10, 1)], 100)],
     };
 
-    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), tree);
+    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), wrapTree(tree));
 
     const { result } = renderHook(() => useReorderElement(PAGE_ID, 'main'), { wrapper });
 
@@ -196,7 +201,7 @@ describe('useReorderElement', () => {
       '100': [makeColumn(1, [makeElement(10, 1)], 100)],
     };
 
-    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), tree);
+    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), wrapTree(tree));
 
     const { result } = renderHook(() => useReorderElement(PAGE_ID, 'main'), { wrapper });
 
@@ -229,7 +234,7 @@ describe('useReorderElement', () => {
       ],
     };
 
-    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), tree);
+    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), wrapTree(tree));
 
     const clearPendingTree = vi.fn();
     const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData');
@@ -266,7 +271,7 @@ describe('useReorderElement', () => {
       '100': [makeColumn(1, [makeElement(10, 1)], 100)],
     };
 
-    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), tree);
+    queryClient.setQueryData(queryKeys.elementTree.byPage(PAGE_ID, 'main'), wrapTree(tree));
 
     const clearPendingTree = vi.fn();
 

@@ -10,7 +10,12 @@ import {
   useReorderElement,
 } from '@/hooks/useElementMutations';
 import { queryKeys } from '@/hooks/queryKeys';
+import type { ElementTreeResponse, TreeApiResponse } from '@/types/elements';
 import { createQueryWrapper } from '../helpers/dndTestUtils';
+
+function wrapTree(tree: ElementTreeResponse): TreeApiResponse {
+  return { tree, overrideCounts: {} };
+}
 
 const mockCreateElement = vi.fn();
 const mockCreateContentElement = vi.fn();
@@ -316,8 +321,8 @@ describe('useReorderElement', () => {
     mockRefreshPreview.mockReset();
   });
 
-  const tree = { '42': [] };
-  const optimisticTree = { '42': [{ moved: true }] };
+  const tree: ElementTreeResponse = { '42': [] };
+  const optimisticTree: ElementTreeResponse = { '42': [{ moved: true }] } as unknown as ElementTreeResponse;
   const params = { elementID: 30, targetParentId: 20, afterElementID: 31 };
 
   it('cancels pending queries before applying optimistic update', async () => {
@@ -347,21 +352,22 @@ describe('useReorderElement', () => {
       result.current.mutateAsync({ params, tree }),
     );
 
-    // First setQueryData call is the optimistic update
+    // First setQueryData call is the optimistic update (wrapped in TreeApiResponse)
     expect(setDataSpy).toHaveBeenCalledWith(
       queryKeys.elementTree.byPage(42, 'main'),
-      optimisticTree,
+      wrapTree(optimisticTree),
     );
   });
 
   it('rolls back to snapshot on error when snapshot exists', async () => {
-    const snapshotTree = { '42': [{ original: true }] };
+    const snapshotTree: ElementTreeResponse = { '42': [{ original: true }] } as unknown as ElementTreeResponse;
+    const wrappedSnapshot = wrapTree(snapshotTree);
     mockReorderElement.mockRejectedValue(new Error('Reorder failed'));
     mockApplyReorder.mockReturnValue(optimisticTree);
     const { wrapper, queryClient } = createQueryWrapper();
 
-    // Seed the cache with a snapshot so onMutate captures it
-    queryClient.setQueryData(queryKeys.elementTree.byPage(42, 'main'), snapshotTree);
+    // Seed the cache with a wrapped snapshot so onMutate captures it
+    queryClient.setQueryData(queryKeys.elementTree.byPage(42, 'main'), wrappedSnapshot);
 
     const setDataSpy = vi.spyOn(queryClient, 'setQueryData');
     const { result } = renderHook(() => useReorderElement(42, 'main'), { wrapper });
@@ -381,7 +387,7 @@ describe('useReorderElement', () => {
     );
     // Should have: optimistic update, then snapshot rollback
     expect(setDataCalls.length).toBeGreaterThanOrEqual(2);
-    expect(setDataCalls[1][1]).toEqual(snapshotTree);
+    expect(setDataCalls[1][1]).toEqual(wrappedSnapshot);
   });
 
   it('does not roll back when no snapshot exists (undefined)', async () => {

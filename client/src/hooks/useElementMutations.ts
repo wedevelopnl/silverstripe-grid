@@ -13,7 +13,7 @@ import {
 } from '@/api/endpoints';
 import type { CreateElementParams, CreateContentElementParams, DuplicateToParams, ReorderElementParams, UpdateGridSettingsParams, ResetGridSettingsOverridesParams } from '@/api/endpoints';
 import type { ApiError } from '@/api/errors';
-import type { ElementTreeResponse } from '@/types/elements';
+import type { ElementTreeResponse, TreeApiResponse } from '@/types/elements';
 import { applyReorder } from '@/utils/applyReorder';
 import { refreshPreview } from '@/utils/refreshPreview';
 import { showToast } from '@/utils/toast';
@@ -114,12 +114,12 @@ export function useReorderElement(pageId: number, zone: string) {
   const queryClient = useQueryClient();
   const queryKey = queryKeys.elementTree.byPage(pageId, zone);
 
-  return useMutation<void, ApiError, ReorderMutationVariables, ElementTreeResponse | undefined>({
+  return useMutation<void, ApiError, ReorderMutationVariables, TreeApiResponse | undefined>({
     mutationFn: ({ params }) => reorderElement(params),
     onMutate: async ({ params, tree, clearPendingTree }) => {
       await queryClient.cancelQueries({ queryKey });
 
-      const snapshot = queryClient.getQueryData<ElementTreeResponse>(queryKey);
+      const snapshot = queryClient.getQueryData<TreeApiResponse>(queryKey);
 
       const optimistic = applyReorder(
         tree,
@@ -128,7 +128,10 @@ export function useReorderElement(pageId: number, zone: string) {
         params.afterElementID,
       );
 
-      queryClient.setQueryData(queryKey, optimistic);
+      queryClient.setQueryData<TreeApiResponse>(queryKey, {
+        tree: optimistic,
+        overrideCounts: snapshot?.overrideCounts ?? {},
+      });
 
       // Clear pending tree after optimistic data is in the cache,
       // preventing a 1-frame snap-back to the original tree.
@@ -142,7 +145,7 @@ export function useReorderElement(pageId: number, zone: string) {
       clearPendingTree?.();
 
       if (snapshot !== undefined) {
-        queryClient.setQueryData(queryKey, snapshot);
+        queryClient.setQueryData<TreeApiResponse>(queryKey, snapshot);
       }
       showToast(error.message);
     },

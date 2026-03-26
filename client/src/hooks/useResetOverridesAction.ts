@@ -21,7 +21,7 @@ export function useResetOverridesAction(): ResetOverridesState {
   const { activeViewport } = useViewportContext();
   const { pageId, zone } = useGridEditorContext();
   const overrideCounts = useViewportOverrideCounts(pageId, zone);
-  const resetMutation = useResetGridSettingsOverrides(pageId, zone);
+  const { mutate: resetOverrides } = useResetGridSettingsOverrides(pageId, zone);
   const [isDialogOpen, setDialogOpen] = useState(false);
 
   const defaultViewport = getDefaultViewport();
@@ -42,7 +42,7 @@ export function useResetOverridesAction(): ResetOverridesState {
   const suffix = affectedCount === 1 ? 'column' : 'columns';
   const dialogMessage = isDefaultViewport
     ? `Reset all viewport overrides across ${affectedCount} ${suffix}?`
-    : `Reset ${affectedCount} ${suffix} override for ${viewportLabel}?`;
+    : `Reset overrides for ${affectedCount} ${suffix} on ${viewportLabel}?`;
 
   const handleResetClick = useCallback(() => {
     setDialogOpen(true);
@@ -57,8 +57,8 @@ export function useResetOverridesAction(): ResetOverridesState {
     const params = isDefaultViewport
       ? { pageId, zone }
       : { pageId, zone, viewport: activeViewport };
-    resetMutation.mutate(params);
-  }, [isDefaultViewport, pageId, zone, activeViewport, resetMutation]);
+    resetOverrides(params);
+  }, [isDefaultViewport, pageId, zone, activeViewport, resetOverrides]);
 
   return {
     showReset: affectedCount > 0,

@@ -4,6 +4,21 @@ import type { ElementTreeResponse, TreeApiResponse } from '@/types/elements';
 import type { ApiError } from '@/api/errors';
 import { queryKeys } from './queryKeys';
 
+function treeQueryOptions(pageId: number | null, zone: string) {
+  return {
+    queryKey: pageId !== null
+      ? queryKeys.elementTree.byPage(pageId, zone)
+      : ['elementTree', 'disabled'] as const,
+    queryFn: () => {
+      if (pageId === null) {
+        throw new Error('pageId is required — query should be disabled');
+      }
+      return fetchElementTree(pageId, zone);
+    },
+    enabled: pageId !== null,
+  };
+}
+
 /**
  * Fetches and caches the element tree for a CMS page zone.
  * Disabled when pageId is null (no page selected).
@@ -13,17 +28,8 @@ import { queryKeys } from './queryKeys';
  */
 export function useElementTree(pageId: number | null, zone: string) {
   return useQuery<TreeApiResponse, ApiError, ElementTreeResponse>({
-    queryKey: pageId !== null
-      ? queryKeys.elementTree.byPage(pageId, zone)
-      : ['elementTree', 'disabled'],
-    queryFn: () => {
-      if (pageId === null) {
-        throw new Error('pageId is required — query should be disabled');
-      }
-      return fetchElementTree(pageId, zone);
-    },
+    ...treeQueryOptions(pageId, zone),
     select: (response) => response.tree,
-    enabled: pageId !== null,
   });
 }
 
@@ -33,17 +39,8 @@ export function useElementTree(pageId: number | null, zone: string) {
  */
 export function useViewportOverrideCounts(pageId: number | null, zone: string): Record<string, number> {
   const { data } = useQuery<TreeApiResponse, ApiError, Record<string, number>>({
-    queryKey: pageId !== null
-      ? queryKeys.elementTree.byPage(pageId, zone)
-      : ['elementTree', 'disabled'],
-    queryFn: () => {
-      if (pageId === null) {
-        throw new Error('pageId is required — query should be disabled');
-      }
-      return fetchElementTree(pageId, zone);
-    },
+    ...treeQueryOptions(pageId, zone),
     select: (response) => response.overrideCounts,
-    enabled: pageId !== null,
   });
 
   return data ?? {};

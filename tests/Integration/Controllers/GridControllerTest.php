@@ -16,8 +16,11 @@ use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\CreateContentRequest;
 use WeDevelop\Grid\Value\CreateElementRequest;
 use WeDevelop\Grid\Value\DuplicateToRequest;
+use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ReorderRequest;
+use WeDevelop\Grid\Value\ResetGridSettingsOverridesRequest;
 use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
+use WeDevelop\Grid\Value\ViewportConfig;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
@@ -38,6 +41,8 @@ use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 #[CoversClass(CreateContentRequest::class)]
 #[CoversClass(ReorderRequest::class)]
 #[CoversClass(UpdateGridSettingsRequest::class)]
+#[CoversClass(ResetGridSettingsOverridesRequest::class)]
+#[CoversClass(GridSettings::class)]
 #[CoversClass(DuplicateToRequest::class)]
 #[CoversClass(ReorderService::class)]
 #[CoversClass(TitleGenerator::class)]
@@ -1969,5 +1974,216 @@ final class GridControllerTest extends FunctionalTest
         ]);
 
         $this->assertSame(403, $response->getStatusCode());
+    }
+
+    // --- apiResetGridSettingsOverrides ----------------------------------------
+
+    /**
+     * Set viewport overrides on columns for reset tests.
+     */
+    private function seedColumnOverrides(): void
+    {
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+        $col2 = $this->objFromFixture(Column::class, 'col2');
+
+        $col1->setGridSettings(new GridSettings(
+            ViewportConfig::default(12),
+            [
+                'xs' => new ViewportConfig(6, 0, true),
+                'lg' => new ViewportConfig(4, 0, true),
+            ],
+        ));
+        $col1->write();
+
+        $col2->setGridSettings(new GridSettings(
+            ViewportConfig::default(12),
+            [
+                'xs' => new ViewportConfig(12, 0, false),
+            ],
+        ));
+        $col2->write();
+    }
+
+    public function testResetGridSettingsOverridesResetsViewport(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $this->seedColumnOverrides();
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+        $response = $this->deleteJson('/admin/grid/api/resetGridSettingsOverrides', [
+            'pageId' => (int) $page->ID,
+            'zone' => 'main',
+            'viewport' => 'xs',
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        // col1: xs override removed, lg override preserved
+        /** @var Column $col1 */
+        $col1 = Column::get()->byID($this->idFromFixture(Column::class, 'col1'));
+        $this->assertFalse($col1->getGridSettings()->hasOverride('xs'));
+        $this->assertTrue($col1->getGridSettings()->hasOverride('lg'));
+
+        // col2: xs override removed (was the only one)
+        /** @var Column $col2 */
+        $col2 = Column::get()->byID($this->idFromFixture(Column::class, 'col2'));
+        $this->assertFalse($col2->getGridSettings()->hasOverride('xs'));
+        $this->assertSame([], $col2->getGridSettings()->overrides);
+    }
+
+    public function testResetGridSettingsOverridesResetsAll(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $this->seedColumnOverrides();
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+        $response = $this->deleteJson('/admin/grid/api/resetGridSettingsOverrides', [
+            'pageId' => (int) $page->ID,
+            'zone' => 'main',
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        // Both columns should have no overrides
+        /** @var Column $col1 */
+        $col1 = Column::get()->byID($this->idFromFixture(Column::class, 'col1'));
+        $this->assertSame([], $col1->getGridSettings()->overrides);
+
+        /** @var Column $col2 */
+        $col2 = Column::get()->byID($this->idFromFixture(Column::class, 'col2'));
+        $this->assertSame([], $col2->getGridSettings()->overrides);
+    }
+
+    public function testResetGridSettingsOverridesSkipsColumnsWithoutMatchingOverride(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $this->seedColumnOverrides();
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+        // col2 has no lg override — should be skipped
+        $response = $this->deleteJson('/admin/grid/api/resetGridSettingsOverrides', [
+            'pageId' => (int) $page->ID,
+            'zone' => 'main',
+            'viewport' => 'lg',
+        ]);
+
+        $this->assertSame(204, $response->getStatusCode());
+
+        // col1: lg removed, xs preserved
+        /** @var Column $col1 */
+        $col1 = Column::get()->byID($this->idFromFixture(Column::class, 'col1'));
+        $this->assertFalse($col1->getGridSettings()->hasOverride('lg'));
+        $this->assertTrue($col1->getGridSettings()->hasOverride('xs'));
+
+        // col2: unchanged (had no lg override)
+        /** @var Column $col2 */
+        $col2 = Column::get()->byID($this->idFromFixture(Column::class, 'col2'));
+        $this->assertTrue($col2->getGridSettings()->hasOverride('xs'));
+    }
+
+    public function testResetGridSettingsOverridesReturns404ForMissingPage(): void
+    {
+        $this->logInForHttp();
+
+        $response = $this->deleteJson('/admin/grid/api/resetGridSettingsOverrides', [
+            'pageId' => 999999,
+            'zone' => 'main',
+        ]);
+
+        $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testResetGridSettingsOverridesReturns400ForDefaultViewport(): void
+    {
+        $this->logInForHttp();
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+        $response = $this->deleteJson('/admin/grid/api/resetGridSettingsOverrides', [
+            'pageId' => (int) $page->ID,
+            'zone' => 'main',
+            'viewport' => 'md',
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testResetGridSettingsOverridesReturns400ForInvalidViewport(): void
+    {
+        $this->logInForHttp();
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+
+        $response = $this->deleteJson('/admin/grid/api/resetGridSettingsOverrides', [
+            'pageId' => (int) $page->ID,
+            'zone' => 'main',
+            'viewport' => 'nonexistent',
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    public function testResetGridSettingsOverridesReturns403WhenNotEditable(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $this->restrictPagePermissions($page);
+
+        $response = $this->deleteJson('/admin/grid/api/resetGridSettingsOverrides', [
+            'pageId' => (int) $page->ID,
+            'zone' => 'main',
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
+
+    public function testResetGridSettingsOverridesTouchesPage(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $this->seedColumnOverrides();
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $versionBefore = (int) $page->Version;
+
+        $this->deleteJson('/admin/grid/api/resetGridSettingsOverrides', [
+            'pageId' => (int) $page->ID,
+            'zone' => 'main',
+        ]);
+
+        /** @var TestPage $pageAfter */
+        $pageAfter = TestPage::get()->byID($page->ID);
+        $this->assertGreaterThan($versionBefore, (int) $pageAfter->Version);
+    }
+
+    public function testResetGridSettingsOverridesDoesNotTouchPageWhenNoChanges(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        // No overrides seeded — reset should be a no-op
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $versionBefore = (int) $page->Version;
+
+        $this->deleteJson('/admin/grid/api/resetGridSettingsOverrides', [
+            'pageId' => (int) $page->ID,
+            'zone' => 'main',
+        ]);
+
+        /** @var TestPage $pageAfter */
+        $pageAfter = TestPage::get()->byID($page->ID);
+        $this->assertSame($versionBefore, (int) $pageAfter->Version);
     }
 }

@@ -847,7 +847,7 @@ class GridController extends AdminController
      * plus a total count of columns with any overrides.
      *
      * @param list<GridNode> $nodes
-     * @param array<non-empty-string|'_total', int> $counts Accumulated counts (by reference)
+     * @param array<non-empty-string, int> $counts Accumulated counts (by reference), includes '_total' key
      */
     private function countOverridesInTree(array $nodes, array &$counts): void
     {

@@ -143,7 +143,7 @@ describe('ViewportSwitcher', () => {
       affectedCount: 3,
       isDialogOpen: false,
       dialogTitle: 'Reset Small overrides',
-      dialogMessage: 'Reset 3 columns override for Small?',
+      dialogMessage: 'Reset overrides for 3 columns on Small?',
       onResetClick: vi.fn(),
       onConfirm: vi.fn(),
       onCancel: vi.fn(),
