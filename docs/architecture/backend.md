@@ -88,7 +88,7 @@ Two value objects model this data: `ViewportConfig` (readonly record of width/of
 
 `GridSettingsResolver` resolves the effective `ViewportConfig` for each active viewport by applying overrides on top of the default. The resolver supports two strategies via `OverrideStrategy`:
 - **Isolated** (default): each viewport uses the default unless it has an explicit override.
-- **Cascade**: overrides carry forward to subsequent viewports (mobile-first), configurable via `override_strategy: cascade` on the grid adapter.
+- **Cascade**: overrides carry forward to subsequent viewports (mobile-first), configurable via `override_strategy: cascade` on `GridSettingsResolver`.
 
 The Column model exposes `getGridSettings(): GridSettings` and `setGridSettings(GridSettings)` for typed access, routing through `DBGridSettings` via `dbObject()`.
 
@@ -148,14 +148,10 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 ├──────────────────── Rendering ──────────────────────────────┤
 │                                                             │
 │  Grid Adapter System                                        │
-│    ├── GridAdapterInterface (15 methods)                    │
-│    ├── AbstractGridAdapter (shared config + visibility)     │
-│    └── Adapters: Bootstrap, Tailwind, Bulma                 │
-│                                                             │
-│  Content Layout System                                      │
+│    ├── GridAdapterInterface (13 methods)                    │
 │    ├── ContentLayoutAdapterInterface (8 methods)            │
-│    ├── ContentLayoutAdapter (data-driven, unified)          │
-│    ├── ContentLayoutClassMap (per-framework CSS strings)    │
+│    ├── GridAdapter (config-driven base, implements both)    │
+│    ├── Presets: Bootstrap, Tailwind, Bulma (zero-method)   │
 │    └── BlockMediaExtension (media/video on content elts)   │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
@@ -365,25 +361,37 @@ Grid adapters translate the abstract layout model (viewports, column widths, off
 | `getContainerClass(fluid)` | `string` | Container wrapper classes |
 | `getTitleClassOptions()` | `array<string, string>` | CSS class to label mapping |
 | `getOffsetStrategy()` | `OffsetStrategy` | Margin-based vs grid-placement |
-| `getOverrideStrategy()` | `OverrideStrategy` | Isolated vs cascade override resolution |
 | `getContainerMaxWidth()` | `positive-int` | Max container width in px (for responsive images) |
-| `getContentLayoutClassMap()` | `ContentLayoutClassMap` | CSS class mappings for content layout |
 
-### Abstract Base Class
+### Config-Driven Base Class
 
-`AbstractGridAdapter` provides shared configuration, viewport management, and visibility map generation. Concrete adapters extend it and provide framework-specific CSS class generation.
+`GridAdapter` is the single concrete base class implementing both `GridAdapterInterface` and `ContentLayoutAdapterInterface`. All CSS class generation is driven by Configurable static properties — format strings, class maps, and scalar values. Framework presets (BootstrapAdapter, TailwindAdapter, BulmaAdapter) are zero-method subclasses that only override static properties.
 
-YAML-configurable properties (set on the concrete adapter class):
+YAML-configurable properties (set on the concrete preset class):
 
 | Property | Type | Effect |
 |----------|------|--------|
 | `enabled_viewports` | `list<string>\|null` | Restrict active viewports |
-| `total_columns` | `int\|null` | Override column count |
-| `default_viewport` | `string\|null` | Override default viewport |
-| `container_max_width` | `int\|null` | Override container max width |
-| `override_strategy` | `string\|null` | Override strategy: `isolated` (default) or `cascade` |
+| `total_columns` | `positive-int` | Grid column count |
+| `default_viewport` | `string` | Default viewport for CMS editor |
+| `container_max_width` | `positive-int` | Max container width |
+| `base_viewport_key` | `?string` | Viewport using base (no-infix) format |
+| `base_width_format` / `responsive_width_format` | `string` | sprintf format strings for width classes |
+| `base_offset_format` / `responsive_offset_format` | `string` | sprintf format strings for offset classes |
+| `offset_adjustment` | `int` | Added to offset before formatting (0 or 1) |
+| `aspect_ratio_classes` | `array<string, ?string>` | AspectRatio value → CSS class |
+| ... | | (see `GridAdapter` docblock for the full 25+ properties) |
 
-The base class provides helper methods (`applyViewportFilter`, `resolveColumnCount`, `resolveDefaultViewport`, `resolveContainerMaxWidth`) called in the constructor, plus a pre-computed visibility map built from two abstract format hooks (`formatHideClass`, `formatRestoreClass`). Invalid configuration throws `InvalidGridValueException`.
+The constructor reads all config, builds Viewport objects, validates topology, and pre-computes the visibility map. Invalid configuration throws `InvalidGridValueException`.
+
+### Override Strategy (Module Config)
+
+The override strategy is a module-level setting on `GridSettingsResolver`, not the adapter:
+
+```yaml
+WeDevelop\Grid\Service\GridSettingsResolver:
+  override_strategy: cascade
+```
 
 ### Adapters
 
@@ -410,12 +418,10 @@ The content layout system adds media (image/video) capability with side-by-side 
 ```
 BlockMediaExtension (applied to ContentElement via YAML)
   └── ContentLayoutAdapterInterface (8 methods)
-        └── ContentLayoutAdapter (unified, data-driven)
-              └── ContentLayoutClassMap (per-framework CSS strings)
-                    └── GridAdapterInterface::getContentLayoutClassMap()
+        └── GridAdapter (same instance as GridAdapterInterface)
 ```
 
-The design avoids per-framework adapter classes. Instead, each grid adapter provides a `ContentLayoutClassMap` via `getContentLayoutClassMap()`, and the single `ContentLayoutAdapter` uses those mappings to generate CSS classes. Adding a new CSS framework only requires adding a new static factory on `ContentLayoutClassMap`.
+Content layout is implemented directly by `GridAdapter` — the same adapter instance serves both `GridAdapterInterface` and `ContentLayoutAdapterInterface`. Content layout CSS strings are Configurable statics on the adapter alongside grid CSS strings. No separate adapter or data bag needed.
 
 ### ContentLayoutAdapterInterface (8 methods)
 
@@ -430,21 +436,7 @@ The design avoids per-framework adapter classes. Instead, each grid adapter prov
 | `getPaddingClass(direction, size)` | `string` | Directional padding/margin for gap |
 | `getBaseColumnClass()` | `?string` | Framework base class (e.g. Bulma's `column`) |
 
-Width classes delegate to the grid adapter — `getMediaWidthClass()` computes `totalColumns - contentColumns` and calls `GridAdapterInterface::getWidthClass()`. Order classes use the adapter's default viewport for responsive breakpoint resolution.
-
-### ContentLayoutClassMap
-
-A `final readonly class` with static factories for each framework. Holds all CSS strings as structured data:
-
-| Property | Type | Example (Bootstrap) |
-|----------|------|---------------------|
-| `aspectRatioClasses` | `array<string, ?string>` | `'1x1' => 'ratio ratio-1x1'` |
-| `verticalAlignmentClasses` | `array<string, string>` | `'center' => 'align-items-center'` |
-| `orderClass1` / `orderClass2` | `string` | `'order-1'` / `'order-2'` |
-| `responsiveOrderFormat` | `string` (sprintf) | `'order-%1$s-%2$d'` |
-| `paddingDirectionMap` | `array<string, string>` | `'left' => 'ps'`, `'right' => 'pe'` |
-| `paddingFormat` | `string` (sprintf) | `'%1$s-%2$s-%3$d'` |
-| `baseColumnClass` | `?string` | `null` (Bulma: `'column'`) |
+Width classes delegate to `getWidthClass()` on the same adapter — `getMediaWidthClass()` computes `totalColumns - contentColumns`. Order classes use the adapter's default viewport for responsive breakpoint resolution.
 
 ### BlockMediaExtension
 
@@ -470,17 +462,14 @@ Applied to `ContentElement` by default via YAML (`_config/content-layout.yml`). 
 ```yaml
 # _config/content-layout.yml
 SilverStripe\Core\Injector\Injector:
-  WeDevelop\Grid\Contract\ContentLayoutAdapterInterface:
-    class: WeDevelop\Grid\Adapter\ContentLayoutAdapter
-    constructor:
-      gridAdapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
+  WeDevelop\Grid\Contract\ContentLayoutAdapterInterface: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
 
 WeDevelop\Grid\Model\ContentElement:
   extensions:
     BlockMedia: WeDevelop\Grid\Extensions\BlockMediaExtension
 ```
 
-The adapter receives the active grid adapter via constructor injection, reads its class map, and uses it for all CSS class generation.
+Both interfaces resolve to the same adapter singleton.
 
 ## Value Objects
 
@@ -495,7 +484,6 @@ The adapter receives the active grid adapter via constructor injection, reads it
 | `AspectRatio` | Enum: Auto, Square (1x1), FourByThree (4x3), SixteenByNine (16x9) |
 | `MediaPosition` | Enum: First, Last, LastOnDesktop |
 | `VerticalAlignment` | Enum: Top, Center, Bottom |
-| `ContentLayoutClassMap` | Per-framework CSS string mappings for content layout |
 | `ViewportConfig` | Readonly record: width, offset, visible for a single viewport |
 | `GridSettings` | Default `ViewportConfig` + map of per-viewport overrides |
 | `OverrideStrategy` | Enum: Isolated (per-viewport), Cascade (mobile-first carry-forward) |

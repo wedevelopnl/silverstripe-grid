@@ -2,18 +2,17 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Unit\Service;
+namespace WeDevelop\Grid\Tests\Integration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
+use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
 use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Service\ColumnClassResolver;
 use WeDevelop\Grid\Service\GridSettingsResolver;
-use WeDevelop\Grid\Tests\Unit\Adapter\ConfigManifestTrait;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
 
@@ -24,18 +23,13 @@ use WeDevelop\Grid\Value\ViewportConfig;
  * Tests verify correct CSS output across all three adapters.
  */
 #[CoversClass(ColumnClassResolver::class)]
-final class ColumnClassResolverTest extends TestCase
+final class ColumnClassResolverTest extends SapphireTest
 {
-    use ConfigManifestTrait;
+    protected $usesDatabase = false;
 
     protected function setUp(): void
     {
-        $this->pushConfigManifest();
-    }
-
-    protected function tearDown(): void
-    {
-        $this->popConfigManifest();
+        parent::setUp();
     }
 
     /**

@@ -2,46 +2,47 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Unit\Adapter;
+namespace WeDevelop\Grid\Tests\Integration\Adapter;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
-use SilverStripe\Config\Collections\MemoryConfigCollection;
-use SilverStripe\Core\Config\ConfigLoader;
+use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BulmaAdapter;
+use WeDevelop\Grid\Adapter\GridAdapter;
+use WeDevelop\Grid\Contract\ContentLayoutAdapterInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Value\AspectRatio;
+use WeDevelop\Grid\Value\MediaPosition;
 use WeDevelop\Grid\Value\OffsetStrategy;
+use WeDevelop\Grid\Value\VerticalAlignment;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
- * Unit tests for BulmaAdapter — viewport definitions, class generation,
+ * Integration tests for BulmaAdapter — viewport definitions, class generation,
  * offset strategy, and visibility with filtered viewport sets.
  */
 #[CoversClass(BulmaAdapter::class)]
-final class BulmaAdapterTest extends TestCase
+#[CoversClass(GridAdapter::class)]
+final class BulmaAdapterTest extends SapphireTest
 {
-    use ConfigManifestTrait;
-
-    private MemoryConfigCollection $configCollection;
+    protected $usesDatabase = false;
 
     private BulmaAdapter $adapter;
 
     protected function setUp(): void
     {
-        $this->configCollection = new MemoryConfigCollection();
-        ConfigLoader::inst()->pushManifest($this->configCollection);
+        parent::setUp();
         $this->adapter = new BulmaAdapter();
-    }
-
-    protected function tearDown(): void
-    {
-        ConfigLoader::inst()->popManifest();
     }
 
     public function testImplementsGridAdapterInterface(): void
     {
         $this->assertInstanceOf(GridAdapterInterface::class, $this->adapter);
+    }
+
+    public function testImplementsContentLayoutAdapterInterface(): void
+    {
+        $this->assertInstanceOf(ContentLayoutAdapterInterface::class, $this->adapter);
     }
 
     public function testGetViewportsReturnsFiveViewports(): void
@@ -295,8 +296,8 @@ final class BulmaAdapterTest extends TestCase
     #[DataProvider('visibilityClassWithFilteredViewportsProvider')]
     public function testGetVisibilityClassesWithFilteredViewports(array $enabledViewports, string $viewport, array $expectedClasses): void
     {
-        $this->configCollection->set(BulmaAdapter::class, 'enabled_viewports', $enabledViewports);
-        $this->configCollection->set(BulmaAdapter::class, 'default_viewport', $enabledViewports[0]);
+        BulmaAdapter::config()->set('enabled_viewports', $enabledViewports);
+        BulmaAdapter::config()->set('default_viewport', $enabledViewports[0]);
 
         $adapter = new BulmaAdapter();
 
@@ -323,5 +324,114 @@ final class BulmaAdapterTest extends TestCase
         // [mobile, fullhd] — only 2
         yield '[mobile,fullhd] — mobile' => [['mobile', 'fullhd'], 'mobile', ['is-hidden-mobile', 'is-block-fullhd']];
         yield '[mobile,fullhd] — fullhd' => [['mobile', 'fullhd'], 'fullhd', ['is-hidden-fullhd']];
+    }
+
+    // ─── Content layout: aspect ratio ────────────────────────────────
+
+    #[DataProvider('aspectRatioProvider')]
+    public function testGetAspectRatioClass(AspectRatio $ratio, ?string $expected): void
+    {
+        $this->assertSame($expected, $this->adapter->getAspectRatioClass($ratio));
+    }
+
+    /**
+     * @return iterable<string, array{AspectRatio, ?string}>
+     */
+    public static function aspectRatioProvider(): iterable
+    {
+        yield 'auto' => [AspectRatio::Auto, null];
+        yield 'square' => [AspectRatio::Square, 'is-1by1'];
+        yield '4:3' => [AspectRatio::FourByThree, 'is-4by3'];
+        yield '16:9' => [AspectRatio::SixteenByNine, 'is-16by9'];
+    }
+
+    // ─── Content layout: vertical alignment ──────────────────────────
+
+    #[DataProvider('verticalAlignmentProvider')]
+    public function testGetVerticalAlignmentClass(VerticalAlignment $alignment, string $expected): void
+    {
+        $this->assertSame($expected, $this->adapter->getVerticalAlignmentClass($alignment));
+    }
+
+    /**
+     * @return iterable<string, array{VerticalAlignment, string}>
+     */
+    public static function verticalAlignmentProvider(): iterable
+    {
+        yield 'top' => [VerticalAlignment::Top, 'is-flex-start'];
+        yield 'center' => [VerticalAlignment::Center, 'is-vcentered'];
+        yield 'bottom' => [VerticalAlignment::Bottom, 'is-flex-end'];
+    }
+
+    // ─── Content layout: media ordering ──────────────────────────────
+
+    #[DataProvider('mediaOrderProvider')]
+    public function testGetMediaOrderClasses(MediaPosition $position, string $expected): void
+    {
+        $this->assertSame($expected, $this->adapter->getMediaOrderClasses($position));
+    }
+
+    /**
+     * @return iterable<string, array{MediaPosition, string}>
+     */
+    public static function mediaOrderProvider(): iterable
+    {
+        yield 'first' => [MediaPosition::First, 'has-order-1'];
+        yield 'last' => [MediaPosition::Last, 'has-order-2'];
+        yield 'last on desktop' => [MediaPosition::LastOnDesktop, 'has-order-1 has-order-2-desktop'];
+    }
+
+    #[DataProvider('contentOrderProvider')]
+    public function testGetContentOrderClasses(MediaPosition $position, string $expected): void
+    {
+        $this->assertSame($expected, $this->adapter->getContentOrderClasses($position));
+    }
+
+    /**
+     * @return iterable<string, array{MediaPosition, string}>
+     */
+    public static function contentOrderProvider(): iterable
+    {
+        yield 'first' => [MediaPosition::First, 'has-order-2'];
+        yield 'last' => [MediaPosition::Last, 'has-order-1'];
+        yield 'last on desktop' => [MediaPosition::LastOnDesktop, 'has-order-2 has-order-1-desktop'];
+    }
+
+    // ─── Content layout: width classes ───────────────────────────────
+
+    public function testGetMediaWidthClass(): void
+    {
+        // Default viewport is desktop, 12 columns, contentColumns=8 → media=4
+        $this->assertSame('is-4-desktop', $this->adapter->getMediaWidthClass(8));
+    }
+
+    public function testGetContentWidthClass(): void
+    {
+        $this->assertSame('is-8-desktop', $this->adapter->getContentWidthClass(8));
+    }
+
+    // ─── Content layout: padding ─────────────────────────────────────
+
+    #[DataProvider('paddingClassProvider')]
+    public function testGetPaddingClass(string $direction, int $size, string $expected): void
+    {
+        $this->assertSame($expected, $this->adapter->getPaddingClass($direction, $size));
+    }
+
+    /**
+     * @return iterable<string, array{string, int, string}>
+     */
+    public static function paddingClassProvider(): iterable
+    {
+        yield 'left size 3' => ['left', 3, 'pl-3-desktop'];
+        yield 'right size 3' => ['right', 3, 'pr-3-desktop'];
+        yield 'left size 5' => ['left', 5, 'pl-5-desktop'];
+    }
+
+    // ─── Content layout: base column class ───────────────────────────
+
+    public function testGetBaseColumnClassReturnsColumn(): void
+    {
+        $this->assertSame('column', $this->adapter->getBaseColumnClass());
     }
 }

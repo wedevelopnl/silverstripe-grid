@@ -4,30 +4,54 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Service;
 
+use SilverStripe\Core\Config\Configurable;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\OverrideStrategy;
 use WeDevelop\Grid\Value\ViewportConfig;
 
 /**
- * Resolves effective ViewportConfig per viewport from GridSettings + adapter strategy.
+ * Resolves effective ViewportConfig per viewport from GridSettings + override strategy.
  *
  * This is the single place where the override strategy (isolated vs cascade) is applied.
  * The result is a flat map of viewport key → effective ViewportConfig, ready for
  * CSS class generation by ColumnClassResolver.
+ *
+ * The override strategy is a module-level config, not a framework adapter property:
+ * ```yaml
+ * WeDevelop\Grid\Service\GridSettingsResolver:
+ *   override_strategy: cascade
+ * ```
  */
-final readonly class GridSettingsResolver
+final class GridSettingsResolver
 {
+    use Configurable;
+
+    private static string $override_strategy = 'isolated';
+
+    private readonly OverrideStrategy $strategy;
+
     public function __construct(
-        private GridAdapterInterface $adapter,
-    ) {}
+        private readonly GridAdapterInterface $adapter,
+    ) {
+        /** @var string $value */
+        $value = static::config()->get('override_strategy');
+        $strategy = OverrideStrategy::tryFrom($value);
+
+        if ($strategy === null) {
+            throw InvalidGridValueException::forOverrideStrategy($value);
+        }
+
+        $this->strategy = $strategy;
+    }
 
     /**
      * @return array<non-empty-string, ViewportConfig>
      */
     public function resolveEffective(GridSettings $settings): array
     {
-        return match ($this->adapter->getOverrideStrategy()) {
+        return match ($this->strategy) {
             OverrideStrategy::Isolated => $this->resolveIsolated($settings),
             OverrideStrategy::Cascade => $this->resolveCascade($settings),
         };

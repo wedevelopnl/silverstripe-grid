@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Contract;
 
-use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
-use WeDevelop\Grid\Value\OverrideStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
- * Stateless adapter that translates grid layout intent into framework-specific CSS classes.
+ * Translates grid layout intent into framework-specific CSS classes.
  *
  * Methods receive viewport keys and numeric values, return CSS class strings.
  * No data model dependency — the adapter has no knowledge of elements.
@@ -152,22 +150,4 @@ interface GridAdapterInterface
      * @return positive-int
      */
     public function getContainerMaxWidth(): int;
-
-    /**
-     * How viewport overrides are applied when resolving grid settings.
-     *
-     * Isolated: an override applies ONLY to that specific viewport.
-     * Cascade: an override applies from the smallest viewport up to
-     * (and including) the overridden viewport.
-     */
-    public function getOverrideStrategy(): OverrideStrategy;
-
-    /**
-     * CSS class mappings for content layout adapters.
-     *
-     * Returns the framework-specific class map that the unified
-     * {@see \WeDevelop\Grid\Adapter\ContentLayoutAdapter} uses for
-     * aspect ratios, ordering, alignment, and directional padding.
-     */
-    public function getContentLayoutClassMap(): ContentLayoutClassMap;
 }

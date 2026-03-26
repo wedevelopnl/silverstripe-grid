@@ -2,39 +2,32 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Unit\Controllers;
+namespace WeDevelop\Grid\Tests\Integration\Controllers;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
+use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
 use WeDevelop\Grid\Controllers\GridController;
-use WeDevelop\Grid\Tests\Unit\Adapter\ConfigManifestTrait;
-use WeDevelop\Grid\Value\ContentLayoutClassMap;
 use WeDevelop\Grid\Value\OffsetStrategy;
 
 /**
  * Tests {@see GridController::buildAdapterConfig()} in isolation.
  *
- * Pure logic — no SilverStripe database dependency. A minimal config manifest
- * is pushed so adapters using the Configurable trait can be instantiated.
+ * Uses the SilverStripe framework environment for config resolution
+ * but does not require a database.
  */
 #[CoversClass(GridController::class)]
-final class BuildAdapterConfigTest extends TestCase
+final class BuildAdapterConfigTest extends SapphireTest
 {
-    use ConfigManifestTrait;
+    protected $usesDatabase = false;
 
     /** @var array<string, mixed> */
     private array $config;
 
     protected function setUp(): void
     {
-        $this->pushConfigManifest();
+        parent::setUp();
         $this->config = GridController::buildAdapterConfig(new BootstrapAdapter());
-    }
-
-    protected function tearDown(): void
-    {
-        $this->popConfigManifest();
     }
 
     // --- Structure -----------------------------------------------------------
@@ -277,16 +270,6 @@ final class BuildAdapterConfigTest extends TestCase
             {
                 return 1320;
             }
-
-            public function getContentLayoutClassMap(): ContentLayoutClassMap
-            {
-                return ContentLayoutClassMap::bootstrap();
-            }
-
-            public function getOverrideStrategy(): \WeDevelop\Grid\Value\OverrideStrategy
-            {
-                return \WeDevelop\Grid\Value\OverrideStrategy::Isolated;
-            }
         };
 
         $config = GridController::buildAdapterConfig($adapter);
@@ -363,16 +346,6 @@ final class BuildAdapterConfigTest extends TestCase
             public function getContainerMaxWidth(): int
             {
                 return 1320;
-            }
-
-            public function getContentLayoutClassMap(): ContentLayoutClassMap
-            {
-                return ContentLayoutClassMap::bootstrap();
-            }
-
-            public function getOverrideStrategy(): \WeDevelop\Grid\Value\OverrideStrategy
-            {
-                return \WeDevelop\Grid\Value\OverrideStrategy::Isolated;
             }
         };
 

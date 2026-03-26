@@ -16,4 +16,8 @@ SilverStripe\Core\Injector\Injector:
 #   total_columns: 16
 #   default_viewport: lg
 #   container_max_width: 1400
+#
+# To change the override strategy (module-level, not per-adapter):
+#
+# WeDevelop\Grid\Service\GridSettingsResolver:
 #   override_strategy: cascade

@@ -2,35 +2,19 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Unit\Service;
+namespace WeDevelop\Grid\Tests\Integration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\TestCase;
-use SilverStripe\Config\Collections\MemoryConfigCollection;
-use SilverStripe\Core\Config\ConfigLoader;
+use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
 use WeDevelop\Grid\Service\GridSettingsResolver;
-use WeDevelop\Grid\Tests\Unit\Adapter\ConfigManifestTrait;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
 
 #[CoversClass(GridSettingsResolver::class)]
-final class GridSettingsResolverTest extends TestCase
+final class GridSettingsResolverTest extends SapphireTest
 {
-    use ConfigManifestTrait;
-
-    private MemoryConfigCollection $configCollection;
-
-    protected function setUp(): void
-    {
-        $this->configCollection = new MemoryConfigCollection();
-        ConfigLoader::inst()->pushManifest($this->configCollection);
-    }
-
-    protected function tearDown(): void
-    {
-        ConfigLoader::inst()->popManifest();
-    }
+    protected $usesDatabase = false;
 
     // ─── Isolated strategy ──────────────────────────────────────────
 
@@ -100,7 +84,7 @@ final class GridSettingsResolverTest extends TestCase
 
     public function testCascadeNoOverridesAllDefault(): void
     {
-        $this->configCollection->set(BootstrapAdapter::class, 'override_strategy', 'cascade');
+        GridSettingsResolver::config()->set('override_strategy', 'cascade');
         $adapter = new BootstrapAdapter();
         $resolver = new GridSettingsResolver($adapter);
         $settings = GridSettings::initial(12);
@@ -114,7 +98,7 @@ final class GridSettingsResolverTest extends TestCase
 
     public function testCascadeSingleOverrideAppliesToSmallerViewports(): void
     {
-        $this->configCollection->set(BootstrapAdapter::class, 'override_strategy', 'cascade');
+        GridSettingsResolver::config()->set('override_strategy', 'cascade');
         $adapter = new BootstrapAdapter();
         $resolver = new GridSettingsResolver($adapter);
         $settings = new GridSettings(
@@ -137,7 +121,7 @@ final class GridSettingsResolverTest extends TestCase
 
     public function testCascadeMultipleOverridesClosestWins(): void
     {
-        $this->configCollection->set(BootstrapAdapter::class, 'override_strategy', 'cascade');
+        GridSettingsResolver::config()->set('override_strategy', 'cascade');
         $adapter = new BootstrapAdapter();
         $resolver = new GridSettingsResolver($adapter);
         $settings = new GridSettings(
@@ -167,7 +151,7 @@ final class GridSettingsResolverTest extends TestCase
 
     public function testCascadeOverrideOnFirstViewport(): void
     {
-        $this->configCollection->set(BootstrapAdapter::class, 'override_strategy', 'cascade');
+        GridSettingsResolver::config()->set('override_strategy', 'cascade');
         $adapter = new BootstrapAdapter();
         $resolver = new GridSettingsResolver($adapter);
         $settings = new GridSettings(
@@ -187,7 +171,7 @@ final class GridSettingsResolverTest extends TestCase
 
     public function testCascadeOverrideOnLastViewport(): void
     {
-        $this->configCollection->set(BootstrapAdapter::class, 'override_strategy', 'cascade');
+        GridSettingsResolver::config()->set('override_strategy', 'cascade');
         $adapter = new BootstrapAdapter();
         $resolver = new GridSettingsResolver($adapter);
         $settings = new GridSettings(
@@ -223,7 +207,7 @@ final class GridSettingsResolverTest extends TestCase
 
     public function testCascadeResultKeysMatchAdapterViewportOrder(): void
     {
-        $this->configCollection->set(BootstrapAdapter::class, 'override_strategy', 'cascade');
+        GridSettingsResolver::config()->set('override_strategy', 'cascade');
         $adapter = new BootstrapAdapter();
         $resolver = new GridSettingsResolver($adapter);
         $settings = new GridSettings(

@@ -4,122 +4,113 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Adapter;
 
-use Override;
-use WeDevelop\Grid\Value\ContentLayoutClassMap;
-use WeDevelop\Grid\Value\OffsetStrategy;
-use WeDevelop\Grid\Value\Viewport;
-
 /**
- * Grid adapter for the Bulma CSS framework (Flexbox column system).
+ * Bulma CSS framework grid preset (Flexbox column system).
  *
- * Implements Bulma's responsive column classes using its five default
- * breakpoints: mobile, tablet (769px), desktop (1024px), widescreen
- * (1216px), and fullhd (1408px).
+ * Five breakpoints: mobile (unsuffixed default), tablet (769px), desktop (1024px),
+ * widescreen (1216px), fullhd (1408px). Mobile is the base viewport — width/offset
+ * classes use `is-{n}` without a viewport suffix.
  *
- * Bulma treats mobile as the unsuffixed default — width classes use
- * `is-{n}` instead of `is-{n}-mobile`, and offset classes follow the
- * same pattern. All other viewports append `-{viewport}` as a suffix.
+ * Requires the `column` base class on grid columns.
+ *
+ * Override any property via project YAML:
+ * ```yaml
+ * WeDevelop\Grid\Adapter\BulmaAdapter:
+ *   total_columns: 16
+ *   enabled_viewports: [tablet, desktop, widescreen]
+ * ```
  */
-final class BulmaAdapter extends AbstractGridAdapter
+final class BulmaAdapter extends GridAdapter
 {
-    public function __construct()
-    {
-        parent::__construct(
-            allViewports: [
-                'mobile' => new Viewport('mobile', 'Mobile'),
-                'tablet' => new Viewport('tablet', 'Tablet'),
-                'desktop' => new Viewport('desktop', 'Desktop'),
-                'widescreen' => new Viewport('widescreen', 'Widescreen'),
-                'fullhd' => new Viewport('fullhd', 'Full HD'),
-            ],
-            defaultColumns: 12,
-            defaultContainerMaxWidth: 1344,
-            defaultViewportKey: 'desktop',
-        );
-    }
+    // ─── Grid topology ──────────────────────────────────────────────
 
-    #[Override]
-    public function getWidthClass(string $viewport, int $width): string
-    {
-        if ($viewport === 'mobile') {
-            return sprintf('is-%d', $width);
-        }
+    /** @var array<string, string> */
+    private static array $viewport_definitions = [
+        'mobile' => 'Mobile',
+        'tablet' => 'Tablet',
+        'desktop' => 'Desktop',
+        'widescreen' => 'Widescreen',
+        'fullhd' => 'Full HD',
+    ];
 
-        return sprintf('is-%d-%s', $width, $viewport);
-    }
+    /** @var positive-int */
+    private static int $total_columns = 12;
 
-    #[Override]
-    public function getOffsetClass(string $viewport, int $offset): string
-    {
-        if ($viewport === 'mobile') {
-            return sprintf('is-offset-%d', $offset);
-        }
+    /** @var positive-int */
+    private static int $container_max_width = 1344;
 
-        return sprintf('is-offset-%d-%s', $offset, $viewport);
-    }
+    private static string $default_viewport = 'desktop';
 
-    #[Override]
-    public function getRowClasses(): string
-    {
-        return 'columns is-multiline';
-    }
+    // ─── Width & offset formats ─────────────────────────────────────
 
-    #[Override]
-    public function getContainerClass(bool $fluid): string
-    {
-        if ($fluid) {
-            return 'container is-fluid';
-        }
+    private static ?string $base_viewport_key = 'mobile';
 
-        return 'container';
-    }
+    private static string $base_width_format = 'is-%d';
 
-    #[Override]
-    public function getTitleClassOptions(): array
-    {
-        return [
-            'is-1' => 'Title 1',
-            'is-2' => 'Title 2',
-            'is-3' => 'Title 3',
-            'is-4' => 'Title 4',
-            'is-5' => 'Title 5',
-            'is-6' => 'Title 6',
-        ];
-    }
+    private static string $responsive_width_format = 'is-%2$d-%1$s';
 
-    #[Override]
-    public function getBaseWidthClass(int $width): string
-    {
-        return $this->getWidthClass('mobile', $width);
-    }
+    private static string $base_offset_format = 'is-offset-%d';
 
-    #[Override]
-    public function getBaseOffsetClass(int $offset): string
-    {
-        return $this->getOffsetClass('mobile', $offset);
-    }
+    private static string $responsive_offset_format = 'is-offset-%2$d-%1$s';
 
-    #[Override]
-    public function getOffsetStrategy(): OffsetStrategy
-    {
-        return OffsetStrategy::Margin;
-    }
+    private static int $offset_adjustment = 0;
 
-    #[Override]
-    public function getContentLayoutClassMap(): ContentLayoutClassMap
-    {
-        return ContentLayoutClassMap::bulma();
-    }
+    // ─── Visibility formats ─────────────────────────────────────────
 
-    #[Override]
-    protected function formatHideClass(string $viewportKey): string
-    {
-        return sprintf('is-hidden-%s', $viewportKey);
-    }
+    private static string $base_hide_class = 'is-hidden-mobile';
 
-    #[Override]
-    protected function formatRestoreClass(string $viewportKey): string
-    {
-        return sprintf('is-block-%s', $viewportKey);
-    }
+    private static string $responsive_hide_format = 'is-hidden-%s';
+
+    private static string $responsive_restore_format = 'is-block-%s';
+
+    // ─── Container & structure ───────────────────────────────────────
+
+    private static string $row_class_format = 'columns is-multiline';
+
+    private static string $container_class = 'container';
+
+    private static string $fluid_container_class = 'container is-fluid';
+
+    /** @var array<string, string> */
+    private static array $title_class_options = [
+        'is-1' => 'Title 1',
+        'is-2' => 'Title 2',
+        'is-3' => 'Title 3',
+        'is-4' => 'Title 4',
+        'is-5' => 'Title 5',
+        'is-6' => 'Title 6',
+    ];
+
+    private static string $offset_strategy = 'margin';
+
+    // ─── Content layout ─────────────────────────────────────────────
+
+    /** @var array<string, ?string> */
+    private static array $aspect_ratio_classes = [
+        'auto' => null,
+        '1x1' => 'is-1by1',
+        '4x3' => 'is-4by3',
+        '16x9' => 'is-16by9',
+    ];
+
+    /** @var array<string, string> */
+    private static array $vertical_alignment_classes = [
+        'top' => 'is-flex-start',
+        'center' => 'is-vcentered',
+        'bottom' => 'is-flex-end',
+    ];
+
+    private static string $order_class_format = 'has-order-%d';
+
+    private static string $responsive_order_format = 'has-order-%2$d-%1$s';
+
+    /** @var array<string, string> */
+    private static array $padding_direction_map = [
+        'left' => 'pl',
+        'right' => 'pr',
+    ];
+
+    private static string $padding_format = '%1$s-%3$d-%2$s';
+
+    private static ?string $base_column_class = 'column';
 }

@@ -4,111 +4,110 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Adapter;
 
-use Override;
-use WeDevelop\Grid\Value\ContentLayoutClassMap;
-use WeDevelop\Grid\Value\OffsetStrategy;
-use WeDevelop\Grid\Value\Viewport;
-
 /**
- * Tailwind CSS grid adapter using utility classes for a 12-column CSS Grid layout.
+ * Tailwind CSS grid preset using utility classes for a 12-column CSS Grid layout.
  *
- * Viewport breakpoints match Tailwind v3/v4 defaults (sm through 2xl).
- * All class generation is stateless — no DOM, no config file needed.
+ * Five breakpoints matching Tailwind v3/v4 defaults: sm (640px), md (768px),
+ * lg (1024px), xl (1280px), 2xl (1536px). No base viewport — all breakpoints
+ * use the responsive `{viewport}:` prefix format.
+ *
+ * Uses grid-placement offset strategy (`col-start-N`, 1-based) instead of
+ * margin-based offsets.
+ *
+ * Override any property via project YAML:
+ * ```yaml
+ * WeDevelop\Grid\Adapter\TailwindAdapter:
+ *   total_columns: 16
+ *   enabled_viewports: [sm, md, lg]
+ * ```
  */
-final class TailwindAdapter extends AbstractGridAdapter
+final class TailwindAdapter extends GridAdapter
 {
-    public function __construct()
-    {
-        parent::__construct(
-            allViewports: [
-                'sm' => new Viewport('sm', 'Small'),
-                'md' => new Viewport('md', 'Medium'),
-                'lg' => new Viewport('lg', 'Large'),
-                'xl' => new Viewport('xl', 'Extra Large'),
-                '2xl' => new Viewport('2xl', '2X Large'),
-            ],
-            defaultColumns: 12,
-            defaultContainerMaxWidth: 1536,
-            defaultViewportKey: 'sm',
-        );
-    }
+    // ─── Grid topology ──────────────────────────────────────────────
 
-    #[Override]
-    public function getWidthClass(string $viewport, int $width): string
-    {
-        return sprintf('%s:col-span-%d', $viewport, $width);
-    }
+    /** @var array<string, string> */
+    private static array $viewport_definitions = [
+        'sm' => 'Small',
+        'md' => 'Medium',
+        'lg' => 'Large',
+        'xl' => 'Extra Large',
+        '2xl' => '2X Large',
+    ];
 
-    /**
-     * Tailwind's col-start is 1-based, so an offset of N columns means col-start-(N+1).
-     */
-    #[Override]
-    public function getOffsetClass(string $viewport, int $offset): string
-    {
-        return sprintf('%s:col-start-%d', $viewport, $offset + 1);
-    }
+    /** @var positive-int */
+    private static int $total_columns = 12;
 
-    #[Override]
-    public function getRowClasses(): string
-    {
-        return sprintf('grid grid-cols-%d', $this->getColumnCount());
-    }
+    /** @var positive-int */
+    private static int $container_max_width = 1536;
 
-    #[Override]
-    public function getContainerClass(bool $fluid): string
-    {
-        return $fluid ? 'w-full' : 'container mx-auto';
-    }
+    private static string $default_viewport = 'sm';
 
-    #[Override]
-    public function getTitleClassOptions(): array
-    {
-        return [
-            'text-4xl' => 'Heading 1',
-            'text-3xl' => 'Heading 2',
-            'text-2xl' => 'Heading 3',
-            'text-xl' => 'Heading 4',
-            'text-lg' => 'Heading 5',
-            'text-base' => 'Heading 6',
-        ];
-    }
+    // ─── Width & offset formats ─────────────────────────────────────
 
-    #[Override]
-    public function getBaseWidthClass(int $width): string
-    {
-        return sprintf('col-span-%d', $width);
-    }
+    private static string $base_width_format = 'col-span-%d';
 
-    /**
-     * Tailwind's col-start is 1-based, so an offset of N columns means col-start-(N+1).
-     */
-    #[Override]
-    public function getBaseOffsetClass(int $offset): string
-    {
-        return sprintf('col-start-%d', $offset + 1);
-    }
+    private static string $responsive_width_format = '%1$s:col-span-%2$d';
 
-    #[Override]
-    public function getOffsetStrategy(): OffsetStrategy
-    {
-        return OffsetStrategy::GridPlacement;
-    }
+    private static string $base_offset_format = 'col-start-%d';
 
-    #[Override]
-    public function getContentLayoutClassMap(): ContentLayoutClassMap
-    {
-        return ContentLayoutClassMap::tailwind();
-    }
+    private static string $responsive_offset_format = '%1$s:col-start-%2$d';
 
-    #[Override]
-    protected function formatHideClass(string $viewportKey): string
-    {
-        return sprintf('%s:hidden', $viewportKey);
-    }
+    private static int $offset_adjustment = 1;
 
-    #[Override]
-    protected function formatRestoreClass(string $viewportKey): string
-    {
-        return sprintf('%s:block', $viewportKey);
-    }
+    // ─── Visibility formats ─────────────────────────────────────────
+
+    private static string $responsive_hide_format = '%s:hidden';
+
+    private static string $responsive_restore_format = '%s:block';
+
+    // ─── Container & structure ───────────────────────────────────────
+
+    private static string $row_class_format = 'grid grid-cols-%d';
+
+    private static string $container_class = 'container mx-auto';
+
+    private static string $fluid_container_class = 'w-full';
+
+    /** @var array<string, string> */
+    private static array $title_class_options = [
+        'text-4xl' => 'Heading 1',
+        'text-3xl' => 'Heading 2',
+        'text-2xl' => 'Heading 3',
+        'text-xl' => 'Heading 4',
+        'text-lg' => 'Heading 5',
+        'text-base' => 'Heading 6',
+    ];
+
+    private static string $offset_strategy = 'grid-placement';
+
+    // ─── Content layout ─────────────────────────────────────────────
+
+    /** @var array<string, ?string> */
+    private static array $aspect_ratio_classes = [
+        'auto' => null,
+        '1x1' => 'aspect-square',
+        '4x3' => 'aspect-[4/3]',
+        '16x9' => 'aspect-video',
+    ];
+
+    /** @var array<string, string> */
+    private static array $vertical_alignment_classes = [
+        'top' => 'items-start',
+        'center' => 'items-center',
+        'bottom' => 'items-end',
+    ];
+
+    private static string $order_class_format = 'order-%d';
+
+    private static string $responsive_order_format = '%1$s:order-%2$d';
+
+    /** @var array<string, string> */
+    private static array $padding_direction_map = [
+        'left' => 'pl',
+        'right' => 'pr',
+    ];
+
+    private static string $padding_format = '%2$s:%1$s-%3$d';
+
+    private static ?string $base_column_class = null;
 }

@@ -4,135 +4,117 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Adapter;
 
-use Override;
-use WeDevelop\Grid\Value\ContentLayoutClassMap;
-use WeDevelop\Grid\Value\OffsetStrategy;
-use WeDevelop\Grid\Value\Viewport;
-
 /**
- * Grid adapter for Bootstrap 5's Flexbox grid system.
+ * Bootstrap 5 Flexbox grid preset.
  *
- * Implements Bootstrap's responsive column classes using its six default
- * breakpoints: xs (mobile-first default), sm (576px), md (768px), lg (992px),
- * xl (1200px), and xxl (1400px).
+ * Six breakpoints: xs (mobile-first default, no viewport infix), sm (576px),
+ * md (768px), lg (992px), xl (1200px), xxl (1400px).
  *
- * Bootstrap treats xs as the mobile-first default — width classes use
- * `col-{n}` instead of `col-xs-{n}`, offset classes use `offset-{n}`
- * instead of `offset-xs-{n}`, and visibility uses `d-none` instead of
- * `d-xs-none`. All other viewports include the viewport infix.
+ * Override any property via project YAML:
+ * ```yaml
+ * WeDevelop\Grid\Adapter\BootstrapAdapter:
+ *   total_columns: 16
+ *   enabled_viewports: [sm, md, lg]
+ * ```
  */
-final class BootstrapAdapter extends AbstractGridAdapter
+final class BootstrapAdapter extends GridAdapter
 {
-    public function __construct()
-    {
-        parent::__construct(
-            allViewports: [
-                'xs' => new Viewport('xs', 'Extra Small'),
-                'sm' => new Viewport('sm', 'Small'),
-                'md' => new Viewport('md', 'Medium'),
-                'lg' => new Viewport('lg', 'Large'),
-                'xl' => new Viewport('xl', 'Extra Large'),
-                'xxl' => new Viewport('xxl', 'Extra Extra Large'),
-            ],
-            defaultColumns: 12,
-            defaultContainerMaxWidth: 1320,
-            defaultViewportKey: 'md',
-        );
-    }
+    // ─── Grid topology ──────────────────────────────────────────────
 
-    #[Override]
-    public function getWidthClass(string $viewport, int $width): string
-    {
-        if ($viewport === 'xs') {
-            return sprintf('col-%d', $width);
-        }
+    /** @var array<string, string> */
+    private static array $viewport_definitions = [
+        'xs' => 'Extra Small',
+        'sm' => 'Small',
+        'md' => 'Medium',
+        'lg' => 'Large',
+        'xl' => 'Extra Large',
+        'xxl' => 'Extra Extra Large',
+    ];
 
-        return sprintf('col-%s-%d', $viewport, $width);
-    }
+    /** @var positive-int */
+    private static int $total_columns = 12;
 
-    #[Override]
-    public function getOffsetClass(string $viewport, int $offset): string
-    {
-        if ($viewport === 'xs') {
-            return sprintf('offset-%d', $offset);
-        }
+    /** @var positive-int */
+    private static int $container_max_width = 1320;
 
-        return sprintf('offset-%s-%d', $viewport, $offset);
-    }
+    private static string $default_viewport = 'md';
 
-    #[Override]
-    public function getRowClasses(): string
-    {
-        return 'row';
-    }
+    // ─── Width & offset formats ─────────────────────────────────────
 
-    #[Override]
-    public function getContainerClass(bool $fluid): string
-    {
-        if ($fluid) {
-            return 'container-fluid';
-        }
+    private static ?string $base_viewport_key = 'xs';
 
-        return 'container';
-    }
+    private static string $base_width_format = 'col-%d';
 
-    #[Override]
-    public function getTitleClassOptions(): array
-    {
-        return [
-            'display-1' => 'Display 1',
-            'display-2' => 'Display 2',
-            'display-3' => 'Display 3',
-            'display-4' => 'Display 4',
-            'display-5' => 'Display 5',
-            'display-6' => 'Display 6',
-            'h1' => 'Heading 1',
-            'h2' => 'Heading 2',
-            'h3' => 'Heading 3',
-            'h4' => 'Heading 4',
-            'h5' => 'Heading 5',
-            'h6' => 'Heading 6',
-        ];
-    }
+    private static string $responsive_width_format = 'col-%1$s-%2$d';
 
-    #[Override]
-    public function getBaseWidthClass(int $width): string
-    {
-        return $this->getWidthClass('xs', $width);
-    }
+    private static string $base_offset_format = 'offset-%d';
 
-    #[Override]
-    public function getBaseOffsetClass(int $offset): string
-    {
-        return $this->getOffsetClass('xs', $offset);
-    }
+    private static string $responsive_offset_format = 'offset-%1$s-%2$d';
 
-    #[Override]
-    public function getOffsetStrategy(): OffsetStrategy
-    {
-        return OffsetStrategy::Margin;
-    }
+    private static int $offset_adjustment = 0;
 
-    #[Override]
-    public function getContentLayoutClassMap(): ContentLayoutClassMap
-    {
-        return ContentLayoutClassMap::bootstrap();
-    }
+    // ─── Visibility formats ─────────────────────────────────────────
 
-    #[Override]
-    protected function formatHideClass(string $viewportKey): string
-    {
-        // Bootstrap: xs uses no-infix `d-none`, all others use `d-{vp}-none`
-        if ($viewportKey === 'xs') {
-            return 'd-none';
-        }
+    private static string $base_hide_class = 'd-none';
 
-        return sprintf('d-%s-none', $viewportKey);
-    }
+    private static string $responsive_hide_format = 'd-%s-none';
 
-    #[Override]
-    protected function formatRestoreClass(string $viewportKey): string
-    {
-        return sprintf('d-%s-block', $viewportKey);
-    }
+    private static string $responsive_restore_format = 'd-%s-block';
+
+    // ─── Container & structure ───────────────────────────────────────
+
+    private static string $row_class_format = 'row';
+
+    private static string $container_class = 'container';
+
+    private static string $fluid_container_class = 'container-fluid';
+
+    /** @var array<string, string> */
+    private static array $title_class_options = [
+        'display-1' => 'Display 1',
+        'display-2' => 'Display 2',
+        'display-3' => 'Display 3',
+        'display-4' => 'Display 4',
+        'display-5' => 'Display 5',
+        'display-6' => 'Display 6',
+        'h1' => 'Heading 1',
+        'h2' => 'Heading 2',
+        'h3' => 'Heading 3',
+        'h4' => 'Heading 4',
+        'h5' => 'Heading 5',
+        'h6' => 'Heading 6',
+    ];
+
+    private static string $offset_strategy = 'margin';
+
+    // ─── Content layout ─────────────────────────────────────────────
+
+    /** @var array<string, ?string> */
+    private static array $aspect_ratio_classes = [
+        'auto' => null,
+        '1x1' => 'ratio ratio-1x1',
+        '4x3' => 'ratio ratio-4x3',
+        '16x9' => 'ratio ratio-16x9',
+    ];
+
+    /** @var array<string, string> */
+    private static array $vertical_alignment_classes = [
+        'top' => 'align-items-start',
+        'center' => 'align-items-center',
+        'bottom' => 'align-items-end',
+    ];
+
+    private static string $order_class_format = 'order-%d';
+
+    private static string $responsive_order_format = 'order-%1$s-%2$d';
+
+    /** @var array<string, string> */
+    private static array $padding_direction_map = [
+        'left' => 'ps',
+        'right' => 'pe',
+    ];
+
+    private static string $padding_format = '%1$s-%2$s-%3$d';
+
+    private static ?string $base_column_class = null;
 }

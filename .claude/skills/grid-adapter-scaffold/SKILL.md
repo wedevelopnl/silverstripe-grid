@@ -1,91 +1,58 @@
 ---
 name: grid-adapter-scaffold
-description: Scaffolds a new GridAdapterInterface implementation extending AbstractGridAdapter, with all required method stubs, viewport definitions, visibility format hooks, and YAML config registration. Use when creating a new CSS framework adapter for the grid system.
+description: Scaffolds a new GridAdapter preset subclass for a CSS framework, with all required static config properties and YAML registration. Use when creating a new CSS framework adapter for the grid system.
 ---
 
-This skill generates a complete grid adapter implementation for a new CSS framework. It follows the exact patterns established by the existing Bootstrap, Tailwind, and Bulma adapters.
+This skill generates a complete grid adapter preset for a new CSS framework. Presets are zero-method subclasses of `GridAdapter` that declare their CSS vocabulary as `private static` Configurable properties.
 
 ## Step 1: Gather Requirements
 
 Ask the user for:
 1. **CSS framework name** (e.g., "Foundation", "Skeleton", "PureCSS")
-2. **Viewport breakpoints**: List of viewport keys and labels (e.g., `sm → Small`, `md → Medium`, `lg → Large`)
-3. **Default viewport**: Which viewport is the default (most commonly used)
+2. **Viewport breakpoints**: List of viewport keys and labels, ordered small → large
+3. **Default viewport**: Which viewport is the default for the CMS editor
 4. **Column count**: Total grid columns (typically 12)
 5. **Container max width**: Max container width in px at the largest breakpoint
-6. **Base viewport behavior**: Does the framework have a "mobile-first" base viewport with no prefix in class names? (like Bootstrap's `xs` or Bulma's `mobile`)
-7. **Class name patterns**: Ask for examples of:
-   - Width class (e.g., Bootstrap: `col-md-6`, Tailwind: `md:col-span-6`)
-   - Offset class (e.g., Bootstrap: `offset-md-3`, Tailwind: `md:col-start-4`)
-   - Visibility hide class (e.g., Bootstrap: `d-md-none`, Tailwind: `md:hidden`)
-   - Visibility restore class (e.g., Bootstrap: `d-md-block`, Tailwind: `md:block`)
-   - Row container class
+6. **Base viewport**: Does the framework have a viewport with no prefix in class names? (like Bootstrap's `xs` or Bulma's `mobile`). Set to `null` if all viewports use the same responsive format.
+7. **Class name patterns** — ask for examples of:
+   - Width class at the base viewport and at a responsive viewport
+   - Offset class (and whether it uses 0-based or 1-based positioning)
+   - Visibility hide/restore classes
+   - Row container class (static string, or dynamic based on column count?)
    - Container class (fixed and fluid variants)
 8. **Title class options**: What heading/display classes does the framework offer?
+9. **Content layout classes**: Aspect ratio, vertical alignment, ordering, padding patterns
+10. **Offset strategy**: Margin-based (like Bootstrap/Bulma) or grid-placement (like Tailwind)?
 
-## Step 2: Generate the Adapter Class
+## Step 2: Generate the Preset Class
 
-Create `src/Adapter/{Name}Adapter.php` with this structure:
+Create `src/Adapter/{Name}Adapter.php` — a zero-method subclass of `GridAdapter` with only `private static` property overrides.
 
-```php
-<?php
+Use the existing presets as reference:
+- `src/Adapter/BootstrapAdapter.php` — Bootstrap 5 (base viewport: `xs`)
+- `src/Adapter/TailwindAdapter.php` — Tailwind CSS (no base viewport, offset adjustment: 1)
+- `src/Adapter/BulmaAdapter.php` — Bulma (base viewport: `mobile`, base column class: `column`)
 
-declare(strict_types=1);
+### Format String Conventions
 
-namespace WeDevelop\Grid\Adapter;
+Width/offset formats use sprintf positional args:
+- `%1$s` = viewport key, `%2$d` = width/offset value (after adjustment)
+- Base formats: `%d` = value only (no viewport)
 
-use WeDevelop\Grid\Value\ContentLayoutClassMap;
-use WeDevelop\Grid\Value\OffsetStrategy;
-use WeDevelop\Grid\Value\Viewport;
+Order formats: `%1$s` = viewport, `%2$d` = position (1 or 2)
+Padding format: `%1$s` = direction prefix, `%2$s` = viewport, `%3$d` = size
 
-final class {Name}Adapter extends AbstractGridAdapter
-{
-    public function __construct()
-    {
-        parent::__construct(
-            allViewports: [
-                // ... Viewport instances
-            ],
-            defaultColumns: {columnCount},
-            defaultContainerMaxWidth: {maxWidth},
-            defaultViewportKey: '{defaultKey}',
-        );
-    }
+Row class format: `%d` = column count (unused arg ignored for static strings like `'row'`)
 
-    // ... framework-specific interface methods + format hooks
-}
-```
+### Base Viewport Pattern
 
-### Required Methods
+If `base_viewport_key` is set (e.g., `'xs'`), that viewport uses the base format strings (no viewport infix). All other viewports use the responsive format strings.
 
-Implement the abstract methods from `GridAdapterInterface` (via `AbstractGridAdapter`):
-- `getWidthClass(string $viewport, int $width)` → framework-specific width class
-- `getOffsetClass(string $viewport, int $offset)` → framework-specific offset class
-- `getBaseWidthClass(int $width)` → width class for the base/default viewport
-- `getBaseOffsetClass(int $offset)` → offset class for the base/default viewport
-- `getRowClasses()` → row container class string
-- `getContainerClass(bool $fluid)` → container class (fixed vs fluid)
-- `getTitleClassOptions()` → heading class → label mapping
-- `getOffsetStrategy()` → `OffsetStrategy::Margin` or `OffsetStrategy::GridPlacement`
-- `getContentLayoutClassMap()` → framework-specific content layout class map
-
-And the visibility format hooks:
-- `formatHideClass(string $viewportKey)` → CSS class to hide at this viewport
-- `formatRestoreClass(string $viewportKey)` → CSS class to restore visibility at this viewport
-
-**Note:** `getViewports()`, `getColumnCount()`, `getDefaultViewport()`, `getContainerMaxWidth()`, and `getVisibilityClasses()` are final methods on the base class — do not implement them.
-
-### Visibility Format Hooks
-
-The base class pre-computes the visibility map using `formatHideClass()` and `formatRestoreClass()`:
-- For non-last viewports: `[formatHideClass(key), formatRestoreClass(nextKey)]`
-- For the last viewport: `[formatHideClass(key)]`
-
-Handle base viewports (no prefix) as special cases in `formatHideClass()`.
+If `base_viewport_key` is `null`, all viewports use the responsive format. The base format strings are still used for `getBaseWidthClass()` / `getBaseOffsetClass()` (CMS editor preview).
 
 ## Step 3: Register in YAML
 
-Update `_config/grid.yml` or create a separate YAML file. Show the user the config to switch to the new adapter:
+Show the user the config to switch to the new adapter:
 
 ```yaml
 SilverStripe\Core\Injector\Injector:
@@ -95,15 +62,23 @@ SilverStripe\Core\Injector\Injector:
 
 ## Step 4: Verify
 
-After generating the adapter:
+After generating the preset:
 1. Run `make analyse` to verify PHPStan compliance (level max, 100% type coverage)
-2. Check that all method return types satisfy the interface
-3. Verify the visibility map generates correct hide/restore pairs for all viewport combinations
+2. Run `make test-integration` to verify the adapter works with the real config system
+3. Verify visibility classes generate correct hide/restore pairs for all viewport combinations
+
+## Step 5: Write Integration Tests
+
+Create `tests/Integration/Adapter/{Name}AdapterTest.php` extending `SapphireTest` with `$usesDatabase = false`. Test ALL method outputs:
+- Viewport definitions (count, order, keys, labels)
+- Width/offset/base classes across viewports
+- Visibility class pairs (full set + filtered viewports)
+- Content layout: aspect ratios, alignment, ordering, padding, base column class
+
+Use the existing adapter tests as reference (BootstrapAdapterTest, TailwindAdapterTest, BulmaAdapterTest).
 
 ## Reference
 
-Study the existing adapters for patterns:
-- `src/Adapter/BootstrapAdapter.php` — Bootstrap 5 (base viewport: `xs`, no infix)
-- `src/Adapter/TailwindAdapter.php` — Tailwind v3/v4 (all prefixed, offset uses `col-start-{n+1}`)
-- `src/Adapter/BulmaAdapter.php` — Bulma (base viewport: `mobile`, uses suffix instead of prefix)
-- `src/Adapter/AbstractGridAdapter.php` — Abstract base class with shared config + visibility map
+- `src/Adapter/GridAdapter.php` — Config-driven base class (see docblock for all 25+ config properties)
+- `src/Contract/GridAdapterInterface.php` — 13-method grid contract
+- `src/Contract/ContentLayoutAdapterInterface.php` — 8-method content layout contract

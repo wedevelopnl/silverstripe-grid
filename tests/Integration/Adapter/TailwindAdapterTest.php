@@ -2,46 +2,47 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Unit\Adapter;
+namespace WeDevelop\Grid\Tests\Integration\Adapter;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
-use SilverStripe\Config\Collections\MemoryConfigCollection;
-use SilverStripe\Core\Config\ConfigLoader;
+use SilverStripe\Dev\SapphireTest;
+use WeDevelop\Grid\Adapter\GridAdapter;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
+use WeDevelop\Grid\Contract\ContentLayoutAdapterInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Value\AspectRatio;
+use WeDevelop\Grid\Value\MediaPosition;
 use WeDevelop\Grid\Value\OffsetStrategy;
+use WeDevelop\Grid\Value\VerticalAlignment;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
- * Unit tests for TailwindAdapter — viewport definitions, class generation,
+ * Integration tests for TailwindAdapter — viewport definitions, class generation,
  * offset strategy, and visibility with filtered viewport sets.
  */
 #[CoversClass(TailwindAdapter::class)]
-final class TailwindAdapterTest extends TestCase
+#[CoversClass(GridAdapter::class)]
+final class TailwindAdapterTest extends SapphireTest
 {
-    use ConfigManifestTrait;
-
-    private MemoryConfigCollection $configCollection;
+    protected $usesDatabase = false;
 
     private TailwindAdapter $adapter;
 
     protected function setUp(): void
     {
-        $this->configCollection = new MemoryConfigCollection();
-        ConfigLoader::inst()->pushManifest($this->configCollection);
+        parent::setUp();
         $this->adapter = new TailwindAdapter();
-    }
-
-    protected function tearDown(): void
-    {
-        ConfigLoader::inst()->popManifest();
     }
 
     public function testImplementsGridAdapterInterface(): void
     {
         $this->assertInstanceOf(GridAdapterInterface::class, $this->adapter);
+    }
+
+    public function testImplementsContentLayoutAdapterInterface(): void
+    {
+        $this->assertInstanceOf(ContentLayoutAdapterInterface::class, $this->adapter);
     }
 
     // ── Viewports ──────────────────────────────────────────────
@@ -302,8 +303,8 @@ final class TailwindAdapterTest extends TestCase
     #[DataProvider('visibilityClassWithFilteredViewportsProvider')]
     public function testGetVisibilityClassesWithFilteredViewports(array $enabledViewports, string $viewport, array $expectedClasses): void
     {
-        $this->configCollection->set(TailwindAdapter::class, 'enabled_viewports', $enabledViewports);
-        $this->configCollection->set(TailwindAdapter::class, 'default_viewport', $enabledViewports[0]);
+        TailwindAdapter::config()->set('enabled_viewports', $enabledViewports);
+        TailwindAdapter::config()->set('default_viewport', $enabledViewports[0]);
 
         $adapter = new TailwindAdapter();
 
@@ -323,5 +324,114 @@ final class TailwindAdapterTest extends TestCase
         yield '[sm,lg,2xl] — sm' => [['sm', 'lg', '2xl'], 'sm', ['sm:hidden', 'lg:block']];
         yield '[sm,lg,2xl] — lg' => [['sm', 'lg', '2xl'], 'lg', ['lg:hidden', '2xl:block']];
         yield '[sm,lg,2xl] — 2xl' => [['sm', 'lg', '2xl'], '2xl', ['2xl:hidden']];
+    }
+
+    // ─── Content layout: aspect ratio ────────────────────────────────
+
+    #[DataProvider('aspectRatioProvider')]
+    public function testGetAspectRatioClass(AspectRatio $ratio, ?string $expected): void
+    {
+        $this->assertSame($expected, $this->adapter->getAspectRatioClass($ratio));
+    }
+
+    /**
+     * @return iterable<string, array{AspectRatio, ?string}>
+     */
+    public static function aspectRatioProvider(): iterable
+    {
+        yield 'auto' => [AspectRatio::Auto, null];
+        yield 'square' => [AspectRatio::Square, 'aspect-square'];
+        yield '4:3' => [AspectRatio::FourByThree, 'aspect-[4/3]'];
+        yield '16:9' => [AspectRatio::SixteenByNine, 'aspect-video'];
+    }
+
+    // ─── Content layout: vertical alignment ──────────────────────────
+
+    #[DataProvider('verticalAlignmentProvider')]
+    public function testGetVerticalAlignmentClass(VerticalAlignment $alignment, string $expected): void
+    {
+        $this->assertSame($expected, $this->adapter->getVerticalAlignmentClass($alignment));
+    }
+
+    /**
+     * @return iterable<string, array{VerticalAlignment, string}>
+     */
+    public static function verticalAlignmentProvider(): iterable
+    {
+        yield 'top' => [VerticalAlignment::Top, 'items-start'];
+        yield 'center' => [VerticalAlignment::Center, 'items-center'];
+        yield 'bottom' => [VerticalAlignment::Bottom, 'items-end'];
+    }
+
+    // ─── Content layout: media ordering ──────────────────────────────
+
+    #[DataProvider('mediaOrderProvider')]
+    public function testGetMediaOrderClasses(MediaPosition $position, string $expected): void
+    {
+        $this->assertSame($expected, $this->adapter->getMediaOrderClasses($position));
+    }
+
+    /**
+     * @return iterable<string, array{MediaPosition, string}>
+     */
+    public static function mediaOrderProvider(): iterable
+    {
+        yield 'first' => [MediaPosition::First, 'order-1'];
+        yield 'last' => [MediaPosition::Last, 'order-2'];
+        yield 'last on desktop' => [MediaPosition::LastOnDesktop, 'order-1 sm:order-2'];
+    }
+
+    #[DataProvider('contentOrderProvider')]
+    public function testGetContentOrderClasses(MediaPosition $position, string $expected): void
+    {
+        $this->assertSame($expected, $this->adapter->getContentOrderClasses($position));
+    }
+
+    /**
+     * @return iterable<string, array{MediaPosition, string}>
+     */
+    public static function contentOrderProvider(): iterable
+    {
+        yield 'first' => [MediaPosition::First, 'order-2'];
+        yield 'last' => [MediaPosition::Last, 'order-1'];
+        yield 'last on desktop' => [MediaPosition::LastOnDesktop, 'order-2 sm:order-1'];
+    }
+
+    // ─── Content layout: width classes ───────────────────────────────
+
+    public function testGetMediaWidthClass(): void
+    {
+        // Default viewport is sm, 12 columns, contentColumns=8 → media=4
+        $this->assertSame('sm:col-span-4', $this->adapter->getMediaWidthClass(8));
+    }
+
+    public function testGetContentWidthClass(): void
+    {
+        $this->assertSame('sm:col-span-8', $this->adapter->getContentWidthClass(8));
+    }
+
+    // ─── Content layout: padding ─────────────────────────────────────
+
+    #[DataProvider('paddingClassProvider')]
+    public function testGetPaddingClass(string $direction, int $size, string $expected): void
+    {
+        $this->assertSame($expected, $this->adapter->getPaddingClass($direction, $size));
+    }
+
+    /**
+     * @return iterable<string, array{string, int, string}>
+     */
+    public static function paddingClassProvider(): iterable
+    {
+        yield 'left size 3' => ['left', 3, 'sm:pl-3'];
+        yield 'right size 3' => ['right', 3, 'sm:pr-3'];
+        yield 'left size 5' => ['left', 5, 'sm:pl-5'];
+    }
+
+    // ─── Content layout: base column class ───────────────────────────
+
+    public function testGetBaseColumnClassReturnsNull(): void
+    {
+        $this->assertNull($this->adapter->getBaseColumnClass());
     }
 }

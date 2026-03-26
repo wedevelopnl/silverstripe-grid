@@ -9,14 +9,14 @@ applyTo: "**/*"
 _config/              # YAML config (DI bindings, element hierarchy, grid adapter)
 templates/            # SilverStripe .ss templates (element holders + form fields)
 src/                  # PHP source (PSR-4: WeDevelop\Grid\)
-src/Adapter/          # Grid framework adapters (Tailwind, Bootstrap, Bulma) + GridAdapterConfiguration trait + ContentLayoutAdapter
+src/Adapter/          # Grid framework adapters: GridAdapter base class + framework presets (Bootstrap, Tailwind, Bulma)
 src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderValidatorInterface)
 src/Controllers/      # API controllers (GridController)
 src/Dev/              # Fixture loading for E2E tests (controller, loader, post-actions, result)
 src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement) + ContainerElementTrait
 src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaExtension)
 src/Forms/            # Form field implementations (GridEditorField)
-src/Value/            # Value objects and DTOs (GridNode, Result, ValidationError, ValidationSeverity, ContainerType, Viewport, ViewportConfig, GridSettings, OverrideStrategy, ContentLayoutClassMap, AspectRatio, MediaPosition, VerticalAlignment)
+src/Value/            # Value objects and DTOs (GridNode, Result, ValidationError, ValidationSeverity, ContainerType, Viewport, ViewportConfig, GridSettings, OverrideStrategy, AspectRatio, MediaPosition, VerticalAlignment)
 src/Service/          # Domain services (GridTreeBuilder, ReorderService, GridSettingsResolver)
 src/Validation/       # Hierarchy validation, reorder validation, and field validators (HierarchyValidationService, ReorderValidator, ElementAllowanceTrait, GridSettingsFieldValidator)
 src/Exception/        # Domain exceptions (GridDomainException, InvalidGridValueException)
