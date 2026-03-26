@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Model;
 
 use Override;
-use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Contract\ContainerInterface;
@@ -99,22 +98,6 @@ class Section extends GridElement implements ContainerInterface
     public function getContainerType(): ContainerType
     {
         return ContainerType::Section;
-    }
-
-    /** Render through the holder template. */
-    #[Override]
-    public function forTemplate(): string
-    {
-        /** @var DBHTMLText $result */
-        $result = $this->renderWith('WeDevelop/Grid/Layout/SectionHolder');
-
-        return (string) $result;
-    }
-
-    /** Inner content rendered by `$Element` in the holder template. */
-    public function Element(): DBHTMLText
-    {
-        return $this->renderWith('WeDevelop/Grid/Model/Section');
     }
 
     /** CSS classes for the grid container wrapper. */
