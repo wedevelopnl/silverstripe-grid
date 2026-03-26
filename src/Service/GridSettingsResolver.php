@@ -30,11 +30,27 @@ final class GridSettingsResolver
 
     private static string $override_strategy = 'isolated';
 
-    private readonly OverrideStrategy $strategy;
-
     public function __construct(
         private readonly GridAdapterInterface $adapter,
     ) {
+    }
+
+    /**
+     * @return array<non-empty-string, ViewportConfig>
+     */
+    public function resolveEffective(GridSettings $settings): array
+    {
+        return match ($this->resolveStrategy()) {
+            OverrideStrategy::Isolated => $this->resolveIsolated($settings),
+            OverrideStrategy::Cascade => $this->resolveCascade($settings),
+        };
+    }
+
+    /**
+     * @throws InvalidGridValueException
+     */
+    private function resolveStrategy(): OverrideStrategy
+    {
         /** @var string $value */
         $value = static::config()->get('override_strategy');
         $strategy = OverrideStrategy::tryFrom($value);
@@ -43,18 +59,7 @@ final class GridSettingsResolver
             throw InvalidGridValueException::forOverrideStrategy($value);
         }
 
-        $this->strategy = $strategy;
-    }
-
-    /**
-     * @return array<non-empty-string, ViewportConfig>
-     */
-    public function resolveEffective(GridSettings $settings): array
-    {
-        return match ($this->strategy) {
-            OverrideStrategy::Isolated => $this->resolveIsolated($settings),
-            OverrideStrategy::Cascade => $this->resolveCascade($settings),
-        };
+        return $strategy;
     }
 
     /**

@@ -28,7 +28,7 @@ use WeDevelop\Grid\Value\Viewport;
  *
  * @see BootstrapAdapter for a complete preset example
  */
-class GridAdapter implements GridAdapterInterface, ContentLayoutAdapterInterface
+abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapterInterface
 {
     use Configurable;
 
@@ -200,8 +200,14 @@ class GridAdapter implements GridAdapterInterface, ContentLayoutAdapterInterface
     /** @return list<string> */
     public function getVisibilityClasses(string $viewport): array
     {
+        if (!isset($this->viewports[$viewport])) {
+            throw InvalidGridValueException::forViewport($viewport);
+        }
+
         /** @var list<non-empty-string> $keys */
         $keys = array_keys($this->viewports);
+
+        /** @var int<0, max> $index array_search cannot return false after the isset guard */
         $index = array_search($viewport, $keys, true);
         $isLast = $index === count($keys) - 1;
 

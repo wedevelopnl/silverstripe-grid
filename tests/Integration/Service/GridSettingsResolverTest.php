@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Tests\Integration\Service;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
+use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Service\GridSettingsResolver;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
@@ -225,5 +226,19 @@ final class GridSettingsResolverTest extends SapphireTest
         );
 
         $this->assertSame($expectedKeys, array_keys($effective));
+    }
+
+    // ─── Validation ──────────────────────────────────────────────────
+    // Placed last: config mutation to an invalid value would pollute subsequent tests.
+
+    public function testInvalidOverrideStrategyThrows(): void
+    {
+        GridSettingsResolver::config()->set('override_strategy', 'invalid');
+        $adapter = new BootstrapAdapter();
+        $resolver = new GridSettingsResolver($adapter);
+
+        $this->expectException(InvalidGridValueException::class);
+
+        $resolver->resolveEffective(GridSettings::initial(12));
     }
 }

@@ -19,11 +19,6 @@ final class GridAdapterValidationTest extends SapphireTest
 {
     protected $usesDatabase = false;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-    }
-
     // ─── Viewport validation ────────────────────────────────────────
 
     public function testEmptyEnabledViewportsThrows(): void
