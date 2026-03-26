@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Tests\Unit\Validation\Stub\ContainerParentStub;
 use WeDevelop\Grid\Tests\Unit\Validation\Stub\NonRootElementStub;
 use WeDevelop\Grid\Tests\Unit\Validation\Stub\PageStub;
+use WeDevelop\Grid\Tests\Unit\Validation\Stub\PlainDataObjectStub;
 use WeDevelop\Grid\Tests\Unit\Validation\Stub\RootElementStub;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Validation\HierarchyValidationService;
@@ -124,6 +125,39 @@ final class HierarchyValidationServiceTest extends TestCase
         $this->assertTrue($result->isErr());
         $this->assertStringContainsString('Section', $result->errors()[0]->message);
         $this->assertStringContainsString('Container', $result->errors()[0]->message);
+    }
+
+    // ─── Malformed parent state ────────────────────────────────────
+
+    public function testNonExistentParentReturnsOk(): void
+    {
+        $parent = new class () extends ContainerParentStub {
+            public function exists(): bool
+            {
+                return false;
+            }
+        };
+
+        $element = new RootElementStub();
+        $element->setParentObject($parent);
+
+        $result = $this->service->validate($element);
+
+        $this->assertTrue($result->isOk());
+    }
+
+    public function testNonContainerNonPageParentReturnsFail(): void
+    {
+        $parent = new PlainDataObjectStub();
+
+        $element = new RootElementStub();
+        $element->setParentObject($parent);
+
+        $result = $this->service->validate($element);
+
+        // Falls through to the final fail() — not a SiteTree, not a ContainerInterface
+        $this->assertTrue($result->isErr());
+        $this->assertSame('placement', $result->errors()[0]->field);
     }
 
     private function makeContainerParent(ContainerType $type): ContainerParentStub

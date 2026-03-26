@@ -26,6 +26,26 @@ final class ColumnTest extends ContainerContractTestCase
         return $column;
     }
 
+    protected function expectedIcon(): string
+    {
+        return 'font-icon-block-content';
+    }
+
+    protected function expectedPluralName(): string
+    {
+        return 'Columns';
+    }
+
+    protected function expectedClassDescription(): string
+    {
+        return 'Responsive grid column that holds content blocks';
+    }
+
+    protected function containerClass(): string
+    {
+        return Column::class;
+    }
+
     public function testGetContainerTypeReturnsColumn(): void
     {
         $column = $this->createContainer();
@@ -104,24 +124,6 @@ final class ColumnTest extends ContainerContractTestCase
         /** @var Column $column */
 
         $this->assertFalse($column->hasChildren());
-    }
-
-    public function testIconConfig(): void
-    {
-        $this->assertSame('font-icon-block-content', Column::config()->get('icon'));
-    }
-
-    public function testPluralNameConfig(): void
-    {
-        $this->assertSame('Columns', Column::config()->get('plural_name'));
-    }
-
-    public function testClassDescriptionConfig(): void
-    {
-        $this->assertSame(
-            'Responsive grid column that holds content blocks',
-            Column::config()->get('class_description'),
-        );
     }
 
     public function testGetTypeReturnsColumn(): void

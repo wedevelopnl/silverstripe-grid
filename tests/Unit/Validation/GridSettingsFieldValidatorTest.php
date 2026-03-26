@@ -211,6 +211,75 @@ final class GridSettingsFieldValidatorTest extends TestCase
         $this->assertTrue($result->isValid());
     }
 
+    // ─── Zero and negative boundaries ───────────────────────────
+
+    public function testZeroWidthPassesValidation(): void
+    {
+        $settings = new GridSettings(new ViewportConfig(0, 0, true));
+
+        $result = $this->validate($settings);
+
+        $this->assertTrue($result->isValid());
+    }
+
+    public function testNegativeWidthPassesValidation(): void
+    {
+        // ViewportConfig accepts raw int — validator only checks upper bounds
+        $settings = new GridSettings(new ViewportConfig(-1, 0, true));
+
+        $result = $this->validate($settings);
+
+        $this->assertTrue($result->isValid());
+    }
+
+    public function testNegativeOffsetPassesValidation(): void
+    {
+        $settings = new GridSettings(new ViewportConfig(6, -1, true));
+
+        $result = $this->validate($settings);
+
+        $this->assertTrue($result->isValid());
+    }
+
+    // ─── Width + offset overflow ────────────────────────────────
+
+    public function testWidthAtBoundaryWithOffsetAtBoundaryExceedsColumns(): void
+    {
+        // width=12, offset=1 → sum 13 > 12
+        $settings = new GridSettings(new ViewportConfig(self::COLUMNS, 1, true));
+
+        $result = $this->validate($settings);
+
+        $this->assertFalse($result->isValid());
+        $this->assertErrorContains($result, sprintf('Width %d plus offset 1', self::COLUMNS));
+    }
+
+    public function testWidthPlusOffsetExactlyEqualsColumnsIsValid(): void
+    {
+        // width=6, offset=6 → sum 12 = 12 → offset alone is invalid (offset >= columns)
+        $settings = new GridSettings(new ViewportConfig(6, 6, true));
+
+        $result = $this->validate($settings);
+
+        // offset=6 does NOT exceed max (11), but width=6 + offset=6 = 12 = columns → no overflow error
+        // Only offset >= columnCount triggers the offset error, and 6 < 12 → passes offset check
+        $this->assertTrue($result->isValid());
+    }
+
+    public function testOverrideWidthPlusOffsetOverflowReportsViewportKey(): void
+    {
+        $settings = new GridSettings(
+            new ViewportConfig(6, 0, true),
+            ['xl' => new ViewportConfig(10, 5, true)],
+        );
+
+        $result = $this->validate($settings);
+
+        $this->assertFalse($result->isValid());
+        $this->assertErrorContains($result, '"xl"');
+        $this->assertErrorContains($result, 'Width 10 plus offset 5');
+    }
+
     // ─── Helpers ────────────────────────────────────────────────
 
     private function validate(GridSettings $settings): ValidationResult

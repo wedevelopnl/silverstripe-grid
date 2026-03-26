@@ -671,4 +671,130 @@ final class RequestBodyParserTest extends TestCase
         $this->assertTrue($result->isOk());
         $this->assertSame(1, $result->unwrap());
     }
+
+    // ---- Type coercion boundaries -------------------------------------------
+
+    public function testParseElementIdRejectsStringThatLooksLikeInt(): void
+    {
+        $result = $this->parser->parseElementId(['id' => '42']);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseCreateBodyRejectsWholeNumberFloat(): void
+    {
+        $result = $this->parser->parseCreateBody([
+            'containerType' => 'section',
+            'parentId' => 5.0,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseReorderBodyRejectsNumericStringElementId(): void
+    {
+        $result = $this->parser->parseReorderBody([
+            'elementID' => '10',
+            'targetParentId' => 5,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseReorderBodyRejectsNumericStringTargetParentId(): void
+    {
+        $result = $this->parser->parseReorderBody([
+            'elementID' => 10,
+            'targetParentId' => '5',
+            'afterElementID' => null,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseUpdateGridSettingsBodyRejectsStringId(): void
+    {
+        $result = $this->parser->parseUpdateGridSettingsBody([
+            'id' => '1',
+            'viewport' => 'md',
+            'width' => 6,
+            'offset' => 0,
+            'visible' => true,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseUpdateGridSettingsBodyRejectsStringWidth(): void
+    {
+        $result = $this->parser->parseUpdateGridSettingsBody([
+            'id' => 1,
+            'viewport' => 'md',
+            'width' => '6',
+            'offset' => 0,
+            'visible' => true,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseUpdateGridSettingsBodyRejectsTruthyVisibleString(): void
+    {
+        $result = $this->parser->parseUpdateGridSettingsBody([
+            'id' => 1,
+            'viewport' => 'md',
+            'width' => 6,
+            'offset' => 0,
+            'visible' => 'true',
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseDuplicateToBodyRejectsStringTargetPageId(): void
+    {
+        $result = $this->parser->parseDuplicateToBody([
+            'id' => 5,
+            'targetPageId' => '10',
+            'targetZone' => 'main',
+            'targetParentId' => 1,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseCreateContentBodyRejectsWholeNumberFloat(): void
+    {
+        $result = $this->parser->parseCreateContentBody([
+            'className' => ContentElement::class,
+            'parentId' => 42.0,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    // ---- PHP_INT_MAX boundary -----------------------------------------------
+
+    public function testParseElementIdAcceptsPhpIntMax(): void
+    {
+        $result = $this->parser->parseElementId(['id' => PHP_INT_MAX]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(PHP_INT_MAX, $result->unwrap());
+    }
+
+    public function testParseCreateBodyAcceptsPhpIntMaxParentId(): void
+    {
+        $result = $this->parser->parseCreateBody([
+            'containerType' => 'section',
+            'parentId' => PHP_INT_MAX,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(PHP_INT_MAX, $result->unwrap()->parentId);
+    }
 }

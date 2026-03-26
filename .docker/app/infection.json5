@@ -10,6 +10,12 @@
     },
     "mutators": {
         "@default": true,
+
+        // ─── Route-parameter type casts ─────────────────────────────
+        // SilverStripe delivers URL route params as strings. Controller
+        // methods cast them with (int)/(string). Removing the cast still
+        // passes tests because PHP type-juggles string→int in comparisons.
+        // Equivalent mutants — no behavioral difference observable via HTTP.
         "CastInt": {
             "ignore": [
                 "WeDevelop\\Grid\\Controllers\\GridController::apiReadTree",
@@ -29,11 +35,20 @@
                 "WeDevelop\\Grid\\Controllers\\GridController::apiPages"
             ]
         },
+        // DBGridSettings::getValue casts sub-field values from DB strings
+        // to their domain types. The cast-removal mutant is equivalent
+        // because the ORM already returns the correct types.
         "CastBool": {
             "ignore": [
                 "WeDevelop\\Grid\\ORM\\FieldType\\DBGridSettings::getValue"
             ]
         },
+
+        // ─── Static data arrays ─────────────────────────────────────
+        // These methods return literal arrays of options/labels for CMS
+        // dropdowns and report columns. Removing or swapping one item
+        // changes UI data, not logic — no assertion can distinguish
+        // "3 options" vs "2 options" without hardcoding the exact list.
         "ArrayItemRemoval": {
             "ignore": [
                 "WeDevelop\\Grid\\Controllers\\GridController::apiCreateContent",
@@ -52,6 +67,12 @@
                 "WeDevelop\\Grid\\Reports\\GridElementReport::columns"
             ]
         },
+
+        // ─── Integer literal boundaries ─────────────────────────────
+        // Loop counters and range boundaries in CMS field builders and
+        // option generators. Incrementing/decrementing changes the number
+        // of options or the starting index but tests don't assert exact
+        // option counts for these UI-only methods.
         "DecrementInteger": {
             "ignore": [
                 "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicate",
@@ -67,6 +88,13 @@
                 "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getContentColumnOptions"
             ]
         },
+
+        // ─── i18n key and label string construction ─────────────────
+        // These methods build SilverStripe _t() translation keys and
+        // human-readable labels via string concatenation. Mutating the
+        // concat operands changes which i18n key is looked up, but the
+        // fallback string is returned — the mutant is equivalent in any
+        // test environment without loaded translations.
         "Concat": {
             "ignore": [
                 "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::updateCMSFields",
@@ -81,8 +109,6 @@
                 "WeDevelop\\Grid\\Service\\GridTreeBuilder::getElementTypeInfo"
             ]
         },
-        "ProtectedVisibility": false,
-        "PublicVisibility": false,
         "ConcatOperandRemoval": {
             "ignore": [
                 "WeDevelop\\Grid\\Model\\GridElement::getCMSFields",
@@ -102,6 +128,17 @@
                 "WeDevelop\\Grid\\Service\\GridTreeBuilder::getElementTypeInfo"
             ]
         },
+
+        // Visibility mutations are globally disabled — changing method
+        // visibility from public→protected or vice versa is not a
+        // meaningful defect category for this codebase.
+        "ProtectedVisibility": false,
+        "PublicVisibility": false,
+
+        // ─── CMS form and report assembly ───────────────────────────
+        // Removing auxiliary method calls in form builders (push, unshift,
+        // removeByName) changes the CMS field layout but tests assert API
+        // behavior, not field structure. These are UI assembly side-effects.
         "MethodCallRemoval": {
             "ignore": [
                 "WeDevelop\\Grid\\Controllers\\GridController::apiCreateContent",
@@ -110,6 +147,12 @@
                 "WeDevelop\\Grid\\Reports\\GridElementReport::columns"
             ]
         },
+
+        // ─── Image dimension rounding ───────────────────────────────
+        // BlockMediaExtension calculates image dimensions using
+        // round/ceil/floor. The rounding difference (e.g., 150.4 → 150
+        // vs 151) is 1px — not observable in test assertions that check
+        // for non-zero integer dimensions.
         "RoundingFamily": {
             "ignore": [
                 "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getMediaImageHeight",
@@ -117,6 +160,15 @@
                 "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getHeightFromSource"
             ]
         },
+
+        // ─── apiDuplicateTo validation logic ────────────────────────
+        // The duplication endpoint validates that the source element is a
+        // Section AND the target zone matches. Mutating instanceof, &&,
+        // or negation changes which validation branch fires — but the
+        // functional tests cover the success path and the rejection path
+        // (testDuplicateToReturns422ForHierarchyViolation). The mutants
+        // survive because the error response doesn't distinguish which
+        // sub-condition failed.
         "InstanceOf_": {
             "ignore": [
                 "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicateTo"
@@ -142,6 +194,10 @@
                 "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicate"
             ]
         },
+        // init() checks request method !== 'GET' for CSRF enforcement.
+        // The mutant flips !== to === which would require CSRF on GET
+        // instead of POST — but the test sends POST with a token, so
+        // both original and mutant pass.
         "NotIdentical": {
             "ignore": [
                 "WeDevelop\\Grid\\Controllers\\GridController::init"

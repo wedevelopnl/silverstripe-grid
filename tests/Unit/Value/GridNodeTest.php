@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Unit\Model;
+namespace WeDevelop\Grid\Tests\Unit\Value;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;

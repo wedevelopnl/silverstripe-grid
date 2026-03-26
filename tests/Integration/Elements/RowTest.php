@@ -25,6 +25,26 @@ final class RowTest extends ContainerContractTestCase
         return $row;
     }
 
+    protected function expectedIcon(): string
+    {
+        return 'font-icon-columns';
+    }
+
+    protected function expectedPluralName(): string
+    {
+        return 'Rows';
+    }
+
+    protected function expectedClassDescription(): string
+    {
+        return 'Horizontal container that holds columns within a section';
+    }
+
+    protected function containerClass(): string
+    {
+        return Row::class;
+    }
+
     public function testGetContainerTypeReturnsRow(): void
     {
         $row = $this->createContainer();
@@ -156,24 +176,6 @@ final class RowTest extends ContainerContractTestCase
 
             $this->assertFalse($row->hasChildren());
         });
-    }
-
-    public function testIconConfig(): void
-    {
-        $this->assertSame('font-icon-columns', Row::config()->get('icon'));
-    }
-
-    public function testPluralNameConfig(): void
-    {
-        $this->assertSame('Rows', Row::config()->get('plural_name'));
-    }
-
-    public function testClassDescriptionConfig(): void
-    {
-        $this->assertSame(
-            'Horizontal container that holds columns within a section',
-            Row::config()->get('class_description'),
-        );
     }
 
     public function testGetTypeReturnsRow(): void

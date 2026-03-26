@@ -39,6 +39,26 @@ final class SectionTest extends ContainerContractTestCase
         return $section;
     }
 
+    protected function expectedIcon(): string
+    {
+        return 'font-icon-block-layout';
+    }
+
+    protected function expectedPluralName(): string
+    {
+        return 'Sections';
+    }
+
+    protected function expectedClassDescription(): string
+    {
+        return 'Top-level layout container that holds rows';
+    }
+
+    protected function containerClass(): string
+    {
+        return Section::class;
+    }
+
     public function testGetContainerTypeReturnsSection(): void
     {
         $section = $this->createContainer();
@@ -235,24 +255,6 @@ final class SectionTest extends ContainerContractTestCase
         $result = $section->validate();
 
         $this->assertTrue($result->isValid());
-    }
-
-    public function testIconConfig(): void
-    {
-        $this->assertSame('font-icon-block-layout', Section::config()->get('icon'));
-    }
-
-    public function testPluralNameConfig(): void
-    {
-        $this->assertSame('Sections', Section::config()->get('plural_name'));
-    }
-
-    public function testClassDescriptionConfig(): void
-    {
-        $this->assertSame(
-            'Top-level layout container that holds rows',
-            Section::config()->get('class_description'),
-        );
     }
 
     public function testGetTypeReturnsSection(): void

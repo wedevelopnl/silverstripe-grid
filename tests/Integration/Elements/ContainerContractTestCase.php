@@ -37,6 +37,35 @@ abstract class ContainerContractTestCase extends SapphireTest
 
     abstract protected function createContainer(): ContainerInterface;
 
+    abstract protected function expectedIcon(): string;
+
+    abstract protected function expectedPluralName(): string;
+
+    abstract protected function expectedClassDescription(): string;
+
+    /**
+     * @return class-string<ContainerInterface>
+     */
+    abstract protected function containerClass(): string;
+
+    public function testIconConfig(): void
+    {
+        $this->assertSame($this->expectedIcon(), $this->containerClass()::config()->get('icon'));
+    }
+
+    public function testPluralNameConfig(): void
+    {
+        $this->assertSame($this->expectedPluralName(), $this->containerClass()::config()->get('plural_name'));
+    }
+
+    public function testClassDescriptionConfig(): void
+    {
+        $this->assertSame(
+            $this->expectedClassDescription(),
+            $this->containerClass()::config()->get('class_description'),
+        );
+    }
+
     public function testImplementsContainerInterface(): void
     {
         $container = $this->createContainer();
