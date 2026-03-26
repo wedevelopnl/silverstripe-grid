@@ -173,10 +173,40 @@ describe('DuplicateToDialog', () => {
     expect(screen.getByTestId('duplicate-to-dialog')).toBeDefined();
   });
 
-  it('renders search input on page step', () => {
+  it('renders search input on page step with empty value', () => {
     render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
-    expect(screen.getByTestId('duplicate-to-search')).toBeDefined();
+    const input = screen.getByTestId('duplicate-to-search');
+    expect(input).toBeDefined();
+    expect(input).toHaveProperty('value', '');
+  });
+
+  it('only renders the active step content', async () => {
+    const user = userEvent.setup();
+    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+    // Page step is visible, others are not
+    expect(screen.getByTestId('duplicate-to-step-page')).toBeDefined();
+    expect(screen.queryByTestId('duplicate-to-step-zone')).toBeNull();
+    expect(screen.queryByTestId('duplicate-to-step-container')).toBeNull();
+    expect(screen.queryByTestId('duplicate-to-step-confirm')).toBeNull();
+
+    // Advance to zone step
+    await advanceToZone(user);
+    expect(screen.queryByTestId('duplicate-to-step-page')).toBeNull();
+    expect(screen.getByTestId('duplicate-to-step-zone')).toBeDefined();
+  });
+
+  it('shows Back button only after the page step', async () => {
+    const user = userEvent.setup();
+    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+    // On page step, no back button
+    expect(screen.queryByTestId('duplicate-to-back')).toBeNull();
+
+    // On zone step, back button appears
+    await advanceToZone(user);
+    expect(screen.getByTestId('duplicate-to-back')).toBeDefined();
   });
 
   it('calls onCancel when cancel button is clicked', async () => {
@@ -227,6 +257,69 @@ describe('DuplicateToDialog', () => {
 
       // Home should remain selected
       expect(homeItem.getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('disabled page has tabIndex -1', () => {
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+      const items = screen.getAllByTestId('duplicate-to-page-item');
+      const blogItem = items.find((item) => item.textContent === 'Blog')!;
+      expect(blogItem.getAttribute('tabindex')).toBe('-1');
+    });
+
+    it('selected page has the --selected class modifier', async () => {
+      const user = userEvent.setup();
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+      const items = screen.getAllByTestId('duplicate-to-page-item');
+      const aboutItem = items.find((item) => item.textContent === 'About')!;
+      const homeItem = items.find((item) => item.textContent === 'Home')!;
+
+      // Home is pre-selected
+      expect(homeItem.className).toContain('--selected');
+      expect(aboutItem.className).not.toContain('--selected');
+
+      await user.click(aboutItem);
+
+      expect(aboutItem.className).toContain('--selected');
+      expect(homeItem.className).not.toContain('--selected');
+    });
+
+    it('disabled page has the --disabled class modifier', () => {
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+      const items = screen.getAllByTestId('duplicate-to-page-item');
+      const blogItem = items.find((item) => item.textContent === 'Blog')!;
+      const homeItem = items.find((item) => item.textContent === 'Home')!;
+
+      expect(blogItem.className).toContain('--disabled');
+      expect(homeItem.className).not.toContain('--disabled');
+    });
+
+    it('selects a page via Enter key', async () => {
+      const user = userEvent.setup();
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+      const items = screen.getAllByTestId('duplicate-to-page-item');
+      const aboutItem = items.find((item) => item.textContent === 'About')!;
+
+      aboutItem.focus();
+      await user.keyboard('{Enter}');
+
+      expect(aboutItem.getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('selects a page via Space key', async () => {
+      const user = userEvent.setup();
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+      const items = screen.getAllByTestId('duplicate-to-page-item');
+      const aboutItem = items.find((item) => item.textContent === 'About')!;
+
+      aboutItem.focus();
+      await user.keyboard(' ');
+
+      expect(aboutItem.getAttribute('aria-selected')).toBe('true');
     });
 
     it('Next button is disabled when currentPageId is 0', () => {
@@ -280,6 +373,44 @@ describe('DuplicateToDialog', () => {
       await user.click(items[1]); // click 'sidebar'
 
       expect(items[1].getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('non-selected zone does not have aria-selected true', async () => {
+      const user = userEvent.setup();
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+      await advanceToZone(user);
+
+      const items = screen.getAllByTestId('duplicate-to-zone-item');
+      // No zone is selected initially
+      expect(items[0].getAttribute('aria-selected')).toBe('false');
+      expect(items[1].getAttribute('aria-selected')).toBe('false');
+    });
+
+    it('selects a zone via Enter key', async () => {
+      const user = userEvent.setup();
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+      await advanceToZone(user);
+
+      const items = screen.getAllByTestId('duplicate-to-zone-item');
+      items[1].focus();
+      await user.keyboard('{Enter}');
+
+      expect(items[1].getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('selects a zone via Space key', async () => {
+      const user = userEvent.setup();
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+      await advanceToZone(user);
+
+      const items = screen.getAllByTestId('duplicate-to-zone-item');
+      items[0].focus();
+      await user.keyboard(' ');
+
+      expect(items[0].getAttribute('aria-selected')).toBe('true');
     });
 
     it('Next button is disabled when no zone is selected', async () => {
@@ -364,6 +495,43 @@ describe('DuplicateToDialog', () => {
       await user.click(items[0]);
 
       expect(items[0].getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('non-selected container does not have aria-selected true', async () => {
+      const user = userEvent.setup();
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+      await advanceToContainer(user);
+
+      const items = screen.getAllByTestId('duplicate-to-container-item');
+      expect(items[0].getAttribute('aria-selected')).toBe('false');
+      expect(items[1].getAttribute('aria-selected')).toBe('false');
+    });
+
+    it('selects a container via Enter key', async () => {
+      const user = userEvent.setup();
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+      await advanceToContainer(user);
+
+      const items = screen.getAllByTestId('duplicate-to-container-item');
+      items[0].focus();
+      await user.keyboard('{Enter}');
+
+      expect(items[0].getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('selects a container via Space key', async () => {
+      const user = userEvent.setup();
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
+
+      await advanceToContainer(user);
+
+      const items = screen.getAllByTestId('duplicate-to-container-item');
+      items[1].focus();
+      await user.keyboard(' ');
+
+      expect(items[1].getAttribute('aria-selected')).toBe('true');
     });
 
     it('Confirm button is disabled when no container selected', async () => {

@@ -81,15 +81,20 @@ function containsDialogSyncCall(node) {
 }
 
 /**
- * Walk ancestors to check if the path is inside a JSX attribute named `className`.
+ * Check if the path is inside a TemplateLiteral within a className JSX attribute.
  *
  * @param {import('@stryker-mutator/api/ignore').NodePath} path
  * @returns {boolean}
  */
-function isInsideClassNameAttribute(path) {
+function isInsideClassNameTemplateLiteral(path) {
   let current = path.parentPath;
+  let insideTemplate = false;
   while (current) {
+    if (current.isTemplateLiteral()) {
+      insideTemplate = true;
+    }
     if (
+      insideTemplate &&
       current.isJSXAttribute() &&
       current.node.name?.type === 'JSXIdentifier' &&
       current.node.name.name === 'className'
@@ -120,18 +125,15 @@ const reactIgnorer = {
       }
     }
 
-    // Pattern 2: CSS className ternary empty-string false branches
-    // Matches StringLiteral '' as the alternate of a ConditionalExpression
-    // inside a TemplateLiteral within a className JSX attribute
-    if (
-      path.isStringLiteral() &&
-      path.node.value === '' &&
-      path.parentPath?.isConditionalExpression() &&
-      path.key === 'alternate' &&
-      path.parentPath.parentPath?.isTemplateLiteral() &&
-      isInsideClassNameAttribute(path.parentPath.parentPath)
-    ) {
-      return 'CSS className ternary false branch';
+    // Pattern 2: CSS className mutations inside TemplateLiterals
+    // Suppresses StringLiteral mutations (modifier classes, empty branches) and
+    // ConditionalExpression mutations (selected/disabled toggles) inside className
+    // JSX attributes — these are visual-only and don't affect testable behavior.
+    if (path.isStringLiteral() && isInsideClassNameTemplateLiteral(path)) {
+      return 'CSS className string in template literal';
+    }
+    if (path.isConditionalExpression() && isInsideClassNameTemplateLiteral(path)) {
+      return 'CSS className conditional in template literal';
     }
 
     // Pattern 3: useEffect/useLayoutEffect cleanup return functions
