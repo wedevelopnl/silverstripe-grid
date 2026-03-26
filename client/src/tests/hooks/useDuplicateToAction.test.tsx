@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
@@ -6,8 +6,14 @@ import { useDuplicateToAction } from '@/hooks/useDuplicateToAction';
 import { GridEditorProvider } from '@/hooks/GridEditorContext';
 import type { SimpleElementNode, SectionNode } from '@/types/elements';
 
+const mockMutate = vi.hoisted(() => vi.fn());
+
 vi.mock('@/api/endpoints', () => ({
   duplicateToElement: vi.fn(),
+}));
+
+vi.mock('@/hooks/useElementMutations', () => ({
+  useDuplicateToElement: () => ({ mutate: mockMutate }),
 }));
 
 function createWrapper() {
@@ -66,6 +72,10 @@ function makeSection(overrides: Partial<SectionNode> = {}): SectionNode {
 }
 
 describe('useDuplicateToAction', () => {
+  beforeEach(() => {
+    mockMutate.mockReset();
+  });
+
   it('returns null action and dialog when canCreate is false', () => {
     const { result } = renderHook(
       () => useDuplicateToAction(makeLeaf({ canCreate: false })),
@@ -124,5 +134,89 @@ describe('useDuplicateToAction', () => {
 
     expect(result.current.action).not.toBeNull();
     expect(result.current.action!.destructive).toBeUndefined();
+  });
+
+  it('opens the dialog when action.onAction is called', () => {
+    const { result } = renderHook(
+      () => useDuplicateToAction(makeLeaf()),
+      { wrapper: createWrapper() },
+    );
+
+    expect(result.current.dialog!.isOpen).toBe(false);
+
+    act(() => {
+      result.current.action!.onAction();
+    });
+
+    expect(result.current.dialog!.isOpen).toBe(true);
+  });
+
+  it('closes the dialog and clears error when onCancel is called', () => {
+    const { result } = renderHook(
+      () => useDuplicateToAction(makeLeaf()),
+      { wrapper: createWrapper() },
+    );
+
+    act(() => {
+      result.current.action!.onAction();
+    });
+
+    expect(result.current.dialog!.isOpen).toBe(true);
+
+    act(() => {
+      result.current.dialog!.onCancel();
+    });
+
+    expect(result.current.dialog!.isOpen).toBe(false);
+    expect(result.current.dialog!.error).toBeNull();
+  });
+
+  it('closes the dialog on successful confirm', () => {
+    mockMutate.mockImplementation((_params: unknown, options: { onSuccess: () => void }) => {
+      options.onSuccess();
+    });
+
+    const { result } = renderHook(
+      () => useDuplicateToAction(makeLeaf()),
+      { wrapper: createWrapper() },
+    );
+
+    act(() => {
+      result.current.action!.onAction();
+    });
+
+    expect(result.current.dialog!.isOpen).toBe(true);
+
+    act(() => {
+      result.current.dialog!.onConfirm(2, 'main', 10);
+    });
+
+    expect(result.current.dialog!.isOpen).toBe(false);
+    expect(result.current.dialog!.error).toBeNull();
+    expect(mockMutate).toHaveBeenCalledWith(
+      { id: 1, targetPageId: 2, targetZone: 'main', targetParentId: 10 },
+      expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+    );
+  });
+
+  it('sets error on failed confirm', () => {
+    mockMutate.mockImplementation((_params: unknown, options: { onError: (err: Error) => void }) => {
+      options.onError(new Error('Network error'));
+    });
+
+    const { result } = renderHook(
+      () => useDuplicateToAction(makeLeaf()),
+      { wrapper: createWrapper() },
+    );
+
+    act(() => {
+      result.current.action!.onAction();
+    });
+
+    act(() => {
+      result.current.dialog!.onConfirm(2, 'main', 10);
+    });
+
+    expect(result.current.dialog!.error).toBe('Network error');
   });
 });

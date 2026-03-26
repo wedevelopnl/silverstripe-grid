@@ -18,6 +18,7 @@ if (typeof globalThis.PointerEvent === 'undefined') {
   };
 }
 import type { ElementTreeResponse } from '@/types/elements';
+import { isContainerNode } from '@/types/elements';
 import { useDragAndDrop } from '@/hooks/useDragAndDrop';
 import type { DragState } from '@/hooks/useDragAndDrop';
 import { makeElement, makeColumn, makeRow, makeSection } from '../helpers/elementFactories';
@@ -107,6 +108,65 @@ const crossContainerTree: ElementTreeResponse = {
     ], 42),
   ],
 };
+
+// Tree for cross-container drag-over with non-empty target containers.
+// Section 5 has 2 rows with columns containing elements — provides a
+// non-empty target when dragging a row from section 4 into section 5.
+const crossContainerNonEmptyTree: ElementTreeResponse = {
+  '42': [
+    makeSection(4, [
+      makeRow(60, [makeColumn(70, [makeElement(80, 70)], 60)], 4),
+    ], 42),
+    makeSection(5, [
+      makeRow(61, [makeColumn(71, [makeElement(81, 71)], 61)], 5),
+      makeRow(62, [makeColumn(72, [makeElement(82, 72)], 62)], 5),
+    ], 42),
+  ],
+};
+
+// --- Event factories with pointer geometry ---
+
+function makeActiveWithRect(
+  id: string,
+  initial: { left: number; top: number },
+  translated: { left: number; top: number },
+): Active {
+  const fullInitial = { ...initial, width: 0, height: 0, right: initial.left, bottom: initial.top };
+  const fullTranslated = { ...translated, width: 0, height: 0, right: translated.left, bottom: translated.top };
+  return {
+    id,
+    data: createMutableRef(undefined),
+    rect: createMutableRef({ initial: fullInitial, translated: fullTranslated }),
+  };
+}
+
+function makeOverWithRect(
+  id: string,
+  rect: { width: number; height: number; top: number; left: number; right: number; bottom: number },
+): Over {
+  return {
+    id,
+    data: createMutableRef(undefined),
+    rect,
+    disabled: false,
+  };
+}
+
+function makeDragOverEventWithPointer(
+  activeId: string,
+  overId: string,
+  clientX: number,
+  clientY: number,
+  overRect: { width: number; height: number; top: number; left: number; right: number; bottom: number },
+): DragOverEvent {
+  return {
+    active: makeActiveWithRect(activeId, { left: 0, top: 0 }, { left: 0, top: 0 }),
+    over: makeOverWithRect(overId, overRect),
+    collisions: [],
+    delta: { x: 0, y: 0 },
+    activatorEvent: new PointerEvent('pointerdown', { clientX, clientY }),
+  };
+}
 
 // --- Tests ---
 
@@ -482,6 +542,130 @@ describe('useDragAndDrop', () => {
       });
 
       expect(result.current.pendingTree).toBeNull();
+    });
+  });
+
+  describe('cross-container drag-over with non-empty target', () => {
+    it('places element after last child when dragging into container with children', () => {
+      const { result } = renderHook(() =>
+        useDragAndDrop({ tree: crossContainerNonEmptyTree, onReorder: vi.fn() }),
+      );
+
+      // Drag row-60 (in section-4) over section-5 (cross-type: row → section).
+      // Section 5 has children [row-61, row-62], so afterElementId should be 62.
+      act(() => {
+        result.current.dndContextProps.onDragOver(makeDragOverEvent('row-60', 'section-5'));
+      });
+
+      expect(result.current.pendingTree).not.toBeNull();
+
+      // Verify row-60 was placed at the end (after row-62) in section-5
+      const sections = result.current.pendingTree!['42'];
+      const section5 = sections.find((s) => s.id === 5);
+      expect(section5).toBeDefined();
+      expect(isContainerNode(section5!)).toBe(true);
+      if (isContainerNode(section5!)) {
+        const childIds = section5!.children!.map((c) => c.id);
+        expect(childIds).toEqual([61, 62, 60]);
+      }
+    });
+
+    it('calls onReorder with correct afterElementId after cross-type drag + drop', () => {
+      const onReorder = vi.fn();
+      const { result } = renderHook(() =>
+        useDragAndDrop({ tree: crossContainerNonEmptyTree, onReorder }),
+      );
+
+      act(() => {
+        result.current.dndContextProps.onDragOver(makeDragOverEvent('row-60', 'section-5'));
+      });
+
+      act(() => {
+        result.current.dndContextProps.onDragEnd(makeDragEndEvent('row-60', 'section-5'));
+      });
+
+      expect(onReorder).toHaveBeenCalledTimes(1);
+      // row-60 moved to section-5, placed after row-62 (last child)
+      expect(onReorder).toHaveBeenCalledWith(
+        60, 5, 62, expect.any(Function),
+      );
+    });
+  });
+
+  describe('direction detection with pointer geometry', () => {
+    // Over rect for rows: Y-axis direction. Center Y = 100 + 100/2 = 150.
+    const rowRect = { top: 100, left: 0, width: 200, height: 100, right: 200, bottom: 200 };
+
+    it('places before target when pointer is above center (cross-parent)', () => {
+      const { result } = renderHook(() =>
+        useDragAndDrop({ tree: crossContainerTree, onReorder: vi.fn() }),
+      );
+
+      // Drag row-11 (section-2) over row-14 (section-3, second row).
+      // Pointer Y=120 < center Y=150 → "before" → afterElementId = siblings[0].id = 13
+      // Expected: row-11 placed after row-13, before row-14
+      act(() => {
+        result.current.dndContextProps.onDragOver(
+          makeDragOverEventWithPointer('row-11', 'row-14', 50, 120, rowRect),
+        );
+      });
+
+      expect(result.current.pendingTree).not.toBeNull();
+      const sections = result.current.pendingTree!['42'];
+      const section3 = sections.find((s) => s.id === 3);
+      expect(isContainerNode(section3!)).toBe(true);
+      if (isContainerNode(section3!)) {
+        const childIds = section3!.children!.map((c) => c.id);
+        expect(childIds).toEqual([13, 11, 14]);
+      }
+    });
+
+    it('places after target when pointer is below center (cross-parent)', () => {
+      const { result } = renderHook(() =>
+        useDragAndDrop({ tree: crossContainerTree, onReorder: vi.fn() }),
+      );
+
+      // Drag row-11 (section-2) over row-14 (section-3, second row).
+      // Pointer Y=180 >= center Y=150 → "after" → afterElementId = overParsed.id = 14
+      // Expected: row-11 placed after row-14
+      act(() => {
+        result.current.dndContextProps.onDragOver(
+          makeDragOverEventWithPointer('row-11', 'row-14', 50, 180, rowRect),
+        );
+      });
+
+      expect(result.current.pendingTree).not.toBeNull();
+      const sections = result.current.pendingTree!['42'];
+      const section3 = sections.find((s) => s.id === 3);
+      expect(isContainerNode(section3!)).toBe(true);
+      if (isContainerNode(section3!)) {
+        const childIds = section3!.children!.map((c) => c.id);
+        expect(childIds).toEqual([13, 14, 11]);
+      }
+    });
+
+    it('places at start when pointer is before first sibling (cross-parent)', () => {
+      const { result } = renderHook(() =>
+        useDragAndDrop({ tree: crossContainerTree, onReorder: vi.fn() }),
+      );
+
+      // Drag row-11 (section-2) over row-13 (section-3, FIRST row).
+      // Pointer Y=120 < center Y=150 → "before" → overIdx=0, overIdx > 0 is false
+      // → afterElementId = null → placed at beginning
+      act(() => {
+        result.current.dndContextProps.onDragOver(
+          makeDragOverEventWithPointer('row-11', 'row-13', 50, 120, rowRect),
+        );
+      });
+
+      expect(result.current.pendingTree).not.toBeNull();
+      const sections = result.current.pendingTree!['42'];
+      const section3 = sections.find((s) => s.id === 3);
+      expect(isContainerNode(section3!)).toBe(true);
+      if (isContainerNode(section3!)) {
+        const childIds = section3!.children!.map((c) => c.id);
+        expect(childIds).toEqual([11, 13, 14]);
+      }
     });
   });
 });

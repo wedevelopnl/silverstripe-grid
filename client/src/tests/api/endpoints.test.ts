@@ -3,7 +3,11 @@ import {
   createElement,
   archiveElement,
   duplicateElement,
+  duplicateToElement,
+  fetchAcceptableContainers,
   fetchElementTree,
+  fetchPages,
+  fetchZones,
   publishElement,
   reorderElement,
   unpublishElement,
@@ -230,6 +234,80 @@ describe('endpoints', () => {
           elementID: 5,
           targetParentId: 10,
           afterElementID: null,
+        },
+      );
+    });
+  });
+
+  describe('fetchPages', () => {
+    it('calls GET without query string when no search provided', async () => {
+      mockApiGet.mockResolvedValue([]);
+
+      await fetchPages();
+
+      expect(mockApiGet).toHaveBeenCalledWith('/admin/grid/api/pages');
+    });
+
+    it('calls GET with encoded search query string', async () => {
+      mockApiGet.mockResolvedValue([]);
+
+      await fetchPages('hello world');
+
+      expect(mockApiGet).toHaveBeenCalledWith(
+        '/admin/grid/api/pages?search=hello%20world',
+      );
+    });
+
+    it('does not include search param when called without argument', async () => {
+      mockApiGet.mockResolvedValue([]);
+
+      await fetchPages();
+
+      const url = mockApiGet.mock.calls[0][0] as string;
+      expect(url).not.toContain('?search=');
+    });
+  });
+
+  describe('fetchZones', () => {
+    it('calls GET with page ID in URL', async () => {
+      mockApiGet.mockResolvedValue(['main']);
+
+      await fetchZones(42);
+
+      expect(mockApiGet).toHaveBeenCalledWith('/admin/grid/api/zones/42');
+    });
+  });
+
+  describe('fetchAcceptableContainers', () => {
+    it('calls GET with page ID, zone, and element type in URL', async () => {
+      mockApiGet.mockResolvedValue([]);
+
+      await fetchAcceptableContainers(42, 'main', 'row');
+
+      expect(mockApiGet).toHaveBeenCalledWith(
+        '/admin/grid/api/acceptableContainers/42/main/row',
+      );
+    });
+  });
+
+  describe('duplicateToElement', () => {
+    it('sends correct POST body', async () => {
+      mockApiPost.mockResolvedValue(undefined);
+
+      await duplicateToElement({
+        id: 1,
+        targetPageId: 2,
+        targetZone: 'main',
+        targetParentId: 3,
+      });
+
+      expect(mockApiPost).toHaveBeenCalledWith(
+        '/admin/grid/api/duplicateTo',
+        {
+          id: 1,
+          targetPageId: 2,
+          targetZone: 'main',
+          targetParentId: 3,
         },
       );
     });
