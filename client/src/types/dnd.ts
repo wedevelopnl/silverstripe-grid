@@ -22,6 +22,7 @@ export function buildDraggableId(type: DraggableType, id: number): string {
 
 export function parseDraggableId(compositeId: string): ParsedDraggableId | null {
   const separatorIndex = compositeId.indexOf(SEPARATOR);
+  // Stryker disable next-line EqualityOperator,ConditionalExpression: Equivalent — empty/missing type prefix caught by isDraggableType below
   if (separatorIndex <= 0) return null;
 
   const type = compositeId.slice(0, separatorIndex);

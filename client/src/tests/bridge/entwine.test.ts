@@ -131,6 +131,42 @@ describe('entwine bridge', () => {
     expect(setReactRoot).not.toHaveBeenCalled();
   });
 
+  it('onmatch preserves a valid non-empty zone from schema', () => {
+    const MockGridEditor = vi.fn(() => null);
+    mockLoadComponent.mockReturnValue(MockGridEditor);
+
+    const setReactRoot = vi.fn();
+    const context = {
+      data: vi.fn().mockReturnValue({ 'grid-page-id': 7, 'grid-zone': 'sidebar' }),
+      setReactRoot,
+      0: document.createElement('div'),
+    };
+
+    capturedRules.onmatch!.call(context as never);
+
+    const renderCall = mockRoot.render.mock.calls[0][0];
+    const gridEditorProps = renderCall.props.children.props.children.props;
+    expect(gridEditorProps.zone).toBe('sidebar');
+  });
+
+  it('onmatch falls back to main when zone is an empty string', () => {
+    const MockGridEditor = vi.fn(() => null);
+    mockLoadComponent.mockReturnValue(MockGridEditor);
+
+    const setReactRoot = vi.fn();
+    const context = {
+      data: vi.fn().mockReturnValue({ 'grid-page-id': 7, 'grid-zone': '' }),
+      setReactRoot,
+      0: document.createElement('div'),
+    };
+
+    capturedRules.onmatch!.call(context as never);
+
+    const renderCall = mockRoot.render.mock.calls[0][0];
+    const gridEditorProps = renderCall.props.children.props.children.props;
+    expect(gridEditorProps.zone).toBe('main');
+  });
+
   it('onmatch falls back to defaults when schema has wrong types', () => {
     const MockGridEditor = vi.fn(() => null);
     mockLoadComponent.mockReturnValue(MockGridEditor);

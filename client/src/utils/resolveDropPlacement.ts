@@ -59,6 +59,7 @@ export function resolveDropPlacement(ctx: DropContext): ReorderElementParams | n
       // Same container: use the over element's index in the full list.
       // SortableContext handles visual positioning, so no direction needed.
       const overOriginalIdx = compositeIds.indexOf(overCompositeId);
+      // Stryker disable next-line ConditionalExpression: Equivalent — over element is always in its parent's children list
       if (overOriginalIdx === -1) {
         insertIndex = filtered.length;
       } else {
@@ -68,6 +69,7 @@ export function resolveDropPlacement(ctx: DropContext): ReorderElementParams | n
     } else {
       // Cross container: find position in filtered list, apply direction
       const overIdx = filtered.indexOf(overCompositeId);
+      // Stryker disable next-line ConditionalExpression: Equivalent — over element is always present after filtering (active !== over)
       if (overIdx === -1) {
         insertIndex = filtered.length;
       } else {

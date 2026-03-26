@@ -805,6 +805,48 @@ describe('ColumnBlock', () => {
     expect(screen.queryByTestId('element-type-picker')).toBeNull();
   });
 
+  it('selecting "hidden" in the width picker sets visible to false', async () => {
+    const column = makeEnrichedColumn({
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
+    });
+    const user = userEvent.setup();
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    await user.click(screen.getByTestId('column-badge'));
+    const widthListbox = screen.getByTestId('column-badge-listbox');
+    // "hidden" is the last option (after 1-12)
+    const hiddenOption = widthListbox.querySelector('[role="option"]:last-child');
+    await user.click(hiddenOption!);
+
+    const callArgs = mockUpdateGridSettings.mock.calls[0][0];
+    expect(callArgs).toEqual(expect.objectContaining({ visible: false }));
+  });
+
+  it('selecting an offset value calls updateGridSettings with the offset', async () => {
+    const column = makeEnrichedColumn({
+      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
+    });
+    const user = userEvent.setup();
+
+    render(
+      <ColumnBlock column={column} />,
+      { wrapper: createDndWrapper() },
+    );
+
+    // Open offset picker and select +3 (4th option: none, +1, +2, +3)
+    await user.click(screen.getByTestId('column-offset-badge'));
+    const offsetListbox = screen.getByTestId('column-offset-badge-listbox');
+    const offset3Option = offsetListbox.querySelector('[role="option"]:nth-child(4)');
+    await user.click(offset3Option!);
+
+    const callArgs = mockUpdateGridSettings.mock.calls[0][0];
+    expect(callArgs).toEqual(expect.objectContaining({ offset: 3 }));
+  });
+
   describe('offset options constrained by width', () => {
     it('calls getOffsetOptions with the resolved width', () => {
       const column = makeEnrichedColumn({

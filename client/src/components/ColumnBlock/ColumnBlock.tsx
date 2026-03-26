@@ -93,6 +93,7 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
         updateSettings({ visible: false });
       } else {
         const maxOffset = columnCount - value;
+        // Stryker disable next-line EqualityOperator: Equivalent — offset === maxOffset yields same value either branch
         const clampedOffset = settings.offset > maxOffset ? maxOffset : settings.offset;
         updateSettings({ width: value, visible: true, offset: clampedOffset });
       }

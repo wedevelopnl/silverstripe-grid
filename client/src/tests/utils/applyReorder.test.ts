@@ -438,6 +438,23 @@ describe('applyReorder', () => {
     });
   });
 
+  describe('isTreeAffected with empty root arrays', () => {
+    it('preserves reference for an empty root key unrelated to the reorder', () => {
+      const tree: ElementTreeResponse = {
+        '100': [
+          makeColumn(1, [makeElement(10, 1), makeElement(11, 1)], 100),
+        ],
+        '300': [],
+      };
+
+      const result = applyReorder(tree, 11, 1, null);
+
+      // Empty root key 300 has no entries in childrenByParentId, so isTreeAffected
+      // must return false and preserve the original reference
+      expect(result['300']).toBe(tree['300']);
+    });
+  });
+
   describe('removal from nested containers', () => {
     it('removes element from a deeply nested container during cross-area move', () => {
       const tree: ElementTreeResponse = {

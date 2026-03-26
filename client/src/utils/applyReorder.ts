@@ -28,10 +28,12 @@ export function applyReorder(
   if (!sourceChildren) return tree;
 
   const sourceIndex = sourceChildren.findIndex((n) => n.id === elementId);
+  // Stryker disable next-line ConditionalExpression: Equivalent — buildMaps guarantees element is in its parent's children
   if (sourceIndex === -1) return tree;
 
   // Check target parent exists (either as a mapped container or a root tree key)
   const targetChildren = maps.childrenByParentId.get(targetParentId);
+  // Stryker disable next-line ConditionalExpression,BooleanLiteral: Equivalent — line 64 catches missing cloned target
   if (!targetChildren && !Object.prototype.hasOwnProperty.call(tree, String(targetParentId))) {
     return tree;
   }
@@ -50,11 +52,13 @@ export function applyReorder(
   if (!clonedSourceChildren) return tree;
 
   const clonedSourceIndex = clonedSourceChildren.findIndex((n) => n.id === elementId);
+  // Stryker disable next-line ConditionalExpression: Equivalent — structuredClone preserves structure verified at line 31
   if (clonedSourceIndex === -1) return tree;
 
   const [movedElement] = clonedSourceChildren.splice(clonedSourceIndex, 1);
 
   // Update parentId on the moved element if crossing parents
+  // Stryker disable next-line ConditionalExpression: Equivalent — assigning same parentId is a no-op
   if (sourceParentId !== targetParentId) {
     (movedElement as { parentId: number }).parentId = targetParentId;
   }
