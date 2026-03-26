@@ -4,7 +4,7 @@ import {
   useTreeEnrichment,
   buildStorageKey,
 } from '@/hooks/useTreeEnrichment';
-import type { SectionNode, RowNode, ColumnNode, SimpleElementNode } from '@/types/elements';
+import { makeElement, makeColumn, makeRow, makeSection } from '../helpers/elementFactories';
 
 function createMockStorage(): Storage {
   const store = new Map<string, string>();
@@ -34,115 +34,6 @@ const AREA_ID = 42;
 
 function storageKey(): string {
   return `grid:collapsed:${String(AREA_ID)}`;
-}
-
-function makeElement(id: number, parentId: number): SimpleElementNode {
-  return {
-    id,
-    parentId,
-    title: `Element ${id}`,
-    blockSchema: {
-      typeName: 'Content',
-      label: 'Content',
-      icon: 'font-icon-block-content',
-      type: 'Content',
-      title: '',
-      summary: '',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-  };
-}
-
-function makeColumn(id: number, overrides: Partial<ColumnNode> = {}, parentId: number = 200): ColumnNode {
-  return {
-    id,
-    parentId,
-    title: `Column ${id}`,
-    blockSchema: {
-      typeName: 'Column',
-      label: 'Column',
-      icon: 'font-icon-block-content',
-      type: 'Column',
-      title: '',
-      summary: '',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    containerType: 'column',
-    allowedTypes: null,
-    children: null,
-    gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
-    ...overrides,
-  };
-}
-
-function makeRow(id: number, overrides: Partial<RowNode> = {}, parentId: number = 300): RowNode {
-  return {
-    id,
-    parentId,
-    title: `Row ${id}`,
-    blockSchema: {
-      typeName: 'Row',
-      label: 'Row',
-      icon: 'font-icon-block-content',
-      type: 'Row',
-      title: '',
-      summary: '',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    containerType: 'row',
-    allowedTypes: null,
-    children: null,
-    ...overrides,
-  };
-}
-
-function makeSection(id: number, overrides: Partial<SectionNode> = {}, parentId: number = 42): SectionNode {
-  return {
-    id,
-    parentId,
-    title: `Section ${id}`,
-    blockSchema: {
-      typeName: 'Section',
-      label: 'Section',
-      icon: 'font-icon-block-content',
-      type: 'Section',
-      title: '',
-      summary: '',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    containerType: 'section',
-    allowedTypes: null,
-    children: null,
-    ...overrides,
-  };
 }
 
 describe('buildStorageKey', () => {
@@ -226,13 +117,9 @@ describe('useTreeEnrichment', () => {
     mockStorage.setItem(storageKey(), JSON.stringify([10, 30]));
 
     const sections = [
-      makeSection(1, {
-        children: [
-          makeRow(10, {
-            children: [makeColumn(30)],
-          }),
-        ],
-      }),
+      makeSection(1, [
+          makeRow(10, [makeColumn(30)]),
+        ]),
     ];
 
     const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));
@@ -252,7 +139,7 @@ describe('useTreeEnrichment', () => {
 
   it('handles null children', () => {
     const sections = [
-      makeSection(1, { children: null }),
+      makeSection(1, null),
     ];
 
     const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));
@@ -336,13 +223,9 @@ describe('useTreeEnrichment', () => {
 
   it('child toggle updates the correct node', () => {
     const sections = [
-      makeSection(1, {
-        children: [
-          makeRow(10, {
-            children: [makeColumn(30)],
-          }),
-        ],
-      }),
+      makeSection(1, [
+          makeRow(10, [makeColumn(30)]),
+        ]),
     ];
 
     const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));
@@ -370,9 +253,7 @@ describe('useTreeEnrichment', () => {
 
     it('computes sortableId for rows', () => {
       const sections = [
-        makeSection(1, {
-          children: [makeRow(15)],
-        }),
+        makeSection(1, [makeRow(15)]),
       ];
 
       const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));
@@ -382,13 +263,9 @@ describe('useTreeEnrichment', () => {
 
     it('computes sortableId for columns', () => {
       const sections = [
-        makeSection(1, {
-          children: [
-            makeRow(10, {
-              children: [makeColumn(25)],
-            }),
-          ],
-        }),
+        makeSection(1, [
+            makeRow(10, [makeColumn(25)]),
+          ]),
       ];
 
       const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));
@@ -398,17 +275,11 @@ describe('useTreeEnrichment', () => {
 
     it('computes sortableId for leaf elements', () => {
       const sections = [
-        makeSection(1, {
-          children: [
-            makeRow(10, {
-              children: [
-                makeColumn(20, {
-                  children: [makeElement(99, 100)],
-                }),
-              ],
-            }),
-          ],
-        }),
+        makeSection(1, [
+            makeRow(10, [
+                makeColumn(20, [makeElement(99, 100)]),
+              ]),
+          ]),
       ];
 
       const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));
@@ -419,9 +290,7 @@ describe('useTreeEnrichment', () => {
 
     it('computes childSortableIds for sections from row children', () => {
       const sections = [
-        makeSection(1, {
-          children: [makeRow(10), makeRow(20)],
-        }),
+        makeSection(1, [makeRow(10), makeRow(20)]),
       ];
 
       const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));
@@ -431,13 +300,9 @@ describe('useTreeEnrichment', () => {
 
     it('computes childSortableIds for rows from column children', () => {
       const sections = [
-        makeSection(1, {
-          children: [
-            makeRow(10, {
-              children: [makeColumn(30), makeColumn(31)],
-            }),
-          ],
-        }),
+        makeSection(1, [
+            makeRow(10, [makeColumn(30), makeColumn(31)]),
+          ]),
       ];
 
       const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));
@@ -447,17 +312,11 @@ describe('useTreeEnrichment', () => {
 
     it('computes childSortableIds for columns from element children', () => {
       const sections = [
-        makeSection(1, {
-          children: [
-            makeRow(10, {
-              children: [
-                makeColumn(20, {
-                  children: [makeElement(50, 100), makeElement(51, 100)],
-                }),
-              ],
-            }),
-          ],
-        }),
+        makeSection(1, [
+            makeRow(10, [
+                makeColumn(20, [makeElement(50, 100), makeElement(51, 100)]),
+              ]),
+          ]),
       ];
 
       const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));
@@ -466,7 +325,7 @@ describe('useTreeEnrichment', () => {
     });
 
     it('returns empty childSortableIds when section children is null', () => {
-      const sections = [makeSection(1, { children: null })];
+      const sections = [makeSection(1, null)];
 
       const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));
 
@@ -475,9 +334,7 @@ describe('useTreeEnrichment', () => {
 
     it('returns empty childSortableIds when row children is null', () => {
       const sections = [
-        makeSection(1, {
-          children: [makeRow(10, { children: null })],
-        }),
+        makeSection(1, [makeRow(10, null)]),
       ];
 
       const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));
@@ -487,13 +344,9 @@ describe('useTreeEnrichment', () => {
 
     it('returns empty childSortableIds when column children is null', () => {
       const sections = [
-        makeSection(1, {
-          children: [
-            makeRow(10, {
-              children: [makeColumn(20, { children: null })],
-            }),
-          ],
-        }),
+        makeSection(1, [
+            makeRow(10, [makeColumn(20, null)]),
+          ]),
       ];
 
       const { result } = renderHook(() => useTreeEnrichment(sections, AREA_ID));

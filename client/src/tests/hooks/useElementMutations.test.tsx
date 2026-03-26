@@ -1,6 +1,4 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
 import {
   useCreateElement,
   useCreateContentElement,
@@ -12,6 +10,7 @@ import {
   useReorderElement,
 } from '@/hooks/useElementMutations';
 import { queryKeys } from '@/hooks/queryKeys';
+import { createQueryWrapper } from '../helpers/dndTestUtils';
 
 const mockCreateElement = vi.fn();
 const mockCreateContentElement = vi.fn();
@@ -48,24 +47,6 @@ vi.mock('@/utils/applyReorder', () => ({
   applyReorder: (...args: unknown[]) => mockApplyReorder(...args),
 }));
 
-let queryClient: QueryClient;
-
-function createWrapper() {
-  queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    );
-  };
-}
 
 describe('useCreateElement', () => {
   afterEach(() => {
@@ -77,7 +58,7 @@ describe('useCreateElement', () => {
   it('calls createElement endpoint with params as first argument', async () => {
     mockCreateElement.mockResolvedValue(undefined);
     const { result } = renderHook(() => useCreateElement(42, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await act(() =>
@@ -96,7 +77,7 @@ describe('useCreateElement', () => {
 
   it('invalidates element tree cache on success', async () => {
     mockCreateElement.mockResolvedValue(undefined);
-    const wrapper = createWrapper();
+    const { wrapper, queryClient } = createQueryWrapper();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const { result } = renderHook(() => useCreateElement(42, 'main'), { wrapper });
 
@@ -117,7 +98,7 @@ describe('useCreateElement', () => {
   it('refreshes CMS preview on success', async () => {
     mockCreateElement.mockResolvedValue(undefined);
     const { result } = renderHook(() => useCreateElement(42, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await act(() =>
@@ -140,7 +121,7 @@ describe('useCreateContentElement', () => {
   it('calls createContentElement endpoint with params', async () => {
     mockCreateContentElement.mockResolvedValue(undefined);
     const { result } = renderHook(() => useCreateContentElement(42, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await act(() =>
@@ -163,7 +144,7 @@ describe('useCreateContentElement', () => {
 
   it('invalidates element tree cache on success', async () => {
     mockCreateContentElement.mockResolvedValue(undefined);
-    const wrapper = createWrapper();
+    const { wrapper, queryClient } = createQueryWrapper();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const { result } = renderHook(() => useCreateContentElement(42, 'main'), { wrapper });
 
@@ -190,7 +171,7 @@ describe('usePublishElement', () => {
   it('calls publishElement endpoint', async () => {
     mockPublishElement.mockResolvedValue(undefined);
     const { result } = renderHook(() => usePublishElement(42, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await act(() => result.current.mutateAsync(7));
@@ -207,7 +188,7 @@ describe('useUnpublishElement', () => {
   it('calls unpublishElement endpoint', async () => {
     mockUnpublishElement.mockResolvedValue(undefined);
     const { result } = renderHook(() => useUnpublishElement(42, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await act(() => result.current.mutateAsync(7));
@@ -224,7 +205,7 @@ describe('useArchiveElement', () => {
   it('calls archiveElement endpoint', async () => {
     mockArchiveElement.mockResolvedValue(undefined);
     const { result } = renderHook(() => useArchiveElement(42, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await act(() => result.current.mutateAsync(3));
@@ -240,7 +221,7 @@ describe('useDuplicateElement', () => {
 
   it('calls duplicateElement endpoint and invalidates cache', async () => {
     mockDuplicateElement.mockResolvedValue(undefined);
-    const wrapper = createWrapper();
+    const { wrapper, queryClient } = createQueryWrapper();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const { result } = renderHook(() => useDuplicateElement(42, 'main'), { wrapper });
 
@@ -258,7 +239,7 @@ describe('useDuplicateElement', () => {
     const error = new Error('Server error');
     mockDuplicateElement.mockRejectedValue(error);
     const { result } = renderHook(() => useDuplicateElement(42, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await act(async () => {
@@ -282,7 +263,7 @@ describe('useUpdateGridSettings', () => {
   it('calls updateGridSettings endpoint with params', async () => {
     mockUpdateGridSettings.mockResolvedValue(undefined);
     const { result } = renderHook(() => useUpdateGridSettings(42, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     const params = { id: 5, viewport: 'md', width: 6, offset: 0, visible: true };
@@ -293,7 +274,7 @@ describe('useUpdateGridSettings', () => {
 
   it('invalidates element tree cache on success', async () => {
     mockUpdateGridSettings.mockResolvedValue(undefined);
-    const wrapper = createWrapper();
+    const { wrapper, queryClient } = createQueryWrapper();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const { result } = renderHook(() => useUpdateGridSettings(42, 'main'), { wrapper });
 
@@ -312,7 +293,7 @@ describe('useUpdateGridSettings', () => {
     const error = new Error('Bad Request');
     mockUpdateGridSettings.mockRejectedValue(error);
     const { result } = renderHook(() => useUpdateGridSettings(42, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await act(async () => {
@@ -342,7 +323,7 @@ describe('useReorderElement', () => {
   it('cancels pending queries before applying optimistic update', async () => {
     mockReorderElement.mockResolvedValue(undefined);
     mockApplyReorder.mockReturnValue(optimisticTree);
-    const wrapper = createWrapper();
+    const { wrapper, queryClient } = createQueryWrapper();
     const cancelSpy = vi.spyOn(queryClient, 'cancelQueries');
     const { result } = renderHook(() => useReorderElement(42, 'main'), { wrapper });
 
@@ -358,7 +339,7 @@ describe('useReorderElement', () => {
   it('sets optimistic data in query cache during mutation', async () => {
     mockReorderElement.mockResolvedValue(undefined);
     mockApplyReorder.mockReturnValue(optimisticTree);
-    const wrapper = createWrapper();
+    const { wrapper, queryClient } = createQueryWrapper();
     const setDataSpy = vi.spyOn(queryClient, 'setQueryData');
     const { result } = renderHook(() => useReorderElement(42, 'main'), { wrapper });
 
@@ -377,7 +358,7 @@ describe('useReorderElement', () => {
     const snapshotTree = { '42': [{ original: true }] };
     mockReorderElement.mockRejectedValue(new Error('Reorder failed'));
     mockApplyReorder.mockReturnValue(optimisticTree);
-    const wrapper = createWrapper();
+    const { wrapper, queryClient } = createQueryWrapper();
 
     // Seed the cache with a snapshot so onMutate captures it
     queryClient.setQueryData(queryKeys.elementTree.byPage(42, 'main'), snapshotTree);
@@ -406,7 +387,7 @@ describe('useReorderElement', () => {
   it('does not roll back when no snapshot exists (undefined)', async () => {
     mockReorderElement.mockRejectedValue(new Error('Reorder failed'));
     mockApplyReorder.mockReturnValue(optimisticTree);
-    const wrapper = createWrapper();
+    const { wrapper, queryClient } = createQueryWrapper();
 
     // Do NOT seed the cache — snapshot will be undefined
     const setDataSpy = vi.spyOn(queryClient, 'setQueryData');
@@ -432,7 +413,7 @@ describe('useReorderElement', () => {
     mockReorderElement.mockResolvedValue(undefined);
     mockApplyReorder.mockReturnValue(optimisticTree);
     const { result } = renderHook(() => useReorderElement(42, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await act(() =>

@@ -1,8 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
 import { useElementTree } from '@/hooks/useElementTree';
 import type { ElementTreeResponse } from '@/types/elements';
+import { createQueryWrapper } from '../helpers/dndTestUtils';
 
 const mockFetchElementTree = vi.fn();
 
@@ -10,22 +9,6 @@ vi.mock('@/api/endpoints', () => ({
   fetchElementTree: (...args: unknown[]) => mockFetchElementTree(...args),
   updateGridSettings: vi.fn(),
 }));
-
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  });
-
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    );
-  };
-}
 
 describe('useElementTree', () => {
   afterEach(() => {
@@ -39,7 +22,7 @@ describe('useElementTree', () => {
     mockFetchElementTree.mockResolvedValue(mockTree);
 
     const { result } = renderHook(() => useElementTree(42, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -52,7 +35,7 @@ describe('useElementTree', () => {
     mockFetchElementTree.mockResolvedValue({});
 
     const { result } = renderHook(() => useElementTree(null, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     expect(result.current.fetchStatus).toBe('idle');
@@ -63,7 +46,7 @@ describe('useElementTree', () => {
     mockFetchElementTree.mockRejectedValue(new Error('Network error'));
 
     const { result } = renderHook(() => useElementTree(1, 'main'), {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -78,7 +61,7 @@ describe('useElementTree', () => {
       .mockResolvedValueOnce(tree42)
       .mockResolvedValueOnce(tree99);
 
-    const wrapper = createWrapper();
+    const wrapper = createQueryWrapper().wrapper;
 
     const hook42 = renderHook(() => useElementTree(42, 'main'), { wrapper });
     await waitFor(() => expect(hook42.result.current.isSuccess).toBe(true));
@@ -96,7 +79,7 @@ describe('useElementTree', () => {
     const tree1: ElementTreeResponse = { '1': [] };
     mockFetchElementTree.mockResolvedValue(tree1);
 
-    const wrapper = createWrapper();
+    const wrapper = createQueryWrapper().wrapper;
 
     // First render with null — should not fetch
     const hookNull = renderHook(() => useElementTree(null, 'main'), { wrapper });

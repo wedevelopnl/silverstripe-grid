@@ -1,10 +1,8 @@
 import { renderHook, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
 
 import { useDuplicateToAction } from '@/hooks/useDuplicateToAction';
-import { GridEditorProvider } from '@/hooks/GridEditorContext';
-import type { SimpleElementNode, SectionNode } from '@/types/elements';
+import { makeLeaf, makeSection } from '../helpers/elementFactories';
+import { createGridEditorWrapper } from '../helpers/dndTestUtils';
 
 const mockMutate = vi.hoisted(() => vi.fn());
 
@@ -16,61 +14,6 @@ vi.mock('@/hooks/useElementMutations', () => ({
   useDuplicateToElement: () => ({ mutate: mockMutate }),
 }));
 
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <GridEditorProvider value={{ pageId: 1, zone: 'main' }}>
-          {children}
-        </GridEditorProvider>
-      </QueryClientProvider>
-    );
-  };
-}
-
-function makeLeaf(overrides: Partial<SimpleElementNode> = {}): SimpleElementNode {
-  return {
-    id: 1,
-    parentId: 100,
-    title: 'My Element',
-    blockSchema: { typeName: 'Content', label: 'Content', icon: '', type: 'Content', title: 'My Element', summary: '' },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    ...overrides,
-  };
-}
-
-function makeSection(overrides: Partial<SectionNode> = {}): SectionNode {
-  return {
-    id: 1,
-    parentId: 100,
-    title: 'Section A',
-    blockSchema: { typeName: 'Section', label: 'Section', icon: '', type: 'Section', title: 'Section A', summary: '' },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    containerType: 'section',
-    allowedTypes: null,
-    children: null,
-    ...overrides,
-  };
-}
-
 describe('useDuplicateToAction', () => {
   beforeEach(() => {
     mockMutate.mockReset();
@@ -79,7 +22,7 @@ describe('useDuplicateToAction', () => {
   it('returns null action and dialog when canCreate is false', () => {
     const { result } = renderHook(
       () => useDuplicateToAction(makeLeaf({ canCreate: false })),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.action).toBeNull();
@@ -89,7 +32,7 @@ describe('useDuplicateToAction', () => {
   it('returns action with key "duplicate-to" and label "Duplicate to\u2026" when canCreate is true', () => {
     const { result } = renderHook(
       () => useDuplicateToAction(makeLeaf({ canCreate: true })),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.action).not.toBeNull();
@@ -100,7 +43,7 @@ describe('useDuplicateToAction', () => {
   it('returns dialog state when canCreate is true', () => {
     const { result } = renderHook(
       () => useDuplicateToAction(makeLeaf({ canCreate: true })),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.dialog).not.toBeNull();
@@ -111,7 +54,7 @@ describe('useDuplicateToAction', () => {
   it('sets elementType to "element" for simple element nodes', () => {
     const { result } = renderHook(
       () => useDuplicateToAction(makeLeaf()),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.dialog!.elementType).toBe('element');
@@ -119,8 +62,8 @@ describe('useDuplicateToAction', () => {
 
   it('sets elementType to "section" for section nodes', () => {
     const { result } = renderHook(
-      () => useDuplicateToAction(makeSection()),
-      { wrapper: createWrapper() },
+      () => useDuplicateToAction(makeSection(1)),
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.dialog!.elementType).toBe('section');
@@ -129,7 +72,7 @@ describe('useDuplicateToAction', () => {
   it('action is not destructive', () => {
     const { result } = renderHook(
       () => useDuplicateToAction(makeLeaf({ canCreate: true })),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.action).not.toBeNull();
@@ -139,7 +82,7 @@ describe('useDuplicateToAction', () => {
   it('opens the dialog when action.onAction is called', () => {
     const { result } = renderHook(
       () => useDuplicateToAction(makeLeaf()),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.dialog!.isOpen).toBe(false);
@@ -154,7 +97,7 @@ describe('useDuplicateToAction', () => {
   it('closes the dialog and clears error when onCancel is called', () => {
     const { result } = renderHook(
       () => useDuplicateToAction(makeLeaf()),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     act(() => {
@@ -178,7 +121,7 @@ describe('useDuplicateToAction', () => {
 
     const { result } = renderHook(
       () => useDuplicateToAction(makeLeaf()),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     act(() => {
@@ -206,7 +149,7 @@ describe('useDuplicateToAction', () => {
 
     const { result } = renderHook(
       () => useDuplicateToAction(makeLeaf()),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     act(() => {

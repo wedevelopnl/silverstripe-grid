@@ -5,69 +5,11 @@ import { useReorderElement } from '@/hooks/useElementMutations';
 import { queryKeys } from '@/hooks/queryKeys';
 import { ApiError } from '@/api/errors';
 import type {
-  SimpleElementNode,
   ColumnNode,
   ElementTreeResponse,
 } from '@/types/elements';
 import type { ReorderElementParams } from '@/api/endpoints';
-
-// --- Test factories ---
-
-function makeElement(id: number, parentId: number): SimpleElementNode {
-  return {
-    id,
-    parentId,
-    title: `Element ${id}`,
-    blockSchema: {
-      typeName: 'Element',
-      label: 'Element',
-      icon: 'font-icon-block-content',
-      type: 'Element',
-      title: '',
-      summary: '',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-  };
-}
-
-function makeColumn(
-  id: number,
-  children: SimpleElementNode[],
-  parentId: number,
-): ColumnNode {
-  return {
-    id,
-    parentId,
-    title: `Column ${id}`,
-    blockSchema: {
-      typeName: 'Column',
-      label: 'Column',
-      icon: 'font-icon-block-content',
-      type: 'Column',
-      title: '',
-      summary: '',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    containerType: 'column',
-    allowedTypes: null,
-    children,
-    gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
-  };
-}
+import { makeElement, makeColumn } from '../helpers/elementFactories';
 
 // --- Mocks ---
 

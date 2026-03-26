@@ -1,13 +1,17 @@
+import { vi } from 'vitest';
 import type {
-  SimpleElementNode,
-  ColumnNode,
-  RowNode,
-  SectionNode,
-} from '@/types/elements';
+  EnrichedSimpleElementNode,
+  EnrichedColumnNode,
+  EnrichedRowNode,
+  EnrichedSectionNode,
+} from '@/types/enriched';
 
-export function makeLeaf(overrides: Partial<SimpleElementNode> = {}): SimpleElementNode {
+export function makeEnrichedElement(
+  overrides: Partial<EnrichedSimpleElementNode> = {},
+): EnrichedSimpleElementNode {
+  const id = overrides.id ?? 1;
   return {
-    id: 1,
+    id,
     parentId: 100,
     title: 'My Element',
     blockSchema: {
@@ -26,51 +30,22 @@ export function makeLeaf(overrides: Partial<SimpleElementNode> = {}): SimpleElem
     canCreate: true,
     editLink: null,
     statusFlags: {},
+    sortableId: `element-${id}`,
     ...overrides,
   };
 }
 
-export function makeElement(
-  id: number,
-  parentId: number,
-  overrides?: Partial<SimpleElementNode>,
-): SimpleElementNode {
+export function makeEnrichedColumn(
+  overrides: Partial<EnrichedColumnNode> = {},
+): EnrichedColumnNode {
+  const id = overrides.id ?? 10;
+  const children = overrides.children ?? null;
   return {
     id,
-    parentId,
-    title: `Element ${id}`,
+    parentId: 200,
+    title: 'Column',
     blockSchema: {
-      typeName: 'Element',
-      label: 'Element',
-      icon: 'font-icon-block-content',
-      type: 'Element',
-      title: '',
-      summary: '',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    ...overrides,
-  };
-}
-
-export function makeColumn(
-  id: number,
-  children: SimpleElementNode[] | null = null,
-  parentId: number = 200,
-  overrides?: Partial<ColumnNode>,
-): ColumnNode {
-  return {
-    id,
-    parentId,
-    title: `Column ${id}`,
-    blockSchema: {
-      typeName: 'Column',
+      typeName: String.raw`WeDevelop\Grid\Elements\Column`,
       label: 'Column',
       icon: 'font-icon-block-content',
       type: 'Column',
@@ -87,24 +62,30 @@ export function makeColumn(
     statusFlags: {},
     containerType: 'column',
     allowedTypes: null,
+    gridSettings: {
+      default: { width: 12, offset: 0, visible: true },
+      overrides: {},
+    },
+    isCollapsed: false,
+    toggle: vi.fn(),
+    sortableId: `column-${id}`,
     children,
-    gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
+    childSortableIds: children?.map((c) => c.sortableId) ?? [],
     ...overrides,
   };
 }
 
-export function makeRow(
-  id: number,
-  children: ColumnNode[] | null = null,
-  parentId: number = 300,
-  overrides?: Partial<RowNode>,
-): RowNode {
+export function makeEnrichedRow(
+  overrides: Partial<EnrichedRowNode> = {},
+): EnrichedRowNode {
+  const id = overrides.id ?? 20;
+  const children = overrides.children ?? null;
   return {
     id,
-    parentId,
-    title: `Row ${id}`,
+    parentId: 300,
+    title: 'Row',
     blockSchema: {
-      typeName: 'Row',
+      typeName: String.raw`WeDevelop\Grid\Elements\Row`,
       label: 'Row',
       icon: 'font-icon-block-content',
       type: 'Row',
@@ -121,23 +102,26 @@ export function makeRow(
     statusFlags: {},
     containerType: 'row',
     allowedTypes: null,
+    isCollapsed: false,
+    toggle: vi.fn(),
+    sortableId: `row-${id}`,
     children,
+    childSortableIds: children?.map((c) => c.sortableId) ?? [],
     ...overrides,
   };
 }
 
-export function makeSection(
-  id: number,
-  children: RowNode[] | null = null,
-  parentId: number = 42,
-  overrides?: Partial<SectionNode>,
-): SectionNode {
+export function makeEnrichedSection(
+  overrides: Partial<EnrichedSectionNode> = {},
+): EnrichedSectionNode {
+  const id = overrides.id ?? 1;
+  const children = overrides.children ?? null;
   return {
     id,
-    parentId,
-    title: `Section ${id}`,
+    parentId: 42,
+    title: 'Section',
     blockSchema: {
-      typeName: 'Section',
+      typeName: String.raw`WeDevelop\Grid\Elements\Section`,
       label: 'Section',
       icon: 'font-icon-block-content',
       type: 'Section',
@@ -154,7 +138,11 @@ export function makeSection(
     statusFlags: {},
     containerType: 'section',
     allowedTypes: null,
+    isCollapsed: false,
+    toggle: vi.fn(),
+    sortableId: `section-${id}`,
     children,
+    childSortableIds: children?.map((c) => c.sortableId) ?? [],
     ...overrides,
   };
 }

@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ReactNode } from 'react';
 
 import ViewportSwitcher from '@/components/ViewportSwitcher/ViewportSwitcher';
-import { ViewportProvider } from '@/hooks/ViewportContext';
+import { createViewportWrapper } from '@/tests/helpers/viewportTestUtils';
 
 vi.mock('@/utils/gridAdapter', () => ({
   getViewports: vi.fn(() => [
@@ -15,26 +14,16 @@ vi.mock('@/utils/gridAdapter', () => ({
   getDefaultViewport: vi.fn(() => 'md'),
 }));
 
-function createWrapper(initialViewport = 'xs') {
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <ViewportProvider initialViewport={initialViewport}>
-        {children}
-      </ViewportProvider>
-    );
-  };
-}
-
 describe('ViewportSwitcher', () => {
   it('renders a button per viewport', () => {
-    render(<ViewportSwitcher />, { wrapper: createWrapper() });
+    render(<ViewportSwitcher />, { wrapper: createViewportWrapper('xs') });
 
     const buttons = screen.getAllByRole('button');
     expect(buttons).toHaveLength(4);
   });
 
   it('renders viewport labels as button text', () => {
-    render(<ViewportSwitcher />, { wrapper: createWrapper() });
+    render(<ViewportSwitcher />, { wrapper: createViewportWrapper('xs') });
 
     expect(screen.getByText('Extra Small')).toBeDefined();
     expect(screen.getByText('Small')).toBeDefined();
@@ -43,14 +32,14 @@ describe('ViewportSwitcher', () => {
   });
 
   it('marks active viewport button as aria-pressed="true"', () => {
-    render(<ViewportSwitcher />, { wrapper: createWrapper('sm') });
+    render(<ViewportSwitcher />, { wrapper: createViewportWrapper('sm') });
 
     const activeButton = screen.getByText('Small');
     expect(activeButton.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('marks inactive viewport buttons as aria-pressed="false"', () => {
-    render(<ViewportSwitcher />, { wrapper: createWrapper('sm') });
+    render(<ViewportSwitcher />, { wrapper: createViewportWrapper('sm') });
 
     const inactiveLabels = ['Extra Small', 'Medium', 'Large'];
     for (const label of inactiveLabels) {
@@ -62,7 +51,7 @@ describe('ViewportSwitcher', () => {
   it('switches active viewport when a button is clicked', async () => {
     const user = userEvent.setup();
 
-    render(<ViewportSwitcher />, { wrapper: createWrapper('xs') });
+    render(<ViewportSwitcher />, { wrapper: createViewportWrapper('xs') });
 
     await user.click(screen.getByText('Medium'));
 
@@ -71,14 +60,14 @@ describe('ViewportSwitcher', () => {
   });
 
   it('applies active modifier class to the active viewport button', () => {
-    render(<ViewportSwitcher />, { wrapper: createWrapper('sm') });
+    render(<ViewportSwitcher />, { wrapper: createViewportWrapper('sm') });
 
     const activeButton = screen.getByText('Small');
     expect(activeButton.classList.contains('viewport-switcher__button--active')).toBe(true);
   });
 
   it('does not apply active modifier class to inactive viewport buttons', () => {
-    render(<ViewportSwitcher />, { wrapper: createWrapper('sm') });
+    render(<ViewportSwitcher />, { wrapper: createViewportWrapper('sm') });
 
     const inactiveLabels = ['Extra Small', 'Medium', 'Large'];
     for (const label of inactiveLabels) {
@@ -89,7 +78,7 @@ describe('ViewportSwitcher', () => {
   });
 
   it('marks active viewport button as aria-disabled', () => {
-    render(<ViewportSwitcher />, { wrapper: createWrapper('sm') });
+    render(<ViewportSwitcher />, { wrapper: createViewportWrapper('sm') });
 
     const activeButton = screen.getByText('Small');
     expect(activeButton.getAttribute('aria-disabled')).toBe('true');
@@ -104,7 +93,7 @@ describe('ViewportSwitcher', () => {
   it('does not change state when clicking the already-active button', async () => {
     const user = userEvent.setup();
 
-    render(<ViewportSwitcher />, { wrapper: createWrapper('sm') });
+    render(<ViewportSwitcher />, { wrapper: createViewportWrapper('sm') });
 
     await user.click(screen.getByText('Small'));
 
@@ -115,7 +104,7 @@ describe('ViewportSwitcher', () => {
   it('does not call setActiveViewport when clicking the already-active button', async () => {
     const user = userEvent.setup();
 
-    render(<ViewportSwitcher />, { wrapper: createWrapper('sm') });
+    render(<ViewportSwitcher />, { wrapper: createViewportWrapper('sm') });
 
     // Click an inactive button first to verify switching works
     await user.click(screen.getByText('Medium'));

@@ -1,82 +1,22 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
 
 import { useArchiveAction } from '@/hooks/useArchiveAction';
-import { GridEditorProvider } from '@/hooks/GridEditorContext';
-import type { SimpleElementNode, SectionNode, ColumnNode, RowNode } from '@/types/elements';
+import { makeLeaf, makeColumn, makeRow, makeSection } from '../helpers/elementFactories';
+import { createGridEditorWrapper } from '../helpers/dndTestUtils';
 
 vi.mock('@/api/endpoints', () => ({
   archiveElement: vi.fn(),
 }));
 
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <GridEditorProvider value={{ pageId: 1, zone: 'main' }}>
-          {children}
-        </GridEditorProvider>
-      </QueryClientProvider>
-    );
-  };
-}
-
-function makeLeaf(overrides: Partial<SimpleElementNode> = {}): SimpleElementNode {
-  return {
-    id: 1,
-    parentId: 100,
-    title: 'My Element',
-    blockSchema: { typeName: 'Content', label: 'Content', icon: '', type: 'Content', title: 'My Element', summary: '' },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    ...overrides,
-  };
-}
-
-function makeSection(overrides: Partial<SectionNode> = {}): SectionNode {
-  const leaf = makeLeaf();
-  return {
-    ...leaf,
-    containerType: 'section' as const,
-    allowedTypes: null,
-    children: [
-      {
-        ...leaf,
-        id: 2,
-        containerType: 'row' as const,
-        allowedTypes: null,
-        children: [
-          {
-            ...leaf,
-            id: 3,
-            containerType: 'column' as const,
-            allowedTypes: null,
-            children: [{ ...leaf, id: 4 }],
-            gridSettings: {},
-          } as ColumnNode,
-        ],
-      } as RowNode,
-    ],
-    ...overrides,
-  };
-}
+vi.mock('@/utils/toast', () => ({
+  showToast: vi.fn(),
+}));
 
 describe('useArchiveAction', () => {
   it('returns null action when canDelete is false', () => {
     const { result } = renderHook(
       () => useArchiveAction(makeLeaf({ canDelete: false })),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.action).toBeNull();
@@ -86,7 +26,7 @@ describe('useArchiveAction', () => {
   it('returns archive action when canDelete is true', () => {
     const { result } = renderHook(
       () => useArchiveAction(makeLeaf({ canDelete: true })),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.action).not.toBeNull();
@@ -98,7 +38,7 @@ describe('useArchiveAction', () => {
   it('returns dialog state with correct message for leaf element', () => {
     const { result } = renderHook(
       () => useArchiveAction(makeLeaf({ title: 'Hero Banner' })),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.dialog).not.toBeNull();
@@ -107,8 +47,10 @@ describe('useArchiveAction', () => {
 
   it('returns dialog state with descendant count for container', () => {
     const { result } = renderHook(
-      () => useArchiveAction(makeSection({ title: 'Main Section' })),
-      { wrapper: createWrapper() },
+      () => useArchiveAction(makeSection(1, [
+        makeRow(2, [makeColumn(3, [makeLeaf({ id: 4 })], 2)], 1),
+      ], 42, { title: 'Main Section' })),
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.dialog).not.toBeNull();
@@ -119,7 +61,7 @@ describe('useArchiveAction', () => {
   it('opens dialog when action.onAction is called', () => {
     const { result } = renderHook(
       () => useArchiveAction(makeLeaf()),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.dialog!.isOpen).toBe(false);
@@ -134,7 +76,7 @@ describe('useArchiveAction', () => {
   it('closes dialog when onCancel is called', () => {
     const { result } = renderHook(
       () => useArchiveAction(makeLeaf()),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     act(() => {
@@ -151,7 +93,7 @@ describe('useArchiveAction', () => {
   it('closes dialog when onConfirm is called', () => {
     const { result } = renderHook(
       () => useArchiveAction(makeLeaf()),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     act(() => {
@@ -166,18 +108,11 @@ describe('useArchiveAction', () => {
   });
 
   it('uses singular "child element" when container has exactly 1 descendant', () => {
-    const leaf = makeLeaf();
-    const singleChildSection: SectionNode = {
-      ...leaf,
-      title: 'Wrapper',
-      containerType: 'section' as const,
-      allowedTypes: null,
-      children: [{ ...leaf, id: 50 } as RowNode],
-    };
+    const singleChildSection = makeSection(1, [makeRow(50)], 42, { title: 'Wrapper' });
 
     const { result } = renderHook(
       () => useArchiveAction(singleChildSection),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.dialog!.message).toBe('Archive "Wrapper" and all 1 child element?');
@@ -186,7 +121,7 @@ describe('useArchiveAction', () => {
   it('dialog title is "Confirm archive"', () => {
     const { result } = renderHook(
       () => useArchiveAction(makeLeaf()),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(result.current.dialog!.title).toBe('Confirm archive');
@@ -200,7 +135,7 @@ describe('useArchiveAction', () => {
 
     const { result } = renderHook(
       () => useArchiveAction(makeLeaf({ id: 77 })),
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     act(() => {
@@ -214,6 +149,33 @@ describe('useArchiveAction', () => {
     // The mutation is async — wait for TanStack Query to invoke mutationFn
     await waitFor(() => {
       expect(archiveFn).toHaveBeenCalledWith(77, expect.anything());
+    });
+  });
+
+  it('calls showToast with error message when archive mutation fails', async () => {
+    const { archiveElement: mockArchive } = await import('@/api/endpoints');
+    const { showToast: mockShowToast } = await import('@/utils/toast');
+    const archiveFn = mockArchive as ReturnType<typeof vi.fn>;
+    const showToastFn = mockShowToast as ReturnType<typeof vi.fn>;
+    archiveFn.mockClear();
+    showToastFn.mockClear();
+    archiveFn.mockRejectedValue(new Error('Archive failed'));
+
+    const { result } = renderHook(
+      () => useArchiveAction(makeLeaf({ id: 88 })),
+      { wrapper: createGridEditorWrapper().wrapper },
+    );
+
+    act(() => {
+      result.current.action!.onAction();
+    });
+
+    act(() => {
+      result.current.dialog!.onConfirm();
+    });
+
+    await waitFor(() => {
+      expect(showToastFn).toHaveBeenCalledWith('Archive failed');
     });
   });
 });

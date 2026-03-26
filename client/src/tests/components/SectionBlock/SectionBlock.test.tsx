@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import SectionBlock from '@/components/SectionBlock/SectionBlock';
-import type { EnrichedSectionNode, EnrichedRowNode } from '@/types/enriched';
 import { createDndWrapper } from '@/tests/helpers/dndTestUtils';
+import { makeEnrichedColumn, makeEnrichedRow, makeEnrichedSection } from '@/tests/helpers/enrichedFactories';
 import {
   getOffsetStrategy,
 } from '@/utils/gridAdapter';
@@ -18,15 +18,11 @@ const { getIsOver, setIsOver } = vi.hoisted(() => {
 
 vi.mock('@dnd-kit/sortable', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@dnd-kit/sortable')>();
+  const { DEFAULT_SORTABLE_RETURN } = await import('@/tests/helpers/mockData');
   return {
     ...actual,
     useSortable: () => ({
-      attributes: {},
-      listeners: undefined,
-      setNodeRef: () => {},
-      transform: null,
-      transition: null,
-      isDragging: false,
+      ...DEFAULT_SORTABLE_RETURN,
       isOver: getIsOver(),
     }),
   };
@@ -44,100 +40,21 @@ vi.mock('@/api/endpoints', () => ({
   fetchAcceptableContainers: vi.fn().mockResolvedValue([]),
 }));
 
-const { mockViewports, mockResolveViewportSettings } = vi.hoisted(() => {
-  const viewports = [
-    { key: 'xs', label: 'XS' }, { key: 'sm', label: 'SM' }, { key: 'md', label: 'MD' },
-    { key: 'lg', label: 'LG' }, { key: 'xl', label: 'XL' }, { key: 'xxl', label: 'XXL' },
-  ];
-  const resolve = (gridSettings: { default: { width: number; offset: number; visible: boolean }; overrides: Record<string, { width: number; offset: number; visible: boolean }> }, activeViewport: string) => {
-    return gridSettings.overrides[activeViewport] ?? gridSettings.default;
+vi.mock('@/utils/gridAdapter', async () => {
+  const { MOCK_VIEWPORTS, resolveViewportSettingsImpl, defaultWidthOptions, defaultOffsetOptions } = await import('@/tests/helpers/mockData');
+  return {
+    getColumnCount: vi.fn(() => 12),
+    getViewports: vi.fn(() => MOCK_VIEWPORTS),
+    getRowClasses: vi.fn(() => 'row'),
+    getOffsetStrategy: vi.fn(() => 'margin'),
+    getWidthClass: vi.fn((width: number) => `col-${width}`),
+    getOffsetClass: vi.fn((offset: number) => `offset-${offset}`),
+    getDefaultViewport: vi.fn(() => 'md'),
+    getWidthOptions: vi.fn(() => defaultWidthOptions()),
+    getOffsetOptions: vi.fn(() => defaultOffsetOptions()),
+    resolveViewportSettings: vi.fn(resolveViewportSettingsImpl),
   };
-  return { mockViewports: viewports, mockResolveViewportSettings: resolve };
 });
-
-vi.mock('@/utils/gridAdapter', () => ({
-  getColumnCount: vi.fn(() => 12),
-  getViewports: vi.fn(() => mockViewports),
-  getRowClasses: vi.fn(() => 'row'),
-  getOffsetStrategy: vi.fn(() => 'margin'),
-  getWidthClass: vi.fn((width: number) => `col-${width}`),
-  getOffsetClass: vi.fn((offset: number) => `offset-${offset}`),
-  getDefaultViewport: vi.fn(() => 'md'),
-  getWidthOptions: vi.fn(() => [
-    ...Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}/12` })),
-    { value: 'hidden', label: 'hidden' },
-  ]),
-  getOffsetOptions: vi.fn(() =>
-    Array.from({ length: 12 }, (_, i) => ({ value: i, label: i === 0 ? 'none' : `+${i}` })),
-  ),
-  resolveViewportSettings: vi.fn(mockResolveViewportSettings),
-}));
-
-function makeRow(id: number, title: string, overrides: Partial<EnrichedRowNode> = {}): EnrichedRowNode {
-  return {
-    id,
-    parentId: 300,
-    title,
-    blockSchema: {
-      typeName: 'WeDevelop\\Grid\\Elements\\Row',
-      label: 'Row',
-      icon: 'font-icon-block-content',
-      type: 'Row',
-      title: '',
-      summary: '',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    containerType: 'row',
-    allowedTypes: null,
-    children: null,
-    isCollapsed: false,
-    toggle: vi.fn(),
-    sortableId: `row-${id}`,
-    childSortableIds: [],
-    ...overrides,
-  };
-}
-
-function makeSection(overrides: Partial<EnrichedSectionNode> = {}): EnrichedSectionNode {
-  const id = overrides.id ?? 1;
-  const children = overrides.children ?? null;
-  return {
-    id,
-    parentId: 42,
-    title: 'Section',
-    blockSchema: {
-      typeName: 'WeDevelop\\Grid\\Elements\\Section',
-      label: 'Section',
-      icon: 'font-icon-block-content',
-      type: 'Section',
-      title: '',
-      summary: '',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    containerType: 'section',
-    allowedTypes: null,
-    children,
-    isCollapsed: false,
-    toggle: vi.fn(),
-    sortableId: `section-${id}`,
-    childSortableIds: children?.map((c) => c.sortableId) ?? [],
-    ...overrides,
-  };
-}
 
 describe('SectionBlock', () => {
   beforeEach(() => {
@@ -147,7 +64,7 @@ describe('SectionBlock', () => {
   });
 
   it('renders as a <section> element', () => {
-    const section = makeSection();
+    const section = makeEnrichedSection();
 
     const { container } = render(
       <SectionBlock section={section} />,
@@ -158,7 +75,7 @@ describe('SectionBlock', () => {
   });
 
   it('renders title as an h2 heading', () => {
-    const section = makeSection({ title: 'Hero Section' });
+    const section = makeEnrichedSection({ title: 'Hero Section' });
 
     render(
       <SectionBlock section={section} />,
@@ -170,10 +87,10 @@ describe('SectionBlock', () => {
   });
 
   it('renders row children as RowBlocks', () => {
-    const section = makeSection({
+    const section = makeEnrichedSection({
       children: [
-        makeRow(10, 'First Row'),
-        makeRow(11, 'Second Row'),
+        makeEnrichedRow({ id: 10, title: 'First Row' }),
+        makeEnrichedRow({ id: 11, title: 'Second Row' }),
       ],
     });
 
@@ -187,7 +104,7 @@ describe('SectionBlock', () => {
   });
 
   it('renders add child empty state when children is null', () => {
-    const section = makeSection({ children: null });
+    const section = makeEnrichedSection({ children: null });
 
     render(
       <SectionBlock section={section} />,
@@ -199,7 +116,7 @@ describe('SectionBlock', () => {
   });
 
   it('renders add child empty state when children is empty array', () => {
-    const section = makeSection({ children: [] });
+    const section = makeEnrichedSection({ children: [] });
 
     render(
       <SectionBlock section={section} />,
@@ -211,7 +128,7 @@ describe('SectionBlock', () => {
   });
 
   it('applies draft publication state modifier class', () => {
-    const section = makeSection({
+    const section = makeEnrichedSection({
       statusFlags: { addedtodraft: { text: 'Draft', title: 'Item has not been published yet' } },
     });
 
@@ -225,7 +142,7 @@ describe('SectionBlock', () => {
   });
 
   it('applies published publication state modifier class', () => {
-    const section = makeSection({
+    const section = makeEnrichedSection({
       statusFlags: {},
     });
 
@@ -239,7 +156,7 @@ describe('SectionBlock', () => {
   });
 
   it('applies modified publication state modifier class', () => {
-    const section = makeSection({
+    const section = makeEnrichedSection({
       statusFlags: { modified: { text: 'Modified', title: 'Item has unpublished changes' } },
     });
 
@@ -253,8 +170,8 @@ describe('SectionBlock', () => {
   });
 
   it('child columns resolve settings based on activeViewport from context', () => {
-    const section = makeSection({
-      children: [makeRow(10, 'Row')],
+    const section = makeEnrichedSection({
+      children: [makeEnrichedRow({ id: 10, title: 'Row' })],
     });
 
     const { container } = render(
@@ -267,8 +184,8 @@ describe('SectionBlock', () => {
   });
 
   it('rows apply flex layout class from offsetStrategy', () => {
-    const section = makeSection({
-      children: [makeRow(10, 'Row')],
+    const section = makeEnrichedSection({
+      children: [makeEnrichedRow({ id: 10, title: 'Row' })],
     });
 
     const { container } = render(
@@ -281,42 +198,19 @@ describe('SectionBlock', () => {
   });
 
   it('nested columns set CSS custom properties for layout', () => {
-    const section = makeSection({
+    const section = makeEnrichedSection({
       children: [
-        makeRow(10, 'Row', {
+        makeEnrichedRow({
+          id: 10,
+          title: 'Row',
           children: [
-            {
+            makeEnrichedColumn({
               id: 30,
-              parentId: 200,
-              title: 'Column',
-              blockSchema: {
-                typeName: 'WeDevelop\\Grid\\Elements\\Column',
-                label: 'Column',
-                icon: 'font-icon-block-content',
-                type: 'Column',
-                title: '',
-                summary: '',
-              },
-              obsoleteClassName: null,
-              version: 1,
-              canDelete: true,
-              canPublish: true,
-              canUnpublish: false,
-              canCreate: true,
-              editLink: null,
-              statusFlags: {},
-              containerType: 'column' as const,
-              allowedTypes: null,
-              children: null,
               gridSettings: {
                 default: { width: 12, offset: 0, visible: true },
                 overrides: { md: { width: 8, offset: 2, visible: true } },
               },
-              isCollapsed: false,
-              toggle: vi.fn(),
-              sortableId: 'column-30',
-              childSortableIds: [],
-            },
+            }),
           ],
         }),
       ],
@@ -333,8 +227,8 @@ describe('SectionBlock', () => {
   });
 
   it('renders rows in the body area within section-block__body', () => {
-    const section = makeSection({
-      children: [makeRow(10, 'First Row')],
+    const section = makeEnrichedSection({
+      children: [makeEnrichedRow({ id: 10, title: 'First Row' })],
     });
 
     const { container } = render(
@@ -351,7 +245,7 @@ describe('SectionBlock', () => {
 
   it('applies --drop-target modifier when isOver is true and activeType is section', () => {
     setIsOver(true);
-    const section = makeSection();
+    const section = makeEnrichedSection();
 
     const { container } = render(
       <SectionBlock section={section} />,
@@ -364,7 +258,7 @@ describe('SectionBlock', () => {
 
   it('does not apply --drop-target when isOver is true but activeType is not section', () => {
     setIsOver(true);
-    const section = makeSection();
+    const section = makeEnrichedSection();
 
     const { container } = render(
       <SectionBlock section={section} />,
@@ -376,7 +270,7 @@ describe('SectionBlock', () => {
   });
 
   it('does not apply --drop-target modifier when isOver is false', () => {
-    const section = makeSection();
+    const section = makeEnrichedSection();
 
     const { container } = render(
       <SectionBlock section={section} />,
@@ -389,7 +283,7 @@ describe('SectionBlock', () => {
 
   describe('collapse', () => {
     it('renders a collapse toggle button', () => {
-      const section = makeSection();
+      const section = makeEnrichedSection();
 
       render(
         <SectionBlock section={section} />,
@@ -401,7 +295,7 @@ describe('SectionBlock', () => {
 
     it('wires toggle to CollapseToggle onToggle', async () => {
       const toggle = vi.fn();
-      const section = makeSection({ toggle });
+      const section = makeEnrichedSection({ toggle });
       const user = userEvent.setup();
 
       render(
@@ -414,9 +308,9 @@ describe('SectionBlock', () => {
     });
 
     it('hides body when collapsed', () => {
-      const section = makeSection({
+      const section = makeEnrichedSection({
         isCollapsed: true,
-        children: [makeRow(10, 'First Row')],
+        children: [makeEnrichedRow({ id: 10, title: 'First Row' })],
       });
 
       const { container } = render(
@@ -429,9 +323,9 @@ describe('SectionBlock', () => {
     });
 
     it('shows body when expanded', () => {
-      const section = makeSection({
+      const section = makeEnrichedSection({
         isCollapsed: false,
-        children: [makeRow(10, 'First Row')],
+        children: [makeEnrichedRow({ id: 10, title: 'First Row' })],
       });
 
       const { container } = render(
@@ -445,7 +339,7 @@ describe('SectionBlock', () => {
   });
 
   it('renders ElementActions with actions menu', () => {
-    const section = makeSection({ canDelete: true });
+    const section = makeEnrichedSection({ canDelete: true });
 
     render(
       <SectionBlock section={section} />,
@@ -456,7 +350,7 @@ describe('SectionBlock', () => {
   });
 
   it('renders the block schema icon class on the icon element', () => {
-    const section = makeSection({
+    const section = makeEnrichedSection({
       blockSchema: {
         typeName: 'WeDevelop\\Grid\\Elements\\Section',
         label: 'Section',
@@ -479,7 +373,7 @@ describe('SectionBlock', () => {
 
   describe('edit link', () => {
     it('renders title as a link when editLink is present', () => {
-      const section = makeSection({
+      const section = makeEnrichedSection({
         title: 'Hero Section',
         editLink: '/admin/pages/edit/EditForm/42/field/GridEditor/item/1/edit',
       });
@@ -496,7 +390,7 @@ describe('SectionBlock', () => {
     });
 
     it('renders plain heading without link when editLink is null', () => {
-      const section = makeSection({ title: 'Hero Section', editLink: null });
+      const section = makeEnrichedSection({ title: 'Hero Section', editLink: null });
 
       render(
         <SectionBlock section={section} />,
@@ -510,7 +404,7 @@ describe('SectionBlock', () => {
   });
 
   it('renders a drag handle', () => {
-    const section = makeSection({ title: 'Hero Section' });
+    const section = makeEnrichedSection({ title: 'Hero Section' });
 
     render(
       <SectionBlock section={section} />,

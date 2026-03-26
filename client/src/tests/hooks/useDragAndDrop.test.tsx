@@ -343,6 +343,20 @@ describe('useDragAndDrop', () => {
 
       expect(onReorder).not.toHaveBeenCalled();
     });
+
+    it('does not call onReorder when active ID parses but node is not in nodeMap', () => {
+      const onReorder = vi.fn();
+      const { result } = renderHook(() =>
+        useDragAndDrop({ ...defaultOptions, onReorder }),
+      );
+
+      // element-999 is a valid composite ID but does not exist in testTree
+      act(() => {
+        result.current.dndContextProps.onDragEnd(makeDragEndEvent('element-999', 'element-30'));
+      });
+
+      expect(onReorder).not.toHaveBeenCalled();
+    });
   });
 
   describe('handleDragOver + handleDragEnd (cross-container integration)', () => {
@@ -539,6 +553,30 @@ describe('useDragAndDrop', () => {
 
       act(() => {
         result.current.dndContextProps.onDragOver(makeDragOverEvent('row-11', 'row-11'));
+      });
+
+      expect(result.current.pendingTree).toBeNull();
+    });
+
+    it('does not set pendingTree when over ID is unparseable', () => {
+      const { result } = renderHook(() =>
+        useDragAndDrop({ tree: crossContainerTree, onReorder: vi.fn() }),
+      );
+
+      act(() => {
+        result.current.dndContextProps.onDragOver(makeDragOverEvent('row-11', 'not-a-valid-id'));
+      });
+
+      expect(result.current.pendingTree).toBeNull();
+    });
+
+    it('does not set pendingTree when active ID is unparseable', () => {
+      const { result } = renderHook(() =>
+        useDragAndDrop({ tree: crossContainerTree, onReorder: vi.fn() }),
+      );
+
+      act(() => {
+        result.current.dndContextProps.onDragOver(makeDragOverEvent('garbage', 'row-11'));
       });
 
       expect(result.current.pendingTree).toBeNull();

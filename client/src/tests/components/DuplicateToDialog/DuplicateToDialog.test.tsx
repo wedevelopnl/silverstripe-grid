@@ -1,10 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
 
 import DuplicateToDialog from '@/components/DuplicateToDialog/DuplicateToDialog';
 import type { PageEntry, AcceptableContainer } from '@/api/endpoints';
+import { createQueryWrapper } from '../../helpers/dndTestUtils';
 
 // jsdom does not implement HTMLDialogElement.showModal / close
 const showModalSpy = vi.fn(function (this: HTMLDialogElement) {
@@ -43,20 +42,6 @@ vi.mock('@/hooks/useDuplicateToQueries', () => ({
   useZones: mockUseZones,
   useAcceptableContainers: mockUseAcceptableContainers,
 }));
-
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    );
-  };
-}
 
 const defaultProps = {
   isOpen: true,
@@ -97,7 +82,7 @@ describe('DuplicateToDialog', () => {
   // --- Existing tests ---
 
   it('renders page list on open', () => {
-    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
     expect(screen.getByTestId('duplicate-to-step-page')).toBeDefined();
     expect(screen.getByTestId('duplicate-to-page-list')).toBeDefined();
@@ -105,7 +90,7 @@ describe('DuplicateToDialog', () => {
   });
 
   it('shows disabled pages with aria-disabled', () => {
-    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
     const items = screen.getAllByTestId('duplicate-to-page-item');
     const blogItem = items.find((item) => item.textContent === 'Blog');
@@ -113,7 +98,7 @@ describe('DuplicateToDialog', () => {
   });
 
   it('pre-selects the current page', () => {
-    render(<DuplicateToDialog {...defaultProps} currentPageId={1} />, { wrapper: createWrapper() });
+    render(<DuplicateToDialog {...defaultProps} currentPageId={1} />, { wrapper: createQueryWrapper().wrapper });
 
     const items = screen.getAllByTestId('duplicate-to-page-item');
     const homeItem = items.find((item) => item.textContent === 'Home');
@@ -123,7 +108,7 @@ describe('DuplicateToDialog', () => {
   it('can navigate from page step to zone step', async () => {
     const user = userEvent.setup();
 
-    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
     await user.click(screen.getByTestId('duplicate-to-next'));
 
@@ -135,7 +120,7 @@ describe('DuplicateToDialog', () => {
   it('shows zone list with multiple zones', async () => {
     const user = userEvent.setup();
 
-    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
     await user.click(screen.getByTestId('duplicate-to-next'));
 
@@ -148,7 +133,7 @@ describe('DuplicateToDialog', () => {
   it('can navigate back from zone step to page step', async () => {
     const user = userEvent.setup();
 
-    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
     await user.click(screen.getByTestId('duplicate-to-next'));
 
@@ -166,7 +151,7 @@ describe('DuplicateToDialog', () => {
   it('displays error message when error prop is set', () => {
     render(
       <DuplicateToDialog {...defaultProps} error="Something went wrong" />,
-      { wrapper: createWrapper() },
+      { wrapper: createQueryWrapper().wrapper },
     );
 
     expect(screen.getByTestId('duplicate-to-error')).toBeDefined();
@@ -176,20 +161,20 @@ describe('DuplicateToDialog', () => {
   it('does not display error when error prop is null', () => {
     render(
       <DuplicateToDialog {...defaultProps} error={null} />,
-      { wrapper: createWrapper() },
+      { wrapper: createQueryWrapper().wrapper },
     );
 
     expect(screen.queryByTestId('duplicate-to-error')).toBeNull();
   });
 
   it('has duplicate-to-dialog test id', () => {
-    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
     expect(screen.getByTestId('duplicate-to-dialog')).toBeDefined();
   });
 
   it('renders search input on page step', () => {
-    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+    render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
     expect(screen.getByTestId('duplicate-to-search')).toBeDefined();
   });
@@ -200,7 +185,7 @@ describe('DuplicateToDialog', () => {
 
     render(
       <DuplicateToDialog {...defaultProps} onCancel={onCancel} />,
-      { wrapper: createWrapper() },
+      { wrapper: createQueryWrapper().wrapper },
     );
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -211,14 +196,14 @@ describe('DuplicateToDialog', () => {
 
   describe('page step', () => {
     it('shows "Select target page" title', () => {
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       expect(screen.getByText('Select target page')).toBeDefined();
     });
 
     it('selecting a page updates aria-selected', async () => {
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       const items = screen.getAllByTestId('duplicate-to-page-item');
       const aboutItem = items.find((item) => item.textContent === 'About')!;
@@ -232,7 +217,7 @@ describe('DuplicateToDialog', () => {
 
     it('clicking disabled page does not change selection', async () => {
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       const items = screen.getAllByTestId('duplicate-to-page-item');
       const blogItem = items.find((item) => item.textContent === 'Blog')!;
@@ -247,7 +232,7 @@ describe('DuplicateToDialog', () => {
     it('Next button is disabled when currentPageId is 0', () => {
       render(
         <DuplicateToDialog {...defaultProps} currentPageId={0} />,
-        { wrapper: createWrapper() },
+        { wrapper: createQueryWrapper().wrapper },
       );
 
       expect(screen.getByTestId('duplicate-to-next')).toHaveProperty('disabled', true);
@@ -256,7 +241,7 @@ describe('DuplicateToDialog', () => {
     it('shows loading state for pages', () => {
       mockUsePages.mockReturnValue({ data: undefined, isLoading: true });
 
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       expect(screen.getByText(/Loading pages/)).toBeDefined();
       expect(screen.queryByTestId('duplicate-to-page-list')).toBeNull();
@@ -264,7 +249,7 @@ describe('DuplicateToDialog', () => {
 
     it('updates search input value', async () => {
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       const input = screen.getByTestId('duplicate-to-search');
       await user.type(input, 'test');
@@ -278,7 +263,7 @@ describe('DuplicateToDialog', () => {
   describe('zone step', () => {
     it('shows "Select zone" title', async () => {
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       await advanceToZone(user);
 
@@ -287,7 +272,7 @@ describe('DuplicateToDialog', () => {
 
     it('selecting a zone updates aria-selected', async () => {
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       await advanceToZone(user);
 
@@ -299,7 +284,7 @@ describe('DuplicateToDialog', () => {
 
     it('Next button is disabled when no zone is selected', async () => {
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       await advanceToZone(user);
 
@@ -311,7 +296,7 @@ describe('DuplicateToDialog', () => {
       // Start with loaded pages, loading zones
       mockUseZones.mockReturnValue({ data: undefined, isLoading: true });
 
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       await advanceToZone(user);
 
@@ -322,7 +307,7 @@ describe('DuplicateToDialog', () => {
       const user = userEvent.setup();
       mockUseZones.mockReturnValue({ data: ['main'], isLoading: false });
 
-      render(<DuplicateToDialog {...defaultProps} elementType="row" />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} elementType="row" />, { wrapper: createQueryWrapper().wrapper });
 
       await user.click(screen.getByTestId('duplicate-to-next'));
 
@@ -335,7 +320,7 @@ describe('DuplicateToDialog', () => {
       const user = userEvent.setup();
       mockUseZones.mockReturnValue({ data: ['main'], isLoading: false });
 
-      render(<DuplicateToDialog {...defaultProps} elementType="section" />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} elementType="section" />, { wrapper: createQueryWrapper().wrapper });
 
       await user.click(screen.getByTestId('duplicate-to-next'));
 
@@ -350,7 +335,7 @@ describe('DuplicateToDialog', () => {
   describe('container step', () => {
     it('shows "Select container" title', async () => {
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       await advanceToContainer(user);
 
@@ -359,7 +344,7 @@ describe('DuplicateToDialog', () => {
 
     it('renders container items with title and type', async () => {
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       await advanceToContainer(user);
 
@@ -371,7 +356,7 @@ describe('DuplicateToDialog', () => {
 
     it('selecting a container updates aria-selected', async () => {
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       await advanceToContainer(user);
 
@@ -383,7 +368,7 @@ describe('DuplicateToDialog', () => {
 
     it('Confirm button is disabled when no container selected', async () => {
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       await advanceToContainer(user);
 
@@ -395,7 +380,7 @@ describe('DuplicateToDialog', () => {
       const user = userEvent.setup();
       render(
         <DuplicateToDialog {...defaultProps} onConfirm={onConfirm} />,
-        { wrapper: createWrapper() },
+        { wrapper: createQueryWrapper().wrapper },
       );
 
       await advanceToContainer(user);
@@ -411,7 +396,7 @@ describe('DuplicateToDialog', () => {
       mockUseAcceptableContainers.mockReturnValue({ data: [], isLoading: false });
 
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       await advanceToContainer(user);
 
@@ -423,7 +408,7 @@ describe('DuplicateToDialog', () => {
       mockUseAcceptableContainers.mockReturnValue({ data: undefined, isLoading: true });
 
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       await advanceToContainer(user);
 
@@ -432,7 +417,7 @@ describe('DuplicateToDialog', () => {
 
     it('Back button navigates to zone step', async () => {
       const user = userEvent.setup();
-      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createWrapper() });
+      render(<DuplicateToDialog {...defaultProps} />, { wrapper: createQueryWrapper().wrapper });
 
       await advanceToContainer(user);
       await user.click(screen.getByTestId('duplicate-to-back'));
@@ -460,7 +445,7 @@ describe('DuplicateToDialog', () => {
       const user = userEvent.setup();
       render(
         <DuplicateToDialog {...defaultProps} elementType="section" />,
-        { wrapper: createWrapper() },
+        { wrapper: createQueryWrapper().wrapper },
       );
 
       await advanceToConfirm(user);
@@ -472,7 +457,7 @@ describe('DuplicateToDialog', () => {
       const user = userEvent.setup();
       render(
         <DuplicateToDialog {...defaultProps} elementType="section" />,
-        { wrapper: createWrapper() },
+        { wrapper: createQueryWrapper().wrapper },
       );
 
       await advanceToConfirm(user);
@@ -485,7 +470,7 @@ describe('DuplicateToDialog', () => {
       const user = userEvent.setup();
       render(
         <DuplicateToDialog {...defaultProps} elementType="section" onConfirm={onConfirm} />,
-        { wrapper: createWrapper() },
+        { wrapper: createQueryWrapper().wrapper },
       );
 
       await advanceToConfirm(user);
@@ -499,7 +484,7 @@ describe('DuplicateToDialog', () => {
       const user = userEvent.setup();
       render(
         <DuplicateToDialog {...defaultProps} elementType="section" />,
-        { wrapper: createWrapper() },
+        { wrapper: createQueryWrapper().wrapper },
       );
 
       await advanceToConfirm(user);
@@ -517,7 +502,7 @@ describe('DuplicateToDialog', () => {
     it('calls showModal when isOpen transitions to true', () => {
       const { rerender } = render(
         <DuplicateToDialog {...defaultProps} isOpen={false} />,
-        { wrapper: createWrapper() },
+        { wrapper: createQueryWrapper().wrapper },
       );
 
       showModalSpy.mockClear();
@@ -528,7 +513,7 @@ describe('DuplicateToDialog', () => {
     });
 
     it('calls close when isOpen transitions to false', () => {
-      const wrapper = createWrapper();
+      const wrapper = createQueryWrapper().wrapper;
       const { rerender } = render(
         <DuplicateToDialog {...defaultProps} isOpen={true} />,
         { wrapper },
@@ -543,7 +528,7 @@ describe('DuplicateToDialog', () => {
 
     it('resets state when dialog reopens', async () => {
       const user = userEvent.setup();
-      const wrapper = createWrapper();
+      const wrapper = createQueryWrapper().wrapper;
 
       const { rerender } = render(
         <DuplicateToDialog {...defaultProps} isOpen={true} />,

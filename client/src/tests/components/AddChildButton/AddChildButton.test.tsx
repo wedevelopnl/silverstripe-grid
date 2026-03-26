@@ -1,10 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
 
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
-import { GridEditorProvider } from '@/hooks/GridEditorContext';
+import { createGridEditorWrapper } from '../../helpers/dndTestUtils';
 
 const mockCreateElement = vi.fn();
 
@@ -14,24 +12,6 @@ vi.mock('@/api/endpoints', () => ({
   duplicateElement: vi.fn(),
   updateGridSettings: vi.fn(),
 }));
-
-function createWrapper(pageId = 1, zone = 'main') {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  });
-
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <GridEditorProvider value={{ pageId, zone }}>
-          {children}
-        </GridEditorProvider>
-      </QueryClientProvider>
-    );
-  };
-}
 
 describe('AddChildButton', () => {
   afterEach(() => {
@@ -46,7 +26,7 @@ describe('AddChildButton', () => {
         childLabel="Row"
         variant="empty-state"
       />,
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(screen.getByTestId('add-child-empty')).toBeDefined();
@@ -62,7 +42,7 @@ describe('AddChildButton', () => {
         childLabel="Column"
         variant="append"
       />,
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     expect(screen.getByTestId('add-child-append')).toBeDefined();
@@ -80,7 +60,7 @@ describe('AddChildButton', () => {
         childLabel="Column"
         variant="append"
       />,
-      { wrapper: createWrapper(10, 'main') },
+      { wrapper: createGridEditorWrapper(10, 'main').wrapper },
     );
 
     await user.click(screen.getByTestId('add-child-button'));
@@ -105,7 +85,7 @@ describe('AddChildButton', () => {
         childLabel="Section"
         variant="empty-state"
       />,
-      { wrapper: createWrapper(42, 'sidebar') },
+      { wrapper: createGridEditorWrapper(42, 'sidebar').wrapper },
     );
 
     await user.click(screen.getByTestId('add-child-button'));
@@ -131,7 +111,7 @@ describe('AddChildButton', () => {
         childLabel="Row"
         variant="append"
       />,
-      { wrapper: createWrapper() },
+      { wrapper: createGridEditorWrapper().wrapper },
     );
 
     await user.click(screen.getByTestId('add-child-button'));

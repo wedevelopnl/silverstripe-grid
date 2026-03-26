@@ -1,10 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
 
 import GridEditor from '@/components/GridEditor/GridEditor';
 import type { ElementTreeResponse } from '@/types/elements';
+import { createQueryWrapper } from '../../helpers/dndTestUtils';
 
 const mockFetchElementTree = vi.fn();
 
@@ -24,50 +23,21 @@ vi.mock('@/api/endpoints', () => ({
   fetchAcceptableContainers: vi.fn().mockResolvedValue([]),
 }));
 
-const { mockViewports, mockResolveViewportSettings } = vi.hoisted(() => {
-  const viewports = [
-    { key: 'xs', label: 'XS' }, { key: 'sm', label: 'SM' }, { key: 'md', label: 'MD' },
-    { key: 'lg', label: 'LG' }, { key: 'xl', label: 'XL' }, { key: 'xxl', label: 'XXL' },
-  ];
-  const resolve = (gridSettings: { default: { width: number; offset: number; visible: boolean }; overrides: Record<string, { width: number; offset: number; visible: boolean }> }, activeViewport: string) => {
-    return gridSettings.overrides[activeViewport] ?? gridSettings.default;
+vi.mock('@/utils/gridAdapter', async () => {
+  const { MOCK_VIEWPORTS, resolveViewportSettingsImpl, defaultWidthOptions, defaultOffsetOptions } = await import('@/tests/helpers/mockData');
+  return {
+    getViewports: vi.fn(() => MOCK_VIEWPORTS),
+    getDefaultViewport: vi.fn(() => 'md'),
+    getColumnCount: vi.fn(() => 12),
+    getRowClasses: vi.fn(() => 'row'),
+    getOffsetStrategy: vi.fn(() => 'margin'),
+    getWidthClass: vi.fn((width: number) => `col-${width}`),
+    getOffsetClass: vi.fn((offset: number) => `offset-${offset}`),
+    getWidthOptions: vi.fn(() => defaultWidthOptions()),
+    getOffsetOptions: vi.fn(() => defaultOffsetOptions()),
+    resolveViewportSettings: vi.fn(resolveViewportSettingsImpl),
   };
-  return { mockViewports: viewports, mockResolveViewportSettings: resolve };
 });
-
-vi.mock('@/utils/gridAdapter', () => ({
-  getViewports: vi.fn(() => mockViewports),
-  getDefaultViewport: vi.fn(() => 'md'),
-  getColumnCount: vi.fn(() => 12),
-  getRowClasses: vi.fn(() => 'row'),
-  getOffsetStrategy: vi.fn(() => 'margin'),
-  getWidthClass: vi.fn((width: number) => `col-${width}`),
-  getOffsetClass: vi.fn((offset: number) => `offset-${offset}`),
-  getWidthOptions: vi.fn(() => [
-    ...Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}/12` })),
-    { value: 'hidden', label: 'hidden' },
-  ]),
-  getOffsetOptions: vi.fn(() =>
-    Array.from({ length: 12 }, (_, i) => ({ value: i, label: i === 0 ? 'none' : `+${i}` })),
-  ),
-  resolveViewportSettings: vi.fn(mockResolveViewportSettings),
-}));
-
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  });
-
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    );
-  };
-}
 
 const mockTree: ElementTreeResponse = {
   '7': [
@@ -202,7 +172,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockReturnValue(new Promise(() => {}));
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     expect(screen.getByText('Loading elements...')).toBeDefined();
@@ -212,7 +182,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockRejectedValue(new Error('Network error'));
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await waitFor(() => {
@@ -224,7 +194,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockResolvedValue(mockTree);
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await waitFor(() => {
@@ -244,7 +214,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockResolvedValue(mockTree);
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await waitFor(() => {
@@ -259,7 +229,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockResolvedValue(emptyTree);
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await waitFor(() => {
@@ -274,7 +244,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockResolvedValue(noSectionsTree);
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await waitFor(() => {
@@ -288,7 +258,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockResolvedValue(mockTree);
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     const editorDiv = screen.getByTestId('grid-editor');
@@ -299,7 +269,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockReturnValue(new Promise(() => {}));
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     const editorDiv = screen.getByTestId('grid-editor');
@@ -308,7 +278,7 @@ describe('GridEditor', () => {
 
   it('omits data-page-id attribute when pageId is null', () => {
     render(<GridEditor pageId={null} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     const editorDiv = screen.getByTestId('grid-editor');
@@ -320,7 +290,7 @@ describe('GridEditor', () => {
     const user = userEvent.setup();
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     // Wait for data to load — default viewport is "md"
@@ -347,7 +317,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockResolvedValue(treeForDifferentArea);
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await waitFor(() => {
@@ -359,7 +329,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockReturnValue(new Promise(() => {}));
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     expect(screen.queryByTestId('section-block')).toBeNull();
@@ -372,7 +342,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockResolvedValue(mockTree);
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await waitFor(() => {
@@ -388,7 +358,7 @@ describe('GridEditor', () => {
     const user = userEvent.setup();
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await waitFor(() => {
@@ -411,7 +381,7 @@ describe('GridEditor', () => {
     mockFetchElementTree.mockResolvedValue(mockTree);
 
     render(<GridEditor pageId={7} zone="main" />, {
-      wrapper: createWrapper(),
+      wrapper: createQueryWrapper().wrapper,
     });
 
     await waitFor(() => {

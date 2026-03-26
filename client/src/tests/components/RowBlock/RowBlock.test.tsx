@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import RowBlock from '@/components/RowBlock/RowBlock';
-import type { EnrichedRowNode, EnrichedColumnNode } from '@/types/enriched';
 import { createDndWrapper } from '@/tests/helpers/dndTestUtils';
+import { makeEnrichedColumn, makeEnrichedRow } from '@/tests/helpers/enrichedFactories';
 import {
   getOffsetStrategy,
   getColumnCount,
@@ -19,15 +19,11 @@ const { getIsOver, setIsOver } = vi.hoisted(() => {
 
 vi.mock('@dnd-kit/sortable', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@dnd-kit/sortable')>();
+  const { DEFAULT_SORTABLE_RETURN } = await import('@/tests/helpers/mockData');
   return {
     ...actual,
     useSortable: () => ({
-      attributes: {},
-      listeners: undefined,
-      setNodeRef: () => {},
-      transform: null,
-      transition: null,
-      isDragging: false,
+      ...DEFAULT_SORTABLE_RETURN,
       isOver: getIsOver(),
     }),
   };
@@ -45,101 +41,18 @@ vi.mock('@/api/endpoints', () => ({
   fetchAcceptableContainers: vi.fn().mockResolvedValue([]),
 }));
 
-const { mockViewports, mockResolveViewportSettings } = vi.hoisted(() => {
-  const viewports = [
-    { key: 'xs', label: 'XS' }, { key: 'sm', label: 'SM' }, { key: 'md', label: 'MD' },
-    { key: 'lg', label: 'LG' }, { key: 'xl', label: 'XL' }, { key: 'xxl', label: 'XXL' },
-  ];
-  const resolve = (gridSettings: { default: { width: number; offset: number; visible: boolean }; overrides: Record<string, { width: number; offset: number; visible: boolean }> }, activeViewport: string) => {
-    return gridSettings.overrides[activeViewport] ?? gridSettings.default;
+vi.mock('@/utils/gridAdapter', async () => {
+  const { MOCK_VIEWPORTS, resolveViewportSettingsImpl, defaultWidthOptions, defaultOffsetOptions } = await import('@/tests/helpers/mockData');
+  return {
+    getColumnCount: vi.fn(() => 12),
+    getViewports: vi.fn(() => MOCK_VIEWPORTS),
+    getOffsetStrategy: vi.fn(() => 'margin'),
+    getDefaultViewport: vi.fn(() => 'md'),
+    getWidthOptions: vi.fn(() => defaultWidthOptions()),
+    getOffsetOptions: vi.fn(() => defaultOffsetOptions()),
+    resolveViewportSettings: vi.fn(resolveViewportSettingsImpl),
   };
-  return { mockViewports: viewports, mockResolveViewportSettings: resolve };
 });
-
-vi.mock('@/utils/gridAdapter', () => ({
-  getColumnCount: vi.fn(() => 12),
-  getViewports: vi.fn(() => mockViewports),
-  getOffsetStrategy: vi.fn(() => 'margin'),
-  getDefaultViewport: vi.fn(() => 'md'),
-  getWidthOptions: vi.fn(() => [
-    ...Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}/12` })),
-    { value: 'hidden', label: 'hidden' },
-  ]),
-  getOffsetOptions: vi.fn(() =>
-    Array.from({ length: 12 }, (_, i) => ({ value: i, label: i === 0 ? 'none' : `+${i}` })),
-  ),
-  resolveViewportSettings: vi.fn(mockResolveViewportSettings),
-}));
-
-function makeColumn(id: number, title: string, overrides: Partial<EnrichedColumnNode> = {}): EnrichedColumnNode {
-  return {
-    id,
-    parentId: 200,
-    title,
-    blockSchema: {
-      typeName: 'WeDevelop\\Grid\\Elements\\Column',
-      label: 'Column',
-      icon: 'font-icon-block-content',
-      type: 'Column',
-      title: '',
-      summary: '',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    containerType: 'column' as const,
-    allowedTypes: null,
-    children: null,
-    gridSettings: {
-      default: { width: 12, offset: 0, visible: true },
-      overrides: { md: { width: 6, offset: 0, visible: true } },
-    },
-    isCollapsed: false,
-    toggle: vi.fn(),
-    sortableId: `column-${id}`,
-    childSortableIds: [],
-    ...overrides,
-  };
-}
-
-function makeRow(overrides: Partial<EnrichedRowNode> = {}): EnrichedRowNode {
-  const id = overrides.id ?? 20;
-  const children = overrides.children ?? null;
-  return {
-    id,
-    parentId: 300,
-    title: 'Row',
-    blockSchema: {
-      typeName: 'WeDevelop\\Grid\\Elements\\Row',
-      label: 'Row',
-      icon: 'font-icon-block-content',
-      type: 'Row',
-      title: '',
-      summary: '',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    containerType: 'row',
-    allowedTypes: null,
-    children,
-    isCollapsed: false,
-    toggle: vi.fn(),
-    sortableId: `row-${id}`,
-    childSortableIds: children?.map((c) => c.sortableId) ?? [],
-    ...overrides,
-  };
-}
 
 describe('RowBlock', () => {
   beforeEach(() => {
@@ -150,7 +63,7 @@ describe('RowBlock', () => {
   });
 
   it('renders title as an h3 heading', () => {
-    const row = makeRow({ title: 'Main Row' });
+    const row = makeEnrichedRow({ title: 'Main Row' });
 
     const { container } = render(
       <RowBlock row={row} />,
@@ -164,7 +77,7 @@ describe('RowBlock', () => {
 
   it('applies flex layout class when offsetStrategy is margin', () => {
     vi.mocked(getOffsetStrategy).mockReturnValue('margin');
-    const row = makeRow();
+    const row = makeEnrichedRow();
 
     const { container } = render(
       <RowBlock row={row} />,
@@ -178,7 +91,7 @@ describe('RowBlock', () => {
 
   it('applies grid layout class when offsetStrategy is grid-placement', () => {
     vi.mocked(getOffsetStrategy).mockReturnValue('grid-placement');
-    const row = makeRow();
+    const row = makeEnrichedRow();
 
     const { container } = render(
       <RowBlock row={row} />,
@@ -191,10 +104,10 @@ describe('RowBlock', () => {
   });
 
   it('renders column children as ColumnBlocks', () => {
-    const row = makeRow({
+    const row = makeEnrichedRow({
       children: [
-        makeColumn(10, 'Left Column'),
-        makeColumn(11, 'Right Column'),
+        makeEnrichedColumn({ id: 10, title: 'Left Column' }),
+        makeEnrichedColumn({ id: 11, title: 'Right Column' }),
       ],
     });
 
@@ -208,7 +121,7 @@ describe('RowBlock', () => {
   });
 
   it('renders add child empty state when children is null', () => {
-    const row = makeRow({ children: null });
+    const row = makeEnrichedRow({ children: null });
 
     render(
       <RowBlock row={row} />,
@@ -220,7 +133,7 @@ describe('RowBlock', () => {
   });
 
   it('renders add child empty state when children is empty array', () => {
-    const row = makeRow({ children: [] });
+    const row = makeEnrichedRow({ children: [] });
 
     render(
       <RowBlock row={row} />,
@@ -232,7 +145,7 @@ describe('RowBlock', () => {
   });
 
   it('applies draft publication state modifier class', () => {
-    const row = makeRow({
+    const row = makeEnrichedRow({
       statusFlags: { addedtodraft: { text: 'Draft', title: 'Item has not been published yet' } },
     });
 
@@ -246,7 +159,7 @@ describe('RowBlock', () => {
   });
 
   it('applies published publication state modifier class', () => {
-    const row = makeRow({
+    const row = makeEnrichedRow({
       statusFlags: {},
     });
 
@@ -260,7 +173,7 @@ describe('RowBlock', () => {
   });
 
   it('applies modified publication state modifier class', () => {
-    const row = makeRow({
+    const row = makeEnrichedRow({
       statusFlags: { modified: { text: 'Modified', title: 'Item has unpublished changes' } },
     });
 
@@ -274,9 +187,11 @@ describe('RowBlock', () => {
   });
 
   it('child columns resolve settings based on activeViewport from context', () => {
-    const row = makeRow({
+    const row = makeEnrichedRow({
       children: [
-        makeColumn(10, 'Column', {
+        makeEnrichedColumn({
+          id: 10,
+          title: 'Column',
           gridSettings: {
             default: { width: 12, offset: 0, visible: true },
             overrides: {
@@ -301,9 +216,11 @@ describe('RowBlock', () => {
   it('child columns use getColumnCount from gridAdapter for badge display', () => {
     vi.mocked(getColumnCount).mockReturnValue(16);
 
-    const row = makeRow({
+    const row = makeEnrichedRow({
       children: [
-        makeColumn(10, 'Column', {
+        makeEnrichedColumn({
+          id: 10,
+          title: 'Column',
           gridSettings: {
             default: { width: 12, offset: 0, visible: true },
             overrides: { md: { width: 6, offset: 0, visible: true } },
@@ -324,7 +241,7 @@ describe('RowBlock', () => {
 
   it('applies --drop-target modifier when isOver is true and activeType is row', () => {
     setIsOver(true);
-    const row = makeRow();
+    const row = makeEnrichedRow();
 
     const { container } = render(
       <RowBlock row={row} />,
@@ -337,7 +254,7 @@ describe('RowBlock', () => {
 
   it('does not apply --drop-target when isOver is true but activeType is not row', () => {
     setIsOver(true);
-    const row = makeRow();
+    const row = makeEnrichedRow();
 
     const { container } = render(
       <RowBlock row={row} />,
@@ -349,7 +266,7 @@ describe('RowBlock', () => {
   });
 
   it('does not apply --drop-target modifier when isOver is false', () => {
-    const row = makeRow();
+    const row = makeEnrichedRow();
 
     const { container } = render(
       <RowBlock row={row} />,
@@ -362,7 +279,7 @@ describe('RowBlock', () => {
 
   describe('collapse', () => {
     it('renders a collapse toggle button', () => {
-      const row = makeRow();
+      const row = makeEnrichedRow();
 
       render(
         <RowBlock row={row} />,
@@ -374,7 +291,7 @@ describe('RowBlock', () => {
 
     it('wires toggle to CollapseToggle onToggle', async () => {
       const toggle = vi.fn();
-      const row = makeRow({ id: 77, toggle });
+      const row = makeEnrichedRow({ id: 77, toggle });
       const user = userEvent.setup();
 
       render(
@@ -387,7 +304,7 @@ describe('RowBlock', () => {
     });
 
     it('applies --collapsed modifier when collapsed', () => {
-      const row = makeRow({ isCollapsed: true });
+      const row = makeEnrichedRow({ isCollapsed: true });
 
       const { container } = render(
         <RowBlock row={row} />,
@@ -399,7 +316,7 @@ describe('RowBlock', () => {
     });
 
     it('does not apply --collapsed modifier when expanded', () => {
-      const row = makeRow({ isCollapsed: false });
+      const row = makeEnrichedRow({ isCollapsed: false });
 
       const { container } = render(
         <RowBlock row={row} />,
@@ -412,7 +329,7 @@ describe('RowBlock', () => {
   });
 
   it('renders ElementActions with actions menu', () => {
-    const row = makeRow({ canDelete: true });
+    const row = makeEnrichedRow({ canDelete: true });
 
     render(
       <RowBlock row={row} />,
@@ -424,7 +341,7 @@ describe('RowBlock', () => {
 
   describe('edit link', () => {
     it('renders title as a link when editLink is present', () => {
-      const row = makeRow({
+      const row = makeEnrichedRow({
         title: 'Main Row',
         editLink: '/admin/pages/edit/EditForm/42/field/GridEditor/item/20/edit',
       });
@@ -441,7 +358,7 @@ describe('RowBlock', () => {
     });
 
     it('renders plain heading without link when editLink is null', () => {
-      const row = makeRow({ title: 'Main Row', editLink: null });
+      const row = makeEnrichedRow({ title: 'Main Row', editLink: null });
 
       render(
         <RowBlock row={row} />,
@@ -455,7 +372,7 @@ describe('RowBlock', () => {
   });
 
   it('renders a drag handle', () => {
-    const row = makeRow({ title: 'Main Row' });
+    const row = makeEnrichedRow({ title: 'Main Row' });
 
     render(
       <RowBlock row={row} />,

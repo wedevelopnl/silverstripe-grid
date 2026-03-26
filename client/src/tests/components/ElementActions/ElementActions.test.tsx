@@ -2,32 +2,14 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import ElementActions from '@/components/ElementActions/ElementActions';
-import type { SimpleElementNode } from '@/types/elements';
 import { createDndWrapper } from '@/tests/helpers/dndTestUtils';
+import { makeLeaf } from '@/tests/helpers/elementFactories';
 
 vi.mock('@/api/endpoints', () => ({
   archiveElement: vi.fn(),
   duplicateElement: vi.fn(),
   duplicateToElement: vi.fn(),
 }));
-
-function makeNode(overrides: Partial<SimpleElementNode> = {}): SimpleElementNode {
-  return {
-    id: 1,
-    parentId: 100,
-    title: 'Test Element',
-    blockSchema: { typeName: 'Content', label: 'Content', icon: '', type: 'Content', title: 'Test Element', summary: '' },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    ...overrides,
-  };
-}
 
 describe('ElementActions', () => {
   beforeEach(() => {
@@ -36,7 +18,7 @@ describe('ElementActions', () => {
   });
 
   it('renders actions menu when permissions allow', () => {
-    render(<ElementActions node={makeNode()} />, {
+    render(<ElementActions node={makeLeaf()} />, {
       wrapper: createDndWrapper(),
     });
 
@@ -46,7 +28,7 @@ describe('ElementActions', () => {
   it('renders all three actions in correct order', async () => {
     const user = userEvent.setup();
 
-    render(<ElementActions node={makeNode()} />, {
+    render(<ElementActions node={makeLeaf()} />, {
       wrapper: createDndWrapper(),
     });
 
@@ -60,7 +42,7 @@ describe('ElementActions', () => {
   });
 
   it('renders no actions menu when all permissions are denied', () => {
-    render(<ElementActions node={makeNode({ canDelete: false, canCreate: false })} />, {
+    render(<ElementActions node={makeLeaf({ canDelete: false, canCreate: false })} />, {
       wrapper: createDndWrapper(),
     });
 
@@ -70,7 +52,7 @@ describe('ElementActions', () => {
   it('renders only archive when canCreate is false', async () => {
     const user = userEvent.setup();
 
-    render(<ElementActions node={makeNode({ canCreate: false })} />, {
+    render(<ElementActions node={makeLeaf({ canCreate: false })} />, {
       wrapper: createDndWrapper(),
     });
 
@@ -84,7 +66,7 @@ describe('ElementActions', () => {
   it('renders only duplicate actions when canDelete is false', async () => {
     const user = userEvent.setup();
 
-    render(<ElementActions node={makeNode({ canDelete: false })} />, {
+    render(<ElementActions node={makeLeaf({ canDelete: false })} />, {
       wrapper: createDndWrapper(),
     });
 
@@ -99,7 +81,7 @@ describe('ElementActions', () => {
   it('opens archive dialog when archive action is triggered', async () => {
     const user = userEvent.setup();
 
-    render(<ElementActions node={makeNode()} />, {
+    render(<ElementActions node={makeLeaf()} />, {
       wrapper: createDndWrapper(),
     });
 
@@ -112,7 +94,7 @@ describe('ElementActions', () => {
   it('opens duplicate-to dialog when duplicate-to action is triggered', async () => {
     const user = userEvent.setup();
 
-    render(<ElementActions node={makeNode()} />, {
+    render(<ElementActions node={makeLeaf()} />, {
       wrapper: createDndWrapper(),
     });
 

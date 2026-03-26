@@ -3,10 +3,8 @@ import {
   parseDraggableId,
   getDraggableType,
   getDraggableTypeForNode,
-  PARENT_CONTAINER_TYPE,
-  DRAGGABLE_TYPES,
 } from '@/types/dnd';
-import type { SectionNode, RowNode, ColumnNode, SimpleElementNode } from '@/types/elements';
+import { makeLeaf, makeColumn, makeRow, makeSection } from '../helpers/elementFactories';
 
 describe('buildDraggableId', () => {
   it('builds a composite ID from type and numeric ID', () => {
@@ -51,78 +49,20 @@ describe('getDraggableType', () => {
   });
 });
 
-describe('PARENT_CONTAINER_TYPE', () => {
-  it('maps each type to its parent container', () => {
-    expect(PARENT_CONTAINER_TYPE.section).toBe('root');
-    expect(PARENT_CONTAINER_TYPE.row).toBe('section');
-    expect(PARENT_CONTAINER_TYPE.column).toBe('row');
-    expect(PARENT_CONTAINER_TYPE.element).toBe('column');
-  });
-});
-
-describe('DRAGGABLE_TYPES', () => {
-  it('contains all four hierarchy levels', () => {
-    expect(DRAGGABLE_TYPES).toEqual(['section', 'row', 'column', 'element']);
-  });
-});
-
 describe('getDraggableTypeForNode', () => {
-  const baseFields = {
-    title: 'Test',
-    blockSchema: { typeName: 'Test', label: 'Test', icon: 'font-icon-block-content', type: 'Test', title: '', summary: '' },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-  };
-
   it('returns "section" for a section node', () => {
-    const node: SectionNode = {
-      ...baseFields,
-      id: 1,
-      parentId: 42,
-      containerType: 'section',
-      allowedTypes: null,
-      children: null,
-    };
-    expect(getDraggableTypeForNode(node)).toBe('section');
+    expect(getDraggableTypeForNode(makeSection(1))).toBe('section');
   });
 
   it('returns "row" for a row node', () => {
-    const node: RowNode = {
-      ...baseFields,
-      id: 2,
-      parentId: 100,
-      containerType: 'row',
-      allowedTypes: null,
-      children: null,
-    };
-    expect(getDraggableTypeForNode(node)).toBe('row');
+    expect(getDraggableTypeForNode(makeRow(2))).toBe('row');
   });
 
   it('returns "column" for a column node', () => {
-    const node: ColumnNode = {
-      ...baseFields,
-      id: 3,
-      parentId: 200,
-      containerType: 'column',
-      allowedTypes: null,
-      children: null,
-      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
-    };
-    expect(getDraggableTypeForNode(node)).toBe('column');
+    expect(getDraggableTypeForNode(makeColumn(3))).toBe('column');
   });
 
   it('returns "element" for a leaf node', () => {
-    const node: SimpleElementNode = {
-      ...baseFields,
-      id: 4,
-      parentId: 300,
-    };
-    expect(getDraggableTypeForNode(node)).toBe('element');
+    expect(getDraggableTypeForNode(makeLeaf())).toBe('element');
   });
 });

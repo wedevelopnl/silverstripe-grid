@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import ColumnBlock from '@/components/ColumnBlock/ColumnBlock';
-import type { EnrichedColumnNode } from '@/types/enriched';
 import { createDndWrapper } from '@/tests/helpers/dndTestUtils';
+import { makeEnrichedColumn } from '@/tests/helpers/enrichedFactories';
 import { getColumnCount, getOffsetStrategy, getOffsetOptions } from '@/utils/gridAdapter';
 
 const { getIsOver, setIsOver } = vi.hoisted(() => {
@@ -30,90 +30,28 @@ vi.mock('@/api/endpoints', () => ({
 
 vi.mock('@dnd-kit/sortable', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@dnd-kit/sortable')>();
+  const { DEFAULT_SORTABLE_RETURN } = await import('@/tests/helpers/mockData');
   return {
     ...actual,
     useSortable: () => ({
-      attributes: {},
-      listeners: undefined,
-      setNodeRef: () => {},
-      transform: null,
-      transition: null,
-      isDragging: false,
+      ...DEFAULT_SORTABLE_RETURN,
       isOver: getIsOver(),
     }),
   };
 });
 
-const { mockViewports, mockResolveViewportSettings } = vi.hoisted(() => {
-  const viewports = [
-    { key: 'xs', label: 'XS' },
-    { key: 'sm', label: 'SM' },
-    { key: 'md', label: 'MD' },
-    { key: 'lg', label: 'LG' },
-    { key: 'xl', label: 'XL' },
-    { key: 'xxl', label: 'XXL' },
-  ];
-
-  const resolve = (gridSettings: { default: { width: number; offset: number; visible: boolean }; overrides: Record<string, { width: number; offset: number; visible: boolean }> }, activeViewport: string) => {
-    return gridSettings.overrides[activeViewport] ?? gridSettings.default;
-  };
-
-  return { mockViewports: viewports, mockResolveViewportSettings: resolve };
-});
-
-vi.mock('@/utils/gridAdapter', () => ({
-  getColumnCount: vi.fn(() => 12),
-  getViewports: vi.fn(() => mockViewports),
-  getOffsetStrategy: vi.fn(() => 'margin'),
-  getDefaultViewport: vi.fn(() => 'md'),
-  getWidthOptions: vi.fn(() => [
-    ...Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}/12` })),
-    { value: 'hidden', label: 'hidden' },
-  ]),
-  getOffsetOptions: vi.fn((currentWidth?: number) => {
-    const maxOffset = currentWidth !== undefined ? 12 - currentWidth : 11;
-    return Array.from({ length: maxOffset + 1 }, (_, i) => ({ value: i, label: i === 0 ? 'none' : `+${i}` }));
-  }),
-  resolveViewportSettings: vi.fn(mockResolveViewportSettings),
-}));
-
-function makeColumn(overrides: Partial<EnrichedColumnNode> = {}): EnrichedColumnNode {
-  const id = overrides.id ?? 10;
-  const children = overrides.children ?? null;
+vi.mock('@/utils/gridAdapter', async () => {
+  const { MOCK_VIEWPORTS, resolveViewportSettingsImpl, defaultWidthOptions, defaultOffsetOptions } = await import('@/tests/helpers/mockData');
   return {
-    id,
-    parentId: 200,
-    title: 'Column',
-    blockSchema: {
-      typeName: 'WeDevelop\\Grid\\Elements\\Column',
-      label: 'Column',
-      icon: 'font-icon-block-content',
-      type: 'Column',
-      title: '',
-      summary: '',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    containerType: 'column',
-    allowedTypes: null,
-    gridSettings: {
-      default: { width: 12, offset: 0, visible: true },
-      overrides: { md: { width: 6, offset: 0, visible: true } },
-    },
-    isCollapsed: false,
-    toggle: vi.fn(),
-    sortableId: `column-${id}`,
-    children,
-    childSortableIds: children?.map((c) => c.sortableId) ?? [],
-    ...overrides,
+    getColumnCount: vi.fn(() => 12),
+    getViewports: vi.fn(() => MOCK_VIEWPORTS),
+    getOffsetStrategy: vi.fn(() => 'margin'),
+    getDefaultViewport: vi.fn(() => 'md'),
+    getWidthOptions: vi.fn(() => defaultWidthOptions()),
+    getOffsetOptions: vi.fn((currentWidth?: number) => defaultOffsetOptions(currentWidth)),
+    resolveViewportSettings: vi.fn(resolveViewportSettingsImpl),
   };
-}
+});
 
 describe('ColumnBlock', () => {
   beforeEach(() => {
@@ -124,7 +62,7 @@ describe('ColumnBlock', () => {
   });
 
   it('renders fraction badge for the active viewport', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
     });
 
@@ -142,7 +80,7 @@ describe('ColumnBlock', () => {
     });
 
     it('sets --col-width as percentage', () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
       });
 
@@ -156,7 +94,7 @@ describe('ColumnBlock', () => {
     });
 
     it('sets --col-offset when offset > 0', () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 4, offset: 2, visible: true } } },
       });
 
@@ -171,7 +109,7 @@ describe('ColumnBlock', () => {
     });
 
     it('does not set --col-offset when offset is 0', () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
       });
 
@@ -191,7 +129,7 @@ describe('ColumnBlock', () => {
     });
 
     it('sets --col-span as integer string', () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
       });
 
@@ -205,7 +143,7 @@ describe('ColumnBlock', () => {
     });
 
     it('sets --col-start when offset > 0', () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 4, offset: 2, visible: true } } },
       });
 
@@ -219,7 +157,7 @@ describe('ColumnBlock', () => {
     });
 
     it('does not set --col-start when offset is 0', () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
       });
 
@@ -234,7 +172,7 @@ describe('ColumnBlock', () => {
   });
 
   it('renders child elements as ElementCards', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       children: [
         {
           id: 100,
@@ -294,7 +232,7 @@ describe('ColumnBlock', () => {
   });
 
   it('renders EmptyState when children is null', () => {
-    const column = makeColumn({ children: null });
+    const column = makeEnrichedColumn({ children: null });
 
     render(
       <ColumnBlock column={column} />,
@@ -305,7 +243,7 @@ describe('ColumnBlock', () => {
   });
 
   it('renders EmptyState when children is empty array', () => {
-    const column = makeColumn({ children: [] });
+    const column = makeEnrichedColumn({ children: [] });
 
     render(
       <ColumnBlock column={column} />,
@@ -316,7 +254,7 @@ describe('ColumnBlock', () => {
   });
 
   it('applies hidden modifier when visible is false', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: false } } },
     });
 
@@ -330,7 +268,7 @@ describe('ColumnBlock', () => {
   });
 
   it('does not apply hidden modifier when visible is true', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
     });
 
@@ -344,7 +282,7 @@ describe('ColumnBlock', () => {
   });
 
   it('shows "hidden" instead of fraction badge when not visible', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: false } } },
     });
 
@@ -358,7 +296,7 @@ describe('ColumnBlock', () => {
   });
 
   it('applies publication state modifier class for draft column', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       statusFlags: { addedtodraft: { text: 'Draft', title: 'Item has not been published yet' } },
     });
 
@@ -372,7 +310,7 @@ describe('ColumnBlock', () => {
   });
 
   it('applies publication state modifier class for published column', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       statusFlags: {},
     });
 
@@ -386,7 +324,7 @@ describe('ColumnBlock', () => {
   });
 
   it('applies publication state modifier class for modified column', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       statusFlags: { modified: { text: 'Modified', title: 'Item has unpublished changes' } },
     });
 
@@ -400,7 +338,7 @@ describe('ColumnBlock', () => {
   });
 
   it('uses override for the active viewport', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { lg: { width: 6, offset: 0, visible: true } } },
     });
 
@@ -415,7 +353,7 @@ describe('ColumnBlock', () => {
   });
 
   it('falls back to default when no override exists for viewport', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 3, visible: true } } },
     });
 
@@ -431,7 +369,7 @@ describe('ColumnBlock', () => {
   });
 
   it('uses override with hidden visibility for active viewport', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { lg: { width: 6, offset: 0, visible: false } } },
     });
 
@@ -447,7 +385,7 @@ describe('ColumnBlock', () => {
 
   it('applies --drop-target modifier when isOver is true and activeType is column', () => {
     setIsOver(true);
-    const column = makeColumn();
+    const column = makeEnrichedColumn();
 
     const { container } = render(
       <ColumnBlock column={column} />,
@@ -460,7 +398,7 @@ describe('ColumnBlock', () => {
 
   it('does not apply --drop-target when isOver is true but activeType is not column', () => {
     setIsOver(true);
-    const column = makeColumn();
+    const column = makeEnrichedColumn();
 
     const { container } = render(
       <ColumnBlock column={column} />,
@@ -472,7 +410,7 @@ describe('ColumnBlock', () => {
   });
 
   it('does not apply --drop-target modifier when isOver is false', () => {
-    const column = makeColumn();
+    const column = makeEnrichedColumn();
 
     const { container } = render(
       <ColumnBlock column={column} />,
@@ -485,7 +423,7 @@ describe('ColumnBlock', () => {
 
   describe('collapse', () => {
     it('renders a collapse toggle button', () => {
-      const column = makeColumn();
+      const column = makeEnrichedColumn();
 
       render(
         <ColumnBlock column={column} />,
@@ -497,7 +435,7 @@ describe('ColumnBlock', () => {
 
     it('wires toggle to CollapseToggle onToggle', async () => {
       const toggle = vi.fn();
-      const column = makeColumn({ id: 55, toggle });
+      const column = makeEnrichedColumn({ id: 55, toggle });
       const user = userEvent.setup();
 
       render(
@@ -510,7 +448,7 @@ describe('ColumnBlock', () => {
     });
 
     it('applies --collapsed modifier when collapsed', () => {
-      const column = makeColumn({ isCollapsed: true });
+      const column = makeEnrichedColumn({ isCollapsed: true });
 
       const { container } = render(
         <ColumnBlock column={column} />,
@@ -522,7 +460,7 @@ describe('ColumnBlock', () => {
     });
 
     it('does not apply --collapsed modifier when expanded', () => {
-      const column = makeColumn({ isCollapsed: false });
+      const column = makeEnrichedColumn({ isCollapsed: false });
 
       const { container } = render(
         <ColumnBlock column={column} />,
@@ -536,7 +474,7 @@ describe('ColumnBlock', () => {
 
   describe('edit link', () => {
     it('renders title as a link when editLink is present', () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         title: 'Left Column',
         editLink: '/admin/pages/edit/EditForm/42/field/GridEditor/item/10/edit',
       });
@@ -553,7 +491,7 @@ describe('ColumnBlock', () => {
     });
 
     it('renders plain title text without link when editLink is null', () => {
-      const column = makeColumn({ title: 'Left Column', editLink: null });
+      const column = makeEnrichedColumn({ title: 'Left Column', editLink: null });
 
       render(
         <ColumnBlock column={column} />,
@@ -566,7 +504,7 @@ describe('ColumnBlock', () => {
     });
 
     it('renders visible title text in header', () => {
-      const column = makeColumn({ title: 'My Column' });
+      const column = makeEnrichedColumn({ title: 'My Column' });
 
       render(
         <ColumnBlock column={column} />,
@@ -579,7 +517,7 @@ describe('ColumnBlock', () => {
   });
 
   it('renders a drag handle', () => {
-    const column = makeColumn({ title: 'Left Column' });
+    const column = makeEnrichedColumn({ title: 'Left Column' });
 
     render(
       <ColumnBlock column={column} />,
@@ -598,7 +536,7 @@ describe('ColumnBlock', () => {
     });
 
     it('shows "Add content" button when allowedTypes has entries', () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         allowedTypes: { 'App\\Model\\Text': { label: 'Text', icon: 'font-icon-block-content', description: '' } },
       });
 
@@ -611,7 +549,7 @@ describe('ColumnBlock', () => {
     });
 
     it('does not show "Add content" button when allowedTypes is null', () => {
-      const column = makeColumn({ allowedTypes: null });
+      const column = makeEnrichedColumn({ allowedTypes: null });
 
       render(
         <ColumnBlock column={column} />,
@@ -622,7 +560,7 @@ describe('ColumnBlock', () => {
     });
 
     it('does not show "Add content" button when allowedTypes is empty object', () => {
-      const column = makeColumn({ allowedTypes: {} });
+      const column = makeEnrichedColumn({ allowedTypes: {} });
 
       render(
         <ColumnBlock column={column} />,
@@ -633,7 +571,7 @@ describe('ColumnBlock', () => {
     });
 
     it('shows EmptyState when children is empty and allowedTypes is null', () => {
-      const column = makeColumn({ children: [], allowedTypes: null });
+      const column = makeEnrichedColumn({ children: [], allowedTypes: null });
 
       render(
         <ColumnBlock column={column} />,
@@ -644,7 +582,7 @@ describe('ColumnBlock', () => {
     });
 
     it('does not show EmptyState when children is empty but allowedTypes has entries', () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         children: [],
         allowedTypes: { 'App\\Model\\Text': { label: 'Text', icon: 'font-icon-block-content', description: '' } },
       });
@@ -659,7 +597,7 @@ describe('ColumnBlock', () => {
   });
 
   it('renders ElementActions with actions menu', () => {
-    const column = makeColumn({ canDelete: true });
+    const column = makeEnrichedColumn({ canDelete: true });
 
     render(
       <ColumnBlock column={column} />,
@@ -670,7 +608,7 @@ describe('ColumnBlock', () => {
   });
 
   it('applies isDragging class when any drag is active', () => {
-    const column = makeColumn();
+    const column = makeEnrichedColumn();
 
     render(
       <ColumnBlock column={column} />,
@@ -683,7 +621,7 @@ describe('ColumnBlock', () => {
   });
 
   it('disables pickers when drag is active (isDragActive)', () => {
-    const column = makeColumn();
+    const column = makeEnrichedColumn();
 
     render(
       <ColumnBlock column={column} />,
@@ -698,7 +636,7 @@ describe('ColumnBlock', () => {
 
   it('disables pickers when updateGridSettings mutation is pending', async () => {
     // With no drag active, pickers are enabled by default
-    const column = makeColumn();
+    const column = makeEnrichedColumn();
 
     render(
       <ColumnBlock column={column} />,
@@ -711,7 +649,7 @@ describe('ColumnBlock', () => {
   });
 
   it('shows offset label "none" when offset is 0', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: true } } },
     });
 
@@ -725,7 +663,7 @@ describe('ColumnBlock', () => {
   });
 
   it('shows offset label "+N" when offset is greater than 0', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 3, visible: true } } },
     });
 
@@ -739,7 +677,7 @@ describe('ColumnBlock', () => {
   });
 
   it('disables offset picker when column is full width', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 12, offset: 0, visible: true } } },
     });
 
@@ -753,7 +691,7 @@ describe('ColumnBlock', () => {
   });
 
   it('disables offset picker when column is hidden', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 0, visible: false } } },
     });
 
@@ -769,7 +707,7 @@ describe('ColumnBlock', () => {
   it('clamps offset to maxOffset boundary (offset > maxOffset uses maxOffset)', async () => {
     // width=6, offset=6 → maxOffset = 12-6 = 6, offset=6 is exactly at boundary
     // Now select width=11, maxOffset=1, offset 6 > 1 → clamped to 1
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 6, visible: true } } },
     });
     const user = userEvent.setup();
@@ -794,7 +732,7 @@ describe('ColumnBlock', () => {
 
   it('keeps offset at boundary when offset equals maxOffset exactly', async () => {
     // width=6, offset=6 → select width=6 again (maxOffset=6, offset=6 is NOT > 6)
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 6, visible: true } } },
     });
     const user = userEvent.setup();
@@ -819,7 +757,7 @@ describe('ColumnBlock', () => {
   });
 
   it('renders the block schema icon class on the icon element', () => {
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       blockSchema: {
         typeName: 'WeDevelop\\Grid\\Elements\\Column',
         label: 'Column',
@@ -844,7 +782,7 @@ describe('ColumnBlock', () => {
     HTMLDialogElement.prototype.showModal = vi.fn();
     HTMLDialogElement.prototype.close = vi.fn();
 
-    const column = makeColumn({
+    const column = makeEnrichedColumn({
       allowedTypes: { 'App\\Model\\Text': { label: 'Text', icon: 'font-icon-block-content', description: '' } },
     });
 
@@ -857,7 +795,7 @@ describe('ColumnBlock', () => {
   });
 
   it('does not render ElementTypePicker when allowedTypes is null', () => {
-    const column = makeColumn({ allowedTypes: null });
+    const column = makeEnrichedColumn({ allowedTypes: null });
 
     render(
       <ColumnBlock column={column} />,
@@ -869,7 +807,7 @@ describe('ColumnBlock', () => {
 
   describe('offset options constrained by width', () => {
     it('calls getOffsetOptions with the resolved width', () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 8, offset: 0, visible: true } } },
       });
 
@@ -882,7 +820,7 @@ describe('ColumnBlock', () => {
     });
 
     it('shows only valid offset options in the dropdown', async () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 11, offset: 0, visible: true } } },
       });
       const user = userEvent.setup();
@@ -902,7 +840,7 @@ describe('ColumnBlock', () => {
     });
 
     it('auto-clamps offset when width change makes current offset invalid', async () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 5, visible: true } } },
       });
       const user = userEvent.setup();
@@ -928,7 +866,7 @@ describe('ColumnBlock', () => {
     });
 
     it('preserves offset when width change keeps it valid', async () => {
-      const column = makeColumn({
+      const column = makeEnrichedColumn({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: { width: 6, offset: 2, visible: true } } },
       });
       const user = userEvent.setup();

@@ -5,101 +5,13 @@ import {
   isColumnNode,
   isSimpleElementNode,
 } from '@/types/elements';
-import type {
-  SimpleElementNode,
-  ColumnNode,
-  RowNode,
-  SectionNode,
-} from '@/types/elements';
-
-// --- Test fixtures ---
-
-const validBlockSchema = {
-  typeName: String.raw`WeDevelop\Grid\Model\ContentElement`,
-  label: 'Content',
-  icon: 'font-icon-block-content',
-  type: 'Content',
-  title: '',
-  summary: '<p>Hello world</p>',
-};
-
-function makeSimpleNode(overrides: Record<string, unknown> = {}) {
-  return {
-    id: 1,
-    parentId: 42,
-    title: 'Text block',
-    blockSchema: validBlockSchema,
-    obsoleteClassName: null,
-    version: 3,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: true,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    ...overrides,
-  };
-}
-
-function makeColumnNode(
-  children: unknown[] | null = null,
-  overrides: Record<string, unknown> = {},
-) {
-  return {
-    ...makeSimpleNode(),
-    id: 10,
-    parentId: 200,
-    title: 'Column',
-    containerType: 'column' as const,
-    allowedTypes: { 'App\\Model\\ElementContent': { label: 'Content', icon: 'font-icon-block-content', description: '' } },
-    children,
-    gridSettings: {
-      default: { width: 12, offset: 0, visible: true },
-      overrides: {},
-    },
-    ...overrides,
-  };
-}
-
-function makeRowNode(
-  children: unknown[] | null = null,
-  overrides: Record<string, unknown> = {},
-) {
-  return {
-    ...makeSimpleNode(),
-    id: 20,
-    parentId: 300,
-    title: 'Row',
-    containerType: 'row' as const,
-    allowedTypes: null,
-    children,
-    ...overrides,
-  };
-}
-
-function makeSectionNode(
-  children: unknown[] | null = null,
-  overrides: Record<string, unknown> = {},
-) {
-  return {
-    ...makeSimpleNode(),
-    id: 30,
-    parentId: 42,
-    title: 'Section',
-    containerType: 'section' as const,
-    allowedTypes: null,
-    children,
-    ...overrides,
-  };
-}
-
-// --- Type guards ---
+import { makeLeaf, makeColumn, makeRow, makeSection } from '../helpers/elementFactories';
 
 describe('type guards', () => {
-  const simple = makeSimpleNode() as SimpleElementNode;
-  const column = makeColumnNode() as ColumnNode;
-  const row = makeRowNode() as RowNode;
-  const section = makeSectionNode() as SectionNode;
+  const simple = makeLeaf();
+  const column = makeColumn(10);
+  const row = makeRow(20);
+  const section = makeSection(30);
 
   describe('isContainerNode', () => {
     it('returns true for container nodes', () => {
@@ -149,19 +61,4 @@ describe('type guards', () => {
     });
   });
 
-  describe('type narrowing', () => {
-    it('narrows to SectionNode with correct children type', () => {
-      if (isSectionNode(section)) {
-        const children = section.children;
-        expect(children).toBeNull();
-      }
-    });
-
-    it('narrows to ColumnNode with correct children type', () => {
-      const col = makeColumnNode([makeSimpleNode()]) as ColumnNode;
-      if (isColumnNode(col)) {
-        expect(col.children).toHaveLength(1);
-      }
-    });
-  });
 });

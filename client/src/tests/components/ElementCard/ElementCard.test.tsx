@@ -2,39 +2,12 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import ElementCard from '@/components/ElementCard/ElementCard';
-import type { EnrichedSimpleElementNode } from '@/types/enriched';
 import { createDndWrapper } from '@/tests/helpers/dndTestUtils';
-
-function makeElement(overrides: Partial<EnrichedSimpleElementNode> = {}): EnrichedSimpleElementNode {
-  const id = overrides.id ?? 1;
-  return {
-    id,
-    parentId: 100,
-    title: 'My Element',
-    blockSchema: {
-      typeName: String.raw`WeDevelop\Grid\Model\ContentElement`,
-      label: 'Base Element',
-      icon: 'font-icon-block-content',
-      type: 'Base Element',
-      title: 'My Element',
-      summary: 'Some preview text',
-    },
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: false,
-    canCreate: true,
-    editLink: null,
-    statusFlags: {},
-    sortableId: `element-${id}`,
-    ...overrides,
-  };
-}
+import { makeEnrichedElement } from '@/tests/helpers/enrichedFactories';
 
 describe('ElementCard', () => {
   it('renders the element title as an h4 heading', () => {
-    render(<ElementCard element={makeElement({ title: 'Hero Banner' })} />, {
+    render(<ElementCard element={makeEnrichedElement({ title: 'Hero Banner' })} />, {
       wrapper: createDndWrapper(),
     });
 
@@ -43,7 +16,7 @@ describe('ElementCard', () => {
   });
 
   it('renders content preview from blockSchema.content', () => {
-    const element = makeElement({
+    const element = makeEnrichedElement({
       blockSchema: {
         typeName: 'Content',
         label: 'Content',
@@ -62,7 +35,7 @@ describe('ElementCard', () => {
   });
 
   it('renders "No preview available" when content is empty', () => {
-    const element = makeElement({
+    const element = makeEnrichedElement({
       blockSchema: {
         typeName: 'Content',
         label: 'Content',
@@ -81,7 +54,7 @@ describe('ElementCard', () => {
   });
 
   it('renders blockSchema.icon as the element type icon', () => {
-    const element = makeElement({
+    const element = makeEnrichedElement({
       blockSchema: {
         typeName: String.raw`WeDevelop\Grid\Model\ContentElement`,
         label: 'Content Block',
@@ -102,7 +75,7 @@ describe('ElementCard', () => {
   });
 
   it('applies element-card__content--empty class when content is empty', () => {
-    const element = makeElement({
+    const element = makeEnrichedElement({
       blockSchema: {
         typeName: 'Content',
         label: 'Content',
@@ -123,7 +96,7 @@ describe('ElementCard', () => {
   });
 
   it('does not apply element-card__content--empty class when content is non-empty', () => {
-    const { container } = render(<ElementCard element={makeElement()} />, {
+    const { container } = render(<ElementCard element={makeEnrichedElement({ blockSchema: { typeName: 'Content', label: 'Content', icon: 'font-icon-block-content', type: 'Content', title: '', summary: 'Some preview text' } })} />, {
       wrapper: createDndWrapper(),
     });
 
@@ -133,7 +106,7 @@ describe('ElementCard', () => {
   });
 
   it('applies "element-card--draft" class for draft elements', () => {
-    const element = makeElement({ statusFlags: { addedtodraft: { text: 'Draft', title: 'Item has not been published yet' } } });
+    const element = makeEnrichedElement({ statusFlags: { addedtodraft: { text: 'Draft', title: 'Item has not been published yet' } } });
 
     const { container } = render(<ElementCard element={element} />, {
       wrapper: createDndWrapper(),
@@ -144,7 +117,7 @@ describe('ElementCard', () => {
   });
 
   it('applies "element-card--published" class for published elements', () => {
-    const element = makeElement({ statusFlags: {} });
+    const element = makeEnrichedElement({ statusFlags: {} });
 
     const { container } = render(<ElementCard element={element} />, {
       wrapper: createDndWrapper(),
@@ -155,7 +128,7 @@ describe('ElementCard', () => {
   });
 
   it('applies "element-card--modified" class for modified elements', () => {
-    const element = makeElement({ statusFlags: { modified: { text: 'Modified', title: 'Item has unpublished changes' } } });
+    const element = makeEnrichedElement({ statusFlags: { modified: { text: 'Modified', title: 'Item has unpublished changes' } } });
 
     const { container } = render(<ElementCard element={element} />, {
       wrapper: createDndWrapper(),
@@ -166,7 +139,7 @@ describe('ElementCard', () => {
   });
 
   it('renders drag handle and actions menu as interactive elements', () => {
-    const { container } = render(<ElementCard element={makeElement()} />, {
+    const { container } = render(<ElementCard element={makeEnrichedElement()} />, {
       wrapper: createDndWrapper(),
     });
 
@@ -185,7 +158,7 @@ describe('ElementCard', () => {
   });
 
   it('renders a drag handle', () => {
-    render(<ElementCard element={makeElement({ title: 'Hero Banner' })} />, {
+    render(<ElementCard element={makeEnrichedElement({ title: 'Hero Banner' })} />, {
       wrapper: createDndWrapper(),
     });
 
@@ -213,7 +186,7 @@ describe('ElementCard', () => {
     });
 
     it('applies "element-card--clickable" class when editLink is present', () => {
-      const element = makeElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
+      const element = makeEnrichedElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
 
       const { container } = render(<ElementCard element={element} />, {
         wrapper: createDndWrapper(),
@@ -224,7 +197,7 @@ describe('ElementCard', () => {
     });
 
     it('does not apply "element-card--clickable" class when editLink is null', () => {
-      const element = makeElement({ editLink: null });
+      const element = makeEnrichedElement({ editLink: null });
 
       const { container } = render(<ElementCard element={element} />, {
         wrapper: createDndWrapper(),
@@ -236,7 +209,7 @@ describe('ElementCard', () => {
     });
 
     it('sets role="link" when editLink is present', () => {
-      const element = makeElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
+      const element = makeEnrichedElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
 
       render(<ElementCard element={element} />, {
         wrapper: createDndWrapper(),
@@ -247,7 +220,7 @@ describe('ElementCard', () => {
     });
 
     it('does not set role attribute when editLink is null', () => {
-      const element = makeElement({ editLink: null });
+      const element = makeEnrichedElement({ editLink: null });
 
       render(<ElementCard element={element} />, {
         wrapper: createDndWrapper(),
@@ -258,7 +231,7 @@ describe('ElementCard', () => {
     });
 
     it('navigates to editLink on click', async () => {
-      const element = makeElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
+      const element = makeEnrichedElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
       const user = userEvent.setup();
 
       render(<ElementCard element={element} />, {
@@ -271,7 +244,7 @@ describe('ElementCard', () => {
     });
 
     it('navigates to editLink on Enter key press', async () => {
-      const element = makeElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
+      const element = makeEnrichedElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
       const user = userEvent.setup();
 
       render(<ElementCard element={element} />, {
@@ -285,7 +258,7 @@ describe('ElementCard', () => {
     });
 
     it('does not navigate on Enter key press when editLink is null', async () => {
-      const element = makeElement({ editLink: null });
+      const element = makeEnrichedElement({ editLink: null });
       const user = userEvent.setup();
 
       render(<ElementCard element={element} />, {
@@ -299,7 +272,7 @@ describe('ElementCard', () => {
     });
 
     it('sets tabIndex=0 when editLink is present', () => {
-      const element = makeElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
+      const element = makeEnrichedElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
 
       render(<ElementCard element={element} />, {
         wrapper: createDndWrapper(),
@@ -310,7 +283,7 @@ describe('ElementCard', () => {
     });
 
     it('does not set tabIndex when editLink is null', () => {
-      const element = makeElement({ editLink: null });
+      const element = makeEnrichedElement({ editLink: null });
 
       render(<ElementCard element={element} />, {
         wrapper: createDndWrapper(),
@@ -321,7 +294,7 @@ describe('ElementCard', () => {
     });
 
     it('does not navigate on non-Enter key press when editLink is present', async () => {
-      const element = makeElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
+      const element = makeEnrichedElement({ editLink: '/admin/grid-elements/EditForm/field/1/item/42' });
       const user = userEvent.setup();
 
       render(<ElementCard element={element} />, {
@@ -335,7 +308,7 @@ describe('ElementCard', () => {
     });
 
     it('does not set onKeyDown handler when editLink is null', () => {
-      const element = makeElement({ editLink: null });
+      const element = makeEnrichedElement({ editLink: null });
 
       const { container } = render(<ElementCard element={element} />, {
         wrapper: createDndWrapper(),
