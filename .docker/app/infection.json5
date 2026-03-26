@@ -15,29 +15,70 @@
                 "WeDevelop\\Grid\\Controllers\\GridController::apiReadTree",
                 "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicate",
                 "WeDevelop\\Grid\\Controllers\\GridController::apiReorder",
-                "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle"
+                "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiAcceptableContainers",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiZones",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiPages"
             ]
         },
         "CastString": {
             "ignore": [
                 "WeDevelop\\Grid\\Controllers\\GridController::apiReadTree",
-                "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle"
+                "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiAcceptableContainers",
+                "WeDevelop\\Grid\\Controllers\\GridController::apiPages"
+            ]
+        },
+        "CastBool": {
+            "ignore": [
+                "WeDevelop\\Grid\\ORM\\FieldType\\DBGridSettings::getValue"
             ]
         },
         "ArrayItemRemoval": {
             "ignore": [
-                "WeDevelop\\Grid\\Controllers\\GridController::apiCreateContent"
+                "WeDevelop\\Grid\\Controllers\\GridController::apiCreateContent",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::updateCMSFields",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getAspectRatioOptions",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getVerticalAlignmentOptions",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getMediaPositionOptions",
+                "WeDevelop\\Grid\\Reports\\GridElementReport::columns"
+            ]
+        },
+        "ArrayItem": {
+            "ignore": [
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getAspectRatioOptions",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getMediaPositionOptions",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getVerticalAlignmentOptions",
+                "WeDevelop\\Grid\\Reports\\GridElementReport::columns"
             ]
         },
         "DecrementInteger": {
             "ignore": [
                 "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicate",
-                "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle"
+                "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::updateCMSFields",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getContentColumnOptions"
             ]
         },
         "IncrementInteger": {
             "ignore": [
-                "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle"
+                "WeDevelop\\Grid\\Controllers\\GridController::generateCopyTitle",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::updateCMSFields",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getContentColumnOptions"
+            ]
+        },
+        "Concat": {
+            "ignore": [
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::updateCMSFields",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getAspectRatioOptions",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getMediaPositionOptions",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getVerticalAlignmentOptions",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getContentColumnOptions",
+                "WeDevelop\\Grid\\Reports\\GridElementReport::columns",
+                "WeDevelop\\Grid\\Reports\\GridElementReport::parameterFields",
+                "WeDevelop\\Grid\\Model\\GridElement::getCMSFields",
+                "WeDevelop\\Grid\\Service\\GridTreeBuilder::createNode",
+                "WeDevelop\\Grid\\Service\\GridTreeBuilder::getElementTypeInfo"
             ]
         },
         "ProtectedVisibility": false,
@@ -51,12 +92,49 @@
                 "WeDevelop\\Grid\\Reports\\GridElementReport::title",
                 "WeDevelop\\Grid\\Reports\\GridElementReport::description",
                 "WeDevelop\\Grid\\Reports\\GridElementReport::sourceRecords",
-                "WeDevelop\\Grid\\Reports\\GridElementReport::parameterFields"
+                "WeDevelop\\Grid\\Reports\\GridElementReport::parameterFields",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::updateCMSFields",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getAspectRatioOptions",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getMediaPositionOptions",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getVerticalAlignmentOptions",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getContentColumnOptions",
+                "WeDevelop\\Grid\\Service\\GridTreeBuilder::createNode",
+                "WeDevelop\\Grid\\Service\\GridTreeBuilder::getElementTypeInfo"
             ]
         },
         "MethodCallRemoval": {
             "ignore": [
-                "WeDevelop\\Grid\\Controllers\\GridController::apiCreateContent"
+                "WeDevelop\\Grid\\Controllers\\GridController::apiCreateContent",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::updateCMSFields",
+                "WeDevelop\\Grid\\Model\\GridElement::getCMSFields",
+                "WeDevelop\\Grid\\Reports\\GridElementReport::columns"
+            ]
+        },
+        "RoundingFamily": {
+            "ignore": [
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getMediaImageHeight",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getCalculatedMediaImageWidth",
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getHeightFromSource"
+            ]
+        },
+        "InstanceOf_": {
+            "ignore": [
+                "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicateTo"
+            ]
+        },
+        "LogicalAnd": {
+            "ignore": [
+                "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicateTo"
+            ]
+        },
+        "LogicalAndAllSubExprNegation": {
+            "ignore": [
+                "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicateTo"
+            ]
+        },
+        "LogicalAndNegation": {
+            "ignore": [
+                "WeDevelop\\Grid\\Controllers\\GridController::apiDuplicateTo"
             ]
         },
         "LogicalOr": {

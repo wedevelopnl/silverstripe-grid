@@ -312,6 +312,17 @@ final class BlockMediaExtensionTest extends TestCase
         $this->assertSame($expected, $this->extension->getMediaImageHeight());
     }
 
+    public function testMediaImageHeightForFourByThreeRatio(): void
+    {
+        $this->owner->ContentColumns = 8;
+        $this->owner->MediaRatio = '4x3';
+
+        $width = $this->extension->getMediaImageWidth();
+        $expected = (int) round($width * 3 / 4);
+
+        $this->assertSame($expected, $this->extension->getMediaImageHeight());
+    }
+
     // --- Height from source (Auto ratio) ---
 
     public function testMediaImageHeightFromSourceDimensions(): void

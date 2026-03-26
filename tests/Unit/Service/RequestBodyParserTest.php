@@ -14,6 +14,7 @@ use WeDevelop\Grid\Service\RequestBodyParser;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\CreateContentRequest;
 use WeDevelop\Grid\Value\CreateElementRequest;
+use WeDevelop\Grid\Value\DuplicateToRequest;
 use WeDevelop\Grid\Value\ReorderRequest;
 use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
 use WeDevelop\Grid\Value\Viewport;
@@ -475,5 +476,199 @@ final class RequestBodyParserTest extends TestCase
         $result = $this->parser->parseElementId(['id' => 'abc']);
 
         $this->assertTrue($result->isErr());
+    }
+
+    // ---- parseDuplicateToBody: success --------------------------------------
+
+    public function testParseDuplicateToBodyReturnsValueObject(): void
+    {
+        $result = $this->parser->parseDuplicateToBody([
+            'id' => 10,
+            'targetPageId' => 20,
+            'targetZone' => 'main',
+            'targetParentId' => 30,
+        ]);
+
+        $this->assertTrue($result->isOk());
+
+        $body = $result->unwrap();
+        $this->assertInstanceOf(DuplicateToRequest::class, $body);
+        $this->assertSame(10, $body->id);
+        $this->assertSame(20, $body->targetPageId);
+        $this->assertSame('main', $body->targetZone);
+        $this->assertSame(30, $body->targetParentId);
+    }
+
+    // ---- parseDuplicateToBody: failures -------------------------------------
+
+    public function testParseDuplicateToBodyRejectsZeroId(): void
+    {
+        $result = $this->parser->parseDuplicateToBody([
+            'id' => 0,
+            'targetPageId' => 1,
+            'targetZone' => 'main',
+            'targetParentId' => 1,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    public function testParseDuplicateToBodyRejectsEmptyZone(): void
+    {
+        $result = $this->parser->parseDuplicateToBody([
+            'id' => 1,
+            'targetPageId' => 1,
+            'targetZone' => '',
+            'targetParentId' => 1,
+        ]);
+
+        $this->assertTrue($result->isErr());
+    }
+
+    // ---- Boundary value: 1 is accepted as a positive integer ----------------
+
+    public function testParseCreateBodyAcceptsParentIdOfOne(): void
+    {
+        $result = $this->parser->parseCreateBody([
+            'containerType' => 'section',
+            'parentId' => 1,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(1, $result->unwrap()->parentId);
+    }
+
+    public function testParseCreateBodyAcceptsAfterElementIdOfOne(): void
+    {
+        $result = $this->parser->parseCreateBody([
+            'containerType' => 'section',
+            'parentId' => 5,
+            'insertAfterElementID' => 1,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(1, $result->unwrap()->insertAfterElementID);
+    }
+
+    public function testParseCreateContentBodyAcceptsParentIdOfOne(): void
+    {
+        $result = $this->parser->parseCreateContentBody([
+            'className' => ContentElement::class,
+            'parentId' => 1,
+            'insertAfterElementID' => null,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(1, $result->unwrap()->parentId);
+    }
+
+    public function testParseCreateContentBodyAcceptsAfterElementIdOfOne(): void
+    {
+        $result = $this->parser->parseCreateContentBody([
+            'className' => ContentElement::class,
+            'parentId' => 5,
+            'insertAfterElementID' => 1,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(1, $result->unwrap()->insertAfterElementID);
+    }
+
+    public function testParseReorderBodyAcceptsElementIdOfOne(): void
+    {
+        $result = $this->parser->parseReorderBody([
+            'elementID' => 1,
+            'targetParentId' => 5,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(1, $result->unwrap()->elementID);
+    }
+
+    public function testParseReorderBodyAcceptsTargetParentIdOfOne(): void
+    {
+        $result = $this->parser->parseReorderBody([
+            'elementID' => 5,
+            'targetParentId' => 1,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(1, $result->unwrap()->targetParentId);
+    }
+
+    public function testParseReorderBodyAcceptsAfterElementIdOfOne(): void
+    {
+        $result = $this->parser->parseReorderBody([
+            'elementID' => 5,
+            'targetParentId' => 10,
+            'afterElementID' => 1,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(1, $result->unwrap()->afterElementID);
+    }
+
+    public function testParseUpdateGridSettingsBodyAcceptsIdOfOne(): void
+    {
+        $result = $this->parser->parseUpdateGridSettingsBody([
+            'id' => 1,
+            'viewport' => 'md',
+            'width' => 6,
+            'offset' => 0,
+            'visible' => true,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(1, $result->unwrap()->id);
+    }
+
+    public function testParseDuplicateToBodyAcceptsIdOfOne(): void
+    {
+        $result = $this->parser->parseDuplicateToBody([
+            'id' => 1,
+            'targetPageId' => 5,
+            'targetZone' => 'main',
+            'targetParentId' => 10,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(1, $result->unwrap()->id);
+    }
+
+    public function testParseDuplicateToBodyAcceptsTargetPageIdOfOne(): void
+    {
+        $result = $this->parser->parseDuplicateToBody([
+            'id' => 5,
+            'targetPageId' => 1,
+            'targetZone' => 'main',
+            'targetParentId' => 10,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(1, $result->unwrap()->targetPageId);
+    }
+
+    public function testParseDuplicateToBodyAcceptsTargetParentIdOfOne(): void
+    {
+        $result = $this->parser->parseDuplicateToBody([
+            'id' => 5,
+            'targetPageId' => 10,
+            'targetZone' => 'main',
+            'targetParentId' => 1,
+        ]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(1, $result->unwrap()->targetParentId);
+    }
+
+    public function testParseElementIdAcceptsIdOfOne(): void
+    {
+        $result = $this->parser->parseElementId(['id' => 1]);
+
+        $this->assertTrue($result->isOk());
+        $this->assertSame(1, $result->unwrap());
     }
 }

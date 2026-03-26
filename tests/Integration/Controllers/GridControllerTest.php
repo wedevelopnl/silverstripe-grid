@@ -1782,4 +1782,104 @@ final class GridControllerTest extends FunctionalTest
             $this->assertStringContainsString('Tree Test', $page['title']);
         }
     }
+
+    // --- apiDuplicateTo: zone mismatch & canBeRoot ----------------------------
+
+    public function testDuplicateToReturns400WhenTargetZoneDoesNotMatchSection(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        // row1 lives in section1 (main zone)
+        $row1 = $this->objFromFixture(Row::class, 'row1');
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        // sidebar_section1 lives in the 'sidebar' zone
+        $sidebarSection = $this->objFromFixture(Section::class, 'sidebar_section1');
+
+        // Claim targetZone is 'main' but targetParent is in 'sidebar' zone
+        $response = $this->postJson('/admin/grid/api/duplicateTo', [
+            'id' => (int) $row1->ID,
+            'targetPageId' => (int) $page->ID,
+            'targetZone' => 'main',
+            'targetParentId' => (int) $sidebarSection->ID,
+        ]);
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // --- apiAcceptableContainers: additional types ----------------------------
+
+    public function testAcceptableContainersReturnsRowsForColumnType(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $response = $this->get('/admin/grid/api/acceptableContainers/' . $page->ID . '/main/column');
+
+        $this->assertSame(200, $response->getStatusCode());
+
+        $body = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+        $this->assertIsArray($body);
+        $this->assertNotEmpty($body);
+
+        foreach ($body as $container) {
+            $this->assertSame('row', $container['type']);
+        }
+    }
+
+    public function testAcceptableContainersReturnsColumnsForElementType(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $response = $this->get('/admin/grid/api/acceptableContainers/' . $page->ID . '/main/element');
+
+        $this->assertSame(200, $response->getStatusCode());
+
+        $body = json_decode($response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+        $this->assertIsArray($body);
+        $this->assertNotEmpty($body);
+
+        foreach ($body as $container) {
+            $this->assertSame('column', $container['type']);
+        }
+    }
+
+    public function testAcceptableContainersReturns400ForInvalidType(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $response = $this->get('/admin/grid/api/acceptableContainers/' . $page->ID . '/main/bogus');
+
+        $this->assertSame(400, $response->getStatusCode());
+    }
+
+    // --- apiReorder: cross-parent source permission check --------------------
+
+    public function testReorderReturns403WhenSourceParentNotEditable(): void
+    {
+        $this->logInForHttp();
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $page = $this->objFromFixture(TestPage::class, 'testpage');
+        $col1 = $this->objFromFixture(Column::class, 'col1');
+
+        // col1 is in row1 (section1). Move it to row2 (same section, different row).
+        $row2 = $this->objFromFixture(Row::class, 'row2');
+
+        // Restrict the page so permissions cascade — source parent (row1) becomes uneditable
+        $this->restrictPagePermissions($page);
+
+        $response = $this->patchJson('/admin/grid/api/reorder', [
+            'elementID' => (int) $col1->ID,
+            'targetParentId' => (int) $row2->ID,
+            'afterElementID' => null,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+    }
 }
