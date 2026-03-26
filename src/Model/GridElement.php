@@ -16,6 +16,7 @@ use SilverStripe\Forms\FieldGroup;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\TextField;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
@@ -93,6 +94,28 @@ class GridElement extends DataObject
             'columns' => ['Sort'],
         ],
     ];
+
+    /** Render through the holder template (two-pass: holder wraps inner content). */
+    #[Override]
+    public function forTemplate(): string
+    {
+        /** @var DBHTMLText $result */
+        $result = $this->renderWith($this->getViewerTemplates('_holder'));
+
+        return (string) $result;
+    }
+
+    /** Inner content rendered by `$Element` in holder templates. */
+    public function Element(): DBHTMLText
+    {
+        return $this->renderWith($this->getViewerTemplates());
+    }
+
+    /** Short class name for CSS class generation in holder templates. */
+    public function getSimpleClassName(): string
+    {
+        return ClassInfo::shortName(static::class);
+    }
 
     #[Override]
     public function getCMSEditLink(): ?string

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Model;
 
 use Override;
-use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Contract\ContainerInterface;
@@ -82,22 +81,6 @@ class Row extends GridElement implements ContainerInterface
     public function getContainerType(): ContainerType
     {
         return ContainerType::Row;
-    }
-
-    /** Render through the holder template. */
-    #[Override]
-    public function forTemplate(): string
-    {
-        /** @var DBHTMLText $result */
-        $result = $this->renderWith('WeDevelop/Grid/Layout/RowHolder');
-
-        return (string) $result;
-    }
-
-    /** Inner content rendered by `$Element` in the holder template. */
-    public function Element(): DBHTMLText
-    {
-        return $this->renderWith('WeDevelop/Grid/Model/Row');
     }
 
     /** CSS classes for the grid row wrapper. */

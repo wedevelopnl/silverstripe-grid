@@ -6,7 +6,6 @@ namespace WeDevelop\Grid\Model;
 
 use Override;
 use SilverStripe\Forms\FieldList;
-use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
@@ -102,22 +101,6 @@ class Column extends GridElement implements ContainerInterface
         );
 
         return $fields;
-    }
-
-    /** Render through the holder template. */
-    #[Override]
-    public function forTemplate(): string
-    {
-        /** @var DBHTMLText $result */
-        $result = $this->renderWith('WeDevelop/Grid/Layout/ColumnHolder');
-
-        return (string) $result;
-    }
-
-    /** Inner content rendered by `$Element` in the holder template. */
-    public function Element(): DBHTMLText
-    {
-        return $this->renderWith('WeDevelop/Grid/Model/Column');
     }
 
     /** Returns the default viewport's width as a fraction, e.g. '6/12'. */
