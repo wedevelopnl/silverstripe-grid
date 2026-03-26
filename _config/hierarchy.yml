@@ -27,9 +27,11 @@ SilverStripe\Core\Injector\Injector:
     class: WeDevelop\Grid\Validation\HierarchyValidationService
   WeDevelop\Grid\Repository\GridElementRepositoryInterface:
     class: WeDevelop\Grid\Repository\OrmGridElementRepository
+  WeDevelop\Grid\Service\GridNodeMapper: ~
   WeDevelop\Grid\Service\GridTreeBuilder:
     constructor:
       elementRepository: '%$WeDevelop\Grid\Repository\GridElementRepositoryInterface'
+      nodeMapper: '%$WeDevelop\Grid\Service\GridNodeMapper'
   WeDevelop\Grid\Contract\ReorderValidatorInterface:
     class: WeDevelop\Grid\Validation\ReorderValidator
   WeDevelop\Grid\Service\RequestBodyParser:

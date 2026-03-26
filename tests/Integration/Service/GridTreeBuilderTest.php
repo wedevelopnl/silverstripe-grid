@@ -18,6 +18,7 @@ use WeDevelop\Grid\Extensions\GridPageExtension;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Service\GridNodeMapper;
 use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Tests\Integration\Fixture\TestPage;
 
@@ -324,7 +325,7 @@ final class GridTreeBuilderTest extends SapphireTest
 
     public function testExtensionCanEnrichGridNode(): void
     {
-        GridTreeBuilder::add_extension(TestEnricherExtension::class);
+        GridNodeMapper::add_extension(TestEnricherExtension::class);
 
         try {
             $tree = $this->buildTree();
@@ -344,7 +345,7 @@ final class GridTreeBuilderTest extends SapphireTest
             $this->assertArrayHasKey('extensions', $leafData);
             $this->assertSame('enriched', $leafData['extensions']['testEnricher']);
         } finally {
-            GridTreeBuilder::remove_extension(TestEnricherExtension::class);
+            GridNodeMapper::remove_extension(TestEnricherExtension::class);
         }
     }
 
