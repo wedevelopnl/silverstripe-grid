@@ -79,6 +79,20 @@ final class GridAdapterTest extends SapphireTest
         self::assertSame(1320, $this->adapter->getColumnPixelWidth(12));
     }
 
+    public function testGetColumnPixelWidthRoundsCorrectly(): void
+    {
+        // Use a container width that doesn't divide evenly by 12 to distinguish
+        // round() from floor() and ceil().
+        Config::modify()->set(BootstrapAdapter::class, 'container_max_width', 1000);
+        $adapter = new BootstrapAdapter();
+
+        // 1000 * 5 / 12 = 416.666... → round=417, floor=416 (kills floor mutant)
+        self::assertSame(417, $adapter->getColumnPixelWidth(5));
+
+        // 1000 * 1 / 12 = 83.333... → round=83, ceil=84 (kills ceil mutant)
+        self::assertSame(83, $adapter->getColumnPixelWidth(1));
+    }
+
     // -- Width classes -------------------------------------------------------
 
     public function testGetWidthClassForBaseViewport(): void
@@ -176,6 +190,16 @@ final class GridAdapterTest extends SapphireTest
     public function testGetBaseOffsetClass(): void
     {
         self::assertSame('offset-3', $this->adapter->getBaseOffsetClass(3));
+    }
+
+    public function testGetBaseOffsetClassAppliesAdjustment(): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'offset_adjustment', 1);
+        $adapter = new BootstrapAdapter();
+
+        // offset=2, adjustment=1 → 2+1=3, so class should use 3
+        // Mutant changes + to -, which would give 2-1=1
+        self::assertSame('offset-3', $adapter->getBaseOffsetClass(2));
     }
 
     // -- Offset strategy -----------------------------------------------------
@@ -288,6 +312,7 @@ final class GridAdapterTest extends SapphireTest
     public function testConstructorThrowsForEmptyViewports(): void
     {
         $this->expectException(InvalidGridValueException::class);
+        $this->expectExceptionMessage('The enabled_viewports configuration cannot be an empty array.');
 
         Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', []);
 

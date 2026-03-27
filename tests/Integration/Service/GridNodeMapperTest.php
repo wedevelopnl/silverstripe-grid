@@ -181,4 +181,31 @@ final class GridNodeMapperTest extends SapphireTest
         self::assertSame('font-icon-columns', $rowMeta['icon']);
         self::assertSame('Horizontal container that holds columns within a section', $rowMeta['description']);
     }
+
+    public function testGetAllowedTypesForColumnExcludesBaseClass(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $allowed = $this->mapper->getAllowedTypes($column);
+
+        // Base GridElement class should never appear in allowed types
+        self::assertArrayNotHasKey(GridElement::class, $allowed);
+        // Should have at least ContentElement
+        self::assertNotEmpty($allowed);
+    }
+
+    public function testGetAllowedTypesCacheReturnsIdenticalResult(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+
+        $first = $this->mapper->getAllowedTypes($section);
+        $second = $this->mapper->getAllowedTypes($section);
+
+        // Cache hit should return identical object (same reference)
+        self::assertSame($first, $second);
+    }
 }

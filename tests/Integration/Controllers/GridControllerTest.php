@@ -35,6 +35,18 @@ final class GridControllerTest extends SapphireTest
         self::assertSame('row', $config['rowClasses']);
         self::assertSame('margin', $config['offsetStrategy']);
         self::assertCount(6, $config['viewports']);
+
+        // Each viewport entry must have 'key' and 'label' keys
+        foreach ($config['viewports'] as $viewport) {
+            self::assertIsArray($viewport);
+            self::assertArrayHasKey('key', $viewport);
+            self::assertArrayHasKey('label', $viewport);
+            self::assertIsString($viewport['key']);
+            self::assertIsString($viewport['label']);
+        }
+        // Verify first and last viewport values
+        self::assertSame('xs', $config['viewports'][0]['key']);
+        self::assertSame('Extra Small', $config['viewports'][0]['label']);
     }
 
     public function testBuildAdapterConfigWidthClassMap(): void

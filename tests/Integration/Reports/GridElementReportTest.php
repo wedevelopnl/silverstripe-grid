@@ -11,7 +11,9 @@ use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Reports\GridElementReport;
@@ -193,5 +195,63 @@ final class GridElementReportTest extends SapphireTest
         $typeField = $fields->fieldByName('ClassName');
         self::assertNotNull($typeField);
         self::assertInstanceOf(DropdownField::class, $typeField);
+    }
+
+    public function testParameterFieldsTypeDropdownExcludesBaseClass(): void
+    {
+        $fields = $this->report()->parameterFields();
+        /** @var DropdownField $typeField */
+        $typeField = $fields->fieldByName('ClassName');
+        $source = $typeField->getSource();
+
+        self::assertArrayNotHasKey(GridElement::class, $source);
+        // Should include concrete subclasses
+        self::assertNotEmpty($source);
+    }
+
+    public function testSourceRecordsFiltersByPageIdContinuesOnMismatch(): void
+    {
+        $page1 = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page2 = $this->objFromFixture(SiteTree::class, 'test_page_2');
+
+        GridTreeFactory::section($page1, 'main', 0, 'Page1 Section');
+        GridTreeFactory::section($page2, 'main', 0, 'Page2 Section');
+
+        // Filter to page1 only — page2 elements should be excluded
+        $records = $this->report()->sourceRecords([
+            'PageID' => (string) $page1->ID,
+        ]);
+
+        foreach ($records as $record) {
+            if ($record->PageTitle !== null) {
+                self::assertSame((string) $page1->Title, $record->PageTitle);
+            }
+        }
+    }
+
+    public function testColumnsFormattingCallbacksReturnStrings(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page, 'main', 0, 'Formatted Section');
+
+        $columns = $this->report()->columns();
+
+        // Test PageTitle formatting with a linked element
+        $records = $this->report()->sourceRecords();
+        foreach ($records as $record) {
+            if ((int) $record->ID === (int) $section->ID) {
+                // PageTitle formatter — linked case
+                $formatter = $columns['PageTitle']['formatting'];
+                $result = $formatter($record->PageTitle, $record);
+                self::assertStringContainsString($page->Title, $result);
+
+                // Type formatter
+                $typeFormatter = $columns['Type']['formatting'];
+                $typeResult = $typeFormatter(null, $record);
+                self::assertNotEmpty($typeResult);
+
+                break;
+            }
+        }
     }
 }

@@ -302,6 +302,17 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertSame(371, $element->getMediaImageHeight());
     }
 
+    public function testGetMediaImageHeightSixteenByNineRoundsCorrectly(): void
+    {
+        $element = $this->createContentElement();
+        $element->ContentColumns = 3;
+        $element->MediaRatio = AspectRatio::SixteenByNine->value;
+
+        // mediaColumns=9, width=round(1320*9/12)=990
+        // round(990 * 9/16) = round(556.875) = 557 (floor would give 556)
+        self::assertSame(557, $element->getMediaImageHeight());
+    }
+
     public function testGetMediaImageHeightFourByThree(): void
     {
         $element = $this->createContentElement();
@@ -310,6 +321,17 @@ final class BlockMediaExtensionTest extends SapphireTest
 
         // round(660 * 3/4) = 495
         self::assertSame(495, $element->getMediaImageHeight());
+    }
+
+    public function testGetMediaImageHeightFourByThreeRoundsCorrectly(): void
+    {
+        $element = $this->createContentElement();
+        $element->ContentColumns = 5;
+        $element->MediaRatio = AspectRatio::FourByThree->value;
+
+        // mediaColumns=7, width=round(1320*7/12)=770
+        // round(770 * 3/4) = round(577.5) = 578 (floor would give 577)
+        self::assertSame(578, $element->getMediaImageHeight());
     }
 
     public function testGetMediaImageHeightAutoWithoutImage(): void

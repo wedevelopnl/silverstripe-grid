@@ -1384,4 +1384,256 @@ final class GridControllerTest extends FunctionalTest
 
         self::assertSame(400, $response->getStatusCode());
     }
+
+    // ─── overrideCounts JSON shape ───────────────────────────────
+
+    public function testReadTreeOverrideCountsIsJsonObject(): void
+    {
+        // When no overrides exist, overrideCounts must still be a JSON object {}
+        // (not an empty array []) for frontend compatibility
+        $this->buildTree();
+        $pageId = (int) $this->page()->ID;
+
+        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main");
+        self::assertSame(200, $response->getStatusCode());
+
+        // Parse as raw JSON to check the actual type
+        $raw = json_decode((string) $response->getBody(), false, 512, JSON_THROW_ON_ERROR);
+        self::assertInstanceOf(\stdClass::class, $raw->overrideCounts);
+    }
+
+    // ─── Zone assignment on container create ─────────────────────
+
+    public function testCreateSectionSetsZone(): void
+    {
+        $pageId = (int) $this->page()->ID;
+
+        $this->jsonPost(self::BASE_URL . '/create', [
+            'containerType' => 'section',
+            'parentId' => $pageId,
+            'zone' => 'sidebar',
+        ]);
+
+        $section = Section::get()->filter([
+            'ParentID' => $pageId,
+            'ParentClass' => SiteTree::class,
+            'Zone' => 'sidebar',
+        ])->first();
+        self::assertNotNull($section, 'Section should have Zone set to "sidebar"');
+    }
+
+    public function testCreateRowDoesNotSetZone(): void
+    {
+        $section = GridTreeFactory::section($this->page(), 'main');
+
+        $this->jsonPost(self::BASE_URL . '/create', [
+            'containerType' => 'row',
+            'parentId' => (int) $section->ID,
+        ]);
+
+        $rows = Row::get()->filter([
+            'ParentID' => (int) $section->ID,
+            'ParentClass' => Section::class,
+        ]);
+        foreach ($rows as $row) {
+            self::assertEmpty($row->Zone, 'Row should not have Zone set');
+        }
+    }
+
+    // ─── touchOwningPage on create ───────────────────────────────
+
+    public function testCreateSectionTouchesOwningPage(): void
+    {
+        $page = $this->page();
+        $page->publishRecursive();
+
+        $liveVersion = (int) Versioned::withVersionedMode(static function () use ($page): int {
+            Versioned::set_stage(Versioned::LIVE);
+
+            return (int) SiteTree::get()->byID($page->ID)->Version;
+        });
+
+        $this->jsonPost(self::BASE_URL . '/create', [
+            'containerType' => 'section',
+            'parentId' => (int) $page->ID,
+            'zone' => 'main',
+        ]);
+
+        $draftPage = SiteTree::get()->byID($page->ID);
+        self::assertGreaterThan($liveVersion, (int) $draftPage->Version);
+    }
+
+    // ─── Duplicate verifies sort and title ───────────────────────
+
+    public function testDuplicateSetsCorrectSortAndTitle(): void
+    {
+        $tree = $this->buildTree();
+        $sectionId = (int) $tree['section']->ID;
+        $pageId = (int) $this->page()->ID;
+
+        $this->jsonPost(self::BASE_URL . '/duplicate', ['id' => $sectionId]);
+
+        // Find the cloned section (not the original)
+        $sections = Section::get()->filter([
+            'ParentID' => $pageId,
+            'ParentClass' => SiteTree::class,
+        ])->sort('ID', 'DESC');
+
+        $clone = $sections->first();
+        self::assertNotNull($clone);
+        self::assertNotSame($sectionId, (int) $clone->ID);
+
+        // Clone title should contain "copy"
+        self::assertStringContainsString('copy', strtolower($clone->Title));
+    }
+
+    // ─── DuplicateTo deep copy ───────────────────────────────────
+
+    public function testDuplicateToCreatesDeepCopy(): void
+    {
+        $tree = $this->buildTree();
+        $page2 = $this->page2();
+        $page2Id = (int) $page2->ID;
+
+        // Duplicate section (with its row+column+content) to page2
+        $this->jsonPost(self::BASE_URL . '/duplicateTo', [
+            'id' => (int) $tree['section']->ID,
+            'targetPageId' => $page2Id,
+            'targetZone' => 'main',
+            'targetParentId' => $page2Id,
+        ]);
+
+        // Verify section created under page2
+        $newSection = Section::get()->filter([
+            'ParentID' => $page2Id,
+            'ParentClass' => SiteTree::class,
+        ])->first();
+        self::assertNotNull($newSection);
+
+        // Should have a child row (deep copy)
+        $newRows = Row::get()->filter([
+            'ParentID' => (int) $newSection->ID,
+            'ParentClass' => Section::class,
+        ]);
+        self::assertGreaterThanOrEqual(1, $newRows->count(), 'Deep copy should include child rows');
+    }
+
+    public function testDuplicateToSectionSetsTargetZone(): void
+    {
+        $tree = $this->buildTree();
+        $page2 = $this->page2();
+        $page2Id = (int) $page2->ID;
+
+        $this->jsonPost(self::BASE_URL . '/duplicateTo', [
+            'id' => (int) $tree['section']->ID,
+            'targetPageId' => $page2Id,
+            'targetZone' => 'sidebar',
+            'targetParentId' => $page2Id,
+        ]);
+
+        $newSection = Section::get()->filter([
+            'ParentID' => $page2Id,
+            'ParentClass' => SiteTree::class,
+            'Zone' => 'sidebar',
+        ])->first();
+        self::assertNotNull($newSection, 'Duplicated section should have target zone "sidebar"');
+    }
+
+    // ─── acceptableContainers response shape ─────────────────────
+
+    public function testAcceptableContainersResponseHasIdTitleTypeKeys(): void
+    {
+        $this->buildTree();
+        $pageId = (int) $this->page()->ID;
+
+        $response = $this->get(self::BASE_URL . "/acceptableContainers/{$pageId}/main/column");
+
+        self::assertSame(200, $response->getStatusCode());
+        $data = $this->parseJson($response);
+        self::assertNotEmpty($data);
+
+        $first = $data[0];
+        self::assertArrayHasKey('id', $first);
+        self::assertArrayHasKey('title', $first);
+        self::assertArrayHasKey('type', $first);
+        self::assertSame('row', $first['type']);
+    }
+
+    // ─── Reset overrides with multiple columns ───────────────────
+
+    public function testResetOverridesAffectsMultipleColumns(): void
+    {
+        $page = $this->page();
+        $section = GridTreeFactory::section($page, 'main');
+        $row = GridTreeFactory::row($section);
+
+        // Create 3 columns, each with a different viewport override
+        $col1 = GridTreeFactory::column($row, 1, new GridSettings(
+            ViewportConfig::default(12),
+            ['md' => new ViewportConfig(6, 0, true)],
+        ));
+        $col2 = GridTreeFactory::column($row, 2, new GridSettings(
+            ViewportConfig::default(12),
+            ['lg' => new ViewportConfig(4, 0, true)],
+        ));
+        $col3 = GridTreeFactory::column($row, 3, new GridSettings(
+            ViewportConfig::default(12),
+            ['md' => new ViewportConfig(8, 0, true)],
+        ));
+
+        $page->publishRecursive();
+        $liveVersion = (int) Versioned::withVersionedMode(static function () use ($page): int {
+            Versioned::set_stage(Versioned::LIVE);
+
+            return (int) SiteTree::get()->byID($page->ID)->Version;
+        });
+
+        // Reset ALL overrides for the page
+        $response = $this->jsonDelete(self::BASE_URL . '/resetGridSettingsOverrides', [
+            'pageId' => (int) $page->ID,
+            'zone' => 'main',
+            'viewport' => null,
+        ]);
+
+        self::assertSame(204, $response->getStatusCode());
+
+        // All 3 columns should have overrides cleared
+        foreach ([$col1, $col2, $col3] as $col) {
+            /** @var Column $updated */
+            $updated = Column::get()->byID((int) $col->ID);
+            self::assertSame([], $updated->getGridSettings()->overrides);
+        }
+
+        // Page should be touched since affected > 0
+        $draftPage = SiteTree::get()->byID($page->ID);
+        self::assertGreaterThan($liveVersion, (int) $draftPage->Version);
+    }
+
+    // ─── Pages endpoint returns multiple results ─────────────────
+
+    public function testPagesReturnsMultipleResults(): void
+    {
+        $response = $this->get(self::BASE_URL . '/pages');
+
+        self::assertSame(200, $response->getStatusCode());
+        $data = $this->parseJson($response);
+        // Fixture has 2 pages, both should be editable
+        self::assertGreaterThanOrEqual(2, count($data));
+    }
+
+    // ─── Zones deduplication ─────────────────────────────────────
+
+    public function testZonesReturnsDeduplicated(): void
+    {
+        $page = $this->page();
+        $pageId = (int) $page->ID;
+
+        $response = $this->get(self::BASE_URL . "/zones/{$pageId}");
+
+        self::assertSame(200, $response->getStatusCode());
+        $data = $this->parseJson($response);
+
+        // Should be a simple array (not object) with unique values
+        self::assertSame(array_values(array_unique($data)), $data);
+    }
 }

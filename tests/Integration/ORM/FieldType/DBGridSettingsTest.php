@@ -264,4 +264,28 @@ final class DBGridSettingsTest extends SapphireTest
 
         self::assertNull($dbField->getValue());
     }
+
+    public function testGetValueDefaultOffsetIsZero(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $settings = $column->getGridSettings();
+        self::assertNotNull($settings);
+        self::assertSame(0, $settings->default->offset);
+    }
+
+    public function testGetValueDefaultVisibleIsTrue(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $settings = $column->getGridSettings();
+        self::assertNotNull($settings);
+        self::assertTrue($settings->default->visible);
+    }
 }

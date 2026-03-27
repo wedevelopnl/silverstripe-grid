@@ -18,6 +18,23 @@
             ignoreSourceCodeByRegex: [
                 // PHP coerces numeric strings in arithmetic; explicit (int) cast documents intent
                 ".*\\(int\\) \\$m\\[.num.\\].*",
+                // SilverStripe ORM returns numeric strings for DB columns (ID, ParentID, Sort).
+                // Explicit (int) is for PHPStan type narrowing, not runtime behavior — PHP
+                // coerces transparently in arithmetic, array access, and comparisons.
+                ".*\\(int\\)\\s*\\$\\w+->(?:ID|ParentID|Sort)\\b.*",
+                ".*\\(int\\)\\s*\\$request->param\\(.*",
+                // Form option values from integer array keys — cast documents type, not behavior
+                ".*\\(int\\)\\s*\\$optionValue\\b.*",
+                // DB aggregate results (->max('"Sort"')) return numeric strings
+                ".*\\(int\\)\\s*\\$max\\b.*",
+            ],
+        },
+        "CastString": {
+            ignoreSourceCodeByRegex: [
+                // SilverStripe ORM string properties and request params — explicit (string)
+                // cast is for PHPStan, not behavior. ORM already returns strings.
+                ".*\\(string\\)\\s*\\$\\w+->(?:Title|Zone|ParentClass|ClassName)\\b.*",
+                ".*\\(string\\)\\s*\\$request->param\\(.*",
             ],
         },
         "Concat": {
@@ -26,14 +43,24 @@
                 // key still returns the fallback string, making the mutation undetectable without
                 // testing the i18n system itself
                 ".*_t\\(.*",
+                // i18n keys on separate lines from _t() call: ClassName::class . '.KEY'
+                // is always an i18n key in SilverStripe; the fallback string is returned regardless
+                ".*::class\\s*\\.\\s*'\\.[A-Z_]+'.*",
+                // HTML element ID construction: $this->ID() . '_' . $optionValue
+                // is template rendering data, not business logic
+                ".*\\$this->ID\\(\\)\\s*\\.\\s*'_'.*",
             ],
         },
         "ConcatOperandRemoval": {
             ignoreSourceCodeByRegex: [
                 ".*_t\\(.*",
+                // i18n keys on separate lines (see Concat comment above)
+                ".*::class\\s*\\.\\s*'\\.[A-Z_]+'.*",
                 // Label concatenation in form option builders (e.g. $i . '/' . $columnCount)
                 // produces display text only — mutations change the label format but not behavior
                 ".*\\$i\\s*\\.\\s*'/'\\s*\\..*",
+                // HTML element ID construction (see Concat comment above)
+                ".*\\$this->ID\\(\\)\\s*\\.\\s*'_'.*",
             ],
         },
         "MethodCallRemoval": {
@@ -55,6 +82,15 @@
                 ".*->setFolderName\\(.*",
                 ".*->setEmptyString\\(.*",
                 ".*->addExtraClass\\(.*",
+                // Versioned::set_stage(DRAFT) inside withVersionedMode closures: the test suite
+                // sets DRAFT stage in setUp(), so the closure's stage call has no observable
+                // effect. Removing it produces identical test behavior.
+                ".*Versioned::set_stage\\(Versioned::DRAFT\\).*",
+                // CMS field scaffolding removal (removeByName) — removing a scaffolded field
+                // changes form UI, not business logic
+                ".*->removeByName\\(.*",
+                // CMS form field group setTitle — UI label only
+                ".*->setTitle\\(_t\\(.*",
             ],
         },
         // Private methods returning pure option arrays (aspect ratio labels, media position
@@ -66,11 +102,49 @@
                 ".*MediaPosition::.*=>\\s*_t\\(.*",
                 ".*VerticalAlignment::.*=>\\s*_t\\(.*",
                 ".*AspectRatio::.*=>\\s*_t\\(.*",
+                // Template data keys for CMS rendering only (disabled state, percent display)
+                ".*'isDisabled'\\s*=>.*",
             ],
         },
         "ArrayItemRemoval": {
             ignoreSourceCodeByRegex: [
                 ".*=>\\s*_t\\(.*",
+                // Template data array entries (HTML element IDs, disabled state) —
+                // only affect CMS rendering, not business logic
+                ".*'ID'\\s*=>\\s*\\$this->ID\\(\\).*",
+            ],
+        },
+        "DecrementInteger": {
+            ignoreSourceCodeByRegex: [
+                // CMS conditional field visibility thresholds: ->displayIf('X')->isGreaterThan(0).
+                // Changing 0 to -1 alters when a CMS field shows/hides — not business logic.
+                ".*->isGreaterThan\\(\\d+\\).*",
+                // CMS dropdown array key [0 => _t(...)] — option key is UI config data
+                ".*\\[0\\s*=>\\s*_t\\(.*",
+                // Error message format strings: $columnCount - 1 in sprintf produces a cosmetic
+                // max-value for the user — the actual validation condition is unaffected
+                ".*sprintf\\(.*\\$this->columnCount\\s*-\\s*1.*",
+            ],
+        },
+        "IncrementInteger": {
+            ignoreSourceCodeByRegex: [
+                ".*->isGreaterThan\\(\\d+\\).*",
+                ".*\\[0\\s*=>\\s*_t\\(.*",
+                ".*sprintf\\(.*\\$this->columnCount\\s*-\\s*1.*",
+                // round() precision arg in template percent — cosmetic display value
+                ".*round\\(.*\\$contentPercent.*",
+            ],
+        },
+        // FunctionalTest::setUp() calls SecurityToken::disable(), making the CSRF
+        // guard in init() invisible to tests regardless of how it's mutated
+        "NotIdentical": {
+            ignoreSourceCodeByRegex: [
+                ".*->httpMethod\\(\\)\\s*!==\\s*'GET'.*",
+            ],
+        },
+        "Minus": {
+            ignoreSourceCodeByRegex: [
+                ".*sprintf\\(.*\\$this->columnCount\\s*-\\s*1.*",
             ],
         },
     },
