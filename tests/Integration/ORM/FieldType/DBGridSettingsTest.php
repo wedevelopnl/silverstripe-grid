@@ -1,0 +1,217 @@
+<?php
+
+declare(strict_types=1);
+
+namespace WeDevelop\Grid\Tests\Integration\ORM\FieldType;
+
+use PHPUnit\Framework\Attributes\CoversClass;
+use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Core\Config\Config;
+use SilverStripe\Core\Validation\ValidationException;
+use SilverStripe\Dev\SapphireTest;
+use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Model\Row;
+use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\ORM\FieldType\DBGridSettings;
+use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Value\ViewportConfig;
+
+#[CoversClass(DBGridSettings::class)]
+final class DBGridSettingsTest extends SapphireTest
+{
+    protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Versioned::set_stage(Versioned::DRAFT);
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        Config::modify()->set(Row::class, 'auto_scaffold', false);
+    }
+
+    public function testRoundTripViaColumnWrite(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        $original = new GridSettings(
+            new ViewportConfig(8, 2, true),
+            ['lg' => new ViewportConfig(6, 1, false)],
+        );
+        $column = GridTreeFactory::column($row, gridSettings: $original);
+
+        // Reload from DB
+        $reloaded = Column::get()->byID($column->ID);
+        self::assertInstanceOf(Column::class, $reloaded);
+
+        $settings = $reloaded->getGridSettings();
+        self::assertSame(8, $settings->default->width);
+        self::assertSame(2, $settings->default->offset);
+        self::assertTrue($settings->default->visible);
+        self::assertArrayHasKey('lg', $settings->overrides);
+        self::assertSame(6, $settings->overrides['lg']->width);
+        self::assertSame(1, $settings->overrides['lg']->offset);
+        self::assertFalse($settings->overrides['lg']->visible);
+    }
+
+    public function testSetValueWithJsonString(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $json = '{"default":{"width":8,"offset":1,"visible":true},"overrides":{}}';
+        $column->setGridSettings($json);
+        $column->write();
+
+        $reloaded = Column::get()->byID($column->ID);
+        self::assertInstanceOf(Column::class, $reloaded);
+
+        $settings = $reloaded->getGridSettings();
+        self::assertSame(8, $settings->default->width);
+        self::assertSame(1, $settings->default->offset);
+        self::assertTrue($settings->default->visible);
+    }
+
+    public function testSetValueWithInvalidString(): void
+    {
+        $field = DBGridSettings::create('GridSettings');
+        $field->setValue('not-json');
+
+        self::assertNull($field->getValue());
+    }
+
+    public function testGetValueWhenNoData(): void
+    {
+        $field = DBGridSettings::create('GridSettings');
+
+        self::assertNull($field->getValue());
+    }
+
+    public function testExistsWhenWidthStored(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        // Column gets initial GridSettings on first write
+        /** @var DBGridSettings $dbField */
+        $dbField = $column->dbObject('GridSettings');
+
+        self::assertTrue($dbField->exists());
+    }
+
+    public function testExistsWhenNoWidth(): void
+    {
+        $field = DBGridSettings::create('GridSettings');
+
+        self::assertFalse($field->exists());
+    }
+
+    public function testOverridesStoredAsJson(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        $settings = new GridSettings(
+            new ViewportConfig(12, 0, true),
+            ['md' => new ViewportConfig(6, 0, true)],
+        );
+        $column = GridTreeFactory::column($row, gridSettings: $settings);
+
+        $reloaded = Column::get()->byID($column->ID);
+        self::assertInstanceOf(Column::class, $reloaded);
+
+        /** @var DBGridSettings $dbField */
+        $dbField = $reloaded->dbObject('GridSettings');
+        $rawOverrides = $dbField->getField('Overrides');
+
+        self::assertNotNull($rawOverrides);
+        self::assertIsString($rawOverrides);
+        self::assertJson($rawOverrides);
+    }
+
+    public function testOverridesNullWhenEmpty(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        $settings = new GridSettings(
+            new ViewportConfig(12, 0, true),
+        );
+        $column = GridTreeFactory::column($row, gridSettings: $settings);
+
+        $reloaded = Column::get()->byID($column->ID);
+        self::assertInstanceOf(Column::class, $reloaded);
+
+        /** @var DBGridSettings $dbField */
+        $dbField = $reloaded->dbObject('GridSettings');
+
+        self::assertNull($dbField->getField('Overrides'));
+    }
+
+    public function testFieldValidationBlocksExcessiveWidth(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $this->expectException(ValidationException::class);
+
+        $column->setGridSettings(new GridSettings(
+            new ViewportConfig(13, 0, true),
+        ));
+        $column->write();
+    }
+
+    public function testFieldValidationBlocksExcessiveOffset(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $this->expectException(ValidationException::class);
+
+        $column->setGridSettings(new GridSettings(
+            new ViewportConfig(6, 12, true),
+        ));
+        $column->write();
+    }
+
+    public function testFieldValidationBlocksWidthPlusOffset(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $this->expectException(ValidationException::class);
+
+        $column->setGridSettings(new GridSettings(
+            new ViewportConfig(8, 6, true),
+        ));
+        $column->write();
+    }
+
+    public function testGetColumnCountFromAdapter(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        /** @var DBGridSettings $dbField */
+        $dbField = $column->dbObject('GridSettings');
+
+        self::assertSame(12, $dbField->getColumnCount());
+    }
+}

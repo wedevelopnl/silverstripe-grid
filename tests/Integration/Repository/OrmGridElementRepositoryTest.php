@@ -1,0 +1,175 @@
+<?php
+
+declare(strict_types=1);
+
+namespace WeDevelop\Grid\Tests\Integration\Repository;
+
+use PHPUnit\Framework\Attributes\CoversClass;
+use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Core\Config\Config;
+use SilverStripe\Dev\SapphireTest;
+use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Model\Row;
+use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Repository\OrmGridElementRepository;
+use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+
+#[CoversClass(OrmGridElementRepository::class)]
+final class OrmGridElementRepositoryTest extends SapphireTest
+{
+    protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
+
+    private OrmGridElementRepository $repository;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Versioned::set_stage(Versioned::DRAFT);
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        Config::modify()->set(Row::class, 'auto_scaffold', false);
+
+        $this->repository = new OrmGridElementRepository();
+    }
+
+    public function testFindByIdReturnsElement(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+
+        $found = $this->repository->findById((int) $section->ID);
+
+        self::assertInstanceOf(GridElement::class, $found);
+        self::assertSame((int) $section->ID, (int) $found->ID);
+    }
+
+    public function testFindByIdReturnsNullForMissing(): void
+    {
+        $found = $this->repository->findById(999999);
+
+        self::assertNull($found);
+    }
+
+    public function testFindByParentIdsSorted(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+
+        $sectionA = GridTreeFactory::section($page, sort: 3);
+        $sectionB = GridTreeFactory::section($page, sort: 1);
+        $sectionC = GridTreeFactory::section($page, sort: 2);
+
+        $results = $this->repository->findByParentIds(
+            [(int) $page->ID],
+            SiteTree::class,
+        );
+
+        self::assertCount(3, $results);
+        self::assertSame((int) $sectionB->ID, (int) $results[0]->ID, 'Sort 1 should be first');
+        self::assertSame((int) $sectionC->ID, (int) $results[1]->ID, 'Sort 2 should be second');
+        self::assertSame((int) $sectionA->ID, (int) $results[2]->ID, 'Sort 3 should be third');
+    }
+
+    public function testFindByParentIdsEmptyArray(): void
+    {
+        $results = $this->repository->findByParentIds([], SiteTree::class);
+
+        self::assertSame([], $results);
+    }
+
+    public function testFindByParentIdsFiltersParentClass(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+
+        // Section under page (ParentClass = SiteTree)
+        $section = GridTreeFactory::section($page);
+        // Row under section (ParentClass = Section)
+        $row = GridTreeFactory::row($section);
+
+        // Query with page's ID but Section::class as parentClass
+        // The row has ParentID = section->ID, not page->ID, so nothing matches
+        // unless IDs happen to collide. Instead, query with section's ID.
+        $results = $this->repository->findByParentIds(
+            [(int) $section->ID],
+            Section::class,
+        );
+
+        // Only the row should be returned (parented to section with Section::class)
+        self::assertCount(1, $results);
+        self::assertSame((int) $row->ID, (int) $results[0]->ID);
+
+        // Same ID but wrong parent class returns nothing
+        $results = $this->repository->findByParentIds(
+            [(int) $section->ID],
+            SiteTree::class,
+        );
+
+        self::assertSame([], $results);
+    }
+
+    public function testFindByParentsWithZoneFilter(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+
+        $mainSection = GridTreeFactory::section($page, zone: 'main');
+        GridTreeFactory::section($page, zone: 'sidebar');
+
+        $results = $this->repository->findByParents(
+            [SiteTree::class => [(int) $page->ID]],
+            'main',
+        );
+
+        self::assertCount(1, $results);
+        self::assertSame((int) $mainSection->ID, (int) $results[0]->ID);
+    }
+
+    public function testFindByParentsWithoutZoneFilter(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        // Without zone, queries GridElement::get() — returns all element types
+        $results = $this->repository->findByParents(
+            [Section::class => [(int) $section->ID]],
+        );
+
+        self::assertCount(1, $results);
+        self::assertSame((int) $row->ID, (int) $results[0]->ID);
+
+        $results = $this->repository->findByParents(
+            [Row::class => [(int) $row->ID]],
+        );
+
+        self::assertCount(1, $results);
+        self::assertSame((int) $column->ID, (int) $results[0]->ID);
+    }
+
+    public function testFindByParentsMultipleClasses(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        // Pass multiple parent classes — results combined
+        $results = $this->repository->findByParents([
+            SiteTree::class => [(int) $page->ID],
+            Section::class => [(int) $section->ID],
+        ]);
+
+        // Should return section (child of page) + row (child of section)
+        self::assertCount(2, $results);
+
+        $ids = array_map(static fn (GridElement $el): int => (int) $el->ID, $results);
+        self::assertContains((int) $section->ID, $ids);
+        self::assertContains((int) $row->ID, $ids);
+    }
+
+    public function testFindByParentsEmptyInput(): void
+    {
+        $results = $this->repository->findByParents([]);
+
+        self::assertSame([], $results);
+    }
+}

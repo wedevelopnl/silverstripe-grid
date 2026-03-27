@@ -1,0 +1,7 @@
+SilverStripe\CMS\Model\SiteTree:
+  test_page:
+    Title: 'Integration Test Page'
+    URLSegment: 'integration-test'
+  test_page_2:
+    Title: 'Integration Test Page 2'
+    URLSegment: 'integration-test-2'
