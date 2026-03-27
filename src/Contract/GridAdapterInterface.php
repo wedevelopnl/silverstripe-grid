@@ -150,4 +150,18 @@ interface GridAdapterInterface
      * @return positive-int
      */
     public function getContainerMaxWidth(): int;
+
+    /**
+     * Pixel width for a given column span at the container's maximum width.
+     *
+     * Converts a column span to its equivalent pixel width using the grid's
+     * column count and container max width. Used for responsive image sizing.
+     *
+     * @param positive-int $columnSpan
+     * @return positive-int
+     *
+     * @example Bootstrap 12-col, 1320px: getColumnPixelWidth(4) → 440
+     * @example Bootstrap 12-col, 1320px: getColumnPixelWidth(6) → 660
+     */
+    public function getColumnPixelWidth(int $columnSpan): int;
 }

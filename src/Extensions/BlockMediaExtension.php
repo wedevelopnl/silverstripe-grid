@@ -97,13 +97,6 @@ class BlockMediaExtension extends Extension
         'MediaRatio' => AspectRatio::Auto->value,
     ];
 
-    /** @var array<string, string> */
-    private static array $dependencies = [
-        'contentLayoutAdapter' => '%$' . ContentLayoutAdapterInterface::class,
-    ];
-
-    public ContentLayoutAdapterInterface $contentLayoutAdapter;
-
     /** Whether an image is attached or a video URL is present. */
     public function hasMedia(): bool
     {
@@ -136,7 +129,7 @@ class BlockMediaExtension extends Extension
         $classes = [$owner->gridAdapter->getRowClasses()];
 
         $alignment = $this->getVerticalAlignmentEnum();
-        $classes[] = $this->contentLayoutAdapter->getVerticalAlignmentClass($alignment);
+        $classes[] = $this->getContentLayoutAdapter()->getVerticalAlignmentClass($alignment);
 
         return implode(' ', $classes);
     }
@@ -146,13 +139,13 @@ class BlockMediaExtension extends Extension
     {
         $classes = [];
 
-        $baseClass = $this->contentLayoutAdapter->getBaseColumnClass();
+        $baseClass = $this->getContentLayoutAdapter()->getBaseColumnClass();
         if ($baseClass !== null) {
             $classes[] = $baseClass;
         }
 
-        $classes[] = $this->contentLayoutAdapter->getMediaWidthClass($this->getContentColumnsValue());
-        $classes[] = $this->contentLayoutAdapter->getMediaOrderClasses($this->getMediaPositionEnum());
+        $classes[] = $this->getContentLayoutAdapter()->getMediaWidthClass($this->getContentColumnsValue());
+        $classes[] = $this->getContentLayoutAdapter()->getMediaOrderClasses($this->getMediaPositionEnum());
 
         return implode(' ', $classes);
     }
@@ -162,13 +155,13 @@ class BlockMediaExtension extends Extension
     {
         $classes = [];
 
-        $baseClass = $this->contentLayoutAdapter->getBaseColumnClass();
+        $baseClass = $this->getContentLayoutAdapter()->getBaseColumnClass();
         if ($baseClass !== null) {
             $classes[] = $baseClass;
         }
 
-        $classes[] = $this->contentLayoutAdapter->getContentWidthClass($this->getContentColumnsValue());
-        $classes[] = $this->contentLayoutAdapter->getContentOrderClasses($this->getMediaPositionEnum());
+        $classes[] = $this->getContentLayoutAdapter()->getContentWidthClass($this->getContentColumnsValue());
+        $classes[] = $this->getContentLayoutAdapter()->getContentOrderClasses($this->getMediaPositionEnum());
 
         return implode(' ', $classes);
     }
@@ -184,13 +177,13 @@ class BlockMediaExtension extends Extension
 
         $direction = $this->getContentPaddingDirection();
 
-        return $this->contentLayoutAdapter->getPaddingClass($direction, $gapSize);
+        return $this->getContentLayoutAdapter()->getPaddingClass($direction, $gapSize);
     }
 
     /** Aspect ratio CSS class, or null for auto. */
     public function getMediaRatioClass(): ?string
     {
-        return $this->contentLayoutAdapter->getAspectRatioClass($this->getAspectRatioEnum());
+        return $this->getContentLayoutAdapter()->getAspectRatioClass($this->getAspectRatioEnum());
     }
 
     /** Calculated pixel width for the media image based on column proportion. */
@@ -455,12 +448,10 @@ class BlockMediaExtension extends Extension
 
     private function getCalculatedMediaImageWidth(): int
     {
-        $adapter = $this->getOwner()->gridAdapter;
+        /** @var positive-int $colSize */
         $colSize = $this->getColSize();
-        $totalColumns = $adapter->getColumnCount();
-        $containerWidth = $adapter->getContainerMaxWidth();
 
-        return (int) round($containerWidth * $colSize / $totalColumns);
+        return $this->getOwner()->gridAdapter->getColumnPixelWidth($colSize);
     }
 
     /** Effective column span for the media side. */
@@ -472,6 +463,15 @@ class BlockMediaExtension extends Extension
         return $contentColumns > 0
             ? ($columnCount - $contentColumns)
             : $columnCount;
+    }
+
+    /** Access the ContentLayoutAdapterInterface through the owner's grid adapter. */
+    private function getContentLayoutAdapter(): ContentLayoutAdapterInterface
+    {
+        $adapter = $this->getOwner()->gridAdapter;
+        assert($adapter instanceof ContentLayoutAdapterInterface);
+
+        return $adapter;
     }
 
     /** Calculate height from source image dimensions, preserving aspect ratio. */

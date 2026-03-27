@@ -173,6 +173,13 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
         return $this->containerMaxWidth;
     }
 
+    /** @return positive-int */
+    public function getColumnPixelWidth(int $columnSpan): int
+    {
+        /** @var positive-int */
+        return (int) round($this->containerMaxWidth * $columnSpan / $this->columnCount);
+    }
+
     // ─── GridAdapterInterface: CSS class generation ─────────────────
 
     public function getWidthClass(string $viewport, int $width): string

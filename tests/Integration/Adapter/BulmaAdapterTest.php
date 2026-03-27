@@ -434,4 +434,24 @@ final class BulmaAdapterTest extends SapphireTest
     {
         $this->assertSame('column', $this->adapter->getBaseColumnClass());
     }
+
+    // ─── getColumnPixelWidth ────────────────────────────────────────
+
+    #[DataProvider('columnPixelWidthProvider')]
+    public function testGetColumnPixelWidth(int $columnSpan, int $expected): void
+    {
+        $this->assertSame($expected, $this->adapter->getColumnPixelWidth($columnSpan));
+    }
+
+    /**
+     * @return iterable<string, array{int, int}>
+     */
+    public static function columnPixelWidthProvider(): iterable
+    {
+        // Bulma: 12 columns, 1344px container
+        yield 'full width (12)' => [12, 1344];
+        yield 'half width (6)' => [6, 672];
+        yield 'third width (4)' => [4, 448];
+        yield 'quarter width (3)' => [3, 336];
+    }
 }

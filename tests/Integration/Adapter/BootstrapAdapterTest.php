@@ -510,4 +510,24 @@ final class BootstrapAdapterTest extends SapphireTest
     {
         $this->assertNull($this->adapter->getBaseColumnClass());
     }
+
+    // ─── getColumnPixelWidth ────────────────────────────────────────
+
+    #[DataProvider('columnPixelWidthProvider')]
+    public function testGetColumnPixelWidth(int $columnSpan, int $expected): void
+    {
+        $this->assertSame($expected, $this->adapter->getColumnPixelWidth($columnSpan));
+    }
+
+    /**
+     * @return iterable<string, array{int, int}>
+     */
+    public static function columnPixelWidthProvider(): iterable
+    {
+        // Bootstrap: 12 columns, 1320px container
+        yield 'full width (12)' => [12, 1320];
+        yield 'half width (6)' => [6, 660];
+        yield 'third width (4)' => [4, 440];
+        yield 'quarter width (3)' => [3, 330];
+    }
 }

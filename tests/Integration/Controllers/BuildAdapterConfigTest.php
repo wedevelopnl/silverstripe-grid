@@ -270,6 +270,11 @@ final class BuildAdapterConfigTest extends SapphireTest
             {
                 return 1320;
             }
+
+            public function getColumnPixelWidth(int $columnSpan): int
+            {
+                return (int) round(1320 * $columnSpan / 2);
+            }
         };
 
         $config = GridController::buildAdapterConfig($adapter);
@@ -346,6 +351,11 @@ final class BuildAdapterConfigTest extends SapphireTest
             public function getContainerMaxWidth(): int
             {
                 return 1320;
+            }
+
+            public function getColumnPixelWidth(int $columnSpan): int
+            {
+                return (int) round(1320 * $columnSpan / 12);
             }
         };
 
