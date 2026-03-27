@@ -418,6 +418,9 @@ class GridController extends AdminController
         }
 
         // C2: Validate hierarchy rules before deep copy
+        // Only container-to-container moves need checking. Section-to-page is always
+        // valid (canBeRoot=true) and non-sections are loaded from GridElement table,
+        // so $targetParent is never SiteTree for them.
         if ($targetParent instanceof ContainerInterface) {
             $containerType = $targetParent->getContainerType();
             if (!$containerType->isChildAllowed($element::class)) {
@@ -425,14 +428,6 @@ class GridController extends AdminController
                     '%s cannot be placed inside %s.',
                     $element->singular_name(),
                     $targetParent->singular_name(),
-                ));
-            }
-        }
-        if ($targetParent instanceof SiteTree && $element instanceof ContainerInterface) {
-            if (!$element->getContainerType()->canBeRoot()) {
-                $this->jsonError(422, sprintf(
-                    '%s cannot be placed at page level.',
-                    $element->singular_name(),
                 ));
             }
         }

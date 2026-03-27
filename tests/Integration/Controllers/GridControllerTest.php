@@ -13,7 +13,7 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Controllers\GridController;
 
 #[CoversClass(GridController::class)]
-final class GridControllerBuildAdapterConfigTest extends SapphireTest
+final class GridControllerTest extends SapphireTest
 {
     protected $usesDatabase = false;
 
@@ -61,5 +61,18 @@ final class GridControllerBuildAdapterConfigTest extends SapphireTest
         self::assertCount(12, $offsets);
         self::assertSame('offset-0', $offsets[0]);
         self::assertSame('offset-11', $offsets[11]);
+    }
+
+    public function testGetClientConfigIncludesControllerLinkAndAdapter(): void
+    {
+        /** @var GridController $controller */
+        $controller = Injector::inst()->get(GridController::class);
+        $config = $controller->getClientConfig();
+
+        self::assertArrayHasKey('controllerLink', $config);
+        self::assertArrayHasKey('gridAdapter', $config);
+        self::assertNotEmpty($config['controllerLink']);
+        self::assertIsArray($config['gridAdapter']);
+        self::assertArrayHasKey('columnCount', $config['gridAdapter']);
     }
 }
