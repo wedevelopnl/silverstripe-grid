@@ -214,4 +214,37 @@ final class DBGridSettingsTest extends SapphireTest
 
         self::assertSame(12, $dbField->getColumnCount());
     }
+
+    public function testScaffoldFormFieldReturnsNull(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        /** @var DBGridSettings $field */
+        $field = $column->dbObject('GridSettings');
+
+        self::assertNull($field->scaffoldFormField());
+    }
+
+    public function testSetValueWithGridSettingsAndRecord(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        /** @var DBGridSettings $field */
+        $field = $column->dbObject('GridSettings');
+
+        $settings = new GridSettings(new ViewportConfig(8, 1, true), []);
+        $field->setValue($settings, $column);
+
+        $result = $field->getValue();
+        self::assertInstanceOf(GridSettings::class, $result);
+        self::assertSame(8, $result->default->width);
+        self::assertSame(1, $result->default->offset);
+        self::assertTrue($result->default->visible);
+    }
 }

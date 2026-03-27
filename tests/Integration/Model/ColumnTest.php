@@ -156,4 +156,46 @@ final class ColumnTest extends SapphireTest
 
         self::assertSame('6/12', $column->getGridWidthSummary());
     }
+
+    // ── Column classes ──────────────────────────────────────────
+
+    public function testGetColumnClassesReturnsNonEmptyString(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $classes = $column->getColumnClasses();
+
+        self::assertNotEmpty($classes);
+    }
+
+    public function testGetColumnClassesWithOverrides(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        $settings = GridSettings::initial(12)->withOverride('md', new ViewportConfig(6, 0, true));
+        $column = GridTreeFactory::column($row, gridSettings: $settings);
+
+        $classes = $column->getColumnClasses();
+
+        self::assertNotEmpty($classes);
+    }
+
+    // ── getCMSFields ────────────────────────────────────────────
+
+    public function testGetCMSFieldsIncludesGridTab(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $fields = $column->getCMSFields();
+
+        self::assertNotNull($fields->fieldByName('Root.Grid'));
+    }
 }

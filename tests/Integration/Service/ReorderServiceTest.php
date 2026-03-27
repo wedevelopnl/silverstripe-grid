@@ -15,6 +15,8 @@ use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\ReorderService;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Value\ViewportConfig;
 
 #[CoversClass(ReorderService::class)]
 final class ReorderServiceTest extends SapphireTest
@@ -188,5 +190,48 @@ final class ReorderServiceTest extends SapphireTest
 
         self::assertTrue($result->isErr());
         self::assertNotEmpty($result->errors());
+    }
+
+    public function testCrossParentSectionMoveWithZoneFiltering(): void
+    {
+        $page1 = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page2 = $this->objFromFixture(SiteTree::class, 'test_page_2');
+
+        $main1 = GridTreeFactory::section($page1, zone: 'main');
+        $main2 = GridTreeFactory::section($page1, zone: 'main');
+        $sidebar1 = GridTreeFactory::section($page1, zone: 'sidebar');
+
+        // Move main2 from page1 to page2
+        $result = $this->service->reorder($main2, $page2, null);
+
+        self::assertTrue($result->isOk());
+
+        // Reload and verify sort values are unchanged for unaffected elements
+        $main1 = GridElement::get()->byID($main1->ID);
+        self::assertSame(1, $main1->Sort, 'main1 sort should remain 1');
+
+        $sidebar1 = GridElement::get()->byID($sidebar1->ID);
+        self::assertSame(1, $sidebar1->Sort, 'sidebar1 sort should remain 1 (different zone)');
+    }
+
+    public function testWriteFailureDuringPersistPropagatesAsError(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $col1 = GridTreeFactory::column($row);
+        $col2 = GridTreeFactory::column($row);
+
+        // Set invalid GridSettings on col1 in memory (width 13 exceeds 12-column grid)
+        // Do NOT write — the invalid state only exists in memory
+        $col1->setGridSettings(new GridSettings(
+            new ViewportConfig(13, 0, true),
+            [],
+        ));
+
+        // Reorder col1 after col2 — this triggers a write() on col1 with invalid settings
+        $result = $this->service->reorder($col1, $row, $col2->ID);
+
+        self::assertTrue($result->isErr(), 'Reorder should fail when element write triggers validation error');
     }
 }

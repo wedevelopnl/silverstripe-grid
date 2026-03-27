@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
@@ -210,5 +211,266 @@ final class GridElementTest extends SapphireTest
 
         $this->logOut();
         self::assertFalse(ContentElement::singleton()->canCreate());
+    }
+
+    // ── Simple class name ───────────────────────────────────────
+
+    public function testGetSimpleClassNameReturnsShortName(): void
+    {
+        $section = Section::create();
+
+        self::assertSame('Section', $section->getSimpleClassName());
+    }
+
+    // ── CMS edit link ───────────────────────────────────────────
+
+    public function testGetCMSEditLinkWithPage(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $contentElement = GridTreeFactory::contentElement($column);
+
+        $link = $contentElement->getCMSEditLink();
+
+        self::assertNotNull($link);
+        self::assertStringContainsString((string) $contentElement->ID, $link);
+    }
+
+    public function testGetCMSEditLinkOrphanReturnsNull(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $element = GridTreeFactory::contentElement($column);
+
+        // Orphan via raw SQL to bypass polymorphic has_one validation
+        DB::query(sprintf(
+            "UPDATE \"GridElement\" SET \"ParentID\" = 0, \"ParentClass\" = '' WHERE \"ID\" = %d",
+            $element->ID,
+        ));
+
+        // Reload from DB to pick up the orphaned state
+        $element = ContentElement::get()->byID($element->ID);
+
+        self::assertNull($element->getCMSEditLink());
+    }
+
+    // ── Anchor ──────────────────────────────────────────────────
+
+    public function testGetAnchorContainsElementId(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $element = GridTreeFactory::contentElement($column);
+
+        self::assertSame('grid-element-' . $element->ID, $element->getAnchor());
+    }
+
+    // ── Type name ───────────────────────────────────────────────
+
+    public function testGetTypeNameReplacesBackslashes(): void
+    {
+        $element = ContentElement::create();
+        $typeName = $element->getTypeName();
+
+        self::assertStringNotContainsString('\\', $typeName);
+        self::assertStringContainsString('ContentElement', $typeName);
+    }
+
+    // ── Summary ─────────────────────────────────────────────────
+
+    public function testGetSummaryReturnsEmptyString(): void
+    {
+        $element = ContentElement::create();
+
+        self::assertSame('', $element->getSummary());
+    }
+
+    // ── Block schema ────────────────────────────────────────────
+
+    public function testGetBlockSchemaReturnsExpectedKeys(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $element = GridTreeFactory::contentElement($column, title: 'My Block');
+
+        $schema = $element->getBlockSchema();
+
+        self::assertArrayHasKey('id', $schema);
+        self::assertArrayHasKey('typeName', $schema);
+        self::assertArrayHasKey('type', $schema);
+        self::assertArrayHasKey('title', $schema);
+        self::assertArrayHasKey('summary', $schema);
+        self::assertSame($element->ID, $schema['id']);
+        self::assertSame('My Block', $schema['title']);
+    }
+
+    // ── Title size class ────────────────────────────────────────
+
+    public function testGetTitleSizeClassReturnsStoredValue(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $element = ContentElement::create();
+        $element->Title = 'Test';
+        $element->TitleClass = 'display-3';
+        $element->ParentID = $column->ID;
+        $element->ParentClass = $column::class;
+        $element->write();
+
+        self::assertSame('display-3', $element->getTitleSizeClass());
+    }
+
+    public function testGetTitleSizeClassReturnsEmptyWhenNotSet(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $element = GridTreeFactory::contentElement($column);
+
+        self::assertSame('', $element->getTitleSizeClass());
+    }
+
+    // ── getCMSFields ────────────────────────────────────────────
+
+    public function testGetCMSFieldsContainsTitleGroup(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $element = GridTreeFactory::contentElement($column);
+
+        $fields = $element->getCMSFields();
+
+        self::assertNotNull($fields->fieldByName('Root.Main.TitleSettings'));
+    }
+
+    public function testGetCMSFieldsExcludesScaffoldedFields(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $element = GridTreeFactory::contentElement($column);
+
+        $fields = $element->getCMSFields();
+
+        self::assertNull($fields->dataFieldByName('Sort'));
+        self::assertNull($fields->dataFieldByName('ParentID'));
+    }
+
+    public function testGetCMSFieldsIncludesTitleClassWhenEnabled(): void
+    {
+        Config::modify()->set(GridElement::class, 'enable_custom_title_classes', true);
+
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $element = GridTreeFactory::contentElement($column);
+
+        $fields = $element->getCMSFields();
+
+        self::assertNotNull($fields->dataFieldByName('TitleClass'));
+    }
+
+    public function testGetCMSFieldsExcludesTitleClassWhenDisabled(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $element = GridTreeFactory::contentElement($column);
+
+        $fields = $element->getCMSFields();
+
+        self::assertNull($fields->dataFieldByName('TitleClass'));
+    }
+
+    // ── Orphan permission fallback ──────────────────────────────
+
+    public function testCanViewFallsBackToPermissionCheckForOrphan(): void
+    {
+        $element = $this->createOrphanElement();
+
+        $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
+        self::assertTrue($element->canView());
+
+        $this->logOut();
+        self::assertFalse($element->canView());
+    }
+
+    public function testCanEditFallsBackToPermissionCheckForOrphan(): void
+    {
+        $element = $this->createOrphanElement();
+
+        $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
+        self::assertTrue($element->canEdit());
+
+        $this->logOut();
+        self::assertFalse($element->canEdit());
+    }
+
+    public function testCanDeleteFallsBackToPermissionCheckForOrphan(): void
+    {
+        $element = $this->createOrphanElement();
+
+        $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
+        self::assertTrue($element->canDelete());
+
+        $this->logOut();
+        self::assertFalse($element->canDelete());
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────
+
+    /**
+     * Creates a persisted ContentElement then orphans it via raw SQL
+     * to bypass SS6's polymorphic has_one validation.
+     */
+    private function createOrphanElement(): ContentElement
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $element = GridTreeFactory::contentElement($column);
+
+        DB::query(sprintf(
+            "UPDATE \"GridElement\" SET \"ParentID\" = 0, \"ParentClass\" = '' WHERE \"ID\" = %d",
+            $element->ID,
+        ));
+
+        $reloaded = ContentElement::get()->byID($element->ID);
+        self::assertInstanceOf(ContentElement::class, $reloaded);
+
+        return $reloaded;
+    }
+
+    // ── forTemplate ─────────────────────────────────────────────
+
+    public function testForTemplateReturnsString(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $element = GridTreeFactory::contentElement($column);
+
+        $result = $element->forTemplate();
+
+        self::assertIsString($result);
     }
 }

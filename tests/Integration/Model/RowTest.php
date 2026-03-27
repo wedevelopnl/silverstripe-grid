@@ -108,4 +108,20 @@ final class RowTest extends SapphireTest
     {
         self::assertSame(ContainerType::Row, Row::singleton()->getContainerType());
     }
+
+    // ── Row classes ─────────────────────────────────────────────
+
+    public function testGetRowClassesReturnsNonEmptyString(): void
+    {
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        Config::modify()->set(Row::class, 'auto_scaffold', false);
+
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        $classes = $row->getRowClasses();
+
+        self::assertNotEmpty($classes);
+    }
 }

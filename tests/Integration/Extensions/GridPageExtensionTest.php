@@ -11,6 +11,7 @@ use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Extensions\GridPageExtension;
+use WeDevelop\Grid\Forms\GridEditorField;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
@@ -145,5 +146,15 @@ final class GridPageExtensionTest extends SapphireTest
         self::assertSame(6, $settings->overrides['lg']->width);
         self::assertSame(1, $settings->overrides['lg']->offset);
         self::assertFalse($settings->overrides['lg']->visible);
+    }
+
+    public function testUpdateCMSFieldsInjectsGridEditorField(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $fields = $page->getCMSFields();
+
+        self::assertNull($fields->dataFieldByName('Content'), 'Content field should be removed by extension');
+        self::assertNotNull($fields->dataFieldByName('GridEditor'), 'GridEditor field should be injected');
+        self::assertInstanceOf(GridEditorField::class, $fields->dataFieldByName('GridEditor'));
     }
 }

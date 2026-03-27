@@ -187,4 +187,52 @@ final class SectionTest extends SapphireTest
     {
         self::assertSame(ContainerType::Section, Section::singleton()->getContainerType());
     }
+
+    // ── Container classes ───────────────────────────────────────
+
+    public function testGetContainerClasses(): void
+    {
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+
+        $classes = $section->getContainerClasses();
+
+        self::assertNotEmpty($classes);
+    }
+
+    public function testGetContainerClassesFluid(): void
+    {
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+
+        Config::modify()->set(Section::class, 'fluid_container', true);
+        $fluidSection = GridTreeFactory::section($page);
+        $fluidClasses = $fluidSection->getContainerClasses();
+
+        Config::modify()->set(Section::class, 'fluid_container', false);
+        $fixedSection = GridTreeFactory::section($page);
+        $fixedClasses = $fixedSection->getContainerClasses();
+
+        self::assertNotEmpty($fluidClasses);
+        self::assertNotEmpty($fixedClasses);
+        self::assertNotSame($fluidClasses, $fixedClasses);
+    }
+
+    // ── Summary ─────────────────────────────────────────────────
+
+    public function testGetSummaryDelegatesToChildCountSummary(): void
+    {
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        Config::modify()->set(Row::class, 'auto_scaffold', false);
+
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        GridTreeFactory::row($section);
+        GridTreeFactory::row($section);
+
+        self::assertSame($section->getChildCountSummary(), $section->getSummary());
+    }
 }
