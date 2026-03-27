@@ -41,7 +41,14 @@ final class ColumnTest extends SapphireTest
         // Create column without explicit GridSettings — onBeforeWrite should initialize
         $column = GridTreeFactory::column($row);
 
-        $settings = $column->getGridSettings();
+        // Reload from DB to verify settings were persisted, not just the in-memory fallback
+        $reloaded = Column::get()->byID($column->ID);
+        self::assertInstanceOf(Column::class, $reloaded);
+
+        // Verify the composite field was actually written (not relying on getValue fallback)
+        self::assertTrue($reloaded->dbObject('GridSettings')->exists());
+
+        $settings = $reloaded->getGridSettings();
         $expected = GridSettings::initial(12);
 
         self::assertSame($expected->default->width, $settings->default->width);
@@ -197,5 +204,30 @@ final class ColumnTest extends SapphireTest
         $fields = $column->getCMSFields();
 
         self::assertNotNull($fields->fieldByName('Root.Grid'));
+    }
+
+    // ── GridSettings not re-initialized on subsequent write ────
+
+    public function testGridSettingsNotReInitializedOnSubsequentWrite(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        $custom = new GridSettings(new ViewportConfig(8, 2, true), []);
+        $column = GridTreeFactory::column($row, gridSettings: $custom);
+
+        // Write again with a title change
+        $column->Title = 'Changed';
+        $column->write();
+
+        // Reload from DB
+        $reloaded = Column::get()->byID($column->ID);
+        self::assertInstanceOf(Column::class, $reloaded);
+
+        $settings = $reloaded->getGridSettings();
+        self::assertSame(8, $settings->default->width);
+        self::assertSame(2, $settings->default->offset);
+        self::assertTrue($settings->default->visible);
     }
 }

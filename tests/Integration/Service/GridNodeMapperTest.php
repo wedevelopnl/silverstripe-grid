@@ -61,22 +61,29 @@ final class GridNodeMapperTest extends SapphireTest
         self::assertIsArray($node->children);
         self::assertNull($node->gridSettings);
 
-        // blockSchema fields
-        self::assertArrayHasKey('typeName', $node->blockSchema);
-        self::assertArrayHasKey('type', $node->blockSchema);
-        self::assertArrayHasKey('title', $node->blockSchema);
-        self::assertArrayHasKey('summary', $node->blockSchema);
-        self::assertArrayHasKey('label', $node->blockSchema);
-        self::assertArrayHasKey('icon', $node->blockSchema);
+        // blockSchema fields — assert concrete values, not just key existence
+        self::assertSame($section->getTypeName(), $node->blockSchema['typeName']);
+        self::assertSame('Section', $node->blockSchema['type']);
+        self::assertSame('My Section', $node->blockSchema['title']);
+        self::assertSame($section->getSummary(), $node->blockSchema['summary']);
+        self::assertSame('Section', $node->blockSchema['label']);
+        self::assertSame('font-icon-block-layout', $node->blockSchema['icon']);
 
-        // Permission booleans
-        self::assertIsBool($node->canDelete);
-        self::assertIsBool($node->canPublish);
-        self::assertIsBool($node->canUnpublish);
-        self::assertIsBool($node->canCreate);
+        // Edit link present for a Section with a page parent
+        self::assertNotNull($node->editLink);
 
-        // Version (written once, so at least 1)
-        self::assertGreaterThanOrEqual(1, $node->version);
+        // Version matches the element's version
+        self::assertSame((int) $section->Version, $node->version);
+
+        // Permission booleans — logged in with CMS_ACCESS
+        self::assertTrue($node->canDelete);
+        self::assertTrue($node->canPublish);
+        self::assertTrue($node->canCreate);
+
+        // Metadata fields
+        self::assertNull($node->obsoleteClassName);
+        self::assertIsArray($node->statusFlags);
+        self::assertIsArray($node->extensions);
     }
 
     public function testMapToNodeUntitledFallback(): void
@@ -157,6 +164,7 @@ final class GridNodeMapperTest extends SapphireTest
 
         $allowed = $this->mapper->getAllowedTypes($section);
 
+        // Generic structure check for all entries
         foreach ($allowed as $typeInfo) {
             self::assertArrayHasKey('label', $typeInfo);
             self::assertArrayHasKey('icon', $typeInfo);
@@ -165,5 +173,12 @@ final class GridNodeMapperTest extends SapphireTest
             self::assertNotEmpty($typeInfo['icon']);
             self::assertIsString($typeInfo['description']);
         }
+
+        // Assert concrete values for the Row entry (Section allows only Rows)
+        self::assertArrayHasKey(Row::class, $allowed);
+        $rowMeta = $allowed[Row::class];
+        self::assertSame('Row', $rowMeta['label']);
+        self::assertSame('font-icon-columns', $rowMeta['icon']);
+        self::assertSame('Horizontal container that holds columns within a section', $rowMeta['description']);
     }
 }

@@ -130,6 +130,7 @@ final class GridElementTest extends SapphireTest
         self::assertSame(2, $inserted->Sort);
         self::assertSame(3, $b->Sort);
         self::assertSame(4, $c->Sort);
+        self::assertSame('Inserted', $inserted->Title);
     }
 
     public function testInsertAfterSiblingNonexistentReference(): void
@@ -236,6 +237,7 @@ final class GridElementTest extends SapphireTest
 
         self::assertNotNull($link);
         self::assertStringContainsString((string) $contentElement->ID, $link);
+        self::assertStringContainsString('item/' . $contentElement->ID, $link);
     }
 
     public function testGetCMSEditLinkOrphanReturnsNull(): void
@@ -310,6 +312,9 @@ final class GridElementTest extends SapphireTest
         self::assertArrayHasKey('summary', $schema);
         self::assertSame($element->ID, $schema['id']);
         self::assertSame('My Block', $schema['title']);
+        self::assertSame('Content element', $schema['type']);
+        self::assertSame('', $schema['summary']);
+        self::assertStringNotContainsString('\\', $schema['typeName']);
     }
 
     // ── Title size class ────────────────────────────────────────
@@ -369,6 +374,9 @@ final class GridElementTest extends SapphireTest
 
         self::assertNull($fields->dataFieldByName('Sort'));
         self::assertNull($fields->dataFieldByName('ParentID'));
+        self::assertNull($fields->dataFieldByName('ExtraClass'));
+        self::assertNull($fields->dataFieldByName('Style'));
+        self::assertNull($fields->dataFieldByName('ParentClass'));
     }
 
     public function testGetCMSFieldsIncludesTitleClassWhenEnabled(): void
@@ -432,6 +440,33 @@ final class GridElementTest extends SapphireTest
 
         $this->logOut();
         self::assertFalse($element->canDelete());
+    }
+
+    // ── Sort guard boundary ────────────────────────────────────
+
+    public function testEnsureSortSetGuardPreservesPositiveSort(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $element = GridTreeFactory::contentElement($column, sort: 5);
+
+        // Reload from DB to confirm persistence
+        $reloaded = ContentElement::get()->byID($element->ID);
+        self::assertSame(5, $reloaded->Sort);
+    }
+
+    // ── getType ─────────────────────────────────────────────────
+
+    public function testGetTypeReturnsConfiguredSingularName(): void
+    {
+        $section = Section::create();
+        self::assertSame('Section', $section->getType());
+
+        $content = ContentElement::create();
+        self::assertSame('Content element', $content->getType());
     }
 
     // ── Helpers ──────────────────────────────────────────────────

@@ -55,6 +55,12 @@ final class DBGridSettingsTest extends SapphireTest
         self::assertSame(6, $settings->overrides['lg']->width);
         self::assertSame(1, $settings->overrides['lg']->offset);
         self::assertFalse($settings->overrides['lg']->visible);
+
+        // Verify raw sub-field values match
+        /** @var DBGridSettings $dbField */
+        $dbField = $reloaded->dbObject('GridSettings');
+        self::assertSame(8, $dbField->getField('DefaultWidth'));
+        self::assertSame(2, $dbField->getField('DefaultOffset'));
     }
 
     public function testSetValueWithJsonString(): void
@@ -246,5 +252,16 @@ final class DBGridSettingsTest extends SapphireTest
         self::assertSame(8, $result->default->width);
         self::assertSame(1, $result->default->offset);
         self::assertTrue($result->default->visible);
+    }
+
+    public function testSetValueWithInvalidStringDoesNotSetSubFields(): void
+    {
+        // Create a fresh composite field not bound to a record
+        $dbField = DBGridSettings::create('GridSettings');
+
+        // Invalid JSON falls through to parent::setValue(null) — sub-fields not populated
+        $dbField->setValue('not-valid-json');
+
+        self::assertNull($dbField->getValue());
     }
 }

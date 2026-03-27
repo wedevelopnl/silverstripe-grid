@@ -126,6 +126,15 @@ final class SectionTest extends SapphireTest
         self::assertSame(2, $main2->Sort);
         // Sidebar zone has independent Sort numbering
         self::assertSame(1, $sidebar1->Sort);
+
+        // Reload from DB to confirm persisted values match
+        $main1Reloaded = Section::get()->byID($main1->ID);
+        $main2Reloaded = Section::get()->byID($main2->ID);
+        $sidebar1Reloaded = Section::get()->byID($sidebar1->ID);
+
+        self::assertSame(1, $main1Reloaded->Sort);
+        self::assertSame(2, $main2Reloaded->Sort);
+        self::assertSame(1, $sidebar1Reloaded->Sort);
     }
 
     // ── Container behavior (ContainerElementTrait) ──────────────

@@ -10,10 +10,38 @@
     },
     mutators: {
         "@default": true,
+        // SilverStripe calls methods by name via reflection (extend, $dependencies, Injector).
+        // Visibility changes don't break tests but would break the framework at runtime.
+        "PublicVisibility": false,
+        "ProtectedVisibility": false,
         "CastInt": {
             ignoreSourceCodeByRegex: [
                 // PHP coerces numeric strings in arithmetic; explicit (int) cast documents intent
                 ".*\\(int\\) \\$m\\[.num.\\].*",
+            ],
+        },
+        "Concat": {
+            ignoreSourceCodeByRegex: [
+                // i18n key concatenation: _t(self::class . '.KEY', 'fallback') — mutating the
+                // key still returns the fallback string, making the mutation undetectable without
+                // testing the i18n system itself
+                ".*_t\\(.*",
+            ],
+        },
+        "ConcatOperandRemoval": {
+            ignoreSourceCodeByRegex: [
+                ".*_t\\(.*",
+            ],
+        },
+        "MethodCallRemoval": {
+            ignoreSourceCodeByRegex: [
+                // Extension point hooks: ->extend('updateX', $var) are contracts for third-party
+                // code. Removing them has no effect without active extensions in test env.
+                ".*->extend\\(.*",
+                // Parent lifecycle calls (parent::onAfterWrite, parent::onBeforeWrite) are
+                // framework contracts. Removing them breaks the lifecycle chain but tests
+                // don't observe the parent's side effects directly.
+                ".*parent::on(Before|After)Write\\(\\).*",
             ],
         },
     },

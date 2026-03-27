@@ -185,11 +185,17 @@ final class ReorderServiceTest extends SapphireTest
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
+        $originalSort = $row->Sort;
+
         // Row cannot be placed at page level — validator should reject
         $result = $this->service->reorder($row, $page, null);
 
         self::assertTrue($result->isErr());
         self::assertNotEmpty($result->errors());
+
+        // Element should not have been modified
+        $reloaded = GridElement::get()->byID($row->ID);
+        self::assertSame($originalSort, $reloaded->Sort);
     }
 
     public function testCrossParentSectionMoveWithZoneFiltering(): void

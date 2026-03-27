@@ -39,11 +39,14 @@ final class GridAdapterTest extends SapphireTest
     {
         $viewports = $this->adapter->getViewports();
 
-        self::assertNotEmpty($viewports);
+        self::assertCount(6, $viewports);
 
-        foreach ($viewports as $viewport) {
-            self::assertInstanceOf(Viewport::class, $viewport);
-        }
+        $keys = array_map(
+            static fn (Viewport $vp): string => $vp->key,
+            $viewports,
+        );
+
+        self::assertSame(['xs', 'sm', 'md', 'lg', 'xl', 'xxl'], $keys);
     }
 
     public function testGetColumnCountReturnsPositiveInt(): void
@@ -56,23 +59,18 @@ final class GridAdapterTest extends SapphireTest
         $default = $this->adapter->getDefaultViewport();
 
         self::assertInstanceOf(Viewport::class, $default);
-
-        $keys = array_map(
-            static fn (Viewport $vp): string => $vp->key,
-            $this->adapter->getViewports(),
-        );
-
-        self::assertContains($default->key, $keys);
+        self::assertSame('md', $default->key);
+        self::assertSame('Medium', $default->label);
     }
 
     public function testGetContainerMaxWidthReturnsPositiveInt(): void
     {
-        self::assertGreaterThan(0, $this->adapter->getContainerMaxWidth());
+        self::assertSame(1320, $this->adapter->getContainerMaxWidth());
     }
 
     public function testGetColumnPixelWidth(): void
     {
-        self::assertGreaterThan(0, $this->adapter->getColumnPixelWidth(6));
+        self::assertSame(660, $this->adapter->getColumnPixelWidth(6));
         self::assertSame(1320, $this->adapter->getColumnPixelWidth(12));
     }
 
@@ -82,16 +80,14 @@ final class GridAdapterTest extends SapphireTest
     {
         $class = $this->adapter->getWidthClass('xs', 6);
 
-        self::assertNotEmpty($class);
-        self::assertIsString($class);
+        self::assertSame('col-6', $class);
     }
 
     public function testGetWidthClassForResponsiveViewport(): void
     {
         $class = $this->adapter->getWidthClass('md', 6);
 
-        self::assertNotEmpty($class);
-        self::assertIsString($class);
+        self::assertSame('col-md-6', $class);
     }
 
     // -- Offset classes ------------------------------------------------------
@@ -100,16 +96,14 @@ final class GridAdapterTest extends SapphireTest
     {
         $class = $this->adapter->getOffsetClass('xs', 3);
 
-        self::assertNotEmpty($class);
-        self::assertIsString($class);
+        self::assertSame('offset-3', $class);
     }
 
     public function testGetOffsetClassForResponsiveViewport(): void
     {
         $class = $this->adapter->getOffsetClass('md', 3);
 
-        self::assertNotEmpty($class);
-        self::assertIsString($class);
+        self::assertSame('offset-md-3', $class);
     }
 
     // -- Visibility classes --------------------------------------------------
@@ -118,32 +112,21 @@ final class GridAdapterTest extends SapphireTest
     {
         $classes = $this->adapter->getVisibilityClasses('md');
 
-        self::assertCount(2, $classes);
-
-        foreach ($classes as $class) {
-            self::assertIsString($class);
-            self::assertNotEmpty($class);
-        }
+        self::assertSame(['d-md-none', 'd-lg-block'], $classes);
     }
 
     public function testGetVisibilityClassesForLastViewport(): void
     {
         $classes = $this->adapter->getVisibilityClasses('xxl');
 
-        self::assertCount(1, $classes);
-        self::assertNotEmpty($classes[0]);
+        self::assertSame(['d-xxl-none'], $classes);
     }
 
     public function testGetVisibilityClassesForBaseViewport(): void
     {
         $classes = $this->adapter->getVisibilityClasses('xs');
 
-        self::assertCount(2, $classes);
-
-        foreach ($classes as $class) {
-            self::assertIsString($class);
-            self::assertNotEmpty($class);
-        }
+        self::assertSame(['d-none', 'd-sm-block'], $classes);
     }
 
     public function testGetVisibilityClassesThrowsForInvalidViewport(): void
@@ -157,21 +140,17 @@ final class GridAdapterTest extends SapphireTest
 
     public function testGetRowClassesReturnsNonEmptyString(): void
     {
-        self::assertNotEmpty($this->adapter->getRowClasses());
+        self::assertSame('row', $this->adapter->getRowClasses());
     }
 
     public function testGetContainerClassNonFluid(): void
     {
-        self::assertNotEmpty($this->adapter->getContainerClass(false));
+        self::assertSame('container', $this->adapter->getContainerClass(false));
     }
 
     public function testGetContainerClassFluid(): void
     {
-        $fluid = $this->adapter->getContainerClass(true);
-        $nonFluid = $this->adapter->getContainerClass(false);
-
-        self::assertNotEmpty($fluid);
-        self::assertNotSame($fluid, $nonFluid);
+        self::assertSame('container-fluid', $this->adapter->getContainerClass(true));
     }
 
     public function testGetTitleClassOptionsReturnsNonEmptyArray(): void
@@ -186,19 +165,19 @@ final class GridAdapterTest extends SapphireTest
 
     public function testGetBaseWidthClass(): void
     {
-        self::assertNotEmpty($this->adapter->getBaseWidthClass(6));
+        self::assertSame('col-6', $this->adapter->getBaseWidthClass(6));
     }
 
     public function testGetBaseOffsetClass(): void
     {
-        self::assertNotEmpty($this->adapter->getBaseOffsetClass(3));
+        self::assertSame('offset-3', $this->adapter->getBaseOffsetClass(3));
     }
 
     // -- Offset strategy -----------------------------------------------------
 
     public function testGetOffsetStrategyReturnsEnum(): void
     {
-        self::assertInstanceOf(OffsetStrategy::class, $this->adapter->getOffsetStrategy());
+        self::assertSame(OffsetStrategy::Margin, $this->adapter->getOffsetStrategy());
     }
 
     // -- Content layout: aspect ratio ----------------------------------------
@@ -209,102 +188,87 @@ final class GridAdapterTest extends SapphireTest
     }
 
     /**
-     * @return array<string, array{AspectRatio}>
+     * @return array<string, array{AspectRatio, string}>
      */
     public static function nonAutoAspectRatioProvider(): array
     {
         return [
-            'Square' => [AspectRatio::Square],
-            'FourByThree' => [AspectRatio::FourByThree],
-            'SixteenByNine' => [AspectRatio::SixteenByNine],
+            'Square' => [AspectRatio::Square, 'ratio ratio-1x1'],
+            'FourByThree' => [AspectRatio::FourByThree, 'ratio ratio-4x3'],
+            'SixteenByNine' => [AspectRatio::SixteenByNine, 'ratio ratio-16x9'],
         ];
     }
 
     #[DataProvider('nonAutoAspectRatioProvider')]
-    public function testGetAspectRatioClassNonAutoReturnsString(AspectRatio $ratio): void
+    public function testGetAspectRatioClassNonAutoReturnsString(AspectRatio $ratio, string $expected): void
     {
-        $class = $this->adapter->getAspectRatioClass($ratio);
-
-        self::assertIsString($class);
-        self::assertNotEmpty($class);
+        self::assertSame($expected, $this->adapter->getAspectRatioClass($ratio));
     }
 
     // -- Content layout: vertical alignment ----------------------------------
 
     /**
-     * @return array<string, array{VerticalAlignment}>
+     * @return array<string, array{VerticalAlignment, string}>
      */
     public static function verticalAlignmentProvider(): array
     {
         return [
-            'Top' => [VerticalAlignment::Top],
-            'Center' => [VerticalAlignment::Center],
-            'Bottom' => [VerticalAlignment::Bottom],
+            'Top' => [VerticalAlignment::Top, 'align-items-start'],
+            'Center' => [VerticalAlignment::Center, 'align-items-center'],
+            'Bottom' => [VerticalAlignment::Bottom, 'align-items-end'],
         ];
     }
 
     #[DataProvider('verticalAlignmentProvider')]
-    public function testGetVerticalAlignmentClass(VerticalAlignment $alignment): void
+    public function testGetVerticalAlignmentClass(VerticalAlignment $alignment, string $expected): void
     {
-        $class = $this->adapter->getVerticalAlignmentClass($alignment);
-
-        self::assertIsString($class);
-        self::assertNotEmpty($class);
+        self::assertSame($expected, $this->adapter->getVerticalAlignmentClass($alignment));
     }
 
     // -- Content layout: media/content order ---------------------------------
 
     /**
-     * @return array<string, array{MediaPosition}>
+     * @return array<string, array{MediaPosition, string, string}>
      */
     public static function mediaPositionProvider(): array
     {
         return [
-            'First' => [MediaPosition::First],
-            'Last' => [MediaPosition::Last],
-            'LastOnDesktop' => [MediaPosition::LastOnDesktop],
+            'First' => [MediaPosition::First, 'order-1', 'order-2'],
+            'Last' => [MediaPosition::Last, 'order-2', 'order-1'],
+            'LastOnDesktop' => [MediaPosition::LastOnDesktop, 'order-1 order-md-2', 'order-2 order-md-1'],
         ];
     }
 
     #[DataProvider('mediaPositionProvider')]
-    public function testGetMediaOrderClasses(MediaPosition $position): void
+    public function testGetMediaOrderClasses(MediaPosition $position, string $expectedMedia): void
     {
-        $class = $this->adapter->getMediaOrderClasses($position);
-
-        self::assertIsString($class);
-        self::assertNotEmpty($class);
+        self::assertSame($expectedMedia, $this->adapter->getMediaOrderClasses($position));
     }
 
     #[DataProvider('mediaPositionProvider')]
-    public function testGetContentOrderClasses(MediaPosition $position): void
+    public function testGetContentOrderClasses(MediaPosition $position, string $_expectedMedia, string $expectedContent): void
     {
-        $class = $this->adapter->getContentOrderClasses($position);
-
-        self::assertIsString($class);
-        self::assertNotEmpty($class);
+        self::assertSame($expectedContent, $this->adapter->getContentOrderClasses($position));
     }
 
     // -- Content layout: media/content width ---------------------------------
 
     public function testGetMediaWidthClass(): void
     {
-        self::assertNotEmpty($this->adapter->getMediaWidthClass(6));
+        self::assertSame('col-md-6', $this->adapter->getMediaWidthClass(6));
     }
 
     public function testGetContentWidthClass(): void
     {
-        self::assertNotEmpty($this->adapter->getContentWidthClass(6));
+        self::assertSame('col-md-6', $this->adapter->getContentWidthClass(6));
     }
 
     // -- Content layout: padding ---------------------------------------------
 
     public function testGetPaddingClass(): void
     {
-        $left = $this->adapter->getPaddingClass('left', 3);
-        $right = $this->adapter->getPaddingClass('right', 3);
-
-        self::assertNotEmpty($left);
-        self::assertNotEmpty($right);
+        self::assertSame('ps-md-3', $this->adapter->getPaddingClass('left', 3));
+        self::assertSame('pe-md-3', $this->adapter->getPaddingClass('right', 3));
     }
 
     // -- Content layout: base column class -----------------------------------

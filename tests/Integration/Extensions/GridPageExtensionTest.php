@@ -154,6 +154,7 @@ final class GridPageExtensionTest extends SapphireTest
         $fields = $page->getCMSFields();
 
         self::assertNull($fields->dataFieldByName('Content'), 'Content field should be removed by extension');
+        self::assertNull($fields->dataFieldByName('Sections'), 'Sections relation field should be removed by extension');
         self::assertNotNull($fields->dataFieldByName('GridEditor'), 'GridEditor field should be injected');
         self::assertInstanceOf(GridEditorField::class, $fields->dataFieldByName('GridEditor'));
     }
