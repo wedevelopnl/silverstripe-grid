@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Service;
 
-use SilverStripe\Core\Config\Configurable;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Value\GridSettings;
@@ -18,21 +17,32 @@ use WeDevelop\Grid\Value\ViewportConfig;
  * The result is a flat map of viewport key → effective ViewportConfig, ready for
  * CSS class generation by ColumnClassResolver.
  *
- * The override strategy is a module-level config, not a framework adapter property:
+ * The override strategy is configured via DI constructor injection:
  * ```yaml
  * WeDevelop\Grid\Service\GridSettingsResolver:
- *   override_strategy: cascade
+ *   constructor:
+ *     overrideStrategy: cascade
  * ```
  */
 final class GridSettingsResolver
 {
-    use Configurable;
+    private readonly OverrideStrategy $strategy;
 
-    private static string $override_strategy = 'isolated';
-
+    /**
+     * @param non-empty-string $overrideStrategy 'isolated' or 'cascade'
+     * @throws InvalidGridValueException If the strategy string is not valid
+     */
     public function __construct(
         private readonly GridAdapterInterface $adapter,
+        string $overrideStrategy = 'isolated',
     ) {
+        $strategy = OverrideStrategy::tryFrom($overrideStrategy);
+
+        if ($strategy === null) {
+            throw InvalidGridValueException::forOverrideStrategy($overrideStrategy);
+        }
+
+        $this->strategy = $strategy;
     }
 
     /**
@@ -40,26 +50,10 @@ final class GridSettingsResolver
      */
     public function resolveEffective(GridSettings $settings): array
     {
-        return match ($this->resolveStrategy()) {
+        return match ($this->strategy) {
             OverrideStrategy::Isolated => $this->resolveIsolated($settings),
             OverrideStrategy::Cascade => $this->resolveCascade($settings),
         };
-    }
-
-    /**
-     * @throws InvalidGridValueException
-     */
-    private function resolveStrategy(): OverrideStrategy
-    {
-        /** @var string $value */
-        $value = static::config()->get('override_strategy');
-        $strategy = OverrideStrategy::tryFrom($value);
-
-        if ($strategy === null) {
-            throw InvalidGridValueException::forOverrideStrategy($value);
-        }
-
-        return $strategy;
     }
 
     /**

@@ -24,11 +24,11 @@ final class ColumnClassResolver
         $parts = [];
         $viewports = $adapter->getViewports();
 
-        // Track effective state for mobile-first CSS emission
+        // Sentinels: width=0 ensures first viewport always emits (valid widths are >0).
+        // Offset=0 suppresses emission of offset-0 at the first viewport (it's the default).
         $prevWidth = 0;
         $prevOffset = 0;
         $prevVisible = true;
-        $isFirst = true;
 
         foreach ($viewports as $viewport) {
             $key = $viewport->key;
@@ -41,18 +41,13 @@ final class ColumnClassResolver
             $visible = $config->visible;
 
             if (!$visible && $prevVisible) {
-                // Transitioning to hidden — emit visibility classes
                 $parts = [...$parts, ...$adapter->getVisibilityClasses($key)];
             } elseif ($visible) {
-                // Emit width when it changes or at the base viewport
-                if ($isFirst || $width !== $prevWidth || (!$prevVisible)) {
+                if ($width !== $prevWidth || !$prevVisible) {
                     $parts[] = $adapter->getWidthClass($key, $width);
                 }
 
-                // Emit offset when it changes (including reset to 0)
-                if ($isFirst && $offset > 0) {
-                    $parts[] = $adapter->getOffsetClass($key, $offset);
-                } elseif (!$isFirst && $offset !== $prevOffset) {
+                if ($offset !== $prevOffset) {
                     $parts[] = $adapter->getOffsetClass($key, $offset);
                 }
             }
@@ -60,7 +55,6 @@ final class ColumnClassResolver
             $prevWidth = $width;
             $prevOffset = $offset;
             $prevVisible = $visible;
-            $isFirst = false;
         }
 
         return implode(' ', $parts);

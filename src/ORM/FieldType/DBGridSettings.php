@@ -11,6 +11,7 @@ use SilverStripe\Forms\FormField;
 use SilverStripe\Model\ModelData;
 use SilverStripe\ORM\FieldType\DBComposite;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Service\GridSettingsSerializer;
 use WeDevelop\Grid\Validation\GridSettingsFieldValidator;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
@@ -64,7 +65,7 @@ final class DBGridSettings extends DBComposite
 
         $default = new ViewportConfig($width, $offset, $visible);
 
-        $overrides = $this->deserializeOverrides($this->getField('Overrides'));
+        $overrides = GridSettingsSerializer::deserializeOverrides($this->getField('Overrides'));
 
         return new GridSettings($default, $overrides);
     }
@@ -86,7 +87,7 @@ final class DBGridSettings extends DBComposite
         }
 
         if (is_string($value)) {
-            $parsed = $this->parseJsonString($value);
+            $parsed = GridSettingsSerializer::fromJson($value);
             if ($parsed instanceof GridSettings) {
                 return $this->applyGridSettings($parsed, $record, $markChanged);
             }
@@ -113,41 +114,9 @@ final class DBGridSettings extends DBComposite
         $this->setField('DefaultWidth', $value->default->width);
         $this->setField('DefaultOffset', $value->default->offset);
         $this->setField('DefaultVisible', $value->default->visible);
-        $this->setField('Overrides', $this->serializeOverrides($value->overrides));
+        $this->setField('Overrides', GridSettingsSerializer::serializeOverrides($value->overrides));
 
         return $this;
-    }
-
-    /**
-     * Parse a JSON string into a GridSettings VO.
-     *
-     * Returns null for empty, invalid, or structurally incomplete JSON.
-     */
-    private function parseJsonString(string $raw): ?GridSettings
-    {
-        if ($raw === '' || $raw === '{}' || $raw === '[]') {
-            return null;
-        }
-
-        $decoded = json_decode($raw, true);
-        if (!is_array($decoded) || !isset($decoded['default']) || !is_array($decoded['default'])) {
-            return null;
-        }
-
-        $defaultData = $decoded['default'];
-        if (!isset($defaultData['width']) || !is_int($defaultData['width']) || $defaultData['width'] <= 0) {
-            return null;
-        }
-
-        /** @var array{width: int, offset: int, visible: bool} $defaultData */
-        $default = ViewportConfig::fromArray($defaultData);
-        $overrides = $this->deserializeOverrides(
-            isset($decoded['overrides']) && is_array($decoded['overrides'])
-                ? json_encode($decoded['overrides'], JSON_THROW_ON_ERROR)
-                : '',
-        );
-
-        return new GridSettings($default, $overrides);
     }
 
     /**
@@ -194,54 +163,4 @@ final class DBGridSettings extends DBComposite
         return null;
     }
 
-    /**
-     * Serialize viewport overrides to JSON for storage.
-     *
-     * Returns null when there are no overrides — no empty strings or
-     * empty JSON objects are stored.
-     *
-     * @param array<non-empty-string, ViewportConfig> $overrides
-     */
-    private function serializeOverrides(array $overrides): ?string
-    {
-        if ($overrides === []) {
-            return null;
-        }
-
-        $data = [];
-        foreach ($overrides as $key => $config) {
-            $data[$key] = $config->toArray();
-        }
-
-        return json_encode($data, JSON_THROW_ON_ERROR);
-    }
-
-    /**
-     * Deserialize viewport overrides from JSON.
-     *
-     * @return array<non-empty-string, ViewportConfig>
-     */
-    private function deserializeOverrides(mixed $raw): array
-    {
-        if (!is_string($raw)) {
-            return [];
-        }
-
-        $decoded = json_decode($raw, true);
-
-        if (!is_array($decoded)) {
-            return [];
-        }
-
-        $overrides = [];
-        foreach ($decoded as $key => $data) {
-            if (is_string($key) && $key !== '' && is_array($data)) {
-                /** @var array{width: int, offset: int, visible: bool} $data */
-                $overrides[$key] = ViewportConfig::fromArray($data);
-            }
-        }
-
-        /** @var array<non-empty-string, ViewportConfig> $overrides */
-        return $overrides;
-    }
 }

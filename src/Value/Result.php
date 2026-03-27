@@ -42,8 +42,11 @@ final readonly class Result
      */
     public static function fail(ValidationError $first, ValidationError ...$rest): self
     {
+        /** @var list<ValidationError> $errors Variadic ...$rest is always a list */
+        $errors = [$first, ...$rest];
+
         /** @var self<never> Safe: failed Results never expose their value via unwrap() */
-        $result = new self(ok: false, value: null, errors: [$first, ...array_values($rest)]);
+        $result = new self(ok: false, value: null, errors: $errors);
 
         return $result;
     }

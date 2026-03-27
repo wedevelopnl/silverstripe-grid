@@ -19,17 +19,9 @@ final class TitleGenerator
      */
     public static function generateCopyTitle(string $title): string
     {
-        $hasCopyPattern = '/^.*(\scopy($|\s\d+$))/';
-        $hasNumPattern = '/^.*(\s\d+$)/';
-
-        if (preg_match($hasCopyPattern, $title, $parts) === 1) {
-            $copy = $parts[1];
-
-            if (preg_match($hasNumPattern, $copy, $numParts) === 1) {
-                $num = trim($numParts[1]);
-                $inc = (int) $num + 1;
-
-                return substr($title, 0, -strlen($num)) . $inc;
+        if (preg_match('/^(?<base>.*)\scopy(?:\s(?<num>\d+))?$/', $title, $m) === 1) {
+            if (isset($m['num'])) {
+                return $m['base'] . ' copy ' . ((int) $m['num'] + 1);
             }
 
             return $title . ' 2';
