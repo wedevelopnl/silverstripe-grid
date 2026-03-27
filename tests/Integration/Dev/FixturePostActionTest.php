@@ -58,12 +58,17 @@ final class FixturePostActionTest extends SapphireTest
         $page = $this->objFromFixture(\SilverStripe\CMS\Model\SiteTree::class, 'test_page');
         $section = GridTreeFactory::section($page, title: 'Original');
 
-        $action = new FixturePostAction('modify', Section::class, 'unused', fields: ['Title' => 'Modified']);
+        // Two fields to kill ArrayItemRemoval on the foreach iteration
+        $action = new FixturePostAction('modify', Section::class, 'unused', fields: [
+            'Title' => 'Modified',
+            'Zone' => 'sidebar',
+        ]);
         $action->apply($section);
 
         $reloaded = Section::get()->byID($section->ID);
         self::assertNotNull($reloaded);
         self::assertSame('Modified', $reloaded->Title);
+        self::assertSame('sidebar', $reloaded->Zone);
     }
 
     public function testApplyAttachImageThrowsWithoutRequiredFields(): void

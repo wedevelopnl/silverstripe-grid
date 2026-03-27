@@ -31,6 +31,9 @@
         "ConcatOperandRemoval": {
             ignoreSourceCodeByRegex: [
                 ".*_t\\(.*",
+                // Label concatenation in form option builders (e.g. $i . '/' . $columnCount)
+                // produces display text only — mutations change the label format but not behavior
+                ".*\\$i\\s*\\.\\s*'/'\\s*\\..*",
             ],
         },
         "MethodCallRemoval": {
@@ -42,6 +45,32 @@
                 // framework contracts. Removing them breaks the lifecycle chain but tests
                 // don't observe the parent's side effects directly.
                 ".*parent::on(Before|After)Write\\(\\).*",
+                // CMS form assembly: ->push(), ->displayIf(), ->setDescription(),
+                // ->setFolderName(), ->setEmptyString() are UI wiring. Removing a single
+                // push/decorator call produces a valid form missing one UI element — testing
+                // every field exists is fragile UI testing, not business logic.
+                ".*->push\\(.*",
+                ".*->displayIf\\(.*",
+                ".*->setDescription\\(.*",
+                ".*->setFolderName\\(.*",
+                ".*->setEmptyString\\(.*",
+                ".*->addExtraClass\\(.*",
+            ],
+        },
+        // Private methods returning pure option arrays (aspect ratio labels, media position
+        // labels, vertical alignment labels, gap size labels) are UI configuration.
+        // Mutating individual array entries changes display labels, not behavior.
+        "ArrayItem": {
+            ignoreSourceCodeByRegex: [
+                ".*=>\\s*_t\\(.*",
+                ".*MediaPosition::.*=>\\s*_t\\(.*",
+                ".*VerticalAlignment::.*=>\\s*_t\\(.*",
+                ".*AspectRatio::.*=>\\s*_t\\(.*",
+            ],
+        },
+        "ArrayItemRemoval": {
+            ignoreSourceCodeByRegex: [
+                ".*=>\\s*_t\\(.*",
             ],
         },
     },

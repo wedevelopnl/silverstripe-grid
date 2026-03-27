@@ -49,6 +49,9 @@ final class GridSettingsFieldTest extends SapphireTest
         $field = $this->createField();
         $viewportData = $field->getViewportData();
 
+        // Coalesce fallback title
+        self::assertSame('Grid Settings', $field->Title());
+
         $md = $viewportData->find('Key', 'md');
         self::assertNotNull($md);
         self::assertSame(12, $md->Width);
@@ -158,11 +161,17 @@ final class GridSettingsFieldTest extends SapphireTest
     public function testGetViewportDataMarksDefaultViewport(): void
     {
         $field = $this->createField();
+        $field->setValue(new GridSettings(new ViewportConfig(8, 1, true)));
         $viewportData = $field->getViewportData();
 
         $md = $viewportData->find('Key', 'md');
         self::assertNotNull($md);
         self::assertTrue($md->IsDefault);
+        self::assertSame(8, $md->Width);
+        self::assertSame(1, $md->Offset);
+        self::assertTrue($md->Visible);
+        self::assertSame('Medium', $md->Label);
+        self::assertSame('GridSettings', $md->FieldName);
 
         $xs = $viewportData->find('Key', 'xs');
         self::assertNotNull($xs);
@@ -179,8 +188,21 @@ final class GridSettingsFieldTest extends SapphireTest
 
         // Width options: 1 through 12
         self::assertCount(12, $md->WidthOptions);
+        $firstWidth = $md->WidthOptions->first();
+        self::assertSame(1, $firstWidth->Value);
+        self::assertSame('1/12', $firstWidth->Label);
+        $lastWidth = $md->WidthOptions->last();
+        self::assertSame(12, $lastWidth->Value);
+        self::assertSame('12/12', $lastWidth->Label);
+
         // Offset options: 0 through 11
         self::assertCount(12, $md->OffsetOptions);
+        $firstOffset = $md->OffsetOptions->first();
+        self::assertSame(0, $firstOffset->Value);
+        self::assertSame('0', $firstOffset->Label);
+        $lastOffset = $md->OffsetOptions->last();
+        self::assertSame(11, $lastOffset->Value);
+        self::assertSame('11', $lastOffset->Label);
     }
 
     // ── saveInto ────────────────────────────────────────────────
@@ -222,7 +244,8 @@ final class GridSettingsFieldTest extends SapphireTest
 
         $readonly = $field->performReadonlyTransformation();
 
-        self::assertStringContainsString('md: 6/12+0', $readonly->dataValue());
+        // visible=true produces no suffix — kills the ternary mutant on the visibility guard
+        self::assertSame('md: 6/12+0', $readonly->dataValue());
     }
 
     public function testReadonlySummaryIncludesOverrides(): void

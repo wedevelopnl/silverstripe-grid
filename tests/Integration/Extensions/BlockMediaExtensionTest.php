@@ -193,8 +193,8 @@ final class BlockMediaExtensionTest extends SapphireTest
 
         $classes = $element->getMediaColumnClasses();
 
-        self::assertStringContainsString('col-md-6', $classes);
-        self::assertStringContainsString('order-1', $classes);
+        // Exact match kills the !== null guard on getBaseColumnClass() (Bootstrap returns null)
+        self::assertSame('col-md-6 order-1', $classes);
     }
 
     public function testGetContentColumnClasses(): void
@@ -205,8 +205,8 @@ final class BlockMediaExtensionTest extends SapphireTest
 
         $classes = $element->getContentColumnClasses();
 
-        self::assertStringContainsString('col-md-6', $classes);
-        self::assertStringContainsString('order-2', $classes);
+        // Exact match kills the !== null guard on getBaseColumnClass() (Bootstrap returns null)
+        self::assertSame('col-md-6 order-2', $classes);
     }
 
     public function testGetContentPaddingClassesWithGap(): void
@@ -272,6 +272,15 @@ final class BlockMediaExtensionTest extends SapphireTest
 
         // Full grid width → 1320px
         self::assertSame(1320, $element->getMediaImageWidth());
+    }
+
+    public function testGetMediaImageWidthWithOneContentColumn(): void
+    {
+        $element = $this->createContentElement();
+        $element->ContentColumns = 1;
+
+        // 12 - 1 = 11 media columns → round(1320 * 11 / 12) = 1210
+        self::assertSame(1210, $element->getMediaImageWidth());
     }
 
     public function testGetMediaImageHeightSquare(): void
