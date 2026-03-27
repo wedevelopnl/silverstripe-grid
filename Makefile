@@ -1,6 +1,6 @@
 COMPOSE := docker compose -f .docker/compose.yml
 
-.PHONY: up down destroy build test test-unit test-integration test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-typecheck _qa-test-js
+.PHONY: up down destroy build test test-unit test-integration test-functional test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-typecheck _qa-test-js
 
 ## Generate .docker/.env with deterministic ports (auto-runs if missing)
 .docker/.env:
@@ -27,8 +27,8 @@ build:
 ensure-up:
 	@$(COMPOSE) exec app true 2>/dev/null || $(COMPOSE) up -d --build --wait
 
-## Run all tests (PHP unit + integration + JS)
-test: ensure-up test-unit test-integration test-js
+## Run all tests (PHP unit + integration + functional + JS)
+test: ensure-up test-unit test-integration test-functional test-js
 
 ## Run unit tests (no database or framework)
 test-unit: ensure-up
@@ -37,6 +37,10 @@ test-unit: ensure-up
 ## Run integration tests (full SilverStripe environment)
 test-integration: ensure-up
 	$(COMPOSE) exec app vendor/bin/phpunit --testsuite integration
+
+## Run functional tests (HTTP/controller tests)
+test-functional: ensure-up
+	$(COMPOSE) exec app vendor/bin/phpunit --testsuite functional
 
 ## Run JavaScript tests (Vitest)
 test-js:
@@ -59,6 +63,12 @@ coverage-integration: ensure-up
 	$(COMPOSE) exec app vendor/bin/phpunit --testsuite integration \
 		--coverage-html coverage/integration/html \
 		--coverage-clover coverage/integration/clover.xml
+
+## Run functional tests with coverage (individual report)
+coverage-functional: ensure-up
+	$(COMPOSE) exec app vendor/bin/phpunit --testsuite functional \
+		--coverage-html coverage/functional/html \
+		--coverage-clover coverage/functional/clover.xml
 
 ## Run JavaScript tests with coverage
 coverage-js:

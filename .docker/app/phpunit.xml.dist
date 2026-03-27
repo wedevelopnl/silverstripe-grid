@@ -12,6 +12,9 @@
         <testsuite name="integration">
             <directory>vendor/wedevelopnl/silverstripe-grid/tests/Integration</directory>
         </testsuite>
+        <testsuite name="functional">
+            <directory>vendor/wedevelopnl/silverstripe-grid/tests/Functional</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>
