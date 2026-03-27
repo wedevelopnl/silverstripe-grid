@@ -12,6 +12,8 @@ use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\ValidationSeverity;
 
 #[CoversClass(Result::class)]
+#[CoversClass(ValidationError::class)]
+#[CoversClass(ValidationSeverity::class)]
 final class ResultTest extends TestCase
 {
     public function testOkResultIsOk(): void

@@ -20,6 +20,11 @@ use WeDevelop\Grid\Value\VerticalAlignment;
 use WeDevelop\Grid\Value\Viewport;
 
 #[CoversClass(GridAdapter::class)]
+#[CoversClass(Viewport::class)]
+#[CoversClass(OffsetStrategy::class)]
+#[CoversClass(AspectRatio::class)]
+#[CoversClass(MediaPosition::class)]
+#[CoversClass(VerticalAlignment::class)]
 final class GridAdapterTest extends SapphireTest
 {
     protected $usesDatabase = false;

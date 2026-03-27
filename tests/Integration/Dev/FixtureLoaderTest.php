@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Dev;
 
 use InvalidArgumentException;
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Dev\FixtureLoader;
@@ -113,5 +115,42 @@ final class FixtureLoaderTest extends SapphireTest
         // element-tree has post_action: publish_recursive on Page.e2e_page
         Versioned::set_stage(Versioned::LIVE);
         self::assertNotNull(SiteTree::get()->byID($result->pageId));
+    }
+
+    public function testLoadThrowsForFixtureWithNoPath(): void
+    {
+        Config::modify()->merge(FixtureLoader::class, 'fixtures', [
+            'broken-no-path' => ['post_actions' => []],
+        ]);
+
+        $loader = FixtureLoader::create();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('has no path configured');
+        $loader->load('broken-no-path');
+    }
+
+    public function testLoadThrowsForFixtureWithEmptyPath(): void
+    {
+        Config::modify()->merge(FixtureLoader::class, 'fixtures', [
+            'broken-empty-path' => ['path' => ''],
+        ]);
+
+        $loader = FixtureLoader::create();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('has no path configured');
+        $loader->load('broken-empty-path');
+    }
+
+    public function testLoadPrefersSiteTreePageClass(): void
+    {
+        $loader = FixtureLoader::create();
+        $result = $loader->load('element-tree');
+
+        // findPageInFactory() prefers Page::class over other SiteTree subclasses
+        $page = SiteTree::get()->byID($result->pageId);
+        self::assertNotNull($page);
+        self::assertSame(Page::class, $page::class);
     }
 }

@@ -19,6 +19,12 @@ use WeDevelop\Grid\Value\ResetGridSettingsOverridesRequest;
 use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
 
 #[CoversClass(RequestBodyParser::class)]
+#[CoversClass(CreateContentRequest::class)]
+#[CoversClass(CreateElementRequest::class)]
+#[CoversClass(DuplicateToRequest::class)]
+#[CoversClass(ReorderRequest::class)]
+#[CoversClass(ResetGridSettingsOverridesRequest::class)]
+#[CoversClass(UpdateGridSettingsRequest::class)]
 final class RequestBodyParserTest extends TestCase
 {
     private RequestBodyParser $parser;
