@@ -384,17 +384,23 @@ class BlockMediaExtension extends Extension
         /** @var bool $changed */
         $changed = $owner->isChanged('VideoURL', DataObject::CHANGE_VALUE);
         if ($changed && $videoUrl !== '') {
-            MediaField::saveEmbed(
-                $owner,
-                videoFullURLField: 'VideoURL',
-                videoEmbeddedURLField: 'VideoEmbedURL',
-                videoProviderField: 'VideoProvider',
-                videoEmbeddedNameField: 'VideoEmbedName',
-                videoEmbeddedDescriptionField: 'VideoEmbedDescription',
-                videoEmbeddedThumbnailField: 'VideoEmbedThumbnail',
-                videoEmbeddedCreatedField: 'VideoEmbedCreated',
-            );
+            $this->resolveVideoEmbed($owner);
         }
+    }
+
+    /** Resolve oEmbed metadata for the current VideoURL via the MediaField package. */
+    protected function resolveVideoEmbed(DataObject $owner): void
+    {
+        MediaField::saveEmbed(
+            $owner,
+            videoFullURLField: 'VideoURL',
+            videoEmbeddedURLField: 'VideoEmbedURL',
+            videoProviderField: 'VideoProvider',
+            videoEmbeddedNameField: 'VideoEmbedName',
+            videoEmbeddedDescriptionField: 'VideoEmbedDescription',
+            videoEmbeddedThumbnailField: 'VideoEmbedThumbnail',
+            videoEmbeddedCreatedField: 'VideoEmbedCreated',
+        );
     }
 
     /** @return array<string, string> */
