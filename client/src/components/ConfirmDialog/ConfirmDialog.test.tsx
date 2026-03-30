@@ -1,0 +1,66 @@
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import ConfirmDialog from './ConfirmDialog';
+
+beforeEach(() => {
+  // jsdom does not implement HTMLDialogElement.showModal/close
+  HTMLDialogElement.prototype.showModal = vi.fn();
+  HTMLDialogElement.prototype.close = vi.fn();
+});
+
+const defaultProps = {
+  isOpen: true,
+  title: 'Delete element',
+  message: 'Are you sure you want to delete this element?',
+  confirmLabel: 'Delete',
+  onConfirm: vi.fn(),
+  onCancel: vi.fn(),
+};
+
+describe('ConfirmDialog', () => {
+  it('renders title, message, and confirm label', () => {
+    render(<ConfirmDialog {...defaultProps} />);
+
+    expect(screen.getByText('Delete element')).toBeInTheDocument();
+    expect(screen.getByText('Are you sure you want to delete this element?')).toBeInTheDocument();
+    expect(screen.getByText('Delete')).toBeInTheDocument();
+  });
+
+  it('calls onCancel when Cancel button is clicked', async () => {
+    const user = userEvent.setup();
+    const onCancel = vi.fn();
+
+    render(<ConfirmDialog {...defaultProps} onCancel={onCancel} />);
+
+    await user.click(screen.getByText('Cancel'));
+
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it('calls onConfirm when confirm button is clicked', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+
+    render(<ConfirmDialog {...defaultProps} onConfirm={onConfirm} />);
+
+    await user.click(screen.getByText('Delete'));
+
+    expect(onConfirm).toHaveBeenCalledOnce();
+  });
+
+  it('applies destructive CSS class to confirm button when destructive', () => {
+    render(<ConfirmDialog {...defaultProps} destructive={true} />);
+
+    const confirmButton = screen.getByText('Delete');
+    expect(confirmButton).toHaveClass('confirm-dialog__button--destructive');
+  });
+
+  it('does not apply destructive CSS class by default', () => {
+    render(<ConfirmDialog {...defaultProps} />);
+
+    const confirmButton = screen.getByText('Delete');
+    expect(confirmButton).not.toHaveClass('confirm-dialog__button--destructive');
+  });
+});

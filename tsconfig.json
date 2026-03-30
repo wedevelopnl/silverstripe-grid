@@ -11,10 +11,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["vitest/globals"],
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {
       "@/*": ["./client/src/*"]
     }
   },
-  "include": ["client/src/**/*", "vite.config.ts", "playwright.config.ts"]
+  "include": ["client/src/**/*", "vite.config.ts", "vitest.setup.ts", "playwright.config.ts"]
 }
