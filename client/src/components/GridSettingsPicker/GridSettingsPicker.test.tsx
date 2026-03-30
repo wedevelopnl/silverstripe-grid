@@ -141,4 +141,95 @@ describe('GridSettingsPicker', () => {
     expect(trigger).toBeDisabled();
     expect(trigger).toHaveClass('grid-settings-picker__trigger--disabled');
   });
+
+  it('trigger button displays the label text', () => {
+    renderPicker({ label: 'Width' });
+
+    expect(screen.getByTestId('width-picker')).toHaveTextContent('Width');
+  });
+
+  it('option items show correct labels from options prop', async () => {
+    const user = userEvent.setup();
+
+    renderPicker();
+
+    await user.click(screen.getByTestId('width-picker'));
+
+    expect(screen.getByText('6 columns')).toBeInTheDocument();
+    expect(screen.getByText('12 columns')).toBeInTheDocument();
+    expect(screen.getByText('Hidden')).toBeInTheDocument();
+  });
+
+  it('listbox has role="listbox"', async () => {
+    const user = userEvent.setup();
+
+    renderPicker();
+
+    await user.click(screen.getByTestId('width-picker'));
+
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+  });
+
+  it('options have role="option"', async () => {
+    const user = userEvent.setup();
+
+    renderPicker();
+
+    await user.click(screen.getByTestId('width-picker'));
+
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(3);
+  });
+
+  it('trigger has aria-haspopup="listbox"', () => {
+    renderPicker();
+
+    expect(screen.getByTestId('width-picker')).toHaveAttribute('aria-haspopup', 'listbox');
+  });
+
+  it('trigger has aria-expanded=false when closed', () => {
+    renderPicker();
+
+    expect(screen.getByTestId('width-picker')).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('trigger has aria-controls when open', async () => {
+    const user = userEvent.setup();
+
+    renderPicker();
+
+    const trigger = screen.getByTestId('width-picker');
+    expect(trigger).not.toHaveAttribute('aria-controls');
+
+    await user.click(trigger);
+
+    expect(trigger).toHaveAttribute('aria-controls', 'width-picker-listbox');
+  });
+
+  it('hidden option has separator class', async () => {
+    const user = userEvent.setup();
+
+    renderPicker();
+
+    await user.click(screen.getByTestId('width-picker'));
+
+    expect(screen.getByText('Hidden')).toHaveClass('grid-settings-picker__option--separator');
+  });
+
+  it('selected option has selected class', async () => {
+    const user = userEvent.setup();
+
+    renderPicker({ selectedValue: 6 });
+
+    await user.click(screen.getByTestId('width-picker'));
+
+    expect(screen.getByText('6 columns')).toHaveClass('grid-settings-picker__option--selected');
+    expect(screen.getByText('12 columns')).not.toHaveClass('grid-settings-picker__option--selected');
+  });
+
+  it('enabled trigger does not have disabled class', () => {
+    renderPicker({ disabled: false });
+
+    expect(screen.getByTestId('width-picker')).not.toHaveClass('grid-settings-picker__trigger--disabled');
+  });
 });

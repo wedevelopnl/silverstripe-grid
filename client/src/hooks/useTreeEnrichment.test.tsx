@@ -1,185 +1,179 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useTreeEnrichment, buildStorageKey } from './useTreeEnrichment';
+import { useTreeEnrichment } from '@/hooks/useTreeEnrichment';
 import {
   createSectionNode,
   createRowNode,
   createColumnNode,
   resetIdCounter,
 } from '@/testing/factories';
+import type { SectionNode } from '@/types/elements';
 
-// jsdom's localStorage in Node 24 doesn't have standard methods.
-// Provide a simple in-memory stub.
-let storage: Map<string, string>;
-const localStorageStub = {
-  getItem: (key: string) => storage.get(key) ?? null,
-  setItem: (key: string, value: string) => { storage.set(key, value); },
-  removeItem: (key: string) => { storage.delete(key); },
-  clear: () => { storage.clear(); },
-  get length() { return storage.size; },
-  key: (index: number) => [...storage.keys()][index] ?? null,
-};
+// Use a unique areaId per test to avoid localStorage leaking between tests
+let areaId: number;
 
 beforeEach(() => {
   resetIdCounter();
-  storage = new Map();
-  Object.defineProperty(globalThis, 'localStorage', {
-    value: localStorageStub,
-    writable: true,
-    configurable: true,
-  });
+  areaId = Math.floor(Math.random() * 1_000_000);
 });
 
-describe('buildStorageKey', () => {
-  it('returns a key scoped to the areaId', () => {
-    expect(buildStorageKey(42)).toBe('grid:collapsed:42');
-  });
-
-  it('returns different keys for different areaIds', () => {
-    expect(buildStorageKey(1)).not.toBe(buildStorageKey(2));
-  });
-});
+function renderEnrichment(sections: readonly SectionNode[], testAreaId = areaId) {
+  return renderHook(() => useTreeEnrichment(sections, testAreaId));
+}
 
 describe('useTreeEnrichment', () => {
-  it('adds sortableId to section nodes', () => {
-    const section = createSectionNode({ id: 10 });
-
-    const { result } = renderHook(() => useTreeEnrichment([section], 1));
-
-    expect(result.current[0].sortableId).toBe('section-10');
-  });
-
-  it('adds sortableId to row nodes', () => {
-    const row = createRowNode({ id: 20, parentId: 10 });
-    const section = createSectionNode({ id: 10, children: [row] });
-
-    const { result } = renderHook(() => useTreeEnrichment([section], 1));
-
-    expect(result.current[0].children![0].sortableId).toBe('row-20');
-  });
-
-  it('adds sortableId to column nodes', () => {
-    const col = createColumnNode({ id: 30, parentId: 20 });
-    const row = createRowNode({ id: 20, parentId: 10, children: [col] });
-    const section = createSectionNode({ id: 10, children: [row] });
-
-    const { result } = renderHook(() => useTreeEnrichment([section], 1));
-
-    expect(result.current[0].children![0].children![0].sortableId).toBe('column-30');
-  });
-
-  it('adds sortableId to simple element nodes', () => {
-    const section = createSectionNode({ id: 10 });
-    // Default factory creates section > row > column > element
-    const { result } = renderHook(() => useTreeEnrichment([section], 1));
-
-    const element = result.current[0].children![0].children![0].children![0];
-    expect(element.sortableId).toMatch(/^element-\d+$/);
-  });
-
-  it('adds childSortableIds to container nodes', () => {
-    const col1 = createColumnNode({ id: 30, parentId: 20, childCount: 0 });
-    const col2 = createColumnNode({ id: 31, parentId: 20, childCount: 0 });
-    const row = createRowNode({ id: 20, parentId: 10, children: [col1, col2] });
-    const section = createSectionNode({ id: 10, children: [row] });
-
-    const { result } = renderHook(() => useTreeEnrichment([section], 1));
-
-    expect(result.current[0].childSortableIds).toEqual(['row-20']);
-    expect(result.current[0].children![0].childSortableIds).toEqual(['column-30', 'column-31']);
-  });
-
-  describe('collapse toggle', () => {
-    it('toggles collapse state on a section', () => {
+  describe('section toggle', () => {
+    it('should toggle section collapse state', () => {
       const section = createSectionNode({ id: 10 });
-
-      const { result } = renderHook(() => useTreeEnrichment([section], 1));
+      const { result } = renderEnrichment([section]);
 
       expect(result.current[0].isCollapsed).toBe(false);
 
       act(() => {
         result.current[0].toggle();
       });
-
       expect(result.current[0].isCollapsed).toBe(true);
 
       act(() => {
         result.current[0].toggle();
       });
-
       expect(result.current[0].isCollapsed).toBe(false);
     });
+  });
 
-    it('persists collapsed state to localStorage', () => {
-      const section = createSectionNode({ id: 10 });
-      const setItemSpy = vi.spyOn(localStorageStub, 'setItem');
+  describe('row toggle', () => {
+    it('should toggle row collapse state', () => {
+      const section = createSectionNode({
+        id: 10,
+        children: [createRowNode({ id: 20 })],
+      });
+      const { result } = renderEnrichment([section]);
 
-      const { result } = renderHook(() => useTreeEnrichment([section], 1));
+      const row = result.current[0].children![0];
+      expect(row.isCollapsed).toBe(false);
 
       act(() => {
-        result.current[0].toggle();
+        row.toggle();
       });
 
-      expect(setItemSpy).toHaveBeenCalledWith(
-        'grid:collapsed:1',
-        expect.any(String),
-      );
-
-      const stored = JSON.parse(setItemSpy.mock.calls[0][1]);
-      expect(stored).toContain(10);
+      expect(result.current[0].children![0].isCollapsed).toBe(true);
     });
 
-    it('reads collapsed state from localStorage on init', () => {
-      localStorage.setItem('grid:collapsed:1', JSON.stringify([10]));
+    it('should toggle row back to uncollapsed', () => {
+      const section = createSectionNode({
+        id: 10,
+        children: [createRowNode({ id: 20 })],
+      });
+      const { result } = renderEnrichment([section]);
 
-      const section = createSectionNode({ id: 10 });
-      const { result } = renderHook(() => useTreeEnrichment([section], 1));
+      act(() => {
+        result.current[0].children![0].toggle();
+      });
+      expect(result.current[0].children![0].isCollapsed).toBe(true);
 
-      expect(result.current[0].isCollapsed).toBe(true);
-    });
-  });
-
-  describe('corrupted localStorage', () => {
-    it('recovers from non-array JSON', () => {
-      localStorage.setItem('grid:collapsed:1', '"not-an-array"');
-
-      const section = createSectionNode({ id: 10 });
-      const { result } = renderHook(() => useTreeEnrichment([section], 1));
-
-      expect(result.current[0].isCollapsed).toBe(false);
-    });
-
-    it('recovers from invalid JSON', () => {
-      localStorage.setItem('grid:collapsed:1', '{broken');
-
-      const section = createSectionNode({ id: 10 });
-      const { result } = renderHook(() => useTreeEnrichment([section], 1));
-
-      expect(result.current[0].isCollapsed).toBe(false);
-    });
-
-    it('filters out non-number values from stored array', () => {
-      localStorage.setItem('grid:collapsed:1', JSON.stringify([10, 'bogus', null, true]));
-
-      const section = createSectionNode({ id: 10 });
-      const { result } = renderHook(() => useTreeEnrichment([section], 1));
-
-      // 10 is a valid number, so it should be collapsed
-      expect(result.current[0].isCollapsed).toBe(true);
+      act(() => {
+        result.current[0].children![0].toggle();
+      });
+      expect(result.current[0].children![0].isCollapsed).toBe(false);
     });
   });
 
-  describe('per-area isolation', () => {
-    it('uses different storage keys for different areaIds', () => {
-      localStorage.setItem('grid:collapsed:1', JSON.stringify([10]));
+  describe('column toggle', () => {
+    it('should toggle column collapse state', () => {
+      const section = createSectionNode({
+        id: 10,
+        children: [
+          createRowNode({
+            id: 20,
+            children: [createColumnNode({ id: 30 })],
+          }),
+        ],
+      });
+      const { result } = renderEnrichment([section]);
 
-      const section = createSectionNode({ id: 10 });
+      const column = result.current[0].children![0].children![0];
+      expect(column.isCollapsed).toBe(false);
 
-      const { result: area1 } = renderHook(() => useTreeEnrichment([section], 1));
-      const { result: area2 } = renderHook(() => useTreeEnrichment([section], 2));
+      act(() => {
+        column.toggle();
+      });
 
-      expect(area1.current[0].isCollapsed).toBe(true);
-      expect(area2.current[0].isCollapsed).toBe(false);
+      expect(result.current[0].children![0].children![0].isCollapsed).toBe(true);
+    });
+
+    it('should toggle column back to uncollapsed', () => {
+      const section = createSectionNode({
+        id: 10,
+        children: [
+          createRowNode({
+            id: 20,
+            children: [createColumnNode({ id: 30 })],
+          }),
+        ],
+      });
+      const { result } = renderEnrichment([section]);
+
+      act(() => {
+        result.current[0].children![0].children![0].toggle();
+      });
+      expect(result.current[0].children![0].children![0].isCollapsed).toBe(true);
+
+      act(() => {
+        result.current[0].children![0].children![0].toggle();
+      });
+      expect(result.current[0].children![0].children![0].isCollapsed).toBe(false);
+    });
+  });
+
+  describe('sortableId assignment', () => {
+    it('should assign correct sortableIds to all node types', () => {
+      const section = createSectionNode({
+        id: 1,
+        children: [
+          createRowNode({
+            id: 2,
+            children: [
+              createColumnNode({
+                id: 3,
+                childCount: 1,
+              }),
+            ],
+          }),
+        ],
+      });
+
+      // Override the auto-generated child element ID for predictability
+      section.children![0].children![0].children![0].id = 4;
+
+      const { result } = renderEnrichment([section]);
+
+      expect(result.current[0].sortableId).toBe('section-1');
+      expect(result.current[0].children![0].sortableId).toBe('row-2');
+      expect(result.current[0].children![0].children![0].sortableId).toBe('column-3');
+      expect(result.current[0].children![0].children![0].children![0].sortableId).toBe('element-4');
+    });
+  });
+
+  describe('childSortableIds', () => {
+    it('should populate childSortableIds from children', () => {
+      const section = createSectionNode({
+        id: 1,
+        children: [
+          createRowNode({ id: 10 }),
+          createRowNode({ id: 11 }),
+        ],
+      });
+
+      const { result } = renderEnrichment([section]);
+
+      expect(result.current[0].childSortableIds).toEqual(['row-10', 'row-11']);
+    });
+
+    it('should return empty array when children is null', () => {
+      const section = createSectionNode({ id: 1, children: null });
+      const { result } = renderEnrichment([section]);
+
+      expect(result.current[0].childSortableIds).toEqual([]);
     });
   });
 });

@@ -77,4 +77,59 @@ describe('ViewportSwitcher', () => {
 
     expect(screen.queryByTestId('reset-overrides-button')).not.toBeInTheDocument();
   });
+
+  it('active button has aria-disabled attribute', () => {
+    mockFetchSuccess({});
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
+
+    const buttons = screen.getAllByTestId('viewport-button');
+    const mdButton = buttons[2];
+
+    expect(mdButton).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('inactive buttons do not have aria-disabled attribute', () => {
+    mockFetchSuccess({});
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
+
+    const buttons = screen.getAllByTestId('viewport-button');
+    // xs (index 0) is inactive
+    expect(buttons[0]).not.toHaveAttribute('aria-disabled');
+    // lg (index 3) is inactive
+    expect(buttons[3]).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('inactive buttons do not have active class', () => {
+    mockFetchSuccess({});
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
+
+    const buttons = screen.getAllByTestId('viewport-button');
+
+    expect(buttons[0]).not.toHaveClass('viewport-switcher__button--active');
+    expect(buttons[0]).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('clicking active button does not change active state', async () => {
+    const user = userEvent.setup();
+    mockFetchSuccess({});
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
+
+    const buttons = screen.getAllByTestId('viewport-button');
+    const mdButton = buttons[2];
+
+    // Click active button
+    await user.click(mdButton);
+
+    // md should still be active
+    expect(mdButton).toHaveClass('viewport-switcher__button--active');
+    expect(mdButton).toHaveAttribute('aria-pressed', 'true');
+
+    // Other buttons should still be inactive
+    expect(buttons[0]).not.toHaveClass('viewport-switcher__button--active');
+    expect(buttons[3]).not.toHaveClass('viewport-switcher__button--active');
+  });
 });

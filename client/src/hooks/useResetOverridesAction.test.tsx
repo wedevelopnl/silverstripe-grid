@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { QueryClient } from '@tanstack/react-query';
 import { useResetOverridesAction } from './useResetOverridesAction';
 import { createProviderWrapper } from '@/testing/renderWithProviders';
 import { createTreeApiResponse } from '@/testing/factories';
+import { mockFetchSuccess, getFetchCalls } from '@/testing/mockFetch';
 import { queryKeys } from './queryKeys';
 
 function setupWithOverrides(
@@ -127,5 +128,96 @@ describe('useResetOverridesAction', () => {
     });
 
     expect(result.current.isDialogOpen).toBe(false);
+  });
+
+  describe('handleConfirm', () => {
+    it('should trigger resetGridSettingsOverrides mutation', async () => {
+      mockFetchSuccess({});
+      const { wrapper } = setupWithOverrides({ _total: 2 }, 'md');
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper });
+
+      act(() => {
+        result.current.onResetClick();
+      });
+
+      act(() => {
+        result.current.onConfirm();
+      });
+
+      await waitFor(() => {
+        const resetCall = getFetchCalls().find(([url]) =>
+          (url as string).includes('/api/resetGridSettingsOverrides'),
+        );
+        expect(resetCall).toBeDefined();
+        expect(resetCall![1]?.method).toBe('DELETE');
+      });
+    });
+
+    it('should send params without viewport key for default viewport', async () => {
+      mockFetchSuccess({});
+      const { wrapper } = setupWithOverrides({ _total: 2 }, 'md');
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper });
+
+      act(() => {
+        result.current.onResetClick();
+      });
+
+      act(() => {
+        result.current.onConfirm();
+      });
+
+      await waitFor(() => {
+        const resetCall = getFetchCalls().find(([url]) =>
+          (url as string).includes('/api/resetGridSettingsOverrides'),
+        );
+        expect(resetCall).toBeDefined();
+        const body = JSON.parse(resetCall![1]?.body as string);
+        expect(body).toEqual({ pageId: 1, zone: 'main' });
+        expect(body).not.toHaveProperty('viewport');
+      });
+    });
+
+    it('should send params with viewport key for non-default viewport', async () => {
+      mockFetchSuccess({});
+      const { wrapper } = setupWithOverrides({ lg: 3 }, 'lg');
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper });
+
+      act(() => {
+        result.current.onResetClick();
+      });
+
+      act(() => {
+        result.current.onConfirm();
+      });
+
+      await waitFor(() => {
+        const resetCall = getFetchCalls().find(([url]) =>
+          (url as string).includes('/api/resetGridSettingsOverrides'),
+        );
+        expect(resetCall).toBeDefined();
+        const body = JSON.parse(resetCall![1]?.body as string);
+        expect(body).toEqual({ pageId: 1, zone: 'main', viewport: 'lg' });
+      });
+    });
+
+    it('should close dialog on confirm', () => {
+      mockFetchSuccess({});
+      const { wrapper } = setupWithOverrides({ _total: 2 }, 'md');
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper });
+
+      act(() => {
+        result.current.onResetClick();
+      });
+      expect(result.current.isDialogOpen).toBe(true);
+
+      act(() => {
+        result.current.onConfirm();
+      });
+      expect(result.current.isDialogOpen).toBe(false);
+    });
   });
 });

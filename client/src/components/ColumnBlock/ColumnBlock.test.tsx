@@ -1,12 +1,23 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetAdapterCache } from '@/utils/gridAdapter';
 
 import { mockFetchSuccess, getFetchCalls } from '@/testing/mockFetch';
 import { createEnrichedColumn, createEnrichedElement } from '@/testing/enrichedFactories';
 import { renderWithProviders } from '@/testing/renderWithProviders';
 
 import ColumnBlock from './ColumnBlock';
+
+// jsdom doesn't support native dialog showModal/close
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function showModal(this: HTMLDialogElement) {
+    this.setAttribute('open', '');
+  });
+  HTMLDialogElement.prototype.close = vi.fn(function close(this: HTMLDialogElement) {
+    this.removeAttribute('open');
+  });
+});
 
 vi.mock('@dnd-kit/sortable', () => ({
   useSortable: () => ({
@@ -62,70 +73,7 @@ describe('ColumnBlock', () => {
     expect(screen.getByText('No content blocks')).toBeInTheDocument();
   });
 
-  it('width picker shows current width label', () => {
-    mockFetchSuccess({});
-
-    const column = createEnrichedColumn({
-      gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-    });
-
-    renderWithProviders(<ColumnBlock column={column} />);
-
-    expect(screen.getByTestId('column-badge')).toHaveTextContent('6/12');
-  });
-
-  it('width selection calls updateGridSettings mutation', async () => {
-    const user = userEvent.setup();
-    mockFetchSuccess({});
-
-    const column = createEnrichedColumn({
-      id: 50,
-      gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-    });
-
-    renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' });
-
-    // Open the width picker
-    await user.click(screen.getByTestId('column-badge'));
-
-    // Select a different width option
-    const listbox = screen.getByTestId('column-badge-listbox');
-    const option8 = listbox.querySelector('[aria-selected="false"]');
-    // Click the "8/12" option (value 8)
-    const options = screen.getAllByRole('option');
-    const option = options.find((opt) => opt.textContent === '8/12');
-    expect(option).toBeDefined();
-    await user.click(option!);
-
-    await waitFor(() => {
-      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
-    });
-
-    const [url, init] = getFetchCalls()[0];
-    const body = JSON.parse(init!.body as string);
-
-    expect(url).toContain('updateGridSettings');
-    expect(body).toMatchObject({
-      id: 50,
-      viewport: 'md',
-      width: 8,
-      visible: true,
-    });
-  });
-
-  it('offset picker disabled when width equals column count', () => {
-    mockFetchSuccess({});
-
-    const column = createEnrichedColumn({
-      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
-    });
-
-    renderWithProviders(<ColumnBlock column={column} />);
-
-    expect(screen.getByTestId('column-offset-badge')).toBeDisabled();
-  });
-
-  it('shows "Add content" button when allowedTypes exist', () => {
+  it('does not show empty state when no children but allowedTypes exist', () => {
     mockFetchSuccess({});
 
     const column = createEnrichedColumn({
@@ -136,6 +84,454 @@ describe('ColumnBlock', () => {
 
     renderWithProviders(<ColumnBlock column={column} />);
 
-    expect(screen.getByTestId('add-content-button')).toHaveTextContent('+ Add content');
+    expect(screen.queryByText('No content blocks')).not.toBeInTheDocument();
+  });
+
+  it('does not show "Add content" button when allowedTypes is null', () => {
+    mockFetchSuccess({});
+
+    const column = createEnrichedColumn({ allowedTypes: null });
+
+    renderWithProviders(<ColumnBlock column={column} />);
+
+    expect(screen.queryByTestId('add-content-button')).not.toBeInTheDocument();
+  });
+
+  it('does not show "Add content" button when allowedTypes is empty object', () => {
+    mockFetchSuccess({});
+
+    const column = createEnrichedColumn({ allowedTypes: {} });
+
+    renderWithProviders(<ColumnBlock column={column} />);
+
+    expect(screen.queryByTestId('add-content-button')).not.toBeInTheDocument();
+  });
+
+  describe('CSS classes', () => {
+    it('includes status modifier class for draft status', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({ statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } } });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-block')).toHaveClass('column-block--draft');
+    });
+
+    it('includes status modifier class for modified status', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({ statusFlags: { modified: { text: 'Modified', title: 'Modified' } } });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-block')).toHaveClass('column-block--modified');
+    });
+
+    it('includes published status by default', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({ statusFlags: {} });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-block')).toHaveClass('column-block--published');
+    });
+
+    it('includes hidden class when column is not visible', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-block')).toHaveClass('column-block--hidden');
+    });
+
+    it('does not include hidden class when column is visible', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-block')).not.toHaveClass('column-block--hidden');
+    });
+
+    it('includes collapsed class when column is collapsed', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({});
+      // Override isCollapsed directly
+      (column as { isCollapsed: boolean }).isCollapsed = true;
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-block')).toHaveClass('column-block--collapsed');
+    });
+  });
+
+  describe('width picker', () => {
+    it('shows current width label', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-badge')).toHaveTextContent('6/12');
+    });
+
+    it('shows "hidden" label when column is not visible', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-badge')).toHaveTextContent('hidden');
+    });
+
+    it('width selection calls updateGridSettings with new width and visible=true', async () => {
+      const user = userEvent.setup();
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        id: 50,
+        gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' });
+
+      await user.click(screen.getByTestId('column-badge'));
+
+      const options = screen.getAllByRole('option');
+      const option = options.find((opt) => opt.textContent === '8/12');
+      expect(option).toBeDefined();
+      await user.click(option!);
+
+      await waitFor(() => {
+        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
+      });
+
+      const [url, init] = getFetchCalls()[0];
+      const body = JSON.parse(init!.body as string);
+
+      expect(url).toContain('updateGridSettings');
+      expect(body).toMatchObject({
+        id: 50,
+        viewport: 'md',
+        width: 8,
+        visible: true,
+        offset: 0,
+      });
+    });
+
+    it('selecting "hidden" calls updateGridSettings with visible=false', async () => {
+      const user = userEvent.setup();
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        id: 51,
+        gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' });
+
+      await user.click(screen.getByTestId('column-badge'));
+
+      const options = screen.getAllByRole('option');
+      const hiddenOption = options.find((opt) => opt.textContent === 'hidden');
+      expect(hiddenOption).toBeDefined();
+      await user.click(hiddenOption!);
+
+      await waitFor(() => {
+        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
+      });
+
+      const [, init] = getFetchCalls()[0];
+      const body = JSON.parse(init!.body as string);
+
+      expect(body).toMatchObject({
+        id: 51,
+        viewport: 'md',
+        visible: false,
+      });
+    });
+
+    it('clamps offset when selecting a width that makes current offset too large', async () => {
+      const user = userEvent.setup();
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        id: 52,
+        gridSettings: { default: { width: 4, offset: 7, visible: true }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' });
+
+      await user.click(screen.getByTestId('column-badge'));
+
+      // Select width 10 — max offset is 12-10=2, but current offset is 7
+      const options = screen.getAllByRole('option');
+      const option = options.find((opt) => opt.textContent === '10/12');
+      expect(option).toBeDefined();
+      await user.click(option!);
+
+      await waitFor(() => {
+        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
+      });
+
+      const [, init] = getFetchCalls()[0];
+      const body = JSON.parse(init!.body as string);
+
+      expect(body).toMatchObject({
+        id: 52,
+        width: 10,
+        offset: 2,
+        visible: true,
+      });
+    });
+  });
+
+  describe('offset picker', () => {
+    it('shows "none" label when offset is 0', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('none');
+    });
+
+    it('shows "+N" label when offset is non-zero', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 6, offset: 3, visible: true }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('+3');
+    });
+
+    it('disabled when width equals column count', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-offset-badge')).toBeDisabled();
+    });
+
+    it('disabled when column is not visible', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-offset-badge')).toBeDisabled();
+    });
+
+    it('enabled when width < column count and visible', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-offset-badge')).not.toBeDisabled();
+    });
+
+    it('offset selection calls updateGridSettings with offset value', async () => {
+      const user = userEvent.setup();
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        id: 53,
+        gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' });
+
+      await user.click(screen.getByTestId('column-offset-badge'));
+
+      const options = screen.getAllByRole('option');
+      const option = options.find((opt) => opt.textContent === '+3');
+      expect(option).toBeDefined();
+      await user.click(option!);
+
+      await waitFor(() => {
+        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
+      });
+
+      const [, init] = getFetchCalls()[0];
+      const body = JSON.parse(init!.body as string);
+
+      expect(body).toMatchObject({
+        id: 53,
+        viewport: 'md',
+        offset: 3,
+      });
+    });
+  });
+
+  describe('column style (margin strategy)', () => {
+    it('sets --col-width CSS variable based on width/columnCount', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+      });
+
+      const { container } = renderWithProviders(<ColumnBlock column={column} />);
+
+      const outerDiv = container.querySelector('.row-block__column') as HTMLElement;
+      expect(outerDiv.style.getPropertyValue('--col-width')).toBe('50%');
+    });
+
+    it('sets --col-offset CSS variable when offset > 0', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 6, offset: 3, visible: true }, overrides: {} },
+      });
+
+      const { container } = renderWithProviders(<ColumnBlock column={column} />);
+
+      const outerDiv = container.querySelector('.row-block__column') as HTMLElement;
+      expect(outerDiv.style.getPropertyValue('--col-offset')).toBe('25%');
+    });
+
+    it('does not set --col-offset when offset is 0', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+      });
+
+      const { container } = renderWithProviders(<ColumnBlock column={column} />);
+
+      const outerDiv = container.querySelector('.row-block__column') as HTMLElement;
+      expect(outerDiv.style.getPropertyValue('--col-offset')).toBe('');
+    });
+  });
+
+  describe('column style (grid-placement strategy)', () => {
+    it('sets --col-span and --col-start CSS variables', () => {
+      // Override the adapter config to use grid-placement
+      resetAdapterCache();
+      window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement';
+
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        gridSettings: { default: { width: 4, offset: 2, visible: true }, overrides: {} },
+      });
+
+      const { container } = renderWithProviders(<ColumnBlock column={column} />);
+
+      const outerDiv = container.querySelector('.row-block__column') as HTMLElement;
+      expect(outerDiv.style.getPropertyValue('--col-span')).toBe('4');
+      // offset + 1 = 3 for grid-column-start
+      expect(outerDiv.style.getPropertyValue('--col-start')).toBe('3');
+    });
+  });
+
+  describe('element type picker', () => {
+    it('shows "Add content" button when allowedTypes exist', () => {
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        children: null,
+        childCount: 0,
+        allowedTypes: { 'App\\Model\\ContentBlock': { label: 'Content Block', icon: '', description: '' } },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('add-content-button')).toHaveTextContent('+ Add content');
+    });
+
+    it('opens type picker on "Add content" click and calls createContentElement on select', async () => {
+      const user = userEvent.setup();
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({
+        id: 60,
+        children: null,
+        childCount: 0,
+        allowedTypes: {
+          'App\\Model\\TextBlock': { label: 'Text Block', icon: 'font-icon-text', description: 'A text block' },
+        },
+      });
+
+      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' });
+
+      // Open the type picker
+      await user.click(screen.getByTestId('add-content-button'));
+
+      // The type picker dialog should be open
+      expect(screen.getByTestId('element-type-picker')).toBeInTheDocument();
+
+      // Click the tile
+      await user.click(screen.getByTestId('element-type-tile'));
+
+      await waitFor(() => {
+        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
+      });
+
+      const [url, init] = getFetchCalls()[0];
+      const body = JSON.parse(init!.body as string);
+
+      expect(url).toContain('createContent');
+      expect(body).toMatchObject({
+        className: 'App\\Model\\TextBlock',
+        parentId: 60,
+      });
+    });
+  });
+
+  it('renders edit link when editLink is set', () => {
+    mockFetchSuccess({});
+
+    const column = createEnrichedColumn({ editLink: '/admin/pages/edit/show/42' });
+
+    renderWithProviders(<ColumnBlock column={column} />);
+
+    const link = screen.getByTestId('column-edit-link');
+    expect(link).toHaveAttribute('href', '/admin/pages/edit/show/42');
+    expect(link).toHaveTextContent(column.title);
+  });
+
+  it('renders title as plain text when editLink is null', () => {
+    mockFetchSuccess({});
+
+    const column = createEnrichedColumn({ editLink: null });
+
+    renderWithProviders(<ColumnBlock column={column} />);
+
+    expect(screen.queryByTestId('column-edit-link')).not.toBeInTheDocument();
+    expect(screen.getByTestId('column-title')).toHaveTextContent(column.title);
   });
 });

@@ -39,4 +39,30 @@ describe('CollapseToggle', () => {
 
     expect(onToggle).toHaveBeenCalledOnce();
   });
+
+  it('has chevron span with collapse-toggle__chevron class', () => {
+    render(<CollapseToggle isCollapsed={false} onToggle={vi.fn()} label="Section" />);
+
+    const chevron = screen.getByTestId('collapse-toggle').querySelector('span');
+    expect(chevron).toHaveClass('collapse-toggle__chevron');
+    expect(chevron).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('has collapse-toggle base class', () => {
+    render(<CollapseToggle isCollapsed={false} onToggle={vi.fn()} label="Section" />);
+
+    expect(screen.getByTestId('collapse-toggle')).toHaveClass('collapse-toggle');
+  });
+
+  it('has collapse-toggle--collapsed class when collapsed', () => {
+    render(<CollapseToggle isCollapsed={true} onToggle={vi.fn()} label="Section" />);
+
+    expect(screen.getByTestId('collapse-toggle')).toHaveClass('collapse-toggle--collapsed');
+  });
+
+  it('does not have collapse-toggle--collapsed class when expanded', () => {
+    render(<CollapseToggle isCollapsed={false} onToggle={vi.fn()} label="Section" />);
+
+    expect(screen.getByTestId('collapse-toggle')).not.toHaveClass('collapse-toggle--collapsed');
+  });
 });

@@ -1,48 +1,73 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useDuplicateAction } from './useDuplicateAction';
+import { useDuplicateAction } from '@/hooks/useDuplicateAction';
 import { createProviderWrapper } from '@/testing/renderWithProviders';
-import { createSimpleElement } from '@/testing/factories';
-import { mockFetchSuccess } from '@/testing/mockFetch';
+import { createSimpleElement, resetIdCounter } from '@/testing/factories';
+import { mockFetchSuccess, mockFetchError, getFetchCalls } from '@/testing/mockFetch';
+import type { ElementNode } from '@/types/elements';
+
+function renderDuplicateAction(node: ElementNode) {
+  const { wrapper } = createProviderWrapper();
+  return renderHook(() => useDuplicateAction(node), { wrapper });
+}
 
 describe('useDuplicateAction', () => {
+  beforeEach(() => {
+    resetIdCounter();
+  });
+
   it('should return null action when canCreate is false', () => {
     const node = createSimpleElement({ canCreate: false });
-    const { wrapper } = createProviderWrapper();
-
-    const { result } = renderHook(() => useDuplicateAction(node), { wrapper });
+    const { result } = renderDuplicateAction(node);
 
     expect(result.current.action).toBeNull();
   });
 
-  it('should return action with key "duplicate" when canCreate is true', () => {
+  it('should return action when canCreate is true', () => {
     const node = createSimpleElement({ canCreate: true });
-    const { wrapper } = createProviderWrapper();
-
-    const { result } = renderHook(() => useDuplicateAction(node), { wrapper });
+    const { result } = renderDuplicateAction(node);
 
     expect(result.current.action).not.toBeNull();
     expect(result.current.action?.key).toBe('duplicate');
-    expect(result.current.action?.label).toBe('Duplicate');
   });
 
-  it('should call duplicate mutation when onAction is invoked', async () => {
+  it('should trigger duplicate mutation with correct URL on action', async () => {
     mockFetchSuccess({});
-
-    const node = createSimpleElement({ id: 77, canCreate: true });
-    const { wrapper } = createProviderWrapper();
-
-    const { result } = renderHook(() => useDuplicateAction(node), { wrapper });
+    const node = createSimpleElement({ id: 42 });
+    const { result } = renderDuplicateAction(node);
 
     act(() => {
       result.current.action?.onAction();
     });
 
     await waitFor(() => {
-      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
+      expect(getFetchCalls().length).toBeGreaterThan(0);
     });
 
-    const [url] = vi.mocked(globalThis.fetch).mock.calls[0];
-    expect(String(url)).toContain('duplicate');
+    const [url, init] = getFetchCalls()[0];
+    expect(url).toContain('/api/duplicate');
+    expect(init?.method).toBe('POST');
+  });
+
+  it('should show toast when mutation fails', async () => {
+    mockFetchError(500, { message: 'Duplicate failed' });
+    const dispatch = vi.fn();
+    window.ss.store = { dispatch };
+
+    const node = createSimpleElement({ id: 42 });
+    const { result } = renderDuplicateAction(node);
+
+    act(() => {
+      result.current.action?.onAction();
+    });
+
+    await waitFor(() => {
+      expect(dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'DISPLAY_TOAST',
+          payload: expect.objectContaining({ type: 'error' }),
+        }),
+      );
+    });
   });
 });

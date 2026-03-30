@@ -514,6 +514,368 @@ describe('DuplicateToDialog', () => {
     });
   });
 
+  describe('keyboard navigation', () => {
+    it('selects page via Enter key', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog();
+
+      await goToPageStep();
+
+      const aboutItem = screen.getByText('About').closest('[role="option"]')!;
+      await user.type(aboutItem, '{Enter}');
+
+      expect(aboutItem).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('selects page via Space key', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog();
+
+      await goToPageStep();
+
+      const aboutItem = screen.getByText('About').closest('[role="option"]')!;
+      await user.type(aboutItem, ' ');
+
+      expect(aboutItem).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('selects zone via Enter key', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog();
+
+      await goToZoneStep(user);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument();
+      });
+
+      const sidebarItem = screen.getByText('sidebar').closest('[role="option"]')!;
+      await user.type(sidebarItem, '{Enter}');
+
+      expect(sidebarItem).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('selects zone via Space key', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog();
+
+      await goToZoneStep(user);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument();
+      });
+
+      const sidebarItem = screen.getByText('sidebar').closest('[role="option"]')!;
+      await user.type(sidebarItem, ' ');
+
+      expect(sidebarItem).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('selects container via Enter key', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog({ elementType: 'row' });
+
+      await goToContainerStep(user);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-container-list')).toBeInTheDocument();
+      });
+
+      const row1Item = screen.getByText('Row 1').closest('[role="option"]')!;
+      await user.type(row1Item, '{Enter}');
+
+      expect(row1Item).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('selects container via Space key', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog({ elementType: 'row' });
+
+      await goToContainerStep(user);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-container-list')).toBeInTheDocument();
+      });
+
+      const row1Item = screen.getByText('Row 1').closest('[role="option"]')!;
+      await user.type(row1Item, ' ');
+
+      expect(row1Item).toHaveAttribute('aria-selected', 'true');
+    });
+  });
+
+  describe('loading states', () => {
+    it('shows "Loading pages..." before page data arrives', () => {
+      // Fetch that never resolves simulates loading
+      vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+      renderDialog();
+
+      expect(screen.getByText(/Loading pages/)).toBeInTheDocument();
+      expect(screen.getByText(/Loading pages/)).toHaveClass('duplicate-to-dialog__loading');
+    });
+
+    it('shows "Loading zones..." before zone data arrives', async () => {
+      const user = userEvent.setup();
+
+      function createUrlResponse(body: unknown): Response {
+        return {
+          ok: true, status: 200, statusText: 'OK',
+          json: () => Promise.resolve(body),
+          headers: new Headers(), redirected: false, type: 'basic' as ResponseType, url: '',
+          clone() { return this; }, body: null, bodyUsed: false,
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+          blob: () => Promise.resolve(new Blob()),
+          bytes: () => Promise.resolve(new Uint8Array()),
+          formData: () => Promise.resolve(new FormData()),
+          text: () => Promise.resolve(JSON.stringify(body)),
+        } as Response;
+      }
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: string | URL | Request) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+        if (url.includes('/api/pages')) {
+          return createUrlResponse(PAGES);
+        }
+
+        // Zones never resolve
+        return new Promise(() => {});
+      });
+
+      renderDialog();
+
+      await goToPageStep();
+      await user.click(screen.getByText('About'));
+      await user.click(screen.getByTestId('duplicate-to-next'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-step-zone')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/Loading zones/)).toBeInTheDocument();
+      expect(screen.getByText(/Loading zones/)).toHaveClass('duplicate-to-dialog__loading');
+    });
+
+    it('shows "Loading containers..." before container data arrives', async () => {
+      const user = userEvent.setup();
+
+      function createUrlResponse(body: unknown): Response {
+        return {
+          ok: true, status: 200, statusText: 'OK',
+          json: () => Promise.resolve(body),
+          headers: new Headers(), redirected: false, type: 'basic' as ResponseType, url: '',
+          clone() { return this; }, body: null, bodyUsed: false,
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+          blob: () => Promise.resolve(new Blob()),
+          bytes: () => Promise.resolve(new Uint8Array()),
+          formData: () => Promise.resolve(new FormData()),
+          text: () => Promise.resolve(JSON.stringify(body)),
+        } as Response;
+      }
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: string | URL | Request) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+        if (url.includes('/api/pages')) return createUrlResponse(PAGES);
+        if (url.includes('/api/zones/')) return createUrlResponse(ZONES);
+
+        // Containers never resolve
+        return new Promise(() => {});
+      });
+
+      renderDialog({ elementType: 'row' });
+
+      await goToPageStep();
+      await user.click(screen.getByText('About'));
+      await user.click(screen.getByTestId('duplicate-to-next'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-step-zone')).toBeInTheDocument();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText('main'));
+      await user.click(screen.getByTestId('duplicate-to-next'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-step-container')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/Loading containers/)).toBeInTheDocument();
+      expect(screen.getByText(/Loading containers/)).toHaveClass('duplicate-to-dialog__loading');
+    });
+  });
+
+  describe('step titles', () => {
+    it('shows "Select target page" on page step', () => {
+      mockApiRoutes();
+      renderDialog();
+
+      expect(screen.getByText('Select target page')).toBeInTheDocument();
+    });
+
+    it('shows "Select zone" on zone step', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog();
+
+      await selectPageAndAdvance(user);
+
+      await waitFor(() => {
+        expect(screen.getByText('Select zone')).toBeInTheDocument();
+      });
+    });
+
+    it('shows "Select container" on container step', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog({ elementType: 'row' });
+
+      await goToContainerStep(user);
+
+      expect(screen.getByText('Select container')).toBeInTheDocument();
+    });
+
+    it('shows "Confirm duplication" on confirm step', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog({ elementType: 'section' });
+
+      await goToZoneStep(user);
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument();
+      });
+      await user.click(screen.getByText('main'));
+      await user.click(screen.getByTestId('duplicate-to-next'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Confirm duplication')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('back button clears selections', () => {
+    it('going back from zone clears selectedZone', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog();
+
+      await goToZoneStep(user);
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument();
+      });
+
+      // Select a zone
+      await user.click(screen.getByText('sidebar'));
+      expect(screen.getByText('sidebar').closest('[role="option"]')).toHaveAttribute('aria-selected', 'true');
+
+      // Go back
+      await user.click(screen.getByTestId('duplicate-to-back'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-step-page')).toBeInTheDocument();
+      });
+
+      // Advance again — zone should not be pre-selected
+      await user.click(screen.getByText('About'));
+      await user.click(screen.getByTestId('duplicate-to-next'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument();
+      });
+
+      // Next button should be disabled (no zone selected)
+      expect(screen.getByTestId('duplicate-to-next')).toBeDisabled();
+    });
+
+    it('going back from container clears selectedContainerId', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog({ elementType: 'row' });
+
+      await goToContainerStep(user);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-container-list')).toBeInTheDocument();
+      });
+
+      // Select a container
+      await user.click(screen.getByText('Row 1'));
+      expect(screen.getByText('Row 1').closest('[role="option"]')).toHaveAttribute('aria-selected', 'true');
+
+      // Go back to zone
+      await user.click(screen.getByTestId('duplicate-to-back'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-step-zone')).toBeInTheDocument();
+      });
+
+      // Go forward again
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument();
+      });
+      await user.click(screen.getByText('main'));
+      await user.click(screen.getByTestId('duplicate-to-next'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-container-list')).toBeInTheDocument();
+      });
+
+      // Confirm should be disabled (no container selected after back)
+      expect(screen.getByTestId('duplicate-to-confirm')).toBeDisabled();
+    });
+  });
+
+  describe('container item metadata', () => {
+    it('displays container type alongside title', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog({ elementType: 'row' });
+
+      await goToContainerStep(user);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-container-list')).toBeInTheDocument();
+      });
+
+      // Each container shows both title and type
+      expect(screen.getByText('Row 1')).toBeInTheDocument();
+      expect(screen.getAllByText('Row')).toHaveLength(2);
+    });
+  });
+
+  describe('confirm step summary', () => {
+    it('shows selected zone name in summary', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes();
+      renderDialog({ elementType: 'section' });
+
+      await goToZoneStep(user);
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument();
+      });
+      await user.click(screen.getByText('sidebar'));
+      await user.click(screen.getByTestId('duplicate-to-next'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-step-confirm')).toBeInTheDocument();
+      });
+
+      const summary = screen.getByText(/Duplicate section to zone/);
+      expect(summary).toBeInTheDocument();
+      expect(screen.getByText('sidebar')).toBeInTheDocument();
+    });
+  });
+
   describe('error and cancel', () => {
     it('displays error message when error prop is set', () => {
       mockApiRoutes();

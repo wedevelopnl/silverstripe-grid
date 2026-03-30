@@ -1,117 +1,177 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useArchiveAction } from './useArchiveAction';
+import { useArchiveAction } from '@/hooks/useArchiveAction';
 import { createProviderWrapper } from '@/testing/renderWithProviders';
-import { createSectionNode, createSimpleElement } from '@/testing/factories';
-import { mockFetchSuccess } from '@/testing/mockFetch';
+import {
+  createSectionNode,
+  createRowNode,
+  createColumnNode,
+  createSimpleElement,
+  resetIdCounter,
+} from '@/testing/factories';
+import { mockFetchSuccess, mockFetchError, getFetchCalls } from '@/testing/mockFetch';
+import type { ElementNode } from '@/types/elements';
+
+function renderArchiveAction(node: ElementNode) {
+  const { wrapper } = createProviderWrapper();
+  return renderHook(() => useArchiveAction(node), { wrapper });
+}
 
 describe('useArchiveAction', () => {
-  it('should return null action when canDelete is false', () => {
-    const node = createSimpleElement({ canDelete: false });
-    const { wrapper } = createProviderWrapper();
-
-    const { result } = renderHook(() => useArchiveAction(node), { wrapper });
-
-    expect(result.current.action).toBeNull();
-    expect(result.current.dialog).toBeNull();
+  beforeEach(() => {
+    resetIdCounter();
   });
 
-  it('should return action with key "archive" when canDelete is true', () => {
-    const node = createSimpleElement({ canDelete: true });
-    const { wrapper } = createProviderWrapper();
+  describe('buildArchiveMessage via dialog.message', () => {
+    it('should show simple message for leaf element with no descendants', () => {
+      const node = createSimpleElement({ title: 'My Element' });
+      const { result } = renderArchiveAction(node);
 
-    const { result } = renderHook(() => useArchiveAction(node), { wrapper });
+      expect(result.current.dialog?.message).toBe('Archive "My Element"?');
+    });
 
-    expect(result.current.action).not.toBeNull();
-    expect(result.current.action?.key).toBe('archive');
-    expect(result.current.action?.destructive).toBe(true);
+    it('should show singular child message for 1 descendant', () => {
+      const column = createColumnNode({
+        title: 'My Column',
+        childCount: 1,
+      });
+      const { result } = renderArchiveAction(column);
+
+      expect(result.current.dialog?.message).toBe(
+        'Archive "My Column" and all 1 child element?',
+      );
+    });
+
+    it('should show plural children message for multiple descendants', () => {
+      const column = createColumnNode({
+        title: 'My Column',
+        childCount: 3,
+      });
+      const { result } = renderArchiveAction(column);
+
+      expect(result.current.dialog?.message).toBe(
+        'Archive "My Column" and all 3 child elements?',
+      );
+    });
+
+    it('should count nested descendants recursively', () => {
+      const section = createSectionNode({
+        title: 'My Section',
+        children: [
+          createRowNode({
+            children: [
+              createColumnNode({ childCount: 2 }),
+            ],
+          }),
+        ],
+      });
+      const { result } = renderArchiveAction(section);
+
+      // section > row(1) > column(1) > 2 elements = 4 descendants
+      expect(result.current.dialog?.message).toContain('4 child elements');
+    });
   });
 
-  it('should include descendant count in dialog message', () => {
-    const section = createSectionNode({
-      title: 'My Section',
-      canDelete: true,
+  describe('canDelete guard', () => {
+    it('should return null action when canDelete is false', () => {
+      const node = createSimpleElement({ canDelete: false });
+      const { result } = renderArchiveAction(node);
+
+      expect(result.current.action).toBeNull();
+      expect(result.current.dialog).toBeNull();
     });
-    const { wrapper } = createProviderWrapper();
 
-    const { result } = renderHook(() => useArchiveAction(section), { wrapper });
+    it('should return action when canDelete is true', () => {
+      const node = createSimpleElement({ canDelete: true });
+      const { result } = renderArchiveAction(node);
 
-    // Section has 1 row with 1 column with 1 element = 3 descendants
-    expect(result.current.dialog?.message).toBe(
-      'Archive "My Section" and all 3 child elements?',
-    );
+      expect(result.current.action).not.toBeNull();
+      expect(result.current.action?.key).toBe('archive');
+    });
   });
 
-  it('should use singular "child element" for 1 descendant', () => {
-    const section = createSectionNode({
-      title: 'Tiny Section',
-      canDelete: true,
-      children: [
-        // A single row with no columns gives 1 descendant
-        {
-          id: 50,
-          parentId: 10,
-          title: 'Row',
-          blockSchema: { typeName: 'Row', label: 'Row', icon: '', type: 'Row', title: 'Row', summary: '' },
-          obsoleteClassName: null,
-          version: 1,
-          canDelete: true,
-          canPublish: true,
-          canUnpublish: true,
-          canCreate: true,
-          editLink: null,
-          statusFlags: {},
-          containerType: 'row' as const,
-          allowedTypes: null,
-          children: null,
-        },
-      ],
+  describe('dialog open/cancel cycle', () => {
+    it('should open dialog on action and close on cancel', () => {
+      const node = createSimpleElement();
+      const { result } = renderArchiveAction(node);
+
+      expect(result.current.dialog?.isOpen).toBe(false);
+
+      act(() => {
+        result.current.action?.onAction();
+      });
+      expect(result.current.dialog?.isOpen).toBe(true);
+
+      act(() => {
+        result.current.dialog?.onCancel();
+      });
+      expect(result.current.dialog?.isOpen).toBe(false);
     });
-    const { wrapper } = createProviderWrapper();
-
-    const { result } = renderHook(() => useArchiveAction(section), { wrapper });
-
-    expect(result.current.dialog?.message).toBe(
-      'Archive "Tiny Section" and all 1 child element?',
-    );
   });
 
-  it('should open dialog when onAction is called', () => {
-    const node = createSimpleElement({ canDelete: true });
-    const { wrapper } = createProviderWrapper();
+  describe('handleConfirm', () => {
+    it('should trigger archive mutation with correct URL', async () => {
+      mockFetchSuccess({});
+      const node = createSimpleElement({ id: 42 });
+      const { result } = renderArchiveAction(node);
 
-    const { result } = renderHook(() => useArchiveAction(node), { wrapper });
+      act(() => {
+        result.current.action?.onAction();
+      });
 
-    expect(result.current.dialog?.isOpen).toBe(false);
+      act(() => {
+        result.current.dialog?.onConfirm();
+      });
 
-    act(() => {
-      result.current.action?.onAction();
+      await waitFor(() => {
+        expect(getFetchCalls().length).toBeGreaterThan(0);
+      });
+
+      const [url, init] = getFetchCalls()[0];
+      expect(url).toContain('/api/delete');
+      expect(init?.method).toBe('DELETE');
     });
 
-    expect(result.current.dialog?.isOpen).toBe(true);
-  });
+    it('should close dialog on confirm', () => {
+      mockFetchSuccess({});
+      const node = createSimpleElement();
+      const { result } = renderArchiveAction(node);
 
-  it('should call archive mutation on confirm', async () => {
-    mockFetchSuccess({});
+      act(() => {
+        result.current.action?.onAction();
+      });
+      expect(result.current.dialog?.isOpen).toBe(true);
 
-    const node = createSimpleElement({ id: 42, canDelete: true });
-    const { wrapper } = createProviderWrapper();
-
-    const { result } = renderHook(() => useArchiveAction(node), { wrapper });
-
-    act(() => {
-      result.current.action?.onAction();
+      act(() => {
+        result.current.dialog?.onConfirm();
+      });
+      expect(result.current.dialog?.isOpen).toBe(false);
     });
 
-    act(() => {
-      result.current.dialog?.onConfirm();
-    });
+    it('should show toast on error', async () => {
+      mockFetchError(500, { message: 'Server error' });
+      const dispatch = vi.fn();
+      window.ss.store = { dispatch };
 
-    await waitFor(() => {
-      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
-    });
+      const node = createSimpleElement({ id: 99 });
+      const { result } = renderArchiveAction(node);
 
-    const [url] = vi.mocked(globalThis.fetch).mock.calls[0];
-    expect(String(url)).toContain('delete');
+      act(() => {
+        result.current.action?.onAction();
+      });
+
+      act(() => {
+        result.current.dialog?.onConfirm();
+      });
+
+      await waitFor(() => {
+        expect(dispatch).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'DISPLAY_TOAST',
+            payload: expect.objectContaining({ type: 'error' }),
+          }),
+        );
+      });
+    });
   });
 });

@@ -50,4 +50,44 @@ describe('GridEditorErrorBoundary', () => {
       screen.getByText('The grid editor failed to render. Try reloading the page.'),
     ).toBeInTheDocument();
   });
+
+  it('calls showToast with error message when child throws', async () => {
+    const { showToast } = await import('@/utils/toast');
+
+    render(
+      <GridEditorErrorBoundary>
+        <ThrowingChild />
+      </GridEditorErrorBoundary>,
+    );
+
+    expect(showToast).toHaveBeenCalledWith(
+      'The grid editor encountered an error and could not render.',
+    );
+  });
+
+  it('calls console.error when child throws', () => {
+    render(
+      <GridEditorErrorBoundary>
+        <ThrowingChild />
+      </GridEditorErrorBoundary>,
+    );
+
+    // Our componentDidCatch calls console.error with a specific prefix
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[GridEditor] Render error:',
+      expect.any(Error),
+      expect.objectContaining({ componentStack: expect.any(String) }),
+    );
+  });
+
+  it('fallback has grid-editor__error class', () => {
+    render(
+      <GridEditorErrorBoundary>
+        <ThrowingChild />
+      </GridEditorErrorBoundary>,
+    );
+
+    const fallback = screen.getByText('The grid editor failed to render. Try reloading the page.');
+    expect(fallback).toHaveClass('grid-editor__error');
+  });
 });

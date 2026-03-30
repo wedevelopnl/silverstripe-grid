@@ -147,4 +147,124 @@ describe('ElementCard', () => {
 
     Object.defineProperty(window, 'location', locationDescriptor!);
   });
+
+  it('Enter key navigates to editLink', async () => {
+    const user = userEvent.setup();
+    mockFetchSuccess({});
+
+    let capturedHref = '';
+    const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, set href(val: string) { capturedHref = val; }, get href() { return capturedHref || 'http://localhost/'; } },
+      writable: true,
+      configurable: true,
+    });
+
+    const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
+
+    renderWithProviders(<ElementCard element={element} />);
+
+    const card = screen.getByTestId('element-card');
+    card.focus();
+    await user.keyboard('{Enter}');
+
+    expect(capturedHref).toBe('/admin/pages/edit/show/5');
+
+    Object.defineProperty(window, 'location', locationDescriptor!);
+  });
+
+  it('has role="link" and tabIndex when editLink is set', () => {
+    mockFetchSuccess({});
+
+    const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
+
+    renderWithProviders(<ElementCard element={element} />);
+
+    const card = screen.getByTestId('element-card');
+    expect(card).toHaveAttribute('role', 'link');
+    expect(card).toHaveAttribute('tabindex', '0');
+  });
+
+  it('has no role or tabIndex when editLink is null', () => {
+    mockFetchSuccess({});
+
+    const element = createEnrichedElement({ editLink: null });
+
+    renderWithProviders(<ElementCard element={element} />);
+
+    const card = screen.getByTestId('element-card');
+    expect(card).not.toHaveAttribute('role');
+    expect(card).not.toHaveAttribute('tabindex');
+  });
+
+  it('applies element-card base class always', () => {
+    mockFetchSuccess({});
+
+    const element = createEnrichedElement();
+
+    renderWithProviders(<ElementCard element={element} />);
+
+    expect(screen.getByTestId('element-card')).toHaveClass('element-card');
+  });
+
+  it('empty content area has the --empty modifier class', () => {
+    mockFetchSuccess({});
+
+    const element = createEnrichedElement({
+      blockSchema: {
+        typeName: 'Content',
+        label: 'Content',
+        icon: 'font-icon-content',
+        type: 'Content',
+        title: 'Content',
+        summary: '',
+      },
+    });
+
+    renderWithProviders(<ElementCard element={element} />);
+
+    const contentDiv = screen.getByText('No preview available');
+    expect(contentDiv).toHaveClass('element-card__content', 'element-card__content--empty');
+  });
+
+  it('non-empty content area does not have the --empty modifier class', () => {
+    mockFetchSuccess({});
+
+    const element = createEnrichedElement({
+      blockSchema: {
+        typeName: 'Content',
+        label: 'Content',
+        icon: 'font-icon-content',
+        type: 'Content',
+        title: 'Content',
+        summary: 'Some text',
+      },
+    });
+
+    renderWithProviders(<ElementCard element={element} />);
+
+    const contentDiv = screen.getByText('Some text');
+    expect(contentDiv).toHaveClass('element-card__content');
+    expect(contentDiv).not.toHaveClass('element-card__content--empty');
+  });
+
+  it('renders the icon with the blockSchema icon class', () => {
+    mockFetchSuccess({});
+
+    const element = createEnrichedElement({
+      blockSchema: {
+        typeName: 'Content',
+        label: 'Content',
+        icon: 'font-icon-block-content',
+        type: 'Content',
+        title: 'Content',
+        summary: '',
+      },
+    });
+
+    renderWithProviders(<ElementCard element={element} />);
+
+    const icon = screen.getByTestId('element-card').querySelector('.element-card__icon');
+    expect(icon).toHaveClass('element-card__icon', 'font-icon-block-content');
+  });
 });

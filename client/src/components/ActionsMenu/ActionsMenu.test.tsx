@@ -155,4 +155,81 @@ describe('ActionsMenu', () => {
     await user.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
   });
+
+  it('trigger has aria-controls pointing to menu id when open', async () => {
+    const user = userEvent.setup();
+
+    render(<ActionsMenu actions={createActions()} />);
+
+    const trigger = screen.getByTestId('actions-menu-trigger');
+
+    // Closed: no aria-controls
+    expect(trigger).not.toHaveAttribute('aria-controls');
+
+    await user.click(trigger);
+
+    // Open: aria-controls references the dropdown id
+    expect(trigger).toHaveAttribute('aria-controls', 'actions-menu-menu');
+  });
+
+  it('trigger has aria-haspopup="menu"', () => {
+    render(<ActionsMenu actions={createActions()} />);
+
+    expect(screen.getByTestId('actions-menu-trigger')).toHaveAttribute('aria-haspopup', 'menu');
+  });
+
+  it('trigger has aria-label "Actions"', () => {
+    render(<ActionsMenu actions={createActions()} />);
+
+    expect(screen.getByTestId('actions-menu-trigger')).toHaveAttribute('aria-label', 'Actions');
+  });
+
+  it('dropdown has role="menu"', async () => {
+    const user = userEvent.setup();
+
+    render(<ActionsMenu actions={createActions()} />);
+
+    await user.click(screen.getByTestId('actions-menu-trigger'));
+
+    const dropdown = screen.getByTestId('actions-menu-dropdown');
+    expect(dropdown).toHaveAttribute('role', 'menu');
+  });
+
+  it('menu items have role="menuitem"', async () => {
+    const user = userEvent.setup();
+
+    render(<ActionsMenu actions={createActions()} />);
+
+    await user.click(screen.getByTestId('actions-menu-trigger'));
+
+    const items = screen.getAllByRole('menuitem');
+    expect(items).toHaveLength(2);
+  });
+
+  it('trigger has actions-menu__trigger class', () => {
+    render(<ActionsMenu actions={createActions()} />);
+
+    expect(screen.getByTestId('actions-menu-trigger')).toHaveClass('actions-menu__trigger');
+  });
+
+  it('non-destructive item does not have actions-menu__item--destructive class', async () => {
+    const user = userEvent.setup();
+
+    render(<ActionsMenu actions={createActions()} />);
+
+    await user.click(screen.getByTestId('actions-menu-trigger'));
+
+    expect(screen.getByText('Edit')).toHaveClass('actions-menu__item');
+    expect(screen.getByText('Edit')).not.toHaveClass('actions-menu__item--destructive');
+  });
+
+  it('uses custom testId for dropdown', async () => {
+    const user = userEvent.setup();
+
+    render(<ActionsMenu actions={createActions()} testId="custom-menu" />);
+
+    await user.click(screen.getByTestId('actions-menu-trigger'));
+
+    expect(screen.getByTestId('custom-menu-dropdown')).toBeInTheDocument();
+  });
 });

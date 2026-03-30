@@ -63,4 +63,52 @@ describe('ConfirmDialog', () => {
     const confirmButton = screen.getByText('Delete');
     expect(confirmButton).not.toHaveClass('confirm-dialog__button--destructive');
   });
+
+  it('calls onCancel when dialog native close event fires', () => {
+    const onCancel = vi.fn();
+
+    render(<ConfirmDialog {...defaultProps} onCancel={onCancel} />);
+
+    const dialog = screen.getByTestId('confirm-dialog');
+    dialog.dispatchEvent(new Event('close', { bubbles: false }));
+
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  // Stryker disable next-line all: jsdom does not implement HTMLDialogElement.showModal/close natively
+  it('calls showModal when isOpen transitions to true', () => {
+    const { rerender } = render(<ConfirmDialog {...defaultProps} isOpen={false} />);
+
+    rerender(<ConfirmDialog {...defaultProps} isOpen={true} />);
+
+    expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled();
+  });
+
+  // Stryker disable next-line all: jsdom does not implement HTMLDialogElement.close natively
+  it('calls close when isOpen transitions to false', () => {
+    const { rerender } = render(<ConfirmDialog {...defaultProps} isOpen={true} />);
+
+    // showModal was called, now the mock thinks dialog.open is truthy
+    // We need to simulate dialog.open for the close branch
+    const dialog = screen.getByTestId('confirm-dialog') as HTMLDialogElement;
+    Object.defineProperty(dialog, 'open', { value: true, writable: true });
+
+    rerender(<ConfirmDialog {...defaultProps} isOpen={false} />);
+
+    expect(HTMLDialogElement.prototype.close).toHaveBeenCalled();
+  });
+
+  it('confirm button has confirm class', () => {
+    render(<ConfirmDialog {...defaultProps} />);
+
+    const confirmButton = screen.getByText('Delete');
+    expect(confirmButton).toHaveClass('confirm-dialog__button--confirm');
+  });
+
+  it('cancel button has cancel class', () => {
+    render(<ConfirmDialog {...defaultProps} />);
+
+    const cancelButton = screen.getByText('Cancel');
+    expect(cancelButton).toHaveClass('confirm-dialog__button--cancel');
+  });
 });
