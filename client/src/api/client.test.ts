@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { apiGet, apiPost, apiPatch, apiDelete } from './client';
 import { ApiError } from './errors';
 import { mockFetchSuccess, mockFetchError, getFetchCalls } from '@/testing/mockFetch';

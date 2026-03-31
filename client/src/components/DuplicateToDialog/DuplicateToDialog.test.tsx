@@ -207,7 +207,7 @@ describe('DuplicateToDialog', () => {
 
     it('search debounces and updates page list', async () => {
       const user = userEvent.setup();
-      const fetchSpy = mockApiRoutes();
+      mockApiRoutes();
       renderDialog();
 
       await goToPageStep();

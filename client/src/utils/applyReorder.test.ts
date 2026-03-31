@@ -544,7 +544,7 @@ describe('applyReorder', () => {
     it('should return same reference when inserting after previous sibling matches current position', () => {
       const { tree } = buildTree();
       const column = drillDown(tree, '1', 0, 0, 0);
-      const [elemA, elemB, elemC] = column.children!;
+      const [, elemB, elemC] = column.children!;
 
       // Element C (index 2) is already after element B (index 1)
       const result = applyReorder(tree, elemC.id, column.id, elemB.id);
