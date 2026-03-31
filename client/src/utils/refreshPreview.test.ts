@@ -12,6 +12,10 @@ describe('refreshPreview', () => {
     expect(trigger).toHaveBeenCalledWith('aftersubmitform', {
       xhr: { getResponseHeader: expect.any(Function) },
     });
+
+    // Verify the stub getResponseHeader returns null
+    const eventData = trigger.mock.calls[0][1] as { xhr: { getResponseHeader: () => unknown } };
+    expect(eventData.xhr.getResponseHeader()).toBeNull();
   });
 
   it('does nothing when jQuery is not available', () => {

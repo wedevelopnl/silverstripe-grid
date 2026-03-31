@@ -232,4 +232,62 @@ describe('GridSettingsPicker', () => {
 
     expect(screen.getByTestId('width-picker')).not.toHaveClass('grid-settings-picker__trigger--disabled');
   });
+
+  it('outside click while picker is closed does not open it', async () => {
+    const user = userEvent.setup();
+
+    renderPicker();
+
+    // Picker starts closed
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    // Click outside
+    await user.click(document.body);
+
+    // Should still be closed
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('Escape key while picker is closed does not cause errors', async () => {
+    const user = userEvent.setup();
+
+    renderPicker();
+
+    // Picker starts closed
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    // Press Escape while closed
+    await user.keyboard('{Escape}');
+
+    // Should still be closed
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('option elements have exact base class', async () => {
+    const user = userEvent.setup();
+
+    renderPicker({ selectedValue: 12 });
+
+    await user.click(screen.getByTestId('width-picker'));
+
+    const options = screen.getAllByRole('option');
+    // Each option has the base class
+    for (const option of options) {
+      expect(option).toHaveClass('grid-settings-picker__option');
+    }
+  });
+
+  it('trigger has exact base class when enabled', () => {
+    renderPicker({ disabled: false });
+
+    expect(screen.getByTestId('width-picker').className).toBe('grid-settings-picker__trigger');
+  });
+
+  it('trigger has exact classes when disabled', () => {
+    renderPicker({ disabled: true });
+
+    expect(screen.getByTestId('width-picker').className).toBe(
+      'grid-settings-picker__trigger grid-settings-picker__trigger--disabled',
+    );
+  });
 });

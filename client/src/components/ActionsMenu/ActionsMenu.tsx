@@ -37,6 +37,7 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
+        // Stryker disable next-line all: stopPropagation prevents bubble to parent menus, not observable via RTL
         e.stopPropagation();
         close();
       }

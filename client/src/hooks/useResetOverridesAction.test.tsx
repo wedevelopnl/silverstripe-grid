@@ -88,8 +88,7 @@ describe('useResetOverridesAction', () => {
 
     const { result } = renderHook(() => useResetOverridesAction(), { wrapper });
 
-    expect(result.current.dialogMessage).toContain('1 column?');
-    expect(result.current.dialogMessage).not.toContain('columns');
+    expect(result.current.dialogMessage).toBe('Reset all viewport overrides across 1 column?');
   });
 
   it('should use plural "columns" when affected count is greater than 1', () => {
@@ -97,7 +96,39 @@ describe('useResetOverridesAction', () => {
 
     const { result } = renderHook(() => useResetOverridesAction(), { wrapper });
 
-    expect(result.current.dialogMessage).toContain('5 columns?');
+    expect(result.current.dialogMessage).toBe('Reset all viewport overrides across 5 columns?');
+  });
+
+  it('should set dialogTitle to "Reset all overrides" on default viewport', () => {
+    const { wrapper } = setupWithOverrides({ _total: 3 }, 'md');
+
+    const { result } = renderHook(() => useResetOverridesAction(), { wrapper });
+
+    expect(result.current.dialogTitle).toBe('Reset all overrides');
+  });
+
+  it('should set dialogTitle with viewport label for non-default viewport', () => {
+    const { wrapper } = setupWithOverrides({ lg: 2 }, 'lg');
+
+    const { result } = renderHook(() => useResetOverridesAction(), { wrapper });
+
+    expect(result.current.dialogTitle).toBe('Reset Large overrides');
+  });
+
+  it('should use viewport label "Large" in dialogMessage for lg viewport', () => {
+    const { wrapper } = setupWithOverrides({ lg: 3 }, 'lg');
+
+    const { result } = renderHook(() => useResetOverridesAction(), { wrapper });
+
+    expect(result.current.dialogMessage).toBe('Reset overrides for 3 columns on Large?');
+  });
+
+  it('should use singular "column" in non-default viewport dialogMessage', () => {
+    const { wrapper } = setupWithOverrides({ lg: 1 }, 'lg');
+
+    const { result } = renderHook(() => useResetOverridesAction(), { wrapper });
+
+    expect(result.current.dialogMessage).toBe('Reset overrides for 1 column on Large?');
   });
 
   it('should open dialog on reset click', () => {

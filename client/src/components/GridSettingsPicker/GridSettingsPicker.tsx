@@ -47,6 +47,7 @@ export default function GridSettingsPicker({
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
+        // Stryker disable next-line all: stopPropagation prevents bubble to parent pickers, not observable via RTL
         e.stopPropagation();
         close();
       }

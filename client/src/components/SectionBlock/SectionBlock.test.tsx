@@ -1,6 +1,8 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useSortable } from '@dnd-kit/sortable';
+import { useDragContext } from '@/hooks/useDragAndDrop';
 
 import { mockFetchSuccess } from '@/testing/mockFetch';
 import { createEnrichedSection } from '@/testing/enrichedFactories';
@@ -8,24 +10,31 @@ import { renderWithProviders } from '@/testing/renderWithProviders';
 
 import SectionBlock from './SectionBlock';
 
+const defaultSortable = {
+  attributes: {},
+  listeners: {},
+  setNodeRef: vi.fn(),
+  transform: null,
+  transition: undefined,
+  isDragging: false,
+  isOver: false,
+};
+
 vi.mock('@dnd-kit/sortable', () => ({
-  useSortable: () => ({
-    attributes: {},
-    listeners: {},
-    setNodeRef: vi.fn(),
-    transform: null,
-    transition: undefined,
-    isDragging: false,
-    isOver: false,
-  }),
+  useSortable: vi.fn(() => ({ ...defaultSortable })),
   SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   verticalListSortingStrategy: {},
   horizontalListSortingStrategy: {},
 }));
 
 vi.mock('@/hooks/useDragAndDrop', () => ({
-  useDragContext: () => ({ activeType: null }),
+  useDragContext: vi.fn(() => ({ activeType: null })),
 }));
+
+afterEach(() => {
+  vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<typeof useSortable>);
+  vi.mocked(useDragContext).mockReturnValue({ activeType: null });
+});
 
 describe('SectionBlock', () => {
   it('renders section title', () => {
@@ -128,6 +137,16 @@ describe('SectionBlock', () => {
     expect(screen.getByTestId('section-title')).toHaveTextContent(section.title);
   });
 
+  it('shows empty state when children is an empty array', () => {
+    mockFetchSuccess({});
+
+    const section = createEnrichedSection({ children: [] as never });
+
+    renderWithProviders(<SectionBlock section={section} />);
+
+    expect(screen.getByTestId('add-child-empty')).toBeInTheDocument();
+  });
+
   describe('CSS classes', () => {
     it('includes draft status modifier', () => {
       mockFetchSuccess({});
@@ -157,6 +176,42 @@ describe('SectionBlock', () => {
       renderWithProviders(<SectionBlock section={section} />);
 
       expect(screen.getByTestId('section-block')).toHaveClass('section-block--published');
+    });
+
+    it('includes drop-target class when isOver and activeType is section', () => {
+      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: true } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'section' });
+      mockFetchSuccess({});
+
+      const section = createEnrichedSection({});
+
+      renderWithProviders(<SectionBlock section={section} />);
+
+      expect(screen.getByTestId('section-block')).toHaveClass('section-block--drop-target');
+    });
+
+    it('does not include drop-target class when isOver but activeType is not section', () => {
+      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: true } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'row' });
+      mockFetchSuccess({});
+
+      const section = createEnrichedSection({});
+
+      renderWithProviders(<SectionBlock section={section} />);
+
+      expect(screen.getByTestId('section-block')).not.toHaveClass('section-block--drop-target');
+    });
+
+    it('does not include drop-target class when activeType is section but not isOver', () => {
+      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: false } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'section' });
+      mockFetchSuccess({});
+
+      const section = createEnrichedSection({});
+
+      renderWithProviders(<SectionBlock section={section} />);
+
+      expect(screen.getByTestId('section-block')).not.toHaveClass('section-block--drop-target');
     });
   });
 });

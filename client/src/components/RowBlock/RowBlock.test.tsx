@@ -1,6 +1,8 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resetAdapterCache } from '@/utils/gridAdapter';
+import { useSortable } from '@dnd-kit/sortable';
+import { useDragContext } from '@/hooks/useDragAndDrop';
 
 import { mockFetchSuccess } from '@/testing/mockFetch';
 import { createEnrichedRow } from '@/testing/enrichedFactories';
@@ -8,24 +10,31 @@ import { renderWithProviders } from '@/testing/renderWithProviders';
 
 import RowBlock from './RowBlock';
 
+const defaultSortable = {
+  attributes: {},
+  listeners: {},
+  setNodeRef: vi.fn(),
+  transform: null,
+  transition: undefined,
+  isDragging: false,
+  isOver: false,
+};
+
 vi.mock('@dnd-kit/sortable', () => ({
-  useSortable: () => ({
-    attributes: {},
-    listeners: {},
-    setNodeRef: vi.fn(),
-    transform: null,
-    transition: undefined,
-    isDragging: false,
-    isOver: false,
-  }),
+  useSortable: vi.fn(() => ({ ...defaultSortable })),
   SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   verticalListSortingStrategy: {},
   horizontalListSortingStrategy: {},
 }));
 
 vi.mock('@/hooks/useDragAndDrop', () => ({
-  useDragContext: () => ({ activeType: null }),
+  useDragContext: vi.fn(() => ({ activeType: null })),
 }));
+
+afterEach(() => {
+  vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<typeof useSortable>);
+  vi.mocked(useDragContext).mockReturnValue({ activeType: null });
+});
 
 describe('RowBlock', () => {
   it('renders row title', () => {
@@ -68,6 +77,16 @@ describe('RowBlock', () => {
 
     expect(screen.getByTestId('add-child-append')).toBeInTheDocument();
     expect(screen.queryByTestId('add-child-empty')).not.toBeInTheDocument();
+  });
+
+  it('shows empty state when children is an empty array', () => {
+    mockFetchSuccess({});
+
+    const row = createEnrichedRow({ children: [] as never });
+
+    renderWithProviders(<RowBlock row={row} />);
+
+    expect(screen.getByTestId('add-child-empty')).toBeInTheDocument();
   });
 
   describe('CSS classes', () => {
@@ -120,6 +139,42 @@ describe('RowBlock', () => {
       renderWithProviders(<RowBlock row={row} />);
 
       expect(screen.getByTestId('row-block')).not.toHaveClass('row-block--collapsed');
+    });
+
+    it('includes drop-target class when isOver and activeType is row', () => {
+      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: true } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'row' });
+      mockFetchSuccess({});
+
+      const row = createEnrichedRow({});
+
+      renderWithProviders(<RowBlock row={row} />);
+
+      expect(screen.getByTestId('row-block')).toHaveClass('row-block--drop-target');
+    });
+
+    it('does not include drop-target class when isOver but activeType is not row', () => {
+      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: true } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'section' });
+      mockFetchSuccess({});
+
+      const row = createEnrichedRow({});
+
+      renderWithProviders(<RowBlock row={row} />);
+
+      expect(screen.getByTestId('row-block')).not.toHaveClass('row-block--drop-target');
+    });
+
+    it('does not include drop-target class when activeType is row but not isOver', () => {
+      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: false } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'row' });
+      mockFetchSuccess({});
+
+      const row = createEnrichedRow({});
+
+      renderWithProviders(<RowBlock row={row} />);
+
+      expect(screen.getByTestId('row-block')).not.toHaveClass('row-block--drop-target');
     });
   });
 

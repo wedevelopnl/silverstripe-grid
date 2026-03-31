@@ -1,9 +1,12 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 
 import { mockFetchSuccess } from '@/testing/mockFetch';
+import { createTreeApiResponse } from '@/testing/factories';
 import { renderWithProviders } from '@/testing/renderWithProviders';
+import { queryKeys } from '@/hooks/queryKeys';
 
 import ViewportSwitcher from './ViewportSwitcher';
 
@@ -131,5 +134,56 @@ describe('ViewportSwitcher', () => {
     // Other buttons should still be inactive
     expect(buttons[0]).not.toHaveClass('viewport-switcher__button--active');
     expect(buttons[3]).not.toHaveClass('viewport-switcher__button--active');
+  });
+
+  it('inactive buttons do not have aria-disabled attribute at all', () => {
+    mockFetchSuccess({});
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
+
+    const buttons = screen.getAllByTestId('viewport-button');
+    // All non-active buttons should lack aria-disabled entirely
+    for (const [index, button] of buttons.entries()) {
+      if (index === 2) continue; // skip md (active)
+      expect(button).not.toHaveAttribute('aria-disabled');
+    }
+  });
+
+  it('shows reset button when overrides exist in cache', () => {
+    mockFetchSuccess({});
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+
+    queryClient.setQueryData(
+      queryKeys.elementTree.byPage(1, 'main'),
+      createTreeApiResponse({ overrideCounts: { _total: 5, md: 3 } }),
+    );
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'md', queryClient });
+
+    const resetButton = screen.getByTestId('reset-overrides-button');
+    expect(resetButton).toBeInTheDocument();
+    expect(resetButton).toHaveTextContent('Reset all');
+  });
+
+  it('shows "Reset viewport" label for non-default viewport with overrides', () => {
+    mockFetchSuccess({});
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+
+    queryClient.setQueryData(
+      queryKeys.elementTree.byPage(1, 'main'),
+      createTreeApiResponse({ overrideCounts: { _total: 5, lg: 2 } }),
+    );
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'lg', queryClient });
+
+    const resetButton = screen.getByTestId('reset-overrides-button');
+    expect(resetButton).toBeInTheDocument();
+    expect(resetButton).toHaveTextContent('Reset viewport');
   });
 });

@@ -8,11 +8,13 @@ describe('getConfig', () => {
     expect(config.sections).toHaveLength(1);
   });
 
-  it('throws ConfigError when window.ss.config is undefined', () => {
+  it('throws ConfigError with exact message when window.ss.config is undefined', () => {
     // @ts-expect-error — testing missing global
     delete window.ss;
 
-    expect(() => getConfig()).toThrow('SilverStripe config is not available');
+    expect(() => getConfig()).toThrow(
+      'SilverStripe config is not available. Ensure the admin bundle is loaded before the grid editor.',
+    );
   });
 });
 
@@ -27,10 +29,18 @@ describe('getControllerLink', () => {
     expect(getControllerLink()).toBe('/admin/grid');
   });
 
-  it('throws ConfigError when controller section is missing', () => {
+  it('throws ConfigError with exact message when controller section is missing', () => {
     window.ss.config.sections = [];
 
-    expect(() => getControllerLink()).toThrow('Controller section');
+    expect(() => getControllerLink()).toThrow(
+      'Controller section "WeDevelop\\Grid\\Controllers\\GridController" not found in CMS config. Ensure the grid module is installed.',
+    );
+  });
+
+  it('strips multiple trailing slashes from controller link', () => {
+    window.ss.config.sections[0].controllerLink = '/admin/grid///';
+
+    expect(getControllerLink()).toBe('/admin/grid');
   });
 });
 
@@ -41,9 +51,11 @@ describe('getAdapterConfig', () => {
     expect(config.defaultViewport).toBe('md');
   });
 
-  it('throws ConfigError when adapter config is missing', () => {
+  it('throws ConfigError with exact message when adapter config is missing', () => {
     delete window.ss.config.sections[0].gridAdapter;
 
-    expect(() => getAdapterConfig()).toThrow('Grid adapter configuration is missing');
+    expect(() => getAdapterConfig()).toThrow(
+      'Grid adapter configuration is missing. Ensure the grid module is installed and configured.',
+    );
   });
 });

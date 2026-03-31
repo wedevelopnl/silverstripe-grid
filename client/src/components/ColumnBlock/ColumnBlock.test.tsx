@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetAdapterCache } from '@/utils/gridAdapter';
 
 import { mockFetchSuccess, getFetchCalls } from '@/testing/mockFetch';
@@ -19,16 +19,21 @@ beforeEach(() => {
   });
 });
 
+import { useSortable } from '@dnd-kit/sortable';
+import { useDragContext } from '@/hooks/useDragAndDrop';
+
+const defaultSortable = {
+  attributes: {},
+  listeners: {},
+  setNodeRef: vi.fn(),
+  transform: null,
+  transition: undefined,
+  isDragging: false,
+  isOver: false,
+};
+
 vi.mock('@dnd-kit/sortable', () => ({
-  useSortable: () => ({
-    attributes: {},
-    listeners: {},
-    setNodeRef: vi.fn(),
-    transform: null,
-    transition: undefined,
-    isDragging: false,
-    isOver: false,
-  }),
+  useSortable: vi.fn(() => ({ ...defaultSortable })),
   SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   verticalListSortingStrategy: {},
   horizontalListSortingStrategy: {},
@@ -43,8 +48,13 @@ vi.mock('@dnd-kit/core', async (importOriginal) => {
 });
 
 vi.mock('@/hooks/useDragAndDrop', () => ({
-  useDragContext: () => ({ activeType: null }),
+  useDragContext: vi.fn(() => ({ activeType: null })),
 }));
+
+afterEach(() => {
+  vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<typeof useSortable>);
+  vi.mocked(useDragContext).mockReturnValue({ activeType: null });
+});
 
 describe('ColumnBlock', () => {
   it('renders column children (element cards)', () => {
@@ -172,6 +182,42 @@ describe('ColumnBlock', () => {
       renderWithProviders(<ColumnBlock column={column} />);
 
       expect(screen.getByTestId('column-block')).toHaveClass('column-block--collapsed');
+    });
+
+    it('includes drop-target class when isOver and activeType is column', () => {
+      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: true } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'column' });
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({});
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-block')).toHaveClass('column-block--drop-target');
+    });
+
+    it('does not include drop-target class when isOver but activeType is not column', () => {
+      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: true } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'row' });
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({});
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-block')).not.toHaveClass('column-block--drop-target');
+    });
+
+    it('does not include drop-target class when activeType is column but not isOver', () => {
+      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: false } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'column' });
+      mockFetchSuccess({});
+
+      const column = createEnrichedColumn({});
+
+      renderWithProviders(<ColumnBlock column={column} />);
+
+      expect(screen.getByTestId('column-block')).not.toHaveClass('column-block--drop-target');
     });
   });
 
@@ -510,6 +556,55 @@ describe('ColumnBlock', () => {
         parentId: 60,
       });
     });
+  });
+
+  it('shows EmptyState when children is empty array and no allowedTypes', () => {
+    mockFetchSuccess({});
+
+    const column = createEnrichedColumn({ children: [] as never, childCount: 0, allowedTypes: null });
+
+    renderWithProviders(<ColumnBlock column={column} />);
+
+    expect(screen.getByText('No content blocks')).toBeInTheDocument();
+  });
+
+  it('disables width picker when a drag is active', () => {
+    vi.mocked(useDragContext).mockReturnValue({ activeType: 'column' });
+    mockFetchSuccess({});
+
+    const column = createEnrichedColumn({
+      gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+    });
+
+    renderWithProviders(<ColumnBlock column={column} />);
+
+    expect(screen.getByTestId('column-badge')).toBeDisabled();
+  });
+
+  it('closes the element type picker when close handler is invoked', async () => {
+    const user = userEvent.setup();
+    mockFetchSuccess({});
+
+    const column = createEnrichedColumn({
+      children: null,
+      childCount: 0,
+      allowedTypes: {
+        'App\\Model\\TextBlock': { label: 'Text Block', icon: 'font-icon-text', description: 'A text block' },
+      },
+    });
+
+    renderWithProviders(<ColumnBlock column={column} />);
+
+    // Open the picker
+    await user.click(screen.getByTestId('add-content-button'));
+    expect(screen.getByTestId('element-type-picker')).toBeInTheDocument();
+
+    // Close it via the close button
+    await user.click(screen.getByTestId('element-type-picker-close'));
+
+    // The dialog should be closed (no open attribute)
+    const dialog = screen.getByTestId('element-type-picker');
+    expect(dialog).not.toHaveAttribute('open');
   });
 
   it('renders edit link when editLink is set', () => {

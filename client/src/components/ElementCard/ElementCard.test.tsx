@@ -49,7 +49,7 @@ describe('ElementCard', () => {
     expect(screen.getByText('This is a preview of the content')).toBeInTheDocument();
   });
 
-  it('shows "No preview available" when summary is empty', () => {
+  it('shows exact "No preview available" text when summary is empty and has empty class', () => {
     mockFetchSuccess({});
 
     const element = createEnrichedElement({
@@ -65,7 +65,9 @@ describe('ElementCard', () => {
 
     renderWithProviders(<ElementCard element={element} />);
 
-    expect(screen.getByText('No preview available')).toBeInTheDocument();
+    const content = screen.getByText('No preview available');
+    expect(content.textContent).toBe('No preview available');
+    expect(content).toHaveClass('element-card__content', 'element-card__content--empty');
   });
 
   it('status class applied correctly', () => {
@@ -246,6 +248,72 @@ describe('ElementCard', () => {
     const contentDiv = screen.getByText('Some text');
     expect(contentDiv).toHaveClass('element-card__content');
     expect(contentDiv).not.toHaveClass('element-card__content--empty');
+  });
+
+  it('non-Enter keys do not navigate to editLink', async () => {
+    const user = userEvent.setup();
+    mockFetchSuccess({});
+
+    let navigated = false;
+    const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, set href(_: string) { navigated = true; }, get href() { return 'http://localhost/'; } },
+      writable: true,
+      configurable: true,
+    });
+
+    const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
+
+    renderWithProviders(<ElementCard element={element} />);
+
+    const card = screen.getByTestId('element-card');
+    card.focus();
+    await user.keyboard('{Tab}');
+
+    expect(navigated).toBe(false);
+
+    Object.defineProperty(window, 'location', locationDescriptor!);
+  });
+
+  it('clickable class is exactly "element-card--clickable"', () => {
+    mockFetchSuccess({});
+
+    const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
+
+    renderWithProviders(<ElementCard element={element} />);
+
+    const card = screen.getByTestId('element-card');
+    expect(card.className).toContain('element-card--clickable');
+  });
+
+  it('role attribute is exactly "link" when editLink is set', () => {
+    mockFetchSuccess({});
+
+    const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
+
+    renderWithProviders(<ElementCard element={element} />);
+
+    expect(screen.getByTestId('element-card')).toHaveAttribute('role', 'link');
+  });
+
+  it('content class is exactly "element-card__content--empty" for empty summary', () => {
+    mockFetchSuccess({});
+
+    const element = createEnrichedElement({
+      blockSchema: {
+        typeName: 'Content',
+        label: 'Content',
+        icon: 'font-icon-content',
+        type: 'Content',
+        title: 'Content',
+        summary: '',
+      },
+    });
+
+    renderWithProviders(<ElementCard element={element} />);
+
+    const content = screen.getByText('No preview available');
+    expect(content.className).toBe('element-card__content element-card__content--empty');
   });
 
   it('renders the icon with the blockSchema icon class', () => {

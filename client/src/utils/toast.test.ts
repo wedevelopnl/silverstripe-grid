@@ -50,6 +50,23 @@ describe('showToast', () => {
     );
   });
 
+  it('sets stay to true for warning toasts', () => {
+    const dispatch = vi.fn();
+    window.ss.store = { dispatch };
+
+    showToast('Heads up', 'warning');
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'DISPLAY_TOAST',
+      payload: {
+        id: 'toast-00000000-0000-0000-0000-000000000000',
+        text: 'Heads up',
+        type: 'warning',
+        stay: true,
+      },
+    });
+  });
+
   it('falls back to console.warn when store is unavailable', () => {
     delete window.ss.store;
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});

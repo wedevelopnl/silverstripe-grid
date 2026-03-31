@@ -335,6 +335,201 @@ describe('applyReorder', () => {
     });
   });
 
+  describe('multi-root tree isolation', () => {
+    it('should only affect root trees containing the source or target parent', () => {
+      resetIdCounter();
+
+      // Three root trees: move within root 1, roots 2 and 3 should be unaffected
+      const section1 = createSectionNode({
+        id: 10,
+        parentId: 1,
+        children: [
+          createRowNode({
+            id: 20,
+            parentId: 10,
+            children: [
+              createColumnNode({
+                id: 30,
+                parentId: 20,
+                childCount: 2,
+              }),
+            ],
+          }),
+        ],
+      });
+      for (const child of section1.children![0].children![0].children!) {
+        child.parentId = 30;
+      }
+
+      const section2 = createSectionNode({
+        id: 11,
+        parentId: 2,
+        children: [
+          createRowNode({
+            id: 21,
+            parentId: 11,
+            children: [
+              createColumnNode({ id: 31, parentId: 21, childCount: 1 }),
+            ],
+          }),
+        ],
+      });
+
+      const section3 = createSectionNode({
+        id: 12,
+        parentId: 3,
+        children: [
+          createRowNode({
+            id: 22,
+            parentId: 12,
+            children: [
+              createColumnNode({ id: 32, parentId: 22, childCount: 1 }),
+            ],
+          }),
+        ],
+      });
+
+      const tree: ElementTreeResponse = {
+        '1': [section1],
+        '2': [section2],
+        '3': [section3],
+      };
+
+      const col30Children = section1.children![0].children![0].children!;
+      const result = applyReorder(tree, col30Children[1].id, 30, null);
+
+      expect(result).not.toBe(tree);
+      // Root 1 affected — new reference
+      expect(result['1']).not.toBe(tree['1']);
+      // Roots 2 and 3 unaffected — same reference
+      expect(result['2']).toBe(tree['2']);
+      expect(result['3']).toBe(tree['3']);
+    });
+
+    it('should mark both source and target root trees as affected in cross-root move', () => {
+      resetIdCounter();
+
+      const section1 = createSectionNode({
+        id: 10,
+        parentId: 1,
+        children: [
+          createRowNode({
+            id: 20,
+            parentId: 10,
+            children: [
+              createColumnNode({
+                id: 30,
+                parentId: 20,
+                children: [
+                  createSimpleElement({ id: 100, parentId: 30 }),
+                  createSimpleElement({ id: 101, parentId: 30 }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const section2 = createSectionNode({
+        id: 11,
+        parentId: 2,
+        children: [
+          createRowNode({
+            id: 21,
+            parentId: 11,
+            children: [
+              createColumnNode({
+                id: 31,
+                parentId: 21,
+                children: [
+                  createSimpleElement({ id: 200, parentId: 31 }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const section3 = createSectionNode({
+        id: 12,
+        parentId: 3,
+        children: [
+          createRowNode({
+            id: 22,
+            parentId: 12,
+            children: [
+              createColumnNode({ id: 32, parentId: 22, childCount: 1 }),
+            ],
+          }),
+        ],
+      });
+
+      const tree: ElementTreeResponse = {
+        '1': [section1],
+        '2': [section2],
+        '3': [section3],
+      };
+
+      // Move element 100 from column 30 (root 1) to column 31 (root 2)
+      const result = applyReorder(tree, 100, 31, 200);
+
+      expect(result).not.toBe(tree);
+      // Both roots 1 and 2 are affected
+      expect(result['1']).not.toBe(tree['1']);
+      expect(result['2']).not.toBe(tree['2']);
+      // Root 3 is unaffected
+      expect(result['3']).toBe(tree['3']);
+
+      // Verify the move happened correctly
+      const resultCol30 = asContainer(drillDown(result, '1', 0, 0).children![0]);
+      const resultCol31 = asContainer(drillDown(result, '2', 0, 0).children![0]);
+      expect(resultCol30.children!.map((c: ElementNode) => c.id)).toEqual([101]);
+      expect(resultCol31.children!.map((c: ElementNode) => c.id)).toEqual([200, 100]);
+    });
+  });
+
+  describe('insertIntoArray fallback', () => {
+    it('should append when afterElementId does not exist in a cross-parent move', () => {
+      resetIdCounter();
+      const section = createSectionNode({
+        id: 10,
+        parentId: 1,
+        children: [
+          createRowNode({
+            id: 20,
+            parentId: 10,
+            children: [
+              createColumnNode({
+                id: 30,
+                parentId: 20,
+                children: [
+                  createSimpleElement({ id: 100, parentId: 30 }),
+                ],
+              }),
+              createColumnNode({
+                id: 31,
+                parentId: 20,
+                children: [
+                  createSimpleElement({ id: 200, parentId: 31 }),
+                  createSimpleElement({ id: 201, parentId: 31 }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const tree: ElementTreeResponse = { '1': [section] };
+
+      // Move element 100 to column 31, after non-existent element 9999 — should append
+      const result = applyReorder(tree, 100, 31, 9999);
+
+      const resultCol31 = asContainer(drillDown(result, '1', 0, 0).children![1]);
+      const ids = resultCol31.children!.map((c: ElementNode) => c.id);
+      expect(ids).toEqual([200, 201, 100]);
+    });
+  });
+
   describe('no-op detection', () => {
     it('should return same reference when prepending an element already at first position', () => {
       const { tree } = buildTree();
