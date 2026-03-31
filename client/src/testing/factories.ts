@@ -175,11 +175,11 @@ export function createSectionNode(
 }
 
 /**
- * Build a full ElementTreeResponse keyed by root key (default: "SilverStripe\\CMS\\Model\\SiteTree:1").
+ * Build a full ElementTreeResponse keyed by root key (default: "1").
  */
 export function createTree(
   sections?: SectionNode[],
-  rootKey = 'SilverStripe\\CMS\\Model\\SiteTree:1',
+  rootKey = '1',
 ): ElementTreeResponse {
   return {
     [rootKey]: sections ?? [createSectionNode()],

@@ -285,11 +285,4 @@ describe('ActionsMenu', () => {
     expect(editItem.className).toBe('actions-menu__item');
   });
 
-  // Stryker disable next-line all: stopPropagation on Escape cannot be observed from outside
-  it('Escape handler stops propagation (covered by Stryker ignore)', () => {
-    // e.stopPropagation() in the Escape handler prevents the keydown from
-    // bubbling to parent menus. This side effect cannot be meaningfully
-    // tested via RTL without real DOM event propagation inspection.
-    expect(true).toBe(true);
-  });
 });

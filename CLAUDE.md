@@ -104,7 +104,7 @@ client/src/hooks/     # React hooks, query keys, TanStack Query, mutations
 client/src/styles/    # SCSS styles
 client/src/types/     # Zod schemas, TypeScript types
 client/src/utils/     # Frontend utility functions
-client/src/tests/     # Frontend test files (Vitest + RTL)
+client/src/testing/   # Test infrastructure (factories, helpers, mocks)
 client/dist/          # Vite build output (exposed, created by build)
 phpstan/              # PHPStan stubs (e.g. AdminController.stub)
 .docker/              # Docker dev env: Caddy + PHP + MySQL 8
@@ -594,7 +594,8 @@ Use the narrowest PHPStan PHPDoc type that matches the domain constraint. Prefer
 ## Testing
 
 - Vitest + React Testing Library with jsdom environment
-- Test files in `client/src/tests/`
+- Test files co-located next to source (`.test.ts`/`.test.tsx`)
+- Shared test infrastructure in `client/src/testing/` (factories, helpers, mocks)
 - Stryker for mutation testing
 
 ## Key Patterns

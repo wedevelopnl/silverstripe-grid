@@ -22,7 +22,8 @@ applyTo: "**/*.{ts,tsx}"
 ## Testing
 
 - Vitest + React Testing Library with jsdom environment
-- Test files in `client/src/tests/`
+- Test files co-located next to source (`.test.ts`/`.test.tsx`)
+- Shared test infrastructure in `client/src/testing/` (factories, helpers, mocks)
 - Stryker for mutation testing
 
 ## Key Patterns

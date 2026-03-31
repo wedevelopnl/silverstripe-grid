@@ -7,20 +7,61 @@ import {
   useReorderElement,
 } from '@/hooks/useElementMutations';
 import { createProviderWrapper } from '@/testing/renderWithProviders';
-import { createTree, createTreeApiResponse, resetIdCounter } from '@/testing/factories';
+import {
+  createSectionNode,
+  createRowNode,
+  createColumnNode,
+  resetIdCounter,
+} from '@/testing/factories';
 import { mockFetchSuccess, mockFetchError, mockFetchSequence, getFetchCalls } from '@/testing/mockFetch';
 import { queryKeys } from '@/hooks/queryKeys';
 import { QueryClient } from '@tanstack/react-query';
+import type { ContainerNode, ElementTreeResponse, TreeApiResponse } from '@/types/elements';
 
-function createQueryClientWithTree(pageId = 1, zone = 'main') {
+/**
+ * Build a tree with explicit IDs and consistent parentId chains for reorder tests.
+ * Uses numeric root key so applyReorder's Number(rootKey) resolves correctly.
+ */
+function createReorderTree(pageId = 1, zone = 'main') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
+
+  const section = createSectionNode({
+    id: 100,
+    parentId: pageId,
+    children: [
+      createRowNode({
+        id: 200,
+        parentId: 100,
+        children: [
+          createColumnNode({
+            id: 300,
+            parentId: 200,
+            childCount: 2,
+          }),
+        ],
+      }),
+    ],
+  });
+
+  // Patch child parentIds to match their container
+  for (const child of section.children![0].children![0].children!) {
+    child.parentId = 300;
+  }
+
+  const tree: ElementTreeResponse = { [String(pageId)]: [section] };
+  const treeApiResponse: TreeApiResponse = { tree, overrideCounts: {} };
+
   queryClient.setQueryData(
     queryKeys.elementTree.byPage(pageId, zone),
-    createTreeApiResponse(),
+    treeApiResponse,
   );
-  return queryClient;
+
+  const column = section.children![0].children![0];
+  const [elemA, elemB] = column.children!;
+
+  return { queryClient, tree, treeApiResponse, column, elemA, elemB };
 }
 
 describe('useElementMutations', () => {
@@ -152,45 +193,52 @@ describe('useElementMutations', () => {
   });
 
   describe('useReorderElement', () => {
-    it('should call reorder endpoint', async () => {
+    it('should call reorder endpoint and apply optimistic update', async () => {
       mockFetchSuccess({});
-      const queryClient = createQueryClientWithTree();
+      const { queryClient, tree, column, elemA, elemB } = createReorderTree();
+      const queryKey = queryKeys.elementTree.byPage(1, 'main');
       const { wrapper } = createProviderWrapper({ queryClient });
       const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
 
-      const tree = createTree();
-      act(() => {
+      await act(async () => {
         result.current.mutate({
-          params: { elementID: 10, targetParentId: 20, afterElementID: null },
+          params: { elementID: elemB.id, targetParentId: column.id, afterElementID: null },
           tree,
         });
+        // Flush onMutate microtask (cancelQueries)
+        await Promise.resolve();
       });
+
+      // Verify optimistic update: elemB moved before elemA (check before onSettled invalidates)
+      const cached = queryClient.getQueryData<TreeApiResponse>(queryKey);
+      const cachedSection = cached!.tree['1'][0] as ContainerNode;
+      const cachedRow = cachedSection.children![0] as ContainerNode;
+      const cachedColumn = cachedRow.children![0] as ContainerNode;
+      expect(cachedColumn.children!.map((c) => c.id)).toEqual([elemB.id, elemA.id]);
 
       await waitFor(() => {
         expect(getFetchCalls().length).toBeGreaterThan(0);
       });
-
       const [url] = getFetchCalls()[0];
       expect(url).toContain('/api/reorder');
     });
 
     it('should show toast and restore snapshot on error', async () => {
+      const { queryClient, tree, treeApiResponse, column, elemB } = createReorderTree();
       mockFetchSequence([
         { status: 500, body: { message: 'Reorder failed' } },
-        // The onSettled invalidation triggers a refetch — provide a success response
-        { status: 200, body: createTreeApiResponse() },
+        // The onSettled invalidation triggers a refetch — provide the original response
+        { status: 200, body: treeApiResponse },
       ]);
       const dispatch = vi.fn();
       window.ss.store = { dispatch };
 
-      const queryClient = createQueryClientWithTree();
       const { wrapper } = createProviderWrapper({ queryClient });
       const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
 
-      const tree = createTree();
       act(() => {
         result.current.mutate({
-          params: { elementID: 10, targetParentId: 20, afterElementID: null },
+          params: { elementID: elemB.id, targetParentId: column.id, afterElementID: null },
           tree,
         });
       });
@@ -206,21 +254,20 @@ describe('useElementMutations', () => {
     });
 
     it('should call clearPendingTree on error as safety net', async () => {
+      const { queryClient, tree, treeApiResponse, column, elemB } = createReorderTree();
       mockFetchSequence([
         { status: 500, body: { message: 'fail' } },
-        { status: 200, body: createTreeApiResponse() },
+        { status: 200, body: treeApiResponse },
       ]);
 
-      const queryClient = createQueryClientWithTree();
       const { wrapper } = createProviderWrapper({ queryClient });
       const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
 
       const clearPendingTree = vi.fn();
-      const tree = createTree();
 
       act(() => {
         result.current.mutate({
-          params: { elementID: 10, targetParentId: 20, afterElementID: null },
+          params: { elementID: elemB.id, targetParentId: column.id, afterElementID: null },
           tree,
           clearPendingTree,
         });
