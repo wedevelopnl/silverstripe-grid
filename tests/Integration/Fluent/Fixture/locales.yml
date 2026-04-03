@@ -1,0 +1,13 @@
+TractorCow\Fluent\Model\Locale:
+  en:
+    Locale: en_US
+    Title: English
+    IsGlobalDefault: 1
+  nl:
+    Locale: nl_NL
+    Title: Dutch
+
+SilverStripe\CMS\Model\SiteTree:
+  test_page:
+    Title: 'Fluent Test Page'
+    URLSegment: 'fluent-test'
