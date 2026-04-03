@@ -16,7 +16,8 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-COPY app/composer.json /app/composer.json
+ARG COMPOSER_FILE=app/composer.json
+COPY ${COMPOSER_FILE} /app/composer.json
 
 # SilverStripe requires Page and PageController classes in the project.
 # These are generated here (not stored in the repo) to avoid duplicate

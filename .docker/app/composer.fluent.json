@@ -1,9 +1,10 @@
 {
-    "_comment": "Keep in sync with composer.fluent.json (adds Fluent dependency)",
+    "_comment": "Fluent variant of composer.json — keep in sync, only difference is tractorcow/silverstripe-fluent in require",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
         "silverstripe/recipe-cms": "^6.0",
+        "tractorcow/silverstripe-fluent": "^8.0",
         "wedevelopnl/silverstripe-grid": "*"
     },
     "repositories": [

@@ -34,6 +34,42 @@ services:
       SS_ENVIRONMENT_TYPE: dev
       SS_PHPUNIT_FLUSH: 1
 
+  app-fluent:
+    profiles: [fluent]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        COMPOSER_FILE: app/composer.fluent.json
+    volumes:
+      - ../composer.json:/module/composer.json:ro
+      - ../src:/module/src
+      - ../tests:/module/tests:ro
+      - ../_config:/module/_config:ro
+      - ../phpstan:/module/phpstan:ro
+      - ../client/dist:/module/client/dist:ro
+      - ../client/images:/module/client/images:ro
+      - ../templates:/module/templates:ro
+      - ../coverage:/app/coverage
+      - vendor-fluent:/app/vendor
+    healthcheck:
+      test: test -f /tmp/.app-ready
+      interval: 3s
+      start_period: 60s
+      retries: 20
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SS_DATABASE_SERVER: db
+      SS_DATABASE_NAME: silverstripe_fluent
+      SS_DATABASE_USERNAME: silverstripe
+      SS_DATABASE_PASSWORD: silverstripe
+      SS_DEFAULT_ADMIN_USERNAME: admin
+      SS_DEFAULT_ADMIN_PASSWORD: admin
+      SS_ENVIRONMENT_TYPE: dev
+      SS_PHPUNIT_FLUSH: 1
+
   db:
     image: mysql:8
     ports:
@@ -53,4 +89,5 @@ services:
 
 volumes:
   vendor:
+  vendor-fluent:
   db-data:
