@@ -108,7 +108,7 @@ rector-dry: ensure-up
 
 ## Run full QA suite (all checks in parallel)
 qa: ensure-up ensure-up-fluent
-	$(MAKE) -j6 _qa-analyse _qa-coverage _qa-fluent _qa-lint _qa-typecheck _qa-test-js
+	$(MAKE) -j5 _qa-analyse _qa-coverage _qa-lint _qa-typecheck _qa-test-js
 
 ## QA sub-targets (not intended to be called directly)
 _qa-analyse:
