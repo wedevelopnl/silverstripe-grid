@@ -1,6 +1,6 @@
 COMPOSE := docker compose -f .docker/compose.yml
 
-.PHONY: up down destroy build test test-unit test-integration test-functional test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-typecheck _qa-test-js
+.PHONY: up down destroy build test test-unit test-integration test-functional ensure-up-fluent test-fluent test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-typecheck _qa-test-js
 
 ## Generate .docker/.env with deterministic ports (auto-runs if missing)
 .docker/.env:
@@ -41,6 +41,14 @@ test-integration: ensure-up
 ## Run functional tests (HTTP/controller tests)
 test-functional: ensure-up
 	$(COMPOSE) exec app vendor/bin/phpunit --testsuite functional
+
+## Ensure Fluent services are running and ready
+ensure-up-fluent: .docker/.env
+	@$(COMPOSE) --profile fluent exec app-fluent true 2>/dev/null || $(COMPOSE) --profile fluent up -d --build --wait
+
+## Run all integration + fluent tests in Fluent environment
+test-fluent: ensure-up-fluent
+	$(COMPOSE) exec app-fluent vendor/bin/phpunit --testsuite integration,functional,fluent
 
 ## Run JavaScript tests (Vitest)
 test-js:
