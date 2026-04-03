@@ -21,7 +21,7 @@ final class FluentLocaleIsolationTest extends SapphireTest
     protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';
 
     /** @var array<class-string, list<class-string>> */
-    protected static $extra_extensions = [
+    protected static $required_extensions = [
         GridElement::class => [FluentIsolatedExtension::class],
     ];
 
