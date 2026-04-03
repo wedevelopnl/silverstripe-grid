@@ -6,7 +6,9 @@ SilverStripe sites using the Fluent module for multi-locale content need the gri
 
 ## Approach: FluentIsolatedExtension on GridElement
 
-Fluent's `FluentIsolatedExtension` adds a `LocaleID` foreign key directly to the DataObject table, scoping each record to exactly one locale. Fluent's `augmentSQL` automatically appends `WHERE LocaleID = ?` to all queries, including in the CMS. This gives each locale a fully independent grid tree without any changes to the module's query, service, or controller layers.
+Fluent's `FluentIsolatedExtension` adds a `LocaleID` foreign key directly to the DataObject table, scoping each record to exactly one locale. Fluent's `augmentSQL` automatically appends `WHERE LocaleID = ?` to all queries, including in the CMS (controlled by `apply_isolated_locales_to_admin`, which defaults to `true`). This gives each locale a fully independent grid tree without any changes to the module's query, service, or controller layers.
+
+The extension also auto-assigns `LocaleID` on write via its own `onBeforeWrite` hook when the field is unset, ensuring auto-scaffolded children and API-created elements inherit the active locale automatically.
 
 ### Why FluentIsolatedExtension over alternatives
 
@@ -33,38 +35,22 @@ Only:
 WeDevelop\Grid\Model\GridElement:
   extensions:
     FluentIsolated: TractorCow\Fluent\Extension\FluentIsolatedExtension
-    FluentLocale: WeDevelop\Grid\Extensions\FluentLocaleExtension
 ```
 
-Applied to `GridElement` (the abstract base class), both extensions propagate to all subclasses: Section, Row, Column, ContentElement, and any third-party elements extending GridElement.
+Applied to `GridElement` (the abstract base class), the extension propagates to all subclasses: Section, Row, Column, ContentElement, and any third-party elements extending GridElement.
 
 When Fluent is installed but not configured, the module behaves identically to a non-Fluent installation. The implementor opts in explicitly.
 
-#### FluentLocaleExtension (auto-locale assignment)
+No custom extension class is needed in the module. `FluentIsolatedExtension` already handles:
+- **Query filtering**: `augmentSQL` appends `WHERE LocaleID = ?` to all queries
+- **Auto-locale assignment**: `onBeforeWrite` sets `LocaleID` from `FluentState` when unset
+- **CMS filtering**: enabled by default via `apply_isolated_locales_to_admin: true`
 
-A small `DataExtension` shipped in `src/Extensions/FluentLocaleExtension.php`. Applied alongside `FluentIsolatedExtension` by the implementor.
-
-Responsibility: ensure every element has a locale on write.
-
-```
-onBeforeWrite:
-  1. if !$this->owner->hasExtension(FluentIsolatedExtension::class) -> return
-  2. if $this->owner->LocaleID > 0 -> return (already set)
-  3. resolve locale from FluentState::singleton()->getLocale()
-  4. look up Locale record by locale code
-  5. assign LocaleID
-```
-
-This solves three problems:
-- **Auto-scaffolding**: Section -> Row -> Column cascade all inherit the active locale without changes to scaffolding code
-- **API creates**: Elements created via the grid editor API inherit the CMS locale
-- **Test compatibility**: Test code creating elements without explicit locale gets valid records
-
-The extension imports Fluent classes (`FluentState`, `Locale`), which is safe because it's only applied when the implementor explicitly wires it via YAML -- Fluent is guaranteed installed at that point.
+**Important**: the README should warn implementors not to set `apply_isolated_locales_to_admin: false` on `GridElement`, as this would cause the grid editor to show cross-locale data.
 
 ### 2. What Does Not Change
 
-The entire Fluent integration consists of one PHP extension class + README documentation + test infrastructure. No changes to:
+The entire Fluent integration consists of README documentation + test infrastructure. No PHP code changes, no new classes. No changes to:
 
 - **GridTreeBuilder** -- Fluent's `augmentSQL` filters queries transparently
 - **OrmGridElementRepository** -- batch queries via `findByParents()` get the locale WHERE clause appended by Fluent's ORM layer
@@ -72,7 +58,7 @@ The entire Fluent integration consists of one PHP extension class + README docum
 - **GridNodeMapper** -- reads from already-locale-scoped DataObjects
 - **React frontend** -- zero changes; no locale parameters, no cache key changes, no new types; Fluent middleware sets locale via session/cookie, the server handles everything
 - **Templates** -- records are locale-scoped, so `$Title` etc. return the correct value
-- **Auto-scaffolding** (Section/Row `onAfterWrite`) -- writes happen within the active FluentState, and `FluentLocaleExtension::onBeforeWrite` assigns the locale automatically
+- **Auto-scaffolding** (Section/Row `onAfterWrite`) -- writes happen within the active FluentState, and `FluentIsolatedExtension::onBeforeWrite` assigns the locale automatically
 - **Hierarchy validation** -- checks parent/child allowances, which are structural, not locale-dependent
 - **ReorderService** -- reordering happens within a locale-scoped query context
 
@@ -102,15 +88,14 @@ Because the module ships no Fluent YAML config, and core tests don't use `extra_
 
 #### Fluent integration tests
 
-Test the actual Fluent behavior using `extra_extensions` on `SapphireTest` to apply both `FluentIsolatedExtension` and `FluentLocaleExtension` to `GridElement`. Skip via `markTestSkipped` when Fluent is not installed.
+Test the actual Fluent behavior using `extra_extensions` on `SapphireTest` to apply `FluentIsolatedExtension` to `GridElement`. Skip via `markTestSkipped` when Fluent is not installed.
 
 Test scenarios:
 - Elements created in locale A are invisible when querying in locale B
 - Auto-scaffolding (Section -> Row -> Column) all receive the active locale's `LocaleID`
 - Tree builder returns the correct locale-scoped tree for each locale
 - Switching FluentState produces independent trees for the same page and zone
-- Auto-locale assignment sets `LocaleID` on write when unset
-- Guard: extension bails out when `FluentIsolatedExtension` is not active on the DataObject
+- Auto-locale assignment sets `LocaleID` on write when unset (FluentIsolatedExtension built-in behavior)
 
 #### Docker setup
 
@@ -129,15 +114,31 @@ No install/teardown in the same container -- full isolation between environments
 
 Two matrix entries using the respective Docker services. Both run on every push/PR.
 
+### 5. Migration Path
+
+When an implementor adds `FluentIsolatedExtension` to an existing installation that already has grid elements, those records will have `LocaleID = 0` after `dev/build`. Records with `LocaleID = 0` are invisible in all locales.
+
+`FluentIsolatedExtension` includes a built-in migration (`onRequireDefaultRecords`) that attempts to populate `LocaleID` from legacy `FluentFilteredExtension` data. However, for sites that had no Fluent extension previously, existing records remain orphaned.
+
+The README should document this: implementors enabling Fluent on an existing site must run a migration task to assign existing records to a default locale. This is the implementor's responsibility — the module does not ship a migration task since the correct default locale is project-specific.
+
+### 6. Publish Cascades and Duplication
+
+Grid elements use `$owns`, `$cascade_deletes`, and `$cascade_duplicates` for the parent-child hierarchy. With `FluentIsolatedExtension`:
+
+- **Publishing**: `publishRecursive()` cascades through owned records. Since all records in the tree share the same `LocaleID` (assigned on write within the same FluentState), publish cascades naturally stay within a single locale.
+- **Deletion**: `$cascade_deletes` removes children when a parent is deleted. Locale-scoped queries ensure only same-locale children are affected.
+- **Duplication**: CMS "Duplicate" cascades through `$cascade_duplicates`. Duplicated records go through `onBeforeWrite`, where `FluentIsolatedExtension` assigns the current locale. Duplicating within the same locale produces same-locale copies. Cross-locale duplication would require explicit FluentState switching, which is not a use case this module needs to support.
+
 ## Locale Propagation (How It Works End-to-End)
 
 For reference, this is how locale state flows through the system when Fluent is active. No custom code is needed for any of this -- it's all handled by Fluent's middleware and ORM layer.
 
 1. Author selects locale in CMS locale switcher (Fluent's UI)
-2. Full page reload with `?l=locale_code` query parameter
+2. Navigation with `?l=locale_code` query parameter (triggers locale detection and session persistence)
 3. `DetectLocaleMiddleware` detects locale, stores in session (`FluentLocale_CMS`) and cookie
 4. `FluentState` singleton is set with the active locale
 5. Subsequent AJAX requests (including grid editor API calls) restore locale from session -- no explicit locale parameter needed
 6. `FluentIsolatedExtension::augmentSQL()` appends `WHERE LocaleID = ?` to all GridElement queries
 7. Grid editor receives locale-scoped element tree with correct titles/content
-8. Element writes (creates, duplicates, auto-scaffolding) go through `FluentLocaleExtension::onBeforeWrite()` which assigns the active locale's ID
+8. Element writes (creates, duplicates, auto-scaffolding) go through `FluentIsolatedExtension::onBeforeWrite()` which assigns the active locale's ID
