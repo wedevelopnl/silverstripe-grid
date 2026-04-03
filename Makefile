@@ -55,8 +55,8 @@ test-js:
 	npm run test
 
 ## Run all tests with merged coverage (HTML + Clover XML)
-coverage: ensure-up
-	$(COMPOSE) exec app vendor/bin/phpunit \
+coverage: ensure-up-fluent
+	$(COMPOSE) exec app-fluent vendor/bin/phpunit \
 		--coverage-html coverage/combined/html \
 		--coverage-clover coverage/combined/clover.xml
 
@@ -67,8 +67,8 @@ coverage-unit: ensure-up
 		--coverage-clover coverage/unit/clover.xml
 
 ## Run integration tests with coverage (individual report)
-coverage-integration: ensure-up
-	$(COMPOSE) exec app vendor/bin/phpunit --testsuite integration \
+coverage-integration: ensure-up-fluent
+	$(COMPOSE) exec app-fluent vendor/bin/phpunit --testsuite integration,fluent \
 		--coverage-html coverage/integration/html \
 		--coverage-clover coverage/integration/clover.xml
 
@@ -115,10 +115,10 @@ _qa-analyse:
 	$(COMPOSE) exec app vendor/bin/phpstan analyse -c phpstan.neon.dist --memory-limit=512M
 
 _qa-coverage:
-	$(COMPOSE) exec app vendor/bin/phpunit \
+	$(COMPOSE) exec app-fluent vendor/bin/phpunit \
 		--coverage-html coverage/combined/html \
 		--coverage-clover coverage/combined/clover.xml
-	$(COMPOSE) exec app vendor/bin/coverage-check coverage/combined/clover.xml 90
+	$(COMPOSE) exec app-fluent vendor/bin/coverage-check coverage/combined/clover.xml 90
 
 _qa-lint:
 	npm run lint
