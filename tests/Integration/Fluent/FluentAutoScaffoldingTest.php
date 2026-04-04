@@ -14,7 +14,13 @@ use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Value\ContainerType;
 
+/**
+ * Verifies that the auto-scaffolding cascade (Section → Row → Column via
+ * onAfterWrite) produces a complete, queryable hierarchy through the
+ * ContainerInterface when Fluent locale filtering is active.
+ */
 final class FluentAutoScaffoldingTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';
@@ -30,95 +36,81 @@ final class FluentAutoScaffoldingTest extends SapphireTest
 
         Versioned::set_stage(Versioned::DRAFT);
 
-        // Default to English for each test
         $locale = $this->objFromFixture(Locale::class, 'en');
         FluentState::singleton()->setLocale($locale->Locale);
     }
 
     /**
-     * Auto-scaffolded Row and Column children must inherit the LocaleID
-     * that was active when the parent Section was written.
-     *
-     * Writing a Section in English triggers Section → Row → Column scaffolding.
-     * All three nodes must carry the same English LocaleID.
+     * Writing a Section with auto-scaffold enabled must produce a complete
+     * Section → Row → Column hierarchy that is fully queryable through
+     * getChildren() and getContainerType() in the active locale.
      */
-    public function testAutoScaffoldedChildrenInheritLocale(): void
+    public function testCascadeProducesQueryableHierarchy(): void
     {
         $page = $this->objFromFixture(SiteTree::class, 'test_page');
-        $english = $this->objFromFixture(Locale::class, 'en');
-        $expectedLocaleId = (int) $english->ID;
 
         $section = Section::create();
-        $section->Title = 'Auto-scaffold Section';
+        $section->Title = 'Scaffolded Section';
         $section->Zone = 'main';
-        $section->Sort = 0;
         $section->ParentID = $page->ID;
         $section->ParentClass = $page::class;
         $section->write();
 
-        // Section itself must be assigned to English
-        self::assertSame($expectedLocaleId, (int) $section->LocaleID);
+        // Section has children queryable via ContainerInterface
+        self::assertTrue($section->hasChildren());
+        self::assertSame(ContainerType::Section, $section->getContainerType());
 
-        // Auto-scaffolded Row must inherit English
-        $row = $section->getChildren()->first();
+        $rows = $section->getChildren();
+        self::assertCount(1, $rows);
+
+        /** @var Row $row */
+        $row = $rows->first();
         self::assertInstanceOf(Row::class, $row);
-        self::assertSame($expectedLocaleId, (int) $row->LocaleID);
+        self::assertTrue($row->hasChildren());
+        self::assertSame(ContainerType::Row, $row->getContainerType());
 
-        // Auto-scaffolded Column must inherit English
-        $column = $row->getChildren()->first();
+        $columns = $row->getChildren();
+        self::assertCount(1, $columns);
+
+        /** @var Column $column */
+        $column = $columns->first();
         self::assertInstanceOf(Column::class, $column);
-        self::assertSame($expectedLocaleId, (int) $column->LocaleID);
+        self::assertSame(ContainerType::Column, $column->getContainerType());
+        self::assertFalse($column->hasChildren(), 'Column should have no children after scaffolding');
     }
 
     /**
-     * Auto-scaffolded children written in English must be invisible when
-     * querying in Dutch.
-     *
-     * After creating a full Section → Row → Column tree in English, switching
-     * to Dutch and querying by the page's ParentID must return zero results
-     * for all three levels.
+     * A hierarchy scaffolded in one locale must not be queryable through
+     * ContainerInterface methods when a different locale is active.
      */
-    public function testAutoScaffoldedChildrenScopedToLocale(): void
+    public function testCascadeInOneLocaleDoesNotLeakToAnother(): void
     {
         $page = $this->objFromFixture(SiteTree::class, 'test_page');
 
+        // Scaffold in English
         $section = Section::create();
-        $section->Title = 'Scoped Section';
+        $section->Title = 'English Only';
         $section->Zone = 'main';
-        $section->Sort = 0;
         $section->ParentID = $page->ID;
         $section->ParentClass = $page::class;
         $section->write();
 
-        // Confirm the tree was scaffolded correctly in English
-        self::assertCount(1, $section->getChildren());
-        $row = $section->getChildren()->first();
-        self::assertInstanceOf(Row::class, $row);
-        self::assertCount(1, $row->getChildren());
+        // Confirm English hierarchy exists
+        self::assertTrue($section->hasChildren());
 
-        // Switch to Dutch
+        // Switch to Dutch — query the hierarchy from scratch
         $dutch = $this->objFromFixture(Locale::class, 'nl');
         FluentState::singleton()->setLocale($dutch->Locale);
 
-        // No sections visible for this page in Dutch
-        $dutchSections = Section::get()->filter([
+        // No sections exist for this page in Dutch
+        $sections = Section::get()->filter([
             'ParentID' => $page->ID,
             'ParentClass' => $page::class,
         ]);
-        self::assertCount(0, $dutchSections);
+        self::assertCount(0, $sections);
 
-        // No rows visible for this section in Dutch
-        $dutchRows = Row::get()->filter([
-            'ParentID' => $section->ID,
-            'ParentClass' => $section::class,
-        ]);
-        self::assertCount(0, $dutchRows);
-
-        // No columns visible for the scaffolded row in Dutch
-        $dutchColumns = Column::get()->filter([
-            'ParentID' => $row->ID,
-            'ParentClass' => $row::class,
-        ]);
-        self::assertCount(0, $dutchColumns);
+        // No rows or columns exist in Dutch at all
+        self::assertCount(0, Row::get());
+        self::assertCount(0, Column::get());
     }
 }

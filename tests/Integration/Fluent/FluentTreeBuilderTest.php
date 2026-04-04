@@ -17,7 +17,12 @@ use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Value\ContainerType;
 
+/**
+ * Verifies that GridTreeBuilder correctly batch-loads, maps parent keys,
+ * and assembles recursive trees when Fluent locale filtering is active.
+ */
 final class FluentTreeBuilderTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';
@@ -40,7 +45,6 @@ final class FluentTreeBuilderTest extends SapphireTest
 
         $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
 
-        // Default to English for each test
         $locale = $this->objFromFixture(Locale::class, 'en');
         FluentState::singleton()->setLocale($locale->Locale);
 
@@ -48,70 +52,110 @@ final class FluentTreeBuilderTest extends SapphireTest
     }
 
     /**
-     * GridTreeBuilder must return only the nodes belonging to the active locale.
-     * Switching locale must produce a completely independent tree.
+     * Build full-depth hierarchies in two locales and verify the tree builder
+     * returns the correct multi-level tree for each. Asserts at every level:
+     * section titles, row count, column count, content element titles.
      */
-    public function testTreeBuilderReturnsLocaleSpecificTree(): void
+    public function testFullDepthTreePerLocale(): void
     {
         $page = $this->objFromFixture(SiteTree::class, 'test_page');
 
-        // Create elements in English
-        $enSection = GridTreeFactory::section($page, 'main', 0, 'EN Section');
-        $enRow = GridTreeFactory::row($enSection, 0, 'EN Row');
-        $enColumn = GridTreeFactory::column($enRow);
-        GridTreeFactory::contentElement($enColumn, 0, 'EN Content');
+        // English: Section → Row → Column → ContentElement
+        $enSection = GridTreeFactory::section($page, title: 'EN Section');
+        $enRow = GridTreeFactory::row($enSection, title: 'EN Row');
+        $enCol = GridTreeFactory::column($enRow);
+        GridTreeFactory::contentElement($enCol, title: 'EN Content');
 
-        // Switch to Dutch and create a different structure there
+        // Dutch: Section → Row → 2 Columns (different structure)
         $dutch = $this->objFromFixture(Locale::class, 'nl');
         FluentState::singleton()->setLocale($dutch->Locale);
 
-        $nlSection = GridTreeFactory::section($page, 'main', 0, 'NL Section');
-        $nlRow = GridTreeFactory::row($nlSection, 0, 'NL Row');
+        $nlSection = GridTreeFactory::section($page, title: 'NL Section');
+        $nlRow = GridTreeFactory::row($nlSection, title: 'NL Row');
+        GridTreeFactory::column($nlRow);
         GridTreeFactory::column($nlRow);
 
-        // Dutch tree must contain only the Dutch section
-        $dutchTree = $this->builder->buildForPage($page, 'main');
+        // Verify Dutch tree — full depth
+        $nlTree = $this->builder->buildForPage($page, 'main');
+        self::assertArrayHasKey($page->ID, $nlTree);
 
-        self::assertArrayHasKey($page->ID, $dutchTree);
-        $dutchSectionNodes = $dutchTree[$page->ID];
-        self::assertCount(1, $dutchSectionNodes);
-        self::assertSame('NL Section', $dutchSectionNodes[0]->title);
-        self::assertSame((int) $nlSection->ID, $dutchSectionNodes[0]->id);
+        $nlSections = $nlTree[$page->ID];
+        self::assertCount(1, $nlSections);
+        self::assertSame('NL Section', $nlSections[0]->title);
+        self::assertSame(ContainerType::Section, $nlSections[0]->containerType);
 
-        // Switch back to English and verify the English tree is unaffected
+        $nlRows = $nlSections[0]->children;
+        self::assertNotNull($nlRows);
+        self::assertCount(1, $nlRows);
+        self::assertSame('NL Row', $nlRows[0]->title);
+        self::assertSame(ContainerType::Row, $nlRows[0]->containerType);
+
+        $nlColumns = $nlRows[0]->children;
+        self::assertNotNull($nlColumns);
+        self::assertCount(2, $nlColumns, 'Dutch row should have 2 columns');
+
+        // Verify English tree — full depth
         $english = $this->objFromFixture(Locale::class, 'en');
         FluentState::singleton()->setLocale($english->Locale);
 
-        $englishTree = $this->builder->buildForPage($page, 'main');
+        $enTree = $this->builder->buildForPage($page, 'main');
+        $enSections = $enTree[$page->ID];
+        self::assertCount(1, $enSections);
+        self::assertSame('EN Section', $enSections[0]->title);
 
-        self::assertArrayHasKey($page->ID, $englishTree);
-        $englishSectionNodes = $englishTree[$page->ID];
-        self::assertCount(1, $englishSectionNodes);
-        self::assertSame('EN Section', $englishSectionNodes[0]->title);
-        self::assertSame((int) $enSection->ID, $englishSectionNodes[0]->id);
+        $enRows = $enSections[0]->children;
+        self::assertNotNull($enRows);
+        self::assertCount(1, $enRows);
+
+        $enColumns = $enRows[0]->children;
+        self::assertNotNull($enColumns);
+        self::assertCount(1, $enColumns, 'English row should have 1 column');
+
+        $enContent = $enColumns[0]->children;
+        self::assertNotNull($enContent);
+        self::assertCount(1, $enContent);
+        self::assertSame('EN Content', $enContent[0]->title);
     }
 
     /**
-     * When no elements exist for the active locale, buildForPage must not
-     * include the page key in the result (no phantom empty entry).
+     * Multiple zones in one locale should each return correct data,
+     * while the other locale returns empty for both zones.
      */
-    public function testEmptyTreeForLocaleWithNoElements(): void
+    public function testMultiZoneTreePerLocale(): void
     {
         $page = $this->objFromFixture(SiteTree::class, 'test_page');
 
-        // Create elements in English only
-        $enSection = GridTreeFactory::section($page, 'main', 0, 'EN Section');
-        $enRow = GridTreeFactory::row($enSection);
-        GridTreeFactory::column($enRow);
+        // English: elements in both 'main' and 'sidebar' zones
+        $mainSection = GridTreeFactory::section($page, zone: 'main', title: 'EN Main');
+        $mainRow = GridTreeFactory::row($mainSection);
+        GridTreeFactory::column($mainRow);
 
-        // Switch to Dutch — no elements exist in this locale
+        $sidebarSection = GridTreeFactory::section($page, zone: 'sidebar', title: 'EN Sidebar');
+        $sidebarRow = GridTreeFactory::row($sidebarSection);
+        GridTreeFactory::column($sidebarRow);
+
+        // English main zone
+        $mainTree = $this->builder->buildForPage($page, 'main');
+        self::assertArrayHasKey($page->ID, $mainTree);
+        self::assertCount(1, $mainTree[$page->ID]);
+        self::assertSame('EN Main', $mainTree[$page->ID][0]->title);
+
+        // English sidebar zone
+        $sidebarTree = $this->builder->buildForPage($page, 'sidebar');
+        self::assertArrayHasKey($page->ID, $sidebarTree);
+        self::assertCount(1, $sidebarTree[$page->ID]);
+        self::assertSame('EN Sidebar', $sidebarTree[$page->ID][0]->title);
+
+        // Dutch: both zones should be empty
         $dutch = $this->objFromFixture(Locale::class, 'nl');
         FluentState::singleton()->setLocale($dutch->Locale);
 
-        $tree = $this->builder->buildForPage($page, 'main');
+        $nlMain = $this->builder->buildForPage($page, 'main');
+        $hasSections = isset($nlMain[$page->ID]) && count($nlMain[$page->ID]) > 0;
+        self::assertFalse($hasSections, 'Dutch main zone should have no sections');
 
-        // No sections in Dutch: the page key must be absent or have an empty list
-        $hasSections = isset($tree[$page->ID]) && count($tree[$page->ID]) > 0;
-        self::assertFalse($hasSections, 'Dutch locale should have no sections for this page');
+        $nlSidebar = $this->builder->buildForPage($page, 'sidebar');
+        $hasSections = isset($nlSidebar[$page->ID]) && count($nlSidebar[$page->ID]) > 0;
+        self::assertFalse($hasSections, 'Dutch sidebar zone should have no sections');
     }
 }
