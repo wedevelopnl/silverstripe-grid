@@ -42,10 +42,23 @@ final class FluentReorderServiceTest extends SapphireTest
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
+        // Clear cached locale records so fixture-loaded locales are visible
+        Locale::clearCached();
+
         $locale = $this->objFromFixture(Locale::class, 'en');
         FluentState::singleton()->setLocale($locale->Locale);
 
         $this->service = Injector::inst()->get(ReorderService::class);
+    }
+
+    private function createPage(string $title = 'Test Page'): SiteTree
+    {
+        $page = SiteTree::create();
+        $page->Title = $title;
+        $page->URLSegment = 'fluent-reorder-test';
+        $page->writeToStage(Versioned::DRAFT);
+
+        return $page;
     }
 
     /**
@@ -54,7 +67,7 @@ final class FluentReorderServiceTest extends SapphireTest
      */
     public function testReorderWithinLocalePreservesSort(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->createPage();
 
         $section1 = GridTreeFactory::section($page, title: 'First');
         $section2 = GridTreeFactory::section($page, title: 'Second');
@@ -80,7 +93,7 @@ final class FluentReorderServiceTest extends SapphireTest
      */
     public function testReorderInOneLocaleDoesNotAffectAnother(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->createPage();
 
         // English sections
         $enSection1 = GridTreeFactory::section($page, title: 'EN First');

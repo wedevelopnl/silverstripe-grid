@@ -1,0 +1,14 @@
+---
+Name: grid-fluent
+Only:
+  classexists: TractorCow\Fluent\Extension\FluentIsolatedExtension
+After:
+  - '#grid-page'
+---
+SilverStripe\CMS\Model\SiteTree:
+  extensions:
+    FluentGrid: WeDevelop\Grid\Extensions\FluentGridPageExtension
+
+SilverStripe\Core\Injector\Injector:
+  TractorCow\Fluent\Model\Delete\DeleteLocalisationPolicy:
+    class: WeDevelop\Grid\Service\GridAwareDeleteLocalisationPolicy

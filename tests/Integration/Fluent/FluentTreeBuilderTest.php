@@ -45,10 +45,23 @@ final class FluentTreeBuilderTest extends SapphireTest
 
         $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
 
+        // Clear cached locale records so fixture-loaded locales are visible
+        Locale::clearCached();
+
         $locale = $this->objFromFixture(Locale::class, 'en');
         FluentState::singleton()->setLocale($locale->Locale);
 
         $this->builder = Injector::inst()->get(GridTreeBuilder::class);
+    }
+
+    private function createPage(string $title = 'Test Page'): SiteTree
+    {
+        $page = SiteTree::create();
+        $page->Title = $title;
+        $page->URLSegment = 'fluent-tree-builder-test';
+        $page->writeToStage(Versioned::DRAFT);
+
+        return $page;
     }
 
     /**
@@ -58,7 +71,7 @@ final class FluentTreeBuilderTest extends SapphireTest
      */
     public function testFullDepthTreePerLocale(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->createPage();
 
         // English: Section → Row → Column → ContentElement
         $enSection = GridTreeFactory::section($page, title: 'EN Section');
@@ -123,7 +136,7 @@ final class FluentTreeBuilderTest extends SapphireTest
      */
     public function testMultiZoneTreePerLocale(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->createPage();
 
         // English: elements in both 'main' and 'sidebar' zones
         $mainSection = GridTreeFactory::section($page, zone: 'main', title: 'EN Main');

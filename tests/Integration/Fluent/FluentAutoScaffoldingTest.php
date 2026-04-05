@@ -36,8 +36,21 @@ final class FluentAutoScaffoldingTest extends SapphireTest
 
         Versioned::set_stage(Versioned::DRAFT);
 
+        // Clear cached locale records so fixture-loaded locales are visible
+        Locale::clearCached();
+
         $locale = $this->objFromFixture(Locale::class, 'en');
         FluentState::singleton()->setLocale($locale->Locale);
+    }
+
+    private function createPage(string $title = 'Test Page'): SiteTree
+    {
+        $page = SiteTree::create();
+        $page->Title = $title;
+        $page->URLSegment = 'fluent-autoscaffolding-test';
+        $page->writeToStage(Versioned::DRAFT);
+
+        return $page;
     }
 
     /**
@@ -47,7 +60,7 @@ final class FluentAutoScaffoldingTest extends SapphireTest
      */
     public function testCascadeProducesQueryableHierarchy(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->createPage();
 
         $section = Section::create();
         $section->Title = 'Scaffolded Section';
@@ -85,7 +98,7 @@ final class FluentAutoScaffoldingTest extends SapphireTest
      */
     public function testCascadeInOneLocaleDoesNotLeakToAnother(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->createPage();
 
         // Scaffold in English
         $section = Section::create();
