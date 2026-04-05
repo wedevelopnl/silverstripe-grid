@@ -45,14 +45,17 @@ class FluentGridPageExtension extends Extension
     {
 
         $targetLocale = FluentState::singleton()->getLocale();
-        if ($targetLocale === null) {
+        if ($targetLocale === null || $targetLocale === '') {
             return;
         }
 
         /** @var SiteTree $page */
         $page = $this->getOwner();
 
-        $sourceLocale = $this->findSourceLocale((int) $page->ID, $page::class, $targetLocale);
+        /** @var positive-int $pageId */
+        $pageId = (int) $page->ID;
+
+        $sourceLocale = $this->findSourceLocale($pageId, $page::class, $targetLocale);
         if ($sourceLocale === null) {
             return;
         }
@@ -101,6 +104,7 @@ class FluentGridPageExtension extends Extension
             $state->setLocale($sourceLocale);
 
             foreach ($page->Sections() as $section) {
+                /** @var Section $clone */
                 $clone = $section->duplicate(true);
 
                 // Collect all cloned elements while in source locale (where they're visible)
@@ -128,6 +132,7 @@ class FluentGridPageExtension extends Extension
         $elements = [$root];
 
         if ($root instanceof ContainerInterface && $root->hasChildren()) {
+            /** @var GridElement $child */
             foreach ($root->getChildren() as $child) {
                 $elements = array_merge($elements, $this->collectTree($child));
             }

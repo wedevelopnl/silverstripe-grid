@@ -1,0 +1,14 @@
+<?php
+
+namespace TractorCow\Fluent\Model\Delete;
+
+use SilverStripe\ORM\DataObject;
+
+class DeleteLocalisationPolicy
+{
+    /** @return static */
+    public static function create() {}
+
+    /** @return bool */
+    public function delete(DataObject $record) {}
+}

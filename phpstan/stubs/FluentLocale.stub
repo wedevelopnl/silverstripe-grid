@@ -1,0 +1,32 @@
+<?php
+
+namespace TractorCow\Fluent\Model;
+
+class Locale
+{
+    /** @var non-empty-string */
+    public string $Locale;
+
+    /** @var non-empty-string */
+    public string $Title;
+
+    /** @var positive-int */
+    public int $ID;
+
+    /** @return ?static */
+    public static function getCurrentLocale() {}
+
+    /** @return ?static */
+    public static function getDefault() {}
+
+    /**
+     * @param string|static|null $locale
+     * @return ?static
+     */
+    public static function getByLocale($locale) {}
+
+    /** @return iterable<static> */
+    public static function getCached() {}
+
+    public static function clearCached(): void {}
+}

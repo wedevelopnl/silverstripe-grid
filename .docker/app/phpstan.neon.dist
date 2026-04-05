@@ -2,6 +2,11 @@ parameters:
     level: max
     paths:
         - /module/src
+    scanFiles:
+        - /module/phpstan/stubs/DeleteLocalisationPolicy.stub
+        - /module/phpstan/stubs/FluentIsolatedExtension.stub
+        - /module/phpstan/stubs/FluentLocale.stub
+        - /module/phpstan/stubs/FluentState.stub
     stubFiles:
         - /module/phpstan/stubs/AdminController.stub
         - /module/phpstan/stubs/ImageManipulation.stub

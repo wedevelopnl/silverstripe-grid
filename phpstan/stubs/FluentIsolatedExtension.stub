@@ -1,0 +1,7 @@
+<?php
+
+namespace TractorCow\Fluent\Extension;
+
+class FluentIsolatedExtension
+{
+}

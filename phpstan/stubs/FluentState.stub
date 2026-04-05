@@ -1,0 +1,25 @@
+<?php
+
+namespace TractorCow\Fluent\State;
+
+class FluentState
+{
+    /** @return static */
+    public static function singleton() {}
+
+    /** @return ?string */
+    public function getLocale() {}
+
+    /**
+     * @param ?string $locale
+     * @return $this
+     */
+    public function setLocale($locale) {}
+
+    /**
+     * @template T
+     * @param callable(static): T $callback
+     * @return T
+     */
+    public function withState(callable $callback) {}
+}
