@@ -43,7 +43,6 @@ class FluentGridPageExtension extends Extension
      */
     public function onAfterLocalisedCopy(): void
     {
-
         $targetLocale = FluentState::singleton()->getLocale();
         if ($targetLocale === null || $targetLocale === '') {
             return;

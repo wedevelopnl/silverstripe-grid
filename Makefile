@@ -1,6 +1,6 @@
 COMPOSE := docker compose -f .docker/compose.yml
 
-.PHONY: up down destroy build test test-unit test-integration test-functional ensure-up-fluent test-fluent test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-fluent _qa-lint _qa-typecheck _qa-test-js
+.PHONY: up down destroy build test test-unit test-integration test-functional ensure-up-fluent test-fluent test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-typecheck _qa-test-js
 
 ## Generate .docker/.env with deterministic ports (auto-runs if missing)
 .docker/.env:
@@ -128,9 +128,6 @@ _qa-typecheck:
 
 _qa-test-js:
 	npm run test
-
-_qa-fluent:
-	$(COMPOSE) exec app-fluent vendor/bin/phpunit --testsuite integration,functional,fluent
 
 ## Run E2E tests (Playwright, requires running Docker services)
 test-e2e: ensure-up
