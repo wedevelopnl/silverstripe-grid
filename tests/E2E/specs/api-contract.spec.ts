@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 import type {
   ColumnNode,
-  ElementTreeResponse,
   SectionNode,
   StatusFlags,
+  TreeApiResponse,
 } from '@/types/elements';
 import { loadFixture, resetFixtures } from '../helpers/fixtures';
 
@@ -20,7 +20,7 @@ test.describe('API contract', () => {
 
     expect(response.ok()).toBe(true);
 
-    const tree = await response.json() as ElementTreeResponse;
+    const { tree } = await response.json() as TreeApiResponse;
 
     // Sanity: at least one section exists
     const areaKeys = Object.keys(tree);
@@ -33,7 +33,7 @@ test.describe('API contract', () => {
   test('versioned state flags reflect fixture post-actions', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
-    const tree = await response.json() as ElementTreeResponse;
+    const { tree } = await response.json() as TreeApiResponse;
 
     // Collect all containers and leaf elements across the tree
     type FlaggedNode = { title: string; statusFlags: StatusFlags };
@@ -122,7 +122,7 @@ test.describe('API contract', () => {
   test('column nodes include gridSettings with per-viewport structure', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
-    const tree = await response.json() as ElementTreeResponse;
+    const { tree } = await response.json() as TreeApiResponse;
 
     // Collect all column nodes
     const columns: ColumnNode[] = [];
@@ -185,7 +185,7 @@ test.describe('API contract', () => {
   test('element nodes include editLink field', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
-    const tree = await response.json() as ElementTreeResponse;
+    const { tree } = await response.json() as TreeApiResponse;
 
     for (const sections of Object.values(tree)) {
       for (const section of sections) {
@@ -198,7 +198,7 @@ test.describe('API contract', () => {
   test('container allowedTypes include label, icon, and description', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
-    const tree = await response.json() as ElementTreeResponse;
+    const { tree } = await response.json() as TreeApiResponse;
 
     for (const sections of Object.values(tree)) {
       for (const section of sections) {
