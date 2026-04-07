@@ -828,7 +828,99 @@ final class MigrationAcceptanceTest extends SapphireTest
         ]);
     }
 
-    // ─── Scenario 8: Custom element with project-specific fields ──
+    // ─── Scenario 8: Cross-framework migration (Bootstrap → Tailwind) ──
+
+    /**
+     * Verifies migration when changing CSS framework during the SS5→SS6 upgrade.
+     *
+     * Old module used Bootstrap (XS, SM, MD, LG, XL).
+     * New module uses Tailwind (sm, md, lg, xl, 2xl — no xs equivalent).
+     *
+     * Key behaviors:
+     * - XS viewport data is LOST (no mapping target) — accepted trade-off
+     * - MD remains the default viewport
+     * - XL maps to xl, SM maps to sm, LG maps to lg
+     * - Viewport overrides use the new Tailwind keys
+     */
+    public function testCrossFrameworkMigrationBootstrapToTailwind(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 1700;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        // Tailwind viewport map: no XS mapping (Tailwind has no xs breakpoint)
+        $tailwindKeyMap = [
+            'SM' => 'sm',
+            'MD' => 'md',
+            'LG' => 'lg',
+            'XL' => 'xl',
+        ];
+
+        // Row with elements that have viewport-specific grid settings
+        $this->seeder->seedElement(1700, $areaId, self::ROW_CLASS, 1);
+        $this->seeder->seedRow(1700);
+
+        // Element with XS-specific visibility (will be lost in Tailwind migration)
+        $this->seeder->seedElement(1701, $areaId, self::CONTENT_CLASS, 2, [
+            'SizeMD' => 8,
+            'OffsetMD' => 2,
+            'SizeXL' => 6,
+            'OffsetXL' => 3,
+            'SizeSM' => 12,
+            'VisibilityXS' => 'hidden',
+            'Title' => 'Responsive Element',
+        ]);
+        $this->seeder->seedContentMedia(1701, ['HTML' => '<p>Responsive content.</p>']);
+
+        // Element with only default viewport (no overrides needed)
+        $this->seeder->seedElement(1702, $areaId, self::CONTENT_CLASS, 3, [
+            'SizeMD' => 4,
+            'Title' => 'Simple Element',
+        ]);
+        $this->seeder->seedContentMedia(1702, ['HTML' => '<p>Simple content.</p>']);
+
+        $this->runRowPerSection($pageId, 'MD', $tailwindKeyMap);
+
+        $this->assertMigratedHierarchy($pageId, self::ZONE, Versioned::DRAFT, [
+            [
+                'rows' => [
+                    [
+                        'columns' => [
+                            [
+                                // Default from MD: width=8, offset=2
+                                'gridDefault' => ['width' => 8, 'offset' => 2, 'visible' => true],
+                                'gridOverrides' => [
+                                    // SM override: width=12 (differs from default 8)
+                                    'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    // XL override: width=6, offset=3
+                                    'xl' => ['width' => 6, 'offset' => 3, 'visible' => true],
+                                    // XS data (VisibilityXS=hidden) is LOST — no mapping for XS
+                                    // LG not present — no old data for LG, so no override
+                                ],
+                                'element' => [
+                                    'className' => ContentElement::class,
+                                    'title' => 'Responsive Element',
+                                    'html' => '<p>Responsive content.</p>',
+                                ],
+                            ],
+                            [
+                                // Only MD set — no overrides
+                                'gridDefault' => ['width' => 4, 'offset' => 0, 'visible' => true],
+                                'gridOverrides' => [],
+                                'element' => [
+                                    'className' => ContentElement::class,
+                                    'title' => 'Simple Element',
+                                    'html' => '<p>Simple content.</p>',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+    }
+
+    // ─── Scenario 9: Custom element with project-specific fields ──
 
     /**
      * Verifies the full custom element migration path:
@@ -1153,24 +1245,34 @@ final class MigrationAcceptanceTest extends SapphireTest
 
     // ─── Migration runner helpers ─────────────────────────────────
 
-    private function runRowPerSection(int $pageId): void
+    /**
+     * @param array<string, string>|null $viewportKeyMap Override viewport key map (default: Bootstrap identity map)
+     */
+    private function runRowPerSection(int $pageId, ?string $defaultViewport = null, ?array $viewportKeyMap = null): void
     {
+        $viewport = $defaultViewport ?? self::DEFAULT_VIEWPORT;
+        $keyMap = $viewportKeyMap ?? self::VIEWPORT_KEY_MAP;
         $reader = new LegacyDataReader();
         $mapper = new FieldMapper();
         $grouper = new ElementGrouper();
-        $strategy = new RowPerSectionStrategy($grouper, $mapper, self::DEFAULT_VIEWPORT, self::VIEWPORT_KEY_MAP);
+        $strategy = new RowPerSectionStrategy($grouper, $mapper, $viewport, $keyMap);
         $service = new GridMigrationService($reader, $mapper, $strategy, new NullLogger());
-        $service->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);
+        $service->run($viewport, self::ZONE, $keyMap, false, [$pageId]);
     }
 
-    private function runAllRowsInSection(int $pageId): void
+    /**
+     * @param array<string, string>|null $viewportKeyMap Override viewport key map (default: Bootstrap identity map)
+     */
+    private function runAllRowsInSection(int $pageId, ?string $defaultViewport = null, ?array $viewportKeyMap = null): void
     {
+        $viewport = $defaultViewport ?? self::DEFAULT_VIEWPORT;
+        $keyMap = $viewportKeyMap ?? self::VIEWPORT_KEY_MAP;
         $reader = new LegacyDataReader();
         $mapper = new FieldMapper();
         $grouper = new ElementGrouper();
-        $strategy = new AllRowsInSectionStrategy($grouper, $mapper, self::DEFAULT_VIEWPORT, self::VIEWPORT_KEY_MAP, new NullLogger());
+        $strategy = new AllRowsInSectionStrategy($grouper, $mapper, $viewport, $keyMap, new NullLogger());
         $service = new GridMigrationService($reader, $mapper, $strategy, new NullLogger());
-        $service->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);
+        $service->run($viewport, self::ZONE, $keyMap, false, [$pageId]);
     }
 
     private function getPageId(): int
