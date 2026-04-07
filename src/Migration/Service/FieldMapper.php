@@ -186,9 +186,7 @@ final class FieldMapper
         $mapped['VerticalAlignment'] = $this->verticalAlignMap[$align] ?? 'top';
 
         // MediaPosition CSS class → enum value; null/empty fall back to 'first'
-        /** @var string|null $rawPosition */
-        $rawPosition = $fields['MediaPosition'] ?? '';
-        $position = $rawPosition ?? '';
+        $position = $fields['MediaPosition'] ?? '';
         $mapped['MediaPosition'] = $this->mediaPositionMap[$position] ?? 'first';
 
         // ContentColumns Varchar → int; '' or null → 0

@@ -279,6 +279,11 @@ final class LegacyDataReader
      */
     private function stageTable(string $baseTable, string $stage): string
     {
-        return \strtolower($stage) === 'live' ? $baseTable . '_Live' : $baseTable;
+        $normalized = \strtolower($stage);
+        if ($normalized !== 'draft' && $normalized !== 'live') {
+            throw new \InvalidArgumentException(\sprintf('Invalid stage "%s", expected "draft" or "live"', $stage));
+        }
+
+        return $normalized === 'live' ? $baseTable . '_Live' : $baseTable;
     }
 }

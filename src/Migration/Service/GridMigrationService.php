@@ -125,6 +125,9 @@ final class GridMigrationService
         $conn->transactionStart();
 
         try {
+            // Suppress auto-scaffolding process-wide during migration to prevent
+            // Section/Row onAfterWrite hooks from creating duplicate child records.
+            // Restored in the finally block below.
             Section::config()->set('auto_scaffold', false);
             Row::config()->set('auto_scaffold', false);
 
@@ -146,7 +149,10 @@ final class GridMigrationService
                     $this->writeDraftHierarchy($pageId, $zone, $sections, $oldToNewElementId, $oldToNewColumnId);
                 });
 
-                // Step 7: Handle live stage
+                // Step 7: Publish draft records to live for elements that also existed on live.
+                // Stage is set to DRAFT because we read the draft-created records
+                // and then call writeToStage(LIVE) to copy them to _Live tables.
+                // overwriteLiveContent() then corrects _Live with live-specific values.
                 $liveElements = $this->reader->getElementsForArea($areaId, 'live');
                 if ($liveElements !== []) {
                     Versioned::withVersionedMode(function () use (
@@ -283,34 +289,40 @@ final class GridMigrationService
      */
     private function createContentElement(MigrationColumn $migration, int $columnId): GridElement
     {
-        $legacyElement = $migration->element;
+        $newElement = $this->buildContentElement($migration->element, $columnId, $migration->element->sort);
+        $newElement->write();
 
-        // Step 6c-2: Resolve ClassName
+        return $newElement;
+    }
+
+    /**
+     * Build a GridElement from legacy data without writing.
+     *
+     * Shared by both draft creation (createContentElement) and live-only
+     * creation (createLiveOnlyElement) to avoid duplicating the field
+     * mapping, class name resolution, and extension hook logic.
+     */
+    private function buildContentElement(LegacyElement $legacyElement, int $columnId, int $sort): GridElement
+    {
         $newClassName = $this->mapper->resolveClassName($legacyElement->className);
         $oldClassName = $legacyElement->className;
         $this->extend('updateClassNameMapping', $newClassName, $oldClassName);
 
-        // Step 6c-3: Create instance
         /** @var GridElement $newElement */
         $newElement = $newClassName::create();
 
-        // Step 6c-4: Set base fields
         $newElement->Title = $legacyElement->title;
         $newElement->ShowTitle = $legacyElement->showTitle;
-        // TitleTag enum requires a valid value; empty strings from legacy data default to 'h2'
         /** @var 'h1'|'h2'|'h3'|'h4'|'h5'|'h6' $titleTag */
         $titleTag = $legacyElement->titleTag !== '' ? $legacyElement->titleTag : 'h2';
         $newElement->TitleTag = $titleTag;
         $newElement->TitleClass = $legacyElement->titleClass;
-        $newElement->Sort = $legacyElement->sort;
+        $newElement->Sort = $sort;
         $newElement->ExtraClass = $legacyElement->extraClass;
         $newElement->ParentID = $columnId;
         $newElement->ParentClass = Column::class;
 
-        // Step 6c-5: Map media fields and HTML for ElementContent → ContentElement
         if ($legacyElement->mediaData !== null && $newElement instanceof ContentElement) {
-            // HTML is carried alongside media fields in LegacyMediaData but
-            // not processed by mapMediaFields — set it directly.
             $html = $legacyElement->mediaData->fields['HTML'] ?? null;
             if (\is_string($html)) {
                 $newElement->HTML = $html;
@@ -322,11 +334,7 @@ final class GridMigrationService
             }
         }
 
-        // Step 6c-6: Extension hook for custom field mapping
         $this->extend('updateElementFieldMapping', $newElement, $legacyElement);
-        /** @var GridElement $newElement */
-
-        $newElement->write();
 
         return $newElement;
     }
@@ -483,6 +491,10 @@ final class GridMigrationService
         $setClauses = [];
         $params = [];
         foreach ($liveFields as $field => $value) {
+            // Guard against column name injection — only allow alphanumeric + underscore
+            if (\preg_match('/^[A-Za-z_]+$/', $field) !== 1) {
+                continue;
+            }
             $setClauses[] = \sprintf('"%s" = ?', $field);
             $params[] = $value;
         }
@@ -542,38 +554,8 @@ final class GridMigrationService
         $column->setGridSettings($gridSettings);
         $column->write();
 
-        // Create content element on draft
-        $newClassName = $this->mapper->resolveClassName($liveElement->className);
-        $oldClassName = $liveElement->className;
-        $this->extend('updateClassNameMapping', $newClassName, $oldClassName);
-
-        /** @var GridElement $newElement */
-        $newElement = $newClassName::create();
-        $newElement->Title = $liveElement->title;
-        $newElement->ShowTitle = $liveElement->showTitle;
-        /** @var 'h1'|'h2'|'h3'|'h4'|'h5'|'h6' $liveTitleTag */
-        $liveTitleTag = $liveElement->titleTag !== '' ? $liveElement->titleTag : 'h2';
-        $newElement->TitleTag = $liveTitleTag;
-        $newElement->TitleClass = $liveElement->titleClass;
-        $newElement->Sort = 1;
-        $newElement->ExtraClass = $liveElement->extraClass;
-        $newElement->ParentID = (int) $column->ID;
-        $newElement->ParentClass = Column::class;
-
-        if ($liveElement->mediaData !== null && $newElement instanceof ContentElement) {
-            $html = $liveElement->mediaData->fields['HTML'] ?? null;
-            if (\is_string($html)) {
-                $newElement->HTML = $html;
-            }
-
-            $mappedFields = $this->mapper->mapMediaFields($liveElement->mediaData);
-            foreach ($mappedFields as $field => $value) {
-                $newElement->$field = $value;
-            }
-        }
-
-        $this->extend('updateElementFieldMapping', $newElement, $liveElement);
-        /** @var GridElement $newElement */
+        // Create content element on draft using shared builder
+        $newElement = $this->buildContentElement($liveElement, (int) $column->ID, 1);
         $newElement->write();
 
         // Publish all to live
