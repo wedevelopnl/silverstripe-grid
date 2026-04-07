@@ -335,6 +335,7 @@ final class GridMigrationService
         }
 
         $this->extend('updateElementFieldMapping', $newElement, $legacyElement);
+        /** @var GridElement $newElement */
 
         return $newElement;
     }

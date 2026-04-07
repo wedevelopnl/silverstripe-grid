@@ -186,6 +186,7 @@ final class FieldMapper
         $mapped['VerticalAlignment'] = $this->verticalAlignMap[$align] ?? 'top';
 
         // MediaPosition CSS class → enum value; null/empty fall back to 'first'
+        /** @var string $position */
         $position = $fields['MediaPosition'] ?? '';
         $mapped['MediaPosition'] = $this->mediaPositionMap[$position] ?? 'first';
 
