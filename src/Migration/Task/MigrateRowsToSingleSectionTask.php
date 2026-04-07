@@ -37,7 +37,7 @@ class MigrateRowsToSingleSectionTask extends BuildTask
         ];
     }
 
-    public function run(InputInterface $input, PolyOutput $output): int
+    public function execute(InputInterface $input, PolyOutput $output): int
     {
         $defaultViewport = $input->getOption('default-viewport');
         $zone = $input->getOption('zone');
