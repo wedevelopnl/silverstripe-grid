@@ -34,6 +34,7 @@ final class ElementGrouperTest extends TestCase
         $result = $this->grouper->group([$e1]);
 
         self::assertCount(1, $result);
+        self::assertNull($result[0]['row']);
         self::assertNull($result[0]['rowData']);
         self::assertSame([$e1], $result[0]['elements']);
     }
@@ -47,6 +48,7 @@ final class ElementGrouperTest extends TestCase
         $result = $this->grouper->group([$e1, $e2, $e3]);
 
         self::assertCount(1, $result);
+        self::assertNull($result[0]['row']);
         self::assertNull($result[0]['rowData']);
         self::assertSame([$e1, $e2, $e3], $result[0]['elements']);
     }
@@ -58,6 +60,7 @@ final class ElementGrouperTest extends TestCase
         $result = $this->grouper->group([$row]);
 
         self::assertCount(1, $result);
+        self::assertSame($row, $result[0]['row']);
         self::assertSame($row->rowData, $result[0]['rowData']);
         self::assertSame([], $result[0]['elements']);
     }
@@ -74,10 +77,12 @@ final class ElementGrouperTest extends TestCase
         self::assertCount(2, $result);
 
         // First group: implicit (before any row), contains e1 + e2
+        self::assertNull($result[0]['row']);
         self::assertNull($result[0]['rowData']);
         self::assertSame([$e1, $e2], $result[0]['elements']);
 
         // Second group: row's group, contains e3
+        self::assertSame($row, $result[1]['row']);
         self::assertSame($row->rowData, $result[1]['rowData']);
         self::assertSame([$e3], $result[1]['elements']);
     }
@@ -96,14 +101,17 @@ final class ElementGrouperTest extends TestCase
         self::assertCount(3, $result);
 
         // First group: implicit (e1 before first row)
+        self::assertNull($result[0]['row']);
         self::assertNull($result[0]['rowData']);
         self::assertSame([$e1], $result[0]['elements']);
 
         // Second group: row1's group (e2, e3)
+        self::assertSame($row1, $result[1]['row']);
         self::assertSame($row1->rowData, $result[1]['rowData']);
         self::assertSame([$e2, $e3], $result[1]['elements']);
 
         // Third group: row2's group (e4)
+        self::assertSame($row2, $result[2]['row']);
         self::assertSame($row2->rowData, $result[2]['rowData']);
         self::assertSame([$e4], $result[2]['elements']);
     }
@@ -117,6 +125,7 @@ final class ElementGrouperTest extends TestCase
         $result = $this->grouper->group([$row, $e1, $e2]);
 
         self::assertCount(1, $result);
+        self::assertSame($row, $result[0]['row']);
         self::assertSame($row->rowData, $result[0]['rowData']);
         self::assertSame([$e1, $e2], $result[0]['elements']);
     }
@@ -132,10 +141,12 @@ final class ElementGrouperTest extends TestCase
         self::assertCount(2, $result);
 
         // First row's group is empty
+        self::assertSame($row1, $result[0]['row']);
         self::assertSame($row1->rowData, $result[0]['rowData']);
         self::assertSame([], $result[0]['elements']);
 
         // Second row's group contains e1
+        self::assertSame($row2, $result[1]['row']);
         self::assertSame($row2->rowData, $result[1]['rowData']);
         self::assertSame([$e1], $result[1]['elements']);
     }
@@ -149,6 +160,7 @@ final class ElementGrouperTest extends TestCase
         $result = $this->grouper->group([$row, $e1]);
 
         self::assertCount(1, $result);
+        self::assertSame($row, $result[0]['row']);
         self::assertSame($rowData, $result[0]['rowData']);
     }
 }

@@ -12,16 +12,17 @@ final class ElementGrouper
     /**
      * Split a flat sorted element list into groups delimited by ElementRow records.
      *
-     * Elements before the first row form an implicit group (rowData: null).
+     * Elements before the first row form an implicit group (row: null, rowData: null).
      * Each row element starts a new group containing all following non-row elements
      * up to the next row (or end of list).
      *
      * @param list<LegacyElement> $elements Sorted by Sort ASC
-     * @return list<array{rowData: ?LegacyRowData, elements: list<LegacyElement>}>
+     * @return list<array{row: ?LegacyElement, rowData: ?LegacyRowData, elements: list<LegacyElement>}>
      */
     public function group(array $elements): array
     {
         $groups = [];
+        $currentRow = null;
         $currentRowData = null;
         $currentElements = [];
         $hasSeenRow = false;
@@ -32,9 +33,10 @@ final class ElementGrouper
                 // something to flush (either a prior row started a group, or we
                 // accumulated implicit elements before the first row).
                 if ($hasSeenRow || $currentElements !== []) {
-                    $groups[] = ['rowData' => $currentRowData, 'elements' => $currentElements];
+                    $groups[] = ['row' => $currentRow, 'rowData' => $currentRowData, 'elements' => $currentElements];
                 }
 
+                $currentRow = $element;
                 $currentRowData = $element->rowData;
                 $currentElements = [];
                 $hasSeenRow = true;
@@ -45,7 +47,7 @@ final class ElementGrouper
 
         // Flush the final group (covers: implicit-only, last row's group, single row).
         if ($hasSeenRow || $currentElements !== []) {
-            $groups[] = ['rowData' => $currentRowData, 'elements' => $currentElements];
+            $groups[] = ['row' => $currentRow, 'rowData' => $currentRowData, 'elements' => $currentElements];
         }
 
         return $groups;
