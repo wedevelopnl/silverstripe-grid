@@ -194,6 +194,7 @@ final class GridElementService
             if ($targetParentId !== $targetPageId) {
                 return Result::fail(new ValidationError(
                     message: 'Target parent does not match the claimed page.',
+                    field: 'ownership',
                 ));
             }
 
@@ -207,6 +208,7 @@ final class GridElementService
         if (!$owningPage instanceof SiteTree || (int) $owningPage->ID !== $targetPageId) {
             return Result::fail(new ValidationError(
                 message: 'Target parent does not belong to the claimed page.',
+                field: 'ownership',
             ));
         }
 
@@ -220,6 +222,7 @@ final class GridElementService
         if ($ancestor instanceof Section && $ancestor->Zone !== $targetZone) {
             return Result::fail(new ValidationError(
                 message: 'Target parent does not belong to the claimed zone.',
+                field: 'ownership',
             ));
         }
 

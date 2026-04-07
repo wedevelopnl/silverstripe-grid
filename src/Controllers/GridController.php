@@ -328,7 +328,11 @@ class GridController extends AdminController
             $body->targetZone,
         );
         if ($result->isErr()) {
-            return $this->resultToResponse($result);
+            // Ownership validation failures (C1) are bad-request errors;
+            // hierarchy violations (C2) are domain validation errors (422).
+            $statusCode = $result->errors()[0]->field === 'ownership' ? 400 : 422;
+
+            return $this->resultToResponse($result, $statusCode);
         }
 
         $this->touchOwningPage($result->unwrap());
