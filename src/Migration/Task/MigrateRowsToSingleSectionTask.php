@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Migration\Task;
 
 use Psr\Log\LoggerInterface;
-use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\BuildTask;
+use SilverStripe\PolyExecution\PolyOutput;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
@@ -23,24 +26,39 @@ class MigrateRowsToSingleSectionTask extends BuildTask
 
     protected static string $description = 'Migrates old elemental-grid data: all ElementRows become Rows under a single Section per page.';
 
-    public function run(HTTPRequest $request): void
+    protected function getOptions(): array
     {
-        $defaultViewport = $request->getVar('default_viewport');
-        $zone = $request->getVar('zone');
+        return [
+            new InputOption('default-viewport', null, InputOption::VALUE_REQUIRED, 'Old module default viewport (e.g. MD)'),
+            new InputOption('zone', null, InputOption::VALUE_REQUIRED, 'Target zone for new Sections (e.g. main)'),
+            new InputOption('dry-run', null, InputOption::VALUE_NONE, 'Log what would be migrated without writing'),
+            new InputOption('viewport-map', null, InputOption::VALUE_REQUIRED, 'Comma-separated old=new viewport key pairs'),
+            new InputOption('page-ids', null, InputOption::VALUE_REQUIRED, 'Comma-separated page IDs to migrate'),
+        ];
+    }
+
+    public function run(InputInterface $input, PolyOutput $output): int
+    {
+        $defaultViewport = $input->getOption('default-viewport');
+        $zone = $input->getOption('zone');
+
         if (!$defaultViewport || !$zone) {
-            echo "Required arguments: default_viewport, zone\n";
-            echo "Usage: sake dev/tasks/migrate-grid-rows-to-single-section default_viewport=MD zone=main\n";
-            return;
+            $output->writeln('Required options: --default-viewport, --zone');
+            $output->writeln('Usage: sake dev/tasks/migrate-grid-rows-to-single-section --default-viewport=MD --zone=main');
+            return Command::FAILURE;
         }
 
-        $dryRun = (bool) $request->getVar('dry-run');
-        $pageIdsArg = $request->getVar('page-ids');
-        $pageIds = $pageIdsArg
+        /** @var string $defaultViewport */
+        /** @var string $zone */
+
+        $dryRun = (bool) $input->getOption('dry-run');
+        $pageIdsArg = $input->getOption('page-ids');
+        $pageIds = \is_string($pageIdsArg) && $pageIdsArg !== ''
             ? \array_map('intval', \explode(',', $pageIdsArg))
             : null;
 
         $viewportKeyMap = $this->resolveViewportKeyMap(
-            $request->getVar('viewport-map'),
+            \is_string($input->getOption('viewport-map')) ? $input->getOption('viewport-map') : null,
         );
 
         $logger = Injector::inst()->get(LoggerInterface::class);
@@ -51,16 +69,15 @@ class MigrateRowsToSingleSectionTask extends BuildTask
 
         $service = new GridMigrationService($reader, $mapper, $strategy, $logger);
         $service->run($defaultViewport, $zone, $viewportKeyMap, $dryRun, $pageIds);
+
+        return Command::SUCCESS;
     }
 
     /**
-     * Parse viewport-map arg or derive from adapter.
-     *
-     * @return array<string, string> old key → new key
+     * @return array<string, string>
      */
     protected function resolveViewportKeyMap(?string $viewportMapArg): array
     {
-        // Duplicate of MigrateRowsToSectionsTask — intentional for thin shells
         if ($viewportMapArg !== null && $viewportMapArg !== '') {
             $map = [];
             foreach (\explode(',', $viewportMapArg) as $pair) {
