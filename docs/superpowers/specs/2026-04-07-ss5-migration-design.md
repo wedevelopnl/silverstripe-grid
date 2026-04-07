@@ -47,6 +47,8 @@ The user chooses whichever task matches their site's usage of the old module.
 | Argument | Purpose |
 |---|---|
 | `dry-run` | Flag. Log what would be migrated without writing. |
+| `viewport-map` | Comma-separated `old=new` pairs (e.g. `XS=xs,SM=sm,MD=md,LG=lg,XL=xl`). Maps old viewport keys to new adapter keys. If omitted, derived automatically by case-insensitive matching of old uppercase keys against the active adapter's viewport definitions. Required when migrating across CSS frameworks (e.g. Bootstrap → Tailwind) where viewport names differ. |
+| `page-ids` | Comma-separated list of page IDs to migrate (e.g. `1,5,12`). If omitted, all eligible pages are migrated. Useful for testing the migration on specific pages before running the full batch. |
 
 ## Architecture
 
@@ -78,7 +80,7 @@ Encapsulates all raw SQL queries against old tables. Returns plain DTOs. No ORM 
 
 | Method | Returns | Source tables |
 |---|---|---|
-| `getEligiblePageIds()` | `list<int>` | `SiteTree` (or `SiteTree_Live`) — pages where `UseElementalGrid = 1` and `ElementalAreaID > 0` |
+| `getEligiblePages()` | `list<array{pageId: int, areaId: int}>` | `SiteTree` (or `SiteTree_Live`) — pages where `UseElementalGrid = 1` and `ElementalAreaID > 0`. Returns both page ID and ElementalArea ID. |
 | `getElementsForArea(int $areaId)` | `list<LegacyElement>` | `BaseElement` (or `_Live`) — all elements in that area, ordered by `Sort ASC` |
 | `getRowData(int $elementId)` | `?LegacyRowData` | `ElementRow` (or `_Live`) — `IsFluid`, `CustomSectionClass` |
 | `getContentMediaData(int $elementId)` | `?LegacyMediaData` | `ElementContent` (or `_Live`) — all media/layout fields |
@@ -121,7 +123,7 @@ Produces:
 }
 ```
 
-**Viewport key map**: Old module uses uppercase keys (`XS`, `SM`, `MD`, `LG`, `XL`). New module's adapter defines its own keys (Bootstrap lowercase `xs`, `sm`, etc.). The mapper receives a key map as input — derived from the active adapter by the BuildTask. No hardcoded assumption that old keys are just uppercase versions of new keys.
+**Viewport key map**: Old module uses uppercase keys (`XS`, `SM`, `MD`, `LG`, `XL`). New module's adapter defines its own keys (Bootstrap lowercase `xs`, `sm`, etc.). The mapper receives a key map as input. When the `viewport-map` argument is provided, it's used directly. Otherwise, derived automatically by case-insensitive matching of old keys against the active adapter's viewport definitions. No hardcoded assumption that old keys are just uppercase versions of new keys.
 
 **Media field mapping** — hardcoded lookup tables:
 
@@ -146,8 +148,30 @@ Produces:
 'MediaVideoEmbeddedDescription' => 'VideoEmbedDescription',
 'MediaVideoEmbeddedThumbnail' => 'VideoEmbedThumbnail',
 'MediaVideoEmbeddedCreated' => 'VideoEmbedCreated',
-'ExtraColumnGap' => 'GapSize',
 'ContentVerticalAlign' => 'VerticalAlignment',  // + CSS class → enum value conversion
+
+// ContentColumns (Varchar → Int, empty string → 0)
+// Straight cast, '' maps to 0 (no side-by-side layout)
+
+// MediaRatio (empty string → 'auto', other values pass through unchanged)
+// Old: '', '1x1', '4x3', '16x9'
+// New: 'auto', '1x1', '4x3', '16x9'
+
+// MediaType — values are identical between old and new ('image', 'video')
+// No mapping needed, pass through unchanged
+
+// MediaImageID — same column name in both modules, pass through unchanged
+
+// ExtraColumnGap → GapSize (different value scales, hardcoded mapping)
+2 => 1,   // Smallest → Smallest
+3 => 1,   // Smaller → Smallest
+5 => 2,   // Small → Small
+7 => 3,   // Normal → Medium
+9 => 3,   // Medium → Medium
+11 => 4,  // Large → Large
+16 => 5,  // Larger → Largest
+17 => 5,  // Largest → Largest
+0 => 0,   // None → None
 ```
 
 **ClassName resolution**: Default mapping: `DNADesign\Elemental\Models\ElementContent` → `WeDevelop\Grid\Model\ContentElement`. Unknown classes pass through unchanged.
@@ -214,7 +238,8 @@ Orchestrates the full migration. Receives strategy, reader, and mapper via const
 ```
 for each eligible page:
     for each stage (draft, live):
-        1. Idempotency check: query Section table for this page + zone + stage
+        1. Idempotency check: query Section table for this page + zone on the
+           current stage (Section for draft, Section_Live for live)
            → if Sections exist, skip (log "already migrated")
 
         2. Read legacy elements for this page's ElementalAreaID
@@ -235,9 +260,22 @@ for each eligible page:
         7. Commit (or rollback on failure, log error, continue to next page)
 ```
 
-**Stage-specific writes**: Draft writes to normal tables. Live writes to `_Live` suffixed tables. Both stages get `_Versions` entries.
+**ORM writes with auto-scaffolding disabled**: The migration uses ORM `write()` calls so that SilverStripe's Versioned extension handles `_Versions` entries and stage-specific table writes automatically. To prevent Section and Row `onAfterWrite` hooks from auto-creating child records (which would duplicate the migration-created hierarchy), the migration temporarily disables auto-scaffolding via config before writing:
+
+```php
+Section::config()->set('auto_scaffold', false);
+Row::config()->set('auto_scaffold', false);
+// ... write Sections, Rows, Columns ...
+// Config resets automatically after request (or restore explicitly in finally block)
+```
+
+**Stage-specific writes**: The migration sets the Versioned reading/writing stage before each pass. Draft pass uses `Versioned::DRAFT`, live pass uses `Versioned::LIVE`. ORM + Versioned handles writing to the correct tables (`Section` vs `Section_Live`, etc.) and creating `_Versions` entries.
 
 **Re-parenting**: The critical mutation. Old elements have `ParentID → ElementalArea`, `ParentClass → ElementalArea::class`. Updated to `ParentID → new Column ID`, `ParentClass → Column::class`.
+
+**Old `ElementRow` records**: Left as orphans in the legacy tables after migration. The old tables are dead weight post-migration and cleaning them up is not worth the complexity. SilverStripe does not provide a clean mechanism for removing legacy table data.
+
+**New fields without old equivalents**: The new `GridElement.Style` field has no counterpart in the old module. It defaults to empty string and is not part of the migration.
 
 ### DTOs
 
@@ -293,7 +331,7 @@ MigrationColumn
 
 Both tasks:
 - Validate required arguments (`default_viewport`, `zone`), exit early with usage instructions if missing
-- Derive viewport key map from the active `GridAdapterInterface`
+- Parse `viewport-map` if provided; otherwise derive automatically by case-insensitive matching of old uppercase viewport keys (`XS`, `SM`, `MD`, `LG`, `XL`) against the active `GridAdapterInterface`'s viewport definitions
 - Output progress: page count, per-page results, warnings, summary
 
 ## File Layout
