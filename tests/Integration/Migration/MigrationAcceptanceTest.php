@@ -21,7 +21,10 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Migration\Service\TestCustomElement;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestCustomElementMigrationExtension;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestCustomElementReaderExtension;
 
 /**
  * End-to-end acceptance tests for the SS5 → SS6 grid migration pipeline.
@@ -34,6 +37,11 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 final class MigrationAcceptanceTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
+
+    /** @var list<class-string> */
+    protected static $extra_dataobjects = [
+        TestCustomElement::class,
+    ];
 
     protected $usesTransactions = false;
 
@@ -820,6 +828,101 @@ final class MigrationAcceptanceTest extends SapphireTest
         ]);
     }
 
+    // ─── Scenario 8: Custom element with project-specific fields ──
+
+    /**
+     * Verifies the full custom element migration path:
+     * 1. LegacyDataReader hook reads custom fields from a legacy subclass table
+     * 2. GridMigrationService hook maps old ClassName → new ClassName
+     * 3. GridMigrationService hook sets custom fields from extraData
+     *
+     * This is the pattern every project with custom element types must implement.
+     */
+    public function testCustomElementWithProjectSpecificFields(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 1600;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        $heroClassName = 'App\\Elements\\HeroBlock';
+
+        // Create the legacy HeroBlock table (simulates old project-specific table)
+        DB::query(<<<SQL
+            CREATE TABLE IF NOT EXISTS "LegacyHeroBlock" (
+                "ID" int NOT NULL PRIMARY KEY,
+                "Subtitle" varchar(255) NOT NULL DEFAULT '',
+                "ButtonText" varchar(255) NOT NULL DEFAULT ''
+            )
+            SQL);
+
+        // Row with mixed element types: one standard ContentElement, one custom HeroBlock
+        $this->seeder->seedElement(1600, $areaId, self::ROW_CLASS, 1);
+        $this->seeder->seedRow(1600, customSectionClass: 'mixed-section');
+
+        // Standard ContentElement
+        $this->seeder->seedElement(1601, $areaId, self::CONTENT_CLASS, 2, [
+            'SizeMD' => 8, 'Title' => 'Regular Content',
+        ]);
+        $this->seeder->seedContentMedia(1601, ['HTML' => '<p>Normal text block.</p>']);
+
+        // Custom HeroBlock (stored in BaseElement with custom ClassName)
+        $this->seeder->seedElement(1602, $areaId, $heroClassName, 3, [
+            'SizeMD' => 4, 'Title' => 'Hero CTA', 'ShowTitle' => 1, 'TitleTag' => 'h3',
+            'ExtraClass' => 'hero-cta',
+        ]);
+        // Seed the custom subclass table
+        DB::prepared_query(
+            'INSERT INTO "LegacyHeroBlock" ("ID", "Subtitle", "ButtonText") VALUES (?, ?, ?)',
+            [1602, 'Discover More', 'Get Started'],
+        );
+
+        // Register both extensions to complete the custom element migration chain
+        LegacyDataReader::add_extension(TestCustomElementReaderExtension::class);
+        GridMigrationService::add_extension(TestCustomElementMigrationExtension::class);
+
+        try {
+            $this->runRowPerSection($pageId);
+
+            $this->assertMigratedHierarchy($pageId, self::ZONE, Versioned::DRAFT, [
+                [
+                    'extraClass' => 'mixed-section',
+                    'rows' => [
+                        [
+                            'columns' => [
+                                [
+                                    'gridDefault' => ['width' => 8, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Regular Content',
+                                        'html' => '<p>Normal text block.</p>',
+                                    ],
+                                ],
+                                [
+                                    'gridDefault' => ['width' => 4, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => TestCustomElement::class,
+                                        'title' => 'Hero CTA',
+                                        'showTitle' => true,
+                                        'titleTag' => 'h3',
+                                        'extraClass' => 'hero-cta',
+                                        'subtitle' => 'Discover More',
+                                        'buttonText' => 'Get Started',
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+        } finally {
+            GridMigrationService::remove_extension(TestCustomElementMigrationExtension::class);
+            LegacyDataReader::remove_extension(TestCustomElementReaderExtension::class);
+            DB::query('DROP TABLE IF EXISTS "LegacyHeroBlock"');
+        }
+    }
+
     // ─── Assertion helper ─────────────────────────────────────────
 
     /**
@@ -1036,6 +1139,16 @@ final class MigrationAcceptanceTest extends SapphireTest
                 self::assertSame($expectedEl['videoCustomThumbnailID'], (int) $element->VideoCustomThumbnailID, "$elPath: videoCustomThumbnailID");
             }
         }
+
+        // TestCustomElement-specific fields (custom project elements)
+        if ($element instanceof TestCustomElement) {
+            if (isset($expectedEl['subtitle'])) {
+                self::assertSame($expectedEl['subtitle'], $element->Subtitle, "$elPath: subtitle");
+            }
+            if (isset($expectedEl['buttonText'])) {
+                self::assertSame($expectedEl['buttonText'], $element->ButtonText, "$elPath: buttonText");
+            }
+        }
     }
 
     // ─── Migration runner helpers ─────────────────────────────────
@@ -1071,6 +1184,7 @@ final class MigrationAcceptanceTest extends SapphireTest
     private function cleanGridTables(): void
     {
         $tables = [
+            'TestCustomElement', 'TestCustomElement_Live',
             'ContentElement', 'ContentElement_Live',
             'Column', 'Column_Live',
             'Row', 'Row_Live',
