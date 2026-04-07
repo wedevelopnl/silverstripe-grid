@@ -27,6 +27,7 @@ final class LegacyDataReader
     private const array VIEWPORT_KEYS = ['XS', 'SM', 'MD', 'LG', 'XL'];
 
     private const array MEDIA_FIELDS = [
+        'HTML',
         'ContentColumns',
         'ContentVerticalAlign',
         'ExtraColumnGap',
