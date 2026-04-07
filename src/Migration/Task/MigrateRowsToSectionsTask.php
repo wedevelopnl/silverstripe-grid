@@ -21,7 +21,7 @@ class MigrateRowsToSectionsTask extends BuildTask
 
     protected string $title = 'Migrate grid rows to sections';
 
-    private static string $description = 'Migrates old elemental-grid data: each ElementRow becomes a Section + Row in the new hierarchy.';
+    protected static string $description = 'Migrates old elemental-grid data: each ElementRow becomes a Section + Row in the new hierarchy.';
 
     public function run(HTTPRequest $request): void
     {
