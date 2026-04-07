@@ -93,13 +93,13 @@ class MigrateRowsToSectionsTask extends BuildTask
 
         /** @var GridAdapterInterface $adapter */
         $adapter = Injector::inst()->get(GridAdapterInterface::class);
-        $adapterViewports = $adapter->getViewportDefinitions();
+        $viewports = $adapter->getViewports();
         $oldKeys = ['XS', 'SM', 'MD', 'LG', 'XL'];
         $map = [];
         foreach ($oldKeys as $oldKey) {
-            foreach ($adapterViewports as $newKey => $label) {
-                if (\strtolower($oldKey) === \strtolower($newKey)) {
-                    $map[$oldKey] = $newKey;
+            foreach ($viewports as $viewport) {
+                if (\strtolower($oldKey) === \strtolower($viewport->key)) {
+                    $map[$oldKey] = $viewport->key;
                     break;
                 }
             }

@@ -87,8 +87,8 @@ final class AllRowsInSectionStrategy implements RowMappingStrategy
             $columns = $this->buildColumns($group['elements']);
 
             $rows[] = new MigrationRow(
-                title: $row?->title ?? '',
-                extraClass: $row?->extraClass ?? '',
+                title: $row !== null ? $row->title : '',
+                extraClass: $row !== null ? $row->extraClass : '',
                 sort: $rowSort,
                 columns: $columns,
             );

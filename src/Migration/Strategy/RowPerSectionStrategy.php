@@ -45,10 +45,10 @@ final class RowPerSectionStrategy implements RowMappingStrategy
             $row = $group['row'];
             $rowData = $group['rowData'];
 
-            $isFluid = $rowData?->isFluid ?? false;
-            $extraClass = $rowData?->customSectionClass ?? '';
-            $rowTitle = $row?->title ?? '';
-            $rowExtraClass = $row?->extraClass ?? '';
+            $isFluid = $rowData !== null ? $rowData->isFluid : false;
+            $extraClass = $rowData !== null ? $rowData->customSectionClass : '';
+            $rowTitle = $row !== null ? $row->title : '';
+            $rowExtraClass = $row !== null ? $row->extraClass : '';
 
             $columns = $this->buildColumns($group['elements']);
 
