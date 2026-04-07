@@ -136,7 +136,7 @@ Produces:
 // MediaPosition (CSS class → enum value)
 'order-1' => 'first',
 'order-2' => 'last',
-'order-1 order-md-2' => 'last_on_desktop',
+'order-1 order-md-2' => 'last-on-desktop',
 
 // Field renames (old → new)
 'MediaVideoFullURL' => 'VideoURL',
@@ -175,6 +175,12 @@ Produces:
 ```
 
 **ClassName resolution**: Default mapping: `DNADesign\Elemental\Models\ElementContent` → `WeDevelop\Grid\Model\ContentElement`. Unknown classes pass through unchanged.
+
+**NULL and empty string handling**: The FieldMapper treats both `NULL` and `''` (empty string) as "not set" for all optional fields (visibility, MediaPosition, MediaRatio, ContentColumns). This covers elements that were never edited and retained database defaults.
+
+**Default MediaPosition**: When `MediaPosition` is `NULL` or `''` in legacy data, maps to `'first'` (the new module's default), matching the old module's default of `'order-1'`.
+
+**Bootstrap assumption**: The hardcoded media field mappings (ContentVerticalAlign CSS classes, MediaPosition CSS classes) assume the old site used Bootstrap. Projects that used Tailwind or Bulma with the old module must override these mappings via the `updateFieldMapping()` extension hook, since the old module stored framework-specific CSS class strings for `MediaPosition` values containing responsive breakpoint classes (e.g. `order-md-2` is Bootstrap-specific).
 
 **Extension points**:
 - `updateElementFieldMapping($mappedFields, $legacyElement)` — per-element field mapping. Projects can add fields from custom extensions, override default mappings.
@@ -235,30 +241,42 @@ Orchestrates the full migration. Receives strategy, reader, and mapper via const
 
 **Flow per page:**
 
+SilverStripe's Versioned extension expects the same record ID to exist in both draft and `_Live` tables when content is published. Creating separate IDs per stage would break the publishing model. Therefore, the migration writes containers on **draft first**, then publishes to live for elements that also existed on live.
+
 ```
 for each eligible page:
-    for each stage (draft, live):
-        1. Idempotency check: query Section table for this page + zone on the
-           current stage (Section for draft, Section_Live for live)
-           → if Sections exist, skip (log "already migrated")
+    1. Idempotency check: query Section table (draft) for this page + zone
+       → if Sections exist, skip (log "already migrated")
 
-        2. Read legacy elements for this page's ElementalAreaID
-           → if empty, skip
+    2. Read DRAFT legacy elements for this page's ElementalAreaID
+       → if empty, skip to step 6 (live-only elements)
 
-        3. Run FieldMapper on each element's grid fields + media fields
+    3. Run FieldMapper on each element's grid fields + media fields
 
-        4. Pass to RowMappingStrategy → get list<MigrationSection>
+    4. Pass to RowMappingStrategy → get list<MigrationSection>
 
-        5. If dry-run: log what would be created, continue
+    5. If dry-run: log what would be created, continue to next page
 
-        6. Begin transaction
-           - Write Sections → Rows → Columns to the correct stage tables
-           - Re-parent content elements: UPDATE ParentID + ParentClass
-             to point to new Column (instead of old ElementalArea)
-           - Update ClassName via FieldMapper resolution
-           - Create _Versions entries
-        7. Commit (or rollback on failure, log error, continue to next page)
+    6. Begin transaction
+       a. Write Sections → Rows → Columns on DRAFT via ORM (gets IDs)
+       b. Re-parent draft content elements: update ParentID → new Column,
+          ParentClass → Column::class
+       c. Update ClassName via FieldMapper resolution on draft tables
+       d. Build a mapping: old element ID → new Column ID
+
+    7. Read LIVE legacy elements for this page's ElementalAreaID
+       → for each live element, find its matching Column from the draft
+         mapping (by old element ID)
+       → publish those Sections/Rows/Columns to live via writeToStage(LIVE)
+       → re-parent live content elements to the same Column IDs
+       → update ClassName on live tables
+       → live-only elements (no draft counterpart) get their own Columns
+         written to both draft and live
+
+    8. Commit (or rollback on failure, log error, continue to next page)
 ```
+
+**Live-only elements**: Elements that exist on live but were deleted on draft are an edge case. These still need containers. The migration creates Section/Row/Column records on both stages (the container exists on draft even though the content element doesn't) to maintain Versioned integrity.
 
 **ORM writes with auto-scaffolding disabled**: The migration uses ORM `write()` calls so that SilverStripe's Versioned extension handles `_Versions` entries and stage-specific table writes automatically. To prevent Section and Row `onAfterWrite` hooks from auto-creating child records (which would duplicate the migration-created hierarchy), the migration temporarily disables auto-scaffolding via config before writing:
 
@@ -269,13 +287,19 @@ Row::config()->set('auto_scaffold', false);
 // Config resets automatically after request (or restore explicitly in finally block)
 ```
 
-**Stage-specific writes**: The migration sets the Versioned reading/writing stage before each pass. Draft pass uses `Versioned::DRAFT`, live pass uses `Versioned::LIVE`. ORM + Versioned handles writing to the correct tables (`Section` vs `Section_Live`, etc.) and creating `_Versions` entries.
+**Stage-specific writes**: Draft containers are written via normal ORM `write()` on `Versioned::DRAFT`. Live publishing uses `writeToStage(Versioned::LIVE)` on the same records (same IDs), so both stages share record IDs — preserving the Versioned contract. ORM + Versioned handles `_Versions` entries automatically.
+
+**Sort auto-assignment**: `GridElement::onBeforeWrite()` auto-assigns Sort when it's `0`. The migration must set explicit Sort values on containers **before** calling `write()` to prevent the auto-sort hook from overriding intended ordering. The Sort values come from the `MigrationSection`/`MigrationRow`/`MigrationColumn` DTOs which derive them from the old element ordering.
 
 **Re-parenting**: The critical mutation. Old elements have `ParentID → ElementalArea`, `ParentClass → ElementalArea::class`. Updated to `ParentID → new Column ID`, `ParentClass → Column::class`.
 
 **Old `ElementRow` records**: Left as orphans in the legacy tables after migration. The old tables are dead weight post-migration and cleaning them up is not worth the complexity. SilverStripe does not provide a clean mechanism for removing legacy table data.
 
 **New fields without old equivalents**: The new `GridElement.Style` field has no counterpart in the old module. It defaults to empty string and is not part of the migration.
+
+**`UseElementalGrid` table location**: The `UseElementalGrid` and `ElementalAreaID` columns may live on the `Page` table rather than `SiteTree`, depending on which class the old module's extension was applied to. The `LegacyDataReader` must query the correct table — verify against the actual database schema. A JOIN across `SiteTree` and `Page` is the safest approach.
+
+**`ElementRow` TitleTag/TitleClass**: The old `ElementRow` inherits `TitleTag`, `TitleClass`, and `ShowTitle` from `BaseElementExtension` but removes them from the CMS UI. These fields likely contain default/empty values in the database. They are dropped during migration — only `Title` and `ExtraClass` are carried to the new Row.
 
 ### DTOs
 
