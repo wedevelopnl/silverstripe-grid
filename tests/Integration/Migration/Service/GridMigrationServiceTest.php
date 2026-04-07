@@ -465,32 +465,36 @@ final class GridMigrationServiceTest extends SapphireTest
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
-        // Seed same element on both stages
+        // Seed same element on both stages with different content
         $this->seeder->seedElement(5000, $areaId, self::CONTENT_CLASS, 1, [
             'SizeMD' => 8,
-            'Title' => 'Both Stages',
+            'Title' => 'Draft Title',
         ], stage: 'draft');
-        $this->seeder->seedContentMedia(5000, ['HTML' => '<p>Draft</p>'], stage: 'draft');
+        $this->seeder->seedContentMedia(5000, ['HTML' => '<p>Draft HTML</p>'], stage: 'draft');
 
         $this->seeder->seedElement(5000, $areaId, self::CONTENT_CLASS, 1, [
             'SizeMD' => 8,
-            'Title' => 'Both Stages',
+            'Title' => 'Live Title',
         ], stage: 'live');
-        $this->seeder->seedContentMedia(5000, ['HTML' => '<p>Live</p>'], stage: 'live');
+        $this->seeder->seedContentMedia(5000, ['HTML' => '<p>Live HTML</p>'], stage: 'live');
 
         $this->runMigration();
 
-        // Check draft
+        // Check draft has draft content
         Versioned::set_stage(Versioned::DRAFT);
-        $draftElements = ContentElement::get()->filter(['ParentClass' => Column::class]);
-        self::assertCount(1, $draftElements);
-        $draftId = (int) $draftElements->first()->ID;
+        $draftElement = ContentElement::get()->filter(['ParentClass' => Column::class])->first();
+        self::assertInstanceOf(ContentElement::class, $draftElement);
+        $draftId = (int) $draftElement->ID;
+        self::assertSame('Draft Title', $draftElement->Title);
+        self::assertSame('<p>Draft HTML</p>', $draftElement->HTML);
 
-        // Check live
+        // Check live has live content
         Versioned::set_stage(Versioned::LIVE);
-        $liveElements = ContentElement::get()->filter(['ParentClass' => Column::class]);
-        self::assertCount(1, $liveElements);
-        $liveId = (int) $liveElements->first()->ID;
+        $liveElement = ContentElement::get()->filter(['ParentClass' => Column::class])->first();
+        self::assertInstanceOf(ContentElement::class, $liveElement);
+        $liveId = (int) $liveElement->ID;
+        self::assertSame('Live Title', $liveElement->Title);
+        self::assertSame('<p>Live HTML</p>', $liveElement->HTML);
 
         // Same ID on both stages
         self::assertSame($draftId, $liveId);
@@ -568,18 +572,20 @@ final class GridMigrationServiceTest extends SapphireTest
 
         $this->runMigration();
 
-        // Both stages should share the same record ID.
-        // writeToStage(LIVE) writes to both tables, so live gets draft content.
-        // Draft content is canonical — this is standard SilverStripe publish behavior.
+        // Both stages share the same record ID but preserve their own content
         Versioned::set_stage(Versioned::DRAFT);
         $draftElement = ContentElement::get()->filter(['ParentClass' => Column::class])->first();
         self::assertInstanceOf(ContentElement::class, $draftElement);
         $draftId = (int) $draftElement->ID;
+        self::assertSame('Draft Title', $draftElement->Title);
+        self::assertSame('<p>Draft HTML</p>', $draftElement->HTML);
 
         Versioned::set_stage(Versioned::LIVE);
         $liveElement = ContentElement::get()->filter(['ParentClass' => Column::class])->first();
         self::assertInstanceOf(ContentElement::class, $liveElement);
         self::assertSame($draftId, (int) $liveElement->ID);
+        self::assertSame('Live Title', $liveElement->Title);
+        self::assertSame('<p>Live HTML</p>', $liveElement->HTML);
     }
 
     public function testContainersShareSameIdsAcrossStages(): void

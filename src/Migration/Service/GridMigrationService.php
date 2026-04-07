@@ -372,9 +372,13 @@ final class GridMigrationService
 
                 $element = GridElement::get()->byID($newElementId);
                 if ($element instanceof GridElement) {
-                    // Publish draft record to live. writeToStage(LIVE) writes
-                    // to both draft and live tables — live will have draft content.
+                    // Publish draft structure to live (creates _Live rows with
+                    // correct ID, ParentID, ParentClass, ClassName).
                     $element->writeToStage(Versioned::LIVE);
+
+                    // Overwrite live content fields with live-specific values,
+                    // since writeToStage copied draft content to live.
+                    $this->overwriteLiveContent($newElementId, $liveElement);
                 }
             } else {
                 // Live-only element — create new records on both draft and live
@@ -423,6 +427,74 @@ final class GridMigrationService
 
         $column->writeToStage(Versioned::LIVE);
         $publishedContainers[$columnId] = true;
+    }
+
+    /**
+     * Overwrite live content fields with live-specific values.
+     *
+     * After writeToStage(LIVE) copies draft content to the _Live tables,
+     * this method corrects the live rows with the actual live element data.
+     * This prevents draft-only changes from leaking onto the live site.
+     */
+    private function overwriteLiveContent(int $newElementId, LegacyElement $liveElement): void
+    {
+        // Base fields on GridElement_Live
+        /** @var 'h1'|'h2'|'h3'|'h4'|'h5'|'h6' $titleTag */
+        $titleTag = $liveElement->titleTag !== '' ? $liveElement->titleTag : 'h2';
+
+        DB::prepared_query(
+            'UPDATE "GridElement_Live" SET
+                "Title" = ?,
+                "ShowTitle" = ?,
+                "TitleTag" = ?,
+                "TitleClass" = ?,
+                "Sort" = ?,
+                "ExtraClass" = ?
+            WHERE "ID" = ?',
+            [
+                $liveElement->title,
+                $liveElement->showTitle ? 1 : 0,
+                $titleTag,
+                $liveElement->titleClass,
+                $liveElement->sort,
+                $liveElement->extraClass,
+                $newElementId,
+            ],
+        );
+
+        // Subclass fields on ContentElement_Live (HTML + media)
+        if ($liveElement->mediaData === null) {
+            return;
+        }
+
+        /** @var array<string, mixed> $liveFields */
+        $liveFields = ['HTML' => ''];
+
+        $html = $liveElement->mediaData->fields['HTML'] ?? null;
+        if (\is_string($html)) {
+            $liveFields['HTML'] = $html;
+        }
+
+        $mappedMedia = $this->mapper->mapMediaFields($liveElement->mediaData);
+        foreach ($mappedMedia as $field => $value) {
+            $liveFields[$field] = $value;
+        }
+
+        $setClauses = [];
+        $params = [];
+        foreach ($liveFields as $field => $value) {
+            $setClauses[] = \sprintf('"%s" = ?', $field);
+            $params[] = $value;
+        }
+        $params[] = $newElementId;
+
+        DB::prepared_query(
+            \sprintf(
+                'UPDATE "ContentElement_Live" SET %s WHERE "ID" = ?',
+                \implode(', ', $setClauses),
+            ),
+            $params,
+        );
     }
 
     /**
