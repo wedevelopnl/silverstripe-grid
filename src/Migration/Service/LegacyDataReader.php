@@ -262,13 +262,13 @@ final class LegacyDataReader
         $tables = DB::table_list();
 
         // table_list() returns lowercase table names as keys
-        if (!array_key_exists(strtolower($table), $tables)) {
+        if (!\array_key_exists(\strtolower($table), $tables)) {
             return false;
         }
 
         $columns = DB::field_list($table);
 
-        return array_key_exists($column, $columns);
+        return \array_key_exists($column, $columns);
     }
 
     /**
@@ -278,6 +278,6 @@ final class LegacyDataReader
      */
     private function stageTable(string $baseTable, string $stage): string
     {
-        return strtolower($stage) === 'live' ? $baseTable . '_Live' : $baseTable;
+        return \strtolower($stage) === 'live' ? $baseTable . '_Live' : $baseTable;
     }
 }

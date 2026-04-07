@@ -56,7 +56,7 @@ final class LegacyTableSeeder
 
         // Reset the grid columns on SiteTree rows
         $columns = DB::field_list('SiteTree');
-        if (array_key_exists('UseElementalGrid', $columns)) {
+        if (\array_key_exists('UseElementalGrid', $columns)) {
             DB::query('UPDATE "SiteTree" SET "UseElementalGrid" = 0, "ElementalAreaID" = 0');
         }
     }
@@ -132,14 +132,14 @@ final class LegacyTableSeeder
             'VisibilityXL' => null,
         ];
 
-        $data = array_merge($defaults, $overrides);
+        $data = \array_merge($defaults, $overrides);
 
-        $columns = implode('", "', array_keys($data));
-        $placeholders = implode(', ', array_fill(0, count($data), '?'));
+        $columns = \implode('", "', \array_keys($data));
+        $placeholders = \implode(', ', \array_fill(0, \count($data), '?'));
 
         DB::prepared_query(
             "INSERT INTO \"{$table}\" (\"{$columns}\") VALUES ({$placeholders})",
-            array_values($data),
+            \array_values($data),
         );
     }
 
@@ -194,14 +194,14 @@ final class LegacyTableSeeder
             'MediaVideoEmbeddedCreated' => '',
         ];
 
-        $data = array_merge($defaults, $fields);
+        $data = \array_merge($defaults, $fields);
 
-        $columns = implode('", "', array_keys($data));
-        $placeholders = implode(', ', array_fill(0, count($data), '?'));
+        $columns = \implode('", "', \array_keys($data));
+        $placeholders = \implode(', ', \array_fill(0, \count($data), '?'));
 
         DB::prepared_query(
             "INSERT INTO \"{$table}\" (\"{$columns}\") VALUES ({$placeholders})",
-            array_values($data),
+            \array_values($data),
         );
     }
 
@@ -295,11 +295,11 @@ final class LegacyTableSeeder
     {
         $columns = DB::field_list('SiteTree');
 
-        if (!array_key_exists('UseElementalGrid', $columns)) {
+        if (!\array_key_exists('UseElementalGrid', $columns)) {
             DB::query('ALTER TABLE "SiteTree" ADD COLUMN "UseElementalGrid" tinyint NOT NULL DEFAULT 0');
         }
 
-        if (!array_key_exists('ElementalAreaID', $columns)) {
+        if (!\array_key_exists('ElementalAreaID', $columns)) {
             DB::query('ALTER TABLE "SiteTree" ADD COLUMN "ElementalAreaID" int NOT NULL DEFAULT 0');
         }
     }
@@ -311,17 +311,17 @@ final class LegacyTableSeeder
     {
         $columns = DB::field_list('SiteTree');
 
-        if (array_key_exists('UseElementalGrid', $columns)) {
+        if (\array_key_exists('UseElementalGrid', $columns)) {
             DB::query('ALTER TABLE "SiteTree" DROP COLUMN "UseElementalGrid"');
         }
 
-        if (array_key_exists('ElementalAreaID', $columns)) {
+        if (\array_key_exists('ElementalAreaID', $columns)) {
             DB::query('ALTER TABLE "SiteTree" DROP COLUMN "ElementalAreaID"');
         }
     }
 
     private function stageTable(string $baseTable, string $stage): string
     {
-        return strtolower($stage) === 'live' ? $baseTable . '_Live' : $baseTable;
+        return \strtolower($stage) === 'live' ? $baseTable . '_Live' : $baseTable;
     }
 }
