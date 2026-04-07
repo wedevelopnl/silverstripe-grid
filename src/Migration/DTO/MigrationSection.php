@@ -10,7 +10,6 @@ final readonly class MigrationSection
     public function __construct(
         public string $title,
         public string $zone,
-        public bool $isFluid,
         public string $extraClass,
         public int $sort,
         public array $rows,

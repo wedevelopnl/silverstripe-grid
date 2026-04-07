@@ -49,7 +49,8 @@ final class AllRowsInSectionStrategy implements RowMappingStrategy
 
         // Determine section-level fields from the first explicit row group.
         // Implicit groups (no row element) contribute no section-level data.
-        $sectionIsFluid = false;
+        // Note: IsFluid is not migrated — it's a class-level config on Section,
+        // not a per-instance field. Only customSectionClass is carried over.
         $sectionExtraClass = '';
         $sectionFieldsSet = false;
 
@@ -62,19 +63,9 @@ final class AllRowsInSectionStrategy implements RowMappingStrategy
 
             if ($rowData !== null) {
                 if (!$sectionFieldsSet) {
-                    $sectionIsFluid = $rowData->isFluid;
                     $sectionExtraClass = $rowData->customSectionClass;
                     $sectionFieldsSet = true;
                 } else {
-                    // Warn when later rows carry section-level fields that differ
-                    // from what we already committed to the single Section.
-                    if ($rowData->isFluid !== $sectionIsFluid) {
-                        $this->logger->warning(
-                            'AllRowsInSectionStrategy: row isFluid conflicts with section value; discarding row value.',
-                            ['rowId' => $row?->id, 'rowIsFluid' => $rowData->isFluid, 'sectionIsFluid' => $sectionIsFluid],
-                        );
-                    }
-
                     if ($rowData->customSectionClass !== $sectionExtraClass) {
                         $this->logger->warning(
                             'AllRowsInSectionStrategy: row customSectionClass conflicts with section value; discarding row value.',
@@ -100,7 +91,6 @@ final class AllRowsInSectionStrategy implements RowMappingStrategy
             new MigrationSection(
                 title: '',
                 zone: $zone,
-                isFluid: $sectionIsFluid,
                 extraClass: $sectionExtraClass,
                 sort: 1,
                 rows: $rows,

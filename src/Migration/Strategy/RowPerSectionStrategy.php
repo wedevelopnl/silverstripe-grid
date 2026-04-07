@@ -45,7 +45,6 @@ final class RowPerSectionStrategy implements RowMappingStrategy
             $row = $group['row'];
             $rowData = $group['rowData'];
 
-            $isFluid = $rowData !== null ? $rowData->isFluid : false;
             $extraClass = $rowData !== null ? $rowData->customSectionClass : '';
             $rowTitle = $row !== null ? $row->title : '';
             $rowExtraClass = $row !== null ? $row->extraClass : '';
@@ -62,7 +61,6 @@ final class RowPerSectionStrategy implements RowMappingStrategy
             $sections[] = new MigrationSection(
                 title: '',
                 zone: $zone,
-                isFluid: $isFluid,
                 extraClass: $extraClass,
                 sort: $sectionSort,
                 rows: [$migrationRow],

@@ -65,7 +65,6 @@ final class RowPerSectionStrategyTest extends TestCase
 
         self::assertCount(1, $sections);
         $section = $sections[0];
-        self::assertTrue($section->isFluid);
         self::assertSame('my-section-class', $section->extraClass);
 
         self::assertCount(1, $section->rows);
@@ -103,7 +102,6 @@ final class RowPerSectionStrategyTest extends TestCase
 
         // Implicit group — defaults
         $implicitSection = $sections[0];
-        self::assertFalse($implicitSection->isFluid);
         self::assertSame('', $implicitSection->extraClass);
         self::assertSame('', $implicitSection->title);
 

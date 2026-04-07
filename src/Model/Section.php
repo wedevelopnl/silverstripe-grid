@@ -18,7 +18,6 @@ use WeDevelop\Grid\Value\ContainerType;
  * to create a Column) when no children exist.
  *
  * @property string $Zone
- * @property bool $IsFluid
  * @method HasManyList<Row> Rows()
  * @implements ContainerInterface<Row>
  */
@@ -36,7 +35,6 @@ class Section extends GridElement implements ContainerInterface
     /** @var array<string, string> */
     private static array $db = [
         'Zone' => 'Varchar(50)',
-        'IsFluid' => 'Boolean(0)',
     ];
 
     /** @var array<string, array<string, string|list<string>>> */
@@ -105,7 +103,8 @@ class Section extends GridElement implements ContainerInterface
     /** CSS classes for the grid container wrapper. */
     public function getContainerClasses(): string
     {
-        $fluid = (bool) $this->IsFluid || (bool) static::config()->get('fluid_container');
+        /** @var bool $fluid */
+        $fluid = static::config()->get('fluid_container');
         $classes = $this->gridAdapter->getContainerClass($fluid);
 
         $this->extend('updateContainerClasses', $classes);

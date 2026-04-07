@@ -241,7 +241,6 @@ final class GridMigrationService
         $section = Section::create();
         $section->Title = '';
         $section->Zone = $zone;
-        $section->IsFluid = $migration->isFluid;
         $section->ExtraClass = $migration->extraClass;
         $section->Sort = $migration->sort;
         $section->ParentID = $pageId;

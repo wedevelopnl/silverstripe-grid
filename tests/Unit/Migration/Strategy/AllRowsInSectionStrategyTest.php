@@ -49,30 +49,14 @@ final class AllRowsInSectionStrategyTest extends TestCase
         self::assertCount(2, $sections[0]->rows);
     }
 
-    public function testFirstRowIsFluidAndCustomClassAppliedToSection(): void
+    public function testFirstRowCustomClassAppliedToSection(): void
     {
         $rowData = new LegacyRowData(isFluid: true, customSectionClass: 'hero-section');
         $row = LegacyElementFactory::row(1, 1, $rowData);
 
         $sections = $this->strategy->buildHierarchy([$row], pageId: 10, zone: 'main');
 
-        self::assertTrue($sections[0]->isFluid);
         self::assertSame('hero-section', $sections[0]->extraClass);
-    }
-
-    public function testLaterRowWithDifferentIsFluidLogsWarningAndIsDiscarded(): void
-    {
-        $row1 = LegacyElementFactory::row(1, 1, new LegacyRowData(isFluid: true, customSectionClass: ''));
-        $row2 = LegacyElementFactory::row(2, 2, new LegacyRowData(isFluid: false, customSectionClass: ''));
-
-        $this->logger->expects(self::atLeastOnce())
-            ->method('warning')
-            ->with(self::stringContains('isFluid'));
-
-        $sections = $this->strategy->buildHierarchy([$row1, $row2], pageId: 10, zone: 'main');
-
-        // Section keeps the first row's value
-        self::assertTrue($sections[0]->isFluid);
     }
 
     public function testLaterRowWithDifferentCustomSectionClassLogsWarningAndIsDiscarded(): void
@@ -177,10 +161,10 @@ final class AllRowsInSectionStrategyTest extends TestCase
         self::assertSame('sidebar', $sections[0]->zone);
     }
 
-    public function testNoWarningWhenAllRowsHaveSameIsFluid(): void
+    public function testNoWarningWhenAllRowsHaveSameCustomSectionClass(): void
     {
-        $row1 = LegacyElementFactory::row(1, 1, new LegacyRowData(isFluid: true, customSectionClass: ''));
-        $row2 = LegacyElementFactory::row(2, 2, new LegacyRowData(isFluid: true, customSectionClass: ''));
+        $row1 = LegacyElementFactory::row(1, 1, new LegacyRowData(isFluid: false, customSectionClass: 'same-class'));
+        $row2 = LegacyElementFactory::row(2, 2, new LegacyRowData(isFluid: false, customSectionClass: 'same-class'));
 
         $this->logger->expects(self::never())->method('warning');
 
