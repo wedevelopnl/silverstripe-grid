@@ -9,8 +9,6 @@ use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
-use WeDevelop\Grid\Value\GridSettings;
-use WeDevelop\Grid\Value\ViewportConfig;
 
 #[CoversClass(FieldMapper::class)]
 final class FieldMapperTest extends TestCase
