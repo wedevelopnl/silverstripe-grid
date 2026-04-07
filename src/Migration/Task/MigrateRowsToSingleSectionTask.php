@@ -19,9 +19,9 @@ class MigrateRowsToSingleSectionTask extends BuildTask
 {
     private static string $segment = 'migrate-grid-rows-to-single-section';
 
-    protected string $title = 'Migrate grid rows to single section';
+    private static string $title = 'Migrate grid rows to single section';
 
-    protected string $description = 'Migrates old elemental-grid data: all ElementRows become Rows under a single Section per page.';
+    private static string $description = 'Migrates old elemental-grid data: all ElementRows become Rows under a single Section per page.';
 
     public function run(HTTPRequest $request): void
     {
