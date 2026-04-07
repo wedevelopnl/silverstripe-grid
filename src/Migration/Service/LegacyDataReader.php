@@ -182,7 +182,6 @@ final class LegacyDataReader
         $row = $result->record();
 
         return new LegacyRowData(
-            isFluid: (bool) ($row['IsFluid'] ?? false),
             customSectionClass: (string) ($row['CustomSectionClass'] ?? ''),
         );
     }

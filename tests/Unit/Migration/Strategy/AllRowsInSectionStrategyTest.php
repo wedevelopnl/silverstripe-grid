@@ -51,7 +51,7 @@ final class AllRowsInSectionStrategyTest extends TestCase
 
     public function testFirstRowCustomClassAppliedToSection(): void
     {
-        $rowData = new LegacyRowData(isFluid: true, customSectionClass: 'hero-section');
+        $rowData = new LegacyRowData(customSectionClass: 'hero-section');
         $row = LegacyElementFactory::row(1, 1, $rowData);
 
         $sections = $this->strategy->buildHierarchy([$row], pageId: 10, zone: 'main');
@@ -61,8 +61,8 @@ final class AllRowsInSectionStrategyTest extends TestCase
 
     public function testLaterRowWithDifferentCustomSectionClassLogsWarningAndIsDiscarded(): void
     {
-        $row1 = LegacyElementFactory::row(1, 1, new LegacyRowData(isFluid: false, customSectionClass: 'first-class'));
-        $row2 = LegacyElementFactory::row(2, 2, new LegacyRowData(isFluid: false, customSectionClass: 'second-class'));
+        $row1 = LegacyElementFactory::row(1, 1, new LegacyRowData(customSectionClass: 'first-class'));
+        $row2 = LegacyElementFactory::row(2, 2, new LegacyRowData(customSectionClass: 'second-class'));
 
         $this->logger->expects(self::atLeastOnce())
             ->method('warning')
@@ -89,7 +89,7 @@ final class AllRowsInSectionStrategyTest extends TestCase
             sizeFields: [],
             offsetFields: [],
             visibilityFields: [],
-            rowData: new LegacyRowData(isFluid: false, customSectionClass: ''),
+            rowData: new LegacyRowData(customSectionClass: ''),
         );
         $row2 = new LegacyElement(
             id: 2,
@@ -104,7 +104,7 @@ final class AllRowsInSectionStrategyTest extends TestCase
             sizeFields: [],
             offsetFields: [],
             visibilityFields: [],
-            rowData: new LegacyRowData(isFluid: false, customSectionClass: ''),
+            rowData: new LegacyRowData(customSectionClass: ''),
         );
 
         $sections = $this->strategy->buildHierarchy([$row1, $row2], pageId: 10, zone: 'main');
@@ -163,8 +163,8 @@ final class AllRowsInSectionStrategyTest extends TestCase
 
     public function testNoWarningWhenAllRowsHaveSameCustomSectionClass(): void
     {
-        $row1 = LegacyElementFactory::row(1, 1, new LegacyRowData(isFluid: false, customSectionClass: 'same-class'));
-        $row2 = LegacyElementFactory::row(2, 2, new LegacyRowData(isFluid: false, customSectionClass: 'same-class'));
+        $row1 = LegacyElementFactory::row(1, 1, new LegacyRowData(customSectionClass: 'same-class'));
+        $row2 = LegacyElementFactory::row(2, 2, new LegacyRowData(customSectionClass: 'same-class'));
 
         $this->logger->expects(self::never())->method('warning');
 

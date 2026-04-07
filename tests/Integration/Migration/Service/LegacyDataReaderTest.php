@@ -149,14 +149,13 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertFalse($elements[1]->isRow);
     }
 
-    public function testGetRowDataReturnsFluidAndSectionClass(): void
+    public function testGetRowDataReturnsSectionClass(): void
     {
         $this->seeder->seedRow(40, isFluid: true, customSectionClass: 'wide-section');
 
         $rowData = $this->reader->getRowData(40, 'draft');
 
         self::assertInstanceOf(LegacyRowData::class, $rowData);
-        self::assertTrue($rowData->isFluid);
         self::assertSame('wide-section', $rowData->customSectionClass);
     }
 
@@ -246,7 +245,6 @@ final class LegacyDataReaderTest extends SapphireTest
 
         self::assertCount(1, $elements);
         self::assertNotNull($elements[0]->rowData);
-        self::assertTrue($elements[0]->rowData->isFluid);
         self::assertSame('custom-class', $elements[0]->rowData->customSectionClass);
     }
 

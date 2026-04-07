@@ -59,7 +59,7 @@ final class LegacyElementFactory
             sizeFields: [],
             offsetFields: [],
             visibilityFields: [],
-            rowData: $rowData ?? new LegacyRowData(isFluid: false, customSectionClass: ''),
+            rowData: $rowData ?? new LegacyRowData(customSectionClass: ''),
             mediaData: null,
             extraData: [],
         );

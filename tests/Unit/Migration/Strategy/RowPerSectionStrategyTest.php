@@ -43,7 +43,7 @@ final class RowPerSectionStrategyTest extends TestCase
 
     public function testRowFieldsMapToSectionAndRow(): void
     {
-        $rowData = new LegacyRowData(isFluid: true, customSectionClass: 'my-section-class');
+        $rowData = new LegacyRowData(customSectionClass: 'my-section-class');
         $row = LegacyElementFactory::row(1, 1, $rowData);
         $row = new \WeDevelop\Grid\Migration\DTO\LegacyElement(
             id: 1,

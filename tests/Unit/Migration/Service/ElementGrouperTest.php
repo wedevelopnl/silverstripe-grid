@@ -132,8 +132,8 @@ final class ElementGrouperTest extends TestCase
 
     public function testAdjacentRowsProduceEmptyGroupForFirstRow(): void
     {
-        $row1 = LegacyElementFactory::row(1, 1, new LegacyRowData(isFluid: true, customSectionClass: 'fluid-row'));
-        $row2 = LegacyElementFactory::row(2, 2, new LegacyRowData(isFluid: false, customSectionClass: 'normal-row'));
+        $row1 = LegacyElementFactory::row(1, 1, new LegacyRowData(customSectionClass: 'fluid-row'));
+        $row2 = LegacyElementFactory::row(2, 2, new LegacyRowData(customSectionClass: 'normal-row'));
         $e1 = LegacyElementFactory::content(3, 3);
 
         $result = $this->grouper->group([$row1, $row2, $e1]);
@@ -153,7 +153,7 @@ final class ElementGrouperTest extends TestCase
 
     public function testRowDataIsPreservedOnGroup(): void
     {
-        $rowData = new LegacyRowData(isFluid: true, customSectionClass: 'my-section');
+        $rowData = new LegacyRowData(customSectionClass: 'my-section');
         $row = LegacyElementFactory::row(1, 1, $rowData);
         $e1 = LegacyElementFactory::content(2, 2);
 

@@ -16,7 +16,7 @@ use WeDevelop\Grid\Migration\Service\FieldMapper;
  * Maps all row groups to Rows under a single Section.
  *
  * Use this when the source page has multiple rows that logically
- * belong to one section. Section-level fields (isFluid, extraClass)
+ * belong to one section. Section-level fields (extraClass)
  * are taken from the first explicit row; later rows with conflicting
  * values trigger a warning and are discarded.
  */
