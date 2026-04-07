@@ -144,4 +144,47 @@ final class GridTreeBuilderTest extends SapphireTest
         self::assertInstanceOf(GridSettings::class, $columnNode->gridSettings);
         self::assertSame(12, $columnNode->gridSettings->default->width);
     }
+
+    public function testFindColumnsForPageReturnsAllColumns(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row1 = GridTreeFactory::row($section);
+        $row2 = GridTreeFactory::row($section);
+        $col1 = GridTreeFactory::column($row1);
+        $col2 = GridTreeFactory::column($row1);
+        $col3 = GridTreeFactory::column($row2);
+
+        $columns = $this->builder->findColumnsForPage($page, 'main');
+
+        self::assertCount(3, $columns);
+        $ids = array_map(static fn (Column $c): int => (int) $c->ID, $columns);
+        self::assertContains((int) $col1->ID, $ids);
+        self::assertContains((int) $col2->ID, $ids);
+        self::assertContains((int) $col3->ID, $ids);
+    }
+
+    public function testFindColumnsForPageRespectsZone(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $mainSection = GridTreeFactory::section($page, zone: 'main');
+        $sidebarSection = GridTreeFactory::section($page, zone: 'sidebar');
+        $mainRow = GridTreeFactory::row($mainSection);
+        $sidebarRow = GridTreeFactory::row($sidebarSection);
+        GridTreeFactory::column($mainRow);
+        GridTreeFactory::column($sidebarRow);
+
+        $columns = $this->builder->findColumnsForPage($page, 'main');
+
+        self::assertCount(1, $columns);
+    }
+
+    public function testFindColumnsForPageReturnsEmptyForEmptyPage(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+
+        $columns = $this->builder->findColumnsForPage($page, 'main');
+
+        self::assertSame([], $columns);
+    }
 }

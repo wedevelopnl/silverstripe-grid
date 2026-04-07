@@ -41,3 +41,8 @@ SilverStripe\Core\Injector\Injector:
     constructor:
       validator: '%$WeDevelop\Grid\Contract\ReorderValidatorInterface'
       elementRepository: '%$WeDevelop\Grid\Repository\GridElementRepositoryInterface'
+  WeDevelop\Grid\Service\GridElementService: ~
+  WeDevelop\Grid\Service\GridSettingsService:
+    constructor:
+      gridAdapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
+      treeBuilder: '%$WeDevelop\Grid\Service\GridTreeBuilder'

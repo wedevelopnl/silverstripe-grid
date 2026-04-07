@@ -9,8 +9,9 @@ use SilverStripe\Core\Injector\Injectable;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
+use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\GridNode;
 
 /**
  * Builds a recursive element tree for a page using batch-loading to avoid N+1 queries.
@@ -49,6 +50,109 @@ class GridTreeBuilder
         $tree[$pageId] = $this->assembleSubTree($elementsByParent, $rootKey, $pageId);
 
         return $tree;
+    }
+
+    /**
+     * Find all Column elements for a page + zone using batch loading.
+     *
+     * Reuses the same breadth-first loading strategy as {@see buildForPage()}
+     * but returns only the Column model instances, needed for bulk grid
+     * settings operations like viewport override resets.
+     *
+     * @param non-empty-string $zone
+     * @return list<Column>
+     */
+    public function findColumnsForPage(SiteTree $page, string $zone): array
+    {
+        /** @var positive-int $pageId */
+        $pageId = $page->ID;
+
+        $elementsByParent = $this->loadAllElements($pageId, $page::class, $zone);
+
+        /** @var list<Column> $columns */
+        $columns = [];
+        foreach ($elementsByParent as $elements) {
+            foreach ($elements as $element) {
+                if ($element instanceof Column) {
+                    $columns[] = $element;
+                }
+            }
+        }
+
+        return $columns;
+    }
+
+    /**
+     * Recursively collect containers matching the target type from a pre-built tree.
+     *
+     * @param list<GridNode> $nodes
+     * @return list<array{id: positive-int, title: string, type: string}>
+     */
+    public static function collectContainersOfType(array $nodes, ContainerType $targetType): array
+    {
+        /** @var list<array{id: positive-int, title: string, type: string}> $containers */
+        $containers = [];
+        self::doCollectContainers($nodes, $targetType, $containers);
+
+        return $containers;
+    }
+
+    /**
+     * Walk a pre-built tree and count how many columns have overrides per viewport,
+     * plus a total count of columns with any overrides.
+     *
+     * @param list<GridNode> $nodes
+     * @return array<non-empty-string, int>
+     */
+    public static function countOverrides(array $nodes): array
+    {
+        /** @var array<non-empty-string, int> $counts */
+        $counts = [];
+        self::doCountOverrides($nodes, $counts);
+
+        return $counts;
+    }
+
+    /**
+     * @param list<GridNode> $nodes
+     * @param list<array{id: positive-int, title: string, type: string}> $containers
+     */
+    private static function doCollectContainers(array $nodes, ContainerType $targetType, array &$containers): void
+    {
+        foreach ($nodes as $node) {
+            if ($node->containerType === $targetType) {
+                $containers[] = [
+                    'id' => $node->id,
+                    'title' => $node->title,
+                    'type' => $targetType->value,
+                ];
+            }
+
+            if ($node->children !== null) {
+                self::doCollectContainers($node->children, $targetType, $containers);
+            }
+        }
+    }
+
+    /**
+     * @param list<GridNode> $nodes
+     * @param array<non-empty-string, int> $counts
+     */
+    private static function doCountOverrides(array $nodes, array &$counts): void
+    {
+        foreach ($nodes as $node) {
+            if ($node->gridSettings !== null && $node->gridSettings->overrides !== []) {
+                $counts['_total'] = ($counts['_total'] ?? 0) + 1;
+
+                foreach (array_keys($node->gridSettings->overrides) as $viewport) {
+                    $counts[$viewport] = ($counts[$viewport] ?? 0) + 1;
+                }
+            }
+
+            if ($node->children !== null) {
+                self::doCountOverrides($node->children, $counts);
+            }
+        }
     }
 
     /**

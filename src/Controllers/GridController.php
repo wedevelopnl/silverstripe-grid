@@ -11,31 +11,25 @@ use SilverStripe\Admin\AdminController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
-use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\SecurityToken;
 use SilverStripe\Versioned\Versioned;
-use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Extensions\GridPageExtension;
 use WeDevelop\Grid\Model\Column;
-use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Value\ContainerType;
-use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\Viewport;
-use WeDevelop\Grid\Value\WriteResult;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
+use WeDevelop\Grid\Service\GridElementService;
+use WeDevelop\Grid\Service\GridSettingsService;
 use WeDevelop\Grid\Service\GridTreeBuilder;
-use WeDevelop\Grid\Value\ViewportConfig;
 use WeDevelop\Grid\Service\ReorderService;
 use WeDevelop\Grid\Service\RequestBodyParser;
-use WeDevelop\Grid\Service\TitleGenerator;
 use WeDevelop\Grid\Forms\GridEditorField;
-use WeDevelop\Grid\Value\GridNode;
 
 /**
  * @phpstan-type AdapterConfig array{viewports: list<array{key: string, label: string}>, defaultViewport: string, columnCount: positive-int, rowClasses: string, offsetStrategy: 'margin'|'grid-placement', baseWidthClasses: stdClass&object{'1': string, '2': string, '3': string, '4': string, '5': string, '6': string, '7': string, '8': string, '9': string, '10': string, '11': string, '12': string}, baseOffsetClasses: stdClass&object{'0': string, '1': string, '2': string, '3': string, '4': string, '5': string, '6': string, '7': string, '8': string, '9': string, '10': string, '11': string}}
@@ -45,6 +39,8 @@ use WeDevelop\Grid\Value\GridNode;
  * @property ReorderService $reorderService
  * @property GridAdapterInterface $gridAdapter
  * @property RequestBodyParser $requestBodyParser
+ * @property GridElementService $elementService
+ * @property GridSettingsService $settingsService
  */
 class GridController extends AdminController
 {
@@ -59,6 +55,8 @@ class GridController extends AdminController
         'reorderService' => '%$' . ReorderService::class,
         'gridAdapter' => '%$' . GridAdapterInterface::class,
         'requestBodyParser' => '%$' . RequestBodyParser::class,
+        'elementService' => '%$' . GridElementService::class,
+        'settingsService' => '%$' . GridSettingsService::class,
     ];
 
     public GridElementRepositoryInterface $elementRepository;
@@ -70,6 +68,10 @@ class GridController extends AdminController
     public GridAdapterInterface $gridAdapter;
 
     public RequestBodyParser $requestBodyParser;
+
+    public GridElementService $elementService;
+
+    public GridSettingsService $settingsService;
 
     /** @var array<string, string> */
     private static array $url_handlers = [
@@ -142,10 +144,8 @@ class GridController extends AdminController
         $zone = (string) $request->param('Zone');
         $tree = $this->treeBuilder->buildForPage($page, $zone);
 
-        /** @var array<non-empty-string, int> $overrideCounts */
-        $overrideCounts = [];
         $rootNodes = $tree[(int) $page->ID] ?? [];
-        $this->countOverridesInTree($rootNodes, $overrideCounts);
+        $overrideCounts = GridTreeBuilder::countOverrides($rootNodes);
 
         return $this->jsonSuccess(200, [
             'tree' => $tree,
@@ -163,19 +163,7 @@ class GridController extends AdminController
 
         $body = $parseResult->unwrap();
 
-        /** @var DataObject|null $parent */
-        $parent = Versioned::withVersionedMode(static function () use ($body): ?DataObject {
-            Versioned::set_stage(Versioned::DRAFT);
-
-            // Sections live under SiteTree pages; rows and columns live under GridElements.
-            // We must query the correct table because page IDs and element IDs share
-            // the same numeric space and can collide.
-            if ($body->containerType === ContainerType::Section) {
-                return SiteTree::get()->byID($body->parentId);
-            }
-
-            return GridElement::get()->byID($body->parentId);
-        });
+        $parent = $this->resolveParentForContainerType($body->containerType, $body->parentId);
         if ($parent === null) {
             $this->jsonError(400);
         }
@@ -184,31 +172,12 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        /** @var GridElement $newElement */
-        $newElement = Injector::inst()->create($body->containerType->toElementClass());
-        if (!$newElement->canCreate(null, ['Parent' => $parent])) {
-            $this->jsonError(403);
-        }
-
-        $newElement->ParentID = $body->parentId;
-        $newElement->ParentClass = $parent::class;
-
-        if ($body->containerType === ContainerType::Section) {
-            $newElement->Zone = $body->zone;
-        }
-
-        $result = WriteResult::from(function () use ($newElement, $body): GridElement {
-            $newElement->write();
-            if ($body->insertAfterElementID !== null) {
-                $newElement->insertAfterSibling($body->insertAfterElementID);
-            }
-            return $newElement;
-        });
+        $result = $this->elementService->createElement($parent, $body->containerType, $body->zone, $body->insertAfterElementID);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
 
-        $this->touchOwningPage($newElement);
+        $this->touchOwningPage($result->unwrap());
 
         return $this->jsonSuccess(204);
     }
@@ -241,27 +210,12 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        /** @var ContentElement $newElement */
-        $newElement = Injector::inst()->create($body->className);
-        if (!$newElement->canCreate(null, ['Parent' => $parent])) {
-            $this->jsonError(403);
-        }
-
-        $newElement->ParentID = $body->parentId;
-        $newElement->ParentClass = $parent::class;
-
-        $result = WriteResult::from(function () use ($newElement, $body): GridElement {
-            $newElement->write();
-            if ($body->insertAfterElementID !== null) {
-                $newElement->insertAfterSibling($body->insertAfterElementID);
-            }
-            return $newElement;
-        });
+        $result = $this->elementService->createContentElement($parent, $body->className, $body->insertAfterElementID);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
 
-        $this->touchOwningPage($newElement);
+        $this->touchOwningPage($result->unwrap());
 
         return $this->jsonSuccess(204);
     }
@@ -328,27 +282,12 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        $clone = $element->duplicate(false);
-        /** @var non-empty-string $cloneTitle Elements always have a title after write */
-        $cloneTitle = $clone->Title ?: $element->Title ?: 'Untitled';
-        $clone->Title = TitleGenerator::generateCopyTitle($cloneTitle);
-        $clone->Sort = 0;
-        $clone->ParentID = $element->ParentID;
-        $clone->ParentClass = $element->ParentClass;
-
-        /** @var positive-int $elementId */
-        $elementId = (int) $element->ID;
-
-        $result = WriteResult::from(function () use ($clone, $elementId): GridElement {
-            $clone->write();
-            $clone->insertAfterSibling($elementId);
-            return $clone;
-        });
+        $result = $this->elementService->duplicateElement($element);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
 
-        $this->touchOwningPage($clone);
+        $this->touchOwningPage($result->unwrap());
 
         return $this->jsonSuccess(204);
     }
@@ -372,16 +311,7 @@ class GridController extends AdminController
         // Must query the correct table due to ID namespace collisions.
         $isSection = $element instanceof Section;
 
-        /** @var DataObject|null $targetParent */
-        $targetParent = Versioned::withVersionedMode(static function () use ($body, $isSection): ?DataObject {
-            Versioned::set_stage(Versioned::DRAFT);
-
-            if ($isSection) {
-                return SiteTree::get()->byID($body->targetParentId);
-            }
-
-            return GridElement::get()->byID($body->targetParentId);
-        });
+        $targetParent = $this->resolveParentByElementType($isSection, $body->targetParentId);
 
         if ($targetParent === null || !$targetParent->exists()) {
             $this->jsonError(404);
@@ -391,75 +321,17 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        // C1: Validate target parent belongs to the claimed page/zone
-        if ($isSection) {
-            // For sections, the target parent IS the page
-            if ($body->targetParentId !== $body->targetPageId) {
-                $this->jsonError(400);
-            }
-        } else {
-            // For non-section elements, walk up to the page and verify ownership
-            assert($targetParent instanceof GridElement);
-            $owningPage = $targetParent->getPage();
-
-            if (!$owningPage instanceof SiteTree || (int) $owningPage->ID !== $body->targetPageId) {
-                $this->jsonError(400);
-            }
-
-            // Find the root section and verify its zone matches
-            $ancestor = $targetParent;
-            while ($ancestor instanceof GridElement && !$ancestor instanceof Section) {
-                $parent = $ancestor->Parent();
-                $ancestor = $parent instanceof GridElement ? $parent : null;
-            }
-            if ($ancestor instanceof Section && $ancestor->Zone !== $body->targetZone) {
-                $this->jsonError(400);
-            }
-        }
-
-        // C2: Validate hierarchy rules before deep copy
-        // Only container-to-container moves need checking. Section-to-page is always
-        // valid (canBeRoot=true) and non-sections are loaded from GridElement table,
-        // so $targetParent is never SiteTree for them.
-        if ($targetParent instanceof ContainerInterface) {
-            $containerType = $targetParent->getContainerType();
-            if (!$containerType->isChildAllowed($element::class)) {
-                $this->jsonError(422, sprintf(
-                    '%s cannot be placed inside %s.',
-                    $element->singular_name(),
-                    $targetParent->singular_name(),
-                ));
-            }
-        }
-
-        // Deep-duplicate the entire subtree (follows cascade_duplicates)
-        $clone = $element->duplicate(true);
-
-        // Re-parent to target
-        $clone->ParentID = $body->targetParentId;
-        $clone->ParentClass = $targetParent::class;
-
-        // Set zone for sections
-        if ($clone instanceof Section) {
-            $clone->Zone = $body->targetZone;
-        }
-
-        // Generate copy title (top-level only — children keep originals)
-        /** @var non-empty-string $cloneTitle */
-        $cloneTitle = $clone->Title ?: $element->Title ?: 'Untitled';
-        $clone->Title = TitleGenerator::generateCopyTitle($cloneTitle);
-
-        $clone->Sort = 0;
-
-        $result = WriteResult::from(function () use ($clone): GridElement {
-            $clone->write();
-            return $clone;
-        });
+        $result = $this->elementService->duplicateElementTo(
+            $element,
+            $targetParent,
+            $body->targetPageId,
+            $body->targetZone,
+        );
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
 
-        $this->touchOwningPage($clone);
+        $this->touchOwningPage($result->unwrap());
 
         return $this->jsonSuccess(204);
     }
@@ -532,29 +404,12 @@ class GridController extends AdminController
             $this->jsonError(400);
         }
 
-        $settings = $element->getGridSettings();
-        $defaultKey = $this->gridAdapter->getDefaultViewport()->key;
-        $values = new ViewportConfig($body->width, $body->offset, $body->visible);
-
-        if ($body->viewport === $defaultKey) {
-            $settings = $settings->withDefault($values);
-        } else {
-            $settings = $values->equals($settings->default)
-                ? $settings->withoutOverride($body->viewport)
-                : $settings->withOverride($body->viewport, $values);
-        }
-
-        $element->setGridSettings($settings);
-
-        $result = WriteResult::from(function () use ($element): GridElement {
-            $element->write();
-            return $element;
-        });
+        $result = $this->settingsService->updateSettings($element, $body->viewport, $body->width, $body->offset, $body->visible);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
 
-        $this->touchOwningPage($element);
+        $this->touchOwningPage($result->unwrap());
 
         return $this->jsonSuccess(204);
     }
@@ -584,38 +439,12 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        $columns = $this->findColumnsForPage($page, $body->zone);
-
-        $affected = 0;
-        foreach ($columns as $column) {
-            $settings = $column->getGridSettings();
-
-            if ($body->viewport !== null) {
-                if (!$settings->hasOverride($body->viewport)) {
-                    continue;
-                }
-                $settings = $settings->withoutOverride($body->viewport);
-            } else {
-                if ($settings->overrides === []) {
-                    continue;
-                }
-                $settings = $settings->withoutOverrides();
-            }
-
-            $column->setGridSettings($settings);
-
-            $result = WriteResult::from(function () use ($column): GridElement {
-                $column->write();
-                return $column;
-            });
-            if ($result->isErr()) {
-                return $this->resultToResponse($result);
-            }
-
-            ++$affected;
+        $result = $this->settingsService->resetOverrides($page, $body->zone, $body->viewport);
+        if ($result->isErr()) {
+            return $this->resultToResponse($result);
         }
 
-        if ($affected > 0) {
+        if ($result->unwrap() > 0) {
             $this->touchOwningPage($page);
         }
 
@@ -666,10 +495,8 @@ class GridController extends AdminController
 
         $rootNodes = $tree[(int) $page->ID] ?? [];
 
-        /** @var list<array{id: positive-int, title: string, type: string}> $containers */
-        $containers = [];
         assert($targetContainerType instanceof ContainerType);
-        $this->collectContainersOfType($rootNodes, $targetContainerType, $containers);
+        $containers = GridTreeBuilder::collectContainersOfType($rootNodes, $targetContainerType);
 
         return $this->jsonSuccess(200, $containers);
     }
@@ -749,29 +576,6 @@ class GridController extends AdminController
     }
 
     /**
-     * Recursively collect containers matching the target type from the tree.
-     *
-     * @param list<GridNode> $nodes
-     * @param list<array{id: positive-int, title: string, type: string}> $containers Collected results (by reference)
-     */
-    private function collectContainersOfType(array $nodes, ContainerType $targetType, array &$containers): void
-    {
-        foreach ($nodes as $node) {
-            if ($node->containerType === $targetType) {
-                $containers[] = [
-                    'id' => $node->id,
-                    'title' => $node->title,
-                    'type' => $targetType->value,
-                ];
-            }
-
-            if ($node->children !== null) {
-                $this->collectContainersOfType($node->children, $targetType, $containers);
-            }
-        }
-    }
-
-    /**
      * @return array<string, mixed>
      */
     #[Override]
@@ -835,88 +639,6 @@ class GridController extends AdminController
             'baseWidthClasses' => $baseWidthClasses,
             'baseOffsetClasses' => $baseOffsetClasses,
         ];
-    }
-
-    /**
-     * Walk the tree and count how many columns have overrides per viewport,
-     * plus a total count of columns with any overrides.
-     *
-     * @param list<GridNode> $nodes
-     * @param array<non-empty-string, int> $counts Accumulated counts (by reference), includes '_total' key
-     */
-    private function countOverridesInTree(array $nodes, array &$counts): void
-    {
-        foreach ($nodes as $node) {
-            if ($node->gridSettings !== null && $node->gridSettings->overrides !== []) {
-                $counts['_total'] = ($counts['_total'] ?? 0) + 1;
-
-                foreach (array_keys($node->gridSettings->overrides) as $viewport) {
-                    $counts[$viewport] = ($counts[$viewport] ?? 0) + 1;
-                }
-            }
-
-            if ($node->children !== null) {
-                $this->countOverridesInTree($node->children, $counts);
-            }
-        }
-    }
-
-    /**
-     * Find all Column elements for a page + zone using breadth-first batch loading.
-     *
-     * Walks Section → Row → Column using the element repository, mirroring
-     * the same batch-loading approach as GridTreeBuilder but returning only
-     * the Column model instances needed for grid settings updates.
-     *
-     * @param non-empty-string $zone
-     * @return list<Column>
-     */
-    private function findColumnsForPage(SiteTree $page, string $zone): array
-    {
-        // Level 1: Sections under this page + zone
-        /** @var array<class-string, list<positive-int>> $sectionParents */
-        $sectionParents = [$page::class => [(int) $page->ID]];
-        $sections = $this->elementRepository->findByParents($sectionParents, $zone);
-
-        if ($sections === []) {
-            return [];
-        }
-
-        // Level 2: Rows under those sections
-        /** @var array<class-string, list<positive-int>> $rowParents */
-        $rowParents = [];
-        foreach ($sections as $section) {
-            /** @var positive-int $sectionId */
-            $sectionId = (int) $section->ID;
-            $rowParents[$section::class] ??= [];
-            $rowParents[$section::class][] = $sectionId;
-        }
-        $rows = $this->elementRepository->findByParents($rowParents);
-
-        if ($rows === []) {
-            return [];
-        }
-
-        // Level 3: Columns under those rows
-        /** @var array<class-string, list<positive-int>> $columnParents */
-        $columnParents = [];
-        foreach ($rows as $row) {
-            /** @var positive-int $rowId */
-            $rowId = (int) $row->ID;
-            $columnParents[$row::class] ??= [];
-            $columnParents[$row::class][] = $rowId;
-        }
-        $allElements = $this->elementRepository->findByParents($columnParents);
-
-        /** @var list<Column> $columns */
-        $columns = [];
-        foreach ($allElements as $element) {
-            if ($element instanceof Column) {
-                $columns[] = $element;
-            }
-        }
-
-        return $columns;
     }
 
     /**
@@ -990,6 +712,46 @@ class GridController extends AdminController
         }
 
         return $element;
+    }
+
+    /**
+     * Resolve a parent record for creating a container element.
+     *
+     * Sections live under SiteTree pages; rows and columns live under GridElements.
+     * Must query the correct table because page IDs and element IDs share
+     * the same numeric space and can collide.
+     *
+     * @param positive-int $parentId
+     */
+    private function resolveParentForContainerType(ContainerType $containerType, int $parentId): ?DataObject
+    {
+        return Versioned::withVersionedMode(static function () use ($containerType, $parentId): ?DataObject {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            if ($containerType === ContainerType::Section) {
+                return SiteTree::get()->byID($parentId);
+            }
+
+            return GridElement::get()->byID($parentId);
+        });
+    }
+
+    /**
+     * Resolve a parent record by element type (section vs non-section).
+     *
+     * @param positive-int $parentId
+     */
+    private function resolveParentByElementType(bool $isSection, int $parentId): ?DataObject
+    {
+        return Versioned::withVersionedMode(static function () use ($isSection, $parentId): ?DataObject {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            if ($isSection) {
+                return SiteTree::get()->byID($parentId);
+            }
+
+            return GridElement::get()->byID($parentId);
+        });
     }
 
     /**
