@@ -94,6 +94,8 @@ Encapsulates all raw SQL queries against old tables. Returns plain DTOs. No ORM 
 
 **Subclass table joins**: Only joins known tables (`ElementRow`, `ElementContent`). Custom element subclass tables are the project's responsibility via the extension hook.
 
+**Old table hierarchy**: All reads target the old `dnadesign/silverstripe-elemental` table hierarchy: `BaseElement` (shared fields + grid extension fields), `ElementRow` (row-specific fields), `ElementContent` (HTML + media extension fields). These tables remain in the database after the old module is uninstalled. The reader appends `_Live` to table names for live-stage reads (e.g. `BaseElement_Live`).
+
 ### FieldMapper
 
 Pure stateless transformations. No DB access, no side effects.
@@ -241,7 +243,11 @@ Orchestrates the full migration. Receives strategy, reader, and mapper via const
 
 **Flow per page:**
 
-SilverStripe's Versioned extension expects the same record ID to exist in both draft and `_Live` tables when content is published. Creating separate IDs per stage would break the publishing model. Therefore, the migration writes containers on **draft first**, then publishes to live for elements that also existed on live.
+**Table hierarchy change**: The old module stores content elements in the `BaseElement` table (from `dnadesign/silverstripe-elemental`). The new module uses a `GridElement` table. These are different physical tables. After the PHP classes are updated to extend `GridElement` and `dev/build` runs, the `GridElement` table exists but is empty — data remains in `BaseElement`. The migration must **INSERT new records** into the `GridElement` table hierarchy, not UPDATE existing rows in `BaseElement`.
+
+**New IDs for all migrated elements**: Content elements receive new IDs when inserted into `GridElement`. The migration maintains an **old ID → new ID mapping** per page to reconcile draft and live stages. Old records in `BaseElement` are left as orphans (same as `ElementRow` records). External references to old element IDs (e.g. shortcodes, links) will break — this is an accepted consequence of the table hierarchy change.
+
+SilverStripe's Versioned extension expects the same record ID to exist in both draft and `_Live` tables when content is published. Therefore, the migration writes on **draft first** (getting new IDs), then publishes to live for elements that also existed on live.
 
 ```
 for each eligible page:
@@ -258,25 +264,29 @@ for each eligible page:
     5. If dry-run: log what would be created, continue to next page
 
     6. Begin transaction
-       a. Write Sections → Rows → Columns on DRAFT via ORM (gets IDs)
-       b. Re-parent draft content elements: update ParentID → new Column,
-          ParentClass → Column::class
-       c. Update ClassName via FieldMapper resolution on draft tables
-       d. Build a mapping: old element ID → new Column ID
+       a. Write Sections → Rows → Columns on DRAFT via ORM (gets new IDs)
+       b. For each content element: create new GridElement record on DRAFT
+          with mapped fields, ParentID → new Column ID,
+          ParentClass → Column::class, ClassName from FieldMapper
+       c. For subclass data (e.g. ContentElement with BlockMediaExtension
+          fields): write mapped fields to the new subclass tables
+       d. Build mappings: old element ID → new element ID,
+          old element ID → new Column ID
 
     7. Read LIVE legacy elements for this page's ElementalAreaID
-       → for each live element, find its matching Column from the draft
-         mapping (by old element ID)
-       → publish those Sections/Rows/Columns to live via writeToStage(LIVE)
-       → re-parent live content elements to the same Column IDs
-       → update ClassName on live tables
-       → live-only elements (no draft counterpart) get their own Columns
-         written to both draft and live
+       → for each live element, find its matching new element/Column
+         from the draft mapping (by old element ID)
+       → publish containers to live via writeToStage(Versioned::LIVE)
+       → publish content elements to live via writeToStage(Versioned::LIVE)
+       → live-only elements (no draft counterpart) get new records
+         written to both draft and live to maintain Versioned integrity
 
     8. Commit (or rollback on failure, log error, continue to next page)
 ```
 
-**Live-only elements**: Elements that exist on live but were deleted on draft are an edge case. These still need containers. The migration creates Section/Row/Column records on both stages (the container exists on draft even though the content element doesn't) to maintain Versioned integrity.
+**Live-only elements**: Elements that exist on live but were deleted on draft are an edge case. These still need containers and content records. The migration creates Section/Row/Column + content element records on both stages (the records exist on draft even though the old content was draft-deleted) to maintain the Versioned contract. This means some draft-deleted content will "reappear" on draft — an accepted trade-off, as the alternative (live-only records with no draft counterpart) breaks Versioned's assumptions.
+
+**Subclass table migration**: Content element data spans multiple tables in both old and new hierarchies. For example, old `ElementContent` has data in `BaseElement` (shared fields) + `ElementContent` (HTML field) + extension columns on `ElementContent` (media fields from `ElementContentExtension`). The new `ContentElement` has data in `GridElement` (shared fields) + `ContentElement` (HTML field) + extension columns (media fields from `BlockMediaExtension`). The migration must read from the old table hierarchy and write to the new one. The `FieldMapper` handles the column-level mapping; the `GridMigrationService` handles writing to the correct new tables via ORM.
 
 **ORM writes with auto-scaffolding disabled**: The migration uses ORM `write()` calls so that SilverStripe's Versioned extension handles `_Versions` entries and stage-specific table writes automatically. To prevent Section and Row `onAfterWrite` hooks from auto-creating child records (which would duplicate the migration-created hierarchy), the migration temporarily disables auto-scaffolding via config before writing:
 
@@ -291,7 +301,7 @@ Row::config()->set('auto_scaffold', false);
 
 **Sort auto-assignment**: `GridElement::onBeforeWrite()` auto-assigns Sort when it's `0`. The migration must set explicit Sort values on containers **before** calling `write()` to prevent the auto-sort hook from overriding intended ordering. The Sort values come from the `MigrationSection`/`MigrationRow`/`MigrationColumn` DTOs which derive them from the old element ordering.
 
-**Re-parenting**: The critical mutation. Old elements have `ParentID → ElementalArea`, `ParentClass → ElementalArea::class`. Updated to `ParentID → new Column ID`, `ParentClass → Column::class`.
+**Content element creation**: Unlike containers (which are purely new records), content elements are **copies** of old data into the new table hierarchy. The ORM creates new records in `GridElement` + subclass tables with mapped field values. The old `BaseElement` records are not modified — they remain as orphans in the legacy tables.
 
 **Old `ElementRow` records**: Left as orphans in the legacy tables after migration. The old tables are dead weight post-migration and cleaning them up is not worth the complexity. SilverStripe does not provide a clean mechanism for removing legacy table data.
 
@@ -413,10 +423,18 @@ src/Migration/
 | **Core migration** | Media fields mapped correctly on ContentElement (renames, CSS class→enum, has_one relations preserved) |
 | **Core migration** | Element Sort order preserved through the hierarchy |
 | **Core migration** | Title, ShowTitle, TitleTag, TitleClass, ExtraClass carried over to new elements |
-| **Stage handling** | Draft-only element exists only in draft tables after migration |
-| **Stage handling** | Live-only element (deleted on draft, still published) exists only in live tables |
-| **Stage handling** | Element with different content on draft vs live — both versions migrated independently |
+| **Table migration** | Content element data correctly inserted into `GridElement` + subclass tables (not left in `BaseElement`) |
+| **Table migration** | Content elements receive new IDs (not reusing old `BaseElement` IDs) |
+| **Table migration** | Old `BaseElement` records left untouched as orphans |
+| **Table migration** | Subclass data migrated correctly (e.g. `ElementContent.HTML` → `ContentElement.HTML`) |
+| **Table migration** | `has_one` relation IDs preserved (MediaImageID, VideoCustomThumbnailID renamed correctly) |
+| **Stage handling** | Draft-only element: new record exists only in draft tables |
+| **Stage handling** | Live-only element (deleted on draft): new record exists on both draft and live (Versioned integrity) |
+| **Stage handling** | Element with different content on draft vs live — both versions migrated with same new ID |
+| **Stage handling** | Draft and live containers share the same IDs (Versioned contract) |
 | **Stage handling** | `_Versions` records created for both stages |
+| **ID mapping** | Old element ID → new element ID mapping used correctly for live-stage reconciliation |
+| **ID mapping** | Old element ID → new Column ID mapping assigns correct parents |
 | **Idempotency** | Run twice on same page — no duplicates, second run skips |
 | **Idempotency** | Partially migrated state (draft done, live not yet) — completes live without touching draft |
 | **Dry-run** | No writes to any table, output describes what would happen |
