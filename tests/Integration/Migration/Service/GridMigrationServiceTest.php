@@ -29,6 +29,8 @@ final class GridMigrationServiceTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
 
+    protected static $extra_dataobjects = [TestCustomElement::class];
+
     // Disable SapphireTest's per-test transaction wrapping. The migration
     // service uses its own transactions, and the LegacyTableSeeder's DDL
     // (CREATE TABLE) auto-commits in MySQL, which breaks savepoint-based
@@ -103,6 +105,7 @@ final class GridMigrationServiceTest extends SapphireTest
     private function cleanGridTables(): void
     {
         $tables = [
+            'TestCustomElement', 'TestCustomElement_Live',
             'ContentElement', 'ContentElement_Live',
             'Column', 'Column_Live',
             'Row', 'Row_Live',
@@ -784,35 +787,52 @@ final class GridMigrationServiceTest extends SapphireTest
         $areaId1 = 100;
         $areaId2 = 200;
 
-        // Seed valid data for page 1
+        // Page 1: element titled "FAIL_ME" triggers the failing extension
         $this->seeder->seedPage($pageId1, $areaId1);
-        $this->seeder->seedElement(6000, $areaId1, self::CONTENT_CLASS, 1, ['SizeMD' => 12]);
+        $this->seeder->seedElement(6000, $areaId1, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'FAIL_ME',
+        ]);
         $this->seeder->seedContentMedia(6000);
 
-        // Seed valid data for page 2
+        // Page 2: normal element that should succeed
         $this->seeder->seedPage($pageId2, $areaId2);
-        $this->seeder->seedElement(6100, $areaId2, self::CONTENT_CLASS, 1, ['SizeMD' => 12]);
+        $this->seeder->seedElement(6100, $areaId2, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'Normal Element',
+        ]);
         $this->seeder->seedContentMedia(6100);
 
-        // Run migration for both pages — both should succeed
-        $service = $this->createService();
-        $service->run(
-            self::DEFAULT_VIEWPORT,
-            self::ZONE,
-            self::VIEWPORT_KEY_MAP,
-            dryRun: false,
-            pageIds: [$pageId1, $pageId2],
-        );
+        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
 
-        // Both pages should have been migrated
-        self::assertGreaterThan(0, Section::get()->filter([
-            'ParentID' => $pageId1,
-            'Zone' => self::ZONE,
-        ])->count());
-        self::assertGreaterThan(0, Section::get()->filter([
-            'ParentID' => $pageId2,
-            'Zone' => self::ZONE,
-        ])->count());
+        try {
+            $service = $this->createService();
+            $service->run(
+                self::DEFAULT_VIEWPORT,
+                self::ZONE,
+                self::VIEWPORT_KEY_MAP,
+                dryRun: false,
+                pageIds: [$pageId1, $pageId2],
+            );
+
+            // Page 1 should be rolled back — no sections
+            self::assertCount(0, Section::get()->filter([
+                'ParentID' => $pageId1,
+                'Zone' => self::ZONE,
+            ]));
+
+            // Page 2 should have succeeded
+            self::assertGreaterThan(0, Section::get()->filter([
+                'ParentID' => $pageId2,
+                'Zone' => self::ZONE,
+            ])->count());
+
+            // The error should have been logged
+            self::assertNotEmpty($this->logger->errors);
+            self::assertStringContainsString('Deliberate test failure', $this->logger->errors[0]);
+        } finally {
+            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+        }
     }
 
     // ─── Test Group 6: Pseudo rows (tests 23-25) ─────────────────
@@ -1067,30 +1087,46 @@ final class GridMigrationServiceTest extends SapphireTest
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
-        // ElementContent → ContentElement
+        // ElementContent → ContentElement (default mapping)
         $this->seeder->seedElement(8400, $areaId, self::CONTENT_CLASS, 1, [
             'SizeMD' => 6,
             'Title' => 'Content Type',
         ]);
         $this->seeder->seedContentMedia(8400);
 
-        // Unknown custom type → stays as-is (unless mapped)
-        // We need to use ContentElement for this test since unknown classes won't exist
-        // in the test environment. The FieldMapper.resolveClassName returns unmapped
-        // classes unchanged, but we can't instantiate non-existent classes.
-        // Instead, test that ContentElement gets the correct ClassName.
-        $this->seeder->seedElement(8401, $areaId, self::CONTENT_CLASS, 2, [
+        // Custom legacy class → TestCustomElement (via extension hook)
+        $this->seeder->seedElement(8401, $areaId, 'App\\Elements\\CustomBlock', 2, [
             'SizeMD' => 6,
-            'Title' => 'Another Content',
+            'Title' => 'Custom Type',
         ]);
         $this->seeder->seedContentMedia(8401);
 
-        $this->runMigration();
+        TestClassNameMappingExtension::$targetClass = TestCustomElement::class;
+        TestClassNameMappingExtension::$sourceClass = 'App\\Elements\\CustomBlock';
+        GridMigrationService::add_extension(TestClassNameMappingExtension::class);
 
-        $elements = ContentElement::get()->filter(['ParentClass' => Column::class])->sort('Sort', 'ASC');
-        self::assertCount(2, $elements);
-        foreach ($elements as $element) {
-            self::assertSame(ContentElement::class, $element->ClassName);
+        try {
+            $this->runMigration();
+
+            // Default-mapped element should be ContentElement
+            $contentElement = ContentElement::get()->filter([
+                'Title' => 'Content Type',
+                'ParentClass' => Column::class,
+            ])->first();
+            self::assertInstanceOf(ContentElement::class, $contentElement);
+            self::assertSame(ContentElement::class, $contentElement->ClassName);
+
+            // Extension-mapped element should be TestCustomElement
+            $customElement = GridElement::get()->filter([
+                'Title' => 'Custom Type',
+                'ParentClass' => Column::class,
+            ])->first();
+            self::assertInstanceOf(TestCustomElement::class, $customElement);
+            self::assertSame(TestCustomElement::class, $customElement->ClassName);
+        } finally {
+            GridMigrationService::remove_extension(TestClassNameMappingExtension::class);
+            TestClassNameMappingExtension::$targetClass = '';
+            TestClassNameMappingExtension::$sourceClass = null;
         }
     }
 
@@ -1134,20 +1170,161 @@ final class GridMigrationServiceTest extends SapphireTest
 
         $this->seeder->seedElement(9100, $areaId, self::CONTENT_CLASS, 1, [
             'SizeMD' => 12,
+            'Title' => 'Overridden',
         ]);
         $this->seeder->seedContentMedia(9100);
 
+        // Override the default ContentElement mapping to TestCustomElement
+        TestClassNameMappingExtension::$targetClass = TestCustomElement::class;
+        TestClassNameMappingExtension::$sourceClass = null;
         GridMigrationService::add_extension(TestClassNameMappingExtension::class);
 
         try {
             $this->runMigration();
 
-            // The extension remaps ContentElement → ContentElement (same, since we
-            // can't use non-existent classes). The hook is verified to be called.
-            $element = GridElement::get()->filter(['ParentClass' => Column::class])->first();
-            self::assertInstanceOf(GridElement::class, $element);
+            $element = GridElement::get()->filter([
+                'Title' => 'Overridden',
+                'ParentClass' => Column::class,
+            ])->first();
+            self::assertInstanceOf(TestCustomElement::class, $element);
+            self::assertSame(TestCustomElement::class, $element->ClassName);
         } finally {
             GridMigrationService::remove_extension(TestClassNameMappingExtension::class);
+            TestClassNameMappingExtension::$targetClass = '';
+            TestClassNameMappingExtension::$sourceClass = null;
+        }
+    }
+
+    // ─── Test Group 9: Realistic multi-row migration (test 34) ───
+
+    public function testRealisticPageMigration(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        // Orphan element before any row (no row wrapper)
+        $this->seeder->seedElement(9200, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 6,
+            'Title' => 'Orphan',
+        ]);
+        $this->seeder->seedContentMedia(9200);
+
+        // Row 1: "hero" section with 1 full-width element + image media
+        $this->seeder->seedElement(9201, $areaId, self::ROW_CLASS, 2);
+        $this->seeder->seedRow(9201, customSectionClass: 'hero');
+        $this->seeder->seedElement(9202, $areaId, self::CONTENT_CLASS, 3, [
+            'SizeMD' => 12,
+            'Title' => 'Hero Element',
+        ]);
+        $this->seeder->seedContentMedia(9202, [
+            'MediaImageID' => 42,
+            'MediaRatio' => '16x9',
+            'MediaType' => 'image',
+        ]);
+
+        // Row 2: 2 elements (8 + 4 columns), second has gap and video
+        $this->seeder->seedElement(9210, $areaId, self::ROW_CLASS, 4);
+        $this->seeder->seedRow(9210);
+        $this->seeder->seedElement(9211, $areaId, self::CONTENT_CLASS, 5, [
+            'SizeMD' => 8,
+            'Title' => 'Left Column',
+        ]);
+        $this->seeder->seedContentMedia(9211);
+        $this->seeder->seedElement(9212, $areaId, self::CONTENT_CLASS, 6, [
+            'SizeMD' => 4,
+            'Title' => 'Right Column',
+        ]);
+        $this->seeder->seedContentMedia(9212, [
+            'ExtraColumnGap' => 7,
+            'MediaVideoFullURL' => 'https://example.com/vid.mp4',
+            'MediaType' => 'video',
+        ]);
+
+        $this->runMigration();
+
+        // 3 sections: implicit (orphan) + hero + row 2
+        $sections = Section::get()->filter([
+            'ParentID' => $pageId,
+            'Zone' => self::ZONE,
+        ])->sort('Sort', 'ASC');
+        self::assertCount(3, $sections);
+
+        $sectionList = $sections->toArray();
+
+        // Section 1 (implicit): orphan element
+        $implicitSection = $sectionList[0];
+        $implicitRow = Row::get()->filter(['ParentID' => $implicitSection->ID])->first();
+        self::assertInstanceOf(Row::class, $implicitRow);
+        $implicitColumns = Column::get()->filter(['ParentID' => $implicitRow->ID]);
+        self::assertCount(1, $implicitColumns);
+        $orphanElement = ContentElement::get()->filter(['ParentID' => $implicitColumns->first()->ID])->first();
+        self::assertInstanceOf(ContentElement::class, $orphanElement);
+        self::assertSame('Orphan', $orphanElement->Title);
+
+        // Section 2 (hero): ExtraClass="hero", 1 row, 1 column width=12
+        $heroSection = $sectionList[1];
+        self::assertSame('hero', $heroSection->ExtraClass);
+        $heroRow = Row::get()->filter(['ParentID' => $heroSection->ID])->first();
+        self::assertInstanceOf(Row::class, $heroRow);
+        $heroColumns = Column::get()->filter(['ParentID' => $heroRow->ID]);
+        self::assertCount(1, $heroColumns);
+        $heroColumn = $heroColumns->first();
+        self::assertSame(12, $heroColumn->getGridSettings()->default->width);
+        $heroElement = ContentElement::get()->filter(['ParentID' => $heroColumn->ID])->first();
+        self::assertInstanceOf(ContentElement::class, $heroElement);
+        self::assertSame(42, (int) $heroElement->MediaImageID);
+
+        // Section 3: 1 row, 2 columns (width 8 + 4)
+        $thirdSection = $sectionList[2];
+        $thirdRow = Row::get()->filter(['ParentID' => $thirdSection->ID])->first();
+        self::assertInstanceOf(Row::class, $thirdRow);
+        $thirdColumns = Column::get()->filter(['ParentID' => $thirdRow->ID])->sort('Sort', 'ASC');
+        self::assertCount(2, $thirdColumns);
+
+        $columnList = $thirdColumns->toArray();
+        self::assertSame(8, $columnList[0]->getGridSettings()->default->width);
+        self::assertSame(4, $columnList[1]->getGridSettings()->default->width);
+
+        // Second element in row 2 has GapSize=3 (mapped from ExtraColumnGap=7)
+        // and VideoURL set
+        $rightElement = ContentElement::get()->filter(['ParentID' => $columnList[1]->ID])->first();
+        self::assertInstanceOf(ContentElement::class, $rightElement);
+        self::assertSame(3, (int) $rightElement->GapSize);
+        self::assertSame('https://example.com/vid.mp4', $rightElement->VideoURL);
+    }
+
+    // ─── Test Group 10: Filter hook (test 35) ────────────────────
+
+    public function testUpdateLegacyElementsFilterPreventsElementFromMigrating(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        $this->seeder->seedElement(9300, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 6,
+            'Title' => 'Skip Me',
+        ]);
+        $this->seeder->seedContentMedia(9300);
+
+        $this->seeder->seedElement(9301, $areaId, self::CONTENT_CLASS, 2, [
+            'SizeMD' => 6,
+            'Title' => 'Keep Me',
+        ]);
+        $this->seeder->seedContentMedia(9301);
+
+        LegacyDataReader::add_extension(TestFilterExtension::class);
+
+        try {
+            $this->runMigration();
+
+            // Only "Keep Me" should be migrated
+            $elements = ContentElement::get()->filter(['ParentClass' => Column::class]);
+            self::assertCount(1, $elements);
+            self::assertSame('Keep Me', $elements->first()->Title);
+        } finally {
+            LegacyDataReader::remove_extension(TestFilterExtension::class);
         }
     }
 }
