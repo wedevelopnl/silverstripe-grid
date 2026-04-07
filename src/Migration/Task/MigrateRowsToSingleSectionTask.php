@@ -26,7 +26,7 @@ class MigrateRowsToSingleSectionTask extends BuildTask
 
     protected static string $description = 'Migrates old elemental-grid data: all ElementRows become Rows under a single Section per page.';
 
-    protected function getOptions(): array
+    public function getOptions(): array
     {
         return [
             new InputOption('default-viewport', null, InputOption::VALUE_REQUIRED, 'Old module default viewport (e.g. MD)'),
