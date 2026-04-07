@@ -85,7 +85,7 @@ final class LegacyDataReader
         $params = [];
 
         if ($pageIds !== null && $pageIds !== []) {
-            $placeholders = implode(', ', array_fill(0, count($pageIds), '?'));
+            $placeholders = \implode(', ', \array_fill(0, \count($pageIds), '?'));
             $sql .= " AND s.ID IN ({$placeholders})";
             $params = $pageIds;
         }
@@ -206,7 +206,7 @@ final class LegacyDataReader
         $row = $result->record();
         $fields = [];
         foreach (self::MEDIA_FIELDS as $field) {
-            if (array_key_exists($field, $row)) {
+            if (\array_key_exists($field, $row)) {
                 $fields[$field] = $row[$field];
             }
         }

@@ -164,14 +164,14 @@ final class FieldMapper
 
         // Renamed fields — old names are dropped, new names take their values
         foreach (self::FIELD_RENAME_MAP as $old => $new) {
-            if (array_key_exists($old, $fields)) {
+            if (\array_key_exists($old, $fields)) {
                 $mapped[$new] = $fields[$old];
             }
         }
 
         // Pass-through fields (same name in old and new)
         foreach (['MediaType', 'MediaCaption', 'MediaImageID', 'MediaRatio'] as $field) {
-            if (array_key_exists($field, $fields)) {
+            if (\array_key_exists($field, $fields)) {
                 $mapped[$field] = $fields[$field];
             }
         }
