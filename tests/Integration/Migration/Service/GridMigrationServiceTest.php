@@ -31,7 +31,7 @@ final class GridMigrationServiceTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
 
-    protected static $extra_dataobjects = [TestCustomElement::class];
+    protected static $extra_dataobjects = [TestCustomElement::class, TestPage::class];
 
     // Disable SapphireTest's per-test transaction wrapping. The migration
     // service uses its own transactions, and the LegacyTableSeeder's DDL
@@ -113,6 +113,7 @@ final class GridMigrationServiceTest extends SapphireTest
             'Row', 'Row_Live',
             'Section', 'Section_Live',
             'GridElement', 'GridElement_Live',
+            'TestPage', 'TestPage_Live',
         ];
 
         $allTables = \SilverStripe\ORM\DB::table_list();
@@ -1328,5 +1329,50 @@ final class GridMigrationServiceTest extends SapphireTest
         } finally {
             LegacyDataReader::remove_extension(TestFilterExtension::class);
         }
+    }
+
+    // ─── Test Group 11: Concrete page class (test 36) ───────────
+
+    public function testMigrationUsesConcretePageClassName(): void
+    {
+        // Create a TestPage subclass (not base SiteTree) to verify
+        // ParentClass stores the concrete class, not the base.
+        $page = TestPage::create();
+        $page->Title = 'Subclass Page';
+        $page->URLSegment = 'subclass-page';
+        $page->write();
+        $pageId = (int) $page->ID;
+
+        $areaId = 800;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        $this->seeder->seedElement(8001, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+        ]);
+        $this->seeder->seedContentMedia(8001, ['HTML' => '<p>Subclass</p>']);
+
+        $service = $this->createService();
+        $service->run(
+            self::DEFAULT_VIEWPORT,
+            self::ZONE,
+            self::VIEWPORT_KEY_MAP,
+            dryRun: false,
+            pageIds: [$pageId],
+        );
+
+        $sections = Section::get()->filter([
+            'ParentID' => $pageId,
+            'ParentClass' => TestPage::class,
+            'Zone' => self::ZONE,
+        ]);
+        self::assertCount(1, $sections, 'Section should have ParentClass = TestPage');
+
+        // Verify no sections exist with the base SiteTree class
+        $wrongSections = Section::get()->filter([
+            'ParentID' => $pageId,
+            'ParentClass' => SiteTree::class,
+            'Zone' => self::ZONE,
+        ]);
+        self::assertCount(0, $wrongSections, 'No sections should have ParentClass = SiteTree');
     }
 }

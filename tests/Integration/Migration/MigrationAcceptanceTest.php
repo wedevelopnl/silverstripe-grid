@@ -22,6 +22,7 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Migration\Service\TestCustomElement;
+use WeDevelop\Grid\Tests\Integration\Migration\Service\TestPage;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestCustomElementMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestCustomElementReaderExtension;
@@ -41,6 +42,7 @@ final class MigrationAcceptanceTest extends SapphireTest
     /** @var list<class-string> */
     protected static $extra_dataobjects = [
         TestCustomElement::class,
+        TestPage::class,
     ];
 
     protected $usesTransactions = false;
@@ -1015,6 +1017,61 @@ final class MigrationAcceptanceTest extends SapphireTest
         }
     }
 
+    // ─── Scenario 10: SiteTree subclass page ──────────────────────
+
+    public function testSubclassPageMigrationUsesConcreteParentClass(): void
+    {
+        $page = TestPage::create();
+        $page->Title = 'Subclass Acceptance Page';
+        $page->URLSegment = 'subclass-acceptance';
+        $page->write();
+        $pageId = (int) $page->ID;
+
+        $areaId = 900;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        // One row with two content elements
+        $this->seeder->seedElement(9001, $areaId, self::ROW_CLASS, 1);
+        $this->seeder->seedRow(9001);
+        $this->seeder->seedElement(9002, $areaId, self::CONTENT_CLASS, 2, [
+            'Title' => 'Subclass Element',
+            'ShowTitle' => 1,
+            'SizeMD' => 6,
+        ]);
+        $this->seeder->seedContentMedia(9002, ['HTML' => '<p>Subclass content</p>']);
+        $this->seeder->seedElement(9003, $areaId, self::CONTENT_CLASS, 3, [
+            'SizeMD' => 6,
+        ]);
+        $this->seeder->seedContentMedia(9003, ['HTML' => '<p>Second</p>']);
+
+        $this->runAllRowsInSection($pageId);
+
+        $this->assertMigratedHierarchy($pageId, self::ZONE, Versioned::DRAFT, [
+            [
+                'rows' => [
+                    [
+                        'columns' => [
+                            [
+                                'gridDefault' => ['width' => 6, 'offset' => 0, 'visible' => true],
+                                'element' => [
+                                    'title' => 'Subclass Element',
+                                    'showTitle' => true,
+                                    'html' => '<p>Subclass content</p>',
+                                ],
+                            ],
+                            [
+                                'gridDefault' => ['width' => 6, 'offset' => 0, 'visible' => true],
+                                'element' => [
+                                    'html' => '<p>Second</p>',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ], TestPage::class);
+    }
+
     // ─── Assertion helper ─────────────────────────────────────────
 
     /**
@@ -1050,18 +1107,22 @@ final class MigrationAcceptanceTest extends SapphireTest
      *     }>,
      * }> $expectedSections
      */
+    /**
+     * @param class-string $parentClass
+     */
     private function assertMigratedHierarchy(
         int $pageId,
         string $zone,
         string $stage,
         array $expectedSections,
+        string $parentClass = SiteTree::class,
     ): void {
-        Versioned::withVersionedMode(function () use ($pageId, $zone, $stage, $expectedSections): void {
+        Versioned::withVersionedMode(function () use ($pageId, $zone, $stage, $expectedSections, $parentClass): void {
             Versioned::set_stage($stage);
 
             $sections = Section::get()->filter([
                 'ParentID' => $pageId,
-                'ParentClass' => SiteTree::class,
+                'ParentClass' => $parentClass,
                 'Zone' => $zone,
             ])->sort('Sort', 'ASC');
 
@@ -1292,6 +1353,7 @@ final class MigrationAcceptanceTest extends SapphireTest
             'Row', 'Row_Live',
             'Section', 'Section_Live',
             'GridElement', 'GridElement_Live',
+            'TestPage', 'TestPage_Live',
         ];
 
         $allTables = DB::table_list();

@@ -20,6 +20,8 @@ final class LegacyDataReaderTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
 
+    protected static $extra_dataobjects = [TestPage::class];
+
     private LegacyDataReader $reader;
 
     private LegacyTableSeeder $seeder;
@@ -53,6 +55,7 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertCount(1, $result);
         self::assertSame((int) $page->ID, $result[0]['pageId']);
         self::assertSame(100, $result[0]['areaId']);
+        self::assertSame(SiteTree::class, $result[0]['pageClassName']);
     }
 
     public function testGetEligiblePagesSkipsDisabledPages(): void
@@ -75,7 +78,22 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertCount(1, $result);
         self::assertArrayHasKey('pageId', $result[0]);
         self::assertArrayHasKey('areaId', $result[0]);
+        self::assertArrayHasKey('pageClassName', $result[0]);
         self::assertSame(200, $result[0]['areaId']);
+    }
+
+    public function testGetEligiblePagesReturnsConcretePageClassName(): void
+    {
+        $page = TestPage::create();
+        $page->Title = 'Subclass Reader Page';
+        $page->URLSegment = 'subclass-reader';
+        $page->write();
+        $this->seeder->seedPage((int) $page->ID, 300);
+
+        $result = $this->reader->getEligiblePages('draft', [(int) $page->ID]);
+
+        self::assertCount(1, $result);
+        self::assertSame(TestPage::class, $result[0]['pageClassName']);
     }
 
     public function testGetEligiblePagesWithPageIdFilter(): void

@@ -57,7 +57,7 @@ final class LegacyDataReader
      * extension was applied. We LEFT JOIN both and COALESCE to handle either.
      *
      * @param list<int>|null $pageIds Optional filter to restrict to specific pages
-     * @return list<array{pageId: int, areaId: int}>
+     * @return list<array{pageId: int, areaId: int, pageClassName: class-string}>
      */
     public function getEligiblePages(string $stage, ?array $pageIds = null): array
     {
@@ -70,29 +70,50 @@ final class LegacyDataReader
             return [];
         }
 
+        // ClassName always lives on the SiteTree base table. JOIN with it
+        // to resolve the concrete page class for polymorphic ParentClass.
+        $siteTreeTable = $this->stageTable('SiteTree', $stage);
+
         $pages = [];
         /** @var array<int, true> $seen */
         $seen = [];
 
         foreach ($baseTables as $baseTable) {
             $table = $this->stageTable($baseTable, $stage);
+            $isSiteTreeTable = ($table === $siteTreeTable);
 
-            $sql = <<<SQL
-                SELECT "ID" AS pageId, "ElementalAreaID" AS areaId
-                FROM "{$table}"
-                WHERE "UseElementalGrid" = 1
-                  AND "ElementalAreaID" > 0
-                SQL;
+            if ($isSiteTreeTable) {
+                $sql = <<<SQL
+                    SELECT "ID" AS pageId,
+                           "ElementalAreaID" AS areaId,
+                           "ClassName" AS pageClassName
+                    FROM "{$table}"
+                    WHERE "UseElementalGrid" = 1
+                      AND "ElementalAreaID" > 0
+                    SQL;
+            } else {
+                $sql = <<<SQL
+                    SELECT "{$table}"."ID" AS pageId,
+                           "{$table}"."ElementalAreaID" AS areaId,
+                           "_st"."ClassName" AS pageClassName
+                    FROM "{$table}"
+                    INNER JOIN "{$siteTreeTable}" AS "_st" ON "_st"."ID" = "{$table}"."ID"
+                    WHERE "{$table}"."UseElementalGrid" = 1
+                      AND "{$table}"."ElementalAreaID" > 0
+                    SQL;
+            }
 
             $params = [];
 
             if ($pageIds !== null && $pageIds !== []) {
                 $placeholders = \implode(', ', \array_fill(0, \count($pageIds), '?'));
-                $sql .= " AND \"ID\" IN ({$placeholders})";
+                $idColumn = $isSiteTreeTable ? '"ID"' : \sprintf('"%s"."ID"', $table);
+                $sql .= " AND {$idColumn} IN ({$placeholders})";
                 $params = $pageIds;
             }
 
-            $sql .= ' ORDER BY "ID" ASC';
+            $orderColumn = $isSiteTreeTable ? '"ID"' : \sprintf('"%s"."ID"', $table);
+            $sql .= " ORDER BY {$orderColumn} ASC";
 
             $result = DB::prepared_query($sql, $params);
 
@@ -103,9 +124,12 @@ final class LegacyDataReader
                     continue;
                 }
                 $seen[$id] = true;
+                /** @var class-string $pageClassName */
+                $pageClassName = (string) $row['pageClassName'];
                 $pages[] = [
                     'pageId' => $id,
                     'areaId' => (int) $row['areaId'],
+                    'pageClassName' => $pageClassName,
                 ];
             }
         }

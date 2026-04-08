@@ -59,9 +59,10 @@ final class GridMigrationService
         foreach ($eligiblePages as $pageInfo) {
             $pageId = $pageInfo['pageId'];
             $areaId = $pageInfo['areaId'];
+            $pageClassName = $pageInfo['pageClassName'];
 
             try {
-                $this->migratePage($pageId, $areaId, $defaultViewport, $zone, $viewportKeyMap, $dryRun);
+                $this->migratePage($pageId, $areaId, $pageClassName, $defaultViewport, $zone, $viewportKeyMap, $dryRun);
             } catch (\Throwable $exception) {
                 $this->logger->error('Migration failed for page {pageId}: {message}', [
                     'pageId' => $pageId,
@@ -74,18 +75,20 @@ final class GridMigrationService
     /**
      * Migrate a single page's legacy elements to the new grid hierarchy.
      *
+     * @param class-string $pageClassName Concrete page class (e.g. 'Page', not 'SiteTree')
      * @param array<string, string> $viewportKeyMap
      */
     private function migratePage(
         int $pageId,
         int $areaId,
+        string $pageClassName,
         string $defaultViewport,
         string $zone,
         array $viewportKeyMap,
         bool $dryRun,
     ): void {
         // Step 1: Idempotency — skip if Sections already exist for this page + zone
-        if ($this->hasExistingSections($pageId, $zone)) {
+        if ($this->hasExistingSections($pageId, $pageClassName, $zone)) {
             $this->logger->info('Page {pageId} already migrated for zone "{zone}", skipping.', [
                 'pageId' => $pageId,
                 'zone' => $zone,
@@ -137,13 +140,14 @@ final class GridMigrationService
 
                 Versioned::withVersionedMode(function () use (
                     $pageId,
+                    $pageClassName,
                     $zone,
                     $sections,
                     &$oldToNewElementId,
                     &$oldToNewColumnId,
                 ): void {
                     Versioned::set_stage(Versioned::DRAFT);
-                    $this->writeDraftHierarchy($pageId, $zone, $sections, $oldToNewElementId, $oldToNewColumnId);
+                    $this->writeDraftHierarchy($pageId, $pageClassName, $zone, $sections, $oldToNewElementId, $oldToNewColumnId);
                 });
 
                 // Step 7: Publish draft records to live for elements that also existed on live.
@@ -154,6 +158,7 @@ final class GridMigrationService
                 if ($liveElements !== []) {
                     Versioned::withVersionedMode(function () use (
                         $pageId,
+                        $pageClassName,
                         $zone,
                         $liveElements,
                         $oldToNewElementId,
@@ -164,6 +169,7 @@ final class GridMigrationService
                         Versioned::set_stage(Versioned::DRAFT);
                         $this->publishToLive(
                             $pageId,
+                            $pageClassName,
                             $zone,
                             $liveElements,
                             $oldToNewElementId,
@@ -190,15 +196,17 @@ final class GridMigrationService
 
     /**
      * Check whether Sections already exist for a page + zone on draft stage.
+     *
+     * @param class-string $pageClassName
      */
-    private function hasExistingSections(int $pageId, string $zone): bool
+    private function hasExistingSections(int $pageId, string $pageClassName, string $zone): bool
     {
-        $count = Versioned::withVersionedMode(function () use ($pageId, $zone): int {
+        $count = Versioned::withVersionedMode(function () use ($pageId, $pageClassName, $zone): int {
             Versioned::set_stage(Versioned::DRAFT);
 
             return Section::get()->filter([
                 'ParentID' => $pageId,
-                'ParentClass' => 'SilverStripe\\CMS\\Model\\SiteTree',
+                'ParentClass' => $pageClassName,
                 'Zone' => $zone,
             ])->count();
         });
@@ -209,19 +217,21 @@ final class GridMigrationService
     /**
      * Write the full Section → Row → Column → Element hierarchy to DRAFT.
      *
+     * @param class-string $pageClassName
      * @param list<MigrationSection> $sections
      * @param array<int, int> $oldToNewElementId Populated by reference
      * @param array<int, int> $oldToNewColumnId Populated by reference
      */
     private function writeDraftHierarchy(
         int $pageId,
+        string $pageClassName,
         string $zone,
         array $sections,
         array &$oldToNewElementId,
         array &$oldToNewColumnId,
     ): void {
         foreach ($sections as $migrationSection) {
-            $section = $this->createSection($migrationSection, $pageId, $zone);
+            $section = $this->createSection($migrationSection, $pageId, $pageClassName, $zone);
 
             foreach ($migrationSection->rows as $migrationRow) {
                 $row = $this->createRow($migrationRow, (int) $section->ID);
@@ -239,7 +249,10 @@ final class GridMigrationService
         }
     }
 
-    private function createSection(MigrationSection $migration, int $pageId, string $zone): Section
+    /**
+     * @param class-string $pageClassName
+     */
+    private function createSection(MigrationSection $migration, int $pageId, string $pageClassName, string $zone): Section
     {
         $section = Section::create();
         $section->Title = '';
@@ -247,7 +260,7 @@ final class GridMigrationService
         $section->ExtraClass = $migration->extraClass;
         $section->Sort = $migration->sort;
         $section->ParentID = $pageId;
-        $section->ParentClass = 'SilverStripe\\CMS\\Model\\SiteTree';
+        $section->ParentClass = $pageClassName;
         $section->write();
 
         return $section;
@@ -341,6 +354,7 @@ final class GridMigrationService
      * (created in draft) are published to live. For live-only elements
      * (no draft counterpart), new records are created on both stages.
      *
+     * @param class-string $pageClassName
      * @param list<LegacyElement> $liveElements
      * @param array<int, int> $oldToNewElementId
      * @param array<int, int> $oldToNewColumnId
@@ -348,6 +362,7 @@ final class GridMigrationService
      */
     private function publishToLive(
         int $pageId,
+        string $pageClassName,
         string $zone,
         array $liveElements,
         array $oldToNewElementId,
@@ -388,6 +403,7 @@ final class GridMigrationService
                 $this->createLiveOnlyElement(
                     $liveElement,
                     $pageId,
+                    $pageClassName,
                     $zone,
                     $publishedContainers,
                     $defaultViewport,
@@ -507,12 +523,14 @@ final class GridMigrationService
      * Versioned integrity. We create a minimal Section→Row→Column chain
      * if one doesn't already exist.
      *
+     * @param class-string $pageClassName
      * @param array<int, bool> $publishedContainers
      * @param array<string, string> $viewportKeyMap
      */
     private function createLiveOnlyElement(
         LegacyElement $liveElement,
         int $pageId,
+        string $pageClassName,
         string $zone,
         array &$publishedContainers,
         string $defaultViewport,
@@ -525,9 +543,9 @@ final class GridMigrationService
         $section = Section::create();
         $section->Title = '';
         $section->Zone = $zone;
-        $section->Sort = $this->getNextSectionSort($pageId, $zone);
+        $section->Sort = $this->getNextSectionSort($pageId, $pageClassName, $zone);
         $section->ParentID = $pageId;
-        $section->ParentClass = 'SilverStripe\\CMS\\Model\\SiteTree';
+        $section->ParentClass = $pageClassName;
         $section->write();
 
         $row = Row::create();
@@ -562,12 +580,14 @@ final class GridMigrationService
 
     /**
      * Get the next available Sort value for Sections under a page + zone.
+     *
+     * @param class-string $pageClassName
      */
-    private function getNextSectionSort(int $pageId, string $zone): int
+    private function getNextSectionSort(int $pageId, string $pageClassName, string $zone): int
     {
         $max = Section::get()->filter([
             'ParentID' => $pageId,
-            'ParentClass' => 'SilverStripe\\CMS\\Model\\SiteTree',
+            'ParentClass' => $pageClassName,
             'Zone' => $zone,
         ])->max('Sort');
 
