@@ -119,9 +119,6 @@ final class GridMigrationService
 
         // Steps 6-8: Transaction-wrapped write
         $conn = DB::get_conn();
-        if ($conn === null) {
-            throw new \RuntimeException('No database connection available');
-        }
         $conn->transactionStart();
 
         try {
