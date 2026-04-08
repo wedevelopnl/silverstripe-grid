@@ -86,9 +86,9 @@ coverage-js:
 coverage-check: coverage
 	$(COMPOSE) exec app vendor/bin/coverage-check coverage/combined/clover.xml 90
 
-## Run PHP mutation testing (Infection)
-mutate: ensure-up
-	$(COMPOSE) exec app php -d memory_limit=256M vendor/bin/infection --threads=4
+## Run PHP mutation testing (Infection) — uses Fluent container so all tests run
+mutate: ensure-up-fluent
+	$(COMPOSE) exec app-fluent php -d memory_limit=256M vendor/bin/infection --threads=4
 
 ## Run JavaScript mutation testing (Stryker)
 mutate-js:
