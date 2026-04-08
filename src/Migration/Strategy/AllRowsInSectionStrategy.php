@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Migration\Strategy;
 
 use Psr\Log\LoggerInterface;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
+use WeDevelop\Grid\Migration\DTO\LegacyRowData;
 use WeDevelop\Grid\Migration\DTO\MigrationColumn;
 use WeDevelop\Grid\Migration\DTO\MigrationRow;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
@@ -42,60 +43,85 @@ final class AllRowsInSectionStrategy implements RowMappingStrategy
     public function buildHierarchy(array $elements, int $pageId, string $zone): array
     {
         $groups = $this->grouper->group($elements);
+        $rows = $this->buildRows($groups);
 
-        if ($groups === []) {
+        if ($rows === []) {
             return [];
-        }
-
-        // Determine section-level fields from the first explicit row group.
-        // Implicit groups (no row element) contribute no section-level data.
-        // Note: IsFluid is not migrated — it's a class-level config on Section,
-        // not a per-instance field. Only customSectionClass is carried over.
-        $sectionExtraClass = '';
-        $sectionFieldsSet = false;
-
-        $rows = [];
-        $rowSort = 1;
-
-        foreach ($groups as $group) {
-            $row = $group['row'];
-            $rowData = $group['rowData'];
-
-            if ($rowData !== null) {
-                if (!$sectionFieldsSet) {
-                    $sectionExtraClass = $rowData->customSectionClass;
-                    $sectionFieldsSet = true;
-                } else {
-                    if ($rowData->customSectionClass !== $sectionExtraClass) {
-                        $this->logger->warning(
-                            'AllRowsInSectionStrategy: row customSectionClass conflicts with section value; discarding row value.',
-                            ['rowId' => $row?->id, 'rowClass' => $rowData->customSectionClass, 'sectionClass' => $sectionExtraClass],
-                        );
-                    }
-                }
-            }
-
-            $columns = $this->buildColumns($group['elements']);
-
-            $rows[] = new MigrationRow(
-                title: $row !== null ? $row->title : '',
-                extraClass: $row !== null ? $row->extraClass : '',
-                sort: $rowSort,
-                columns: $columns,
-            );
-
-            $rowSort++;
         }
 
         return [
             new MigrationSection(
                 title: '',
                 zone: $zone,
-                extraClass: $sectionExtraClass,
+                extraClass: $this->resolveSectionExtraClass($groups),
                 sort: 1,
                 rows: $rows,
             ),
         ];
+    }
+
+    /**
+     * Resolve section-level extraClass from the first explicit row group.
+     *
+     * Implicit groups (no row element) contribute no section-level data.
+     * IsFluid is not migrated — it's a class-level config on Section,
+     * not a per-instance field. Only customSectionClass is carried over.
+     *
+     * @param list<array{row: ?LegacyElement, rowData: ?LegacyRowData, elements: list<LegacyElement>}> $groups
+     */
+    private function resolveSectionExtraClass(array $groups): string
+    {
+        $sectionExtraClass = '';
+        $resolved = false;
+
+        foreach ($groups as $group) {
+            $rowData = $group['rowData'];
+
+            if ($rowData === null) {
+                continue;
+            }
+
+            if (!$resolved) {
+                $sectionExtraClass = $rowData->customSectionClass;
+                $resolved = true;
+
+                continue;
+            }
+
+            if ($rowData->customSectionClass !== $sectionExtraClass) {
+                $this->logger->warning(
+                    'AllRowsInSectionStrategy: row customSectionClass conflicts with section value; discarding row value.',
+                    ['rowId' => $group['row']?->id, 'rowClass' => $rowData->customSectionClass, 'sectionClass' => $sectionExtraClass],
+                );
+            }
+        }
+
+        return $sectionExtraClass;
+    }
+
+    /**
+     * @param list<array{row: ?LegacyElement, rowData: ?LegacyRowData, elements: list<LegacyElement>}> $groups
+     * @return list<MigrationRow>
+     */
+    private function buildRows(array $groups): array
+    {
+        $rows = [];
+        $rowSort = 1;
+
+        foreach ($groups as $group) {
+            $row = $group['row'];
+
+            $rows[] = new MigrationRow(
+                title: $row !== null ? $row->title : '',
+                extraClass: $row !== null ? $row->extraClass : '',
+                sort: $rowSort,
+                columns: $this->buildColumns($group['elements']),
+            );
+
+            $rowSort++;
+        }
+
+        return $rows;
     }
 
     /**
