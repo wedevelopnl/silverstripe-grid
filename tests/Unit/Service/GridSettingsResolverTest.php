@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Unit\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Service\GridSettingsResolver;
@@ -15,123 +16,198 @@ use WeDevelop\Grid\Value\ViewportConfig;
 #[CoversClass(GridSettingsResolver::class)]
 final class GridSettingsResolverTest extends TestCase
 {
+    // ── Factory helper ──────────────────────────────────────────
+
+    private static function vc(int $width, int $offset = 0, bool $visible = true): ViewportConfig
+    {
+        return new ViewportConfig($width, $offset, $visible);
+    }
+
     // ── Isolated strategy ───────────────────────────────────────
 
-    public function testIsolatedNoOverridesReturnsDefaultForAllViewports(): void
+    /**
+     * Each case yields: [settings, expected viewport → config map].
+     *
+     * @return iterable<string, array{GridSettings, array<string, ViewportConfig>}>
+     */
+    public static function isolatedProvider(): iterable
+    {
+        $d = ViewportConfig::default(12);
+
+        yield 'no overrides' => [
+            GridSettings::initial(12),
+            ['xs' => $d, 'md' => $d, 'lg' => $d],
+        ];
+
+        yield 'single override at xs' => [
+            GridSettings::initial(12)->withOverride('xs', self::vc(12, 0, false)),
+            ['xs' => self::vc(12, 0, false), 'md' => $d, 'lg' => $d],
+        ];
+
+        yield 'single override at md' => [
+            GridSettings::initial(12)->withOverride('md', self::vc(6, 2, false)),
+            ['xs' => $d, 'md' => self::vc(6, 2, false), 'lg' => $d],
+        ];
+
+        yield 'single override at lg' => [
+            GridSettings::initial(12)->withOverride('lg', self::vc(4, 1, false)),
+            ['xs' => $d, 'md' => $d, 'lg' => self::vc(4, 1, false)],
+        ];
+
+        yield 'two overrides xs+lg, middle untouched' => [
+            GridSettings::initial(12)
+                ->withOverride('xs', self::vc(12, 0, false))
+                ->withOverride('lg', self::vc(4, 2, false)),
+            ['xs' => self::vc(12, 0, false), 'md' => $d, 'lg' => self::vc(4, 2, false)],
+        ];
+
+        yield 'two overrides xs+md' => [
+            GridSettings::initial(12)
+                ->withOverride('xs', self::vc(12, 0, false))
+                ->withOverride('md', self::vc(6, 0, true)),
+            ['xs' => self::vc(12, 0, false), 'md' => self::vc(6, 0, true), 'lg' => $d],
+        ];
+
+        yield 'two overrides md+lg' => [
+            GridSettings::initial(12)
+                ->withOverride('md', self::vc(6, 0, true))
+                ->withOverride('lg', self::vc(4, 2, false)),
+            ['xs' => $d, 'md' => self::vc(6, 0, true), 'lg' => self::vc(4, 2, false)],
+        ];
+
+        yield 'all three overrides' => [
+            GridSettings::initial(12)
+                ->withOverride('xs', self::vc(12, 0, true))
+                ->withOverride('md', self::vc(6, 0, true))
+                ->withOverride('lg', self::vc(4, 2, false)),
+            ['xs' => self::vc(12, 0, true), 'md' => self::vc(6, 0, true), 'lg' => self::vc(4, 2, false)],
+        ];
+
+        yield 'override for unknown viewport is ignored' => [
+            GridSettings::initial(12)->withOverride('xxl', self::vc(3, 0, true)),
+            ['xs' => $d, 'md' => $d, 'lg' => $d],
+        ];
+
+        yield 'hidden viewport override' => [
+            GridSettings::initial(12)->withOverride('md', self::vc(6, 0, false)),
+            ['xs' => $d, 'md' => self::vc(6, 0, false), 'lg' => $d],
+        ];
+    }
+
+    /**
+     * @param array<string, ViewportConfig> $expected
+     */
+    #[DataProvider('isolatedProvider')]
+    public function testIsolated(GridSettings $settings, array $expected): void
     {
         $resolver = new GridSettingsResolver(new GridAdapterStub(), 'isolated');
-        $settings = GridSettings::initial(12);
-
         $result = $resolver->resolveEffective($settings);
 
-        self::assertCount(3, $result);
-        foreach ($result as $config) {
-            self::assertTrue($config->equals(ViewportConfig::default(12)));
+        self::assertSame(array_keys($expected), array_keys($result), 'Result keys must match expected viewport order');
+
+        foreach ($expected as $viewport => $expectedConfig) {
+            self::assertTrue(
+                $result[$viewport]->equals($expectedConfig),
+                sprintf('Viewport "%s": expected %s, got %s', $viewport, json_encode($expectedConfig->toArray()), json_encode($result[$viewport]->toArray())),
+            );
         }
-    }
-
-    public function testIsolatedOneOverrideAffectsOnlyThatViewport(): void
-    {
-        $resolver = new GridSettingsResolver(new GridAdapterStub(), 'isolated');
-        $override = new ViewportConfig(6, 2, false);
-        $settings = GridSettings::initial(12)->withOverride('md', $override);
-
-        $result = $resolver->resolveEffective($settings);
-
-        self::assertTrue($result['xs']->equals(ViewportConfig::default(12)));
-        self::assertTrue($result['md']->equals($override));
-        self::assertTrue($result['lg']->equals(ViewportConfig::default(12)));
-    }
-
-    public function testIsolatedAllOverridesEachViewportGetsItsOwn(): void
-    {
-        $resolver = new GridSettingsResolver(new GridAdapterStub(), 'isolated');
-        $xsOverride = new ViewportConfig(12, 0, true);
-        $mdOverride = new ViewportConfig(6, 0, true);
-        $lgOverride = new ViewportConfig(4, 2, false);
-        $settings = new GridSettings(
-            ViewportConfig::default(12),
-            ['xs' => $xsOverride, 'md' => $mdOverride, 'lg' => $lgOverride],
-        );
-
-        $result = $resolver->resolveEffective($settings);
-
-        self::assertTrue($result['xs']->equals($xsOverride));
-        self::assertTrue($result['md']->equals($mdOverride));
-        self::assertTrue($result['lg']->equals($lgOverride));
     }
 
     // ── Cascade strategy ────────────────────────────────────────
 
-    public function testCascadeNoOverridesReturnsDefaultForAllViewports(): void
+    /**
+     * Each case yields: [settings, expected viewport → config map].
+     *
+     * @return iterable<string, array{GridSettings, array<string, ViewportConfig>}>
+     */
+    public static function cascadeProvider(): iterable
+    {
+        $d = ViewportConfig::default(12);
+
+        yield 'no overrides' => [
+            GridSettings::initial(12),
+            ['xs' => $d, 'md' => $d, 'lg' => $d],
+        ];
+
+        yield 'override at lg cascades to all' => [
+            GridSettings::initial(12)->withOverride('lg', self::vc(4, 1, false)),
+            ['xs' => self::vc(4, 1, false), 'md' => self::vc(4, 1, false), 'lg' => self::vc(4, 1, false)],
+        ];
+
+        yield 'override at md cascades down only' => [
+            GridSettings::initial(12)->withOverride('md', self::vc(6, 0, true)),
+            ['xs' => self::vc(6, 0, true), 'md' => self::vc(6, 0, true), 'lg' => $d],
+        ];
+
+        yield 'override at xs affects only xs' => [
+            GridSettings::initial(12)->withOverride('xs', self::vc(12, 0, false)),
+            ['xs' => self::vc(12, 0, false), 'md' => $d, 'lg' => $d],
+        ];
+
+        yield 'two overrides md+lg' => [
+            GridSettings::initial(12)
+                ->withOverride('md', self::vc(6, 0, true))
+                ->withOverride('lg', self::vc(4, 2, false)),
+            ['xs' => self::vc(6, 0, true), 'md' => self::vc(6, 0, true), 'lg' => self::vc(4, 2, false)],
+        ];
+
+        yield 'two overrides xs+lg, md inherits from lg' => [
+            GridSettings::initial(12)
+                ->withOverride('xs', self::vc(12, 0, false))
+                ->withOverride('lg', self::vc(4, 1, true)),
+            ['xs' => self::vc(12, 0, false), 'md' => self::vc(4, 1, true), 'lg' => self::vc(4, 1, true)],
+        ];
+
+        yield 'two overrides xs+md' => [
+            GridSettings::initial(12)
+                ->withOverride('xs', self::vc(12, 0, false))
+                ->withOverride('md', self::vc(6, 0, true)),
+            ['xs' => self::vc(12, 0, false), 'md' => self::vc(6, 0, true), 'lg' => $d],
+        ];
+
+        yield 'all three overrides' => [
+            GridSettings::initial(12)
+                ->withOverride('xs', self::vc(12, 0, true))
+                ->withOverride('md', self::vc(6, 0, true))
+                ->withOverride('lg', self::vc(4, 2, false)),
+            ['xs' => self::vc(12, 0, true), 'md' => self::vc(6, 0, true), 'lg' => self::vc(4, 2, false)],
+        ];
+
+        yield 'override for unknown viewport is ignored' => [
+            GridSettings::initial(12)->withOverride('xxl', self::vc(3, 0, true)),
+            ['xs' => $d, 'md' => $d, 'lg' => $d],
+        ];
+
+        yield 'hidden viewport at lg cascades down' => [
+            GridSettings::initial(12)->withOverride('lg', self::vc(4, 0, false)),
+            ['xs' => self::vc(4, 0, false), 'md' => self::vc(4, 0, false), 'lg' => self::vc(4, 0, false)],
+        ];
+
+        yield 'md override does not leak upward past lg override' => [
+            GridSettings::initial(12)
+                ->withOverride('md', self::vc(6, 0, true))
+                ->withOverride('lg', self::vc(4, 2, false)),
+            ['xs' => self::vc(6, 0, true), 'md' => self::vc(6, 0, true), 'lg' => self::vc(4, 2, false)],
+        ];
+    }
+
+    /**
+     * @param array<string, ViewportConfig> $expected
+     */
+    #[DataProvider('cascadeProvider')]
+    public function testCascade(GridSettings $settings, array $expected): void
     {
         $resolver = new GridSettingsResolver(new GridAdapterStub(), 'cascade');
-        $settings = GridSettings::initial(12);
-
         $result = $resolver->resolveEffective($settings);
 
-        self::assertCount(3, $result);
-        foreach ($result as $config) {
-            self::assertTrue($config->equals(ViewportConfig::default(12)));
+        self::assertSame(array_keys($expected), array_keys($result), 'Result keys must match expected viewport order');
+
+        foreach ($expected as $viewport => $expectedConfig) {
+            self::assertTrue(
+                $result[$viewport]->equals($expectedConfig),
+                sprintf('Viewport "%s": expected %s, got %s', $viewport, json_encode($expectedConfig->toArray()), json_encode($result[$viewport]->toArray())),
+            );
         }
-    }
-
-    public function testCascadeOverrideAtLargestCascadesToAll(): void
-    {
-        $resolver = new GridSettingsResolver(new GridAdapterStub(), 'cascade');
-        $lgOverride = new ViewportConfig(4, 1, false);
-        $settings = GridSettings::initial(12)->withOverride('lg', $lgOverride);
-
-        $result = $resolver->resolveEffective($settings);
-
-        // lg override cascades down to xs and md
-        self::assertTrue($result['xs']->equals($lgOverride));
-        self::assertTrue($result['md']->equals($lgOverride));
-        self::assertTrue($result['lg']->equals($lgOverride));
-    }
-
-    public function testCascadeOverrideAtMiddleCascadesDownOnly(): void
-    {
-        $resolver = new GridSettingsResolver(new GridAdapterStub(), 'cascade');
-        $mdOverride = new ViewportConfig(6, 0, true);
-        $settings = GridSettings::initial(12)->withOverride('md', $mdOverride);
-
-        $result = $resolver->resolveEffective($settings);
-
-        // md cascades down to xs; lg has no override → gets default
-        self::assertTrue($result['xs']->equals($mdOverride));
-        self::assertTrue($result['md']->equals($mdOverride));
-        self::assertTrue($result['lg']->equals(ViewportConfig::default(12)));
-    }
-
-    public function testCascadeOverrideAtSmallestAffectsOnlySmallest(): void
-    {
-        $resolver = new GridSettingsResolver(new GridAdapterStub(), 'cascade');
-        $xsOverride = new ViewportConfig(12, 0, false);
-        $settings = GridSettings::initial(12)->withOverride('xs', $xsOverride);
-
-        $result = $resolver->resolveEffective($settings);
-
-        self::assertTrue($result['xs']->equals($xsOverride));
-        self::assertTrue($result['md']->equals(ViewportConfig::default(12)));
-        self::assertTrue($result['lg']->equals(ViewportConfig::default(12)));
-    }
-
-    public function testCascadeMultipleOverrides(): void
-    {
-        $resolver = new GridSettingsResolver(new GridAdapterStub(), 'cascade');
-        $mdOverride = new ViewportConfig(6, 0, true);
-        $lgOverride = new ViewportConfig(4, 2, false);
-        $settings = GridSettings::initial(12)
-            ->withOverride('md', $mdOverride)
-            ->withOverride('lg', $lgOverride);
-
-        $result = $resolver->resolveEffective($settings);
-
-        // xs gets md's override (cascade from md), md gets its own, lg gets its own
-        self::assertTrue($result['xs']->equals($mdOverride));
-        self::assertTrue($result['md']->equals($mdOverride));
-        self::assertTrue($result['lg']->equals($lgOverride));
     }
 
     // ── Strategy validation ─────────────────────────────────────
@@ -145,22 +221,20 @@ final class GridSettingsResolverTest extends TestCase
 
     // ── Key ordering ────────────────────────────────────────────
 
-    public function testResultKeysMatchAdapterViewportOrder(): void
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function strategyProvider(): iterable
     {
-        $resolver = new GridSettingsResolver(new GridAdapterStub(), 'isolated');
-        $settings = GridSettings::initial(12);
-
-        $result = $resolver->resolveEffective($settings);
-
-        self::assertSame(['xs', 'md', 'lg'], array_keys($result));
+        yield 'isolated' => ['isolated'];
+        yield 'cascade' => ['cascade'];
     }
 
-    public function testCascadeResultKeysMatchAdapterViewportOrder(): void
+    #[DataProvider('strategyProvider')]
+    public function testResultKeysMatchAdapterViewportOrder(string $strategy): void
     {
-        $resolver = new GridSettingsResolver(new GridAdapterStub(), 'cascade');
-        $settings = GridSettings::initial(12);
-
-        $result = $resolver->resolveEffective($settings);
+        $resolver = new GridSettingsResolver(new GridAdapterStub(), $strategy);
+        $result = $resolver->resolveEffective(GridSettings::initial(12));
 
         self::assertSame(['xs', 'md', 'lg'], array_keys($result));
     }
