@@ -57,13 +57,17 @@ class MigrateRowsToSingleSectionTask extends BuildTask
             ? \array_map('intval', \explode(',', $pageIdsArg))
             : null;
 
+        /** @var GridAdapterInterface $adapter */
+        $adapter = Injector::inst()->get(GridAdapterInterface::class);
+
         $viewportKeyMap = $this->resolveViewportKeyMap(
             \is_string($input->getOption('viewport-map')) ? $input->getOption('viewport-map') : null,
+            $adapter,
         );
 
         $logger = Injector::inst()->get(LoggerInterface::class);
         $reader = new LegacyDataReader();
-        $mapper = new FieldMapper();
+        $mapper = new FieldMapper(columnCount: $adapter->getColumnCount(), logger: $logger);
         $grouper = new ElementGrouper();
         $strategy = new AllRowsInSectionStrategy($grouper, $mapper, $defaultViewport, $viewportKeyMap, $logger);
 
@@ -76,7 +80,7 @@ class MigrateRowsToSingleSectionTask extends BuildTask
     /**
      * @return array<string, string>
      */
-    protected function resolveViewportKeyMap(?string $viewportMapArg): array
+    protected function resolveViewportKeyMap(?string $viewportMapArg, GridAdapterInterface $adapter): array
     {
         if ($viewportMapArg !== null && $viewportMapArg !== '') {
             $map = [];
@@ -89,8 +93,6 @@ class MigrateRowsToSingleSectionTask extends BuildTask
             return $map;
         }
 
-        /** @var GridAdapterInterface $adapter */
-        $adapter = Injector::inst()->get(GridAdapterInterface::class);
         $viewports = $adapter->getViewports();
         $oldKeys = ['XS', 'SM', 'MD', 'LG', 'XL'];
         $map = [];

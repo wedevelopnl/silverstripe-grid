@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Tests\Unit\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
@@ -363,6 +364,165 @@ final class FieldMapperTest extends TestCase
         self::assertSame('first', $resultEmpty->MediaPosition);
         self::assertSame('auto', $resultEmpty->MediaRatio);
         self::assertSame(0, $resultEmpty->ContentColumns);
+    }
+
+    // ─── Grid settings: clamping ─────────────────────────────────────────────────
+
+    public function testWidthExceedingColumnCountIsClampedToColumnCount(): void
+    {
+        $mapper = new FieldMapper(columnCount: 12);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 15],
+            'offsetFields' => ['MD' => 0],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertSame(12, $settings->default->width);
+    }
+
+    public function testWidthBelowOneIsClampedToOne(): void
+    {
+        // Width -3 is not the size=0 sentinel — it should clamp to 1
+        $mapper = new FieldMapper(columnCount: 12);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => -3],
+            'offsetFields' => ['MD' => 0],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertSame(1, $settings->default->width);
+    }
+
+    public function testNegativeOffsetIsClampedToZero(): void
+    {
+        $mapper = new FieldMapper(columnCount: 12);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 6],
+            'offsetFields' => ['MD' => -2],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertSame(0, $settings->default->offset);
+    }
+
+    public function testOffsetExceedingMaxIsClampedToColumnCountMinusOne(): void
+    {
+        $mapper = new FieldMapper(columnCount: 12);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 1],
+            'offsetFields' => ['MD' => 14],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertSame(11, $settings->default->offset);
+    }
+
+    public function testWidthPlusOffsetExceedingColumnCountReducesOffset(): void
+    {
+        $mapper = new FieldMapper(columnCount: 12);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8],
+            'offsetFields' => ['MD' => 6],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertSame(8, $settings->default->width);
+        self::assertSame(4, $settings->default->offset);
+    }
+
+    public function testCombinedWidthAndOffsetBothClamped(): void
+    {
+        $mapper = new FieldMapper(columnCount: 12);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 15],
+            'offsetFields' => ['MD' => 14],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        // width clamped to 12, then offset must be 0 (12 + 0 = 12)
+        self::assertSame(12, $settings->default->width);
+        self::assertSame(0, $settings->default->offset);
+    }
+
+    public function testOverrideClampedIndependentlyFromDefault(): void
+    {
+        $mapper = new FieldMapper(columnCount: 12);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8, 'XS' => 15],
+            'offsetFields' => ['MD' => 0, 'XS' => 0],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md', 'XS' => 'xs']);
+
+        self::assertSame(8, $settings->default->width);
+        self::assertTrue($settings->hasOverride('xs'));
+        self::assertSame(12, $settings->getOverride('xs')?->width);
+    }
+
+    public function testClampedOverrideMatchingClampedDefaultProducesNoOverride(): void
+    {
+        // Both MD=15 and XS=20 clamp to width=12, offset=0 — no override needed
+        $mapper = new FieldMapper(columnCount: 12);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 15, 'XS' => 20],
+            'offsetFields' => ['MD' => 0, 'XS' => 0],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md', 'XS' => 'xs']);
+
+        self::assertFalse($settings->hasOverride('xs'));
+    }
+
+    public function testClampingLogsWarningWithElementIdAndViewport(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::atLeastOnce())
+            ->method('warning')
+            ->with(
+                self::stringContains('Clamped'),
+                self::callback(static fn (array $ctx): bool => $ctx['elementId'] === 42 && $ctx['viewport'] === 'default'),
+            );
+
+        $mapper = new FieldMapper(columnCount: 12, logger: $logger);
+        $element = LegacyElementFactory::content(id: 42, overrides: [
+            'sizeFields' => ['MD' => 15],
+            'offsetFields' => ['MD' => 0],
+        ]);
+
+        $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+    }
+
+    public function testNoLoggingWhenValuesAreValid(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::never())->method('warning');
+
+        $mapper = new FieldMapper(columnCount: 12, logger: $logger);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8],
+            'offsetFields' => ['MD' => 2],
+        ]);
+
+        $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+    }
+
+    public function testClampingRespectsCustomColumnCount(): void
+    {
+        $mapper = new FieldMapper(columnCount: 6);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8],
+            'offsetFields' => ['MD' => 0],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertSame(6, $settings->default->width);
     }
 
     // ─── ClassName resolution ──────────────────────────────────────────────────

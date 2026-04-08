@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Migration\Service;
 
+use Psr\Log\LoggerInterface;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
@@ -11,12 +12,13 @@ use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
 
 /**
- * Pure mapping class with no framework dependencies.
+ * Mapping class that converts legacy elemental field structures to the new
+ * grid value objects and field names used by BlockMediaExtension.
  *
- * Converts legacy elemental field structures to the new grid value objects
- * and field names used by BlockMediaExtension. All lookup tables are
- * hardcoded as class constants; constructor injection allows test overrides
- * and project-level customisation without framework hooks.
+ * All lookup tables are hardcoded as class constants; constructor injection
+ * allows test overrides and project-level customisation without framework
+ * hooks. Grid settings are clamped to valid ranges during mapping to prevent
+ * invalid legacy data from causing write-time validation failures.
  */
 final class FieldMapper
 {
@@ -68,12 +70,15 @@ final class FieldMapper
      * @param array<string, string>|null $verticalAlignMap   Replaces the default map entirely when provided
      * @param array<string, string>|null $mediaPositionMap   Replaces the default map entirely when provided
      * @param array<int, int>|null       $gapSizeMap         Replaces the default map entirely when provided
+     * @param positive-int               $columnCount        Grid column count for clamping (default 12)
      */
     public function __construct(
         ?array $classNameMap = null,
         ?array $verticalAlignMap = null,
         ?array $mediaPositionMap = null,
         ?array $gapSizeMap = null,
+        private readonly int $columnCount = 12,
+        private readonly ?LoggerInterface $logger = null,
     ) {
         $this->classNameMap = $classNameMap ?? self::DEFAULT_CLASS_NAME_MAP;
         $this->verticalAlignMap = $verticalAlignMap ?? self::VERTICAL_ALIGN_MAP;
@@ -99,6 +104,7 @@ final class FieldMapper
             offset: $element->offsetFields[$defaultViewport] ?? 0,
             visible: $this->mapVisibility($element->visibilityFields[$defaultViewport] ?? null) ?? true,
         );
+        $defaultConfig = $this->clampViewportConfig($defaultConfig, $element->id, 'default');
 
         /** @var array<non-empty-string, ViewportConfig> $overrides */
         $overrides = [];
@@ -129,6 +135,7 @@ final class FieldMapper
                 offset: $offset,
                 visible: $visible ?? $defaultConfig->visible,
             );
+            $overrideConfig = $this->clampViewportConfig($overrideConfig, $element->id, $newKey);
 
             if (!$overrideConfig->equals($defaultConfig)) {
                 $overrides[$newKey] = $overrideConfig;
@@ -199,6 +206,42 @@ final class FieldMapper
     public function resolveClassName(string $oldClassName): string
     {
         return $this->classNameMap[$oldClassName] ?? $oldClassName;
+    }
+
+    /**
+     * Clamp a ViewportConfig's width and offset to valid ranges.
+     *
+     * Rules applied in order:
+     * 1. width ∈ [1, columnCount]
+     * 2. offset ∈ [0, columnCount − 1]
+     * 3. width + offset ≤ columnCount (reduce offset if needed)
+     */
+    private function clampViewportConfig(ViewportConfig $config, int $elementId, string $viewport): ViewportConfig
+    {
+        $width = \max(1, \min($config->width, $this->columnCount));
+        $offset = \max(0, \min($config->offset, $this->columnCount - 1));
+
+        if ($width + $offset > $this->columnCount) {
+            $offset = $this->columnCount - $width;
+        }
+
+        if ($width !== $config->width || $offset !== $config->offset) {
+            $this->logger?->warning(
+                'Clamped grid settings for element {elementId} viewport "{viewport}": width {oldWidth}→{newWidth}, offset {oldOffset}→{newOffset}',
+                [
+                    'elementId' => $elementId,
+                    'viewport' => $viewport,
+                    'oldWidth' => $config->width,
+                    'newWidth' => $width,
+                    'oldOffset' => $config->offset,
+                    'newOffset' => $offset,
+                ],
+            );
+
+            return new ViewportConfig($width, $offset, $config->visible);
+        }
+
+        return $config;
     }
 
     /**

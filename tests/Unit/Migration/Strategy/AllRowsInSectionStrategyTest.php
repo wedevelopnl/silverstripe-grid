@@ -201,6 +201,15 @@ final class AllRowsInSectionStrategyTest extends TestCase
             ['rows' => [['title' => '', 'extraClass' => '', 'columns' => [['w' => 12]]]]],
         ];
 
+        // ── Clamping case ────────────────────────────────────────
+
+        self::$nextId = 0;
+        yield 'invalid grid settings are clamped to valid range' => [
+            [self::r(), self::e(15, 14)],
+            'main',
+            ['rows' => [['columns' => [['w' => 12, 'o' => 0]]]]],
+        ];
+
         // ── Zone case ────────────────────────────────────────────
 
         self::$nextId = 0;
