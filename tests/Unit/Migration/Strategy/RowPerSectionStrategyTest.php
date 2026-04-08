@@ -39,10 +39,13 @@ final class RowPerSectionStrategyTest extends TestCase
 
     private static int $nextId = 0;
 
-    private static function e(int $width): LegacyElement
+    private static function e(int $width, int $offset = 0): LegacyElement
     {
         $id = ++self::$nextId;
-        return LegacyElementFactory::content($id, $id, ['sizeFields' => ['MD' => $width]]);
+        return LegacyElementFactory::content($id, $id, [
+            'sizeFields' => ['MD' => $width],
+            'offsetFields' => ['MD' => $offset],
+        ]);
     }
 
     private static function r(string $title = '', string $extraClass = '', string $sectionClass = ''): LegacyElement
@@ -71,13 +74,13 @@ final class RowPerSectionStrategyTest extends TestCase
     /**
      * Each case yields: [elements, zone, expected sections].
      *
-     * Expected section shape (fields default to '' / 0 if omitted):
-     *   ['extraClass' => '', 'rows' => [['title' => '', 'extraClass' => '', 'columnWidths' => [8, 4]]]]
+     * Expected column shape: ['w' => width, 'o' => offset].
+     * Offset defaults to 0 if omitted.
      *
-     * Sort values are deterministic: section sort = index+1, row sort = always 1,
-     * column sort = index+1. These are asserted automatically.
+     * Sort values are deterministic and asserted automatically:
+     * section sort = index+1, row sort = always 1, column sort = index+1.
      *
-     * @return iterable<string, array{list<LegacyElement>, string, list<array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columnWidths: list<int>}>}>}>
+     * @return iterable<string, array{list<LegacyElement>, string, list<array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int}>}>}>}>
      */
     public static function hierarchyProvider(): iterable
     {
@@ -87,14 +90,14 @@ final class RowPerSectionStrategyTest extends TestCase
         yield 'single row, single element' => [
             [self::r(), self::e(12)],
             'main',
-            [['rows' => [['columnWidths' => [12]]]]],
+            [['rows' => [['columns' => [['w' => 12]]]]]],
         ];
 
         self::$nextId = 0;
         yield 'single row, three elements' => [
             [self::r(), self::e(4), self::e(4), self::e(4)],
             'main',
-            [['rows' => [['columnWidths' => [4, 4, 4]]]]],
+            [['rows' => [['columns' => [['w' => 4], ['w' => 4], ['w' => 4]]]]]],
         ];
 
         self::$nextId = 0;
@@ -102,8 +105,8 @@ final class RowPerSectionStrategyTest extends TestCase
             [self::r(), self::e(8), self::e(4), self::r(), self::e(12)],
             'main',
             [
-                ['rows' => [['columnWidths' => [8, 4]]]],
-                ['rows' => [['columnWidths' => [12]]]],
+                ['rows' => [['columns' => [['w' => 8], ['w' => 4]]]]],
+                ['rows' => [['columns' => [['w' => 12]]]]],
             ],
         ];
 
@@ -111,7 +114,7 @@ final class RowPerSectionStrategyTest extends TestCase
         yield 'orphans only, no rows' => [
             [self::e(6), self::e(6)],
             'main',
-            [['rows' => [['columnWidths' => [6, 6]]]]],
+            [['rows' => [['columns' => [['w' => 6], ['w' => 6]]]]]],
         ];
 
         self::$nextId = 0;
@@ -119,9 +122,9 @@ final class RowPerSectionStrategyTest extends TestCase
             [self::r(), self::e(4), self::e(4), self::e(4), self::r(), self::e(12), self::r()],
             'main',
             [
-                ['rows' => [['columnWidths' => [4, 4, 4]]]],
-                ['rows' => [['columnWidths' => [12]]]],
-                ['rows' => [['columnWidths' => []]]],
+                ['rows' => [['columns' => [['w' => 4], ['w' => 4], ['w' => 4]]]]],
+                ['rows' => [['columns' => [['w' => 12]]]]],
+                ['rows' => [['columns' => []]]],
             ],
         ];
 
@@ -130,8 +133,8 @@ final class RowPerSectionStrategyTest extends TestCase
             [self::r(), self::r(), self::e(6), self::e(6)],
             'main',
             [
-                ['rows' => [['columnWidths' => []]]],
-                ['rows' => [['columnWidths' => [6, 6]]]],
+                ['rows' => [['columns' => []]]],
+                ['rows' => [['columns' => [['w' => 6], ['w' => 6]]]]],
             ],
         ];
 
@@ -140,8 +143,37 @@ final class RowPerSectionStrategyTest extends TestCase
             [self::e(3), self::r(), self::e(6), self::e(3), self::e(3)],
             'main',
             [
-                ['rows' => [['columnWidths' => [3]]]],
-                ['rows' => [['columnWidths' => [6, 3, 3]]]],
+                ['rows' => [['columns' => [['w' => 3]]]]],
+                ['rows' => [['columns' => [['w' => 6], ['w' => 3], ['w' => 3]]]]],
+            ],
+        ];
+
+        // ── Offset cases ─────────────────────────────────────────
+
+        self::$nextId = 0;
+        yield 'elements with offsets' => [
+            [self::r(), self::e(8, 2), self::e(4)],
+            'main',
+            [['rows' => [['columns' => [['w' => 8, 'o' => 2], ['w' => 4]]]]]],
+        ];
+
+        self::$nextId = 0;
+        yield 'mixed offsets across rows' => [
+            [self::r(), self::e(6, 3), self::r(), self::e(4, 1), self::e(4, 1)],
+            'main',
+            [
+                ['rows' => [['columns' => [['w' => 6, 'o' => 3]]]]],
+                ['rows' => [['columns' => [['w' => 4, 'o' => 1], ['w' => 4, 'o' => 1]]]]],
+            ],
+        ];
+
+        self::$nextId = 0;
+        yield 'orphan elements with offsets' => [
+            [self::e(8, 2), self::e(4), self::r(), self::e(12)],
+            'main',
+            [
+                ['rows' => [['columns' => [['w' => 8, 'o' => 2], ['w' => 4]]]]],
+                ['rows' => [['columns' => [['w' => 12]]]]],
             ],
         ];
 
@@ -154,7 +186,7 @@ final class RowPerSectionStrategyTest extends TestCase
             [
                 [
                     'extraClass' => 'section-class',
-                    'rows' => [['title' => 'Row Title', 'extraClass' => 'row-extra', 'columnWidths' => [12]]],
+                    'rows' => [['title' => 'Row Title', 'extraClass' => 'row-extra', 'columns' => [['w' => 12]]]],
                 ],
             ],
         ];
@@ -166,11 +198,11 @@ final class RowPerSectionStrategyTest extends TestCase
             [
                 [
                     'extraClass' => '',
-                    'rows' => [['title' => '', 'extraClass' => '', 'columnWidths' => [8, 4]]],
+                    'rows' => [['title' => '', 'extraClass' => '', 'columns' => [['w' => 8], ['w' => 4]]]],
                 ],
                 [
                     'extraClass' => 'explicit-section',
-                    'rows' => [['title' => 'Explicit', 'extraClass' => 'explicit-extra', 'columnWidths' => [12]]],
+                    'rows' => [['title' => 'Explicit', 'extraClass' => 'explicit-extra', 'columns' => [['w' => 12]]]],
                 ],
             ],
         ];
@@ -182,15 +214,15 @@ final class RowPerSectionStrategyTest extends TestCase
             [self::r(), self::r()],
             'sidebar',
             [
-                ['rows' => [['columnWidths' => []]]],
-                ['rows' => [['columnWidths' => []]]],
+                ['rows' => [['columns' => []]]],
+                ['rows' => [['columns' => []]]],
             ],
         ];
     }
 
     /**
      * @param list<LegacyElement> $elements
-     * @param list<array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columnWidths: list<int>}>}> $expectedSections
+     * @param list<array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int}>}>}> $expectedSections
      */
     #[DataProvider('hierarchyProvider')]
     public function testHierarchy(array $elements, string $zone, array $expectedSections): void
@@ -214,21 +246,20 @@ final class RowPerSectionStrategyTest extends TestCase
                 $expectedRow = $expectedRows[$ri];
                 $rowPath = "{$path} > Row {$ri}";
 
-                // RowPerSection: each section has exactly 1 row, sort is always 1
                 self::assertSame(1, $row->sort, "{$rowPath}: sort");
                 self::assertSame($expectedRow['title'] ?? '', $row->title, "{$rowPath}: title");
                 self::assertSame($expectedRow['extraClass'] ?? '', $row->extraClass, "{$rowPath}: extraClass");
 
-                $expectedWidths = $expectedRow['columnWidths'];
-                self::assertCount(\count($expectedWidths), $row->columns, "{$rowPath}: column count");
+                $expectedColumns = $expectedRow['columns'];
+                self::assertCount(\count($expectedColumns), $row->columns, "{$rowPath}: column count");
 
                 foreach ($row->columns as $ci => $column) {
-                    self::assertSame($ci + 1, $column->sort, "{$rowPath} > Column {$ci}: sort");
-                    self::assertSame(
-                        $expectedWidths[$ci],
-                        $column->gridSettings->default->width,
-                        "{$rowPath} > Column {$ci}: width",
-                    );
+                    $colPath = "{$rowPath} > Column {$ci}";
+                    $expectedCol = $expectedColumns[$ci];
+
+                    self::assertSame($ci + 1, $column->sort, "{$colPath}: sort");
+                    self::assertSame($expectedCol['w'], $column->gridSettings->default->width, "{$colPath}: width");
+                    self::assertSame($expectedCol['o'] ?? 0, $column->gridSettings->default->offset, "{$colPath}: offset");
                 }
             }
         }
