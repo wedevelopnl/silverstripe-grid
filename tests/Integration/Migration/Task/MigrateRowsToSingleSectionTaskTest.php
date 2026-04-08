@@ -1,0 +1,160 @@
+<?php
+
+declare(strict_types=1);
+
+namespace WeDevelop\Grid\Tests\Integration\Migration\Task;
+
+use PHPUnit\Framework\Attributes\CoversClass;
+use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Dev\SapphireTest;
+use SilverStripe\PolyExecution\PolyOutput;
+use SilverStripe\Versioned\Versioned;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Input\InputDefinition;
+use Symfony\Component\Console\Output\BufferedOutput;
+use WeDevelop\Grid\Migration\Task\MigrateRowsToSingleSectionTask;
+use WeDevelop\Grid\Model\Row;
+use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+
+#[CoversClass(MigrateRowsToSingleSectionTask::class)]
+final class MigrateRowsToSingleSectionTaskTest extends SapphireTest
+{
+    protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
+
+    // Disable SapphireTest's per-test transaction wrapping. The migration
+    // task uses its own transactions, and the LegacyTableSeeder's DDL
+    // (CREATE TABLE) auto-commits in MySQL, which breaks savepoint-based
+    // transaction nesting.
+    protected $usesTransactions = false;
+
+    private const string CONTENT_CLASS = 'DNADesign\\Elemental\\Models\\ElementContent';
+
+    private const string ROW_CLASS = 'WeDevelop\\ElementalGrid\\Models\\ElementRow';
+
+    private LegacyTableSeeder $seeder;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Versioned::set_stage(Versioned::DRAFT);
+
+        $this->seeder = new LegacyTableSeeder();
+        $this->seeder->createTables();
+        $this->seeder->truncateTables();
+
+        $this->cleanGridTables();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->seeder->dropTables();
+
+        parent::tearDown();
+    }
+
+    // ─── Helpers ──────────────────────────────────────────────────
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    private function executeTask(array $options): int
+    {
+        $task = new MigrateRowsToSingleSectionTask();
+        $definition = new InputDefinition($task->getOptions());
+        $input = new ArrayInput($options, $definition);
+        $buffered = new BufferedOutput();
+        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+        return $task->execute($input, $output);
+    }
+
+    private function getPageId(): int
+    {
+        return (int) $this->objFromFixture(SiteTree::class, 'test_page')->ID;
+    }
+
+    /**
+     * Remove all records from GridElement and related tables to prevent leaking between tests.
+     */
+    private function cleanGridTables(): void
+    {
+        $tables = [
+            'ContentElement', 'ContentElement_Live',
+            'Column', 'Column_Live',
+            'Row', 'Row_Live',
+            'Section', 'Section_Live',
+            'GridElement', 'GridElement_Live',
+        ];
+
+        $allTables = \SilverStripe\ORM\DB::table_list();
+
+        foreach ($tables as $table) {
+            if (\array_key_exists(\strtolower($table), $allTables)) {
+                \SilverStripe\ORM\DB::query("DELETE FROM \"{$table}\"");
+            }
+        }
+    }
+
+    // ─── Tests ────────────────────────────────────────────────────
+
+    public function testMissingDefaultViewportReturnsFailure(): void
+    {
+        $exitCode = $this->executeTask(['--zone' => 'main']);
+
+        self::assertSame(Command::FAILURE, $exitCode);
+        self::assertCount(0, Section::get());
+    }
+
+    public function testMissingZoneReturnsFailure(): void
+    {
+        $exitCode = $this->executeTask(['--default-viewport' => 'MD']);
+
+        self::assertSame(Command::FAILURE, $exitCode);
+        self::assertCount(0, Section::get());
+    }
+
+    public function testExecuteUsesAllRowsInSectionStrategy(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        // Two rows → AllRowsInSection strategy should produce 1 Section with 2 Rows
+        $this->seeder->seedElement(1000, $areaId, self::ROW_CLASS, 1);
+        $this->seeder->seedRow(1000);
+        $this->seeder->seedElement(1001, $areaId, self::CONTENT_CLASS, 2, ['SizeMD' => 12]);
+        $this->seeder->seedContentMedia(1001);
+
+        $this->seeder->seedElement(1010, $areaId, self::ROW_CLASS, 3);
+        $this->seeder->seedRow(1010);
+        $this->seeder->seedElement(1011, $areaId, self::CONTENT_CLASS, 4, ['SizeMD' => 12]);
+        $this->seeder->seedContentMedia(1011);
+
+        $exitCode = $this->executeTask([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+        ]);
+
+        self::assertSame(Command::SUCCESS, $exitCode);
+
+        $sections = Section::get()->filter([
+            'ParentID' => $pageId,
+            'ParentClass' => SiteTree::class,
+            'Zone' => 'main',
+        ]);
+
+        // AllRowsInSection: all ElementRows go under a single Section
+        self::assertCount(1, $sections);
+
+        $section = $sections->first();
+        self::assertInstanceOf(Section::class, $section);
+
+        $rows = Row::get()->filter([
+            'ParentID' => $section->ID,
+            'ParentClass' => Section::class,
+        ]);
+        self::assertCount(2, $rows);
+    }
+}
