@@ -6,11 +6,14 @@ namespace WeDevelop\Grid\Tests\Unit\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyRowData;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 
 #[CoversClass(ElementGrouper::class)]
+#[CoversClass(LegacyElement::class)]
+#[CoversClass(LegacyRowData::class)]
 final class ElementGrouperTest extends TestCase
 {
     private ElementGrouper $grouper;

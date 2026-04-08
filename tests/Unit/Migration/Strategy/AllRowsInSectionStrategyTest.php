@@ -15,7 +15,14 @@ use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Strategy\AllRowsInSectionStrategy;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 
+use WeDevelop\Grid\Migration\DTO\MigrationColumn;
+use WeDevelop\Grid\Migration\DTO\MigrationRow;
+use WeDevelop\Grid\Migration\DTO\MigrationSection;
+
 #[CoversClass(AllRowsInSectionStrategy::class)]
+#[CoversClass(MigrationSection::class)]
+#[CoversClass(MigrationRow::class)]
+#[CoversClass(MigrationColumn::class)]
 final class AllRowsInSectionStrategyTest extends TestCase
 {
     private AllRowsInSectionStrategy $strategy;

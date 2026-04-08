@@ -6,11 +6,14 @@ namespace WeDevelop\Grid\Tests\Unit\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 
 #[CoversClass(FieldMapper::class)]
+#[CoversClass(LegacyElement::class)]
+#[CoversClass(LegacyMediaData::class)]
 final class FieldMapperTest extends TestCase
 {
     private FieldMapper $mapper;

@@ -7,12 +7,18 @@ namespace WeDevelop\Grid\Tests\Unit\Migration\Strategy;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Migration\DTO\LegacyRowData;
+use WeDevelop\Grid\Migration\DTO\MigrationColumn;
+use WeDevelop\Grid\Migration\DTO\MigrationRow;
+use WeDevelop\Grid\Migration\DTO\MigrationSection;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 
 #[CoversClass(RowPerSectionStrategy::class)]
+#[CoversClass(MigrationSection::class)]
+#[CoversClass(MigrationRow::class)]
+#[CoversClass(MigrationColumn::class)]
 final class RowPerSectionStrategyTest extends TestCase
 {
     private RowPerSectionStrategy $strategy;
