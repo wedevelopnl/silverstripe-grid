@@ -13,6 +13,7 @@ use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\DTO\LegacyRowData;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestLegacyReaderFilterExtension;
 
 #[CoversClass(LegacyDataReader::class)]
 final class LegacyDataReaderTest extends SapphireTest
@@ -227,10 +228,27 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertSame([], $elements);
     }
 
-    public function testUpdateLegacyElementsExtensionHookExists(): void
+    public function testUpdateLegacyElementsHookIsInvokedAndCanMutate(): void
     {
-        // Verify the class uses Extensible and has the extend() method available
-        self::assertTrue(method_exists($this->reader, 'extend'));
+        $areaId = 850;
+        $this->seeder->seedElement(85, $areaId, 'DNADesign\\Elemental\\Models\\ElementContent', 1, ['Title' => 'Keep Me']);
+        $this->seeder->seedElement(86, $areaId, 'DNADesign\\Elemental\\Models\\ElementContent', 2, ['Title' => 'Filter Me']);
+
+        TestLegacyReaderFilterExtension::reset();
+        LegacyDataReader::add_extension(TestLegacyReaderFilterExtension::class);
+
+        try {
+            $elements = $this->reader->getElementsForArea($areaId, 'draft');
+
+            self::assertTrue(TestLegacyReaderFilterExtension::$hookCalled);
+            self::assertSame($areaId, TestLegacyReaderFilterExtension::$receivedAreaId);
+            self::assertSame('draft', TestLegacyReaderFilterExtension::$receivedStage);
+
+            self::assertCount(1, $elements);
+            self::assertSame('Keep Me', $elements[0]->title);
+        } finally {
+            LegacyDataReader::remove_extension(TestLegacyReaderFilterExtension::class);
+        }
     }
 
     public function testGetElementsForAreaEagerLoadsRowData(): void
@@ -296,5 +314,75 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertSame(5, $element->sort);
         self::assertSame('highlight', $element->extraClass);
         self::assertFalse($element->isRow);
+    }
+
+    // ─── Invalid stage handling ──────────────────────────────────
+
+    public function testGetEligiblePagesThrowsOnInvalidStage(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->reader->getEligiblePages('staging');
+    }
+
+    public function testGetElementsForAreaThrowsOnInvalidStage(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->reader->getElementsForArea(1, 'preview');
+    }
+
+    public function testGetRowDataThrowsOnInvalidStage(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->reader->getRowData(1, 'unknown');
+    }
+
+    public function testGetContentMediaDataThrowsOnInvalidStage(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->reader->getContentMediaData(1, 'invalid');
+    }
+
+    // ─── Additional coverage ─────────────────────────────────────
+
+    public function testGetContentMediaDataWithPartialFields(): void
+    {
+        $this->seeder->seedContentMedia(50, ['HTML' => '<p>Sparse</p>', 'MediaType' => 'image']);
+
+        $mediaData = $this->reader->getContentMediaData(50, 'draft');
+
+        self::assertNotNull($mediaData);
+        self::assertSame('<p>Sparse</p>', $mediaData->fields['HTML']);
+        self::assertSame('image', $mediaData->fields['MediaType']);
+        self::assertArrayHasKey('MediaImageID', $mediaData->fields);
+    }
+
+    public function testGetEligiblePagesReturnsMultiplePages(): void
+    {
+        $page1 = (int) $this->objFromFixture(SiteTree::class, 'test_page')->ID;
+        $page2 = (int) $this->objFromFixture(SiteTree::class, 'test_page_2')->ID;
+
+        $this->seeder->seedPage($page1, 100);
+        $this->seeder->seedPage($page2, 200);
+
+        $pages = $this->reader->getEligiblePages('draft');
+
+        self::assertCount(2, $pages);
+
+        $pageIds = \array_column($pages, 'pageId');
+        self::assertContains($page1, $pageIds);
+        self::assertContains($page2, $pageIds);
+    }
+
+    public function testStageIsCaseInsensitive(): void
+    {
+        $areaId = 950;
+        $this->seeder->seedElement(95, $areaId, 'DNADesign\\Elemental\\Models\\ElementContent', 1, [
+            'Title' => 'Live Element',
+        ], 'live');
+
+        $elements = $this->reader->getElementsForArea($areaId, 'LIVE');
+
+        self::assertCount(1, $elements);
+        self::assertSame('Live Element', $elements[0]->title);
     }
 }
