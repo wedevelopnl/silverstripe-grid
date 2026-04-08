@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Migration\Support;
 
+use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Core\ClassInfo;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 
 /**
@@ -28,6 +31,10 @@ final class LegacyTableSeeder
 
     /**
      * Create all legacy tables (idempotent — uses IF NOT EXISTS).
+     *
+     * Does NOT add extension columns to any page table. Call
+     * {@see addExtensionColumns()} separately to simulate where the old
+     * elemental extension was applied.
      */
     public function createTables(): void
     {
@@ -39,7 +46,6 @@ final class LegacyTableSeeder
         $this->createElementContentTable('ElementContent_Live');
         $this->createElementalAreaTable('ElementalArea');
         $this->createElementalAreaTable('ElementalArea_Live');
-        $this->addSiteTreeColumns();
     }
 
     /**
@@ -47,6 +53,10 @@ final class LegacyTableSeeder
      *
      * DDL (CREATE TABLE) causes implicit commits in MySQL, so SapphireTest's
      * transaction rollback cannot clean up data in these tables between tests.
+     *
+     * Also resets extension columns on any page table that has them, so each
+     * test starts with a clean slate regardless of which table the extension
+     * was applied to.
      */
     public function truncateTables(): void
     {
@@ -54,23 +64,58 @@ final class LegacyTableSeeder
             DB::query("DELETE FROM \"{$table}\"");
         }
 
-        // Reset the grid columns on SiteTree rows
-        $columns = DB::field_list('SiteTree');
-        if (\array_key_exists('UseElementalGrid', $columns)) {
-            DB::query('UPDATE "SiteTree" SET "UseElementalGrid" = 0, "ElementalAreaID" = 0');
+        foreach ($this->findTablesWithExtensionColumns() as $table) {
+            DB::query("UPDATE \"{$table}\" SET \"UseElementalGrid\" = 0, \"ElementalAreaID\" = 0");
         }
     }
 
     /**
-     * Drop all legacy tables and remove added SiteTree columns.
+     * Drop all legacy tables.
+     *
+     * Does NOT remove extension columns from page tables. Call
+     * {@see removeExtensionColumns()} separately.
      */
     public function dropTables(): void
     {
         foreach (self::LEGACY_TABLES as $table) {
             DB::query("DROP TABLE IF EXISTS \"{$table}\"");
         }
+    }
 
-        $this->removeSiteTreeColumns();
+    /**
+     * Add UseElementalGrid and ElementalAreaID columns to a page table.
+     *
+     * Simulates the old elemental extension being applied to a specific class.
+     * For example, `addExtensionColumns('SiteTree')` when the extension was on
+     * SiteTree, or `addExtensionColumns('Page')` when it was on Page.
+     */
+    public function addExtensionColumns(string $table): void
+    {
+        $columns = DB::field_list($table);
+
+        if (!\array_key_exists('UseElementalGrid', $columns)) {
+            DB::query("ALTER TABLE \"{$table}\" ADD COLUMN \"UseElementalGrid\" tinyint NOT NULL DEFAULT 0");
+        }
+
+        if (!\array_key_exists('ElementalAreaID', $columns)) {
+            DB::query("ALTER TABLE \"{$table}\" ADD COLUMN \"ElementalAreaID\" int NOT NULL DEFAULT 0");
+        }
+    }
+
+    /**
+     * Remove extension columns from a page table.
+     */
+    public function removeExtensionColumns(string $table): void
+    {
+        $columns = DB::field_list($table);
+
+        if (\array_key_exists('UseElementalGrid', $columns)) {
+            DB::query("ALTER TABLE \"{$table}\" DROP COLUMN \"UseElementalGrid\"");
+        }
+
+        if (\array_key_exists('ElementalAreaID', $columns)) {
+            DB::query("ALTER TABLE \"{$table}\" DROP COLUMN \"ElementalAreaID\"");
+        }
     }
 
     /**
@@ -79,8 +124,19 @@ final class LegacyTableSeeder
      */
     public function seedPage(int $pageId, int $areaId, bool $useGrid = true): void
     {
+        $this->seedPageOnTable('SiteTree', $pageId, $areaId, $useGrid);
+    }
+
+    /**
+     * Seed eligible page data on a specific table.
+     *
+     * Updates the extension columns on the given table and creates the
+     * corresponding ElementalArea row.
+     */
+    public function seedPageOnTable(string $table, int $pageId, int $areaId, bool $useGrid = true): void
+    {
         DB::prepared_query(
-            'UPDATE "SiteTree" SET "UseElementalGrid" = ?, "ElementalAreaID" = ? WHERE "ID" = ?',
+            "UPDATE \"{$table}\" SET \"UseElementalGrid\" = ?, \"ElementalAreaID\" = ? WHERE \"ID\" = ?",
             [$useGrid ? 1 : 0, $areaId, $pageId],
         );
 
@@ -286,90 +342,39 @@ final class LegacyTableSeeder
     }
 
     /**
-     * Add UseElementalGrid and ElementalAreaID columns to SiteTree if missing.
+     * Find all SiteTree subclass tables that currently have extension columns.
      *
-     * Uses a schema check rather than IF NOT EXISTS because MySQL's ALTER TABLE
-     * does not support that syntax for ADD COLUMN consistently.
-     */
-    private function addSiteTreeColumns(): void
-    {
-        $columns = DB::field_list('SiteTree');
-
-        if (!\array_key_exists('UseElementalGrid', $columns)) {
-            DB::query('ALTER TABLE "SiteTree" ADD COLUMN "UseElementalGrid" tinyint NOT NULL DEFAULT 0');
-        }
-
-        if (!\array_key_exists('ElementalAreaID', $columns)) {
-            DB::query('ALTER TABLE "SiteTree" ADD COLUMN "ElementalAreaID" int NOT NULL DEFAULT 0');
-        }
-    }
-
-    /**
-     * Remove the columns added to SiteTree (best-effort cleanup).
-     */
-    public function removeSiteTreeColumns(): void
-    {
-        $columns = DB::field_list('SiteTree');
-
-        if (\array_key_exists('UseElementalGrid', $columns)) {
-            DB::query('ALTER TABLE "SiteTree" DROP COLUMN "UseElementalGrid"');
-        }
-
-        if (\array_key_exists('ElementalAreaID', $columns)) {
-            DB::query('ALTER TABLE "SiteTree" DROP COLUMN "ElementalAreaID"');
-        }
-    }
-
-    /**
-     * Add UseElementalGrid and ElementalAreaID columns to the Page table.
+     * Used by {@see truncateTables()} to reset data regardless of which table
+     * the extension was applied to.
      *
-     * Simulates the production case where the old extension was applied to Page
-     * (or a Page subclass) rather than SiteTree.
+     * @return list<string>
      */
-    public function addPageColumns(): void
+    private function findTablesWithExtensionColumns(): array
     {
-        $columns = DB::field_list('Page');
+        $schema = DataObject::getSchema();
+        $existingTables = DB::table_list();
+        $result = [];
+        $checked = [];
 
-        if (!\array_key_exists('UseElementalGrid', $columns)) {
-            DB::query('ALTER TABLE "Page" ADD COLUMN "UseElementalGrid" tinyint NOT NULL DEFAULT 0');
+        foreach (ClassInfo::subclassesFor(SiteTree::class, true) as $class) {
+            $table = $schema->tableName($class);
+            if ($table === null || isset($checked[$table])) {
+                continue;
+            }
+            $checked[$table] = true;
+
+            // table_list() returns lowercase keys
+            if (!\array_key_exists(\strtolower($table), $existingTables)) {
+                continue;
+            }
+
+            $columns = DB::field_list($table);
+            if (\array_key_exists('UseElementalGrid', $columns)) {
+                $result[] = $table;
+            }
         }
 
-        if (!\array_key_exists('ElementalAreaID', $columns)) {
-            DB::query('ALTER TABLE "Page" ADD COLUMN "ElementalAreaID" int NOT NULL DEFAULT 0');
-        }
-    }
-
-    /**
-     * Remove the columns added to the Page table.
-     */
-    public function removePageColumns(): void
-    {
-        $columns = DB::field_list('Page');
-
-        if (\array_key_exists('UseElementalGrid', $columns)) {
-            DB::query('ALTER TABLE "Page" DROP COLUMN "UseElementalGrid"');
-        }
-
-        if (\array_key_exists('ElementalAreaID', $columns)) {
-            DB::query('ALTER TABLE "Page" DROP COLUMN "ElementalAreaID"');
-        }
-    }
-
-    /**
-     * Seed eligible page data on the Page table (not SiteTree).
-     */
-    public function seedPageOnPageTable(int $pageId, int $areaId, bool $useGrid = true): void
-    {
-        DB::prepared_query(
-            'UPDATE "Page" SET "UseElementalGrid" = ?, "ElementalAreaID" = ? WHERE "ID" = ?',
-            [$useGrid ? 1 : 0, $areaId, $pageId],
-        );
-
-        // Still need the ElementalArea row
-        DB::prepared_query(
-            'INSERT INTO "ElementalArea" ("ID", "OwnerClassName") VALUES (?, ?)',
-            [$areaId, 'SilverStripe\\CMS\\Model\\SiteTree'],
-        );
+        return $result;
     }
 
     private function stageTable(string $baseTable, string $stage): string

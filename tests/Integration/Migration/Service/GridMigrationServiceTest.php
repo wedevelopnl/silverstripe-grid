@@ -71,6 +71,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
         $this->seeder = new LegacyTableSeeder();
         $this->seeder->createTables();
+        $this->seeder->addExtensionColumns('SiteTree');
         $this->seeder->truncateTables();
 
         // Clean ORM grid tables from previous tests. DDL in createTables()
@@ -96,6 +97,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     protected function tearDown(): void
     {
+        $this->seeder->removeExtensionColumns('SiteTree');
         $this->seeder->dropTables();
 
         parent::tearDown();

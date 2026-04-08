@@ -14,4 +14,9 @@ use SilverStripe\Dev\TestOnly;
 class TestPage extends SiteTree implements TestOnly
 {
     private static string $table_name = 'TestPage';
+
+    /** @var array<string, string> */
+    private static array $db = [
+        'Subtitle' => 'Varchar',
+    ];
 }

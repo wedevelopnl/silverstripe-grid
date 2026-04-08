@@ -44,6 +44,7 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
 
         $this->seeder = new LegacyTableSeeder();
         $this->seeder->createTables();
+        $this->seeder->addExtensionColumns('SiteTree');
         $this->seeder->truncateTables();
 
         $this->cleanGridTables();
@@ -51,6 +52,7 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
 
     protected function tearDown(): void
     {
+        $this->seeder->removeExtensionColumns('SiteTree');
         $this->seeder->dropTables();
 
         parent::tearDown();

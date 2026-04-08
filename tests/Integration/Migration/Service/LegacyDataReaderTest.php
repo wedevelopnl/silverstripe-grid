@@ -35,11 +35,13 @@ final class LegacyDataReaderTest extends SapphireTest
         $this->reader = new LegacyDataReader();
         $this->seeder = new LegacyTableSeeder();
         $this->seeder->createTables();
+        $this->seeder->addExtensionColumns('SiteTree');
         $this->seeder->truncateTables();
     }
 
     protected function tearDown(): void
     {
+        $this->seeder->removeExtensionColumns('SiteTree');
         $this->seeder->dropTables();
 
         parent::tearDown();
@@ -332,6 +334,55 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertSame(5, $element->sort);
         self::assertSame('highlight', $element->extraClass);
         self::assertFalse($element->isRow);
+    }
+
+    // ─── Extension on subclass table (INNER JOIN branch) ─────────
+
+    public function testGetEligiblePagesFromSubclassTable(): void
+    {
+        $this->seeder->addExtensionColumns('TestPage');
+
+        try {
+            $page = TestPage::create();
+            $page->Title = 'Subclass Table Test';
+            $page->URLSegment = 'subclass-table-test';
+            $page->write();
+
+            $this->seeder->seedPageOnTable('TestPage', (int) $page->ID, 600);
+
+            $result = $this->reader->getEligiblePages('draft');
+
+            self::assertCount(1, $result);
+            self::assertSame((int) $page->ID, $result[0]['pageId']);
+            self::assertSame(600, $result[0]['areaId']);
+            self::assertSame(TestPage::class, $result[0]['pageClassName']);
+        } finally {
+            $this->seeder->removeExtensionColumns('TestPage');
+        }
+    }
+
+    public function testGetEligiblePagesFromSubclassTableWithPageIdFilter(): void
+    {
+        $this->seeder->addExtensionColumns('TestPage');
+
+        try {
+            $page = TestPage::create();
+            $page->Title = 'Subclass Filter Test';
+            $page->URLSegment = 'subclass-filter-test';
+            $page->write();
+
+            $pageId = (int) $page->ID;
+            $this->seeder->seedPageOnTable('TestPage', $pageId, 601);
+
+            $result = $this->reader->getEligiblePages('draft', [$pageId]);
+            self::assertCount(1, $result);
+            self::assertSame($pageId, $result[0]['pageId']);
+
+            $result = $this->reader->getEligiblePages('draft', [999999]);
+            self::assertSame([], $result);
+        } finally {
+            $this->seeder->removeExtensionColumns('TestPage');
+        }
     }
 
     // ─── Invalid stage handling ──────────────────────────────────
