@@ -11,14 +11,13 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyRowData;
+use WeDevelop\Grid\Migration\DTO\MigrationColumn;
+use WeDevelop\Grid\Migration\DTO\MigrationRow;
+use WeDevelop\Grid\Migration\DTO\MigrationSection;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Strategy\AllRowsInSectionStrategy;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
-
-use WeDevelop\Grid\Migration\DTO\MigrationColumn;
-use WeDevelop\Grid\Migration\DTO\MigrationRow;
-use WeDevelop\Grid\Migration\DTO\MigrationSection;
 
 #[CoversClass(AllRowsInSectionStrategy::class)]
 #[CoversClass(MigrationSection::class)]
@@ -44,20 +43,12 @@ final class AllRowsInSectionStrategyTest extends TestCase
         );
     }
 
-    public function testFirstRowCustomClassAppliedToSection(): void
+    // ─── Warning behavior (needs logger mock — cannot be data provider) ──
+
+    public function testLaterRowWithDifferentCustomSectionClassLogsWarning(): void
     {
-        $rowData = new LegacyRowData(customSectionClass: 'hero-section');
-        $row = LegacyElementFactory::row(1, 1, $rowData);
-
-        $sections = $this->strategy->buildHierarchy([$row], pageId: 10, zone: 'main');
-
-        self::assertSame('hero-section', $sections[0]->extraClass);
-    }
-
-    public function testLaterRowWithDifferentCustomSectionClassLogsWarningAndIsDiscarded(): void
-    {
-        $row1 = LegacyElementFactory::row(1, 1, new LegacyRowData(customSectionClass: 'first-class'));
-        $row2 = LegacyElementFactory::row(2, 2, new LegacyRowData(customSectionClass: 'second-class'));
+        $row1 = self::r('', '', 'first-class');
+        $row2 = self::r('', '', 'second-class');
 
         $this->logger->expects(self::atLeastOnce())
             ->method('warning')
@@ -65,108 +56,20 @@ final class AllRowsInSectionStrategyTest extends TestCase
 
         $sections = $this->strategy->buildHierarchy([$row1, $row2], pageId: 10, zone: 'main');
 
-        // Section keeps the first row's value
         self::assertSame('first-class', $sections[0]->extraClass);
-    }
-
-    public function testEachRowTitleAndExtraClassMappedToMigrationRow(): void
-    {
-        $row1 = new LegacyElement(
-            id: 1,
-            className: 'Test\Row',
-            title: 'Row One',
-            showTitle: false,
-            titleTag: 'h2',
-            titleClass: '',
-            sort: 1,
-            extraClass: 'row-one-extra',
-            isRow: true,
-            sizeFields: [],
-            offsetFields: [],
-            visibilityFields: [],
-            rowData: new LegacyRowData(customSectionClass: ''),
-        );
-        $row2 = new LegacyElement(
-            id: 2,
-            className: 'Test\Row',
-            title: 'Row Two',
-            showTitle: false,
-            titleTag: 'h2',
-            titleClass: '',
-            sort: 2,
-            extraClass: 'row-two-extra',
-            isRow: true,
-            sizeFields: [],
-            offsetFields: [],
-            visibilityFields: [],
-            rowData: new LegacyRowData(customSectionClass: ''),
-        );
-
-        $sections = $this->strategy->buildHierarchy([$row1, $row2], pageId: 10, zone: 'main');
-
-        $rows = $sections[0]->rows;
-        self::assertSame('Row One', $rows[0]->title);
-        self::assertSame('row-one-extra', $rows[0]->extraClass);
-        self::assertSame('Row Two', $rows[1]->title);
-        self::assertSame('row-two-extra', $rows[1]->extraClass);
-    }
-
-    public function testImplicitGroupProducesRowWithDefaultValues(): void
-    {
-        $e1 = LegacyElementFactory::content(1, 1);
-
-        $sections = $this->strategy->buildHierarchy([$e1], pageId: 10, zone: 'main');
-
-        self::assertCount(1, $sections);
-        $row = $sections[0]->rows[0];
-        self::assertSame('', $row->title);
-        self::assertSame('', $row->extraClass);
-    }
-
-    public function testSectionSortIsAlwaysOne(): void
-    {
-        $row1 = LegacyElementFactory::row(1, 1);
-        $row2 = LegacyElementFactory::row(2, 2);
-
-        $sections = $this->strategy->buildHierarchy([$row1, $row2], pageId: 10, zone: 'main');
-
-        self::assertSame(1, $sections[0]->sort);
-    }
-
-    public function testRowSortsAreSequential(): void
-    {
-        $row1 = LegacyElementFactory::row(1, 1);
-        $row2 = LegacyElementFactory::row(2, 2);
-        $row3 = LegacyElementFactory::row(3, 3);
-
-        $sections = $this->strategy->buildHierarchy([$row1, $row2, $row3], pageId: 10, zone: 'main');
-
-        $rows = $sections[0]->rows;
-        self::assertSame(1, $rows[0]->sort);
-        self::assertSame(2, $rows[1]->sort);
-        self::assertSame(3, $rows[2]->sort);
-    }
-
-    public function testZoneIsPassedThroughToSection(): void
-    {
-        $row = LegacyElementFactory::row(1, 1);
-
-        $sections = $this->strategy->buildHierarchy([$row], pageId: 10, zone: 'sidebar');
-
-        self::assertSame('sidebar', $sections[0]->zone);
     }
 
     public function testNoWarningWhenAllRowsHaveSameCustomSectionClass(): void
     {
-        $row1 = LegacyElementFactory::row(1, 1, new LegacyRowData(customSectionClass: 'same-class'));
-        $row2 = LegacyElementFactory::row(2, 2, new LegacyRowData(customSectionClass: 'same-class'));
+        $row1 = self::r('', '', 'same-class');
+        $row2 = self::r('', '', 'same-class');
 
         $this->logger->expects(self::never())->method('warning');
 
         $this->strategy->buildHierarchy([$row1, $row2], pageId: 10, zone: 'main');
     }
 
-    // ─── Structural data provider tests ──────────────────────────
+    // ─── Factory helpers ─────────────────────────────────────────
 
     private static int $nextId = 0;
 
@@ -176,75 +79,150 @@ final class AllRowsInSectionStrategyTest extends TestCase
         return LegacyElementFactory::content($id, $id, ['sizeFields' => ['MD' => $width]]);
     }
 
-    private static function r(): LegacyElement
+    private static function r(string $title = '', string $extraClass = '', string $sectionClass = ''): LegacyElement
     {
         $id = ++self::$nextId;
-        return LegacyElementFactory::row($id, $id);
+
+        return new LegacyElement(
+            id: $id,
+            className: 'Test\Row',
+            title: $title,
+            showTitle: false,
+            titleTag: 'h2',
+            titleClass: '',
+            sort: $id,
+            extraClass: $extraClass,
+            isRow: true,
+            sizeFields: [],
+            offsetFields: [],
+            visibilityFields: [],
+            rowData: new LegacyRowData(customSectionClass: $sectionClass),
+        );
     }
 
+    // ─── Data provider ───────────────────────────────────────────
+
     /**
-     * Each case: [flat element list, expected rows→column widths under the single section].
+     * Each case yields: [elements, zone, expected section spec].
      *
-     * AllRows always produces exactly 1 section, so the structure is rows→column widths.
+     * AllRows always produces exactly 1 section. The expected spec is:
+     *   ['extraClass' => '', 'rows' => [['title' => '', 'extraClass' => '', 'columnWidths' => [8, 4]]]]
      *
-     * @return iterable<string, array{list<LegacyElement>, list<list<int>>}>
+     * @return iterable<string, array{list<LegacyElement>, string, array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columnWidths: list<int>}>}}>
      */
     public static function hierarchyProvider(): iterable
     {
+        // ── Structural cases ─────────────────────────────────────
+
         self::$nextId = 0;
         yield 'single row, three elements' => [
             [self::r(), self::e(4), self::e(4), self::e(4)],
-            [[4, 4, 4]],
+            'main',
+            ['rows' => [['columnWidths' => [4, 4, 4]]]],
         ];
 
         self::$nextId = 0;
         yield 'two rows, varying element counts' => [
             [self::r(), self::e(8), self::e(4), self::r(), self::e(12)],
-            [[8, 4], [12]],
+            'main',
+            ['rows' => [['columnWidths' => [8, 4]], ['columnWidths' => [12]]]],
         ];
 
         self::$nextId = 0;
         yield 'orphans before first row' => [
             [self::e(8), self::e(4), self::r(), self::e(12)],
-            [[8, 4], [12]],
+            'main',
+            ['rows' => [['columnWidths' => [8, 4]], ['columnWidths' => [12]]]],
         ];
 
         self::$nextId = 0;
         yield 'orphans only, no rows' => [
             [self::e(6), self::e(6)],
-            [[6, 6]],
+            'main',
+            ['rows' => [['columnWidths' => [6, 6]]]],
         ];
 
         self::$nextId = 0;
         yield 'three rows: 3 elements, 1 element, empty' => [
             [self::r(), self::e(4), self::e(4), self::e(4), self::r(), self::e(12), self::r()],
-            [[4, 4, 4], [12], []],
+            'main',
+            ['rows' => [['columnWidths' => [4, 4, 4]], ['columnWidths' => [12]], ['columnWidths' => []]]],
+        ];
+
+        // ── Field mapping cases ──────────────────────────────────
+
+        self::$nextId = 0;
+        yield 'first row customSectionClass applied to section' => [
+            [self::r('', '', 'hero-section'), self::e(12)],
+            'main',
+            ['extraClass' => 'hero-section', 'rows' => [['columnWidths' => [12]]]],
+        ];
+
+        self::$nextId = 0;
+        yield 'row title and extraClass mapped to migration rows' => [
+            [self::r('Row One', 'one-extra'), self::e(8), self::r('Row Two', 'two-extra'), self::e(4)],
+            'main',
+            [
+                'rows' => [
+                    ['title' => 'Row One', 'extraClass' => 'one-extra', 'columnWidths' => [8]],
+                    ['title' => 'Row Two', 'extraClass' => 'two-extra', 'columnWidths' => [4]],
+                ],
+            ],
+        ];
+
+        self::$nextId = 0;
+        yield 'implicit group produces row with default values' => [
+            [self::e(12)],
+            'main',
+            ['rows' => [['title' => '', 'extraClass' => '', 'columnWidths' => [12]]]],
+        ];
+
+        // ── Zone case ────────────────────────────────────────────
+
+        self::$nextId = 0;
+        yield 'zone passed through to section' => [
+            [self::r()],
+            'sidebar',
+            ['rows' => [['columnWidths' => []]]],
         ];
     }
 
     /**
      * @param list<LegacyElement> $elements
-     * @param list<list<int>> $expectedRows rows → column widths
+     * @param array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columnWidths: list<int>}>} $expectedSection
      */
     #[DataProvider('hierarchyProvider')]
-    public function testHierarchyStructure(array $elements, array $expectedRows): void
+    public function testHierarchy(array $elements, string $zone, array $expectedSection): void
     {
-        $sections = $this->strategy->buildHierarchy($elements, pageId: 1, zone: 'main');
+        $sections = $this->strategy->buildHierarchy($elements, pageId: 1, zone: $zone);
 
         self::assertCount(1, $sections, 'AllRows always produces 1 section');
 
-        $rows = $sections[0]->rows;
-        self::assertCount(\count($expectedRows), $rows, 'Row count');
+        $section = $sections[0];
+        self::assertSame($zone, $section->zone, 'Section: zone');
+        self::assertSame(1, $section->sort, 'Section: sort');
+        self::assertSame($expectedSection['extraClass'] ?? '', $section->extraClass, 'Section: extraClass');
 
-        foreach ($rows as $ri => $row) {
-            $expectedWidths = $expectedRows[$ri];
-            self::assertCount(\count($expectedWidths), $row->columns, "Row {$ri}: column count");
+        $expectedRows = $expectedSection['rows'];
+        self::assertCount(\count($expectedRows), $section->rows, 'Row count');
+
+        foreach ($section->rows as $ri => $row) {
+            $expectedRow = $expectedRows[$ri];
+            $rowPath = "Row {$ri}";
+
+            self::assertSame($ri + 1, $row->sort, "{$rowPath}: sort");
+            self::assertSame($expectedRow['title'] ?? '', $row->title, "{$rowPath}: title");
+            self::assertSame($expectedRow['extraClass'] ?? '', $row->extraClass, "{$rowPath}: extraClass");
+
+            $expectedWidths = $expectedRow['columnWidths'];
+            self::assertCount(\count($expectedWidths), $row->columns, "{$rowPath}: column count");
 
             foreach ($row->columns as $ci => $column) {
+                self::assertSame($ci + 1, $column->sort, "{$rowPath} > Column {$ci}: sort");
                 self::assertSame(
                     $expectedWidths[$ci],
                     $column->gridSettings->default->width,
-                    "Row {$ri} > Column {$ci}: width",
+                    "{$rowPath} > Column {$ci}: width",
                 );
             }
         }
