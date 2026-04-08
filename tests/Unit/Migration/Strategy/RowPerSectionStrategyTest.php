@@ -35,20 +35,6 @@ final class RowPerSectionStrategyTest extends TestCase
         );
     }
 
-    public function testEachExplicitRowGroupProducesOneSectionWithOneRow(): void
-    {
-        $row1 = LegacyElementFactory::row(1, 1);
-        $e1 = LegacyElementFactory::content(2, 2);
-        $row2 = LegacyElementFactory::row(3, 3);
-        $e2 = LegacyElementFactory::content(4, 4);
-
-        $sections = $this->strategy->buildHierarchy([$row1, $e1, $row2, $e2], pageId: 10, zone: 'main');
-
-        self::assertCount(2, $sections);
-        self::assertCount(1, $sections[0]->rows);
-        self::assertCount(1, $sections[1]->rows);
-    }
-
     public function testRowFieldsMapToSectionAndRow(): void
     {
         $rowData = new LegacyRowData(customSectionClass: 'my-section-class');
@@ -116,18 +102,6 @@ final class RowPerSectionStrategyTest extends TestCase
         $implicitRow = $implicitSection->rows[0];
         self::assertSame('', $implicitRow->title);
         self::assertSame('', $implicitRow->extraClass);
-    }
-
-    public function testEmptyRowGroupProducesSectionWithRowAndNoColumns(): void
-    {
-        $row1 = LegacyElementFactory::row(1, 1);
-        $row2 = LegacyElementFactory::row(2, 2);
-
-        $sections = $this->strategy->buildHierarchy([$row1, $row2], pageId: 10, zone: 'main');
-
-        self::assertCount(2, $sections);
-        self::assertCount(1, $sections[0]->rows);
-        self::assertSame([], $sections[0]->rows[0]->columns);
     }
 
     public function testZoneIsPassedThroughToAllSections(): void

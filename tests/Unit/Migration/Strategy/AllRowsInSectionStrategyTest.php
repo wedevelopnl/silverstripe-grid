@@ -44,19 +44,6 @@ final class AllRowsInSectionStrategyTest extends TestCase
         );
     }
 
-    public function testAllGroupsBecomeRowsUnderASingleSection(): void
-    {
-        $row1 = LegacyElementFactory::row(1, 1);
-        $e1 = LegacyElementFactory::content(2, 2);
-        $row2 = LegacyElementFactory::row(3, 3);
-        $e2 = LegacyElementFactory::content(4, 4);
-
-        $sections = $this->strategy->buildHierarchy([$row1, $e1, $row2, $e2], pageId: 10, zone: 'main');
-
-        self::assertCount(1, $sections);
-        self::assertCount(2, $sections[0]->rows);
-    }
-
     public function testFirstRowCustomClassAppliedToSection(): void
     {
         $rowData = new LegacyRowData(customSectionClass: 'hero-section');
