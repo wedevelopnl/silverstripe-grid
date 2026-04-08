@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Unit\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
@@ -26,7 +27,7 @@ final class FieldMapperTest extends TestCase
         $this->mapper = new FieldMapper();
     }
 
-    // ─── Grid settings: default viewport ──────────────────────────────────────
+    // ─── Grid settings: viewport overrides ────────────────────────────────────
 
     public function testDefaultViewportExtractedCorrectly(): void
     {
@@ -191,79 +192,114 @@ final class FieldMapperTest extends TestCase
         self::assertFalse($xsOverride->visible);
     }
 
-    // ─── Media field mapping ───────────────────────────────────────────────────
+    // ─── Media field mapping: data providers ──────────────────────────────────
 
-    public function testContentVerticalAlignCenterClassMapsToCenter(): void
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function verticalAlignmentProvider(): iterable
     {
-        $media = new LegacyMediaData(['ContentVerticalAlign' => 'align-items-center']);
-
-        $result = $this->mapper->mapMediaFields($media);
-
-        self::assertSame('center', $result->VerticalAlignment);
+        yield 'center CSS class → center' => ['align-items-center', 'center'];
+        yield 'end CSS class → bottom' => ['align-items-end', 'bottom'];
+        yield 'empty string → top (default)' => ['', 'top'];
+        yield 'unknown CSS class → top (fallback)' => ['align-items-start', 'top'];
     }
 
-    public function testContentVerticalAlignEmptyMapsToTop(): void
+    #[DataProvider('verticalAlignmentProvider')]
+    public function testVerticalAlignmentMapping(string $input, string $expected): void
     {
-        $media = new LegacyMediaData(['ContentVerticalAlign' => '']);
+        $media = new LegacyMediaData(['ContentVerticalAlign' => $input]);
 
-        $result = $this->mapper->mapMediaFields($media);
-
-        self::assertSame('top', $result->VerticalAlignment);
+        self::assertSame($expected, $this->mapper->mapMediaFields($media)->VerticalAlignment);
     }
 
-    public function testContentVerticalAlignEndClassMapsToBottom(): void
+    /**
+     * @return iterable<string, array{string|null, string}>
+     */
+    public static function mediaPositionProvider(): iterable
     {
-        $media = new LegacyMediaData(['ContentVerticalAlign' => 'align-items-end']);
-
-        $result = $this->mapper->mapMediaFields($media);
-
-        self::assertSame('bottom', $result->VerticalAlignment);
+        yield 'order-1 → first' => ['order-1', 'first'];
+        yield 'order-2 → last' => ['order-2', 'last'];
+        yield 'responsive order → last-on-desktop' => ['order-1 order-md-2', 'last-on-desktop'];
+        yield 'null → first (default)' => [null, 'first'];
+        yield 'empty string → first (default)' => ['', 'first'];
+        yield 'unknown class → first (fallback)' => ['order-99', 'first'];
     }
 
-    public function testMediaPositionOrder1MapsToFirst(): void
+    #[DataProvider('mediaPositionProvider')]
+    public function testMediaPositionMapping(?string $input, string $expected): void
     {
-        $media = new LegacyMediaData(['MediaPosition' => 'order-1']);
+        $media = new LegacyMediaData(['MediaPosition' => $input]);
 
-        $result = $this->mapper->mapMediaFields($media);
-
-        self::assertSame('first', $result->MediaPosition);
+        self::assertSame($expected, $this->mapper->mapMediaFields($media)->MediaPosition);
     }
 
-    public function testMediaPositionOrder2MapsToLast(): void
+    /**
+     * @return iterable<string, array{string|null, string}>
+     */
+    public static function mediaRatioProvider(): iterable
     {
-        $media = new LegacyMediaData(['MediaPosition' => 'order-2']);
-
-        $result = $this->mapper->mapMediaFields($media);
-
-        self::assertSame('last', $result->MediaPosition);
+        yield 'empty string → auto' => ['', 'auto'];
+        yield 'null → auto' => [null, 'auto'];
+        yield '16x9 passes through' => ['16x9', '16x9'];
+        yield '4x3 passes through' => ['4x3', '4x3'];
+        yield '1x1 passes through' => ['1x1', '1x1'];
     }
 
-    public function testMediaPositionResponsiveClassMapsToLastOnDesktop(): void
+    #[DataProvider('mediaRatioProvider')]
+    public function testMediaRatioMapping(?string $input, string $expected): void
     {
-        $media = new LegacyMediaData(['MediaPosition' => 'order-1 order-md-2']);
+        $media = new LegacyMediaData(['MediaRatio' => $input]);
 
-        $result = $this->mapper->mapMediaFields($media);
-
-        self::assertSame('last-on-desktop', $result->MediaPosition);
+        self::assertSame($expected, $this->mapper->mapMediaFields($media)->MediaRatio);
     }
 
-    public function testMediaPositionNullDefaultsToFirst(): void
+    /**
+     * @return iterable<string, array{string|null, int}>
+     */
+    public static function contentColumnsProvider(): iterable
     {
-        $media = new LegacyMediaData(['MediaPosition' => null]);
-
-        $result = $this->mapper->mapMediaFields($media);
-
-        self::assertSame('first', $result->MediaPosition);
+        yield '8 string → 8 int' => ['8', 8];
+        yield '12 string → 12 int' => ['12', 12];
+        yield 'empty string → 0' => ['', 0];
+        yield 'null → 0' => [null, 0];
+        yield '0 string → 0' => ['0', 0];
     }
 
-    public function testMediaPositionEmptyStringDefaultsToFirst(): void
+    #[DataProvider('contentColumnsProvider')]
+    public function testContentColumnsMapping(?string $input, int $expected): void
     {
-        $media = new LegacyMediaData(['MediaPosition' => '']);
+        $media = new LegacyMediaData(['ContentColumns' => $input]);
 
-        $result = $this->mapper->mapMediaFields($media);
-
-        self::assertSame('first', $result->MediaPosition);
+        self::assertSame($expected, $this->mapper->mapMediaFields($media)->ContentColumns);
     }
+
+    /**
+     * @return iterable<string, array{int, int}>
+     */
+    public static function gapSizeProvider(): iterable
+    {
+        yield '0 → 0' => [0, 0];
+        yield '2 → 1' => [2, 1];
+        yield '3 → 1' => [3, 1];
+        yield '5 → 2' => [5, 2];
+        yield '7 → 3' => [7, 3];
+        yield '9 → 3' => [9, 3];
+        yield '11 → 4' => [11, 4];
+        yield '16 → 5' => [16, 5];
+        yield '17 → 5' => [17, 5];
+        yield 'unmapped value → 0 (fallback)' => [99, 0];
+    }
+
+    #[DataProvider('gapSizeProvider')]
+    public function testGapSizeMapping(int $input, int $expected): void
+    {
+        $media = new LegacyMediaData(['ExtraColumnGap' => $input]);
+
+        self::assertSame($expected, $this->mapper->mapMediaFields($media)->GapSize);
+    }
+
+    // ─── Media field mapping: standalone tests ────────────────────────────────
 
     public function testFieldRenamesAreApplied(): void
     {
@@ -292,55 +328,6 @@ final class FieldMapperTest extends TestCase
         self::assertSame('2024-01-01', $result->VideoEmbedCreated);
     }
 
-    public function testExtraColumnGapMapsToGapSizeWithScaling(): void
-    {
-        $media7 = new LegacyMediaData(['ExtraColumnGap' => 7]);
-        $media17 = new LegacyMediaData(['ExtraColumnGap' => 17]);
-        $media0 = new LegacyMediaData(['ExtraColumnGap' => 0]);
-
-        self::assertSame(3, $this->mapper->mapMediaFields($media7)->GapSize);
-        self::assertSame(5, $this->mapper->mapMediaFields($media17)->GapSize);
-        self::assertSame(0, $this->mapper->mapMediaFields($media0)->GapSize);
-    }
-
-    public function testContentColumnsStringToInt(): void
-    {
-        $media8 = new LegacyMediaData(['ContentColumns' => '8']);
-        $mediaEmpty = new LegacyMediaData(['ContentColumns' => '']);
-        $mediaNull = new LegacyMediaData(['ContentColumns' => null]);
-
-        self::assertSame(8, $this->mapper->mapMediaFields($media8)->ContentColumns);
-        self::assertSame(0, $this->mapper->mapMediaFields($mediaEmpty)->ContentColumns);
-        self::assertSame(0, $this->mapper->mapMediaFields($mediaNull)->ContentColumns);
-    }
-
-    public function testMediaRatioEmptyStringMapsToAuto(): void
-    {
-        $media = new LegacyMediaData(['MediaRatio' => '']);
-
-        $result = $this->mapper->mapMediaFields($media);
-
-        self::assertSame('auto', $result->MediaRatio);
-    }
-
-    public function testMediaRatioNullMapsToAuto(): void
-    {
-        $media = new LegacyMediaData(['MediaRatio' => null]);
-
-        $result = $this->mapper->mapMediaFields($media);
-
-        self::assertSame('auto', $result->MediaRatio);
-    }
-
-    public function testMediaRatioValidValuePassesThrough(): void
-    {
-        $media = new LegacyMediaData(['MediaRatio' => '16x9']);
-
-        $result = $this->mapper->mapMediaFields($media);
-
-        self::assertSame('16x9', $result->MediaRatio);
-    }
-
     public function testNullAndEmptyStringBothTreatedAsNotSetForOptionalFields(): void
     {
         $mediaNull = new LegacyMediaData([
@@ -366,88 +353,41 @@ final class FieldMapperTest extends TestCase
         self::assertSame(0, $resultEmpty->ContentColumns);
     }
 
-    // ─── Grid settings: clamping ─────────────────────────────────────────────────
+    // ─── Grid settings: clamping data provider ───────────────────────────────
 
-    public function testWidthExceedingColumnCountIsClampedToColumnCount(): void
+    /**
+     * Each case: [columnCount, sizeInput, offsetInput, expectedWidth, expectedOffset].
+     *
+     * @return iterable<string, array{int, int, int, int, int}>
+     */
+    public static function clampingProvider(): iterable
     {
-        $mapper = new FieldMapper(columnCount: 12);
-        $element = LegacyElementFactory::content(overrides: [
-            'sizeFields' => ['MD' => 15],
-            'offsetFields' => ['MD' => 0],
-        ]);
-
-        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
-
-        self::assertSame(12, $settings->default->width);
+        yield 'width exceeding columns → clamped to column count' => [12, 15, 0, 12, 0];
+        yield 'width below 1 → clamped to 1' => [12, -3, 0, 1, 0];
+        yield 'negative offset → clamped to 0' => [12, 6, -2, 6, 0];
+        yield 'offset exceeding max → clamped to columns - 1' => [12, 1, 14, 1, 11];
+        yield 'width + offset overflow → offset reduced' => [12, 8, 6, 8, 4];
+        yield 'both width and offset out of range' => [12, 15, 14, 12, 0];
+        yield 'custom column count respected' => [6, 8, 0, 6, 0];
+        yield 'valid values unchanged' => [12, 8, 2, 8, 2];
     }
 
-    public function testWidthBelowOneIsClampedToOne(): void
+    /**
+     * @param positive-int $columnCount
+     */
+    #[DataProvider('clampingProvider')]
+    public function testClamping(int $columnCount, int $sizeInput, int $offsetInput, int $expectedWidth, int $expectedOffset): void
     {
-        // Width -3 is not the size=0 sentinel — it should clamp to 1
-        $mapper = new FieldMapper(columnCount: 12);
+        $mapper = new FieldMapper(columnCount: $columnCount);
         $element = LegacyElementFactory::content(overrides: [
-            'sizeFields' => ['MD' => -3],
-            'offsetFields' => ['MD' => 0],
+            'sizeFields' => ['MD' => $sizeInput],
+            'offsetFields' => ['MD' => $offsetInput],
         ]);
 
         $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
 
-        self::assertSame(1, $settings->default->width);
-    }
-
-    public function testNegativeOffsetIsClampedToZero(): void
-    {
-        $mapper = new FieldMapper(columnCount: 12);
-        $element = LegacyElementFactory::content(overrides: [
-            'sizeFields' => ['MD' => 6],
-            'offsetFields' => ['MD' => -2],
-        ]);
-
-        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
-
-        self::assertSame(0, $settings->default->offset);
-    }
-
-    public function testOffsetExceedingMaxIsClampedToColumnCountMinusOne(): void
-    {
-        $mapper = new FieldMapper(columnCount: 12);
-        $element = LegacyElementFactory::content(overrides: [
-            'sizeFields' => ['MD' => 1],
-            'offsetFields' => ['MD' => 14],
-        ]);
-
-        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
-
-        self::assertSame(11, $settings->default->offset);
-    }
-
-    public function testWidthPlusOffsetExceedingColumnCountReducesOffset(): void
-    {
-        $mapper = new FieldMapper(columnCount: 12);
-        $element = LegacyElementFactory::content(overrides: [
-            'sizeFields' => ['MD' => 8],
-            'offsetFields' => ['MD' => 6],
-        ]);
-
-        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
-
-        self::assertSame(8, $settings->default->width);
-        self::assertSame(4, $settings->default->offset);
-    }
-
-    public function testCombinedWidthAndOffsetBothClamped(): void
-    {
-        $mapper = new FieldMapper(columnCount: 12);
-        $element = LegacyElementFactory::content(overrides: [
-            'sizeFields' => ['MD' => 15],
-            'offsetFields' => ['MD' => 14],
-        ]);
-
-        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
-
-        // width clamped to 12, then offset must be 0 (12 + 0 = 12)
-        self::assertSame(12, $settings->default->width);
-        self::assertSame(0, $settings->default->offset);
+        self::assertSame($expectedWidth, $settings->default->width, 'width');
+        self::assertSame($expectedOffset, $settings->default->offset, 'offset');
     }
 
     public function testOverrideClampedIndependentlyFromDefault(): void
@@ -512,33 +452,27 @@ final class FieldMapperTest extends TestCase
         $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
     }
 
-    public function testClampingRespectsCustomColumnCount(): void
+    // ─── ClassName resolution ─────────────────────────────────────────────────
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function classNameProvider(): iterable
     {
-        $mapper = new FieldMapper(columnCount: 6);
-        $element = LegacyElementFactory::content(overrides: [
-            'sizeFields' => ['MD' => 8],
-            'offsetFields' => ['MD' => 0],
-        ]);
-
-        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
-
-        self::assertSame(6, $settings->default->width);
+        yield 'known ElementContent → ContentElement' => [
+            'DNADesign\\Elemental\\Models\\ElementContent',
+            'WeDevelop\\Grid\\Model\\ContentElement',
+        ];
+        yield 'unknown class passes through' => [
+            'My\\Custom\\Element',
+            'My\\Custom\\Element',
+        ];
     }
 
-    // ─── ClassName resolution ──────────────────────────────────────────────────
-
-    public function testKnownOldClassNameResolvesToNewClassName(): void
+    #[DataProvider('classNameProvider')]
+    public function testClassNameResolution(string $input, string $expected): void
     {
-        $result = $this->mapper->resolveClassName('DNADesign\\Elemental\\Models\\ElementContent');
-
-        self::assertSame('WeDevelop\\Grid\\Model\\ContentElement', $result);
-    }
-
-    public function testUnknownClassNamePassesThroughUnchanged(): void
-    {
-        $result = $this->mapper->resolveClassName('My\\Custom\\Element');
-
-        self::assertSame('My\\Custom\\Element', $result);
+        self::assertSame($expected, $this->mapper->resolveClassName($input));
     }
 
     public function testCustomClassNameMapOverridesDefault(): void
