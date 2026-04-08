@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Unit\Migration\Strategy;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -176,5 +177,89 @@ final class AllRowsInSectionStrategyTest extends TestCase
         $this->logger->expects(self::never())->method('warning');
 
         $this->strategy->buildHierarchy([$row1, $row2], pageId: 10, zone: 'main');
+    }
+
+    // ─── Structural data provider tests ──────────────────────────
+
+    private static int $nextId = 0;
+
+    private static function e(int $width): LegacyElement
+    {
+        $id = ++self::$nextId;
+        return LegacyElementFactory::content($id, $id, ['sizeFields' => ['MD' => $width]]);
+    }
+
+    private static function r(): LegacyElement
+    {
+        $id = ++self::$nextId;
+        return LegacyElementFactory::row($id, $id);
+    }
+
+    /**
+     * Each case: [flat element list, expected rows→column widths under the single section].
+     *
+     * AllRows always produces exactly 1 section, so the structure is rows→column widths.
+     *
+     * @return iterable<string, array{list<LegacyElement>, list<list<int>>}>
+     */
+    public static function hierarchyProvider(): iterable
+    {
+        self::$nextId = 0;
+        yield 'single row, three elements' => [
+            [self::r(), self::e(4), self::e(4), self::e(4)],
+            [[4, 4, 4]],
+        ];
+
+        self::$nextId = 0;
+        yield 'two rows, varying element counts' => [
+            [self::r(), self::e(8), self::e(4), self::r(), self::e(12)],
+            [[8, 4], [12]],
+        ];
+
+        self::$nextId = 0;
+        yield 'orphans before first row' => [
+            [self::e(8), self::e(4), self::r(), self::e(12)],
+            [[8, 4], [12]],
+        ];
+
+        self::$nextId = 0;
+        yield 'orphans only, no rows' => [
+            [self::e(6), self::e(6)],
+            [[6, 6]],
+        ];
+
+        self::$nextId = 0;
+        yield 'three rows: 3 elements, 1 element, empty' => [
+            [self::r(), self::e(4), self::e(4), self::e(4), self::r(), self::e(12), self::r()],
+            [[4, 4, 4], [12], []],
+        ];
+    }
+
+    /**
+     * @param list<LegacyElement> $elements
+     * @param list<list<int>> $expectedRows rows → column widths
+     */
+    #[DataProvider('hierarchyProvider')]
+    public function testHierarchyStructure(array $elements, array $expectedRows): void
+    {
+        $sections = $this->strategy->buildHierarchy($elements, pageId: 1, zone: 'main');
+
+        self::assertCount(1, $sections, 'AllRows always produces 1 section');
+
+        $rows = $sections[0]->rows;
+        self::assertCount(\count($expectedRows), $rows, 'Row count');
+
+        foreach ($rows as $ri => $row) {
+            $expectedWidths = $expectedRows[$ri];
+            self::assertCount(\count($expectedWidths), $row->columns, "Row {$ri}: column count");
+
+            foreach ($row->columns as $ci => $column) {
+                self::assertSame(
+                    $expectedWidths[$ci],
+                    $column->gridSettings->default->width,
+                    "Row {$ri} > Column {$ci}: width",
+                );
+            }
+        }
     }
 }
