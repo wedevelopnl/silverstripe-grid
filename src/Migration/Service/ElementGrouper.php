@@ -21,34 +21,32 @@ final class ElementGrouper
      */
     public function group(array $elements): array
     {
+        if ($elements === []) {
+            return [];
+        }
+
+        // The first element determines the initial context: if it's a row we
+        // start in that row's group, otherwise we start in an implicit group.
+        $first = $elements[0];
+        $currentRow = $first->isRow ? $first : null;
+        $currentRowData = $first->isRow ? $first->rowData : null;
+        $currentElements = $first->isRow ? [] : [$first];
+
         $groups = [];
-        $currentRow = null;
-        $currentRowData = null;
-        $currentElements = [];
-        $hasSeenRow = false;
 
-        foreach ($elements as $element) {
+        for ($i = 1, $count = \count($elements); $i < $count; $i++) {
+            $element = $elements[$i];
             if ($element->isRow) {
-                // Flush the current group when we hit a row — but only if there's
-                // something to flush (either a prior row started a group, or we
-                // accumulated implicit elements before the first row).
-                if ($hasSeenRow || $currentElements !== []) {
-                    $groups[] = ['row' => $currentRow, 'rowData' => $currentRowData, 'elements' => $currentElements];
-                }
-
+                $groups[] = ['row' => $currentRow, 'rowData' => $currentRowData, 'elements' => $currentElements];
                 $currentRow = $element;
                 $currentRowData = $element->rowData;
                 $currentElements = [];
-                $hasSeenRow = true;
             } else {
                 $currentElements[] = $element;
             }
         }
 
-        // Flush the final group (covers: implicit-only, last row's group, single row).
-        if ($hasSeenRow || $currentElements !== []) {
-            $groups[] = ['row' => $currentRow, 'rowData' => $currentRowData, 'elements' => $currentElements];
-        }
+        $groups[] = ['row' => $currentRow, 'rowData' => $currentRowData, 'elements' => $currentElements];
 
         return $groups;
     }
