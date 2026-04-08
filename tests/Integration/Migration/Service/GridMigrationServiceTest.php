@@ -737,6 +737,45 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertSame((int) $draftElement->ParentID, (int) $liveElement->ParentID);
     }
 
+    public function testLiveRowElementsAreSkippedDuringPublish(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        // Draft: row delimiter + content element
+        $this->seeder->seedElement(5800, $areaId, self::ROW_CLASS, 1);
+        $this->seeder->seedRow(5800);
+        $this->seeder->seedElement(5801, $areaId, self::CONTENT_CLASS, 2, [
+            'SizeMD' => 12,
+            'Title' => 'Content In Row',
+        ]);
+        $this->seeder->seedContentMedia(5801);
+
+        // Live: same row + content element
+        $this->seeder->seedElement(5800, $areaId, self::ROW_CLASS, 1, stage: 'live');
+        $this->seeder->seedRow(5800, stage: 'live');
+        $this->seeder->seedElement(5801, $areaId, self::CONTENT_CLASS, 2, [
+            'SizeMD' => 12,
+            'Title' => 'Content In Row',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(5801, stage: 'live');
+
+        $this->runMigration();
+
+        // Draft: content element exists in the hierarchy
+        Versioned::set_stage(Versioned::DRAFT);
+        $draftElements = GridElement::get()->filter(['ParentClass' => Column::class]);
+        self::assertCount(1, $draftElements);
+        self::assertSame('Content In Row', $draftElements->first()->Title);
+
+        // Live: only the content element is published — row element must not leak through
+        Versioned::set_stage(Versioned::LIVE);
+        $liveElements = GridElement::get()->filter(['ParentClass' => Column::class]);
+        self::assertCount(1, $liveElements);
+        self::assertSame('Content In Row', $liveElements->first()->Title);
+    }
+
     // ─── Test Group 4: Idempotency + dry-run (tests 19-21) ──────
 
     public function testRunTwiceSkipsSecondRunNoDuplicates(): void
