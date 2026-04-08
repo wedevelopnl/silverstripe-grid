@@ -385,4 +385,5 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertCount(1, $elements);
         self::assertSame('Live Element', $elements[0]->title);
     }
+
 }

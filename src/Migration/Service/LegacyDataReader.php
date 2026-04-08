@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Migration\Service;
 
+use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Extensible;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
@@ -58,50 +61,53 @@ final class LegacyDataReader
      */
     public function getEligiblePages(string $stage, ?array $pageIds = null): array
     {
-        $siteTreeTable = $this->stageTable('SiteTree', $stage);
-        $pageTable = $this->stageTable('Page', $stage);
-        $hasPageTable = $this->tableHasColumn($pageTable, 'ElementalAreaID');
+        // The old elemental extension could be applied to any SiteTree subclass
+        // (Page, HomePage, BlogPage, etc.). Discover which tables have the column
+        // using the class manifest, then query each.
+        $baseTables = $this->findPageTablesWithColumn('ElementalAreaID');
 
-        if ($hasPageTable) {
-            $sql = <<<SQL
-                SELECT
-                    s.ID AS pageId,
-                    COALESCE(p.ElementalAreaID, s.ElementalAreaID) AS areaId
-                FROM "{$siteTreeTable}" s
-                LEFT JOIN "{$pageTable}" p ON s.ID = p.ID
-                WHERE COALESCE(p.UseElementalGrid, s.UseElementalGrid) = 1
-                  AND COALESCE(p.ElementalAreaID, s.ElementalAreaID) > 0
-                SQL;
-        } else {
-            $sql = <<<SQL
-                SELECT
-                    s.ID AS pageId,
-                    s.ElementalAreaID AS areaId
-                FROM "{$siteTreeTable}" s
-                WHERE s.UseElementalGrid = 1
-                  AND s.ElementalAreaID > 0
-                SQL;
+        if ($baseTables === []) {
+            return [];
         }
 
-        $params = [];
-
-        if ($pageIds !== null && $pageIds !== []) {
-            $placeholders = \implode(', ', \array_fill(0, \count($pageIds), '?'));
-            $sql .= " AND s.ID IN ({$placeholders})";
-            $params = $pageIds;
-        }
-
-        $sql .= ' ORDER BY s.ID ASC';
-
-        $result = DB::prepared_query($sql, $params);
         $pages = [];
+        /** @var array<int, true> $seen */
+        $seen = [];
 
-        foreach ($result as $row) {
-            /** @var array<string, int|string> $row */
-            $pages[] = [
-                'pageId' => (int) $row['pageId'],
-                'areaId' => (int) $row['areaId'],
-            ];
+        foreach ($baseTables as $baseTable) {
+            $table = $this->stageTable($baseTable, $stage);
+
+            $sql = <<<SQL
+                SELECT "ID" AS pageId, "ElementalAreaID" AS areaId
+                FROM "{$table}"
+                WHERE "UseElementalGrid" = 1
+                  AND "ElementalAreaID" > 0
+                SQL;
+
+            $params = [];
+
+            if ($pageIds !== null && $pageIds !== []) {
+                $placeholders = \implode(', ', \array_fill(0, \count($pageIds), '?'));
+                $sql .= " AND \"ID\" IN ({$placeholders})";
+                $params = $pageIds;
+            }
+
+            $sql .= ' ORDER BY "ID" ASC';
+
+            $result = DB::prepared_query($sql, $params);
+
+            foreach ($result as $row) {
+                /** @var array<string, int|string> $row */
+                $id = (int) $row['pageId'];
+                if (isset($seen[$id])) {
+                    continue;
+                }
+                $seen[$id] = true;
+                $pages[] = [
+                    'pageId' => $id,
+                    'areaId' => (int) $row['areaId'],
+                ];
+            }
         }
 
         return $pages;
@@ -269,6 +275,35 @@ final class LegacyDataReader
         $columns = DB::field_list($table);
 
         return \array_key_exists($column, $columns);
+    }
+
+    /**
+     * Find page tables that have a given column.
+     *
+     * Uses the class manifest to discover all SiteTree subclass table names,
+     * then checks each for the column. Only scans page tables, not the entire database.
+     *
+     * @return list<string> Base table names (without stage suffix)
+     */
+    private function findPageTablesWithColumn(string $column): array
+    {
+        $schema = DataObject::getSchema();
+        $result = [];
+        $checked = [];
+
+        foreach (ClassInfo::subclassesFor(SiteTree::class, true) as $class) {
+            $table = $schema->tableName($class);
+            if ($table === null || isset($checked[$table])) {
+                continue;
+            }
+            $checked[$table] = true;
+
+            if ($this->tableHasColumn($table, $column)) {
+                $result[] = $table;
+            }
+        }
+
+        return $result;
     }
 
     /**

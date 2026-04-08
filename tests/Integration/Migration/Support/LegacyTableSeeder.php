@@ -307,7 +307,7 @@ final class LegacyTableSeeder
     /**
      * Remove the columns added to SiteTree (best-effort cleanup).
      */
-    private function removeSiteTreeColumns(): void
+    public function removeSiteTreeColumns(): void
     {
         $columns = DB::field_list('SiteTree');
 
@@ -318,6 +318,58 @@ final class LegacyTableSeeder
         if (\array_key_exists('ElementalAreaID', $columns)) {
             DB::query('ALTER TABLE "SiteTree" DROP COLUMN "ElementalAreaID"');
         }
+    }
+
+    /**
+     * Add UseElementalGrid and ElementalAreaID columns to the Page table.
+     *
+     * Simulates the production case where the old extension was applied to Page
+     * (or a Page subclass) rather than SiteTree.
+     */
+    public function addPageColumns(): void
+    {
+        $columns = DB::field_list('Page');
+
+        if (!\array_key_exists('UseElementalGrid', $columns)) {
+            DB::query('ALTER TABLE "Page" ADD COLUMN "UseElementalGrid" tinyint NOT NULL DEFAULT 0');
+        }
+
+        if (!\array_key_exists('ElementalAreaID', $columns)) {
+            DB::query('ALTER TABLE "Page" ADD COLUMN "ElementalAreaID" int NOT NULL DEFAULT 0');
+        }
+    }
+
+    /**
+     * Remove the columns added to the Page table.
+     */
+    public function removePageColumns(): void
+    {
+        $columns = DB::field_list('Page');
+
+        if (\array_key_exists('UseElementalGrid', $columns)) {
+            DB::query('ALTER TABLE "Page" DROP COLUMN "UseElementalGrid"');
+        }
+
+        if (\array_key_exists('ElementalAreaID', $columns)) {
+            DB::query('ALTER TABLE "Page" DROP COLUMN "ElementalAreaID"');
+        }
+    }
+
+    /**
+     * Seed eligible page data on the Page table (not SiteTree).
+     */
+    public function seedPageOnPageTable(int $pageId, int $areaId, bool $useGrid = true): void
+    {
+        DB::prepared_query(
+            'UPDATE "Page" SET "UseElementalGrid" = ?, "ElementalAreaID" = ? WHERE "ID" = ?',
+            [$useGrid ? 1 : 0, $areaId, $pageId],
+        );
+
+        // Still need the ElementalArea row
+        DB::prepared_query(
+            'INSERT INTO "ElementalArea" ("ID", "OwnerClassName") VALUES (?, ?)',
+            [$areaId, 'SilverStripe\\CMS\\Model\\SiteTree'],
+        );
     }
 
     private function stageTable(string $baseTable, string $stage): string
