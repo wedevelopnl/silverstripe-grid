@@ -69,6 +69,11 @@ final class AllRowsInSectionStrategyTest extends TestCase
         $this->strategy->buildHierarchy([$row1, $row2], pageId: 10, zone: 'main');
     }
 
+    public function testEmptyElementsReturnsNoSections(): void
+    {
+        self::assertSame([], $this->strategy->buildHierarchy([], pageId: 1, zone: 'main'));
+    }
+
     // ─── Factory helpers ─────────────────────────────────────────
 
     private static int $nextId = 0;
