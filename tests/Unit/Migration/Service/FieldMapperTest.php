@@ -364,9 +364,14 @@ final class FieldMapperTest extends TestCase
     {
         yield 'width exceeding columns → clamped to column count' => [12, 15, 0, 12, 0];
         yield 'width below 1 → clamped to 1' => [12, -3, 0, 1, 0];
+        yield 'width=0 → clamped to 1 not 0' => [12, 0, 0, 1, 0];
+        yield 'width=1 stays 1 not clamped to 2' => [12, 1, 0, 1, 0];
         yield 'negative offset → clamped to 0' => [12, 6, -2, 6, 0];
+        yield 'offset=0 stays 0 not clamped to 1' => [12, 6, 0, 6, 0];
         yield 'offset exceeding max → clamped to columns - 1' => [12, 1, 14, 1, 11];
         yield 'width + offset overflow → offset reduced' => [12, 8, 6, 8, 4];
+        yield 'width + offset exactly equals columnCount' => [12, 11, 1, 11, 1];
+        yield 'width + offset = columnCount+1 → offset reduced by 1' => [12, 11, 2, 11, 1];
         yield 'both width and offset out of range' => [12, 15, 14, 12, 0];
         yield 'custom column count respected' => [6, 8, 0, 6, 0];
         yield 'valid values unchanged' => [12, 8, 2, 8, 2];
@@ -487,5 +492,50 @@ final class FieldMapperTest extends TestCase
             'DNADesign\\Elemental\\Models\\ElementContent',
             $mapper->resolveClassName('DNADesign\\Elemental\\Models\\ElementContent'),
         );
+    }
+
+    // ─── Viewport override compound condition edge cases ─────────────────────
+
+    public function testSizeZeroWithNonZeroOffsetProducesOverride(): void
+    {
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8, 'XS' => 0],
+            'offsetFields' => ['MD' => 0, 'XS' => 1],
+        ]);
+
+        $settings = $this->mapper->mapGridSettings($element, 'MD', ['XS' => 'xs', 'SM' => 'sm', 'MD' => 'md', 'LG' => 'lg', 'XL' => 'xl']);
+
+        // size=0 but offset=1 → not "unset", override should exist
+        self::assertTrue($settings->hasOverride('xs'));
+        self::assertSame(1, $settings->getOverride('xs')?->offset);
+    }
+
+    public function testSizeZeroWithExplicitVisibilityProducesOverride(): void
+    {
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8, 'XS' => 0],
+            'offsetFields' => ['MD' => 0, 'XS' => 0],
+            'visibilityFields' => ['MD' => null, 'XS' => 'hidden'],
+        ]);
+
+        $settings = $this->mapper->mapGridSettings($element, 'MD', ['XS' => 'xs', 'SM' => 'sm', 'MD' => 'md', 'LG' => 'lg', 'XL' => 'xl']);
+
+        // size=0, offset=0, but visibility is set → not "unset", override should exist
+        self::assertTrue($settings->hasOverride('xs'));
+        self::assertFalse($settings->getOverride('xs')?->visible);
+    }
+
+    public function testSizeOneWithZeroOffsetAndNullVisibilityProducesOverrideWhenDifferentFromDefault(): void
+    {
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8, 'XS' => 1],
+            'offsetFields' => ['MD' => 0, 'XS' => 0],
+        ]);
+
+        $settings = $this->mapper->mapGridSettings($element, 'MD', ['XS' => 'xs', 'SM' => 'sm', 'MD' => 'md', 'LG' => 'lg', 'XL' => 'xl']);
+
+        // size=1 is > 0, so it's considered "set" and differs from default=8
+        self::assertTrue($settings->hasOverride('xs'));
+        self::assertSame(1, $settings->getOverride('xs')?->width);
     }
 }

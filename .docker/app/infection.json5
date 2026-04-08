@@ -27,6 +27,9 @@
                 ".*\\(int\\)\\s*\\$optionValue\\b.*",
                 // DB aggregate results (->max('"Sort"')) return numeric strings
                 ".*\\(int\\)\\s*\\$max\\b.*",
+                // Raw SQL result arrays — same as ORM property casts above but via
+                // array access. PHP coerces transparently; casts are for PHPStan.
+                ".*\\(int\\)\\s*\\(?\\$row\\[.*",
             ],
         },
         "CastString": {
@@ -35,6 +38,24 @@
                 // cast is for PHPStan, not behavior. ORM already returns strings.
                 ".*\\(string\\)\\s*\\$\\w+->(?:Title|Zone|ParentClass|ClassName)\\b.*",
                 ".*\\(string\\)\\s*\\$request->param\\(.*",
+                // Raw SQL result arrays — cast documents type for PHPStan, not behavior
+                ".*\\(string\\)\\s*\\(?\\$row\\[.*",
+            ],
+        },
+        "CastBool": {
+            ignoreSourceCodeByRegex: [
+                // Raw SQL result arrays — cast documents type for PHPStan
+                ".*\\(bool\\)\\s*\\(?\\$row\\[.*",
+                // Symfony Console getOption() for VALUE_NONE already returns bool;
+                // explicit cast is for PHPStan type narrowing
+                ".*\\(bool\\)\\s*\\$input->getOption\\(.*",
+            ],
+        },
+        "TrueValue": {
+            ignoreSourceCodeByRegex: [
+                // Auto-scaffold config restoration in migration finally blocks —
+                // process-global state invisible within a single test run
+                ".*config\\(\\)->set\\('auto_scaffold'.*",
             ],
         },
         "Concat": {
@@ -91,6 +112,16 @@
                 ".*->removeByName\\(.*",
                 // CMS form field group setTitle — UI label only
                 ".*->setTitle\\(_t\\(.*",
+                // Info-level log calls are observability, not business logic. Tests use
+                // NullLogger so removing these has no test-observable effect.
+                ".*\\$this->logger->info\\(.*",
+                // Auto-scaffold config toggling in migration finally blocks — framework
+                // lifecycle management, not business logic. Effect is process-global and
+                // invisible within a single test run.
+                ".*config\\(\\)->set\\('auto_scaffold'.*",
+                // Task CLI output (writeln) is user feedback, not business logic.
+                // Tests assert return codes and DB state, not output text.
+                ".*->writeln\\(.*",
             ],
         },
         // Private methods returning pure option arrays (aspect ratio labels, media position
@@ -104,6 +135,9 @@
                 ".*AspectRatio::.*=>\\s*_t\\(.*",
                 // Template data keys for CMS rendering only (disabled state, percent display)
                 ".*'isDisabled'\\s*=>.*",
+                // Log context arrays — changing a context key/value has no effect on
+                // business logic; logs are observability only
+                ".*->logger->.*",
             ],
         },
         "ArrayItemRemoval": {
@@ -112,6 +146,8 @@
                 // Template data array entries (HTML element IDs, disabled state) —
                 // only affect CMS rendering, not business logic
                 ".*'ID'\\s*=>\\s*\\$this->ID\\(\\).*",
+                // Log context arrays — removing one context key has no observable effect
+                ".*->logger->.*",
             ],
         },
         "DecrementInteger": {

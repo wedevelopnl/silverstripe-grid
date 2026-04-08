@@ -82,15 +82,16 @@ final class GridMigrationServiceTest extends SapphireTest
         $this->reader = new LegacyDataReader();
         $this->mapper = new FieldMapper();
         $this->logger = new class () extends NullLogger {
-            /** @var list<string> */
-            public array $errors = [];
+            /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
+            public array $messages = [];
 
-            public function error(string|\Stringable $message, array $context = []): void
+            public function log($level, string|\Stringable $message, array $context = []): void
             {
-                $this->errors[] = \strtr((string) $message, [
-                    '{pageId}' => (string) ($context['pageId'] ?? ''),
-                    '{message}' => (string) ($context['message'] ?? ''),
-                ]);
+                $this->messages[] = [
+                    'level' => (string) $level,
+                    'message' => (string) $message,
+                    'context' => $context,
+                ];
             }
         };
     }
@@ -168,6 +169,27 @@ final class GridMigrationServiceTest extends SapphireTest
     private function getPageId2(): int
     {
         return (int) $this->objFromFixture(SiteTree::class, 'test_page_2')->ID;
+    }
+
+    /**
+     * Get logged messages filtered by level, with PSR-3 placeholders interpolated.
+     *
+     * @return list<string>
+     */
+    private function getLogMessages(string $level): array
+    {
+        $result = [];
+        foreach ($this->logger->messages as $entry) {
+            if ($entry['level'] !== $level) {
+                continue;
+            }
+            $replacements = [];
+            foreach ($entry['context'] as $key => $value) {
+                $replacements['{' . $key . '}'] = (string) $value;
+            }
+            $result[] = \strtr($entry['message'], $replacements);
+        }
+        return $result;
     }
 
     private function runMigration(?GridMigrationService $service = null, ?int $pageId = null): void
@@ -791,7 +813,8 @@ final class GridMigrationServiceTest extends SapphireTest
             'Zone' => self::ZONE,
         ])->count();
 
-        // Run again
+        // Run again — should skip due to idempotency
+        $this->logger->messages = [];
         $this->runMigration();
         $secondRunCount = Section::get()->filter([
             'ParentID' => $pageId,
@@ -799,6 +822,11 @@ final class GridMigrationServiceTest extends SapphireTest
         ])->count();
 
         self::assertSame($firstRunCount, $secondRunCount);
+
+        // Verify the skip was logged
+        $infoMessages = $this->getLogMessages('info');
+        self::assertNotEmpty($infoMessages);
+        self::assertStringContainsString('already migrated', $infoMessages[0]);
     }
 
     public function testDryRunCreatesNoRecords(): void
@@ -820,6 +848,15 @@ final class GridMigrationServiceTest extends SapphireTest
             'Zone' => self::ZONE,
         ]);
         self::assertCount(0, $sections);
+
+        // Verify dry-run logged the correct hierarchy counts
+        $infoMessages = $this->getLogMessages('info');
+        self::assertNotEmpty($infoMessages);
+        $dryRunLog = $infoMessages[0];
+        self::assertStringContainsString('[DRY RUN]', $dryRunLog);
+        self::assertStringContainsString('1 section(s)', $dryRunLog);
+        self::assertStringContainsString('1 row(s)', $dryRunLog);
+        self::assertStringContainsString('2 column(s)', $dryRunLog);
     }
 
     // ─── Test Group 5: Transaction safety (test 22) ──────────────
@@ -872,8 +909,9 @@ final class GridMigrationServiceTest extends SapphireTest
             ])->count());
 
             // The error should have been logged
-            self::assertNotEmpty($this->logger->errors);
-            self::assertStringContainsString('Deliberate test failure', $this->logger->errors[0]);
+            $errors = $this->getLogMessages('error');
+            self::assertNotEmpty($errors);
+            self::assertStringContainsString('Deliberate test failure', $errors[0]);
         } finally {
             GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
         }
@@ -1123,6 +1161,11 @@ final class GridMigrationServiceTest extends SapphireTest
             'Zone' => self::ZONE,
         ]);
         self::assertCount(0, $sections);
+
+        // Verify "no elements" was logged
+        $infoMessages = $this->getLogMessages('info');
+        self::assertNotEmpty($infoMessages);
+        self::assertStringContainsString('no elements to migrate', $infoMessages[0]);
     }
 
     public function testMultipleElementTypesGetCorrectClassName(): void
@@ -1415,5 +1458,107 @@ final class GridMigrationServiceTest extends SapphireTest
             'Zone' => self::ZONE,
         ]);
         self::assertCount(0, $wrongSections, 'No sections should have ParentClass = SiteTree');
+    }
+
+    // ─── Test Group 12: Logging behaviour (tests 37-40) ─────────
+
+    public function testSuccessfulMigrationLogsSuccess(): void
+    {
+        $pageId = $this->getPageId();
+        $this->seedStandardPage($pageId);
+
+        $this->runMigration();
+
+        $infoMessages = $this->getLogMessages('info');
+        self::assertNotEmpty($infoMessages);
+        self::assertStringContainsString('Successfully migrated page', $infoMessages[0]);
+    }
+
+    public function testDryRunWithEmptyPageLogsNoElements(): void
+    {
+        $pageId = $this->getPageId();
+        $this->seeder->seedPage($pageId, 100);
+        // No elements seeded
+
+        $service = $this->createService();
+        $service->run(
+            self::DEFAULT_VIEWPORT,
+            self::ZONE,
+            self::VIEWPORT_KEY_MAP,
+            dryRun: true,
+            pageIds: [$pageId],
+        );
+
+        self::assertCount(0, Section::get());
+
+        $infoMessages = $this->getLogMessages('info');
+        self::assertNotEmpty($infoMessages);
+        self::assertStringContainsString('[DRY RUN]', $infoMessages[0]);
+        self::assertStringContainsString('no elements to migrate', $infoMessages[0]);
+    }
+
+    public function testDryRunWithMultipleRowsLogsCounts(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        // Row 1 with 1 element
+        $this->seeder->seedElement(9000, $areaId, self::ROW_CLASS, 1);
+        $this->seeder->seedRow(9000);
+        $this->seeder->seedElement(9001, $areaId, self::CONTENT_CLASS, 2, ['SizeMD' => 12]);
+        $this->seeder->seedContentMedia(9001);
+
+        // Row 2 with 2 elements
+        $this->seeder->seedElement(9010, $areaId, self::ROW_CLASS, 3);
+        $this->seeder->seedRow(9010);
+        $this->seeder->seedElement(9011, $areaId, self::CONTENT_CLASS, 4, ['SizeMD' => 6]);
+        $this->seeder->seedContentMedia(9011);
+        $this->seeder->seedElement(9012, $areaId, self::CONTENT_CLASS, 5, ['SizeMD' => 6]);
+        $this->seeder->seedContentMedia(9012);
+
+        $service = $this->createService();
+        $service->run(
+            self::DEFAULT_VIEWPORT,
+            self::ZONE,
+            self::VIEWPORT_KEY_MAP,
+            dryRun: true,
+            pageIds: [$pageId],
+        );
+
+        self::assertCount(0, Section::get());
+
+        $infoMessages = $this->getLogMessages('info');
+        self::assertNotEmpty($infoMessages);
+        $dryRunLog = $infoMessages[0];
+        self::assertStringContainsString('[DRY RUN]', $dryRunLog);
+        self::assertStringContainsString('2 section(s)', $dryRunLog);
+        self::assertStringContainsString('2 row(s)', $dryRunLog);
+        self::assertStringContainsString('3 column(s)', $dryRunLog);
+    }
+
+    public function testErrorLogIncludesPageIdAndMessage(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 100;
+
+        $this->seeder->seedPage($pageId, $areaId);
+        $this->seeder->seedElement(9100, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'FAIL_ME',
+        ]);
+        $this->seeder->seedContentMedia(9100);
+
+        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+        try {
+            $this->runMigration();
+
+            $errors = $this->getLogMessages('error');
+            self::assertCount(1, $errors);
+            self::assertStringContainsString((string) $pageId, $errors[0]);
+            self::assertStringContainsString('Deliberate test failure', $errors[0]);
+        } finally {
+            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+        }
     }
 }

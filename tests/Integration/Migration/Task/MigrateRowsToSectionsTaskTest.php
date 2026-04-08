@@ -349,4 +349,88 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
         self::assertNotNull($smOverride);
         self::assertSame(6, $smOverride->width);
     }
+
+    public function testViewportMapWithWhitespaceParsesCorrectly(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 600;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        $this->seeder->seedElement(6000, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 8,
+            'SizeXL' => 6,
+        ]);
+        $this->seeder->seedContentMedia(6000);
+
+        // Whitespace around = and , should be trimmed
+        $exitCode = $this->executeTask([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--viewport-map' => ' MD = md , XL = xl ',
+        ]);
+
+        self::assertSame(Command::SUCCESS, $exitCode);
+
+        $column = Column::get()->filter(['ParentClass' => Row::class])->first();
+        self::assertInstanceOf(Column::class, $column);
+
+        $settings = $column->getGridSettings();
+        self::assertSame(8, $settings->default->width);
+        self::assertTrue($settings->hasOverride('xl'));
+        self::assertSame(6, $settings->getOverride('xl')?->width);
+    }
+
+    public function testViewportMapSinglePairParsedCorrectly(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 700;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        $this->seeder->seedElement(7000, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 10,
+        ]);
+        $this->seeder->seedContentMedia(7000);
+
+        // Single pair without commas
+        $exitCode = $this->executeTask([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--viewport-map' => 'MD=md',
+        ]);
+
+        self::assertSame(Command::SUCCESS, $exitCode);
+
+        $column = Column::get()->filter(['ParentClass' => Row::class])->first();
+        self::assertInstanceOf(Column::class, $column);
+        self::assertSame(10, $column->getGridSettings()->default->width);
+    }
+
+    public function testViewportMapMalformedPairsAreSkipped(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 800;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        $this->seeder->seedElement(8000, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 8,
+            'SizeXL' => 6,
+        ]);
+        $this->seeder->seedContentMedia(8000);
+
+        // "BROKEN" has no = sign → should be skipped, only MD=md and XL=xl used
+        $exitCode = $this->executeTask([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--viewport-map' => 'MD=md,BROKEN,XL=xl',
+        ]);
+
+        self::assertSame(Command::SUCCESS, $exitCode);
+
+        $column = Column::get()->filter(['ParentClass' => Row::class])->first();
+        self::assertInstanceOf(Column::class, $column);
+
+        $settings = $column->getGridSettings();
+        self::assertSame(8, $settings->default->width);
+        self::assertTrue($settings->hasOverride('xl'));
+    }
 }
