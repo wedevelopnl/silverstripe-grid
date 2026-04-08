@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Unit\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Value\ContainerType;
@@ -25,7 +25,7 @@ final class GridTreeBuilderTest extends TestCase
         'icon' => 'font-icon-block',
     ];
 
-    private function makeNode(array $overrides = []): GridNode
+    private static function makeNode(array $overrides = []): GridNode
     {
         $defaults = [
             'id' => 1,
@@ -72,219 +72,354 @@ final class GridTreeBuilderTest extends TestCase
 
     // ─── collectContainersOfType ────────────────────────────────
 
-    #[Test]
-    public function collectContainersOfTypeReturnsEmptyForEmptyNodes(): void
+    /** @return iterable<string, array{list<GridNode>, ContainerType, list<array{id: int, title: string, type: string}>}> */
+    public static function collectContainersOfTypeProvider(): iterable
     {
-        self::assertSame([], GridTreeBuilder::collectContainersOfType([], ContainerType::Row));
+        yield 'empty nodes' => [
+            [],
+            ContainerType::Row,
+            [],
+        ];
+
+        yield 'no matching type' => [
+            [self::makeNode(['id' => 1, 'containerType' => ContainerType::Section, 'children' => []])],
+            ContainerType::Row,
+            [],
+        ];
+
+        yield 'leaf node without container type' => [
+            [self::makeNode(['id' => 1])],
+            ContainerType::Row,
+            [],
+        ];
+
+        yield 'match at root level' => [
+            [
+                self::makeNode(['id' => 1, 'title' => 'Section 1', 'containerType' => ContainerType::Section, 'children' => []]),
+                self::makeNode(['id' => 2, 'title' => 'Section 2', 'containerType' => ContainerType::Section, 'children' => []]),
+            ],
+            ContainerType::Section,
+            [
+                ['id' => 1, 'title' => 'Section 1', 'type' => 'section'],
+                ['id' => 2, 'title' => 'Section 2', 'type' => 'section'],
+            ],
+        ];
+
+        yield 'matches at child level' => [
+            [
+                self::makeNode([
+                    'id' => 1,
+                    'containerType' => ContainerType::Section,
+                    'children' => [
+                        self::makeNode(['id' => 2, 'title' => 'Row 1', 'containerType' => ContainerType::Row, 'children' => []]),
+                        self::makeNode(['id' => 3, 'title' => 'Row 2', 'containerType' => ContainerType::Row, 'children' => []]),
+                    ],
+                ]),
+            ],
+            ContainerType::Row,
+            [
+                ['id' => 2, 'title' => 'Row 1', 'type' => 'row'],
+                ['id' => 3, 'title' => 'Row 2', 'type' => 'row'],
+            ],
+        ];
+
+        yield 'deeply nested match' => [
+            [
+                self::makeNode([
+                    'id' => 1,
+                    'containerType' => ContainerType::Section,
+                    'children' => [
+                        self::makeNode([
+                            'id' => 3,
+                            'containerType' => ContainerType::Row,
+                            'children' => [
+                                self::makeNode(['id' => 4, 'title' => 'Column 1', 'containerType' => ContainerType::Column, 'children' => []]),
+                            ],
+                        ]),
+                    ],
+                ]),
+            ],
+            ContainerType::Column,
+            [
+                ['id' => 4, 'title' => 'Column 1', 'type' => 'column'],
+            ],
+        ];
+
+        yield 'multiple root nodes' => [
+            [
+                self::makeNode([
+                    'id' => 1,
+                    'containerType' => ContainerType::Section,
+                    'children' => [
+                        self::makeNode(['id' => 2, 'containerType' => ContainerType::Row, 'children' => []]),
+                    ],
+                ]),
+                self::makeNode([
+                    'id' => 3,
+                    'containerType' => ContainerType::Section,
+                    'children' => [
+                        self::makeNode(['id' => 4, 'containerType' => ContainerType::Row, 'children' => []]),
+                    ],
+                ]),
+            ],
+            ContainerType::Row,
+            [
+                ['id' => 2, 'title' => 'Test Node', 'type' => 'row'],
+                ['id' => 4, 'title' => 'Test Node', 'type' => 'row'],
+            ],
+        ];
+
+        // Matching node should still recurse into its children
+        yield 'match and recurse into children' => [
+            [
+                self::makeNode([
+                    'id' => 1,
+                    'title' => 'Row 1',
+                    'containerType' => ContainerType::Row,
+                    'children' => [
+                        self::makeNode([
+                            'id' => 2,
+                            'title' => 'Column 1',
+                            'containerType' => ContainerType::Column,
+                            'children' => [],
+                        ]),
+                    ],
+                ]),
+            ],
+            ContainerType::Column,
+            [
+                ['id' => 2, 'title' => 'Column 1', 'type' => 'column'],
+            ],
+        ];
+
+        yield 'mixed types at same level' => [
+            [
+                self::makeNode([
+                    'id' => 1,
+                    'containerType' => ContainerType::Row,
+                    'children' => [
+                        self::makeNode(['id' => 2, 'title' => 'Column 1', 'containerType' => ContainerType::Column, 'children' => []]),
+                        self::makeNode(['id' => 3, 'title' => 'Content']),
+                        self::makeNode(['id' => 4, 'title' => 'Column 2', 'containerType' => ContainerType::Column, 'children' => []]),
+                    ],
+                ]),
+            ],
+            ContainerType::Column,
+            [
+                ['id' => 2, 'title' => 'Column 1', 'type' => 'column'],
+                ['id' => 4, 'title' => 'Column 2', 'type' => 'column'],
+            ],
+        ];
     }
 
-    #[Test]
-    public function collectContainersOfTypeReturnsEmptyWhenNoMatch(): void
+    /** @param list<GridNode> $nodes */
+    /** @param list<array{id: int, title: string, type: string}> $expected */
+    #[DataProvider('collectContainersOfTypeProvider')]
+    public function testCollectContainersOfType(array $nodes, ContainerType $targetType, array $expected): void
     {
-        $section = $this->makeNode([
-            'id' => 1,
-            'title' => 'Section 1',
-            'containerType' => ContainerType::Section,
-            'children' => [],
-        ]);
+        $result = GridTreeBuilder::collectContainersOfType($nodes, $targetType);
 
-        self::assertSame([], GridTreeBuilder::collectContainersOfType([$section], ContainerType::Row));
-    }
+        self::assertCount(count($expected), $result);
 
-    #[Test]
-    public function collectContainersOfTypeFindsMatchingNodes(): void
-    {
-        $row1 = $this->makeNode([
-            'id' => 2,
-            'title' => 'Row 1',
-            'containerType' => ContainerType::Row,
-            'children' => [],
-        ]);
-
-        $row2 = $this->makeNode([
-            'id' => 3,
-            'title' => 'Row 2',
-            'containerType' => ContainerType::Row,
-            'children' => [],
-        ]);
-
-        $section = $this->makeNode([
-            'id' => 1,
-            'title' => 'Section 1',
-            'containerType' => ContainerType::Section,
-            'children' => [$row1, $row2],
-        ]);
-
-        $result = GridTreeBuilder::collectContainersOfType([$section], ContainerType::Row);
-
-        self::assertCount(2, $result);
-        self::assertSame(2, $result[0]['id']);
-        self::assertSame('Row 1', $result[0]['title']);
-        self::assertSame('row', $result[0]['type']);
-        self::assertSame(3, $result[1]['id']);
-    }
-
-    #[Test]
-    public function collectContainersOfTypeSearchesDeeplyNestedTree(): void
-    {
-        $column = $this->makeNode([
-            'id' => 4,
-            'title' => 'Column 1',
-            'containerType' => ContainerType::Column,
-            'children' => [],
-        ]);
-
-        $row = $this->makeNode([
-            'id' => 3,
-            'containerType' => ContainerType::Row,
-            'children' => [$column],
-        ]);
-
-        $section = $this->makeNode([
-            'id' => 1,
-            'containerType' => ContainerType::Section,
-            'children' => [$row],
-        ]);
-
-        $result = GridTreeBuilder::collectContainersOfType([$section], ContainerType::Column);
-
-        self::assertCount(1, $result);
-        self::assertSame(4, $result[0]['id']);
-        self::assertSame('column', $result[0]['type']);
-    }
-
-    #[Test]
-    public function collectContainersOfTypeCollectsAcrossMultipleRootNodes(): void
-    {
-        $row1 = $this->makeNode(['id' => 2, 'containerType' => ContainerType::Row, 'children' => []]);
-        $row2 = $this->makeNode(['id' => 4, 'containerType' => ContainerType::Row, 'children' => []]);
-        $section1 = $this->makeNode(['id' => 1, 'containerType' => ContainerType::Section, 'children' => [$row1]]);
-        $section2 = $this->makeNode(['id' => 3, 'containerType' => ContainerType::Section, 'children' => [$row2]]);
-
-        $result = GridTreeBuilder::collectContainersOfType([$section1, $section2], ContainerType::Row);
-
-        self::assertCount(2, $result);
-        self::assertSame(2, $result[0]['id']);
-        self::assertSame(4, $result[1]['id']);
+        foreach ($expected as $i => $entry) {
+            self::assertSame($entry['id'], $result[$i]['id']);
+            self::assertSame($entry['title'], $result[$i]['title']);
+            self::assertSame($entry['type'], $result[$i]['type']);
+        }
     }
 
     // ─── countOverrides ─────────────────────────────────────────
 
-    #[Test]
-    public function countOverridesReturnsEmptyForEmptyNodes(): void
+    /** @return iterable<string, array{list<GridNode>, array<string, int>}> */
+    public static function countOverridesProvider(): iterable
     {
-        self::assertSame([], GridTreeBuilder::countOverrides([]));
+        yield 'empty nodes' => [
+            [],
+            [],
+        ];
+
+        yield 'no overrides exist' => [
+            [
+                self::makeNode([
+                    'containerType' => ContainerType::Column,
+                    'gridSettings' => new GridSettings(ViewportConfig::default(12)),
+                    'children' => [],
+                ]),
+            ],
+            [],
+        ];
+
+        yield 'gridSettings with explicitly empty overrides' => [
+            [
+                self::makeNode([
+                    'containerType' => ContainerType::Column,
+                    'gridSettings' => new GridSettings(ViewportConfig::default(12), []),
+                    'children' => [],
+                ]),
+            ],
+            [],
+        ];
+
+        yield 'null grid settings' => [
+            [
+                self::makeNode([
+                    'containerType' => ContainerType::Column,
+                    'gridSettings' => null,
+                    'children' => [],
+                ]),
+            ],
+            [],
+        ];
+
+        yield 'non-column node without grid settings' => [
+            [
+                self::makeNode([
+                    'containerType' => ContainerType::Row,
+                    'children' => [
+                        self::makeNode([
+                            'containerType' => ContainerType::Column,
+                            'gridSettings' => null,
+                            'children' => [],
+                        ]),
+                    ],
+                ]),
+            ],
+            [],
+        ];
+
+        yield 'single viewport override' => [
+            [
+                self::makeNode([
+                    'id' => 2,
+                    'containerType' => ContainerType::Row,
+                    'children' => [
+                        self::makeNode([
+                            'containerType' => ContainerType::Column,
+                            'gridSettings' => new GridSettings(
+                                ViewportConfig::default(12),
+                                ['lg' => new ViewportConfig(6, 0, true)],
+                            ),
+                            'children' => [],
+                        ]),
+                    ],
+                ]),
+            ],
+            ['_total' => 1, 'lg' => 1],
+        ];
+
+        yield 'multiple viewports on same column' => [
+            [
+                self::makeNode([
+                    'containerType' => ContainerType::Column,
+                    'gridSettings' => new GridSettings(
+                        ViewportConfig::default(12),
+                        ['lg' => new ViewportConfig(6, 0, true), 'xl' => new ViewportConfig(4, 0, true)],
+                    ),
+                    'children' => [],
+                ]),
+            ],
+            ['_total' => 1, 'lg' => 1, 'xl' => 1],
+        ];
+
+        yield 'accumulates across multiple columns' => [
+            [
+                self::makeNode([
+                    'id' => 3,
+                    'containerType' => ContainerType::Row,
+                    'children' => [
+                        self::makeNode([
+                            'id' => 1,
+                            'containerType' => ContainerType::Column,
+                            'gridSettings' => new GridSettings(
+                                ViewportConfig::default(12),
+                                ['lg' => new ViewportConfig(6, 0, true)],
+                            ),
+                            'children' => [],
+                        ]),
+                        self::makeNode([
+                            'id' => 2,
+                            'containerType' => ContainerType::Column,
+                            'gridSettings' => new GridSettings(
+                                ViewportConfig::default(12),
+                                ['lg' => new ViewportConfig(4, 0, true), 'sm' => new ViewportConfig(12, 0, false)],
+                            ),
+                            'children' => [],
+                        ]),
+                    ],
+                ]),
+            ],
+            ['_total' => 2, 'lg' => 2, 'sm' => 1],
+        ];
+
+        yield 'nested tree traversal' => [
+            [
+                self::makeNode([
+                    'id' => 1,
+                    'containerType' => ContainerType::Section,
+                    'children' => [
+                        self::makeNode([
+                            'id' => 3,
+                            'containerType' => ContainerType::Row,
+                            'children' => [
+                                self::makeNode([
+                                    'id' => 4,
+                                    'containerType' => ContainerType::Column,
+                                    'gridSettings' => new GridSettings(
+                                        ViewportConfig::default(12),
+                                        ['md' => new ViewportConfig(8, 2, true)],
+                                    ),
+                                    'children' => [],
+                                ]),
+                            ],
+                        ]),
+                    ],
+                ]),
+            ],
+            ['_total' => 1, 'md' => 1],
+        ];
+
+        yield 'columns at different depths accumulate' => [
+            [
+                self::makeNode([
+                    'id' => 1,
+                    'containerType' => ContainerType::Section,
+                    'children' => [
+                        self::makeNode([
+                            'id' => 2,
+                            'containerType' => ContainerType::Row,
+                            'children' => [
+                                self::makeNode([
+                                    'id' => 3,
+                                    'containerType' => ContainerType::Column,
+                                    'gridSettings' => new GridSettings(
+                                        ViewportConfig::default(12),
+                                        ['lg' => new ViewportConfig(6, 0, true)],
+                                    ),
+                                    'children' => [],
+                                ]),
+                            ],
+                        ]),
+                    ],
+                ]),
+                self::makeNode([
+                    'id' => 5,
+                    'containerType' => ContainerType::Column,
+                    'gridSettings' => new GridSettings(
+                        ViewportConfig::default(12),
+                        ['lg' => new ViewportConfig(4, 0, true), 'xl' => new ViewportConfig(3, 0, true)],
+                    ),
+                    'children' => [],
+                ]),
+            ],
+            ['_total' => 2, 'lg' => 2, 'xl' => 1],
+        ];
     }
 
-    #[Test]
-    public function countOverridesReturnsEmptyWhenNoOverridesExist(): void
+    /** @param list<GridNode> $nodes */
+    /** @param array<string, int> $expected */
+    #[DataProvider('countOverridesProvider')]
+    public function testCountOverrides(array $nodes, array $expected): void
     {
-        $column = $this->makeNode([
-            'containerType' => ContainerType::Column,
-            'gridSettings' => new GridSettings(ViewportConfig::default(12)),
-            'children' => [],
-        ]);
-
-        self::assertSame([], GridTreeBuilder::countOverrides([$column]));
-    }
-
-    #[Test]
-    public function countOverridesCountsSingleViewportOverride(): void
-    {
-        $settings = new GridSettings(
-            ViewportConfig::default(12),
-            ['lg' => new ViewportConfig(6, 0, true)],
-        );
-
-        $column = $this->makeNode([
-            'containerType' => ContainerType::Column,
-            'gridSettings' => $settings,
-            'children' => [],
-        ]);
-
-        $row = $this->makeNode(['id' => 2, 'containerType' => ContainerType::Row, 'children' => [$column]]);
-
-        $result = GridTreeBuilder::countOverrides([$row]);
-
-        self::assertSame(1, $result['_total']);
-        self::assertSame(1, $result['lg']);
-    }
-
-    #[Test]
-    public function countOverridesCountsMultipleViewportsOnSameColumn(): void
-    {
-        $settings = new GridSettings(
-            ViewportConfig::default(12),
-            ['lg' => new ViewportConfig(6, 0, true), 'xl' => new ViewportConfig(4, 0, true)],
-        );
-
-        $column = $this->makeNode([
-            'containerType' => ContainerType::Column,
-            'gridSettings' => $settings,
-            'children' => [],
-        ]);
-
-        $result = GridTreeBuilder::countOverrides([$column]);
-
-        self::assertSame(1, $result['_total']);
-        self::assertSame(1, $result['lg']);
-        self::assertSame(1, $result['xl']);
-    }
-
-    #[Test]
-    public function countOverridesAccumulatesAcrossMultipleColumns(): void
-    {
-        $col1 = $this->makeNode([
-            'id' => 1,
-            'containerType' => ContainerType::Column,
-            'gridSettings' => new GridSettings(ViewportConfig::default(12), ['lg' => new ViewportConfig(6, 0, true)]),
-            'children' => [],
-        ]);
-
-        $col2 = $this->makeNode([
-            'id' => 2,
-            'containerType' => ContainerType::Column,
-            'gridSettings' => new GridSettings(ViewportConfig::default(12), ['lg' => new ViewportConfig(4, 0, true), 'sm' => new ViewportConfig(12, 0, false)]),
-            'children' => [],
-        ]);
-
-        $row = $this->makeNode(['id' => 3, 'containerType' => ContainerType::Row, 'children' => [$col1, $col2]]);
-
-        $result = GridTreeBuilder::countOverrides([$row]);
-
-        self::assertSame(2, $result['_total']);
-        self::assertSame(2, $result['lg']);
-        self::assertSame(1, $result['sm']);
-    }
-
-    #[Test]
-    public function countOverridesIgnoresColumnsWithNullGridSettings(): void
-    {
-        $column = $this->makeNode([
-            'containerType' => ContainerType::Column,
-            'gridSettings' => null,
-            'children' => [],
-        ]);
-
-        self::assertSame([], GridTreeBuilder::countOverrides([$column]));
-    }
-
-    #[Test]
-    public function countOverridesTraversesNestedTree(): void
-    {
-        $column = $this->makeNode([
-            'id' => 4,
-            'containerType' => ContainerType::Column,
-            'gridSettings' => new GridSettings(ViewportConfig::default(12), ['md' => new ViewportConfig(8, 2, true)]),
-            'children' => [],
-        ]);
-
-        $row = $this->makeNode(['id' => 3, 'containerType' => ContainerType::Row, 'children' => [$column]]);
-        $section = $this->makeNode(['id' => 1, 'containerType' => ContainerType::Section, 'children' => [$row]]);
-
-        $result = GridTreeBuilder::countOverrides([$section]);
-
-        self::assertSame(1, $result['_total']);
-        self::assertSame(1, $result['md']);
+        self::assertSame($expected, GridTreeBuilder::countOverrides($nodes));
     }
 }
