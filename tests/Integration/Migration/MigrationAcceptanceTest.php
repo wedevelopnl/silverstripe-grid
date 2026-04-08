@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Migration;
 
-use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DB;
@@ -33,7 +33,7 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\TestCustomElementReaderEx
  * asserts the ENTIRE resulting hierarchy — every Section, Row, Column, content
  * element, grid setting, and media field.
  */
-#[CoversClass(GridMigrationService::class)]
+#[CoversNothing]
 final class MigrationAcceptanceTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
