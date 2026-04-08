@@ -19,6 +19,8 @@ use WeDevelop\Grid\Model\Section;
 #[CoversClass(FixtureLoader::class)]
 final class FixtureLoaderTest extends SapphireTest
 {
+    protected $usesDatabase = true;
+
     protected function setUp(): void
     {
         parent::setUp();
