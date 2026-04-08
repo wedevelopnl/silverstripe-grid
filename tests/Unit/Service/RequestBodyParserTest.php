@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Unit\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 use WeDevelop\Grid\Model\ContentElement;
@@ -36,123 +37,111 @@ final class RequestBodyParserTest extends TestCase
 
     // ── parseCreateBody ─────────────────────────────────────────
 
-    public function testParseCreateBodyValid(): void
-    {
-        $result = $this->parser->parseCreateBody([
-            'containerType' => 'section',
-            'parentId' => 1,
-            'insertAfterElementID' => 5,
-            'zone' => 'sidebar',
-        ]);
+    /**
+     * @param array<string, mixed> $input
+     */
+    #[DataProvider('createBodyValidProvider')]
+    public function testParseCreateBodyValid(
+        array $input,
+        ContainerType $expectedType,
+        int $expectedParentId,
+        ?int $expectedInsertAfter,
+        string $expectedZone,
+    ): void {
+        $result = $this->parser->parseCreateBody($input);
 
         self::assertTrue($result->isOk());
 
         $request = $result->unwrap();
         self::assertInstanceOf(CreateElementRequest::class, $request);
-        self::assertSame(ContainerType::Section, $request->containerType);
-        self::assertSame(1, $request->parentId);
-        self::assertSame(5, $request->insertAfterElementID);
-        self::assertSame('sidebar', $request->zone);
+        self::assertSame($expectedType, $request->containerType);
+        self::assertSame($expectedParentId, $request->parentId);
+        self::assertSame($expectedInsertAfter, $request->insertAfterElementID);
+        self::assertSame($expectedZone, $request->zone);
     }
 
-    public function testParseCreateBodyMissingContainerType(): void
+    /**
+     * @return iterable<string, array{array<string, mixed>, ContainerType, int, ?int, string}>
+     */
+    public static function createBodyValidProvider(): iterable
     {
-        $result = $this->parser->parseCreateBody(['parentId' => 1]);
+        yield 'all fields' => [
+            ['containerType' => 'section', 'parentId' => 1, 'insertAfterElementID' => 5, 'zone' => 'sidebar'],
+            ContainerType::Section, 1, 5, 'sidebar',
+        ];
+
+        yield 'null insertAfterElementID' => [
+            ['containerType' => 'row', 'parentId' => 5, 'insertAfterElementID' => null],
+            ContainerType::Row, 5, null, 'main',
+        ];
+
+        yield 'default zone' => [
+            ['containerType' => 'column', 'parentId' => 3],
+            ContainerType::Column, 3, null, 'main',
+        ];
+
+        yield 'insertAfterElementID = 1' => [
+            ['containerType' => 'section', 'parentId' => 1, 'insertAfterElementID' => 1],
+            ContainerType::Section, 1, 1, 'main',
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     */
+    #[DataProvider('createBodyErrorProvider')]
+    public function testParseCreateBodyRejectsInvalidInput(array $input, string $expectedMessage): void
+    {
+        $result = $this->parser->parseCreateBody($input);
 
         self::assertTrue($result->isErr());
-        self::assertSame('Invalid or missing containerType.', $result->errors()[0]->message);
+        self::assertSame($expectedMessage, $result->errors()[0]->message);
     }
 
-    public function testParseCreateBodyInvalidContainerType(): void
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
+    public static function createBodyErrorProvider(): iterable
     {
-        $result = $this->parser->parseCreateBody(['containerType' => 'invalid', 'parentId' => 1]);
+        yield 'missing containerType' => [
+            ['parentId' => 1],
+            'Invalid or missing containerType.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('Invalid or missing containerType.', $result->errors()[0]->message);
-    }
+        yield 'invalid containerType' => [
+            ['containerType' => 'invalid', 'parentId' => 1],
+            'Invalid or missing containerType.',
+        ];
 
-    public function testParseCreateBodyNonIntParentId(): void
-    {
-        $result = $this->parser->parseCreateBody(['containerType' => 'section', 'parentId' => 'abc']);
+        yield 'non-string containerType' => [
+            ['containerType' => 123, 'parentId' => 1],
+            'Invalid or missing containerType.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('parentId must be a positive integer.', $result->errors()[0]->message);
-    }
+        yield 'non-int parentId' => [
+            ['containerType' => 'section', 'parentId' => 'abc'],
+            'parentId must be a positive integer.',
+        ];
 
-    public function testParseCreateBodyZeroParentId(): void
-    {
-        $result = $this->parser->parseCreateBody(['containerType' => 'section', 'parentId' => 0]);
+        yield 'zero parentId' => [
+            ['containerType' => 'section', 'parentId' => 0],
+            'parentId must be a positive integer.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('parentId must be a positive integer.', $result->errors()[0]->message);
-    }
+        yield 'non-int insertAfterElementID' => [
+            ['containerType' => 'section', 'parentId' => 1, 'insertAfterElementID' => 'abc'],
+            'insertAfterElementID must be a positive integer or null.',
+        ];
 
-    public function testParseCreateBodyInsertAfterNonInt(): void
-    {
-        $result = $this->parser->parseCreateBody([
-            'containerType' => 'section',
-            'parentId' => 1,
-            'insertAfterElementID' => 'abc',
-        ]);
+        yield 'zero insertAfterElementID' => [
+            ['containerType' => 'section', 'parentId' => 1, 'insertAfterElementID' => 0],
+            'insertAfterElementID must be a positive integer or null.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('insertAfterElementID must be a positive integer or null.', $result->errors()[0]->message);
-    }
-
-    public function testParseCreateBodyInsertAfterZero(): void
-    {
-        $result = $this->parser->parseCreateBody([
-            'containerType' => 'section',
-            'parentId' => 1,
-            'insertAfterElementID' => 0,
-        ]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('insertAfterElementID must be a positive integer or null.', $result->errors()[0]->message);
-    }
-
-    public function testParseCreateBodyInsertAfterOneIsValid(): void
-    {
-        $result = $this->parser->parseCreateBody([
-            'containerType' => 'section',
-            'parentId' => 1,
-            'insertAfterElementID' => 1,
-        ]);
-
-        self::assertTrue($result->isOk());
-        self::assertSame(1, $result->unwrap()->insertAfterElementID);
-    }
-
-    public function testParseCreateBodyNullInsertAfterAllowed(): void
-    {
-        $result = $this->parser->parseCreateBody([
-            'containerType' => 'row',
-            'parentId' => 5,
-            'insertAfterElementID' => null,
-        ]);
-
-        self::assertTrue($result->isOk());
-        self::assertNull($result->unwrap()->insertAfterElementID);
-    }
-
-    public function testParseCreateBodyDefaultZone(): void
-    {
-        $result = $this->parser->parseCreateBody(['containerType' => 'column', 'parentId' => 3]);
-
-        self::assertTrue($result->isOk());
-        self::assertSame('main', $result->unwrap()->zone);
-    }
-
-    public function testParseCreateBodyEmptyZone(): void
-    {
-        $result = $this->parser->parseCreateBody([
-            'containerType' => 'section',
-            'parentId' => 1,
-            'zone' => '',
-        ]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('zone must be a non-empty string.', $result->errors()[0]->message);
+        yield 'empty zone' => [
+            ['containerType' => 'section', 'parentId' => 1, 'zone' => ''],
+            'zone must be a non-empty string.',
+        ];
     }
 
     // ── parseCreateContentBody ──────────────────────────────────
@@ -174,68 +163,52 @@ final class RequestBodyParserTest extends TestCase
         self::assertSame(1, $request->insertAfterElementID);
     }
 
-    public function testParseCreateContentBodyNonStringClassName(): void
+    /**
+     * @param array<string, mixed> $input
+     */
+    #[DataProvider('createContentBodyErrorProvider')]
+    public function testParseCreateContentBodyRejectsInvalidInput(array $input, string $expectedMessage): void
     {
-        $result = $this->parser->parseCreateContentBody(['className' => 123, 'parentId' => 1]);
+        $result = $this->parser->parseCreateContentBody($input);
 
         self::assertTrue($result->isErr());
-        self::assertSame('className must be a string.', $result->errors()[0]->message);
+        self::assertSame($expectedMessage, $result->errors()[0]->message);
     }
 
-    public function testParseCreateContentBodyNonExistentClass(): void
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
+    public static function createContentBodyErrorProvider(): iterable
     {
-        $result = $this->parser->parseCreateContentBody([
-            'className' => 'NonExistent\\Class',
-            'parentId' => 1,
-        ]);
+        yield 'non-string className' => [
+            ['className' => 123, 'parentId' => 1],
+            'className must be a string.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('className does not refer to an existing class.', $result->errors()[0]->message);
-    }
+        yield 'non-existent class' => [
+            ['className' => 'NonExistent\\Class', 'parentId' => 1],
+            'className does not refer to an existing class.',
+        ];
 
-    public function testParseCreateContentBodyNotContentElement(): void
-    {
-        $result = $this->parser->parseCreateContentBody([
-            'className' => stdClass::class,
-            'parentId' => 1,
-        ]);
+        yield 'not a ContentElement subclass' => [
+            ['className' => stdClass::class, 'parentId' => 1],
+            'className must be a ContentElement subclass.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('className must be a ContentElement subclass.', $result->errors()[0]->message);
-    }
+        yield 'non-int parentId' => [
+            ['className' => ContentElement::class, 'parentId' => 'abc'],
+            'parentId must be a positive integer.',
+        ];
 
-    public function testParseCreateContentBodyNonIntParentId(): void
-    {
-        $result = $this->parser->parseCreateContentBody([
-            'className' => ContentElement::class,
-            'parentId' => 'abc',
-        ]);
+        yield 'zero parentId' => [
+            ['className' => ContentElement::class, 'parentId' => 0],
+            'parentId must be a positive integer.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('parentId must be a positive integer.', $result->errors()[0]->message);
-    }
-
-    public function testParseCreateContentBodyZeroParentId(): void
-    {
-        $result = $this->parser->parseCreateContentBody([
-            'className' => ContentElement::class,
-            'parentId' => 0,
-        ]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('parentId must be a positive integer.', $result->errors()[0]->message);
-    }
-
-    public function testParseCreateContentBodyInsertAfterNonInt(): void
-    {
-        $result = $this->parser->parseCreateContentBody([
-            'className' => ContentElement::class,
-            'parentId' => 1,
-            'insertAfterElementID' => 'abc',
-        ]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('insertAfterElementID must be a positive integer or null.', $result->errors()[0]->message);
+        yield 'non-int insertAfterElementID' => [
+            ['className' => ContentElement::class, 'parentId' => 1, 'insertAfterElementID' => 'abc'],
+            'insertAfterElementID must be a positive integer or null.',
+        ];
     }
 
     // ── parseReorderBody ────────────────────────────────────────
@@ -257,61 +230,47 @@ final class RequestBodyParserTest extends TestCase
         self::assertSame(1, $request->afterElementID);
     }
 
-    public function testParseReorderBodyNonIntElementId(): void
+    /**
+     * @param array<string, mixed> $input
+     */
+    #[DataProvider('reorderBodyErrorProvider')]
+    public function testParseReorderBodyRejectsInvalidInput(array $input, string $expectedMessage): void
     {
-        $result = $this->parser->parseReorderBody([
-            'elementID' => 'abc',
-            'targetParentId' => 20,
-        ]);
+        $result = $this->parser->parseReorderBody($input);
 
         self::assertTrue($result->isErr());
-        self::assertSame('elementID must be a positive integer.', $result->errors()[0]->message);
+        self::assertSame($expectedMessage, $result->errors()[0]->message);
     }
 
-    public function testParseReorderBodyZeroElementId(): void
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
+    public static function reorderBodyErrorProvider(): iterable
     {
-        $result = $this->parser->parseReorderBody([
-            'elementID' => 0,
-            'targetParentId' => 20,
-        ]);
+        yield 'non-int elementID' => [
+            ['elementID' => 'abc', 'targetParentId' => 20],
+            'elementID must be a positive integer.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('elementID must be a positive integer.', $result->errors()[0]->message);
-    }
+        yield 'zero elementID' => [
+            ['elementID' => 0, 'targetParentId' => 20],
+            'elementID must be a positive integer.',
+        ];
 
-    public function testParseReorderBodyNonIntTargetParentId(): void
-    {
-        $result = $this->parser->parseReorderBody([
-            'elementID' => 10,
-            'targetParentId' => 'abc',
-        ]);
+        yield 'non-int targetParentId' => [
+            ['elementID' => 10, 'targetParentId' => 'abc'],
+            'targetParentId must be a positive integer.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('targetParentId must be a positive integer.', $result->errors()[0]->message);
-    }
+        yield 'non-int afterElementID' => [
+            ['elementID' => 10, 'targetParentId' => 20, 'afterElementID' => 'abc'],
+            'afterElementID must be a positive integer or null.',
+        ];
 
-    public function testParseReorderBodyAfterElementIdNonInt(): void
-    {
-        $result = $this->parser->parseReorderBody([
-            'elementID' => 10,
-            'targetParentId' => 20,
-            'afterElementID' => 'abc',
-        ]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('afterElementID must be a positive integer or null.', $result->errors()[0]->message);
-    }
-
-    public function testParseReorderBodyAfterElementIdZero(): void
-    {
-        $result = $this->parser->parseReorderBody([
-            'elementID' => 10,
-            'targetParentId' => 20,
-            'afterElementID' => 0,
-        ]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('afterElementID must be a positive integer or null.', $result->errors()[0]->message);
+        yield 'zero afterElementID' => [
+            ['elementID' => 10, 'targetParentId' => 20, 'afterElementID' => 0],
+            'afterElementID must be a positive integer or null.',
+        ];
     }
 
     // ── parseUpdateGridSettingsBody ─────────────────────────────
@@ -337,88 +296,54 @@ final class RequestBodyParserTest extends TestCase
         self::assertTrue($request->visible);
     }
 
-    public function testParseUpdateGridSettingsBodyNonIntId(): void
+    /**
+     * @param array<string, mixed> $input
+     */
+    #[DataProvider('updateGridSettingsBodyErrorProvider')]
+    public function testParseUpdateGridSettingsBodyRejectsInvalidInput(array $input, string $expectedMessage): void
     {
-        $result = $this->parser->parseUpdateGridSettingsBody([
-            'id' => 'abc',
-            'viewport' => 'md',
-            'width' => 6,
-            'offset' => 0,
-            'visible' => true,
-        ]);
+        $result = $this->parser->parseUpdateGridSettingsBody($input);
 
         self::assertTrue($result->isErr());
-        self::assertSame('id must be a positive integer.', $result->errors()[0]->message);
+        self::assertSame($expectedMessage, $result->errors()[0]->message);
     }
 
-    public function testParseUpdateGridSettingsBodyZeroId(): void
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
+    public static function updateGridSettingsBodyErrorProvider(): iterable
     {
-        $result = $this->parser->parseUpdateGridSettingsBody([
-            'id' => 0,
-            'viewport' => 'md',
-            'width' => 6,
-            'offset' => 0,
-            'visible' => true,
-        ]);
+        $valid = ['id' => 1, 'viewport' => 'md', 'width' => 6, 'offset' => 0, 'visible' => true];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('id must be a positive integer.', $result->errors()[0]->message);
-    }
+        yield 'non-int id' => [
+            array_merge($valid, ['id' => 'abc']),
+            'id must be a positive integer.',
+        ];
 
-    public function testParseUpdateGridSettingsBodyInvalidViewport(): void
-    {
-        $result = $this->parser->parseUpdateGridSettingsBody([
-            'id' => 1,
-            'viewport' => 'xxl',
-            'width' => 6,
-            'offset' => 0,
-            'visible' => true,
-        ]);
+        yield 'zero id' => [
+            array_merge($valid, ['id' => 0]),
+            'id must be a positive integer.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('viewport is not a valid viewport key.', $result->errors()[0]->message);
-    }
+        yield 'invalid viewport' => [
+            array_merge($valid, ['viewport' => 'xxl']),
+            'viewport is not a valid viewport key.',
+        ];
 
-    public function testParseUpdateGridSettingsBodyNonIntWidth(): void
-    {
-        $result = $this->parser->parseUpdateGridSettingsBody([
-            'id' => 1,
-            'viewport' => 'md',
-            'width' => 'six',
-            'offset' => 0,
-            'visible' => true,
-        ]);
+        yield 'non-int width' => [
+            array_merge($valid, ['width' => 'six']),
+            'width must be an integer.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('width must be an integer.', $result->errors()[0]->message);
-    }
+        yield 'non-int offset' => [
+            array_merge($valid, ['offset' => 'two']),
+            'offset must be an integer.',
+        ];
 
-    public function testParseUpdateGridSettingsBodyNonIntOffset(): void
-    {
-        $result = $this->parser->parseUpdateGridSettingsBody([
-            'id' => 1,
-            'viewport' => 'md',
-            'width' => 6,
-            'offset' => 'two',
-            'visible' => true,
-        ]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('offset must be an integer.', $result->errors()[0]->message);
-    }
-
-    public function testParseUpdateGridSettingsBodyNonBoolVisible(): void
-    {
-        $result = $this->parser->parseUpdateGridSettingsBody([
-            'id' => 1,
-            'viewport' => 'md',
-            'width' => 6,
-            'offset' => 0,
-            'visible' => 1,
-        ]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('visible must be a boolean.', $result->errors()[0]->message);
+        yield 'non-bool visible' => [
+            array_merge($valid, ['visible' => 1]),
+            'visible must be a boolean.',
+        ];
     }
 
     // ── parseDuplicateToBody ────────────────────────────────────
@@ -442,197 +367,150 @@ final class RequestBodyParserTest extends TestCase
         self::assertSame(1, $request->targetParentId);
     }
 
-    public function testParseDuplicateToBodyNonIntId(): void
+    /**
+     * @param array<string, mixed> $input
+     */
+    #[DataProvider('duplicateToBodyErrorProvider')]
+    public function testParseDuplicateToBodyRejectsInvalidInput(array $input, string $expectedMessage): void
     {
-        $result = $this->parser->parseDuplicateToBody([
-            'id' => 'abc',
-            'targetPageId' => 10,
-            'targetZone' => 'main',
-            'targetParentId' => 15,
-        ]);
+        $result = $this->parser->parseDuplicateToBody($input);
 
         self::assertTrue($result->isErr());
-        self::assertSame('id must be a positive integer.', $result->errors()[0]->message);
+        self::assertSame($expectedMessage, $result->errors()[0]->message);
     }
 
-    public function testParseDuplicateToBodyZeroId(): void
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
+    public static function duplicateToBodyErrorProvider(): iterable
     {
-        $result = $this->parser->parseDuplicateToBody([
-            'id' => 0,
-            'targetPageId' => 10,
-            'targetZone' => 'main',
-            'targetParentId' => 15,
-        ]);
+        $valid = ['id' => 5, 'targetPageId' => 10, 'targetZone' => 'main', 'targetParentId' => 15];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('id must be a positive integer.', $result->errors()[0]->message);
-    }
+        yield 'non-int id' => [
+            array_merge($valid, ['id' => 'abc']),
+            'id must be a positive integer.',
+        ];
 
-    public function testParseDuplicateToBodyNonIntTargetPageId(): void
-    {
-        $result = $this->parser->parseDuplicateToBody([
-            'id' => 5,
-            'targetPageId' => 'abc',
-            'targetZone' => 'main',
-            'targetParentId' => 15,
-        ]);
+        yield 'zero id' => [
+            array_merge($valid, ['id' => 0]),
+            'id must be a positive integer.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('targetPageId must be a positive integer.', $result->errors()[0]->message);
-    }
+        yield 'non-int targetPageId' => [
+            array_merge($valid, ['targetPageId' => 'abc']),
+            'targetPageId must be a positive integer.',
+        ];
 
-    public function testParseDuplicateToBodyEmptyTargetZone(): void
-    {
-        $result = $this->parser->parseDuplicateToBody([
-            'id' => 5,
-            'targetPageId' => 10,
-            'targetZone' => '',
-            'targetParentId' => 15,
-        ]);
+        yield 'empty targetZone' => [
+            array_merge($valid, ['targetZone' => '']),
+            'targetZone must be a non-empty string.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('targetZone must be a non-empty string.', $result->errors()[0]->message);
-    }
+        yield 'non-int targetParentId' => [
+            array_merge($valid, ['targetParentId' => 'abc']),
+            'targetParentId must be a positive integer.',
+        ];
 
-    public function testParseDuplicateToBodyNonIntTargetParentId(): void
-    {
-        $result = $this->parser->parseDuplicateToBody([
-            'id' => 5,
-            'targetPageId' => 10,
-            'targetZone' => 'main',
-            'targetParentId' => 'abc',
-        ]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('targetParentId must be a positive integer.', $result->errors()[0]->message);
-    }
-
-    public function testParseDuplicateToBodyZeroTargetParentId(): void
-    {
-        $result = $this->parser->parseDuplicateToBody([
-            'id' => 5,
-            'targetPageId' => 10,
-            'targetZone' => 'main',
-            'targetParentId' => 0,
-        ]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('targetParentId must be a positive integer.', $result->errors()[0]->message);
+        yield 'zero targetParentId' => [
+            array_merge($valid, ['targetParentId' => 0]),
+            'targetParentId must be a positive integer.',
+        ];
     }
 
     // ── parseResetGridSettingsOverridesBody ──────────────────────
 
-    public function testParseResetValid(): void
-    {
-        $result = $this->parser->parseResetGridSettingsOverridesBody([
-            'pageId' => 1,
-            'zone' => 'main',
-            'viewport' => 'md',
-        ]);
+    /**
+     * @param array<string, mixed> $input
+     */
+    #[DataProvider('resetGridSettingsOverridesValidProvider')]
+    public function testParseResetGridSettingsOverridesBodyValid(
+        array $input,
+        int $expectedPageId,
+        string $expectedZone,
+        ?string $expectedViewport,
+    ): void {
+        $result = $this->parser->parseResetGridSettingsOverridesBody($input);
 
         self::assertTrue($result->isOk());
 
         $request = $result->unwrap();
         self::assertInstanceOf(ResetGridSettingsOverridesRequest::class, $request);
-        self::assertSame(1, $request->pageId);
-        self::assertSame('main', $request->zone);
-        self::assertSame('md', $request->viewport);
+        self::assertSame($expectedPageId, $request->pageId);
+        self::assertSame($expectedZone, $request->zone);
+        self::assertSame($expectedViewport, $request->viewport);
     }
 
-    public function testParseResetNullViewportAllowed(): void
+    /**
+     * @return iterable<string, array{array<string, mixed>, int, string, ?string}>
+     */
+    public static function resetGridSettingsOverridesValidProvider(): iterable
     {
-        $result = $this->parser->parseResetGridSettingsOverridesBody([
-            'pageId' => 1,
-            'zone' => 'main',
-            'viewport' => null,
-        ]);
+        yield 'with viewport' => [
+            ['pageId' => 1, 'zone' => 'main', 'viewport' => 'md'],
+            1, 'main', 'md',
+        ];
 
-        self::assertTrue($result->isOk());
-        self::assertNull($result->unwrap()->viewport);
+        yield 'null viewport' => [
+            ['pageId' => 1, 'zone' => 'main', 'viewport' => null],
+            1, 'main', null,
+        ];
     }
 
-    public function testParseResetNonIntPageId(): void
-    {
-        $result = $this->parser->parseResetGridSettingsOverridesBody([
-            'pageId' => 'abc',
-            'zone' => 'main',
-            'viewport' => 'md',
-        ]);
+    /**
+     * @param array<string, mixed> $input
+     */
+    #[DataProvider('resetGridSettingsOverridesErrorProvider')]
+    public function testParseResetGridSettingsOverridesBodyRejectsInvalidInput(
+        array $input,
+        string $expectedMessage,
+    ): void {
+        $result = $this->parser->parseResetGridSettingsOverridesBody($input);
 
         self::assertTrue($result->isErr());
-        self::assertSame('pageId must be a positive integer.', $result->errors()[0]->message);
+        self::assertSame($expectedMessage, $result->errors()[0]->message);
     }
 
-    public function testParseResetZeroPageId(): void
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
+    public static function resetGridSettingsOverridesErrorProvider(): iterable
     {
-        $result = $this->parser->parseResetGridSettingsOverridesBody([
-            'pageId' => 0,
-            'zone' => 'main',
-            'viewport' => 'md',
-        ]);
+        $valid = ['pageId' => 1, 'zone' => 'main', 'viewport' => 'md'];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('pageId must be a positive integer.', $result->errors()[0]->message);
-    }
+        yield 'non-int pageId' => [
+            array_merge($valid, ['pageId' => 'abc']),
+            'pageId must be a positive integer.',
+        ];
 
-    public function testParseResetNonStringZone(): void
-    {
-        $result = $this->parser->parseResetGridSettingsOverridesBody([
-            'pageId' => 1,
-            'zone' => 123,
-            'viewport' => 'md',
-        ]);
+        yield 'zero pageId' => [
+            array_merge($valid, ['pageId' => 0]),
+            'pageId must be a positive integer.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('zone must be a non-empty string.', $result->errors()[0]->message);
-    }
+        yield 'non-string zone' => [
+            array_merge($valid, ['zone' => 123]),
+            'zone must be a non-empty string.',
+        ];
 
-    public function testParseResetEmptyZone(): void
-    {
-        $result = $this->parser->parseResetGridSettingsOverridesBody([
-            'pageId' => 1,
-            'zone' => '',
-            'viewport' => 'md',
-        ]);
+        yield 'empty zone' => [
+            array_merge($valid, ['zone' => '']),
+            'zone must be a non-empty string.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('zone must be a non-empty string.', $result->errors()[0]->message);
-    }
+        yield 'non-string viewport' => [
+            array_merge($valid, ['viewport' => 123]),
+            'viewport must be a non-empty string or null.',
+        ];
 
-    public function testParseResetNonStringViewport(): void
-    {
-        $result = $this->parser->parseResetGridSettingsOverridesBody([
-            'pageId' => 1,
-            'zone' => 'main',
-            'viewport' => 123,
-        ]);
+        yield 'invalid viewport' => [
+            array_merge($valid, ['viewport' => 'xxl']),
+            'viewport is not a valid viewport key.',
+        ];
 
-        self::assertTrue($result->isErr());
-        self::assertSame('viewport must be a non-empty string or null.', $result->errors()[0]->message);
-    }
-
-    public function testParseResetInvalidViewport(): void
-    {
-        $result = $this->parser->parseResetGridSettingsOverridesBody([
-            'pageId' => 1,
-            'zone' => 'main',
-            'viewport' => 'xxl',
-        ]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('viewport is not a valid viewport key.', $result->errors()[0]->message);
-    }
-
-    public function testParseResetDefaultViewportRejected(): void
-    {
-        $result = $this->parser->parseResetGridSettingsOverridesBody([
-            'pageId' => 1,
-            'zone' => 'main',
-            'viewport' => 'xs',
-        ]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('Cannot reset the default viewport — it has no overrides.', $result->errors()[0]->message);
+        yield 'default viewport rejected' => [
+            array_merge($valid, ['viewport' => 'xs']),
+            'Cannot reset the default viewport — it has no overrides.',
+        ];
     }
 
     // ── parseElementId ──────────────────────────────────────────
@@ -645,27 +523,25 @@ final class RequestBodyParserTest extends TestCase
         self::assertSame(1, $result->unwrap());
     }
 
-    public function testParseElementIdNonInt(): void
+    /**
+     * @param array<string, mixed> $input
+     */
+    #[DataProvider('elementIdErrorProvider')]
+    public function testParseElementIdRejectsInvalidInput(array $input): void
     {
-        $result = $this->parser->parseElementId(['id' => 'abc']);
+        $result = $this->parser->parseElementId($input);
 
         self::assertTrue($result->isErr());
         self::assertSame('id must be a positive integer.', $result->errors()[0]->message);
     }
 
-    public function testParseElementIdZero(): void
+    /**
+     * @return iterable<string, array{array<string, mixed>}>
+     */
+    public static function elementIdErrorProvider(): iterable
     {
-        $result = $this->parser->parseElementId(['id' => 0]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('id must be a positive integer.', $result->errors()[0]->message);
-    }
-
-    public function testParseElementIdMissing(): void
-    {
-        $result = $this->parser->parseElementId([]);
-
-        self::assertTrue($result->isErr());
-        self::assertSame('id must be a positive integer.', $result->errors()[0]->message);
+        yield 'non-int' => [['id' => 'abc']];
+        yield 'zero' => [['id' => 0]];
+        yield 'missing' => [[]];
     }
 }
