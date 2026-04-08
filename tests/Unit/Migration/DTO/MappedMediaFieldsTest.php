@@ -59,38 +59,4 @@ final class MappedMediaFieldsTest extends TestCase
         self::assertSame('2024-01-15', $array['VideoEmbedCreated']);
     }
 
-    public function testApplyToSetsAllFieldsOnTarget(): void
-    {
-        $target = new class () {
-            /** @var array<string, mixed> */
-            public array $fields = [];
-
-            public function __set(string $name, mixed $value): void
-            {
-                $this->fields[$name] = $value;
-            }
-        };
-
-        $fields = $this->createDistinctFields();
-        $fields->applyTo($target);
-
-        self::assertCount(17, $target->fields);
-        self::assertSame(6, $target->fields['ContentColumns']);
-        self::assertSame('center', $target->fields['VerticalAlignment']);
-        self::assertSame(2, $target->fields['GapSize']);
-        self::assertSame('image', $target->fields['MediaType']);
-        self::assertSame('Test caption', $target->fields['MediaCaption']);
-        self::assertSame(42, $target->fields['MediaImageID']);
-        self::assertSame('16x9', $target->fields['MediaRatio']);
-        self::assertSame('first', $target->fields['MediaPosition']);
-        self::assertSame('https://example.com/video', $target->fields['VideoURL']);
-        self::assertSame('youtube', $target->fields['VideoProvider']);
-        self::assertTrue($target->fields['VideoHasOverlay']);
-        self::assertSame(99, $target->fields['VideoCustomThumbnailID']);
-        self::assertSame('Embed Name', $target->fields['VideoEmbedName']);
-        self::assertSame('https://embed.example.com', $target->fields['VideoEmbedURL']);
-        self::assertSame('Embed Description', $target->fields['VideoEmbedDescription']);
-        self::assertSame('https://thumb.example.com', $target->fields['VideoEmbedThumbnail']);
-        self::assertSame('2024-01-15', $target->fields['VideoEmbedCreated']);
-    }
 }

@@ -6,7 +6,10 @@ namespace WeDevelop\Grid\Migration\DTO;
 
 final readonly class MigrationSection
 {
-    /** @param list<MigrationRow> $rows */
+    /**
+     * @param positive-int $sort
+     * @param list<MigrationRow> $rows
+     */
     public function __construct(
         public string $title,
         public string $zone,

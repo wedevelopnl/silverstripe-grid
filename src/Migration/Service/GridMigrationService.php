@@ -46,6 +46,7 @@ final class GridMigrationService
      * @param array<string, string> $viewportKeyMap Old viewport key → new key (e.g. 'MD' → 'md')
      * @param bool $dryRun When true, log what would be created without writing
      * @param list<int>|null $pageIds Optional filter to restrict to specific pages
+     * @return int<0, max> Number of pages that failed to migrate
      */
     public function run(
         string $defaultViewport,
@@ -53,8 +54,9 @@ final class GridMigrationService
         array $viewportKeyMap,
         bool $dryRun = false,
         ?array $pageIds = null,
-    ): void {
+    ): int {
         $eligiblePages = $this->reader->getEligiblePages('draft', $pageIds);
+        $failures = 0;
 
         foreach ($eligiblePages as $pageInfo) {
             $pageId = $pageInfo['pageId'];
@@ -64,12 +66,15 @@ final class GridMigrationService
             try {
                 $this->migratePage($pageId, $areaId, $pageClassName, $defaultViewport, $zone, $viewportKeyMap, $dryRun);
             } catch (\Throwable $exception) {
+                $failures++;
                 $this->logger->error('Migration failed for page {pageId}: {message}', [
                     'pageId' => $pageId,
                     'message' => $exception->getMessage(),
                 ]);
             }
         }
+
+        return $failures;
     }
 
     /**
@@ -122,6 +127,9 @@ final class GridMigrationService
 
         // Steps 6-8: Transaction-wrapped write
         $conn = DB::get_conn();
+        if ($conn === null) {
+            throw new \RuntimeException('No database connection available for migration.');
+        }
         $conn->transactionStart();
 
         try {
@@ -318,6 +326,15 @@ final class GridMigrationService
         $oldClassName = $legacyElement->className;
         $this->extend('updateClassNameMapping', $newClassName, $oldClassName);
 
+        if (!\is_a($newClassName, GridElement::class, true)) {
+            throw new \RuntimeException(\sprintf(
+                'Resolved class "%s" (from legacy "%s") does not extend %s.',
+                $newClassName,
+                $oldClassName,
+                GridElement::class,
+            ));
+        }
+
         /** @var GridElement $newElement */
         $newElement = $newClassName::create();
 
@@ -338,7 +355,9 @@ final class GridMigrationService
                 $newElement->HTML = $html;
             }
 
-            $this->mapper->mapMediaFields($legacyElement->mediaData)->applyTo($newElement);
+            foreach ($this->mapper->mapMediaFields($legacyElement->mediaData)->toArray() as $field => $value) {
+                $newElement->__set($field, $value);
+            }
         }
 
         $this->extend('updateElementFieldMapping', $newElement, $legacyElement);
@@ -499,6 +518,7 @@ final class GridMigrationService
             $liveFields[$field] = $value;
         }
 
+        // Field names are compile-time constants from MappedMediaFields::toArray(), not user input.
         $setClauses = [];
         $params = [];
         foreach ($liveFields as $field => $value) {

@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Migration\DTO;
 final readonly class LegacyElement
 {
     /**
+     * @param positive-int $id
      * @param array<string, int> $sizeFields       e.g. ['XS' => 0, 'SM' => 0, 'MD' => 8, ...]
      * @param array<string, int> $offsetFields      e.g. ['XS' => 0, 'SM' => 0, 'MD' => 2, ...]
      * @param array<string, ?string> $visibilityFields e.g. ['XS' => 'hidden', 'MD' => 'visible', ...]

@@ -8,6 +8,7 @@ use WeDevelop\Grid\Value\GridSettings;
 
 final readonly class MigrationColumn
 {
+    /** @param positive-int $sort */
     public function __construct(
         public GridSettings $gridSettings,
         public int $sort,

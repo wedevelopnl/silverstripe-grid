@@ -32,21 +32,6 @@ final readonly class MappedMediaFields
     ) {}
 
     /**
-     * Apply all mapped field values to a target object.
-     *
-     * Uses dynamic property assignment — the target must accept the field
-     * names defined by this DTO (e.g. SilverStripe DataObjects via __set).
-     */
-    public function applyTo(object $target): void
-    {
-        assert(\method_exists($target, '__set'), 'Target must support dynamic property assignment (__set)');
-
-        foreach ($this->toArray() as $field => $value) {
-            $target->__set($field, $value);
-        }
-    }
-
-    /**
      * Field name → value pairs keyed by DB column name.
      *
      * @return array{

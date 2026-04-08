@@ -160,6 +160,7 @@ final class LegacyDataReader
 
         foreach ($result as $row) {
             /** @var array<string, int|string|null> $row */
+            /** @var positive-int $elementId */
             $elementId = (int) $row['ID'];
             $className = (string) ($row['ClassName'] ?? '');
             $isRow = $className === self::ROW_CLASS_NAME;
