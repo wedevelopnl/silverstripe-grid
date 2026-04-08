@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Migration\Service;
 
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
+use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
 
@@ -45,18 +46,6 @@ final class FieldMapper
         11 => 4,
         16 => 5,
         17 => 5,
-    ];
-
-    private const array FIELD_RENAME_MAP = [
-        'MediaVideoFullURL' => 'VideoURL',
-        'MediaVideoProvider' => 'VideoProvider',
-        'MediaVideoHasOverlay' => 'VideoHasOverlay',
-        'MediaVideoCustomThumbnailID' => 'VideoCustomThumbnailID',
-        'MediaVideoEmbeddedName' => 'VideoEmbedName',
-        'MediaVideoEmbeddedURL' => 'VideoEmbedURL',
-        'MediaVideoEmbeddedDescription' => 'VideoEmbedDescription',
-        'MediaVideoEmbeddedThumbnail' => 'VideoEmbedThumbnail',
-        'MediaVideoEmbeddedCreated' => 'VideoEmbedCreated',
     ];
 
     /** Ordered list of old viewport keys the mapper iterates over for overrides. */
@@ -154,53 +143,52 @@ final class FieldMapper
      *
      * Handles field renames, value transformations (CSS class → enum string,
      * scale mapping, string→int coercion), and null/empty normalisation.
-     *
-     * @return array<string, mixed>
      */
-    public function mapMediaFields(LegacyMediaData $mediaData): array
+    public function mapMediaFields(LegacyMediaData $mediaData): MappedMediaFields
     {
         $fields = $mediaData->fields;
-        $mapped = [];
-
-        // Renamed fields — old names are dropped, new names take their values
-        foreach (self::FIELD_RENAME_MAP as $old => $new) {
-            if (\array_key_exists($old, $fields)) {
-                $mapped[$new] = $fields[$old];
-            }
-        }
-
-        // Pass-through fields (same name in old and new)
-        foreach (['MediaType', 'MediaCaption', 'MediaImageID', 'MediaRatio'] as $field) {
-            if (\array_key_exists($field, $fields)) {
-                $mapped[$field] = $fields[$field];
-            }
-        }
 
         // MediaRatio: '' or null → 'auto'
-        $ratio = $mapped['MediaRatio'] ?? null;
-        $mapped['MediaRatio'] = ($ratio === '' || $ratio === null) ? 'auto' : $ratio;
+        /** @var string|null $ratio */
+        $ratio = $fields['MediaRatio'] ?? null;
 
-        // ContentVerticalAlign CSS class → enum value; missing/unknown keys fall back to 'top'
+        // ContentVerticalAlign CSS class → enum value
         /** @var string $align */
         $align = $fields['ContentVerticalAlign'] ?? '';
-        $mapped['VerticalAlignment'] = $this->verticalAlignMap[$align] ?? 'top';
 
-        // MediaPosition CSS class → enum value; null/empty fall back to 'first'
+        // MediaPosition CSS class → enum value
         /** @var string $position */
         $position = $fields['MediaPosition'] ?? '';
-        $mapped['MediaPosition'] = $this->mediaPositionMap[$position] ?? 'first';
 
-        // ContentColumns Varchar → int; '' or null → 0
+        // ContentColumns Varchar → int
         /** @var string|null $cols */
         $cols = $fields['ContentColumns'] ?? '';
-        $mapped['ContentColumns'] = ($cols === '' || $cols === null) ? 0 : (int) $cols;
 
-        // ExtraColumnGap → GapSize using a discrete scale mapping
+        // ExtraColumnGap → GapSize using discrete scale mapping
         /** @var int $gap */
         $gap = $fields['ExtraColumnGap'] ?? 0;
-        $mapped['GapSize'] = $this->gapSizeMap[$gap] ?? 0;
 
-        return $mapped;
+        /** @var array<string, string|int|bool|null> $fields */
+
+        return new MappedMediaFields(
+            ContentColumns: ($cols === '' || $cols === null) ? 0 : (int) $cols,
+            VerticalAlignment: $this->verticalAlignMap[$align] ?? 'top',
+            GapSize: $this->gapSizeMap[$gap] ?? 0,
+            MediaType: (string) ($fields['MediaType'] ?? ''),
+            MediaCaption: (string) ($fields['MediaCaption'] ?? ''),
+            MediaImageID: (int) ($fields['MediaImageID'] ?? 0),
+            MediaRatio: ($ratio === '' || $ratio === null) ? 'auto' : (string) $ratio,
+            MediaPosition: $this->mediaPositionMap[$position] ?? 'first',
+            VideoURL: (string) ($fields['MediaVideoFullURL'] ?? ''),
+            VideoProvider: (string) ($fields['MediaVideoProvider'] ?? ''),
+            VideoHasOverlay: (bool) ($fields['MediaVideoHasOverlay'] ?? false),
+            VideoCustomThumbnailID: (int) ($fields['MediaVideoCustomThumbnailID'] ?? 0),
+            VideoEmbedName: (string) ($fields['MediaVideoEmbeddedName'] ?? ''),
+            VideoEmbedURL: (string) ($fields['MediaVideoEmbeddedURL'] ?? ''),
+            VideoEmbedDescription: (string) ($fields['MediaVideoEmbeddedDescription'] ?? ''),
+            VideoEmbedThumbnail: (string) ($fields['MediaVideoEmbeddedThumbnail'] ?? ''),
+            VideoEmbedCreated: (string) ($fields['MediaVideoEmbeddedCreated'] ?? ''),
+        );
     }
 
     /**

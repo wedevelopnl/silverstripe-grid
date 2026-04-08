@@ -328,10 +328,7 @@ final class GridMigrationService
                 $newElement->HTML = $html;
             }
 
-            $mappedFields = $this->mapper->mapMediaFields($legacyElement->mediaData);
-            foreach ($mappedFields as $field => $value) {
-                $newElement->$field = $value;
-            }
+            $this->mapper->mapMediaFields($legacyElement->mediaData)->applyTo($newElement);
         }
 
         $this->extend('updateElementFieldMapping', $newElement, $legacyElement);
@@ -485,17 +482,13 @@ final class GridMigrationService
         }
 
         $mappedMedia = $this->mapper->mapMediaFields($liveElement->mediaData);
-        foreach ($mappedMedia as $field => $value) {
+        foreach ($mappedMedia->toArray() as $field => $value) {
             $liveFields[$field] = $value;
         }
 
         $setClauses = [];
         $params = [];
         foreach ($liveFields as $field => $value) {
-            // Guard against column name injection — only allow alphanumeric + underscore
-            if (\preg_match('/^[A-Za-z_]+$/', $field) !== 1) {
-                continue;
-            }
             $setClauses[] = \sprintf('"%s" = ?', $field);
             $params[] = $value;
         }

@@ -8,12 +8,14 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
+use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 
 #[CoversClass(FieldMapper::class)]
 #[CoversClass(LegacyElement::class)]
 #[CoversClass(LegacyMediaData::class)]
+#[CoversClass(MappedMediaFields::class)]
 final class FieldMapperTest extends TestCase
 {
     private FieldMapper $mapper;
@@ -196,7 +198,7 @@ final class FieldMapperTest extends TestCase
 
         $result = $this->mapper->mapMediaFields($media);
 
-        self::assertSame('center', $result['VerticalAlignment']);
+        self::assertSame('center', $result->VerticalAlignment);
     }
 
     public function testContentVerticalAlignEmptyMapsToTop(): void
@@ -205,7 +207,7 @@ final class FieldMapperTest extends TestCase
 
         $result = $this->mapper->mapMediaFields($media);
 
-        self::assertSame('top', $result['VerticalAlignment']);
+        self::assertSame('top', $result->VerticalAlignment);
     }
 
     public function testContentVerticalAlignEndClassMapsToBottom(): void
@@ -214,7 +216,7 @@ final class FieldMapperTest extends TestCase
 
         $result = $this->mapper->mapMediaFields($media);
 
-        self::assertSame('bottom', $result['VerticalAlignment']);
+        self::assertSame('bottom', $result->VerticalAlignment);
     }
 
     public function testMediaPositionOrder1MapsToFirst(): void
@@ -223,7 +225,7 @@ final class FieldMapperTest extends TestCase
 
         $result = $this->mapper->mapMediaFields($media);
 
-        self::assertSame('first', $result['MediaPosition']);
+        self::assertSame('first', $result->MediaPosition);
     }
 
     public function testMediaPositionOrder2MapsToLast(): void
@@ -232,7 +234,7 @@ final class FieldMapperTest extends TestCase
 
         $result = $this->mapper->mapMediaFields($media);
 
-        self::assertSame('last', $result['MediaPosition']);
+        self::assertSame('last', $result->MediaPosition);
     }
 
     public function testMediaPositionResponsiveClassMapsToLastOnDesktop(): void
@@ -241,7 +243,7 @@ final class FieldMapperTest extends TestCase
 
         $result = $this->mapper->mapMediaFields($media);
 
-        self::assertSame('last-on-desktop', $result['MediaPosition']);
+        self::assertSame('last-on-desktop', $result->MediaPosition);
     }
 
     public function testMediaPositionNullDefaultsToFirst(): void
@@ -250,7 +252,7 @@ final class FieldMapperTest extends TestCase
 
         $result = $this->mapper->mapMediaFields($media);
 
-        self::assertSame('first', $result['MediaPosition']);
+        self::assertSame('first', $result->MediaPosition);
     }
 
     public function testMediaPositionEmptyStringDefaultsToFirst(): void
@@ -259,7 +261,7 @@ final class FieldMapperTest extends TestCase
 
         $result = $this->mapper->mapMediaFields($media);
 
-        self::assertSame('first', $result['MediaPosition']);
+        self::assertSame('first', $result->MediaPosition);
     }
 
     public function testFieldRenamesAreApplied(): void
@@ -278,19 +280,15 @@ final class FieldMapperTest extends TestCase
 
         $result = $this->mapper->mapMediaFields($media);
 
-        self::assertSame('https://example.com/video.mp4', $result['VideoURL']);
-        self::assertSame('youtube', $result['VideoProvider']);
-        self::assertTrue($result['VideoHasOverlay']);
-        self::assertSame(42, $result['VideoCustomThumbnailID']);
-        self::assertSame('My Video', $result['VideoEmbedName']);
-        self::assertSame('https://youtube.com/embed/abc', $result['VideoEmbedURL']);
-        self::assertSame('A video', $result['VideoEmbedDescription']);
-        self::assertSame('https://img.youtube.com/abc.jpg', $result['VideoEmbedThumbnail']);
-        self::assertSame('2024-01-01', $result['VideoEmbedCreated']);
-
-        // Old names should not appear in output
-        self::assertArrayNotHasKey('MediaVideoFullURL', $result);
-        self::assertArrayNotHasKey('MediaVideoProvider', $result);
+        self::assertSame('https://example.com/video.mp4', $result->VideoURL);
+        self::assertSame('youtube', $result->VideoProvider);
+        self::assertTrue($result->VideoHasOverlay);
+        self::assertSame(42, $result->VideoCustomThumbnailID);
+        self::assertSame('My Video', $result->VideoEmbedName);
+        self::assertSame('https://youtube.com/embed/abc', $result->VideoEmbedURL);
+        self::assertSame('A video', $result->VideoEmbedDescription);
+        self::assertSame('https://img.youtube.com/abc.jpg', $result->VideoEmbedThumbnail);
+        self::assertSame('2024-01-01', $result->VideoEmbedCreated);
     }
 
     public function testExtraColumnGapMapsToGapSizeWithScaling(): void
@@ -299,9 +297,9 @@ final class FieldMapperTest extends TestCase
         $media17 = new LegacyMediaData(['ExtraColumnGap' => 17]);
         $media0 = new LegacyMediaData(['ExtraColumnGap' => 0]);
 
-        self::assertSame(3, $this->mapper->mapMediaFields($media7)['GapSize']);
-        self::assertSame(5, $this->mapper->mapMediaFields($media17)['GapSize']);
-        self::assertSame(0, $this->mapper->mapMediaFields($media0)['GapSize']);
+        self::assertSame(3, $this->mapper->mapMediaFields($media7)->GapSize);
+        self::assertSame(5, $this->mapper->mapMediaFields($media17)->GapSize);
+        self::assertSame(0, $this->mapper->mapMediaFields($media0)->GapSize);
     }
 
     public function testContentColumnsStringToInt(): void
@@ -310,9 +308,9 @@ final class FieldMapperTest extends TestCase
         $mediaEmpty = new LegacyMediaData(['ContentColumns' => '']);
         $mediaNull = new LegacyMediaData(['ContentColumns' => null]);
 
-        self::assertSame(8, $this->mapper->mapMediaFields($media8)['ContentColumns']);
-        self::assertSame(0, $this->mapper->mapMediaFields($mediaEmpty)['ContentColumns']);
-        self::assertSame(0, $this->mapper->mapMediaFields($mediaNull)['ContentColumns']);
+        self::assertSame(8, $this->mapper->mapMediaFields($media8)->ContentColumns);
+        self::assertSame(0, $this->mapper->mapMediaFields($mediaEmpty)->ContentColumns);
+        self::assertSame(0, $this->mapper->mapMediaFields($mediaNull)->ContentColumns);
     }
 
     public function testMediaRatioEmptyStringMapsToAuto(): void
@@ -321,7 +319,7 @@ final class FieldMapperTest extends TestCase
 
         $result = $this->mapper->mapMediaFields($media);
 
-        self::assertSame('auto', $result['MediaRatio']);
+        self::assertSame('auto', $result->MediaRatio);
     }
 
     public function testMediaRatioNullMapsToAuto(): void
@@ -330,7 +328,7 @@ final class FieldMapperTest extends TestCase
 
         $result = $this->mapper->mapMediaFields($media);
 
-        self::assertSame('auto', $result['MediaRatio']);
+        self::assertSame('auto', $result->MediaRatio);
     }
 
     public function testMediaRatioValidValuePassesThrough(): void
@@ -339,7 +337,7 @@ final class FieldMapperTest extends TestCase
 
         $result = $this->mapper->mapMediaFields($media);
 
-        self::assertSame('16x9', $result['MediaRatio']);
+        self::assertSame('16x9', $result->MediaRatio);
     }
 
     public function testNullAndEmptyStringBothTreatedAsNotSetForOptionalFields(): void
@@ -358,13 +356,13 @@ final class FieldMapperTest extends TestCase
         $resultNull = $this->mapper->mapMediaFields($mediaNull);
         $resultEmpty = $this->mapper->mapMediaFields($mediaEmpty);
 
-        self::assertSame('first', $resultNull['MediaPosition']);
-        self::assertSame('auto', $resultNull['MediaRatio']);
-        self::assertSame(0, $resultNull['ContentColumns']);
+        self::assertSame('first', $resultNull->MediaPosition);
+        self::assertSame('auto', $resultNull->MediaRatio);
+        self::assertSame(0, $resultNull->ContentColumns);
 
-        self::assertSame('first', $resultEmpty['MediaPosition']);
-        self::assertSame('auto', $resultEmpty['MediaRatio']);
-        self::assertSame(0, $resultEmpty['ContentColumns']);
+        self::assertSame('first', $resultEmpty->MediaPosition);
+        self::assertSame('auto', $resultEmpty->MediaRatio);
+        self::assertSame(0, $resultEmpty->ContentColumns);
     }
 
     // ─── ClassName resolution ──────────────────────────────────────────────────
