@@ -59,6 +59,29 @@ final readonly class GridSettings
         return $this->overrides[$viewport] ?? $this->default;
     }
 
+    /**
+     * Two GridSettings are equal when their defaults match, they have
+     * the same override keys, and every override value matches.
+     */
+    public function equals(self $other): bool
+    {
+        if (!$this->default->equals($other->default)) {
+            return false;
+        }
+
+        if (\count($this->overrides) !== \count($other->overrides)) {
+            return false;
+        }
+
+        foreach ($this->overrides as $key => $config) {
+            if (!isset($other->overrides[$key]) || !$config->equals($other->overrides[$key])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     // ─── Immutable updates ─────────────────────────────────────
 
     public function withDefault(ViewportConfig $config): self

@@ -16,11 +16,13 @@ use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
+use WeDevelop\Grid\Value\GridSettings;
 
 #[CoversClass(RowPerSectionStrategy::class)]
 #[CoversClass(MigrationSection::class)]
 #[CoversClass(MigrationRow::class)]
 #[CoversClass(MigrationColumn::class)]
+#[CoversClass(GridSettings::class)]
 final class RowPerSectionStrategyTest extends TestCase
 {
     private RowPerSectionStrategy $strategy;
@@ -39,12 +41,25 @@ final class RowPerSectionStrategyTest extends TestCase
 
     private static int $nextId = 0;
 
-    private static function e(int $width, int $offset = 0): LegacyElement
-    {
+    /**
+     * Content element with only default-viewport grid settings.
+     *
+     * @param array<string, int> $sizeFields    Override size fields (default: ['MD' => $width])
+     * @param array<string, int> $offsetFields   Override offset fields (default: ['MD' => $offset])
+     * @param array<string, ?string> $visibilityFields Override visibility fields
+     */
+    private static function e(
+        int $width,
+        int $offset = 0,
+        array $sizeFields = [],
+        array $offsetFields = [],
+        array $visibilityFields = [],
+    ): LegacyElement {
         $id = ++self::$nextId;
         return LegacyElementFactory::content($id, $id, [
-            'sizeFields' => ['MD' => $width],
-            'offsetFields' => ['MD' => $offset],
+            'sizeFields' => $sizeFields !== [] ? $sizeFields : ['MD' => $width],
+            'offsetFields' => $offsetFields !== [] ? $offsetFields : ['MD' => $offset],
+            'visibilityFields' => $visibilityFields,
         ]);
     }
 
@@ -74,13 +89,13 @@ final class RowPerSectionStrategyTest extends TestCase
     /**
      * Each case yields: [elements, zone, expected sections].
      *
-     * Expected column shape: ['w' => width, 'o' => offset].
-     * Offset defaults to 0 if omitted.
+     * Expected column shape: ['w' => width, 'o' => offset, 'n' => element count].
+     * Offset defaults to 0 and element count defaults to 1 if omitted.
      *
      * Sort values are deterministic and asserted automatically:
      * section sort = index+1, row sort = always 1, column sort = index+1.
      *
-     * @return iterable<string, array{list<LegacyElement>, string, list<array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int}>}>}>}>
+     * @return iterable<string, array{list<LegacyElement>, string, list<array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int, n?: int}>}>}>}>
      */
     public static function hierarchyProvider(): iterable
     {
@@ -94,10 +109,10 @@ final class RowPerSectionStrategyTest extends TestCase
         ];
 
         self::$nextId = 0;
-        yield 'single row, three elements' => [
+        yield 'single row, three elements with same width are grouped' => [
             [self::r(), self::e(4), self::e(4), self::e(4)],
             'main',
-            [['rows' => [['columns' => [['w' => 4], ['w' => 4], ['w' => 4]]]]]],
+            [['rows' => [['columns' => [['w' => 4, 'n' => 3]]]]]],
         ];
 
         self::$nextId = 0;
@@ -111,18 +126,18 @@ final class RowPerSectionStrategyTest extends TestCase
         ];
 
         self::$nextId = 0;
-        yield 'orphans only, no rows' => [
+        yield 'orphans with same width are grouped' => [
             [self::e(6), self::e(6)],
             'main',
-            [['rows' => [['columns' => [['w' => 6], ['w' => 6]]]]]],
+            [['rows' => [['columns' => [['w' => 6, 'n' => 2]]]]]],
         ];
 
         self::$nextId = 0;
-        yield 'three rows: 3 elements, 1 element, empty' => [
+        yield 'three rows: 3 same elements grouped, 1 element, empty' => [
             [self::r(), self::e(4), self::e(4), self::e(4), self::r(), self::e(12), self::r()],
             'main',
             [
-                ['rows' => [['columns' => [['w' => 4], ['w' => 4], ['w' => 4]]]]],
+                ['rows' => [['columns' => [['w' => 4, 'n' => 3]]]]],
                 ['rows' => [['columns' => [['w' => 12]]]]],
                 ['rows' => [['columns' => []]]],
             ],
@@ -134,7 +149,7 @@ final class RowPerSectionStrategyTest extends TestCase
             'main',
             [
                 ['rows' => [['columns' => []]]],
-                ['rows' => [['columns' => [['w' => 6], ['w' => 6]]]]],
+                ['rows' => [['columns' => [['w' => 6, 'n' => 2]]]]],
             ],
         ];
 
@@ -144,7 +159,7 @@ final class RowPerSectionStrategyTest extends TestCase
             'main',
             [
                 ['rows' => [['columns' => [['w' => 3]]]]],
-                ['rows' => [['columns' => [['w' => 6], ['w' => 3], ['w' => 3]]]]],
+                ['rows' => [['columns' => [['w' => 6], ['w' => 3, 'n' => 2]]]]],
             ],
         ];
 
@@ -163,7 +178,7 @@ final class RowPerSectionStrategyTest extends TestCase
             'main',
             [
                 ['rows' => [['columns' => [['w' => 6, 'o' => 3]]]]],
-                ['rows' => [['columns' => [['w' => 4, 'o' => 1], ['w' => 4, 'o' => 1]]]]],
+                ['rows' => [['columns' => [['w' => 4, 'o' => 1, 'n' => 2]]]]],
             ],
         ];
 
@@ -227,11 +242,65 @@ final class RowPerSectionStrategyTest extends TestCase
                 ['rows' => [['columns' => []]]],
             ],
         ];
+
+        // ── Grouping cases ───────────────────────────────────────
+
+        self::$nextId = 0;
+        yield 'alternating widths prevent grouping' => [
+            [self::r(), self::e(6), self::e(4), self::e(6), self::e(4)],
+            'main',
+            [['rows' => [['columns' => [['w' => 6], ['w' => 4], ['w' => 6], ['w' => 4]]]]]],
+        ];
+
+        self::$nextId = 0;
+        yield 'same width different offset prevents grouping' => [
+            [self::r(), self::e(6, 0), self::e(6, 3)],
+            'main',
+            [['rows' => [['columns' => [['w' => 6], ['w' => 6, 'o' => 3]]]]]],
+        ];
+
+        self::$nextId = 0;
+        yield 'viewport override difference prevents grouping' => [
+            [
+                self::r(),
+                self::e(6, 0, ['MD' => 6], ['MD' => 0]),
+                self::e(6, 0, ['MD' => 6, 'SM' => 12], ['MD' => 0, 'SM' => 0]),
+                self::e(6, 0, ['MD' => 6], ['MD' => 0]),
+            ],
+            'main',
+            [['rows' => [['columns' => [['w' => 6], ['w' => 6], ['w' => 6]]]]]],
+        ];
+
+        self::$nextId = 0;
+        yield 'visibility override difference prevents grouping' => [
+            [
+                self::r(),
+                self::e(6, 0, ['MD' => 6], ['MD' => 0], []),
+                self::e(6, 0, ['MD' => 6], ['MD' => 0], ['SM' => 'hidden']),
+                self::e(6, 0, ['MD' => 6], ['MD' => 0], []),
+            ],
+            'main',
+            [['rows' => [['columns' => [['w' => 6], ['w' => 6], ['w' => 6]]]]]],
+        ];
+
+        self::$nextId = 0;
+        yield 'consecutive same then different then same splits correctly' => [
+            [self::r(), self::e(6), self::e(6), self::e(4), self::e(6), self::e(6)],
+            'main',
+            [['rows' => [['columns' => [['w' => 6, 'n' => 2], ['w' => 4], ['w' => 6, 'n' => 2]]]]]],
+        ];
+
+        self::$nextId = 0;
+        yield 'all elements identical config produce single column' => [
+            [self::r(), self::e(12), self::e(12), self::e(12), self::e(12)],
+            'main',
+            [['rows' => [['columns' => [['w' => 12, 'n' => 4]]]]]],
+        ];
     }
 
     /**
      * @param list<LegacyElement> $elements
-     * @param list<array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int}>}>}> $expectedSections
+     * @param list<array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int, n?: int}>}>}> $expectedSections
      */
     #[DataProvider('hierarchyProvider')]
     public function testHierarchy(array $elements, string $zone, array $expectedSections): void
@@ -269,6 +338,7 @@ final class RowPerSectionStrategyTest extends TestCase
                     self::assertSame($ci + 1, $column->sort, "{$colPath}: sort");
                     self::assertSame($expectedCol['w'], $column->gridSettings->default->width, "{$colPath}: width");
                     self::assertSame($expectedCol['o'] ?? 0, $column->gridSettings->default->offset, "{$colPath}: offset");
+                    self::assertCount($expectedCol['n'] ?? 1, $column->elements, "{$colPath}: element count");
                 }
             }
         }

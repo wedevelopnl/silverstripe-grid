@@ -248,10 +248,15 @@ final class GridMigrationService
                     $column = $this->createColumn($migrationColumn, (int) $row->ID);
                     $columnId = (int) $column->ID;
 
-                    $element = $this->createContentElement($migrationColumn, $columnId);
-                    $oldElementId = $migrationColumn->element->id;
-                    $oldToNewElementId[$oldElementId] = (int) $element->ID;
-                    $oldToNewColumnId[$oldElementId] = $columnId;
+                    $elementSort = 1;
+                    foreach ($migrationColumn->elements as $legacyElement) {
+                        $newElement = $this->buildContentElement($legacyElement, $columnId, $elementSort);
+                        $newElement->write();
+
+                        $oldToNewElementId[$legacyElement->id] = (int) $newElement->ID;
+                        $oldToNewColumnId[$legacyElement->id] = $columnId;
+                        $elementSort++;
+                    }
                 }
             }
         }
@@ -301,22 +306,9 @@ final class GridMigrationService
     }
 
     /**
-     * Create a content element from a MigrationColumn's legacy element data.
-     *
-     * Resolves the ClassName, maps fields, and invokes extension hooks.
-     */
-    private function createContentElement(MigrationColumn $migration, int $columnId): GridElement
-    {
-        $newElement = $this->buildContentElement($migration->element, $columnId, $migration->element->sort);
-        $newElement->write();
-
-        return $newElement;
-    }
-
-    /**
      * Build a GridElement from legacy data without writing.
      *
-     * Shared by both draft creation (createContentElement) and live-only
+     * Shared by both draft creation (writeDraftHierarchy) and live-only
      * creation (createLiveOnlyElement) to avoid duplicating the field
      * mapping, class name resolution, and extension hook logic.
      */

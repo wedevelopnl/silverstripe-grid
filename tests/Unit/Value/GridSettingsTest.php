@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Unit\Value;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
@@ -189,6 +190,102 @@ final class GridSettingsTest extends TestCase
             'overrides' => [],
         ], $result);
     }
+
+    // ─── equals() ─────────────────────────────────────────────
+
+    /**
+     * @return iterable<string, array{GridSettings, GridSettings, bool}>
+     */
+    public static function equalsProvider(): iterable
+    {
+        $default = new ViewportConfig(6, 0, true);
+        $otherDefault = new ViewportConfig(8, 0, true);
+        $smVisible = new ViewportConfig(12, 0, true);
+        $smHidden = new ViewportConfig(12, 0, false);
+        $lgFour = new ViewportConfig(4, 2, false);
+
+        yield 'both empty with same default' => [
+            new GridSettings($default),
+            new GridSettings($default),
+            true,
+        ];
+
+        yield 'both empty from initial() factory' => [
+            GridSettings::initial(12),
+            GridSettings::initial(12),
+            true,
+        ];
+
+        yield 'identical defaults and overrides' => [
+            new GridSettings($default, ['sm' => $smVisible, 'lg' => $lgFour]),
+            new GridSettings($default, ['sm' => $smVisible, 'lg' => $lgFour]),
+            true,
+        ];
+
+        yield 'identical overrides but order reversed in map' => [
+            new GridSettings($default, ['sm' => $smVisible, 'lg' => $lgFour]),
+            new GridSettings($default, ['lg' => $lgFour, 'sm' => $smVisible]),
+            true,
+        ];
+
+        yield 'different default width' => [
+            new GridSettings($default),
+            new GridSettings($otherDefault),
+            false,
+        ];
+
+        yield 'different default offset' => [
+            new GridSettings(new ViewportConfig(6, 0, true)),
+            new GridSettings(new ViewportConfig(6, 2, true)),
+            false,
+        ];
+
+        yield 'different default visibility' => [
+            new GridSettings(new ViewportConfig(6, 0, true)),
+            new GridSettings(new ViewportConfig(6, 0, false)),
+            false,
+        ];
+
+        yield 'same default but one has an override' => [
+            new GridSettings($default),
+            new GridSettings($default, ['sm' => $smHidden]),
+            false,
+        ];
+
+        yield 'same override key with different value (visibility)' => [
+            new GridSettings($default, ['sm' => $smVisible]),
+            new GridSettings($default, ['sm' => $smHidden]),
+            false,
+        ];
+
+        yield 'different override keys' => [
+            new GridSettings($default, ['sm' => $smVisible]),
+            new GridSettings($default, ['lg' => $smVisible]),
+            false,
+        ];
+
+        yield 'same override count but one key differs' => [
+            new GridSettings($default, ['sm' => $smVisible, 'lg' => $lgFour]),
+            new GridSettings($default, ['sm' => $smVisible, 'xl' => $lgFour]),
+            false,
+        ];
+
+        yield 'one has superset of overrides' => [
+            new GridSettings($default, ['sm' => $smVisible]),
+            new GridSettings($default, ['sm' => $smVisible, 'lg' => $lgFour]),
+            false,
+        ];
+    }
+
+    #[DataProvider('equalsProvider')]
+    public function testEquals(GridSettings $a, GridSettings $b, bool $expected): void
+    {
+        self::assertSame($expected, $a->equals($b));
+        // Equality must be symmetric.
+        self::assertSame($expected, $b->equals($a));
+    }
+
+    // ─── Immutability ───────────────────────────────────────────
 
     public function testImmutabilityAllWithMethodsReturnNewInstances(): void
     {

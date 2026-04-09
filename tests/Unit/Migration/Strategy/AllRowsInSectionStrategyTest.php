@@ -18,11 +18,13 @@ use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Strategy\AllRowsInSectionStrategy;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
+use WeDevelop\Grid\Value\GridSettings;
 
 #[CoversClass(AllRowsInSectionStrategy::class)]
 #[CoversClass(MigrationSection::class)]
 #[CoversClass(MigrationRow::class)]
 #[CoversClass(MigrationColumn::class)]
+#[CoversClass(GridSettings::class)]
 final class AllRowsInSectionStrategyTest extends TestCase
 {
     private AllRowsInSectionStrategy $strategy;
@@ -78,12 +80,23 @@ final class AllRowsInSectionStrategyTest extends TestCase
 
     private static int $nextId = 0;
 
-    private static function e(int $width, int $offset = 0): LegacyElement
-    {
+    /**
+     * @param array<string, int> $sizeFields
+     * @param array<string, int> $offsetFields
+     * @param array<string, ?string> $visibilityFields
+     */
+    private static function e(
+        int $width,
+        int $offset = 0,
+        array $sizeFields = [],
+        array $offsetFields = [],
+        array $visibilityFields = [],
+    ): LegacyElement {
         $id = ++self::$nextId;
         return LegacyElementFactory::content($id, $id, [
-            'sizeFields' => ['MD' => $width],
-            'offsetFields' => ['MD' => $offset],
+            'sizeFields' => $sizeFields !== [] ? $sizeFields : ['MD' => $width],
+            'offsetFields' => $offsetFields !== [] ? $offsetFields : ['MD' => $offset],
+            'visibilityFields' => $visibilityFields,
         ]);
     }
 
@@ -113,20 +126,20 @@ final class AllRowsInSectionStrategyTest extends TestCase
     /**
      * Each case yields: [elements, zone, expected section spec].
      *
-     * AllRows always produces exactly 1 section. Column spec: ['w' => width, 'o' => offset].
-     * Offset defaults to 0 if omitted.
+     * AllRows always produces exactly 1 section. Column spec: ['w' => width, 'o' => offset, 'n' => element count].
+     * Offset defaults to 0 and element count defaults to 1 if omitted.
      *
-     * @return iterable<string, array{list<LegacyElement>, string, array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int}>}>}}>
+     * @return iterable<string, array{list<LegacyElement>, string, array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int, n?: int}>}>}}>
      */
     public static function hierarchyProvider(): iterable
     {
         // ── Structural cases ─────────────────────────────────────
 
         self::$nextId = 0;
-        yield 'single row, three elements' => [
+        yield 'single row, three elements with same width are grouped' => [
             [self::r(), self::e(4), self::e(4), self::e(4)],
             'main',
-            ['rows' => [['columns' => [['w' => 4], ['w' => 4], ['w' => 4]]]]],
+            ['rows' => [['columns' => [['w' => 4, 'n' => 3]]]]],
         ];
 
         self::$nextId = 0;
@@ -144,17 +157,17 @@ final class AllRowsInSectionStrategyTest extends TestCase
         ];
 
         self::$nextId = 0;
-        yield 'orphans only, no rows' => [
+        yield 'orphans only with same width are grouped' => [
             [self::e(6), self::e(6)],
             'main',
-            ['rows' => [['columns' => [['w' => 6], ['w' => 6]]]]],
+            ['rows' => [['columns' => [['w' => 6, 'n' => 2]]]]],
         ];
 
         self::$nextId = 0;
-        yield 'three rows: 3 elements, 1 element, empty' => [
+        yield 'three rows: 3 same elements grouped, 1 element, empty' => [
             [self::r(), self::e(4), self::e(4), self::e(4), self::r(), self::e(12), self::r()],
             'main',
-            ['rows' => [['columns' => [['w' => 4], ['w' => 4], ['w' => 4]]], ['columns' => [['w' => 12]]], ['columns' => []]]],
+            ['rows' => [['columns' => [['w' => 4, 'n' => 3]]], ['columns' => [['w' => 12]]], ['columns' => []]]],
         ];
 
         // ── Offset cases ─────────────────────────────────────────
@@ -173,9 +186,30 @@ final class AllRowsInSectionStrategyTest extends TestCase
             [
                 'rows' => [
                     ['columns' => [['w' => 6, 'o' => 3]]],
-                    ['columns' => [['w' => 4, 'o' => 1], ['w' => 4, 'o' => 1]]],
+                    ['columns' => [['w' => 4, 'o' => 1, 'n' => 2]]],
                 ],
             ],
+        ];
+
+        // ── Grouping cases ───────────────────────────────────────
+
+        self::$nextId = 0;
+        yield 'consecutive same then different then same splits correctly' => [
+            [self::r(), self::e(6), self::e(6), self::e(4), self::e(6), self::e(6)],
+            'main',
+            ['rows' => [['columns' => [['w' => 6, 'n' => 2], ['w' => 4], ['w' => 6, 'n' => 2]]]]],
+        ];
+
+        self::$nextId = 0;
+        yield 'viewport override difference prevents grouping' => [
+            [
+                self::r(),
+                self::e(6, 0, ['MD' => 6], ['MD' => 0]),
+                self::e(6, 0, ['MD' => 6], ['MD' => 0], ['SM' => 'hidden']),
+                self::e(6, 0, ['MD' => 6], ['MD' => 0]),
+            ],
+            'main',
+            ['rows' => [['columns' => [['w' => 6], ['w' => 6], ['w' => 6]]]]],
         ];
 
         // ── Field mapping cases ──────────────────────────────────
@@ -227,7 +261,7 @@ final class AllRowsInSectionStrategyTest extends TestCase
 
     /**
      * @param list<LegacyElement> $elements
-     * @param array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int}>}>} $expectedSection
+     * @param array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int, n?: int}>}>} $expectedSection
      */
     #[DataProvider('hierarchyProvider')]
     public function testHierarchy(array $elements, string $zone, array $expectedSection): void
@@ -262,6 +296,7 @@ final class AllRowsInSectionStrategyTest extends TestCase
                 self::assertSame($ci + 1, $column->sort, "{$colPath}: sort");
                 self::assertSame($expectedCol['w'], $column->gridSettings->default->width, "{$colPath}: width");
                 self::assertSame($expectedCol['o'] ?? 0, $column->gridSettings->default->offset, "{$colPath}: offset");
+                self::assertCount($expectedCol['n'] ?? 1, $column->elements, "{$colPath}: element count");
             }
         }
     }

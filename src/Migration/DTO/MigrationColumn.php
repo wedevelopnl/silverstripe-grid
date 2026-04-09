@@ -8,10 +8,13 @@ use WeDevelop\Grid\Value\GridSettings;
 
 final readonly class MigrationColumn
 {
-    /** @param positive-int $sort */
+    /**
+     * @param positive-int $sort
+     * @param list<LegacyElement> $elements
+     */
     public function __construct(
         public GridSettings $gridSettings,
         public int $sort,
-        public LegacyElement $element,
+        public array $elements,
     ) {}
 }

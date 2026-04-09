@@ -789,7 +789,8 @@ final class MigrationAcceptanceTest extends SapphireTest
                     ],
                 ],
             ],
-            // Section 3: row with 2 media-rich elements
+            // Section 3: row with 2 media-rich elements sharing a column
+            // (both have SizeMD=6 and no overrides — grouping produces 1 column)
             [
                 'rows' => [
                     [
@@ -797,32 +798,30 @@ final class MigrationAcceptanceTest extends SapphireTest
                             [
                                 'gridDefault' => ['width' => 6, 'offset' => 0, 'visible' => true],
                                 'gridOverrides' => [],
-                                'element' => [
-                                    'className' => ContentElement::class,
-                                    'title' => 'Gallery Left',
-                                    'html' => '<p>Left panel.</p>',
-                                    'mediaType' => 'image',
-                                    'mediaImageID' => 99,
-                                    'mediaRatio' => '1x1',
-                                    'mediaPosition' => 'first',
-                                    'contentColumns' => 4,
-                                    'verticalAlignment' => 'bottom',
-                                    'gapSize' => 1,
-                                ],
-                            ],
-                            [
-                                'gridDefault' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                                'gridOverrides' => [],
-                                'element' => [
-                                    'className' => ContentElement::class,
-                                    'title' => 'Gallery Right',
-                                    'html' => '<p>Right panel.</p>',
-                                    'mediaType' => 'image',
-                                    'mediaImageID' => 100,
-                                    'mediaRatio' => '4x3',
-                                    'mediaPosition' => 'last',
-                                    'verticalAlignment' => 'top',
-                                    'gapSize' => 0,
+                                'elements' => [
+                                    [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Gallery Left',
+                                        'html' => '<p>Left panel.</p>',
+                                        'mediaType' => 'image',
+                                        'mediaImageID' => 99,
+                                        'mediaRatio' => '1x1',
+                                        'mediaPosition' => 'first',
+                                        'contentColumns' => 4,
+                                        'verticalAlignment' => 'bottom',
+                                        'gapSize' => 1,
+                                    ],
+                                    [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Gallery Right',
+                                        'html' => '<p>Right panel.</p>',
+                                        'mediaType' => 'image',
+                                        'mediaImageID' => 100,
+                                        'mediaRatio' => '4x3',
+                                        'mediaPosition' => 'last',
+                                        'verticalAlignment' => 'top',
+                                        'gapSize' => 0,
+                                    ],
                                 ],
                             ],
                         ],
@@ -1055,16 +1054,15 @@ final class MigrationAcceptanceTest extends SapphireTest
                         'columns' => [
                             [
                                 'gridDefault' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                                'element' => [
-                                    'title' => 'Subclass Element',
-                                    'showTitle' => true,
-                                    'html' => '<p>Subclass content</p>',
-                                ],
-                            ],
-                            [
-                                'gridDefault' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                                'element' => [
-                                    'html' => '<p>Second</p>',
+                                'elements' => [
+                                    [
+                                        'title' => 'Subclass Element',
+                                        'showTitle' => true,
+                                        'html' => '<p>Subclass content</p>',
+                                    ],
+                                    [
+                                        'html' => '<p>Second</p>',
+                                    ],
                                 ],
                             ],
                         ],
@@ -1113,21 +1111,19 @@ final class MigrationAcceptanceTest extends SapphireTest
                                 [
                                     'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
                                     'gridOverrides' => [],
-                                    'element' => [
-                                        'className' => ContentElement::class,
-                                        'title' => 'First Block',
-                                        'html' => '<p>Hello from plain elemental.</p>',
-                                    ],
-                                ],
-                                [
-                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                                    'gridOverrides' => [],
-                                    'element' => [
-                                        'className' => ContentElement::class,
-                                        'title' => 'Second Block',
-                                        'showTitle' => true,
-                                        'titleTag' => 'h3',
-                                        'html' => '<p>Another content block.</p>',
+                                    'elements' => [
+                                        [
+                                            'className' => ContentElement::class,
+                                            'title' => 'First Block',
+                                            'html' => '<p>Hello from plain elemental.</p>',
+                                        ],
+                                        [
+                                            'className' => ContentElement::class,
+                                            'title' => 'Second Block',
+                                            'showTitle' => true,
+                                            'titleTag' => 'h3',
+                                            'html' => '<p>Another content block.</p>',
+                                        ],
                                     ],
                                 ],
                             ],
@@ -1176,28 +1172,22 @@ final class MigrationAcceptanceTest extends SapphireTest
                                 [
                                     'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
                                     'gridOverrides' => [],
-                                    'element' => [
-                                        'className' => ContentElement::class,
-                                        'title' => 'Block A',
-                                        'html' => '<p>Content A.</p>',
-                                    ],
-                                ],
-                                [
-                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                                    'gridOverrides' => [],
-                                    'element' => [
-                                        'className' => ContentElement::class,
-                                        'title' => 'Block B',
-                                        'html' => '<p>Content B.</p>',
-                                    ],
-                                ],
-                                [
-                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                                    'gridOverrides' => [],
-                                    'element' => [
-                                        'className' => ContentElement::class,
-                                        'title' => 'Block C',
-                                        'html' => '<p>Content C.</p>',
+                                    'elements' => [
+                                        [
+                                            'className' => ContentElement::class,
+                                            'title' => 'Block A',
+                                            'html' => '<p>Content A.</p>',
+                                        ],
+                                        [
+                                            'className' => ContentElement::class,
+                                            'title' => 'Block B',
+                                            'html' => '<p>Content B.</p>',
+                                        ],
+                                        [
+                                            'className' => ContentElement::class,
+                                            'title' => 'Block C',
+                                            'html' => '<p>Content C.</p>',
+                                        ],
                                     ],
                                 ],
                             ],
@@ -1240,7 +1230,8 @@ final class MigrationAcceptanceTest extends SapphireTest
 
             $this->runRowPerSection($pageId);
 
-            // Assert draft: 1 Section > 1 Row > 2 Columns
+            // Assert draft: 1 Section > 1 Row > 1 Column with 2 grouped elements
+            // (both are width=12, visible, no overrides — grouping merges them)
             $this->assertMigratedHierarchy($pageId, self::ZONE, Versioned::DRAFT, [
                 [
                     'rows' => [
@@ -1249,19 +1240,17 @@ final class MigrationAcceptanceTest extends SapphireTest
                                 [
                                     'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
                                     'gridOverrides' => [],
-                                    'element' => [
-                                        'className' => ContentElement::class,
-                                        'title' => 'Draft Title',
-                                        'html' => '<p>Draft content</p>',
-                                    ],
-                                ],
-                                [
-                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
-                                    'gridOverrides' => [],
-                                    'element' => [
-                                        'className' => ContentElement::class,
-                                        'title' => 'Draft Only Block',
-                                        'html' => '<p>Not yet published</p>',
+                                    'elements' => [
+                                        [
+                                            'className' => ContentElement::class,
+                                            'title' => 'Draft Title',
+                                            'html' => '<p>Draft content</p>',
+                                        ],
+                                        [
+                                            'className' => ContentElement::class,
+                                            'title' => 'Draft Only Block',
+                                            'html' => '<p>Not yet published</p>',
+                                        ],
                                     ],
                                 ],
                             ],
@@ -1421,7 +1410,14 @@ final class MigrationAcceptanceTest extends SapphireTest
                         $colPath = "$rowPath > Column " . ($colIndex + 1);
 
                         $this->assertColumnGridSettings($column, $expectedCol, $colPath);
-                        $this->assertContentElement($column, $expectedCol['element'], $colPath);
+
+                        // Support 'element' (single) or 'elements' (list) — multi-element
+                        // columns are produced by grouping consecutive elements with
+                        // identical grid settings.
+                        $expectedElements = isset($expectedCol['elements'])
+                            ? $expectedCol['elements']
+                            : [$expectedCol['element']];
+                        $this->assertContentElements($column, $expectedElements, $colPath);
                     }
                 }
             }
@@ -1467,21 +1463,38 @@ final class MigrationAcceptanceTest extends SapphireTest
     }
 
     /**
-     * Assert content element fields inside a column.
+     * Assert content elements (one or more) inside a column, in sort order.
      *
-     * @param array<string, mixed> $expectedEl
+     * @param list<array<string, mixed>> $expectedElements
      */
-    private function assertContentElement(Column $column, array $expectedEl, string $colPath): void
+    private function assertContentElements(Column $column, array $expectedElements, string $colPath): void
     {
         $elements = GridElement::get()->filter([
             'ParentID' => $column->ID,
             'ParentClass' => Column::class,
-        ]);
+        ])->sort('Sort', 'ASC');
 
-        self::assertCount(1, $elements, "$colPath: expected 1 content element");
-        $element = $elements->first();
-        $elPath = "$colPath > Element";
+        self::assertCount(
+            \count($expectedElements),
+            $elements,
+            \sprintf('%s: expected %d content element(s)', $colPath, \count($expectedElements)),
+        );
 
+        $index = 0;
+        foreach ($elements as $element) {
+            $expectedEl = $expectedElements[$index];
+            $this->assertContentElement($element, $expectedEl, "$colPath > Element " . ($index + 1));
+            $index++;
+        }
+    }
+
+    /**
+     * Assert a single content element's fields.
+     *
+     * @param array<string, mixed> $expectedEl
+     */
+    private function assertContentElement(GridElement $element, array $expectedEl, string $elPath): void
+    {
         if (isset($expectedEl['className'])) {
             self::assertSame($expectedEl['className'], $element->ClassName, "$elPath: className");
         }

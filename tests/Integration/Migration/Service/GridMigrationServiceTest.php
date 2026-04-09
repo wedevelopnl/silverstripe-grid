@@ -359,12 +359,12 @@ final class GridMigrationServiceTest extends SapphireTest
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
-        // Two rows with elements
+        // Two rows with elements — use distinct grid settings so they don't group
         $this->seeder->seedElement(3000, $areaId, self::ROW_CLASS, 1);
         $this->seeder->seedRow(3000);
         $this->seeder->seedElement(3001, $areaId, self::CONTENT_CLASS, 2, ['SizeMD' => 6, 'Title' => 'First']);
         $this->seeder->seedContentMedia(3001);
-        $this->seeder->seedElement(3002, $areaId, self::CONTENT_CLASS, 3, ['SizeMD' => 6, 'Title' => 'Second']);
+        $this->seeder->seedElement(3002, $areaId, self::CONTENT_CLASS, 3, ['SizeMD' => 4, 'Title' => 'Second']);
         $this->seeder->seedContentMedia(3002);
 
         $this->seeder->seedElement(3010, $areaId, self::ROW_CLASS, 4);
@@ -383,7 +383,7 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertSame(1, (int) $sections->first()->Sort);
         self::assertSame(2, (int) $sections->last()->Sort);
 
-        // Verify columns in first row maintain sort
+        // Verify columns in first row maintain sort (distinct widths → 2 columns)
         $firstRow = Row::get()->filter(['ParentID' => $sections->first()->ID])->first();
         self::assertInstanceOf(Row::class, $firstRow);
         $columns = Column::get()->filter(['ParentID' => $firstRow->ID])->sort('Sort', 'ASC');
@@ -1008,14 +1008,14 @@ final class GridMigrationServiceTest extends SapphireTest
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
-        // No row elements at all
+        // No row elements at all — distinct widths to prevent grouping
         $this->seeder->seedElement(7200, $areaId, self::CONTENT_CLASS, 1, [
-            'SizeMD' => 6,
+            'SizeMD' => 8,
             'Title' => 'Orphan 1',
         ]);
         $this->seeder->seedContentMedia(7200);
         $this->seeder->seedElement(7201, $areaId, self::CONTENT_CLASS, 2, [
-            'SizeMD' => 6,
+            'SizeMD' => 4,
             'Title' => 'Orphan 2',
         ]);
         $this->seeder->seedContentMedia(7201);
@@ -1029,11 +1029,70 @@ final class GridMigrationServiceTest extends SapphireTest
         ]);
         self::assertCount(1, $sections);
 
-        // With one row containing both elements
+        // With one row containing both columns (distinct widths → no grouping)
         $row = Row::get()->filter(['ParentID' => $sections->first()->ID])->first();
         self::assertInstanceOf(Row::class, $row);
         $columns = Column::get()->filter(['ParentID' => $row->ID]);
         self::assertCount(2, $columns);
+    }
+
+    /**
+     * Four elements where only the 3rd has a different grid configuration produce
+     * exactly 3 columns: [e1, e2] | [e3] | [e4]. Elements 1 and 2 share a column,
+     * element 3 breaks the group, and element 4 starts a new column (it is not
+     * merged with e1+e2 because grouping is strictly consecutive).
+     */
+    public function testGroupsConsecutiveElementsWithSameGridSettings(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        $this->seeder->seedElement(4000, $areaId, self::ROW_CLASS, 1);
+        $this->seeder->seedRow(4000);
+
+        // e1 + e2: identical width=6
+        $this->seeder->seedElement(4001, $areaId, self::CONTENT_CLASS, 2, ['SizeMD' => 6, 'Title' => 'E1']);
+        $this->seeder->seedContentMedia(4001);
+        $this->seeder->seedElement(4002, $areaId, self::CONTENT_CLASS, 3, ['SizeMD' => 6, 'Title' => 'E2']);
+        $this->seeder->seedContentMedia(4002);
+        // e3: different width
+        $this->seeder->seedElement(4003, $areaId, self::CONTENT_CLASS, 4, ['SizeMD' => 4, 'Title' => 'E3']);
+        $this->seeder->seedContentMedia(4003);
+        // e4: back to width=6 — not merged with e1+e2 because grouping is consecutive
+        $this->seeder->seedElement(4004, $areaId, self::CONTENT_CLASS, 5, ['SizeMD' => 6, 'Title' => 'E4']);
+        $this->seeder->seedContentMedia(4004);
+
+        $this->runMigration();
+
+        $section = Section::get()->filter(['ParentID' => $pageId, 'Zone' => self::ZONE])->first();
+        self::assertInstanceOf(Section::class, $section);
+        $row = Row::get()->filter(['ParentID' => $section->ID])->first();
+        self::assertInstanceOf(Row::class, $row);
+
+        $columns = Column::get()->filter(['ParentID' => $row->ID])->sort('Sort', 'ASC');
+        self::assertCount(3, $columns, '[e1,e2][e3][e4] → 3 columns');
+
+        $columnsArray = $columns->toArray();
+
+        // Column 1: e1 + e2 (both width=6)
+        self::assertSame(6, $columnsArray[0]->getGridSettings()->default->width);
+        $col1Elements = ContentElement::get()->filter(['ParentID' => $columnsArray[0]->ID])->sort('Sort', 'ASC');
+        self::assertCount(2, $col1Elements);
+        self::assertSame('E1', $col1Elements->first()->Title);
+        self::assertSame('E2', $col1Elements->last()->Title);
+
+        // Column 2: e3 alone (width=4)
+        self::assertSame(4, $columnsArray[1]->getGridSettings()->default->width);
+        $col2Elements = ContentElement::get()->filter(['ParentID' => $columnsArray[1]->ID]);
+        self::assertCount(1, $col2Elements);
+        self::assertSame('E3', $col2Elements->first()->Title);
+
+        // Column 3: e4 alone (width=6 but separate from e1+e2 due to e3 boundary)
+        self::assertSame(6, $columnsArray[2]->getGridSettings()->default->width);
+        $col3Elements = ContentElement::get()->filter(['ParentID' => $columnsArray[2]->ID]);
+        self::assertCount(1, $col3Elements);
+        self::assertSame('E4', $col3Elements->first()->Title);
     }
 
     // ─── Test Group 7: Strategy-specific + edge cases ────────────
@@ -1509,12 +1568,12 @@ final class GridMigrationServiceTest extends SapphireTest
         $this->seeder->seedElement(9001, $areaId, self::CONTENT_CLASS, 2, ['SizeMD' => 12]);
         $this->seeder->seedContentMedia(9001);
 
-        // Row 2 with 2 elements
+        // Row 2 with 2 elements of different widths (prevent grouping)
         $this->seeder->seedElement(9010, $areaId, self::ROW_CLASS, 3);
         $this->seeder->seedRow(9010);
         $this->seeder->seedElement(9011, $areaId, self::CONTENT_CLASS, 4, ['SizeMD' => 6]);
         $this->seeder->seedContentMedia(9011);
-        $this->seeder->seedElement(9012, $areaId, self::CONTENT_CLASS, 5, ['SizeMD' => 6]);
+        $this->seeder->seedElement(9012, $areaId, self::CONTENT_CLASS, 5, ['SizeMD' => 4]);
         $this->seeder->seedContentMedia(9012);
 
         $service = $this->createService();

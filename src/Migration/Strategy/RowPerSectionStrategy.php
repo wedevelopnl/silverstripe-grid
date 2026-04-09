@@ -10,6 +10,7 @@ use WeDevelop\Grid\Migration\DTO\MigrationRow;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
+use WeDevelop\Grid\Value\GridSettings;
 
 /**
  * Maps each row group to its own Section containing exactly one Row.
@@ -73,24 +74,37 @@ final class RowPerSectionStrategy implements RowMappingStrategy
     }
 
     /**
+     * Group consecutive elements with identical GridSettings into shared columns.
+     *
      * @param list<LegacyElement> $elements
      * @return list<MigrationColumn>
      */
     private function buildColumns(array $elements): array
     {
-        $columns = [];
-        $columnSort = 1;
+        /** @var list<GridSettings> $groupSettings */
+        $groupSettings = [];
+        /** @var list<list<LegacyElement>> $groupElements */
+        $groupElements = [];
 
         foreach ($elements as $element) {
             $gridSettings = $this->mapper->mapGridSettings($element, $this->defaultViewport, $this->viewportKeyMap);
+            $lastIndex = \count($groupSettings) - 1;
 
+            if ($lastIndex >= 0 && $gridSettings->equals($groupSettings[$lastIndex])) {
+                $groupElements[$lastIndex][] = $element;
+            } else {
+                $groupSettings[] = $gridSettings;
+                $groupElements[] = [$element];
+            }
+        }
+
+        $columns = [];
+        foreach ($groupSettings as $index => $settings) {
             $columns[] = new MigrationColumn(
-                gridSettings: $gridSettings,
-                sort: $columnSort,
-                element: $element,
+                gridSettings: $settings,
+                sort: $index + 1,
+                elements: $groupElements[$index],
             );
-
-            $columnSort++;
         }
 
         return $columns;
