@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { usePages, useZones, useAcceptableContainers } from '@/hooks/useDuplicateToQueries';
 import './DuplicateToDialog.scss';
 
@@ -143,12 +142,15 @@ export default function DuplicateToDialog({
     }
   }, [step]);
 
-  return createPortal(
+  return (
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick is a React-event stopPropagation guard — prevents clicks inside the dialog from bubbling through the React tree to ancestor ElementCard navigation handlers. Portals do not help: React portals preserve event bubbling.
+    // biome-ignore lint/a11y/useKeyWithClickEvents: same — the onClick exists solely to break the bubble chain; <dialog> handles Escape natively via onClose.
     <dialog
       ref={dialogRef}
       className="duplicate-to-dialog"
       data-testid="duplicate-to-dialog"
       onClose={handleClose}
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="duplicate-to-dialog__header">
         <h3 className="duplicate-to-dialog__title">
@@ -349,7 +351,6 @@ export default function DuplicateToDialog({
           )}
         </div>
       </div>
-    </dialog>,
-    document.body,
+    </dialog>
   );
 }

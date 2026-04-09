@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import './ConfirmDialog.scss';
 
 interface ConfirmDialogProps {
@@ -42,12 +41,15 @@ export default function ConfirmDialog({
     onConfirm();
   }, [onConfirm]);
 
-  return createPortal(
+  return (
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick is a React-event stopPropagation guard, not a user interaction — prevents clicks inside the dialog from bubbling through the React tree to ancestor ElementCard navigation handlers. Portals do not help here: React portals preserve React event bubbling.
+    // biome-ignore lint/a11y/useKeyWithClickEvents: same — the onClick exists solely to break the bubble chain; no keyboard equivalent is meaningful. The <dialog> element handles Escape natively via onClose.
     <dialog
       ref={dialogRef}
       className="confirm-dialog"
       data-testid="confirm-dialog"
       onClose={handleClose}
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="confirm-dialog__header">
         <h3 className="confirm-dialog__title">{title}</h3>
@@ -71,7 +73,6 @@ export default function ConfirmDialog({
           {confirmLabel}
         </button>
       </div>
-    </dialog>,
-    document.body,
+    </dialog>
   );
 }
