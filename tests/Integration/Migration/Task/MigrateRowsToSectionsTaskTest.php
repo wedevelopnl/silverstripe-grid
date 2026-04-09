@@ -65,12 +65,35 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
      */
     private function executeTask(array $options): int
     {
+        // Inject --force so the new confirmation gate doesn't block non-interactive tests.
+        // Using += preserves any per-test override.
+        $options += ['--force' => true];
+
+        return $this->executeTaskRaw($options)['exitCode'];
+    }
+
+    /**
+     * Execute the task without injecting --force. Returns the exit code and the
+     * buffered output so tests can assert against what was printed. The input
+     * is forced non-interactive to make the confirmation gate deterministic in
+     * the test environment (where STDIN is not a real TTY).
+     *
+     * @param array<string, mixed> $options
+     * @return array{exitCode: int, output: string}
+     */
+    private function executeTaskRaw(array $options): array
+    {
         $task = new MigrateRowsToSectionsTask();
         $definition = new InputDefinition($task->getOptions());
         $input = new ArrayInput($options, $definition);
+        $input->setInteractive(false);
         $buffered = new BufferedOutput();
         $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
-        return $task->execute($input, $output);
+
+        return [
+            'exitCode' => $task->execute($input, $output),
+            'output' => $buffered->fetch(),
+        ];
     }
 
     private function getPageId(): int
@@ -216,6 +239,40 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
         ]);
         // RowPerSection: one Section per ElementRow
         self::assertCount(2, $sections);
+    }
+
+    public function testNonInteractiveRefusesWithoutForce(): void
+    {
+        $pageId = $this->getPageId();
+        $this->seedStandardPage($pageId);
+
+        $result = $this->executeTaskRaw([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+        ]);
+
+        self::assertSame(Command::FAILURE, $result['exitCode']);
+        self::assertStringContainsString('Refusing to run', $result['output']);
+        self::assertCount(0, Section::get());
+        self::assertCount(0, Row::get());
+        self::assertCount(0, Column::get());
+    }
+
+    public function testDryRunBypassesConfirmationGateWithoutForce(): void
+    {
+        $pageId = $this->getPageId();
+        $this->seedStandardPage($pageId);
+
+        $result = $this->executeTaskRaw([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--dry-run' => true,
+        ]);
+
+        self::assertSame(Command::SUCCESS, $result['exitCode']);
+        self::assertCount(0, Section::get());
+        self::assertCount(0, Row::get());
+        self::assertCount(0, Column::get());
     }
 
     public function testDryRunCreatesNoRecords(): void

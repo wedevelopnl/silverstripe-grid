@@ -107,20 +107,30 @@ Page "About Us"
 Both tasks are standard SilverStripe `BuildTask`s and accept the same options. Always start with a dry run.
 
 ```bash
-# Dry run — writes nothing, logs what would be created
+# Dry run — writes nothing, logs what would be created (no confirmation prompt)
 vendor/bin/sake dev/tasks/migrate-grid-rows-to-sections \
     --default-viewport=MD --zone=main --dry-run
 
-# Full migration
+# Full migration — prompts for confirmation before writing anything
 vendor/bin/sake dev/tasks/migrate-grid-rows-to-sections \
     --default-viewport=MD --zone=main
 
+# Full migration, non-interactive (CI, scripts): --force skips the confirmation prompt
+vendor/bin/sake dev/tasks/migrate-grid-rows-to-sections \
+    --default-viewport=MD --zone=main --force
+
 # Migrate specific pages only (useful for staged rollouts)
 vendor/bin/sake dev/tasks/migrate-grid-rows-to-sections \
-    --default-viewport=MD --zone=main --page-ids=1,5,12
+    --default-viewport=MD --zone=main --page-ids=1,5,12 --force
 ```
 
 Replace `migrate-grid-rows-to-sections` with `migrate-grid-rows-to-single-section` to use Strategy B.
+
+### Confirmation prompt
+
+Because the migration writes into live tables, a run without `--dry-run` asks for an interactive `[y/N]` confirmation before any data is written. Answering anything other than `y`/`yes` aborts the run with a successful exit code and no database changes.
+
+When stdin is not a TTY (CI pipelines, `sake` called from a script), there is nothing to prompt — the task refuses to run and exits with a failure code. Pass `--force` (short: `-f`) in those contexts to acknowledge that the run is intentional. `--dry-run` always bypasses the prompt.
 
 ### Options Reference
 
@@ -128,7 +138,8 @@ Replace `migrate-grid-rows-to-sections` with `migrate-grid-rows-to-single-sectio
 |--------|----------|---------|-------------|
 | `--default-viewport` | yes | `MD` | Legacy viewport key used as the default for the new `GridSettings`. The element's value in this viewport becomes `default`; other viewports are written as overrides only when they differ. |
 | `--zone` | yes | `main` | Zone name for the created Sections. Sort order is scoped per zone. |
-| `--dry-run` | no | (flag) | Log planned writes and skip all database changes. Exit code is 0 on success even when nothing was written. |
+| `--dry-run` | no | (flag) | Log planned writes and skip all database changes. Bypasses the confirmation prompt. Exit code is 0 on success even when nothing was written. |
+| `--force` / `-f` | no | (flag) | Skip the interactive confirmation prompt. Required for non-interactive runs (CI, piped invocations) when not using `--dry-run`. |
 | `--viewport-map` | no | `XS=xs,SM=sm,MD=md,LG=lg,XL=xl` | Map legacy viewport keys to the active adapter's viewport keys. Derived automatically via case-insensitive matching when omitted — provide this explicitly when migrating across CSS frameworks with different viewport names. |
 | `--page-ids` | no | `1,5,12` | Comma-separated page IDs to migrate. If omitted, all eligible pages are migrated. |
 

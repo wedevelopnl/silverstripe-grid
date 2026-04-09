@@ -9,8 +9,10 @@ use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\BuildTask;
 use SilverStripe\PolyExecution\PolyOutput;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
@@ -27,6 +29,7 @@ abstract class AbstractMigrationTask extends BuildTask
             new InputOption('default-viewport', null, InputOption::VALUE_REQUIRED, 'Old module default viewport (e.g. MD)'),
             new InputOption('zone', null, InputOption::VALUE_REQUIRED, 'Target zone for new Sections (e.g. main)'),
             new InputOption('dry-run', null, InputOption::VALUE_NONE, 'Log what would be migrated without writing'),
+            new InputOption('force', 'f', InputOption::VALUE_NONE, 'Skip the interactive confirmation prompt (required for non-interactive runs)'),
             new InputOption('viewport-map', null, InputOption::VALUE_REQUIRED, 'Comma-separated old=new viewport key pairs'),
             new InputOption('page-ids', null, InputOption::VALUE_REQUIRED, 'Comma-separated page IDs to migrate'),
         ];
@@ -49,6 +52,25 @@ abstract class AbstractMigrationTask extends BuildTask
         /** @var string $zone */
 
         $dryRun = (bool) $input->getOption('dry-run');
+        $force = (bool) $input->getOption('force');
+
+        if (!$dryRun && !$force) {
+            if (!$input->isInteractive()) {
+                $output->writeln('<error>Refusing to run: migration is destructive. Pass --dry-run to preview, or --force to run non-interactively.</error>');
+                return Command::FAILURE;
+            }
+
+            $question = new ConfirmationQuestion(
+                'This will write Section/Row/Column elements derived from the legacy Elemental tables. Continue? [y/N] ',
+                false,
+            );
+
+            if (!(new QuestionHelper())->ask($input, $output, $question)) {
+                $output->writeln('Migration aborted.');
+                return Command::SUCCESS;
+            }
+        }
+
         $pageIdsArg = $input->getOption('page-ids');
         $pageIds = \is_string($pageIdsArg) && $pageIdsArg !== ''
             ? \array_map('intval', \explode(',', $pageIdsArg))

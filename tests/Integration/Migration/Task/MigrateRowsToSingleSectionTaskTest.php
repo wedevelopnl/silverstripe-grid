@@ -64,6 +64,10 @@ final class MigrateRowsToSingleSectionTaskTest extends SapphireTest
      */
     private function executeTask(array $options): int
     {
+        // Inject --force so the new confirmation gate doesn't block non-interactive tests.
+        // Using += preserves any per-test override (e.g. --dry-run).
+        $options += ['--force' => true];
+
         $task = new MigrateRowsToSingleSectionTask();
         $definition = new InputDefinition($task->getOptions());
         $input = new ArrayInput($options, $definition);
