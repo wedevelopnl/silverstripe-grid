@@ -124,8 +124,16 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 ├──────────────────── JSON API ───────────────────────────────┤
 │                                                             │
 │  Service Layer                                              │
+│    ├── RequestBodyParser (JSON → typed request DTOs)        │
+│    │                                                        │
 │    ├── GridTreeBuilder (read path)                          │
 │    │     └── GridElementRepositoryInterface                 │
+│    │                                                        │
+│    ├── GridElementService (create + duplicate lifecycle)    │
+│    │                                                        │
+│    ├── GridSettingsService (column grid settings writes)    │
+│    │     ├── GridAdapterInterface                           │
+│    │     └── GridTreeBuilder                                │
 │    │                                                        │
 │    ├── ReorderService (validate + reorder + persist)        │
 │    │     ├── ReorderValidatorInterface                      │
@@ -148,7 +156,7 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 ├──────────────────── Rendering ──────────────────────────────┤
 │                                                             │
 │  Grid Adapter System                                        │
-│    ├── GridAdapterInterface (13 methods)                    │
+│    ├── GridAdapterInterface (14 methods)                    │
 │    ├── ContentLayoutAdapterInterface (8 methods)            │
 │    ├── GridAdapter (config-driven base, implements both)    │
 │    ├── Presets: Bootstrap, Tailwind, Bulma (zero-method)   │
@@ -165,13 +173,20 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 
 | Method | Route | Purpose | Response |
 |--------|-------|---------|----------|
-| GET | `api/readTree/{PageID}/{Zone}` | Load element tree | 200 + JSON tree |
-| POST | `api/create` | Create element | 204 |
-| PATCH | `api/publish` | Publish recursively | 204 |
-| PATCH | `api/unpublish` | Unpublish element | 204 |
-| DELETE | `api/delete` | Archive element | 204 |
-| POST | `api/duplicate` | Duplicate element | 204 |
-| PATCH | `api/reorder` | Reorder/move element | 204 |
+| GET | `api/readTree/{PageID}/{Zone}` | Load element tree for a zone on a page | 200 + `{ tree: Record<int, GridNode[]>, overrideCounts: object }` |
+| POST | `api/create` | Create a container element (Section / Row / Column) under a parent | 204 |
+| POST | `api/createContent` | Create a content element inside a `Column` | 204 |
+| PATCH | `api/publish` | Publish an element recursively | 204 |
+| PATCH | `api/unpublish` | Unpublish an element | 204 |
+| DELETE | `api/delete` | Archive an element | 204 |
+| POST | `api/duplicate` | Duplicate an element in place (same parent) | 204 |
+| POST | `api/duplicateTo` | Duplicate an element into a specific target parent (and optional page / zone) | 204 |
+| PATCH | `api/reorder` | Reorder or move an element within or across parents | 204 |
+| PATCH | `api/updateGridSettings` | Update a column's `GridSettings` for a viewport (default or override) | 204 |
+| DELETE | `api/resetGridSettingsOverrides` | Clear viewport overrides across all columns in a page/zone (optionally scoped to one viewport) | 204 |
+| GET | `api/acceptableContainers/{PageID}/{Zone}/{ElementType}` | List containers on a page/zone that accept the given element type | 200 + `GridNode[]` (empty array when `ElementType=section`) |
+| GET | `api/zones/{PageID}` | List zones declared by `GridEditorField`s on a page's CMS fields | 200 + `string[]` |
+| GET | `api/pages` | List pages (optional `?search=` by title), for the duplicate-to target picker | 200 + `{ id, title, parentId, hasGridZones }[]` |
 
 All mutations return 204 (no body) on success. The frontend refetches the tree after each mutation to reconcile state.
 
@@ -218,6 +233,18 @@ Permission resolution delegates to the owning page: `GridElement.canEdit()` walk
 This allows the frontend grid editor to render column width previews and viewport controls without knowing the concrete CSS framework.
 
 ## Service Layer
+
+### RequestBodyParser
+
+Turns raw JSON arrays from incoming `HTTPRequest` bodies into typed, validated request DTOs (`CreateElementRequest`, `CreateContentRequest`, `ReorderRequest`, `DuplicateToRequest`, `UpdateGridSettingsRequest`, `ResetGridSettingsOverridesRequest`). Each `parseX()` method returns a `Result` — invalid payloads fail with a `ValidationError` carrying a specific field name, which the controller translates to HTTP 400. The parser is injected with `GridAdapterInterface` so that viewport-scoped request fields can be validated against the configured viewport set.
+
+### GridElementService
+
+Domain service for element creation and duplication lifecycle (`createElement`, `createContentElement`, `duplicateElement`, `duplicateElementTo`). Mirrors `ReorderService`'s contract: receives already-loaded, already-authorized objects and returns a `Result<GridElement>`. All writes go through `WriteResult::from()` so that thrown `ValidationException`s surface as `Result::fail()` failures. Cross-page duplication (`duplicateElementTo`) additionally validates ownership (C1) and hierarchy (C2) before writing.
+
+### GridSettingsService
+
+Domain service for column `GridSettings` mutations. `updateSettings()` applies viewport-scoped width/offset/visibility changes — writes to the default config when the targeted viewport matches the adapter default, otherwise to an override, and automatically drops overrides that collapse back to the default (redundant-override cleanup). `resetOverrides()` clears every column's viewport overrides across a page/zone (optionally scoped to a single viewport) in a single pass. Depends on `GridAdapterInterface` (to identify the default viewport) and `GridTreeBuilder` (to walk the page's columns for bulk reset).
 
 ### GridTreeBuilder
 
@@ -442,12 +469,12 @@ Width classes delegate to `getWidthClass()` on the same adapter — `getMediaWid
 
 Applied to `ContentElement` by default via YAML (`_config/content-layout.yml`). Adds media attachment and layout controls to any `GridElement`.
 
-**Database fields** (16 fields via `$db`):
+**Database fields** (15 fields via `$db`):
 
 | Group | Fields |
 |-------|--------|
 | Layout | `ContentColumns` (int), `VerticalAlignment`, `GapSize` (int), `MediaPosition` |
-| Image | `MediaImage` (has_one → Image), `MediaCaption`, `MediaRatio` |
+| Image | `MediaCaption`, `MediaRatio` |
 | Video | `VideoURL`, `VideoProvider`, `VideoHasOverlay`, `VideoEmbedName`, `VideoEmbedURL`, `VideoEmbedDescription`, `VideoEmbedThumbnail`, `VideoEmbedCreated` |
 | Media type | `MediaType` (image/video discriminator) |
 

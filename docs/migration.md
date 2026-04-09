@@ -156,6 +156,7 @@ If a run finishes with failures, the task exits with a non-zero status and the f
   - Every clamp is logged as a warning so you can review the migration log and decide whether to correct data in the CMS.
 - **Element metadata.** `Title`, `ShowTitle`, `TitleClass`, `ExtraClass`, `Sort`. `TitleTag` defaults to `h2` when the legacy value is empty.
 - **Row metadata.** `ElementRow.Title` and `ElementRow.ExtraClass` map to the new `Row`. `ElementRow.CustomSectionClass` maps to the parent `Section.ExtraClass`.
+- **Content body.** `ElementContent.HTML` is copied directly onto `ContentElement.HTML` on both draft and live.
 - **Media fields.** Fields added by `ElementContentExtension` (`ContentColumns`, `ContentVerticalAlign`, `ExtraColumnGap`, `MediaType`, `MediaCaption`, `MediaRatio`, `MediaPosition`, `MediaImage`, video fields) are translated into the equivalent fields on `BlockMediaExtension` — including CSS-class → enum conversions and a discrete scale mapping for `ExtraColumnGap`.
 - **Draft and live stages.** The migration writes the draft hierarchy first, then reconciles the live stage. Elements that exist on both stages reuse the draft IDs; elements that only exist on live get new records on both stages to preserve Versioned integrity.
 

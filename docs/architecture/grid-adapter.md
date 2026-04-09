@@ -6,7 +6,7 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single concrete
 
 ## Key Files
 
-- `src/Contract/GridAdapterInterface.php` — 13 methods defining the grid adapter contract
+- `src/Contract/GridAdapterInterface.php` — 14 methods defining the grid adapter contract
 - `src/Contract/ContentLayoutAdapterInterface.php` — 8 methods for content layout CSS
 - `src/Adapter/GridAdapter.php` — Config-driven base class implementing both interfaces
 - `src/Adapter/BootstrapAdapter.php` — Bootstrap 5 preset (zero methods, only statics)

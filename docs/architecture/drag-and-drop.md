@@ -39,8 +39,8 @@ The drag-and-drop system enables visual reordering of elements within the grid e
 │                                                             │
 │  ReorderService (orchestrator)                              │
 │    ├── Phase 1: ReorderValidator (hierarchy rules)          │
-│    ├── Phase 2: ReorderExecutor (sort calculation)          │
-│    └── Phase 3: ElementPersistenceService (write to DB)     │
+│    ├── Phase 2: in-memory sort calculation                  │
+│    └── Phase 3: persist via WriteResult (catches exceptions)│
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -175,19 +175,18 @@ For the expected scale (dozens of sections, not hundreds), this produces no meas
 
 ## Backend Architecture
 
-### Layered Service Design
+### Service Design
 
 ```
 Controller (HTTP concerns)
-  └── ReorderService (orchestration)
-        ├── ReorderValidator (hierarchy rules)
-        ├── ReorderExecutor (sort calculation)
-        └── ElementPersistenceService (database writes)
+  └── ReorderService (orchestration — validation, sort calculation, persistence)
+        ├── ReorderValidatorInterface (hierarchy rules — injected)
+        └── GridElementRepositoryInterface (sibling loads — injected)
 ```
 
-Each layer has a single responsibility and communicates via the `Result` pattern.
+`ReorderService` owns all three phases directly. Validation is delegated to the injected `ReorderValidatorInterface`; sort calculation happens inline via private helpers (`filterByZone`, `excludeElement`, `resolveInsertionIndex`, `reindex`); persistence goes through `persistAndReturn()`, which wraps the writes in `WriteResult::from()` to translate any thrown `ValidationException` into `Result::fail()`. The service communicates with callers exclusively via the `Result` pattern.
 
-### Phase 1: Validation (ReorderValidator)
+### Phase 1: Validation
 
 **Same-area moves** skip validation entirely — reordering within a container cannot violate hierarchy rules.
 
@@ -197,22 +196,23 @@ Each layer has a single responsibility and communicates via the `Result` pattern
 
 Validation returns `Result::fail()` with structured errors on violation. No database writes or in-memory mutations occur.
 
-### Phase 2: Sort Calculation (ReorderExecutor)
+### Phase 2: Sort Calculation
 
-The executor works entirely in memory:
+All sort work happens in memory, inside `ReorderService::reorder()`:
 
-1. Load siblings of the target area (sorted by `Sort ASC, ID ASC`)
-2. Exclude the moved element from the sibling list
-3. Resolve the insertion index from `afterElementID`
-4. `array_splice()` the element into position
-5. Reindex sort values (1-based: 1, 2, 3, ...)
-6. Track dirty elements (only those whose `Sort` or `ParentID` actually changed)
+1. Load siblings of the target area via the repository (sorted by `Sort ASC, ID ASC`)
+2. For `Section` moves, filter the siblings to the element's `Zone` (`filterByZone()`) — sort values are per-zone-per-parent, so mixing zones would corrupt the index
+3. Exclude the moved element from the sibling list
+4. Resolve the insertion index from `afterElementID`
+5. `array_splice()` the element into position
+6. Reindex sort values (1-based: 1, 2, 3, ...) via `reindex()`
+7. Track dirty elements (only those whose `Sort` or `ParentID` actually changed)
 
-For cross-area moves, the source area's siblings are also reindexed to close the gap.
+For cross-area moves, the source area's siblings are loaded and reindexed the same way to close the gap.
 
-### Phase 3: Persistence (ElementPersistenceService)
+### Phase 3: Persistence
 
-Only dirty elements are written. The persistence service catches SilverStripe's `ValidationException` and translates it to `Result::fail()`, maintaining the Result pattern contract through the entire stack.
+Only dirty elements are written. `persistAndReturn()` calls `WriteResult::from()` with a closure that writes each dirty element; `WriteResult` catches any `ValidationException` thrown during the writes and converts it to a failed `Result`, maintaining the Result-pattern contract through the entire stack.
 
 ### Result Pattern
 
