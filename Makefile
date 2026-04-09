@@ -108,29 +108,41 @@ rector-dry: ensure-up
 
 ## Run full QA suite (all checks in parallel)
 qa: ensure-up ensure-up-fluent
-	$(MAKE) -j6 _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js
+	$(MAKE) -j6 --output-sync=target _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js
 
 ## QA sub-targets (not intended to be called directly)
 _qa-analyse:
-	$(COMPOSE) exec app vendor/bin/phpstan analyse -c phpstan.neon.dist --memory-limit=512M
+	@echo "==> [analyse] running PHPStan..."
+	$(COMPOSE) exec -T app vendor/bin/phpstan analyse -c phpstan.neon.dist --memory-limit=512M
+	@echo "==> [analyse] done"
 
 _qa-coverage:
-	$(COMPOSE) exec app-fluent vendor/bin/phpunit \
+	@echo "==> [coverage] running PHPUnit with coverage (slow, several minutes)..."
+	$(COMPOSE) exec -T app-fluent vendor/bin/phpunit \
 		--coverage-html coverage/combined/html \
 		--coverage-clover coverage/combined/clover.xml
-	$(COMPOSE) exec app-fluent vendor/bin/coverage-check coverage/combined/clover.xml 90
+	$(COMPOSE) exec -T app-fluent vendor/bin/coverage-check coverage/combined/clover.xml 90
+	@echo "==> [coverage] done"
 
 _qa-lint:
+	@echo "==> [lint] running Biome + Stylelint..."
 	npm run lint
+	@echo "==> [lint] done"
 
 _qa-format:
+	@echo "==> [format] running Biome format check..."
 	npm run format:check
+	@echo "==> [format] done"
 
 _qa-typecheck:
+	@echo "==> [typecheck] running tsc..."
 	npm run typecheck
+	@echo "==> [typecheck] done"
 
 _qa-test-js:
+	@echo "==> [test-js] running Vitest..."
 	npm run test
+	@echo "==> [test-js] done"
 
 ## Run E2E tests (Playwright, requires running Docker services)
 test-e2e: ensure-up
