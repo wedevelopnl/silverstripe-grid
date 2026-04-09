@@ -8,9 +8,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
-    "baseUrl": "../..",
     "paths": {
-      "@/*": ["./client/src/*"]
+      "@/*": ["../../client/src/*"]
     }
   },
   "include": [
