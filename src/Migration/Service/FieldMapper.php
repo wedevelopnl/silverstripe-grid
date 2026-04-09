@@ -122,8 +122,6 @@ final class FieldMapper
                 continue;
             }
 
-            /** @var non-empty-string $newKey */
-
             $size = $element->sizeFields[$oldKey] ?? 0;
             $offset = $element->offsetFields[$oldKey] ?? 0;
             $visible = $this->mapVisibility($element->visibilityFields[$oldKey] ?? null);
