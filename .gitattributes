@@ -33,7 +33,7 @@
 /apm.yml                export-ignore
 /CLAUDE.md              export-ignore
 /Makefile               export-ignore
-/oxlintrc.json          export-ignore
+/biome.json             export-ignore
 /package.json           export-ignore
 /package-lock.json      export-ignore
 /playwright.config.ts   export-ignore
