@@ -136,9 +136,10 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
     [createContentElement, column.id],
   );
 
-  const hasAllowedTypes =
-    column.allowedTypes !== null && Object.keys(column.allowedTypes).length > 0;
-  const hasChildren = column.children !== null && column.children.length > 0;
+  const children = column.children ?? [];
+  const allowedTypes = column.allowedTypes ?? {};
+  const hasChildren = children.length > 0;
+  const hasAllowedTypes = Object.keys(allowedTypes).length > 0;
 
   return (
     <div ref={setNodeRef} style={columnStyle} className="row-block__column">
@@ -181,7 +182,7 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
         <div className="column-block__body">
           <SortableContext items={column.childSortableIds} strategy={verticalListSortingStrategy}>
             {hasChildren
-              ? column.children!.map((child) => <ElementCard key={child.id} element={child} />)
+              ? children.map((child) => <ElementCard key={child.id} element={child} />)
               : !hasAllowedTypes && <EmptyState message="No content blocks" />}
           </SortableContext>
           {hasAllowedTypes && (
@@ -198,7 +199,7 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
       </div>
       {hasAllowedTypes && (
         <ElementTypePicker
-          allowedTypes={column.allowedTypes!}
+          allowedTypes={allowedTypes}
           isOpen={isPickerOpen}
           onClose={handleClosePicker}
           onSelect={handleTypeSelect}

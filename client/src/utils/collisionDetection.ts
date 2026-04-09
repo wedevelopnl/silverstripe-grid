@@ -445,14 +445,15 @@ export function createTypedCollisionDetection(
     const parents = filterParentContainers(activeId, nonActiveContainers);
 
     if (args.pointerCoordinates) {
+      const pointer = args.pointerCoordinates;
       const containingParent = parents.find((parent) => {
         const rect = args.droppableRects.get(parent.id);
         if (rect === undefined) return false;
         return (
-          args.pointerCoordinates!.x >= rect.left &&
-          args.pointerCoordinates!.x <= rect.left + rect.width &&
-          args.pointerCoordinates!.y >= rect.top &&
-          args.pointerCoordinates!.y <= rect.top + rect.height
+          pointer.x >= rect.left &&
+          pointer.x <= rect.left + rect.width &&
+          pointer.y >= rect.top &&
+          pointer.y <= rect.top + rect.height
         );
       });
       if (containingParent) {
