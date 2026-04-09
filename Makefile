@@ -1,6 +1,6 @@
 COMPOSE := docker compose -f .docker/compose.yml
 
-.PHONY: up down destroy build test test-unit test-integration test-functional ensure-up-fluent test-fluent test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-typecheck _qa-test-js
+.PHONY: up down destroy build test test-unit test-integration test-functional ensure-up-fluent test-fluent test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js
 
 ## Generate .docker/.env with deterministic ports (auto-runs if missing)
 .docker/.env:
@@ -108,7 +108,7 @@ rector-dry: ensure-up
 
 ## Run full QA suite (all checks in parallel)
 qa: ensure-up ensure-up-fluent
-	$(MAKE) -j5 _qa-analyse _qa-coverage _qa-lint _qa-typecheck _qa-test-js
+	$(MAKE) -j6 _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js
 
 ## QA sub-targets (not intended to be called directly)
 _qa-analyse:
@@ -122,6 +122,9 @@ _qa-coverage:
 
 _qa-lint:
 	npm run lint
+
+_qa-format:
+	npm run format:check
 
 _qa-typecheck:
 	npm run typecheck
@@ -147,4 +150,4 @@ dev-build: ensure-up
 
 ## Run JavaScript QA (lint + typecheck + test, in parallel)
 qa-js:
-	$(MAKE) -j3 _qa-lint _qa-typecheck _qa-test-js
+	$(MAKE) -j4 _qa-lint _qa-format _qa-typecheck _qa-test-js
