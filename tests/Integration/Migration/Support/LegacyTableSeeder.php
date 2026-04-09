@@ -64,8 +64,12 @@ final class LegacyTableSeeder
             DB::query("DELETE FROM \"{$table}\"");
         }
 
-        foreach ($this->findTablesWithExtensionColumns() as $table) {
-            DB::query("UPDATE \"{$table}\" SET \"UseElementalGrid\" = 0, \"ElementalAreaID\" = 0");
+        foreach ($this->findTablesWithExtensionColumns() as [$table, $hasUseElementalGrid]) {
+            if ($hasUseElementalGrid) {
+                DB::query("UPDATE \"{$table}\" SET \"UseElementalGrid\" = 0, \"ElementalAreaID\" = 0");
+            } else {
+                DB::query("UPDATE \"{$table}\" SET \"ElementalAreaID\" = 0");
+            }
         }
     }
 
@@ -116,6 +120,60 @@ final class LegacyTableSeeder
         if (\array_key_exists('ElementalAreaID', $columns)) {
             DB::query("ALTER TABLE \"{$table}\" DROP COLUMN \"ElementalAreaID\"");
         }
+    }
+
+    /**
+     * Add only ElementalAreaID to a page table (no UseElementalGrid).
+     *
+     * Simulates plain dnadesign/silverstripe-elemental without the WeDevelop
+     * grid extension. Pages are eligible for migration based solely on having
+     * a valid ElementalAreaID.
+     */
+    public function addElementalAreaColumn(string $table): void
+    {
+        $columns = DB::field_list($table);
+
+        if (!\array_key_exists('ElementalAreaID', $columns)) {
+            DB::query("ALTER TABLE \"{$table}\" ADD COLUMN \"ElementalAreaID\" int NOT NULL DEFAULT 0");
+        }
+    }
+
+    /**
+     * Remove only the ElementalAreaID column from a page table.
+     */
+    public function removeElementalAreaColumn(string $table): void
+    {
+        $columns = DB::field_list($table);
+
+        if (\array_key_exists('ElementalAreaID', $columns)) {
+            DB::query("ALTER TABLE \"{$table}\" DROP COLUMN \"ElementalAreaID\"");
+        }
+    }
+
+    /**
+     * Seed a plain elemental page (ElementalAreaID only, no UseElementalGrid).
+     */
+    public function seedPlainElementalPage(int $pageId, int $areaId): void
+    {
+        $this->seedPlainElementalPageOnTable('SiteTree', $pageId, $areaId);
+    }
+
+    /**
+     * Seed a plain elemental page on a specific table.
+     *
+     * Sets only ElementalAreaID (no UseElementalGrid column expected).
+     */
+    public function seedPlainElementalPageOnTable(string $table, int $pageId, int $areaId): void
+    {
+        DB::prepared_query(
+            "UPDATE \"{$table}\" SET \"ElementalAreaID\" = ? WHERE \"ID\" = ?",
+            [$areaId, $pageId],
+        );
+
+        DB::prepared_query(
+            'INSERT INTO "ElementalArea" ("ID", "OwnerClassName") VALUES (?, ?)',
+            [$areaId, 'SilverStripe\\CMS\\Model\\SiteTree'],
+        );
     }
 
     /**
@@ -345,9 +403,10 @@ final class LegacyTableSeeder
      * Find all SiteTree subclass tables that currently have extension columns.
      *
      * Used by {@see truncateTables()} to reset data regardless of which table
-     * the extension was applied to.
+     * the extension was applied to. Detects tables with either UseElementalGrid
+     * (WeDevelop grid) or only ElementalAreaID (plain elemental).
      *
-     * @return list<string>
+     * @return list<array{string, bool}> Each entry is [tableName, hasUseElementalGrid]
      */
     private function findTablesWithExtensionColumns(): array
     {
@@ -369,8 +428,11 @@ final class LegacyTableSeeder
             }
 
             $columns = DB::field_list($table);
-            if (\array_key_exists('UseElementalGrid', $columns)) {
-                $result[] = $table;
+            $hasUseElementalGrid = \array_key_exists('UseElementalGrid', $columns);
+            $hasElementalAreaID = \array_key_exists('ElementalAreaID', $columns);
+
+            if ($hasUseElementalGrid || $hasElementalAreaID) {
+                $result[] = [$table, $hasUseElementalGrid];
             }
         }
 

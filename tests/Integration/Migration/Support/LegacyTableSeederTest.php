@@ -470,6 +470,107 @@ final class LegacyTableSeederTest extends SapphireTest
         }
     }
 
+    // ─── Group 9: Plain Elemental (ElementalAreaID only) ───────
+
+    public function testAddElementalAreaColumnAddsOnlyAreaId(): void
+    {
+        $this->seeder->addElementalAreaColumn('SiteTree');
+
+        $columns = DB::field_list('SiteTree');
+
+        self::assertArrayHasKey('ElementalAreaID', $columns);
+        self::assertArrayNotHasKey('UseElementalGrid', $columns);
+    }
+
+    public function testAddElementalAreaColumnIsIdempotent(): void
+    {
+        $this->seeder->addElementalAreaColumn('SiteTree');
+        $this->seeder->addElementalAreaColumn('SiteTree');
+
+        $columns = DB::field_list('SiteTree');
+
+        self::assertArrayHasKey('ElementalAreaID', $columns);
+    }
+
+    public function testRemoveElementalAreaColumnDropsOnlyAreaId(): void
+    {
+        $this->seeder->addExtensionColumns('SiteTree');
+        $this->seeder->removeElementalAreaColumn('SiteTree');
+
+        $columns = DB::field_list('SiteTree');
+
+        self::assertArrayNotHasKey('ElementalAreaID', $columns);
+        self::assertArrayHasKey('UseElementalGrid', $columns, 'UseElementalGrid should be untouched');
+
+        // Clean up the remaining column
+        DB::query('ALTER TABLE "SiteTree" DROP COLUMN "UseElementalGrid"');
+    }
+
+    public function testRemoveElementalAreaColumnIsIdempotent(): void
+    {
+        $this->seeder->addElementalAreaColumn('SiteTree');
+        $this->seeder->removeElementalAreaColumn('SiteTree');
+        $this->seeder->removeElementalAreaColumn('SiteTree');
+
+        $columns = DB::field_list('SiteTree');
+
+        self::assertArrayNotHasKey('ElementalAreaID', $columns);
+    }
+
+    public function testSeedPlainElementalPageSetsAreaIdWithoutUseElementalGrid(): void
+    {
+        $this->seeder->createTables();
+        $this->seeder->addElementalAreaColumn('SiteTree');
+
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $pageId = (int) $page->ID;
+
+        $this->seeder->seedPlainElementalPage($pageId, 200);
+
+        $row = DB::prepared_query(
+            'SELECT "ElementalAreaID" FROM "SiteTree" WHERE "ID" = ?',
+            [$pageId],
+        )->record();
+
+        self::assertSame(200, (int) $row['ElementalAreaID']);
+
+        // UseElementalGrid column should not exist at all
+        $columns = DB::field_list('SiteTree');
+        self::assertArrayNotHasKey('UseElementalGrid', $columns);
+
+        // ElementalArea row should be created
+        $area = DB::prepared_query(
+            'SELECT "OwnerClassName" FROM "ElementalArea" WHERE "ID" = ?',
+            [200],
+        )->record();
+
+        self::assertNotEmpty($area);
+        self::assertSame(SiteTree::class, $area['OwnerClassName']);
+
+        $this->seeder->removeElementalAreaColumn('SiteTree');
+    }
+
+    public function testTruncateTablesResetsElementalAreaOnlyColumns(): void
+    {
+        $this->seeder->createTables();
+        $this->seeder->addElementalAreaColumn('SiteTree');
+
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $pageId = (int) $page->ID;
+
+        $this->seeder->seedPlainElementalPage($pageId, 300);
+        $this->seeder->truncateTables();
+
+        $row = DB::prepared_query(
+            'SELECT "ElementalAreaID" FROM "SiteTree" WHERE "ID" = ?',
+            [$pageId],
+        )->record();
+
+        self::assertSame(0, (int) $row['ElementalAreaID']);
+
+        $this->seeder->removeElementalAreaColumn('SiteTree');
+    }
+
     // ─── Helpers ────────────────────────────────────────────────
 
     private function setUpTablesAndExtensions(): void

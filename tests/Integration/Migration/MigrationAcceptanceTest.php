@@ -1074,6 +1074,246 @@ final class MigrationAcceptanceTest extends SapphireTest
         ], TestPage::class);
     }
 
+    // ─── Scenario 11: Plain elemental — flat blocks (RowPerSection) ──
+
+    /**
+     * Migrates a plain dnadesign/silverstripe-elemental page (no WeDevelop grid
+     * extension). Elements are flat under an ElementalArea with no ElementRow
+     * records and no viewport-specific grid settings.
+     *
+     * Expected: all elements grouped into a single implicit Section > Row,
+     * each with full-width grid settings (width=12).
+     */
+    public function testPlainElementalFlatBlocksRowPerSection(): void
+    {
+        $this->switchToPlainElementalSchema();
+
+        try {
+            $pageId = $this->getPageId();
+            $areaId = 2000;
+            $this->seeder->seedPlainElementalPage($pageId, $areaId);
+
+            $this->seeder->seedElement(2001, $areaId, self::CONTENT_CLASS, 1, [
+                'Title' => 'First Block',
+            ]);
+            $this->seeder->seedContentMedia(2001, ['HTML' => '<p>Hello from plain elemental.</p>']);
+
+            $this->seeder->seedElement(2002, $areaId, self::CONTENT_CLASS, 2, [
+                'Title' => 'Second Block', 'ShowTitle' => 1, 'TitleTag' => 'h3',
+            ]);
+            $this->seeder->seedContentMedia(2002, ['HTML' => '<p>Another content block.</p>']);
+
+            $this->runRowPerSection($pageId);
+
+            $this->assertMigratedHierarchy($pageId, self::ZONE, Versioned::DRAFT, [
+                [
+                    'rows' => [
+                        [
+                            'columns' => [
+                                [
+                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'First Block',
+                                        'html' => '<p>Hello from plain elemental.</p>',
+                                    ],
+                                ],
+                                [
+                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Second Block',
+                                        'showTitle' => true,
+                                        'titleTag' => 'h3',
+                                        'html' => '<p>Another content block.</p>',
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+        } finally {
+            $this->restoreWeDevelopGridSchema();
+        }
+    }
+
+    // ─── Scenario 12: Plain elemental — flat blocks (AllRowsInSection) ──
+
+    public function testPlainElementalFlatBlocksAllRowsInSection(): void
+    {
+        $this->switchToPlainElementalSchema();
+
+        try {
+            $pageId = $this->getPageId();
+            $areaId = 2100;
+            $this->seeder->seedPlainElementalPage($pageId, $areaId);
+
+            $this->seeder->seedElement(2101, $areaId, self::CONTENT_CLASS, 1, [
+                'Title' => 'Block A',
+            ]);
+            $this->seeder->seedContentMedia(2101, ['HTML' => '<p>Content A.</p>']);
+
+            $this->seeder->seedElement(2102, $areaId, self::CONTENT_CLASS, 2, [
+                'Title' => 'Block B',
+            ]);
+            $this->seeder->seedContentMedia(2102, ['HTML' => '<p>Content B.</p>']);
+
+            $this->seeder->seedElement(2103, $areaId, self::CONTENT_CLASS, 3, [
+                'Title' => 'Block C',
+            ]);
+            $this->seeder->seedContentMedia(2103, ['HTML' => '<p>Content C.</p>']);
+
+            $this->runAllRowsInSection($pageId);
+
+            $this->assertMigratedHierarchy($pageId, self::ZONE, Versioned::DRAFT, [
+                [
+                    'rows' => [
+                        [
+                            'columns' => [
+                                [
+                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Block A',
+                                        'html' => '<p>Content A.</p>',
+                                    ],
+                                ],
+                                [
+                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Block B',
+                                        'html' => '<p>Content B.</p>',
+                                    ],
+                                ],
+                                [
+                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Block C',
+                                        'html' => '<p>Content C.</p>',
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+        } finally {
+            $this->restoreWeDevelopGridSchema();
+        }
+    }
+
+    // ─── Scenario 13: Plain elemental — draft/live divergence ────
+
+    public function testPlainElementalDraftLiveDivergence(): void
+    {
+        $this->switchToPlainElementalSchema();
+
+        try {
+            $pageId = $this->getPageId();
+            $areaId = 2200;
+            $this->seeder->seedPlainElementalPage($pageId, $areaId);
+
+            // DRAFT: 2 elements
+            $this->seeder->seedElement(2201, $areaId, self::CONTENT_CLASS, 1, [
+                'Title' => 'Draft Title',
+            ], 'draft');
+            $this->seeder->seedContentMedia(2201, ['HTML' => '<p>Draft content</p>'], 'draft');
+
+            $this->seeder->seedElement(2202, $areaId, self::CONTENT_CLASS, 2, [
+                'Title' => 'Draft Only Block',
+            ], 'draft');
+            $this->seeder->seedContentMedia(2202, ['HTML' => '<p>Not yet published</p>'], 'draft');
+
+            // LIVE: only element 2201 with different content
+            $this->seeder->seedElement(2201, $areaId, self::CONTENT_CLASS, 1, [
+                'Title' => 'Live Title',
+            ], 'live');
+            $this->seeder->seedContentMedia(2201, ['HTML' => '<p>Live content</p>'], 'live');
+
+            $this->runRowPerSection($pageId);
+
+            // Assert draft: 1 Section > 1 Row > 2 Columns
+            $this->assertMigratedHierarchy($pageId, self::ZONE, Versioned::DRAFT, [
+                [
+                    'rows' => [
+                        [
+                            'columns' => [
+                                [
+                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Draft Title',
+                                        'html' => '<p>Draft content</p>',
+                                    ],
+                                ],
+                                [
+                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Draft Only Block',
+                                        'html' => '<p>Not yet published</p>',
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+            // Assert live: 1 Section > 1 Row > 1 Column with live content
+            $this->assertMigratedHierarchy($pageId, self::ZONE, Versioned::LIVE, [
+                [
+                    'rows' => [
+                        [
+                            'columns' => [
+                                [
+                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Live Title',
+                                        'html' => '<p>Live content</p>',
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+            // Verify draft and live Sections share the same ID
+            Versioned::set_stage(Versioned::DRAFT);
+            $draftSection = Section::get()->filter([
+                'ParentID' => $pageId,
+                'ParentClass' => SiteTree::class,
+                'Zone' => self::ZONE,
+            ])->first();
+
+            Versioned::set_stage(Versioned::LIVE);
+            $liveSection = Section::get()->filter([
+                'ParentID' => $pageId,
+                'ParentClass' => SiteTree::class,
+                'Zone' => self::ZONE,
+            ])->first();
+
+            self::assertInstanceOf(Section::class, $draftSection);
+            self::assertInstanceOf(Section::class, $liveSection);
+            self::assertSame((int) $draftSection->ID, (int) $liveSection->ID, 'Draft and live Section share the same ID');
+        } finally {
+            $this->restoreWeDevelopGridSchema();
+        }
+    }
+
     // ─── Assertion helper ─────────────────────────────────────────
 
     /**
@@ -1341,6 +1581,31 @@ final class MigrationAcceptanceTest extends SapphireTest
     private function getPageId(): int
     {
         return (int) $this->objFromFixture(SiteTree::class, 'test_page')->ID;
+    }
+
+    /**
+     * Switch from WeDevelop grid schema to plain elemental schema.
+     *
+     * Removes both extension columns (added in setUp) and adds only
+     * ElementalAreaID — simulating a plain dnadesign/silverstripe-elemental
+     * install without the WeDevelop grid extension.
+     */
+    private function switchToPlainElementalSchema(): void
+    {
+        $this->seeder->removeExtensionColumns('SiteTree');
+        $this->seeder->addElementalAreaColumn('SiteTree');
+    }
+
+    /**
+     * Restore WeDevelop grid schema after a plain elemental test.
+     *
+     * Removes the plain elemental column and re-adds both columns so
+     * tearDown's removeExtensionColumns call can clean up normally.
+     */
+    private function restoreWeDevelopGridSchema(): void
+    {
+        $this->seeder->removeElementalAreaColumn('SiteTree');
+        $this->seeder->addExtensionColumns('SiteTree');
     }
 
     /**

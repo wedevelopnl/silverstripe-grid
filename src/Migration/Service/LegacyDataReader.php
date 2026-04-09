@@ -20,6 +20,12 @@ use WeDevelop\Grid\Migration\DTO\LegacyRowData;
  * ElementContent, ElementalArea) remain in the database after the module is
  * removed. This reader extracts data from those tables without requiring any
  * ORM classes for the old schema.
+ *
+ * Supports two migration sources:
+ * - WeDevelop ElementalGrid: pages have both UseElementalGrid and ElementalAreaID columns
+ * - Plain dnadesign/silverstripe-elemental: pages have only ElementalAreaID (no UseElementalGrid)
+ *
+ * When UseElementalGrid is absent, all pages with ElementalAreaID > 0 are eligible.
  */
 final class LegacyDataReader
 {
@@ -81,6 +87,7 @@ final class LegacyDataReader
         foreach ($baseTables as $baseTable) {
             $table = $this->stageTable($baseTable, $stage);
             $isSiteTreeTable = ($table === $siteTreeTable);
+            $hasUseElementalGrid = $this->tableHasColumn($baseTable, 'UseElementalGrid');
 
             if ($isSiteTreeTable) {
                 $sql = <<<SQL
@@ -88,9 +95,12 @@ final class LegacyDataReader
                            "ElementalAreaID" AS areaId,
                            "ClassName" AS pageClassName
                     FROM "{$table}"
-                    WHERE "UseElementalGrid" = 1
-                      AND "ElementalAreaID" > 0
+                    WHERE "ElementalAreaID" > 0
                     SQL;
+
+                if ($hasUseElementalGrid) {
+                    $sql .= ' AND "UseElementalGrid" = 1';
+                }
             } else {
                 $sql = <<<SQL
                     SELECT "{$table}"."ID" AS pageId,
@@ -98,9 +108,12 @@ final class LegacyDataReader
                            "_st"."ClassName" AS pageClassName
                     FROM "{$table}"
                     INNER JOIN "{$siteTreeTable}" AS "_st" ON "_st"."ID" = "{$table}"."ID"
-                    WHERE "{$table}"."UseElementalGrid" = 1
-                      AND "{$table}"."ElementalAreaID" > 0
+                    WHERE "{$table}"."ElementalAreaID" > 0
                     SQL;
+
+                if ($hasUseElementalGrid) {
+                    $sql .= \sprintf(' AND "%s"."UseElementalGrid" = 1', $table);
+                }
             }
 
             $params = [];

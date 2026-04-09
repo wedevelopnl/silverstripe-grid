@@ -99,8 +99,11 @@ final class FieldMapper
      */
     public function mapGridSettings(LegacyElement $element, string $defaultViewport, array $viewportKeyMap): GridSettings
     {
+        // Size=0 means "not set" (column missing or never configured) — default to full width
+        $rawWidth = $element->sizeFields[$defaultViewport] ?? 0;
+
         $defaultConfig = new ViewportConfig(
-            width: $element->sizeFields[$defaultViewport] ?? 12,
+            width: $rawWidth > 0 ? $rawWidth : $this->columnCount,
             offset: $element->offsetFields[$defaultViewport] ?? 0,
             visible: $this->mapVisibility($element->visibilityFields[$defaultViewport] ?? null) ?? true,
         );

@@ -363,8 +363,8 @@ final class FieldMapperTest extends TestCase
     public static function clampingProvider(): iterable
     {
         yield 'width exceeding columns → clamped to column count' => [12, 15, 0, 12, 0];
-        yield 'width below 1 → clamped to 1' => [12, -3, 0, 1, 0];
-        yield 'width=0 → clamped to 1 not 0' => [12, 0, 0, 1, 0];
+        yield 'negative width → treated as "not set" and defaults to full width' => [12, -3, 0, 12, 0];
+        yield 'width=0 → treated as "not set" and defaults to full width' => [12, 0, 0, 12, 0];
         yield 'width=1 stays 1 not clamped to 2' => [12, 1, 0, 1, 0];
         yield 'negative offset → clamped to 0' => [12, 6, -2, 6, 0];
         yield 'offset=0 stays 0 not clamped to 1' => [12, 6, 0, 6, 0];
@@ -495,6 +495,38 @@ final class FieldMapperTest extends TestCase
     }
 
     // ─── Viewport override compound condition edge cases ─────────────────────
+
+    public function testZeroSizeFieldsDefaultToFullWidth(): void
+    {
+        // Simulates plain elemental where no viewport columns exist — all sizes are 0
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['XS' => 0, 'SM' => 0, 'MD' => 0, 'LG' => 0, 'XL' => 0],
+            'offsetFields' => ['XS' => 0, 'SM' => 0, 'MD' => 0, 'LG' => 0, 'XL' => 0],
+            'visibilityFields' => [],
+        ]);
+
+        $settings = $this->mapper->mapGridSettings($element, 'MD', [
+            'XS' => 'xs', 'SM' => 'sm', 'MD' => 'md', 'LG' => 'lg', 'XL' => 'xl',
+        ]);
+
+        self::assertSame(12, $settings->default->width, 'Default width should be full column count');
+        self::assertSame(0, $settings->default->offset);
+        self::assertTrue($settings->default->visible);
+        self::assertSame([], $settings->overrides, 'No overrides expected when all viewports are unset');
+    }
+
+    public function testZeroSizeFieldsWithCustomColumnCount(): void
+    {
+        $mapper = new FieldMapper(columnCount: 16);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 0],
+            'offsetFields' => ['MD' => 0],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertSame(16, $settings->default->width, 'Should use custom column count as fallback');
+    }
 
     public function testSizeZeroWithNonZeroOffsetProducesOverride(): void
     {
