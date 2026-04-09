@@ -86,7 +86,7 @@ abstract class AbstractMigrationTask extends BuildTask
 
         $logger = Injector::inst()->get(LoggerInterface::class);
         $reader = new LegacyDataReader();
-        $mapper = new FieldMapper(columnCount: $adapter->getColumnCount(), logger: $logger);
+        $mapper = $this->buildFieldMapper($adapter, $logger);
         $grouper = new ElementGrouper();
         $strategy = $this->createStrategy($grouper, $mapper, $defaultViewport, $viewportKeyMap, $logger);
 
@@ -111,6 +111,60 @@ abstract class AbstractMigrationTask extends BuildTask
         array $viewportKeyMap,
         LoggerInterface $logger,
     ): RowMappingStrategy;
+
+    /**
+     * Build the FieldMapper used for the migration, allowing extensions to
+     * override any of its four lookup tables via the `updateFieldMapperConfig`
+     * hook. Each argument is passed by reference and defaults to `null`, which
+     * preserves FieldMapper's built-in defaults.
+     *
+     * Extension signature:
+     * ```
+     * public function updateFieldMapperConfig(
+     *     ?array &$classNameMap,
+     *     ?array &$verticalAlignMap,
+     *     ?array &$mediaPositionMap,
+     *     ?array &$gapSizeMap,
+     * ): void
+     * ```
+     */
+    protected function buildFieldMapper(GridAdapterInterface $adapter, LoggerInterface $logger): FieldMapper
+    {
+        /** @var array<string, string>|null $classNameMap */
+        $classNameMap = null;
+        /** @var array<string, string>|null $verticalAlignMap */
+        $verticalAlignMap = null;
+        /** @var array<string, string>|null $mediaPositionMap */
+        $mediaPositionMap = null;
+        /** @var array<int, int>|null $gapSizeMap */
+        $gapSizeMap = null;
+
+        $this->extend(
+            'updateFieldMapperConfig',
+            $classNameMap,
+            $verticalAlignMap,
+            $mediaPositionMap,
+            $gapSizeMap,
+        );
+
+        // The extend() call passes by reference, which PHPStan has to widen
+        // to the looser array shape it cannot introspect across the hook.
+        // The extension contract is documented above; re-tag the narrowed
+        // types here so the FieldMapper constructor accepts them.
+        /** @var array<string, string>|null $classNameMap */
+        /** @var array<string, string>|null $verticalAlignMap */
+        /** @var array<string, string>|null $mediaPositionMap */
+        /** @var array<int, int>|null $gapSizeMap */
+
+        return new FieldMapper(
+            classNameMap: $classNameMap,
+            verticalAlignMap: $verticalAlignMap,
+            mediaPositionMap: $mediaPositionMap,
+            gapSizeMap: $gapSizeMap,
+            columnCount: $adapter->getColumnCount(),
+            logger: $logger,
+        );
+    }
 
     /**
      * Parse viewport-map arg or derive from adapter.

@@ -214,7 +214,7 @@ A partial migration (draft written, live reconciliation failed) will not be retr
 
 ## Customising the Migration
 
-Three extension points are available via `SilverStripe\Core\Extensible`. Register a `DataExtension` on the service classes below.
+Four extension points are available via `SilverStripe\Core\Extensible`. Register a `DataExtension` on the service or task class listed in each section.
 
 ### 1. Custom element class mapping
 
@@ -278,24 +278,45 @@ public function updateLegacyElements(array &$elements, int $areaId, string $stag
 
 Register the extension on `WeDevelop\Grid\Migration\Service\LegacyDataReader` using the same YAML pattern as above.
 
-### Replacing the built-in CSS-class lookups
+### 4. Overriding the FieldMapper lookup tables
 
-The Bootstrap-specific vertical alignment, media position, and gap-size lookup tables in `FieldMapper` are constructor arguments (with hardcoded Bootstrap defaults). The bundled tasks do not expose a way to swap them from YAML or CLI — replacing them requires a small subclass of the migration task that builds its own `FieldMapper`:
+`AbstractMigrationTask` calls `updateFieldMapperConfig($classNameMap, $verticalAlignMap, $mediaPositionMap, $gapSizeMap)` immediately before constructing the `FieldMapper`. Each argument is a nullable array passed by reference; populating one replaces the corresponding built-in Bootstrap default, leaving the untouched ones on the defaults. Use this when your legacy `ElementContentExtension` was customised to store non-standard CSS class values (the default `silverstripe-elemental-grid` install stores Bootstrap strings regardless of the rendering framework, so most sites need no override).
 
 ```php
-use Psr\Log\LoggerInterface;
-use WeDevelop\Grid\Migration\Service\FieldMapper;
-use WeDevelop\Grid\Migration\Task\MigrateRowsToSectionsTask;
+use SilverStripe\Core\Extension;
 
-class MigrateRowsToSectionsTailwindTask extends MigrateRowsToSectionsTask
+class MyFieldMapperExtension extends Extension
 {
-    private static string $segment = 'migrate-grid-rows-to-sections-tailwind';
-
-    // Override createStrategy() to pass a FieldMapper built with your maps.
+    /**
+     * @param array<string, string>|null $classNameMap
+     * @param array<string, string>|null $verticalAlignMap
+     * @param array<string, string>|null $mediaPositionMap
+     * @param array<int, int>|null       $gapSizeMap
+     */
+    public function updateFieldMapperConfig(
+        ?array &$classNameMap,
+        ?array &$verticalAlignMap,
+        ?array &$mediaPositionMap,
+        ?array &$gapSizeMap,
+    ): void {
+        $verticalAlignMap = [
+            '' => 'top',
+            'items-center' => 'center',
+            'items-end' => 'bottom',
+        ];
+    }
 }
 ```
 
-In practice, the simpler path is an `updateElementFieldMapping` extension (option 2 above) that overwrites the affected fields after the default mapping has run.
+Register it in YAML against the concrete task(s) you run. The hook is inherited from `AbstractMigrationTask`, so registering on the abstract class covers both bundled tasks:
+
+```yaml
+WeDevelop\Grid\Migration\Task\AbstractMigrationTask:
+  extensions:
+    - App\Migration\MyFieldMapperExtension
+```
+
+For field-level tweaks on individual element subclasses, `updateElementFieldMapping` (option 2 above) remains the right hook — it runs after the default mapping and lets you overwrite specific fields on the new element.
 
 ## After Migration
 
@@ -313,7 +334,7 @@ In practice, the simpler path is an `updateElementFieldMapping` extension (optio
 
 **"Resolved class … does not extend GridElement."** — A legacy element class has no mapping to a new class that extends `WeDevelop\Grid\Model\ContentElement` / `GridElement`. Register an `updateClassNameMapping` extension (option 1) or update the PHP class hierarchy.
 
-**Media blocks show the wrong alignment or order.** — The default CSS-class lookups expect Bootstrap values (`align-items-center`, `order-1 order-md-2`, …). Fix the affected fields from an `updateElementFieldMapping` extension, or subclass the task and provide custom lookup tables to `FieldMapper`.
+**Media blocks show the wrong alignment or order.** — The default CSS-class lookups expect Bootstrap values (`align-items-center`, `order-1 order-md-2`, …). Register an `updateFieldMapperConfig` extension (option 4 above) to supply your own lookup tables, or use `updateElementFieldMapping` (option 2) for per-element fixes after the default mapping has run.
 
 **Viewport overrides are missing after migration.** — The automatic viewport-key mapping is case-insensitive but requires at least a case-insensitive match between legacy keys (`XS`, `SM`, `MD`, `LG`, `XL`) and the active adapter's viewport keys. Migrating to an adapter with different names (for example Bulma's `mobile`, `tablet`, `desktop`) requires an explicit `--viewport-map` argument.
 

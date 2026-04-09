@@ -15,9 +15,12 @@ use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Output\BufferedOutput;
 use WeDevelop\Grid\Migration\Task\MigrateRowsToSectionsTask;
 use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\FieldMapperConfigStubExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+use WeDevelop\Grid\Value\VerticalAlignment;
 
 #[CoversClass(MigrateRowsToSectionsTask::class)]
 final class MigrateRowsToSectionsTaskTest extends SapphireTest
@@ -460,6 +463,73 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
         $column = Column::get()->filter(['ParentClass' => Row::class])->first();
         self::assertInstanceOf(Column::class, $column);
         self::assertSame(10, $column->getGridSettings()->default->width);
+    }
+
+    public function testUpdateFieldMapperConfigExtensionReplacesVerticalAlignMap(): void
+    {
+        MigrateRowsToSectionsTask::add_extension(FieldMapperConfigStubExtension::class);
+
+        try {
+            $pageId = $this->getPageId();
+            $areaId = 900;
+            $this->seeder->seedPage($pageId, $areaId);
+
+            $this->seeder->seedElement(9000, $areaId, self::ROW_CLASS, 1);
+            $this->seeder->seedRow(9000);
+
+            $this->seeder->seedElement(9001, $areaId, self::CONTENT_CLASS, 2, [
+                'SizeMD' => 12,
+            ]);
+            // A value that is NOT in FieldMapper's default Bootstrap map. The
+            // stub extension's verticalAlignMap rewrites it to 'bottom'; if the
+            // hook is not wired through, FieldMapper's default fallback would
+            // return 'top' instead.
+            $this->seeder->seedContentMedia(9001, [
+                'ContentVerticalAlign' => FieldMapperConfigStubExtension::CUSTOM_ALIGN_INPUT,
+            ]);
+
+            $exitCode = $this->executeTask([
+                '--default-viewport' => 'MD',
+                '--zone' => 'main',
+            ]);
+
+            self::assertSame(Command::SUCCESS, $exitCode);
+
+            $content = ContentElement::get()->first();
+            self::assertInstanceOf(ContentElement::class, $content);
+            self::assertSame(VerticalAlignment::Bottom->value, $content->VerticalAlignment);
+        } finally {
+            MigrateRowsToSectionsTask::remove_extension(FieldMapperConfigStubExtension::class);
+        }
+    }
+
+    public function testFieldMapperUsesBuiltInDefaultsWhenNoExtensionRegistered(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 950;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        $this->seeder->seedElement(9500, $areaId, self::ROW_CLASS, 1);
+        $this->seeder->seedRow(9500);
+
+        $this->seeder->seedElement(9501, $areaId, self::CONTENT_CLASS, 2, [
+            'SizeMD' => 12,
+        ]);
+        // Standard Bootstrap value — should resolve via the built-in default map.
+        $this->seeder->seedContentMedia(9501, [
+            'ContentVerticalAlign' => 'align-items-center',
+        ]);
+
+        $exitCode = $this->executeTask([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+        ]);
+
+        self::assertSame(Command::SUCCESS, $exitCode);
+
+        $content = ContentElement::get()->first();
+        self::assertInstanceOf(ContentElement::class, $content);
+        self::assertSame(VerticalAlignment::Center->value, $content->VerticalAlignment);
     }
 
     public function testViewportMapMalformedPairsAreSkipped(): void
