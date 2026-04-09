@@ -124,6 +124,10 @@ See the [architecture documentation](docs/architecture/) for detailed design doc
 - [Backend Architecture](docs/architecture/backend.md) — data model, API layer, service design, validation, grid adapters
 - [Drag and Drop](docs/architecture/drag-and-drop.md) — frontend dnd-kit integration and backend reorder pipeline
 
+### Migrating from Elemental / ElementalGrid
+
+Projects upgrading from WeDevelop ElementalGrid (SS5) or plain `dnadesign/silverstripe-elemental` can use the built-in migration tasks. See [Migrating from Elemental / ElementalGrid](docs/migration.md) for the step-by-step guide, strategy diagrams, and extension hooks.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for release history.
