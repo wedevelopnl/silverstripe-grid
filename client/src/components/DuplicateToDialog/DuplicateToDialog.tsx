@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePages, useZones, useAcceptableContainers } from '@/hooks/useDuplicateToQueries';
 import './DuplicateToDialog.scss';
 
@@ -142,13 +143,12 @@ export default function DuplicateToDialog({
     }
   }, [step]);
 
-  return (
+  return createPortal(
     <dialog
       ref={dialogRef}
       className="duplicate-to-dialog"
       data-testid="duplicate-to-dialog"
       onClose={handleClose}
-      onClick={(e) => e.stopPropagation()}
     >
       <div className="duplicate-to-dialog__header">
         <h3 className="duplicate-to-dialog__title">
@@ -172,13 +172,13 @@ export default function DuplicateToDialog({
             />
             {pages.isLoading && <p className="duplicate-to-dialog__loading">Loading pages\u2026</p>}
             {pages.data !== undefined && (
-              <ul
+              <div
                 className="duplicate-to-dialog__list"
                 data-testid="duplicate-to-page-list"
                 role="listbox"
               >
                 {pages.data.map((page) => (
-                  <li
+                  <div
                     key={page.id}
                     className={`duplicate-to-dialog__item${page.id === selectedPageId ? ' duplicate-to-dialog__item--selected' : ''}${!page.hasGridZones ? ' duplicate-to-dialog__item--disabled' : ''}`}
                     role="option"
@@ -196,9 +196,9 @@ export default function DuplicateToDialog({
                     tabIndex={page.hasGridZones ? 0 : -1}
                   >
                     {page.title}
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         )}
@@ -207,13 +207,13 @@ export default function DuplicateToDialog({
           <div data-testid="duplicate-to-step-zone">
             {zones.isLoading && <p className="duplicate-to-dialog__loading">Loading zones\u2026</p>}
             {zones.data !== undefined && zones.data.length > 1 && (
-              <ul
+              <div
                 className="duplicate-to-dialog__list"
                 data-testid="duplicate-to-zone-list"
                 role="listbox"
               >
                 {zones.data.map((zone) => (
-                  <li
+                  <div
                     key={zone}
                     className={`duplicate-to-dialog__item${zone === selectedZone ? ' duplicate-to-dialog__item--selected' : ''}`}
                     role="option"
@@ -226,9 +226,9 @@ export default function DuplicateToDialog({
                     tabIndex={0}
                   >
                     {zone}
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         )}
@@ -244,13 +244,13 @@ export default function DuplicateToDialog({
               </p>
             )}
             {containers.data !== undefined && containers.data.length > 0 && (
-              <ul
+              <div
                 className="duplicate-to-dialog__list"
                 data-testid="duplicate-to-container-list"
                 role="listbox"
               >
                 {containers.data.map((container) => (
-                  <li
+                  <div
                     key={container.id}
                     className={`duplicate-to-dialog__item${container.id === selectedContainerId ? ' duplicate-to-dialog__item--selected' : ''}`}
                     role="option"
@@ -264,9 +264,9 @@ export default function DuplicateToDialog({
                   >
                     <span className="duplicate-to-dialog__item-title">{container.title}</span>
                     <span className="duplicate-to-dialog__item-type">{container.type}</span>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         )}
@@ -349,6 +349,7 @@ export default function DuplicateToDialog({
           )}
         </div>
       </div>
-    </dialog>
+    </dialog>,
+    document.body,
   );
 }

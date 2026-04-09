@@ -69,6 +69,13 @@ export default function GridSettingsPicker({
     close();
   }
 
+  function handleOptionKeyDown(e: React.KeyboardEvent, value: number | 'hidden') {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleOptionClick(value);
+    }
+  }
+
   return (
     <div ref={wrapperRef} className="grid-settings-picker">
       <button
@@ -84,24 +91,26 @@ export default function GridSettingsPicker({
         {label}
       </button>
       {isOpen && (
-        <ul
+        <div
           id={listboxId}
           className="grid-settings-picker__options"
           role="listbox"
           data-testid={`${testId}-listbox`}
         >
           {options.map((option) => (
-            <li
+            <div
               key={option.value}
               className={`grid-settings-picker__option${option.value === selectedValue ? ' grid-settings-picker__option--selected' : ''}${option.value === 'hidden' ? ' grid-settings-picker__option--separator' : ''}`}
               role="option"
               aria-selected={option.value === selectedValue}
+              tabIndex={0}
               onClick={() => handleOptionClick(option.value)}
+              onKeyDown={(e) => handleOptionKeyDown(e, option.value)}
             >
               {option.label}
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

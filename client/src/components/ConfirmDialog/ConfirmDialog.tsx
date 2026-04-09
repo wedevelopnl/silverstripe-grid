@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import './ConfirmDialog.scss';
 
 interface ConfirmDialogProps {
@@ -41,13 +42,12 @@ export default function ConfirmDialog({
     onConfirm();
   }, [onConfirm]);
 
-  return (
+  return createPortal(
     <dialog
       ref={dialogRef}
       className="confirm-dialog"
       data-testid="confirm-dialog"
       onClose={handleClose}
-      onClick={(e) => e.stopPropagation()}
     >
       <div className="confirm-dialog__header">
         <h3 className="confirm-dialog__title">{title}</h3>
@@ -71,6 +71,7 @@ export default function ConfirmDialog({
           {confirmLabel}
         </button>
       </div>
-    </dialog>
+    </dialog>,
+    document.body,
   );
 }

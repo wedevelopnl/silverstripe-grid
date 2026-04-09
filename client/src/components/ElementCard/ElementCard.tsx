@@ -47,6 +47,8 @@ export default function ElementCard({ element }: ElementCardProps) {
   ].join(' ');
 
   return (
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: dnd-kit sortable root; link semantics are applied conditionally via role + keyboard handler when editLink exists.
+    // biome-ignore lint/a11y/noStaticElementInteractions: same — the root div is a sortable container that conditionally behaves as a link; cannot be restructured as <a> without breaking DnD integration.
     <div
       ref={setNodeRef}
       style={style}

@@ -10,6 +10,7 @@ export default function ViewportSwitcher() {
 
   return (
     <div className="viewport-switcher" data-testid="viewport-switcher">
+      {/* biome-ignore lint/a11y/useSemanticElements: no HTML element maps to role="group" for a toolbar-style button cluster; <fieldset> implies form grouping. */}
       <div role="group" aria-label="Viewport size">
         {viewports.map((viewport) => {
           const isActive = viewport.key === activeViewport;

@@ -88,14 +88,14 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
         <span className="actions-menu__dots" aria-hidden="true" />
       </button>
       {isOpen && (
-        <ul
+        <div
           id={menuId}
           className="actions-menu__dropdown"
           role="menu"
           data-testid={`${testId}-dropdown`}
         >
           {actions.map((action) => (
-            <li
+            <div
               key={action.key}
               className={`actions-menu__item${action.destructive ? ' actions-menu__item--destructive' : ''}`}
               role="menuitem"
@@ -104,9 +104,9 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
               onKeyDown={(e) => handleItemKeyDown(e, action.onAction)}
             >
               {action.label}
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
