@@ -52,8 +52,9 @@ describe('apiPost', () => {
     expect(url).toBe('/api/create');
     expect(init?.method).toBe('POST');
     expect(init?.body).toBe(JSON.stringify({ name: 'test' }));
-    expect((init?.headers as Record<string, string>)['X-SecurityID']).toBe('test-security-id');
-    expect((init?.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+    const postHeaders = init?.headers as Record<string, string>;
+    expect(postHeaders['X-SecurityID']).toBe('test-security-id');
+    expect(postHeaders['Content-Type']).toBe('application/json');
   });
 
   it('throws ApiError on non-OK status', async () => {
@@ -71,7 +72,8 @@ describe('apiPatch', () => {
 
     const [, init] = getFetchCalls()[0];
     expect(init?.method).toBe('PATCH');
-    expect((init?.headers as Record<string, string>)['X-SecurityID']).toBe('test-security-id');
+    const patchHeaders = init?.headers as Record<string, string>;
+    expect(patchHeaders['X-SecurityID']).toBe('test-security-id');
   });
 });
 
@@ -83,7 +85,8 @@ describe('apiDelete', () => {
 
     const [, init] = getFetchCalls()[0];
     expect(init?.method).toBe('DELETE');
-    expect((init?.headers as Record<string, string>)['X-SecurityID']).toBe('test-security-id');
+    const deleteHeaders = init?.headers as Record<string, string>;
+    expect(deleteHeaders['X-SecurityID']).toBe('test-security-id');
   });
 });
 
@@ -232,7 +235,8 @@ describe('mutation request headers', () => {
     await apiPost('/api/create', { name: 'test' });
 
     const [, init] = getFetchCalls()[0];
-    expect((init?.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+    const headers = init?.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBe('application/json');
   });
 
   it('sends exact Content-Type application/json for PATCH', async () => {
@@ -241,7 +245,8 @@ describe('mutation request headers', () => {
     await apiPatch('/api/update', { id: 1 });
 
     const [, init] = getFetchCalls()[0];
-    expect((init?.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+    const headers = init?.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBe('application/json');
   });
 
   it('sends exact Content-Type application/json for DELETE', async () => {
@@ -250,6 +255,7 @@ describe('mutation request headers', () => {
     await apiDelete('/api/remove', { id: 1 });
 
     const [, init] = getFetchCalls()[0];
-    expect((init?.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+    const headers = init?.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBe('application/json');
   });
 });
