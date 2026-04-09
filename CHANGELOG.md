@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0-alpha.4] - 2026-04-09
+
+### Added
+
+- **SS5 → SS6 Elemental migration tool** — `MigrateRowsToSectionsTask` and `MigrateRowsToSingleSectionTask` BuildTasks migrate legacy `wedevelopnl/silverstripe-elemental-grid` (and plain `dnadesign/silverstripe-elemental`) content into the new Section→Row→Column hierarchy. Two row-mapping strategies (`RowPerSection`, `AllRowsInSection`), `FieldMapper` for grid settings / media fields / class names (with invalid-value clamping and a cross-framework lookup table), `LegacyDataReader` for raw SQL reads against legacy tables with schema discovery, `ElementGrouper` for row-boundary splitting, and `GridMigrationService` orchestrating the full flow. Preserves live-specific content, requires explicit confirmation before destructive runs, and ships with a 7-scenario acceptance test suite covering cross-framework (Bootstrap → Tailwind) and custom-element migrations. See [`docs/migration.md`](docs/migration.md)
+- **Extension hook for FieldMapper lookup tables** — projects can customise the class name lookup used during migration via a standard SilverStripe extension point, enabling bespoke element class mapping without subclassing
+- **Fluent localisation support** — opt-in multi-locale grid editing via `FluentGridPageExtension` and `GridAwareDeleteLocalisationPolicy`. Elements are isolated per locale, with auto-scaffolding inheriting the active locale, and support for Fluent's copy-to-locale and clear-from-locale actions. Adds `tractorcow/silverstripe-fluent` as a `suggest` dependency, a dedicated `fluent` Docker service, and a `make test-fluent` target. See [`docs/fluent.md`](docs/fluent.md)
+- **Bulk reset of viewport overrides** — a reset action on the viewport switcher clears all per-viewport overrides for the current column in one call. Backed by `ResetGridSettingsOverridesRequest`, the `useResetOverridesAction` hook, and a dedicated API endpoint
+- **Automatic CMS preview refresh** — the CMS preview pane now refreshes automatically after any grid mutation, eliminating stale previews after add/edit/reorder/archive
+- **`GridElementService` and `GridSettingsService`** — business logic extracted from `GridController` into dedicated, testable services
+- **`GridNodeMapper` service** — element-to-`GridNode` DTO conversion extracted from `GridTreeBuilder`
+- **`GridSettingsSerializer` service** — dedicated serialisation layer for `DBGridSettings` read/write
+
+### Changed
+
+- **`AbstractGridAdapter` replaced with a single config-driven `GridAdapter`** — the abstract adapter hierarchy is gone. `GridAdapter` is now a concrete class that reads everything (CSS format strings, class maps, scalar values) from `Configurable` statics, and `BootstrapAdapter` / `TailwindAdapter` / `BulmaAdapter` are zero-method subclasses declaring only `private static` property overrides. Configuration is resolved on demand, eliminating instance property duplication. The `ContentLayoutAdapter` class and `ContentLayoutClassMap` value object are folded into `GridAdapter` directly
+- **`GridController` slimmed down** — the controller is now a thin HTTP adapter; validation, orchestration, and persistence live in `GridElementService`, `GridSettingsService`, `RequestBodyParser`, and `TitleGenerator`
+- **Ownership validation errors map to HTTP 400** — previously surfaced as 500, now correctly classified as client errors
+- **`OrmGridElementRepository.findByParents` query paths unified** — single code path for all parent lookups, removing duplicated query logic
+- **Template rendering unified on `GridElement` base class** — per-subclass rendering duplication eliminated
+
+### Fixed
+
+- CMS preview pane not refreshing after grid mutations (stale preview state)
+
+### Dependencies
+
+- `@tanstack/react-query` 5.95 → 5.96
+- `@playwright/test` 1.58 → 1.59
+- Vite 8.0.2 → 8.0.7
+- Vitest 4.1.1 → 4.1.3
+- `@vitest/coverage-v8` 4.1.1 → 4.1.2
+- jsdom 29.0.1 → 29.0.2
+- oxlint 1.57 → 1.59
+- sass-embedded 1.98 → 1.99
+- Stylelint 17.5 → 17.6
+- `@types/node` 25.2 → 25.5
+- Added `@testing-library/jest-dom` ^6.9 (dev)
+- Added `tractorcow/silverstripe-fluent` as suggested (not required)
+
+### Developer Experience
+
+- **Frontend test suite redesigned** — tests co-located with source files (`client/src/utils/*.test.ts` next to `*.ts`) instead of a mirrored `client/src/tests/` tree, with proper isolation and shared infrastructure consolidated
+- **Integration & functional test expansion** — new `FunctionalTest` coverage for `GridController` API endpoints, `FixtureController`, `GridElementReport`, `BlockMediaExtension`, and the `Dev/` fixture infrastructure; new `SapphireTest` integration suite alongside a pure unit suite with targeted refactorings for testability
+- **Data-provider consolidation** — `GridTreeBuilderTest`, `RequestBodyParserTest`, `GridSettingsSerializerTest`, `GridSettingsResolverTest`, `FieldMapperTest`, and the migration strategy tests converted from one-method-per-case to `#[DataProvider]` tables
+- Expanded README Development section into a full quick start
+
 ## [6.0.0-alpha.3] - 2026-03-25
 
 ### Added
@@ -161,6 +208,7 @@ Ground-up rewrite for SilverStripe 6. This is a new package (`wedevelopnl/silver
 - Makefile with targets for testing, coverage, static analysis, and mutation testing
 - Pre-push QA gate hook
 
+[6.0.0-alpha.4]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.4
 [6.0.0-alpha.3]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.3
 [6.0.0-alpha.2]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.2
 [6.0.0-alpha.1]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.1
