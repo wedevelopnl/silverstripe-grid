@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loadFixture, loadAndNavigate, resetFixtures } from '../helpers/fixtures';
+import { selectChosenValue } from '../helpers/forms';
 
 test.describe('Content elements', () => {
   test.afterAll(async ({ request }) => {
@@ -67,10 +68,7 @@ test.describe('Content elements', () => {
     await page.getByRole('textbox', { name: 'Title' }).fill('My Edited Element');
 
     // Configure title display: set heading level to h4 and enable visibility
-    // Chosen.js hides the native <select> — set value via jQuery to update both
-    await page.evaluate(() => {
-      jQuery('select[name="TitleTag"]').val('h4').trigger('change').trigger('chosen:updated');
-    });
+    await selectChosenValue(page, 'TitleTag', 'h4');
     await page.locator('input[name="ShowTitle"]').check();
 
     // Set HTML content — try TinyMCE API first, fall back to textarea

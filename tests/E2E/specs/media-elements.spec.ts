@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loadFixture, resetFixtures } from '../helpers/fixtures';
+import { selectChosenValue } from '../helpers/forms';
 
 test.describe('Media elements', () => {
   test.afterAll(async ({ request }) => {
@@ -107,9 +108,9 @@ test.describe('Media elements', () => {
       await picker.locator('label:has(input[value="8"])').click();
       await expect(page.locator('[id$="_MediaPosition_Holder"]')).toBeVisible();
 
-      await page.locator('select[name="MediaPosition"]').selectOption('last');
-      await page.locator('select[name="VerticalAlignment"]').selectOption('center');
-      await page.locator('select[name="GapSize"]').selectOption('3');
+      await selectChosenValue(page, 'MediaPosition', 'last');
+      await selectChosenValue(page, 'VerticalAlignment', 'center');
+      await selectChosenValue(page, 'GapSize', '3');
 
       await page.getByRole('button', { name: /Save/ }).first().click();
       await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 });
@@ -119,7 +120,7 @@ test.describe('Media elements', () => {
     await test.step('Configure media settings', async () => {
       await page.getByRole('tab', { name: 'Media' }).click();
 
-      await page.locator('select[name="MediaRatio"]').selectOption('16x9');
+      await selectChosenValue(page, 'MediaRatio', '16x9');
       await page.locator('input[name="MediaCaption"]').fill('Test media caption');
 
       await page.getByRole('button', { name: /Save/ }).first().click();
