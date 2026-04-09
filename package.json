@@ -34,7 +34,7 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.10",
+    "@biomejs/biome": "^2.4.11",
     "@playwright/test": "^1.59.1",
     "@stryker-mutator/core": "^9.5.0",
     "@stryker-mutator/typescript-checker": "^9.5.0",
