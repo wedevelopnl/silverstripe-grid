@@ -440,6 +440,14 @@ Use the narrowest PHPStan PHPDoc type that matches the domain constraint. Prefer
 - **API client layers**: 4-file architecture in `client/src/api/` — `client.ts` (HTTP primitives), `endpoints.ts` (business operations), `config.ts` (CMS globals like security token, base URL), `errors.ts` (typed error classes).
 - **Bridge pattern**: entwine in `client/src/bridge/` mounts React components into jQuery DOM. Injector wraps SilverStripe DI. New components registered via `client/src/boot/registerComponents.ts`.
 
+## Non-Null Assertions (`!`)
+
+- Biome's `style/noNonNullAssertion` rule is enabled in production code — avoid `!` in files under `client/src/` outside tests.
+- **TanStack Query narrowing**: `enabled: x !== null` does **not** narrow `x` inside `queryFn`. Use `skipToken` from `@tanstack/react-query` instead: `queryFn: x !== null ? () => fetch(x) : skipToken`. See `client/src/hooks/useDuplicateToQueries.ts` for the canonical example.
+- **Derived boolean flags** (`hasX = x !== null && ...`) are not type predicates and do not narrow later usages. Prefer introducing a local const with a nullish-coalesced fallback (`const children = column.children ?? []`) and use it directly.
+- **Narrowing across closures**: TypeScript cannot carry narrowing into a callback body because the closed-over value could be reassigned between check and use. Capture the narrowed value to a local const before the callback: `const pointer = args.pointerCoordinates; /* use pointer inside callback */`.
+- The rule is disabled for test files (`**/*.test.{ts,tsx}`) via `biome.json` `overrides`. Fixture walks like `result.current[0].children![0]` are idiomatic in tests — a wrong fixture fails the test loudly, which is the same signal a guard would produce.
+
 ## Drag & Drop (dnd-kit)
 
 See the `dnd-guide` skill for the full reference — coordinate spaces, collision detection, pending tree, diagnostics, and system invariants. The skill is triggered automatically when working on DnD files.
