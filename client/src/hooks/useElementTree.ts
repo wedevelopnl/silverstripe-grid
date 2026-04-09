@@ -6,9 +6,10 @@ import { queryKeys } from './queryKeys';
 
 function treeQueryOptions(pageId: number | null, zone: string) {
   return {
-    queryKey: pageId !== null
-      ? queryKeys.elementTree.byPage(pageId, zone)
-      : ['elementTree', 'disabled'] as const,
+    queryKey:
+      pageId !== null
+        ? queryKeys.elementTree.byPage(pageId, zone)
+        : (['elementTree', 'disabled'] as const),
     queryFn: () => {
       if (pageId === null) {
         throw new Error('pageId is required — query should be disabled');
@@ -37,7 +38,10 @@ export function useElementTree(pageId: number | null, zone: string) {
  * Reads per-viewport override counts from the cached tree API response.
  * Shares the same query cache as useElementTree — no extra fetch.
  */
-export function useViewportOverrideCounts(pageId: number | null, zone: string): Record<string, number> {
+export function useViewportOverrideCounts(
+  pageId: number | null,
+  zone: string,
+): Record<string, number> {
   const { data } = useQuery<TreeApiResponse, ApiError, Record<string, number>>({
     ...treeQueryOptions(pageId, zone),
     select: (response) => response.overrideCounts,

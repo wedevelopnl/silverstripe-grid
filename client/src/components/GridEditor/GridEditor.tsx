@@ -46,9 +46,8 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
   // Use pending tree during cross-container drags for visual feedback
   const effectiveData = pendingTree ?? data;
 
-  const sections = effectiveData === undefined
-    ? []
-    : (effectiveData[String(pageId)] ?? []).filter(isSectionNode);
+  const sections =
+    effectiveData === undefined ? [] : (effectiveData[String(pageId)] ?? []).filter(isSectionNode);
 
   const enrichedSections = useTreeEnrichment(sections, pageId ?? 0);
 
@@ -60,12 +59,19 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
   );
 
   return (
-    <div className="grid-editor" data-page-id={pageId ?? undefined} data-zone={zone} data-testid="grid-editor">
-      {isLoading && <p className="grid-editor__loading" data-testid="grid-editor-loading">Loading elements...</p>}
-      {error !== null && (
-        <p className="grid-editor__error">
-          Failed to load elements: {error.message}
+    <div
+      className="grid-editor"
+      data-page-id={pageId ?? undefined}
+      data-zone={zone}
+      data-testid="grid-editor"
+    >
+      {isLoading && (
+        <p className="grid-editor__loading" data-testid="grid-editor-loading">
+          Loading elements...
         </p>
+      )}
+      {error !== null && (
+        <p className="grid-editor__error">Failed to load elements: {error.message}</p>
       )}
       {data !== undefined && pageId !== null && (
         <GridEditorProvider value={{ pageId, zone }}>
@@ -77,28 +83,26 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
             >
               <DragContext.Provider value={dragContextValue}>
                 <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
-                  {enrichedSections.length > 0
-                    ? (
-                      <>
-                        {enrichedSections.map((section) => (
-                          <SectionBlock key={section.id} section={section} />
-                        ))}
-                        <AddChildButton
-                          parentId={pageId}
-                          childType="section"
-                          childLabel="Section"
-                          variant="append"
-                        />
-                      </>
-                    )
-                    : (
+                  {enrichedSections.length > 0 ? (
+                    <>
+                      {enrichedSections.map((section) => (
+                        <SectionBlock key={section.id} section={section} />
+                      ))}
                       <AddChildButton
                         parentId={pageId}
                         childType="section"
                         childLabel="Section"
-                        variant="empty-state"
+                        variant="append"
                       />
-                    )}
+                    </>
+                  ) : (
+                    <AddChildButton
+                      parentId={pageId}
+                      childType="section"
+                      childLabel="Section"
+                      variant="empty-state"
+                    />
+                  )}
                 </SortableContext>
               </DragContext.Provider>
               <DragOverlay>

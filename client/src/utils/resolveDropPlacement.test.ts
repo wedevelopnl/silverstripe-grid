@@ -227,9 +227,7 @@ describe('resolveDropPlacement', () => {
           createColumnNode({
             id: 51,
             parentId: 10,
-            children: [
-              createSimpleElement({ id: 71, parentId: 51 }),
-            ],
+            children: [createSimpleElement({ id: 71, parentId: 51 })],
           }),
         ],
       });

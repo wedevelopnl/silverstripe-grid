@@ -8,7 +8,12 @@ interface ElementTypePickerProps {
   readonly onSelect: (className: string) => void;
 }
 
-export default function ElementTypePicker({ allowedTypes, isOpen, onClose, onSelect }: ElementTypePickerProps) {
+export default function ElementTypePicker({
+  allowedTypes,
+  isOpen,
+  onClose,
+  onSelect,
+}: ElementTypePickerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {

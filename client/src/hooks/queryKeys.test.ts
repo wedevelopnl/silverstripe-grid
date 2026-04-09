@@ -8,11 +8,7 @@ describe('queryKeys', () => {
     });
 
     it('should return page and zone tuple for byPage()', () => {
-      expect(queryKeys.elementTree.byPage(1, 'main')).toEqual([
-        'elementTree',
-        1,
-        'main',
-      ]);
+      expect(queryKeys.elementTree.byPage(1, 'main')).toEqual(['elementTree', 1, 'main']);
     });
   });
 
@@ -34,9 +30,12 @@ describe('queryKeys', () => {
 
   describe('acceptableContainers', () => {
     it('should return full tuple for byTarget()', () => {
-      expect(
-        queryKeys.acceptableContainers.byTarget(1, 'main', 'Section'),
-      ).toEqual(['acceptableContainers', 1, 'main', 'Section']);
+      expect(queryKeys.acceptableContainers.byTarget(1, 'main', 'Section')).toEqual([
+        'acceptableContainers',
+        1,
+        'main',
+        'Section',
+      ]);
     });
   });
 });

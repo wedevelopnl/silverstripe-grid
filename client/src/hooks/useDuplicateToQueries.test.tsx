@@ -12,11 +12,7 @@ function createWrapper() {
   });
 
   function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   }
 
   return Wrapper;
@@ -33,9 +29,7 @@ describe('usePages', () => {
   });
 
   it('should fetch pages when enabled', async () => {
-    const pages: PageEntry[] = [
-      { id: 1, title: 'Home', parentId: 0, hasGridZones: true },
-    ];
+    const pages: PageEntry[] = [{ id: 1, title: 'Home', parentId: 0, hasGridZones: true }];
     mockFetchSuccess(pages);
     const wrapper = createWrapper();
 
@@ -72,10 +66,9 @@ describe('useAcceptableContainers', () => {
   it('should not fetch when pageId is null', () => {
     const wrapper = createWrapper();
 
-    const { result } = renderHook(
-      () => useAcceptableContainers(null, 'main', 'Section'),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useAcceptableContainers(null, 'main', 'Section'), {
+      wrapper,
+    });
 
     expect(result.current.isFetching).toBe(false);
   });
@@ -83,10 +76,7 @@ describe('useAcceptableContainers', () => {
   it('should not fetch when zone is null', () => {
     const wrapper = createWrapper();
 
-    const { result } = renderHook(
-      () => useAcceptableContainers(1, null, 'Section'),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useAcceptableContainers(1, null, 'Section'), { wrapper });
 
     expect(result.current.isFetching).toBe(false);
   });
@@ -94,25 +84,17 @@ describe('useAcceptableContainers', () => {
   it('should not fetch when elementType is null', () => {
     const wrapper = createWrapper();
 
-    const { result } = renderHook(
-      () => useAcceptableContainers(1, 'main', null),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useAcceptableContainers(1, 'main', null), { wrapper });
 
     expect(result.current.isFetching).toBe(false);
   });
 
   it('should fetch when all dependencies are provided', async () => {
-    const containers: AcceptableContainer[] = [
-      { id: 10, title: 'Column 1', type: 'Column' },
-    ];
+    const containers: AcceptableContainer[] = [{ id: 10, title: 'Column 1', type: 'Column' }];
     mockFetchSuccess(containers);
     const wrapper = createWrapper();
 
-    const { result } = renderHook(
-      () => useAcceptableContainers(1, 'main', 'Section'),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useAcceptableContainers(1, 'main', 'Section'), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(containers);

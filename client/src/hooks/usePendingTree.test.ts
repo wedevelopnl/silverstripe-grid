@@ -81,12 +81,7 @@ describe('usePendingTree', () => {
       const { result } = renderHook(() => usePendingTree());
 
       act(() => {
-        result.current.applyPendingMove(
-          { type: 'element', id: element.id },
-          20,
-          null,
-          tree,
-        );
+        result.current.applyPendingMove({ type: 'element', id: element.id }, 20, null, tree);
       });
 
       expect(result.current.collisionRefs.hasPendingMoveRef.current).toBe(true);
@@ -98,12 +93,7 @@ describe('usePendingTree', () => {
       const { result } = renderHook(() => usePendingTree());
 
       act(() => {
-        result.current.applyPendingMove(
-          { type: 'element', id: element.id },
-          20,
-          null,
-          tree,
-        );
+        result.current.applyPendingMove({ type: 'element', id: element.id }, 20, null, tree);
       });
 
       const pendingItems = result.current.collisionRefs.pendingContainerItemsRef.current;
@@ -124,12 +114,7 @@ describe('usePendingTree', () => {
       let moveResult: ReturnType<typeof result.current.applyPendingMove>;
       act(() => {
         // Move element to same parent, same position (first = afterElementId null)
-        moveResult = result.current.applyPendingMove(
-          { type: 'element', id: 5 },
-          10,
-          null,
-          tree,
-        );
+        moveResult = result.current.applyPendingMove({ type: 'element', id: 5 }, 10, null, tree);
       });
 
       expect(moveResult!).toBeNull();
@@ -159,12 +144,7 @@ describe('usePendingTree', () => {
       const { result } = renderHook(() => usePendingTree());
 
       act(() => {
-        result.current.applyPendingMove(
-          { type: 'element', id: element.id },
-          20,
-          null,
-          tree,
-        );
+        result.current.applyPendingMove({ type: 'element', id: element.id }, 20, null, tree);
       });
 
       const effective = result.current.getEffective(canonicalTree, canonicalMaps);
@@ -180,12 +160,7 @@ describe('usePendingTree', () => {
       const { result } = renderHook(() => usePendingTree());
 
       act(() => {
-        result.current.applyPendingMove(
-          { type: 'element', id: element.id },
-          20,
-          null,
-          tree,
-        );
+        result.current.applyPendingMove({ type: 'element', id: element.id }, 20, null, tree);
       });
       expect(result.current.pendingTree).not.toBeNull();
 
@@ -202,12 +177,7 @@ describe('usePendingTree', () => {
       const { result } = renderHook(() => usePendingTree());
 
       act(() => {
-        result.current.applyPendingMove(
-          { type: 'element', id: element.id },
-          20,
-          null,
-          tree,
-        );
+        result.current.applyPendingMove({ type: 'element', id: element.id }, 20, null, tree);
       });
       expect(result.current.collisionRefs.hasPendingMoveRef.current).toBe(true);
 
@@ -225,12 +195,7 @@ describe('usePendingTree', () => {
 
       act(() => {
         result.current.setSourceSiblings(new Set(['element-1']));
-        result.current.applyPendingMove(
-          { type: 'element', id: element.id },
-          20,
-          null,
-          tree,
-        );
+        result.current.applyPendingMove({ type: 'element', id: element.id }, 20, null, tree);
       });
 
       act(() => {
@@ -249,12 +214,7 @@ describe('usePendingTree', () => {
       const { result } = renderHook(() => usePendingTree());
 
       act(() => {
-        result.current.applyPendingMove(
-          { type: 'element', id: element.id },
-          20,
-          null,
-          tree,
-        );
+        result.current.applyPendingMove({ type: 'element', id: element.id }, 20, null, tree);
       });
 
       act(() => {

@@ -12,7 +12,10 @@ export default function CollapseToggle({ isCollapsed, onToggle, label }: Collaps
       aria-expanded={!isCollapsed}
       aria-label={isCollapsed ? `Expand ${label}` : `Collapse ${label}`}
       data-testid="collapse-toggle"
-      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
     >
       <span className="collapse-toggle__chevron" aria-hidden="true" />
     </button>

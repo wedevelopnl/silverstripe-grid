@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import type {
-  DragStartEvent,
-  DragOverEvent,
-  DragEndEvent,
-  DragCancelEvent,
-} from '@dnd-kit/core';
+import type { DragStartEvent, DragOverEvent, DragEndEvent, DragCancelEvent } from '@dnd-kit/core';
 import { useDragAndDrop } from './useDragAndDrop';
 import type { UseDragAndDropOptions } from './useDragAndDrop';
 import { buildDraggableId } from '@/types/dnd';
@@ -32,10 +27,7 @@ function makeDragStartEvent(activeId: string): DragStartEvent {
   } as unknown as DragStartEvent;
 }
 
-function makeDragOverEvent(
-  activeId: string,
-  overId: string | null,
-): DragOverEvent {
+function makeDragOverEvent(activeId: string, overId: string | null): DragOverEvent {
   return {
     active: createActive(activeId),
     over: overId !== null ? createOver(overId) : null,
@@ -45,10 +37,7 @@ function makeDragOverEvent(
   } as unknown as DragOverEvent;
 }
 
-function makeDragEndEvent(
-  activeId: string,
-  overId: string | null,
-): DragEndEvent {
+function makeDragEndEvent(activeId: string, overId: string | null): DragEndEvent {
   return {
     active: createActive(activeId),
     over: overId !== null ? createOver(overId) : null,
@@ -472,9 +461,7 @@ describe('useDragAndDrop', () => {
 
       // End with an unparseable over ID
       act(() => {
-        result.current.dndContextProps.onDragEnd(
-          makeDragEndEvent(activeId, 'garbage'),
-        );
+        result.current.dndContextProps.onDragEnd(makeDragEndEvent(activeId, 'garbage'));
       });
 
       expect(result.current.dragState).toBeNull();

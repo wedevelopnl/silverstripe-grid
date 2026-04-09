@@ -1,7 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { createColumnNode, createRowNode, createSectionNode, createSimpleElement, resetIdCounter } from '@/testing/factories';
+import {
+  createColumnNode,
+  createRowNode,
+  createSectionNode,
+  createSimpleElement,
+  resetIdCounter,
+} from '@/testing/factories';
 
 import DragOverlayContent from './DragOverlayContent';
 
@@ -102,7 +108,9 @@ describe('DragOverlayContent', () => {
 
     render(<DragOverlayContent node={section} type="section" />);
 
-    const icon = screen.getByTestId('drag-overlay-section').querySelector('.drag-overlay-content__icon');
+    const icon = screen
+      .getByTestId('drag-overlay-section')
+      .querySelector('.drag-overlay-content__icon');
     expect(icon).toHaveClass('drag-overlay-content__icon', 'font-icon-block-layout');
   });
 
@@ -120,7 +128,9 @@ describe('DragOverlayContent', () => {
 
     render(<DragOverlayContent node={row} type="row" />);
 
-    const icon = screen.getByTestId('drag-overlay-row').querySelector('.drag-overlay-content__icon');
+    const icon = screen
+      .getByTestId('drag-overlay-row')
+      .querySelector('.drag-overlay-content__icon');
     expect(icon).toHaveClass('drag-overlay-content__icon', 'font-icon-block-row');
   });
 

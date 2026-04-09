@@ -7,9 +7,7 @@ describe('useGridEditorContext', () => {
   it('returns pageId and zone from provider', () => {
     function Wrapper({ children }: { children: ReactNode }) {
       return (
-        <GridEditorProvider value={{ pageId: 42, zone: 'sidebar' }}>
-          {children}
-        </GridEditorProvider>
+        <GridEditorProvider value={{ pageId: 42, zone: 'sidebar' }}>{children}</GridEditorProvider>
       );
     }
 

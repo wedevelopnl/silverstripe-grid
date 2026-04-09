@@ -32,7 +32,9 @@ vi.mock('@/hooks/useDragAndDrop', () => ({
 }));
 
 afterEach(() => {
-  vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<typeof useSortable>);
+  vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<
+    typeof useSortable
+  >);
   vi.mocked(useDragContext).mockReturnValue({ activeType: null });
 });
 
@@ -93,7 +95,9 @@ describe('RowBlock', () => {
     it('includes draft status modifier', () => {
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({ statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } } });
+      const row = createEnrichedRow({
+        statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } },
+      });
 
       renderWithProviders(<RowBlock row={row} />);
 
@@ -103,7 +107,9 @@ describe('RowBlock', () => {
     it('includes modified status modifier', () => {
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({ statusFlags: { modified: { text: 'Modified', title: 'Modified' } } });
+      const row = createEnrichedRow({
+        statusFlags: { modified: { text: 'Modified', title: 'Modified' } },
+      });
 
       renderWithProviders(<RowBlock row={row} />);
 
@@ -142,7 +148,10 @@ describe('RowBlock', () => {
     });
 
     it('includes drop-target class when isOver and activeType is row', () => {
-      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: true } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useSortable).mockReturnValue({
+        ...defaultSortable,
+        isOver: true,
+      } as unknown as ReturnType<typeof useSortable>);
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'row' });
       mockFetchSuccess({});
 
@@ -154,7 +163,10 @@ describe('RowBlock', () => {
     });
 
     it('does not include drop-target class when isOver but activeType is not row', () => {
-      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: true } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useSortable).mockReturnValue({
+        ...defaultSortable,
+        isOver: true,
+      } as unknown as ReturnType<typeof useSortable>);
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'section' });
       mockFetchSuccess({});
 
@@ -166,7 +178,10 @@ describe('RowBlock', () => {
     });
 
     it('does not include drop-target class when activeType is row but not isOver', () => {
-      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: false } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useSortable).mockReturnValue({
+        ...defaultSortable,
+        isOver: false,
+      } as unknown as ReturnType<typeof useSortable>);
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'row' });
       mockFetchSuccess({});
 

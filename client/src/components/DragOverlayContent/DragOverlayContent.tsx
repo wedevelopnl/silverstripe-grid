@@ -27,7 +27,9 @@ function SectionPreview({ node, type }: PreviewProps): React.JSX.Element {
   return (
     <>
       <i className={`drag-overlay-content__icon ${node.blockSchema.icon}`} />
-      <span className="drag-overlay-content__title" data-testid={`drag-overlay-${type}-title`}>{node.title}</span>
+      <span className="drag-overlay-content__title" data-testid={`drag-overlay-${type}-title`}>
+        {node.title}
+      </span>
       <span className="drag-overlay-content__meta">{pluralize(getChildCount(node), 'row')}</span>
     </>
   );
@@ -37,7 +39,9 @@ function RowPreview({ node, type }: PreviewProps): React.JSX.Element {
   return (
     <>
       <i className={`drag-overlay-content__icon ${node.blockSchema.icon}`} />
-      <span className="drag-overlay-content__title" data-testid={`drag-overlay-${type}-title`}>{node.title}</span>
+      <span className="drag-overlay-content__title" data-testid={`drag-overlay-${type}-title`}>
+        {node.title}
+      </span>
       <span className="drag-overlay-content__meta">{pluralize(getChildCount(node), 'column')}</span>
     </>
   );
@@ -47,7 +51,9 @@ function ColumnPreview({ node, type }: PreviewProps): React.JSX.Element {
   return (
     <>
       <i className={`drag-overlay-content__icon ${node.blockSchema.icon}`} />
-      <span className="drag-overlay-content__title" data-testid={`drag-overlay-${type}-title`}>{node.title}</span>
+      <span className="drag-overlay-content__title" data-testid={`drag-overlay-${type}-title`}>
+        {node.title}
+      </span>
     </>
   );
 }
@@ -56,7 +62,9 @@ function ElementPreview({ node, type }: PreviewProps): React.JSX.Element {
   return (
     <>
       <i className={`drag-overlay-content__icon ${node.blockSchema.icon}`} />
-      <span className="drag-overlay-content__title" data-testid={`drag-overlay-${type}-title`}>{node.title}</span>
+      <span className="drag-overlay-content__title" data-testid={`drag-overlay-${type}-title`}>
+        {node.title}
+      </span>
     </>
   );
 }
@@ -75,7 +83,10 @@ export default function DragOverlayContent({
   const Preview = PREVIEW_BY_TYPE[type];
 
   return (
-    <div className={`drag-overlay-content drag-overlay-content--${type}`} data-testid={`drag-overlay-${type}`}>
+    <div
+      className={`drag-overlay-content drag-overlay-content--${type}`}
+      data-testid={`drag-overlay-${type}`}
+    >
       <Preview node={node} type={type} />
     </div>
   );

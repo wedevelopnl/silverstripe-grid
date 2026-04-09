@@ -84,9 +84,7 @@ describe('GridEditor', () => {
 
     const treeResponse = createTreeApiResponse({
       tree: {
-        '1': [
-          createSectionNode({ id: 10, parentId: 1, title: 'Hero' }),
-        ],
+        '1': [createSectionNode({ id: 10, parentId: 1, title: 'Hero' })],
       },
     });
 

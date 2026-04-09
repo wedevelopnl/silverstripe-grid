@@ -11,9 +11,7 @@ interface GridQueryProviderProps {
  * Each entwine-mounted GridEditor gets its own cache — no stale data
  * leaks between CMS page navigations and clean unmount disposal.
  */
-export default function GridQueryProvider({
-  children,
-}: GridQueryProviderProps) {
+export default function GridQueryProvider({ children }: GridQueryProviderProps) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -28,7 +26,5 @@ export default function GridQueryProvider({
       }),
   );
 
-  return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

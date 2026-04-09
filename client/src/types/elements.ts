@@ -119,8 +119,6 @@ export function isColumnNode(node: ElementNode): node is ColumnNode {
   return 'containerType' in node && node.containerType === 'column';
 }
 
-export function isSimpleElementNode(
-  node: ElementNode,
-): node is SimpleElementNode {
+export function isSimpleElementNode(node: ElementNode): node is SimpleElementNode {
   return !('containerType' in node);
 }

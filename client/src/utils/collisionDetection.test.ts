@@ -85,9 +85,7 @@ describe('filterDroppablesByType', () => {
     const result = filterDroppablesByType('row-17', containers);
     const ids = result.map((c) => String(c.id));
 
-    expect(ids).toEqual(
-      expect.arrayContaining(['row-10', 'row-20', 'section-1', 'section-2']),
-    );
+    expect(ids).toEqual(expect.arrayContaining(['row-10', 'row-20', 'section-1', 'section-2']));
     expect(ids).not.toContain('column-5');
     expect(ids).not.toContain('element-100');
     expect(ids).not.toContain('root');
@@ -97,9 +95,7 @@ describe('filterDroppablesByType', () => {
     const result = filterDroppablesByType('column-5', containers);
     const ids = result.map((c) => String(c.id));
 
-    expect(ids).toEqual(
-      expect.arrayContaining(['column-5', 'column-6', 'row-10', 'row-20']),
-    );
+    expect(ids).toEqual(expect.arrayContaining(['column-5', 'column-6', 'row-10', 'row-20']));
     expect(ids).not.toContain('section-1');
     expect(ids).not.toContain('element-100');
   });
@@ -119,9 +115,7 @@ describe('filterDroppablesByType', () => {
     const result = filterDroppablesByType('section-1', containers);
     const ids = result.map((c) => String(c.id));
 
-    expect(ids).toEqual(
-      expect.arrayContaining(['section-1', 'section-2', 'root']),
-    );
+    expect(ids).toEqual(expect.arrayContaining(['section-1', 'section-2', 'root']));
     expect(ids).not.toContain('row-10');
     expect(ids).not.toContain('column-5');
   });
@@ -377,7 +371,7 @@ describe('centerCrossing', () => {
     // The near target center is at 325, far center at 450.
     // Current center at 450, closer to far target.
     if (collisions.length === 2) {
-      expect((collisions[0].data?.value as number)).toBeLessThanOrEqual(
+      expect(collisions[0].data?.value as number).toBeLessThanOrEqual(
         collisions[1].data?.value as number,
       );
     }
@@ -444,9 +438,7 @@ describe('createTypedCollisionDetection', () => {
 
     it('falls back to parent containers when no sibling collision', () => {
       const parent = createDroppable('section-1');
-      const rects = new Map<string | number, ClientRect>([
-        ['section-1', parentRect],
-      ]);
+      const rects = new Map<string | number, ClientRect>([['section-1', parentRect]]);
 
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
@@ -498,7 +490,10 @@ describe('createTypedCollisionDetection', () => {
     it('uses closestCenterLive for siblings (reads live DOM rects)', () => {
       // closestCenterLive needs DOM nodes with getBoundingClientRect
       const sibling = createDroppableWithRect('row-2', {
-        left: 50, top: 275, width: 200, height: 100,
+        left: 50,
+        top: 275,
+        width: 200,
+        height: 100,
       });
       const pendingItems = new Set<string | number>(['row-2']);
 
@@ -522,10 +517,16 @@ describe('createTypedCollisionDetection', () => {
 
     it('filters siblings to only pending container items', () => {
       const inPending = createDroppableWithRect('row-2', {
-        left: 50, top: 275, width: 200, height: 100,
+        left: 50,
+        top: 275,
+        width: 200,
+        height: 100,
       });
       const notInPending = createDroppableWithRect('row-3', {
-        left: 50, top: 400, width: 200, height: 100,
+        left: 50,
+        top: 400,
+        width: 200,
+        height: 100,
       });
       const pendingItems = new Set<string | number>(['row-2']);
 
@@ -557,9 +558,7 @@ describe('createTypedCollisionDetection', () => {
       // When the source container has no items (e.g. dragged the only row out),
       // centerCrossing should check ALL siblings, not just source-container ones.
       const targetSibling = createDroppable('row-5');
-      const rects = new Map<string | number, ClientRect>([
-        ['row-5', siblingRect],
-      ]);
+      const rects = new Map<string | number, ClientRect>([['row-5', siblingRect]]);
 
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
@@ -583,7 +582,10 @@ describe('createTypedCollisionDetection', () => {
   describe('overRectRef capture', () => {
     it('captures the winning collision node reference', () => {
       const sibling = createDroppableWithRect('row-2', {
-        left: 50, top: 275, width: 200, height: 100,
+        left: 50,
+        top: 275,
+        width: 200,
+        height: 100,
       });
       const overRectRef = { current: null } as {
         current: { id: string | number; nodeRef: { readonly current: HTMLElement | null } } | null;
@@ -594,9 +596,7 @@ describe('createTypedCollisionDetection', () => {
         overRectRef,
       });
 
-      const rects = new Map<string | number, ClientRect>([
-        ['row-2', siblingRect],
-      ]);
+      const rects = new Map<string | number, ClientRect>([['row-2', siblingRect]]);
       const args = buildArgs({
         activeId: 'row-1',
         containers: [sibling],
@@ -613,7 +613,10 @@ describe('createTypedCollisionDetection', () => {
 
     it('does not capture overRectRef for pending-path sibling collisions', () => {
       const sibling = createDroppableWithRect('row-2', {
-        left: 50, top: 275, width: 200, height: 100,
+        left: 50,
+        top: 275,
+        width: 200,
+        height: 100,
       });
       const pendingItems = new Set<string | number>(['row-2']);
       const overRectRef = { current: null } as {
@@ -641,7 +644,10 @@ describe('createTypedCollisionDetection', () => {
 
     it('captures overRectRef for parent container fallback', () => {
       const parent = createDroppableWithRect('section-1', {
-        left: 0, top: 0, width: 800, height: 600,
+        left: 0,
+        top: 0,
+        width: 800,
+        height: 600,
       });
       const overRectRef = { current: null } as {
         current: { id: string | number; nodeRef: { readonly current: HTMLElement | null } } | null;
@@ -652,9 +658,7 @@ describe('createTypedCollisionDetection', () => {
         overRectRef,
       });
 
-      const rects = new Map<string | number, ClientRect>([
-        ['section-1', parentRect],
-      ]);
+      const rects = new Map<string | number, ClientRect>([['section-1', parentRect]]);
       const args = buildArgs({
         activeId: 'row-1',
         containers: [parent],
@@ -681,9 +685,7 @@ describe('createTypedCollisionDetection', () => {
       });
 
       const sibling = createDroppable('row-2');
-      const rects = new Map<string | number, ClientRect>([
-        ['row-2', siblingRect],
-      ]);
+      const rects = new Map<string | number, ClientRect>([['row-2', siblingRect]]);
 
       // First drag: trigger a sibling hit
       const args = buildArgs({

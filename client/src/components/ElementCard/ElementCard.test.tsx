@@ -110,7 +110,15 @@ describe('ElementCard', () => {
     let capturedHref = '';
     const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
     Object.defineProperty(window, 'location', {
-      value: { ...window.location, set href(val: string) { capturedHref = val; }, get href() { return capturedHref || 'http://localhost/'; } },
+      value: {
+        ...window.location,
+        set href(val: string) {
+          capturedHref = val;
+        },
+        get href() {
+          return capturedHref || 'http://localhost/';
+        },
+      },
       writable: true,
       configurable: true,
     });
@@ -134,7 +142,15 @@ describe('ElementCard', () => {
     let navigated = false;
     const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
     Object.defineProperty(window, 'location', {
-      value: { ...window.location, set href(_: string) { navigated = true; }, get href() { return 'http://localhost/'; } },
+      value: {
+        ...window.location,
+        set href(_: string) {
+          navigated = true;
+        },
+        get href() {
+          return 'http://localhost/';
+        },
+      },
       writable: true,
       configurable: true,
     });
@@ -157,7 +173,15 @@ describe('ElementCard', () => {
     let capturedHref = '';
     const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
     Object.defineProperty(window, 'location', {
-      value: { ...window.location, set href(val: string) { capturedHref = val; }, get href() { return capturedHref || 'http://localhost/'; } },
+      value: {
+        ...window.location,
+        set href(val: string) {
+          capturedHref = val;
+        },
+        get href() {
+          return capturedHref || 'http://localhost/';
+        },
+      },
       writable: true,
       configurable: true,
     });
@@ -257,7 +281,15 @@ describe('ElementCard', () => {
     let navigated = false;
     const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
     Object.defineProperty(window, 'location', {
-      value: { ...window.location, set href(_: string) { navigated = true; }, get href() { return 'http://localhost/'; } },
+      value: {
+        ...window.location,
+        set href(_: string) {
+          navigated = true;
+        },
+        get href() {
+          return 'http://localhost/';
+        },
+      },
       writable: true,
       configurable: true,
     });

@@ -66,10 +66,9 @@ describe('useElementMaps', () => {
   it('should memoize when tree reference is the same', () => {
     const tree = createTree();
 
-    const { result, rerender } = renderHook(
-      ({ t }) => useElementMaps(t),
-      { initialProps: { t: tree } },
-    );
+    const { result, rerender } = renderHook(({ t }) => useElementMaps(t), {
+      initialProps: { t: tree },
+    });
 
     const first = result.current;
     rerender({ t: tree });
@@ -82,10 +81,9 @@ describe('useElementMaps', () => {
     const treeA = createTree();
     const treeB = createTree();
 
-    const { result, rerender } = renderHook(
-      ({ t }) => useElementMaps(t),
-      { initialProps: { t: treeA } },
-    );
+    const { result, rerender } = renderHook(({ t }) => useElementMaps(t), {
+      initialProps: { t: treeA },
+    });
 
     const first = result.current;
     rerender({ t: treeB });

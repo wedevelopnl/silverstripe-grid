@@ -56,7 +56,9 @@ function enrichColumn(
     sortableId: buildDraggableId(getDraggableTypeForNode(column), column.id),
     childSortableIds: enrichedChildren?.map((c) => c.sortableId) ?? [],
     isCollapsed: collapsedIds.has(column.id),
-    toggle: () => { toggle(column.id); },
+    toggle: () => {
+      toggle(column.id);
+    },
     children: enrichedChildren,
   };
 }
@@ -66,13 +68,16 @@ function enrichRow(
   collapsedIds: ReadonlySet<number>,
   toggle: (elementId: number) => void,
 ): EnrichedRowNode {
-  const enrichedChildren = row.children?.map((col) => enrichColumn(col, collapsedIds, toggle)) ?? null;
+  const enrichedChildren =
+    row.children?.map((col) => enrichColumn(col, collapsedIds, toggle)) ?? null;
   return {
     ...row,
     sortableId: buildDraggableId(getDraggableTypeForNode(row), row.id),
     childSortableIds: enrichedChildren?.map((c) => c.sortableId) ?? [],
     isCollapsed: collapsedIds.has(row.id),
-    toggle: () => { toggle(row.id); },
+    toggle: () => {
+      toggle(row.id);
+    },
     children: enrichedChildren,
   };
 }
@@ -82,13 +87,16 @@ function enrichSection(
   collapsedIds: ReadonlySet<number>,
   toggle: (elementId: number) => void,
 ): EnrichedSectionNode {
-  const enrichedChildren = section.children?.map((row) => enrichRow(row, collapsedIds, toggle)) ?? null;
+  const enrichedChildren =
+    section.children?.map((row) => enrichRow(row, collapsedIds, toggle)) ?? null;
   return {
     ...section,
     sortableId: buildDraggableId(getDraggableTypeForNode(section), section.id),
     childSortableIds: enrichedChildren?.map((c) => c.sortableId) ?? [],
     isCollapsed: collapsedIds.has(section.id),
-    toggle: () => { toggle(section.id); },
+    toggle: () => {
+      toggle(section.id);
+    },
     children: enrichedChildren,
   };
 }
@@ -99,24 +107,27 @@ export function useTreeEnrichment(
 ): readonly EnrichedSectionNode[] {
   const storageKey = buildStorageKey(areaId);
 
-  const [collapsedIds, setCollapsedIds] = useState<ReadonlySet<number>>(
-    () => readCollapsedIds(storageKey),
+  const [collapsedIds, setCollapsedIds] = useState<ReadonlySet<number>>(() =>
+    readCollapsedIds(storageKey),
   );
 
-  const toggle = useCallback((elementId: number) => {
-    setCollapsedIds((prev) => {
-      const next = new Set(prev);
+  const toggle = useCallback(
+    (elementId: number) => {
+      setCollapsedIds((prev) => {
+        const next = new Set(prev);
 
-      if (next.has(elementId)) {
-        next.delete(elementId);
-      } else {
-        next.add(elementId);
-      }
+        if (next.has(elementId)) {
+          next.delete(elementId);
+        } else {
+          next.add(elementId);
+        }
 
-      writeCollapsedIds(storageKey, next);
-      return next;
-    });
-  }, [storageKey]);
+        writeCollapsedIds(storageKey, next);
+        return next;
+      });
+    },
+    [storageKey],
+  );
 
   return useMemo(
     () => sections.map((section) => enrichSection(section, collapsedIds, toggle)),

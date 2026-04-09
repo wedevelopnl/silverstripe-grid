@@ -52,16 +52,10 @@ describe('useViewportOverrideCounts', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
-    queryClient.setQueryData(
-      queryKeys.elementTree.byPage(1, 'main'),
-      apiResponse,
-    );
+    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), apiResponse);
 
     const { wrapper } = createProviderWrapper({ queryClient, pageId: 1, zone: 'main' });
-    const { result } = renderHook(
-      () => useViewportOverrideCounts(1, 'main'),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useViewportOverrideCounts(1, 'main'), { wrapper });
 
     await waitFor(() => {
       expect(result.current).toEqual({ md: 3, lg: 1 });
@@ -71,10 +65,7 @@ describe('useViewportOverrideCounts', () => {
   it('should return empty object when no data is cached', () => {
     mockFetchSuccess({});
     const { wrapper } = createProviderWrapper();
-    const { result } = renderHook(
-      () => useViewportOverrideCounts(null, 'main'),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useViewportOverrideCounts(null, 'main'), { wrapper });
 
     expect(result.current).toEqual({});
   });

@@ -24,11 +24,7 @@ export function ViewportProvider({ initialViewport, children }: ViewportProvider
     [activeViewport],
   );
 
-  return (
-    <ViewportContext.Provider value={value}>
-      {children}
-    </ViewportContext.Provider>
-  );
+  return <ViewportContext.Provider value={value}>{children}</ViewportContext.Provider>;
 }
 
 export function useViewportContext(): ViewportContextValue {

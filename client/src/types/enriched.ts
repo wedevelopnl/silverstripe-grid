@@ -11,17 +11,23 @@ export interface SortableProps {
 
 export type EnrichedSimpleElementNode = SimpleElementNode & SortableProps;
 
-export type EnrichedColumnNode = Omit<ColumnNode, 'children'> & CollapseProps & SortableProps & {
-  readonly children: EnrichedSimpleElementNode[] | null;
-  readonly childSortableIds: string[];
-};
+export type EnrichedColumnNode = Omit<ColumnNode, 'children'> &
+  CollapseProps &
+  SortableProps & {
+    readonly children: EnrichedSimpleElementNode[] | null;
+    readonly childSortableIds: string[];
+  };
 
-export type EnrichedRowNode = Omit<RowNode, 'children'> & CollapseProps & SortableProps & {
-  readonly children: EnrichedColumnNode[] | null;
-  readonly childSortableIds: string[];
-};
+export type EnrichedRowNode = Omit<RowNode, 'children'> &
+  CollapseProps &
+  SortableProps & {
+    readonly children: EnrichedColumnNode[] | null;
+    readonly childSortableIds: string[];
+  };
 
-export type EnrichedSectionNode = Omit<SectionNode, 'children'> & CollapseProps & SortableProps & {
-  readonly children: EnrichedRowNode[] | null;
-  readonly childSortableIds: string[];
-};
+export type EnrichedSectionNode = Omit<SectionNode, 'children'> &
+  CollapseProps &
+  SortableProps & {
+    readonly children: EnrichedRowNode[] | null;
+    readonly childSortableIds: string[];
+  };

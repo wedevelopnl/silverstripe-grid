@@ -47,9 +47,7 @@ function defaultGridSettings(overrides?: Partial<GridSettings>): GridSettings {
   };
 }
 
-export function createSimpleElement(
-  overrides?: Partial<SimpleElementNode>,
-): SimpleElementNode {
+export function createSimpleElement(overrides?: Partial<SimpleElementNode>): SimpleElementNode {
   const elementId = overrides?.id ?? id();
   return {
     id: elementId,
@@ -78,9 +76,7 @@ export function createColumnNode(
     overrides?.children !== undefined
       ? overrides.children
       : childCount > 0
-        ? Array.from({ length: childCount }, () =>
-            createSimpleElement({ parentId: columnId }),
-          )
+        ? Array.from({ length: childCount }, () => createSimpleElement({ parentId: columnId }))
         : null;
 
   return {
@@ -104,9 +100,7 @@ export function createColumnNode(
   };
 }
 
-export function createRowNode(
-  overrides?: Partial<RowNode> & { columnCount?: number },
-): RowNode {
+export function createRowNode(overrides?: Partial<RowNode> & { columnCount?: number }): RowNode {
   const rowId = overrides?.id ?? id();
   const columnCount = overrides?.columnCount ?? 1;
 
@@ -114,9 +108,7 @@ export function createRowNode(
     overrides?.children !== undefined
       ? overrides.children
       : columnCount > 0
-        ? Array.from({ length: columnCount }, () =>
-            createColumnNode({ parentId: rowId }),
-          )
+        ? Array.from({ length: columnCount }, () => createColumnNode({ parentId: rowId }))
         : null;
 
   return {
@@ -149,9 +141,7 @@ export function createSectionNode(
     overrides?.children !== undefined
       ? overrides.children
       : rowCount > 0
-        ? Array.from({ length: rowCount }, () =>
-            createRowNode({ parentId: sectionId }),
-          )
+        ? Array.from({ length: rowCount }, () => createRowNode({ parentId: sectionId }))
         : null;
 
   return {
@@ -177,18 +167,13 @@ export function createSectionNode(
 /**
  * Build a full ElementTreeResponse keyed by root key (default: "1").
  */
-export function createTree(
-  sections?: SectionNode[],
-  rootKey = '1',
-): ElementTreeResponse {
+export function createTree(sections?: SectionNode[], rootKey = '1'): ElementTreeResponse {
   return {
     [rootKey]: sections ?? [createSectionNode()],
   };
 }
 
-export function createTreeApiResponse(
-  overrides?: Partial<TreeApiResponse>,
-): TreeApiResponse {
+export function createTreeApiResponse(overrides?: Partial<TreeApiResponse>): TreeApiResponse {
   return {
     tree: overrides?.tree ?? createTree(),
     overrideCounts: overrides?.overrideCounts ?? {},

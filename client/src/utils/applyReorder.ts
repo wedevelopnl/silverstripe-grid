@@ -1,8 +1,4 @@
-import {
-  isContainerNode,
-  type ElementTreeResponse,
-  type ElementNode,
-} from '@/types/elements';
+import { isContainerNode, type ElementTreeResponse, type ElementNode } from '@/types/elements';
 import { buildMaps } from '@/hooks/useElementMaps';
 
 /**
@@ -134,10 +130,7 @@ function isTreeAffected(
  * Checks if any container node in the given array (or its descendants)
  * has an ID matching the target parent ID.
  */
-function containsParent(
-  nodes: ElementNode[],
-  parentId: number,
-): boolean {
+function containsParent(nodes: ElementNode[], parentId: number): boolean {
   for (const node of nodes) {
     if (isContainerNode(node)) {
       if (node.id === parentId) return true;

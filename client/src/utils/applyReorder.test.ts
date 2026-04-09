@@ -134,9 +134,7 @@ describe('applyReorder', () => {
               createColumnNode({
                 id: 31,
                 parentId: 20,
-                children: [
-                  createSimpleElement({ id: 200, parentId: 31 }),
-                ],
+                children: [createSimpleElement({ id: 200, parentId: 31 })],
               }),
             ],
           }),
@@ -175,16 +173,12 @@ describe('applyReorder', () => {
               createColumnNode({
                 id: 30,
                 parentId: 20,
-                children: [
-                  createSimpleElement({ id: 100, parentId: 30 }),
-                ],
+                children: [createSimpleElement({ id: 100, parentId: 30 })],
               }),
               createColumnNode({
                 id: 31,
                 parentId: 20,
-                children: [
-                  createSimpleElement({ id: 200, parentId: 31 }),
-                ],
+                children: [createSimpleElement({ id: 200, parentId: 31 })],
               }),
             ],
           }),
@@ -368,9 +362,7 @@ describe('applyReorder', () => {
           createRowNode({
             id: 21,
             parentId: 11,
-            children: [
-              createColumnNode({ id: 31, parentId: 21, childCount: 1 }),
-            ],
+            children: [createColumnNode({ id: 31, parentId: 21, childCount: 1 })],
           }),
         ],
       });
@@ -382,9 +374,7 @@ describe('applyReorder', () => {
           createRowNode({
             id: 22,
             parentId: 12,
-            children: [
-              createColumnNode({ id: 32, parentId: 22, childCount: 1 }),
-            ],
+            children: [createColumnNode({ id: 32, parentId: 22, childCount: 1 })],
           }),
         ],
       });
@@ -441,9 +431,7 @@ describe('applyReorder', () => {
               createColumnNode({
                 id: 31,
                 parentId: 21,
-                children: [
-                  createSimpleElement({ id: 200, parentId: 31 }),
-                ],
+                children: [createSimpleElement({ id: 200, parentId: 31 })],
               }),
             ],
           }),
@@ -457,9 +445,7 @@ describe('applyReorder', () => {
           createRowNode({
             id: 22,
             parentId: 12,
-            children: [
-              createColumnNode({ id: 32, parentId: 22, childCount: 1 }),
-            ],
+            children: [createColumnNode({ id: 32, parentId: 22, childCount: 1 })],
           }),
         ],
       });
@@ -502,9 +488,7 @@ describe('applyReorder', () => {
               createColumnNode({
                 id: 30,
                 parentId: 20,
-                children: [
-                  createSimpleElement({ id: 100, parentId: 30 }),
-                ],
+                children: [createSimpleElement({ id: 100, parentId: 30 })],
               }),
               createColumnNode({
                 id: 31,
@@ -565,16 +549,12 @@ describe('applyReorder', () => {
               createColumnNode({
                 id: 30,
                 parentId: 20,
-                children: [
-                  createSimpleElement({ id: 100, parentId: 30 }),
-                ],
+                children: [createSimpleElement({ id: 100, parentId: 30 })],
               }),
               createColumnNode({
                 id: 31,
                 parentId: 20,
-                children: [
-                  createSimpleElement({ id: 200, parentId: 31 }),
-                ],
+                children: [createSimpleElement({ id: 200, parentId: 31 })],
               }),
             ],
           }),
@@ -589,7 +569,9 @@ describe('applyReorder', () => {
       expect(result).not.toBe(tree);
       const resultRow = drillDown(result, '1', 0, 0);
       expect(asContainer(resultRow.children![0]).children!).toHaveLength(0);
-      expect(asContainer(resultRow.children![1]).children!.map((c: ElementNode) => c.id)).toEqual([100, 200]);
+      expect(asContainer(resultRow.children![1]).children!.map((c: ElementNode) => c.id)).toEqual([
+        100, 200,
+      ]);
     });
   });
 });

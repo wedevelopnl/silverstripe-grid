@@ -284,5 +284,4 @@ describe('ActionsMenu', () => {
     const editItem = screen.getByText('Edit');
     expect(editItem.className).toBe('actions-menu__item');
   });
-
 });

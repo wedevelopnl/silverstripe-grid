@@ -1,8 +1,7 @@
 import type { SilverStripeConfig } from '@/types/silverstripe';
 import { ConfigError } from './errors';
 
-const CONTROLLER_FQCN =
-  'WeDevelop\\Grid\\Controllers\\GridController';
+const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController';
 
 /**
  * Returns the global SilverStripe CMS configuration object.

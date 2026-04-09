@@ -1,9 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import {
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
+import { PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type {
   CollisionDetection,
   DragCancelEvent,
@@ -13,16 +9,10 @@ import type {
   SensorDescriptor,
   SensorOptions,
 } from '@dnd-kit/core';
-import {
-  buildDraggableId,
-  parseDraggableId,
-} from '@/types/dnd';
+import { buildDraggableId, parseDraggableId } from '@/types/dnd';
 import type { DraggableType } from '@/types/dnd';
 import { isContainerNode } from '@/types/elements';
-import type {
-  ElementNode,
-  ElementTreeResponse,
-} from '@/types/elements';
+import type { ElementNode, ElementTreeResponse } from '@/types/elements';
 import { useElementMaps } from '@/hooks/useElementMaps';
 import { usePendingTree } from '@/hooks/usePendingTree';
 import { resolveDropPlacement } from '@/utils/resolveDropPlacement';
@@ -96,7 +86,14 @@ export function useDragContext(): DragContextValue {
  */
 function getPointerPosition(event: {
   activatorEvent: Event;
-  active: { rect: { current: { initial: { left: number; top: number } | null; translated: { left: number; top: number } | null } } };
+  active: {
+    rect: {
+      current: {
+        initial: { left: number; top: number } | null;
+        translated: { left: number; top: number } | null;
+      };
+    };
+  };
 }): { x: number; y: number } | null {
   const pe = event.activatorEvent;
   if (!(pe instanceof PointerEvent)) return null;
@@ -115,16 +112,13 @@ function getPointerPosition(event: {
 
 const POINTER_DISTANCE_THRESHOLD = 8;
 
-export function useDragAndDrop({
-  tree,
-  onReorder,
-}: UseDragAndDropOptions): UseDragAndDropReturn {
+export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseDragAndDropReturn {
   const [dragState, setDragState] = useState<DragState | null>(null);
   const maps = useElementMaps(tree);
   const pending = usePendingTree();
 
-  const [collisionDetection] = useState<CollisionDetection>(
-    () => createTypedCollisionDetection(pending.collisionRefs),
+  const [collisionDetection] = useState<CollisionDetection>(() =>
+    createTypedCollisionDetection(pending.collisionRefs),
   );
 
   const sensors = useSensors(
@@ -142,11 +136,13 @@ export function useDragAndDrop({
       if (!node) return;
 
       const siblings = maps.childrenByParentId.get(node.parentId) ?? [];
-      pending.setSourceSiblings(new Set(
-        siblings
-          .filter((n) => n.id !== parsed.id)
-          .map((n) => buildDraggableId(parsed.type, n.id)),
-      ));
+      pending.setSourceSiblings(
+        new Set(
+          siblings
+            .filter((n) => n.id !== parsed.id)
+            .map((n) => buildDraggableId(parsed.type, n.id)),
+        ),
+      );
 
       setDragState({
         activeId: String(event.active.id),
@@ -180,7 +176,10 @@ export function useDragAndDrop({
         targetParentId = overNode.parentId;
 
         const pointer = getPointerPosition(event);
-        if (pointer !== null && resolveInsertDirection(pointer, over.rect, activeParsed.type) === 'before') {
+        if (
+          pointer !== null &&
+          resolveInsertDirection(pointer, over.rect, activeParsed.type) === 'before'
+        ) {
           const siblings = effectiveMaps.childrenByParentId.get(targetParentId) ?? [];
           const overIdx = siblings.findIndex((n) => n.id === overParsed.id);
           afterElementId = overIdx > 0 ? siblings[overIdx - 1].id : null;
@@ -244,9 +243,10 @@ export function useDragAndDrop({
       // SortableContext transforms shift the element between capture and drop.
       const overSnapshot = pending.collisionRefs.overRectRef.current;
       const overNode = overSnapshot?.nodeRef.current;
-      const effectiveOverRect = String(overSnapshot?.id) === String(over.id) && overNode
-        ? overNode.getBoundingClientRect()
-        : over.rect;
+      const effectiveOverRect =
+        String(overSnapshot?.id) === String(over.id) && overNode
+          ? overNode.getBoundingClientRect()
+          : over.rect;
 
       const pointer = getPointerPosition(event);
 
@@ -261,7 +261,12 @@ export function useDragAndDrop({
       });
 
       if (placement) {
-        onReorder(placement.elementID, placement.targetParentId, placement.afterElementID, pending.clear);
+        onReorder(
+          placement.elementID,
+          placement.targetParentId,
+          placement.afterElementID,
+          pending.clear,
+        );
       } else {
         pending.clear();
       }
@@ -274,14 +279,17 @@ export function useDragAndDrop({
     pending.clear();
   }, [pending]);
 
-  const dndContextProps = useMemo<DndContextProps>(() => ({
-    sensors,
-    collisionDetection,
-    onDragStart: handleDragStart,
-    onDragOver: handleDragOver,
-    onDragEnd: handleDragEnd,
-    onDragCancel: handleDragCancel,
-  }), [sensors, collisionDetection, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel]);
+  const dndContextProps = useMemo<DndContextProps>(
+    () => ({
+      sensors,
+      collisionDetection,
+      onDragStart: handleDragStart,
+      onDragOver: handleDragOver,
+      onDragEnd: handleDragEnd,
+      onDragCancel: handleDragCancel,
+    }),
+    [sensors, collisionDetection, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel],
+  );
 
   return {
     dndContextProps,

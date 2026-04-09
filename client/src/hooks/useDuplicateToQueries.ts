@@ -1,9 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  fetchPages,
-  fetchZones,
-  fetchAcceptableContainers,
-} from '@/api/endpoints';
+import { fetchPages, fetchZones, fetchAcceptableContainers } from '@/api/endpoints';
 import type { PageEntry, AcceptableContainer } from '@/api/endpoints';
 import { queryKeys } from './queryKeys';
 
@@ -29,11 +25,7 @@ export function useAcceptableContainers(
   elementType: string | null,
 ) {
   return useQuery<AcceptableContainer[]>({
-    queryKey: queryKeys.acceptableContainers.byTarget(
-      pageId ?? 0,
-      zone ?? '',
-      elementType ?? '',
-    ),
+    queryKey: queryKeys.acceptableContainers.byTarget(pageId ?? 0, zone ?? '', elementType ?? ''),
     queryFn: () => fetchAcceptableContainers(pageId!, zone!, elementType!),
     enabled: pageId !== null && zone !== null && elementType !== null,
   });

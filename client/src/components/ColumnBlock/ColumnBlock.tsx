@@ -10,7 +10,13 @@ import { useViewportContext } from '@/hooks/ViewportContext';
 import { useUpdateGridSettings, useCreateContentElement } from '@/hooks/useElementMutations';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
-import { getColumnCount, getOffsetStrategy, getWidthOptions, getOffsetOptions, resolveViewportSettings } from '@/utils/gridAdapter';
+import {
+  getColumnCount,
+  getOffsetStrategy,
+  getWidthOptions,
+  getOffsetOptions,
+  resolveViewportSettings,
+} from '@/utils/gridAdapter';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import ElementActions from '@/components/ElementActions/ElementActions';
@@ -35,7 +41,8 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
   const createContentElement = useCreateContentElement(pageId, zone);
   const [isPickerOpen, setPickerOpen] = useState(false);
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: column.sortableId });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
+    useSortable({ id: column.sortableId });
 
   const strategy = getOffsetStrategy();
 
@@ -51,26 +58,27 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
 
   const sortableStyle = buildSortableStyle(transform, transition, isDragging);
 
-  const columnStyle = strategy === 'margin'
-    ? {
-      ...sortableStyle,
-      '--col-width': `${(settings.width / columnCount) * 100}%`,
-      ...(settings.offset > 0 ? { '--col-offset': `${(settings.offset / columnCount) * 100}%` } : {}),
-    } as React.CSSProperties
-    : {
-      ...sortableStyle,
-      '--col-span': String(settings.width),
-      ...(settings.offset > 0 ? { '--col-start': String(settings.offset + 1) } : {}),
-    } as React.CSSProperties;
+  const columnStyle =
+    strategy === 'margin'
+      ? ({
+          ...sortableStyle,
+          '--col-width': `${(settings.width / columnCount) * 100}%`,
+          ...(settings.offset > 0
+            ? { '--col-offset': `${(settings.offset / columnCount) * 100}%` }
+            : {}),
+        } as React.CSSProperties)
+      : ({
+          ...sortableStyle,
+          '--col-span': String(settings.width),
+          ...(settings.offset > 0 ? { '--col-start': String(settings.offset + 1) } : {}),
+        } as React.CSSProperties);
 
   const widthOptions = getWidthOptions();
   const offsetOptions = getOffsetOptions(settings.width);
 
-  const widthLabel = settings.visible
-    ? `${settings.width}/${columnCount}`
-    : 'hidden';
+  const widthLabel = settings.visible ? `${settings.width}/${columnCount}` : 'hidden';
 
-  const widthSelectedValue = settings.visible ? settings.width : 'hidden' as const;
+  const widthSelectedValue = settings.visible ? settings.width : ('hidden' as const);
 
   const offsetLabel = settings.offset === 0 ? 'none' : `+${settings.offset}`;
   const isOffsetDisabled = isPickerDisabled || settings.width === columnCount || !settings.visible;
@@ -128,20 +136,29 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
     [createContentElement, column.id],
   );
 
-  const hasAllowedTypes = column.allowedTypes !== null && Object.keys(column.allowedTypes).length > 0;
+  const hasAllowedTypes =
+    column.allowedTypes !== null && Object.keys(column.allowedTypes).length > 0;
   const hasChildren = column.children !== null && column.children.length > 0;
 
   return (
     <div ref={setNodeRef} style={columnStyle} className="row-block__column">
       <div className={innerClasses} data-testid="column-block">
         <div className="column-block__header" data-testid="column-header">
-          <DragHandle listeners={listeners} attributes={attributes} label={`Move ${column.title}`} />
+          <DragHandle
+            listeners={listeners}
+            attributes={attributes}
+            label={`Move ${column.title}`}
+          />
           <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={column.title} />
           <i className={`column-block__icon ${column.blockSchema.icon}`} />
           <span className="column-block__title" data-testid="column-title">
-            {column.editLink !== null
-              ? <a href={column.editLink} data-testid="column-edit-link">{column.title}</a>
-              : column.title}
+            {column.editLink !== null ? (
+              <a href={column.editLink} data-testid="column-edit-link">
+                {column.title}
+              </a>
+            ) : (
+              column.title
+            )}
           </span>
           <GridSettingsPicker
             label={widthLabel}
@@ -164,9 +181,7 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
         <div className="column-block__body">
           <SortableContext items={column.childSortableIds} strategy={verticalListSortingStrategy}>
             {hasChildren
-              ? column.children!.map((child) => (
-                <ElementCard key={child.id} element={child} />
-              ))
+              ? column.children!.map((child) => <ElementCard key={child.id} element={child} />)
               : !hasAllowedTypes && <EmptyState message="No content blocks" />}
           </SortableContext>
           {hasAllowedTypes && (

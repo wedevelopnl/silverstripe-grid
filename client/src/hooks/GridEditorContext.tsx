@@ -14,11 +14,7 @@ interface GridEditorProviderProps {
 }
 
 export function GridEditorProvider({ value, children }: GridEditorProviderProps) {
-  return (
-    <GridEditorContext.Provider value={value}>
-      {children}
-    </GridEditorContext.Provider>
-  );
+  return <GridEditorContext.Provider value={value}>{children}</GridEditorContext.Provider>;
 }
 
 export function useGridEditorContext(): GridEditorContextValue {

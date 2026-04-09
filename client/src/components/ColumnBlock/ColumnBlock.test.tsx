@@ -52,7 +52,9 @@ vi.mock('@/hooks/useDragAndDrop', () => ({
 }));
 
 afterEach(() => {
-  vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<typeof useSortable>);
+  vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<
+    typeof useSortable
+  >);
   vi.mocked(useDragContext).mockReturnValue({ activeType: null });
 });
 
@@ -89,7 +91,9 @@ describe('ColumnBlock', () => {
     const column = createEnrichedColumn({
       children: null,
       childCount: 0,
-      allowedTypes: { 'App\\Model\\ContentBlock': { label: 'Content Block', icon: '', description: '' } },
+      allowedTypes: {
+        'App\\Model\\ContentBlock': { label: 'Content Block', icon: '', description: '' },
+      },
     });
 
     renderWithProviders(<ColumnBlock column={column} />);
@@ -121,7 +125,9 @@ describe('ColumnBlock', () => {
     it('includes status modifier class for draft status', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({ statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } } });
+      const column = createEnrichedColumn({
+        statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } },
+      });
 
       renderWithProviders(<ColumnBlock column={column} />);
 
@@ -131,7 +137,9 @@ describe('ColumnBlock', () => {
     it('includes status modifier class for modified status', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({ statusFlags: { modified: { text: 'Modified', title: 'Modified' } } });
+      const column = createEnrichedColumn({
+        statusFlags: { modified: { text: 'Modified', title: 'Modified' } },
+      });
 
       renderWithProviders(<ColumnBlock column={column} />);
 
@@ -185,7 +193,10 @@ describe('ColumnBlock', () => {
     });
 
     it('includes drop-target class when isOver and activeType is column', () => {
-      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: true } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useSortable).mockReturnValue({
+        ...defaultSortable,
+        isOver: true,
+      } as unknown as ReturnType<typeof useSortable>);
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'column' });
       mockFetchSuccess({});
 
@@ -197,7 +208,10 @@ describe('ColumnBlock', () => {
     });
 
     it('does not include drop-target class when isOver but activeType is not column', () => {
-      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: true } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useSortable).mockReturnValue({
+        ...defaultSortable,
+        isOver: true,
+      } as unknown as ReturnType<typeof useSortable>);
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'row' });
       mockFetchSuccess({});
 
@@ -209,7 +223,10 @@ describe('ColumnBlock', () => {
     });
 
     it('does not include drop-target class when activeType is column but not isOver', () => {
-      vi.mocked(useSortable).mockReturnValue({ ...defaultSortable, isOver: false } as unknown as ReturnType<typeof useSortable>);
+      vi.mocked(useSortable).mockReturnValue({
+        ...defaultSortable,
+        isOver: false,
+      } as unknown as ReturnType<typeof useSortable>);
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'column' });
       mockFetchSuccess({});
 
@@ -511,7 +528,9 @@ describe('ColumnBlock', () => {
       const column = createEnrichedColumn({
         children: null,
         childCount: 0,
-        allowedTypes: { 'App\\Model\\ContentBlock': { label: 'Content Block', icon: '', description: '' } },
+        allowedTypes: {
+          'App\\Model\\ContentBlock': { label: 'Content Block', icon: '', description: '' },
+        },
       });
 
       renderWithProviders(<ColumnBlock column={column} />);
@@ -528,7 +547,11 @@ describe('ColumnBlock', () => {
         children: null,
         childCount: 0,
         allowedTypes: {
-          'App\\Model\\TextBlock': { label: 'Text Block', icon: 'font-icon-text', description: 'A text block' },
+          'App\\Model\\TextBlock': {
+            label: 'Text Block',
+            icon: 'font-icon-text',
+            description: 'A text block',
+          },
         },
       });
 
@@ -561,7 +584,11 @@ describe('ColumnBlock', () => {
   it('shows EmptyState when children is empty array and no allowedTypes', () => {
     mockFetchSuccess({});
 
-    const column = createEnrichedColumn({ children: [] as never, childCount: 0, allowedTypes: null });
+    const column = createEnrichedColumn({
+      children: [] as never,
+      childCount: 0,
+      allowedTypes: null,
+    });
 
     renderWithProviders(<ColumnBlock column={column} />);
 
@@ -589,7 +616,11 @@ describe('ColumnBlock', () => {
       children: null,
       childCount: 0,
       allowedTypes: {
-        'App\\Model\\TextBlock': { label: 'Text Block', icon: 'font-icon-text', description: 'A text block' },
+        'App\\Model\\TextBlock': {
+          label: 'Text Block',
+          icon: 'font-icon-text',
+          description: 'A text block',
+        },
       },
     });
 

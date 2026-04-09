@@ -9,9 +9,9 @@ describe('getElementStatus', () => {
   });
 
   it('returns "draft" when addedtodraft flag is set', () => {
-    expect(
-      getElementStatus({ addedtodraft: { text: 'Draft', title: 'Added to draft' } }),
-    ).toBe('draft');
+    expect(getElementStatus({ addedtodraft: { text: 'Draft', title: 'Added to draft' } })).toBe(
+      'draft',
+    );
   });
 
   it('returns "modified" when modified flag is set', () => {

@@ -28,9 +28,7 @@ function createResponse({ status = 200, body = {}, statusText = 'OK' }: MockResp
 }
 
 export function mockFetchSuccess(body: unknown, status = 200): void {
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-    createResponse({ status, body }),
-  );
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(createResponse({ status, body }));
 }
 
 export function mockFetchError(status: number, body?: object): void {

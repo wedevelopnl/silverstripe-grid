@@ -32,10 +32,7 @@ function createActiveRect(rect: RectConfig = {}) {
   };
 }
 
-export function createActive(
-  id: string,
-  rect?: RectConfig,
-): Active {
+export function createActive(id: string, rect?: RectConfig): Active {
   return {
     id,
     rect: createActiveRect(rect),
@@ -43,10 +40,7 @@ export function createActive(
   } as Active;
 }
 
-export function createOver(
-  id: string,
-  rect?: RectConfig,
-): Over {
+export function createOver(id: string, rect?: RectConfig): Over {
   return {
     id,
     rect: createDOMRect(rect),
@@ -72,10 +66,7 @@ export interface DragEndEventLike {
   delta: { x: number; y: number };
 }
 
-export function createDragStartEvent(
-  activeId: string,
-  rect?: RectConfig,
-): DragStartEventLike {
+export function createDragStartEvent(activeId: string, rect?: RectConfig): DragStartEventLike {
   return {
     active: createActive(activeId, rect),
   };

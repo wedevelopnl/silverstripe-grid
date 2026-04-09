@@ -16,7 +16,9 @@ interface ElementCardProps {
  * and publication state via a colored left border.
  */
 export default function ElementCard({ element }: ElementCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: element.sortableId });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: element.sortableId,
+  });
   const status = getElementStatus(element.statusFlags);
   const content = element.blockSchema.summary;
   const editLink = element.editLink;
@@ -29,11 +31,14 @@ export default function ElementCard({ element }: ElementCardProps) {
     }
   }, [editLink]);
 
-  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter') {
-      navigateToEdit();
-    }
-  }, [navigateToEdit]);
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'Enter') {
+        navigateToEdit();
+      }
+    },
+    [navigateToEdit],
+  );
 
   const cardClasses = [
     'element-card',
@@ -55,10 +60,14 @@ export default function ElementCard({ element }: ElementCardProps) {
       <div className="element-card__header">
         <DragHandle listeners={listeners} attributes={attributes} label={`Move ${element.title}`} />
         <i className={`element-card__icon ${element.blockSchema.icon}`} />
-        <h4 className="element-card__title" data-testid="element-card-title">{element.title}</h4>
+        <h4 className="element-card__title" data-testid="element-card-title">
+          {element.title}
+        </h4>
         <ElementActions node={element} />
       </div>
-      <div className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}>
+      <div
+        className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}
+      >
         {content || 'No preview available'}
       </div>
     </div>

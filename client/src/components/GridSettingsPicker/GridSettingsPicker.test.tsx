@@ -224,13 +224,17 @@ describe('GridSettingsPicker', () => {
     await user.click(screen.getByTestId('width-picker'));
 
     expect(screen.getByText('6 columns')).toHaveClass('grid-settings-picker__option--selected');
-    expect(screen.getByText('12 columns')).not.toHaveClass('grid-settings-picker__option--selected');
+    expect(screen.getByText('12 columns')).not.toHaveClass(
+      'grid-settings-picker__option--selected',
+    );
   });
 
   it('enabled trigger does not have disabled class', () => {
     renderPicker({ disabled: false });
 
-    expect(screen.getByTestId('width-picker')).not.toHaveClass('grid-settings-picker__trigger--disabled');
+    expect(screen.getByTestId('width-picker')).not.toHaveClass(
+      'grid-settings-picker__trigger--disabled',
+    );
   });
 
   it('outside click while picker is closed does not open it', async () => {

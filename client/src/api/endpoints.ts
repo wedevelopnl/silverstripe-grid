@@ -1,21 +1,12 @@
-import type {
-  ContainerType,
-  TreeApiResponse,
-} from '@/types/elements';
-import type {
-  AcceptableContainer,
-  PageEntry,
-} from '@/types/duplicateTo';
+import type { ContainerType, TreeApiResponse } from '@/types/elements';
+import type { AcceptableContainer, PageEntry } from '@/types/duplicateTo';
 import { apiDelete, apiGet, apiPatch, apiPost } from './client';
 import { getControllerLink } from './config';
 
 /**
  * Fetch the full element tree for a CMS page.
  */
-export async function fetchElementTree(
-  pageId: number,
-  zone: string,
-): Promise<TreeApiResponse> {
+export async function fetchElementTree(pageId: number, zone: string): Promise<TreeApiResponse> {
   const base = getControllerLink();
   return apiGet<TreeApiResponse>(`${base}/api/readTree/${pageId}/${encodeURIComponent(zone)}`);
 }
@@ -27,9 +18,7 @@ export interface CreateElementParams {
   zone?: string;
 }
 
-export async function createElement(
-  params: CreateElementParams,
-): Promise<void> {
+export async function createElement(params: CreateElementParams): Promise<void> {
   const base = getControllerLink();
   await apiPost(`${base}/api/create`, params);
 }
@@ -60,9 +49,7 @@ export interface ReorderElementParams {
   afterElementID: number | null;
 }
 
-export async function reorderElement(
-  params: ReorderElementParams,
-): Promise<void> {
+export async function reorderElement(params: ReorderElementParams): Promise<void> {
   const base = getControllerLink();
   await apiPatch(`${base}/api/reorder`, params);
 }
@@ -73,9 +60,7 @@ export interface CreateContentElementParams {
   insertAfterElementID?: number;
 }
 
-export async function createContentElement(
-  params: CreateContentElementParams,
-): Promise<void> {
+export async function createContentElement(params: CreateContentElementParams): Promise<void> {
   const base = getControllerLink();
   await apiPost(`${base}/api/createContent`, params);
 }
@@ -88,9 +73,7 @@ export interface UpdateGridSettingsParams {
   visible: boolean;
 }
 
-export async function updateGridSettings(
-  params: UpdateGridSettingsParams,
-): Promise<void> {
+export async function updateGridSettings(params: UpdateGridSettingsParams): Promise<void> {
   const base = getControllerLink();
   await apiPatch(`${base}/api/updateGridSettings`, params);
 }
@@ -119,9 +102,7 @@ export interface DuplicateToParams {
   targetParentId: number;
 }
 
-export async function duplicateToElement(
-  params: DuplicateToParams,
-): Promise<void> {
+export async function duplicateToElement(params: DuplicateToParams): Promise<void> {
   const base = getControllerLink();
   await apiPost(`${base}/api/duplicateTo`, params);
 }

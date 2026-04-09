@@ -28,9 +28,7 @@ export function createEnrichedColumn(
   overrides?: Partial<ColumnNode> & { childCount?: number },
 ): EnrichedColumnNode {
   const base = createColumnNode(overrides);
-  const children = base.children?.map((child) =>
-    createEnrichedElement(child),
-  ) ?? null;
+  const children = base.children?.map((child) => createEnrichedElement(child)) ?? null;
   const childSortableIds = children?.map((c) => c.sortableId) ?? [];
 
   return {
@@ -47,9 +45,7 @@ export function createEnrichedRow(
   overrides?: Partial<RowNode> & { columnCount?: number },
 ): EnrichedRowNode {
   const base = createRowNode(overrides);
-  const children = base.children?.map((child) =>
-    createEnrichedColumn(child),
-  ) ?? null;
+  const children = base.children?.map((child) => createEnrichedColumn(child)) ?? null;
   const childSortableIds = children?.map((c) => c.sortableId) ?? [];
 
   return {
@@ -66,9 +62,7 @@ export function createEnrichedSection(
   overrides?: Partial<SectionNode> & { rowCount?: number },
 ): EnrichedSectionNode {
   const base = createSectionNode(overrides);
-  const children = base.children?.map((child) =>
-    createEnrichedRow(child),
-  ) ?? null;
+  const children = base.children?.map((child) => createEnrichedRow(child)) ?? null;
   const childSortableIds = children?.map((c) => c.sortableId) ?? [];
 
   return {

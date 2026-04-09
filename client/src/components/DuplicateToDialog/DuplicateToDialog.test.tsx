@@ -45,7 +45,8 @@ function mockApiRoutes(overrides?: {
   const containers = overrides?.containers ?? CONTAINERS;
 
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: string | URL | Request) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const url =
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
 
     let body: unknown = {};
     if (url.includes('/api/pages')) body = pages;
@@ -61,7 +62,9 @@ function mockApiRoutes(overrides?: {
       redirected: false,
       type: 'basic',
       url: '',
-      clone() { return this; },
+      clone() {
+        return this;
+      },
       body: null,
       bodyUsed: false,
       arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
@@ -155,7 +158,10 @@ describe('DuplicateToDialog', () => {
       await goToPageStep();
       await user.click(screen.getByText('About'));
 
-      expect(screen.getByText('About').closest('[role="option"]')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('About').closest('[role="option"]')).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
     });
 
     it('marks pages without grid zones as disabled', async () => {
@@ -180,7 +186,10 @@ describe('DuplicateToDialog', () => {
       await user.click(screen.getByText('Legacy'));
 
       // About should still be selected
-      expect(screen.getByText('About').closest('[role="option"]')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('About').closest('[role="option"]')).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
     });
 
     it('Next button advances to zone step', async () => {
@@ -219,7 +228,8 @@ describe('DuplicateToDialog', () => {
       await waitFor(() => {
         const calls = vi.mocked(globalThis.fetch).mock.calls;
         const pageSearchCalls = calls.filter(
-          ([url]) => typeof url === 'string' && url.includes('/api/pages') && url.includes('search='),
+          ([url]) =>
+            typeof url === 'string' && url.includes('/api/pages') && url.includes('search='),
         );
         expect(pageSearchCalls.length).toBeGreaterThan(0);
       });
@@ -256,7 +266,10 @@ describe('DuplicateToDialog', () => {
 
       await user.click(screen.getByText('sidebar'));
 
-      expect(screen.getByText('sidebar').closest('[role="option"]')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('sidebar').closest('[role="option"]')).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
     });
 
     it('Next button is disabled until zone is selected', async () => {
@@ -378,7 +391,10 @@ describe('DuplicateToDialog', () => {
 
       await user.click(screen.getByText('Row 1'));
 
-      expect(screen.getByText('Row 1').closest('[role="option"]')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('Row 1').closest('[role="option"]')).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
     });
 
     it('Confirm button disabled until container selected', async () => {
@@ -625,10 +641,19 @@ describe('DuplicateToDialog', () => {
 
       function createUrlResponse(body: unknown): Response {
         return {
-          ok: true, status: 200, statusText: 'OK',
+          ok: true,
+          status: 200,
+          statusText: 'OK',
           json: () => Promise.resolve(body),
-          headers: new Headers(), redirected: false, type: 'basic' as ResponseType, url: '',
-          clone() { return this; }, body: null, bodyUsed: false,
+          headers: new Headers(),
+          redirected: false,
+          type: 'basic' as ResponseType,
+          url: '',
+          clone() {
+            return this;
+          },
+          body: null,
+          bodyUsed: false,
           arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
           blob: () => Promise.resolve(new Blob()),
           bytes: () => Promise.resolve(new Uint8Array()),
@@ -638,7 +663,8 @@ describe('DuplicateToDialog', () => {
       }
 
       vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: string | URL | Request) => {
-        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
 
         if (url.includes('/api/pages')) {
           return createUrlResponse(PAGES);
@@ -667,10 +693,19 @@ describe('DuplicateToDialog', () => {
 
       function createUrlResponse(body: unknown): Response {
         return {
-          ok: true, status: 200, statusText: 'OK',
+          ok: true,
+          status: 200,
+          statusText: 'OK',
           json: () => Promise.resolve(body),
-          headers: new Headers(), redirected: false, type: 'basic' as ResponseType, url: '',
-          clone() { return this; }, body: null, bodyUsed: false,
+          headers: new Headers(),
+          redirected: false,
+          type: 'basic' as ResponseType,
+          url: '',
+          clone() {
+            return this;
+          },
+          body: null,
+          bodyUsed: false,
           arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
           blob: () => Promise.resolve(new Blob()),
           bytes: () => Promise.resolve(new Uint8Array()),
@@ -680,7 +715,8 @@ describe('DuplicateToDialog', () => {
       }
 
       vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: string | URL | Request) => {
-        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
 
         if (url.includes('/api/pages')) return createUrlResponse(PAGES);
         if (url.includes('/api/zones/')) return createUrlResponse(ZONES);
@@ -776,7 +812,10 @@ describe('DuplicateToDialog', () => {
 
       // Select a zone
       await user.click(screen.getByText('sidebar'));
-      expect(screen.getByText('sidebar').closest('[role="option"]')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('sidebar').closest('[role="option"]')).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
 
       // Go back
       await user.click(screen.getByTestId('duplicate-to-back'));
@@ -810,7 +849,10 @@ describe('DuplicateToDialog', () => {
 
       // Select a container
       await user.click(screen.getByText('Row 1'));
-      expect(screen.getByText('Row 1').closest('[role="option"]')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('Row 1').closest('[role="option"]')).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
 
       // Go back to zone
       await user.click(screen.getByTestId('duplicate-to-back'));

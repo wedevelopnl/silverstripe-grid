@@ -40,9 +40,7 @@ export function renderWithProviders(
   const result = render(
     <QueryClientProvider client={queryClient}>
       <GridEditorProvider value={{ pageId, zone }}>
-        <ViewportProvider initialViewport={viewport}>
-          {ui}
-        </ViewportProvider>
+        <ViewportProvider initialViewport={viewport}>{ui}</ViewportProvider>
       </GridEditorProvider>
     </QueryClientProvider>,
   );
@@ -65,9 +63,7 @@ export function createProviderWrapper(options: RenderOptions = {}) {
     return (
       <QueryClientProvider client={queryClient}>
         <GridEditorProvider value={{ pageId, zone }}>
-          <ViewportProvider initialViewport={viewport}>
-            {children}
-          </ViewportProvider>
+          <ViewportProvider initialViewport={viewport}>{children}</ViewportProvider>
         </GridEditorProvider>
       </QueryClientProvider>
     );

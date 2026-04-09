@@ -34,9 +34,7 @@ const closestCenterLive: CollisionDetection = (args) => {
     });
   }
 
-  return collisions.sort(
-    (a, b) => (a.data?.value as number) - (b.data?.value as number),
-  );
+  return collisions.sort((a, b) => (a.data?.value as number) - (b.data?.value as number));
 };
 
 /**
@@ -82,9 +80,7 @@ export function filterSiblings(
   const activeType = getDraggableType(activeId);
   if (activeType === null) return [];
 
-  return containers.filter(
-    (container) => getDraggableType(String(container.id)) === activeType,
-  );
+  return containers.filter((container) => getDraggableType(String(container.id)) === activeType);
 }
 
 /**
@@ -187,13 +183,15 @@ export const centerCrossing: CollisionDetection = (args) => {
     //
     // Dragging AWAY from target: use the stricter of the edge-based
     // threshold and the target center.
-    const thresholdY = initialCY < targetCY
-      ? rect.top + collisionRect.height / 2
-      : Math.min(rect.top + rect.height - collisionRect.height / 2, targetCY);
+    const thresholdY =
+      initialCY < targetCY
+        ? rect.top + collisionRect.height / 2
+        : Math.min(rect.top + rect.height - collisionRect.height / 2, targetCY);
 
-    const thresholdX = initialCX < targetCX
-      ? rect.left + collisionRect.width / 2
-      : Math.min(rect.left + rect.width - collisionRect.width / 2, targetCX);
+    const thresholdX =
+      initialCX < targetCX
+        ? rect.left + collisionRect.width / 2
+        : Math.min(rect.left + rect.width - collisionRect.width / 2, targetCX);
 
     // Use the position furthest along the drag direction for crossing.
     // Moving toward target (initialCX < targetCX): use the rightmost
@@ -240,9 +238,7 @@ export const centerCrossing: CollisionDetection = (args) => {
   }
 
   // Sort by distance to center (closest first)
-  return collisions.sort(
-    (a, b) => (a.data?.value as number) - (b.data?.value as number),
-  );
+  return collisions.sort((a, b) => (a.data?.value as number) - (b.data?.value as number));
 };
 
 export interface OverRectSnapshot {
@@ -317,7 +313,10 @@ export function createTypedCollisionDetection(
         const winnerId = collisions[0].id;
         const container = args.droppableContainers.find((c) => c.id === winnerId);
         if (container?.node.current) {
-          options.overRectRef.current = { id: winnerId, nodeRef: container.node as { readonly current: HTMLElement | null } };
+          options.overRectRef.current = {
+            id: winnerId,
+            nodeRef: container.node as { readonly current: HTMLElement | null },
+          };
         }
       }
       return collisions;
@@ -335,9 +334,10 @@ export function createTypedCollisionDetection(
       // Also filter to only siblings in the pending container to prevent
       // wrong-container bouncing.
       const pendingItems = options.pendingContainerItemsRef?.current;
-      const pendingSiblings = pendingItems !== null && pendingItems !== undefined
-        ? siblings.filter((s) => pendingItems.has(s.id))
-        : siblings;
+      const pendingSiblings =
+        pendingItems !== null && pendingItems !== undefined
+          ? siblings.filter((s) => pendingItems.has(s.id))
+          : siblings;
 
       const siblingCollisions = closestCenterLive({
         ...args,
@@ -371,9 +371,10 @@ export function createTypedCollisionDetection(
       // would always fire, placing the item at the container's end instead
       // of at the pointer's position relative to target siblings.
       const sourceItems = options.sourceContainerItemsRef?.current;
-      const sameContainerSiblings = sourceItems && sourceItems.size > 0
-        ? siblings.filter((s) => sourceItems.has(s.id))
-        : siblings;
+      const sameContainerSiblings =
+        sourceItems && sourceItems.size > 0
+          ? siblings.filter((s) => sourceItems.has(s.id))
+          : siblings;
 
       const siblingCollisions = centerCrossing({
         ...args,
@@ -455,19 +456,23 @@ export function createTypedCollisionDetection(
         );
       });
       if (containingParent) {
-        return captureWinnerNode([{
-          id: containingParent.id,
-          data: { droppableContainer: containingParent, value: 0 },
-        }]);
+        return captureWinnerNode([
+          {
+            id: containingParent.id,
+            data: { droppableContainer: containingParent, value: 0 },
+          },
+        ]);
       }
     }
 
     // Distance fallback: entering empty containers at distance when pointer
     // is not inside any parent rect (e.g. in the gap between sections).
-    return captureWinnerNode(closestCenter({
-      ...args,
-      droppableContainers: parents,
-    }));
+    return captureWinnerNode(
+      closestCenter({
+        ...args,
+        droppableContainers: parents,
+      }),
+    );
   };
 }
 
@@ -475,5 +480,6 @@ export function createTypedCollisionDetection(
  * Static type-aware collision detection — convenience wrapper using
  * `hasPendingMove = false` (always uses centerCrossing for siblings).
  */
-export const typedCollisionDetection: CollisionDetection =
-  createTypedCollisionDetection({ hasPendingMoveRef: { current: false } });
+export const typedCollisionDetection: CollisionDetection = createTypedCollisionDetection({
+  hasPendingMoveRef: { current: false },
+});

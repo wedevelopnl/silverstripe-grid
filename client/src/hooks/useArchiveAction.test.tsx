@@ -37,9 +37,7 @@ describe('useArchiveAction', () => {
       });
       const { result } = renderArchiveAction(column);
 
-      expect(result.current.dialog?.message).toBe(
-        'Archive "My Column" and all 1 child element?',
-      );
+      expect(result.current.dialog?.message).toBe('Archive "My Column" and all 1 child element?');
     });
 
     it('should show plural children message for multiple descendants', () => {
@@ -49,9 +47,7 @@ describe('useArchiveAction', () => {
       });
       const { result } = renderArchiveAction(column);
 
-      expect(result.current.dialog?.message).toBe(
-        'Archive "My Column" and all 3 child elements?',
-      );
+      expect(result.current.dialog?.message).toBe('Archive "My Column" and all 3 child elements?');
     });
 
     it('should count nested descendants recursively', () => {
@@ -59,9 +55,7 @@ describe('useArchiveAction', () => {
         title: 'My Section',
         children: [
           createRowNode({
-            children: [
-              createColumnNode({ childCount: 2 }),
-            ],
+            children: [createColumnNode({ childCount: 2 })],
           }),
         ],
       });

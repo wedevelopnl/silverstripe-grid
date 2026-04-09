@@ -6,9 +6,7 @@ import { ViewportProvider, useViewportContext } from './ViewportContext';
 describe('useViewportContext', () => {
   it('initializes from initialViewport prop', () => {
     function Wrapper({ children }: { children: ReactNode }) {
-      return (
-        <ViewportProvider initialViewport="lg">{children}</ViewportProvider>
-      );
+      return <ViewportProvider initialViewport="lg">{children}</ViewportProvider>;
     }
 
     const { result } = renderHook(() => useViewportContext(), {
@@ -32,9 +30,7 @@ describe('useViewportContext', () => {
 
   it('updates viewport via setter', () => {
     function Wrapper({ children }: { children: ReactNode }) {
-      return (
-        <ViewportProvider initialViewport="sm">{children}</ViewportProvider>
-      );
+      return <ViewportProvider initialViewport="sm">{children}</ViewportProvider>;
     }
 
     const { result } = renderHook(() => useViewportContext(), {

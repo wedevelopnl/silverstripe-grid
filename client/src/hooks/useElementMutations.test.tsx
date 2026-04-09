@@ -13,7 +13,12 @@ import {
   createColumnNode,
   resetIdCounter,
 } from '@/testing/factories';
-import { mockFetchSuccess, mockFetchError, mockFetchSequence, getFetchCalls } from '@/testing/mockFetch';
+import {
+  mockFetchSuccess,
+  mockFetchError,
+  mockFetchSequence,
+  getFetchCalls,
+} from '@/testing/mockFetch';
 import { queryKeys } from '@/hooks/queryKeys';
 import { QueryClient } from '@tanstack/react-query';
 import type { ContainerNode, ElementTreeResponse, TreeApiResponse } from '@/types/elements';
@@ -53,10 +58,7 @@ function createReorderTree(pageId = 1, zone = 'main') {
   const tree: ElementTreeResponse = { [String(pageId)]: [section] };
   const treeApiResponse: TreeApiResponse = { tree, overrideCounts: {} };
 
-  queryClient.setQueryData(
-    queryKeys.elementTree.byPage(pageId, zone),
-    treeApiResponse,
-  );
+  queryClient.setQueryData(queryKeys.elementTree.byPage(pageId, zone), treeApiResponse);
 
   const column = section.children![0].children![0];
   const [elemA, elemB] = column.children!;

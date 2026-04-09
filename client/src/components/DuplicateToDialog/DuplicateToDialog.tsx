@@ -170,11 +170,13 @@ export default function DuplicateToDialog({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            {pages.isLoading && (
-              <p className="duplicate-to-dialog__loading">Loading pages\u2026</p>
-            )}
+            {pages.isLoading && <p className="duplicate-to-dialog__loading">Loading pages\u2026</p>}
             {pages.data !== undefined && (
-              <ul className="duplicate-to-dialog__list" data-testid="duplicate-to-page-list" role="listbox">
+              <ul
+                className="duplicate-to-dialog__list"
+                data-testid="duplicate-to-page-list"
+                role="listbox"
+              >
                 {pages.data.map((page) => (
                   <li
                     key={page.id}
@@ -184,9 +186,13 @@ export default function DuplicateToDialog({
                     aria-disabled={!page.hasGridZones}
                     data-testid="duplicate-to-page-item"
                     onClick={page.hasGridZones ? () => handlePageSelect(page.id) : undefined}
-                    onKeyDown={page.hasGridZones
-                      ? (e) => { if (e.key === 'Enter' || e.key === ' ') handlePageSelect(page.id); }
-                      : undefined}
+                    onKeyDown={
+                      page.hasGridZones
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') handlePageSelect(page.id);
+                          }
+                        : undefined
+                    }
                     tabIndex={page.hasGridZones ? 0 : -1}
                   >
                     {page.title}
@@ -199,11 +205,13 @@ export default function DuplicateToDialog({
 
         {step === 'zone' && (
           <div data-testid="duplicate-to-step-zone">
-            {zones.isLoading && (
-              <p className="duplicate-to-dialog__loading">Loading zones\u2026</p>
-            )}
+            {zones.isLoading && <p className="duplicate-to-dialog__loading">Loading zones\u2026</p>}
             {zones.data !== undefined && zones.data.length > 1 && (
-              <ul className="duplicate-to-dialog__list" data-testid="duplicate-to-zone-list" role="listbox">
+              <ul
+                className="duplicate-to-dialog__list"
+                data-testid="duplicate-to-zone-list"
+                role="listbox"
+              >
                 {zones.data.map((zone) => (
                   <li
                     key={zone}
@@ -212,7 +220,9 @@ export default function DuplicateToDialog({
                     aria-selected={zone === selectedZone}
                     data-testid="duplicate-to-zone-item"
                     onClick={() => handleZoneSelect(zone)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleZoneSelect(zone); }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') handleZoneSelect(zone);
+                    }}
                     tabIndex={0}
                   >
                     {zone}
@@ -234,7 +244,11 @@ export default function DuplicateToDialog({
               </p>
             )}
             {containers.data !== undefined && containers.data.length > 0 && (
-              <ul className="duplicate-to-dialog__list" data-testid="duplicate-to-container-list" role="listbox">
+              <ul
+                className="duplicate-to-dialog__list"
+                data-testid="duplicate-to-container-list"
+                role="listbox"
+              >
                 {containers.data.map((container) => (
                   <li
                     key={container.id}
@@ -243,7 +257,9 @@ export default function DuplicateToDialog({
                     aria-selected={container.id === selectedContainerId}
                     data-testid="duplicate-to-container-item"
                     onClick={() => handleContainerSelect(container.id)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleContainerSelect(container.id); }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') handleContainerSelect(container.id);
+                    }}
                     tabIndex={0}
                   >
                     <span className="duplicate-to-dialog__item-title">{container.title}</span>
@@ -266,7 +282,9 @@ export default function DuplicateToDialog({
 
       <div className="duplicate-to-dialog__footer">
         {error !== undefined && error !== null && (
-          <p className="duplicate-to-dialog__error" data-testid="duplicate-to-error">{error}</p>
+          <p className="duplicate-to-dialog__error" data-testid="duplicate-to-error">
+            {error}
+          </p>
         )}
         <div className="duplicate-to-dialog__actions">
           {step !== 'page' && (

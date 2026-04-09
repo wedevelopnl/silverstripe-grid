@@ -20,7 +20,8 @@ export default function SectionBlock({ section }: SectionBlockProps) {
   const { isCollapsed, toggle } = section;
   const { activeType } = useDragContext();
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: section.sortableId });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
+    useSortable({ id: section.sortableId });
 
   const showDropTarget = isOver && activeType === 'section';
 
@@ -38,39 +39,38 @@ export default function SectionBlock({ section }: SectionBlockProps) {
         <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={section.title} />
         <i className={`section-block__icon ${section.blockSchema.icon}`} />
         <h2 className="section-block__title" data-testid="section-title">
-          {section.editLink !== null
-            ? <a href={section.editLink} data-testid="section-edit-link">{section.title}</a>
-            : section.title}
+          {section.editLink !== null ? (
+            <a href={section.editLink} data-testid="section-edit-link">
+              {section.title}
+            </a>
+          ) : (
+            section.title
+          )}
         </h2>
         <ElementActions node={section} />
       </div>
       <div className="section-block__body">
         <SortableContext items={section.childSortableIds} strategy={verticalListSortingStrategy}>
-          {section.children !== null && section.children.length > 0
-            ? (
-              <>
-                {section.children.map((row) => (
-                  <RowBlock
-                    key={row.id}
-                    row={row}
-                  />
-                ))}
-                <AddChildButton
-                  parentId={section.id}
-                  childType="row"
-                  childLabel="Row"
-                  variant="append"
-                />
-              </>
-            )
-            : (
+          {section.children !== null && section.children.length > 0 ? (
+            <>
+              {section.children.map((row) => (
+                <RowBlock key={row.id} row={row} />
+              ))}
               <AddChildButton
                 parentId={section.id}
                 childType="row"
                 childLabel="Row"
-                variant="empty-state"
+                variant="append"
               />
-            )}
+            </>
+          ) : (
+            <AddChildButton
+              parentId={section.id}
+              childType="row"
+              childLabel="Row"
+              variant="empty-state"
+            />
+          )}
         </SortableContext>
       </div>
     </section>

@@ -7,15 +7,15 @@ describe('buildBlockClasses', () => {
   });
 
   it('appends active modifiers', () => {
-    expect(
-      buildBlockClasses('card', 'draft', { active: true, highlighted: true }),
-    ).toBe('card card--draft card--active card--highlighted');
+    expect(buildBlockClasses('card', 'draft', { active: true, highlighted: true })).toBe(
+      'card card--draft card--active card--highlighted',
+    );
   });
 
   it('skips inactive modifiers', () => {
-    expect(
-      buildBlockClasses('card', 'modified', { active: false, dragging: true }),
-    ).toBe('card card--modified card--dragging');
+    expect(buildBlockClasses('card', 'modified', { active: false, dragging: true })).toBe(
+      'card card--modified card--dragging',
+    );
   });
 
   it('works with no modifiers', () => {

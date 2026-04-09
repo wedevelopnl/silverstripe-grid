@@ -22,9 +22,7 @@ export interface ReorderContext {
  * Returns null if the active ID is unparseable or the move is a no-op
  * (same container and same index).
  */
-export function resolveReorderParams(
-  context: ReorderContext,
-): ReorderElementParams | null {
+export function resolveReorderParams(context: ReorderContext): ReorderElementParams | null {
   const parsed = parseDraggableId(context.activeId);
   if (!parsed) return null;
 
@@ -49,10 +47,7 @@ export function resolveReorderParams(
  * Determines the afterElementID by looking at the item before the insertion
  * index in containerItems, skipping the active item itself.
  */
-function resolveAfterElementId(
-  context: ReorderContext,
-  activeElementId: number,
-): number | null {
+function resolveAfterElementId(context: ReorderContext, activeElementId: number): number | null {
   // Walk backwards from overIndex - 1 to find the first valid, non-active item
   for (let i = context.overIndex - 1; i >= 0; i--) {
     const item = context.containerItems[i];

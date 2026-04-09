@@ -4,13 +4,7 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ message, variant }: EmptyStateProps) {
-  const className = variant === 'centered'
-    ? 'empty-state empty-state--centered'
-    : 'empty-state';
+  const className = variant === 'centered' ? 'empty-state empty-state--centered' : 'empty-state';
 
-  return (
-    <div className={className}>
-      {message}
-    </div>
-  );
+  return <div className={className}>{message}</div>;
 }
