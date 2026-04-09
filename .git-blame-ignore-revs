@@ -1,0 +1,6 @@
+# Commits listed here are skipped by `git blame`.
+# Enable locally with: git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub honors this file automatically.
+
+# style: normalize client/src formatting with biome
+4820e69dc68f1ee5ce5c89bcb9e829579384cc96

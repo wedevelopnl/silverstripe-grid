@@ -108,6 +108,16 @@ E2E tests require running Docker services and are not part of the standard QA su
 make test-e2e
 ```
 
+### Git Blame
+
+The repository tracks bulk-reformat commits in `.git-blame-ignore-revs` so
+`git blame` surfaces the real author of a line instead of the reformat. GitHub
+honors this file automatically. To enable it in your local clone, run once:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 ## Project Structure
 
 See the `CLAUDE.md` file for a detailed overview of the architecture, directory layout, and key conventions.
