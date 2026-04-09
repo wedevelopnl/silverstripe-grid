@@ -95,7 +95,8 @@ npm run qa
 | `make analyse` | PHPStan static analysis |
 | `make test-unit` | PHP unit tests |
 | `make test-integration` | PHP integration tests (requires Docker) |
-| `npm run lint` | oxlint + Stylelint |
+| `npm run lint` | Biome (JS/TS) + Stylelint (SCSS) |
+| `npm run format` | Biome format --write (JS/TS) |
 | `npm run typecheck` | TypeScript type checking |
 | `npm run test` | Vitest unit tests |
 

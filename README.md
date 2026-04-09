@@ -112,7 +112,8 @@ See `src/Dev/FixtureController.php`. The endpoints are gated by `Director::isDev
 | `make analyse` | PHPStan static analysis (level max + Silverstan, 100% type coverage) |
 | `make rector-dry` | Preview Rector refactorings |
 | `make rector` | Apply Rector refactorings |
-| `npm run lint` | oxlint + Stylelint |
+| `npm run lint` | Biome (JS/TS) + Stylelint (SCSS) |
+| `npm run format` | Biome format --write (JS/TS) |
 | `npm run typecheck` | TypeScript type checking |
 | `make qa` | Full QA suite — PHPStan + coverage + lint + typecheck + JS tests (parallel) |
 | `make qa-js` | JS-only QA — lint + typecheck + Vitest (parallel) |

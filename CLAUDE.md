@@ -101,11 +101,13 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 | `npm run build` | Vite production build |
 | `npm run dev` | Vite watch mode for development |
 | `npm run test` | Run Vitest tests |
-| `npm run lint` | oxlint + Stylelint |
-| `npm run lint:js` | oxlint only (no fix) |
-| `npm run lint:js:fix` | oxlint with auto-fix |
+| `npm run lint` | Biome lint (JS/TS) + Stylelint (SCSS) |
+| `npm run lint:js` | Biome lint only (no fix) |
+| `npm run lint:js:fix` | Biome lint with auto-fix |
 | `npm run lint:css` | Stylelint only (no fix) |
 | `npm run lint:css:fix` | Stylelint with auto-fix |
+| `npm run format` | Biome format --write (JS/TS) |
+| `npm run format:check` | Biome format check (no write) |
 | `npm run typecheck` | TypeScript type checking |
 | `npm run test:watch` | Vitest in watch mode |
 | `npm run coverage` | Vitest with coverage report |
@@ -113,7 +115,7 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 | `npm run test:e2e` | Run Playwright E2E tests |
 | `npm run test:e2e:ui` | Playwright with interactive UI |
 | `npm run test:e2e:debug` | Playwright in debug mode |
-| `npm run qa` | Full QA: lint + typecheck + test |
+| `npm run qa` | Full QA: lint + format:check + typecheck + test |
 
 ## PHP (via Makefile — requires Docker)
 
@@ -137,7 +139,7 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 | `make test-e2e` | Run Playwright E2E tests (requires Docker) |
 | `make test-e2e-ui` | Playwright E2E with interactive UI |
 | `make qa` | Full QA suite (PHPStan + PHP tests + JS QA) |
-| `make qa-js` | JavaScript QA (oxlint + Stylelint + typecheck + Vitest) |
+| `make qa-js` | JavaScript QA (Biome + Stylelint + typecheck + Vitest) |
 
 <!-- Source: local .apm/instructions/docker.instructions.md -->
 # Docker Dev Environment
@@ -276,7 +278,7 @@ YAML fixtures must list elements **bottom-up** (leaf → column → row → sect
 - The SS5 version lives on `main` (and legacy `master`) for architectural reference only
 - Active development happens on branch `6` (orphaned from `main`)
 - composer.json is intentionally minimal; dependencies will be added incrementally
-- JS linting uses oxlint (`oxlintrc.json`), CSS/SCSS linting uses Stylelint (`stylelint.config.mjs`)
+- JS/TS linting and formatting use Biome (`biome.json`), CSS/SCSS linting uses Stylelint (`stylelint.config.mjs`)
 
 ## Grid Domain
 

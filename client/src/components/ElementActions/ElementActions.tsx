@@ -26,7 +26,7 @@ export default function ElementActions({ node }: ElementActionsProps) {
   return (
     <>
       <ActionsMenu actions={actions} />
-      {archiveDialog !== null && archiveDialog.isOpen && (
+      {archiveDialog?.isOpen && (
         <ConfirmDialog
           isOpen={archiveDialog.isOpen}
           title={archiveDialog.title}
@@ -37,7 +37,7 @@ export default function ElementActions({ node }: ElementActionsProps) {
           destructive
         />
       )}
-      {duplicateToDialog !== null && duplicateToDialog.isOpen && (
+      {duplicateToDialog?.isOpen && (
         <DuplicateToDialog
           isOpen={duplicateToDialog.isOpen}
           elementType={duplicateToDialog.elementType}

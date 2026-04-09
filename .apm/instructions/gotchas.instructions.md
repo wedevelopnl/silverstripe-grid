@@ -11,7 +11,7 @@ applyTo: "**/*"
 - The SS5 version lives on `main` (and legacy `master`) for architectural reference only
 - Active development happens on branch `6` (orphaned from `main`)
 - composer.json is intentionally minimal; dependencies will be added incrementally
-- JS linting uses oxlint (`oxlintrc.json`), CSS/SCSS linting uses Stylelint (`stylelint.config.mjs`)
+- JS/TS linting and formatting use Biome (`biome.json`), CSS/SCSS linting uses Stylelint (`stylelint.config.mjs`)
 
 ## Grid Domain
 

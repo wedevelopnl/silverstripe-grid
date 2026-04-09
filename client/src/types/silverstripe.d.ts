@@ -6,8 +6,6 @@
  * needing Rollup external mappings for non-React globals.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import type { ComponentType } from 'react';
 import type { AdapterConfig } from './adapter';
 
@@ -16,6 +14,7 @@ import type { AdapterConfig } from './adapter';
 export interface InjectorComponentRegistry {
   // Components are registered with their own prop types but retrieved
   // generically — the registry accepts any component signature.
+  // biome-ignore lint/suspicious/noExplicitAny: ComponentType props are contravariant; unknown rejects real components.
   registerMany(components: Record<string, ComponentType<any>>): void;
 }
 
@@ -27,6 +26,7 @@ interface InjectorGlobal {
   /** The singleton Container instance */
   default: InjectorContainer;
   /** Load a component with all registered transforms applied */
+  // biome-ignore lint/suspicious/noExplicitAny: generic component loader; callers cast to the specific component type.
   loadComponent(name: string, context?: Record<string, unknown>): ComponentType<any>;
 }
 

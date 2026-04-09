@@ -28,7 +28,7 @@ export function useResetOverridesAction(): ResetOverridesState {
   const isDefaultViewport = activeViewport === defaultViewport;
 
   const affectedCount = isDefaultViewport
-    ? overrideCounts['_total'] ?? 0
+    ? overrideCounts._total ?? 0
     : overrideCounts[activeViewport] ?? 0;
 
   const viewportLabel = getViewports().find((vp) => vp.key === activeViewport)?.label ?? activeViewport;

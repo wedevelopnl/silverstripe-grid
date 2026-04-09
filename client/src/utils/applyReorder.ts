@@ -34,7 +34,7 @@ export function applyReorder(
   // Check target parent exists (either as a mapped container or a root tree key)
   const targetChildren = maps.childrenByParentId.get(targetParentId);
   // Stryker disable next-line ConditionalExpression,BooleanLiteral: Equivalent — line 64 catches missing cloned target
-  if (!targetChildren && !Object.prototype.hasOwnProperty.call(tree, String(targetParentId))) {
+  if (!targetChildren && !Object.hasOwn(tree, String(targetParentId))) {
     return tree;
   }
 
