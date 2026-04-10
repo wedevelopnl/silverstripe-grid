@@ -6,10 +6,10 @@ namespace WeDevelop\Grid\Forms;
 
 use Override;
 use SilverStripe\ORM\FieldType\DBHTMLText;
+use SilverStripe\Forms\FormField;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldConfig;
 use SilverStripe\Forms\GridField\GridFieldDetailForm;
-use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\DataObjectInterface;
 use WeDevelop\Grid\Model\GridElement;
 
@@ -22,6 +22,11 @@ use WeDevelop\Grid\Model\GridElement;
  */
 class GridEditorField extends GridField
 {
+    private bool $isReadonlyField = false;
+
+    /** @var positive-int|null */
+    private ?int $version = null;
+
     /**
      * @param positive-int $pageId
      * @param non-empty-string $zone
@@ -80,6 +85,14 @@ class GridEditorField extends GridField
         $schemaData['grid-page-id'] = $this->pageId;
         $schemaData['grid-zone'] = $this->zone;
 
+        if ($this->isReadonlyField) {
+            $schemaData['grid-readonly'] = true;
+
+            if ($this->version !== null) {
+                $schemaData['grid-version'] = $this->version;
+            }
+        }
+
         return $schemaData;
     }
 
@@ -95,9 +108,22 @@ class GridEditorField extends GridField
         // Intentionally empty
     }
 
-    #[Override] // @phpstan-ignore method.childReturnType (GridField returns self but we intentionally return a LiteralField to strip all grid functionality in read-only mode)
-    public function performReadonlyTransformation(): LiteralField
+    #[Override]
+    public function performReadonlyTransformation(): FormField
     {
-        return LiteralField::create($this->name, '');
+        $clone = clone $this;
+        $clone->isReadonlyField = true;
+        $clone->setReadonly(true);
+
+        // getForm() and getRecord() PHPDocs declare non-nullable return
+        // types, but both return null at runtime when unset.
+        /** @var mixed $rawVersion */
+        $rawVersion = $this->getForm()?->getRecord()?->Version; // @phpstan-ignore-line nullsafe.neverNull (getForm() returns null at runtime when field has no form)
+
+        if (is_int($rawVersion) && $rawVersion > 0) {
+            $clone->version = $rawVersion;
+        }
+
+        return $clone;
     }
 }

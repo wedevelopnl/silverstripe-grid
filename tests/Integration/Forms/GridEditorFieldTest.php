@@ -11,7 +11,6 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
-use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Forms\GridEditorField;
@@ -84,11 +83,52 @@ final class GridEditorFieldTest extends SapphireTest
         self::assertTrue(true, 'saveInto completed without exception');
     }
 
-    public function testPerformReadonlyTransformationReturnsLiteralField(): void
+    public function testPerformReadonlyTransformationReturnsReadonlyClone(): void
     {
         $field = new GridEditorField('GridEditor', 42);
 
-        self::assertInstanceOf(LiteralField::class, $field->performReadonlyTransformation());
+        $readonly = $field->performReadonlyTransformation();
+
+        self::assertInstanceOf(GridEditorField::class, $readonly);
+        self::assertNotSame($field, $readonly);
+        self::assertTrue($readonly->isReadonly());
+    }
+
+    public function testReadonlyFieldIncludesVersionInSchemaData(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $field = new GridEditorField('GridEditor', $page->ID);
+        $form = Form::create(
+            Controller::create(),
+            'TestForm',
+            FieldList::create($field),
+            FieldList::create(),
+        );
+        $form->setFormAction('/test');
+        $form->loadDataFrom($page);
+
+        self::assertSame($page, $form->getRecord());
+
+        $readonly = $field->performReadonlyTransformation();
+        $this->attachToForm($readonly);
+
+        $schema = $readonly->getSchemaDataDefaults();
+
+        self::assertTrue($schema['grid-readonly']);
+        self::assertSame($page->Version, $schema['grid-version']);
+    }
+
+    public function testReadonlyFieldSchemaOmitsVersionWhenNoRecord(): void
+    {
+        $field = new GridEditorField('GridEditor', 42);
+
+        $readonly = $field->performReadonlyTransformation();
+        $this->attachToForm($readonly);
+
+        $schema = $readonly->getSchemaDataDefaults();
+
+        self::assertTrue($schema['grid-readonly']);
+        self::assertArrayNotHasKey('grid-version', $schema);
     }
 
     public function testFieldHolderReturnsDBHTMLText(): void
