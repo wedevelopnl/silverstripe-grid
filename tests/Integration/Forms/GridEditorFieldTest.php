@@ -115,7 +115,7 @@ final class GridEditorFieldTest extends SapphireTest
         $schema = $readonly->getSchemaDataDefaults();
 
         self::assertTrue($schema['grid-readonly']);
-        self::assertSame($page->Version, $schema['grid-version']);
+        self::assertSame((int) $page->Version, $schema['grid-version']);
     }
 
     public function testReadonlyFieldSchemaOmitsVersionWhenNoRecord(): void

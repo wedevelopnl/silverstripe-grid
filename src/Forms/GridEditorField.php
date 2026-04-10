@@ -109,7 +109,7 @@ class GridEditorField extends GridField
     }
 
     #[Override]
-    public function performReadonlyTransformation(): FormField
+    public function performReadonlyTransformation(): self
     {
         $clone = clone $this;
         $clone->isReadonlyField = true;
@@ -120,8 +120,9 @@ class GridEditorField extends GridField
         /** @var mixed $rawVersion */
         $rawVersion = $this->getForm()?->getRecord()?->Version; // @phpstan-ignore-line nullsafe.neverNull (getForm() returns null at runtime when field has no form)
 
-        if (is_int($rawVersion) && $rawVersion > 0) {
-            $clone->version = $rawVersion;
+        $version = filter_var($rawVersion, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($version !== false) {
+            $clone->version = $version;
         }
 
         return $clone;
