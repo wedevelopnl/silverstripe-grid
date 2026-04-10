@@ -1,4 +1,10 @@
-localhost, 127.0.0.1 {
+localhost {
+    root * /app/public
+    php_server
+}
+
+127.0.0.1 {
+    tls internal
     root * /app/public
     php_server
 }
