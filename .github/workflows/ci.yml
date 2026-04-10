@@ -45,32 +45,26 @@ jobs:
         php: ['8.3', '8.4', '8.5']
     env:
       PHP_VERSION: ${{ matrix.php }}
-      COMPOSE: docker compose -f .docker/compose.yml
+      COMPOSE: docker compose -f .docker/compose.yml --profile fluent
     steps:
       - uses: actions/checkout@v4
       - run: make .docker/.env
-      - run: make ensure-up
+      - run: $COMPOSE up -d --build --wait
+        name: Start services
       - run: make analyse
-      - run: $COMPOSE exec app vendor/bin/phpunit --testsuite unit --log-junit coverage/junit-unit.xml
-        name: Unit tests
-      - run: $COMPOSE exec app vendor/bin/phpunit --testsuite integration --log-junit coverage/junit-integration.xml
-        name: Integration tests
-      - run: $COMPOSE exec app vendor/bin/phpunit --testsuite functional --log-junit coverage/junit-functional.xml
-        name: Functional tests
+      - run: >-
+          $COMPOSE exec app-fluent vendor/bin/phpunit
+          --log-junit coverage/junit.xml
+          --coverage-clover coverage/clover.xml
+        name: Run all tests with coverage
+      - run: $COMPOSE exec app-fluent vendor/bin/coverage-check coverage/clover.xml 90
+        name: Check coverage threshold (90%)
       - uses: dorny/test-reporter@v1
         if: always()
         with:
           name: PHPUnit Results (PHP ${{ matrix.php }})
-          path: coverage/junit-*.xml
+          path: coverage/junit.xml
           reporter: java-junit
-
-  php-coverage:
-    name: PHP Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: make .docker/.env
-      - run: make coverage-check
 
   e2e:
     name: E2E (${{ matrix.browser }})
