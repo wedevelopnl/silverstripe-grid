@@ -27,6 +27,18 @@ describe('fetchElementTree', () => {
     const [url] = getFetchCalls()[0];
     expect(url).toBe('/admin/grid/api/readTree/42/main%20area');
   });
+
+  it('appends version query param when version is provided', async () => {
+    await fetchElementTree(42, 'main', 5);
+    const [url] = getFetchCalls()[0];
+    expect(url).toBe('/admin/grid/api/readTree/42/main?version=5');
+  });
+
+  it('omits version query param when version is undefined', async () => {
+    await fetchElementTree(42, 'main');
+    const [url] = getFetchCalls()[0];
+    expect(url).toBe('/admin/grid/api/readTree/42/main');
+  });
 });
 
 describe('createElement', () => {

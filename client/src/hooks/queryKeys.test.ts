@@ -10,6 +10,14 @@ describe('queryKeys', () => {
     it('should return page and zone tuple for byPage()', () => {
       expect(queryKeys.elementTree.byPage(1, 'main')).toEqual(['elementTree', 1, 'main']);
     });
+
+    it('should include version in tuple when version is provided', () => {
+      expect(queryKeys.elementTree.byPage(1, 'main', 5)).toEqual(['elementTree', 1, 'main', 5]);
+    });
+
+    it('should omit version from tuple when version is undefined', () => {
+      expect(queryKeys.elementTree.byPage(1, 'main', undefined)).toEqual(['elementTree', 1, 'main']);
+    });
   });
 
   describe('pages', () => {

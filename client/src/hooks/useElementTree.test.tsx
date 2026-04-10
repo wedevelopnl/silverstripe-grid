@@ -37,6 +37,21 @@ describe('useElementTree', () => {
     expect(result.current.data).toBeUndefined();
     expect(getFetchCalls()).toHaveLength(0);
   });
+
+  it('should append version query param when version is provided', async () => {
+    const apiResponse = createTreeApiResponse();
+    mockFetchSuccess(apiResponse);
+    const { wrapper } = createProviderWrapper({ pageId: 1, zone: 'main' });
+
+    const { result } = renderHook(() => useElementTree(1, 'main', 5), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    const [url] = getFetchCalls()[0];
+    expect(url).toContain('/api/readTree/1/main?version=5');
+  });
 });
 
 describe('useViewportOverrideCounts', () => {
@@ -68,5 +83,22 @@ describe('useViewportOverrideCounts', () => {
     const { result } = renderHook(() => useViewportOverrideCounts(null, 'main'), { wrapper });
 
     expect(result.current).toEqual({});
+  });
+
+  it('should use version-keyed cache entry when version is provided', async () => {
+    const overrideCounts = { md: 2 };
+    const apiResponse = createTreeApiResponse({ overrideCounts });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main', 5), apiResponse);
+
+    const { wrapper } = createProviderWrapper({ queryClient, pageId: 1, zone: 'main' });
+    const { result } = renderHook(() => useViewportOverrideCounts(1, 'main', 5), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ md: 2 });
+    });
   });
 });

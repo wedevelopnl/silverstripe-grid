@@ -4,17 +4,17 @@ import type { ElementTreeResponse, TreeApiResponse } from '@/types/elements';
 import type { ApiError } from '@/api/errors';
 import { queryKeys } from './queryKeys';
 
-function treeQueryOptions(pageId: number | null, zone: string) {
+function treeQueryOptions(pageId: number | null, zone: string, version?: number) {
   return {
     queryKey:
       pageId !== null
-        ? queryKeys.elementTree.byPage(pageId, zone)
+        ? queryKeys.elementTree.byPage(pageId, zone, version)
         : (['elementTree', 'disabled'] as const),
     queryFn: () => {
       if (pageId === null) {
         throw new Error('pageId is required — query should be disabled');
       }
-      return fetchElementTree(pageId, zone);
+      return fetchElementTree(pageId, zone, version);
     },
     enabled: pageId !== null,
   };
@@ -24,12 +24,13 @@ function treeQueryOptions(pageId: number | null, zone: string) {
  * Fetches and caches the element tree for a CMS page zone.
  * Disabled when pageId is null (no page selected).
  *
+ * Pass `version` to fetch a specific historical version of the tree.
  * Uses `select` to extract just the tree, keeping the full API response
  * (including overrideCounts) in the query cache for other hooks.
  */
-export function useElementTree(pageId: number | null, zone: string) {
+export function useElementTree(pageId: number | null, zone: string, version?: number) {
   return useQuery<TreeApiResponse, ApiError, ElementTreeResponse>({
-    ...treeQueryOptions(pageId, zone),
+    ...treeQueryOptions(pageId, zone, version),
     select: (response) => response.tree,
   });
 }
@@ -37,13 +38,15 @@ export function useElementTree(pageId: number | null, zone: string) {
 /**
  * Reads per-viewport override counts from the cached tree API response.
  * Shares the same query cache as useElementTree — no extra fetch.
+ * Pass `version` to read from a version-specific cache entry.
  */
 export function useViewportOverrideCounts(
   pageId: number | null,
   zone: string,
+  version?: number,
 ): Record<string, number> {
   const { data } = useQuery<TreeApiResponse, ApiError, Record<string, number>>({
-    ...treeQueryOptions(pageId, zone),
+    ...treeQueryOptions(pageId, zone, version),
     select: (response) => response.overrideCounts,
   });
 

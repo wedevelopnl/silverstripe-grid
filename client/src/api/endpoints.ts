@@ -5,10 +5,17 @@ import { getControllerLink } from './config';
 
 /**
  * Fetch the full element tree for a CMS page.
+ * Pass `version` to fetch a specific historical version from the readTree endpoint.
  */
-export async function fetchElementTree(pageId: number, zone: string): Promise<TreeApiResponse> {
+export async function fetchElementTree(
+  pageId: number,
+  zone: string,
+  version?: number,
+): Promise<TreeApiResponse> {
   const base = getControllerLink();
-  return apiGet<TreeApiResponse>(`${base}/api/readTree/${pageId}/${encodeURIComponent(zone)}`);
+  const url = `${base}/api/readTree/${pageId}/${encodeURIComponent(zone)}`;
+  const query = version !== undefined ? `?version=${version}` : '';
+  return apiGet<TreeApiResponse>(`${url}${query}`);
 }
 
 export interface CreateElementParams {
