@@ -204,6 +204,43 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(1, $overrides['_total']);
     }
 
+    public function testReadTreeWithVersionReturnsHistoricalTree(): void
+    {
+        $this->buildTree();
+        $page = $this->page();
+        $pageId = (int) $page->ID;
+
+        // The page already has a version from buildTree's touchOwningPage-style writes.
+        // Capture the current version number.
+        $version = (int) $page->Version;
+        self::assertGreaterThan(0, $version);
+
+        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main?version={$version}");
+
+        self::assertSame(200, $response->getStatusCode());
+        $data = $this->parseJson($response);
+        self::assertArrayHasKey('tree', $data);
+        self::assertArrayHasKey('overrideCounts', $data);
+    }
+
+    public function testReadTreeWithInvalidVersionReturns404(): void
+    {
+        $pageId = (int) $this->page()->ID;
+
+        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main?version=999999");
+
+        self::assertSame(404, $response->getStatusCode());
+    }
+
+    public function testReadTreeWithNonNumericVersionReturns400(): void
+    {
+        $pageId = (int) $this->page()->ID;
+
+        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main?version=abc");
+
+        self::assertSame(400, $response->getStatusCode());
+    }
+
     // ─── create ───────────────────────────────────────────────────
 
     public function testCreateSectionReturns204(): void

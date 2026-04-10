@@ -125,6 +125,14 @@ class GridController extends AdminController
     {
         $pageId = (int) $request->param('PageID');
 
+        /** @var non-empty-string $zone Route pattern guarantees non-empty zone segment */
+        $zone = (string) $request->param('Zone');
+
+        $versionRaw = $request->getVar('version');
+        if ($versionRaw !== null) {
+            return $this->readTreeForVersion($pageId, $zone, $versionRaw);
+        }
+
         /** @var SiteTree|null $page */
         $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
             Versioned::set_stage(Versioned::DRAFT);
@@ -140,11 +148,58 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        /** @var non-empty-string $zone Route pattern guarantees non-empty zone segment */
-        $zone = (string) $request->param('Zone');
         $tree = $this->treeBuilder->buildForPage($page, $zone);
 
         $rootNodes = $tree[(int) $page->ID] ?? [];
+        $overrideCounts = GridTreeBuilder::countOverrides($rootNodes);
+
+        return $this->jsonSuccess(200, [
+            'tree' => $tree,
+            'overrideCounts' => (object) $overrideCounts,
+        ]);
+    }
+
+    /**
+     * Load a historical tree for a specific page version.
+     *
+     * Uses archived reading mode so that standalone ORM queries in the tree
+     * builder (which don't inherit version context from the page record)
+     * resolve against the correct historical snapshot.
+     *
+     * @param non-empty-string $zone
+     */
+    private function readTreeForVersion(int $pageId, string $zone, mixed $versionRaw): HTTPResponse
+    {
+        $version = filter_var($versionRaw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($version === false) {
+            $this->jsonError(400);
+        }
+
+        /** @var SiteTree|null $page */
+        $page = Versioned::get_version(SiteTree::class, $pageId, $version);
+
+        if ($page === null) {
+            $this->jsonError(404);
+        }
+
+        if (!$page->canView()) {
+            $this->jsonError(403);
+        }
+
+        $treeBuilder = $this->treeBuilder;
+
+        // Wrap tree building in archived reading mode so standalone ORM queries
+        // (in OrmGridElementRepository) resolve against the historical snapshot.
+        // Versioned::reading_archived_date() is required because the tree builder
+        // uses GridElement::get()->filter(...), NOT relation traversals from the
+        // page record — updateInheritableQueryParams() does not apply.
+        $tree = Versioned::withVersionedMode(static function () use ($treeBuilder, $page, $zone): array {
+            Versioned::reading_archived_date($page->LastEdited);
+
+            return $treeBuilder->buildForPage($page, $zone);
+        });
+
+        $rootNodes = $tree[$pageId] ?? [];
         $overrideCounts = GridTreeBuilder::countOverrides($rootNodes);
 
         return $this->jsonSuccess(200, [
