@@ -48,6 +48,7 @@ jobs:
       COMPOSE: docker compose -f .docker/compose.yml
     steps:
       - uses: actions/checkout@v4
+      - run: make .docker/.env
       - run: make ensure-up
       - run: make analyse
       - run: $COMPOSE exec app vendor/bin/phpunit --testsuite unit --log-junit coverage/junit-unit.xml
@@ -68,6 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: make .docker/.env
       - run: make coverage-check
 
   e2e:
@@ -87,6 +89,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: make .docker/.env
       - run: make ensure-up
       - run: npx playwright test --project=${{ matrix.browser }} --reporter=html,junit
         env:
