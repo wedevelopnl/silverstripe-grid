@@ -1,4 +1,5 @@
-FROM dunglas/frankenphp:php8.3
+ARG PHP_VERSION=8.3
+FROM dunglas/frankenphp:php${PHP_VERSION}
 
 RUN install-php-extensions \
     intl \

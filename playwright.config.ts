@@ -57,5 +57,26 @@ export default defineConfig({
       },
       dependencies: ['setup'],
     },
+    // Firefox and WebKit only run in CI (via --project flag)
+    ...(process.env.CI
+      ? [
+          {
+            name: 'firefox',
+            use: {
+              ...devices['Desktop Firefox'],
+              storageState: 'tests/E2E/.auth/admin.json',
+            },
+            dependencies: ['setup'],
+          },
+          {
+            name: 'webkit',
+            use: {
+              ...devices['Desktop Safari'],
+              storageState: 'tests/E2E/.auth/admin.json',
+            },
+            dependencies: ['setup'],
+          },
+        ]
+      : []),
   ],
 });
