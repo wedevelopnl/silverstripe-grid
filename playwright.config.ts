@@ -45,9 +45,10 @@ export default defineConfig({
 
   projects: [
     {
-      name: 'setup',
+      name: 'setup-chromium',
       testDir: './tests/E2E',
       testMatch: /global\.setup\.ts/,
+      use: devices['Desktop Chrome'],
     },
     {
       name: 'chromium',
@@ -55,18 +56,30 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         storageState: 'tests/E2E/.auth/admin.json',
       },
-      dependencies: ['setup'],
+      dependencies: ['setup-chromium'],
     },
     // Firefox and WebKit only run in CI (via --project flag)
     ...(process.env.CI
       ? [
+          {
+            name: 'setup-firefox',
+            testDir: './tests/E2E',
+            testMatch: /global\.setup\.ts/,
+            use: devices['Desktop Firefox'],
+          },
           {
             name: 'firefox',
             use: {
               ...devices['Desktop Firefox'],
               storageState: 'tests/E2E/.auth/admin.json',
             },
-            dependencies: ['setup'],
+            dependencies: ['setup-firefox'],
+          },
+          {
+            name: 'setup-webkit',
+            testDir: './tests/E2E',
+            testMatch: /global\.setup\.ts/,
+            use: devices['Desktop Safari'],
           },
           {
             name: 'webkit',
@@ -74,7 +87,7 @@ export default defineConfig({
               ...devices['Desktop Safari'],
               storageState: 'tests/E2E/.auth/admin.json',
             },
-            dependencies: ['setup'],
+            dependencies: ['setup-webkit'],
           },
         ]
       : []),
