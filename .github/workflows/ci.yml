@@ -88,6 +88,10 @@ jobs:
           key: playwright-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: make .docker/.env
+      - name: Export E2E base URL
+        run: |
+          source .docker/.env
+          echo "E2E_BASE_URL=https://127.0.0.1:${WEB_PORT}" >> "$GITHUB_ENV"
       - run: make ensure-up
       - run: npx playwright test --project=${{ matrix.browser }} --reporter=html,junit
         env:
