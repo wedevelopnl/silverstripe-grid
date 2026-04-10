@@ -29,6 +29,9 @@ function elementTitleLocators(container: import('@playwright/test').Locator) {
 }
 
 test.describe('Drag and drop', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium',
+    'DnD pointer simulation is Chromium-specific');
+
   // The DnD fixture renders a deep hierarchy (~900px tall) that exceeds the
   // default Desktop Chrome viewport (720px). A taller viewport ensures all
   // drag handles are reachable by page.mouse without mid-drag scrolling.

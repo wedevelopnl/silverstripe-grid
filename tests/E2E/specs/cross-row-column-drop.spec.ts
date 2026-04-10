@@ -12,6 +12,9 @@ import { activateDragByTitle, dropAndSettle } from '../helpers/drag';
  * compares pointer X position against the 'over' element's center X.
  */
 test.describe('Cross-row column drop positions', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium',
+    'DnD pointer simulation is Chromium-specific');
+
   test.use({ viewport: { width: 1280, height: 1400 } });
 
   test.afterAll(async ({ request }) => {

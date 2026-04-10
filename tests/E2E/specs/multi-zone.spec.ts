@@ -27,6 +27,9 @@ function waitForMutationSettlement(page: import('@playwright/test').Page) {
 }
 
 test.describe('Multi-zone isolation', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium',
+    'DnD pointer simulation is Chromium-specific');
+
   // Two zones stacked vertically need a tall viewport
   test.use({ viewport: { width: 1280, height: 1400 } });
 

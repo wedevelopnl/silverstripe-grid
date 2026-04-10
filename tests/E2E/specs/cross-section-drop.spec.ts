@@ -12,6 +12,9 @@ import { activateDragByTitle, dropAndSettle } from '../helpers/drag';
  * all drop positions and directions efficiently.
  */
 test.describe('Cross-section row drop positions', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium',
+    'DnD pointer simulation is Chromium-specific');
+
   test.use({ viewport: { width: 1280, height: 1400 } });
 
   test.afterAll(async ({ request }) => {
