@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Functional\Controllers;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPResponse;
@@ -223,7 +224,7 @@ final class GridControllerTest extends FunctionalTest
         self::assertArrayHasKey('overrideCounts', $data);
     }
 
-    public function testReadTreeWithInvalidVersionReturns404(): void
+    public function testReadTreeWithNonExistentVersionReturns404(): void
     {
         $pageId = (int) $this->page()->ID;
 
@@ -232,13 +233,23 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(404, $response->getStatusCode());
     }
 
-    public function testReadTreeWithNonNumericVersionReturns400(): void
+    #[DataProvider('invalidVersionProvider')]
+    public function testReadTreeWithInvalidVersionParameterReturns400(string $version): void
     {
         $pageId = (int) $this->page()->ID;
 
-        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main?version=abc");
+        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main?version={$version}");
 
         self::assertSame(400, $response->getStatusCode());
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function invalidVersionProvider(): iterable
+    {
+        yield 'non-numeric' => ['abc'];
+        yield 'zero' => ['0'];
+        yield 'negative' => ['-1'];
+        yield 'float' => ['1.5'];
     }
 
     // ─── create ───────────────────────────────────────────────────

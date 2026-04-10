@@ -175,6 +175,8 @@ class GridController extends AdminController
             $this->jsonError(400);
         }
 
+        /** @var positive-int $version filter_var guarantees min_range=1 */
+
         /** @var SiteTree|null $page */
         $page = Versioned::get_version(SiteTree::class, $pageId, $version);
 
