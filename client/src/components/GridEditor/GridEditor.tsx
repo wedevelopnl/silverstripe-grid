@@ -7,6 +7,7 @@ import { useDragAndDrop, DragContext } from '@/hooks/useDragAndDrop';
 import { useReorderElement } from '@/hooks/useElementMutations';
 import { ViewportProvider } from '@/hooks/ViewportContext';
 import { GridEditorProvider } from '@/hooks/GridEditorContext';
+import { ReadonlyProvider } from '@/hooks/ReadonlyContext';
 import { isSectionNode } from '@/types/elements';
 import ViewportSwitcher from '@/components/ViewportSwitcher/ViewportSwitcher';
 import SectionBlock from '@/components/SectionBlock/SectionBlock';
@@ -17,6 +18,8 @@ import DragOverlayContent from '@/components/DragOverlayContent/DragOverlayConte
 interface GridEditorProps {
   readonly pageId: number | null;
   readonly zone: string;
+  readonly readonly?: boolean;
+  readonly version?: number;
 }
 
 /**
@@ -27,8 +30,8 @@ interface GridEditorProps {
  * SectionBlock (section > row > column > element card hierarchy)
  * to render the full grid editing interface.
  */
-export default function GridEditor({ pageId, zone }: GridEditorProps) {
-  const { data, isLoading, error } = useElementTree(pageId, zone);
+export default function GridEditor({ pageId, zone, readonly = false, version }: GridEditorProps) {
+  const { data, isLoading, error } = useElementTree(pageId, zone, readonly ? version : undefined);
 
   const reorderMutation = useReorderElement(pageId ?? 0, zone);
 
@@ -57,6 +60,35 @@ export default function GridEditor({ pageId, zone }: GridEditorProps) {
     () => ({ activeType: dragState?.activeType ?? null }),
     [dragState?.activeType],
   );
+
+  if (readonly && data !== undefined && pageId !== null) {
+    const validPageId = pageId;
+
+    return (
+      <div
+        className="grid-editor grid-editor--readonly"
+        data-page-id={validPageId}
+        data-zone={zone}
+        data-testid="grid-editor"
+      >
+        <GridEditorProvider value={{ pageId: validPageId, zone }}>
+          <ViewportProvider>
+            <ReadonlyProvider value={true}>
+              <DndContext>
+                {enrichedSections.length === 0 ? (
+                  <p className="grid-editor__empty-state">No sections in this version</p>
+                ) : (
+                  enrichedSections.map((section) => (
+                    <SectionBlock key={section.id} section={section} />
+                  ))
+                )}
+              </DndContext>
+            </ReadonlyProvider>
+          </ViewportProvider>
+        </GridEditorProvider>
+      </div>
+    );
+  }
 
   return (
     <div

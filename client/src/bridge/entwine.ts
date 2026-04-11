@@ -8,6 +8,8 @@ import { loadComponent } from './Injector';
 interface BridgeSchema {
   pageId: number | null;
   zone: string;
+  readonly: boolean;
+  version: number | undefined;
 }
 
 function parseBridgeData(data: unknown): BridgeSchema {
@@ -15,9 +17,14 @@ function parseBridgeData(data: unknown): BridgeSchema {
   const rawPageId = record['grid-page-id'];
   const rawZone = record['grid-zone'];
 
+  const rawReadonly = record['grid-readonly'];
+  const rawVersion = record['grid-version'];
+
   return {
     pageId: typeof rawPageId === 'number' ? rawPageId : null,
     zone: typeof rawZone === 'string' && rawZone !== '' ? rawZone : 'main',
+    readonly: rawReadonly === true,
+    version: typeof rawVersion === 'number' ? rawVersion : undefined,
   };
 }
 
@@ -33,7 +40,7 @@ window.jQuery.entwine('ss', ($) => {
     onmatch() {
       try {
         const GridEditor = loadComponent('GridEditor');
-        const { pageId, zone } = parseBridgeData(this.data('schema'));
+        const { pageId, zone, readonly, version } = parseBridgeData(this.data('schema'));
 
         const root = createRoot(this[0]);
         this.setReactRoot(root);
@@ -44,7 +51,7 @@ window.jQuery.entwine('ss', ($) => {
             createElement(
               GridEditorErrorBoundary,
               null,
-              createElement(GridEditor, { pageId, zone }),
+              createElement(GridEditor, { pageId, zone, readonly, version }),
             ),
           ),
         );

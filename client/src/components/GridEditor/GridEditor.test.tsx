@@ -147,4 +147,55 @@ describe('GridEditor', () => {
     expect(editor).toHaveAttribute('data-zone', 'main');
     expect(editor).toHaveClass('grid-editor');
   });
+
+  describe('readonly mode', () => {
+    it('renders sections in readonly mode with readonly class', async () => {
+      resetIdCounter();
+
+      const treeResponse = createTreeApiResponse({
+        tree: {
+          '1': [
+            createSectionNode({ id: 10, parentId: 1, title: 'Hero' }),
+            createSectionNode({ id: 20, parentId: 1, title: 'Content' }),
+          ],
+        },
+      });
+
+      mockFetchSuccess(treeResponse);
+
+      renderWithProviders(<GridEditor pageId={1} zone="main" readonly={true} version={5} />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument();
+      });
+
+      expect(screen.getAllByTestId('section-block')).toHaveLength(2);
+      expect(screen.getByTestId('grid-editor')).toHaveClass('grid-editor--readonly');
+    });
+
+    it('shows empty state message when readonly tree has no sections', async () => {
+      const treeResponse = createTreeApiResponse({
+        tree: { '1': [] },
+      });
+
+      mockFetchSuccess(treeResponse);
+
+      renderWithProviders(<GridEditor pageId={1} zone="main" readonly={true} version={3} />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument();
+      });
+
+      expect(screen.getByText('No sections in this version')).toBeInTheDocument();
+      expect(screen.queryByTestId('add-child-empty')).not.toBeInTheDocument();
+    });
+
+    it('shows loading state in readonly mode', () => {
+      vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+
+      renderWithProviders(<GridEditor pageId={1} zone="main" readonly={true} version={2} />);
+
+      expect(screen.getByTestId('grid-editor-loading')).toHaveTextContent('Loading elements...');
+    });
+  });
 });
