@@ -190,12 +190,13 @@ describe('GridEditor', () => {
       expect(screen.queryByTestId('add-child-empty')).not.toBeInTheDocument();
     });
 
-    it('shows loading state in readonly mode', () => {
+    it('shows loading state in readonly mode with readonly class', () => {
       vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
 
       renderWithProviders(<GridEditor pageId={1} zone="main" readonly={true} version={2} />);
 
       expect(screen.getByTestId('grid-editor-loading')).toHaveTextContent('Loading elements...');
+      expect(screen.getByTestId('grid-editor')).toHaveClass('grid-editor--readonly');
     });
   });
 });

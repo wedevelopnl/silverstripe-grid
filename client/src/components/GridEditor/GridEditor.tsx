@@ -61,7 +61,7 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
     [dragState?.activeType],
   );
 
-  if (readonly && data !== undefined && pageId !== null) {
+  if (readonly && pageId !== null) {
     const validPageId = pageId;
 
     return (
@@ -71,21 +71,31 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
         data-zone={zone}
         data-testid="grid-editor"
       >
-        <GridEditorProvider value={{ pageId: validPageId, zone }}>
-          <ViewportProvider>
-            <ReadonlyProvider value={true}>
-              <DndContext>
-                {enrichedSections.length === 0 ? (
-                  <p className="grid-editor__empty-state">No sections in this version</p>
-                ) : (
-                  enrichedSections.map((section) => (
-                    <SectionBlock key={section.id} section={section} />
-                  ))
-                )}
-              </DndContext>
-            </ReadonlyProvider>
-          </ViewportProvider>
-        </GridEditorProvider>
+        {isLoading && (
+          <p className="grid-editor__loading" data-testid="grid-editor-loading">
+            Loading elements...
+          </p>
+        )}
+        {error !== null && (
+          <p className="grid-editor__error">Failed to load elements.</p>
+        )}
+        {data !== undefined && (
+          <GridEditorProvider value={{ pageId: validPageId, zone }}>
+            <ViewportProvider>
+              <ReadonlyProvider value={true}>
+                <DndContext>
+                  {enrichedSections.length === 0 ? (
+                    <p className="grid-editor__empty-state">No sections in this version</p>
+                  ) : (
+                    enrichedSections.map((section) => (
+                      <SectionBlock key={section.id} section={section} />
+                    ))
+                  )}
+                </DndContext>
+              </ReadonlyProvider>
+            </ViewportProvider>
+          </GridEditorProvider>
+        )}
       </div>
     );
   }
