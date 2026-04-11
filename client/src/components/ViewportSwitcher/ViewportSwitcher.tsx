@@ -1,9 +1,11 @@
 import { useViewportContext } from '@/hooks/ViewportContext';
+import { useReadonly } from '@/hooks/ReadonlyContext';
 import { useResetOverridesAction } from '@/hooks/useResetOverridesAction';
 import { getViewports } from '@/utils/gridAdapter';
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
 
 export default function ViewportSwitcher() {
+  const readonly = useReadonly();
   const viewports = getViewports();
   const { activeViewport, setActiveViewport } = useViewportContext();
   const reset = useResetOverridesAction();
@@ -34,7 +36,7 @@ export default function ViewportSwitcher() {
           );
         })}
       </div>
-      {reset.showReset && (
+      {!readonly && reset.showReset && (
         <button
           type="button"
           className="viewport-switcher__reset"
@@ -44,15 +46,17 @@ export default function ViewportSwitcher() {
           {reset.label}
         </button>
       )}
-      <ConfirmDialog
-        isOpen={reset.isDialogOpen}
-        title={reset.dialogTitle}
-        message={reset.dialogMessage}
-        confirmLabel="Reset"
-        onConfirm={reset.onConfirm}
-        onCancel={reset.onCancel}
-        destructive
-      />
+      {!readonly && (
+        <ConfirmDialog
+          isOpen={reset.isDialogOpen}
+          title={reset.dialogTitle}
+          message={reset.dialogMessage}
+          confirmLabel="Reset"
+          onConfirm={reset.onConfirm}
+          onCancel={reset.onCancel}
+          destructive
+        />
+      )}
     </div>
   );
 }

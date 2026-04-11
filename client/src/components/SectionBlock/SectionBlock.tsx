@@ -5,6 +5,7 @@ import { getElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
+import { useReadonly } from '@/hooks/ReadonlyContext';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import ElementActions from '@/components/ElementActions/ElementActions';
@@ -16,6 +17,7 @@ interface SectionBlockProps {
 }
 
 export default function SectionBlock({ section }: SectionBlockProps) {
+  const readonly = useReadonly();
   const status = getElementStatus(section.statusFlags);
   const { isCollapsed, toggle } = section;
   const { activeType } = useDragContext();
@@ -35,11 +37,13 @@ export default function SectionBlock({ section }: SectionBlockProps) {
   return (
     <section ref={setNodeRef} style={style} className={rootClasses} data-testid="section-block">
       <div className="section-block__header" data-testid="section-header">
-        <DragHandle listeners={listeners} attributes={attributes} label={`Move ${section.title}`} />
+        {!readonly && (
+          <DragHandle listeners={listeners} attributes={attributes} label={`Move ${section.title}`} />
+        )}
         <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={section.title} />
         <i className={`section-block__icon ${section.blockSchema.icon}`} />
         <h2 className="section-block__title" data-testid="section-title">
-          {section.editLink !== null ? (
+          {!readonly && section.editLink !== null ? (
             <a href={section.editLink} data-testid="section-edit-link">
               {section.title}
             </a>
@@ -47,7 +51,7 @@ export default function SectionBlock({ section }: SectionBlockProps) {
             section.title
           )}
         </h2>
-        <ElementActions node={section} />
+        {!readonly && <ElementActions node={section} />}
       </div>
       <div className="section-block__body">
         <SortableContext items={section.childSortableIds} strategy={verticalListSortingStrategy}>
@@ -56,20 +60,24 @@ export default function SectionBlock({ section }: SectionBlockProps) {
               {section.children.map((row) => (
                 <RowBlock key={row.id} row={row} />
               ))}
+              {!readonly && (
+                <AddChildButton
+                  parentId={section.id}
+                  childType="row"
+                  childLabel="Row"
+                  variant="append"
+                />
+              )}
+            </>
+          ) : (
+            !readonly && (
               <AddChildButton
                 parentId={section.id}
                 childType="row"
                 childLabel="Row"
-                variant="append"
+                variant="empty-state"
               />
-            </>
-          ) : (
-            <AddChildButton
-              parentId={section.id}
-              childType="row"
-              childLabel="Row"
-              variant="empty-state"
-            />
+            )
           )}
         </SortableContext>
       </div>

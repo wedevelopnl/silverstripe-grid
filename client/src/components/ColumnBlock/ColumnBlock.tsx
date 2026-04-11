@@ -6,6 +6,7 @@ import type { EnrichedColumnNode } from '@/types/enriched';
 import { getElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { useGridEditorContext } from '@/hooks/GridEditorContext';
+import { useReadonly } from '@/hooks/ReadonlyContext';
 import { useViewportContext } from '@/hooks/ViewportContext';
 import { useUpdateGridSettings, useCreateContentElement } from '@/hooks/useElementMutations';
 import { buildSortableStyle } from '@/utils/sortableStyles';
@@ -30,6 +31,7 @@ interface ColumnBlockProps {
 }
 
 export default function ColumnBlock({ column }: ColumnBlockProps) {
+  const readonly = useReadonly();
   const { activeViewport } = useViewportContext();
   const { pageId, zone } = useGridEditorContext();
   const columnCount = getColumnCount();
@@ -145,15 +147,17 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
     <div ref={setNodeRef} style={columnStyle} className="row-block__column">
       <div className={innerClasses} data-testid="column-block">
         <div className="column-block__header" data-testid="column-header">
-          <DragHandle
-            listeners={listeners}
-            attributes={attributes}
-            label={`Move ${column.title}`}
-          />
+          {!readonly && (
+            <DragHandle
+              listeners={listeners}
+              attributes={attributes}
+              label={`Move ${column.title}`}
+            />
+          )}
           <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={column.title} />
           <i className={`column-block__icon ${column.blockSchema.icon}`} />
           <span className="column-block__title" data-testid="column-title">
-            {column.editLink !== null ? (
+            {!readonly && column.editLink !== null ? (
               <a href={column.editLink} data-testid="column-edit-link">
                 {column.title}
               </a>
@@ -161,23 +165,27 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
               column.title
             )}
           </span>
-          <GridSettingsPicker
-            label={widthLabel}
-            options={widthOptions}
-            selectedValue={widthSelectedValue}
-            disabled={isPickerDisabled}
-            testId="column-badge"
-            onSelect={handleWidthSelect}
-          />
-          <GridSettingsPicker
-            label={offsetLabel}
-            options={offsetOptions}
-            selectedValue={settings.offset}
-            disabled={isOffsetDisabled}
-            testId="column-offset-badge"
-            onSelect={handleOffsetSelect}
-          />
-          <ElementActions node={column} />
+          {!readonly && (
+            <>
+              <GridSettingsPicker
+                label={widthLabel}
+                options={widthOptions}
+                selectedValue={widthSelectedValue}
+                disabled={isPickerDisabled}
+                testId="column-badge"
+                onSelect={handleWidthSelect}
+              />
+              <GridSettingsPicker
+                label={offsetLabel}
+                options={offsetOptions}
+                selectedValue={settings.offset}
+                disabled={isOffsetDisabled}
+                testId="column-offset-badge"
+                onSelect={handleOffsetSelect}
+              />
+              <ElementActions node={column} />
+            </>
+          )}
         </div>
         <div className="column-block__body">
           <SortableContext items={column.childSortableIds} strategy={verticalListSortingStrategy}>
@@ -185,7 +193,7 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
               ? children.map((child) => <ElementCard key={child.id} element={child} />)
               : !hasAllowedTypes && <EmptyState message="No content blocks" />}
           </SortableContext>
-          {hasAllowedTypes && (
+          {!readonly && hasAllowedTypes && (
             <button
               type="button"
               className="column-block__add-button"
@@ -197,7 +205,7 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
           )}
         </div>
       </div>
-      {hasAllowedTypes && (
+      {!readonly && hasAllowedTypes && (
         <ElementTypePicker
           allowedTypes={allowedTypes}
           isOpen={isPickerOpen}
