@@ -8,9 +8,7 @@ interface ReadonlyProviderProps {
 }
 
 export function ReadonlyProvider({ value, children }: ReadonlyProviderProps): ReactNode {
-  return (
-    <ReadonlyContext.Provider value={value}>{children}</ReadonlyContext.Provider>
-  );
+  return <ReadonlyContext.Provider value={value}>{children}</ReadonlyContext.Provider>;
 }
 
 export function useReadonly(): boolean {

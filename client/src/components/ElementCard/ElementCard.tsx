@@ -64,7 +64,11 @@ export default function ElementCard({ element }: ElementCardProps) {
     >
       <div className="element-card__header">
         {!readonly && (
-          <DragHandle listeners={listeners} attributes={attributes} label={`Move ${element.title}`} />
+          <DragHandle
+            listeners={listeners}
+            attributes={attributes}
+            label={`Move ${element.title}`}
+          />
         )}
         <i className={`element-card__icon ${element.blockSchema.icon}`} />
         <h4 className="element-card__title" data-testid="element-card-title">

@@ -38,7 +38,11 @@ export default function SectionBlock({ section }: SectionBlockProps) {
     <section ref={setNodeRef} style={style} className={rootClasses} data-testid="section-block">
       <div className="section-block__header" data-testid="section-header">
         {!readonly && (
-          <DragHandle listeners={listeners} attributes={attributes} label={`Move ${section.title}`} />
+          <DragHandle
+            listeners={listeners}
+            attributes={attributes}
+            label={`Move ${section.title}`}
+          />
         )}
         <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={section.title} />
         <i className={`section-block__icon ${section.blockSchema.icon}`} />

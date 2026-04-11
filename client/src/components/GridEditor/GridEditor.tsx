@@ -76,9 +76,7 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
             Loading elements...
           </p>
         )}
-        {error !== null && (
-          <p className="grid-editor__error">Failed to load elements.</p>
-        )}
+        {error !== null && <p className="grid-editor__error">Failed to load elements.</p>}
         {data !== undefined && (
           <GridEditorProvider value={{ pageId: validPageId, zone }}>
             <ViewportProvider>

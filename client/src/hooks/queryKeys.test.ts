@@ -16,7 +16,11 @@ describe('queryKeys', () => {
     });
 
     it('should omit version from tuple when version is undefined', () => {
-      expect(queryKeys.elementTree.byPage(1, 'main', undefined)).toEqual(['elementTree', 1, 'main']);
+      expect(queryKeys.elementTree.byPage(1, 'main', undefined)).toEqual([
+        'elementTree',
+        1,
+        'main',
+      ]);
     });
   });
 
