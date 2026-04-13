@@ -75,6 +75,7 @@ class GridController extends AdminController
 
     /** @var array<string, string> */
     private static array $url_handlers = [
+        'GET api/readTree/$PageID!/$Zone!/version/$Version!' => 'apiReadTreeAtVersion',
         'GET api/readTree/$PageID!/$Zone!' => 'apiReadTree',
         'POST api/create' => 'apiCreate',
         'POST api/createContent' => 'apiCreateContent',
@@ -94,6 +95,7 @@ class GridController extends AdminController
     /** @var list<string> */
     private static array $allowed_actions = [
         'apiReadTree',
+        'apiReadTreeAtVersion',
         'apiCreate',
         'apiCreateContent',
         'apiPublish',
@@ -128,11 +130,6 @@ class GridController extends AdminController
         /** @var non-empty-string $zone Route pattern guarantees non-empty zone segment */
         $zone = (string) $request->param('Zone');
 
-        $versionRaw = $request->getVar('version');
-        if ($versionRaw !== null) {
-            return $this->readTreeForVersion($pageId, $zone, $versionRaw);
-        }
-
         /** @var SiteTree|null $page */
         $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
             Versioned::set_stage(Versioned::DRAFT);
@@ -165,14 +162,21 @@ class GridController extends AdminController
      * Uses archived reading mode so that standalone ORM queries in the tree
      * builder (which don't inherit version context from the page record)
      * resolve against the correct historical snapshot.
-     *
-     * @param non-empty-string $zone
      */
-    private function readTreeForVersion(int $pageId, string $zone, mixed $versionRaw): HTTPResponse
+    public function apiReadTreeAtVersion(HTTPRequest $request): HTTPResponse
     {
-        $version = filter_var($versionRaw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $pageId = (int) $request->param('PageID');
+
+        /** @var non-empty-string $zone Route pattern guarantees non-empty zone segment */
+        $zone = (string) $request->param('Zone');
+
+        $version = filter_var(
+            $request->param('Version'),
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1]],
+        );
         if ($version === false) {
-            $this->jsonError(400);
+            $this->jsonError(404);
         }
 
         /** @var positive-int $version filter_var guarantees min_range=1 */

@@ -205,7 +205,7 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(1, $overrides['_total']);
     }
 
-    public function testReadTreeWithVersionReturnsHistoricalTree(): void
+    public function testReadTreeAtVersionReturnsHistoricalTree(): void
     {
         $this->buildTree();
         $page = $this->page();
@@ -216,7 +216,7 @@ final class GridControllerTest extends FunctionalTest
         $version = (int) $page->Version;
         self::assertGreaterThan(0, $version);
 
-        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main?version={$version}");
+        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main/version/{$version}");
 
         self::assertSame(200, $response->getStatusCode());
         $data = $this->parseJson($response);
@@ -224,23 +224,27 @@ final class GridControllerTest extends FunctionalTest
         self::assertArrayHasKey('overrideCounts', $data);
     }
 
-    public function testReadTreeWithNonExistentVersionReturns404(): void
+    public function testReadTreeAtVersionWithNonExistentVersionReturns404(): void
     {
         $pageId = (int) $this->page()->ID;
 
-        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main?version=999999");
+        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main/version/999999");
 
         self::assertSame(404, $response->getStatusCode());
     }
 
     #[DataProvider('invalidVersionProvider')]
-    public function testReadTreeWithInvalidVersionParameterReturns400(string $version): void
+    public function testReadTreeAtVersionWithInvalidVersionParameterReturns404(string $version): void
     {
         $pageId = (int) $this->page()->ID;
 
-        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main?version={$version}");
+        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main/version/{$version}");
 
-        self::assertSame(400, $response->getStatusCode());
+        // Invalid version segments either fail the route altogether (non-
+        // numeric, negative) or are rejected by filter_var in the action
+        // (0, 1.5). Both cases surface as 404 — there is no resource at
+        // that URL.
+        self::assertSame(404, $response->getStatusCode());
     }
 
     /** @return iterable<string, array{string}> */

@@ -38,7 +38,7 @@ describe('useElementTree', () => {
     expect(getFetchCalls()).toHaveLength(0);
   });
 
-  it('should append version query param when version is provided', async () => {
+  it('should append /version/N path segment when version is provided', async () => {
     const apiResponse = createTreeApiResponse();
     mockFetchSuccess(apiResponse);
     const { wrapper } = createProviderWrapper({ pageId: 1, zone: 'main' });
@@ -50,7 +50,7 @@ describe('useElementTree', () => {
     });
 
     const [url] = getFetchCalls()[0];
-    expect(url).toContain('/api/readTree/1/main?version=5');
+    expect(url).toContain('/api/readTree/1/main/version/5');
   });
 });
 

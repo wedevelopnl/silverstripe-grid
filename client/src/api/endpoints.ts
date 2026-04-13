@@ -5,7 +5,12 @@ import { getControllerLink } from './config';
 
 /**
  * Fetch the full element tree for a CMS page.
- * Pass `version` to fetch a specific historical version from the readTree endpoint.
+ *
+ * When `version` is omitted, the draft tree is returned from
+ * `/api/readTree/{pageId}/{zone}`. When `version` is provided, the archived
+ * tree at that page version is returned from
+ * `/api/readTree/{pageId}/{zone}/version/{version}` — used by the readonly
+ * history viewer.
  */
 export async function fetchElementTree(
   pageId: number,
@@ -13,9 +18,12 @@ export async function fetchElementTree(
   version?: number,
 ): Promise<TreeApiResponse> {
   const base = getControllerLink();
-  const url = `${base}/api/readTree/${pageId}/${encodeURIComponent(zone)}`;
-  const query = version !== undefined ? `?version=${version}` : '';
-  return apiGet<TreeApiResponse>(`${url}${query}`);
+  const encodedZone = encodeURIComponent(zone);
+  const url =
+    version !== undefined
+      ? `${base}/api/readTree/${pageId}/${encodedZone}/version/${version}`
+      : `${base}/api/readTree/${pageId}/${encodedZone}`;
+  return apiGet<TreeApiResponse>(url);
 }
 
 export interface CreateElementParams {
