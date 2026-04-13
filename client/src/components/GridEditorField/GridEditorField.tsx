@@ -46,8 +46,7 @@ interface GridEditorFieldProps {
 export default function GridEditorField({ data, readOnly }: GridEditorFieldProps) {
   const pageId = typeof data?.pageId === 'number' ? data.pageId : null;
   const zone = typeof data?.zone === 'string' ? data.zone : 'main';
-  const version =
-    typeof data?.version === 'number' && data.version > 0 ? data.version : undefined;
+  const version = typeof data?.version === 'number' && data.version > 0 ? data.version : undefined;
 
   // FormBuilder's readOnly is the source of truth — it reflects
   // Form::makeReadonly() state. data.readonly is a safety fallback.
