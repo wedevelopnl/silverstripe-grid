@@ -6,8 +6,12 @@ namespace WeDevelop\Grid\Forms;
 
 use Override;
 use SilverStripe\Forms\FormField;
+use SilverStripe\Forms\GridField\GridField;
+use SilverStripe\Forms\GridField\GridFieldConfig;
+use SilverStripe\Forms\GridField\GridFieldDetailForm;
 use SilverStripe\ORM\DataObjectInterface;
 use SilverStripe\ORM\FieldType\DBHTMLText;
+use WeDevelop\Grid\Model\GridElement;
 
 /**
  * Grid editor field that renders a bare `<div>` with data attributes
@@ -15,12 +19,15 @@ use SilverStripe\ORM\FieldType\DBHTMLText;
  * grid mutations are handled by the GridController API endpoints,
  * not by the CMS form, so this field needs no data binding.
  *
- * Note: intentionally extends FormField rather than GridField, because
- * DataObjectVersionFormFactory strips all GridField instances from the
- * form before rendering history views — extending GridField would cause
- * the readonly history viewer to disappear.
+ * Extends `GridField` to inherit URL routing via `GridFieldDetailForm`:
+ * element edit forms are reached via `field/GridEditor/item/{id}/edit`
+ * URLs, which the parent's request handler resolves. The CMS History
+ * viewer's `DataObjectVersionFormFactory` would normally strip every
+ * `GridField` subclass from the form — we avoid that by aliasing the
+ * factory to `WeDevelop\Grid\Forms\GridAwareVersionFormFactory` which
+ * skips `GridEditorField` in its override of the strip step.
  */
-class GridEditorField extends FormField
+class GridEditorField extends GridField
 {
     private bool $isReadonlyField = false;
 
@@ -33,7 +40,12 @@ class GridEditorField extends FormField
      */
     public function __construct(string $name, private readonly int $pageId, private readonly string $zone = 'main')
     {
-        parent::__construct($name, '');
+        parent::__construct(
+            $name,
+            '',
+            GridElement::get(),
+            GridFieldConfig::create()->addComponent(GridFieldDetailForm::create()),
+        );
 
         $this->schemaDataType = FormField::SCHEMA_DATA_TYPE_CUSTOM;
         $this->setSchemaComponent('GridEditorField');
@@ -42,12 +54,14 @@ class GridEditorField extends FormField
     }
 
     /**
-     * Delegates to template rendering which outputs the React mount `<div>`.
+     * Skip GridField's expensive table rendering (iterates the full list
+     * and calls canView() on every record). Delegates to template rendering
+     * which outputs the React mount `<div>`.
      *
      * @param array<string, mixed> $properties
      * @return DBHTMLText
      */
-    #[Override] // @phpstan-ignore typeCoverage.returnTypeCoverage (matching untyped parent signature; renderWith returns DBHTMLText, not string)
+    #[Override] // @phpstan-ignore method.childReturnType, typeCoverage.returnTypeCoverage (matching untyped parent signature; renderWith returns DBHTMLText, not string)
     public function FieldHolder($properties = []) // @phpstan-ignore typeCoverage.paramTypeCoverage (matching untyped parent signature)
     {
         $context = $this;

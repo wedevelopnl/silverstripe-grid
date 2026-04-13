@@ -142,6 +142,7 @@ final class GridEditorFieldTest extends SapphireTest
     public function testFieldDeclaresCustomSchemaTypeAndComponent(): void
     {
         $field = GridEditorField::create('GridEditor', 42, 'main');
+        $this->attachToForm($field);
 
         $schema = $field->getSchemaData();
 
@@ -152,6 +153,7 @@ final class GridEditorFieldTest extends SapphireTest
     public function testSchemaDataSubArrayContainsPageIdAndZone(): void
     {
         $field = GridEditorField::create('GridEditor', 42, 'sidebar');
+        $this->attachToForm($field);
 
         $schema = $field->getSchemaData();
 

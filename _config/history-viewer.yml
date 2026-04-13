@@ -1,0 +1,13 @@
+---
+Name: grid-history-viewer
+After:
+  - '#versioned-admin'
+---
+
+SilverStripe\Core\Injector\Injector:
+  # Replace the stock history-viewer form factory with one that keeps
+  # GridEditorField instances alive. The stock factory strips every
+  # GridField subclass before serializing the form to JSON, which would
+  # erase our grid editor from the history viewer.
+  SilverStripe\VersionedAdmin\Forms\DataObjectVersionFormFactory:
+    class: WeDevelop\Grid\Forms\GridAwareVersionFormFactory
