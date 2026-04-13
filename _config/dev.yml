@@ -148,7 +148,7 @@ WeDevelop\Grid\Dev\FixtureLoader:
           identifier: section2
     history-view-test:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/HistoryViewTest.yml'
-      post_actions:
-        - action: publish_recursive
-          class: Page
-          identifier: e2e_history_page
+      # No post_actions: the history-view E2E spec creates all versions
+      # via user actions (publish, edit, publish again) so each version
+      # in the resulting history is the validated result of a real
+      # interaction, not a fixture side-effect.
