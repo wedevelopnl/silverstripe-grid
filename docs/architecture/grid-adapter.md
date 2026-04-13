@@ -15,7 +15,7 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single concrete
 - `src/Value/Viewport.php` — Value object (`final readonly class`, not an enum)
 - `src/Value/ContainerType.php` — Enum: `Section`, `Row`, `Column`
 - `_config/grid.yml` — DI binding (default: `BootstrapAdapter`)
-- `_config/content-layout.yml` — DI alias for `ContentLayoutAdapterInterface` + BlockMediaExtension
+- `_config/content-layout.yml` — applies `BlockMediaExtension` to `ContentElement` (no DI alias needed — see below)
 
 ## Existing Presets
 
@@ -207,15 +207,16 @@ Content layout (aspect ratios, media ordering, vertical alignment, directional p
 | `getPaddingClass(direction, size)` | `string` | Directional padding/margin for gap |
 | `getBaseColumnClass()` | `?string` | Framework base class (e.g. Bulma's `column`) |
 
-### DI Configuration
+### How the content layout adapter is resolved
 
-```yaml
-# _config/content-layout.yml
-SilverStripe\Core\Injector\Injector:
-  WeDevelop\Grid\Contract\ContentLayoutAdapterInterface: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
+There is no `Injector` alias for `ContentLayoutAdapterInterface`. `GridAdapter` implements both `GridAdapterInterface` and `ContentLayoutAdapterInterface` on the same class, so the singleton bound to `GridAdapterInterface` in `_config/grid.yml` already satisfies both contracts. Consumers that need content-layout behaviour fetch the grid adapter and cast:
+
+```php
+$adapter = $this->getGridAdapter();
+assert($adapter instanceof ContentLayoutAdapterInterface);
 ```
 
-Both interfaces resolve to the same adapter singleton.
+See `BlockMediaExtension::getContentLayoutAdapter()` for the canonical pattern. A custom adapter that does not extend `GridAdapter` must implement `ContentLayoutAdapterInterface` itself for this assertion to hold.
 
 ### Value Objects
 

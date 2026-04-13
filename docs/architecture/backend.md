@@ -372,7 +372,7 @@ The controller maps `Result::ok()` to HTTP 204 and `Result::fail()` to HTTP 422 
 
 Grid adapters translate the abstract layout model (viewports, column widths, offsets, visibility) into CSS framework-specific class names. All consumers depend on `GridAdapterInterface`, never on a concrete adapter.
 
-### Interface Contract (15 methods)
+### Interface Contract (14 methods)
 
 | Method | Returns | Purpose |
 |--------|---------|---------|
@@ -389,6 +389,7 @@ Grid adapters translate the abstract layout model (viewports, column widths, off
 | `getTitleClassOptions()` | `array<string, string>` | CSS class to label mapping |
 | `getOffsetStrategy()` | `OffsetStrategy` | Margin-based vs grid-placement |
 | `getContainerMaxWidth()` | `positive-int` | Max container width in px (for responsive images) |
+| `getColumnPixelWidth(columnSpan)` | `positive-int` | Pixel width of a column span at max container width (for responsive images) |
 
 ### Config-Driven Base Class
 
