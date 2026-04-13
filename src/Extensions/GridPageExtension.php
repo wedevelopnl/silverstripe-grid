@@ -49,8 +49,12 @@ class GridPageExtension extends Extension
 
         $fields->removeByName('Content');
         $fields->removeByName('Sections');
+        // Insert after the "Navigation label" field — its actual field name
+        // is MenuTitle (NavigationLabel is the display label, not the name).
+        // Using the wrong name would cause insertAfter to fall back to push(),
+        // which adds the field as a sibling of Root instead of inside a tab.
         $fields->insertAfter(
-            'NavigationLabel',
+            'MenuTitle',
             GridEditorField::create('GridEditor', (int) $owner->ID, 'main'),
         );
     }

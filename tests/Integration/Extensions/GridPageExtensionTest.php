@@ -158,4 +158,22 @@ final class GridPageExtensionTest extends SapphireTest
         self::assertNotNull($fields->dataFieldByName('GridEditor'), 'GridEditor field should be injected');
         self::assertInstanceOf(GridEditorField::class, $fields->dataFieldByName('GridEditor'));
     }
+
+    public function testGridEditorFieldIsInsideRootMainTab(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+
+        $fields = $page->getCMSFields();
+
+        $mainTab = $fields->findTab('Root.Main');
+        self::assertNotNull($mainTab, 'Root.Main tab must exist on SiteTree');
+
+        self::assertInstanceOf(
+            GridEditorField::class,
+            $mainTab->fieldByName('GridEditor'),
+            'GridEditorField must live inside Root.Main; insertAfter falling '
+            . 'back to push() would place it as a sibling of Root and break '
+            . 'history viewer schema serialization.',
+        );
+    }
 }

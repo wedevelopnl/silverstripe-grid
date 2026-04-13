@@ -5,22 +5,22 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Forms;
 
 use Override;
-use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\Forms\FormField;
-use SilverStripe\Forms\GridField\GridField;
-use SilverStripe\Forms\GridField\GridFieldConfig;
-use SilverStripe\Forms\GridField\GridFieldDetailForm;
 use SilverStripe\ORM\DataObjectInterface;
-use WeDevelop\Grid\Model\GridElement;
+use SilverStripe\ORM\FieldType\DBHTMLText;
 
 /**
- * Grid editor field that extends GridField to inherit URL routing for
- * element edit forms via GridFieldDetailForm. Renders a bare `<div>`
- * with data attributes that the entwine bridge reads to mount the
- * React application — GridField's table rendering is bypassed via
- * the FieldHolder() override.
+ * Grid editor field that renders a bare `<div>` with data attributes
+ * that the entwine bridge reads to mount the React application. All
+ * grid mutations are handled by the GridController API endpoints,
+ * not by the CMS form, so this field needs no data binding.
+ *
+ * Note: intentionally extends FormField rather than GridField, because
+ * DataObjectVersionFormFactory strips all GridField instances from the
+ * form before rendering history views — extending GridField would cause
+ * the readonly history viewer to disappear.
  */
-class GridEditorField extends GridField
+class GridEditorField extends FormField
 {
     private bool $isReadonlyField = false;
 
@@ -33,25 +33,18 @@ class GridEditorField extends GridField
      */
     public function __construct(string $name, private readonly int $pageId, private readonly string $zone = 'main')
     {
-        parent::__construct(
-            $name,
-            '',
-            GridElement::get(),
-            GridFieldConfig::create()->addComponent(GridFieldDetailForm::create()),
-        );
+        parent::__construct($name, '');
 
         $this->addExtraClass('grid-editor__container no-change-track');
     }
 
     /**
-     * Skip GridField's expensive table rendering (iterates the full list
-     * and calls canView() on every record). Delegates to template rendering
-     * which outputs the React mount <div>.
+     * Delegates to template rendering which outputs the React mount `<div>`.
      *
      * @param array<string, mixed> $properties
      * @return DBHTMLText
      */
-    #[Override] // @phpstan-ignore method.childReturnType, typeCoverage.returnTypeCoverage (matching untyped parent signature; renderWith returns DBHTMLText, not string)
+    #[Override] // @phpstan-ignore typeCoverage.returnTypeCoverage (matching untyped parent signature; renderWith returns DBHTMLText, not string)
     public function FieldHolder($properties = []) // @phpstan-ignore typeCoverage.paramTypeCoverage (matching untyped parent signature)
     {
         $context = $this;
