@@ -115,6 +115,14 @@ test.describe('History view readonly grid', () => {
         .filter({ hasText: 'Original Alpha Section' }),
     ).toBeVisible();
 
+    // The viewport switcher is mounted in readonly mode so admins can
+    // inspect the grid at each responsive breakpoint while browsing
+    // history. The reset-overrides button stays hidden in readonly.
+    await expect(historyGridEditor.getByTestId('viewport-switcher')).toBeVisible();
+    await expect(
+      historyGridEditor.getByTestId('viewport-button').first(),
+    ).toBeVisible();
+
     // ALL interactive controls must be hidden in readonly mode —
     // proves `useReadonly()` gates the block components correctly.
     await expect(historyGridEditor.getByTestId('drag-handle')).toHaveCount(0);

@@ -3,8 +3,8 @@ import type { KeyboardEvent } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import type { EnrichedSimpleElementNode } from '@/types/enriched';
 import { getElementStatus } from '@/types/status';
-import { buildSortableStyle } from '@/utils/sortableStyles';
 import { useReadonly } from '@/hooks/ReadonlyContext';
+import { buildSortableStyle } from '@/utils/sortableStyles';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import ElementActions from '@/components/ElementActions/ElementActions';
 
@@ -13,18 +13,29 @@ interface ElementCardProps {
 }
 
 /**
- * Compact read-only card showing an element's type, title, content preview,
- * and publication state via a colored left border.
+ * Element card dispatcher: picks the editable or readonly variant
+ * based on the `ReadonlyContext`. The readonly variant drops
+ * `useSortable`, navigation callbacks, and interactive controls —
+ * just renders the icon, title, and content preview inside the
+ * status-colored border.
  */
 export default function ElementCard({ element }: ElementCardProps) {
   const readonly = useReadonly();
+  return readonly ? (
+    <ReadonlyElementCard element={element} />
+  ) : (
+    <EditableElementCard element={element} />
+  );
+}
+
+function EditableElementCard({ element }: ElementCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: element.sortableId,
   });
   const status = getElementStatus(element.statusFlags);
   const content = element.blockSchema.summary;
   const editLink = element.editLink;
-  const isClickable = !readonly && editLink !== null;
+  const isClickable = editLink !== null;
 
   const style = buildSortableStyle(transform, transition, isDragging);
 
@@ -63,18 +74,34 @@ export default function ElementCard({ element }: ElementCardProps) {
       tabIndex={isClickable ? 0 : undefined}
     >
       <div className="element-card__header">
-        {!readonly && (
-          <DragHandle
-            listeners={listeners}
-            attributes={attributes}
-            label={`Move ${element.title}`}
-          />
-        )}
+        <DragHandle listeners={listeners} attributes={attributes} label={`Move ${element.title}`} />
         <i className={`element-card__icon ${element.blockSchema.icon}`} />
         <h4 className="element-card__title" data-testid="element-card-title">
           {element.title}
         </h4>
-        {!readonly && <ElementActions node={element} />}
+        <ElementActions node={element} />
+      </div>
+      <div
+        className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}
+      >
+        {content || 'No preview available'}
+      </div>
+    </div>
+  );
+}
+
+function ReadonlyElementCard({ element }: ElementCardProps) {
+  const status = getElementStatus(element.statusFlags);
+  const content = element.blockSchema.summary;
+  const cardClasses = `element-card element-card--${status}`;
+
+  return (
+    <div className={cardClasses} data-testid="element-card">
+      <div className="element-card__header">
+        <i className={`element-card__icon ${element.blockSchema.icon}`} />
+        <h4 className="element-card__title" data-testid="element-card-title">
+          {element.title}
+        </h4>
       </div>
       <div
         className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}

@@ -3,10 +3,10 @@ import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortabl
 import type { EnrichedRowNode } from '@/types/enriched';
 import { getElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
+import { useReadonly } from '@/hooks/ReadonlyContext';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
 import { getOffsetStrategy, getColumnCount } from '@/utils/gridAdapter';
-import { useReadonly } from '@/hooks/ReadonlyContext';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import ElementActions from '@/components/ElementActions/ElementActions';
@@ -17,8 +17,18 @@ interface RowBlockProps {
   readonly row: EnrichedRowNode;
 }
 
+/**
+ * Row block dispatcher: picks the editable or readonly variant based on
+ * the `ReadonlyContext`. See `SectionBlock` for the rationale — readonly
+ * variants never call `useSortable`, so a readonly grid tree doesn't
+ * need a `DndContext` ancestor.
+ */
 export default function RowBlock({ row }: RowBlockProps) {
   const readonly = useReadonly();
+  return readonly ? <ReadonlyRowBlock row={row} /> : <EditableRowBlock row={row} />;
+}
+
+function EditableRowBlock({ row }: RowBlockProps) {
   const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid';
   const status = getElementStatus(row.statusFlags);
   const { isCollapsed, toggle } = row;
@@ -39,13 +49,11 @@ export default function RowBlock({ row }: RowBlockProps) {
   return (
     <div ref={setNodeRef} style={style} className={rootClasses} data-testid="row-block">
       <div className="row-block__header" data-testid="row-header">
-        {!readonly && (
-          <DragHandle listeners={listeners} attributes={attributes} label={`Move ${row.title}`} />
-        )}
+        <DragHandle listeners={listeners} attributes={attributes} label={`Move ${row.title}`} />
         <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={row.title} />
         <i className={`row-block__icon ${row.blockSchema.icon}`} />
         <h3 className="row-block__title" data-testid="row-title">
-          {!readonly && row.editLink !== null ? (
+          {row.editLink !== null ? (
             <a href={row.editLink} data-testid="row-edit-link">
               {row.title}
             </a>
@@ -53,7 +61,7 @@ export default function RowBlock({ row }: RowBlockProps) {
             row.title
           )}
         </h3>
-        {!readonly && <ElementActions node={row} />}
+        <ElementActions node={row} />
       </div>
       <div
         className={`row-block__columns row-block__columns--${layoutMode}`}
@@ -69,26 +77,56 @@ export default function RowBlock({ row }: RowBlockProps) {
               {row.children.map((column) => (
                 <ColumnBlock key={column.id} column={column} />
               ))}
-              {!readonly && (
-                <AddChildButton
-                  parentId={row.id}
-                  childType="column"
-                  childLabel="Column"
-                  variant="append"
-                />
-              )}
-            </>
-          ) : (
-            !readonly && (
               <AddChildButton
                 parentId={row.id}
                 childType="column"
                 childLabel="Column"
-                variant="empty-state"
+                variant="append"
               />
-            )
+            </>
+          ) : (
+            <AddChildButton
+              parentId={row.id}
+              childType="column"
+              childLabel="Column"
+              variant="empty-state"
+            />
           )}
         </SortableContext>
+      </div>
+    </div>
+  );
+}
+
+function ReadonlyRowBlock({ row }: RowBlockProps) {
+  const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid';
+  const status = getElementStatus(row.statusFlags);
+  const { isCollapsed, toggle } = row;
+
+  const rootClasses = buildBlockClasses('row-block', status, {
+    collapsed: isCollapsed,
+  });
+
+  return (
+    <div className={rootClasses} data-testid="row-block">
+      <div className="row-block__header" data-testid="row-header">
+        <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={row.title} />
+        <i className={`row-block__icon ${row.blockSchema.icon}`} />
+        <h3 className="row-block__title" data-testid="row-title">
+          {row.title}
+        </h3>
+      </div>
+      <div
+        className={`row-block__columns row-block__columns--${layoutMode}`}
+        style={
+          layoutMode === 'grid'
+            ? ({ '--grid-columns': String(getColumnCount()) } as React.CSSProperties)
+            : undefined
+        }
+      >
+        {row.children?.map((column) => (
+          <ColumnBlock key={column.id} column={column} />
+        ))}
       </div>
     </div>
   );

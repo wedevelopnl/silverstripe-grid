@@ -23,12 +23,21 @@ interface GridEditorProps {
 }
 
 /**
- * Root component for the grid editor. Mounted by the entwine bridge
- * inside each `.grid-editor__container` element in the CMS.
+ * Root component for the grid editor.
  *
- * Composes ViewportSwitcher (viewport breakpoint selection) with
- * SectionBlock (section > row > column > element card hierarchy)
- * to render the full grid editing interface.
+ * Mounted by:
+ * - The legacy entwine bridge (`client/src/bridge/entwine.ts`) on the
+ *   `.grid-editor__container` element in the main CMS edit view — always
+ *   runs in editable mode.
+ * - The React `GridEditorField` wrapper (`client/src/components/GridEditorField`)
+ *   when `FormBuilder` serializes the history viewer's form schema — always
+ *   runs in readonly mode with a specific page version.
+ *
+ * Block components (`SectionBlock`, `RowBlock`, `ColumnBlock`, `ElementCard`)
+ * each dispatch to an editable or readonly variant via `useReadonly()`, so
+ * the readonly tree never calls `useSortable` — we simply don't mount a
+ * `DndContext` wrapper around it. The ViewportSwitcher renders in both
+ * modes so admins can inspect responsive grid settings at every version.
  */
 export default function GridEditor({ pageId, zone, readonly = false, version }: GridEditorProps) {
   const { data, isLoading, error } = useElementTree(pageId, zone, readonly ? version : undefined);
@@ -61,46 +70,27 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
     [dragState?.activeType],
   );
 
-  if (readonly && pageId !== null) {
-    const validPageId = pageId;
+  const rootClassName = readonly ? 'grid-editor grid-editor--readonly' : 'grid-editor';
+  const hasSections = enrichedSections.length > 0;
 
-    return (
-      <div
-        className="grid-editor grid-editor--readonly"
-        data-page-id={validPageId}
-        data-zone={zone}
-        data-testid="grid-editor"
-      >
-        {isLoading && (
-          <p className="grid-editor__loading" data-testid="grid-editor-loading">
-            Loading elements...
-          </p>
-        )}
-        {error !== null && <p className="grid-editor__error">Failed to load elements.</p>}
-        {data !== undefined && (
-          <GridEditorProvider value={{ pageId: validPageId, zone }}>
-            <ViewportProvider>
-              <ReadonlyProvider value={true}>
-                <DndContext>
-                  {enrichedSections.length === 0 ? (
-                    <p className="grid-editor__empty-state">No sections in this version</p>
-                  ) : (
-                    enrichedSections.map((section) => (
-                      <SectionBlock key={section.id} section={section} />
-                    ))
-                  )}
-                </DndContext>
-              </ReadonlyProvider>
-            </ViewportProvider>
-          </GridEditorProvider>
-        )}
-      </div>
-    );
-  }
+  const sectionList = hasSections ? (
+    enrichedSections.map((section) => <SectionBlock key={section.id} section={section} />)
+  ) : readonly ? (
+    <p className="grid-editor__empty-state">No sections in this version</p>
+  ) : (
+    pageId !== null && (
+      <AddChildButton
+        parentId={pageId}
+        childType="section"
+        childLabel="Section"
+        variant="empty-state"
+      />
+    )
+  );
 
   return (
     <div
-      className="grid-editor"
+      className={rootClassName}
       data-page-id={pageId ?? undefined}
       data-zone={zone}
       data-testid="grid-editor"
@@ -116,41 +106,36 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
       {data !== undefined && pageId !== null && (
         <GridEditorProvider value={{ pageId, zone }}>
           <ViewportProvider>
-            <ViewportSwitcher />
-            <DndContext
-              {...dndContextProps}
-              measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-            >
-              <DragContext.Provider value={dragContextValue}>
-                <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
-                  {enrichedSections.length > 0 ? (
-                    <>
-                      {enrichedSections.map((section) => (
-                        <SectionBlock key={section.id} section={section} />
-                      ))}
-                      <AddChildButton
-                        parentId={pageId}
-                        childType="section"
-                        childLabel="Section"
-                        variant="append"
-                      />
-                    </>
-                  ) : (
-                    <AddChildButton
-                      parentId={pageId}
-                      childType="section"
-                      childLabel="Section"
-                      variant="empty-state"
-                    />
-                  )}
-                </SortableContext>
-              </DragContext.Provider>
-              <DragOverlay>
-                {dragState !== null && (
-                  <DragOverlayContent node={dragState.activeNode} type={dragState.activeType} />
-                )}
-              </DragOverlay>
-            </DndContext>
+            <ReadonlyProvider value={readonly}>
+              <ViewportSwitcher />
+              {readonly ? (
+                sectionList
+              ) : (
+                <DndContext
+                  {...dndContextProps}
+                  measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+                >
+                  <DragContext.Provider value={dragContextValue}>
+                    <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
+                      {sectionList}
+                      {hasSections && (
+                        <AddChildButton
+                          parentId={pageId}
+                          childType="section"
+                          childLabel="Section"
+                          variant="append"
+                        />
+                      )}
+                    </SortableContext>
+                  </DragContext.Provider>
+                  <DragOverlay>
+                    {dragState !== null && (
+                      <DragOverlayContent node={dragState.activeNode} type={dragState.activeType} />
+                    )}
+                  </DragOverlay>
+                </DndContext>
+              )}
+            </ReadonlyProvider>
           </ViewportProvider>
         </GridEditorProvider>
       )}

@@ -30,8 +30,49 @@ interface ColumnBlockProps {
   readonly column: EnrichedColumnNode;
 }
 
+/**
+ * Column block dispatcher: picks the editable or readonly variant based
+ * on the `ReadonlyContext`. The readonly variant drops `useSortable`,
+ * both mutation hooks (`useUpdateGridSettings`, `useCreateContentElement`),
+ * the grid settings pickers, the element type picker, and the "Add
+ * content" button — but keeps the responsive column layout driven by
+ * `resolveViewportSettings` so that viewport switching in the history
+ * viewer still re-layouts the readonly tree.
+ */
 export default function ColumnBlock({ column }: ColumnBlockProps) {
   const readonly = useReadonly();
+  return readonly ? (
+    <ReadonlyColumnBlock column={column} />
+  ) : (
+    <EditableColumnBlock column={column} />
+  );
+}
+
+function buildColumnStyle(
+  settings: ViewportSettings,
+  sortableStyle: React.CSSProperties,
+): React.CSSProperties {
+  const columnCount = getColumnCount();
+  const strategy = getOffsetStrategy();
+
+  if (strategy === 'margin') {
+    return {
+      ...sortableStyle,
+      '--col-width': `${(settings.width / columnCount) * 100}%`,
+      ...(settings.offset > 0
+        ? { '--col-offset': `${(settings.offset / columnCount) * 100}%` }
+        : {}),
+    } as React.CSSProperties;
+  }
+
+  return {
+    ...sortableStyle,
+    '--col-span': String(settings.width),
+    ...(settings.offset > 0 ? { '--col-start': String(settings.offset + 1) } : {}),
+  } as React.CSSProperties;
+}
+
+function EditableColumnBlock({ column }: ColumnBlockProps) {
   const { activeViewport } = useViewportContext();
   const { pageId, zone } = useGridEditorContext();
   const columnCount = getColumnCount();
@@ -46,8 +87,6 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({ id: column.sortableId });
 
-  const strategy = getOffsetStrategy();
-
   const showDropTarget = isOver && activeType === 'column';
   const isDragActive = activeType !== null;
   const isPickerDisabled = isDragActive || updateGridSettings.isPending;
@@ -59,21 +98,7 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
   });
 
   const sortableStyle = buildSortableStyle(transform, transition, isDragging);
-
-  const columnStyle =
-    strategy === 'margin'
-      ? ({
-          ...sortableStyle,
-          '--col-width': `${(settings.width / columnCount) * 100}%`,
-          ...(settings.offset > 0
-            ? { '--col-offset': `${(settings.offset / columnCount) * 100}%` }
-            : {}),
-        } as React.CSSProperties)
-      : ({
-          ...sortableStyle,
-          '--col-span': String(settings.width),
-          ...(settings.offset > 0 ? { '--col-start': String(settings.offset + 1) } : {}),
-        } as React.CSSProperties);
+  const columnStyle = buildColumnStyle(settings, sortableStyle);
 
   const widthOptions = getWidthOptions();
   const offsetOptions = getOffsetOptions(settings.width);
@@ -147,17 +172,15 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
     <div ref={setNodeRef} style={columnStyle} className="row-block__column">
       <div className={innerClasses} data-testid="column-block">
         <div className="column-block__header" data-testid="column-header">
-          {!readonly && (
-            <DragHandle
-              listeners={listeners}
-              attributes={attributes}
-              label={`Move ${column.title}`}
-            />
-          )}
+          <DragHandle
+            listeners={listeners}
+            attributes={attributes}
+            label={`Move ${column.title}`}
+          />
           <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={column.title} />
           <i className={`column-block__icon ${column.blockSchema.icon}`} />
           <span className="column-block__title" data-testid="column-title">
-            {!readonly && column.editLink !== null ? (
+            {column.editLink !== null ? (
               <a href={column.editLink} data-testid="column-edit-link">
                 {column.title}
               </a>
@@ -165,27 +188,23 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
               column.title
             )}
           </span>
-          {!readonly && (
-            <>
-              <GridSettingsPicker
-                label={widthLabel}
-                options={widthOptions}
-                selectedValue={widthSelectedValue}
-                disabled={isPickerDisabled}
-                testId="column-badge"
-                onSelect={handleWidthSelect}
-              />
-              <GridSettingsPicker
-                label={offsetLabel}
-                options={offsetOptions}
-                selectedValue={settings.offset}
-                disabled={isOffsetDisabled}
-                testId="column-offset-badge"
-                onSelect={handleOffsetSelect}
-              />
-              <ElementActions node={column} />
-            </>
-          )}
+          <GridSettingsPicker
+            label={widthLabel}
+            options={widthOptions}
+            selectedValue={widthSelectedValue}
+            disabled={isPickerDisabled}
+            testId="column-badge"
+            onSelect={handleWidthSelect}
+          />
+          <GridSettingsPicker
+            label={offsetLabel}
+            options={offsetOptions}
+            selectedValue={settings.offset}
+            disabled={isOffsetDisabled}
+            testId="column-offset-badge"
+            onSelect={handleOffsetSelect}
+          />
+          <ElementActions node={column} />
         </div>
         <div className="column-block__body">
           <SortableContext items={column.childSortableIds} strategy={verticalListSortingStrategy}>
@@ -193,7 +212,7 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
               ? children.map((child) => <ElementCard key={child.id} element={child} />)
               : !hasAllowedTypes && <EmptyState message="No content blocks" />}
           </SortableContext>
-          {!readonly && hasAllowedTypes && (
+          {hasAllowedTypes && (
             <button
               type="button"
               className="column-block__add-button"
@@ -205,7 +224,7 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
           )}
         </div>
       </div>
-      {!readonly && hasAllowedTypes && (
+      {hasAllowedTypes && (
         <ElementTypePicker
           allowedTypes={allowedTypes}
           isOpen={isPickerOpen}
@@ -213,6 +232,45 @@ export default function ColumnBlock({ column }: ColumnBlockProps) {
           onSelect={handleTypeSelect}
         />
       )}
+    </div>
+  );
+}
+
+function ReadonlyColumnBlock({ column }: ColumnBlockProps) {
+  const { activeViewport } = useViewportContext();
+  const settings = resolveViewportSettings(column.gridSettings, activeViewport);
+  const status = getElementStatus(column.statusFlags);
+  const { isCollapsed, toggle } = column;
+
+  const innerClasses = buildBlockClasses('column-block', status, {
+    hidden: !settings.visible,
+    collapsed: isCollapsed,
+  });
+
+  // No sortable transform in readonly mode — pass empty style and let
+  // buildColumnStyle layer the --col-width / --col-span variables on top.
+  const columnStyle = buildColumnStyle(settings, {});
+
+  const children = column.children ?? [];
+
+  return (
+    <div style={columnStyle} className="row-block__column">
+      <div className={innerClasses} data-testid="column-block">
+        <div className="column-block__header" data-testid="column-header">
+          <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={column.title} />
+          <i className={`column-block__icon ${column.blockSchema.icon}`} />
+          <span className="column-block__title" data-testid="column-title">
+            {column.title}
+          </span>
+        </div>
+        <div className="column-block__body">
+          {children.length > 0 ? (
+            children.map((child) => <ElementCard key={child.id} element={child} />)
+          ) : (
+            <EmptyState message="No content blocks" />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

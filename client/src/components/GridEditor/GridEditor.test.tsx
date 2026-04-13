@@ -173,6 +173,53 @@ describe('GridEditor', () => {
       expect(screen.getByTestId('grid-editor')).toHaveClass('grid-editor--readonly');
     });
 
+    it('mounts the viewport switcher in readonly mode without the reset-overrides button', async () => {
+      resetIdCounter();
+
+      const treeResponse = createTreeApiResponse({
+        tree: {
+          '1': [createSectionNode({ id: 10, parentId: 1, title: 'Hero' })],
+        },
+      });
+
+      mockFetchSuccess(treeResponse);
+
+      renderWithProviders(<GridEditor pageId={1} zone="main" readonly={true} version={5} />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument();
+      });
+
+      // ViewportSwitcher is mounted so admins can inspect the grid at
+      // each responsive breakpoint while browsing history.
+      expect(screen.getByTestId('viewport-switcher')).toBeInTheDocument();
+      // But its reset-overrides button is gated on readonly and must
+      // be absent in history view.
+      expect(screen.queryByTestId('reset-overrides-button')).not.toBeInTheDocument();
+    });
+
+    it('does not render any drag handles in readonly mode', async () => {
+      resetIdCounter();
+
+      const treeResponse = createTreeApiResponse({
+        tree: {
+          '1': [createSectionNode({ id: 10, parentId: 1, title: 'Hero' })],
+        },
+      });
+
+      mockFetchSuccess(treeResponse);
+
+      renderWithProviders(<GridEditor pageId={1} zone="main" readonly={true} version={5} />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument();
+      });
+
+      // The readonly block variants don't call useSortable, so no
+      // DragHandle is rendered anywhere in the tree.
+      expect(screen.queryAllByTestId('drag-handle')).toHaveLength(0);
+    });
+
     it('shows empty state message when readonly tree has no sections', async () => {
       const treeResponse = createTreeApiResponse({
         tree: { '1': [] },
