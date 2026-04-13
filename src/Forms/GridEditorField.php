@@ -35,6 +35,9 @@ class GridEditorField extends FormField
     {
         parent::__construct($name, '');
 
+        $this->schemaDataType = FormField::SCHEMA_DATA_TYPE_CUSTOM;
+        $this->setSchemaComponent('GridEditorField');
+
         $this->addExtraClass('grid-editor__container no-change-track');
     }
 
@@ -75,16 +78,30 @@ class GridEditorField extends FormField
         /** @var array<string, mixed> $schemaData */
         $schemaData = parent::getSchemaDataDefaults();
 
+        // Legacy HTML path (main edit view): entwine bridge reads these
+        // top-level keys from the rendered <div>'s data-schema attribute.
         $schemaData['grid-page-id'] = $this->pageId;
         $schemaData['grid-zone'] = $this->zone;
 
+        // React FormBuilder path (history viewer): the wrapper component
+        // reads from the nested data sub-array, which FormBuilder passes
+        // as component props.
+        /** @var array<string, mixed> $data */
+        $data = $schemaData['data'] ?? [];
+        $data['pageId'] = $this->pageId;
+        $data['zone'] = $this->zone;
+
         if ($this->isReadonlyField) {
             $schemaData['grid-readonly'] = true;
+            $data['readonly'] = true;
 
             if ($this->version !== null) {
                 $schemaData['grid-version'] = $this->version;
+                $data['version'] = $this->version;
             }
         }
+
+        $schemaData['data'] = $data;
 
         return $schemaData;
     }

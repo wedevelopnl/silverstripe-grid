@@ -139,6 +139,49 @@ final class GridEditorFieldTest extends SapphireTest
         self::assertInstanceOf(DBHTMLText::class, $field->FieldHolder());
     }
 
+    public function testFieldDeclaresCustomSchemaTypeAndComponent(): void
+    {
+        $field = GridEditorField::create('GridEditor', 42, 'main');
+
+        $schema = $field->getSchemaData();
+
+        self::assertSame('Custom', $schema['schemaType']);
+        self::assertSame('GridEditorField', $schema['component']);
+    }
+
+    public function testSchemaDataSubArrayContainsPageIdAndZone(): void
+    {
+        $field = GridEditorField::create('GridEditor', 42, 'sidebar');
+
+        $schema = $field->getSchemaData();
+
+        self::assertSame(42, $schema['data']['pageId']);
+        self::assertSame('sidebar', $schema['data']['zone']);
+    }
+
+    public function testReadonlyCloneExposesVersionInSchemaDataSubArray(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+
+        $form = Form::create(
+            Controller::create(),
+            'TestForm',
+            FieldList::create(),
+            FieldList::create(),
+        );
+        $form->setFormAction('/test');
+        $form->loadDataFrom($page);
+
+        $field = GridEditorField::create('GridEditor', (int) $page->ID, 'main');
+        $field->setForm($form);
+
+        $readonly = $field->performReadonlyTransformation();
+        $schema = $readonly->getSchemaData();
+
+        self::assertSame((int) $page->Version, $schema['data']['version']);
+        self::assertTrue($schema['data']['readonly']);
+    }
+
     /**
      * Attach a field to a minimal Form so Link() resolves.
      */
