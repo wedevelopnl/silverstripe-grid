@@ -1,0 +1,40 @@
+# E2E fixture: a published page with one known section, used to verify
+# the history viewer renders the readonly grid for a specific version.
+#
+# Post-actions in _config/dev.yml publish recursively so v1 exists on
+# LIVE. The test then mutates the section title (creating v2) and
+# asserts that each history version renders its own frozen state.
+#
+# Bottom-up ordering (leaf → column → row → section → page) to prevent
+# auto-scaffolding from creating duplicate children.
+
+Page:
+  e2e_history_page:
+    Title: 'E2E History Page'
+    URLSegment: 'e2e-history-page'
+
+WeDevelop\Grid\Model\Section:
+  history_section_alpha:
+    Title: 'Original Alpha Section'
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_history_page
+
+WeDevelop\Grid\Model\Row:
+  history_row_alpha:
+    Title: 'Alpha Row'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.history_section_alpha
+
+WeDevelop\Grid\Model\Column:
+  history_col_alpha:
+    Title: 'Alpha Column'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.history_row_alpha
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
+
+WeDevelop\Grid\Model\ContentElement:
+  history_leaf_alpha:
+    Title: 'Original Alpha Leaf'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.history_col_alpha

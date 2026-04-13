@@ -146,3 +146,9 @@ WeDevelop\Grid\Dev\FixtureLoader:
         - action: unpublish
           class: 'WeDevelop\Grid\Model\Section'
           identifier: section2
+    history-view-test:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/HistoryViewTest.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_history_page
