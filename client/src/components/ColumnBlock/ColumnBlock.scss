@@ -4,6 +4,8 @@
 .column-block {
   @include mixins.status-indicator;
 
+  container-type: inline-size;
+  container-name: column-block;
   background: vars.$color-bg-column;
   padding: 8px;
   min-height: 60px;
@@ -31,19 +33,27 @@
   &__header {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
+    row-gap: 4px;
     margin-bottom: 8px;
   }
 
   &__icon {
     font-size: 0.75em;
     color: vars.$color-text-muted;
+    flex: 0 0 auto;
   }
 
   &__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
     font-size: 0.75em;
     font-weight: 600;
     color: vars.$color-text-muted;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 
     a {
       color: inherit;
@@ -53,6 +63,24 @@
       &:hover {
         text-decoration: underline;
       }
+    }
+  }
+
+  &__header-meta {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+    margin-left: auto;
+  }
+
+  @container column-block (max-width: 240px) {
+    .column-block__header-meta {
+      flex-basis: 100%;
+      margin-left: 0;
+      justify-content: flex-end;
     }
   }
 

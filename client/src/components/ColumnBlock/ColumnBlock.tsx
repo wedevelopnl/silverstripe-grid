@@ -188,23 +188,25 @@ function EditableColumnBlock({ column }: ColumnBlockProps) {
               column.title
             )}
           </span>
-          <GridSettingsPicker
-            label={widthLabel}
-            options={widthOptions}
-            selectedValue={widthSelectedValue}
-            disabled={isPickerDisabled}
-            testId="column-badge"
-            onSelect={handleWidthSelect}
-          />
-          <GridSettingsPicker
-            label={offsetLabel}
-            options={offsetOptions}
-            selectedValue={settings.offset}
-            disabled={isOffsetDisabled}
-            testId="column-offset-badge"
-            onSelect={handleOffsetSelect}
-          />
-          <ElementActions node={column} />
+          <div className="column-block__header-meta">
+            <GridSettingsPicker
+              label={widthLabel}
+              options={widthOptions}
+              selectedValue={widthSelectedValue}
+              disabled={isPickerDisabled}
+              testId="column-badge"
+              onSelect={handleWidthSelect}
+            />
+            <GridSettingsPicker
+              label={offsetLabel}
+              options={offsetOptions}
+              selectedValue={settings.offset}
+              disabled={isOffsetDisabled}
+              testId="column-offset-badge"
+              onSelect={handleOffsetSelect}
+            />
+            <ElementActions node={column} />
+          </div>
         </div>
         <div className="column-block__body">
           <SortableContext items={column.childSortableIds} strategy={verticalListSortingStrategy}>
