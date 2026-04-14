@@ -26,7 +26,14 @@ import { refreshPreview } from '@/utils/refreshPreview';
 import { showToast } from '@/utils/toast';
 import { queryKeys } from './queryKeys';
 
-function useInvalidateOnSuccess(pageId: number, zone: string) {
+/**
+ * Shared mutation defaults: invalidate the element tree on success and toast on error.
+ *
+ * Centralizing onError here prevents drift — every mutation that spreads this helper
+ * automatically reports failures to the user. Mutations with custom onError (e.g.
+ * useReorderElement's optimistic rollback) should still call showToast explicitly.
+ */
+function useStandardMutationOptions(pageId: number, zone: string) {
   const queryClient = useQueryClient();
 
   return {
@@ -36,78 +43,72 @@ function useInvalidateOnSuccess(pageId: number, zone: string) {
       });
       refreshPreview();
     },
+    onError: (error: ApiError) => {
+      showToast(error.message);
+    },
   };
 }
 
 export function useCreateElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, CreateElementParams>({
     mutationFn: createElement,
-    ...useInvalidateOnSuccess(pageId, zone),
+    ...useStandardMutationOptions(pageId, zone),
   });
 }
 
 export function useCreateContentElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, CreateContentElementParams>({
     mutationFn: createContentElement,
-    ...useInvalidateOnSuccess(pageId, zone),
-    onError: (error) => {
-      showToast(error.message);
-    },
+    ...useStandardMutationOptions(pageId, zone),
   });
 }
 
 export function usePublishElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, number>({
     mutationFn: publishElement,
-    ...useInvalidateOnSuccess(pageId, zone),
+    ...useStandardMutationOptions(pageId, zone),
   });
 }
 
 export function useUnpublishElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, number>({
     mutationFn: unpublishElement,
-    ...useInvalidateOnSuccess(pageId, zone),
+    ...useStandardMutationOptions(pageId, zone),
   });
 }
 
 export function useArchiveElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, number>({
     mutationFn: archiveElement,
-    ...useInvalidateOnSuccess(pageId, zone),
+    ...useStandardMutationOptions(pageId, zone),
   });
 }
 
 export function useDuplicateElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, number>({
     mutationFn: duplicateElement,
-    ...useInvalidateOnSuccess(pageId, zone),
+    ...useStandardMutationOptions(pageId, zone),
   });
 }
 
 export function useDuplicateToElement(pageId: number, zone: string) {
   return useMutation<void, ApiError, DuplicateToParams>({
     mutationFn: duplicateToElement,
-    ...useInvalidateOnSuccess(pageId, zone),
+    ...useStandardMutationOptions(pageId, zone),
   });
 }
 
 export function useUpdateGridSettings(pageId: number, zone: string) {
   return useMutation<void, ApiError, UpdateGridSettingsParams>({
     mutationFn: updateGridSettings,
-    ...useInvalidateOnSuccess(pageId, zone),
-    onError: (error) => {
-      showToast(error.message);
-    },
+    ...useStandardMutationOptions(pageId, zone),
   });
 }
 
 export function useResetGridSettingsOverrides(pageId: number, zone: string) {
   return useMutation<void, ApiError, ResetGridSettingsOverridesParams>({
     mutationFn: resetGridSettingsOverrides,
-    ...useInvalidateOnSuccess(pageId, zone),
-    onError: (error) => {
-      showToast(error.message);
-    },
+    ...useStandardMutationOptions(pageId, zone),
   });
 }
 

@@ -5,6 +5,8 @@ import {
   useUpdateGridSettings,
   useResetGridSettingsOverrides,
   useReorderElement,
+  usePublishElement,
+  useUnpublishElement,
 } from '@/hooks/useElementMutations';
 import { createProviderWrapper } from '@/testing/renderWithProviders';
 import {
@@ -188,6 +190,60 @@ describe('useElementMutations', () => {
           expect.objectContaining({
             type: 'DISPLAY_TOAST',
             payload: expect.objectContaining({ type: 'error' }),
+          }),
+        );
+      });
+    });
+  });
+
+  describe('usePublishElement', () => {
+    it('should show toast on error', async () => {
+      mockFetchError(500, { message: 'Publish failed' });
+      const dispatch = vi.fn();
+      window.ss.store = { dispatch };
+
+      const { wrapper } = createProviderWrapper();
+      const { result } = renderHook(() => usePublishElement(1, 'main'), { wrapper });
+
+      act(() => {
+        result.current.mutate(5);
+      });
+
+      await waitFor(() => {
+        expect(dispatch).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'DISPLAY_TOAST',
+            payload: expect.objectContaining({
+              type: 'error',
+              text: expect.stringContaining('Publish failed'),
+            }),
+          }),
+        );
+      });
+    });
+  });
+
+  describe('useUnpublishElement', () => {
+    it('should show toast on error', async () => {
+      mockFetchError(500, { message: 'Unpublish failed' });
+      const dispatch = vi.fn();
+      window.ss.store = { dispatch };
+
+      const { wrapper } = createProviderWrapper();
+      const { result } = renderHook(() => useUnpublishElement(1, 'main'), { wrapper });
+
+      act(() => {
+        result.current.mutate(5);
+      });
+
+      await waitFor(() => {
+        expect(dispatch).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'DISPLAY_TOAST',
+            payload: expect.objectContaining({
+              type: 'error',
+              text: expect.stringContaining('Unpublish failed'),
+            }),
           }),
         );
       });
