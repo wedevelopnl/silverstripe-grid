@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Model;
 
 use Override;
+use SilverStripe\ORM\DB;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Contract\ContainerInterface;
@@ -144,14 +145,23 @@ class Section extends GridElement implements ContainerInterface
             return;
         }
 
-        if ($this->Rows()->count() > 0) {
+        $conn = DB::get_conn();
+        if ($conn === null) {
             return;
         }
 
-        $row = Row::create();
-        $row->Title = static::config()->get('default_row_title');
-        $row->ParentID = $this->ID;
-        $row->ParentClass = static::class;
-        $row->write();
+        // Wrap the check-then-create in a transaction and re-check inside the
+        // closure so concurrent writes cannot race past the guard (TOCTOU).
+        $conn->withTransaction(function (): void {
+            if ($this->Rows()->count() > 0) {
+                return;
+            }
+
+            $row = Row::create();
+            $row->Title = static::config()->get('default_row_title');
+            $row->ParentID = $this->ID;
+            $row->ParentClass = static::class;
+            $row->write();
+        });
     }
 }
