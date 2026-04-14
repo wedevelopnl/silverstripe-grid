@@ -45,6 +45,12 @@ export interface SilverStripeConfig {
   sections: SilverStripeSectionConfig[];
 }
 
+export interface SilverStripeI18n {
+  _t(key: string, fallback: string, params?: Record<string, string | number>): string;
+  addDictionary(locale: string, entries: Record<string, string>): void;
+  currentLocale: string;
+}
+
 // --- Window augmentation (jQuery, entwine, Injector, CMS config) ---
 
 declare global {
@@ -88,6 +94,7 @@ declare global {
     jQuery: JQueryStatic;
     ss: {
       config: SilverStripeConfig;
+      i18n: SilverStripeI18n;
       store?: { dispatch(action: unknown): void };
     };
   }

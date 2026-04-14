@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, vi } from 'vitest';
 import type { AdapterConfig } from './client/src/types/adapter';
-import type { SilverStripeConfig } from './client/src/types/silverstripe';
+import type { SilverStripeConfig, SilverStripeI18n } from './client/src/types/silverstripe';
 
 const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController';
 
@@ -38,10 +38,18 @@ const defaultConfig: SilverStripeConfig = {
   ],
 };
 
+// Minimal i18n stub — passes keys through as the fallback value for non-i18n tests
+const defaultI18n: SilverStripeI18n = {
+  _t: (_key: string, fallback: string) => fallback,
+  addDictionary: () => {},
+  currentLocale: 'en',
+};
+
 // Stub CMS globals before each test file
 beforeEach(() => {
   window.ss = {
     config: structuredClone(defaultConfig),
+    i18n: defaultI18n,
   };
 });
 
