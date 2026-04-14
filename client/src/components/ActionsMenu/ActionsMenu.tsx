@@ -63,12 +63,19 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, close]);
 
+  // preventDefault is required because this button may be nested inside a
+  // clickable ancestor (ElementCard's <a href>). React synthetic
+  // stopPropagation only blocks other React handlers from firing; the
+  // browser's default anchor navigation is cancelled only by preventDefault
+  // on the underlying click event.
   function handleTriggerClick(e: React.MouseEvent) {
+    e.preventDefault();
     e.stopPropagation();
     setIsOpen((prev) => !prev);
   }
 
   function handleItemClick(e: React.MouseEvent, onAction: () => void) {
+    e.preventDefault();
     e.stopPropagation();
     onAction();
     close();

@@ -153,8 +153,16 @@ export default function DuplicateToDialog({
       className="duplicate-to-dialog"
       data-testid="duplicate-to-dialog"
       onClose={handleClose}
-      // onClick is a React-event stopPropagation guard — prevents clicks inside the dialog from bubbling to ancestor ElementCard handlers. React portals preserve event bubbling so portaling does not help. Rule disabled for this file via biome.json overrides (<dialog> is natively interactive; biome's a11y rules do not recognize it).
-      onClick={(e) => e.stopPropagation()}
+      // onClick guard prevents clicks inside the dialog from bubbling to
+      // ancestor ElementCard anchors. Both preventDefault and stopPropagation
+      // are required: stopPropagation blocks React handlers on the anchor,
+      // preventDefault cancels the browser's default anchor navigation. Rule
+      // disabled for this file via biome.json overrides (<dialog> is natively
+      // interactive; biome's a11y rules do not recognize it).
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
     >
       <div className="duplicate-to-dialog__header">
         <h3 className="duplicate-to-dialog__title">

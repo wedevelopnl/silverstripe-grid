@@ -37,18 +37,22 @@ export default function ConfirmDialog({
     onCancel();
   }, [onCancel]);
 
-  const handleConfirm = useCallback(() => {
-    onConfirm();
-  }, [onConfirm]);
-
   return (
     <dialog
       ref={dialogRef}
       className="confirm-dialog"
       data-testid="confirm-dialog"
       onClose={handleClose}
-      // onClick is a React-event stopPropagation guard — prevents clicks inside the dialog from bubbling to ancestor ElementCard handlers. React portals preserve event bubbling so portaling does not help. Rule disabled for this file via biome.json overrides (<dialog> is natively interactive; biome's a11y rules do not recognize it).
-      onClick={(e) => e.stopPropagation()}
+      // onClick guard prevents clicks inside the dialog from bubbling to
+      // ancestor ElementCard anchors. Both preventDefault and stopPropagation
+      // are required: stopPropagation blocks React handlers on the anchor,
+      // preventDefault cancels the browser's default anchor navigation. Rule
+      // disabled for this file via biome.json overrides (<dialog> is natively
+      // interactive; biome's a11y rules do not recognize it).
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
     >
       <div className="confirm-dialog__header">
         <h3 className="confirm-dialog__title">{title}</h3>
@@ -67,7 +71,7 @@ export default function ConfirmDialog({
         <button
           type="button"
           className={`confirm-dialog__button confirm-dialog__button--confirm${destructive ? ' confirm-dialog__button--destructive' : ''}`}
-          onClick={handleConfirm}
+          onClick={onConfirm}
         >
           {confirmLabel}
         </button>

@@ -64,15 +64,24 @@ function EditableElementCard({ element }: ElementCardProps) {
   );
 
   if (isClickable) {
-    // Swallow clicks that originated inside the header (drag handle, actions
-    // menu) or while a drag is in progress — the anchor would otherwise
-    // navigate when the user interacts with nested buttons or releases a drag.
+    // Swallow clicks from interactive descendants (drag handle, actions menu,
+    // nested buttons/links/inputs) or while a drag is in progress — the anchor
+    // would otherwise navigate when the user interacts with those controls or
+    // releases a drag. A plain center-click on the card (or a click on the
+    // title text / content body) still navigates because those targets have
+    // no interactive ancestor inside the card other than the anchor itself.
     const handleAnchorClick = (event: MouseEvent<HTMLAnchorElement>) => {
       if (isDragging) {
         event.preventDefault();
         return;
       }
-      if (event.target instanceof Element && event.target.closest('.element-card__header')) {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      const interactive = event.target.closest(
+        'button, input, select, textarea, [role="button"], [role="menuitem"], [role="listbox"], [role="dialog"]',
+      );
+      if (interactive !== null && event.currentTarget.contains(interactive)) {
         event.preventDefault();
       }
     };
