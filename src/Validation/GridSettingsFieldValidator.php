@@ -58,6 +58,17 @@ final class GridSettingsFieldValidator extends FieldValidator
         ViewportConfig $config,
         string $viewport,
     ): void {
+        if ($config->width < 1) {
+            $result->addFieldError(
+                $this->name,
+                sprintf(
+                    'Width %d for viewport "%s" must be at least 1.',
+                    $config->width,
+                    $viewport,
+                ),
+            );
+        }
+
         if ($config->width > $this->columnCount) {
             $result->addFieldError(
                 $this->name,
