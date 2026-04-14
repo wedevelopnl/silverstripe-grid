@@ -908,7 +908,7 @@ class GridController extends AdminController
     private function resultToResponse(Result $result, int $statusCode = 422): never
     {
         $messages = array_map(
-            static fn (ValidationError $error): string => $error->message,
+            static fn (ValidationError $error): string => $error->translate(),
             $result->errors(),
         );
 
