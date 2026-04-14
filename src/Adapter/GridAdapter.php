@@ -229,11 +229,21 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
             return [$hideClass];
         }
 
+        /** @var string $restoreFormat */
+        $restoreFormat = static::config()->get('responsive_restore_format');
+
+        // Frameworks without a per-viewport restore utility (e.g. Bulma) set
+        // `responsive_restore_format` to ''. Emit only the hide class — sprintf on an
+        // empty format would yield an empty string and pollute the class list.
+        if ($restoreFormat === '') {
+            return [$hideClass];
+        }
+
         $nextKey = $keys[$index + 1];
 
         return [
             $hideClass,
-            sprintf(static::config()->get('responsive_restore_format'), $nextKey),
+            sprintf($restoreFormat, $nextKey),
         ];
     }
 

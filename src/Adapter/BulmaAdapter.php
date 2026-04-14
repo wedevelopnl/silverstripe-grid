@@ -57,11 +57,13 @@ final class BulmaAdapter extends GridAdapter
 
     // ─── Visibility formats ─────────────────────────────────────────
 
-    private static string $base_hide_class = 'is-hidden-mobile';
+    private static string $base_hide_class = 'is-hidden-mobile-only';
 
-    private static string $responsive_hide_format = 'is-hidden-%s';
+    private static string $responsive_hide_format = 'is-hidden-%s-only';
 
-    private static string $responsive_restore_format = 'is-block-%s';
+    // Bulma has no symmetric `is-block-{viewport}` utility. Using `-only` hide classes
+    // scopes each hide to its viewport, so no restore class is needed.
+    private static string $responsive_restore_format = '';
 
     // ─── Container & structure ───────────────────────────────────────
 
