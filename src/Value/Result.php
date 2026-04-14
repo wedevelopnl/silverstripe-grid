@@ -12,7 +12,7 @@ use LogicException;
  * Use Result::ok($value) for success and Result::fail($errors...) for expected failures.
  * Exceptions remain for truly exceptional situations (bugs, infrastructure failures).
  *
- * @template T
+ * @template-covariant T
  */
 final readonly class Result
 {
