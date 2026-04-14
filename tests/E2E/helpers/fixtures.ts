@@ -61,7 +61,9 @@ export async function loadFixture(
 export async function resetFixtures(
   request: APIRequestContext,
 ): Promise<void> {
-  const response = await request.post(`${FIXTURE_ENDPOINT}/reset`);
+  // `confirm=1` is required by the backend guard to prevent an accidental
+  // hit on the dev endpoint from wiping fixture-loaded pages.
+  const response = await request.post(`${FIXTURE_ENDPOINT}/reset?confirm=1`);
 
   const body = (await response.json()) as
     | FixtureResetResponse

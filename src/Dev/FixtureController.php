@@ -87,6 +87,15 @@ class FixtureController extends Controller
 
     public function reset(HTTPRequest $request): HTTPResponse
     {
+        // Require an explicit opt-in so an accidental curl/browser hit
+        // on the dev endpoint cannot wipe fixture-loaded pages.
+        if ($request->getVar('confirm') !== '1') {
+            return $this->jsonResponse(400, [
+                'success' => false,
+                'error' => 'Missing confirm=1 query parameter',
+            ]);
+        }
+
         $loader = FixtureLoader::create();
         $loader->reset();
 

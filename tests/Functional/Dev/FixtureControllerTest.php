@@ -98,7 +98,7 @@ final class FixtureControllerTest extends FunctionalTest
 
     public function testResetReturnsSuccess(): void
     {
-        $response = $this->post(self::BASE_URL . '/reset', []);
+        $response = $this->post(self::BASE_URL . '/reset?confirm=1', []);
 
         self::assertSame(200, $response->getStatusCode());
 
@@ -114,7 +114,7 @@ final class FixtureControllerTest extends FunctionalTest
         $count = SiteTree::get()->filter(['URLSegment:StartsWith' => 'e2e-'])->count();
         self::assertGreaterThan(0, $count);
 
-        $this->post(self::BASE_URL . '/reset', []);
+        $this->post(self::BASE_URL . '/reset?confirm=1', []);
 
         self::assertSame(
             0,
