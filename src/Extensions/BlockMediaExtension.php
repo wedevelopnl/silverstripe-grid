@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Extensions;
 
+use LogicException;
 use SilverStripe\AssetAdmin\Forms\UploadField;
 use SilverStripe\Assets\Image;
 use SilverStripe\Core\Extension;
@@ -475,7 +476,13 @@ class BlockMediaExtension extends Extension
     private function getContentLayoutAdapter(): ContentLayoutAdapterInterface
     {
         $adapter = $this->getOwner()->gridAdapter;
-        assert($adapter instanceof ContentLayoutAdapterInterface);
+        if (!$adapter instanceof ContentLayoutAdapterInterface) {
+            throw new LogicException(sprintf(
+                'Configured grid adapter %s must implement %s. Bind the interface in _config/content-layout.yml.',
+                $adapter::class,
+                ContentLayoutAdapterInterface::class,
+            ));
+        }
 
         return $adapter;
     }
