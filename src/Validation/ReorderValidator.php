@@ -19,7 +19,10 @@ class ReorderValidator implements ReorderValidatorInterface
     #[Override]
     public function validate(GridElement $element, DataObject $targetParent): Result
     {
-        if ((int) $element->ParentID === (int) $targetParent->ID) {
+        if (
+            (int) $element->ParentID === (int) $targetParent->ID
+            && $element->ParentClass === $targetParent::class
+        ) {
             return Result::ok($element);
         }
 
