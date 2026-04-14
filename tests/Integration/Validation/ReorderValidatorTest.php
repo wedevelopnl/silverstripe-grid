@@ -139,4 +139,21 @@ final class ReorderValidatorTest extends SapphireTest
         self::assertTrue($result->isErr());
         self::assertNotEmpty($result->errors());
     }
+
+    public function testViolationErrorHasTranslationKey(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $pageB = $this->objFromFixture(SiteTree::class, 'test_page_2');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        // Row to page level — triggers PAGE_LEVEL_REJECTED
+        $result = $this->getValidator()->validate($row, $pageB);
+
+        self::assertTrue($result->isErr());
+
+        $error = $result->errors()[0];
+        self::assertSame(ReorderValidator::class . '.PAGE_LEVEL_REJECTED', $error->key);
+        self::assertArrayHasKey('element', $error->params);
+    }
 }

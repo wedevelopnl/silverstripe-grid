@@ -41,6 +41,8 @@ class ReorderValidator implements ReorderValidatorInterface
                         $element->singular_name(),
                     ),
                     field: 'placement',
+                    key: self::class . '.PAGE_LEVEL_REJECTED',
+                    params: ['element' => $element->singular_name()],
                 ));
             }
 
@@ -59,6 +61,8 @@ class ReorderValidator implements ReorderValidatorInterface
                 $targetParent->singular_name(),
             ),
             field: 'placement',
+            key: self::class . '.PARENT_REJECTED',
+            params: ['element' => $element->singular_name(), 'parent' => $targetParent->singular_name()],
         ));
     }
 
