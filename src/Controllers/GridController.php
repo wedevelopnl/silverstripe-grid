@@ -163,6 +163,18 @@ class GridController extends AdminController
      * Uses archived reading mode so that standalone ORM queries in the tree
      * builder (which don't inherit version context from the page record)
      * resolve against the correct historical snapshot.
+     *
+     * KNOWN LIMITATION: the archive cutoff is derived from the page version
+     * row's LastEdited, which is a MySQL DATETIME with second precision.
+     * Element writes that land in the same wall-clock second as the page's
+     * target version cannot be distinguished from earlier same-second
+     * writes and may leak into the historical snapshot. In practice this
+     * only affects rapid (sub-second) successive publishes of the same
+     * page; normal editor cadence is monotonic at second resolution so the
+     * archive reading mode resolves correctly. A fully accurate fix would
+     * require either microsecond-precision timestamps or a per-element
+     * version-pinned query against GridElement_Versions — see
+     * tests/Functional/Controllers/GridControllerTest::testReadTreeAtVersionReturnsEmptyTreeForPreSectionVersion.
      */
     public function apiReadTreeAtVersion(HTTPRequest $request): HTTPResponse
     {

@@ -224,6 +224,50 @@ final class GridControllerTest extends FunctionalTest
         self::assertArrayHasKey('overrideCounts', $data);
     }
 
+    public function testReadTreeAtVersionReturnsEmptyTreeForPreSectionVersion(): void
+    {
+        // Publish v1: page exists, no sections.
+        $page = $this->page();
+        $page->Title = 'v1 title';
+        $page->write();
+        $page->publishRecursive();
+        $v1 = (int) $page->Version;
+
+        // Sleep past MySQL's DATETIME second boundary. The controller uses
+        // Versioned::reading_archived_date($page->LastEdited) which has only
+        // second precision, so same-second writes are indistinguishable. A
+        // genuine fix for that narrow edge case requires version-pinned
+        // element queries against GridElement_Versions — see the comment at
+        // GridController::apiReadTreeAtVersion for the known limitation.
+        sleep(2);
+
+        // Create a section AFTER v1 was published, modify the page, publish v2.
+        GridTreeFactory::section($page, 'main', 0, 'After v1');
+        $page = SiteTree::get()->byID((int) $page->ID);
+        self::assertNotNull($page);
+        $page->Title = 'v2 title';
+        $page->write();
+        $page->publishRecursive();
+        $v2 = (int) $page->Version;
+        self::assertGreaterThan($v1, $v2);
+
+        // Request the tree at v1: the section did not exist yet,
+        // so it must not appear in the historical snapshot.
+        $pageId = (int) $page->ID;
+        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main/version/{$v1}");
+
+        self::assertSame(200, $response->getStatusCode());
+        $data = $this->parseJson($response);
+
+        $tree = (array) $data['tree'];
+        self::assertArrayHasKey($pageId, $tree);
+        self::assertSame(
+            [],
+            $tree[$pageId],
+            'At v1 no section had been published yet — tree must be empty.',
+        );
+    }
+
     public function testReadTreeAtVersionWithNonExistentVersionReturns404(): void
     {
         $pageId = (int) $this->page()->ID;
