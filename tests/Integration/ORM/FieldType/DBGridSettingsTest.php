@@ -277,6 +277,16 @@ final class DBGridSettingsTest extends SapphireTest
         self::assertSame(0, $settings->default->offset);
     }
 
+    public function testGetValueTreatsZeroWidthAsMissingData(): void
+    {
+        $field = new DBGridSettings('Settings');
+        $field->setField('DefaultWidth', 0);
+        $field->setField('DefaultOffset', 0);
+        $field->setField('DefaultVisible', true);
+
+        self::assertNull($field->getValue(), 'zero width from DB must surface as null, not a malformed ViewportConfig');
+    }
+
     public function testGetValueDefaultVisibleIsTrue(): void
     {
         $page = $this->objFromFixture(SiteTree::class, 'test_page');
