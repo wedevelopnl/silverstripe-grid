@@ -1,1 +1,142 @@
 nl:
+  WeDevelop\Grid\Dev\MultiZonePage:
+    PLURALNAME: 'Multi-zone-paginas'
+    PLURALS:
+      one: 'Een Multi-zone-pagina'
+      other: '{count} Multi-zone-paginas'
+    SINGULARNAME: 'Multi-zone-pagina'
+  WeDevelop\Grid\Extensions\BlockMediaExtension:
+    ALIGN_BOTTOM: Onder
+    ALIGN_CENTER: Midden
+    ALIGN_TOP: Boven
+    CONTENT_COLUMNS: 'Breedte van inhoudskolom'
+    CUSTOM_VIDEO_THUMBNAIL: 'Aangepaste videothumbnail'
+    FULL_WIDTH: 'Volle breedte (niet naast elkaar)'
+    GAP_SIZE: Tussenruimte
+    LAYOUT_TAB: Layout
+    MEDIA_CAPTION: Bijschrift
+    MEDIA_EMBED_CREATED: Aangemaakt
+    MEDIA_EMBED_DESCRIPTION: Omschrijving
+    MEDIA_EMBED_NAME: Naam
+    MEDIA_EMBED_THUMBNAIL: Thumbnail
+    MEDIA_EMBED_URL: URL
+    MEDIA_POSITION: 'Positie van media'
+    MEDIA_RATIO: Beeldverhouding
+    MEDIA_TAB: Media
+    OVERWRITES_DEFAULT_THUMBNAIL: 'Dit overschrijft de standaardthumbnail van het videoplatform'
+    POSITION_FIRST: 'Voor de inhoud'
+    POSITION_LAST: 'Na de inhoud'
+    POSITION_LAST_DESKTOP: 'Na de inhoud op desktop'
+    RATIO_16X9: '16:9'
+    RATIO_1X1: 'Vierkant (1:1)'
+    RATIO_4X3: '4:3'
+    RATIO_AUTO: Automatisch
+    VERTICAL_ALIGNMENT: 'Verticale uitlijning'
+    VIDEO_EMBED_TAB: 'Video-embed'
+    db_ContentColumns: 'Inhoudskolommen'
+    db_GapSize: Tussenruimte
+    db_MediaCaption: 'Mediabijschrift'
+    db_MediaPosition: 'Positie van media'
+    db_MediaRatio: 'Beeldverhouding van media'
+    db_MediaType: 'Type media'
+    db_VerticalAlignment: 'Verticale uitlijning'
+    db_VideoEmbedCreated: 'Video-embed aangemaakt'
+    db_VideoEmbedDescription: 'Video-embed omschrijving'
+    db_VideoEmbedName: 'Video-embed naam'
+    db_VideoEmbedThumbnail: 'Video-embed thumbnail'
+    db_VideoEmbedURL: 'Video-embed URL'
+    db_VideoHasOverlay: 'Video heeft overlay'
+    db_VideoProvider: Videoaanbieder
+    db_VideoURL: Video-URL
+    has_one_MediaImage: 'Media-afbeelding'
+    has_one_VideoCustomThumbnail: 'Aangepaste videothumbnail'
+  WeDevelop\Grid\Extensions\GridPageExtension:
+    has_many_Sections: Secties
+  WeDevelop\Grid\Forms\GridSettingsField:
+    DEFAULT_TITLE: 'Grid-instellingen'
+    HIDDEN_SUFFIX: (verborgen)
+  WeDevelop\Grid\Model\Column:
+    CLASS_DESCRIPTION: 'Responsieve grid-kolom voor inhoudsblokken'
+    PLURALNAME: Kolommen
+    PLURALS:
+      one: 'Een Kolom'
+      other: '{count} Kolommen'
+    SINGULARNAME: Kolom
+    db_GridSettings: 'Grid-instellingen'
+    has_many_Elements: Elementen
+  WeDevelop\Grid\Model\ContentElement:
+    PLURALNAME: 'Inhoudselementen'
+    PLURALS:
+      one: 'Een Inhoudselement'
+      other: '{count} Inhoudselementen'
+    SINGULARNAME: Inhoudselement
+    db_ContentColumns: Inhoudskolommen
+    db_GapSize: Tussenruimte
+    db_HTML: HTML
+    db_MediaCaption: Mediabijschrift
+    db_MediaPosition: 'Positie van media'
+    db_MediaRatio: 'Beeldverhouding van media'
+    db_MediaType: 'Type media'
+    db_VerticalAlignment: 'Verticale uitlijning'
+    db_VideoEmbedCreated: 'Video-embed aangemaakt'
+    db_VideoEmbedDescription: 'Video-embed omschrijving'
+    db_VideoEmbedName: 'Video-embed naam'
+    db_VideoEmbedThumbnail: 'Video-embed thumbnail'
+    db_VideoEmbedURL: 'Video-embed URL'
+    db_VideoHasOverlay: 'Video heeft overlay'
+    db_VideoProvider: Videoaanbieder
+    db_VideoURL: Video-URL
+    has_one_MediaImage: 'Media-afbeelding'
+    has_one_VideoCustomThumbnail: 'Aangepaste videothumbnail'
+  WeDevelop\Grid\Model\GridElement:
+    PLURALNAME: 'Grid-elementen'
+    PLURALS:
+      one: 'Een Grid-element'
+      other: '{count} Grid-elementen'
+    SHOW_TITLE: Tonen
+    SINGULARNAME: 'Grid-element'
+    TITLE: Titel
+    TITLE_CLASS: 'Weergeven als'
+    TITLE_CLASS_DEFAULT: Standaard
+    TITLE_SETTINGS: Titel
+    TITLE_TAG: Titeltag
+    UNTITLED: '(zonder titel)'
+    db_ExtraClass: 'Extra class'
+    db_ShowTitle: 'Titel tonen'
+    db_Sort: Volgorde
+    db_Style: Stijl
+    db_Title: Titel
+    db_TitleClass: Titelclass
+    db_TitleTag: Titeltag
+    db_Version: Versie
+    has_one_Parent: 'Bovenliggend element'
+  WeDevelop\Grid\Model\Row:
+    CLASS_DESCRIPTION: 'Horizontale container voor kolommen binnen een sectie'
+    PLURALNAME: Rijen
+    PLURALS:
+      one: 'Een Rij'
+      other: '{count} Rijen'
+    SINGULARNAME: Rij
+    has_many_Columns: Kolommen
+  WeDevelop\Grid\Model\Section:
+    CLASS_DESCRIPTION: 'Bovenste laag-container die rijen bevat'
+    PLURALNAME: Secties
+    PLURALS:
+      one: 'Een Sectie'
+      other: '{count} Secties'
+    SINGULARNAME: Sectie
+    db_Zone: Zone
+    has_many_Rows: Rijen
+  WeDevelop\Grid\Reports\GridElementReport:
+    COLUMN_LAST_EDITED: 'Laatst bewerkt'
+    COLUMN_PAGE: Pagina
+    COLUMN_TITLE: Titel
+    COLUMN_TYPE: Type
+    DESCRIPTION: 'Toont alle grid-elementen met hun bovenliggende pagina. Gebruik de filters om op pagina of element-type te filteren, of om wees-elementen te vinden.'
+    FILTER_ALL_PAGES: 'Alle paginas'
+    FILTER_ALL_TYPES: 'Alle types'
+    FILTER_ORPHANED: 'Alleen wees-elementen'
+    FILTER_PAGE: Pagina
+    FILTER_TYPE: Element-type
+    ORPHANED: Wees
+    TITLE: 'Grid-elementen'
