@@ -95,13 +95,40 @@ final class GridControllerTest extends FunctionalTest
     }
 
     /**
-     * Send a JSON DELETE request with CSRF token.
+     * Send a DELETE request with parameters encoded on the query string.
      *
-     * @param array<string, mixed> $body
+     * DELETE endpoints no longer read from a JSON body — parameters travel
+     * on the query string. CSRF token is appended alongside the params.
+     *
+     * @param array<string, mixed> $params
      */
-    private function jsonDelete(string $url, array $body = []): HTTPResponse
+    private function jsonDelete(string $url, array $params = []): HTTPResponse
     {
-        return $this->jsonRequest('DELETE', $url, $body);
+        $token = (string) SecurityToken::inst()->getValue();
+
+        $queryParts = [];
+        foreach ($params as $key => $value) {
+            if ($value === null) {
+                continue;
+            }
+            if (is_bool($value)) {
+                $value = $value ? '1' : '0';
+            }
+            $queryParts[] = rawurlencode((string) $key) . '=' . rawurlencode((string) $value);
+        }
+        $queryParts[] = 'SecurityID=' . rawurlencode($token);
+
+        $separator = str_contains($url, '?') ? '&' : '?';
+        $fullUrl = $url . $separator . implode('&', $queryParts);
+
+        return Director::test(
+            $fullUrl,
+            null,
+            $this->session(),
+            'DELETE',
+            null,
+            ['Content-Type' => 'application/json'],
+        );
     }
 
     /**

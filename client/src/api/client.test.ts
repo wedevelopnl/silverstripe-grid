@@ -78,15 +78,51 @@ describe('apiPatch', () => {
 });
 
 describe('apiDelete', () => {
-  it('sends DELETE with JSON body and CSRF header', async () => {
+  it('sends DELETE with CSRF header and no request body', async () => {
     mockFetchSuccess({});
 
     await apiDelete('/api/remove', { id: 1 });
 
     const [, init] = getFetchCalls()[0];
     expect(init?.method).toBe('DELETE');
+    expect(init?.body).toBeUndefined();
     const deleteHeaders = init?.headers as Record<string, string>;
     expect(deleteHeaders['X-SecurityID']).toBe('test-security-id');
+  });
+
+  it('serializes params as a query string appended to the URL', async () => {
+    mockFetchSuccess({});
+
+    await apiDelete('/api/remove', { id: 5, zone: 'main' });
+
+    const [url, init] = getFetchCalls()[0];
+    const urlString = String(url);
+    expect(urlString).toContain('/api/remove?');
+    expect(urlString).toContain('id=5');
+    expect(urlString).toContain('zone=main');
+    expect(init?.body).toBeUndefined();
+  });
+
+  it('omits the query string when no params are provided', async () => {
+    mockFetchSuccess({});
+
+    await apiDelete('/api/remove');
+
+    const [url, init] = getFetchCalls()[0];
+    expect(String(url)).toBe('/api/remove');
+    expect(init?.body).toBeUndefined();
+  });
+
+  it('skips null and undefined param values', async () => {
+    mockFetchSuccess({});
+
+    await apiDelete('/api/remove', { id: 5, viewport: null, other: undefined });
+
+    const [url] = getFetchCalls()[0];
+    const urlString = String(url);
+    expect(urlString).toContain('id=5');
+    expect(urlString).not.toContain('viewport');
+    expect(urlString).not.toContain('other');
   });
 });
 
@@ -249,13 +285,13 @@ describe('mutation request headers', () => {
     expect(headers['Content-Type']).toBe('application/json');
   });
 
-  it('sends exact Content-Type application/json for DELETE', async () => {
+  it('does not send Content-Type for DELETE (no body)', async () => {
     mockFetchSuccess({});
 
     await apiDelete('/api/remove', { id: 1 });
 
     const [, init] = getFetchCalls()[0];
     const headers = init?.headers as Record<string, string>;
-    expect(headers['Content-Type']).toBe('application/json');
+    expect(headers['Content-Type']).toBeUndefined();
   });
 });

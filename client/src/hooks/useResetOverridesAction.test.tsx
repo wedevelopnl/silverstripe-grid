@@ -204,9 +204,11 @@ describe('useResetOverridesAction', () => {
           (url as string).includes('/api/resetGridSettingsOverrides'),
         );
         expect(resetCall).toBeDefined();
-        const body = JSON.parse(resetCall![1]?.body as string);
-        expect(body).toEqual({ pageId: 1, zone: 'main' });
-        expect(body).not.toHaveProperty('viewport');
+        const urlString = String(resetCall![0]);
+        expect(urlString).toContain('pageId=1');
+        expect(urlString).toContain('zone=main');
+        expect(urlString).not.toContain('viewport=');
+        expect(resetCall![1]?.body).toBeUndefined();
       });
     });
 
@@ -229,8 +231,11 @@ describe('useResetOverridesAction', () => {
           (url as string).includes('/api/resetGridSettingsOverrides'),
         );
         expect(resetCall).toBeDefined();
-        const body = JSON.parse(resetCall![1]?.body as string);
-        expect(body).toEqual({ pageId: 1, zone: 'main', viewport: 'lg' });
+        const urlString = String(resetCall![0]);
+        expect(urlString).toContain('pageId=1');
+        expect(urlString).toContain('zone=main');
+        expect(urlString).toContain('viewport=lg');
+        expect(resetCall![1]?.body).toBeUndefined();
       });
     });
 

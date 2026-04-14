@@ -73,11 +73,12 @@ describe('unpublishElement', () => {
 });
 
 describe('archiveElement', () => {
-  it('sends DELETE to /api/delete', async () => {
+  it('sends DELETE to /api/delete with id as query string', async () => {
     await archiveElement(5);
     const [url, init] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/delete');
+    expect(String(url)).toBe('/admin/grid/api/delete?id=5');
     expect(init?.method).toBe('DELETE');
+    expect(init?.body).toBeUndefined();
   });
 });
 
@@ -126,11 +127,15 @@ describe('updateGridSettings', () => {
 });
 
 describe('resetGridSettingsOverrides', () => {
-  it('sends DELETE to /api/resetGridSettingsOverrides', async () => {
+  it('sends DELETE to /api/resetGridSettingsOverrides with params in query string', async () => {
     await resetGridSettingsOverrides({ pageId: 1, zone: 'main' });
     const [url, init] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/resetGridSettingsOverrides');
+    const urlString = String(url);
+    expect(urlString).toContain('/admin/grid/api/resetGridSettingsOverrides?');
+    expect(urlString).toContain('pageId=1');
+    expect(urlString).toContain('zone=main');
     expect(init?.method).toBe('DELETE');
+    expect(init?.body).toBeUndefined();
   });
 });
 

@@ -48,7 +48,7 @@ export async function apiGet<T>(url: string): Promise<T> {
  * @throws ApiError on non-OK HTTP status
  */
 async function apiMutate(
-  method: 'POST' | 'PATCH' | 'DELETE',
+  method: 'POST' | 'PATCH',
   url: string,
   body: object,
 ): Promise<void> {
@@ -88,10 +88,56 @@ export async function apiPatch(url: string, body: object): Promise<void> {
 }
 
 /**
- * Perform a DELETE request to a CMS API endpoint with JSON body.
+ * Serialize DELETE params onto the URL query string.
+ *
+ * DELETE requests do not carry a request body: parameters go into the query
+ * string so intermediaries (proxies, CDNs, server frameworks) that drop or
+ * ignore DELETE bodies still receive the params. Null/undefined values are
+ * skipped so optional fields don't appear as the literal strings
+ * "null"/"undefined".
+ */
+function buildDeleteQueryString(params: Record<string, unknown> | undefined): string {
+  if (params === undefined) {
+    return '';
+  }
+
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === null || value === undefined) {
+      continue;
+    }
+    search.append(key, String(value));
+  }
+
+  const serialized = search.toString();
+  return serialized === '' ? '' : `?${serialized}`;
+}
+
+/**
+ * Perform a DELETE request to a CMS API endpoint.
+ *
+ * Parameters are serialized as a query string rather than a JSON body: DELETE
+ * bodies are not universally supported and SilverStripe's HTTPRequest exposes
+ * query params via `$request->getVar()` regardless of the HTTP verb.
  *
  * @throws ApiError on non-OK HTTP status
  */
-export async function apiDelete(url: string, body: object): Promise<void> {
-  return apiMutate('DELETE', url, body);
+export async function apiDelete(
+  url: string,
+  params?: Record<string, unknown>,
+): Promise<void> {
+  const fullUrl = `${url}${buildDeleteQueryString(params)}`;
+  const response = await fetch(fullUrl, {
+    method: 'DELETE',
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json',
+      'X-SecurityID': getSecurityId(),
+    },
+  });
+
+  if (!response.ok) {
+    const message = await extractErrorMessage(response);
+    throw new ApiError(response.status, message);
+  }
 }

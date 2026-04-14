@@ -327,7 +327,7 @@ class GridController extends AdminController
 
     public function apiDelete(HTTPRequest $request): HTTPResponse
     {
-        $id = $this->requireElementIdFromRequest($request);
+        $id = $this->requireElementIdFromQuery($request);
         $element = $this->requireElementWithPermission(
             $id,
             static fn (GridElement $e): bool => $e->canDelete(),
@@ -497,7 +497,7 @@ class GridController extends AdminController
 
     public function apiResetGridSettingsOverrides(HTTPRequest $request): HTTPResponse
     {
-        $data = $this->parseJsonBody($request);
+        $data = $this->parseResetGridSettingsOverridesQuery($request);
         $parseResult = $this->requestBodyParser->parseResetGridSettingsOverridesBody($data);
         if ($parseResult->isErr()) {
             return $this->resultToResponse($parseResult, 400);
@@ -773,6 +773,51 @@ class GridController extends AdminController
         }
 
         return $parseResult->unwrap();
+    }
+
+    /**
+     * Parse and validate the element ID from the query string.
+     *
+     * DELETE requests carry parameters on the query string, not in a request
+     * body — raw query values are always strings, so coerce to int before
+     * handing off to the shared positive-int validator.
+     *
+     * @return positive-int
+     */
+    private function requireElementIdFromQuery(HTTPRequest $request): int
+    {
+        $raw = $request->getVar('id');
+        $id = filter_var($raw, FILTER_VALIDATE_INT);
+
+        $parseResult = $this->requestBodyParser->parseElementId(['id' => $id === false ? null : $id]);
+        if ($parseResult->isErr()) {
+            $this->jsonError(400);
+        }
+
+        return $parseResult->unwrap();
+    }
+
+    /**
+     * Build a parser-compatible associative array from the reset-overrides
+     * query string. Query values are always strings; coerce pageId to int so
+     * `RequestBodyParser::parseResetGridSettingsOverridesBody` sees the same
+     * shape it got when parameters were sent in a JSON body.
+     *
+     * @return array<string, mixed>
+     */
+    private function parseResetGridSettingsOverridesQuery(HTTPRequest $request): array
+    {
+        $rawPageId = $request->getVar('pageId');
+        $pageId = filter_var($rawPageId, FILTER_VALIDATE_INT);
+
+        $zone = $request->getVar('zone');
+        $viewport = $request->getVar('viewport');
+
+        return [
+            'pageId' => $pageId === false ? null : $pageId,
+            'zone' => is_string($zone) ? $zone : null,
+            'viewport' => is_string($viewport) && $viewport !== '' ? $viewport : null,
+        ];
     }
 
     /**

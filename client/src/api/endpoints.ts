@@ -105,7 +105,11 @@ export async function resetGridSettingsOverrides(
   params: ResetGridSettingsOverridesParams,
 ): Promise<void> {
   const base = getControllerLink();
-  await apiDelete(`${base}/api/resetGridSettingsOverrides`, params);
+  await apiDelete(`${base}/api/resetGridSettingsOverrides`, {
+    pageId: params.pageId,
+    zone: params.zone,
+    viewport: params.viewport,
+  });
 }
 
 // --- Duplicate To ---
