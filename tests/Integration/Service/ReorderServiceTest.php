@@ -220,6 +220,21 @@ final class ReorderServiceTest extends SapphireTest
         self::assertSame(1, $sidebar1->Sort, 'sidebar1 sort should remain 1 (different zone)');
     }
 
+    public function testInvalidReferenceErrorHasTranslationKey(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        // Use an ID that does not exist in the target parent — triggers AFTER_ELEMENT_NOT_FOUND
+        $result = $this->service->reorder($row, $section, 999999);
+
+        self::assertTrue($result->isErr());
+
+        $error = $result->errors()[0];
+        self::assertSame(ReorderService::class . '.AFTER_ELEMENT_NOT_FOUND', $error->key);
+    }
+
     public function testWriteFailureDuringPersistPropagatesAsError(): void
     {
         $page = $this->objFromFixture(SiteTree::class, 'test_page');

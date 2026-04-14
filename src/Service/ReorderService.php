@@ -54,6 +54,7 @@ class ReorderService
             return Result::fail(new ValidationError(
                 message: 'The reference element no longer exists in the target parent.',
                 field: 'afterElementID',
+                key: self::class . '.AFTER_ELEMENT_NOT_FOUND',
             ));
         }
 
