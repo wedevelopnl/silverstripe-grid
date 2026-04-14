@@ -37,30 +37,39 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
             return [];
         }
 
-        // Collect all parent IDs and classes for a combined filter
-        $allParentIds = [];
-        $allParentClasses = [];
+        // Query once per class so (ParentClass, ParentID) stays pair-matched.
+        // A flat IN-list would produce the cartesian product across classes, matching
+        // unrelated records whenever IDs collide across tables (polymorphic namespace).
+        $merged = [];
         foreach ($idsByClass as $class => $ids) {
-            $allParentClasses[] = $class;
-            $allParentIds = array_merge($allParentIds, $ids);
+            if ($ids === []) {
+                continue;
+            }
+
+            $filter = [
+                'ParentClass' => $class,
+                'ParentID' => $ids,
+            ];
+
+            if ($zone !== null) {
+                $filter['Zone'] = $zone;
+                $list = Section::get();
+            } else {
+                $list = GridElement::get();
+            }
+
+            foreach ($list->filter($filter) as $element) {
+                $merged[] = $element;
+            }
         }
 
-        $filter = [
-            'ParentID' => array_unique($allParentIds),
-            'ParentClass' => array_unique($allParentClasses),
-        ];
-
-        if ($zone !== null) {
-            $filter['Zone'] = $zone;
-            $list = Section::get();
-        } else {
-            $list = GridElement::get();
-        }
+        usort(
+            $merged,
+            static fn (GridElement $a, GridElement $b): int
+                => [(int) $a->Sort, (int) $a->ID] <=> [(int) $b->Sort, (int) $b->ID],
+        );
 
         /** @var list<GridElement> */
-        return $list
-            ->filter($filter)
-            ->sort(['Sort' => 'ASC', 'ID' => 'ASC'])
-            ->toArray();
+        return $merged;
     }
 }
