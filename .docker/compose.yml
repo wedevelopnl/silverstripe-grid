@@ -16,6 +16,7 @@ services:
       - ../client/dist:/module/client/dist:ro
       - ../client/lang:/module/client/lang:ro
       - ../client/images:/module/client/images:ro
+      - ../lang:/module/lang
       - ../templates:/module/templates:ro
       - ../coverage:/app/coverage
       - vendor:/app/vendor
@@ -54,6 +55,7 @@ services:
       - ../client/dist:/module/client/dist:ro
       - ../client/lang:/module/client/lang:ro
       - ../client/images:/module/client/images:ro
+      - ../lang:/module/lang
       - ../templates:/module/templates:ro
       - ../coverage:/app/coverage
       - vendor-fluent:/app/vendor
