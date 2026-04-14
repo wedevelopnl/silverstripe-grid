@@ -152,6 +152,12 @@ WeDevelop\Grid\Dev\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
+    viewport-cascade:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/ViewportCascade.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
     history-view-test:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/HistoryViewTest.yml'
       # No post_actions: the history-view E2E spec creates all versions
