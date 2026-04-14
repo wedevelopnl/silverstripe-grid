@@ -11,9 +11,12 @@ export function usePages(search: string, enabled = true) {
   });
 }
 
+// Disabled queries use a distinct sentinel key so they don't collide with a
+// real pageId of 0 (or empty zone/elementType strings) in the query cache.
+// Collisions would otherwise leak cached data across unrelated calls.
 export function useZones(pageId: number | null) {
   return useQuery<string[]>({
-    queryKey: queryKeys.zones.byPage(pageId ?? 0),
+    queryKey: pageId !== null ? queryKeys.zones.byPage(pageId) : (['zones', 'disabled'] as const),
     queryFn: pageId !== null ? () => fetchZones(pageId) : skipToken,
   });
 }
@@ -25,7 +28,9 @@ export function useAcceptableContainers(
 ) {
   const allPresent = pageId !== null && zone !== null && elementType !== null;
   return useQuery<AcceptableContainer[]>({
-    queryKey: queryKeys.acceptableContainers.byTarget(pageId ?? 0, zone ?? '', elementType ?? ''),
+    queryKey: allPresent
+      ? queryKeys.acceptableContainers.byTarget(pageId, zone, elementType)
+      : (['acceptableContainers', 'disabled'] as const),
     queryFn: allPresent ? () => fetchAcceptableContainers(pageId, zone, elementType) : skipToken,
   });
 }

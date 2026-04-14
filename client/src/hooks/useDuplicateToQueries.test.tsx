@@ -6,7 +6,7 @@ import { mockFetchSuccess } from '@/testing/mockFetch';
 import type { PageEntry, AcceptableContainer } from '@/types/duplicateTo';
 import { usePages, useZones, useAcceptableContainers } from './useDuplicateToQueries';
 
-function createWrapper() {
+function createWrapperWithClient() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
@@ -15,7 +15,11 @@ function createWrapper() {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   }
 
-  return Wrapper;
+  return { Wrapper, queryClient };
+}
+
+function createWrapper() {
+  return createWrapperWithClient().Wrapper;
 }
 
 describe('usePages', () => {
@@ -98,5 +102,31 @@ describe('useAcceptableContainers', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(containers);
+  });
+});
+
+describe('disabled query key sentinels', () => {
+  // Disabled queries must use a distinct sentinel so they don't share cache
+  // entries with a real pageId of 0, which would leak stale data across pages.
+  it('useZones uses a disabled sentinel key when pageId is null', () => {
+    const { Wrapper, queryClient } = createWrapperWithClient();
+
+    renderHook(() => useZones(null), { wrapper: Wrapper });
+
+    expect(queryClient.getQueryCache().find({ queryKey: ['zones', 0] })).toBeUndefined();
+    expect(queryClient.getQueryCache().find({ queryKey: ['zones', 'disabled'] })).toBeDefined();
+  });
+
+  it('useAcceptableContainers uses a disabled sentinel key when any input is null', () => {
+    const { Wrapper, queryClient } = createWrapperWithClient();
+
+    renderHook(() => useAcceptableContainers(null, null, null), { wrapper: Wrapper });
+
+    expect(
+      queryClient.getQueryCache().find({ queryKey: ['acceptableContainers', 0, '', ''] }),
+    ).toBeUndefined();
+    expect(
+      queryClient.getQueryCache().find({ queryKey: ['acceptableContainers', 'disabled'] }),
+    ).toBeDefined();
   });
 });
