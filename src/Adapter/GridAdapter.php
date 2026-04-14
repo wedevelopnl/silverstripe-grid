@@ -290,7 +290,15 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
     public function getAspectRatioClass(AspectRatio $ratio): ?string
     {
-        return static::config()->get('aspect_ratio_classes')[$ratio->value];
+        /** @var array<string, ?string> $map */
+        $map = static::config()->get('aspect_ratio_classes');
+
+        // Use array_key_exists — Auto legitimately maps to null, which isset would reject.
+        if (!array_key_exists($ratio->value, $map)) {
+            throw InvalidGridValueException::forAspectRatioClass(static::class, $ratio->value);
+        }
+
+        return $map[$ratio->value];
     }
 
     public function getVerticalAlignmentClass(VerticalAlignment $alignment): string

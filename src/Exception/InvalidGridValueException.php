@@ -57,6 +57,19 @@ final class InvalidGridValueException extends GridDomainException
         );
     }
 
+    public static function forAspectRatioClass(string $adapterClass, string $ratio): self
+    {
+        return new self(
+            userMessage: 'The configured aspect ratio mapping is incomplete.',
+            detailedMessage: sprintf(
+                'Adapter %s is missing aspect_ratio_classes mapping for "%s".',
+                $adapterClass,
+                $ratio,
+            ),
+            statusCode: self::STATUS_CODE,
+        );
+    }
+
     public static function forOverrideStrategy(string $value): self
     {
         return new self(

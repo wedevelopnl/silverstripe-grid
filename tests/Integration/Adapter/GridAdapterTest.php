@@ -234,6 +234,18 @@ final class GridAdapterTest extends SapphireTest
         self::assertSame($expected, $this->adapter->getAspectRatioClass($ratio));
     }
 
+    public function testGetAspectRatioClassThrowsOnMissingConfig(): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'aspect_ratio_classes', []);
+        $adapter = new BootstrapAdapter();
+
+        $this->expectException(InvalidGridValueException::class);
+        $this->expectExceptionMessage(BootstrapAdapter::class);
+        $this->expectExceptionMessage('1x1');
+
+        $adapter->getAspectRatioClass(AspectRatio::Square);
+    }
+
     // -- Content layout: vertical alignment ----------------------------------
 
     /**
