@@ -1,5 +1,4 @@
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { mockFetchSuccess } from '@/testing/mockFetch';
@@ -102,125 +101,26 @@ describe('ElementCard', () => {
     expect(screen.getByTestId('element-card')).not.toHaveClass('element-card--clickable');
   });
 
-  it('click navigates to editLink', async () => {
-    const user = userEvent.setup();
-    mockFetchSuccess({});
-
-    // Intercept location.href assignment via a setter spy
-    let capturedHref = '';
-    const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
-    Object.defineProperty(window, 'location', {
-      value: {
-        ...window.location,
-        set href(val: string) {
-          capturedHref = val;
-        },
-        get href() {
-          return capturedHref || 'http://localhost/';
-        },
-      },
-      writable: true,
-      configurable: true,
-    });
-
-    const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
-
-    renderWithProviders(<ElementCard element={element} />);
-
-    await user.click(screen.getByTestId('element-card'));
-
-    expect(capturedHref).toBe('/admin/pages/edit/show/5');
-
-    // Restore original location
-    Object.defineProperty(window, 'location', locationDescriptor!);
-  });
-
-  it('does not navigate for null editLink', async () => {
-    const user = userEvent.setup();
-    mockFetchSuccess({});
-
-    let navigated = false;
-    const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
-    Object.defineProperty(window, 'location', {
-      value: {
-        ...window.location,
-        set href(_: string) {
-          navigated = true;
-        },
-        get href() {
-          return 'http://localhost/';
-        },
-      },
-      writable: true,
-      configurable: true,
-    });
-
-    const element = createEnrichedElement({ editLink: null });
-
-    renderWithProviders(<ElementCard element={element} />);
-
-    await user.click(screen.getByTestId('element-card'));
-
-    expect(navigated).toBe(false);
-
-    Object.defineProperty(window, 'location', locationDescriptor!);
-  });
-
-  it('Enter key navigates to editLink', async () => {
-    const user = userEvent.setup();
-    mockFetchSuccess({});
-
-    let capturedHref = '';
-    const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
-    Object.defineProperty(window, 'location', {
-      value: {
-        ...window.location,
-        set href(val: string) {
-          capturedHref = val;
-        },
-        get href() {
-          return capturedHref || 'http://localhost/';
-        },
-      },
-      writable: true,
-      configurable: true,
-    });
-
-    const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
-
-    renderWithProviders(<ElementCard element={element} />);
-
-    const card = screen.getByTestId('element-card');
-    card.focus();
-    await user.keyboard('{Enter}');
-
-    expect(capturedHref).toBe('/admin/pages/edit/show/5');
-
-    Object.defineProperty(window, 'location', locationDescriptor!);
-  });
-
-  it('has role="link" and tabIndex when editLink is set', () => {
+  it('renders an anchor with an href so middle-click opens in a new tab', () => {
     mockFetchSuccess({});
 
     const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
 
     renderWithProviders(<ElementCard element={element} />);
 
-    const card = screen.getByTestId('element-card');
-    expect(card).toHaveAttribute('role', 'link');
-    expect(card).toHaveAttribute('tabindex', '0');
+    const link = screen.getByRole('link');
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('href', '/admin/pages/edit/show/5');
   });
 
-  it('has no role or tabIndex when editLink is null', () => {
+  it('renders as non-interactive when editLink is null', () => {
     mockFetchSuccess({});
 
     const element = createEnrichedElement({ editLink: null });
 
     renderWithProviders(<ElementCard element={element} />);
 
-    const card = screen.getByTestId('element-card');
-    expect(card).not.toHaveAttribute('role');
-    expect(card).not.toHaveAttribute('tabindex');
+    expect(screen.queryByRole('link')).toBeNull();
   });
 
   it('applies element-card base class always', () => {
@@ -274,39 +174,6 @@ describe('ElementCard', () => {
     expect(contentDiv).not.toHaveClass('element-card__content--empty');
   });
 
-  it('non-Enter keys do not navigate to editLink', async () => {
-    const user = userEvent.setup();
-    mockFetchSuccess({});
-
-    let navigated = false;
-    const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
-    Object.defineProperty(window, 'location', {
-      value: {
-        ...window.location,
-        set href(_: string) {
-          navigated = true;
-        },
-        get href() {
-          return 'http://localhost/';
-        },
-      },
-      writable: true,
-      configurable: true,
-    });
-
-    const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
-
-    renderWithProviders(<ElementCard element={element} />);
-
-    const card = screen.getByTestId('element-card');
-    card.focus();
-    await user.keyboard('{Tab}');
-
-    expect(navigated).toBe(false);
-
-    Object.defineProperty(window, 'location', locationDescriptor!);
-  });
-
   it('clickable class is exactly "element-card--clickable"', () => {
     mockFetchSuccess({});
 
@@ -316,16 +183,6 @@ describe('ElementCard', () => {
 
     const card = screen.getByTestId('element-card');
     expect(card.className).toContain('element-card--clickable');
-  });
-
-  it('role attribute is exactly "link" when editLink is set', () => {
-    mockFetchSuccess({});
-
-    const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
-
-    renderWithProviders(<ElementCard element={element} />);
-
-    expect(screen.getByTestId('element-card')).toHaveAttribute('role', 'link');
   });
 
   it('content class is exactly "element-card__content--empty" for empty summary', () => {

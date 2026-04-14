@@ -1,5 +1,4 @@
-import { useCallback } from 'react';
-import type { KeyboardEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import type { EnrichedSimpleElementNode } from '@/types/enriched';
 import { getElementStatus } from '@/types/status';
@@ -39,53 +38,64 @@ function EditableElementCard({ element }: ElementCardProps) {
 
   const style = buildSortableStyle(transform, transition, isDragging);
 
-  const navigateToEdit = useCallback(() => {
-    if (editLink?.startsWith('/')) {
-      window.location.href = editLink;
-    }
-  }, [editLink]);
-
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>) => {
-      if (event.key === 'Enter') {
-        navigateToEdit();
-      }
-    },
-    [navigateToEdit],
-  );
-
   const cardClasses = [
     'element-card',
     `element-card--${status}`,
     ...(isClickable ? ['element-card--clickable'] : []),
   ].join(' ');
 
-  return (
-    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: dnd-kit sortable root; link semantics are applied conditionally via role + keyboard handler when editLink exists.
-    // biome-ignore lint/a11y/noStaticElementInteractions: same — the root div is a sortable container that conditionally behaves as a link; cannot be restructured as <a> without breaking DnD integration.
+  const header: ReactNode = (
+    <div className="element-card__header">
+      <DragHandle listeners={listeners} attributes={attributes} label={`Move ${element.title}`} />
+      <i className={`element-card__icon ${element.blockSchema.icon}`} />
+      <h4 className="element-card__title" data-testid="element-card-title">
+        {element.title}
+      </h4>
+      <ElementActions node={element} />
+    </div>
+  );
+
+  const contentBody: ReactNode = (
     <div
-      ref={setNodeRef}
-      style={style}
-      className={cardClasses}
-      data-testid="element-card"
-      onClick={isClickable ? navigateToEdit : undefined}
-      onKeyDown={isClickable ? handleKeyDown : undefined}
-      role={isClickable ? 'link' : undefined}
-      tabIndex={isClickable ? 0 : undefined}
+      className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}
     >
-      <div className="element-card__header">
-        <DragHandle listeners={listeners} attributes={attributes} label={`Move ${element.title}`} />
-        <i className={`element-card__icon ${element.blockSchema.icon}`} />
-        <h4 className="element-card__title" data-testid="element-card-title">
-          {element.title}
-        </h4>
-        <ElementActions node={element} />
-      </div>
-      <div
-        className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}
+      {content || 'No preview available'}
+    </div>
+  );
+
+  if (isClickable) {
+    // Swallow clicks that originated inside the header (drag handle, actions
+    // menu) or while a drag is in progress — the anchor would otherwise
+    // navigate when the user interacts with nested buttons or releases a drag.
+    const handleAnchorClick = (event: MouseEvent<HTMLAnchorElement>) => {
+      if (isDragging) {
+        event.preventDefault();
+        return;
+      }
+      if (event.target instanceof Element && event.target.closest('.element-card__header')) {
+        event.preventDefault();
+      }
+    };
+
+    return (
+      <a
+        ref={setNodeRef}
+        href={editLink}
+        style={style}
+        className={cardClasses}
+        data-testid="element-card"
+        onClick={handleAnchorClick}
       >
-        {content || 'No preview available'}
-      </div>
+        {header}
+        {contentBody}
+      </a>
+    );
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className={cardClasses} data-testid="element-card">
+      {header}
+      {contentBody}
     </div>
   );
 }
