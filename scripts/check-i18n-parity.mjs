@@ -6,12 +6,13 @@
 // Exits non-zero with one line per offending key on failure.
 
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { resolve, join } from "node:path";
 import yaml from "js-yaml";
 
 const ROOT = resolve(import.meta.dirname, "..");
 
-function flattenYaml(obj, prefix = "") {
+export function flattenYaml(obj, prefix = "") {
   const out = {};
   if (obj === null || typeof obj !== "object") return out;
   for (const [k, v] of Object.entries(obj)) {
@@ -25,7 +26,7 @@ function flattenYaml(obj, prefix = "") {
   return out;
 }
 
-function loadYaml(path) {
+export function loadYaml(path) {
   const raw = readFileSync(path, "utf8");
   const parsed = yaml.load(raw);
   if (parsed && typeof parsed === "object") {
@@ -37,12 +38,12 @@ function loadYaml(path) {
   return {};
 }
 
-function loadJson(path) {
+export function loadJson(path) {
   const raw = readFileSync(path, "utf8");
   return JSON.parse(raw || "{}");
 }
 
-function check(label, en, nl) {
+export function check(label, en, nl) {
   const errors = [];
   const enKeys = new Set(Object.keys(en));
   const nlKeys = new Set(Object.keys(nl));
@@ -71,23 +72,25 @@ function check(label, en, nl) {
   return errors;
 }
 
-const errors = [
-  ...check(
-    "lang/{en,nl}.yml",
-    loadYaml(join(ROOT, "lang/en.yml")),
-    loadYaml(join(ROOT, "lang/nl.yml")),
-  ),
-  ...check(
-    "client/lang/src/{en,nl}.json",
-    loadJson(join(ROOT, "client/lang/src/en.json")),
-    loadJson(join(ROOT, "client/lang/src/nl.json")),
-  ),
-];
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const errors = [
+    ...check(
+      "lang/{en,nl}.yml",
+      loadYaml(join(ROOT, "lang/en.yml")),
+      loadYaml(join(ROOT, "lang/nl.yml")),
+    ),
+    ...check(
+      "client/lang/src/{en,nl}.json",
+      loadJson(join(ROOT, "client/lang/src/en.json")),
+      loadJson(join(ROOT, "client/lang/src/nl.json")),
+    ),
+  ];
 
-if (errors.length > 0) {
-  console.error("[check-i18n-parity] FAIL");
-  for (const e of errors) console.error(e);
-  process.exit(1);
+  if (errors.length > 0) {
+    console.error("[check-i18n-parity] FAIL");
+    for (const e of errors) console.error(e);
+    process.exit(1);
+  }
+
+  console.log("[check-i18n-parity] OK");
 }
-
-console.log("[check-i18n-parity] OK");

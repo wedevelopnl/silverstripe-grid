@@ -45,8 +45,9 @@ const defaultI18n: SilverStripeI18n = {
   currentLocale: 'en',
 };
 
-// Stub CMS globals before each test file
+// Stub CMS globals before each test file — only applies in browser-like environments
 beforeEach(() => {
+  if (typeof window === "undefined") return;
   window.ss = {
     config: structuredClone(defaultConfig),
     i18n: defaultI18n,
