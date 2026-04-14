@@ -197,6 +197,7 @@ final class GridElementService
                     message: 'Target parent does not match the claimed page.',
                     field: 'ownership',
                     code: ValidationErrorCode::OwnershipDenied,
+                    key: self::class . '.OWNERSHIP_PAGE_MISMATCH',
                 ));
             }
 
@@ -212,6 +213,7 @@ final class GridElementService
                 message: 'Target parent does not belong to the claimed page.',
                 field: 'ownership',
                 code: ValidationErrorCode::OwnershipDenied,
+                key: self::class . '.OWNERSHIP_PAGE_MISMATCH_NON_SECTION',
             ));
         }
 
@@ -227,6 +229,7 @@ final class GridElementService
                 message: 'Target parent does not belong to the claimed zone.',
                 field: 'ownership',
                 code: ValidationErrorCode::OwnershipDenied,
+                key: self::class . '.OWNERSHIP_ZONE_MISMATCH',
             ));
         }
 
@@ -255,6 +258,8 @@ final class GridElementService
                     $element->singular_name(),
                     $targetParent->singular_name(),
                 ),
+                key: self::class . '.HIERARCHY_REJECTED',
+                params: ['element' => $element->singular_name(), 'parent' => $targetParent->singular_name()],
             ));
         }
 

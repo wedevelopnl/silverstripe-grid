@@ -292,4 +292,29 @@ final class GridElementServiceTest extends SapphireTest
         self::assertTrue($result->isErr());
         self::assertNotEmpty($result->errors());
     }
+
+    public function testViolationErrorHasTranslationKey(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $rowToCopy = GridTreeFactory::row($section, title: 'Rogue Row');
+
+        // Row inside Column violates hierarchy — triggers HIERARCHY_REJECTED
+        $result = $this->service->duplicateElementTo(
+            $rowToCopy,
+            $column,
+            (int) $page->ID,
+            'main',
+        );
+
+        self::assertTrue($result->isErr());
+
+        $error = $result->errors()[0];
+        self::assertSame(GridElementService::class . '.HIERARCHY_REJECTED', $error->key);
+        self::assertArrayHasKey('element', $error->params);
+        self::assertArrayHasKey('parent', $error->params);
+    }
 }
