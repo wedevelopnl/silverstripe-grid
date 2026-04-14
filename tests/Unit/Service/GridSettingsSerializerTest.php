@@ -35,7 +35,9 @@ final class GridSettingsSerializerTest extends TestCase
         yield 'default not array' => ['{"default":"string"}'];
         yield 'default width zero' => ['{"default":{"width":0,"offset":0,"visible":true}}'];
         yield 'default width negative' => ['{"default":{"width":-1,"offset":0,"visible":true}}'];
-        yield 'default width missing' => ['{"default":{"offset":0,"visible":true}}'];
+        // Structural errors (missing required keys, wrong types) now throw
+        // InvalidGridValueException — covered in
+        // GridSettingsSerializerMissingKeysTest, not here.
     }
 
     /**

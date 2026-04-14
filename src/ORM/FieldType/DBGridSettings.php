@@ -11,6 +11,7 @@ use SilverStripe\Forms\FormField;
 use SilverStripe\Model\ModelData;
 use SilverStripe\ORM\FieldType\DBComposite;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Service\GridSettingsSerializer;
 use WeDevelop\Grid\Validation\GridSettingsFieldValidator;
 use WeDevelop\Grid\Value\GridSettings;
@@ -87,7 +88,18 @@ final class DBGridSettings extends DBComposite
         }
 
         if (is_string($value)) {
-            $parsed = GridSettingsSerializer::fromJson($value);
+            // Structurally malformed payloads now raise InvalidGridValueException
+            // from the serializer. At this boundary (ORM field coercion, often
+            // hit by fixture/legacy DB data) we preserve the historical
+            // "fall through to parent" behaviour so a bad row does not crash
+            // unrelated page reads — the domain error is still thrown by
+            // direct serializer callers.
+            try {
+                $parsed = GridSettingsSerializer::fromJson($value);
+            } catch (InvalidGridValueException) {
+                $parsed = null;
+            }
+
             if ($parsed instanceof GridSettings) {
                 return $this->applyGridSettings($parsed, $record, $markChanged);
             }

@@ -48,6 +48,15 @@ final class InvalidGridValueException extends GridDomainException
         );
     }
 
+    public static function forMalformedViewportPayload(string $context, string $reason): self
+    {
+        return new self(
+            userMessage: 'The grid settings payload is malformed.',
+            detailedMessage: sprintf('Malformed viewport payload in %s: %s', $context, $reason),
+            statusCode: self::STATUS_CODE,
+        );
+    }
+
     public static function forOverrideStrategy(string $value): self
     {
         return new self(

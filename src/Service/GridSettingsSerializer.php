@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Service;
 
+use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
 
@@ -17,7 +18,12 @@ final class GridSettingsSerializer
     /**
      * Parse a JSON string into a GridSettings value object.
      *
-     * Returns null for empty, invalid, or structurally incomplete JSON.
+     * Returns null for empty/invalid JSON or when the `default` key is absent.
+     * Throws {@see InvalidGridValueException} when a `default` (or override)
+     * payload is present but structurally malformed — missing required keys
+     * or carrying the wrong scalar types. A silent null in that case masked
+     * bugs behind a downstream `TypeError`; an explicit domain error surfaces
+     * the bad write at its origin instead.
      */
     public static function fromJson(string $raw): ?GridSettings
     {
@@ -26,19 +32,29 @@ final class GridSettingsSerializer
             return null;
         }
 
+        /** @var array<string, mixed> $defaultData */
         $defaultData = $decoded['default'];
-        if (!isset($defaultData['width']) || !is_int($defaultData['width']) || $defaultData['width'] <= 0) {
+        // Width zero/negative keeps the tolerant null-return for backward
+        // compatibility with legacy fixture loaders; structural errors still
+        // throw via parseViewportConfig below.
+        if (isset($defaultData['width']) && is_int($defaultData['width']) && $defaultData['width'] <= 0) {
             return null;
         }
 
-        /** @var array{width: int, offset: int, visible: bool} $defaultData */
-        $default = ViewportConfig::fromArray($defaultData);
-        $overrides = self::deserializeOverrides(
-            isset($decoded['overrides']) && is_array($decoded['overrides'])
-                ? json_encode($decoded['overrides'], JSON_THROW_ON_ERROR)
-                : '',
-        );
+        $default = self::parseViewportConfig($defaultData, 'default');
 
+        $overrides = [];
+        if (isset($decoded['overrides']) && is_array($decoded['overrides'])) {
+            foreach ($decoded['overrides'] as $key => $data) {
+                if (!is_string($key) || $key === '' || !is_array($data)) {
+                    continue;
+                }
+                /** @var array<string, mixed> $data */
+                $overrides[$key] = self::parseViewportConfig($data, sprintf('overrides["%s"]', $key));
+            }
+        }
+
+        /** @var array<non-empty-string, ViewportConfig> $overrides */
         return new GridSettings($default, $overrides);
     }
 
@@ -83,13 +99,46 @@ final class GridSettingsSerializer
 
         $overrides = [];
         foreach ($decoded as $key => $data) {
-            if (is_string($key) && $key !== '' && is_array($data)) {
-                /** @var array{width: int, offset: int, visible: bool} $data */
-                $overrides[$key] = ViewportConfig::fromArray($data);
+            if (!is_string($key) || $key === '' || !is_array($data)) {
+                continue;
             }
+            /** @var array<string, mixed> $data */
+            $overrides[$key] = self::parseViewportConfig($data, sprintf('overrides["%s"]', $key));
         }
 
         /** @var array<non-empty-string, ViewportConfig> $overrides */
         return $overrides;
+    }
+
+    /**
+     * Validate and materialise a single viewport payload.
+     *
+     * @param array<string, mixed> $data
+     */
+    private static function parseViewportConfig(array $data, string $context): ViewportConfig
+    {
+        foreach (['width', 'offset', 'visible'] as $key) {
+            if (!array_key_exists($key, $data)) {
+                throw InvalidGridValueException::forMalformedViewportPayload(
+                    $context,
+                    sprintf('missing required key "%s"', $key),
+                );
+            }
+        }
+
+        if (!is_int($data['width']) || !is_int($data['offset']) || !is_bool($data['visible'])) {
+            throw InvalidGridValueException::forMalformedViewportPayload(
+                $context,
+                sprintf(
+                    'expected {width:int, offset:int, visible:bool}, got {width:%s, offset:%s, visible:%s}',
+                    get_debug_type($data['width']),
+                    get_debug_type($data['offset']),
+                    get_debug_type($data['visible']),
+                ),
+            );
+        }
+
+        /** @var array{width: int, offset: int, visible: bool} $data */
+        return ViewportConfig::fromArray($data);
     }
 }
