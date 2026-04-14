@@ -14,6 +14,7 @@ services:
       - ../_config:/module/_config:ro
       - ../phpstan:/module/phpstan:ro
       - ../client/dist:/module/client/dist:ro
+      - ../client/lang:/module/client/lang:ro
       - ../client/images:/module/client/images:ro
       - ../templates:/module/templates:ro
       - ../coverage:/app/coverage
@@ -51,6 +52,7 @@ services:
       - ../_config:/module/_config:ro
       - ../phpstan:/module/phpstan:ro
       - ../client/dist:/module/client/dist:ro
+      - ../client/lang:/module/client/lang:ro
       - ../client/images:/module/client/images:ro
       - ../templates:/module/templates:ro
       - ../coverage:/app/coverage
