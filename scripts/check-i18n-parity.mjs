@@ -47,8 +47,8 @@ function check(label, en, nl) {
   const enKeys = new Set(Object.keys(en));
   const nlKeys = new Set(Object.keys(nl));
 
-  const missingInNl = [...enKeys].filter((k) => !nlKeys.has(k)).sort();
-  const extraInNl = [...nlKeys].filter((k) => !enKeys.has(k)).sort();
+  const missingInNl = [...enKeys].filter((k) => !nlKeys.has(k)).sort((a, b) => a.localeCompare(b));
+  const extraInNl = [...nlKeys].filter((k) => !enKeys.has(k)).sort((a, b) => a.localeCompare(b));
 
   if (missingInNl.length > 0) {
     errors.push(`${label}: NL is missing ${missingInNl.length} key(s) present in EN:`);
@@ -62,7 +62,7 @@ function check(label, en, nl) {
   const empty = Object.entries(nl)
     .filter(([, v]) => typeof v !== "string" || v.trim() === "")
     .map(([k]) => k)
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
   if (empty.length > 0) {
     errors.push(`${label}: NL has ${empty.length} empty value(s):`);
     for (const k of empty) errors.push(`  - ${k}`);
