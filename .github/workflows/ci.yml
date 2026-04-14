@@ -26,6 +26,7 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
+      - run: npm run i18n:check
       - run: npx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
       - uses: dorny/test-reporter@v1
         if: always()
