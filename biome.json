@@ -21,7 +21,9 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "a11y": "warn",
+      "a11y": {
+        "recommended": true
+      },
       "correctness": {
         "useExhaustiveDependencies": "warn",
         "noUnusedVariables": "warn"
@@ -35,6 +37,20 @@
         "rules": {
           "style": {
             "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "client/src/components/ConfirmDialog/ConfirmDialog.tsx",
+        "client/src/components/DuplicateToDialog/DuplicateToDialog.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noNoninteractiveElementInteractions": "off",
+            "useKeyWithClickEvents": "off"
           }
         }
       }

@@ -42,13 +42,12 @@ export default function ConfirmDialog({
   }, [onConfirm]);
 
   return (
-    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick is a React-event stopPropagation guard, not a user interaction — prevents clicks inside the dialog from bubbling through the React tree to ancestor ElementCard navigation handlers. Portals do not help here: React portals preserve React event bubbling.
-    // biome-ignore lint/a11y/useKeyWithClickEvents: same — the onClick exists solely to break the bubble chain; no keyboard equivalent is meaningful. The <dialog> element handles Escape natively via onClose.
     <dialog
       ref={dialogRef}
       className="confirm-dialog"
       data-testid="confirm-dialog"
       onClose={handleClose}
+      // onClick is a React-event stopPropagation guard — prevents clicks inside the dialog from bubbling to ancestor ElementCard handlers. React portals preserve event bubbling so portaling does not help. Rule disabled for this file via biome.json overrides (<dialog> is natively interactive; biome's a11y rules do not recognize it).
       onClick={(e) => e.stopPropagation()}
     >
       <div className="confirm-dialog__header">

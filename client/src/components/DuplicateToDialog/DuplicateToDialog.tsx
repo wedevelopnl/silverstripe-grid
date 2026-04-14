@@ -148,13 +148,12 @@ export default function DuplicateToDialog({
   }, [step, zones.data]);
 
   return (
-    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick is a React-event stopPropagation guard — prevents clicks inside the dialog from bubbling through the React tree to ancestor ElementCard navigation handlers. Portals do not help: React portals preserve event bubbling.
-    // biome-ignore lint/a11y/useKeyWithClickEvents: same — the onClick exists solely to break the bubble chain; <dialog> handles Escape natively via onClose.
     <dialog
       ref={dialogRef}
       className="duplicate-to-dialog"
       data-testid="duplicate-to-dialog"
       onClose={handleClose}
+      // onClick is a React-event stopPropagation guard — prevents clicks inside the dialog from bubbling to ancestor ElementCard handlers. React portals preserve event bubbling so portaling does not help. Rule disabled for this file via biome.json overrides (<dialog> is natively interactive; biome's a11y rules do not recognize it).
       onClick={(e) => e.stopPropagation()}
     >
       <div className="duplicate-to-dialog__header">
