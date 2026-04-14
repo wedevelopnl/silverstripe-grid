@@ -47,11 +47,7 @@ export async function apiGet<T>(url: string): Promise<T> {
  *
  * @throws ApiError on non-OK HTTP status
  */
-async function apiMutate(
-  method: 'POST' | 'PATCH',
-  url: string,
-  body: object,
-): Promise<void> {
+async function apiMutate(method: 'POST' | 'PATCH', url: string, body: object): Promise<void> {
   const response = await fetch(url, {
     method,
     credentials: 'same-origin',
@@ -122,10 +118,7 @@ function buildDeleteQueryString(params: Record<string, unknown> | undefined): st
  *
  * @throws ApiError on non-OK HTTP status
  */
-export async function apiDelete(
-  url: string,
-  params?: Record<string, unknown>,
-): Promise<void> {
+export async function apiDelete(url: string, params?: Record<string, unknown>): Promise<void> {
   const fullUrl = `${url}${buildDeleteQueryString(params)}`;
   const response = await fetch(fullUrl, {
     method: 'DELETE',

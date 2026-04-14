@@ -22,10 +22,7 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
   // Stable DOM id prefix so aria-activedescendant references a real element id.
   const itemIdPrefix = useId();
 
-  const getItemId = useCallback(
-    (index: number) => `${itemIdPrefix}item-${index}`,
-    [itemIdPrefix],
-  );
+  const getItemId = useCallback((index: number) => `${itemIdPrefix}item-${index}`, [itemIdPrefix]);
 
   const close = useCallback(() => setIsOpen(false), []);
 

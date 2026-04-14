@@ -17,10 +17,7 @@ async function flushMicrotasks(): Promise<void> {
 function createHost(): HTMLElement {
   const host = document.createElement('div');
   host.className = 'grid-editor__container';
-  host.setAttribute(
-    'data-schema',
-    JSON.stringify({ 'grid-page-id': 1, 'grid-zone': 'main' }),
-  );
+  host.setAttribute('data-schema', JSON.stringify({ 'grid-page-id': 1, 'grid-zone': 'main' }));
   return host;
 }
 

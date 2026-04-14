@@ -362,9 +362,7 @@ describe('useElementMutations', () => {
       });
 
       // Exactly one call — the failed reorder POST. No refetch after rollback.
-      const reorderCalls = getFetchCalls().filter(([url]) =>
-        String(url).includes('/api/reorder'),
-      );
+      const reorderCalls = getFetchCalls().filter(([url]) => String(url).includes('/api/reorder'));
       const treeCalls = getFetchCalls().filter(([url]) => String(url).includes('/api/readTree'));
       expect(reorderCalls).toHaveLength(1);
       expect(treeCalls).toHaveLength(0);
