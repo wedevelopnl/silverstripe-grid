@@ -22,6 +22,7 @@ use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
+use WeDevelop\Grid\Value\ValidationErrorCode;
 use WeDevelop\Grid\Value\Viewport;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Service\GridElementService;
@@ -391,7 +392,10 @@ class GridController extends AdminController
         if ($result->isErr()) {
             // Ownership validation failures (C1) are bad-request errors;
             // hierarchy violations (C2) are domain validation errors (422).
-            $statusCode = $result->errors()[0]->field === 'ownership' ? 400 : 422;
+            $statusCode = match ($result->errors()[0]->code ?? null) {
+                ValidationErrorCode::OwnershipDenied => 400,
+                default => 422,
+            };
 
             return $this->resultToResponse($result, $statusCode);
         }

@@ -15,6 +15,7 @@ use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
+use WeDevelop\Grid\Value\ValidationErrorCode;
 use WeDevelop\Grid\Value\WriteResult;
 
 /**
@@ -195,6 +196,7 @@ final class GridElementService
                 return Result::fail(new ValidationError(
                     message: 'Target parent does not match the claimed page.',
                     field: 'ownership',
+                    code: ValidationErrorCode::OwnershipDenied,
                 ));
             }
 
@@ -209,6 +211,7 @@ final class GridElementService
             return Result::fail(new ValidationError(
                 message: 'Target parent does not belong to the claimed page.',
                 field: 'ownership',
+                code: ValidationErrorCode::OwnershipDenied,
             ));
         }
 
@@ -223,6 +226,7 @@ final class GridElementService
             return Result::fail(new ValidationError(
                 message: 'Target parent does not belong to the claimed zone.',
                 field: 'ownership',
+                code: ValidationErrorCode::OwnershipDenied,
             ));
         }
 

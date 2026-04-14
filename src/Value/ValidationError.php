@@ -17,6 +17,7 @@ final readonly class ValidationError
         public string $message,
         public ?string $field = null,
         public ValidationSeverity $severity = ValidationSeverity::Error,
+        public ValidationErrorCode $code = ValidationErrorCode::Generic,
     ) {
     }
 }
