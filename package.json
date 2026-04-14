@@ -19,6 +19,7 @@
     "lint:css:fix": "stylelint 'client/src/**/*.scss' --fix",
     "format": "biome format --write client/src/",
     "format:check": "biome format client/src/",
+    "i18n:collect": "node scripts/collect-js-i18n.mjs",
     "qa": "npm run lint && npm run format:check && npm run typecheck && npm run test",
     "mutate": "stryker run",
     "test:e2e": "playwright test",
