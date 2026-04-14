@@ -284,4 +284,102 @@ describe('ActionsMenu', () => {
     const editItem = screen.getByText('Edit');
     expect(editItem.className).toBe('actions-menu__item');
   });
+
+  describe('roving tabindex and focus management', () => {
+    it('sets roving tabindex with exactly one menuitem tab-reachable on open', async () => {
+      const user = userEvent.setup();
+
+      render(<ActionsMenu actions={createActions()} />);
+
+      await user.click(screen.getByTestId('actions-menu-trigger'));
+
+      const items = screen.getAllByRole('menuitem');
+      const reachable = items.filter((i) => i.tabIndex === 0);
+      expect(reachable).toHaveLength(1);
+    });
+
+    it('sets aria-activedescendant on the menu pointing to the active item', async () => {
+      const user = userEvent.setup();
+
+      render(<ActionsMenu actions={createActions()} />);
+
+      await user.click(screen.getByTestId('actions-menu-trigger'));
+
+      const menu = screen.getByRole('menu');
+      const items = screen.getAllByRole('menuitem');
+      expect(menu.getAttribute('aria-activedescendant')).toBe(items[0].id);
+      expect(items[0].id).toBeTruthy();
+    });
+
+    it('ArrowDown moves active item and updates aria-activedescendant', async () => {
+      const user = userEvent.setup();
+
+      render(<ActionsMenu actions={createActions()} />);
+
+      await user.click(screen.getByTestId('actions-menu-trigger'));
+      const menu = screen.getByRole('menu');
+      const items = screen.getAllByRole('menuitem');
+
+      await user.keyboard('{ArrowDown}');
+
+      expect(menu.getAttribute('aria-activedescendant')).toBe(items[1].id);
+      expect(items[1].tabIndex).toBe(0);
+      expect(items[0].tabIndex).toBe(-1);
+    });
+
+    it('ArrowUp moves active item backward', async () => {
+      const user = userEvent.setup();
+
+      render(<ActionsMenu actions={createActions()} />);
+
+      await user.click(screen.getByTestId('actions-menu-trigger'));
+      const menu = screen.getByRole('menu');
+      const items = screen.getAllByRole('menuitem');
+
+      await user.keyboard('{ArrowDown}{ArrowUp}');
+
+      expect(menu.getAttribute('aria-activedescendant')).toBe(items[0].id);
+    });
+
+    it('Home/End jump active item to first/last', async () => {
+      const user = userEvent.setup();
+
+      render(<ActionsMenu actions={createActions()} />);
+
+      await user.click(screen.getByTestId('actions-menu-trigger'));
+      const menu = screen.getByRole('menu');
+      const items = screen.getAllByRole('menuitem');
+
+      await user.keyboard('{End}');
+      expect(menu.getAttribute('aria-activedescendant')).toBe(items[items.length - 1].id);
+
+      await user.keyboard('{Home}');
+      expect(menu.getAttribute('aria-activedescendant')).toBe(items[0].id);
+    });
+
+    it('Enter fires the active item action', async () => {
+      const user = userEvent.setup();
+      const onAction = vi.fn();
+      const actions = createActions([{}, { onAction }]);
+
+      render(<ActionsMenu actions={actions} />);
+
+      await user.click(screen.getByTestId('actions-menu-trigger'));
+      await user.keyboard('{ArrowDown}{Enter}');
+
+      expect(onAction).toHaveBeenCalledOnce();
+    });
+
+    it('Escape returns focus to the trigger', async () => {
+      const user = userEvent.setup();
+
+      render(<ActionsMenu actions={createActions()} />);
+
+      const trigger = screen.getByTestId('actions-menu-trigger');
+      await user.click(trigger);
+      await user.keyboard('{Escape}');
+
+      expect(document.activeElement).toBe(trigger);
+    });
+  });
 });

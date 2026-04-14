@@ -294,4 +294,101 @@ describe('GridSettingsPicker', () => {
       'grid-settings-picker__trigger grid-settings-picker__trigger--disabled',
     );
   });
+
+  describe('roving tabindex and focus management', () => {
+    it('sets roving tabindex with exactly one option tab-reachable on open', async () => {
+      const user = userEvent.setup();
+
+      renderPicker();
+
+      await user.click(screen.getByTestId('width-picker'));
+
+      const options = screen.getAllByRole('option');
+      const reachable = options.filter((o) => o.tabIndex === 0);
+      expect(reachable).toHaveLength(1);
+    });
+
+    it('sets aria-activedescendant on the listbox pointing to the active option', async () => {
+      const user = userEvent.setup();
+
+      renderPicker();
+
+      await user.click(screen.getByTestId('width-picker'));
+
+      const listbox = screen.getByRole('listbox');
+      const options = screen.getAllByRole('option');
+      expect(listbox.getAttribute('aria-activedescendant')).toBe(options[0].id);
+      expect(options[0].id).toBeTruthy();
+    });
+
+    it('ArrowDown moves active option forward and updates aria-activedescendant', async () => {
+      const user = userEvent.setup();
+
+      renderPicker();
+
+      await user.click(screen.getByTestId('width-picker'));
+      const listbox = screen.getByRole('listbox');
+      const options = screen.getAllByRole('option');
+
+      await user.keyboard('{ArrowDown}');
+
+      expect(listbox.getAttribute('aria-activedescendant')).toBe(options[1].id);
+      expect(options[1].tabIndex).toBe(0);
+      expect(options[0].tabIndex).toBe(-1);
+    });
+
+    it('ArrowUp moves active option backward', async () => {
+      const user = userEvent.setup();
+
+      renderPicker();
+
+      await user.click(screen.getByTestId('width-picker'));
+      const listbox = screen.getByRole('listbox');
+      const options = screen.getAllByRole('option');
+
+      await user.keyboard('{ArrowDown}{ArrowDown}{ArrowUp}');
+
+      expect(listbox.getAttribute('aria-activedescendant')).toBe(options[1].id);
+    });
+
+    it('Home/End jump active option to first/last', async () => {
+      const user = userEvent.setup();
+
+      renderPicker();
+
+      await user.click(screen.getByTestId('width-picker'));
+      const listbox = screen.getByRole('listbox');
+      const options = screen.getAllByRole('option');
+
+      await user.keyboard('{End}');
+      expect(listbox.getAttribute('aria-activedescendant')).toBe(options[options.length - 1].id);
+
+      await user.keyboard('{Home}');
+      expect(listbox.getAttribute('aria-activedescendant')).toBe(options[0].id);
+    });
+
+    it('Enter selects the active option', async () => {
+      const user = userEvent.setup();
+      const onSelect = vi.fn();
+
+      renderPicker({ onSelect });
+
+      await user.click(screen.getByTestId('width-picker'));
+      await user.keyboard('{ArrowDown}{Enter}');
+
+      expect(onSelect).toHaveBeenCalledWith(12);
+    });
+
+    it('Escape returns focus to the trigger', async () => {
+      const user = userEvent.setup();
+
+      renderPicker();
+
+      const trigger = screen.getByTestId('width-picker');
+      await user.click(trigger);
+      await user.keyboard('{Escape}');
+
+      expect(document.activeElement).toBe(trigger);
+    });
+  });
 });

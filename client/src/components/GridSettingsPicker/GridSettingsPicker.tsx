@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { GridSettingsOption } from '@/types/gridSettings';
 import './GridSettingsPicker.scss';
 
@@ -22,10 +22,30 @@ export default function GridSettingsPicker({
   onSelect,
 }: GridSettingsPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listboxRef = useRef<HTMLDivElement>(null);
   const listboxId = `${testId}-listbox`;
+  // Stable prefix for option DOM ids so aria-activedescendant has a target to reference.
+  const optionIdPrefix = useId();
+
+  const getOptionId = useCallback(
+    (index: number) => `${optionIdPrefix}opt-${index}`,
+    [optionIdPrefix],
+  );
 
   const close = useCallback(() => setIsOpen(false), []);
+
+  // Seed activeIndex to the currently-selected option each time the listbox opens
+  // so keyboard navigation starts from the user's current choice.
+  useEffect(() => {
+    if (!isOpen) return;
+    const selectedIdx = options.findIndex((o) => o.value === selectedValue);
+    setActiveIndex(selectedIdx >= 0 ? selectedIdx : 0);
+    // Move focus to the listbox so Arrow keys target it (aria-activedescendant pattern).
+    listboxRef.current?.focus();
+  }, [isOpen, options, selectedValue]);
 
   // Close on outside click
   useEffect(() => {
@@ -41,7 +61,7 @@ export default function GridSettingsPicker({
     return () => document.removeEventListener('mousedown', handleMouseDown);
   }, [isOpen, close]);
 
-  // Close on Escape
+  // Close on Escape (window-level so it works regardless of focus target) and restore trigger focus.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -50,6 +70,7 @@ export default function GridSettingsPicker({
         // Stryker disable next-line all: stopPropagation prevents bubble to parent pickers, not observable via RTL
         e.stopPropagation();
         close();
+        triggerRef.current?.focus();
       }
     }
 
@@ -69,16 +90,43 @@ export default function GridSettingsPicker({
     close();
   }
 
-  function handleOptionKeyDown(e: React.KeyboardEvent, value: number | 'hidden') {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleOptionClick(value);
+  function handleListboxKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    const last = options.length - 1;
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveIndex((i) => (i >= last ? last : i + 1));
+        return;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveIndex((i) => (i <= 0 ? 0 : i - 1));
+        return;
+      case 'Home':
+        e.preventDefault();
+        setActiveIndex(0);
+        return;
+      case 'End':
+        e.preventDefault();
+        setActiveIndex(last);
+        return;
+      case 'Enter':
+      case ' ': {
+        e.preventDefault();
+        const current = options[activeIndex];
+        if (current) {
+          handleOptionClick(current.value);
+        }
+        return;
+      }
+      default:
+        return;
     }
   }
 
   return (
     <div ref={wrapperRef} className="grid-settings-picker">
       <button
+        ref={triggerRef}
         type="button"
         className={`grid-settings-picker__trigger${disabled ? ' grid-settings-picker__trigger--disabled' : ''}`}
         data-testid={testId}
@@ -93,19 +141,24 @@ export default function GridSettingsPicker({
       {isOpen && (
         <div
           id={listboxId}
+          ref={listboxRef}
           className="grid-settings-picker__options"
           role="listbox"
+          tabIndex={-1}
+          aria-activedescendant={getOptionId(activeIndex)}
           data-testid={`${testId}-listbox`}
+          onKeyDown={handleListboxKeyDown}
         >
-          {options.map((option) => (
+          {options.map((option, index) => (
+            // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard handling lives on the listbox (aria-activedescendant pattern per W3C APG); options are not focusable themselves
             <div
               key={option.value}
+              id={getOptionId(index)}
               className={`grid-settings-picker__option${option.value === selectedValue ? ' grid-settings-picker__option--selected' : ''}${option.value === 'hidden' ? ' grid-settings-picker__option--separator' : ''}`}
               role="option"
               aria-selected={option.value === selectedValue}
-              tabIndex={0}
+              tabIndex={index === activeIndex ? 0 : -1}
               onClick={() => handleOptionClick(option.value)}
-              onKeyDown={(e) => handleOptionKeyDown(e, option.value)}
             >
               {option.label}
             </div>
