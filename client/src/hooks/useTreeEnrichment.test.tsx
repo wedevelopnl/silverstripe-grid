@@ -256,6 +256,65 @@ describe('useTreeEnrichment', () => {
     });
   });
 
+  describe('stable toggle callbacks', () => {
+    it('returns referentially stable toggle callbacks when sections reference changes', () => {
+      const buildSections = (): SectionNode[] => [
+        createSectionNode({
+          id: 10,
+          children: [
+            createRowNode({
+              id: 20,
+              children: [createColumnNode({ id: 30 })],
+            }),
+          ],
+        }),
+      ];
+
+      // Reset factory counter so both renders produce the same IDs
+      resetIdCounter();
+      const first = buildSections();
+      const { result, rerender } = renderHook(
+        ({ s }: { s: readonly SectionNode[] }) => useTreeEnrichment(s, areaId),
+        { initialProps: { s: first } },
+      );
+
+      const firstSectionToggle = result.current[0].toggle;
+      const firstRowToggle = result.current[0].children![0].toggle;
+      const firstColumnToggle = result.current[0].children![0].children![0].toggle;
+
+      // New sections array (fresh identity) — forces useMemo to re-run enrichment
+      resetIdCounter();
+      const second = buildSections();
+      rerender({ s: second });
+
+      expect(result.current[0].toggle).toBe(firstSectionToggle);
+      expect(result.current[0].children![0].toggle).toBe(firstRowToggle);
+      expect(result.current[0].children![0].children![0].toggle).toBe(firstColumnToggle);
+    });
+
+    it('returns stable toggles after collapsedIds change', () => {
+      const section = createSectionNode({
+        id: 10,
+        children: [
+          createRowNode({
+            id: 20,
+            children: [createColumnNode({ id: 30 })],
+          }),
+        ],
+      });
+      const { result } = renderEnrichment([section]);
+
+      const firstColumnToggle = result.current[0].children![0].children![0].toggle;
+
+      // Toggle the column — changes collapsedIds state, re-runs useMemo
+      act(() => {
+        result.current[0].children![0].children![0].toggle();
+      });
+
+      expect(result.current[0].children![0].children![0].toggle).toBe(firstColumnToggle);
+    });
+  });
+
   describe('buildStorageKey', () => {
     it('should produce key in format grid:collapsed:{areaId}', () => {
       expect(buildStorageKey(42)).toBe('grid:collapsed:42');
