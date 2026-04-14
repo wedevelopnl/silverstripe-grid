@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 
 import GridEditorErrorBoundary from '@/components/GridEditorErrorBoundary/GridEditorErrorBoundary';
 import GridQueryProvider from '@/hooks/QueryProvider';
@@ -12,11 +12,20 @@ interface BridgeSchema {
   version: number | undefined;
 }
 
+const MOUNT_SELECTOR = '.grid-editor__container';
+const MOUNTED_ATTR = 'data-grid-editor-mounted';
+
+// Track roots keyed by the host element so both the entwine path and the
+// MutationObserver path can unmount cleanly without double-mounting. The
+// entwine path additionally stores the root via setReactRoot for backwards
+// compatibility with any CMS code that might read it, but this map is the
+// single source of truth for lifecycle.
+const mountedRoots = new WeakMap<HTMLElement, Root>();
+
 function parseBridgeData(data: unknown): BridgeSchema {
   const record = (typeof data === 'object' && data !== null ? data : {}) as Record<string, unknown>;
   const rawPageId = record['grid-page-id'];
   const rawZone = record['grid-zone'];
-
   const rawReadonly = record['grid-readonly'];
   const rawVersion = record['grid-version'];
 
@@ -29,43 +38,158 @@ function parseBridgeData(data: unknown): BridgeSchema {
 }
 
 /**
+ * Read bridge schema from a DOM element. entwine exposes `data-schema` as a
+ * JSON blob via SilverStripe's FormField schema mechanism. When entwine is
+ * present it parses that JSON for us via `this.data('schema')`; the
+ * MutationObserver path has to parse it directly from the attribute.
+ */
+function readSchemaFromElement(element: HTMLElement): unknown {
+  const raw = element.getAttribute('data-schema');
+  if (raw === null || raw === '') {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Mount the grid editor into the given element. Idempotent: a second call
+ * on an already-mounted element is a no-op.
+ */
+export function mountGridEditor(element: HTMLElement, schemaData: unknown): void {
+  if (mountedRoots.has(element)) {
+    return;
+  }
+
+  try {
+    const GridEditor = loadComponent('GridEditor');
+    const { pageId, zone, readonly, version } = parseBridgeData(schemaData);
+
+    const root = createRoot(element);
+    mountedRoots.set(element, root);
+    element.setAttribute(MOUNTED_ATTR, 'true');
+
+    root.render(
+      createElement(
+        GridQueryProvider,
+        null,
+        createElement(
+          GridEditorErrorBoundary,
+          null,
+          createElement(GridEditor, { pageId, zone, readonly, version }),
+        ),
+      ),
+    );
+  } catch (error: unknown) {
+    console.warn('[GridEditor] Failed to mount grid editor.', error);
+  }
+}
+
+/**
+ * Unmount the grid editor from the given element if it was previously
+ * mounted by this bridge. Safe to call on elements that were never mounted.
+ */
+export function unmountGridEditor(element: HTMLElement): void {
+  const root = mountedRoots.get(element);
+  if (root === undefined) {
+    return;
+  }
+
+  mountedRoots.delete(element);
+  element.removeAttribute(MOUNTED_ATTR);
+
+  // React's synchronous unmount walks the rendered subtree and calls
+  // removeChild on nodes that may already be detached (e.g. when a CMS Pjax
+  // swap detaches the host before our observer fires). Swallow the jsdom
+  // NotFoundError from that cleanup — the root is already gone either way.
+  try {
+    root.unmount();
+  } catch (error: unknown) {
+    console.warn('[GridEditor] Error during unmount (element already detached).', error);
+  }
+}
+
+/**
  * jQuery entwine bridge that mounts the React grid editor inside CMS pages.
  *
- * Entwine's onmatch/onunmatch hooks fire automatically when the CMS
- * replaces page content via AJAX navigation, handling mount/unmount
- * without explicit lifecycle management.
+ * Entwine's onmatch/onunmatch hooks fire when the CMS replaces page content
+ * via standard AJAX navigation, BUT they do NOT fire for Pjax-loaded content
+ * — the `.cms-content` replacement path skips entwine's match scan. To cover
+ * both cases we ALSO run a vanilla MutationObserver against document.body
+ * that mounts/unmounts on DOM insertion/removal. Both paths call the same
+ * `mountGridEditor` helper and de-duplicate via a shared WeakMap so an
+ * element loaded through entwine is never double-mounted.
  */
-window.jQuery.entwine('ss', ($) => {
-  $('.js-injector-boot .grid-editor__container').entwine({
-    onmatch() {
-      try {
-        const GridEditor = loadComponent('GridEditor');
-        const { pageId, zone, readonly, version } = parseBridgeData(this.data('schema'));
+function registerEntwineBridge(): void {
+  if (typeof window === 'undefined' || window.jQuery?.entwine === undefined) {
+    return;
+  }
 
-        const root = createRoot(this[0]);
+  window.jQuery.entwine('ss', ($) => {
+    $(`.js-injector-boot ${MOUNT_SELECTOR}`).entwine({
+      onmatch() {
+        const element = this[0];
+        mountGridEditor(element, this.data('schema'));
+        const root = mountedRoots.get(element) ?? null;
         this.setReactRoot(root);
-        root.render(
-          createElement(
-            GridQueryProvider,
-            null,
-            createElement(
-              GridEditorErrorBoundary,
-              null,
-              createElement(GridEditor, { pageId, zone, readonly, version }),
-            ),
-          ),
-        );
-      } catch (error: unknown) {
-        console.warn('[GridEditor] Failed to mount grid editor.', error);
-      }
-    },
+      },
 
-    onunmatch() {
-      const root = this.getReactRoot();
-      if (root !== null) {
-        root.unmount();
+      onunmatch() {
+        const element = this[0];
+        unmountGridEditor(element);
         this.setReactRoot(null);
-      }
-    },
+      },
+    });
   });
-});
+}
+
+function observeForPjax(): void {
+  if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') {
+    return;
+  }
+
+  const handleAdded = (node: Node): void => {
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+    if (node.matches(MOUNT_SELECTOR)) {
+      mountGridEditor(node, readSchemaFromElement(node));
+    }
+    for (const candidate of node.querySelectorAll<HTMLElement>(MOUNT_SELECTOR)) {
+      mountGridEditor(candidate, readSchemaFromElement(candidate));
+    }
+  };
+
+  const handleRemoved = (node: Node): void => {
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+    if (node.matches(MOUNT_SELECTOR)) {
+      unmountGridEditor(node);
+    }
+    for (const candidate of node.querySelectorAll<HTMLElement>(MOUNT_SELECTOR)) {
+      unmountGridEditor(candidate);
+    }
+  };
+
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      mutation.addedNodes.forEach(handleAdded);
+      mutation.removedNodes.forEach(handleRemoved);
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Initial pass: handle any hosts already present when the bridge loads.
+  for (const host of document.querySelectorAll<HTMLElement>(MOUNT_SELECTOR)) {
+    mountGridEditor(host, readSchemaFromElement(host));
+  }
+}
+
+registerEntwineBridge();
+observeForPjax();
