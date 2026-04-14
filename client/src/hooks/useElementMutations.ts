@@ -157,7 +157,10 @@ export function useReorderElement(pageId: number, zone: string) {
       }
       showToast(error.message);
     },
-    onSettled: async () => {
+    // Invalidate only on success: on error we've already restored the
+    // snapshot locally, and a refetch would cause a second tree swap
+    // (flicker) after the rollback has settled visually.
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
       refreshPreview();
     },

@@ -8,6 +8,7 @@ import {
   usePublishElement,
   useUnpublishElement,
 } from '@/hooks/useElementMutations';
+import { useElementTree } from '@/hooks/useElementTree';
 import { createProviderWrapper } from '@/testing/renderWithProviders';
 import {
   createSectionNode,
@@ -309,6 +310,64 @@ describe('useElementMutations', () => {
           }),
         );
       });
+    });
+
+    it('does not refetch after an optimistic rollback', async () => {
+      const { queryClient, tree, treeApiResponse, column, elemB } = createReorderTree();
+      // Prevent the mounted useElementTree observer from doing its own
+      // on-mount background refetch — we only care about the invalidation.
+      queryClient.setDefaultOptions({ queries: { retry: false, gcTime: 0, staleTime: Infinity } });
+      // Queue: the failed reorder POST only. If onSettled invalidates on
+      // error, an active tree query observer will trigger a refetch — caught
+      // by the "exactly one call" assertion below.
+      mockFetchSequence([
+        { status: 422, body: { message: 'hierarchy' } },
+        // Safety net: if the refetch does happen, give it a valid response so
+        // the test fails cleanly on the call-count assertion instead of crashing.
+        { status: 200, body: treeApiResponse },
+      ]);
+      const dispatch = vi.fn();
+      window.ss.store = { dispatch };
+
+      const { wrapper } = createProviderWrapper({ queryClient });
+      // Mount a reader for the tree query so it becomes an *active* query —
+      // TanStack Query only refetches observed queries on invalidation.
+      renderHook(() => useElementTree(1, 'main'), { wrapper });
+
+      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
+
+      await act(async () => {
+        await result.current
+          .mutateAsync({
+            params: { elementID: elemB.id, targetParentId: column.id, afterElementID: null },
+            tree,
+          })
+          .catch(() => undefined);
+      });
+
+      // Wait for the error toast so the mutation has fully settled.
+      await waitFor(() => {
+        expect(dispatch).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'DISPLAY_TOAST',
+            payload: expect.objectContaining({ type: 'error' }),
+          }),
+        );
+      });
+
+      // Flush any queued microtasks that an invalidate-triggered refetch
+      // would use to schedule its fetch.
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Exactly one call — the failed reorder POST. No refetch after rollback.
+      const reorderCalls = getFetchCalls().filter(([url]) =>
+        String(url).includes('/api/reorder'),
+      );
+      const treeCalls = getFetchCalls().filter(([url]) => String(url).includes('/api/readTree'));
+      expect(reorderCalls).toHaveLength(1);
+      expect(treeCalls).toHaveLength(0);
     });
 
     it('should call clearPendingTree on error as safety net', async () => {
