@@ -368,11 +368,11 @@ class BlockMediaExtension extends Extension
                 _t(self::class . '.VIDEO_EMBED_TAB', 'Video Embed'),
             );
 
-            $embedTab->push(ReadonlyField::create('VideoEmbedName', 'Name'));
-            $embedTab->push(ReadonlyField::create('VideoEmbedURL', 'URL'));
-            $embedTab->push(ReadonlyField::create('VideoEmbedDescription', 'Description'));
-            $embedTab->push(ReadonlyField::create('VideoEmbedThumbnail', 'Thumbnail'));
-            $embedTab->push(ReadonlyField::create('VideoEmbedCreated', 'Created'));
+            $embedTab->push(ReadonlyField::create('VideoEmbedName', _t(self::class . '.MEDIA_EMBED_NAME', 'Name')));
+            $embedTab->push(ReadonlyField::create('VideoEmbedURL', _t(self::class . '.MEDIA_EMBED_URL', 'URL')));
+            $embedTab->push(ReadonlyField::create('VideoEmbedDescription', _t(self::class . '.MEDIA_EMBED_DESCRIPTION', 'Description')));
+            $embedTab->push(ReadonlyField::create('VideoEmbedThumbnail', _t(self::class . '.MEDIA_EMBED_THUMBNAIL', 'Thumbnail')));
+            $embedTab->push(ReadonlyField::create('VideoEmbedCreated', _t(self::class . '.MEDIA_EMBED_CREATED', 'Created')));
         }
     }
 

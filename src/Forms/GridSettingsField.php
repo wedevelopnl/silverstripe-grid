@@ -31,7 +31,7 @@ class GridSettingsField extends FormField
     {
         $this->gridSettings = GridSettings::initial($this->adapter->getColumnCount());
 
-        parent::__construct($name, $title ?? 'Grid Settings');
+        parent::__construct($name, $title ?? _t(self::class . '.DEFAULT_TITLE', 'Grid Settings'));
     }
 
     /**
@@ -212,12 +212,12 @@ class GridSettingsField extends FormField
 
         // Default viewport
         $default = $this->gridSettings->default;
-        $visibility = $default->visible ? '' : ' (hidden)';
+        $visibility = $default->visible ? '' : ' ' . _t(self::class . '.HIDDEN_SUFFIX', '(hidden)');
         $parts[] = sprintf('%s: %d/%d+%d%s', $defaultKey, $default->width, $columnCount, $default->offset, $visibility);
 
         // Overrides
         foreach ($this->gridSettings->overrides as $key => $config) {
-            $visibility = $config->visible ? '' : ' (hidden)';
+            $visibility = $config->visible ? '' : ' ' . _t(self::class . '.HIDDEN_SUFFIX', '(hidden)');
             $parts[] = sprintf('%s: %d/%d+%d%s', $key, $config->width, $columnCount, $config->offset, $visibility);
         }
 
