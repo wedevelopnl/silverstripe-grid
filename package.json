@@ -6,7 +6,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "vite build",
+    "build": "npm run i18n:collect && vite build",
     "dev": "vite build --watch",
     "test": "vitest run",
     "test:watch": "vitest",
