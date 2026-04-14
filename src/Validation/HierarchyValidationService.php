@@ -31,6 +31,8 @@ class HierarchyValidationService implements HierarchyValidatorInterface
                         $element->singular_name(),
                     ),
                     field: 'placement',
+                    key: self::class . '.PAGE_LEVEL_REJECTED',
+                    params: ['element' => $element->singular_name()],
                 ));
             }
 
@@ -49,6 +51,8 @@ class HierarchyValidationService implements HierarchyValidatorInterface
                 $parent->singular_name(),
             ),
             field: 'placement',
+            key: self::class . '.PARENT_REJECTED',
+            params: ['element' => $element->singular_name(), 'parent' => $parent->singular_name()],
         ));
     }
 

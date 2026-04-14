@@ -202,4 +202,38 @@ final class HierarchyValidationServiceTest extends SapphireTest
         self::assertTrue($result->isErr());
         self::assertNotEmpty($result->errors());
     }
+
+    public function testViolationErrorHasTranslationKey(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+
+        // Row cannot be placed at page level — triggers PAGE_LEVEL_REJECTED
+        $row = GridTreeFactory::row($section);
+        $row->ParentID = $page->ID;
+        $row->ParentClass = $page::class;
+
+        $result = $this->getService()->validate($row);
+
+        self::assertTrue($result->isErr());
+
+        $error = $result->errors()[0];
+        self::assertSame(HierarchyValidationService::class . '.PAGE_LEVEL_REJECTED', $error->key);
+        self::assertArrayHasKey('element', $error->params);
+
+        // Verify PARENT_REJECTED also carries a key — Column inside Section is disallowed
+        $row2 = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row2);
+        $column->ParentID = $section->ID;
+        $column->ParentClass = $section::class;
+
+        $parentResult = $this->getService()->validate($column);
+
+        self::assertTrue($parentResult->isErr());
+
+        $parentError = $parentResult->errors()[0];
+        self::assertSame(HierarchyValidationService::class . '.PARENT_REJECTED', $parentError->key);
+        self::assertArrayHasKey('element', $parentError->params);
+        self::assertArrayHasKey('parent', $parentError->params);
+    }
 }
