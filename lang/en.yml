@@ -1,1 +1,142 @@
 en:
+  WeDevelop\Grid\Dev\MultiZonePage:
+    PLURALNAME: 'Multi Zone Pages'
+    PLURALS:
+      one: 'A Multi Zone Page'
+      other: '{count} Multi Zone Pages'
+    SINGULARNAME: 'Multi Zone Page'
+  WeDevelop\Grid\Extensions\BlockMediaExtension:
+    ALIGN_BOTTOM: Bottom
+    ALIGN_CENTER: Center
+    ALIGN_TOP: Top
+    CONTENT_COLUMNS: 'Content column width'
+    CUSTOM_VIDEO_THUMBNAIL: 'Custom video thumbnail'
+    FULL_WIDTH: 'Full width (no side-by-side)'
+    GAP_SIZE: 'Gap size'
+    LAYOUT_TAB: Layout
+    MEDIA_CAPTION: Caption
+    MEDIA_EMBED_CREATED: Created
+    MEDIA_EMBED_DESCRIPTION: Description
+    MEDIA_EMBED_NAME: Name
+    MEDIA_EMBED_THUMBNAIL: Thumbnail
+    MEDIA_EMBED_URL: URL
+    MEDIA_POSITION: 'Media position'
+    MEDIA_RATIO: 'Aspect ratio'
+    MEDIA_TAB: Media
+    OVERWRITES_DEFAULT_THUMBNAIL: 'This overwrites the default thumbnail provided by the video platform'
+    POSITION_FIRST: 'Before content'
+    POSITION_LAST: 'After content'
+    POSITION_LAST_DESKTOP: 'After content on desktop'
+    RATIO_16X9: '16:9'
+    RATIO_1X1: 'Square (1:1)'
+    RATIO_4X3: '4:3'
+    RATIO_AUTO: Auto
+    VERTICAL_ALIGNMENT: 'Vertical alignment'
+    VIDEO_EMBED_TAB: 'Video Embed'
+    db_ContentColumns: 'Content columns'
+    db_GapSize: 'Gap size'
+    db_MediaCaption: 'Media caption'
+    db_MediaPosition: 'Media position'
+    db_MediaRatio: 'Media ratio'
+    db_MediaType: 'Media type'
+    db_VerticalAlignment: 'Vertical alignment'
+    db_VideoEmbedCreated: 'Video embed created'
+    db_VideoEmbedDescription: 'Video embed description'
+    db_VideoEmbedName: 'Video embed name'
+    db_VideoEmbedThumbnail: 'Video embed thumbnail'
+    db_VideoEmbedURL: 'Video embed URL'
+    db_VideoHasOverlay: 'Video has overlay'
+    db_VideoProvider: 'Video provider'
+    db_VideoURL: 'Video URL'
+    has_one_MediaImage: 'Media image'
+    has_one_VideoCustomThumbnail: 'Video custom thumbnail'
+  WeDevelop\Grid\Extensions\GridPageExtension:
+    has_many_Sections: Sections
+  WeDevelop\Grid\Forms\GridSettingsField:
+    DEFAULT_TITLE: 'Grid Settings'
+    HIDDEN_SUFFIX: (hidden)
+  WeDevelop\Grid\Model\Column:
+    CLASS_DESCRIPTION: 'Responsive grid column that holds content blocks'
+    PLURALNAME: Columns
+    PLURALS:
+      one: 'A Column'
+      other: '{count} Columns'
+    SINGULARNAME: Column
+    db_GridSettings: 'Grid settings'
+    has_many_Elements: Elements
+  WeDevelop\Grid\Model\ContentElement:
+    PLURALNAME: 'Content elements'
+    PLURALS:
+      one: 'A Content element'
+      other: '{count} Content elements'
+    SINGULARNAME: 'Content element'
+    db_ContentColumns: 'Content columns'
+    db_GapSize: 'Gap size'
+    db_HTML: HTML
+    db_MediaCaption: 'Media caption'
+    db_MediaPosition: 'Media position'
+    db_MediaRatio: 'Media ratio'
+    db_MediaType: 'Media type'
+    db_VerticalAlignment: 'Vertical alignment'
+    db_VideoEmbedCreated: 'Video embed created'
+    db_VideoEmbedDescription: 'Video embed description'
+    db_VideoEmbedName: 'Video embed name'
+    db_VideoEmbedThumbnail: 'Video embed thumbnail'
+    db_VideoEmbedURL: 'Video embed URL'
+    db_VideoHasOverlay: 'Video has overlay'
+    db_VideoProvider: 'Video provider'
+    db_VideoURL: 'Video URL'
+    has_one_MediaImage: 'Media image'
+    has_one_VideoCustomThumbnail: 'Video custom thumbnail'
+  WeDevelop\Grid\Model\GridElement:
+    PLURALNAME: 'Grid elements'
+    PLURALS:
+      one: 'A Grid element'
+      other: '{count} Grid elements'
+    SHOW_TITLE: Displayed
+    SINGULARNAME: 'Grid element'
+    TITLE: Title
+    TITLE_CLASS: 'Display as'
+    TITLE_CLASS_DEFAULT: Default
+    TITLE_SETTINGS: Title
+    TITLE_TAG: 'Title tag'
+    UNTITLED: (untitled)
+    db_ExtraClass: 'Extra class'
+    db_ShowTitle: 'Show title'
+    db_Sort: Sort
+    db_Style: Style
+    db_Title: Title
+    db_TitleClass: 'Title class'
+    db_TitleTag: 'Title tag'
+    db_Version: Version
+    has_one_Parent: Parent
+  WeDevelop\Grid\Model\Row:
+    CLASS_DESCRIPTION: 'Horizontal container that holds columns within a section'
+    PLURALNAME: Rows
+    PLURALS:
+      one: 'A Row'
+      other: '{count} Rows'
+    SINGULARNAME: Row
+    has_many_Columns: Columns
+  WeDevelop\Grid\Model\Section:
+    CLASS_DESCRIPTION: 'Top-level layout container that holds rows'
+    PLURALNAME: Sections
+    PLURALS:
+      one: 'A Section'
+      other: '{count} Sections'
+    SINGULARNAME: Section
+    db_Zone: Zone
+    has_many_Rows: Rows
+  WeDevelop\Grid\Reports\GridElementReport:
+    COLUMN_LAST_EDITED: 'Last Edited'
+    COLUMN_PAGE: Page
+    COLUMN_TITLE: Title
+    COLUMN_TYPE: Type
+    DESCRIPTION: 'Lists all grid elements with their owning page. Use the filters to narrow by page or element type, or to find orphaned elements.'
+    FILTER_ALL_PAGES: 'All pages'
+    FILTER_ALL_TYPES: 'All types'
+    FILTER_ORPHANED: 'Orphaned elements only'
+    FILTER_PAGE: Page
+    FILTER_TYPE: 'Element type'
+    ORPHANED: Orphaned
+    TITLE: 'Grid Elements'
