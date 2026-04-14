@@ -68,8 +68,10 @@ export default function DuplicateToDialog({
 
   // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — TanStack Query enabled flag doesn't affect mocked test data
   const pages = usePages(debouncedSearch, step === 'page');
+  // Keep zones queried on 'confirm' too — goBack needs zones.data to decide
+  // whether to return to 'page' (single zone) or 'zone' (multi-zone).
   // Stryker disable next-line ConditionalExpression,EqualityOperator,LogicalOperator: Equivalent — TanStack Query enabled flag doesn't affect mocked test data
-  const zones = useZones(step === 'zone' || step === 'container' ? selectedPageId : null);
+  const zones = useZones(step !== 'page' ? selectedPageId : null);
   const containers = useAcceptableContainers(
     // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — TanStack Query enabled flag doesn't affect mocked test data
     step === 'container' ? selectedPageId : null,
@@ -137,10 +139,13 @@ export default function DuplicateToDialog({
       setStep('zone');
       setSelectedContainerId(null);
     } else if (step === 'confirm') {
-      setStep('zone');
       setSelectedZone(null);
+      // When there's only one zone, the zone step auto-advances — going back
+      // to 'zone' would immediately bounce forward again, silently breaking
+      // the back button. Skip straight to 'page' instead.
+      setStep(zones.data !== undefined && zones.data.length === 1 ? 'page' : 'zone');
     }
-  }, [step]);
+  }, [step, zones.data]);
 
   return (
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick is a React-event stopPropagation guard — prevents clicks inside the dialog from bubbling through the React tree to ancestor ElementCard navigation handlers. Portals do not help: React portals preserve event bubbling.

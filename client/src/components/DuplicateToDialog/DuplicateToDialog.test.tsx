@@ -505,6 +505,25 @@ describe('DuplicateToDialog', () => {
       expect(onConfirm).toHaveBeenCalledWith(2, 'main', 2);
     });
 
+    it('Back button from confirm returns to page step when there is only one zone', async () => {
+      const user = userEvent.setup();
+      mockApiRoutes({ zones: ['main'] });
+      renderDialog({ elementType: 'section' });
+
+      // Navigate to confirm step (single-zone auto-advances from page -> confirm)
+      await selectPageAndAdvance(user);
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-step-confirm')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTestId('duplicate-to-back'));
+
+      // Must land on page step — zone would immediately auto-advance again
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-step-page')).toBeInTheDocument();
+      });
+    });
+
     it('Back button from confirm returns to zone step', async () => {
       const user = userEvent.setup();
       mockApiRoutes();
