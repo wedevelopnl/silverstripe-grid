@@ -1,0 +1,59 @@
+# E2E fixture for validation error display tests.
+#
+# Structure:
+#   Page (E2E Validation Errors Test Page):
+#     Section Alpha
+#       Row Alpha-1
+#         Column Alpha-1
+#     Section Beta
+#       Row Beta-1
+#         Column Beta-1
+#
+# Minimal two-section hierarchy used to:
+#  1. Exercise the reorder error toast + optimistic rollback path by
+#     intercepting the PATCH /api/reorder response with a simulated
+#     hierarchy violation (see validation-errors.spec.ts).
+#  2. Exercise the GridSettings field validator (width + offset > column
+#     count) by opening the column edit form and saving an invalid
+#     combination.
+#
+# Top-down ordering: parents before children. Auto-scaffolding suppressed by FixtureLoader.
+
+Page:
+  e2e_page:
+    Title: 'E2E Validation Errors Test Page'
+    URLSegment: 'e2e-validation-errors'
+
+WeDevelop\Grid\Model\Section:
+  section_alpha:
+    Title: 'Section Alpha'
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+  section_beta:
+    Title: 'Section Beta'
+    Sort: 2
+    Zone: main
+    Parent: =>Page.e2e_page
+
+WeDevelop\Grid\Model\Row:
+  row_alpha_1:
+    Title: 'Row Alpha-1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.section_alpha
+  row_beta_1:
+    Title: 'Row Beta-1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.section_beta
+
+WeDevelop\Grid\Model\Column:
+  col_alpha_1:
+    Title: 'Column Alpha-1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_alpha_1
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
+  col_beta_1:
+    Title: 'Column Beta-1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_beta_1
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
