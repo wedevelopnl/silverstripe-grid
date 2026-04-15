@@ -74,7 +74,6 @@ function normaliseNode(raw: unknown): ElementNode {
     nodeKey: buildNodeKey(self.type, self.id),
     parentKey: buildNodeKey(parent.type, parent.id),
     id: self.id,
-    parentId: parent.id,
   } as unknown as ElementNode;
 
   if (isContainerNode(normalised) && Array.isArray(node.children)) {
