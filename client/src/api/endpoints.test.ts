@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO(phase-5): rewrite for NodeRef/NodeKey identity model; tracked in plan polished-floating-bubble.md
 import { describe, it, expect } from 'vitest';
 import {
   fetchElementTree,
@@ -15,42 +14,99 @@ import {
   fetchAcceptableContainers,
   fetchZones,
   fetchPages,
+  normaliseTreeResponse,
 } from './endpoints';
 import { mockFetchSuccess, getFetchCalls } from '@/testing/mockFetch';
+import { createTreeApiResponse, resetIdCounter } from '@/testing/factories';
 
 beforeEach(() => {
+  resetIdCounter();
   mockFetchSuccess({});
 });
 
 describe('fetchElementTree', () => {
-  it('constructs correct URL with encoded zone', async () => {
-    await fetchElementTree(42, 'main area');
+  it('constructs correct URL with encoded zone and normalises the response', async () => {
+    mockFetchSuccess({
+      rootParent: { type: 'page', id: 42 },
+      nodes: [],
+      overrideCounts: {},
+    });
+    const result = await fetchElementTree(42, 'main area');
     const [url] = getFetchCalls()[0];
     expect(url).toBe('/admin/grid/api/readTree/42/main%20area');
+    expect(result.rootParent).toEqual({ type: 'page', id: 42 });
   });
 
   it('appends /version/N path segment when version is provided', async () => {
+    mockFetchSuccess({ rootParent: { type: 'page', id: 42 }, nodes: [], overrideCounts: {} });
     await fetchElementTree(42, 'main', 5);
     const [url] = getFetchCalls()[0];
     expect(url).toBe('/admin/grid/api/readTree/42/main/version/5');
   });
 
   it('omits /version path segment when version is undefined', async () => {
+    mockFetchSuccess({ rootParent: { type: 'page', id: 42 }, nodes: [], overrideCounts: {} });
     await fetchElementTree(42, 'main');
     const [url] = getFetchCalls()[0];
     expect(url).toBe('/admin/grid/api/readTree/42/main');
   });
 });
 
+describe('normaliseTreeResponse', () => {
+  it('attaches derived nodeKey and parentKey to every node', () => {
+    const raw = {
+      rootParent: { type: 'page', id: 1 },
+      nodes: [
+        {
+          self: { type: 'section', id: 10 },
+          parent: { type: 'page', id: 1 },
+          title: 'Section A',
+          blockSchema: {
+            typeName: 'Section',
+            type: 'section',
+            title: 'Section A',
+            summary: '',
+            label: 'Section',
+            icon: 'font-icon-block',
+          },
+          obsoleteClassName: null,
+          version: 1,
+          canDelete: true,
+          canPublish: true,
+          canUnpublish: false,
+          canCreate: true,
+          editLink: null,
+          statusFlags: {},
+          containerType: 'section',
+          allowedTypes: null,
+          children: [],
+        },
+      ],
+      overrideCounts: { md: 2 },
+    };
+
+    const normalised = normaliseTreeResponse(raw);
+    expect(normalised.rootParent).toEqual({ type: 'page', id: 1 });
+    expect(normalised.nodes[0].nodeKey).toBe('section-10');
+    expect(normalised.nodes[0].parentKey).toBe('page-1');
+    expect(normalised.overrideCounts).toEqual({ md: 2 });
+  });
+
+  it('throws on malformed payload', () => {
+    expect(() => normaliseTreeResponse(null)).toThrow(TypeError);
+    expect(() => normaliseTreeResponse({ rootParent: { type: 'page', id: 1 } })).toThrow(TypeError);
+  });
+});
+
 describe('createElement', () => {
-  it('sends POST to /api/create', async () => {
-    await createElement({ containerType: 'row', parentId: 10 });
+  it('sends POST to /api/create with NodeRef parent', async () => {
+    await createElement({ containerType: 'row', parent: { type: 'section', id: 10 } });
     const [url, init] = getFetchCalls()[0];
     expect(url).toBe('/admin/grid/api/create');
     expect(init?.method).toBe('POST');
     expect(JSON.parse(init?.body as string)).toEqual({
       containerType: 'row',
-      parentId: 10,
+      parent: { type: 'section', id: 10 },
     });
   });
 });
@@ -92,15 +148,29 @@ describe('duplicateElement', () => {
 });
 
 describe('reorderElement', () => {
-  it('sends PATCH to /api/reorder with params', async () => {
-    await reorderElement({ elementID: 1, targetParentId: 2, afterElementID: 3 });
+  it('sends PATCH to /api/reorder with scoped NodeRef fields', async () => {
+    await reorderElement({
+      element: { type: 'row', id: 1 },
+      parent: { type: 'section', id: 2 },
+      after: { type: 'row', id: 3 },
+    });
     const [url, init] = getFetchCalls()[0];
     expect(url).toBe('/admin/grid/api/reorder');
     expect(JSON.parse(init?.body as string)).toEqual({
-      elementID: 1,
-      targetParentId: 2,
-      afterElementID: 3,
+      element: { type: 'row', id: 1 },
+      parent: { type: 'section', id: 2 },
+      after: { type: 'row', id: 3 },
     });
+  });
+
+  it('sends null after when inserting at the head of the target container', async () => {
+    await reorderElement({
+      element: { type: 'section', id: 5 },
+      parent: { type: 'page', id: 1 },
+      after: null,
+    });
+    const [, init] = getFetchCalls()[0];
+    expect(JSON.parse(init?.body as string).after).toBeNull();
   });
 });
 
@@ -141,10 +211,16 @@ describe('resetGridSettingsOverrides', () => {
 });
 
 describe('duplicateToElement', () => {
-  it('sends POST to /api/duplicateTo', async () => {
-    await duplicateToElement({ id: 1, targetPageId: 2, targetZone: 'main', targetParentId: 3 });
-    const [url] = getFetchCalls()[0];
+  it('sends POST to /api/duplicateTo with targetParent NodeRef', async () => {
+    await duplicateToElement({
+      id: 1,
+      targetPageId: 2,
+      targetZone: 'main',
+      targetParent: { type: 'column', id: 3 },
+    });
+    const [url, init] = getFetchCalls()[0];
     expect(url).toBe('/admin/grid/api/duplicateTo');
+    expect(JSON.parse(init?.body as string).targetParent).toEqual({ type: 'column', id: 3 });
   });
 });
 
@@ -175,5 +251,14 @@ describe('fetchPages', () => {
     await fetchPages('my page');
     const [url] = getFetchCalls()[0];
     expect(url).toBe('/admin/grid/api/pages?search=my%20page');
+  });
+});
+
+describe('factory integration — createTreeApiResponse', () => {
+  it('produces a valid tree response shape', () => {
+    const tree = createTreeApiResponse({ pageId: 1 });
+    expect(tree.rootParent).toEqual({ type: 'page', id: 1 });
+    expect(tree.nodes.length).toBeGreaterThan(0);
+    expect(tree.nodes[0].nodeKey).toMatch(/^section-\d+$/);
   });
 });

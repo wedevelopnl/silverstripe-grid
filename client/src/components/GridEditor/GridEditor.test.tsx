@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO(phase-5): rewrite for NodeRef/NodeKey identity model; tracked in plan polished-floating-bubble.md
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -61,12 +60,11 @@ describe('GridEditor', () => {
     resetIdCounter();
 
     const treeResponse = createTreeApiResponse({
-      tree: {
-        '1': [
-          createSectionNode({ id: 10, parentId: 1, title: 'Hero' }),
-          createSectionNode({ id: 20, parentId: 1, title: 'Content' }),
-        ],
-      },
+      pageId: 1,
+      sections: [
+        createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'Hero' }),
+        createSectionNode({ id: 20, parent: { type: 'page', id: 1 }, title: 'Content' }),
+      ],
     });
 
     mockFetchSuccess(treeResponse);
@@ -84,9 +82,8 @@ describe('GridEditor', () => {
     resetIdCounter();
 
     const treeResponse = createTreeApiResponse({
-      tree: {
-        '1': [createSectionNode({ id: 10, parentId: 1, title: 'Hero' })],
-      },
+      pageId: 1,
+      sections: [createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'Hero' })],
     });
 
     mockFetchSuccess(treeResponse);
@@ -106,7 +103,8 @@ describe('GridEditor', () => {
 
   it('shows empty state when tree has no sections', async () => {
     const treeResponse = createTreeApiResponse({
-      tree: { '1': [] },
+      pageId: 1,
+      sections: [],
     });
 
     mockFetchSuccess(treeResponse);
@@ -154,12 +152,11 @@ describe('GridEditor', () => {
       resetIdCounter();
 
       const treeResponse = createTreeApiResponse({
-        tree: {
-          '1': [
-            createSectionNode({ id: 10, parentId: 1, title: 'Hero' }),
-            createSectionNode({ id: 20, parentId: 1, title: 'Content' }),
-          ],
-        },
+        pageId: 1,
+        sections: [
+          createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'Hero' }),
+          createSectionNode({ id: 20, parent: { type: 'page', id: 1 }, title: 'Content' }),
+        ],
       });
 
       mockFetchSuccess(treeResponse);
@@ -178,9 +175,8 @@ describe('GridEditor', () => {
       resetIdCounter();
 
       const treeResponse = createTreeApiResponse({
-        tree: {
-          '1': [createSectionNode({ id: 10, parentId: 1, title: 'Hero' })],
-        },
+        pageId: 1,
+        sections: [createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'Hero' })],
       });
 
       mockFetchSuccess(treeResponse);
@@ -203,9 +199,8 @@ describe('GridEditor', () => {
       resetIdCounter();
 
       const treeResponse = createTreeApiResponse({
-        tree: {
-          '1': [createSectionNode({ id: 10, parentId: 1, title: 'Hero' })],
-        },
+        pageId: 1,
+        sections: [createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'Hero' })],
       });
 
       mockFetchSuccess(treeResponse);
@@ -223,7 +218,8 @@ describe('GridEditor', () => {
 
     it('shows empty state message when readonly tree has no sections', async () => {
       const treeResponse = createTreeApiResponse({
-        tree: { '1': [] },
+        pageId: 1,
+      sections: [],
       });
 
       mockFetchSuccess(treeResponse);

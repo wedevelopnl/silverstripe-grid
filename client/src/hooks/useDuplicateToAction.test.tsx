@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO(phase-5): rewrite for NodeRef/NodeKey identity model; tracked in plan polished-floating-bubble.md
 import { describe, it, expect } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useDuplicateToAction } from '@/hooks/useDuplicateToAction';
@@ -76,7 +75,7 @@ describe('useDuplicateToAction', () => {
       });
 
       act(() => {
-        result.current.dialog?.onConfirm(2, 'main', 50);
+        result.current.dialog?.onConfirm(2, 'main', { type: 'column', id: 50 });
       });
 
       await waitFor(() => {
@@ -102,7 +101,7 @@ describe('useDuplicateToAction', () => {
       });
 
       act(() => {
-        result.current.dialog?.onConfirm(5, 'sidebar', 99);
+        result.current.dialog?.onConfirm(5, 'sidebar', { type: 'column', id: 99 });
       });
 
       await waitFor(() => {
@@ -119,7 +118,7 @@ describe('useDuplicateToAction', () => {
           id: 42,
           targetPageId: 5,
           targetZone: 'sidebar',
-          targetParentId: 99,
+          targetParent: { type: 'column', id: 99 },
         }),
       );
     });
@@ -135,7 +134,7 @@ describe('useDuplicateToAction', () => {
       expect(result.current.dialog?.isOpen).toBe(true);
 
       act(() => {
-        result.current.dialog?.onConfirm(5, 'main', 99);
+        result.current.dialog?.onConfirm(5, 'main', { type: 'column', id: 99 });
       });
 
       await waitFor(() => {
@@ -155,7 +154,7 @@ describe('useDuplicateToAction', () => {
       });
 
       act(() => {
-        result.current.dialog?.onConfirm(5, 'main', 99);
+        result.current.dialog?.onConfirm(5, 'main', { type: 'column', id: 99 });
       });
 
       await waitFor(() => {

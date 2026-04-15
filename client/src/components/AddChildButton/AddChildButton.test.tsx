@@ -18,7 +18,7 @@ describe('AddChildButton', () => {
     expect(screen.getByTestId('add-child-button')).toHaveTextContent('Add Row');
   });
 
-  it('click triggers createElement mutation with correct containerType and parentId', async () => {
+  it('click triggers createElement mutation with the correct containerType and parent NodeRef', async () => {
     const user = userEvent.setup();
     mockFetchSuccess({});
 
@@ -35,11 +35,14 @@ describe('AddChildButton', () => {
     const [, init] = getFetchCalls()[0];
     const body = JSON.parse(init!.body as string);
 
-    expect(body).toMatchObject({ containerType: 'row', parentId: 10 });
+    expect(body).toMatchObject({
+      containerType: 'row',
+      parent: { type: 'section', id: 10 },
+    });
     expect(body.zone).toBeUndefined();
   });
 
-  it('section type includes zone in mutation payload', async () => {
+  it('section type includes zone in mutation payload and uses a page parent', async () => {
     const user = userEvent.setup();
     mockFetchSuccess({});
 
@@ -57,7 +60,11 @@ describe('AddChildButton', () => {
     const [, init] = getFetchCalls()[0];
     const body = JSON.parse(init!.body as string);
 
-    expect(body).toMatchObject({ containerType: 'section', parentId: 1, zone: 'main' });
+    expect(body).toMatchObject({
+      containerType: 'section',
+      parent: { type: 'page', id: 1 },
+      zone: 'main',
+    });
   });
 
   it('shows "Adding..." text during mutation', async () => {

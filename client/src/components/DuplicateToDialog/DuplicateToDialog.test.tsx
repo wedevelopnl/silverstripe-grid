@@ -454,7 +454,8 @@ describe('DuplicateToDialog', () => {
       await user.click(screen.getByText('Row 1'));
       await user.click(screen.getByTestId('duplicate-to-confirm'));
 
-      expect(onConfirm).toHaveBeenCalledWith(2, 'main', 100);
+      // Row element → target parent type is 'section'.
+      expect(onConfirm).toHaveBeenCalledWith(2, 'main', { type: 'section', id: 100 });
     });
   });
 
@@ -501,8 +502,8 @@ describe('DuplicateToDialog', () => {
 
       await user.click(screen.getByTestId('duplicate-to-confirm'));
 
-      // Section: targetParentId === selectedPageId (page is the parent)
-      expect(onConfirm).toHaveBeenCalledWith(2, 'main', 2);
+      // Section: target parent is the page itself.
+      expect(onConfirm).toHaveBeenCalledWith(2, 'main', { type: 'page', id: 2 });
     });
 
     it('Back button from confirm returns to page step when there is only one zone', async () => {

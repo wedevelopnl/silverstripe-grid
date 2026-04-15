@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO(phase-5): rewrite for NodeRef/NodeKey identity model; tracked in plan polished-floating-bubble.md
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import {
@@ -15,6 +14,7 @@ import {
   createSectionNode,
   createRowNode,
   createColumnNode,
+  createTreeApiResponse,
   resetIdCounter,
 } from '@/testing/factories';
 import {
@@ -25,49 +25,49 @@ import {
 } from '@/testing/mockFetch';
 import { queryKeys } from '@/hooks/queryKeys';
 import { QueryClient } from '@tanstack/react-query';
-import type { ContainerNode, ElementTreeResponse, TreeApiResponse } from '@/types/elements';
+import type { ContainerNode, TreeApiResponse } from '@/types/elements';
 
 /**
- * Build a tree with explicit IDs and consistent parentId chains for reorder tests.
- * Uses numeric root key so applyReorder's Number(rootKey) resolves correctly.
+ * Build a tree with explicit IDs and consistent parent chains for reorder tests.
  */
 function createReorderTree(pageId = 1, zone = 'main') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
 
-  const section = createSectionNode({
-    id: 100,
-    parentId: pageId,
-    children: [
-      createRowNode({
-        id: 200,
-        parentId: 100,
-        children: [
-          createColumnNode({
-            id: 300,
-            parentId: 200,
-            childCount: 2,
-          }),
-        ],
-      }),
-    ],
+  const column = createColumnNode({
+    id: 300,
+    parent: { type: 'row', id: 200 },
+    childCount: 2,
   });
-
-  // Patch child parentIds to match their container
-  for (const child of section.children![0].children![0].children!) {
-    child.parentId = 300;
+  // Re-parent the auto-generated child elements to point at column 300.
+  for (const child of column.children ?? []) {
+    (child as { parent: { type: 'column'; id: number }; parentKey: string }).parent = {
+      type: 'column',
+      id: 300,
+    };
+    (child as { parent: { type: 'column'; id: number }; parentKey: string }).parentKey = `column-${300}`;
+    (child as { parentId: number }).parentId = 300;
   }
 
-  const tree: ElementTreeResponse = { [String(pageId)]: [section] };
-  const treeApiResponse: TreeApiResponse = { tree, overrideCounts: {} };
+  const row = createRowNode({
+    id: 200,
+    parent: { type: 'section', id: 100 },
+    children: [column],
+  });
+  const section = createSectionNode({
+    id: 100,
+    parent: { type: 'page', id: pageId },
+    children: [row],
+  });
+
+  const treeApiResponse = createTreeApiResponse({ pageId, sections: [section] });
 
   queryClient.setQueryData(queryKeys.elementTree.byPage(pageId, zone), treeApiResponse);
 
-  const column = section.children![0].children![0];
-  const [elemA, elemB] = column.children!;
+  const [elemA, elemB] = column.children ?? [];
 
-  return { queryClient, tree, treeApiResponse, column, elemA, elemB };
+  return { queryClient, tree: treeApiResponse, treeApiResponse, column, elemA, elemB };
 }
 
 describe('useElementMutations', () => {
@@ -262,7 +262,11 @@ describe('useElementMutations', () => {
 
       await act(async () => {
         result.current.mutate({
-          params: { elementID: elemB.id, targetParentId: column.id, afterElementID: null },
+          params: {
+            element: { type: 'element', id: elemB.id },
+            parent: { type: 'column', id: column.id },
+            after: null,
+          },
           tree,
         });
         // Flush onMutate microtask (cancelQueries)
@@ -271,10 +275,10 @@ describe('useElementMutations', () => {
 
       // Verify optimistic update: elemB moved before elemA (check before onSettled invalidates)
       const cached = queryClient.getQueryData<TreeApiResponse>(queryKey);
-      const cachedSection = cached!.tree['1'][0] as ContainerNode;
-      const cachedRow = cachedSection.children![0] as ContainerNode;
-      const cachedColumn = cachedRow.children![0] as ContainerNode;
-      expect(cachedColumn.children!.map((c) => c.id)).toEqual([elemB.id, elemA.id]);
+      const cachedSection = cached?.nodes[0] as ContainerNode;
+      const cachedRow = cachedSection.children?.[0] as ContainerNode;
+      const cachedColumn = cachedRow.children?.[0] as ContainerNode;
+      expect(cachedColumn.children?.map((c) => c.id)).toEqual([elemB.id, elemA.id]);
 
       await waitFor(() => {
         expect(getFetchCalls().length).toBeGreaterThan(0);
@@ -298,7 +302,11 @@ describe('useElementMutations', () => {
 
       act(() => {
         result.current.mutate({
-          params: { elementID: elemB.id, targetParentId: column.id, afterElementID: null },
+          params: {
+            element: { type: 'element', id: elemB.id },
+            parent: { type: 'column', id: column.id },
+            after: null,
+          },
           tree,
         });
       });
@@ -340,7 +348,11 @@ describe('useElementMutations', () => {
       await act(async () => {
         await result.current
           .mutateAsync({
-            params: { elementID: elemB.id, targetParentId: column.id, afterElementID: null },
+            params: {
+              element: { type: 'element', id: elemB.id },
+              parent: { type: 'column', id: column.id },
+              after: null,
+            },
             tree,
           })
           .catch(() => undefined);
@@ -383,7 +395,11 @@ describe('useElementMutations', () => {
 
       act(() => {
         result.current.mutate({
-          params: { elementID: elemB.id, targetParentId: column.id, afterElementID: null },
+          params: {
+            element: { type: 'element', id: elemB.id },
+            parent: { type: 'column', id: column.id },
+            after: null,
+          },
           tree,
           clearPendingTree,
         });

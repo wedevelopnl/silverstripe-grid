@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO(phase-5): rewrite for NodeRef/NodeKey identity model; tracked in plan polished-floating-bubble.md
 import { describe, it, expect } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useElementTree, useViewportOverrideCounts } from '@/hooks/useElementTree';
@@ -24,7 +23,8 @@ describe('useElementTree', () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(result.current.data).toEqual(apiResponse.tree);
+    expect(result.current.data?.nodes).toHaveLength(apiResponse.nodes.length);
+    expect(result.current.data?.rootParent).toEqual(apiResponse.rootParent);
     const [url] = getFetchCalls()[0];
     expect(url).toContain('/api/readTree/1/main');
   });

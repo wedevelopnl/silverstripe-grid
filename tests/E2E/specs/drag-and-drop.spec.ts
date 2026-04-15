@@ -134,8 +134,18 @@ test.describe('Drag and drop', () => {
     await expect(sectionBeta.getByTestId('row-block')).toHaveCount(3);
 
     // --- SECTION REORDER ---
+    // Grab Beta mid-drag and assert the DragOverlay becomes visible before
+    // releasing — this is the regression gate for the polymorphic-ID
+    // collision bug. Prior to the fix, the section ghost never appeared
+    // when page.id matched the first section's id, and the drop silently
+    // snapped back. Asserting the overlay here closes that gap.
+    const sectionHandleBeta = dragHandle(page, 'Section Beta');
+    const sectionHandleAlpha = dragHandle(page, 'Section Alpha');
+    const betaDrag = await startDrag(page, sectionHandleBeta, sectionHandleAlpha);
+    await expect(page.getByTestId('drag-overlay-section')).toBeVisible();
+    await expect(page.getByTestId('drag-overlay-section-title')).toHaveText('Section Beta');
     const settle6 = waitForMutationSettlement(page);
-    await performDrag(page, dragHandle(page, 'Section Beta'), dragHandle(page, 'Section Alpha'));
+    await betaDrag.release();
     await settle6();
 
     // Beta should now be first
