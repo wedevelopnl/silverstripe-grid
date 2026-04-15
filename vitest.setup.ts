@@ -38,9 +38,16 @@ const defaultConfig: SilverStripeConfig = {
   ],
 };
 
-// Minimal i18n stub — passes keys through as the fallback value for non-i18n tests
+// Minimal i18n stub — returns the fallback with params substituted, matching
+// the {placeholder} syntax used by the t() helper in production.
 const defaultI18n: SilverStripeI18n = {
-  _t: (_key: string, fallback: string) => fallback,
+  _t: (_key: string, fallback: string, params?: Record<string, string | number>) => {
+    if (!params) return fallback;
+    return Object.entries(params).reduce(
+      (str, [key, value]) => str.replaceAll(`{${key}}`, String(value)),
+      fallback,
+    );
+  },
   addDictionary: () => {},
   currentLocale: 'en',
 };

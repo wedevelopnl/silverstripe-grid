@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { t } from '@/i18n';
 import './ConfirmDialog.scss';
 
 interface ConfirmDialogProps {
@@ -66,7 +67,7 @@ export default function ConfirmDialog({
           className="confirm-dialog__button confirm-dialog__button--cancel"
           onClick={handleClose}
         >
-          Cancel
+          {t('WeDevelopGrid.ConfirmDialog.CANCEL_BUTTON', 'Cancel')}
         </button>
         <button
           type="button"

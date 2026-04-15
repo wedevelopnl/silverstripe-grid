@@ -1,7 +1,7 @@
 import type { ElementNode } from '@/types/elements';
 import { isContainerNode } from '@/types/elements';
 import type { DraggableType } from '@/types/dnd';
-
+import { t } from '@/i18n';
 import './DragOverlayContent.scss';
 
 interface DragOverlayContentProps {
@@ -30,7 +30,9 @@ function SectionPreview({ node, type }: PreviewProps): React.JSX.Element {
       <span className="drag-overlay-content__title" data-testid={`drag-overlay-${type}-title`}>
         {node.title}
       </span>
-      <span className="drag-overlay-content__meta">{pluralize(getChildCount(node), 'row')}</span>
+      <span className="drag-overlay-content__meta">
+        {pluralize(getChildCount(node), t('WeDevelopGrid.DragOverlayContent.ROW_SINGULAR', 'row'))}
+      </span>
     </>
   );
 }
@@ -42,7 +44,12 @@ function RowPreview({ node, type }: PreviewProps): React.JSX.Element {
       <span className="drag-overlay-content__title" data-testid={`drag-overlay-${type}-title`}>
         {node.title}
       </span>
-      <span className="drag-overlay-content__meta">{pluralize(getChildCount(node), 'column')}</span>
+      <span className="drag-overlay-content__meta">
+        {pluralize(
+          getChildCount(node),
+          t('WeDevelopGrid.DragOverlayContent.COLUMN_SINGULAR', 'column'),
+        )}
+      </span>
     </>
   );
 }

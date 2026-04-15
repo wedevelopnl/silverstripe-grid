@@ -1,5 +1,5 @@
 import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core';
-
+import { t } from '@/i18n';
 import './DragHandle.scss';
 
 interface DragHandleProps {
@@ -11,7 +11,7 @@ interface DragHandleProps {
 export default function DragHandle({
   listeners,
   attributes,
-  label = 'Drag to reorder',
+  label = t('WeDevelopGrid.DragHandle.DEFAULT_LABEL', 'Drag to reorder'),
 }: DragHandleProps): React.JSX.Element {
   return (
     <button

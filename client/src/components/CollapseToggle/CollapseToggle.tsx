@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+
 interface CollapseToggleProps {
   readonly isCollapsed: boolean;
   readonly onToggle: () => void;
@@ -10,7 +12,11 @@ export default function CollapseToggle({ isCollapsed, onToggle, label }: Collaps
       type="button"
       className={`collapse-toggle${isCollapsed ? ' collapse-toggle--collapsed' : ''}`}
       aria-expanded={!isCollapsed}
-      aria-label={isCollapsed ? `Expand ${label}` : `Collapse ${label}`}
+      aria-label={
+        isCollapsed
+          ? t('WeDevelopGrid.CollapseToggle.EXPAND_LABEL', 'Expand {label}', { label })
+          : t('WeDevelopGrid.CollapseToggle.COLLAPSE_LABEL', 'Collapse {label}', { label })
+      }
       data-testid="collapse-toggle"
       onClick={(e) => {
         e.stopPropagation();
