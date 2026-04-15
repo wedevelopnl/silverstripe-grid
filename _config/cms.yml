@@ -9,3 +9,5 @@ SilverStripe\Admin\LeftAndMain:
     - 'wedevelopnl/silverstripe-grid:client/dist/js/bundle.js'
   extra_requirements_css:
     - 'wedevelopnl/silverstripe-grid:client/dist/styles/bundle.css'
+  extra_requirements_i18n:
+    'wedevelopnl/silverstripe-grid:client/lang': true
