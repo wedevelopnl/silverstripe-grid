@@ -38,16 +38,17 @@ const defaultConfig: SilverStripeConfig = {
   ],
 };
 
-// Minimal i18n stub — returns the fallback with params substituted, matching
-// the {placeholder} syntax used by the t() helper in production.
+// Minimal i18n stub that mirrors the real window.ss.i18n API shape:
+// `_t` is a pure dictionary lookup (no substitution), and `inject` handles
+// {placeholder} replacement separately. This matches vendor semantics so
+// wrapper bugs cannot slip past tests.
 const defaultI18n: SilverStripeI18n = {
-  _t: (_key: string, fallback: string, params?: Record<string, string | number>) => {
-    if (!params) return fallback;
-    return Object.entries(params).reduce(
-      (str, [key, value]) => str.replaceAll(`{${key}}`, String(value)),
-      fallback,
-    );
-  },
+  _t: (_key: string, fallback: string) => fallback,
+  inject: (str: string, params: Record<string, string | number>) =>
+    Object.entries(params).reduce(
+      (s, [key, value]) => s.replaceAll(`{${key}}`, String(value)),
+      str,
+    ),
   addDictionary: () => {},
   currentLocale: 'en',
 };

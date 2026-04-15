@@ -46,7 +46,10 @@ export interface SilverStripeConfig {
 }
 
 export interface SilverStripeI18n {
-  _t(key: string, fallback: string, params?: Record<string, string | number>): string;
+  /** Pure dictionary lookup — does NOT perform placeholder substitution. */
+  _t(key: string, fallback: string): string;
+  /** Replace `{placeholder}` tokens in `str` with values from `params`. */
+  inject(str: string, params: Record<string, string | number>): string;
   addDictionary(locale: string, entries: Record<string, string>): void;
   currentLocale: string;
 }
