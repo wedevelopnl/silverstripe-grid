@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { DndContext, DragOverlay, MeasuringStrategy } from '@dnd-kit/core';
+import { t } from '@/i18n';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useElementTree } from '@/hooks/useElementTree';
 import { useTreeEnrichment } from '@/hooks/useTreeEnrichment';
@@ -76,7 +77,9 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
   const sectionList = hasSections ? (
     enrichedSections.map((section) => <SectionBlock key={section.id} section={section} />)
   ) : readonly ? (
-    <p className="grid-editor__empty-state">No sections in this version</p>
+    <p className="grid-editor__empty-state">
+      {t('WeDevelopGrid.GridEditor.NO_SECTIONS_READONLY', 'No sections in this version')}
+    </p>
   ) : (
     pageId !== null && (
       <AddChildButton
@@ -97,11 +100,15 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
     >
       {isLoading && (
         <p className="grid-editor__loading" data-testid="grid-editor-loading">
-          Loading elements...
+          {t('WeDevelopGrid.GridEditor.LOADING', 'Loading elements...')}
         </p>
       )}
       {error !== null && (
-        <p className="grid-editor__error">Failed to load elements: {error.message}</p>
+        <p className="grid-editor__error">
+          {t('WeDevelopGrid.GridEditor.LOAD_ERROR', 'Failed to load elements: {message}', {
+            message: error.message,
+          })}
+        </p>
       )}
       {data !== undefined && pageId !== null && (
         <GridEditorProvider value={{ pageId, zone }}>
@@ -140,7 +147,10 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
         </GridEditorProvider>
       )}
       {data !== undefined && pageId === null && (
-        <EmptyState message="No sections yet" variant="centered" />
+        <EmptyState
+          message={t('WeDevelopGrid.GridEditor.NO_SECTIONS', 'No sections yet')}
+          variant="centered"
+        />
       )}
     </div>
   );
