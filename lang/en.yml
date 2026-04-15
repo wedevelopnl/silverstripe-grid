@@ -1,5 +1,6 @@
 en:
   WeDevelop\Grid\Dev\MultiZonePage:
+    CLASS_DESCRIPTION: 'Dev-only page with main + sidebar grid zones'
     PLURALNAME: 'Multi Zone Pages'
     PLURALS:
       one: 'A Multi Zone Page'
@@ -15,11 +16,6 @@ en:
     GAP_SIZE: 'Gap size'
     LAYOUT_TAB: Layout
     MEDIA_CAPTION: Caption
-    MEDIA_EMBED_CREATED: Created
-    MEDIA_EMBED_DESCRIPTION: Description
-    MEDIA_EMBED_NAME: Name
-    MEDIA_EMBED_THUMBNAIL: Thumbnail
-    MEDIA_EMBED_URL: URL
     MEDIA_POSITION: 'Media position'
     MEDIA_RATIO: 'Aspect ratio'
     MEDIA_TAB: Media
@@ -32,7 +28,12 @@ en:
     RATIO_4X3: '4:3'
     RATIO_AUTO: Auto
     VERTICAL_ALIGNMENT: 'Vertical alignment'
+    VIDEO_EMBED_CREATED: Created
+    VIDEO_EMBED_DESCRIPTION: Description
+    VIDEO_EMBED_NAME: Name
     VIDEO_EMBED_TAB: 'Video Embed'
+    VIDEO_EMBED_THUMBNAIL: Thumbnail
+    VIDEO_EMBED_URL: URL
     db_ContentColumns: 'Content columns'
     db_GapSize: 'Gap size'
     db_MediaCaption: 'Media caption'
@@ -54,7 +55,7 @@ en:
     has_many_Sections: Sections
   WeDevelop\Grid\Forms\GridSettingsField:
     DEFAULT_TITLE: 'Grid Settings'
-    HIDDEN_SUFFIX: (hidden)
+    HIDDEN_SUFFIX: ' (hidden)'
   WeDevelop\Grid\Model\Column:
     CLASS_DESCRIPTION: 'Responsive grid column that holds content blocks'
     PLURALNAME: Columns

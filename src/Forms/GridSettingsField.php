@@ -212,12 +212,12 @@ class GridSettingsField extends FormField
 
         // Default viewport
         $default = $this->gridSettings->default;
-        $visibility = $default->visible ? '' : ' ' . _t(self::class . '.HIDDEN_SUFFIX', '(hidden)');
+        $visibility = $default->visible ? '' : _t(self::class . '.HIDDEN_SUFFIX', ' (hidden)');
         $parts[] = sprintf('%s: %d/%d+%d%s', $defaultKey, $default->width, $columnCount, $default->offset, $visibility);
 
         // Overrides
         foreach ($this->gridSettings->overrides as $key => $config) {
-            $visibility = $config->visible ? '' : ' ' . _t(self::class . '.HIDDEN_SUFFIX', '(hidden)');
+            $visibility = $config->visible ? '' : _t(self::class . '.HIDDEN_SUFFIX', ' (hidden)');
             $parts[] = sprintf('%s: %d/%d+%d%s', $key, $config->width, $columnCount, $config->offset, $visibility);
         }
 

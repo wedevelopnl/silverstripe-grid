@@ -1,5 +1,6 @@
 nl:
   WeDevelop\Grid\Dev\MultiZonePage:
+    CLASS_DESCRIPTION: 'Dev-only pagina met main- en sidebar-grid-zones'
     PLURALNAME: 'Multi-zone-paginas'
     PLURALS:
       one: 'Een Multi-zone-pagina'
@@ -15,11 +16,6 @@ nl:
     GAP_SIZE: Tussenruimte
     LAYOUT_TAB: Layout
     MEDIA_CAPTION: Bijschrift
-    MEDIA_EMBED_CREATED: Aangemaakt
-    MEDIA_EMBED_DESCRIPTION: Omschrijving
-    MEDIA_EMBED_NAME: Naam
-    MEDIA_EMBED_THUMBNAIL: Thumbnail
-    MEDIA_EMBED_URL: URL
     MEDIA_POSITION: 'Positie van media'
     MEDIA_RATIO: Beeldverhouding
     MEDIA_TAB: Media
@@ -32,7 +28,12 @@ nl:
     RATIO_4X3: '4:3'
     RATIO_AUTO: Automatisch
     VERTICAL_ALIGNMENT: 'Verticale uitlijning'
+    VIDEO_EMBED_CREATED: Aangemaakt
+    VIDEO_EMBED_DESCRIPTION: Omschrijving
+    VIDEO_EMBED_NAME: Naam
     VIDEO_EMBED_TAB: 'Video-embed'
+    VIDEO_EMBED_THUMBNAIL: Thumbnail
+    VIDEO_EMBED_URL: URL
     db_ContentColumns: 'Inhoudskolommen'
     db_GapSize: Tussenruimte
     db_MediaCaption: 'Mediabijschrift'
@@ -54,7 +55,7 @@ nl:
     has_many_Sections: Secties
   WeDevelop\Grid\Forms\GridSettingsField:
     DEFAULT_TITLE: 'Grid-instellingen'
-    HIDDEN_SUFFIX: (verborgen)
+    HIDDEN_SUFFIX: ' (verborgen)'
   WeDevelop\Grid\Model\Column:
     CLASS_DESCRIPTION: 'Responsieve grid-kolom voor inhoudsblokken'
     PLURALNAME: Kolommen
