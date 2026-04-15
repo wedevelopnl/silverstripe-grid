@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { t } from '@/i18n';
 import './ActionsMenu.scss';
 
 export interface ActionItem {
@@ -132,7 +133,7 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-controls={isOpen ? menuId : undefined}
-        aria-label="Actions"
+        aria-label={t('WeDevelopGrid.ActionsMenu.TRIGGER_LABEL', 'Actions')}
         onClick={handleTriggerClick}
       >
         <span className="actions-menu__dots" aria-hidden="true" />

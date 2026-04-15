@@ -3,6 +3,7 @@ import { useGridEditorContext } from '@/hooks/GridEditorContext';
 import { useArchiveAction } from '@/hooks/useArchiveAction';
 import { useDuplicateAction } from '@/hooks/useDuplicateAction';
 import { useDuplicateToAction } from '@/hooks/useDuplicateToAction';
+import { t } from '@/i18n';
 import ActionsMenu from '@/components/ActionsMenu/ActionsMenu';
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
 import DuplicateToDialog from '@/components/DuplicateToDialog/DuplicateToDialog';
@@ -31,7 +32,7 @@ export default function ElementActions({ node }: ElementActionsProps) {
           isOpen={archiveDialog.isOpen}
           title={archiveDialog.title}
           message={archiveDialog.message}
-          confirmLabel="Archive"
+          confirmLabel={t('WeDevelopGrid.ElementActions.ARCHIVE_CONFIRM_LABEL', 'Archive')}
           onConfirm={archiveDialog.onConfirm}
           onCancel={archiveDialog.onCancel}
           destructive

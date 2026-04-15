@@ -1,6 +1,7 @@
 import type { ContainerType } from '@/types/elements';
 import { useGridEditorContext } from '@/hooks/GridEditorContext';
 import { useCreateElement } from '@/hooks/useElementMutations';
+import { t } from '@/i18n';
 
 interface AddChildButtonProps {
   readonly parentId: number;
@@ -34,14 +35,22 @@ export default function AddChildButton({
       disabled={isPending}
       onClick={handleClick}
     >
-      {isPending ? `Adding ${childLabel}…` : `Add ${childLabel}`}
+      {isPending
+        ? t('WeDevelopGrid.AddChildButton.ADDING_LABEL', 'Adding {childLabel}\u2026', {
+            childLabel,
+          })
+        : t('WeDevelopGrid.AddChildButton.ADD_LABEL', 'Add {childLabel}', { childLabel })}
     </button>
   );
 
   if (variant === 'empty-state') {
     return (
       <div className="add-child-button add-child-button--empty-state" data-testid="add-child-empty">
-        <p className="add-child-button__message">No {childLabel.toLowerCase()}s yet</p>
+        <p className="add-child-button__message">
+          {t('WeDevelopGrid.AddChildButton.EMPTY_MESSAGE', 'No {childLabel}s yet', {
+            childLabel: childLabel.toLowerCase(),
+          })}
+        </p>
         {button}
       </div>
     );

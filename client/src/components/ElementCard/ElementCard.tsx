@@ -4,6 +4,7 @@ import type { EnrichedSimpleElementNode } from '@/types/enriched';
 import { getElementStatus } from '@/types/status';
 import { useReadonly } from '@/hooks/ReadonlyContext';
 import { buildSortableStyle } from '@/utils/sortableStyles';
+import { t } from '@/i18n';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import ElementActions from '@/components/ElementActions/ElementActions';
 
@@ -46,7 +47,11 @@ function EditableElementCard({ element }: ElementCardProps) {
 
   const header: ReactNode = (
     <div className="element-card__header">
-      <DragHandle listeners={listeners} attributes={attributes} label={`Move ${element.title}`} />
+      <DragHandle
+        listeners={listeners}
+        attributes={attributes}
+        label={t('WeDevelopGrid.ElementCard.MOVE_LABEL', 'Move {title}', { title: element.title })}
+      />
       <i className={`element-card__icon ${element.blockSchema.icon}`} />
       <h4 className="element-card__title" data-testid="element-card-title">
         {element.title}
@@ -59,7 +64,7 @@ function EditableElementCard({ element }: ElementCardProps) {
     <div
       className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}
     >
-      {content || 'No preview available'}
+      {content || t('WeDevelopGrid.ElementCard.NO_PREVIEW', 'No preview available')}
     </div>
   );
 
@@ -125,7 +130,7 @@ function ReadonlyElementCard({ element }: ElementCardProps) {
       <div
         className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}
       >
-        {content || 'No preview available'}
+        {content || t('WeDevelopGrid.ElementCard.NO_PREVIEW', 'No preview available')}
       </div>
     </div>
   );
