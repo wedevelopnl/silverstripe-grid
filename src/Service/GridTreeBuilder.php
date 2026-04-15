@@ -12,6 +12,8 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridNode;
+use WeDevelop\Grid\Value\NodeRef;
+use WeDevelop\Grid\Value\NodeType;
 
 /**
  * Builds a recursive element tree for a page using batch-loading to avoid N+1 queries.
@@ -31,7 +33,10 @@ class GridTreeBuilder
     }
 
     /**
-     * Build the full element tree for a page, keyed by parent ID.
+     * Build the full element tree for a page, keyed by page ID for backwards
+     * compatibility with callers that still expect a top-level map (the wire
+     * format emitted by {@see GridController::apiReadTree()} reshapes this
+     * into a structured `{rootParent, nodes}` response).
      *
      * @param non-empty-string $zone
      * @return array<int, list<GridNode>>
@@ -44,10 +49,11 @@ class GridTreeBuilder
         $elementsByParent = $this->loadAllElements($pageId, $page::class, $zone);
 
         $rootKey = $page::class . ':' . $pageId;
+        $rootParent = new NodeRef(NodeType::fromClass($page::class), $pageId);
 
         /** @var array<int, list<GridNode>> $tree */
         $tree = [];
-        $tree[$pageId] = $this->assembleSubTree($elementsByParent, $rootKey, $pageId);
+        $tree[$pageId] = $this->assembleSubTree($elementsByParent, $rootKey, $rootParent);
 
         return $tree;
     }
@@ -122,7 +128,7 @@ class GridTreeBuilder
         foreach ($nodes as $node) {
             if ($node->containerType === $targetType) {
                 $containers[] = [
-                    'id' => $node->id,
+                    'id' => $node->getId(),
                     'title' => $node->title,
                     'type' => $targetType->value,
                 ];
@@ -212,10 +218,9 @@ class GridTreeBuilder
      * Recursively assemble tree nodes from pre-loaded element data.
      *
      * @param array<string, list<GridElement>> $elementsByParent
-     * @param positive-int $parentId Numeric parent ID for the GridNode
      * @return list<GridNode>
      */
-    private function assembleSubTree(array $elementsByParent, string $parentKey, int $parentId): array
+    private function assembleSubTree(array $elementsByParent, string $parentKey, NodeRef $parent): array
     {
         $nodes = [];
 
@@ -224,7 +229,7 @@ class GridTreeBuilder
                 continue;
             }
 
-            $nodes[] = $this->buildElementNode($element, $elementsByParent, $parentId);
+            $nodes[] = $this->buildElementNode($element, $elementsByParent, $parent);
         }
 
         return $nodes;
@@ -234,9 +239,8 @@ class GridTreeBuilder
      * Build a single element node with base fields and optional container fields.
      *
      * @param array<string, list<GridElement>> $elementsByParent
-     * @param positive-int $parentId
      */
-    private function buildElementNode(GridElement $element, array $elementsByParent, int $parentId): GridNode
+    private function buildElementNode(GridElement $element, array $elementsByParent, NodeRef $parent): GridNode
     {
         $containerType = null;
         $allowedTypes = null;
@@ -247,16 +251,17 @@ class GridTreeBuilder
             /** @var positive-int $elementId */
             $elementId = (int) $element->ID;
             $childKey = $element::class . ':' . $elementId;
+            $selfRef = new NodeRef(NodeType::fromClass($element::class), $elementId);
 
             $containerType = $element->getContainerType();
             $allowedTypes = $this->nodeMapper->getAllowedTypes($element);
-            $children = $this->assembleSubTree($elementsByParent, $childKey, $elementId);
+            $children = $this->assembleSubTree($elementsByParent, $childKey, $selfRef);
         }
 
         if ($element instanceof Column) {
             $gridSettings = $element->getGridSettings();
         }
 
-        return $this->nodeMapper->mapToNode($element, $parentId, $containerType, $allowedTypes, $children, $gridSettings);
+        return $this->nodeMapper->mapToNode($element, $parent, $containerType, $allowedTypes, $children, $gridSettings);
     }
 }

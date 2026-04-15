@@ -1,15 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePages, useZones, useAcceptableContainers } from '@/hooks/useDuplicateToQueries';
 import { t } from '@/i18n';
+import type { NodeRef, NodeType } from '@/types/identity';
 import './DuplicateToDialog.scss';
 
 type Step = 'page' | 'zone' | 'container' | 'confirm';
+
+/**
+ * Maps a draggable/grid element type to the type of its expected parent.
+ * Sections live under pages; rows live under sections; columns live under rows;
+ * leaf elements live under columns.
+ */
+const PARENT_TYPE_FOR_ELEMENT: Record<string, NodeType> = {
+  section: 'page',
+  row: 'section',
+  column: 'row',
+  element: 'column',
+};
 
 interface DuplicateToDialogProps {
   readonly isOpen: boolean;
   readonly elementType: string;
   readonly currentPageId: number;
-  readonly onConfirm: (targetPageId: number, targetZone: string, targetParentId: number) => void;
+  readonly onConfirm: (targetPageId: number, targetZone: string, targetParent: NodeRef) => void;
   readonly onCancel: () => void;
   readonly error?: string | null;
 }
@@ -125,12 +138,13 @@ export default function DuplicateToDialog({
     if (selectedZone === null) return;
 
     if (step === 'confirm') {
-      // Section duplication — page is the parent
-      onConfirm(selectedPageId, selectedZone, selectedPageId);
+      // Section duplication — page is the parent.
+      onConfirm(selectedPageId, selectedZone, { type: 'page', id: selectedPageId });
     } else if (selectedContainerId !== null) {
-      onConfirm(selectedPageId, selectedZone, selectedContainerId);
+      const parentType = PARENT_TYPE_FOR_ELEMENT[elementType] ?? 'column';
+      onConfirm(selectedPageId, selectedZone, { type: parentType, id: selectedContainerId });
     }
-  }, [onConfirm, selectedPageId, selectedZone, selectedContainerId, step]);
+  }, [onConfirm, selectedPageId, selectedZone, selectedContainerId, step, elementType]);
 
   const goBack = useCallback(() => {
     if (step === 'zone') {

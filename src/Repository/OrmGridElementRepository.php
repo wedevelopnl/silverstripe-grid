@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Repository;
 
+use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Value\NodeRef;
+use WeDevelop\Grid\Value\NodeType;
 
 final class OrmGridElementRepository implements GridElementRepositoryInterface
 {
@@ -13,6 +16,29 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
     {
         /** @var GridElement|null */
         return GridElement::get()->byID($id);
+    }
+
+    public function findByRef(NodeRef $ref): ?GridElement
+    {
+        if ($ref->type === NodeType::Page) {
+            return null;
+        }
+
+        /** @var class-string<GridElement> $class */
+        $class = $ref->type->toClass();
+
+        /** @var GridElement|null $record */
+        $record = DataObject::get($class)->byID($ref->id);
+
+        if ($record === null) {
+            return null;
+        }
+
+        // Guard against a polymorphic collision: if a caller passes a Row NodeRef
+        // but the numeric ID happens to also exist in a different GridElement
+        // subclass, byID on the narrow base class still returns the matching
+        // record. Verify the fetched record actually is the expected class.
+        return $record instanceof $class ? $record : null;
     }
 
     public function findByParentIds(array $parentIds, string $parentClass): array

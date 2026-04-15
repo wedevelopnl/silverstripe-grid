@@ -11,6 +11,8 @@ use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Value\NodeRef;
+use WeDevelop\Grid\Value\NodeType;
 use WeDevelop\Grid\Value\ViewportConfig;
 
 #[CoversClass(GridTreeBuilder::class)]
@@ -25,11 +27,25 @@ final class GridTreeBuilderTest extends TestCase
         'icon' => 'font-icon-block',
     ];
 
+    /**
+     * @param array<string, mixed> $overrides
+     */
     private static function makeNode(array $overrides = []): GridNode
     {
+        $id = $overrides['id'] ?? 1;
+        unset($overrides['id']);
+
+        $containerType = $overrides['containerType'] ?? null;
+        $selfType = match ($containerType) {
+            ContainerType::Section => NodeType::Section,
+            ContainerType::Row => NodeType::Row,
+            ContainerType::Column => NodeType::Column,
+            default => NodeType::Element,
+        };
+
         $defaults = [
-            'id' => 1,
-            'parentId' => 10,
+            'self' => new NodeRef($selfType, $id),
+            'parent' => new NodeRef(NodeType::Page, 10),
             'title' => 'Test Node',
             'blockSchema' => self::DEFAULT_BLOCK_SCHEMA,
             'obsoleteClassName' => null,
@@ -50,8 +66,8 @@ final class GridTreeBuilderTest extends TestCase
         $args = [...$defaults, ...$overrides];
 
         return new GridNode(
-            id: $args['id'],
-            parentId: $args['parentId'],
+            self: $args['self'],
+            parent: $args['parent'],
             title: $args['title'],
             blockSchema: $args['blockSchema'],
             obsoleteClassName: $args['obsoleteClassName'],

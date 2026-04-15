@@ -12,11 +12,14 @@ use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\GridNodeMapper;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\NodeRef;
+use WeDevelop\Grid\Value\NodeType;
 
 #[CoversClass(GridNodeMapper::class)]
 final class GridNodeMapperTest extends SapphireTest
@@ -45,17 +48,20 @@ final class GridNodeMapperTest extends SapphireTest
         $section = GridTreeFactory::section($page, title: 'My Section');
 
         $allowedTypes = $this->mapper->getAllowedTypes($section);
+        $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
         $node = $this->mapper->mapToNode(
             $section,
-            $page->ID,
+            $parentRef,
             ContainerType::Section,
             $allowedTypes,
             [],
             null,
         );
 
-        self::assertSame((int) $section->ID, $node->id);
-        self::assertSame((int) $page->ID, $node->parentId);
+        self::assertSame((int) $section->ID, $node->getId());
+        self::assertSame((int) $page->ID, $node->getParentId());
+        self::assertSame(NodeType::Section, $node->self->type);
+        self::assertSame(NodeType::Page, $node->parent->type);
         self::assertSame('My Section', $node->title);
         self::assertSame(ContainerType::Section, $node->containerType);
         self::assertIsArray($node->children);
@@ -97,9 +103,10 @@ final class GridNodeMapperTest extends SapphireTest
         // Force Title to empty after write to test the mapper fallback
         $section->Title = '';
 
+        $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
         $node = $this->mapper->mapToNode(
             $section,
-            $page->ID,
+            $parentRef,
             ContainerType::Section,
             null,
             [],

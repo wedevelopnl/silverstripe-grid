@@ -5,11 +5,21 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Repository;
 
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Value\NodeRef;
 
 interface GridElementRepositoryInterface
 {
     /** @param positive-int $id */
     public function findById(int $id): ?GridElement;
+
+    /**
+     * Find an element by its scoped {@see NodeRef}.
+     *
+     * Returns null when the ref refers to a non-element type (e.g. Page),
+     * or when the type/id combination doesn't correspond to a record the
+     * caller can view at the current stage.
+     */
+    public function findByRef(NodeRef $ref): ?GridElement;
 
     /**
      * Find all elements belonging to the given parent IDs and class, ordered by Sort ASC, ID ASC.

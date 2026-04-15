@@ -1,7 +1,7 @@
 import { isContainerNode } from '@/types/elements';
-import { buildDraggableId } from '@/types/dnd';
 import type { ParsedDraggableId } from '@/types/dnd';
 import type { ElementMaps } from '@/hooks/useElementMaps';
+import { buildNodeKey, nodeRefToKey, type NodeKey } from '@/types/identity';
 import { resolveInsertDirection } from '@/utils/resolveInsertDirection';
 import { resolveReorderParams } from '@/utils/resolveReorderParams';
 import type { ReorderElementParams } from '@/api/endpoints';
@@ -18,7 +18,7 @@ export interface DropContext {
   readonly overParsed: ParsedDraggableId;
   readonly pointer: { readonly x: number; readonly y: number } | null;
   readonly maps: ElementMaps;
-  readonly sourceParentId: number;
+  readonly sourceParentKey: NodeKey;
   readonly sourceIndex: number;
   readonly overRect: RectLike;
 }
@@ -26,94 +26,85 @@ export interface DropContext {
 /**
  * Pure function that resolves a drag-and-drop event into API reorder parameters.
  *
- * Handles both same-container reordering and cross-container moves:
- * - Same container (sourceParentId === targetParentId): places at the over
- *   element's index without direction adjustment (SortableContext handles
- *   visual positioning).
- * - Cross container: applies pointer-based direction (before/after) relative
- *   to the over element's rect.
+ * Same-container moves use index-based placement (SortableContext handles the
+ * visual shuffle). Cross-container moves apply pointer-based direction
+ * (before/after) relative to the over element's rect.
  *
  * Returns null for no-ops (same position) or invalid states (missing nodes).
  */
 export function resolveDropPlacement(ctx: DropContext): ReorderElementParams | null {
-  const { activeParsed, overParsed, pointer, maps, sourceParentId, sourceIndex, overRect } = ctx;
+  const { activeParsed, overParsed, pointer, maps, sourceParentKey, sourceIndex, overRect } = ctx;
 
-  let targetParentId: number;
-  let insertIndex: number;
-
-  const activeCompositeId = buildDraggableId(activeParsed.type, activeParsed.id);
+  const activeKey = buildNodeKey(activeParsed.type, activeParsed.id);
 
   if (overParsed.type === activeParsed.type) {
-    // Over a sibling — use the sibling's parent
-    const overNode = maps.nodeMap.get(overParsed.id);
+    const overKey = buildNodeKey(overParsed.type, overParsed.id);
+    const overNode = maps.nodeMap.get(overKey);
     if (!overNode) return null;
 
-    targetParentId = overNode.parentId;
-    const siblings = maps.childrenByParentId.get(targetParentId) ?? [];
-    const compositeIds = siblings.map((n) => buildDraggableId(activeParsed.type, n.id));
-    const filtered = compositeIds.filter((id) => id !== activeCompositeId);
+    const targetParent = overNode.parent;
+    const targetParentKey = overNode.parentKey;
+    const siblings = maps.childrenByParentKey.get(targetParentKey) ?? [];
+    const compositeIds: NodeKey[] = siblings.map((n) => n.nodeKey);
+    const filtered = compositeIds.filter((id) => id !== activeKey);
 
-    const overCompositeId = buildDraggableId(overParsed.type, overParsed.id);
-
-    if (sourceParentId === targetParentId) {
+    let insertIndex: number;
+    if (sourceParentKey === targetParentKey) {
       // Same container: use the over element's index in the full list.
-      // SortableContext handles visual positioning, so no direction needed.
-      const overOriginalIdx = compositeIds.indexOf(overCompositeId);
-      // Stryker disable next-line ConditionalExpression: Equivalent — over element is always in its parent's children list
-      if (overOriginalIdx === -1) {
-        insertIndex = filtered.length;
-      } else {
-        insertIndex = overOriginalIdx;
-      }
-      filtered.splice(insertIndex, 0, activeCompositeId);
+      const overOriginalIdx = compositeIds.indexOf(overKey);
+      insertIndex = overOriginalIdx === -1 ? filtered.length : overOriginalIdx;
+      filtered.splice(insertIndex, 0, activeKey);
     } else {
-      // Cross container: find position in filtered list, apply direction
-      const overIdx = filtered.indexOf(overCompositeId);
-      // Stryker disable next-line ConditionalExpression: Equivalent — over element is always present after filtering (active !== over)
+      const overIdx = filtered.indexOf(overKey);
       if (overIdx === -1) {
         insertIndex = filtered.length;
       } else {
         insertIndex = overIdx;
-
-        if (pointer !== null) {
-          if (resolveInsertDirection(pointer, overRect, activeParsed.type) === 'after') {
-            insertIndex += 1;
-          }
+        if (
+          pointer !== null &&
+          resolveInsertDirection(pointer, overRect, activeParsed.type) === 'after'
+        ) {
+          insertIndex += 1;
         }
       }
 
       const clampedIndex = Math.min(insertIndex, filtered.length);
-      filtered.splice(clampedIndex, 0, activeCompositeId);
+      filtered.splice(clampedIndex, 0, activeKey);
     }
 
     return resolveReorderParams({
-      activeId: activeCompositeId,
-      overContainerParentId: targetParentId,
-      overIndex: filtered.indexOf(activeCompositeId),
+      activeId: activeKey,
+      targetParent,
+      targetParentKey,
+      overIndex: filtered.indexOf(activeKey),
       containerItems: filtered,
-      sourceContainerParentId: sourceParentId,
+      sourceParentKey,
       sourceIndex,
+      maps,
     });
   }
 
-  // Over a container — drop into it
-  const containerNode = maps.nodeMap.get(overParsed.id);
+  // Over a container — drop at its end.
+  const overKey = buildNodeKey(overParsed.type, overParsed.id);
+  const containerNode = maps.nodeMap.get(overKey);
   if (!containerNode || !isContainerNode(containerNode)) return null;
 
-  targetParentId = containerNode.id;
+  const targetParent = containerNode.self;
+  const targetParentKey = nodeRefToKey(targetParent);
   const children = containerNode.children ?? [];
-  const compositeIds = children.map((n) => buildDraggableId(activeParsed.type, n.id));
-  const filtered = compositeIds.filter((id) => id !== activeCompositeId);
+  const compositeIds = children.map((n) => n.nodeKey);
+  const filtered = compositeIds.filter((id) => id !== activeKey);
 
-  insertIndex = filtered.length;
-  filtered.splice(insertIndex, 0, activeCompositeId);
+  filtered.push(activeKey);
 
   return resolveReorderParams({
-    activeId: activeCompositeId,
-    overContainerParentId: targetParentId,
-    overIndex: filtered.indexOf(activeCompositeId),
+    activeId: activeKey,
+    targetParent,
+    targetParentKey,
+    overIndex: filtered.indexOf(activeKey),
     containerItems: filtered,
-    sourceContainerParentId: sourceParentId,
+    sourceParentKey,
     sourceIndex,
+    maps,
   });
 }

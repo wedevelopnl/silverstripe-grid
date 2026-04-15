@@ -2,13 +2,25 @@ import type { ContainerType } from '@/types/elements';
 import { useGridEditorContext } from '@/hooks/GridEditorContext';
 import { useCreateElement } from '@/hooks/useElementMutations';
 import { t } from '@/i18n';
+import type { NodeRef, NodeType } from '@/types/identity';
 
 interface AddChildButtonProps {
+  /**
+   * Numeric ID of the parent the new child will attach to — the correct
+   * NodeType is inferred from `childType` (a section parent is always a page,
+   * a row parent is always a section, a column parent is always a row).
+   */
   readonly parentId: number;
   readonly childType: ContainerType;
   readonly childLabel: string;
   readonly variant: 'empty-state' | 'append';
 }
+
+const PARENT_TYPE_FOR_CHILD: Record<ContainerType, NodeType> = {
+  section: 'page',
+  row: 'section',
+  column: 'row',
+};
 
 export default function AddChildButton({
   parentId,
@@ -20,9 +32,14 @@ export default function AddChildButton({
   const { mutate, isPending } = useCreateElement(pageId, zone);
 
   function handleClick() {
+    const parent: NodeRef = {
+      type: PARENT_TYPE_FOR_CHILD[childType],
+      id: parentId,
+    };
+
     mutate({
       containerType: childType,
-      parentId,
+      parent,
       ...(childType === 'section' ? { zone } : {}),
     });
   }

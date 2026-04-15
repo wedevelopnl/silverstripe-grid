@@ -6,10 +6,13 @@ namespace WeDevelop\Grid\Service;
 
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\ContentElement;
+use InvalidArgumentException;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\CreateContentRequest;
 use WeDevelop\Grid\Value\CreateElementRequest;
 use WeDevelop\Grid\Value\DuplicateToRequest;
+use WeDevelop\Grid\Value\NodeRef;
+use WeDevelop\Grid\Value\NodeType;
 use WeDevelop\Grid\Value\ReorderRequest;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ResetGridSettingsOverridesRequest;
@@ -31,7 +34,7 @@ final readonly class RequestBodyParser
     public function parseCreateBody(array $data): Result
     {
         $containerTypeValue = $data['containerType'] ?? null;
-        $parentId = $data['parentId'] ?? null;
+        $parentData = $data['parent'] ?? null;
         $afterElementID = $data['insertAfterElementID'] ?? null;
         $zone = $data['zone'] ?? 'main';
 
@@ -44,8 +47,10 @@ final readonly class RequestBodyParser
             return Result::fail(new ValidationError('Invalid or missing containerType.'));
         }
 
-        if (!is_int($parentId) || $parentId < 1) {
-            return Result::fail(new ValidationError('parentId must be a positive integer.'));
+        try {
+            $parent = NodeRef::fromArray($parentData);
+        } catch (InvalidArgumentException $e) {
+            return Result::fail(new ValidationError('parent: ' . $e->getMessage()));
         }
 
         if ($afterElementID !== null && (!is_int($afterElementID) || $afterElementID < 1)) {
@@ -57,7 +62,7 @@ final readonly class RequestBodyParser
         }
 
         /** @var non-empty-string $zone Narrowed by === '' guard above */
-        return Result::ok(new CreateElementRequest($containerType, $parentId, $afterElementID, $zone));
+        return Result::ok(new CreateElementRequest($containerType, $parent, $afterElementID, $zone));
     }
 
     /**
@@ -100,23 +105,37 @@ final readonly class RequestBodyParser
      */
     public function parseReorderBody(array $data): Result
     {
-        $elementID = $data['elementID'] ?? null;
-        $targetParentId = $data['targetParentId'] ?? null;
-        $afterElementID = $data['afterElementID'] ?? null;
-
-        if (!is_int($elementID) || $elementID < 1) {
-            return Result::fail(new ValidationError('elementID must be a positive integer.'));
+        try {
+            $element = NodeRef::fromArray($data['element'] ?? null);
+        } catch (InvalidArgumentException $e) {
+            return Result::fail(new ValidationError('element: ' . $e->getMessage()));
         }
 
-        if (!is_int($targetParentId) || $targetParentId < 1) {
-            return Result::fail(new ValidationError('targetParentId must be a positive integer.'));
+        if ($element->type === NodeType::Page) {
+            return Result::fail(new ValidationError('element type cannot be "page".'));
         }
 
-        if ($afterElementID !== null && (!is_int($afterElementID) || $afterElementID < 1)) {
-            return Result::fail(new ValidationError('afterElementID must be a positive integer or null.'));
+        try {
+            $parent = NodeRef::fromArray($data['parent'] ?? null);
+        } catch (InvalidArgumentException $e) {
+            return Result::fail(new ValidationError('parent: ' . $e->getMessage()));
         }
 
-        return Result::ok(new ReorderRequest($elementID, $targetParentId, $afterElementID));
+        $afterData = $data['after'] ?? null;
+        $after = null;
+        if ($afterData !== null) {
+            try {
+                $after = NodeRef::fromArray($afterData);
+            } catch (InvalidArgumentException $e) {
+                return Result::fail(new ValidationError('after: ' . $e->getMessage()));
+            }
+
+            if ($after->type !== $element->type) {
+                return Result::fail(new ValidationError('after.type must match element.type.'));
+            }
+        }
+
+        return Result::ok(new ReorderRequest($element, $parent, $after));
     }
 
     /**
@@ -173,7 +192,6 @@ final readonly class RequestBodyParser
         $id = $data['id'] ?? null;
         $targetPageId = $data['targetPageId'] ?? null;
         $targetZone = $data['targetZone'] ?? null;
-        $targetParentId = $data['targetParentId'] ?? null;
 
         if (!is_int($id) || $id < 1) {
             return Result::fail(new ValidationError('id must be a positive integer.'));
@@ -187,12 +205,14 @@ final readonly class RequestBodyParser
             return Result::fail(new ValidationError('targetZone must be a non-empty string.'));
         }
 
-        if (!is_int($targetParentId) || $targetParentId < 1) {
-            return Result::fail(new ValidationError('targetParentId must be a positive integer.'));
+        try {
+            $targetParent = NodeRef::fromArray($data['targetParent'] ?? null);
+        } catch (InvalidArgumentException $e) {
+            return Result::fail(new ValidationError('targetParent: ' . $e->getMessage()));
         }
 
         /** @var non-empty-string $targetZone Narrowed by === '' guard */
-        return Result::ok(new DuplicateToRequest($id, $targetPageId, $targetZone, $targetParentId));
+        return Result::ok(new DuplicateToRequest($id, $targetPageId, $targetZone, $targetParent));
     }
 
     /**

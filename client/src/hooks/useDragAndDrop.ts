@@ -12,7 +12,8 @@ import type {
 import { buildDraggableId, parseDraggableId } from '@/types/dnd';
 import type { DraggableType } from '@/types/dnd';
 import { isContainerNode } from '@/types/elements';
-import type { ElementNode, ElementTreeResponse } from '@/types/elements';
+import type { ElementNode, TreeApiResponse } from '@/types/elements';
+import { buildNodeKey, nodeRefEquals, type NodeRef } from '@/types/identity';
 import { useElementMaps } from '@/hooks/useElementMaps';
 import { usePendingTree } from '@/hooks/usePendingTree';
 import { resolveDropPlacement } from '@/utils/resolveDropPlacement';
@@ -28,11 +29,11 @@ export interface DragState {
 }
 
 export interface UseDragAndDropOptions {
-  tree: ElementTreeResponse;
+  tree: TreeApiResponse;
   onReorder: (
-    elementID: number,
-    targetParentId: number,
-    afterElementID: number | null,
+    element: NodeRef,
+    parent: NodeRef,
+    after: NodeRef | null,
     clearPendingTree: () => void,
   ) => void;
 }
@@ -52,7 +53,7 @@ export interface UseDragAndDropReturn {
   /** Current drag state for DragOverlay rendering. */
   dragState: DragState | null;
   /** Tree with pending cross-container move applied, or null. */
-  pendingTree: ElementTreeResponse | null;
+  pendingTree: TreeApiResponse | null;
 }
 
 // --- Drag context ---
@@ -129,23 +130,24 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      const parsed = parseDraggableId(String(event.active.id));
+      const activeId = String(event.active.id);
+      const parsed = parseDraggableId(activeId);
       if (!parsed) return;
 
-      const node = maps.nodeMap.get(parsed.id);
+      const node = maps.nodeMap.get(activeId);
       if (!node) return;
 
-      const siblings = maps.childrenByParentId.get(node.parentId) ?? [];
+      const siblings = maps.childrenByParentKey.get(node.parentKey) ?? [];
       pending.setSourceSiblings(
         new Set(
           siblings
-            .filter((n) => n.id !== parsed.id)
-            .map((n) => buildDraggableId(parsed.type, n.id)),
+            .filter((n) => n.nodeKey !== activeId)
+            .map((n) => buildDraggableId(parsed.type, n.self.id)),
         ),
       );
 
       setDragState({
-        activeId: String(event.active.id),
+        activeId,
         activeType: parsed.type,
         activeNode: node,
       });
@@ -158,46 +160,51 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
-      const activeParsed = parseDraggableId(String(active.id));
-      const overParsed = parseDraggableId(String(over.id));
+      const activeId = String(active.id);
+      const overId = String(over.id);
+
+      const activeParsed = parseDraggableId(activeId);
+      const overParsed = parseDraggableId(overId);
       if (!activeParsed || !overParsed) return;
 
       const { tree: effectiveTree, maps: effectiveMaps } = pending.getEffective(tree, maps);
 
-      const activeNode = effectiveMaps.nodeMap.get(activeParsed.id);
+      const activeNode = effectiveMaps.nodeMap.get(activeId);
       if (!activeNode) return;
 
-      let targetParentId: number;
-      let afterElementId: number | null;
+      let targetParent: NodeRef;
+      let after: NodeRef | null;
 
       if (overParsed.type === activeParsed.type) {
-        const overNode = effectiveMaps.nodeMap.get(overParsed.id);
+        const overNode = effectiveMaps.nodeMap.get(overId);
         if (!overNode) return;
-        targetParentId = overNode.parentId;
+        targetParent = overNode.parent;
 
         const pointer = getPointerPosition(event);
         if (
           pointer !== null &&
           resolveInsertDirection(pointer, over.rect, activeParsed.type) === 'before'
         ) {
-          const siblings = effectiveMaps.childrenByParentId.get(targetParentId) ?? [];
-          const overIdx = siblings.findIndex((n) => n.id === overParsed.id);
-          afterElementId = overIdx > 0 ? siblings[overIdx - 1].id : null;
+          const siblings =
+            effectiveMaps.childrenByParentKey.get(overNode.parentKey) ?? [];
+          const overIdx = siblings.findIndex((n) => n.nodeKey === overId);
+          after = overIdx > 0 ? siblings[overIdx - 1].self : null;
         } else {
-          afterElementId = overParsed.id;
+          after = overNode.self;
         }
       } else {
-        const containerNode = effectiveMaps.nodeMap.get(overParsed.id);
+        const containerNode = effectiveMaps.nodeMap.get(overId);
         if (!containerNode || !isContainerNode(containerNode)) return;
-        targetParentId = containerNode.id;
+        targetParent = containerNode.self;
         const children = containerNode.children ?? [];
-        afterElementId = children.length > 0 ? children[children.length - 1].id : null;
+        after = children.length > 0 ? children[children.length - 1].self : null;
       }
 
       // Same-container: SortableContext handles visual reordering via transforms
-      if (activeNode.parentId === targetParentId) return;
+      if (nodeRefEquals(activeNode.parent, targetParent)) return;
 
-      pending.applyPendingMove(activeParsed, targetParentId, afterElementId, effectiveTree);
+      const targetParentKey = buildNodeKey(targetParent.type, targetParent.id);
+      pending.applyPendingMove(activeParsed, targetParentKey, after?.id ?? null, effectiveTree);
     },
     [tree, maps, pending],
   );
@@ -212,26 +219,29 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         return;
       }
 
-      const activeParsed = parseDraggableId(String(active.id));
-      const overParsed = parseDraggableId(String(over.id));
+      const activeId = String(active.id);
+      const overId = String(over.id);
+
+      const activeParsed = parseDraggableId(activeId);
+      const overParsed = parseDraggableId(overId);
       if (!activeParsed || !overParsed) {
         pending.clear();
         return;
       }
 
-      const activeNode = maps.nodeMap.get(activeParsed.id);
+      const activeNode = maps.nodeMap.get(activeId);
       if (!activeNode) {
         pending.clear();
         return;
       }
 
-      const sourceParentId = activeNode.parentId;
-      const sourceChildren = maps.childrenByParentId.get(sourceParentId);
+      const sourceParentKey = activeNode.parentKey;
+      const sourceChildren = maps.childrenByParentKey.get(sourceParentKey);
       if (!sourceChildren) {
         pending.clear();
         return;
       }
-      const sourceIndex = sourceChildren.findIndex((n) => n.id === activeParsed.id);
+      const sourceIndex = sourceChildren.findIndex((n) => n.nodeKey === activeId);
 
       const { maps: effectiveMaps } = pending.getEffective(tree, maps);
 
@@ -255,18 +265,13 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         overParsed,
         pointer,
         maps: effectiveMaps,
-        sourceParentId,
+        sourceParentKey,
         sourceIndex,
         overRect: effectiveOverRect,
       });
 
       if (placement) {
-        onReorder(
-          placement.elementID,
-          placement.targetParentId,
-          placement.afterElementID,
-          pending.clear,
-        );
+        onReorder(placement.element, placement.parent, placement.after, pending.clear);
       } else {
         pending.clear();
       }

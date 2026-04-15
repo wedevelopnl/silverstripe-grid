@@ -62,9 +62,9 @@ export function filterDroppablesByType(
 
     if (containerType === parentType) return true;
 
-    // Sections live under the root-level sortable context, whose droppable
-    // ID won't parse as a valid draggable type (e.g. the string 'root').
-    if (parentType === 'root' && containerType === null) return true;
+    // Sections live under a page — the sortable context wrapping sections has
+    // an unparseable droppable id, so `containerType` is null. Accept it.
+    if (parentType === 'page' && containerType === null) return true;
 
     return false;
   });
@@ -99,7 +99,7 @@ export function filterParentContainers(
   return containers.filter((container) => {
     const containerType = getDraggableType(String(container.id));
 
-    if (parentType === 'root') return containerType === null;
+    if (parentType === 'page') return containerType === null;
 
     return containerType === parentType;
   });

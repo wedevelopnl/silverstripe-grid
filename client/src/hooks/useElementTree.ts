@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchElementTree } from '@/api/endpoints';
-import type { ElementTreeResponse, TreeApiResponse } from '@/types/elements';
+import type { TreeApiResponse } from '@/types/elements';
 import type { ApiError } from '@/api/errors';
 import { queryKeys } from './queryKeys';
 
@@ -24,14 +24,12 @@ function treeQueryOptions(pageId: number | null, zone: string, version?: number)
  * Fetches and caches the element tree for a CMS page zone.
  * Disabled when pageId is null (no page selected).
  *
- * Pass `version` to fetch a specific historical version of the tree.
- * Uses `select` to extract just the tree, keeping the full API response
- * (including overrideCounts) in the query cache for other hooks.
+ * Returns the full {@link TreeApiResponse} including `rootParent`, `nodes`,
+ * and `overrideCounts`.
  */
 export function useElementTree(pageId: number | null, zone: string, version?: number) {
-  return useQuery<TreeApiResponse, ApiError, ElementTreeResponse>({
+  return useQuery<TreeApiResponse, ApiError>({
     ...treeQueryOptions(pageId, zone, version),
-    select: (response) => response.tree,
   });
 }
 

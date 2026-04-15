@@ -53,25 +53,26 @@ final class GridTreeBuilderTest extends SapphireTest
 
         $sectionNodes = $tree[$page->ID];
         self::assertCount(1, $sectionNodes);
-        self::assertSame((int) $section->ID, $sectionNodes[0]->id);
+        self::assertSame((int) $section->ID, $sectionNodes[0]->getId());
+        self::assertSame((int) $page->ID, $sectionNodes[0]->getParentId());
         self::assertSame(ContainerType::Section, $sectionNodes[0]->containerType);
 
         $rowNodes = $sectionNodes[0]->children;
         self::assertNotNull($rowNodes);
         self::assertCount(1, $rowNodes);
-        self::assertSame((int) $row->ID, $rowNodes[0]->id);
+        self::assertSame((int) $row->ID, $rowNodes[0]->getId());
         self::assertSame(ContainerType::Row, $rowNodes[0]->containerType);
 
         $columnNodes = $rowNodes[0]->children;
         self::assertNotNull($columnNodes);
         self::assertCount(1, $columnNodes);
-        self::assertSame((int) $column->ID, $columnNodes[0]->id);
+        self::assertSame((int) $column->ID, $columnNodes[0]->getId());
         self::assertSame(ContainerType::Column, $columnNodes[0]->containerType);
 
         $contentNodes = $columnNodes[0]->children;
         self::assertNotNull($contentNodes);
         self::assertCount(1, $contentNodes);
-        self::assertSame((int) $content->ID, $contentNodes[0]->id);
+        self::assertSame((int) $content->ID, $contentNodes[0]->getId());
         self::assertNull($contentNodes[0]->containerType);
     }
 

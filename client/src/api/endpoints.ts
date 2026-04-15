@@ -1,5 +1,7 @@
-import type { ContainerType, TreeApiResponse } from '@/types/elements';
+import type { ContainerType, ElementNode, TreeApiResponse } from '@/types/elements';
+import { isContainerNode } from '@/types/elements';
 import type { AcceptableContainer, PageEntry } from '@/types/duplicateTo';
+import { assertNodeRef, buildNodeKey, type NodeRef } from '@/types/identity';
 import { apiDelete, apiGet, apiPatch, apiPost } from './client';
 import { getControllerLink } from './config';
 
@@ -23,12 +25,72 @@ export async function fetchElementTree(
     version !== undefined
       ? `${base}/api/readTree/${pageId}/${encodedZone}/version/${version}`
       : `${base}/api/readTree/${pageId}/${encodedZone}`;
-  return apiGet<TreeApiResponse>(url);
+  const raw = await apiGet<unknown>(url);
+  return normaliseTreeResponse(raw);
+}
+
+/**
+ * Validate the tree response shape from the server and attach derived
+ * `nodeKey`/`parentKey` fields to every node in the tree.
+ *
+ * The server emits `self` and `parent` as `{type, id}` tuples — the frontend
+ * caches the composite string keys alongside so downstream lookups never have
+ * to reconstruct them per render.
+ */
+export function normaliseTreeResponse(raw: unknown): TreeApiResponse {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new TypeError('tree response: expected an object');
+  }
+  const data = raw as Record<string, unknown>;
+  const rootParent = assertNodeRef(data.rootParent, 'tree response.rootParent');
+  if (!Array.isArray(data.nodes)) {
+    throw new TypeError('tree response: expected `nodes` to be an array');
+  }
+  const overrideCounts: Record<string, number> = {};
+  const rawCounts = data.overrideCounts;
+  if (typeof rawCounts === 'object' && rawCounts !== null) {
+    for (const [key, value] of Object.entries(rawCounts)) {
+      if (typeof value === 'number') overrideCounts[key] = value;
+    }
+  }
+
+  const nodes = data.nodes.map((node: unknown) => normaliseNode(node));
+
+  return { rootParent, nodes, overrideCounts };
+}
+
+function normaliseNode(raw: unknown): ElementNode {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new TypeError('tree node: expected an object');
+  }
+  const node = raw as Record<string, unknown> & { children?: unknown };
+  const self = assertNodeRef(node.self, 'tree node.self');
+  const parent = assertNodeRef(node.parent, 'tree node.parent');
+
+  const normalised = {
+    ...node,
+    self,
+    parent,
+    nodeKey: buildNodeKey(self.type, self.id),
+    parentKey: buildNodeKey(parent.type, parent.id),
+    id: self.id,
+    parentId: parent.id,
+  } as unknown as ElementNode;
+
+  if (isContainerNode(normalised) && Array.isArray(node.children)) {
+    // Reassign children with the normalised variants. Cast is safe: the type
+    // guard above confirms `normalised` is a container node.
+    (normalised as { children: ElementNode[] | null }).children = node.children.map((child) =>
+      normaliseNode(child),
+    );
+  }
+
+  return normalised;
 }
 
 export interface CreateElementParams {
   containerType: ContainerType;
-  parentId: number;
+  parent: NodeRef;
   insertAfterElementID?: number;
   zone?: string;
 }
@@ -59,9 +121,9 @@ export async function duplicateElement(id: number): Promise<void> {
 }
 
 export interface ReorderElementParams {
-  elementID: number;
-  targetParentId: number;
-  afterElementID: number | null;
+  element: NodeRef;
+  parent: NodeRef;
+  after: NodeRef | null;
 }
 
 export async function reorderElement(params: ReorderElementParams): Promise<void> {
@@ -118,7 +180,7 @@ export interface DuplicateToParams {
   id: number;
   targetPageId: number;
   targetZone: string;
-  targetParentId: number;
+  targetParent: NodeRef;
 }
 
 export async function duplicateToElement(params: DuplicateToParams): Promise<void> {

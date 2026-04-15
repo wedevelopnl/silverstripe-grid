@@ -13,6 +13,8 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Value\NodeRef;
+use WeDevelop\Grid\Value\NodeType;
 
 /**
  * Maps GridElement models to GridNode DTOs.
@@ -32,13 +34,12 @@ class GridNodeMapper
     /**
      * Map a GridElement to a GridNode DTO.
      *
-     * @param positive-int $parentId
      * @param array<class-string, array{label: string, icon: string, description: string}>|null $allowedTypes
      * @param list<GridNode>|null $children
      */
     public function mapToNode(
         GridElement $element,
-        int $parentId,
+        NodeRef $parent,
         ?ContainerType $containerType,
         ?array $allowedTypes,
         ?array $children,
@@ -76,9 +77,11 @@ class GridNodeMapper
         $canUnpublish = $element->canUnpublish();
         assert(is_bool($canUnpublish));
 
+        $self = new NodeRef(NodeType::fromClass($element::class), $id);
+
         return new GridNode(
-            id: $id,
-            parentId: $parentId,
+            self: $self,
+            parent: $parent,
             title: $title,
             blockSchema: $blockSchemaWithIcon,
             obsoleteClassName: $element->getObsoleteClassName(),

@@ -1,53 +1,56 @@
 import { useMemo } from 'react';
 import { isContainerNode } from '@/types/elements';
-import type { ElementNode, ElementTreeResponse } from '@/types/elements';
+import type { ElementNode, TreeApiResponse } from '@/types/elements';
+import type { NodeKey } from '@/types/identity';
 
 export interface ElementMaps {
-  nodeMap: Map<number, ElementNode>;
-  childrenByParentId: Map<number, ElementNode[]>;
+  /** Every node indexed by its composite {@link NodeKey}. Pages are not stored here. */
+  nodeMap: Map<NodeKey, ElementNode>;
+  /**
+   * Children indexed by parent {@link NodeKey}. The root entry is keyed by the
+   * tree's `rootParent` (a page), so `childrenByParentKey.get("page-1")` yields
+   * the top-level sections. This is the canonical sibling lookup — it is
+   * collision-free across the polymorphic parent namespace.
+   */
+  childrenByParentKey: Map<NodeKey, ElementNode[]>;
 }
 
-/**
- * Walks the tree once, populating both lookup maps simultaneously.
- */
 function walkNodes(
   nodes: ElementNode[],
-  nodeMap: Map<number, ElementNode>,
-  childrenByParentId: Map<number, ElementNode[]>,
+  nodeMap: Map<NodeKey, ElementNode>,
+  childrenByParentKey: Map<NodeKey, ElementNode[]>,
 ): void {
   for (const node of nodes) {
-    nodeMap.set(node.id, node);
+    nodeMap.set(node.nodeKey, node);
 
     if (isContainerNode(node) && node.children) {
-      childrenByParentId.set(node.id, node.children);
-      walkNodes(node.children, nodeMap, childrenByParentId);
+      childrenByParentKey.set(node.nodeKey, node.children);
+      walkNodes(node.children, nodeMap, childrenByParentKey);
     }
   }
 }
 
 /**
- * Builds flat lookup maps from a nested element tree.
+ * Build flat lookup maps from a structured tree response.
  *
- * - `nodeMap`: every node by ID for O(1) lookup
- * - `childrenByParentId`: parent ID → children array for O(1) sibling lookup
- *
- * Root-level arrays (keyed by page ID) are included in `childrenByParentId`.
+ * - `nodeMap`: every non-page node by {@link NodeKey} for O(1) lookup.
+ * - `childrenByParentKey`: parent key → children array for O(1) sibling lookup.
+ *   The root entry (page → sections) is keyed by the page's NodeKey.
  */
-export function buildMaps(tree: ElementTreeResponse): ElementMaps {
-  const nodeMap = new Map<number, ElementNode>();
-  const childrenByParentId = new Map<number, ElementNode[]>();
+export function buildMaps(tree: TreeApiResponse): ElementMaps {
+  const nodeMap = new Map<NodeKey, ElementNode>();
+  const childrenByParentKey = new Map<NodeKey, ElementNode[]>();
 
-  for (const [parentKey, nodes] of Object.entries(tree)) {
-    childrenByParentId.set(Number(parentKey), nodes);
-    walkNodes(nodes, nodeMap, childrenByParentId);
-  }
+  const rootKey = `${tree.rootParent.type}-${tree.rootParent.id}`;
+  childrenByParentKey.set(rootKey, tree.nodes);
+  walkNodes(tree.nodes, nodeMap, childrenByParentKey);
 
-  return { nodeMap, childrenByParentId };
+  return { nodeMap, childrenByParentKey };
 }
 
 /**
  * React hook that memoizes element lookup maps from a tree response.
  */
-export function useElementMaps(tree: ElementTreeResponse): ElementMaps {
+export function useElementMaps(tree: TreeApiResponse): ElementMaps {
   return useMemo(() => buildMaps(tree), [tree]);
 }

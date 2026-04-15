@@ -1,5 +1,6 @@
 import type { ElementNode } from './elements';
 import { isContainerNode } from './elements';
+import { buildNodeKey, parseNodeKey, type NodeKey, type NodeType } from './identity';
 
 export const DRAGGABLE_TYPES = ['section', 'row', 'column', 'element'] as const;
 
@@ -10,28 +11,24 @@ export interface ParsedDraggableId {
   readonly id: number;
 }
 
-const SEPARATOR = '-';
-
-function isDraggableType(value: string): value is DraggableType {
-  return (DRAGGABLE_TYPES as readonly string[]).includes(value);
+function isDraggableType(value: NodeType): value is DraggableType {
+  return value !== 'page';
 }
 
-export function buildDraggableId(type: DraggableType, id: number): string {
-  return `${type}${SEPARATOR}${id}`;
+/**
+ * Build a dnd-kit sortable ID. Always returns a {@link NodeKey} string —
+ * dnd-kit IDs and node keys are literally the same format for draggable types,
+ * so there is no translation layer between the two spaces.
+ */
+export function buildDraggableId(type: DraggableType, id: number): NodeKey {
+  return buildNodeKey(type, id);
 }
 
 export function parseDraggableId(compositeId: string): ParsedDraggableId | null {
-  const separatorIndex = compositeId.indexOf(SEPARATOR);
-  // Stryker disable next-line EqualityOperator,ConditionalExpression: Equivalent — empty/missing type prefix caught by isDraggableType below
-  if (separatorIndex <= 0) return null;
-
-  const type = compositeId.slice(0, separatorIndex);
-  if (!isDraggableType(type)) return null;
-
-  const numericId = Number(compositeId.slice(separatorIndex + 1));
-  if (!Number.isInteger(numericId) || numericId <= 0) return null;
-
-  return { type, id: numericId };
+  const ref = parseNodeKey(compositeId);
+  if (ref === null) return null;
+  if (!isDraggableType(ref.type)) return null;
+  return { type: ref.type, id: ref.id };
 }
 
 export function getDraggableType(compositeId: string): DraggableType | null {
@@ -48,11 +45,11 @@ export function getDraggableTypeForNode(node: ElementNode): DraggableType {
 }
 
 /**
- * Maps a draggable type to the container type that holds its siblings.
- * Sections live in the root area, rows in sections, columns in rows, elements in columns.
+ * Maps a draggable type to the parent type that holds its siblings.
+ * Sections live under a page, rows in sections, columns in rows, elements in columns.
  */
-export const PARENT_CONTAINER_TYPE: Record<DraggableType, DraggableType | 'root'> = {
-  section: 'root',
+export const PARENT_CONTAINER_TYPE: Record<DraggableType, NodeType> = {
+  section: 'page',
   row: 'section',
   column: 'row',
   element: 'column',

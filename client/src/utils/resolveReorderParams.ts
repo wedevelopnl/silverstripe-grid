@@ -1,61 +1,64 @@
 import { parseDraggableId } from '@/types/dnd';
+import type { ElementMaps } from '@/hooks/useElementMaps';
+import type { NodeKey, NodeRef } from '@/types/identity';
 import type { ReorderElementParams } from '@/api/endpoints';
 
 export interface ReorderContext {
-  /** Composite dnd-kit ID, e.g. 'row-17' */
-  activeId: string;
-  /** The target parent ID where the item is being dropped */
-  overContainerParentId: number;
-  /** Insertion index in the target container */
+  /** Composite dnd-kit ID of the element being moved — also its NodeKey. */
+  activeId: NodeKey;
+  /** NodeRef of the target parent (scoped identity). */
+  targetParent: NodeRef;
+  /** NodeKey of the target parent (for map lookups). */
+  targetParentKey: NodeKey;
+  /** Insertion index in the target container's final order. */
   overIndex: number;
-  /** Ordered composite IDs of items in the target container (reflects final order) */
-  containerItems: string[];
-  /** Parent ID of the source container */
-  sourceContainerParentId: number;
-  /** Original index in the source container */
+  /** Ordered composite IDs of items in the target container (reflects final order). */
+  containerItems: NodeKey[];
+  /** NodeKey of the source container. */
+  sourceParentKey: NodeKey;
+  /** Original index in the source container. */
   sourceIndex: number;
+  /** Maps into the effective tree — used to resolve `after` NodeRefs. */
+  maps: ElementMaps;
 }
 
 /**
- * Maps dnd-kit event context to the backend API's reorder parameters.
+ * Map drag-and-drop context to the backend API's reorder parameters.
  *
- * Returns null if the active ID is unparseable or the move is a no-op
- * (same container and same index).
+ * Returns null when the move is a no-op (same container, same index) or the
+ * active ID is unparseable.
  */
 export function resolveReorderParams(context: ReorderContext): ReorderElementParams | null {
   const parsed = parseDraggableId(context.activeId);
   if (!parsed) return null;
 
-  // No-op: same container, same index
   if (
-    context.sourceContainerParentId === context.overContainerParentId &&
+    context.sourceParentKey === context.targetParentKey &&
     context.sourceIndex === context.overIndex
   ) {
     return null;
   }
 
-  const afterElementId = resolveAfterElementId(context, parsed.id);
+  const afterKey = resolveAfterKey(context);
+  const afterNode = afterKey === null ? null : context.maps.nodeMap.get(afterKey) ?? null;
 
   return {
-    elementID: parsed.id,
-    targetParentId: context.overContainerParentId,
-    afterElementID: afterElementId,
+    element: { type: parsed.type, id: parsed.id },
+    parent: context.targetParent,
+    after: afterNode ? afterNode.self : null,
   };
 }
 
 /**
- * Determines the afterElementID by looking at the item before the insertion
- * index in containerItems, skipping the active item itself.
+ * Walk backwards from `overIndex - 1` to find the first non-active item, which
+ * becomes the `after` anchor. Returns null when the insertion is at the head
+ * of the target container.
  */
-function resolveAfterElementId(context: ReorderContext, activeElementId: number): number | null {
-  // Walk backwards from overIndex - 1 to find the first valid, non-active item
+function resolveAfterKey(context: ReorderContext): NodeKey | null {
   for (let i = context.overIndex - 1; i >= 0; i--) {
     const item = context.containerItems[i];
-    const parsed = parseDraggableId(item);
-    if (!parsed) continue;
-    if (parsed.id === activeElementId) continue;
-    return parsed.id;
+    if (item === context.activeId) continue;
+    return item;
   }
-
   return null;
 }

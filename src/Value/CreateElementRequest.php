@@ -7,13 +7,12 @@ namespace WeDevelop\Grid\Value;
 final readonly class CreateElementRequest
 {
     /**
-     * @param positive-int $parentId
      * @param positive-int|null $insertAfterElementID
      * @param non-empty-string $zone
      */
     public function __construct(
         public ContainerType $containerType,
-        public int $parentId,
+        public NodeRef $parent,
         public ?int $insertAfterElementID,
         public string $zone,
     ) {

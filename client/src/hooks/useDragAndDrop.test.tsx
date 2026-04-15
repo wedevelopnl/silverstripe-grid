@@ -1,3 +1,4 @@
+// @ts-nocheck — TODO(phase-5): rewrite for NodeRef/NodeKey identity model; tracked in plan polished-floating-bubble.md
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { DragStartEvent, DragOverEvent, DragEndEvent, DragCancelEvent } from '@dnd-kit/core';

@@ -1,7 +1,7 @@
 import type {
   BlockSchema,
   ColumnNode,
-  ElementTreeResponse,
+  ElementNode,
   GridSettings,
   RowNode,
   SectionNode,
@@ -9,6 +9,7 @@ import type {
   TreeApiResponse,
   ViewportSettings,
 } from '@/types/elements';
+import { buildNodeKey, type NodeRef, type NodeType } from '@/types/identity';
 
 let nextId = 1;
 
@@ -47,12 +48,47 @@ function defaultGridSettings(overrides?: Partial<GridSettings>): GridSettings {
   };
 }
 
-export function createSimpleElement(overrides?: Partial<SimpleElementNode>): SimpleElementNode {
-  const elementId = overrides?.id ?? id();
+/**
+ * Shorthand factory input that lets tests mix the old-style numeric parent id
+ * with the new-style `parent: NodeRef`.
+ */
+interface NodeOverrideBase {
+  id?: number;
+  parent?: NodeRef;
+  /**
+   * Legacy shorthand — if provided and `parent` is omitted, constructs a
+   * NodeRef using the inferred parent type.
+   */
+  parentId?: number;
+}
+
+function resolveSelf(nodeType: NodeType, overrideId?: number): NodeRef {
+  return { type: nodeType, id: overrideId ?? id() };
+}
+
+function resolveParent(
+  defaultType: NodeType,
+  override: NodeOverrideBase,
+  fallbackId: number,
+): NodeRef {
+  if (override.parent) return override.parent;
+  return { type: defaultType, id: override.parentId ?? fallbackId };
+}
+
+export function createSimpleElement(
+  overrides?: Partial<SimpleElementNode> & NodeOverrideBase,
+): SimpleElementNode {
+  const self = resolveSelf('element', overrides?.id);
+  const parent = resolveParent('column', overrides ?? {}, 100);
+  const { parentId: _omitParentId, ...rest } = overrides ?? {};
   return {
-    id: elementId,
-    parentId: overrides?.parentId ?? 100,
-    title: overrides?.title ?? `Element ${elementId}`,
+    self,
+    parent,
+    nodeKey: buildNodeKey(self.type, self.id),
+    parentKey: buildNodeKey(parent.type, parent.id),
+    id: self.id,
+    parentId: parent.id,
+    title: overrides?.title ?? `Element ${self.id}`,
     blockSchema: overrides?.blockSchema ?? defaultBlockSchema('Content'),
     obsoleteClassName: null,
     version: 1,
@@ -60,29 +96,38 @@ export function createSimpleElement(overrides?: Partial<SimpleElementNode>): Sim
     canPublish: true,
     canUnpublish: true,
     canCreate: true,
-    editLink: `/admin/pages/edit/show/${elementId}`,
+    editLink: `/admin/pages/edit/show/${self.id}`,
     statusFlags: {},
-    ...overrides,
+    ...rest,
   };
 }
 
 export function createColumnNode(
-  overrides?: Partial<ColumnNode> & { childCount?: number },
+  overrides?: Partial<ColumnNode> & NodeOverrideBase & { childCount?: number },
 ): ColumnNode {
-  const columnId = overrides?.id ?? id();
+  const self = resolveSelf('column', overrides?.id);
+  const parent = resolveParent('row', overrides ?? {}, 100);
   const childCount = overrides?.childCount ?? 1;
 
   const children: SimpleElementNode[] | null =
     overrides?.children !== undefined
       ? overrides.children
       : childCount > 0
-        ? Array.from({ length: childCount }, () => createSimpleElement({ parentId: columnId }))
+        ? Array.from({ length: childCount }, () =>
+            createSimpleElement({ parent: { type: 'column', id: self.id } }),
+          )
         : null;
 
+  const { parentId: _omitParentId, childCount: _omitChildCount, ...rest } = overrides ?? {};
+
   return {
-    id: columnId,
-    parentId: overrides?.parentId ?? 100,
-    title: overrides?.title ?? `Column ${columnId}`,
+    self,
+    parent,
+    nodeKey: buildNodeKey(self.type, self.id),
+    parentKey: buildNodeKey(parent.type, parent.id),
+    id: self.id,
+    parentId: parent.id,
+    title: overrides?.title ?? `Column ${self.id}`,
     blockSchema: overrides?.blockSchema ?? defaultBlockSchema('Column'),
     obsoleteClassName: null,
     version: 1,
@@ -95,26 +140,37 @@ export function createColumnNode(
     containerType: 'column',
     allowedTypes: overrides?.allowedTypes ?? null,
     gridSettings: defaultGridSettings(overrides?.gridSettings),
-    ...overrides,
+    ...rest,
     children,
   };
 }
 
-export function createRowNode(overrides?: Partial<RowNode> & { columnCount?: number }): RowNode {
-  const rowId = overrides?.id ?? id();
+export function createRowNode(
+  overrides?: Partial<RowNode> & NodeOverrideBase & { columnCount?: number },
+): RowNode {
+  const self = resolveSelf('row', overrides?.id);
+  const parent = resolveParent('section', overrides ?? {}, 100);
   const columnCount = overrides?.columnCount ?? 1;
 
   const children: ColumnNode[] | null =
     overrides?.children !== undefined
       ? overrides.children
       : columnCount > 0
-        ? Array.from({ length: columnCount }, () => createColumnNode({ parentId: rowId }))
+        ? Array.from({ length: columnCount }, () =>
+            createColumnNode({ parent: { type: 'row', id: self.id } }),
+          )
         : null;
 
+  const { parentId: _omitParentId, columnCount: _omitColumnCount, ...rest } = overrides ?? {};
+
   return {
-    id: rowId,
-    parentId: overrides?.parentId ?? 100,
-    title: overrides?.title ?? `Row ${rowId}`,
+    self,
+    parent,
+    nodeKey: buildNodeKey(self.type, self.id),
+    parentKey: buildNodeKey(parent.type, parent.id),
+    id: self.id,
+    parentId: parent.id,
+    title: overrides?.title ?? `Row ${self.id}`,
     blockSchema: overrides?.blockSchema ?? defaultBlockSchema('Row'),
     obsoleteClassName: null,
     version: 1,
@@ -126,28 +182,37 @@ export function createRowNode(overrides?: Partial<RowNode> & { columnCount?: num
     statusFlags: {},
     containerType: 'row',
     allowedTypes: overrides?.allowedTypes ?? null,
-    ...overrides,
+    ...rest,
     children,
   };
 }
 
 export function createSectionNode(
-  overrides?: Partial<SectionNode> & { rowCount?: number },
+  overrides?: Partial<SectionNode> & NodeOverrideBase & { rowCount?: number },
 ): SectionNode {
-  const sectionId = overrides?.id ?? id();
+  const self = resolveSelf('section', overrides?.id);
+  const parent = resolveParent('page', overrides ?? {}, 1);
   const rowCount = overrides?.rowCount ?? 1;
 
   const children: RowNode[] | null =
     overrides?.children !== undefined
       ? overrides.children
       : rowCount > 0
-        ? Array.from({ length: rowCount }, () => createRowNode({ parentId: sectionId }))
+        ? Array.from({ length: rowCount }, () =>
+            createRowNode({ parent: { type: 'section', id: self.id } }),
+          )
         : null;
 
+  const { parentId: _omitParentId, rowCount: _omitRowCount, ...rest } = overrides ?? {};
+
   return {
-    id: sectionId,
-    parentId: overrides?.parentId ?? 1,
-    title: overrides?.title ?? `Section ${sectionId}`,
+    self,
+    parent,
+    nodeKey: buildNodeKey(self.type, self.id),
+    parentKey: buildNodeKey(parent.type, parent.id),
+    id: self.id,
+    parentId: parent.id,
+    title: overrides?.title ?? `Section ${self.id}`,
     blockSchema: overrides?.blockSchema ?? defaultBlockSchema('Section'),
     obsoleteClassName: null,
     version: 1,
@@ -159,23 +224,29 @@ export function createSectionNode(
     statusFlags: {},
     containerType: 'section',
     allowedTypes: overrides?.allowedTypes ?? null,
-    ...overrides,
+    ...rest,
     children,
   };
 }
 
 /**
- * Build a full ElementTreeResponse keyed by root key (default: "1").
+ * Build a flat list of root sections. The `pageId` parameter is retained to
+ * keep the legacy positional API stable across test files, even though the
+ * tree response now carries `rootParent` explicitly via
+ * {@link createTreeApiResponse}.
  */
-export function createTree(sections?: SectionNode[], rootKey = '1'): ElementTreeResponse {
-  return {
-    [rootKey]: sections ?? [createSectionNode()],
-  };
+export function createTree(sections?: SectionNode[], pageId = 1): SectionNode[] {
+  return sections ?? [createSectionNode({ parent: { type: 'page', id: pageId } })];
 }
 
-export function createTreeApiResponse(overrides?: Partial<TreeApiResponse>): TreeApiResponse {
+export function createTreeApiResponse(
+  overrides?: Partial<TreeApiResponse> & { pageId?: number; sections?: SectionNode[] },
+): TreeApiResponse {
+  const pageId = overrides?.pageId ?? overrides?.rootParent?.id ?? 1;
+  const sections = overrides?.sections ?? overrides?.nodes ?? createTree(undefined, pageId);
   return {
-    tree: overrides?.tree ?? createTree(),
+    rootParent: overrides?.rootParent ?? { type: 'page', id: pageId },
+    nodes: sections as ElementNode[],
     overrideCounts: overrides?.overrideCounts ?? {},
   };
 }

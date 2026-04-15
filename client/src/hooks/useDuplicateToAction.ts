@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { ActionItem } from '@/components/ActionsMenu/ActionsMenu';
 import type { ElementNode } from '@/types/elements';
+import type { NodeRef } from '@/types/identity';
 import { getElementType } from '@/utils/getElementType';
 import { useGridEditorContext } from './GridEditorContext';
 import { useDuplicateToElement } from './useElementMutations';
@@ -9,7 +10,7 @@ import { t } from '@/i18n';
 interface DuplicateToDialogState {
   readonly isOpen: boolean;
   readonly elementType: string;
-  readonly onConfirm: (targetPageId: number, targetZone: string, targetParentId: number) => void;
+  readonly onConfirm: (targetPageId: number, targetZone: string, targetParent: NodeRef) => void;
   readonly onCancel: () => void;
   readonly error: string | null;
 }
@@ -36,9 +37,9 @@ export function useDuplicateToAction(node: ElementNode): UseDuplicateToActionRes
   }, []);
 
   const handleConfirm = useCallback(
-    (targetPageId: number, targetZone: string, targetParentId: number) => {
+    (targetPageId: number, targetZone: string, targetParent: NodeRef) => {
       duplicateToElement.mutate(
-        { id: node.id, targetPageId, targetZone, targetParentId },
+        { id: node.id, targetPageId, targetZone, targetParent },
         {
           onSuccess: () => {
             setDialogOpen(false);

@@ -18,8 +18,9 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Extensions\GridPageExtension;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\NodeRef;
+use WeDevelop\Grid\Value\NodeType;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\ValidationErrorCode;
@@ -148,11 +149,15 @@ class GridController extends AdminController
 
         $tree = $this->treeBuilder->buildForPage($page, $zone);
 
-        $rootNodes = $tree[(int) $page->ID] ?? [];
+        /** @var positive-int $pageId */
+        $pageId = (int) $page->ID;
+        /** @var positive-int $pageId — $page was loaded by ID above; byID returns null for non-positive IDs, and the null check jumps to jsonError. */
+        $rootNodes = $tree[$pageId] ?? [];
         $overrideCounts = GridTreeBuilder::countOverrides($rootNodes);
 
         return $this->jsonSuccess(200, [
-            'tree' => $tree,
+            'rootParent' => (new NodeRef(NodeType::Page, $pageId))->jsonSerialize(),
+            'nodes' => $rootNodes,
             'overrideCounts' => (object) $overrideCounts,
         ]);
     }
@@ -218,11 +223,13 @@ class GridController extends AdminController
             return $treeBuilder->buildForPage($page, $zone);
         });
 
+        /** @var positive-int $pageId — $page was loaded by ID above; byID returns null for non-positive IDs, and the null check jumps to jsonError. */
         $rootNodes = $tree[$pageId] ?? [];
         $overrideCounts = GridTreeBuilder::countOverrides($rootNodes);
 
         return $this->jsonSuccess(200, [
-            'tree' => $tree,
+            'rootParent' => (new NodeRef(NodeType::Page, $pageId))->jsonSerialize(),
+            'nodes' => $rootNodes,
             'overrideCounts' => (object) $overrideCounts,
         ]);
     }
@@ -237,7 +244,16 @@ class GridController extends AdminController
 
         $body = $parseResult->unwrap();
 
-        $parent = $this->resolveParentForContainerType($body->containerType, $body->parentId);
+        $expectedParentType = match ($body->containerType) {
+            ContainerType::Section => NodeType::Page,
+            ContainerType::Row => NodeType::Section,
+            ContainerType::Column => NodeType::Row,
+        };
+        if ($body->parent->type !== $expectedParentType) {
+            $this->jsonError(400);
+        }
+
+        $parent = $this->resolveNodeRef($body->parent);
         if ($parent === null) {
             $this->jsonError(400);
         }
@@ -381,11 +397,19 @@ class GridController extends AdminController
             static fn (GridElement $e): bool => $e->canCreate(),
         );
 
-        // Sections target pages (SiteTree), all others target GridElements.
-        // Must query the correct table due to ID namespace collisions.
-        $isSection = $element instanceof Section;
+        $elementType = NodeType::fromClass($element::class);
+        $expectedTargetType = match ($elementType) {
+            NodeType::Section => NodeType::Page,
+            NodeType::Row => NodeType::Section,
+            NodeType::Column => NodeType::Row,
+            NodeType::Element => NodeType::Column,
+            NodeType::Page => NodeType::Page, // unreachable: element is always a GridElement
+        };
+        if ($body->targetParent->type !== $expectedTargetType) {
+            $this->jsonError(400);
+        }
 
-        $targetParent = $this->resolveParentByElementType($isSection, $body->targetParentId);
+        $targetParent = $this->resolveNodeRef($body->targetParent);
 
         if ($targetParent === null || !$targetParent->exists()) {
             $this->jsonError(404);
@@ -427,7 +451,7 @@ class GridController extends AdminController
 
         $body = $parseResult->unwrap();
 
-        $element = $this->elementRepository->findById($body->elementID);
+        $element = $this->elementRepository->findByRef($body->element);
         if ($element === null) {
             $this->jsonError(400);
         }
@@ -436,7 +460,7 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        $targetParent = $this->resolveParentRecord($body->targetParentId, $element);
+        $targetParent = $this->resolveNodeRef($body->parent);
         if (!$targetParent instanceof DataObject) {
             $this->jsonError(400);
         }
@@ -447,7 +471,10 @@ class GridController extends AdminController
 
         /** @var positive-int $sourceParentId */
         $sourceParentId = (int) $element->ParentID;
-        $isCrossParent = $sourceParentId !== $body->targetParentId;
+        /** @var class-string $sourceParentClass */
+        $sourceParentClass = (string) $element->ParentClass;
+        $isCrossParent = $sourceParentId !== $body->parent->id
+            || $sourceParentClass !== $body->parent->type->toClass();
 
         if ($isCrossParent) {
             $sourceParent = $element->Parent();
@@ -456,7 +483,7 @@ class GridController extends AdminController
             }
         }
 
-        $result = $this->reorderService->reorder($element, $targetParent, $body->afterElementID);
+        $result = $this->reorderService->reorder($element, $targetParent, $body->after?->id);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }
@@ -841,61 +868,23 @@ class GridController extends AdminController
     }
 
     /**
-     * Resolve a parent record for creating a container element.
+     * Resolve a {@see NodeRef} to the concrete DataObject it refers to.
      *
-     * Sections live under SiteTree pages; rows and columns live under GridElements.
-     * Must query the correct table because page IDs and element IDs share
-     * the same numeric space and can collide.
-     *
-     * @param positive-int $parentId
+     * Uses the NodeRef's type to pick the correct ORM table, avoiding the
+     * polymorphic ID collision between SiteTree page IDs and GridElement IDs.
      */
-    private function resolveParentForContainerType(ContainerType $containerType, int $parentId): ?DataObject
+    private function resolveNodeRef(NodeRef $ref): ?DataObject
     {
-        return Versioned::withVersionedMode(static function () use ($containerType, $parentId): ?DataObject {
+        return Versioned::withVersionedMode(static function () use ($ref): ?DataObject {
             Versioned::set_stage(Versioned::DRAFT);
 
-            if ($containerType === ContainerType::Section) {
-                return SiteTree::get()->byID($parentId);
-            }
+            /** @var class-string<DataObject> $class */
+            $class = $ref->type->toClass();
 
-            return GridElement::get()->byID($parentId);
-        });
-    }
+            /** @var DataObject|null $record */
+            $record = DataObject::get($class)->byID($ref->id);
 
-    /**
-     * Resolve a parent record by element type (section vs non-section).
-     *
-     * @param positive-int $parentId
-     */
-    private function resolveParentByElementType(bool $isSection, int $parentId): ?DataObject
-    {
-        return Versioned::withVersionedMode(static function () use ($isSection, $parentId): ?DataObject {
-            Versioned::set_stage(Versioned::DRAFT);
-
-            if ($isSection) {
-                return SiteTree::get()->byID($parentId);
-            }
-
-            return GridElement::get()->byID($parentId);
-        });
-    }
-
-    /**
-     * Resolve a parent record by ID, querying the correct table based on the
-     * element's hierarchy level to avoid ID collisions between GridElement and SiteTree.
-     *
-     * Sections live under SiteTree pages; all other elements live under GridElements.
-     */
-    private function resolveParentRecord(int $parentId, GridElement $element): ?DataObject
-    {
-        return Versioned::withVersionedMode(static function () use ($parentId, $element): ?DataObject {
-            Versioned::set_stage(Versioned::DRAFT);
-
-            if (is_a($element->ParentClass, SiteTree::class, true)) {
-                return SiteTree::get()->byID($parentId);
-            }
-
-            return GridElement::get()->byID($parentId);
+            return $record;
         });
     }
 

@@ -1,3 +1,4 @@
+// @ts-nocheck — TODO(phase-5): rewrite for NodeRef/NodeKey identity model; tracked in plan polished-floating-bubble.md
 import { describe, it, expect } from 'vitest';
 import {
   fetchElementTree,

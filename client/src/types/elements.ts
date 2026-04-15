@@ -1,3 +1,5 @@
+import type { NodeKey, NodeRef } from './identity';
+
 // --- Container type constants ---
 
 export const CONTAINER_TYPES = ['section', 'row', 'column'] as const;
@@ -27,7 +29,34 @@ export interface StatusFlags {
 }
 
 interface BaseFields {
+  /**
+   * Scoped identity of this node. Canonical form for lookups and API payloads
+   * — always prefer `self`/`nodeKey` over the bare `id` to avoid polymorphic
+   * collisions with pages.
+   */
+  self: NodeRef;
+  /**
+   * Scoped identity of this node's parent. `parent.type` is `'page'` for
+   * sections, and the matching container type for all other levels.
+   */
+  parent: NodeRef;
+  /** Precomputed composite key for this node (equal to `buildNodeKey(self)`). */
+  nodeKey: NodeKey;
+  /** Precomputed composite key for this node's parent. */
+  parentKey: NodeKey;
+  /**
+   * Numeric record ID of this node. Equal to `self.id`. Safe to use for display,
+   * React keys, and endpoints that only accept a bare grid-element ID (publish,
+   * unpublish, delete, duplicate, updateGridSettings). **Do not use as a Map key**
+   * — use `nodeKey` instead so page/element ID collisions are eliminated.
+   */
   id: number;
+  /**
+   * Numeric ID of this node's parent. Equal to `parent.id`. **Do not use as a
+   * Map key**: use `parentKey` instead so SiteTree/GridElement ID collisions
+   * cannot corrupt lookups. Retained as a legacy alias for test fixtures and
+   * display code.
+   */
   parentId: number;
   title: string;
   blockSchema: BlockSchema;
@@ -92,12 +121,21 @@ export interface SectionNode extends BaseFields {
 
 export type ElementNode = SectionNode | RowNode | ColumnNode | SimpleElementNode;
 export type ContainerNode = SectionNode | RowNode | ColumnNode;
-export type ElementTreeResponse = Record<string, ElementNode[]>;
+
+/**
+ * Root sections for a single page/zone — flat list. The old `Record<string,
+ * ElementNode[]>` shape has been retired in favour of the structured
+ * `TreeApiResponse` that carries `rootParent` explicitly.
+ */
+export type ElementTreeResponse = ElementNode[];
 
 // --- API response wrapper ---
 
 export interface TreeApiResponse {
-  tree: ElementTreeResponse;
+  /** Identity of the root container (always a page for the current API). */
+  rootParent: NodeRef;
+  /** Flat list of root-level nodes (sections). */
+  nodes: ElementNode[];
   overrideCounts: Record<string, number>;
 }
 

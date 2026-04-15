@@ -2,7 +2,8 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { MutableRefObject } from 'react';
 import type { ParsedDraggableId } from '@/types/dnd';
 import { buildDraggableId } from '@/types/dnd';
-import type { ElementTreeResponse } from '@/types/elements';
+import type { TreeApiResponse } from '@/types/elements';
+import { buildNodeKey, type NodeKey } from '@/types/identity';
 import { buildMaps } from '@/hooks/useElementMaps';
 import type { ElementMaps } from '@/hooks/useElementMaps';
 import { applyReorder } from '@/utils/applyReorder';
@@ -17,7 +18,7 @@ export interface CollisionRefs {
 
 export interface UsePendingTreeReturn {
   /** React state for rendering — the tree with pending move applied, or null. */
-  pendingTree: ElementTreeResponse | null;
+  pendingTree: TreeApiResponse | null;
 
   /** Refs exposed for collision detection (read-only from its perspective). */
   collisionRefs: CollisionRefs;
@@ -25,31 +26,31 @@ export interface UsePendingTreeReturn {
   /** Apply a cross-container move. Returns new tree/maps, or null if no-op. */
   applyPendingMove(
     activeParsed: ParsedDraggableId,
-    targetParentId: number,
+    targetParentKey: NodeKey,
     afterElementId: number | null,
-    effectiveTree: ElementTreeResponse,
-  ): { tree: ElementTreeResponse; maps: ElementMaps } | null;
+    effectiveTree: TreeApiResponse,
+  ): { tree: TreeApiResponse; maps: ElementMaps } | null;
 
   /** Set source container siblings (called on drag start). */
   setSourceSiblings(siblings: ReadonlySet<string | number>): void;
 
   /** Get effective tree/maps (pending or canonical). */
   getEffective(
-    canonicalTree: ElementTreeResponse,
+    canonicalTree: TreeApiResponse,
     canonicalMaps: ElementMaps,
-  ): { tree: ElementTreeResponse; maps: ElementMaps };
+  ): { tree: TreeApiResponse; maps: ElementMaps };
 
   /** Reset all pending state. */
   clear(): void;
 }
 
 /**
- * Encapsulates pending tree state and collision detection refs for
+ * Encapsulate pending tree state and collision detection refs for
  * cross-container drag-and-drop moves.
  */
 export function usePendingTree(): UsePendingTreeReturn {
-  const [pendingTree, setPendingTree] = useState<ElementTreeResponse | null>(null);
-  const pendingTreeRef = useRef<ElementTreeResponse | null>(null);
+  const [pendingTree, setPendingTree] = useState<TreeApiResponse | null>(null);
+  const pendingTreeRef = useRef<TreeApiResponse | null>(null);
   const pendingMapsRef = useRef<ElementMaps | null>(null);
   const hasPendingMoveRef = useRef(false);
   const overRectRef = useRef<OverRectSnapshot | null>(null);
@@ -69,11 +70,16 @@ export function usePendingTree(): UsePendingTreeReturn {
   const applyPendingMove = useCallback(
     (
       activeParsed: ParsedDraggableId,
-      targetParentId: number,
+      targetParentKey: NodeKey,
       afterElementId: number | null,
-      effectiveTree: ElementTreeResponse,
-    ): { tree: ElementTreeResponse; maps: ElementMaps } | null => {
-      const newTree = applyReorder(effectiveTree, activeParsed.id, targetParentId, afterElementId);
+      effectiveTree: TreeApiResponse,
+    ): { tree: TreeApiResponse; maps: ElementMaps } | null => {
+      const activeKey = buildNodeKey(activeParsed.type, activeParsed.id);
+      const afterKey = afterElementId === null
+        ? null
+        : buildNodeKey(activeParsed.type, afterElementId);
+
+      const newTree = applyReorder(effectiveTree, activeKey, targetParentKey, afterKey);
       if (newTree === effectiveTree) return null;
 
       const newMaps = buildMaps(newTree);
@@ -81,9 +87,9 @@ export function usePendingTree(): UsePendingTreeReturn {
       pendingMapsRef.current = newMaps;
       hasPendingMoveRef.current = true;
 
-      const targetSiblings = newMaps.childrenByParentId.get(targetParentId) ?? [];
+      const targetSiblings = newMaps.childrenByParentKey.get(targetParentKey) ?? [];
       pendingContainerItemsRef.current = new Set(
-        targetSiblings.map((n) => buildDraggableId(activeParsed.type, n.id)),
+        targetSiblings.map((n) => buildDraggableId(activeParsed.type, n.self.id)),
       );
 
       setPendingTree(newTree);
@@ -98,9 +104,9 @@ export function usePendingTree(): UsePendingTreeReturn {
 
   const getEffective = useCallback(
     (
-      canonicalTree: ElementTreeResponse,
+      canonicalTree: TreeApiResponse,
       canonicalMaps: ElementMaps,
-    ): { tree: ElementTreeResponse; maps: ElementMaps } => {
+    ): { tree: TreeApiResponse; maps: ElementMaps } => {
       if (pendingTreeRef.current !== null && pendingMapsRef.current !== null) {
         return { tree: pendingTreeRef.current, maps: pendingMapsRef.current };
       }

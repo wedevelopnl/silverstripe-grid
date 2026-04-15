@@ -10,13 +10,12 @@ final readonly class DuplicateToRequest
      * @param positive-int $id
      * @param positive-int $targetPageId
      * @param non-empty-string $targetZone
-     * @param positive-int $targetParentId
      */
     public function __construct(
         public int $id,
         public int $targetPageId,
         public string $targetZone,
-        public int $targetParentId,
+        public NodeRef $targetParent,
     ) {
     }
 }

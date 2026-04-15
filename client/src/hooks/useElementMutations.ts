@@ -20,7 +20,8 @@ import type {
   ResetGridSettingsOverridesParams,
 } from '@/api/endpoints';
 import type { ApiError } from '@/api/errors';
-import type { ElementTreeResponse, TreeApiResponse } from '@/types/elements';
+import type { TreeApiResponse } from '@/types/elements';
+import { nodeRefToKey } from '@/types/identity';
 import { applyReorder } from '@/utils/applyReorder';
 import { refreshPreview } from '@/utils/refreshPreview';
 import { showToast } from '@/utils/toast';
@@ -114,7 +115,7 @@ export function useResetGridSettingsOverrides(pageId: number, zone: string) {
 
 interface ReorderMutationVariables {
   params: ReorderElementParams;
-  tree: ElementTreeResponse;
+  tree: TreeApiResponse;
   clearPendingTree?: () => void;
 }
 
@@ -129,17 +130,13 @@ export function useReorderElement(pageId: number, zone: string) {
 
       const snapshot = queryClient.getQueryData<TreeApiResponse>(queryKey);
 
-      const optimistic = applyReorder(
-        tree,
-        params.elementID,
-        params.targetParentId,
-        params.afterElementID,
-      );
+      const elementKey = nodeRefToKey(params.element);
+      const parentKey = nodeRefToKey(params.parent);
+      const afterKey = params.after === null ? null : nodeRefToKey(params.after);
 
-      queryClient.setQueryData<TreeApiResponse>(queryKey, {
-        tree: optimistic,
-        overrideCounts: snapshot?.overrideCounts ?? {},
-      });
+      const optimistic = applyReorder(tree, elementKey, parentKey, afterKey);
+
+      queryClient.setQueryData<TreeApiResponse>(queryKey, optimistic);
 
       // Clear pending tree after optimistic data is in the cache,
       // preventing a 1-frame snap-back to the original tree.

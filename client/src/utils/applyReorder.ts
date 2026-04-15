@@ -1,158 +1,119 @@
-import { isContainerNode, type ElementTreeResponse, type ElementNode } from '@/types/elements';
+import type { ElementNode, TreeApiResponse } from '@/types/elements';
 import { buildMaps } from '@/hooks/useElementMaps';
+import type { NodeKey, NodeRef } from '@/types/identity';
 
 /**
- * Applies a reorder operation to the element tree, returning a new tree
+ * Apply a reorder operation to the element tree and return a new tree
  * with the element moved to the specified position.
  *
- * Returns the SAME reference if the element is already at the target position (no-op),
- * if the element is not found, or if the target parent does not exist.
+ * Returns the SAME reference for no-ops (element already at target), missing
+ * element/parent, or any error state — keeping React memoisation stable.
  */
 export function applyReorder(
-  tree: ElementTreeResponse,
-  elementId: number,
-  targetParentId: number,
-  afterElementId: number | null,
-): ElementTreeResponse {
+  tree: TreeApiResponse,
+  elementKey: NodeKey,
+  parentKey: NodeKey,
+  afterKey: NodeKey | null,
+): TreeApiResponse {
   const maps = buildMaps(tree);
 
-  const element = maps.nodeMap.get(elementId);
+  const element = maps.nodeMap.get(elementKey);
   if (!element) return tree;
 
-  const sourceParentId = element.parentId;
-  const sourceChildren = maps.childrenByParentId.get(sourceParentId);
+  const sourceParentKey = element.parentKey;
+  const sourceChildren = maps.childrenByParentKey.get(sourceParentKey);
   if (!sourceChildren) return tree;
 
-  const sourceIndex = sourceChildren.findIndex((n) => n.id === elementId);
-  // Stryker disable next-line ConditionalExpression: Equivalent — buildMaps guarantees element is in its parent's children
+  const sourceIndex = sourceChildren.findIndex((n) => n.nodeKey === elementKey);
   if (sourceIndex === -1) return tree;
 
-  // Check target parent exists (either as a mapped container or a root tree key)
-  const targetChildren = maps.childrenByParentId.get(targetParentId);
-  // Stryker disable next-line ConditionalExpression,BooleanLiteral: Equivalent — line 64 catches missing cloned target
-  if (!targetChildren && !Object.hasOwn(tree, String(targetParentId))) {
+  const targetChildren = maps.childrenByParentKey.get(parentKey);
+  if (!targetChildren) return tree;
+
+  if (isNoOp(sourceParentKey, sourceIndex, sourceChildren, parentKey, afterKey)) {
     return tree;
   }
 
-  // No-op detection
-  if (isNoOp(sourceParentId, sourceIndex, sourceChildren, targetParentId, afterElementId)) {
-    return tree;
-  }
-
-  // Deep clone the tree, then build maps from the clone so references point into the clone
-  const cloned = structuredClone(tree);
+  // Deep-clone and rebuild maps to mutate safely.
+  const cloned: TreeApiResponse = {
+    rootParent: tree.rootParent,
+    nodes: structuredClone(tree.nodes),
+    overrideCounts: { ...tree.overrideCounts },
+  };
   const clonedMaps = buildMaps(cloned);
 
-  // Remove element from its current position in the clone
-  const clonedSourceChildren = clonedMaps.childrenByParentId.get(sourceParentId);
+  const clonedSourceChildren = clonedMaps.childrenByParentKey.get(sourceParentKey);
   if (!clonedSourceChildren) return tree;
 
-  const clonedSourceIndex = clonedSourceChildren.findIndex((n) => n.id === elementId);
-  // Stryker disable next-line ConditionalExpression: Equivalent — structuredClone preserves structure verified at line 31
+  const clonedSourceIndex = clonedSourceChildren.findIndex((n) => n.nodeKey === elementKey);
   if (clonedSourceIndex === -1) return tree;
 
   const [movedElement] = clonedSourceChildren.splice(clonedSourceIndex, 1);
 
-  // Update parentId on the moved element if crossing parents
-  // Stryker disable next-line ConditionalExpression: Equivalent — assigning same parentId is a no-op
-  if (sourceParentId !== targetParentId) {
-    (movedElement as { parentId: number }).parentId = targetParentId;
+  if (sourceParentKey !== parentKey) {
+    const targetParentRef = parseParentRef(parentKey);
+    if (targetParentRef === null) return tree;
+
+    (movedElement as { parent: NodeRef; parentKey: NodeKey }).parent = targetParentRef;
+    (movedElement as { parent: NodeRef; parentKey: NodeKey }).parentKey = parentKey;
   }
 
-  // Insert at new position
-  const clonedTargetChildren = clonedMaps.childrenByParentId.get(targetParentId);
+  const clonedTargetChildren = clonedMaps.childrenByParentKey.get(parentKey);
   if (!clonedTargetChildren) return tree;
 
-  insertIntoArray(clonedTargetChildren, movedElement, afterElementId);
+  insertIntoArray(clonedTargetChildren, movedElement, afterKey);
 
-  // Preserve references for unaffected root trees
-  const result: ElementTreeResponse = {};
-  for (const key of Object.keys(tree)) {
-    if (isTreeAffected(maps, key, sourceParentId, targetParentId)) {
-      result[key] = cloned[key];
-    } else {
-      result[key] = tree[key];
-    }
-  }
-
-  return result;
+  return cloned;
 }
 
-/**
- * Determines whether the element is already at the desired position.
- */
 function isNoOp(
-  sourceParentId: number,
+  sourceParentKey: NodeKey,
   sourceIndex: number,
   sourceChildren: ElementNode[],
-  targetParentId: number,
-  afterElementId: number | null,
+  parentKey: NodeKey,
+  afterKey: NodeKey | null,
 ): boolean {
-  if (sourceParentId !== targetParentId) return false;
+  if (sourceParentKey !== parentKey) return false;
 
-  if (afterElementId === null) {
+  if (afterKey === null) {
     return sourceIndex === 0;
   }
 
-  const afterIndex = sourceChildren.findIndex((n) => n.id === afterElementId);
+  const afterIndex = sourceChildren.findIndex((n) => n.nodeKey === afterKey);
   if (afterIndex === -1) return false;
 
   return afterIndex + 1 === sourceIndex;
 }
 
-/**
- * Checks whether a root tree key is affected by the reorder operation.
- * A root key's subtree is affected if the source or target parent is
- * the root key itself, or is a container node within its subtree.
- */
-function isTreeAffected(
-  maps: ReturnType<typeof buildMaps>,
-  rootKey: string,
-  sourceParentId: number,
-  targetParentId: number,
-): boolean {
-  const rootId = Number(rootKey);
-
-  // Direct match: root IS the source or target parent
-  if (rootId === sourceParentId || rootId === targetParentId) return true;
-
-  // Check if any container in this root tree is the source or target parent
-  const rootNodes = maps.childrenByParentId.get(rootId);
-  if (!rootNodes) return false;
-
-  if (containsParent(rootNodes, sourceParentId)) return true;
-  if (containsParent(rootNodes, targetParentId)) return true;
-
-  return false;
-}
-
-/**
- * Checks if any container node in the given array (or its descendants)
- * has an ID matching the target parent ID.
- */
-function containsParent(nodes: ElementNode[], parentId: number): boolean {
-  for (const node of nodes) {
-    if (isContainerNode(node)) {
-      if (node.id === parentId) return true;
-      if (node.children) {
-        if (containsParent(node.children, parentId)) return true;
-      }
-    }
+function parseParentRef(parentKey: NodeKey): NodeRef | null {
+  const separatorIndex = parentKey.indexOf('-');
+  if (separatorIndex <= 0) return null;
+  const type = parentKey.slice(0, separatorIndex);
+  const idNum = Number(parentKey.slice(separatorIndex + 1));
+  if (!Number.isInteger(idNum) || idNum <= 0) return null;
+  if (
+    type !== 'page' &&
+    type !== 'section' &&
+    type !== 'row' &&
+    type !== 'column' &&
+    type !== 'element'
+  ) {
+    return null;
   }
-  return false;
+  return { type, id: idNum };
 }
 
 function insertIntoArray(
   arr: ElementNode[],
   element: ElementNode,
-  afterElementId: number | null,
+  afterKey: NodeKey | null,
 ): void {
-  if (afterElementId === null) {
+  if (afterKey === null) {
     arr.unshift(element);
     return;
   }
 
-  const afterIndex = arr.findIndex((n) => n.id === afterElementId);
+  const afterIndex = arr.findIndex((n) => n.nodeKey === afterKey);
   if (afterIndex === -1) {
     arr.push(element);
     return;
@@ -160,3 +121,4 @@ function insertIntoArray(
 
   arr.splice(afterIndex + 1, 0, element);
 }
+

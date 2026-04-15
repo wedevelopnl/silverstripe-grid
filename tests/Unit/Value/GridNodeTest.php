@@ -12,6 +12,8 @@ use stdClass;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Value\NodeRef;
+use WeDevelop\Grid\Value\NodeType;
 use WeDevelop\Grid\Value\ViewportConfig;
 
 #[CoversClass(GridNode::class)]
@@ -26,11 +28,14 @@ final class GridNodeTest extends TestCase
         'icon' => 'font-icon-block',
     ];
 
+    /**
+     * @param array<string, mixed> $overrides
+     */
     private function makeNode(array $overrides = []): GridNode
     {
         $defaults = [
-            'id' => 1,
-            'parentId' => 10,
+            'self' => new NodeRef(NodeType::Section, 1),
+            'parent' => new NodeRef(NodeType::Page, 10),
             'title' => 'Test Node',
             'blockSchema' => self::DEFAULT_BLOCK_SCHEMA,
             'obsoleteClassName' => null,
@@ -51,8 +56,8 @@ final class GridNodeTest extends TestCase
         $args = [...$defaults, ...$overrides];
 
         return new GridNode(
-            id: $args['id'],
-            parentId: $args['parentId'],
+            self: $args['self'],
+            parent: $args['parent'],
             title: $args['title'],
             blockSchema: $args['blockSchema'],
             obsoleteClassName: $args['obsoleteClassName'],
@@ -72,21 +77,15 @@ final class GridNodeTest extends TestCase
     }
 
     #[Test]
-    public function constructorThrowsWhenParentIdIsZero(): void
+    public function getIdAndGetParentIdReturnNumericIdsFromRefs(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('parentId must be a positive integer');
+        $node = $this->makeNode([
+            'self' => new NodeRef(NodeType::Row, 42),
+            'parent' => new NodeRef(NodeType::Section, 7),
+        ]);
 
-        $this->makeNode(['parentId' => 0]);
-    }
-
-    #[Test]
-    public function constructorThrowsWhenParentIdIsNegative(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('parentId must be a positive integer');
-
-        $this->makeNode(['parentId' => -1]);
+        self::assertSame(42, $node->getId());
+        self::assertSame(7, $node->getParentId());
     }
 
     #[Test]
@@ -126,13 +125,17 @@ final class GridNodeTest extends TestCase
     }
 
     #[Test]
-    public function jsonSerializeLeafIncludesAllBaseFields(): void
+    public function jsonSerializeLeafIncludesScopedIdentity(): void
     {
-        $node = $this->makeNode(['containerType' => null]);
+        $node = $this->makeNode([
+            'self' => new NodeRef(NodeType::Element, 1),
+            'parent' => new NodeRef(NodeType::Column, 10),
+            'containerType' => null,
+        ]);
         $data = $node->jsonSerialize();
 
-        self::assertSame(1, $data['id']);
-        self::assertSame(10, $data['parentId']);
+        self::assertSame(['type' => 'element', 'id' => 1], $data['self']);
+        self::assertSame(['type' => 'column', 'id' => 10], $data['parent']);
         self::assertSame('Test Node', $data['title']);
         self::assertSame(self::DEFAULT_BLOCK_SCHEMA, $data['blockSchema']);
         self::assertNull($data['obsoleteClassName']);
@@ -142,7 +145,7 @@ final class GridNodeTest extends TestCase
         self::assertFalse($data['canUnpublish']);
         self::assertTrue($data['canCreate']);
         self::assertSame('/admin/edit/1', $data['editLink']);
-        self::assertInstanceOf(\stdClass::class, $data['statusFlags']);
+        self::assertInstanceOf(stdClass::class, $data['statusFlags']);
 
         self::assertArrayNotHasKey('containerType', $data);
         self::assertArrayNotHasKey('allowedTypes', $data);

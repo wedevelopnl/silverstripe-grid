@@ -9,12 +9,21 @@ import { useReorderElement } from '@/hooks/useElementMutations';
 import { ViewportProvider } from '@/hooks/ViewportContext';
 import { GridEditorProvider } from '@/hooks/GridEditorContext';
 import { ReadonlyProvider } from '@/hooks/ReadonlyContext';
-import { isSectionNode } from '@/types/elements';
+import { isSectionNode, type TreeApiResponse } from '@/types/elements';
+import type { NodeRef } from '@/types/identity';
 import ViewportSwitcher from '@/components/ViewportSwitcher/ViewportSwitcher';
 import SectionBlock from '@/components/SectionBlock/SectionBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
 import EmptyState from '@/components/EmptyState/EmptyState';
 import DragOverlayContent from '@/components/DragOverlayContent/DragOverlayContent';
+
+function emptyTree(pageId: number | null): TreeApiResponse {
+  return {
+    rootParent: { type: 'page', id: pageId ?? 1 },
+    nodes: [],
+    overrideCounts: {},
+  };
+}
 
 interface GridEditorProps {
   readonly pageId: number | null;
@@ -45,12 +54,14 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
 
   const reorderMutation = useReorderElement(pageId ?? 0, zone);
 
+  const treeOrEmpty = data ?? emptyTree(pageId);
+
   const { dndContextProps, dragState, pendingTree } = useDragAndDrop({
-    tree: data ?? {},
-    onReorder: (elementID, targetParentId, afterElementID, clearPendingTree) => {
+    tree: treeOrEmpty,
+    onReorder: (element: NodeRef, parent: NodeRef, after: NodeRef | null, clearPendingTree) => {
       reorderMutation.mutate({
-        params: { elementID, targetParentId, afterElementID },
-        tree: data ?? {},
+        params: { element, parent, after },
+        tree: treeOrEmpty,
         clearPendingTree,
       });
     },
@@ -59,8 +70,7 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
   // Use pending tree during cross-container drags for visual feedback
   const effectiveData = pendingTree ?? data;
 
-  const sections =
-    effectiveData === undefined ? [] : (effectiveData[String(pageId)] ?? []).filter(isSectionNode);
+  const sections = effectiveData === undefined ? [] : effectiveData.nodes.filter(isSectionNode);
 
   const enrichedSections = useTreeEnrichment(sections, pageId ?? 0);
 
