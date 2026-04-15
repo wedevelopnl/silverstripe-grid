@@ -640,6 +640,35 @@ final class GridControllerTest extends FunctionalTest
 
     // ─── reorder ──────────────────────────────────────────────────
 
+    public function testReorderSameParentSectionsDoesNotTriggerCrossParentCheck(): void
+    {
+        // Regression: stored Section::ParentClass is the concrete Page class
+        // (e.g. "Page"), while the request carries NodeType::Page whose
+        // toClass() is SiteTree. A literal string comparison would flag this
+        // same-parent reorder as cross-parent. The controller must compare
+        // types via NodeType::fromClass so both sides collapse to NodeType::Page.
+        $page = $this->page();
+        $sectionAlpha = GridTreeFactory::section($page, 'main', 1, 'Alpha');
+        $sectionBeta = GridTreeFactory::section($page, 'main', 2, 'Beta');
+
+        $response = $this->jsonPatch(self::BASE_URL . '/reorder', [
+            'element' => $this->ref($sectionBeta),
+            'parent' => $this->ref($page),
+            'after' => null,
+        ]);
+
+        self::assertSame(204, $response->getStatusCode());
+
+        // Beta now has Sort=1, Alpha has Sort=2 — proves the reorder actually
+        // took effect (not just that the request was accepted).
+        $betaFresh = Section::get()->byID((int) $sectionBeta->ID);
+        $alphaFresh = Section::get()->byID((int) $sectionAlpha->ID);
+        self::assertNotNull($betaFresh);
+        self::assertNotNull($alphaFresh);
+        self::assertSame(1, (int) $betaFresh->Sort);
+        self::assertSame(2, (int) $alphaFresh->Sort);
+    }
+
     public function testReorderSameParentReturns204(): void
     {
         $page = $this->page();

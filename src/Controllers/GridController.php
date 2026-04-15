@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Controllers;
 
 use Override;
 use InvalidArgumentException;
+use LogicException;
 use stdClass;
 use SilverStripe\Admin\AdminController;
 use SilverStripe\CMS\Model\SiteTree;
@@ -403,7 +404,10 @@ class GridController extends AdminController
             NodeType::Row => NodeType::Section,
             NodeType::Column => NodeType::Row,
             NodeType::Element => NodeType::Column,
-            NodeType::Page => NodeType::Page, // unreachable: element is always a GridElement
+            NodeType::Page => throw new LogicException(
+                'apiDuplicateTo: element resolved to NodeType::Page, but the element repository '
+                . 'only returns GridElement subclasses. This indicates a broken invariant.',
+            ),
         };
         if ($body->targetParent->type !== $expectedTargetType) {
             $this->jsonError(400);
@@ -473,8 +477,12 @@ class GridController extends AdminController
         $sourceParentId = (int) $element->ParentID;
         /** @var class-string $sourceParentClass */
         $sourceParentClass = (string) $element->ParentClass;
+        // Resolve the source parent to a NodeType so the comparison is semantic
+        // rather than literal: a stored `Page` ParentClass and a request's
+        // `NodeType::Page` (which maps to SiteTree::class) must compare equal
+        // for same-parent section reorders.
         $isCrossParent = $sourceParentId !== $body->parent->id
-            || $sourceParentClass !== $body->parent->type->toClass();
+            || NodeType::fromClass($sourceParentClass) !== $body->parent->type;
 
         if ($isCrossParent) {
             $sourceParent = $element->Parent();

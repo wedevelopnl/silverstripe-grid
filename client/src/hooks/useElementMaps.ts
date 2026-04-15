@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { isContainerNode } from '@/types/elements';
 import type { ElementNode, TreeApiResponse } from '@/types/elements';
-import type { NodeKey } from '@/types/identity';
+import { nodeRefToKey, type NodeKey } from '@/types/identity';
 
 export interface ElementMaps {
   /** Every node indexed by its composite {@link NodeKey}. Pages are not stored here. */
@@ -41,7 +41,7 @@ export function buildMaps(tree: TreeApiResponse): ElementMaps {
   const nodeMap = new Map<NodeKey, ElementNode>();
   const childrenByParentKey = new Map<NodeKey, ElementNode[]>();
 
-  const rootKey = `${tree.rootParent.type}-${tree.rootParent.id}`;
+  const rootKey = nodeRefToKey(tree.rootParent);
   childrenByParentKey.set(rootKey, tree.nodes);
   walkNodes(tree.nodes, nodeMap, childrenByParentKey);
 

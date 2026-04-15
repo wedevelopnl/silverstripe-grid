@@ -45,19 +45,14 @@ interface BaseFields {
   /** Precomputed composite key for this node's parent. */
   parentKey: NodeKey;
   /**
-   * Numeric record ID of this node. Equal to `self.id`. Safe to use for display,
-   * React keys, and endpoints that only accept a bare grid-element ID (publish,
-   * unpublish, delete, duplicate, updateGridSettings). **Do not use as a Map key**
-   * — use `nodeKey` instead so page/element ID collisions are eliminated.
+   * Numeric record ID of this node. Equal to `self.id`. Safe to use for the
+   * unambiguous GridElement-only endpoints (publish, unpublish, delete,
+   * duplicate, updateGridSettings) that accept a bare id because they query
+   * `GridElement::get()` exclusively. **Do not use as a Map key or for
+   * display identity** — use `nodeKey` instead so page/element ID collisions
+   * are eliminated.
    */
   id: number;
-  /**
-   * Numeric ID of this node's parent. Equal to `parent.id`. **Do not use as a
-   * Map key**: use `parentKey` instead so SiteTree/GridElement ID collisions
-   * cannot corrupt lookups. Retained as a legacy alias for test fixtures and
-   * display code.
-   */
-  parentId: number;
   title: string;
   blockSchema: BlockSchema;
   obsoleteClassName: string | null;

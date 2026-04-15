@@ -47,8 +47,7 @@ function createReorderTree(pageId = 1, zone = 'main') {
       id: 300,
     };
     (child as { parent: { type: 'column'; id: number }; parentKey: string }).parentKey =
-      `column-${300}`;
-    (child as { parentId: number }).parentId = 300;
+      'column-300';
   }
 
   const row = createRowNode({
