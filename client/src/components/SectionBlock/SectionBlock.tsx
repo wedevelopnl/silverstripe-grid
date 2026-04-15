@@ -1,9 +1,12 @@
+import { useCallback, useMemo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import type { EnrichedSectionNode } from '@/types/enriched';
+import type { SectionNode } from '@/types/elements';
+import type { NodeKey } from '@/types/identity';
 import { getElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { useReadonly } from '@/hooks/ReadonlyContext';
+import { useCollapse } from '@/hooks/useCollapseState';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
 import { t } from '@/i18n';
@@ -14,7 +17,7 @@ import RowBlock from '@/components/RowBlock/RowBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
 
 interface SectionBlockProps {
-  readonly section: EnrichedSectionNode;
+  readonly section: SectionNode;
 }
 
 /**
@@ -33,13 +36,24 @@ export default function SectionBlock({ section }: SectionBlockProps) {
   );
 }
 
+function useSectionCollapse(section: SectionNode) {
+  const { isCollapsed: isCollapsedFn, toggle } = useCollapse();
+  const isCollapsed = isCollapsedFn(section.nodeKey);
+  const onToggle = useCallback(() => toggle(section.nodeKey), [toggle, section.nodeKey]);
+  return { isCollapsed, onToggle };
+}
+
+function useChildSortableKeys(section: SectionNode): NodeKey[] {
+  return useMemo(() => section.children?.map((r) => r.nodeKey) ?? [], [section.children]);
+}
+
 function EditableSectionBlock({ section }: SectionBlockProps) {
   const status = getElementStatus(section.statusFlags);
-  const { isCollapsed, toggle } = section;
+  const { isCollapsed, onToggle } = useSectionCollapse(section);
   const { activeType } = useDragContext();
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
-    useSortable({ id: section.sortableId });
+    useSortable({ id: section.nodeKey });
 
   const showDropTarget = isOver && activeType === 'section';
 
@@ -49,6 +63,8 @@ function EditableSectionBlock({ section }: SectionBlockProps) {
   });
 
   const style = buildSortableStyle(transform, transition, isDragging);
+
+  const childKeys = useChildSortableKeys(section);
 
   return (
     <section ref={setNodeRef} style={style} className={rootClasses} data-testid="section-block">
@@ -60,7 +76,7 @@ function EditableSectionBlock({ section }: SectionBlockProps) {
             title: section.title,
           })}
         />
-        <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={section.title} />
+        <CollapseToggle isCollapsed={isCollapsed} onToggle={onToggle} label={section.title} />
         <i className={`section-block__icon ${section.blockSchema.icon}`} />
         <h2 className="section-block__title" data-testid="section-title">
           {section.editLink !== null ? (
@@ -74,11 +90,11 @@ function EditableSectionBlock({ section }: SectionBlockProps) {
         <ElementActions node={section} />
       </div>
       <div className="section-block__body">
-        <SortableContext items={section.childSortableIds} strategy={verticalListSortingStrategy}>
+        <SortableContext items={childKeys} strategy={verticalListSortingStrategy}>
           {section.children !== null && section.children.length > 0 ? (
             <>
               {section.children.map((row) => (
-                <RowBlock key={row.id} row={row} />
+                <RowBlock key={row.nodeKey} row={row} />
               ))}
               <AddChildButton
                 parentId={section.id}
@@ -103,7 +119,7 @@ function EditableSectionBlock({ section }: SectionBlockProps) {
 
 function ReadonlySectionBlock({ section }: SectionBlockProps) {
   const status = getElementStatus(section.statusFlags);
-  const { isCollapsed, toggle } = section;
+  const { isCollapsed, onToggle } = useSectionCollapse(section);
 
   const rootClasses = buildBlockClasses('section-block', status, {
     collapsed: isCollapsed,
@@ -112,7 +128,7 @@ function ReadonlySectionBlock({ section }: SectionBlockProps) {
   return (
     <section className={rootClasses} data-testid="section-block">
       <div className="section-block__header" data-testid="section-header">
-        <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={section.title} />
+        <CollapseToggle isCollapsed={isCollapsed} onToggle={onToggle} label={section.title} />
         <i className={`section-block__icon ${section.blockSchema.icon}`} />
         <h2 className="section-block__title" data-testid="section-title">
           {section.title}
@@ -120,7 +136,7 @@ function ReadonlySectionBlock({ section }: SectionBlockProps) {
       </div>
       <div className="section-block__body">
         {section.children?.map((row) => (
-          <RowBlock key={row.id} row={row} />
+          <RowBlock key={row.nodeKey} row={row} />
         ))}
       </div>
     </section>

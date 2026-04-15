@@ -5,8 +5,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 
 import { mockFetchSuccess } from '@/testing/mockFetch';
-import { createEnrichedSection } from '@/testing/enrichedFactories';
-import { renderWithProviders } from '@/testing/renderWithProviders';
+import { createSectionNode } from '@/testing/factories';
+import { createCollapseStateStub, renderWithProviders } from '@/testing/renderWithProviders';
 
 import SectionBlock from './SectionBlock';
 
@@ -42,7 +42,7 @@ describe('SectionBlock', () => {
   it('renders section title', () => {
     mockFetchSuccess({});
 
-    const section = createEnrichedSection({ title: 'Hero Section' });
+    const section = createSectionNode({ title: 'Hero Section' });
 
     renderWithProviders(<SectionBlock section={section} />);
 
@@ -52,7 +52,7 @@ describe('SectionBlock', () => {
   it('renders child rows', () => {
     mockFetchSuccess({});
 
-    const section = createEnrichedSection({ rowCount: 2 });
+    const section = createSectionNode({ rowCount: 2 });
 
     renderWithProviders(<SectionBlock section={section} />);
 
@@ -62,7 +62,7 @@ describe('SectionBlock', () => {
   it('shows empty state when no children', () => {
     mockFetchSuccess({});
 
-    const section = createEnrichedSection({ children: null });
+    const section = createSectionNode({ children: null });
 
     renderWithProviders(<SectionBlock section={section} />);
 
@@ -73,7 +73,7 @@ describe('SectionBlock', () => {
   it('shows append AddChildButton when children exist', () => {
     mockFetchSuccess({});
 
-    const section = createEnrichedSection({ rowCount: 1 });
+    const section = createSectionNode({ rowCount: 1 });
 
     renderWithProviders(<SectionBlock section={section} />);
 
@@ -89,9 +89,10 @@ describe('SectionBlock', () => {
     const user = userEvent.setup();
     mockFetchSuccess({});
 
-    const section = createEnrichedSection({ rowCount: 1 });
+    const section = createSectionNode({ rowCount: 1 });
+    const collapseState = createCollapseStateStub();
 
-    renderWithProviders(<SectionBlock section={section} />);
+    renderWithProviders(<SectionBlock section={section} />, { collapseState });
 
     // Initially expanded — body should not have collapsed class
     expect(screen.getByTestId('section-block')).not.toHaveClass('section-block--collapsed');
@@ -101,17 +102,19 @@ describe('SectionBlock', () => {
     const toggles = screen.getAllByTestId('collapse-toggle');
     await user.click(toggles[0]);
 
-    // The toggle callback was called
-    expect(section.toggle).toHaveBeenCalledOnce();
+    // The toggle callback was called with the section's NodeKey.
+    expect(collapseState.toggle).toHaveBeenCalledOnce();
+    expect(collapseState.toggle).toHaveBeenCalledWith(section.nodeKey);
   });
 
-  it('applies collapsed class when isCollapsed is true', () => {
+  it('applies collapsed class when the section is collapsed in the context', () => {
     mockFetchSuccess({});
 
-    const section = createEnrichedSection({ rowCount: 1 });
-    (section as { isCollapsed: boolean }).isCollapsed = true;
+    const section = createSectionNode({ rowCount: 1 });
 
-    renderWithProviders(<SectionBlock section={section} />);
+    renderWithProviders(<SectionBlock section={section} />, {
+      collapsedKeys: [section.nodeKey],
+    });
 
     expect(screen.getByTestId('section-block')).toHaveClass('section-block--collapsed');
   });
@@ -119,7 +122,7 @@ describe('SectionBlock', () => {
   it('edit link rendered when editLink exists', () => {
     mockFetchSuccess({});
 
-    const section = createEnrichedSection({ editLink: '/admin/pages/edit/show/5' });
+    const section = createSectionNode({ editLink: '/admin/pages/edit/show/5' });
 
     renderWithProviders(<SectionBlock section={section} />);
 
@@ -131,7 +134,7 @@ describe('SectionBlock', () => {
   it('renders title as plain text when editLink is null', () => {
     mockFetchSuccess({});
 
-    const section = createEnrichedSection({ editLink: null });
+    const section = createSectionNode({ editLink: null });
 
     renderWithProviders(<SectionBlock section={section} />);
 
@@ -142,7 +145,7 @@ describe('SectionBlock', () => {
   it('shows empty state when children is an empty array', () => {
     mockFetchSuccess({});
 
-    const section = createEnrichedSection({ children: [] as never });
+    const section = createSectionNode({ children: [] as never });
 
     renderWithProviders(<SectionBlock section={section} />);
 
@@ -153,7 +156,7 @@ describe('SectionBlock', () => {
     it('includes draft status modifier', () => {
       mockFetchSuccess({});
 
-      const section = createEnrichedSection({
+      const section = createSectionNode({
         statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } },
       });
 
@@ -165,7 +168,7 @@ describe('SectionBlock', () => {
     it('includes modified status modifier', () => {
       mockFetchSuccess({});
 
-      const section = createEnrichedSection({
+      const section = createSectionNode({
         statusFlags: { modified: { text: 'Modified', title: 'Modified' } },
       });
 
@@ -177,7 +180,7 @@ describe('SectionBlock', () => {
     it('includes published status by default', () => {
       mockFetchSuccess({});
 
-      const section = createEnrichedSection({ statusFlags: {} });
+      const section = createSectionNode({ statusFlags: {} });
 
       renderWithProviders(<SectionBlock section={section} />);
 
@@ -192,7 +195,7 @@ describe('SectionBlock', () => {
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'section' });
       mockFetchSuccess({});
 
-      const section = createEnrichedSection({});
+      const section = createSectionNode({});
 
       renderWithProviders(<SectionBlock section={section} />);
 
@@ -207,7 +210,7 @@ describe('SectionBlock', () => {
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'row' });
       mockFetchSuccess({});
 
-      const section = createEnrichedSection({});
+      const section = createSectionNode({});
 
       renderWithProviders(<SectionBlock section={section} />);
 
@@ -222,7 +225,7 @@ describe('SectionBlock', () => {
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'section' });
       mockFetchSuccess({});
 
-      const section = createEnrichedSection({});
+      const section = createSectionNode({});
 
       renderWithProviders(<SectionBlock section={section} />);
 

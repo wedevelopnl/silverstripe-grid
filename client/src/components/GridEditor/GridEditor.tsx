@@ -3,9 +3,9 @@ import { DndContext, DragOverlay, MeasuringStrategy } from '@dnd-kit/core';
 import { t } from '@/i18n';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useElementTree } from '@/hooks/useElementTree';
-import { useTreeEnrichment } from '@/hooks/useTreeEnrichment';
 import { useDragAndDrop, DragContext } from '@/hooks/useDragAndDrop';
 import { useReorderElement } from '@/hooks/useElementMutations';
+import { CollapseContext, useCollapseState } from '@/hooks/useCollapseState';
 import { ViewportProvider } from '@/hooks/ViewportContext';
 import { GridEditorProvider } from '@/hooks/GridEditorContext';
 import { ReadonlyProvider } from '@/hooks/ReadonlyContext';
@@ -72,9 +72,9 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
 
   const sections = effectiveData === undefined ? [] : effectiveData.nodes.filter(isSectionNode);
 
-  const enrichedSections = useTreeEnrichment(sections, pageId ?? 0);
+  const collapseState = useCollapseState(pageId ?? 0);
 
-  const sectionIds = enrichedSections.map((s) => s.sortableId);
+  const sectionIds = useMemo(() => sections.map((s) => s.nodeKey), [sections]);
 
   const dragContextValue = useMemo(
     () => ({ activeType: dragState?.activeType ?? null }),
@@ -82,10 +82,10 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
   );
 
   const rootClassName = readonly ? 'grid-editor grid-editor--readonly' : 'grid-editor';
-  const hasSections = enrichedSections.length > 0;
+  const hasSections = sections.length > 0;
 
   const sectionList = hasSections ? (
-    enrichedSections.map((section) => <SectionBlock key={section.id} section={section} />)
+    sections.map((section) => <SectionBlock key={section.nodeKey} section={section} />)
   ) : readonly ? (
     <p className="grid-editor__empty-state">
       {t('WeDevelopGrid.GridEditor.NO_SECTIONS_READONLY', 'No sections in this version')}
@@ -124,34 +124,39 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
         <GridEditorProvider value={{ pageId, zone }}>
           <ViewportProvider>
             <ReadonlyProvider value={readonly}>
-              <ViewportSwitcher />
-              {readonly ? (
-                sectionList
-              ) : (
-                <DndContext
-                  {...dndContextProps}
-                  measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-                >
-                  <DragContext.Provider value={dragContextValue}>
-                    <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
-                      {sectionList}
-                      {hasSections && (
-                        <AddChildButton
-                          parentId={pageId}
-                          childType="section"
-                          childLabel="Section"
-                          variant="append"
+              <CollapseContext.Provider value={collapseState}>
+                <ViewportSwitcher />
+                {readonly ? (
+                  sectionList
+                ) : (
+                  <DndContext
+                    {...dndContextProps}
+                    measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+                  >
+                    <DragContext.Provider value={dragContextValue}>
+                      <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
+                        {sectionList}
+                        {hasSections && (
+                          <AddChildButton
+                            parentId={pageId}
+                            childType="section"
+                            childLabel="Section"
+                            variant="append"
+                          />
+                        )}
+                      </SortableContext>
+                    </DragContext.Provider>
+                    <DragOverlay>
+                      {dragState !== null && (
+                        <DragOverlayContent
+                          node={dragState.activeNode}
+                          type={dragState.activeType}
                         />
                       )}
-                    </SortableContext>
-                  </DragContext.Provider>
-                  <DragOverlay>
-                    {dragState !== null && (
-                      <DragOverlayContent node={dragState.activeNode} type={dragState.activeType} />
-                    )}
-                  </DragOverlay>
-                </DndContext>
-              )}
+                    </DragOverlay>
+                  </DndContext>
+                )}
+              </CollapseContext.Provider>
             </ReadonlyProvider>
           </ViewportProvider>
         </GridEditorProvider>

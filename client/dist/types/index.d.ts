@@ -1,4 +1,4 @@
 export * from './adapter';
 export * from './elements';
-export * from './enriched';
+export * from './identity';
 export * from './status';

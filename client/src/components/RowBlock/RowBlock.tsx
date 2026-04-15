@@ -1,9 +1,12 @@
+import { useCallback, useMemo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
-import type { EnrichedRowNode } from '@/types/enriched';
+import type { RowNode } from '@/types/elements';
+import type { NodeKey } from '@/types/identity';
 import { getElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { useReadonly } from '@/hooks/ReadonlyContext';
+import { useCollapse } from '@/hooks/useCollapseState';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
 import { getOffsetStrategy, getColumnCount } from '@/utils/gridAdapter';
@@ -15,7 +18,7 @@ import ColumnBlock from '@/components/ColumnBlock/ColumnBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
 
 interface RowBlockProps {
-  readonly row: EnrichedRowNode;
+  readonly row: RowNode;
 }
 
 /**
@@ -29,14 +32,25 @@ export default function RowBlock({ row }: RowBlockProps) {
   return readonly ? <ReadonlyRowBlock row={row} /> : <EditableRowBlock row={row} />;
 }
 
+function useRowCollapse(row: RowNode) {
+  const { isCollapsed: isCollapsedFn, toggle } = useCollapse();
+  const isCollapsed = isCollapsedFn(row.nodeKey);
+  const onToggle = useCallback(() => toggle(row.nodeKey), [toggle, row.nodeKey]);
+  return { isCollapsed, onToggle };
+}
+
+function useChildColumnKeys(row: RowNode): NodeKey[] {
+  return useMemo(() => row.children?.map((c) => c.nodeKey) ?? [], [row.children]);
+}
+
 function EditableRowBlock({ row }: RowBlockProps) {
   const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid';
   const status = getElementStatus(row.statusFlags);
-  const { isCollapsed, toggle } = row;
+  const { isCollapsed, onToggle } = useRowCollapse(row);
   const { activeType } = useDragContext();
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
-    useSortable({ id: row.sortableId });
+    useSortable({ id: row.nodeKey });
 
   const showDropTarget = isOver && activeType === 'row';
 
@@ -47,6 +61,8 @@ function EditableRowBlock({ row }: RowBlockProps) {
 
   const style = buildSortableStyle(transform, transition, isDragging);
 
+  const childKeys = useChildColumnKeys(row);
+
   return (
     <div ref={setNodeRef} style={style} className={rootClasses} data-testid="row-block">
       <div className="row-block__header" data-testid="row-header">
@@ -55,7 +71,7 @@ function EditableRowBlock({ row }: RowBlockProps) {
           attributes={attributes}
           label={t('WeDevelopGrid.RowBlock.MOVE_LABEL', 'Move {title}', { title: row.title })}
         />
-        <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={row.title} />
+        <CollapseToggle isCollapsed={isCollapsed} onToggle={onToggle} label={row.title} />
         <i className={`row-block__icon ${row.blockSchema.icon}`} />
         <h3 className="row-block__title" data-testid="row-title">
           {row.editLink !== null ? (
@@ -76,11 +92,11 @@ function EditableRowBlock({ row }: RowBlockProps) {
             : undefined
         }
       >
-        <SortableContext items={row.childSortableIds} strategy={horizontalListSortingStrategy}>
+        <SortableContext items={childKeys} strategy={horizontalListSortingStrategy}>
           {row.children !== null && row.children.length > 0 ? (
             <>
               {row.children.map((column) => (
-                <ColumnBlock key={column.id} column={column} />
+                <ColumnBlock key={column.nodeKey} column={column} />
               ))}
               <AddChildButton
                 parentId={row.id}
@@ -106,7 +122,7 @@ function EditableRowBlock({ row }: RowBlockProps) {
 function ReadonlyRowBlock({ row }: RowBlockProps) {
   const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid';
   const status = getElementStatus(row.statusFlags);
-  const { isCollapsed, toggle } = row;
+  const { isCollapsed, onToggle } = useRowCollapse(row);
 
   const rootClasses = buildBlockClasses('row-block', status, {
     collapsed: isCollapsed,
@@ -115,7 +131,7 @@ function ReadonlyRowBlock({ row }: RowBlockProps) {
   return (
     <div className={rootClasses} data-testid="row-block">
       <div className="row-block__header" data-testid="row-header">
-        <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={row.title} />
+        <CollapseToggle isCollapsed={isCollapsed} onToggle={onToggle} label={row.title} />
         <i className={`row-block__icon ${row.blockSchema.icon}`} />
         <h3 className="row-block__title" data-testid="row-title">
           {row.title}
@@ -130,7 +146,7 @@ function ReadonlyRowBlock({ row }: RowBlockProps) {
         }
       >
         {row.children?.map((column) => (
-          <ColumnBlock key={column.id} column={column} />
+          <ColumnBlock key={column.nodeKey} column={column} />
         ))}
       </div>
     </div>

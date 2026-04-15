@@ -5,7 +5,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 
 import { mockFetchSuccess } from '@/testing/mockFetch';
-import { createEnrichedRow } from '@/testing/enrichedFactories';
+import { createRowNode } from '@/testing/factories';
 import { renderWithProviders } from '@/testing/renderWithProviders';
 
 import RowBlock from './RowBlock';
@@ -42,7 +42,7 @@ describe('RowBlock', () => {
   it('renders row title', () => {
     mockFetchSuccess({});
 
-    const row = createEnrichedRow({ title: 'Main Row' });
+    const row = createRowNode({ title: 'Main Row' });
 
     renderWithProviders(<RowBlock row={row} />);
 
@@ -52,7 +52,7 @@ describe('RowBlock', () => {
   it('renders child columns', () => {
     mockFetchSuccess({});
 
-    const row = createEnrichedRow({ columnCount: 3 });
+    const row = createRowNode({ columnCount: 3 });
 
     renderWithProviders(<RowBlock row={row} />);
 
@@ -62,7 +62,7 @@ describe('RowBlock', () => {
   it('shows empty state when no children', () => {
     mockFetchSuccess({});
 
-    const row = createEnrichedRow({ children: null });
+    const row = createRowNode({ children: null });
 
     renderWithProviders(<RowBlock row={row} />);
 
@@ -73,7 +73,7 @@ describe('RowBlock', () => {
   it('shows append AddChildButton when children exist', () => {
     mockFetchSuccess({});
 
-    const row = createEnrichedRow({ columnCount: 1 });
+    const row = createRowNode({ columnCount: 1 });
 
     renderWithProviders(<RowBlock row={row} />);
 
@@ -84,7 +84,7 @@ describe('RowBlock', () => {
   it('shows empty state when children is an empty array', () => {
     mockFetchSuccess({});
 
-    const row = createEnrichedRow({ children: [] as never });
+    const row = createRowNode({ children: [] as never });
 
     renderWithProviders(<RowBlock row={row} />);
 
@@ -95,7 +95,7 @@ describe('RowBlock', () => {
     it('includes draft status modifier', () => {
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({
+      const row = createRowNode({
         statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } },
       });
 
@@ -107,7 +107,7 @@ describe('RowBlock', () => {
     it('includes modified status modifier', () => {
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({
+      const row = createRowNode({
         statusFlags: { modified: { text: 'Modified', title: 'Modified' } },
       });
 
@@ -119,20 +119,21 @@ describe('RowBlock', () => {
     it('includes published status by default', () => {
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({ statusFlags: {} });
+      const row = createRowNode({ statusFlags: {} });
 
       renderWithProviders(<RowBlock row={row} />);
 
       expect(screen.getByTestId('row-block')).toHaveClass('row-block--published');
     });
 
-    it('includes collapsed class when collapsed', () => {
+    it('includes collapsed class when the row is collapsed in the context', () => {
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({});
-      (row as { isCollapsed: boolean }).isCollapsed = true;
+      const row = createRowNode({});
 
-      renderWithProviders(<RowBlock row={row} />);
+      renderWithProviders(<RowBlock row={row} />, {
+        collapsedKeys: [row.nodeKey],
+      });
 
       expect(screen.getByTestId('row-block')).toHaveClass('row-block--collapsed');
     });
@@ -140,7 +141,7 @@ describe('RowBlock', () => {
     it('does not include collapsed class when expanded', () => {
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({});
+      const row = createRowNode({});
 
       renderWithProviders(<RowBlock row={row} />);
 
@@ -155,7 +156,7 @@ describe('RowBlock', () => {
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'row' });
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({});
+      const row = createRowNode({});
 
       renderWithProviders(<RowBlock row={row} />);
 
@@ -170,7 +171,7 @@ describe('RowBlock', () => {
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'section' });
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({});
+      const row = createRowNode({});
 
       renderWithProviders(<RowBlock row={row} />);
 
@@ -185,7 +186,7 @@ describe('RowBlock', () => {
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'row' });
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({});
+      const row = createRowNode({});
 
       renderWithProviders(<RowBlock row={row} />);
 
@@ -197,7 +198,7 @@ describe('RowBlock', () => {
     it('uses flex layout when offset strategy is margin', () => {
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({ columnCount: 1 });
+      const row = createRowNode({ columnCount: 1 });
 
       const { container } = renderWithProviders(<RowBlock row={row} />);
 
@@ -213,7 +214,7 @@ describe('RowBlock', () => {
 
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({ columnCount: 1 });
+      const row = createRowNode({ columnCount: 1 });
 
       const { container } = renderWithProviders(<RowBlock row={row} />);
 
@@ -228,7 +229,7 @@ describe('RowBlock', () => {
 
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({ columnCount: 1 });
+      const row = createRowNode({ columnCount: 1 });
 
       const { container } = renderWithProviders(<RowBlock row={row} />);
 
@@ -240,7 +241,7 @@ describe('RowBlock', () => {
       resetAdapterCache();
       mockFetchSuccess({});
 
-      const row = createEnrichedRow({ columnCount: 1 });
+      const row = createRowNode({ columnCount: 1 });
 
       const { container } = renderWithProviders(<RowBlock row={row} />);
 
@@ -252,7 +253,7 @@ describe('RowBlock', () => {
   it('renders edit link when editLink is set', () => {
     mockFetchSuccess({});
 
-    const row = createEnrichedRow({ editLink: '/admin/pages/edit/show/10' });
+    const row = createRowNode({ editLink: '/admin/pages/edit/show/10' });
 
     renderWithProviders(<RowBlock row={row} />);
 
@@ -264,7 +265,7 @@ describe('RowBlock', () => {
   it('renders title as plain text when editLink is null', () => {
     mockFetchSuccess({});
 
-    const row = createEnrichedRow({ editLink: null });
+    const row = createRowNode({ editLink: null });
 
     renderWithProviders(<RowBlock row={row} />);
 

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetAdapterCache } from '@/utils/gridAdapter';
 
 import { mockFetchSuccess, getFetchCalls } from '@/testing/mockFetch';
-import { createEnrichedColumn, createEnrichedElement } from '@/testing/enrichedFactories';
+import { createColumnNode, createSimpleElement } from '@/testing/factories';
 import { renderWithProviders } from '@/testing/renderWithProviders';
 
 import ColumnBlock from './ColumnBlock';
@@ -63,10 +63,10 @@ describe('ColumnBlock', () => {
     mockFetchSuccess({});
 
     const children = [
-      createEnrichedElement({ id: 101, title: 'Content A' }),
-      createEnrichedElement({ id: 102, title: 'Content B' }),
+      createSimpleElement({ id: 101, title: 'Content A' }),
+      createSimpleElement({ id: 102, title: 'Content B' }),
     ];
-    const column = createEnrichedColumn({ children, childCount: 0 });
+    const column = createColumnNode({ children, childCount: 0 });
 
     renderWithProviders(<ColumnBlock column={column} />);
 
@@ -78,7 +78,7 @@ describe('ColumnBlock', () => {
   it('shows empty state when no children and no allowed types', () => {
     mockFetchSuccess({});
 
-    const column = createEnrichedColumn({ children: null, childCount: 0, allowedTypes: null });
+    const column = createColumnNode({ children: null, childCount: 0, allowedTypes: null });
 
     renderWithProviders(<ColumnBlock column={column} />);
 
@@ -88,7 +88,7 @@ describe('ColumnBlock', () => {
   it('does not show empty state when no children but allowedTypes exist', () => {
     mockFetchSuccess({});
 
-    const column = createEnrichedColumn({
+    const column = createColumnNode({
       children: null,
       childCount: 0,
       allowedTypes: {
@@ -104,7 +104,7 @@ describe('ColumnBlock', () => {
   it('does not show "Add content" button when allowedTypes is null', () => {
     mockFetchSuccess({});
 
-    const column = createEnrichedColumn({ allowedTypes: null });
+    const column = createColumnNode({ allowedTypes: null });
 
     renderWithProviders(<ColumnBlock column={column} />);
 
@@ -114,7 +114,7 @@ describe('ColumnBlock', () => {
   it('does not show "Add content" button when allowedTypes is empty object', () => {
     mockFetchSuccess({});
 
-    const column = createEnrichedColumn({ allowedTypes: {} });
+    const column = createColumnNode({ allowedTypes: {} });
 
     renderWithProviders(<ColumnBlock column={column} />);
 
@@ -125,7 +125,7 @@ describe('ColumnBlock', () => {
     it('includes status modifier class for draft status', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } },
       });
 
@@ -137,7 +137,7 @@ describe('ColumnBlock', () => {
     it('includes status modifier class for modified status', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         statusFlags: { modified: { text: 'Modified', title: 'Modified' } },
       });
 
@@ -149,7 +149,7 @@ describe('ColumnBlock', () => {
     it('includes published status by default', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({ statusFlags: {} });
+      const column = createColumnNode({ statusFlags: {} });
 
       renderWithProviders(<ColumnBlock column={column} />);
 
@@ -159,7 +159,7 @@ describe('ColumnBlock', () => {
     it('includes hidden class when column is not visible', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
       });
 
@@ -171,7 +171,7 @@ describe('ColumnBlock', () => {
     it('does not include hidden class when column is visible', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       });
 
@@ -180,14 +180,14 @@ describe('ColumnBlock', () => {
       expect(screen.getByTestId('column-block')).not.toHaveClass('column-block--hidden');
     });
 
-    it('includes collapsed class when column is collapsed', () => {
+    it('includes collapsed class when the column is collapsed in the context', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({});
-      // Override isCollapsed directly
-      (column as { isCollapsed: boolean }).isCollapsed = true;
+      const column = createColumnNode({});
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />, {
+        collapsedKeys: [column.nodeKey],
+      });
 
       expect(screen.getByTestId('column-block')).toHaveClass('column-block--collapsed');
     });
@@ -200,7 +200,7 @@ describe('ColumnBlock', () => {
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'column' });
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({});
+      const column = createColumnNode({});
 
       renderWithProviders(<ColumnBlock column={column} />);
 
@@ -215,7 +215,7 @@ describe('ColumnBlock', () => {
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'row' });
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({});
+      const column = createColumnNode({});
 
       renderWithProviders(<ColumnBlock column={column} />);
 
@@ -230,7 +230,7 @@ describe('ColumnBlock', () => {
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'column' });
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({});
+      const column = createColumnNode({});
 
       renderWithProviders(<ColumnBlock column={column} />);
 
@@ -242,7 +242,7 @@ describe('ColumnBlock', () => {
     it('shows current width label', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       });
 
@@ -254,7 +254,7 @@ describe('ColumnBlock', () => {
     it('shows "hidden" label when column is not visible', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
       });
 
@@ -267,7 +267,7 @@ describe('ColumnBlock', () => {
       const user = userEvent.setup();
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         id: 50,
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       });
@@ -302,7 +302,7 @@ describe('ColumnBlock', () => {
       const user = userEvent.setup();
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         id: 51,
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       });
@@ -334,7 +334,7 @@ describe('ColumnBlock', () => {
       const user = userEvent.setup();
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         id: 52,
         gridSettings: { default: { width: 4, offset: 7, visible: true }, overrides: {} },
       });
@@ -369,7 +369,7 @@ describe('ColumnBlock', () => {
     it('shows "none" label when offset is 0', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       });
 
@@ -381,7 +381,7 @@ describe('ColumnBlock', () => {
     it('shows "+N" label when offset is non-zero', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 3, visible: true }, overrides: {} },
       });
 
@@ -393,7 +393,7 @@ describe('ColumnBlock', () => {
     it('disabled when width equals column count', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
       });
 
@@ -405,7 +405,7 @@ describe('ColumnBlock', () => {
     it('disabled when column is not visible', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
       });
 
@@ -417,7 +417,7 @@ describe('ColumnBlock', () => {
     it('enabled when width < column count and visible', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       });
 
@@ -430,7 +430,7 @@ describe('ColumnBlock', () => {
       const user = userEvent.setup();
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         id: 53,
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       });
@@ -463,7 +463,7 @@ describe('ColumnBlock', () => {
     it('sets --col-width CSS variable based on width/columnCount', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       });
 
@@ -476,7 +476,7 @@ describe('ColumnBlock', () => {
     it('sets --col-offset CSS variable when offset > 0', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 3, visible: true }, overrides: {} },
       });
 
@@ -489,7 +489,7 @@ describe('ColumnBlock', () => {
     it('does not set --col-offset when offset is 0', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       });
 
@@ -508,7 +508,7 @@ describe('ColumnBlock', () => {
 
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         gridSettings: { default: { width: 4, offset: 2, visible: true }, overrides: {} },
       });
 
@@ -525,7 +525,7 @@ describe('ColumnBlock', () => {
     it('shows "Add content" button when allowedTypes exist', () => {
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         children: null,
         childCount: 0,
         allowedTypes: {
@@ -542,7 +542,7 @@ describe('ColumnBlock', () => {
       const user = userEvent.setup();
       mockFetchSuccess({});
 
-      const column = createEnrichedColumn({
+      const column = createColumnNode({
         id: 60,
         children: null,
         childCount: 0,
@@ -584,7 +584,7 @@ describe('ColumnBlock', () => {
   it('shows EmptyState when children is empty array and no allowedTypes', () => {
     mockFetchSuccess({});
 
-    const column = createEnrichedColumn({
+    const column = createColumnNode({
       children: [] as never,
       childCount: 0,
       allowedTypes: null,
@@ -599,7 +599,7 @@ describe('ColumnBlock', () => {
     vi.mocked(useDragContext).mockReturnValue({ activeType: 'column' });
     mockFetchSuccess({});
 
-    const column = createEnrichedColumn({
+    const column = createColumnNode({
       gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
     });
 
@@ -612,7 +612,7 @@ describe('ColumnBlock', () => {
     const user = userEvent.setup();
     mockFetchSuccess({});
 
-    const column = createEnrichedColumn({
+    const column = createColumnNode({
       children: null,
       childCount: 0,
       allowedTypes: {
@@ -641,7 +641,7 @@ describe('ColumnBlock', () => {
   it('renders edit link when editLink is set', () => {
     mockFetchSuccess({});
 
-    const column = createEnrichedColumn({ editLink: '/admin/pages/edit/show/42' });
+    const column = createColumnNode({ editLink: '/admin/pages/edit/show/42' });
 
     renderWithProviders(<ColumnBlock column={column} />);
 
@@ -653,7 +653,7 @@ describe('ColumnBlock', () => {
   it('renders title as plain text when editLink is null', () => {
     mockFetchSuccess({});
 
-    const column = createEnrichedColumn({ editLink: null });
+    const column = createColumnNode({ editLink: null });
 
     renderWithProviders(<ColumnBlock column={column} />);
 

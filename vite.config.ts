@@ -80,7 +80,6 @@ export default defineConfig({
         "client/src/types/silverstripe.d.ts",
         "client/src/types/adapter.ts",
         "client/src/types/duplicateTo.ts",
-        "client/src/types/enriched.ts",
         "client/src/types/gridSettings.ts",
         "client/src/styles/**",
         "client/src/**/*.d.ts",

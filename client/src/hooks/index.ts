@@ -11,7 +11,12 @@ export {
   useDuplicateElement,
   useReorderElement,
 } from './useElementMutations';
-export { useTreeEnrichment, buildStorageKey } from './useTreeEnrichment';
+export {
+  useCollapseState,
+  useCollapse,
+  CollapseContext,
+  type CollapseState,
+} from './useCollapseState';
 export { useDragAndDrop } from './useDragAndDrop';
 export type {
   DragState,

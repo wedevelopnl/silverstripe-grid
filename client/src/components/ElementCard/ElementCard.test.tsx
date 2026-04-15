@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { mockFetchSuccess } from '@/testing/mockFetch';
-import { createEnrichedElement } from '@/testing/enrichedFactories';
+import { createSimpleElement } from '@/testing/factories';
 import { renderWithProviders } from '@/testing/renderWithProviders';
 
 import ElementCard from './ElementCard';
@@ -22,7 +22,7 @@ describe('ElementCard', () => {
   it('renders element title', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({ title: 'My Content Block' });
+    const element = createSimpleElement({ title: 'My Content Block' });
 
     renderWithProviders(<ElementCard element={element} />);
 
@@ -32,7 +32,7 @@ describe('ElementCard', () => {
   it('renders content preview', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({
+    const element = createSimpleElement({
       blockSchema: {
         typeName: 'Content',
         label: 'Content',
@@ -51,7 +51,7 @@ describe('ElementCard', () => {
   it('shows exact "No preview available" text when summary is empty and has empty class', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({
+    const element = createSimpleElement({
       blockSchema: {
         typeName: 'Content',
         label: 'Content',
@@ -72,7 +72,7 @@ describe('ElementCard', () => {
   it('status class applied correctly', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({
+    const element = createSimpleElement({
       statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } },
     });
 
@@ -84,7 +84,7 @@ describe('ElementCard', () => {
   it('clickable class applied when editLink exists', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
+    const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' });
 
     renderWithProviders(<ElementCard element={element} />);
 
@@ -94,7 +94,7 @@ describe('ElementCard', () => {
   it('no clickable class when editLink is null', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({ editLink: null });
+    const element = createSimpleElement({ editLink: null });
 
     renderWithProviders(<ElementCard element={element} />);
 
@@ -104,7 +104,7 @@ describe('ElementCard', () => {
   it('renders an anchor with an href so middle-click opens in a new tab', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
+    const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' });
 
     renderWithProviders(<ElementCard element={element} />);
 
@@ -116,7 +116,7 @@ describe('ElementCard', () => {
   it('renders as non-interactive when editLink is null', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({ editLink: null });
+    const element = createSimpleElement({ editLink: null });
 
     renderWithProviders(<ElementCard element={element} />);
 
@@ -126,7 +126,7 @@ describe('ElementCard', () => {
   it('applies element-card base class always', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement();
+    const element = createSimpleElement();
 
     renderWithProviders(<ElementCard element={element} />);
 
@@ -136,7 +136,7 @@ describe('ElementCard', () => {
   it('empty content area has the --empty modifier class', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({
+    const element = createSimpleElement({
       blockSchema: {
         typeName: 'Content',
         label: 'Content',
@@ -156,7 +156,7 @@ describe('ElementCard', () => {
   it('non-empty content area does not have the --empty modifier class', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({
+    const element = createSimpleElement({
       blockSchema: {
         typeName: 'Content',
         label: 'Content',
@@ -177,7 +177,7 @@ describe('ElementCard', () => {
   it('clickable class is exactly "element-card--clickable"', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({ editLink: '/admin/pages/edit/show/5' });
+    const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' });
 
     renderWithProviders(<ElementCard element={element} />);
 
@@ -188,7 +188,7 @@ describe('ElementCard', () => {
   it('content class is exactly "element-card__content--empty" for empty summary', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({
+    const element = createSimpleElement({
       blockSchema: {
         typeName: 'Content',
         label: 'Content',
@@ -208,7 +208,7 @@ describe('ElementCard', () => {
   it('renders the icon with the blockSchema icon class', () => {
     mockFetchSuccess({});
 
-    const element = createEnrichedElement({
+    const element = createSimpleElement({
       blockSchema: {
         typeName: 'Content',
         label: 'Content',

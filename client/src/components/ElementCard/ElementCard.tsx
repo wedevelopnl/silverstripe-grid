@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactNode } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
-import type { EnrichedSimpleElementNode } from '@/types/enriched';
+import type { SimpleElementNode } from '@/types/elements';
 import { getElementStatus } from '@/types/status';
 import { useReadonly } from '@/hooks/ReadonlyContext';
 import { buildSortableStyle } from '@/utils/sortableStyles';
@@ -9,7 +9,7 @@ import DragHandle from '@/components/DragHandle/DragHandle';
 import ElementActions from '@/components/ElementActions/ElementActions';
 
 interface ElementCardProps {
-  readonly element: EnrichedSimpleElementNode;
+  readonly element: SimpleElementNode;
 }
 
 /**
@@ -30,7 +30,7 @@ export default function ElementCard({ element }: ElementCardProps) {
 
 function EditableElementCard({ element }: ElementCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: element.sortableId,
+    id: element.nodeKey,
   });
   const status = getElementStatus(element.statusFlags);
   const content = element.blockSchema.summary;

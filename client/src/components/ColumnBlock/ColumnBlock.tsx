@@ -1,13 +1,14 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import type { ViewportSettings } from '@/types/elements';
-import type { EnrichedColumnNode } from '@/types/enriched';
+import type { ColumnNode, ViewportSettings } from '@/types/elements';
+import type { NodeKey } from '@/types/identity';
 import { getElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { useGridEditorContext } from '@/hooks/GridEditorContext';
 import { useReadonly } from '@/hooks/ReadonlyContext';
 import { useViewportContext } from '@/hooks/ViewportContext';
+import { useCollapse } from '@/hooks/useCollapseState';
 import { useUpdateGridSettings, useCreateContentElement } from '@/hooks/useElementMutations';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
@@ -28,7 +29,18 @@ import EmptyState from '@/components/EmptyState/EmptyState';
 import ElementTypePicker from '@/components/ElementTypePicker/ElementTypePicker';
 
 interface ColumnBlockProps {
-  readonly column: EnrichedColumnNode;
+  readonly column: ColumnNode;
+}
+
+function useColumnCollapse(column: ColumnNode) {
+  const { isCollapsed: isCollapsedFn, toggle } = useCollapse();
+  const isCollapsed = isCollapsedFn(column.nodeKey);
+  const onToggle = useCallback(() => toggle(column.nodeKey), [toggle, column.nodeKey]);
+  return { isCollapsed, onToggle };
+}
+
+function useChildElementKeys(column: ColumnNode): NodeKey[] {
+  return useMemo(() => column.children?.map((e) => e.nodeKey) ?? [], [column.children]);
 }
 
 /**
@@ -79,14 +91,16 @@ function EditableColumnBlock({ column }: ColumnBlockProps) {
   const columnCount = getColumnCount();
   const settings = resolveViewportSettings(column.gridSettings, activeViewport);
   const status = getElementStatus(column.statusFlags);
-  const { isCollapsed, toggle } = column;
+  const { isCollapsed, onToggle } = useColumnCollapse(column);
   const { activeType } = useDragContext();
   const updateGridSettings = useUpdateGridSettings(pageId, zone);
   const createContentElement = useCreateContentElement(pageId, zone);
   const [isPickerOpen, setPickerOpen] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
-    useSortable({ id: column.sortableId });
+    useSortable({ id: column.nodeKey });
+
+  const childKeys = useChildElementKeys(column);
 
   const showDropTarget = isOver && activeType === 'column';
   const isDragActive = activeType !== null;
@@ -180,7 +194,7 @@ function EditableColumnBlock({ column }: ColumnBlockProps) {
               title: column.title,
             })}
           />
-          <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={column.title} />
+          <CollapseToggle isCollapsed={isCollapsed} onToggle={onToggle} label={column.title} />
           <i className={`column-block__icon ${column.blockSchema.icon}`} />
           <span className="column-block__title" data-testid="column-title">
             {column.editLink !== null ? (
@@ -212,9 +226,9 @@ function EditableColumnBlock({ column }: ColumnBlockProps) {
           </div>
         </div>
         <div className="column-block__body">
-          <SortableContext items={column.childSortableIds} strategy={verticalListSortingStrategy}>
+          <SortableContext items={childKeys} strategy={verticalListSortingStrategy}>
             {hasChildren
-              ? children.map((child) => <ElementCard key={child.id} element={child} />)
+              ? children.map((child) => <ElementCard key={child.nodeKey} element={child} />)
               : !hasAllowedTypes && (
                   <EmptyState
                     message={t('WeDevelopGrid.ColumnBlock.NO_CONTENT_BLOCKS', 'No content blocks')}
@@ -249,7 +263,7 @@ function ReadonlyColumnBlock({ column }: ColumnBlockProps) {
   const { activeViewport } = useViewportContext();
   const settings = resolveViewportSettings(column.gridSettings, activeViewport);
   const status = getElementStatus(column.statusFlags);
-  const { isCollapsed, toggle } = column;
+  const { isCollapsed, onToggle } = useColumnCollapse(column);
 
   const innerClasses = buildBlockClasses('column-block', status, {
     hidden: !settings.visible,
@@ -266,7 +280,7 @@ function ReadonlyColumnBlock({ column }: ColumnBlockProps) {
     <div style={columnStyle} className="row-block__column">
       <div className={innerClasses} data-testid="column-block">
         <div className="column-block__header" data-testid="column-header">
-          <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={column.title} />
+          <CollapseToggle isCollapsed={isCollapsed} onToggle={onToggle} label={column.title} />
           <i className={`column-block__icon ${column.blockSchema.icon}`} />
           <span className="column-block__title" data-testid="column-title">
             {column.title}
@@ -274,7 +288,7 @@ function ReadonlyColumnBlock({ column }: ColumnBlockProps) {
         </div>
         <div className="column-block__body">
           {children.length > 0 ? (
-            children.map((child) => <ElementCard key={child.id} element={child} />)
+            children.map((child) => <ElementCard key={child.nodeKey} element={child} />)
           ) : (
             <EmptyState
               message={t('WeDevelopGrid.ColumnBlock.NO_CONTENT_BLOCKS', 'No content blocks')}
