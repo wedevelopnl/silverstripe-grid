@@ -4,6 +4,7 @@ import { useGridEditorContext } from './GridEditorContext';
 import { useViewportOverrideCounts } from './useElementTree';
 import { useResetGridSettingsOverrides } from './useElementMutations';
 import { getDefaultViewport, getViewports } from '@/utils/gridAdapter';
+import { t } from '@/i18n';
 
 interface ResetOverridesState {
   readonly showReset: boolean;
@@ -34,16 +35,42 @@ export function useResetOverridesAction(): ResetOverridesState {
   const viewportLabel =
     getViewports().find((vp) => vp.key === activeViewport)?.label ?? activeViewport;
 
-  const label = isDefaultViewport ? 'Reset all' : 'Reset viewport';
+  const label = isDefaultViewport
+    ? t('WeDevelopGrid.useResetOverridesAction.RESET_ALL_LABEL', 'Reset all')
+    : t('WeDevelopGrid.useResetOverridesAction.RESET_VIEWPORT_LABEL', 'Reset viewport');
 
   const dialogTitle = isDefaultViewport
-    ? 'Reset all overrides'
-    : `Reset ${viewportLabel} overrides`;
+    ? t('WeDevelopGrid.useResetOverridesAction.DIALOG_TITLE_ALL', 'Reset all overrides')
+    : t(
+        'WeDevelopGrid.useResetOverridesAction.DIALOG_TITLE_VIEWPORT',
+        'Reset {viewport} overrides',
+        { viewport: viewportLabel },
+      );
 
-  const suffix = affectedCount === 1 ? 'column' : 'columns';
-  const dialogMessage = isDefaultViewport
-    ? `Reset all viewport overrides across ${affectedCount} ${suffix}?`
-    : `Reset overrides for ${affectedCount} ${suffix} on ${viewportLabel}?`;
+  const dialogMessage =
+    isDefaultViewport && affectedCount === 1
+      ? t(
+          'WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_ONE',
+          'Reset all viewport overrides across {count} column?',
+          { count: affectedCount },
+        )
+      : isDefaultViewport
+        ? t(
+            'WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_MANY',
+            'Reset all viewport overrides across {count} columns?',
+            { count: affectedCount },
+          )
+        : affectedCount === 1
+          ? t(
+              'WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_ONE',
+              'Reset overrides for {count} column on {viewport}?',
+              { count: affectedCount, viewport: viewportLabel },
+            )
+          : t(
+              'WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_MANY',
+              'Reset overrides for {count} columns on {viewport}?',
+              { count: affectedCount, viewport: viewportLabel },
+            );
 
   const handleResetClick = useCallback(() => {
     setDialogOpen(true);

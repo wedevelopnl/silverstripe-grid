@@ -4,6 +4,7 @@ import type { ElementNode } from '@/types/elements';
 import { getElementType } from '@/utils/getElementType';
 import { useGridEditorContext } from './GridEditorContext';
 import { useDuplicateToElement } from './useElementMutations';
+import { t } from '@/i18n';
 
 interface DuplicateToDialogState {
   readonly isOpen: boolean;
@@ -58,7 +59,7 @@ export function useDuplicateToAction(node: ElementNode): UseDuplicateToActionRes
 
   const action: ActionItem = {
     key: 'duplicate-to',
-    label: 'Duplicate to\u2026',
+    label: t('WeDevelopGrid.useDuplicateToAction.ACTION_LABEL', 'Duplicate to\u2026'),
     onAction: handleOpen,
   };
 

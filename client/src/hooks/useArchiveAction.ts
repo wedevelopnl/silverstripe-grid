@@ -5,6 +5,7 @@ import { useGridEditorContext } from './GridEditorContext';
 import { useArchiveElement } from './useElementMutations';
 import { countDescendants } from '@/utils/countDescendants';
 import { showToast } from '@/utils/toast';
+import { t } from '@/i18n';
 
 interface ArchiveDialogState {
   readonly isOpen: boolean;
@@ -21,11 +22,22 @@ interface UseArchiveActionResult {
 
 function buildArchiveMessage(title: string, descendantCount: number): string {
   if (descendantCount === 0) {
-    return `Archive "${title}"?`;
+    return t('WeDevelopGrid.useArchiveAction.CONFIRM_MESSAGE_SIMPLE', 'Archive "{title}"?', {
+      title,
+    });
   }
 
-  const suffix = descendantCount === 1 ? 'child element' : 'child elements';
-  return `Archive "${title}" and all ${descendantCount} ${suffix}?`;
+  return descendantCount === 1
+    ? t(
+        'WeDevelopGrid.useArchiveAction.CONFIRM_MESSAGE_ONE_CHILD',
+        'Archive "{title}" and all {count} child element?',
+        { title, count: descendantCount },
+      )
+    : t(
+        'WeDevelopGrid.useArchiveAction.CONFIRM_MESSAGE_MANY_CHILDREN',
+        'Archive "{title}" and all {count} child elements?',
+        { title, count: descendantCount },
+      );
 }
 
 export function useArchiveAction(node: ElementNode): UseArchiveActionResult {
@@ -58,14 +70,14 @@ export function useArchiveAction(node: ElementNode): UseArchiveActionResult {
 
   const action: ActionItem = {
     key: 'archive',
-    label: 'Archive',
+    label: t('WeDevelopGrid.useArchiveAction.ACTION_LABEL', 'Archive'),
     destructive: true,
     onAction: handleOpenDialog,
   };
 
   const dialog: ArchiveDialogState = {
     isOpen: isDialogOpen,
-    title: 'Confirm archive',
+    title: t('WeDevelopGrid.useArchiveAction.DIALOG_TITLE', 'Confirm archive'),
     message: buildArchiveMessage(node.title, descendantCount),
     onConfirm: handleConfirm,
     onCancel: handleCancel,

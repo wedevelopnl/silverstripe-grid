@@ -4,6 +4,7 @@ import type { ElementNode } from '@/types/elements';
 import { useGridEditorContext } from './GridEditorContext';
 import { useDuplicateElement } from './useElementMutations';
 import { showToast } from '@/utils/toast';
+import { t } from '@/i18n';
 
 interface UseDuplicateActionResult {
   readonly action: ActionItem | null;
@@ -27,7 +28,7 @@ export function useDuplicateAction(node: ElementNode): UseDuplicateActionResult 
 
   const action: ActionItem = {
     key: 'duplicate',
-    label: 'Duplicate',
+    label: t('WeDevelopGrid.useDuplicateAction.ACTION_LABEL', 'Duplicate'),
     onAction: handleDuplicate,
   };
 
