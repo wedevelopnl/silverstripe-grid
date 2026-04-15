@@ -103,11 +103,7 @@ function parseParentRef(parentKey: NodeKey): NodeRef | null {
   return { type, id: idNum };
 }
 
-function insertIntoArray(
-  arr: ElementNode[],
-  element: ElementNode,
-  afterKey: NodeKey | null,
-): void {
+function insertIntoArray(arr: ElementNode[], element: ElementNode, afterKey: NodeKey | null): void {
   if (afterKey === null) {
     arr.unshift(element);
     return;
@@ -121,4 +117,3 @@ function insertIntoArray(
 
   arr.splice(afterIndex + 1, 0, element);
 }
-

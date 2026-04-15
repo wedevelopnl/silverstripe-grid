@@ -75,9 +75,8 @@ export function usePendingTree(): UsePendingTreeReturn {
       effectiveTree: TreeApiResponse,
     ): { tree: TreeApiResponse; maps: ElementMaps } | null => {
       const activeKey = buildNodeKey(activeParsed.type, activeParsed.id);
-      const afterKey = afterElementId === null
-        ? null
-        : buildNodeKey(activeParsed.type, afterElementId);
+      const afterKey =
+        afterElementId === null ? null : buildNodeKey(activeParsed.type, afterElementId);
 
       const newTree = applyReorder(effectiveTree, activeKey, targetParentKey, afterKey);
       if (newTree === effectiveTree) return null;

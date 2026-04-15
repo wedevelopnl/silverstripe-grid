@@ -185,8 +185,7 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
           pointer !== null &&
           resolveInsertDirection(pointer, over.rect, activeParsed.type) === 'before'
         ) {
-          const siblings =
-            effectiveMaps.childrenByParentKey.get(overNode.parentKey) ?? [];
+          const siblings = effectiveMaps.childrenByParentKey.get(overNode.parentKey) ?? [];
           const overIdx = siblings.findIndex((n) => n.nodeKey === overId);
           after = overIdx > 0 ? siblings[overIdx - 1].self : null;
         } else {

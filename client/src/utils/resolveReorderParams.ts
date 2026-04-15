@@ -40,7 +40,7 @@ export function resolveReorderParams(context: ReorderContext): ReorderElementPar
   }
 
   const afterKey = resolveAfterKey(context);
-  const afterNode = afterKey === null ? null : context.maps.nodeMap.get(afterKey) ?? null;
+  const afterNode = afterKey === null ? null : (context.maps.nodeMap.get(afterKey) ?? null);
 
   return {
     element: { type: parsed.type, id: parsed.id },

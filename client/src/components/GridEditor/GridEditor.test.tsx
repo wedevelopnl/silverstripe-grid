@@ -219,7 +219,7 @@ describe('GridEditor', () => {
     it('shows empty state message when readonly tree has no sections', async () => {
       const treeResponse = createTreeApiResponse({
         pageId: 1,
-      sections: [],
+        sections: [],
       });
 
       mockFetchSuccess(treeResponse);

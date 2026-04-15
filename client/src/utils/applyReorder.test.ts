@@ -34,7 +34,8 @@ describe('applyReorder', () => {
         buildNodeKey('element', 12),
       );
 
-      const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode).children?.[0] as ColumnNode;
+      const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
+        .children?.[0] as ColumnNode;
       expect(movedColumn.children?.map((c: SimpleElementNode) => c.id)).toEqual([11, 12, 10]);
     });
 
@@ -58,7 +59,8 @@ describe('applyReorder', () => {
         null,
       );
 
-      const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode).children?.[0] as ColumnNode;
+      const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
+        .children?.[0] as ColumnNode;
       expect(movedColumn.children?.map((c: SimpleElementNode) => c.id)).toEqual([11, 10]);
     });
 
@@ -169,12 +171,7 @@ describe('applyReorder', () => {
         sections: [section1, section2],
       });
 
-      const result = applyReorder(
-        tree,
-        buildNodeKey('row', 10),
-        buildNodeKey('section', 2),
-        null,
-      );
+      const result = applyReorder(tree, buildNodeKey('row', 10), buildNodeKey('section', 2), null);
 
       const [movedSection1, movedSection2] = result.nodes as [SectionNode, SectionNode];
       expect(movedSection1.children).toEqual([]);
@@ -199,12 +196,7 @@ describe('applyReorder', () => {
     it('returns the original tree when the target parent is not in the maps', () => {
       const tree = createTreeApiResponse({ pageId: 1 });
       const firstSection = tree.nodes[0] as SectionNode;
-      const result = applyReorder(
-        tree,
-        firstSection.nodeKey,
-        buildNodeKey('page', 9999),
-        null,
-      );
+      const result = applyReorder(tree, firstSection.nodeKey, buildNodeKey('page', 9999), null);
       expect(result).toBe(tree);
     });
 
