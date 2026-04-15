@@ -7,6 +7,7 @@ import { useReadonly } from '@/hooks/ReadonlyContext';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
 import { getOffsetStrategy, getColumnCount } from '@/utils/gridAdapter';
+import { t } from '@/i18n';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import ElementActions from '@/components/ElementActions/ElementActions';
@@ -49,7 +50,11 @@ function EditableRowBlock({ row }: RowBlockProps) {
   return (
     <div ref={setNodeRef} style={style} className={rootClasses} data-testid="row-block">
       <div className="row-block__header" data-testid="row-header">
-        <DragHandle listeners={listeners} attributes={attributes} label={`Move ${row.title}`} />
+        <DragHandle
+          listeners={listeners}
+          attributes={attributes}
+          label={t('WeDevelopGrid.RowBlock.MOVE_LABEL', 'Move {title}', { title: row.title })}
+        />
         <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={row.title} />
         <i className={`row-block__icon ${row.blockSchema.icon}`} />
         <h3 className="row-block__title" data-testid="row-title">

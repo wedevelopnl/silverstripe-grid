@@ -6,6 +6,7 @@ import { useDragContext } from '@/hooks/useDragAndDrop';
 import { useReadonly } from '@/hooks/ReadonlyContext';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { buildBlockClasses } from '@/utils/blockClasses';
+import { t } from '@/i18n';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import ElementActions from '@/components/ElementActions/ElementActions';
@@ -52,7 +53,13 @@ function EditableSectionBlock({ section }: SectionBlockProps) {
   return (
     <section ref={setNodeRef} style={style} className={rootClasses} data-testid="section-block">
       <div className="section-block__header" data-testid="section-header">
-        <DragHandle listeners={listeners} attributes={attributes} label={`Move ${section.title}`} />
+        <DragHandle
+          listeners={listeners}
+          attributes={attributes}
+          label={t('WeDevelopGrid.SectionBlock.MOVE_LABEL', 'Move {title}', {
+            title: section.title,
+          })}
+        />
         <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={section.title} />
         <i className={`section-block__icon ${section.blockSchema.icon}`} />
         <h2 className="section-block__title" data-testid="section-title">

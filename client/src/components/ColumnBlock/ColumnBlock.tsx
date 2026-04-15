@@ -18,6 +18,7 @@ import {
   getOffsetOptions,
   resolveViewportSettings,
 } from '@/utils/gridAdapter';
+import { t } from '@/i18n';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import ElementActions from '@/components/ElementActions/ElementActions';
@@ -175,7 +176,9 @@ function EditableColumnBlock({ column }: ColumnBlockProps) {
           <DragHandle
             listeners={listeners}
             attributes={attributes}
-            label={`Move ${column.title}`}
+            label={t('WeDevelopGrid.ColumnBlock.MOVE_LABEL', 'Move {title}', {
+              title: column.title,
+            })}
           />
           <CollapseToggle isCollapsed={isCollapsed} onToggle={toggle} label={column.title} />
           <i className={`column-block__icon ${column.blockSchema.icon}`} />
@@ -212,7 +215,11 @@ function EditableColumnBlock({ column }: ColumnBlockProps) {
           <SortableContext items={column.childSortableIds} strategy={verticalListSortingStrategy}>
             {hasChildren
               ? children.map((child) => <ElementCard key={child.id} element={child} />)
-              : !hasAllowedTypes && <EmptyState message="No content blocks" />}
+              : !hasAllowedTypes && (
+                  <EmptyState
+                    message={t('WeDevelopGrid.ColumnBlock.NO_CONTENT_BLOCKS', 'No content blocks')}
+                  />
+                )}
           </SortableContext>
           {hasAllowedTypes && (
             <button
@@ -221,7 +228,7 @@ function EditableColumnBlock({ column }: ColumnBlockProps) {
               data-testid="add-content-button"
               onClick={handleOpenPicker}
             >
-              + Add content
+              {t('WeDevelopGrid.ColumnBlock.ADD_CONTENT_BUTTON', '+ Add content')}
             </button>
           )}
         </div>
@@ -269,7 +276,9 @@ function ReadonlyColumnBlock({ column }: ColumnBlockProps) {
           {children.length > 0 ? (
             children.map((child) => <ElementCard key={child.id} element={child} />)
           ) : (
-            <EmptyState message="No content blocks" />
+            <EmptyState
+              message={t('WeDevelopGrid.ColumnBlock.NO_CONTENT_BLOCKS', 'No content blocks')}
+            />
           )}
         </div>
       </div>
