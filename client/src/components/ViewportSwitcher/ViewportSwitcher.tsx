@@ -2,6 +2,7 @@ import { useViewportContext } from '@/hooks/ViewportContext';
 import { useReadonly } from '@/hooks/ReadonlyContext';
 import { useResetOverridesAction } from '@/hooks/useResetOverridesAction';
 import { getViewports } from '@/utils/gridAdapter';
+import { t } from '@/i18n';
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
 
 export default function ViewportSwitcher() {
@@ -13,7 +14,10 @@ export default function ViewportSwitcher() {
   return (
     <div className="viewport-switcher" data-testid="viewport-switcher">
       {/* biome-ignore lint/a11y/useSemanticElements: no HTML element maps to role="group" for a toolbar-style button cluster; <fieldset> implies form grouping. */}
-      <div role="group" aria-label="Viewport size">
+      <div
+        role="group"
+        aria-label={t('WeDevelopGrid.ViewportSwitcher.GROUP_LABEL', 'Viewport size')}
+      >
         {viewports.map((viewport) => {
           const isActive = viewport.key === activeViewport;
 
@@ -51,7 +55,7 @@ export default function ViewportSwitcher() {
           isOpen={reset.isDialogOpen}
           title={reset.dialogTitle}
           message={reset.dialogMessage}
-          confirmLabel="Reset"
+          confirmLabel={t('WeDevelopGrid.ViewportSwitcher.RESET_CONFIRM_LABEL', 'Reset')}
           onConfirm={reset.onConfirm}
           onCancel={reset.onCancel}
           destructive

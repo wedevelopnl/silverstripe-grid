@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePages, useZones, useAcceptableContainers } from '@/hooks/useDuplicateToQueries';
+import { t } from '@/i18n';
 import './DuplicateToDialog.scss';
 
 type Step = 'page' | 'zone' | 'container' | 'confirm';
@@ -166,10 +167,13 @@ export default function DuplicateToDialog({
     >
       <div className="duplicate-to-dialog__header">
         <h3 className="duplicate-to-dialog__title">
-          {step === 'page' && 'Select target page'}
-          {step === 'zone' && 'Select zone'}
-          {step === 'container' && 'Select container'}
-          {step === 'confirm' && 'Confirm duplication'}
+          {step === 'page' &&
+            t('WeDevelopGrid.DuplicateToDialog.STEP_PAGE_TITLE', 'Select target page')}
+          {step === 'zone' && t('WeDevelopGrid.DuplicateToDialog.STEP_ZONE_TITLE', 'Select zone')}
+          {step === 'container' &&
+            t('WeDevelopGrid.DuplicateToDialog.STEP_CONTAINER_TITLE', 'Select container')}
+          {step === 'confirm' &&
+            t('WeDevelopGrid.DuplicateToDialog.STEP_CONFIRM_TITLE', 'Confirm duplication')}
         </h3>
       </div>
 
@@ -180,11 +184,18 @@ export default function DuplicateToDialog({
               type="text"
               className="duplicate-to-dialog__search"
               data-testid="duplicate-to-search"
-              placeholder="Search pages\u2026"
+              placeholder={t(
+                'WeDevelopGrid.DuplicateToDialog.SEARCH_PLACEHOLDER',
+                'Search pages\u2026',
+              )}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            {pages.isLoading && <p className="duplicate-to-dialog__loading">Loading pages\u2026</p>}
+            {pages.isLoading && (
+              <p className="duplicate-to-dialog__loading">
+                {t('WeDevelopGrid.DuplicateToDialog.LOADING_PAGES', 'Loading pages\u2026')}
+              </p>
+            )}
             {pages.data !== undefined && (
               <div
                 className="duplicate-to-dialog__list"
@@ -219,7 +230,11 @@ export default function DuplicateToDialog({
 
         {step === 'zone' && (
           <div data-testid="duplicate-to-step-zone">
-            {zones.isLoading && <p className="duplicate-to-dialog__loading">Loading zones\u2026</p>}
+            {zones.isLoading && (
+              <p className="duplicate-to-dialog__loading">
+                {t('WeDevelopGrid.DuplicateToDialog.LOADING_ZONES', 'Loading zones\u2026')}
+              </p>
+            )}
             {zones.data !== undefined && zones.data.length > 1 && (
               <div
                 className="duplicate-to-dialog__list"
@@ -250,11 +265,19 @@ export default function DuplicateToDialog({
         {step === 'container' && (
           <div data-testid="duplicate-to-step-container">
             {containers.isLoading && (
-              <p className="duplicate-to-dialog__loading">Loading containers\u2026</p>
+              <p className="duplicate-to-dialog__loading">
+                {t(
+                  'WeDevelopGrid.DuplicateToDialog.LOADING_CONTAINERS',
+                  'Loading containers\u2026',
+                )}
+              </p>
             )}
             {containers.data !== undefined && containers.data.length === 0 && (
               <p className="duplicate-to-dialog__empty" data-testid="duplicate-to-no-containers">
-                No compatible containers found in this zone
+                {t(
+                  'WeDevelopGrid.DuplicateToDialog.NO_CONTAINERS',
+                  'No compatible containers found in this zone',
+                )}
               </p>
             )}
             {containers.data !== undefined && containers.data.length > 0 && (
@@ -288,7 +311,11 @@ export default function DuplicateToDialog({
         {step === 'confirm' && (
           <div data-testid="duplicate-to-step-confirm">
             <p className="duplicate-to-dialog__summary">
-              Duplicate section to zone <strong>{selectedZone}</strong>?
+              {t(
+                'WeDevelopGrid.DuplicateToDialog.CONFIRM_SUMMARY_PREFIX',
+                'Duplicate section to zone',
+              )}{' '}
+              <strong>{selectedZone}</strong>?
             </p>
           </div>
         )}
@@ -308,7 +335,7 @@ export default function DuplicateToDialog({
               data-testid="duplicate-to-back"
               onClick={goBack}
             >
-              Back
+              {t('WeDevelopGrid.DuplicateToDialog.BACK_BUTTON', 'Back')}
             </button>
           )}
           <button
@@ -316,7 +343,7 @@ export default function DuplicateToDialog({
             className="duplicate-to-dialog__button duplicate-to-dialog__button--cancel"
             onClick={handleClose}
           >
-            Cancel
+            {t('WeDevelopGrid.DuplicateToDialog.CANCEL_BUTTON', 'Cancel')}
           </button>
           {step === 'page' && (
             <button
@@ -326,7 +353,7 @@ export default function DuplicateToDialog({
               disabled={selectedPageId === 0}
               onClick={advanceFromPage}
             >
-              Next
+              {t('WeDevelopGrid.DuplicateToDialog.NEXT_BUTTON', 'Next')}
             </button>
           )}
           {step === 'zone' && (
@@ -337,7 +364,7 @@ export default function DuplicateToDialog({
               disabled={selectedZone === null}
               onClick={advanceFromZone}
             >
-              Next
+              {t('WeDevelopGrid.DuplicateToDialog.NEXT_BUTTON', 'Next')}
             </button>
           )}
           {step === 'container' && (
@@ -348,7 +375,7 @@ export default function DuplicateToDialog({
               disabled={selectedContainerId === null}
               onClick={handleConfirm}
             >
-              Confirm
+              {t('WeDevelopGrid.DuplicateToDialog.CONFIRM_BUTTON', 'Confirm')}
             </button>
           )}
           {step === 'confirm' && (
@@ -358,7 +385,7 @@ export default function DuplicateToDialog({
               data-testid="duplicate-to-confirm"
               onClick={handleConfirm}
             >
-              Confirm
+              {t('WeDevelopGrid.DuplicateToDialog.CONFIRM_BUTTON', 'Confirm')}
             </button>
           )}
         </div>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { AllowedTypeInfo } from '@/types/elements';
+import { t } from '@/i18n';
 
 interface ElementTypePickerProps {
   readonly allowedTypes: Record<string, AllowedTypeInfo>;
@@ -49,13 +50,15 @@ export default function ElementTypePicker({
       onClose={handleClose}
     >
       <div className="element-type-picker__header">
-        <h3 className="element-type-picker__title">Add content element</h3>
+        <h3 className="element-type-picker__title">
+          {t('WeDevelopGrid.ElementTypePicker.TITLE', 'Add content element')}
+        </h3>
         <button
           type="button"
           className="element-type-picker__close"
           data-testid="element-type-picker-close"
           onClick={handleClose}
-          aria-label="Close"
+          aria-label={t('WeDevelopGrid.ElementTypePicker.CLOSE_LABEL', 'Close')}
         >
           &times;
         </button>
@@ -80,7 +83,12 @@ export default function ElementTypePicker({
             ))}
           </div>
         ) : (
-          <p className="element-type-picker__empty">No content element types available</p>
+          <p className="element-type-picker__empty">
+            {t(
+              'WeDevelopGrid.ElementTypePicker.EMPTY_MESSAGE',
+              'No content element types available',
+            )}
+          </p>
         )}
       </div>
     </dialog>
