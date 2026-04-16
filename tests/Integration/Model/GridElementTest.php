@@ -12,6 +12,7 @@ use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
+use SilverStripe\VersionedAdmin\Forms\HistoryViewerField;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
@@ -349,6 +350,31 @@ final class GridElementTest extends SapphireTest
         $fields = $element->getCMSFields();
 
         self::assertNotNull($fields->fieldByName('Root.Main.TitleSettings'));
+    }
+
+    public function testGetCMSFieldsContainsHistoryViewerFieldWhenSaved(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $element = GridTreeFactory::contentElement($column);
+
+        $fields = $element->getCMSFields();
+
+        self::assertInstanceOf(
+            HistoryViewerField::class,
+            $fields->fieldByName('Root.History.ElementHistory'),
+        );
+    }
+
+    public function testGetCMSFieldsOmitsHistoryViewerFieldWhenUnsaved(): void
+    {
+        $element = ContentElement::create();
+
+        $fields = $element->getCMSFields();
+
+        self::assertNull($fields->fieldByName('Root.History.ElementHistory'));
     }
 
     public function testGetCMSFieldsExcludesScaffoldedFields(): void

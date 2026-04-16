@@ -21,6 +21,7 @@ use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\Versioned;
+use SilverStripe\VersionedAdmin\Forms\HistoryViewerField;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 
 /**
@@ -270,6 +271,13 @@ class GridElement extends DataObject
 
         $mainTab = $fields->findOrMakeTab('Root.Main');
         $mainTab->unshift($titleGroup);
+
+        if ($this->isInDB()) {
+            $fields->addFieldToTab(
+                'Root.History',
+                HistoryViewerField::create('ElementHistory'),
+            );
+        }
 
         return $fields;
     }
