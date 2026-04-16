@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Page;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -72,7 +73,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
         $this->seeder = new LegacyTableSeeder();
         $this->seeder->createTables();
-        $this->seeder->addExtensionColumns('SiteTree');
+        $this->seeder->addExtensionColumns('Page');
         $this->seeder->truncateTables();
 
         // Clean ORM grid tables from previous tests. DDL in createTables()
@@ -99,7 +100,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     protected function tearDown(): void
     {
-        $this->seeder->removeExtensionColumns('SiteTree');
+        $this->seeder->removeExtensionColumns('Page');
         $this->seeder->dropTables();
 
         parent::tearDown();
@@ -164,12 +165,12 @@ final class GridMigrationServiceTest extends SapphireTest
 
     private function getPageId(): int
     {
-        return (int) $this->objFromFixture(SiteTree::class, 'test_page')->ID;
+        return (int) $this->objFromFixture(Page::class, 'test_page')->ID;
     }
 
     private function getPageId2(): int
     {
-        return (int) $this->objFromFixture(SiteTree::class, 'test_page_2')->ID;
+        return (int) $this->objFromFixture(Page::class, 'test_page_2')->ID;
     }
 
     /**
@@ -256,7 +257,7 @@ final class GridMigrationServiceTest extends SapphireTest
         // Verify Section exists
         $sections = Section::get()->filter([
             'ParentID' => $pageId,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
             'Zone' => self::ZONE,
         ]);
         self::assertCount(1, $sections);
@@ -1514,10 +1515,10 @@ final class GridMigrationServiceTest extends SapphireTest
         // Verify no sections exist with the base SiteTree class
         $wrongSections = Section::get()->filter([
             'ParentID' => $pageId,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
             'Zone' => self::ZONE,
         ]);
-        self::assertCount(0, $wrongSections, 'No sections should have ParentClass = SiteTree');
+        self::assertCount(0, $wrongSections, 'No sections should have ParentClass = Page');
     }
 
     // ─── Test Group 12: Logging behaviour (tests 37-40) ─────────
@@ -1631,7 +1632,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
         $this->runMigration();
 
-        $row = DB::prepared_query('SELECT "UseGrid" FROM "SiteTree" WHERE "ID" = ?', [$pageId])->record();
+        $row = DB::prepared_query('SELECT "UseGrid" FROM "Page" WHERE "ID" = ?', [$pageId])->record();
         self::assertNotNull($row);
         self::assertSame(1, (int) $row['UseGrid']);
     }
@@ -1649,21 +1650,21 @@ final class GridMigrationServiceTest extends SapphireTest
         ], 'live');
         $this->seeder->seedContentMedia(1001, ['HTML' => '<p>Hello</p>'], 'live');
 
-        // Ensure SiteTree_Live has this page and UseElementalGrid = 1.
+        // Ensure Page_Live has this page and UseElementalGrid = 1.
         // In production, publishing copies all columns. Here we simulate it
         // by publishing via ORM and then setting the legacy column directly.
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $page->UseGrid = false;
         $page->write();
         $page->publishSingle();
         DB::prepared_query(
-            'UPDATE "SiteTree_Live" SET "UseElementalGrid" = 1, "ElementalAreaID" = ? WHERE "ID" = ?',
+            'UPDATE "Page_Live" SET "UseElementalGrid" = 1, "ElementalAreaID" = ? WHERE "ID" = ?',
             [$areaId, $pageId],
         );
 
         $this->runMigration();
 
-        $liveRow = DB::prepared_query('SELECT "UseGrid" FROM "SiteTree_Live" WHERE "ID" = ?', [$pageId])->record();
+        $liveRow = DB::prepared_query('SELECT "UseGrid" FROM "Page_Live" WHERE "ID" = ?', [$pageId])->record();
         self::assertNotNull($liveRow);
         self::assertSame(1, (int) $liveRow['UseGrid']);
     }
@@ -1681,7 +1682,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
         $this->runMigration();
 
-        $row = DB::prepared_query('SELECT "UseGrid" FROM "SiteTree" WHERE "ID" = ?', [$pageId2])->record();
+        $row = DB::prepared_query('SELECT "UseGrid" FROM "Page" WHERE "ID" = ?', [$pageId2])->record();
         self::assertNotNull($row);
         self::assertSame(0, (int) $row['UseGrid']);
     }
@@ -1692,7 +1693,7 @@ final class GridMigrationServiceTest extends SapphireTest
         $this->seedStandardPage($pageId);
 
         // Set UseGrid to 0 to verify dry run doesn't change it
-        DB::prepared_query('UPDATE "SiteTree" SET "UseGrid" = 0 WHERE "ID" = ?', [$pageId]);
+        DB::prepared_query('UPDATE "Page" SET "UseGrid" = 0 WHERE "ID" = ?', [$pageId]);
 
         $service = $this->createService();
         $service->run(
@@ -1703,7 +1704,7 @@ final class GridMigrationServiceTest extends SapphireTest
             pageIds: [$pageId],
         );
 
-        $row = DB::prepared_query('SELECT "UseGrid" FROM "SiteTree" WHERE "ID" = ?', [$pageId])->record();
+        $row = DB::prepared_query('SELECT "UseGrid" FROM "Page" WHERE "ID" = ?', [$pageId])->record();
         self::assertNotNull($row);
         self::assertSame(0, (int) $row['UseGrid'], 'Dry run should not modify UseGrid');
     }
@@ -1714,30 +1715,30 @@ final class GridMigrationServiceTest extends SapphireTest
         $areaId = 100;
         $this->seedStandardPage($pageId, $areaId);
 
-        // Publish the page so SiteTree_Live has the row
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        // Publish the page so Page_Live has the row
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $page->publishSingle();
 
         // Simulate: grid enabled on draft, disabled on live.
         // This can happen if a page was published with grid off, then
         // re-enabled on draft but not yet re-published.
         DB::prepared_query(
-            'UPDATE "SiteTree" SET "UseElementalGrid" = 1 WHERE "ID" = ?',
+            'UPDATE "Page" SET "UseElementalGrid" = 1 WHERE "ID" = ?',
             [$pageId],
         );
         DB::prepared_query(
-            'UPDATE "SiteTree_Live" SET "UseElementalGrid" = 0 WHERE "ID" = ?',
+            'UPDATE "Page_Live" SET "UseElementalGrid" = 0 WHERE "ID" = ?',
             [$pageId],
         );
 
         $this->runMigration();
 
         // Draft should be enabled (content was migrated)
-        $draftRow = DB::prepared_query('SELECT "UseGrid" FROM "SiteTree" WHERE "ID" = ?', [$pageId])->record();
+        $draftRow = DB::prepared_query('SELECT "UseGrid" FROM "Page" WHERE "ID" = ?', [$pageId])->record();
         self::assertSame(1, (int) $draftRow['UseGrid'], 'Draft UseGrid should be 1');
 
         // Live should be disabled (UseElementalGrid was 0 on live)
-        $liveRow = DB::prepared_query('SELECT "UseGrid" FROM "SiteTree_Live" WHERE "ID" = ?', [$pageId])->record();
+        $liveRow = DB::prepared_query('SELECT "UseGrid" FROM "Page_Live" WHERE "ID" = ?', [$pageId])->record();
         self::assertSame(0, (int) $liveRow['UseGrid'], 'Live UseGrid should be 0 — grid was disabled on live');
     }
 }

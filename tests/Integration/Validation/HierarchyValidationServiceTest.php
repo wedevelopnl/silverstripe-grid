@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Validation;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
@@ -42,7 +42,7 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     public function testSectionAtPageLevelPasses(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         $result = $this->getService()->validate($section);
@@ -52,7 +52,7 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     public function testRowInsideSectionPasses(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -63,7 +63,7 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     public function testColumnInsideRowPasses(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -75,7 +75,7 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     public function testContentElementInsideColumnPasses(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -88,7 +88,7 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     public function testOrphanElementPasses(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         // Detach from parent without writing
@@ -104,7 +104,7 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     public function testRowAtPageLevelFails(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         // Create Row with valid parent first, then mutate to invalid placement
@@ -119,7 +119,7 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     public function testColumnAtPageLevelFails(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -136,7 +136,7 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     public function testContentElementAtPageLevelFails(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -154,7 +154,7 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     public function testSectionInsideSectionFails(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $sectionA = GridTreeFactory::section($page);
         $sectionB = GridTreeFactory::section($page);
 
@@ -170,7 +170,7 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     public function testColumnInsideSectionFails(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -187,7 +187,7 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     public function testRowInsideColumnFails(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -205,7 +205,7 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     public function testViolationErrorHasTranslationKey(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         // Row cannot be placed at page level — triggers PAGE_LEVEL_REJECTED

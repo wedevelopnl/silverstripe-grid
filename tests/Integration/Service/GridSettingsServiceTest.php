@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
+use Page;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
@@ -42,7 +42,7 @@ final class GridSettingsServiceTest extends SapphireTest
 
     public function testUpdateSettingsDefaultViewportUpdatesDefaultConfig(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -63,7 +63,7 @@ final class GridSettingsServiceTest extends SapphireTest
 
     public function testUpdateSettingsNonDefaultViewportAddsOverride(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -84,7 +84,7 @@ final class GridSettingsServiceTest extends SapphireTest
 
     public function testUpdateSettingsNonDefaultViewportMatchingDefaultRemovesOverride(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -107,7 +107,7 @@ final class GridSettingsServiceTest extends SapphireTest
 
     public function testUpdateSettingsPersistsColumnToDatabase(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -127,7 +127,7 @@ final class GridSettingsServiceTest extends SapphireTest
 
     public function testResetOverridesRemovesSpecificViewportOverride(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -155,7 +155,7 @@ final class GridSettingsServiceTest extends SapphireTest
 
     public function testResetOverridesRemovesAllOverrides(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -180,7 +180,7 @@ final class GridSettingsServiceTest extends SapphireTest
 
     public function testResetOverridesReturnsZeroWhenNoColumnsHaveOverrides(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -194,7 +194,7 @@ final class GridSettingsServiceTest extends SapphireTest
 
     public function testResetOverridesOnlyAffectsColumnsInSpecifiedZone(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         $mainSection = GridTreeFactory::section($page, zone: 'main');
         $mainRow = GridTreeFactory::row($mainSection);
@@ -228,7 +228,7 @@ final class GridSettingsServiceTest extends SapphireTest
 
     public function testResetOverridesReturnsCountOfAffectedColumns(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 

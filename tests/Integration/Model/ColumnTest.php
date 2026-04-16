@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Model;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -34,7 +34,7 @@ final class ColumnTest extends SapphireTest
 
     public function testGridSettingsInitializedOnFirstWrite(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -59,7 +59,7 @@ final class ColumnTest extends SapphireTest
 
     public function testGridSettingsPreservedOnSubsequentWrite(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -78,7 +78,7 @@ final class ColumnTest extends SapphireTest
 
     public function testGetGridSettingsRoundTrip(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -99,7 +99,7 @@ final class ColumnTest extends SapphireTest
 
     public function testSetGridSettingsWithJsonString(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -118,7 +118,7 @@ final class ColumnTest extends SapphireTest
 
     public function testGetGridSettingsReturnsInitialWhenNoData(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -136,7 +136,7 @@ final class ColumnTest extends SapphireTest
 
     public function testGetChildrenReturnsElements(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -154,7 +154,7 @@ final class ColumnTest extends SapphireTest
 
     public function testGetGridWidthSummary(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -168,7 +168,7 @@ final class ColumnTest extends SapphireTest
 
     public function testGetColumnClassesReturnsNonEmptyString(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -180,7 +180,7 @@ final class ColumnTest extends SapphireTest
 
     public function testGetColumnClassesWithOverrides(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -196,7 +196,7 @@ final class ColumnTest extends SapphireTest
 
     public function testGetCMSFieldsIncludesGridTab(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -210,7 +210,7 @@ final class ColumnTest extends SapphireTest
 
     public function testGridSettingsNotReInitializedOnSubsequentWrite(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 

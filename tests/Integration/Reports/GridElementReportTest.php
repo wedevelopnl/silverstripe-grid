@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Reports;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
@@ -53,7 +54,7 @@ final class GridElementReportTest extends SapphireTest
 
     public function testSourceRecordsReturnsAllElements(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -67,7 +68,7 @@ final class GridElementReportTest extends SapphireTest
 
     public function testSourceRecordsFiltersByClassName(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         GridTreeFactory::section($page);
         $section2 = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section2);
@@ -83,8 +84,8 @@ final class GridElementReportTest extends SapphireTest
 
     public function testSourceRecordsFiltersByPageId(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
-        $page2 = $this->objFromFixture(SiteTree::class, 'test_page_2');
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
         GridTreeFactory::section($page);
         GridTreeFactory::section($page2);
 
@@ -100,7 +101,7 @@ final class GridElementReportTest extends SapphireTest
 
     public function testSourceRecordsFiltersOrphanedOnly(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -123,7 +124,7 @@ final class GridElementReportTest extends SapphireTest
 
     public function testSourceRecordsEnrichesPageTitle(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         $records = $this->report()->sourceRecords();
@@ -142,7 +143,7 @@ final class GridElementReportTest extends SapphireTest
 
     public function testSourceRecordsOrphanGetsOrphanedLabel(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -211,8 +212,8 @@ final class GridElementReportTest extends SapphireTest
 
     public function testSourceRecordsFiltersByPageIdContinuesOnMismatch(): void
     {
-        $page1 = $this->objFromFixture(SiteTree::class, 'test_page');
-        $page2 = $this->objFromFixture(SiteTree::class, 'test_page_2');
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
+        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
 
         GridTreeFactory::section($page1, 'main', 0, 'Page1 Section');
         GridTreeFactory::section($page2, 'main', 0, 'Page2 Section');
@@ -231,7 +232,7 @@ final class GridElementReportTest extends SapphireTest
 
     public function testColumnsFormattingCallbacksReturnStrings(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page, 'main', 0, 'Formatted Section');
 
         $columns = $this->report()->columns();

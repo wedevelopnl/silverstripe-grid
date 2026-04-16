@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
-use SilverStripe\CMS\Model\SiteTree;
+use Page;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -48,9 +48,9 @@ final class FluentClearLocaleTest extends SapphireTest
         FluentState::singleton()->setLocale('en_US');
     }
 
-    private function createPage(string $title = 'Test Page'): SiteTree
+    private function createPage(string $title = 'Test Page'): Page
     {
-        $page = SiteTree::create();
+        $page = Page::create();
         $page->Title = $title;
         $page->URLSegment = 'fluent-clear-test';
         $page->writeToStage(Versioned::DRAFT);
@@ -88,7 +88,7 @@ final class FluentClearLocaleTest extends SapphireTest
         // Dutch grid elements should be gone
         self::assertCount(0, Section::get()->filter([
             'ParentID' => $page->ID,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
         ]), 'Dutch Sections should be deleted');
         self::assertCount(0, Row::get(), 'Dutch Rows should be deleted');
         self::assertCount(0, Column::get(), 'Dutch Columns should be deleted');
@@ -99,7 +99,7 @@ final class FluentClearLocaleTest extends SapphireTest
 
         self::assertCount(1, Section::get()->filter([
             'ParentID' => $page->ID,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
         ]), 'English Section should be intact');
         self::assertCount(1, Row::get(), 'English Row should be intact');
         self::assertCount(1, Column::get(), 'English Column should be intact');
@@ -130,7 +130,7 @@ final class FluentClearLocaleTest extends SapphireTest
         FluentState::singleton()->setLocale('en_US');
         self::assertCount(1, Section::get()->filter([
             'ParentID' => $page->ID,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
         ]), 'English Section should be intact');
     }
 }

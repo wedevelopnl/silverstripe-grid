@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Service;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
@@ -39,7 +39,7 @@ final class ReorderServiceTest extends SapphireTest
 
     public function testSameParentMoveToFront(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row1 = GridTreeFactory::row($section);
         $row2 = GridTreeFactory::row($section);
@@ -61,7 +61,7 @@ final class ReorderServiceTest extends SapphireTest
 
     public function testSameParentMoveToMiddle(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row1 = GridTreeFactory::row($section);
         $row2 = GridTreeFactory::row($section);
@@ -83,7 +83,7 @@ final class ReorderServiceTest extends SapphireTest
 
     public function testSameParentMoveToEnd(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row1 = GridTreeFactory::row($section);
         $row2 = GridTreeFactory::row($section);
@@ -105,7 +105,7 @@ final class ReorderServiceTest extends SapphireTest
 
     public function testCrossParentMove(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $sectionA = GridTreeFactory::section($page);
         $sectionB = GridTreeFactory::section($page);
         $rowA = GridTreeFactory::row($sectionA);
@@ -124,7 +124,7 @@ final class ReorderServiceTest extends SapphireTest
 
     public function testCrossParentMoveSourceGapsClosed(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $sectionA = GridTreeFactory::section($page);
         $sectionB = GridTreeFactory::section($page);
         $row1 = GridTreeFactory::row($sectionA);
@@ -146,7 +146,7 @@ final class ReorderServiceTest extends SapphireTest
 
     public function testZoneScopedReorderForSections(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         $main1 = GridTreeFactory::section($page, zone: 'main');
         $main2 = GridTreeFactory::section($page, zone: 'main');
@@ -168,7 +168,7 @@ final class ReorderServiceTest extends SapphireTest
 
     public function testInvalidReferenceElementReturnsFail(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -181,7 +181,7 @@ final class ReorderServiceTest extends SapphireTest
 
     public function testValidationFailureReturnsFail(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -200,8 +200,8 @@ final class ReorderServiceTest extends SapphireTest
 
     public function testCrossParentSectionMoveWithZoneFiltering(): void
     {
-        $page1 = $this->objFromFixture(SiteTree::class, 'test_page');
-        $page2 = $this->objFromFixture(SiteTree::class, 'test_page_2');
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
+        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
 
         $main1 = GridTreeFactory::section($page1, zone: 'main');
         $main2 = GridTreeFactory::section($page1, zone: 'main');
@@ -222,7 +222,7 @@ final class ReorderServiceTest extends SapphireTest
 
     public function testInvalidReferenceErrorHasTranslationKey(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -237,7 +237,7 @@ final class ReorderServiceTest extends SapphireTest
 
     public function testWriteFailureDuringPersistPropagatesAsError(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $col1 = GridTreeFactory::column($row);

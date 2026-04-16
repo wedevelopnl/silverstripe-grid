@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Model;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
@@ -35,7 +36,7 @@ final class GridElementTest extends SapphireTest
 
     public function testEnsureSortSetAssignsSequentialSort(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -49,7 +50,7 @@ final class GridElementTest extends SapphireTest
 
     public function testEnsureSortSetPreservesExplicitSort(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -63,7 +64,7 @@ final class GridElementTest extends SapphireTest
 
     public function testEnsureDefaultTitleWhenEmpty(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -76,7 +77,7 @@ final class GridElementTest extends SapphireTest
 
     public function testEnsureDefaultTitlePreservesExplicit(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -88,7 +89,7 @@ final class GridElementTest extends SapphireTest
 
     public function testEnsureDefaultTitleCountsOnlySameTypeSiblings(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -104,7 +105,7 @@ final class GridElementTest extends SapphireTest
 
     public function testInsertAfterSiblingBumpsSort(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -136,7 +137,7 @@ final class GridElementTest extends SapphireTest
 
     public function testInsertAfterSiblingNonexistentReference(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -154,7 +155,7 @@ final class GridElementTest extends SapphireTest
 
     public function testGetPageWalksParentChain(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -180,7 +181,7 @@ final class GridElementTest extends SapphireTest
     {
         $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         self::assertTrue($section->canView());
@@ -190,7 +191,7 @@ final class GridElementTest extends SapphireTest
     {
         $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         self::assertTrue($section->canEdit());
@@ -200,7 +201,7 @@ final class GridElementTest extends SapphireTest
     {
         $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         self::assertTrue($section->canDelete());
@@ -228,7 +229,7 @@ final class GridElementTest extends SapphireTest
 
     public function testGetCMSEditLinkWithPage(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -243,7 +244,7 @@ final class GridElementTest extends SapphireTest
 
     public function testGetCMSEditLinkOrphanReturnsNull(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -265,7 +266,7 @@ final class GridElementTest extends SapphireTest
 
     public function testGetAnchorContainsElementId(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -289,7 +290,7 @@ final class GridElementTest extends SapphireTest
 
     public function testGetBlockSchemaReturnsExpectedKeys(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -311,7 +312,7 @@ final class GridElementTest extends SapphireTest
 
     public function testGetTitleSizeClassReturnsStoredValue(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -328,7 +329,7 @@ final class GridElementTest extends SapphireTest
 
     public function testGetTitleSizeClassReturnsEmptyWhenNotSet(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -341,7 +342,7 @@ final class GridElementTest extends SapphireTest
 
     public function testGetCMSFieldsContainsTitleGroup(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -354,7 +355,7 @@ final class GridElementTest extends SapphireTest
 
     public function testGetCMSFieldsContainsHistoryViewerFieldWhenSaved(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -379,7 +380,7 @@ final class GridElementTest extends SapphireTest
 
     public function testGetCMSFieldsExcludesScaffoldedFields(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -398,7 +399,7 @@ final class GridElementTest extends SapphireTest
     {
         Config::modify()->set(GridElement::class, 'enable_custom_title_classes', true);
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -411,7 +412,7 @@ final class GridElementTest extends SapphireTest
 
     public function testGetCMSFieldsExcludesTitleClassWhenDisabled(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -461,7 +462,7 @@ final class GridElementTest extends SapphireTest
 
     public function testEnsureSortSetGuardPreservesPositiveSort(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -492,7 +493,7 @@ final class GridElementTest extends SapphireTest
      */
     private function createOrphanElement(): ContentElement
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -513,7 +514,7 @@ final class GridElementTest extends SapphireTest
 
     public function testForTemplateReturnsString(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);

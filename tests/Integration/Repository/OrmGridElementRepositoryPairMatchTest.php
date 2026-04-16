@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Repository;
 
-use SilverStripe\CMS\Model\SiteTree;
+use Page;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
@@ -30,12 +30,12 @@ final class OrmGridElementRepositoryPairMatchTest extends SapphireTest
         //   section->ID = 1 (first GridElement)
         //   row->ID     = 2 (auto-scaffolded)
         //   column->ID  = 3 (auto-scaffolded)
-        $pageA = SiteTree::create(['Title' => 'A']);
+        $pageA = Page::create(['Title' => 'A']);
         $pageA->write();
 
         $section = Section::create();
         $section->ParentID = $pageA->ID;
-        $section->ParentClass = SiteTree::class;
+        $section->ParentClass = Page::class;
         $section->write();
 
         $row = $section->getChildren()->first();
@@ -46,18 +46,18 @@ final class OrmGridElementRepositoryPairMatchTest extends SapphireTest
         $repo = new OrmGridElementRepository();
 
         // Query with *wrong* class/id pairs whose IDs collide with real records:
-        //   (SiteTree, $row->ID)    — $row->ID == 2, no SiteTree with id 2 has a child.
+        //   (Page, $row->ID)    — $row->ID == 2, no Page with id 2 has a child.
         //   (Row,      $section->ID) — $section->ID == 1, no Row with id 1 exists
         //                              ($row->ID == 2), so no GridElement has
         //                              (ParentClass=Row, ParentID=1).
         //
         // The flattened-IN implementation would produce
-        //   ParentID IN (2, 1) AND ParentClass IN (SiteTree, Row)
-        // which matches the real section (SiteTree, 1) and the real column (Row, 2)
+        //   ParentID IN (2, 1) AND ParentClass IN (Page, Row)
+        // which matches the real section (Page, 1) and the real column (Row, 2)
         // — leaking records whose pairs were never requested. Pair-matched logic
         // must return zero.
         $result = $repo->findByParents([
-            SiteTree::class => [(int) $row->ID],
+            Page::class => [(int) $row->ID],
             Row::class => [(int) $section->ID],
         ]);
 
@@ -70,17 +70,17 @@ final class OrmGridElementRepositoryPairMatchTest extends SapphireTest
 
     public function testFindByParentsReturnsRealPairsAcrossClasses(): void
     {
-        $page = SiteTree::create(['Title' => 'P']);
+        $page = Page::create(['Title' => 'P']);
         $page->write();
 
         $section = Section::create();
         $section->ParentID = $page->ID;
-        $section->ParentClass = SiteTree::class;
+        $section->ParentClass = Page::class;
         $section->write();
 
         $repo = new OrmGridElementRepository();
         $result = $repo->findByParents([
-            SiteTree::class => [(int) $page->ID],
+            Page::class => [(int) $page->ID],
             Section::class => [(int) $section->ID],
         ]);
 

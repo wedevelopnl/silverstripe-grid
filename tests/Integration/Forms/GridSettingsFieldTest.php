@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Forms;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
@@ -209,7 +209,7 @@ final class GridSettingsFieldTest extends SapphireTest
 
     public function testSaveIntoWritesGridSettingsToRecord(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);

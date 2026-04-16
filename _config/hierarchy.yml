@@ -7,19 +7,9 @@ WeDevelop\Grid\Model\GridElement:
     HierarchyValidation: WeDevelop\Grid\Validation\HierarchyValidationExtension
 
 ---
-Name: grid-page
-After:
-  - '#grid-validation'
----
-
-SilverStripe\CMS\Model\SiteTree:
-  extensions:
-    Grid: WeDevelop\Grid\Extensions\GridPageExtension
-
----
 Name: grid-services
 After:
-  - '#grid-page'
+  - '#grid-validation'
 ---
 
 SilverStripe\Core\Injector\Injector:

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
-use SilverStripe\CMS\Model\SiteTree;
+use Page;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use TractorCow\Fluent\Extension\FluentIsolatedExtension;
@@ -43,9 +43,9 @@ final class FluentAutoScaffoldingTest extends SapphireTest
         FluentState::singleton()->setLocale($locale->Locale);
     }
 
-    private function createPage(string $title = 'Test Page'): SiteTree
+    private function createPage(string $title = 'Test Page'): Page
     {
-        $page = SiteTree::create();
+        $page = Page::create();
         $page->Title = $title;
         $page->URLSegment = 'fluent-autoscaffolding-test';
         $page->writeToStage(Versioned::DRAFT);

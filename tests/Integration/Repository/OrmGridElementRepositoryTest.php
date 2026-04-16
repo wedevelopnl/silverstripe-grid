@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Repository;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -35,7 +35,7 @@ final class OrmGridElementRepositoryTest extends SapphireTest
 
     public function testFindByIdReturnsElement(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         $found = $this->repository->findById((int) $section->ID);
@@ -53,7 +53,7 @@ final class OrmGridElementRepositoryTest extends SapphireTest
 
     public function testFindByParentIdsSorted(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         $sectionA = GridTreeFactory::section($page, sort: 3);
         $sectionB = GridTreeFactory::section($page, sort: 1);
@@ -61,7 +61,7 @@ final class OrmGridElementRepositoryTest extends SapphireTest
 
         $results = $this->repository->findByParentIds(
             [(int) $page->ID],
-            SiteTree::class,
+            Page::class,
         );
 
         self::assertCount(3, $results);
@@ -72,16 +72,16 @@ final class OrmGridElementRepositoryTest extends SapphireTest
 
     public function testFindByParentIdsEmptyArray(): void
     {
-        $results = $this->repository->findByParentIds([], SiteTree::class);
+        $results = $this->repository->findByParentIds([], Page::class);
 
         self::assertSame([], $results);
     }
 
     public function testFindByParentIdsFiltersParentClass(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
-        // Section under page (ParentClass = SiteTree)
+        // Section under page (ParentClass = Page)
         $section = GridTreeFactory::section($page);
         // Row under section (ParentClass = Section)
         $row = GridTreeFactory::row($section);
@@ -101,7 +101,7 @@ final class OrmGridElementRepositoryTest extends SapphireTest
         // Same ID but wrong parent class returns nothing
         $results = $this->repository->findByParentIds(
             [(int) $section->ID],
-            SiteTree::class,
+            Page::class,
         );
 
         self::assertSame([], $results);
@@ -109,13 +109,13 @@ final class OrmGridElementRepositoryTest extends SapphireTest
 
     public function testFindByParentsWithZoneFilter(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         $mainSection = GridTreeFactory::section($page, zone: 'main');
         GridTreeFactory::section($page, zone: 'sidebar');
 
         $results = $this->repository->findByParents(
-            [SiteTree::class => [(int) $page->ID]],
+            [Page::class => [(int) $page->ID]],
             'main',
         );
 
@@ -125,7 +125,7 @@ final class OrmGridElementRepositoryTest extends SapphireTest
 
     public function testFindByParentsWithoutZoneFilter(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -148,13 +148,13 @@ final class OrmGridElementRepositoryTest extends SapphireTest
 
     public function testFindByParentsMultipleClasses(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
         // Pass multiple parent classes — results combined
         $results = $this->repository->findByParents([
-            SiteTree::class => [(int) $page->ID],
+            Page::class => [(int) $page->ID],
             Section::class => [(int) $section->ID],
         ]);
 

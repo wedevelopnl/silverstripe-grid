@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Validation;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Dev\SapphireTest;
@@ -30,7 +30,7 @@ final class HierarchyValidationExtensionTest extends SapphireTest
 
     public function testValidWriteSucceeds(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         // Section at page level is valid — write should not throw
         $section = GridTreeFactory::section($page);
@@ -40,7 +40,7 @@ final class HierarchyValidationExtensionTest extends SapphireTest
 
     public function testInvalidWriteThrowsValidationException(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         $this->expectException(ValidationException::class);
 

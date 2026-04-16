@@ -26,11 +26,20 @@ composer require wedevelopnl/silverstripe-grid
 
 ## Usage
 
-The module applies `GridPageExtension` to `SiteTree` by default (see `_config/hierarchy.yml`), adding a grid editor to every page type. Each page has a **"Use grid on this page"** checkbox that toggles between the grid editor and the standard Content HTMLEditorField.
+The module ships `GridPageExtension` which adds a grid editor to page types. Apply it to the page types that need grid editing in your project's YAML config:
+
+```yaml
+# app/_config/grid.yml
+Page:
+  extensions:
+    Grid: WeDevelop\Grid\Extensions\GridPageExtension
+```
+
+Each page with the extension gets a **"Use grid on this page"** checkbox that toggles between the grid editor and the standard Content HTMLEditorField.
 
 ### Page templates
 
-Your page templates must handle both modes. Use `$UseGrid` to render grid sections or fall back to `$Content`:
+Page templates for types with the extension must handle both modes. Use `$UseGrid` to render grid sections or fall back to `$Content`:
 
 ```silverstripe
 <% if $UseGrid %>

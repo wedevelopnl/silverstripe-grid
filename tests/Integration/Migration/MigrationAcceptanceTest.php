@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Migration;
 
 use PHPUnit\Framework\Attributes\CoversNothing;
+use Page;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DB;
@@ -71,14 +72,14 @@ final class MigrationAcceptanceTest extends SapphireTest
         Versioned::set_stage(Versioned::DRAFT);
         $this->seeder = new LegacyTableSeeder();
         $this->seeder->createTables();
-        $this->seeder->addExtensionColumns('SiteTree');
+        $this->seeder->addExtensionColumns('Page');
         $this->seeder->truncateTables();
         $this->cleanGridTables();
     }
 
     protected function tearDown(): void
     {
-        $this->seeder->removeExtensionColumns('SiteTree');
+        $this->seeder->removeExtensionColumns('Page');
         $this->seeder->dropTables();
         parent::tearDown();
     }
@@ -526,14 +527,14 @@ final class MigrationAcceptanceTest extends SapphireTest
         Versioned::set_stage(Versioned::DRAFT);
         $draftSection = Section::get()->filter([
             'ParentID' => $pageId,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
             'Zone' => self::ZONE,
         ])->sort('Sort', 'ASC')->first();
 
         Versioned::set_stage(Versioned::LIVE);
         $liveSection = Section::get()->filter([
             'ParentID' => $pageId,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
             'Zone' => self::ZONE,
         ])->sort('Sort', 'ASC')->first();
 
@@ -1018,7 +1019,7 @@ final class MigrationAcceptanceTest extends SapphireTest
         }
     }
 
-    // ─── Scenario 10: SiteTree subclass page ──────────────────────
+    // ─── Scenario 10: Page subclass ────────────────────────────────
 
     public function testSubclassPageMigrationUsesConcreteParentClass(): void
     {
@@ -1284,14 +1285,14 @@ final class MigrationAcceptanceTest extends SapphireTest
             Versioned::set_stage(Versioned::DRAFT);
             $draftSection = Section::get()->filter([
                 'ParentID' => $pageId,
-                'ParentClass' => SiteTree::class,
+                'ParentClass' => Page::class,
                 'Zone' => self::ZONE,
             ])->first();
 
             Versioned::set_stage(Versioned::LIVE);
             $liveSection = Section::get()->filter([
                 'ParentID' => $pageId,
-                'ParentClass' => SiteTree::class,
+                'ParentClass' => Page::class,
                 'Zone' => self::ZONE,
             ])->first();
 
@@ -1346,7 +1347,7 @@ final class MigrationAcceptanceTest extends SapphireTest
         string $zone,
         string $stage,
         array $expectedSections,
-        string $parentClass = SiteTree::class,
+        string $parentClass = Page::class,
     ): void {
         Versioned::withVersionedMode(function () use ($pageId, $zone, $stage, $expectedSections, $parentClass): void {
             Versioned::set_stage($stage);
@@ -1593,7 +1594,7 @@ final class MigrationAcceptanceTest extends SapphireTest
 
     private function getPageId(): int
     {
-        return (int) $this->objFromFixture(SiteTree::class, 'test_page')->ID;
+        return (int) $this->objFromFixture(Page::class, 'test_page')->ID;
     }
 
     /**
@@ -1605,8 +1606,8 @@ final class MigrationAcceptanceTest extends SapphireTest
      */
     private function switchToPlainElementalSchema(): void
     {
-        $this->seeder->removeExtensionColumns('SiteTree');
-        $this->seeder->addElementalAreaColumn('SiteTree');
+        $this->seeder->removeExtensionColumns('Page');
+        $this->seeder->addElementalAreaColumn('Page');
     }
 
     /**
@@ -1617,8 +1618,8 @@ final class MigrationAcceptanceTest extends SapphireTest
      */
     private function restoreWeDevelopGridSchema(): void
     {
-        $this->seeder->removeElementalAreaColumn('SiteTree');
-        $this->seeder->addExtensionColumns('SiteTree');
+        $this->seeder->removeElementalAreaColumn('Page');
+        $this->seeder->addExtensionColumns('Page');
     }
 
     /**

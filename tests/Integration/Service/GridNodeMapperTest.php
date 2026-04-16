@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Service;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
@@ -44,7 +44,7 @@ final class GridNodeMapperTest extends SapphireTest
 
     public function testMapToNodeIncludesAllFields(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page, title: 'My Section');
 
         $allowedTypes = $this->mapper->getAllowedTypes($section);
@@ -94,7 +94,7 @@ final class GridNodeMapperTest extends SapphireTest
 
     public function testMapToNodeUntitledFallback(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         // Create element with explicit empty title — but GridElement::onBeforeWrite
         // auto-assigns a default title. We need to clear it after write.
@@ -119,7 +119,7 @@ final class GridNodeMapperTest extends SapphireTest
 
     public function testGetAllowedTypesForSection(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         $allowed = $this->mapper->getAllowedTypes($section);
@@ -129,7 +129,7 @@ final class GridNodeMapperTest extends SapphireTest
 
     public function testGetAllowedTypesForRow(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -140,7 +140,7 @@ final class GridNodeMapperTest extends SapphireTest
 
     public function testGetAllowedTypesForColumn(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -155,7 +155,7 @@ final class GridNodeMapperTest extends SapphireTest
 
     public function testGetAllowedTypesConsistentAcrossCalls(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         $first = $this->mapper->getAllowedTypes($section);
@@ -166,7 +166,7 @@ final class GridNodeMapperTest extends SapphireTest
 
     public function testGetAllowedTypesIncludesMetadata(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         $allowed = $this->mapper->getAllowedTypes($section);
@@ -191,7 +191,7 @@ final class GridNodeMapperTest extends SapphireTest
 
     public function testGetAllowedTypesForColumnExcludesBaseClass(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -206,7 +206,7 @@ final class GridNodeMapperTest extends SapphireTest
 
     public function testGetAllowedTypesCacheReturnsIdenticalResult(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         $first = $this->mapper->getAllowedTypes($section);

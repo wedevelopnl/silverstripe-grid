@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Model;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -30,7 +30,7 @@ final class SectionTest extends SapphireTest
 
     public function testAutoScaffoldCreatesRowAndColumn(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         $rows = $section->Rows();
@@ -47,7 +47,7 @@ final class SectionTest extends SapphireTest
 
     public function testAutoScaffoldIdempotent(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         self::assertCount(1, $section->Rows());
@@ -65,7 +65,7 @@ final class SectionTest extends SapphireTest
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         self::assertCount(0, $section->Rows());
@@ -75,7 +75,7 @@ final class SectionTest extends SapphireTest
     {
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         Versioned::set_stage(Versioned::LIVE);
 
@@ -93,7 +93,7 @@ final class SectionTest extends SapphireTest
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -116,7 +116,7 @@ final class SectionTest extends SapphireTest
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         $main1 = GridTreeFactory::section($page, zone: 'main');
         $main2 = GridTreeFactory::section($page, zone: 'main');
@@ -144,7 +144,7 @@ final class SectionTest extends SapphireTest
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -158,7 +158,7 @@ final class SectionTest extends SapphireTest
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         GridTreeFactory::row($section);
 
@@ -169,7 +169,7 @@ final class SectionTest extends SapphireTest
     {
         Config::modify()->set(Section::class, 'auto_scaffold', false);
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         self::assertFalse($section->hasChildren());
@@ -180,7 +180,7 @@ final class SectionTest extends SapphireTest
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         self::assertSame('0 rows', $section->getChildCountSummary());
@@ -203,7 +203,7 @@ final class SectionTest extends SapphireTest
     {
         Config::modify()->set(Section::class, 'auto_scaffold', false);
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         $classes = $section->getContainerClasses();
@@ -215,7 +215,7 @@ final class SectionTest extends SapphireTest
     {
         Config::modify()->set(Section::class, 'auto_scaffold', false);
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         Config::modify()->set(Section::class, 'fluid_container', true);
         $fluidSection = GridTreeFactory::section($page);

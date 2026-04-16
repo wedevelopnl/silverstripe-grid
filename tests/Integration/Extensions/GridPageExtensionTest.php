@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Extensions;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
+use Page;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Forms\CheckboxField;
@@ -35,7 +35,7 @@ final class GridPageExtensionTest extends SapphireTest
 
     public function testPageHasSectionsRelation(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         self::assertInstanceOf(HasManyList::class, $page->Sections());
         self::assertCount(0, $page->Sections());
@@ -51,7 +51,7 @@ final class GridPageExtensionTest extends SapphireTest
     {
         $this->logInWithPermission('ADMIN');
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -74,7 +74,7 @@ final class GridPageExtensionTest extends SapphireTest
     {
         $this->logInWithPermission('ADMIN');
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -94,7 +94,7 @@ final class GridPageExtensionTest extends SapphireTest
     {
         $this->logInWithPermission('ADMIN');
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         GridTreeFactory::column($row);
@@ -124,7 +124,7 @@ final class GridPageExtensionTest extends SapphireTest
     {
         $this->logInWithPermission('ADMIN');
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -151,23 +151,23 @@ final class GridPageExtensionTest extends SapphireTest
 
     public function testNewPageDefaultsToUseGridEnabled(): void
     {
-        $page = SiteTree::create();
+        $page = Page::create();
 
         self::assertTrue((bool) $page->UseGrid, 'New pages should have UseGrid enabled by default');
     }
 
     public function testNewPageRespectsConfiguredDefault(): void
     {
-        Config::modify()->set(SiteTree::class, 'use_grid_by_default', false);
+        Config::modify()->set(Page::class, 'use_grid_by_default', false);
 
-        $page = SiteTree::create();
+        $page = Page::create();
 
         self::assertFalse((bool) $page->UseGrid, 'New pages should respect use_grid_by_default = false');
     }
 
     public function testCMSFieldsShowGridEditorWhenUseGridEnabled(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $page->UseGrid = true;
         $fields = $page->getCMSFields();
 
@@ -179,7 +179,7 @@ final class GridPageExtensionTest extends SapphireTest
 
     public function testCMSFieldsShowContentEditorWhenUseGridDisabled(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $page->UseGrid = false;
         $fields = $page->getCMSFields();
 
@@ -191,7 +191,7 @@ final class GridPageExtensionTest extends SapphireTest
 
     public function testGridEditorFieldIsInsideRootMainTab(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $page->UseGrid = true;
 
         $fields = $page->getCMSFields();

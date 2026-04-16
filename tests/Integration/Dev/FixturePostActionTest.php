@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Dev;
 
 use InvalidArgumentException;
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Assets\Image;
 use SilverStripe\Core\Config\Config;
@@ -37,7 +38,7 @@ final class FixturePostActionTest extends SapphireTest
 
     public function testApplyPublishRecursive(): void
     {
-        $page = $this->objFromFixture(\SilverStripe\CMS\Model\SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         $action = new FixturePostAction('publish_recursive', Section::class, 'unused_identifier');
@@ -49,7 +50,7 @@ final class FixturePostActionTest extends SapphireTest
 
     public function testApplyUnpublish(): void
     {
-        $page = $this->objFromFixture(\SilverStripe\CMS\Model\SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $section->publishRecursive();
 
@@ -62,7 +63,7 @@ final class FixturePostActionTest extends SapphireTest
 
     public function testApplyModify(): void
     {
-        $page = $this->objFromFixture(\SilverStripe\CMS\Model\SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page, title: 'Original');
 
         // Two fields to kill ArrayItemRemoval on the foreach iteration
@@ -80,7 +81,7 @@ final class FixturePostActionTest extends SapphireTest
 
     public function testApplyAttachImageThrowsWithoutRequiredFields(): void
     {
-        $page = $this->objFromFixture(\SilverStripe\CMS\Model\SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -95,7 +96,7 @@ final class FixturePostActionTest extends SapphireTest
 
     public function testApplyAttachImageThrowsWithMissingSource(): void
     {
-        $page = $this->objFromFixture(\SilverStripe\CMS\Model\SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -142,7 +143,7 @@ final class FixturePostActionTest extends SapphireTest
 
     public function testApplyAttachImageThrowsForUnresolvablePath(): void
     {
-        $page = $this->objFromFixture(\SilverStripe\CMS\Model\SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -160,7 +161,7 @@ final class FixturePostActionTest extends SapphireTest
 
     public function testApplyAttachImageCreatesAndAttachesImage(): void
     {
-        $page = $this->objFromFixture(\SilverStripe\CMS\Model\SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);

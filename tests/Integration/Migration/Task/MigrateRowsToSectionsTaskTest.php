@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Migration\Task;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\PolyExecution\PolyOutput;
 use SilverStripe\Versioned\Versioned;
@@ -47,7 +47,7 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
 
         $this->seeder = new LegacyTableSeeder();
         $this->seeder->createTables();
-        $this->seeder->addExtensionColumns('SiteTree');
+        $this->seeder->addExtensionColumns('Page');
         $this->seeder->truncateTables();
 
         $this->cleanGridTables();
@@ -55,7 +55,7 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
 
     protected function tearDown(): void
     {
-        $this->seeder->removeExtensionColumns('SiteTree');
+        $this->seeder->removeExtensionColumns('Page');
         $this->seeder->dropTables();
 
         parent::tearDown();
@@ -101,12 +101,12 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
 
     private function getPageId(): int
     {
-        return (int) $this->objFromFixture(SiteTree::class, 'test_page')->ID;
+        return (int) $this->objFromFixture(Page::class, 'test_page')->ID;
     }
 
     private function getPageId2(): int
     {
-        return (int) $this->objFromFixture(SiteTree::class, 'test_page_2')->ID;
+        return (int) $this->objFromFixture(Page::class, 'test_page_2')->ID;
     }
 
     /**
@@ -188,7 +188,7 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
 
         $sections = Section::get()->filter([
             'ParentID' => $pageId,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
             'Zone' => 'main',
         ]);
         self::assertCount(1, $sections);

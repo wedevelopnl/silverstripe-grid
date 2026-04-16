@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Validation;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
@@ -42,7 +42,7 @@ final class ReorderValidatorTest extends SapphireTest
 
     public function testSameParentAlwaysPasses(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -56,8 +56,8 @@ final class ReorderValidatorTest extends SapphireTest
 
     public function testCrossParentSectionToPagePasses(): void
     {
-        $pageA = $this->objFromFixture(SiteTree::class, 'test_page');
-        $pageB = $this->objFromFixture(SiteTree::class, 'test_page_2');
+        $pageA = $this->objFromFixture(Page::class, 'test_page');
+        $pageB = $this->objFromFixture(Page::class, 'test_page_2');
         $section = GridTreeFactory::section($pageA);
 
         // Move section from pageA to pageB
@@ -68,7 +68,7 @@ final class ReorderValidatorTest extends SapphireTest
 
     public function testCrossParentRowToSectionPasses(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $sectionA = GridTreeFactory::section($page);
         $sectionB = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($sectionA);
@@ -81,7 +81,7 @@ final class ReorderValidatorTest extends SapphireTest
 
     public function testCrossParentColumnToRowPasses(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $rowA = GridTreeFactory::row($section);
         $rowB = GridTreeFactory::row($section);
@@ -95,7 +95,7 @@ final class ReorderValidatorTest extends SapphireTest
 
     public function testCrossParentContentToColumnPasses(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $columnA = GridTreeFactory::column($row);
@@ -112,8 +112,8 @@ final class ReorderValidatorTest extends SapphireTest
 
     public function testCrossParentRowToPageFails(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
-        $pageB = $this->objFromFixture(SiteTree::class, 'test_page_2');
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $pageB = $this->objFromFixture(Page::class, 'test_page_2');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -126,7 +126,7 @@ final class ReorderValidatorTest extends SapphireTest
 
     public function testCrossParentSectionToColumnFails(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -142,8 +142,8 @@ final class ReorderValidatorTest extends SapphireTest
 
     public function testViolationErrorHasTranslationKey(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
-        $pageB = $this->objFromFixture(SiteTree::class, 'test_page_2');
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $pageB = $this->objFromFixture(Page::class, 'test_page_2');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 

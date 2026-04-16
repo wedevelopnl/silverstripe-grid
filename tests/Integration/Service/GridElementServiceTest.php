@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Service;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -41,7 +41,7 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testCreateSectionUnderPage(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         $result = $this->service->createElement($page, ContainerType::Section, 'main', null);
 
@@ -50,13 +50,13 @@ final class GridElementServiceTest extends SapphireTest
         $section = $result->unwrap();
         self::assertInstanceOf(Section::class, $section);
         self::assertSame((int) $page->ID, $section->ParentID);
-        self::assertSame(SiteTree::class, $section->ParentClass);
+        self::assertSame(Page::class, $section->ParentClass);
         self::assertSame('main', $section->Zone);
     }
 
     public function testCreateRowUnderSection(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         $result = $this->service->createElement($section, ContainerType::Row, 'main', null);
@@ -71,7 +71,7 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testCreateElementInsertAfterSibling(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row1 = GridTreeFactory::row($section);
         $row2 = GridTreeFactory::row($section);
@@ -95,7 +95,7 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testCreateContentElementUnderColumn(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -112,7 +112,7 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testCreateContentElementInsertAfterSibling(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -137,7 +137,7 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testDuplicateElementCreatesShallowCopyWithCopyTitle(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page, title: 'My Section');
 
         $result = $this->service->duplicateElement($section);
@@ -153,7 +153,7 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testDuplicateElementInsertsAfterOriginal(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row1 = GridTreeFactory::row($section, title: 'Row 1');
         $row2 = GridTreeFactory::row($section, title: 'Row 2');
@@ -176,8 +176,8 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testDuplicateElementToAnotherPage(): void
     {
-        $page1 = $this->objFromFixture(SiteTree::class, 'test_page');
-        $page2 = $this->objFromFixture(SiteTree::class, 'test_page_2');
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
+        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
         $section = GridTreeFactory::section($page1, title: 'Original');
 
         $result = $this->service->duplicateElementTo(
@@ -199,7 +199,7 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testDuplicateRowToAnotherSection(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $sectionA = GridTreeFactory::section($page);
         $sectionB = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($sectionA, title: 'Original Row');
@@ -222,8 +222,8 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testDuplicateElementToFailsWhenTargetParentNotOnClaimedPage(): void
     {
-        $page1 = $this->objFromFixture(SiteTree::class, 'test_page');
-        $page2 = $this->objFromFixture(SiteTree::class, 'test_page_2');
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
+        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
 
         $sectionOnPage1 = GridTreeFactory::section($page1);
         $rowOnPage1 = GridTreeFactory::row($sectionOnPage1, title: 'Row');
@@ -241,7 +241,7 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testDuplicateElementToFailsWhenTargetParentNotInClaimedZone(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page, zone: 'main');
         $row = GridTreeFactory::row($section, title: 'Row');
 
@@ -258,7 +258,7 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testDuplicateElementToFailsWhenHierarchyViolated(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -278,8 +278,8 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testDuplicateElementToFailsWhenSectionTargetParentMismatchesPageId(): void
     {
-        $page1 = $this->objFromFixture(SiteTree::class, 'test_page');
-        $page2 = $this->objFromFixture(SiteTree::class, 'test_page_2');
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
+        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
         $section = GridTreeFactory::section($page1, title: 'Section');
 
         $result = $this->service->duplicateElementTo(
@@ -295,7 +295,7 @@ final class GridElementServiceTest extends SapphireTest
 
     public function testViolationErrorHasTranslationKey(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);

@@ -170,7 +170,7 @@ final class LegacyTableSeeder
      */
     public function seedPlainElementalPage(int $pageId, int $areaId): void
     {
-        $this->seedPlainElementalPageOnTable('SiteTree', $pageId, $areaId);
+        $this->seedPlainElementalPageOnTable('Page', $pageId, $areaId);
     }
 
     /**
@@ -192,12 +192,12 @@ final class LegacyTableSeeder
     }
 
     /**
-     * Seed a page with UseElementalGrid and ElementalAreaID on SiteTree,
+     * Seed a page with UseElementalGrid and ElementalAreaID on Page,
      * plus an ElementalArea row.
      */
     public function seedPage(int $pageId, int $areaId, bool $useGrid = true): void
     {
-        $this->seedPageOnTable('SiteTree', $pageId, $areaId, $useGrid);
+        $this->seedPageOnTable('Page', $pageId, $areaId, $useGrid);
     }
 
     /**

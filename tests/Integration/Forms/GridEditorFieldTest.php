@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Forms;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Controller;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
@@ -70,7 +70,7 @@ final class GridEditorFieldTest extends SapphireTest
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -96,7 +96,7 @@ final class GridEditorFieldTest extends SapphireTest
 
     public function testReadonlyFieldIncludesVersionInSchemaData(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $field = new GridEditorField('GridEditor', $page->ID);
         $form = Form::create(
             Controller::create(),
@@ -163,7 +163,7 @@ final class GridEditorFieldTest extends SapphireTest
 
     public function testReadonlyCloneExposesVersionInSchemaDataSubArray(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         $form = Form::create(
             Controller::create(),

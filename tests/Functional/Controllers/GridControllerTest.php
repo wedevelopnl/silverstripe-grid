@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Tests\Functional\Controllers;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Page;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPResponse;
@@ -48,12 +49,12 @@ final class GridControllerTest extends FunctionalTest
 
     private function page(): SiteTree
     {
-        return $this->objFromFixture(SiteTree::class, 'test_page');
+        return $this->objFromFixture(Page::class, 'test_page');
     }
 
     private function page2(): SiteTree
     {
-        return $this->objFromFixture(SiteTree::class, 'test_page_2');
+        return $this->objFromFixture(Page::class, 'test_page_2');
     }
 
     /**
@@ -379,7 +380,7 @@ final class GridControllerTest extends FunctionalTest
 
         $sections = Section::get()->filter([
             'ParentID' => $pageId,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
         ]);
         self::assertGreaterThanOrEqual(1, $sections->count());
     }
@@ -560,7 +561,7 @@ final class GridControllerTest extends FunctionalTest
 
         $sectionCountBefore = Section::get()->filter([
             'ParentID' => (int) $this->page()->ID,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
         ])->count();
 
         $response = $this->jsonPost(self::BASE_URL . '/duplicate', [
@@ -571,7 +572,7 @@ final class GridControllerTest extends FunctionalTest
 
         $sectionCountAfter = Section::get()->filter([
             'ParentID' => (int) $this->page()->ID,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
         ])->count();
         self::assertSame($sectionCountBefore + 1, $sectionCountAfter);
     }
@@ -605,7 +606,7 @@ final class GridControllerTest extends FunctionalTest
         // Verify a section now exists under page 2
         $sections = Section::get()->filter([
             'ParentID' => $page2Id,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
         ]);
         self::assertGreaterThanOrEqual(1, $sections->count());
     }
@@ -1607,7 +1608,7 @@ final class GridControllerTest extends FunctionalTest
 
         $section = Section::get()->filter([
             'ParentID' => $pageId,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
             'Zone' => 'sidebar',
         ])->first();
         self::assertNotNull($section, 'Section should have Zone set to "sidebar"');
@@ -1667,7 +1668,7 @@ final class GridControllerTest extends FunctionalTest
         // Find the cloned section (not the original)
         $sections = Section::get()->filter([
             'ParentID' => $pageId,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
         ])->sort('ID', 'DESC');
 
         $clone = $sections->first();
@@ -1697,7 +1698,7 @@ final class GridControllerTest extends FunctionalTest
         // Verify section created under page2
         $newSection = Section::get()->filter([
             'ParentID' => $page2Id,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
         ])->first();
         self::assertNotNull($newSection);
 
@@ -1724,7 +1725,7 @@ final class GridControllerTest extends FunctionalTest
 
         $newSection = Section::get()->filter([
             'ParentID' => $page2Id,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
             'Zone' => 'sidebar',
         ])->first();
         self::assertNotNull($newSection, 'Duplicated section should have target zone "sidebar"');

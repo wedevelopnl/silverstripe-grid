@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use Page;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -35,13 +36,13 @@ final class LegacyDataReaderTest extends SapphireTest
         $this->reader = new LegacyDataReader();
         $this->seeder = new LegacyTableSeeder();
         $this->seeder->createTables();
-        $this->seeder->addExtensionColumns('SiteTree');
+        $this->seeder->addExtensionColumns('Page');
         $this->seeder->truncateTables();
     }
 
     protected function tearDown(): void
     {
-        $this->seeder->removeExtensionColumns('SiteTree');
+        $this->seeder->removeExtensionColumns('Page');
         $this->seeder->dropTables();
 
         parent::tearDown();
@@ -49,7 +50,7 @@ final class LegacyDataReaderTest extends SapphireTest
 
     public function testGetEligiblePagesReturnsGridEnabledPages(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $this->seeder->seedPage((int) $page->ID, 100);
 
         $result = $this->reader->getEligiblePages('draft');
@@ -57,12 +58,12 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertCount(1, $result);
         self::assertSame((int) $page->ID, $result[0]['pageId']);
         self::assertSame(100, $result[0]['areaId']);
-        self::assertSame(SiteTree::class, $result[0]['pageClassName']);
+        self::assertSame(Page::class, $result[0]['pageClassName']);
     }
 
     public function testGetEligiblePagesSkipsDisabledPages(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $this->seeder->seedPage((int) $page->ID, 100, useGrid: false);
 
         $result = $this->reader->getEligiblePages('draft');
@@ -72,7 +73,7 @@ final class LegacyDataReaderTest extends SapphireTest
 
     public function testGetEligiblePagesReturnsBothPageIdAndAreaId(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $this->seeder->seedPage((int) $page->ID, 200);
 
         $result = $this->reader->getEligiblePages('draft');
@@ -100,7 +101,7 @@ final class LegacyDataReaderTest extends SapphireTest
 
     public function testGetEligiblePagesWithPageIdFilter(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $pageId = (int) $page->ID;
 
         $this->seeder->seedPage($pageId, 100);
@@ -427,8 +428,8 @@ final class LegacyDataReaderTest extends SapphireTest
 
     public function testGetEligiblePagesReturnsMultiplePages(): void
     {
-        $page1 = (int) $this->objFromFixture(SiteTree::class, 'test_page')->ID;
-        $page2 = (int) $this->objFromFixture(SiteTree::class, 'test_page_2')->ID;
+        $page1 = (int) $this->objFromFixture(Page::class, 'test_page')->ID;
+        $page2 = (int) $this->objFromFixture(Page::class, 'test_page_2')->ID;
 
         $this->seeder->seedPage($page1, 100);
         $this->seeder->seedPage($page2, 200);
@@ -459,7 +460,7 @@ final class LegacyDataReaderTest extends SapphireTest
 
     public function testGetPagesWithGridDisabledReturnsDisabledPages(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $this->seeder->seedPage((int) $page->ID, 100, useGrid: false);
 
         $result = $this->reader->getPagesWithGridDisabled('draft');
@@ -470,7 +471,7 @@ final class LegacyDataReaderTest extends SapphireTest
 
     public function testGetPagesWithGridDisabledExcludesEnabledPages(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $this->seeder->seedPage((int) $page->ID, 100, useGrid: true);
 
         $result = $this->reader->getPagesWithGridDisabled('draft');
@@ -481,7 +482,7 @@ final class LegacyDataReaderTest extends SapphireTest
 
     public function testGetPagesWithGridDisabledReturnsEmptyWhenNoExtensionColumn(): void
     {
-        $this->seeder->removeExtensionColumns('SiteTree');
+        $this->seeder->removeExtensionColumns('Page');
         $this->seeder->addElementalAreaColumn('SiteTree');
 
         try {
@@ -489,14 +490,14 @@ final class LegacyDataReaderTest extends SapphireTest
             self::assertSame([], $result);
         } finally {
             $this->seeder->removeElementalAreaColumn('SiteTree');
-            $this->seeder->addExtensionColumns('SiteTree');
+            $this->seeder->addExtensionColumns('Page');
         }
     }
 
     public function testGetPagesWithGridDisabledReturnsMixedPages(): void
     {
-        $page1 = $this->objFromFixture(SiteTree::class, 'test_page');
-        $page2 = $this->objFromFixture(SiteTree::class, 'test_page_2');
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
+        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
 
         $this->seeder->seedPage((int) $page1->ID, 100, useGrid: false);
         $this->seeder->seedPage((int) $page2->ID, 200, useGrid: true);

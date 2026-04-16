@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Extensions;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use Page;
 use SilverStripe\Assets\Image;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -34,7 +34,7 @@ final class BlockMediaExtensionTest extends SapphireTest
 
     private function createContentElement(): ContentElement
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);

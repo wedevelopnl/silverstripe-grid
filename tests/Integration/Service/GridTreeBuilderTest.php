@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Service;
 
+use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
@@ -41,7 +41,7 @@ final class GridTreeBuilderTest extends SapphireTest
 
     public function testBuildsFullTreeFromPage(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
@@ -78,7 +78,7 @@ final class GridTreeBuilderTest extends SapphireTest
 
     public function testRespectsZoneFiltering(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         GridTreeFactory::section($page, zone: 'main');
         GridTreeFactory::section($page, zone: 'sidebar');
 
@@ -91,7 +91,7 @@ final class GridTreeBuilderTest extends SapphireTest
 
     public function testEmptyPageReturnsEmptyTree(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         $tree = $this->builder->buildForPage($page, 'main');
 
@@ -101,7 +101,7 @@ final class GridTreeBuilderTest extends SapphireTest
 
     public function testPermissionFilteringExcludesNonViewable(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         GridTreeFactory::section($page);
 
         // Log out so canView returns false (requires CMS_ACCESS)
@@ -114,7 +114,7 @@ final class GridTreeBuilderTest extends SapphireTest
 
     public function testMultipleSectionsWithMultipleRows(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section1 = GridTreeFactory::section($page);
         $section2 = GridTreeFactory::section($page);
         GridTreeFactory::row($section1);
@@ -132,7 +132,7 @@ final class GridTreeBuilderTest extends SapphireTest
 
     public function testColumnNodesIncludeGridSettings(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
@@ -148,7 +148,7 @@ final class GridTreeBuilderTest extends SapphireTest
 
     public function testFindColumnsForPageReturnsAllColumns(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row1 = GridTreeFactory::row($section);
         $row2 = GridTreeFactory::row($section);
@@ -167,7 +167,7 @@ final class GridTreeBuilderTest extends SapphireTest
 
     public function testFindColumnsForPageRespectsZone(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
         $mainSection = GridTreeFactory::section($page, zone: 'main');
         $sidebarSection = GridTreeFactory::section($page, zone: 'sidebar');
         $mainRow = GridTreeFactory::row($mainSection);
@@ -182,7 +182,7 @@ final class GridTreeBuilderTest extends SapphireTest
 
     public function testFindColumnsForPageReturnsEmptyForEmptyPage(): void
     {
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page = $this->objFromFixture(Page::class, 'test_page');
 
         $columns = $this->builder->findColumnsForPage($page, 'main');
 

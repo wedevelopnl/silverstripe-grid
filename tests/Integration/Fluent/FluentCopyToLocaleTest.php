@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
-use SilverStripe\CMS\Model\SiteTree;
+use Page;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -48,9 +48,9 @@ final class FluentCopyToLocaleTest extends SapphireTest
         FluentState::singleton()->setLocale('en_US');
     }
 
-    private function createPage(string $title = 'Test Page'): SiteTree
+    private function createPage(string $title = 'Test Page'): Page
     {
-        $page = SiteTree::create();
+        $page = Page::create();
         $page->Title = $title;
         $page->URLSegment = 'fluent-copy-test';
         $page->writeToStage(Versioned::DRAFT);
@@ -74,7 +74,7 @@ final class FluentCopyToLocaleTest extends SapphireTest
 
         // Copy page to Dutch
         CopyToLocaleService::singleton()->copyToLocale(
-            SiteTree::class,
+            Page::class,
             (int) $page->ID,
             'en_US',
             'nl_NL',
@@ -85,7 +85,7 @@ final class FluentCopyToLocaleTest extends SapphireTest
 
         $nlSections = Section::get()->filter([
             'ParentID' => $page->ID,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
         ]);
         self::assertCount(1, $nlSections, 'Dutch should have one Section after copy');
 
@@ -124,7 +124,7 @@ final class FluentCopyToLocaleTest extends SapphireTest
         FluentState::singleton()->setLocale('en_US');
         self::assertCount(1, Section::get()->filter([
             'ParentID' => $page->ID,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
         ]), 'English should still have exactly one Section');
     }
 
@@ -144,7 +144,7 @@ final class FluentCopyToLocaleTest extends SapphireTest
 
         // Copy to Dutch
         CopyToLocaleService::singleton()->copyToLocale(
-            SiteTree::class,
+            Page::class,
             (int) $page->ID,
             'en_US',
             'nl_NL',
@@ -154,7 +154,7 @@ final class FluentCopyToLocaleTest extends SapphireTest
 
         $nlSections = Section::get()->filter([
             'ParentID' => $page->ID,
-            'ParentClass' => SiteTree::class,
+            'ParentClass' => Page::class,
         ]);
         self::assertCount(2, $nlSections, 'Dutch should have both zones');
 
