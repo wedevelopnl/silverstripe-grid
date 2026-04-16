@@ -71,7 +71,7 @@ final class GridNodeMapperTest extends SapphireTest
         self::assertSame($section->getTypeName(), $node->blockSchema['typeName']);
         self::assertSame('Section', $node->blockSchema['type']);
         self::assertSame('My Section', $node->blockSchema['title']);
-        self::assertSame($section->getSummary(), $node->blockSchema['summary']);
+
         self::assertSame('Section', $node->blockSchema['label']);
         self::assertSame('font-icon-block-layout', $node->blockSchema['icon']);
 

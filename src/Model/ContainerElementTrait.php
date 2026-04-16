@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Model;
 
-use Override;
+
 use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Value\ContainerType;
 
@@ -41,11 +41,5 @@ trait ContainerElementTrait
         $typeName = $this->getContainerType()->childTypeName();
 
         return sprintf('%d %s', $count, $count === 1 ? $typeName : $typeName . 's');
-    }
-
-    #[Override]
-    public function getSummary(): string
-    {
-        return $this->getChildCountSummary();
     }
 }

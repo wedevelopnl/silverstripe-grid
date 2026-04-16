@@ -28,7 +28,6 @@
   "WeDevelopGrid.DuplicateToDialog.STEP_ZONE_TITLE": "Select zone",
   "WeDevelopGrid.ElementActions.ARCHIVE_CONFIRM_LABEL": "Archive",
   "WeDevelopGrid.ElementCard.MOVE_LABEL": "Move {title}",
-  "WeDevelopGrid.ElementCard.NO_PREVIEW": "No preview available",
   "WeDevelopGrid.ElementTypePicker.CLOSE_LABEL": "Close",
   "WeDevelopGrid.ElementTypePicker.EMPTY_MESSAGE": "No content element types available",
   "WeDevelopGrid.ElementTypePicker.TITLE": "Add content element",

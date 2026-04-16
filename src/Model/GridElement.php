@@ -158,12 +158,6 @@ class GridElement extends DataObject
         return str_replace('\\', '-', static::class);
     }
 
-    /** Summary text for CMS grid views. Override in subclasses. */
-    public function getSummary(): string
-    {
-        return '';
-    }
-
     /**
      * Block schema data consumed by the CMS editor React components.
      *
@@ -176,7 +170,7 @@ class GridElement extends DataObject
             'typeName' => $this->getTypeName(),
             'type' => $this->getType(),
             'title' => $this->Title ?? '',
-            'summary' => $this->getSummary(),
+
         ];
 
         return array_merge($schema, $this->provideBlockSchema());

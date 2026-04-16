@@ -22,7 +22,7 @@ final class GridTreeBuilderTest extends TestCase
         'typeName' => 'Test',
         'type' => 'test',
         'title' => 'Test',
-        'summary' => '',
+
         'label' => 'Test',
         'icon' => 'font-icon-block',
     ];

@@ -26,17 +26,6 @@
     color: vars.$color-text-muted;
   }
 
-  &__content {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: vars.$color-text-muted;
-  }
-
-  &__content--empty {
-    font-style: italic;
-  }
-
   &--clickable {
     cursor: pointer;
 

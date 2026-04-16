@@ -29,46 +29,6 @@ describe('ElementCard', () => {
     expect(screen.getByTestId('element-card-title')).toHaveTextContent('My Content Block');
   });
 
-  it('renders content preview', () => {
-    mockFetchSuccess({});
-
-    const element = createSimpleElement({
-      blockSchema: {
-        typeName: 'Content',
-        label: 'Content',
-        icon: 'font-icon-content',
-        type: 'Content',
-        title: 'Content',
-        summary: 'This is a preview of the content',
-      },
-    });
-
-    renderWithProviders(<ElementCard element={element} />);
-
-    expect(screen.getByText('This is a preview of the content')).toBeInTheDocument();
-  });
-
-  it('shows exact "No preview available" text when summary is empty and has empty class', () => {
-    mockFetchSuccess({});
-
-    const element = createSimpleElement({
-      blockSchema: {
-        typeName: 'Content',
-        label: 'Content',
-        icon: 'font-icon-content',
-        type: 'Content',
-        title: 'Content',
-        summary: '',
-      },
-    });
-
-    renderWithProviders(<ElementCard element={element} />);
-
-    const content = screen.getByText('No preview available');
-    expect(content.textContent).toBe('No preview available');
-    expect(content).toHaveClass('element-card__content', 'element-card__content--empty');
-  });
-
   it('status class applied correctly', () => {
     mockFetchSuccess({});
 
@@ -133,47 +93,6 @@ describe('ElementCard', () => {
     expect(screen.getByTestId('element-card')).toHaveClass('element-card');
   });
 
-  it('empty content area has the --empty modifier class', () => {
-    mockFetchSuccess({});
-
-    const element = createSimpleElement({
-      blockSchema: {
-        typeName: 'Content',
-        label: 'Content',
-        icon: 'font-icon-content',
-        type: 'Content',
-        title: 'Content',
-        summary: '',
-      },
-    });
-
-    renderWithProviders(<ElementCard element={element} />);
-
-    const contentDiv = screen.getByText('No preview available');
-    expect(contentDiv).toHaveClass('element-card__content', 'element-card__content--empty');
-  });
-
-  it('non-empty content area does not have the --empty modifier class', () => {
-    mockFetchSuccess({});
-
-    const element = createSimpleElement({
-      blockSchema: {
-        typeName: 'Content',
-        label: 'Content',
-        icon: 'font-icon-content',
-        type: 'Content',
-        title: 'Content',
-        summary: 'Some text',
-      },
-    });
-
-    renderWithProviders(<ElementCard element={element} />);
-
-    const contentDiv = screen.getByText('Some text');
-    expect(contentDiv).toHaveClass('element-card__content');
-    expect(contentDiv).not.toHaveClass('element-card__content--empty');
-  });
-
   it('clickable class is exactly "element-card--clickable"', () => {
     mockFetchSuccess({});
 
@@ -183,26 +102,6 @@ describe('ElementCard', () => {
 
     const card = screen.getByTestId('element-card');
     expect(card.className).toContain('element-card--clickable');
-  });
-
-  it('content class is exactly "element-card__content--empty" for empty summary', () => {
-    mockFetchSuccess({});
-
-    const element = createSimpleElement({
-      blockSchema: {
-        typeName: 'Content',
-        label: 'Content',
-        icon: 'font-icon-content',
-        type: 'Content',
-        title: 'Content',
-        summary: '',
-      },
-    });
-
-    renderWithProviders(<ElementCard element={element} />);
-
-    const content = screen.getByText('No preview available');
-    expect(content.className).toBe('element-card__content element-card__content--empty');
   });
 
   it('renders the icon with the blockSchema icon class', () => {
@@ -215,7 +114,6 @@ describe('ElementCard', () => {
         icon: 'font-icon-block-content',
         type: 'Content',
         title: 'Content',
-        summary: '',
       },
     });
 

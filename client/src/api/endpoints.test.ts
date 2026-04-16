@@ -65,7 +65,7 @@ describe('normaliseTreeResponse', () => {
             typeName: 'Section',
             type: 'section',
             title: 'Section A',
-            summary: '',
+
             label: 'Section',
             icon: 'font-icon-block',
           },

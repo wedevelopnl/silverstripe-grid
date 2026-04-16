@@ -21,13 +21,13 @@ use stdClass;
  * from the serialized output; container nodes include all three.
  *
  * @phpstan-import-type SerializedNodeRef from NodeRef
- * @phpstan-type SerializedNode array{self: SerializedNodeRef, parent: SerializedNodeRef, title: non-empty-string, blockSchema: array{typeName: string, type: string, title: string, summary: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, statusFlags: stdClass&object{addedtodraft?: array{text: string, title: string}, modified?: array{text: string, title: string}, removedfromdraft?: array{text: string, title: string}}, containerType?: string, allowedTypes?: array<class-string, array{label: string, icon: string, description: string}>|null, children?: list<mixed>|null, gridSettings?: array{default: array{width: int, offset: int, visible: bool}, overrides: array<non-empty-string, array{width: int, offset: int, visible: bool}>}, extensions?: array<string, mixed>}
+ * @phpstan-type SerializedNode array{self: SerializedNodeRef, parent: SerializedNodeRef, title: non-empty-string, blockSchema: array{typeName: string, type: string, title: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, statusFlags: stdClass&object{addedtodraft?: array{text: string, title: string}, modified?: array{text: string, title: string}, removedfromdraft?: array{text: string, title: string}}, containerType?: string, allowedTypes?: array<class-string, array{label: string, icon: string, description: string}>|null, children?: list<mixed>|null, gridSettings?: array{default: array{width: int, offset: int, visible: bool}, overrides: array<non-empty-string, array{width: int, offset: int, visible: bool}>}, extensions?: array<string, mixed>}
  */
 final readonly class GridNode implements JsonSerializable
 {
     /**
      * @param non-empty-string $title
-     * @param array{typeName: string, type: string, title: string, summary: string, label: string, icon: string} $blockSchema
+     * @param array{typeName: string, type: string, title: string, label: string, icon: string} $blockSchema
      * @param array<string, array{text: string, title: string}> $statusFlags
      * @param array<class-string, array{label: string, icon: string, description: string}>|null $allowedTypes
      * @param list<self>|null $children

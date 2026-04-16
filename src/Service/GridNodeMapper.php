@@ -51,13 +51,13 @@ class GridNodeMapper
             '(untitled)',
         );
 
-        /** @var array{typeName: string, type: string, title: string, summary: string, label: string} $blockSchema */
+        /** @var array{typeName: string, type: string, title: string, label: string} $blockSchema */
         $blockSchema = $element->getBlockSchema();
         $blockSchema['label'] = $element->getType();
 
         $icon = Config::forClass($element::class)->get('icon');
 
-        /** @var array{typeName: string, type: string, title: string, summary: string, label: string, icon: string} $blockSchemaWithIcon */
+        /** @var array{typeName: string, type: string, title: string, label: string, icon: string} $blockSchemaWithIcon */
         $blockSchemaWithIcon = array_merge($blockSchema, [
             'icon' => is_string($icon) && $icon !== '' ? $icon : 'font-icon-block-content',
         ]);

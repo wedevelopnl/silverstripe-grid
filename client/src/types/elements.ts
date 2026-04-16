@@ -14,7 +14,6 @@ export interface BlockSchema {
   icon: string;
   type: string;
   title: string;
-  summary: string;
 }
 
 interface StatusFlagValue {

@@ -284,15 +284,6 @@ final class GridElementTest extends SapphireTest
         self::assertStringContainsString('ContentElement', $typeName);
     }
 
-    // ── Summary ─────────────────────────────────────────────────
-
-    public function testGetSummaryReturnsEmptyString(): void
-    {
-        $element = ContentElement::create();
-
-        self::assertSame('', $element->getSummary());
-    }
-
     // ── Block schema ────────────────────────────────────────────
 
     public function testGetBlockSchemaReturnsExpectedKeys(): void
@@ -309,11 +300,9 @@ final class GridElementTest extends SapphireTest
         self::assertArrayHasKey('typeName', $schema);
         self::assertArrayHasKey('type', $schema);
         self::assertArrayHasKey('title', $schema);
-        self::assertArrayHasKey('summary', $schema);
         self::assertSame($element->ID, $schema['id']);
         self::assertSame('My Block', $schema['title']);
         self::assertSame('Content element', $schema['type']);
-        self::assertSame('', $schema['summary']);
         self::assertStringNotContainsString('\\', $schema['typeName']);
     }
 

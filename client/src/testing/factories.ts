@@ -28,7 +28,6 @@ function defaultBlockSchema(typeName: string): BlockSchema {
     icon: `font-icon-${typeName.toLowerCase()}`,
     type: typeName,
     title: typeName,
-    summary: '',
   };
 }
 

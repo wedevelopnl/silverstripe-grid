@@ -230,18 +230,4 @@ final class SectionTest extends SapphireTest
         self::assertNotSame($fluidClasses, $fixedClasses);
     }
 
-    // ── Summary ─────────────────────────────────────────────────
-
-    public function testGetSummaryDelegatesToChildCountSummary(): void
-    {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
-        $page = $this->objFromFixture(SiteTree::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        GridTreeFactory::row($section);
-        GridTreeFactory::row($section);
-
-        self::assertSame($section->getChildCountSummary(), $section->getSummary());
-    }
 }

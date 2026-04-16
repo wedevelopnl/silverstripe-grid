@@ -16,8 +16,7 @@ interface ElementCardProps {
  * Element card dispatcher: picks the editable or readonly variant
  * based on the `ReadonlyContext`. The readonly variant drops
  * `useSortable`, navigation callbacks, and interactive controls —
- * just renders the icon, title, and content preview inside the
- * status-colored border.
+ * just renders the icon and title inside the status-colored border.
  */
 export default function ElementCard({ element }: ElementCardProps) {
   const readonly = useReadonly();
@@ -33,7 +32,6 @@ function EditableElementCard({ element }: ElementCardProps) {
     id: element.nodeKey,
   });
   const status = getElementStatus(element.statusFlags);
-  const content = element.blockSchema.summary;
   const editLink = element.editLink;
   const isClickable = editLink !== null;
 
@@ -57,14 +55,6 @@ function EditableElementCard({ element }: ElementCardProps) {
         {element.title}
       </h4>
       <ElementActions node={element} />
-    </div>
-  );
-
-  const contentBody: ReactNode = (
-    <div
-      className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}
-    >
-      {content || t('WeDevelopGrid.ElementCard.NO_PREVIEW', 'No preview available')}
     </div>
   );
 
@@ -101,7 +91,6 @@ function EditableElementCard({ element }: ElementCardProps) {
         onClick={handleAnchorClick}
       >
         {header}
-        {contentBody}
       </a>
     );
   }
@@ -109,14 +98,12 @@ function EditableElementCard({ element }: ElementCardProps) {
   return (
     <div ref={setNodeRef} style={style} className={cardClasses} data-testid="element-card">
       {header}
-      {contentBody}
     </div>
   );
 }
 
 function ReadonlyElementCard({ element }: ElementCardProps) {
   const status = getElementStatus(element.statusFlags);
-  const content = element.blockSchema.summary;
   const cardClasses = `element-card element-card--${status}`;
 
   return (
@@ -126,11 +113,6 @@ function ReadonlyElementCard({ element }: ElementCardProps) {
         <h4 className="element-card__title" data-testid="element-card-title">
           {element.title}
         </h4>
-      </div>
-      <div
-        className={`element-card__content${content === '' ? ' element-card__content--empty' : ''}`}
-      >
-        {content || t('WeDevelopGrid.ElementCard.NO_PREVIEW', 'No preview available')}
       </div>
     </div>
   );

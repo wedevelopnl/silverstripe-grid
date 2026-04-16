@@ -102,7 +102,6 @@ describe('DragOverlayContent', () => {
         icon: 'font-icon-block-layout',
         type: 'Section',
         title: 'Section',
-        summary: '',
       },
     });
 
@@ -122,7 +121,6 @@ describe('DragOverlayContent', () => {
         icon: 'font-icon-block-row',
         type: 'Row',
         title: 'Row',
-        summary: '',
       },
     });
 
