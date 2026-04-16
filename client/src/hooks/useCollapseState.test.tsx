@@ -102,7 +102,7 @@ describe('useCollapseState', () => {
     expect(result.current.isCollapsed(key)).toBe(false);
   });
 
-  it('persists collapsed keys to localStorage under grid:collapsed:${areaId}', () => {
+  it(`persists collapsed keys to localStorage under grid:collapsed:${areaId}`, () => {
     const mock = installMockLocalStorage();
     const { result } = renderHook(() => useCollapseState(areaId));
     const key = buildNodeKey('column', 7);
