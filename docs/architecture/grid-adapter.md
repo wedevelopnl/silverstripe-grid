@@ -12,10 +12,11 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single concrete
 - `src/Adapter/BootstrapAdapter.php` — Bootstrap 5 preset (zero methods, only statics)
 - `src/Adapter/TailwindAdapter.php` — Tailwind CSS preset (zero methods, only statics)
 - `src/Adapter/BulmaAdapter.php` — Bulma preset (zero methods, only statics)
+- `src/Factory/GridAdapterFactory.php` — Injector factory that aliases `ContentLayoutAdapterInterface` to the `GridAdapterInterface` singleton
 - `src/Value/Viewport.php` — Value object (`final readonly class`, not an enum)
 - `src/Value/ContainerType.php` — Enum: `Section`, `Row`, `Column`
 - `_config/grid.yml` — DI binding (default: `BootstrapAdapter`)
-- `_config/content-layout.yml` — applies `BlockMediaExtension` to `ContentElement` (no DI alias needed — see below)
+- `_config/content-layout.yml` — DI alias for `ContentLayoutAdapterInterface` (via `GridAdapterFactory`) + applies `BlockMediaExtension` to `ContentElement`
 
 ## Existing Presets
 
@@ -209,14 +210,15 @@ Content layout (aspect ratios, media ordering, vertical alignment, directional p
 
 ### How the content layout adapter is resolved
 
-There is no `Injector` alias for `ContentLayoutAdapterInterface`. `GridAdapter` implements both `GridAdapterInterface` and `ContentLayoutAdapterInterface` on the same class, so the singleton bound to `GridAdapterInterface` in `_config/grid.yml` already satisfies both contracts. Consumers that need content-layout behaviour fetch the grid adapter and cast:
+`ContentLayoutAdapterInterface` is aliased to the `GridAdapterInterface` singleton via `GridAdapterFactory` in `_config/content-layout.yml`:
 
-```php
-$adapter = $this->getGridAdapter();
-assert($adapter instanceof ContentLayoutAdapterInterface);
+```yaml
+SilverStripe\Core\Injector\Injector:
+  WeDevelop\Grid\Contract\ContentLayoutAdapterInterface:
+    factory: WeDevelop\Grid\Factory\GridAdapterFactory
 ```
 
-See `BlockMediaExtension::getContentLayoutAdapter()` for the canonical pattern. A custom adapter that does not extend `GridAdapter` must implement `ContentLayoutAdapterInterface` itself for this assertion to hold.
+`GridAdapterFactory` resolves `GridAdapterInterface` from the Injector and returns it, so both interfaces share the same adapter singleton. Consumers can inject `ContentLayoutAdapterInterface` directly via DI rather than casting from the grid adapter.
 
 ### Value Objects
 

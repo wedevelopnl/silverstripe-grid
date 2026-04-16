@@ -159,6 +159,7 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 │    ├── GridAdapterInterface (14 methods)                    │
 │    ├── ContentLayoutAdapterInterface (8 methods)            │
 │    ├── GridAdapter (config-driven base, implements both)    │
+│    ├── GridAdapterFactory (DI alias factory)                │
 │    ├── Presets: Bootstrap, Tailwind, Bulma (zero-method)   │
 │    └── BlockMediaExtension (media/video on content elts)   │
 │                                                             │
@@ -173,7 +174,8 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 
 | Method | Route | Purpose | Response |
 |--------|-------|---------|----------|
-| GET | `api/readTree/{PageID}/{Zone}` | Load element tree for a zone on a page | 200 + `{ tree: Record<int, GridNode[]>, overrideCounts: object }` |
+| GET | `api/readTree/{PageID}/{Zone}` | Load element tree for a zone on a page (draft) | 200 + `{ tree: Record<int, GridNode[]>, overrideCounts: object }` |
+| GET | `api/readTree/{PageID}/{Zone}/version/{Version}` | Load element tree at a specific historical version | 200 + `{ tree: Record<int, GridNode[]>, overrideCounts: object }` |
 | POST | `api/create` | Create a container element (Section / Row / Column) under a parent | 204 |
 | POST | `api/createContent` | Create a content element inside a `Column` | 204 |
 | PATCH | `api/publish` | Publish an element recursively | 204 |
@@ -192,11 +194,15 @@ All mutations return 204 (no body) on success. The frontend refetches the tree a
 
 ### Request Validation
 
-The controller validates request bodies with typed parsing methods that return PHPStan-typed arrays:
+The controller delegates body parsing to `RequestBodyParser`, which returns typed request DTOs wrapped in `Result`. Each `parseX()` method returns `Result::fail()` for invalid payloads:
 
 - `parseCreateBody()` — validates `elementClass` (must be `GridElement` subclass), `parentId`, `parentClass`, `insertAfterElementID`, `zone`
+- `parseCreateContentBody()` — validates content element creation fields
 - `parseReorderBody()` — validates `elementID`, `targetParentId`, `afterElementID`
-- `requireElementId()` — validates a single `id` field
+- `parseUpdateGridSettingsBody()` — validates viewport-scoped width/offset/visibility
+- `parseDuplicateToBody()` — validates target page, zone, and container
+- `parseResetGridSettingsOverridesBody()` — validates page/zone scope and optional viewport filter
+- `parseElementId()` — validates a single `id` field
 
 Invalid payloads produce HTTP 400. Validation failures from the service layer produce HTTP 422 with structured error JSON.
 
@@ -205,7 +211,7 @@ Invalid payloads produce HTTP 400. Validation failures from the service layer pr
 | Check | Applies to |
 |-------|-----------|
 | CSRF token | All mutations |
-| `canView()` on page | Tree reads |
+| `canView()` on page | Tree reads (draft and versioned) |
 | `canEdit()` on parent | Create, reorder (target parent) |
 | `canCreate()` on element | Create, duplicate |
 | `canEdit()` on element | Reorder |
@@ -490,14 +496,15 @@ Applied to `ContentElement` by default via YAML (`_config/content-layout.yml`). 
 ```yaml
 # _config/content-layout.yml
 SilverStripe\Core\Injector\Injector:
-  WeDevelop\Grid\Contract\ContentLayoutAdapterInterface: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
+  WeDevelop\Grid\Contract\ContentLayoutAdapterInterface:
+    factory: WeDevelop\Grid\Factory\GridAdapterFactory
 
 WeDevelop\Grid\Model\ContentElement:
   extensions:
     BlockMedia: WeDevelop\Grid\Extensions\BlockMediaExtension
 ```
 
-Both interfaces resolve to the same adapter singleton.
+`GridAdapterFactory` resolves `GridAdapterInterface` from the Injector and returns the same singleton, so both interfaces share one adapter instance. The factory pattern is used instead of a `%$` alias because it guarantees the singleton is fully constructed before being returned.
 
 ## Value Objects
 
@@ -507,7 +514,8 @@ Both interfaces resolve to the same adapter singleton.
 | `Viewport` | `final readonly class` with `key` and `label` |
 | `GridNode` | Readonly DTO for serialized tree nodes |
 | `Result<T>` | Generic success/failure container |
-| `ValidationError` | Structured error with message, field, severity |
+| `ValidationError` | Structured error with message, field, severity, code, and optional i18n key + params |
+| `ValidationErrorCode` | Enum: Generic, OwnershipDenied, HierarchyViolation, InvalidGridSettings |
 | `ValidationSeverity` | Enum: Error, Warning |
 | `AspectRatio` | Enum: Auto, Square (1x1), FourByThree (4x3), SixteenByNine (16x9) |
 | `MediaPosition` | Enum: First, Last, LastOnDesktop |
