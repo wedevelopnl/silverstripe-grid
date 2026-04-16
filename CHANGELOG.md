@@ -5,6 +5,78 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0-alpha.5] - 2026-04-16
+
+### Added
+
+- **Full internationalisation (i18n)** — all user-facing strings in both PHP and React are now translatable via SilverStripe's `_t()` / `ss.i18n._t()` system. Ships with complete English and Dutch (`nl`) translations for PHP (`lang/en.yml`, `lang/nl.yml`) and JavaScript (`client/lang/src/en.json`, `client/lang/src/nl.json`). Includes a JS key collector script, EN/NL parity check in CI, and `ValidationError` objects now carry translation metadata
+- **Version history viewer** — grid elements show a version history tab on their detail forms via `GridAwareVersionFormFactory`. The grid editor renders in readonly mode when viewing a historical version, with all interactive controls (drag handles, action menus, add-child buttons) hidden. Backed by version-aware tree loading in `GridController` and a `ReadonlyContext` propagated through the component tree
+- **Per-page grid editor toggle** — pages can switch between the grid editor and the standard content editor via `GridPageExtension`, allowing mixed content strategies within a single site
+- **`NodeRef` and `NodeType` identity model** — collision-free node identity using a `NodeType` enum + record ID pair (`NodeRef`), replacing raw integer IDs across the full stack (API responses, frontend state, query keys, DnD system). Eliminates the polymorphic parent ID collision risk between pages and elements
+- **GitHub Actions CI workflow** — PHP QA (PHPStan + test coverage), JS QA (Biome + Stylelint + typecheck + Vitest), E2E tests (Playwright on Chromium), and i18n parity checks run on every push and PR
+
+### Changed
+
+- **oxlint replaced with Biome** — JS/TS linting and formatting now use Biome (`biome.json`) instead of oxlint, with `format:check` added to the QA pipeline and a11y rules raised to error severity
+- **`useTreeEnrichment` hook replaced with collapse-state context** — collapse state management extracted into a dedicated `useCollapseState` hook and context, removing the enrichment layer
+- **Block components split into editable/readonly variants** — `SectionBlock`, `RowBlock`, `ColumnBlock`, and `ElementCard` render distinct editable vs readonly component trees based on `ReadonlyContext`
+- **Element content preview removed from grid editor** — grid cards no longer render inline content previews, simplifying the editor UI
+- **API versioning moved to path parameter** — version identifier sent as a URL path segment instead of a query string parameter
+- **Template rendering uses `data-element` attributes** — element type identification in templates switched from CSS classes to `data-element` attributes; holder class generation consolidated via `getHolderClasses()`
+- **Section template wraps content in container div** — `Section_holder.ss` now wraps its children in a container `<div>` for consistent layout control
+- **`GridEditorField` switched to `FormField` base** — replaced `GridField` parent with `FormField`, adding `schemaComponent` for React FormBuilder rendering and Injector registration via `GridEditorField` wrapper component
+- **Typed `ValidationErrorCode` enum** — validation errors use a dedicated enum instead of raw strings, improving error handling consistency
+
+### Fixed
+
+- `findByParents` repository query not pair-matching `ParentClass` + `ParentID`, allowing false matches across polymorphic parent types
+- `ReorderValidator` same-parent shortcut not comparing `ParentClass`, allowing invalid cross-type reorders to bypass validation
+- Section/Row auto-scaffold not wrapped in a database transaction, risking partial tree creation on failure
+- Zero and negative column widths accepted by grid settings validation
+- `DBGridSettings` treating zero-width JSON payloads as valid instead of null
+- `GridSettings` serializer not validating required keys in JSON, accepting malformed payloads
+- Bulma adapter emitting incorrect `is-hidden` utility classes for visibility toggling
+- Missing `aspect_ratio_classes` mapping in adapter silently returning empty string instead of throwing
+- `ContentLayoutAdapterInterface` not bound to `GridAdapterInterface` singleton in DI config
+- Grid editor not mounting in Pjax-loaded CMS forms — switched from entwine `onmatch` to `MutationObserver`
+- `ElementCard` rendered as `<div>` instead of `<a>`, breaking link semantics and keyboard navigation
+- Roving focus and focus restoration broken in listbox and menu widgets
+- Column header text overflowing card at narrow widths
+- `DuplicateToDialog` back button not skipping auto-advanced zone step
+- Mutation error toasts inconsistent across publish/unpublish actions
+- Reorder query cache invalidated on failure, causing rollback flicker
+- `DELETE` requests sending parameters as JSON body instead of query string
+- Fixture reset endpoint missing `confirm=1` guard, allowing accidental resets
+- `Result` template type not marked as covariant
+- Interactive elements inside `ElementCard` anchor not calling `preventDefault`, causing unintended navigation
+
+### Performance
+
+- Playwright browser binaries cached in CI for faster E2E runs
+
+### Dependencies
+
+- `@tanstack/react-query` 5.96 → 5.99
+- Vite 8.0.7 → 8.0.8
+- Vitest 4.1.3 → 4.1.4
+- Stylelint 17.6 → 17.8
+- `@types/node` 25.5 → 25.6
+- `@stryker-mutator/vitest-runner` 9.5 → 9.6
+- `@stryker-mutator/typescript-checker` 9.5 → 9.6
+- `@biomejs/biome` 2.4 (new, replaces `oxlint`)
+- Removed `oxlint`
+- Added `js-yaml` ^4.1 (dev, for i18n parity script)
+
+### Developer Experience
+
+- **Biome as unified JS/TS linter + formatter** — replaces oxlint; `npm run format` / `format:check` added; `biome.json` configured with a11y rules at error severity and `noNonNullAssertion` disabled for test files
+- **i18n CI pipeline** — `npm run i18n:check` validates JS key collection (dry-run) and EN/NL translation parity; integrated into `npm run qa` and `make qa`
+- **`make qa` parallelised and reporting improved** — parallel execution fixed and progress output added
+- **E2E test coverage expanded** — new specs for version history readonly grid, viewport cascade overrides, and validation error display; media-elements flake stabilised via Chosen jQuery helper
+- **Frontend test rewrite for NodeRef identity** — all frontend tests updated to use `NodeRef`/`NodeKey` model; `enrichedFactories` removed in favour of unified `factories.ts`
+- **Bridge test coverage** — new unit tests for Injector, entwine, and `gridSettingsField` bridges
+- **Fluent test coverage** — `GridAwareDeleteLocalisationPolicy` delete lifecycle covered
+
 ## [6.0.0-alpha.4] - 2026-04-09
 
 ### Added
@@ -208,6 +280,7 @@ Ground-up rewrite for SilverStripe 6. This is a new package (`wedevelopnl/silver
 - Makefile with targets for testing, coverage, static analysis, and mutation testing
 - Pre-push QA gate hook
 
+[6.0.0-alpha.5]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.5
 [6.0.0-alpha.4]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.4
 [6.0.0-alpha.3]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.3
 [6.0.0-alpha.2]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.2
