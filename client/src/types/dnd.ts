@@ -48,9 +48,9 @@ export function getDraggableTypeForNode(node: ElementNode): DraggableType {
  * Maps a draggable type to the parent type that holds its siblings.
  * Sections live under a page, rows in sections, columns in rows, elements in columns.
  */
-export const PARENT_CONTAINER_TYPE: Record<DraggableType, NodeType> = {
+export const PARENT_CONTAINER_TYPE = {
   section: 'page',
   row: 'section',
   column: 'row',
   element: 'column',
-};
+} as const satisfies Record<DraggableType, NodeType>;

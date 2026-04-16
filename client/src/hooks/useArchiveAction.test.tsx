@@ -145,7 +145,7 @@ describe('useArchiveAction', () => {
     it('should show toast on error', async () => {
       mockFetchError(500, { message: 'Server error' });
       const dispatch = vi.fn();
-      window.ss.store = { dispatch };
+      window.ss!.store = { dispatch };
 
       const node = createSimpleElement({ id: 99 });
       const { result } = renderArchiveAction(node);

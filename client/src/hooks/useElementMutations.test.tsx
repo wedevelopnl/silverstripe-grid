@@ -96,7 +96,7 @@ describe('useElementMutations', () => {
     it('should show toast on error', async () => {
       mockFetchError(500, { message: 'Create failed' });
       const dispatch = vi.fn();
-      window.ss.store = { dispatch };
+      window.ss!.store = { dispatch };
 
       const { wrapper } = createProviderWrapper();
       const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper });
@@ -137,7 +137,7 @@ describe('useElementMutations', () => {
     it('should show toast on error', async () => {
       mockFetchError(422, { message: 'Invalid settings' });
       const dispatch = vi.fn();
-      window.ss.store = { dispatch };
+      window.ss!.store = { dispatch };
 
       const { wrapper } = createProviderWrapper();
       const { result } = renderHook(() => useUpdateGridSettings(1, 'main'), { wrapper });
@@ -178,7 +178,7 @@ describe('useElementMutations', () => {
     it('should show toast on error', async () => {
       mockFetchError(500, { message: 'Reset failed' });
       const dispatch = vi.fn();
-      window.ss.store = { dispatch };
+      window.ss!.store = { dispatch };
 
       const { wrapper } = createProviderWrapper();
       const { result } = renderHook(() => useResetGridSettingsOverrides(1, 'main'), { wrapper });
@@ -202,7 +202,7 @@ describe('useElementMutations', () => {
     it('should show toast on error', async () => {
       mockFetchError(500, { message: 'Publish failed' });
       const dispatch = vi.fn();
-      window.ss.store = { dispatch };
+      window.ss!.store = { dispatch };
 
       const { wrapper } = createProviderWrapper();
       const { result } = renderHook(() => usePublishElement(1, 'main'), { wrapper });
@@ -229,7 +229,7 @@ describe('useElementMutations', () => {
     it('should show toast on error', async () => {
       mockFetchError(500, { message: 'Unpublish failed' });
       const dispatch = vi.fn();
-      window.ss.store = { dispatch };
+      window.ss!.store = { dispatch };
 
       const { wrapper } = createProviderWrapper();
       const { result } = renderHook(() => useUnpublishElement(1, 'main'), { wrapper });
@@ -295,7 +295,7 @@ describe('useElementMutations', () => {
         { status: 200, body: treeApiResponse },
       ]);
       const dispatch = vi.fn();
-      window.ss.store = { dispatch };
+      window.ss!.store = { dispatch };
 
       const { wrapper } = createProviderWrapper({ queryClient });
       const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
@@ -336,7 +336,7 @@ describe('useElementMutations', () => {
         { status: 200, body: treeApiResponse },
       ]);
       const dispatch = vi.fn();
-      window.ss.store = { dispatch };
+      window.ss!.store = { dispatch };
 
       const { wrapper } = createProviderWrapper({ queryClient });
       // Mount a reader for the tree query so it becomes an *active* query —

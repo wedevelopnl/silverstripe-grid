@@ -10,6 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "erasableSyntaxOnly": true,
     "noEmit": true,
     "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {

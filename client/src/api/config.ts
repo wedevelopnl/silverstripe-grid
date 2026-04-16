@@ -9,7 +9,7 @@ const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController';
  * @throws ConfigError if the admin bundle has not loaded
  */
 export function getConfig(): SilverStripeConfig {
-  const config = (window as Window).ss?.config;
+  const config = window.ss?.config;
 
   if (config === undefined) {
     throw new ConfigError(

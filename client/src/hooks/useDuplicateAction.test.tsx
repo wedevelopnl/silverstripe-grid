@@ -52,7 +52,7 @@ describe('useDuplicateAction', () => {
   it('should show toast when mutation fails', async () => {
     mockFetchError(500, { message: 'Duplicate failed' });
     const dispatch = vi.fn();
-    window.ss.store = { dispatch };
+    window.ss!.store = { dispatch };
 
     const node = createSimpleElement({ id: 42 });
     const { result } = renderDuplicateAction(node);

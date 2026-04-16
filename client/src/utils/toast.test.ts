@@ -9,7 +9,7 @@ beforeEach(() => {
 describe('showToast', () => {
   it('dispatches DISPLAY_TOAST action when store is available', () => {
     const dispatch = vi.fn();
-    window.ss.store = { dispatch };
+    window.ss!.store = { dispatch };
 
     showToast('Something failed', 'error');
 
@@ -26,7 +26,7 @@ describe('showToast', () => {
 
   it('sets stay to false for success toasts', () => {
     const dispatch = vi.fn();
-    window.ss.store = { dispatch };
+    window.ss!.store = { dispatch };
 
     showToast('Done!', 'success');
 
@@ -39,7 +39,7 @@ describe('showToast', () => {
 
   it('defaults type to error', () => {
     const dispatch = vi.fn();
-    window.ss.store = { dispatch };
+    window.ss!.store = { dispatch };
 
     showToast('Oops');
 
@@ -52,7 +52,7 @@ describe('showToast', () => {
 
   it('sets stay to true for warning toasts', () => {
     const dispatch = vi.fn();
-    window.ss.store = { dispatch };
+    window.ss!.store = { dispatch };
 
     showToast('Heads up', 'warning');
 
@@ -68,7 +68,7 @@ describe('showToast', () => {
   });
 
   it('falls back to console.warn when store is unavailable', () => {
-    delete window.ss.store;
+    delete window.ss!.store;
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     showToast('No store', 'warning');

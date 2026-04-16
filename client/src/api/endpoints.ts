@@ -59,6 +59,18 @@ export function normaliseTreeResponse(raw: unknown): TreeApiResponse {
   return { rootParent, nodes, overrideCounts };
 }
 
+/**
+ * Assert that a validated raw node object is a well-formed ElementNode.
+ *
+ * This assertion is safe after normaliseNode has validated `self` and
+ * `parent` via assertNodeRef and attached computed keys. The remaining
+ * fields (title, blockSchema, containerType, etc.) are trusted from the
+ * server.
+ */
+function assertElementNode(value: Record<string, unknown>): ElementNode {
+  return value as unknown as ElementNode;
+}
+
 function normaliseNode(raw: unknown): ElementNode {
   if (typeof raw !== 'object' || raw === null) {
     throw new TypeError('tree node: expected an object');
@@ -67,14 +79,14 @@ function normaliseNode(raw: unknown): ElementNode {
   const self = assertNodeRef(node.self, 'tree node.self');
   const parent = assertNodeRef(node.parent, 'tree node.parent');
 
-  const normalised = {
+  const normalised = assertElementNode({
     ...node,
     self,
     parent,
     nodeKey: buildNodeKey(self.type, self.id),
     parentKey: buildNodeKey(parent.type, parent.id),
     id: self.id,
-  } as unknown as ElementNode;
+  });
 
   if (isContainerNode(normalised) && Array.isArray(node.children)) {
     // Reassign children with the normalised variants. Cast is safe: the type

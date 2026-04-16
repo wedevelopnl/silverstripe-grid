@@ -9,7 +9,6 @@ describe('getConfig', () => {
   });
 
   it('throws ConfigError with exact message when window.ss.config is undefined', () => {
-    // @ts-expect-error — testing missing global
     delete window.ss;
 
     expect(() => getConfig()).toThrow(
@@ -30,7 +29,7 @@ describe('getControllerLink', () => {
   });
 
   it('throws ConfigError with exact message when controller section is missing', () => {
-    window.ss.config.sections = [];
+    window.ss!.config.sections = [];
 
     expect(() => getControllerLink()).toThrow(
       'Controller section "WeDevelop\\Grid\\Controllers\\GridController" not found in CMS config. Ensure the grid module is installed.',
@@ -38,7 +37,7 @@ describe('getControllerLink', () => {
   });
 
   it('strips multiple trailing slashes from controller link', () => {
-    window.ss.config.sections[0].controllerLink = '/admin/grid///';
+    window.ss!.config.sections[0].controllerLink = '/admin/grid///';
 
     expect(getControllerLink()).toBe('/admin/grid');
   });
@@ -52,7 +51,7 @@ describe('getAdapterConfig', () => {
   });
 
   it('throws ConfigError with exact message when adapter config is missing', () => {
-    delete window.ss.config.sections[0].gridAdapter;
+    delete window.ss!.config.sections[0].gridAdapter;
 
     expect(() => getAdapterConfig()).toThrow(
       'Grid adapter configuration is missing. Ensure the grid module is installed and configured.',
