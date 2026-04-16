@@ -110,11 +110,11 @@ test.describe('Viewport cascade / override rendering', () => {
       //   lg → col-lg-12     (width changes back from 6 → 12)
       //   xl → (same as lg)  — no class
       //   xxl → (same as xl) — no class
-      const frontendColumn = page.locator('div.element.column').first();
+      const frontendColumn = page.locator('div[data-element="column"]').first();
       const classes = (await frontendColumn.getAttribute('class')) ?? '';
       const classList = classes.split(/\s+/).filter(Boolean).sort();
       expect(classList).toEqual(
-        ['col-12', 'col-lg-12', 'col-md-6', 'column', 'element'].sort(),
+        ['col-12', 'col-lg-12', 'col-md-6'].sort(),
       );
     });
   });

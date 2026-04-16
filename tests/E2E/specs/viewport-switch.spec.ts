@@ -165,9 +165,9 @@ test.describe('Viewport switcher', () => {
     await page.goto(livePath);
     await expect(page.locator('h1')).toContainText('E2E Grid Test Page');
 
-    // The frontend renders Column elements as <div class="element column {ColumnClasses}">
+    // The frontend renders Column elements as <div data-element="column" class="{ColumnClasses}">
     // ColumnClasses is the full responsive class chain from the Bootstrap adapter.
-    const frontendColumns = page.locator('div.element.column');
+    const frontendColumns = page.locator('div[data-element="column"]');
     await expect(frontendColumns).toHaveCount(2);
 
     // Left column after edits (isolated strategy, default=md={6,2,true}):
@@ -181,7 +181,7 @@ test.describe('Viewport switcher', () => {
     const leftClasses = (await leftFrontend.getAttribute('class'))!.split(/\s+/).sort();
     expect(leftClasses).toEqual([
       'col-12', 'col-sm-6',
-      'column', 'element', 'offset-lg-0', 'offset-sm-2', 'offset-xl-2',
+      'offset-lg-0', 'offset-sm-2', 'offset-xl-2',
     ].sort());
 
     // Right column after edits (isolated strategy, default=md={4,0,true}):
@@ -195,7 +195,6 @@ test.describe('Viewport switcher', () => {
     const rightClasses = (await rightFrontend.getAttribute('class'))!.split(/\s+/).sort();
     expect(rightClasses).toEqual([
       'col-12', 'col-lg-6', 'col-sm-4', 'col-xl-4',
-      'column', 'element',
     ].sort());
 
   });
