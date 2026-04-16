@@ -149,6 +149,15 @@ class Column extends GridElement implements ContainerInterface
         return $classes;
     }
 
+    /** @return list<string> */
+    #[Override]
+    protected function provideHolderClasses(): array
+    {
+        $columnClasses = $this->getColumnClasses();
+
+        return $columnClasses !== '' ? [$columnClasses] : [];
+    }
+
     #[Override]
     protected function onBeforeWrite(): void
     {

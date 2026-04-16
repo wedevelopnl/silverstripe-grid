@@ -111,6 +111,36 @@ class GridElement extends DataObject
         return $this->renderWith($this->getViewerTemplates());
     }
 
+    /**
+     * Holder-level CSS classes: ExtraClass + Style + element-specific classes.
+     *
+     * Subclasses should override {@see provideHolderClasses()} to add
+     * element-specific classes (e.g., row or column grid classes).
+     */
+    public function getHolderClasses(): string
+    {
+        $parts = array_filter([
+            (string) $this->Style,
+            (string) $this->ExtraClass,
+            ...$this->provideHolderClasses(),
+        ], static fn(string $part): bool => $part !== '');
+
+        $classes = implode(' ', $parts);
+        $this->extend('updateHolderClasses', $classes);
+
+        return $classes;
+    }
+
+    /**
+     * Extension point for subclasses to contribute element-specific CSS classes.
+     *
+     * @return list<string>
+     */
+    protected function provideHolderClasses(): array
+    {
+        return [];
+    }
+
     /** Short class name for CSS class generation in holder templates. */
     public function getSimpleClassName(): string
     {

@@ -94,6 +94,15 @@ class Row extends GridElement implements ContainerInterface
         return $classes;
     }
 
+    /** @return list<string> */
+    #[Override]
+    protected function provideHolderClasses(): array
+    {
+        $rowClasses = $this->getRowClasses();
+
+        return $rowClasses !== '' ? [$rowClasses] : [];
+    }
+
     #[Override]
     protected function onAfterWrite(): void
     {
