@@ -20,38 +20,32 @@ test.describe('API contract', () => {
 
     expect(response.ok()).toBe(true);
 
-    const { tree } = await response.json() as TreeApiResponse;
+    const { nodes } = await response.json() as TreeApiResponse;
 
     // Sanity: at least one section exists
-    const areaKeys = Object.keys(tree);
-    expect(areaKeys.length).toBeGreaterThan(0);
-
-    const firstArea = tree[areaKeys[0]];
-    expect(firstArea.length).toBeGreaterThan(0);
+    expect(nodes.length).toBeGreaterThan(0);
   });
 
   test('versioned state flags reflect fixture post-actions', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
-    const { tree } = await response.json() as TreeApiResponse;
+    const { nodes } = await response.json() as TreeApiResponse;
 
     // Collect all containers and leaf elements across the tree
     type FlaggedNode = { title: string; statusFlags: StatusFlags };
     const leaves: FlaggedNode[] = [];
     const containers: FlaggedNode[] = [];
 
-    for (const sections of Object.values(tree)) {
-      for (const section of sections) {
-        if (!('containerType' in section) || section.containerType !== 'section') continue;
-        const sectionNode = section as SectionNode;
-        containers.push({ title: sectionNode.title, statusFlags: sectionNode.statusFlags });
-        for (const row of sectionNode.children ?? []) {
-          containers.push({ title: row.title, statusFlags: row.statusFlags });
-          for (const col of row.children ?? []) {
-            containers.push({ title: col.title, statusFlags: col.statusFlags });
-            for (const leaf of col.children ?? []) {
-              leaves.push({ title: leaf.title, statusFlags: leaf.statusFlags });
-            }
+    for (const section of nodes) {
+      if (!('containerType' in section) || section.containerType !== 'section') continue;
+      const sectionNode = section as SectionNode;
+      containers.push({ title: sectionNode.title, statusFlags: sectionNode.statusFlags });
+      for (const row of sectionNode.children ?? []) {
+        containers.push({ title: row.title, statusFlags: row.statusFlags });
+        for (const col of row.children ?? []) {
+          containers.push({ title: col.title, statusFlags: col.statusFlags });
+          for (const leaf of col.children ?? []) {
+            leaves.push({ title: leaf.title, statusFlags: leaf.statusFlags });
           }
         }
       }
@@ -99,16 +93,16 @@ test.describe('API contract', () => {
     const mainAlphaId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\Section']['main_alpha'];
     const sidebarAlphaId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\Section']['sidebar_alpha'];
 
-    // Attempt cross-zone reorder via direct API call
+    // Attempt cross-zone reorder via direct API call (NodeRef format)
     const response = await page.request.patch('/admin/grid/api/reorder', {
       headers: {
         'Content-Type': 'application/json',
         'X-SecurityID': securityId,
       },
       data: {
-        elementID: mainAlphaId,
-        targetParentId: fixture.pageId,
-        afterElementID: sidebarAlphaId,
+        element: { type: 'section', id: mainAlphaId },
+        parent: { type: 'page', id: fixture.pageId },
+        after: { type: 'section', id: sidebarAlphaId },
       },
     });
 
@@ -122,18 +116,16 @@ test.describe('API contract', () => {
   test('column nodes include gridSettings with per-viewport structure', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
-    const { tree } = await response.json() as TreeApiResponse;
+    const { nodes } = await response.json() as TreeApiResponse;
 
     // Collect all column nodes
     const columns: ColumnNode[] = [];
-    for (const sections of Object.values(tree)) {
-      for (const section of sections) {
-        if (!('containerType' in section) || section.containerType !== 'section') continue;
-        const sectionNode = section as SectionNode;
-        for (const row of sectionNode.children ?? []) {
-          for (const col of row.children ?? []) {
-            columns.push(col);
-          }
+    for (const section of nodes) {
+      if (!('containerType' in section) || section.containerType !== 'section') continue;
+      const sectionNode = section as SectionNode;
+      for (const row of sectionNode.children ?? []) {
+        for (const col of row.children ?? []) {
+          columns.push(col);
         }
       }
     }
@@ -185,33 +177,29 @@ test.describe('API contract', () => {
   test('element nodes include editLink field', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
-    const { tree } = await response.json() as TreeApiResponse;
+    const { nodes } = await response.json() as TreeApiResponse;
 
-    for (const sections of Object.values(tree)) {
-      for (const section of sections) {
-        expect(section).toHaveProperty('editLink');
-        expect(typeof section.editLink === 'string' || section.editLink === null).toBe(true);
-      }
+    for (const section of nodes) {
+      expect(section).toHaveProperty('editLink');
+      expect(typeof section.editLink === 'string' || section.editLink === null).toBe(true);
     }
   });
 
   test('container allowedTypes include label, icon, and description', async ({ request }) => {
     const fixture = await loadFixture(request, 'complex-page');
     const response = await request.get(`${API_BASE}/${fixture.pageId}/main`);
-    const { tree } = await response.json() as TreeApiResponse;
+    const { nodes } = await response.json() as TreeApiResponse;
 
-    for (const sections of Object.values(tree)) {
-      for (const section of sections) {
-        if (!('containerType' in section) || section.containerType !== 'section') continue;
-        const sectionNode = section as SectionNode;
+    for (const section of nodes) {
+      if (!('containerType' in section) || section.containerType !== 'section') continue;
+      const sectionNode = section as SectionNode;
 
-        // Section's allowedTypes should have enriched info objects
-        if (sectionNode.allowedTypes !== null) {
-          for (const [className, info] of Object.entries(sectionNode.allowedTypes)) {
-            expect(typeof info.label, `allowedTypes[${className}].label should be a string`).toBe('string');
-            expect(typeof info.icon, `allowedTypes[${className}].icon should be a string`).toBe('string');
-            expect(typeof info.description, `allowedTypes[${className}].description should be a string`).toBe('string');
-          }
+      // Section's allowedTypes should have enriched info objects
+      if (sectionNode.allowedTypes !== null) {
+        for (const [className, info] of Object.entries(sectionNode.allowedTypes)) {
+          expect(typeof info.label, `allowedTypes[${className}].label should be a string`).toBe('string');
+          expect(typeof info.icon, `allowedTypes[${className}].icon should be a string`).toBe('string');
+          expect(typeof info.description, `allowedTypes[${className}].description should be a string`).toBe('string');
         }
       }
     }
