@@ -1707,4 +1707,37 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertNotNull($row);
         self::assertSame(0, (int) $row['UseGrid'], 'Dry run should not modify UseGrid');
     }
+
+    public function testMigrationHandlesGridDisabledOnLiveButEnabledOnDraft(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seedStandardPage($pageId, $areaId);
+
+        // Publish the page so SiteTree_Live has the row
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page->publishSingle();
+
+        // Simulate: grid enabled on draft, disabled on live.
+        // This can happen if a page was published with grid off, then
+        // re-enabled on draft but not yet re-published.
+        DB::prepared_query(
+            'UPDATE "SiteTree" SET "UseElementalGrid" = 1 WHERE "ID" = ?',
+            [$pageId],
+        );
+        DB::prepared_query(
+            'UPDATE "SiteTree_Live" SET "UseElementalGrid" = 0 WHERE "ID" = ?',
+            [$pageId],
+        );
+
+        $this->runMigration();
+
+        // Draft should be enabled (content was migrated)
+        $draftRow = DB::prepared_query('SELECT "UseGrid" FROM "SiteTree" WHERE "ID" = ?', [$pageId])->record();
+        self::assertSame(1, (int) $draftRow['UseGrid'], 'Draft UseGrid should be 1');
+
+        // Live should be disabled (UseElementalGrid was 0 on live)
+        $liveRow = DB::prepared_query('SELECT "UseGrid" FROM "SiteTree_Live" WHERE "ID" = ?', [$pageId])->record();
+        self::assertSame(0, (int) $liveRow['UseGrid'], 'Live UseGrid should be 0 — grid was disabled on live');
+    }
 }

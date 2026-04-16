@@ -192,10 +192,10 @@ final class GridMigrationService
                     });
                 }
 
-                $conn->transactionEnd();
-
                 $hasLiveContent = $liveElements !== [];
-                $this->setUseGridOnPage($pageId, true, $hasLiveContent);
+                $this->setUseGridOnPage($pageId, true, includeLive: $hasLiveContent);
+
+                $conn->transactionEnd();
 
                 $this->logger->info('Successfully migrated page {pageId}.', ['pageId' => $pageId]);
             } finally {
@@ -618,15 +618,20 @@ final class GridMigrationService
      *
      * Uses raw SQL for consistency with the migration's existing approach
      * to live-stage table updates.
+     *
+     * @param bool $includeDraft Update draft (SiteTree) table
+     * @param bool $includeLive Update live (SiteTree_Live) table
      */
-    private function setUseGridOnPage(int $pageId, bool $enabled, bool $includeLive = false): void
+    private function setUseGridOnPage(int $pageId, bool $enabled, bool $includeDraft = true, bool $includeLive = false): void
     {
         $value = $enabled ? 1 : 0;
 
-        DB::prepared_query(
-            'UPDATE "SiteTree" SET "UseGrid" = ? WHERE "ID" = ?',
-            [$value, $pageId],
-        );
+        if ($includeDraft) {
+            DB::prepared_query(
+                'UPDATE "SiteTree" SET "UseGrid" = ? WHERE "ID" = ?',
+                [$value, $pageId],
+            );
+        }
 
         if ($includeLive) {
             DB::prepared_query(
@@ -652,10 +657,7 @@ final class GridMigrationService
 
         $livePages = $this->reader->getPagesWithGridDisabled('live');
         foreach ($livePages as $pageInfo) {
-            DB::prepared_query(
-                'UPDATE "SiteTree_Live" SET "UseGrid" = 0 WHERE "ID" = ?',
-                [$pageInfo['pageId']],
-            );
+            $this->setUseGridOnPage($pageInfo['pageId'], false, includeDraft: false, includeLive: true);
         }
 
         $totalPages = \count($draftPages) + \count($livePages);
