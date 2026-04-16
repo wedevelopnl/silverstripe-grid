@@ -24,6 +24,36 @@ A grid-based content block system for SilverStripe CMS, enabling structured Sect
 composer require wedevelopnl/silverstripe-grid
 ```
 
+## Usage
+
+The module applies `GridPageExtension` to `SiteTree` by default (see `_config/hierarchy.yml`), adding a grid editor to every page type. Each page has a **"Use grid on this page"** checkbox that toggles between the grid editor and the standard Content HTMLEditorField.
+
+### Page templates
+
+Your page templates must handle both modes. Use `$UseGrid` to render grid sections or fall back to `$Content`:
+
+```silverstripe
+<% if $UseGrid %>
+    <% loop $Sections %>$Me<% end_loop %>
+<% else %>
+    $Content
+<% end_if %>
+```
+
+### Configuring the default
+
+The grid is enabled by default on new pages. Override this per page type in YAML:
+
+```yaml
+App\Pages\ArticlePage:
+  use_grid_by_default: true    # default — grid editor on new pages
+
+App\Pages\JobPage:
+  use_grid_by_default: false   # content editor on new pages
+```
+
+CMS users can still toggle the checkbox per page regardless of the default.
+
 ## Development
 
 ### Prerequisites
