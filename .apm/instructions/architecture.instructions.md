@@ -13,10 +13,13 @@ src/Adapter/          # Grid framework adapters: GridAdapter base class + framew
 src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderValidatorInterface)
 src/Controllers/      # API controllers (GridController)
 src/Dev/              # Fixture loading for E2E tests (controller, loader, post-actions, result)
+src/Factory/          # Factories (GridAdapterFactory)
 src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement) + ContainerElementTrait
 src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaExtension)
 src/Forms/            # Form field implementations (GridEditorField)
-src/Value/            # Value objects and DTOs (GridNode, Result, ValidationError, ValidationSeverity, ContainerType, Viewport, ViewportConfig, GridSettings, OverrideStrategy, AspectRatio, MediaPosition, VerticalAlignment)
+src/Migration/        # SS5→SS6 migration (DTOs, strategies, tasks, services)
+src/Reports/          # CMS reports (GridElementReport)
+src/Value/            # Value objects, DTOs, and request objects
 src/Service/          # Domain services (GridTreeBuilder, ReorderService, GridSettingsResolver)
 src/Validation/       # Hierarchy validation, reorder validation, and field validators (HierarchyValidationService, ReorderValidator, ElementAllowanceTrait, GridSettingsFieldValidator)
 src/Exception/        # Domain exceptions (GridDomainException, InvalidGridValueException)
@@ -39,14 +42,16 @@ client/src/styles/    # SCSS styles
 client/src/types/     # Zod schemas, TypeScript types
 client/src/utils/     # Frontend utility functions
 client/src/testing/   # Test infrastructure (factories, helpers, mocks)
+client/src/i18n/      # Internationalization utilities
 client/dist/          # Vite build output (exposed, created by build)
+scripts/              # Build scripts (i18n collection, parity checks)
 phpstan/              # PHPStan stubs (e.g. AdminController.stub)
 .docker/              # Docker dev env: Caddy + PHP + MySQL 8
 docs/architecture/    # Architecture documents (backend, drag-and-drop)
 ```
 
 - PSR-4 namespace: `WeDevelop\Grid\` → `src/`
-- Frontend: React 18, TypeScript 5.9, Vite 7, SCSS
+- Frontend: React 18, TypeScript 6, Vite 8, SCSS
 - Key frontend libs: dnd-kit (drag & drop), TanStack Query (data fetching), Zod (validation)
 - Testing: Vitest + React Testing Library (jsdom), PHPUnit 11, Playwright (E2E)
 - Node: >=24 (pinned to 24.13 in `.nvmrc`)
@@ -67,7 +72,7 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 ## PHP Testing
 
 - PHPUnit 11 — runs inside Docker via `make test`
-- PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit` and `integration` testsuites, selected via `--testsuite` flag)
+- PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, and `fluent` testsuites, selected via `--testsuite` flag)
 - Test namespace: `WeDevelop\Grid\Tests\` → `tests/` (Unit/ + Integration/)
 
 ## Static Analysis

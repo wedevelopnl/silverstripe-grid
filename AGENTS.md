@@ -17,10 +17,13 @@ src/Adapter/          # Grid framework adapters: GridAdapter base class + framew
 src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderValidatorInterface)
 src/Controllers/      # API controllers (GridController)
 src/Dev/              # Fixture loading for E2E tests (controller, loader, post-actions, result)
+src/Factory/          # Factories (GridAdapterFactory)
 src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement) + ContainerElementTrait
 src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaExtension)
 src/Forms/            # Form field implementations (GridEditorField)
-src/Value/            # Value objects and DTOs (GridNode, Result, ValidationError, ValidationSeverity, ContainerType, Viewport, ViewportConfig, GridSettings, OverrideStrategy, AspectRatio, MediaPosition, VerticalAlignment)
+src/Migration/        # SS5→SS6 migration (DTOs, strategies, tasks, services)
+src/Reports/          # CMS reports (GridElementReport)
+src/Value/            # Value objects, DTOs, and request objects
 src/Service/          # Domain services (GridTreeBuilder, ReorderService, GridSettingsResolver)
 src/Validation/       # Hierarchy validation, reorder validation, and field validators (HierarchyValidationService, ReorderValidator, ElementAllowanceTrait, GridSettingsFieldValidator)
 src/Exception/        # Domain exceptions (GridDomainException, InvalidGridValueException)
@@ -43,14 +46,16 @@ client/src/styles/    # SCSS styles
 client/src/types/     # Zod schemas, TypeScript types
 client/src/utils/     # Frontend utility functions
 client/src/testing/   # Test infrastructure (factories, helpers, mocks)
+client/src/i18n/      # Internationalization utilities
 client/dist/          # Vite build output (exposed, created by build)
+scripts/              # Build scripts (i18n collection, parity checks)
 phpstan/              # PHPStan stubs (e.g. AdminController.stub)
 .docker/              # Docker dev env: Caddy + PHP + MySQL 8
 docs/architecture/    # Architecture documents (backend, drag-and-drop)
 ```
 
 - PSR-4 namespace: `WeDevelop\Grid\` → `src/`
-- Frontend: React 18, TypeScript 5.9, Vite 7, SCSS
+- Frontend: React 18, TypeScript 6, Vite 8, SCSS
 - Key frontend libs: dnd-kit (drag & drop), TanStack Query (data fetching), Zod (validation)
 - Testing: Vitest + React Testing Library (jsdom), PHPUnit 11, Playwright (E2E)
 - Node: >=24 (pinned to 24.13 in `.nvmrc`)
@@ -71,7 +76,7 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 ## PHP Testing
 
 - PHPUnit 11 — runs inside Docker via `make test`
-- PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit` and `integration` testsuites, selected via `--testsuite` flag)
+- PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, and `fluent` testsuites, selected via `--testsuite` flag)
 - Test namespace: `WeDevelop\Grid\Tests\` → `tests/` (Unit/ + Integration/)
 
 ## Static Analysis
@@ -108,10 +113,12 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 | `npm run test:watch` | Vitest in watch mode |
 | `npm run coverage` | Vitest with coverage report |
 | `npm run mutate` | JS mutation testing (Stryker) |
+| `npm run i18n:collect` | Collect JS i18n strings |
+| `npm run i18n:check` | Dry-run collect + parity check |
 | `npm run test:e2e` | Run Playwright E2E tests |
 | `npm run test:e2e:ui` | Playwright with interactive UI |
 | `npm run test:e2e:debug` | Playwright in debug mode |
-| `npm run qa` | Full QA: lint + format:check + typecheck + test |
+| `npm run qa` | Full QA: lint + format:check + typecheck + test + i18n:check |
 
 ## PHP (via Makefile — requires Docker)
 
@@ -121,20 +128,27 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 | `make down` | Stop Docker services |
 | `make destroy` | Stop services and remove volumes |
 | `make build` | Build Docker images without starting |
-| `make test` | Run all tests (PHP unit + integration + JS) |
+| `make test` | Run all tests (PHP unit + integration + functional + JS) |
 | `make test-unit` | Run PHP unit tests (no database/framework) |
 | `make test-integration` | Run PHP integration tests (full SilverStripe env) |
+| `make test-functional` | Run PHP functional tests (HTTP/controller tests) |
+| `make test-fluent` | Run integration + functional + fluent tests in Fluent env |
 | `make test-js` | Run JavaScript tests (Vitest, no Docker needed) |
 | `make coverage` | Merged PHP coverage report (HTML + Clover) |
 | `make coverage-unit` | PHP unit test coverage only |
 | `make coverage-integration` | PHP integration test coverage only |
+| `make coverage-functional` | PHP functional test coverage only |
 | `make coverage-js` | JavaScript test coverage (Vitest) |
 | `make mutate` | PHP mutation testing (Infection) |
 | `make mutate-js` | JS mutation testing (Stryker) |
 | `make analyse` | Run PHPStan static analysis |
+| `make rector` | Run Rector refactoring (applies changes) |
+| `make rector-dry` | Run Rector in dry-run mode (preview only) |
 | `make test-e2e` | Run Playwright E2E tests (requires Docker) |
 | `make test-e2e-ui` | Playwright E2E with interactive UI |
-| `make qa` | Full QA suite (PHPStan + PHP tests + JS QA) |
+| `make flush` | Clear SilverStripe cache |
+| `make dev-build` | Run dev/build to rebuild database and manifest |
+| `make qa` | Full QA suite (PHPStan + PHP coverage + JS QA, parallel) |
 | `make qa-js` | JavaScript QA (Biome + Stylelint + typecheck + Vitest) |
 
 <!-- Source: local .apm/instructions/docker.instructions.md -->
@@ -410,7 +424,7 @@ Use the narrowest PHPStan PHPDoc type that matches the domain constraint. Prefer
 
 ## Stack
 
-- React 18, TypeScript 5.9, Vite 7, SCSS
+- React 18, TypeScript 6, Vite 8, SCSS
 - dnd-kit for drag & drop
 - TanStack Query for data fetching
 - Zod for runtime validation and schema definitions
