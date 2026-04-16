@@ -52,6 +52,9 @@ en:
     has_one_MediaImage: 'Media image'
     has_one_VideoCustomThumbnail: 'Video custom thumbnail'
   WeDevelop\Grid\Extensions\GridPageExtension:
+    USE_GRID: 'Use grid on this page'
+    USE_GRID_DESCRIPTION: 'Save the page after changing this setting'
+    db_UseGrid: 'Use grid'
     has_many_Sections: Sections
   WeDevelop\Grid\Forms\GridSettingsField:
     DEFAULT_TITLE: 'Grid Settings'

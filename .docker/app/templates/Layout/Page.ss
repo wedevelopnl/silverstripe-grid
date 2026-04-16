@@ -1,4 +1,7 @@
 <h1>$Title</h1>
-$Content
+<% if $UseGrid %>
+    <% loop $Sections %>$Me<% end_loop %>
+<% else %>
+    $Content
+<% end_if %>
 $Form
-<% loop $Sections %>$Me<% end_loop %>

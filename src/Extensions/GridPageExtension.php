@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Extensions;
 
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Extension;
+use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Model\Section;
@@ -15,13 +16,22 @@ use WeDevelop\Grid\Forms\GridEditorField;
  * Adds grid editing capability to SiteTree pages.
  *
  * Provides the has_many relationship for top-level Sections and
- * injects the GridEditorField into the CMS editing form.
+ * injects the GridEditorField into the CMS editing form. A per-page
+ * toggle allows switching between the grid editor and the default
+ * Content HTMLEditorField.
  *
  * @extends Extension<SiteTree>
  * @method HasManyList<Section> Sections()
  */
 class GridPageExtension extends Extension
 {
+    private static bool $use_grid_by_default = true;
+
+    /** @var array<string, string> */
+    private static array $db = [
+        'UseGrid' => 'Boolean(1)',
+    ];
+
     /** @var array<string, string> */
     private static array $has_many = [
         'Sections' => Section::class . '.Parent',
@@ -42,20 +52,38 @@ class GridPageExtension extends Extension
         'Sections',
     ];
 
+    public function onAfterPopulateDefaults(): void
+    {
+        /** @var SiteTree $owner */
+        $owner = $this->getOwner();
+
+        /** @var bool $useGrid */
+        $useGrid = $owner->config()->get('use_grid_by_default');
+        $owner->UseGrid = $useGrid;
+    }
+
     public function updateCMSFields(FieldList $fields): void
     {
         /** @var SiteTree $owner */
         $owner = $this->getOwner();
 
-        $fields->removeByName('Content');
         $fields->removeByName('Sections');
-        // Insert after the "Navigation label" field — its actual field name
-        // is MenuTitle (NavigationLabel is the display label, not the name).
-        // Using the wrong name would cause insertAfter to fall back to push(),
-        // which adds the field as a sibling of Root instead of inside a tab.
-        $fields->insertAfter(
-            'MenuTitle',
-            GridEditorField::create('GridEditor', (int) $owner->ID, 'main'),
+
+        if ($owner->UseGrid) {
+            $fields->removeByName('Content');
+            $fields->insertAfter(
+                'MenuTitle',
+                GridEditorField::create('GridEditor', (int) $owner->ID, 'main'),
+            );
+            $insertBefore = 'GridEditor';
+        } else {
+            $insertBefore = 'Content';
+        }
+
+        $fields->insertBefore(
+            $insertBefore,
+            CheckboxField::create('UseGrid', _t(__CLASS__ . '.USE_GRID', 'Use grid on this page'))
+                ->setDescription(_t(__CLASS__ . '.USE_GRID_DESCRIPTION', 'Save the page after changing this setting')),
         );
     }
 }

@@ -259,6 +259,51 @@ final class LegacyDataReader
     }
 
     /**
+     * Find pages that have UseElementalGrid explicitly disabled (= 0).
+     *
+     * Used during migration to preserve the toggle state: pages that opted out
+     * of the grid in the old module should keep UseGrid = 0 in the new module.
+     *
+     * Returns an empty array when the UseElementalGrid column does not exist
+     * (plain dnadesign/silverstripe-elemental without the WeDevelop extension).
+     *
+     * @return list<array{pageId: int}>
+     */
+    public function getPagesWithGridDisabled(string $stage): array
+    {
+        $baseTables = $this->findPageTablesWithColumn('UseElementalGrid');
+
+        if ($baseTables === []) {
+            return [];
+        }
+
+        $pages = [];
+        /** @var array<int, true> $seen */
+        $seen = [];
+
+        foreach ($baseTables as $baseTable) {
+            $table = $this->stageTable($baseTable, $stage);
+
+            $result = DB::query(\sprintf(
+                'SELECT "ID" AS pageId FROM "%s" WHERE "UseElementalGrid" = 0',
+                $table,
+            ));
+
+            foreach ($result as $row) {
+                /** @var array{pageId: int|string} $row */
+                $pageId = (int) $row['pageId'];
+                if (isset($seen[$pageId])) {
+                    continue;
+                }
+                $seen[$pageId] = true;
+                $pages[] = ['pageId' => $pageId];
+            }
+        }
+
+        return $pages;
+    }
+
+    /**
      * Extract per-viewport integer fields (Size or Offset) from a database row.
      *
      * @param array<string, int|string|null> $row

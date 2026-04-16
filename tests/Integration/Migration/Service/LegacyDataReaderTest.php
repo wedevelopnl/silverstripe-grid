@@ -455,4 +455,56 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertSame('Live Element', $elements[0]->title);
     }
 
+    // ─── getPagesWithGridDisabled ─────────────────────────────────
+
+    public function testGetPagesWithGridDisabledReturnsDisabledPages(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $this->seeder->seedPage((int) $page->ID, 100, useGrid: false);
+
+        $result = $this->reader->getPagesWithGridDisabled('draft');
+        $pageIds = \array_column($result, 'pageId');
+
+        self::assertContains((int) $page->ID, $pageIds);
+    }
+
+    public function testGetPagesWithGridDisabledExcludesEnabledPages(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $this->seeder->seedPage((int) $page->ID, 100, useGrid: true);
+
+        $result = $this->reader->getPagesWithGridDisabled('draft');
+        $pageIds = \array_column($result, 'pageId');
+
+        self::assertNotContains((int) $page->ID, $pageIds);
+    }
+
+    public function testGetPagesWithGridDisabledReturnsEmptyWhenNoExtensionColumn(): void
+    {
+        $this->seeder->removeExtensionColumns('SiteTree');
+        $this->seeder->addElementalAreaColumn('SiteTree');
+
+        try {
+            $result = $this->reader->getPagesWithGridDisabled('draft');
+            self::assertSame([], $result);
+        } finally {
+            $this->seeder->removeElementalAreaColumn('SiteTree');
+            $this->seeder->addExtensionColumns('SiteTree');
+        }
+    }
+
+    public function testGetPagesWithGridDisabledReturnsMixedPages(): void
+    {
+        $page1 = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page2 = $this->objFromFixture(SiteTree::class, 'test_page_2');
+
+        $this->seeder->seedPage((int) $page1->ID, 100, useGrid: false);
+        $this->seeder->seedPage((int) $page2->ID, 200, useGrid: true);
+
+        $result = $this->reader->getPagesWithGridDisabled('draft');
+        $pageIds = \array_column($result, 'pageId');
+
+        self::assertContains((int) $page1->ID, $pageIds);
+        self::assertNotContains((int) $page2->ID, $pageIds);
+    }
 }

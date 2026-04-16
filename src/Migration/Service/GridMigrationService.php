@@ -74,6 +74,10 @@ final class GridMigrationService
             }
         }
 
+        if (!$dryRun) {
+            $this->migrateDisabledGridPages();
+        }
+
         return $failures;
     }
 
@@ -189,6 +193,9 @@ final class GridMigrationService
                 }
 
                 $conn->transactionEnd();
+
+                $hasLiveContent = $liveElements !== [];
+                $this->setUseGridOnPage($pageId, true, $hasLiveContent);
 
                 $this->logger->info('Successfully migrated page {pageId}.', ['pageId' => $pageId]);
             } finally {
@@ -604,6 +611,60 @@ final class GridMigrationService
         ])->max('Sort');
 
         return (\is_numeric($max) ? (int) $max : 0) + 1;
+    }
+
+    /**
+     * Set the UseGrid flag on a page's SiteTree record(s).
+     *
+     * Uses raw SQL for consistency with the migration's existing approach
+     * to live-stage table updates.
+     */
+    private function setUseGridOnPage(int $pageId, bool $enabled, bool $includeLive = false): void
+    {
+        $value = $enabled ? 1 : 0;
+
+        DB::prepared_query(
+            'UPDATE "SiteTree" SET "UseGrid" = ? WHERE "ID" = ?',
+            [$value, $pageId],
+        );
+
+        if ($includeLive) {
+            DB::prepared_query(
+                'UPDATE "SiteTree_Live" SET "UseGrid" = ? WHERE "ID" = ?',
+                [$value, $pageId],
+            );
+        }
+    }
+
+    /**
+     * Preserve UseGrid = 0 for pages that had UseElementalGrid disabled.
+     *
+     * These pages are excluded from content migration (no grid content to move)
+     * but their toggle state must be carried forward so the Content editor
+     * remains active after migration.
+     */
+    private function migrateDisabledGridPages(): void
+    {
+        $draftPages = $this->reader->getPagesWithGridDisabled('draft');
+        foreach ($draftPages as $pageInfo) {
+            $this->setUseGridOnPage($pageInfo['pageId'], false);
+        }
+
+        $livePages = $this->reader->getPagesWithGridDisabled('live');
+        foreach ($livePages as $pageInfo) {
+            DB::prepared_query(
+                'UPDATE "SiteTree_Live" SET "UseGrid" = 0 WHERE "ID" = ?',
+                [$pageInfo['pageId']],
+            );
+        }
+
+        $totalPages = \count($draftPages) + \count($livePages);
+        if ($totalPages > 0) {
+            $this->logger->info('Set UseGrid = 0 for {draftCount} draft and {liveCount} live page(s) with grid disabled.', [
+                'draftCount' => \count($draftPages),
+                'liveCount' => \count($livePages),
+            ]);
+        }
     }
 
     /**

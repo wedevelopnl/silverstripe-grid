@@ -52,6 +52,9 @@ nl:
     has_one_MediaImage: 'Media-afbeelding'
     has_one_VideoCustomThumbnail: 'Aangepaste videothumbnail'
   WeDevelop\Grid\Extensions\GridPageExtension:
+    USE_GRID: 'Gebruik grid op deze pagina'
+    USE_GRID_DESCRIPTION: 'Sla de pagina op nadat je deze instelling hebt gewijzigd'
+    db_UseGrid: 'Gebruik grid'
     has_many_Sections: Secties
   WeDevelop\Grid\Forms\GridSettingsField:
     DEFAULT_TITLE: 'Grid-instellingen'

@@ -18,6 +18,7 @@ use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Migration\Strategy\AllRowsInSectionStrategy;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
+use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
@@ -1619,5 +1620,91 @@ final class GridMigrationServiceTest extends SapphireTest
         } finally {
             GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
         }
+    }
+
+    // ─── UseGrid flag migration ──────────────────────────────────
+
+    public function testMigrationSetsUseGridOnDraftPage(): void
+    {
+        $pageId = $this->getPageId();
+        $this->seedStandardPage($pageId);
+
+        $this->runMigration();
+
+        $row = DB::prepared_query('SELECT "UseGrid" FROM "SiteTree" WHERE "ID" = ?', [$pageId])->record();
+        self::assertNotNull($row);
+        self::assertSame(1, (int) $row['UseGrid']);
+    }
+
+    public function testMigrationSetsUseGridOnLivePage(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seedStandardPage($pageId, $areaId);
+
+        // Seed the same elements on live stage
+        $this->seeder->seedElement(1001, $areaId, self::CONTENT_CLASS, 2, [
+            'Title' => 'Element One',
+            'SizeMD' => 8,
+        ], 'live');
+        $this->seeder->seedContentMedia(1001, ['HTML' => '<p>Hello</p>'], 'live');
+
+        // Ensure SiteTree_Live has this page and UseElementalGrid = 1.
+        // In production, publishing copies all columns. Here we simulate it
+        // by publishing via ORM and then setting the legacy column directly.
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page->UseGrid = false;
+        $page->write();
+        $page->publishSingle();
+        DB::prepared_query(
+            'UPDATE "SiteTree_Live" SET "UseElementalGrid" = 1, "ElementalAreaID" = ? WHERE "ID" = ?',
+            [$areaId, $pageId],
+        );
+
+        $this->runMigration();
+
+        $liveRow = DB::prepared_query('SELECT "UseGrid" FROM "SiteTree_Live" WHERE "ID" = ?', [$pageId])->record();
+        self::assertNotNull($liveRow);
+        self::assertSame(1, (int) $liveRow['UseGrid']);
+    }
+
+    public function testMigrationSetsUseGridFalseForDisabledPages(): void
+    {
+        $pageId = $this->getPageId();
+        $pageId2 = $this->getPageId2();
+
+        // Page 1 has grid enabled + content
+        $this->seedStandardPage($pageId, 100);
+
+        // Page 2 has grid disabled (no content to migrate)
+        $this->seeder->seedPage($pageId2, 200, useGrid: false);
+
+        $this->runMigration();
+
+        $row = DB::prepared_query('SELECT "UseGrid" FROM "SiteTree" WHERE "ID" = ?', [$pageId2])->record();
+        self::assertNotNull($row);
+        self::assertSame(0, (int) $row['UseGrid']);
+    }
+
+    public function testDryRunDoesNotSetUseGrid(): void
+    {
+        $pageId = $this->getPageId();
+        $this->seedStandardPage($pageId);
+
+        // Set UseGrid to 0 to verify dry run doesn't change it
+        DB::prepared_query('UPDATE "SiteTree" SET "UseGrid" = 0 WHERE "ID" = ?', [$pageId]);
+
+        $service = $this->createService();
+        $service->run(
+            self::DEFAULT_VIEWPORT,
+            self::ZONE,
+            self::VIEWPORT_KEY_MAP,
+            dryRun: true,
+            pageIds: [$pageId],
+        );
+
+        $row = DB::prepared_query('SELECT "UseGrid" FROM "SiteTree" WHERE "ID" = ?', [$pageId])->record();
+        self::assertNotNull($row);
+        self::assertSame(0, (int) $row['UseGrid'], 'Dry run should not modify UseGrid');
     }
 }

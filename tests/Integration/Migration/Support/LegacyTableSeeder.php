@@ -65,10 +65,16 @@ final class LegacyTableSeeder
         }
 
         foreach ($this->findTablesWithExtensionColumns() as [$table, $hasUseElementalGrid]) {
-            if ($hasUseElementalGrid) {
-                DB::query("UPDATE \"{$table}\" SET \"UseElementalGrid\" = 0, \"ElementalAreaID\" = 0");
-            } else {
-                DB::query("UPDATE \"{$table}\" SET \"ElementalAreaID\" = 0");
+            foreach ([$table, $table . '_Live'] as $target) {
+                $columns = DB::field_list($target);
+                $hasFlag = \array_key_exists('UseElementalGrid', $columns);
+                $hasArea = \array_key_exists('ElementalAreaID', $columns);
+
+                if ($hasFlag) {
+                    DB::query("UPDATE \"{$target}\" SET \"UseElementalGrid\" = 0, \"ElementalAreaID\" = 0");
+                } elseif ($hasArea) {
+                    DB::query("UPDATE \"{$target}\" SET \"ElementalAreaID\" = 0");
+                }
             }
         }
     }
@@ -90,35 +96,40 @@ final class LegacyTableSeeder
      * Add UseElementalGrid and ElementalAreaID columns to a page table.
      *
      * Simulates the old elemental extension being applied to a specific class.
+     * Adds columns to both draft and _Live tables, matching dev/build behaviour.
      * For example, `addExtensionColumns('SiteTree')` when the extension was on
      * SiteTree, or `addExtensionColumns('Page')` when it was on Page.
      */
     public function addExtensionColumns(string $table): void
     {
-        $columns = DB::field_list($table);
+        foreach ([$table, $table . '_Live'] as $target) {
+            $columns = DB::field_list($target);
 
-        if (!\array_key_exists('UseElementalGrid', $columns)) {
-            DB::query("ALTER TABLE \"{$table}\" ADD COLUMN \"UseElementalGrid\" tinyint NOT NULL DEFAULT 0");
-        }
+            if (!\array_key_exists('UseElementalGrid', $columns)) {
+                DB::query("ALTER TABLE \"{$target}\" ADD COLUMN \"UseElementalGrid\" tinyint NOT NULL DEFAULT 0");
+            }
 
-        if (!\array_key_exists('ElementalAreaID', $columns)) {
-            DB::query("ALTER TABLE \"{$table}\" ADD COLUMN \"ElementalAreaID\" int NOT NULL DEFAULT 0");
+            if (!\array_key_exists('ElementalAreaID', $columns)) {
+                DB::query("ALTER TABLE \"{$target}\" ADD COLUMN \"ElementalAreaID\" int NOT NULL DEFAULT 0");
+            }
         }
     }
 
     /**
-     * Remove extension columns from a page table.
+     * Remove extension columns from a page table (draft and _Live).
      */
     public function removeExtensionColumns(string $table): void
     {
-        $columns = DB::field_list($table);
+        foreach ([$table, $table . '_Live'] as $target) {
+            $columns = DB::field_list($target);
 
-        if (\array_key_exists('UseElementalGrid', $columns)) {
-            DB::query("ALTER TABLE \"{$table}\" DROP COLUMN \"UseElementalGrid\"");
-        }
+            if (\array_key_exists('UseElementalGrid', $columns)) {
+                DB::query("ALTER TABLE \"{$target}\" DROP COLUMN \"UseElementalGrid\"");
+            }
 
-        if (\array_key_exists('ElementalAreaID', $columns)) {
-            DB::query("ALTER TABLE \"{$table}\" DROP COLUMN \"ElementalAreaID\"");
+            if (\array_key_exists('ElementalAreaID', $columns)) {
+                DB::query("ALTER TABLE \"{$target}\" DROP COLUMN \"ElementalAreaID\"");
+            }
         }
     }
 
@@ -127,26 +138,30 @@ final class LegacyTableSeeder
      *
      * Simulates plain dnadesign/silverstripe-elemental without the WeDevelop
      * grid extension. Pages are eligible for migration based solely on having
-     * a valid ElementalAreaID.
+     * a valid ElementalAreaID. Adds to both draft and _Live tables.
      */
     public function addElementalAreaColumn(string $table): void
     {
-        $columns = DB::field_list($table);
+        foreach ([$table, $table . '_Live'] as $target) {
+            $columns = DB::field_list($target);
 
-        if (!\array_key_exists('ElementalAreaID', $columns)) {
-            DB::query("ALTER TABLE \"{$table}\" ADD COLUMN \"ElementalAreaID\" int NOT NULL DEFAULT 0");
+            if (!\array_key_exists('ElementalAreaID', $columns)) {
+                DB::query("ALTER TABLE \"{$target}\" ADD COLUMN \"ElementalAreaID\" int NOT NULL DEFAULT 0");
+            }
         }
     }
 
     /**
-     * Remove only the ElementalAreaID column from a page table.
+     * Remove only the ElementalAreaID column from a page table (draft and _Live).
      */
     public function removeElementalAreaColumn(string $table): void
     {
-        $columns = DB::field_list($table);
+        foreach ([$table, $table . '_Live'] as $target) {
+            $columns = DB::field_list($target);
 
-        if (\array_key_exists('ElementalAreaID', $columns)) {
-            DB::query("ALTER TABLE \"{$table}\" DROP COLUMN \"ElementalAreaID\"");
+            if (\array_key_exists('ElementalAreaID', $columns)) {
+                DB::query("ALTER TABLE \"{$target}\" DROP COLUMN \"ElementalAreaID\"");
+            }
         }
     }
 

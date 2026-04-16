@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\Forms\CheckboxField;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Extensions\GridPageExtension;
@@ -148,20 +149,50 @@ final class GridPageExtensionTest extends SapphireTest
         self::assertFalse($settings->overrides['lg']->visible);
     }
 
-    public function testUpdateCMSFieldsInjectsGridEditorField(): void
+    public function testNewPageDefaultsToUseGridEnabled(): void
+    {
+        $page = SiteTree::create();
+
+        self::assertTrue((bool) $page->UseGrid, 'New pages should have UseGrid enabled by default');
+    }
+
+    public function testNewPageRespectsConfiguredDefault(): void
+    {
+        Config::modify()->set(SiteTree::class, 'use_grid_by_default', false);
+
+        $page = SiteTree::create();
+
+        self::assertFalse((bool) $page->UseGrid, 'New pages should respect use_grid_by_default = false');
+    }
+
+    public function testCMSFieldsShowGridEditorWhenUseGridEnabled(): void
     {
         $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page->UseGrid = true;
         $fields = $page->getCMSFields();
 
-        self::assertNull($fields->dataFieldByName('Content'), 'Content field should be removed by extension');
-        self::assertNull($fields->dataFieldByName('Sections'), 'Sections relation field should be removed by extension');
-        self::assertNotNull($fields->dataFieldByName('GridEditor'), 'GridEditor field should be injected');
+        self::assertNull($fields->dataFieldByName('Content'), 'Content field should be removed when grid is enabled');
+        self::assertNull($fields->dataFieldByName('Sections'), 'Sections relation field should always be removed');
         self::assertInstanceOf(GridEditorField::class, $fields->dataFieldByName('GridEditor'));
+        self::assertInstanceOf(CheckboxField::class, $fields->dataFieldByName('UseGrid'));
+    }
+
+    public function testCMSFieldsShowContentEditorWhenUseGridDisabled(): void
+    {
+        $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page->UseGrid = false;
+        $fields = $page->getCMSFields();
+
+        self::assertNotNull($fields->dataFieldByName('Content'), 'Content field should be present when grid is disabled');
+        self::assertNull($fields->dataFieldByName('GridEditor'), 'GridEditor should not be present when grid is disabled');
+        self::assertNull($fields->dataFieldByName('Sections'), 'Sections relation field should always be removed');
+        self::assertInstanceOf(CheckboxField::class, $fields->dataFieldByName('UseGrid'));
     }
 
     public function testGridEditorFieldIsInsideRootMainTab(): void
     {
         $page = $this->objFromFixture(SiteTree::class, 'test_page');
+        $page->UseGrid = true;
 
         $fields = $page->getCMSFields();
 
