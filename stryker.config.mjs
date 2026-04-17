@@ -1,8 +1,8 @@
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
   testRunner: 'vitest',
-  appendPlugins: ['./stryker-react-ignorer.mjs'],
-  ignorers: ['react'],
+  appendPlugins: ['./stryker-ignorers.mjs'],
+  ignorers: ['react', 'i18nKey'],
   mutate: [
     'client/src/**/*.{ts,tsx}',
     '!client/src/**/*.{test,spec}.*',

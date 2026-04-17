@@ -498,6 +498,186 @@ describe('useDragAndDrop', () => {
     });
   });
 
+  describe('onDragOver container target', () => {
+    it('sets after=null when dropping into an empty cross-type container', () => {
+      // Empty target column: `children.length > 0` must be FALSE so `after` is null
+      // rather than dereferencing children[-1].self (which would throw). Mutants that
+      // force `true`, `>= 0`, or `<= 0` evaluate the length=0 branch as true and crash.
+      const moved = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } });
+      const col1 = createColumnNode({
+        id: 30,
+        parent: { type: 'row', id: 20 },
+        children: [moved],
+      });
+      const col2 = createColumnNode({
+        id: 31,
+        parent: { type: 'row', id: 20 },
+        children: [],
+      });
+      const row = createRowNode({
+        id: 20,
+        parent: { type: 'section', id: 10 },
+        children: [col1, col2],
+      });
+      const section = createSectionNode({
+        id: 10,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      });
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] });
+
+      const onReorder = vi.fn();
+      const { result } = renderDndHook({ tree, onReorder });
+
+      const activeId = buildDraggableId('element', 40);
+      const overContainerId = buildDraggableId('column', col2.id);
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId));
+      });
+      act(() => {
+        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overContainerId));
+      });
+      // Drop over the container itself — resolveDropPlacement's cross-type branch pushes
+      // the active element onto `filtered`, producing an `after` determined by the pending
+      // tree order.
+      act(() => {
+        result.current.dndContextProps.onDragEnd(makeDragEndEvent(activeId, overContainerId));
+      });
+
+      expect(onReorder).toHaveBeenCalledTimes(1);
+      const [, parent, after] = onReorder.mock.calls[0];
+      expect(parent).toEqual({ type: 'column', id: 31 });
+      expect(after).toBeNull();
+    });
+
+    it('sets after to the last existing child when dropping into a non-empty cross-type container', () => {
+      // Target column has [x, y, z]. Dragging element1 (from col 30) over col 31 as a
+      // container should position active AFTER the last existing child. Mutants that
+      // force the `after = …` ternary to `false`/`<= 0` return null and place active at
+      // the head, changing pending-tree order.
+      const moved = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } });
+      const x = createSimpleElement({ id: 50, parent: { type: 'column', id: 31 } });
+      const y = createSimpleElement({ id: 51, parent: { type: 'column', id: 31 } });
+      const z = createSimpleElement({ id: 52, parent: { type: 'column', id: 31 } });
+      const col1 = createColumnNode({
+        id: 30,
+        parent: { type: 'row', id: 20 },
+        children: [moved],
+      });
+      const col2 = createColumnNode({
+        id: 31,
+        parent: { type: 'row', id: 20 },
+        children: [x, y, z],
+      });
+      const row = createRowNode({
+        id: 20,
+        parent: { type: 'section', id: 10 },
+        children: [col1, col2],
+      });
+      const section = createSectionNode({
+        id: 10,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      });
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] });
+
+      const { result } = renderDndHook({ tree });
+
+      const activeId = buildDraggableId('element', 40);
+      const overContainerId = buildDraggableId('column', col2.id);
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId));
+      });
+      act(() => {
+        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overContainerId));
+      });
+
+      // Verify the pending tree places active at the END of the target column.
+      const pending = result.current.pendingTree;
+      expect(pending).not.toBeNull();
+      const targetCol = ((pending?.nodes[0] as typeof section).children?.[0] as typeof row)
+        .children?.[1];
+      expect((targetCol as typeof col2).children?.map((c) => c.id)).toEqual([50, 51, 52, 40]);
+    });
+  });
+
+  describe('placement=null cleanup', () => {
+    it('clears the pending tree when resolveDropPlacement returns null after a cross-container drag-over', () => {
+      // Trigger pendingTree via cross-container drag-over, then drop over a parseable but
+      // non-existent element ID. resolveDropPlacement can't resolve overKey in the effective
+      // maps → returns null → the else branch must call pending.clear(). If that branch is
+      // removed, pendingTree leaks after drag end.
+      const { tree, element1, col2 } = buildTwoColumnTree();
+      const onReorder = vi.fn();
+      const { result } = renderDndHook({ tree, onReorder });
+
+      const activeId = buildDraggableId('element', element1.id);
+      const overContainerId = buildDraggableId('column', col2.id);
+      const missingOverId = buildDraggableId('element', 999);
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId));
+      });
+      act(() => {
+        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overContainerId));
+      });
+      expect(result.current.pendingTree).not.toBeNull();
+
+      act(() => {
+        result.current.dndContextProps.onDragEnd(makeDragEndEvent(activeId, missingOverId));
+      });
+
+      expect(onReorder).not.toHaveBeenCalled();
+      expect(result.current.pendingTree).toBeNull();
+    });
+  });
+
+  describe('sourceIndex findIndex', () => {
+    it('calls onReorder when moving a mid-column element before the first element', () => {
+      // Column has [A, B, C] at indexes 0, 1, 2. Dragging B over A should result in
+      // [B, A, C] (overIndex=0, sourceIndex=1). The no-op detector compares sourceIndex
+      // to overIndex — with the real predicate they differ (1 !== 0) so onReorder fires.
+      // A mutant that forces sourceIndex to 0 (`findIndex((n) => true)`) would make
+      // 0 === 0 → no-op → onReorder skipped.
+      const a = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } });
+      const b = createSimpleElement({ id: 41, parent: { type: 'column', id: 30 } });
+      const c = createSimpleElement({ id: 42, parent: { type: 'column', id: 30 } });
+      const column = createColumnNode({
+        id: 30,
+        parent: { type: 'row', id: 20 },
+        children: [a, b, c],
+      });
+      const row = createRowNode({
+        id: 20,
+        parent: { type: 'section', id: 10 },
+        children: [column],
+      });
+      const section = createSectionNode({
+        id: 10,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      });
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] });
+
+      const onReorder = vi.fn();
+      const { result } = renderDndHook({ tree, onReorder });
+
+      const activeId = buildDraggableId('element', b.id);
+      const overId = buildDraggableId('element', a.id);
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId));
+      });
+      act(() => {
+        result.current.dndContextProps.onDragEnd(makeDragEndEvent(activeId, overId));
+      });
+
+      expect(onReorder).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('polymorphic collision regression', () => {
     it('handles section drag when section ID equals page ID', () => {
       // Fresh-DB scenario: page id=1, first section id=1.

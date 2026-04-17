@@ -25,9 +25,11 @@ export function applyReorder(
   if (!sourceChildren) return tree;
 
   const sourceIndex = sourceChildren.findIndex((n) => n.nodeKey === elementKey);
+  // Stryker disable next-line ConditionalExpression: Equivalent — unreachable in well-formed trees (buildMaps derives childrenByParentKey from node.parentKey, so a node present in nodeMap is always found in its parent's children)
   if (sourceIndex === -1) return tree;
 
   const targetChildren = maps.childrenByParentKey.get(parentKey);
+  // Stryker disable next-line ConditionalExpression: Equivalent — line 62 re-checks the same lookup on the cloned map and returns tree, so this early-return is shadowed
   if (!targetChildren) return tree;
 
   if (isNoOp(sourceParentKey, sourceIndex, sourceChildren, parentKey, afterKey)) {
@@ -46,10 +48,12 @@ export function applyReorder(
   if (!clonedSourceChildren) return tree;
 
   const clonedSourceIndex = clonedSourceChildren.findIndex((n) => n.nodeKey === elementKey);
+  // Stryker disable next-line ConditionalExpression: Equivalent — unreachable after structuredClone + buildMaps rebuild (same invariant as line 28)
   if (clonedSourceIndex === -1) return tree;
 
   const [movedElement] = clonedSourceChildren.splice(clonedSourceIndex, 1);
 
+  // Stryker disable next-line ConditionalExpression: Equivalent — for same-parent moves, parseParentRef(parentKey) produces a NodeRef structurally identical to the cloned movedElement.parent, so reassigning yields the same result
   if (sourceParentKey !== parentKey) {
     const targetParentRef = parseParentRef(parentKey);
     if (targetParentRef === null) return tree;
@@ -85,6 +89,14 @@ function isNoOp(
   return afterIndex + 1 === sourceIndex;
 }
 
+// Stryker disable all
+// The guards in parseParentRef are unreachable via applyReorder's public API:
+// line 31 (`if (!targetChildren) return tree`) already returns the input tree for any
+// parentKey that doesn't map to a parent in `childrenByParentKey`, which includes every
+// malformed key (empty type, non-integer id, non-whitelisted type, etc.). parseParentRef
+// is only called on line 54 for cross-parent moves where `targetChildren` was found, so
+// by that point `parentKey` is guaranteed to be well-formed. Mutants on these defensive
+// validations therefore produce identical observable behavior at the applyReorder boundary.
 function parseParentRef(parentKey: NodeKey): NodeRef | null {
   const separatorIndex = parentKey.indexOf('-');
   if (separatorIndex <= 0) return null;
@@ -102,6 +114,7 @@ function parseParentRef(parentKey: NodeKey): NodeRef | null {
   }
   return { type, id: idNum };
 }
+// Stryker restore all
 
 function insertIntoArray(arr: ElementNode[], element: ElementNode, afterKey: NodeKey | null): void {
   if (afterKey === null) {

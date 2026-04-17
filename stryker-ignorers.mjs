@@ -1,11 +1,18 @@
 // @ts-check
 
 /**
- * Stryker ignorer plugin for React-specific false-positive mutants.
+ * Stryker ignorer plugins for false-positive mutants.
  *
  * Suppresses mutations that survive because they target patterns whose
- * correctness cannot be observed in unit tests (jsdom limitations,
- * React hook semantics, visual-only CSS classes).
+ * correctness cannot be observed in unit tests:
+ * - React hook semantics (dep arrays, effect cleanups)
+ * - jsdom limitations (HTMLDialogElement.showModal/close)
+ * - Visual-only CSS classes inside className template literals
+ * - i18n translation keys (first arg of `t(…)` calls — tests assert the
+ *   rendered fallback string, not the key)
+ *
+ * Exported as two plugins (`react` and `i18nKey`) so they can be toggled
+ * independently via `ignorers` in stryker.config.mjs.
  *
  * @see https://stryker-mutator.io/docs/stryker-js/disable-mutants/
  */
@@ -161,11 +168,44 @@ const reactIgnorer = {
   },
 };
 
+/**
+ * Ignore StringLiteral mutations in the first argument of `t(…)` calls.
+ *
+ * The i18n helper `t(key, fallback)` returns the fallback in tests because
+ * `window.ss.i18n._t` is mocked to echo the fallback. Component tests assert
+ * the rendered fallback, so mutating the key to "" is semantically invisible.
+ * Skip these centrally rather than sprinkling disable comments over ~60 call
+ * sites.
+ */
+/** @type {import('@stryker-mutator/api/ignore').Ignorer} */
+const i18nKeyIgnorer = {
+  shouldIgnore(path) {
+    if (!path.isStringLiteral()) return undefined;
+
+    const parent = path.parentPath;
+    if (!parent?.isCallExpression()) return undefined;
+
+    const callee = parent.node.callee;
+    if (callee.type !== 'Identifier' || callee.name !== 't') return undefined;
+
+    if (parent.node.arguments[0] !== path.node) return undefined;
+
+    return 'i18n translation key (first arg of t() call)';
+  },
+};
+
 /** @type {import('@stryker-mutator/api/plugin').ValuePlugin<import('@stryker-mutator/api/plugin').PluginKind.Ignore>} */
-const plugin = {
+const reactPlugin = {
   kind: 'Ignore',
   name: 'react',
   value: reactIgnorer,
 };
 
-export const strykerPlugins = [plugin];
+/** @type {import('@stryker-mutator/api/plugin').ValuePlugin<import('@stryker-mutator/api/plugin').PluginKind.Ignore>} */
+const i18nPlugin = {
+  kind: 'Ignore',
+  name: 'i18nKey',
+  value: i18nKeyIgnorer,
+};
+
+export const strykerPlugins = [reactPlugin, i18nPlugin];

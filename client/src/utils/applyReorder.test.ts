@@ -228,4 +228,130 @@ describe('applyReorder', () => {
       expect(col31Result.children?.map((c: SimpleElementNode) => c.id)).toEqual([20, 10]);
     });
   });
+
+  describe('no-op detection', () => {
+    it('returns the same reference when moving an element adjacent-after its current position', () => {
+      // sourceChildren = [A, B, C]. Moving C with afterKey = B is a no-op because
+      // C is already directly after B. The isNoOp check `afterIndex + 1 === sourceIndex`
+      // (1 + 1 === 2) must return true. This distinguishes the default predicate from
+      // mutants that alter the findIndex callback or the afterIndex comparison.
+      resetIdCounter();
+      const a = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } });
+      const b = createSimpleElement({ id: 11, parent: { type: 'column', id: 30 } });
+      const c = createSimpleElement({ id: 12, parent: { type: 'column', id: 30 } });
+      const column = createColumnNode({ id: 30, children: [a, b, c] });
+      const row = createRowNode({ id: 20, children: [column] });
+      const section = createSectionNode({
+        id: 1,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      });
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] });
+
+      const result = applyReorder(
+        tree,
+        buildNodeKey('element', 12),
+        buildNodeKey('column', 30),
+        buildNodeKey('element', 11),
+      );
+
+      expect(result).toBe(tree);
+    });
+
+    it('applies the move when sourceIndex === 0 and afterKey is not a sibling', () => {
+      // Source at index 0 with an unknown afterKey exercises the `afterIndex === -1`
+      // guard in isNoOp. Default: guard returns false → move applied, appending to end.
+      // Mutant `if (false) return false;`: falls through to `afterIndex + 1 === sourceIndex`
+      // → `-1 + 1 === 0` → true → wrongly treats as no-op → returns tree unchanged.
+      resetIdCounter();
+      const a = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } });
+      const b = createSimpleElement({ id: 11, parent: { type: 'column', id: 30 } });
+      const c = createSimpleElement({ id: 12, parent: { type: 'column', id: 30 } });
+      const column = createColumnNode({ id: 30, children: [a, b, c] });
+      const row = createRowNode({ id: 20, children: [column] });
+      const section = createSectionNode({
+        id: 1,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      });
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] });
+
+      const result = applyReorder(
+        tree,
+        buildNodeKey('element', 10),
+        buildNodeKey('column', 30),
+        buildNodeKey('element', 9999),
+      );
+
+      expect(result).not.toBe(tree);
+      const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
+        .children?.[0] as ColumnNode;
+      expect(movedColumn.children?.map((c: SimpleElementNode) => c.id)).toEqual([11, 12, 10]);
+    });
+  });
+
+  describe('insertIntoArray with matching afterKey', () => {
+    it('inserts after the matching sibling when afterKey is found with multiple target children', () => {
+      // Target column has two existing children [20, 21]. Moving element 10 cross-container
+      // with afterKey=20 must position 10 immediately after 20 → [20, 10, 21]. This
+      // distinguishes the real predicate from mutants that force findIndex to always
+      // return 0, true, or -1 (all of which would yield different orderings).
+      resetIdCounter();
+      const movedEl = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } });
+      const col30 = createColumnNode({ id: 30, children: [movedEl] });
+      const existing20 = createSimpleElement({ id: 20, parent: { type: 'column', id: 31 } });
+      const existing21 = createSimpleElement({ id: 21, parent: { type: 'column', id: 31 } });
+      const col31 = createColumnNode({ id: 31, children: [existing20, existing21] });
+      const row = createRowNode({ id: 40, children: [col30, col31] });
+      const section = createSectionNode({
+        id: 1,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      });
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] });
+
+      const result = applyReorder(
+        tree,
+        buildNodeKey('element', 10),
+        buildNodeKey('column', 31),
+        buildNodeKey('element', 20),
+      );
+
+      const row40 = (result.nodes[0] as SectionNode).children?.[0] as RowNode;
+      const col31Result = row40.children?.[1] as ColumnNode;
+      expect(col31Result.children?.map((c: SimpleElementNode) => c.id)).toEqual([20, 10, 21]);
+    });
+  });
+
+  describe('overrideCounts preservation', () => {
+    it('copies overrideCounts onto the returned tree when a reorder is applied', () => {
+      // The cloned tree must preserve the original overrideCounts map (spread copy).
+      // If mutated to an empty object, this assertion fails.
+      resetIdCounter();
+      const e1 = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } });
+      const col30 = createColumnNode({ id: 30, children: [e1] });
+      const col31 = createColumnNode({ id: 31, children: [] });
+      const row = createRowNode({ id: 20, children: [col30, col31] });
+      const section = createSectionNode({
+        id: 1,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      });
+      const tree = createTreeApiResponse({
+        pageId: 1,
+        sections: [section],
+        overrideCounts: { 'column-30': 2, 'column-31': 5 },
+      });
+
+      const result = applyReorder(
+        tree,
+        buildNodeKey('element', 10),
+        buildNodeKey('column', 31),
+        null,
+      );
+
+      expect(result).not.toBe(tree);
+      expect(result.overrideCounts).toEqual({ 'column-30': 2, 'column-31': 5 });
+    });
+  });
 });
