@@ -199,13 +199,14 @@ final class GridMigrationServiceTest extends SapphireTest
         $service = $service ?? $this->createService();
         $targetPageId = $pageId ?? $this->getPageId();
 
-        $service->run(
+        $failures = $service->run(
             self::DEFAULT_VIEWPORT,
             self::ZONE,
             self::VIEWPORT_KEY_MAP,
             dryRun: false,
             pageIds: [$targetPageId],
         );
+        self::assertSame(0, $failures, 'Migration should complete without failures');
     }
 
     /**
@@ -1612,7 +1613,15 @@ final class GridMigrationServiceTest extends SapphireTest
 
         GridMigrationService::add_extension(TestFailingMigrationExtension::class);
         try {
-            $this->runMigration();
+            $service = $this->createService();
+            $failures = $service->run(
+                self::DEFAULT_VIEWPORT,
+                self::ZONE,
+                self::VIEWPORT_KEY_MAP,
+                dryRun: false,
+                pageIds: [$pageId],
+            );
+            self::assertSame(1, $failures, 'Failing extension should cause one page failure');
 
             $errors = $this->getLogMessages('error');
             self::assertCount(1, $errors);

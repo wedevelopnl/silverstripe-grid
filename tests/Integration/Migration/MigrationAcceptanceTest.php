@@ -1574,7 +1574,8 @@ final class MigrationAcceptanceTest extends SapphireTest
         $grouper = new ElementGrouper();
         $strategy = new RowPerSectionStrategy($grouper, $mapper, $viewport, $keyMap);
         $service = new GridMigrationService($reader, $mapper, $strategy, new NullLogger());
-        $service->run($viewport, self::ZONE, $keyMap, false, [$pageId]);
+        $failures = $service->run($viewport, self::ZONE, $keyMap, false, [$pageId]);
+        self::assertSame(0, $failures, 'Migration should complete without failures');
     }
 
     /**
@@ -1589,7 +1590,8 @@ final class MigrationAcceptanceTest extends SapphireTest
         $grouper = new ElementGrouper();
         $strategy = new AllRowsInSectionStrategy($grouper, $mapper, $viewport, $keyMap, new NullLogger());
         $service = new GridMigrationService($reader, $mapper, $strategy, new NullLogger());
-        $service->run($viewport, self::ZONE, $keyMap, false, [$pageId]);
+        $failures = $service->run($viewport, self::ZONE, $keyMap, false, [$pageId]);
+        self::assertSame(0, $failures, 'Migration should complete without failures');
     }
 
     private function getPageId(): int
