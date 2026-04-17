@@ -1046,6 +1046,181 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
     });
   });
 
+  describe('centerCrossing crossed-comparison at exact threshold', () => {
+    // The crossing condition uses `<=` (downward) and `>=` (upward) so that a pointer
+    // exactly on the threshold counts as crossed. Mutants tightening these to `<` / `>`
+    // are only discriminated at the exact boundary.
+    function runHorizontalAtCurrent(currentX: number, initialX: number) {
+      const target = createDroppable('row-2');
+      const targetRect = makeDomRect(250, 275, 100, 100);
+      const pointerY = 325;
+      const collisionRect = makeDomRect(currentX - 50, pointerY - 25, 100, 50);
+      const initialRect = makeDomRect(initialX - 50, pointerY - 25, 100, 50);
+      const args = {
+        active: {
+          id: 'row-1',
+          rect: { current: { initial: initialRect, translated: collisionRect } },
+          data: { current: undefined },
+        },
+        collisionRect,
+        droppableContainers: [target],
+        droppableRects: new Map([['row-2', targetRect]]),
+        pointerCoordinates: { x: currentX, y: pointerY },
+      };
+      return centerCrossing(args as never);
+    }
+
+    it('counts as crossed when dragging RIGHT with currentCX exactly at the threshold (line 209 >=)', () => {
+      // Right-drag: initialCX(100) < thresholdX(300). Crossing requires currentCX >= 300.
+      // At currentCX=300 exactly, `>= 300` is true, `> 300` is false.
+      expect(runHorizontalAtCurrent(300, 100)).toHaveLength(1);
+    });
+
+    it('counts as crossed when dragging LEFT with currentCX exactly at the threshold (line 208 <=)', () => {
+      // Left-drag: initialCX(700) > thresholdX(300). Crossing requires currentCX <= 300.
+      expect(runHorizontalAtCurrent(300, 700)).toHaveLength(1);
+    });
+  });
+
+  describe('centerCrossing margin gate at exact edge', () => {
+    // Margin gate uses strict `<` on the outer side. A pointer exactly on
+    // `rect.right + MARGIN_X` must be OUT (default) — mutant `<=` would put it IN.
+    it('excludes pointer exactly on rect.right + MARGIN_X (strict < upper bound)', () => {
+      const target = createDroppable('row-2');
+      const targetRect = makeDomRect(200, 275, 100, 100); // right = 300, MARGIN_X = 50
+      const collisionRect = makeDomRect(200, 285, 100, 50);
+      const initialRect = makeDomRect(200, 50, 100, 50);
+      const args = {
+        active: {
+          id: 'row-1',
+          rect: { current: { initial: initialRect, translated: collisionRect } },
+          data: { current: undefined },
+        },
+        collisionRect,
+        droppableContainers: [target],
+        droppableRects: new Map([['row-2', targetRect]]),
+        pointerCoordinates: { x: 350, y: 310 }, // exactly at rect.right + MARGIN_X
+      };
+      expect(centerCrossing(args as never)).toEqual([]);
+    });
+
+    it('excludes pointer exactly on rect.bottom + MARGIN_Y (strict < upper bound)', () => {
+      // Target bottom = 275 + 100 = 375. MARGIN_Y = 150. Boundary at ptrY = 525.
+      const target = createDroppable('row-2');
+      const targetRect = makeDomRect(200, 275, 100, 100);
+      const collisionRect = makeDomRect(200, 285, 100, 50);
+      const initialRect = makeDomRect(200, 50, 100, 50);
+      const args = {
+        active: {
+          id: 'row-1',
+          rect: { current: { initial: initialRect, translated: collisionRect } },
+          data: { current: undefined },
+        },
+        collisionRect,
+        droppableContainers: [target],
+        droppableRects: new Map([['row-2', targetRect]]),
+        pointerCoordinates: { x: 250, y: 525 },
+      };
+      expect(centerCrossing(args as never)).toEqual([]);
+    });
+  });
+
+  describe('centerCrossing UP-direction threshold with wide target', () => {
+    // Default thresholdY when moving UP: Math.min(rect.top + rect.height - collisionRect.height/2, targetCY).
+    // Mutant `-` → `+` only differs when the formula branch is NOT clamped by targetCY.
+    // Use a very tall target so the formula value exceeds targetCY for `-` but not for `+`
+    // → wait, both would exceed. We need collisionRect tall enough that the `-` value
+    // sits BELOW targetCY. Use collisionRect.height such that formula = rect.top + h - collisionRect.h/2
+    // is less than targetCY.
+    //
+    // target (50, 200, 200, 600): targetCY = 500, rect.bottom = 800.
+    // Small collisionRect.height=100: formula = 200+600-50 = 750. Math.min(750, 500) = 500.
+    // Large collisionRect.height=800: formula = 200+600-400 = 400. Math.min(400, 500) = 400.
+    //   Mutant +: formula = 200+600+400 = 1200. Math.min(1200, 500) = 500. DIFFERENT.
+    //
+    // Moving UP, initial Y high (below target). Threshold = 400 (default) vs 500 (mutant).
+    // currentY=450: default crossedY (initial>threshold=400, currentY<=400? 450<=400 false → not crossed).
+    //   Hmm need currentY<=threshold for UP crossing.
+    // currentY=400: default 400<=400 true → crossed. Mutant 400<=500 true → also crossed. Same.
+    // currentY=500: default 500<=400 false → not crossed. Mutant 500<=500 true → crossed. DIFFERENT.
+    it('kills Math.min formula `+` mutant when collisionRect is taller than target/2', () => {
+      const target = createDroppable('row-2');
+      const targetRect = makeDomRect(50, 200, 200, 600); // targetCY = 500, rect.bottom = 800
+      // Large collisionRect.height shifts the UP-formula threshold BELOW targetCY (to 400),
+      // so Math.min picks the formula branch. Moving UP from below target, currentY=500 means:
+      // default (threshold=400): 500 <= 400 → not crossed. Mutant + (threshold=500): 500<=500 → crossed.
+      //
+      // X is neutralised (initialCX === targetCX === 150) so crossedX can't independently
+      // trigger a collision.
+      const collisionRect = makeDomRect(50, 100, 200, 800); // center (150, 500), h=800
+      const initialRect = makeDomRect(50, 900, 200, 800); // center (150, 1300)
+      const args = {
+        active: {
+          id: 'row-1',
+          rect: { current: { initial: initialRect, translated: collisionRect } },
+          data: { current: undefined },
+        },
+        collisionRect,
+        droppableContainers: [target],
+        droppableRects: new Map([['row-2', targetRect]]),
+        pointerCoordinates: { x: 150, y: 500 },
+      };
+      // Default threshold = 400 → currentCY=500 NOT <= 400 → not crossed → empty.
+      expect(centerCrossing(args as never)).toEqual([]);
+    });
+  });
+
+  describe('overRectRef picks the correct container among multiple', () => {
+    it('selects the winning container by id, not the first one (discriminates `find((c) => true)`)', () => {
+      // Two containers both registered as droppables. The sibling filter and centerCrossing
+      // together should identify the true collision winner; overRectRef.current.id must
+      // match that winner, not the first container in the list.
+      const near = createDroppableWithRect('row-2', {
+        left: 50,
+        top: 275,
+        width: 200,
+        height: 100,
+      });
+      const decoy = createDroppableWithRect('row-99', {
+        left: 50,
+        top: 900, // far from pointer
+        width: 200,
+        height: 100,
+      });
+      const overRectRef = { current: null } as {
+        current: { id: string | number; nodeRef: { readonly current: HTMLElement | null } } | null;
+      };
+      const detect = createTypedCollisionDetection({
+        hasPendingMoveRef: { current: false },
+        overRectRef,
+      });
+
+      const args = {
+        active: {
+          id: 'row-1',
+          rect: {
+            current: {
+              initial: makeDomRect(100, 75, 100, 50),
+              translated: makeDomRect(100, 285, 100, 50),
+            },
+          },
+          data: { current: undefined },
+        },
+        collisionRect: makeDomRect(100, 285, 100, 50),
+        droppableContainers: [decoy, near], // decoy first to detect first-wins bugs
+        droppableRects: new Map([
+          ['row-2', makeDomRect(50, 275, 200, 100)],
+          ['row-99', makeDomRect(50, 900, 200, 100)],
+        ]),
+        pointerCoordinates: { x: 150, y: 310 },
+      };
+
+      detect(args as never);
+      expect(overRectRef.current?.id).toBe('row-2');
+      expect(overRectRef.current?.nodeRef).toBe(near.node);
+    });
+  });
+
   describe('centerCrossing initial-rect center computation', () => {
     // Pin the initialCX/initialCY formulas. initialCY = initialRect.top + initialRect.height/2.
     // Mutants `+` → `-` or `/2` → `*2` shift the direction classification (initialCY < targetCY
