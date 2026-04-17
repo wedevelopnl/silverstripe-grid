@@ -27,6 +27,8 @@ class GridPageExtension extends Extension
 {
     private static bool $use_grid_by_default = true;
 
+    private static bool $enable_editor_toggle = false;
+
     /** @var array<string, string> */
     private static array $db = [
         'UseGrid' => 'Boolean(1)',
@@ -68,8 +70,13 @@ class GridPageExtension extends Extension
         $owner = $this->getOwner();
 
         $fields->removeByName('Sections');
+        $fields->removeByName('UseGrid');
 
-        if ($owner->UseGrid) {
+        /** @var bool $enableToggle */
+        $enableToggle = $owner->config()->get('enable_editor_toggle');
+        $useGrid = !$enableToggle || (bool) $owner->UseGrid;
+
+        if ($useGrid) {
             $fields->removeByName('Content');
             $fields->insertAfter(
                 'MenuTitle',
@@ -80,10 +87,12 @@ class GridPageExtension extends Extension
             $insertBefore = 'Content';
         }
 
-        $fields->insertBefore(
-            $insertBefore,
-            CheckboxField::create('UseGrid', _t(__CLASS__ . '.USE_GRID', 'Use grid on this page'))
-                ->setDescription(_t(__CLASS__ . '.USE_GRID_DESCRIPTION', 'Save the page after changing this setting')),
-        );
+        if ($enableToggle) {
+            $fields->insertBefore(
+                $insertBefore,
+                CheckboxField::create('UseGrid', _t(__CLASS__ . '.USE_GRID', 'Use grid on this page'))
+                    ->setDescription(_t(__CLASS__ . '.USE_GRID_DESCRIPTION', 'Save the page after changing this setting')),
+            );
+        }
     }
 }

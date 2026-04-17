@@ -165,8 +165,32 @@ final class GridPageExtensionTest extends SapphireTest
         self::assertFalse((bool) $page->UseGrid, 'New pages should respect use_grid_by_default = false');
     }
 
+    public function testCMSFieldsHideToggleByDefault(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $fields = $page->getCMSFields();
+
+        self::assertNull($fields->dataFieldByName('UseGrid'), 'Toggle checkbox should be hidden by default');
+        self::assertNull($fields->dataFieldByName('Content'), 'Content field should be removed when toggle is disabled');
+        self::assertNull($fields->dataFieldByName('Sections'), 'Sections relation field should always be removed');
+        self::assertInstanceOf(GridEditorField::class, $fields->dataFieldByName('GridEditor'));
+    }
+
+    public function testCMSFieldsIgnoreStoredUseGridWhenToggleDisabled(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $page->UseGrid = false;
+        $fields = $page->getCMSFields();
+
+        self::assertNull($fields->dataFieldByName('UseGrid'), 'Toggle checkbox should be hidden by default');
+        self::assertNull($fields->dataFieldByName('Content'), 'Stored UseGrid=false should be ignored when toggle is disabled');
+        self::assertInstanceOf(GridEditorField::class, $fields->dataFieldByName('GridEditor'));
+    }
+
     public function testCMSFieldsShowGridEditorWhenUseGridEnabled(): void
     {
+        Config::modify()->set(Page::class, 'enable_editor_toggle', true);
+
         $page = $this->objFromFixture(Page::class, 'test_page');
         $page->UseGrid = true;
         $fields = $page->getCMSFields();
@@ -179,6 +203,8 @@ final class GridPageExtensionTest extends SapphireTest
 
     public function testCMSFieldsShowContentEditorWhenUseGridDisabled(): void
     {
+        Config::modify()->set(Page::class, 'enable_editor_toggle', true);
+
         $page = $this->objFromFixture(Page::class, 'test_page');
         $page->UseGrid = false;
         $fields = $page->getCMSFields();

@@ -35,11 +35,11 @@ Page:
     Grid: WeDevelop\Grid\Extensions\GridPageExtension
 ```
 
-Each page with the extension gets a **"Use grid on this page"** checkbox that toggles between the grid editor and the standard Content HTMLEditorField.
+By default each page with the extension uses the grid editor and the standard Content HTMLEditorField is removed from the CMS form.
 
 ### Page templates
 
-Page templates for types with the extension must handle both modes. Use `$UseGrid` to render grid sections or fall back to `$Content`:
+Use `$UseGrid` in page templates to render grid sections with a fallback to `$Content`:
 
 ```silverstripe
 <% if $UseGrid %>
@@ -48,6 +48,19 @@ Page templates for types with the extension must handle both modes. Use `$UseGri
     $Content
 <% end_if %>
 ```
+
+This pattern works whether or not the editor toggle is enabled — `$UseGrid` stays `true` when the toggle is off, so the `<% else %>` branch simply never runs. Projects that do not use the toggle can simplify to `<% loop $Sections %>$Me<% end_loop %>`.
+
+### Enabling the editor toggle
+
+To let CMS users switch between the grid editor and the Content HTMLEditorField on a per-page basis, opt in on the page type:
+
+```yaml
+App\Pages\ArticlePage:
+  enable_editor_toggle: true
+```
+
+With the toggle enabled, a **"Use grid on this page"** checkbox appears in the CMS form and the editor shown reflects the stored `UseGrid` value.
 
 ### Configuring the default
 
@@ -58,10 +71,8 @@ App\Pages\ArticlePage:
   use_grid_by_default: true    # default — grid editor on new pages
 
 App\Pages\JobPage:
-  use_grid_by_default: false   # content editor on new pages
+  use_grid_by_default: false   # content editor on new pages (only effective when enable_editor_toggle: true)
 ```
-
-CMS users can still toggle the checkbox per page regardless of the default.
 
 ## Development
 
