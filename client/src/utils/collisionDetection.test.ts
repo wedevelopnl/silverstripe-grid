@@ -1096,6 +1096,145 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
     });
   });
 
+  describe('parent containment pointer boundaries', () => {
+    // Pass-2 containment check at lines 447–458 uses strict `>=` / `<=` comparisons for
+    // all four edges. Boundary tests (pointer exactly ON each edge) pin these operators.
+    const parent = createDroppable('section-1');
+    const parentRect = makeDomRect(100, 200, 300, 400); // right=400, bottom=600
+
+    function runParentContainment(pointerX: number, pointerY: number) {
+      const detect = createTypedCollisionDetection({
+        hasPendingMoveRef: { current: false },
+      });
+      const collisionRect = makeDomRect(50, pointerY - 25, 100, 50);
+      const initialRect = makeDomRect(50, 75, 100, 50);
+      const args = {
+        active: {
+          id: 'row-1',
+          rect: { current: { initial: initialRect, translated: collisionRect } },
+          data: { current: undefined },
+        },
+        collisionRect,
+        droppableContainers: [parent],
+        droppableRects: new Map([['section-1', parentRect]]),
+        pointerCoordinates: { x: pointerX, y: pointerY },
+      };
+      return detect(args as never);
+    }
+
+    // Containment path sets value=0 (synthetic); closestCenter fallback sets value to the
+    // squared distance from the pointer to the parent center. Asserting on `value === 0`
+    // cleanly discriminates "inside parent" from the distance-based fallback.
+    function assertContained(result: ReturnType<typeof runParentContainment>) {
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('section-1');
+      expect(result[0].data?.value).toBe(0);
+    }
+    function assertNotContained(result: ReturnType<typeof runParentContainment>) {
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('section-1');
+      // Distance fallback populates a nonzero value.
+      expect(result[0].data?.value).not.toBe(0);
+    }
+
+    it('matches when pointer is exactly on the LEFT edge of the parent', () => {
+      assertContained(runParentContainment(100, 400));
+    });
+
+    it('does NOT match when pointer is 1px outside the LEFT edge', () => {
+      assertNotContained(runParentContainment(99, 400));
+    });
+
+    it('matches when pointer is exactly on the RIGHT edge (rect.left + rect.width)', () => {
+      assertContained(runParentContainment(400, 400));
+    });
+
+    it('does NOT match when pointer is 1px outside the RIGHT edge', () => {
+      assertNotContained(runParentContainment(401, 400));
+    });
+
+    it('matches when pointer is exactly on the TOP edge', () => {
+      assertContained(runParentContainment(200, 200));
+    });
+
+    it('does NOT match when pointer is 1px outside the TOP edge', () => {
+      assertNotContained(runParentContainment(200, 199));
+    });
+
+    it('matches when pointer is exactly on the BOTTOM edge (rect.top + rect.height)', () => {
+      assertContained(runParentContainment(200, 600));
+    });
+
+    it('does NOT match when pointer is 1px outside the BOTTOM edge', () => {
+      assertNotContained(runParentContainment(200, 601));
+    });
+  });
+
+  describe('nonActiveContainers filter', () => {
+    it('excludes the active container when it is registered as a droppable (discriminates active filter)', () => {
+      // Solo-sibling scenario: the only registered droppable shares the active id.
+      // Default: the filter removes it → no siblings → no sibling collision → falls through
+      // to parent (none) → returns []. Mutant `(c) => true`: active included as sibling,
+      // centerCrossing may detect its own rect (pointer inside) → returns a non-empty array.
+      const self = createDroppable('row-1');
+      const selfRect = makeDomRect(100, 95, 100, 50); // initialRect position
+      const detect = createTypedCollisionDetection({
+        hasPendingMoveRef: { current: false },
+      });
+      const collisionRect = makeDomRect(100, 285, 100, 50); // center (150, 310)
+      const initialRect = makeDomRect(100, 75, 100, 50);
+      const args = {
+        active: {
+          id: 'row-1',
+          rect: { current: { initial: initialRect, translated: collisionRect } },
+          data: { current: undefined },
+        },
+        collisionRect,
+        droppableContainers: [self],
+        droppableRects: new Map([['row-1', selfRect]]),
+        pointerCoordinates: { x: 150, y: 120 },
+      };
+      expect(detect(args as never)).toEqual([]);
+    });
+  });
+
+  describe('overRectRef only captures when collisions exist', () => {
+    it('leaves overRectRef null when there are no collisions (line 312 length > 0 guard)', () => {
+      // No droppable rect matches the pointer → empty collisions → guard prevents capture.
+      const unrelated = createDroppableWithRect('row-2', {
+        left: 1000,
+        top: 1000,
+        width: 50,
+        height: 50,
+      });
+      const overRectRef = { current: null } as {
+        current: { id: string | number; nodeRef: { readonly current: HTMLElement | null } } | null;
+      };
+      const detect = createTypedCollisionDetection({
+        hasPendingMoveRef: { current: false },
+        overRectRef,
+      });
+      const args = {
+        active: {
+          id: 'row-1',
+          rect: {
+            current: {
+              initial: makeDomRect(0, 0, 50, 50),
+              translated: makeDomRect(0, 50, 50, 50),
+            },
+          },
+          data: { current: undefined },
+        },
+        collisionRect: makeDomRect(0, 50, 50, 50),
+        droppableContainers: [unrelated],
+        droppableRects: new Map(),
+        pointerCoordinates: { x: 25, y: 75 },
+      };
+      detect(args as never);
+      expect(overRectRef.current).toBeNull();
+    });
+  });
+
   describe('overRectRef exact node reference', () => {
     it('captures the actual DOM node from the winning container (reference equality)', () => {
       const target = createDroppableWithRect('row-2', {
