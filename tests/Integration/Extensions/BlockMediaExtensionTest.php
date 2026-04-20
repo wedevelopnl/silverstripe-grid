@@ -14,6 +14,7 @@ use WeDevelop\Grid\Extensions\BlockMediaExtension;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Extensions\Support\RecordingBlockMediaExtension;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Value\AspectRatio;
 use WeDevelop\Grid\Value\MediaPosition;
@@ -403,5 +404,153 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertNull($fields->dataFieldByName('VideoProvider'));
         self::assertNull($fields->dataFieldByName('VideoHasOverlay'));
         self::assertNull($fields->dataFieldByName('VideoCustomThumbnailID'));
+    }
+
+    // ── ContentColumns field options (loop bounds) ──────────────────────────
+
+    /**
+     * With the default Bootstrap adapter (column_count=12), getContentColumnOptions
+     * produces keys [4..8] → assertArrayHasKey/NotHasKey pins each loop boundary.
+     * The ColumnWidthPickerField source also includes 0 (full-width).
+     */
+    public function testContentColumnsFieldOptionsForDefaultColumnCount(): void
+    {
+        $element = $this->createContentElement();
+        $fields = $element->getCMSFields();
+
+        $field = $fields->dataFieldByName('ContentColumns');
+        self::assertNotNull($field);
+
+        /** @var array<int, string> $source */
+        $source = $field->getSource();
+        $keys = array_keys($source);
+        sort($keys);
+
+        // Full-width (0) prepended plus range [4..8] from getContentColumnOptions
+        self::assertSame([0, 4, 5, 6, 7, 8], $keys);
+
+        // Label format '%d/%d (content/media)' — kills Minus at 449 ($total-$i → $total+$i)
+        self::assertSame('4/8 (content/media)', $source[4]);
+        self::assertSame('5/7 (content/media)', $source[5]);
+        self::assertSame('8/4 (content/media)', $source[8]);
+    }
+
+    // ── getContentPaddingDirection: both Last and LastOnDesktop → right ─────
+
+    public function testGetContentPaddingDirectionForLastOnDesktop(): void
+    {
+        // Pins the MatchArmRemoval: MediaPosition::LastOnDesktop must share the
+        // 'right' branch with MediaPosition::Last.
+        $element = $this->createContentElement();
+        $element->GapSize = 3;
+        $element->MediaPosition = MediaPosition::LastOnDesktop->value;
+
+        self::assertSame('pe-md-3', $element->getContentPaddingClasses());
+    }
+
+    // ── updateCMSFields VideoEmbed tab visibility ───────────────────────────
+
+    public function testUpdateCMSFieldsShowsVideoEmbedTabWhenEmbedNamePresent(): void
+    {
+        $element = $this->createContentElement();
+        $element->VideoEmbedName = 'A video title';
+
+        $fields = $element->getCMSFields();
+        $embedTab = $fields->fieldByName('Root.VideoEmbed');
+
+        // Pins `$embedName !== ''`: if mutated to `===`, tab is never created when name is set
+        self::assertNotNull($embedTab);
+    }
+
+    public function testUpdateCMSFieldsHidesVideoEmbedTabWhenEmbedNameEmpty(): void
+    {
+        $element = $this->createContentElement();
+        $element->VideoEmbedName = '';
+
+        $fields = $element->getCMSFields();
+        $embedTab = $fields->fieldByName('Root.VideoEmbed');
+
+        // Mirror case — mutated `===` would still create the tab when name is empty
+        self::assertNull($embedTab);
+    }
+
+    // ── onBeforeWrite resolveVideoEmbed trigger conditions ──────────────────
+
+    /**
+     * Swap in a test-only subclass of BlockMediaExtension that replaces
+     * resolveVideoEmbed() with a call counter. Lets us pin the
+     * `$changed && $videoUrl !== ''` guard without hitting the real oEmbed
+     * network path (which MediaField::saveEmbed invokes).
+     */
+    private function swapInRecordingExtension(): void
+    {
+        Config::modify()->remove(ContentElement::class, 'extensions', BlockMediaExtension::class);
+        Config::modify()->merge(ContentElement::class, 'extensions', [RecordingBlockMediaExtension::class]);
+        RecordingBlockMediaExtension::reset();
+    }
+
+    public function testOnBeforeWriteResolvesEmbedWhenURLChangedAndNonEmpty(): void
+    {
+        $this->swapInRecordingExtension();
+
+        $element = $this->createContentElement();
+        $element->write();
+        self::assertSame(0, RecordingBlockMediaExtension::$resolveCalls, 'Initial write with empty URL must not resolve');
+
+        $element->VideoURL = 'https://youtube.com/watch?v=abc';
+        $element->write();
+
+        // Pins `$changed && $videoUrl !== ''`: both sub-expressions must be true
+        self::assertSame(1, RecordingBlockMediaExtension::$resolveCalls);
+    }
+
+    public function testOnBeforeWriteSkipsResolveWhenURLUnchanged(): void
+    {
+        $this->swapInRecordingExtension();
+
+        $element = $this->createContentElement();
+        $element->VideoURL = 'https://youtube.com/watch?v=abc';
+        $element->write();
+
+        RecordingBlockMediaExtension::reset();
+        $element->Title = 'Updated title';
+        $element->write();
+
+        // `$changed` is false → guard short-circuits; mutated LogicalAnd `||` would wrongly call
+        self::assertSame(0, RecordingBlockMediaExtension::$resolveCalls);
+    }
+
+    public function testOnBeforeWriteSkipsResolveWhenURLChangedToEmpty(): void
+    {
+        $this->swapInRecordingExtension();
+
+        $element = $this->createContentElement();
+        $element->VideoURL = 'https://youtube.com/watch?v=abc';
+        $element->write();
+
+        RecordingBlockMediaExtension::reset();
+        $element->VideoURL = '';
+        $element->write();
+
+        // `$videoUrl !== ''` is false → guard short-circuits; any mutation replacing `!==` with
+        // `===` or flipping the && would call resolve here
+        self::assertSame(0, RecordingBlockMediaExtension::$resolveCalls);
+    }
+
+    public function testOnBeforeWriteSkipsResolveWhenUnchangedAndEmpty(): void
+    {
+        $this->swapInRecordingExtension();
+
+        $element = $this->createContentElement();
+        $element->VideoURL = '';
+        $element->write();
+        RecordingBlockMediaExtension::reset();
+
+        $element->Title = 'Something';
+        $element->write();
+
+        // Both sub-expressions false — LogicalAndAllSubExprNegation flips to `!$changed && !(url!=='')`
+        // which would be true here and call resolve
+        self::assertSame(0, RecordingBlockMediaExtension::$resolveCalls);
     }
 }

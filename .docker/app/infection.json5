@@ -55,7 +55,22 @@
             ignoreSourceCodeByRegex: [
                 // Auto-scaffold config restoration in migration finally blocks —
                 // process-global state invisible within a single test run
-                ".*config\\(\\)->set\\('auto_scaffold'.*",
+                ".*->set\\(.*'auto_scaffold'.*",
+                // Dedup marker values: $seen[$id] = true is only probed via isset(),
+                // so the assigned value is behaviourally irrelevant
+                ".*\\$seen\\[[^\\]]+\\]\\s*=\\s*true\\b.*",
+            ],
+        },
+        "FalseValue": {
+            ignoreSourceCodeByRegex: [
+                // Auto-scaffold suppression during duplication — the children-count
+                // guard in Section/Row::onAfterWrite already prevents duplicate scaffolding,
+                // so the `false` setting has no observable effect in tests
+                ".*->set\\(.*'auto_scaffold'.*",
+                // Legacy DB reader null-coalesce defaults — schema columns are
+                // NOT NULL with DEFAULT 0, so `(bool) ($row[...] ?? false)` is
+                // defensive dead code
+                ".*\\(bool\\)\\s*\\(\\$row\\[.*\\]\\s*\\?\\?\\s*false\\).*",
             ],
         },
         "Concat": {
@@ -70,6 +85,10 @@
                 // HTML element ID construction: $this->ID() . '_' . $optionValue
                 // is template rendering data, not business logic
                 ".*\\$this->ID\\(\\)\\s*\\.\\s*'_'.*",
+                // Validation-error field prefixes: 'parent: ' . $e->getMessage() — the prefix
+                // is diagnostic metadata for logs; the ValidationError text is never surfaced
+                // to API clients (jsonError() discards it). Testing exact message text is brittle.
+                ".*'\\w+:\\s*'\\s*\\.\\s*\\$e->getMessage\\(\\).*",
             ],
         },
         "ConcatOperandRemoval": {
@@ -82,6 +101,8 @@
                 ".*\\$i\\s*\\.\\s*'/'\\s*\\..*",
                 // HTML element ID construction (see Concat comment above)
                 ".*\\$this->ID\\(\\)\\s*\\.\\s*'_'.*",
+                // Validation-error field prefixes (see Concat comment above)
+                ".*'\\w+:\\s*'\\s*\\.\\s*\\$e->getMessage\\(\\).*",
             ],
         },
         "MethodCallRemoval": {
@@ -118,7 +139,7 @@
                 // Auto-scaffold config toggling in migration finally blocks — framework
                 // lifecycle management, not business logic. Effect is process-global and
                 // invisible within a single test run.
-                ".*config\\(\\)->set\\('auto_scaffold'.*",
+                ".*->set\\(.*'auto_scaffold'.*",
                 // Task CLI output (writeln) is user feedback, not business logic.
                 // Tests assert return codes and DB state, not output text.
                 ".*->writeln\\(.*",
@@ -160,6 +181,13 @@
                 // Error message format strings: $columnCount - 1 in sprintf produces a cosmetic
                 // max-value for the user — the actual validation condition is unaffected
                 ".*sprintf\\(.*\\$this->columnCount\\s*-\\s*1.*",
+                // SQL placeholder string: array_fill(N, count, '?') is joined with implode
+                // which ignores keys — the start index is behaviourally irrelevant
+                ".*array_fill\\(\\d+.*'\\?'.*",
+                // Legacy DB reader null-coalesce defaults — schema columns are
+                // NOT NULL with DEFAULT 0, so `(int) ($row[...] ?? 0)` is
+                // defensive dead code that can't be exercised via the DB
+                ".*\\(int\\)\\s*\\(\\$row\\[.*\\]\\s*\\?\\?\\s*0\\).*",
             ],
         },
         "IncrementInteger": {
@@ -169,6 +197,10 @@
                 ".*sprintf\\(.*\\$this->columnCount\\s*-\\s*1.*",
                 // round() precision arg in template percent — cosmetic display value
                 ".*round\\(.*\\$contentPercent.*",
+                // SQL placeholder string (see DecrementInteger comment above)
+                ".*array_fill\\(\\d+.*'\\?'.*",
+                // Legacy DB reader null-coalesce defaults (see DecrementInteger comment)
+                ".*\\(int\\)\\s*\\(\\$row\\[.*\\]\\s*\\?\\?\\s*0\\).*",
             ],
         },
         // FunctionalTest::setUp() calls SecurityToken::disable(), making the CSRF
@@ -176,6 +208,14 @@
         "NotIdentical": {
             ignoreSourceCodeByRegex: [
                 ".*->httpMethod\\(\\)\\s*!==\\s*'GET'.*",
+            ],
+        },
+        "PregMatchRemoveCaret": {
+            ignoreSourceCodeByRegex: [
+                // TitleGenerator's "... copy" suffix regex: the `^` anchor is
+                // redundant because titles are always single-line — `.*$` with or
+                // without `^` produces identical matches on any valid title.
+                ".*preg_match.*copy.*",
             ],
         },
         "Minus": {

@@ -172,4 +172,57 @@ final class OrmGridElementRepositoryTest extends SapphireTest
 
         self::assertSame([], $results);
     }
+
+    /**
+     * Pins the `usort` comparator at line 92-95:
+     *   - Spaceship direction (ascending)
+     *   - Tuple shape [Sort, ID]: removing either field breaks tie-breaking
+     *   - The call itself: without usort, results come back in class-insertion order
+     *
+     * With two parent classes feeding the result, same-Sort ties between classes
+     * force the ID tiebreaker to disambiguate, which the test asserts.
+     */
+    public function testFindByParentsSortsBySortThenIdAscending(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, sort: 2);
+        $row = GridTreeFactory::row($section, sort: 2); // same Sort as section
+
+        // Combined query: tuple ordering must put the lower ID first.
+        $results = $this->repository->findByParents([
+            Page::class => [(int) $page->ID],
+            Section::class => [(int) $section->ID],
+        ]);
+
+        self::assertCount(2, $results);
+
+        $ids = array_map(static fn (GridElement $el): int => (int) $el->ID, $results);
+        $sorted = $ids;
+        sort($sorted);
+        self::assertSame(
+            $sorted,
+            $ids,
+            'Tuple sort [Sort, ID] ascending: reversing Spaceship or dropping ID would break this',
+        );
+    }
+
+    public function testFindByParentsSortsByPrimarySortThenId(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        // Three sections with deliberately non-sequential IDs (created in this order)
+        // and Sort values that isolate primary vs. secondary keys.
+        $third = GridTreeFactory::section($page, sort: 3);
+        $first = GridTreeFactory::section($page, sort: 1);
+        $second = GridTreeFactory::section($page, sort: 2);
+
+        $results = $this->repository->findByParents([
+            Page::class => [(int) $page->ID],
+        ]);
+
+        self::assertCount(3, $results);
+        self::assertSame((int) $first->ID, (int) $results[0]->ID, 'Sort=1 must be first');
+        self::assertSame((int) $second->ID, (int) $results[1]->ID, 'Sort=2 must be second');
+        self::assertSame((int) $third->ID, (int) $results[2]->ID, 'Sort=3 must be third');
+    }
 }

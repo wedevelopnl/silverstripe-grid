@@ -129,6 +129,127 @@ final class FluentCopyToLocaleTest extends SapphireTest
     }
 
     /**
+     * `findSourceLocale` is the decision core of `onAfterLocalisedCopy`.
+     * The mutants at line 155 (NotIdentical/LogicalAnd/negation) all permute
+     * `$defaultLocale !== null && $defaultLocale->Locale !== $targetLocale`.
+     * This test exercises the private method via reflection so we can pin
+     * every branch independently of the CMS copy-button trigger.
+     */
+    public function testFindSourceLocaleReturnsDefaultWhenDefaultHasSections(): void
+    {
+        $page = $this->createPage();
+        // Section created in en_US (the global default)
+        GridTreeFactory::section($page, title: 'EN Section');
+
+        $extension = new \WeDevelop\Grid\Extensions\FluentGridPageExtension();
+        $extension->setOwner($page);
+
+        $method = new \ReflectionMethod($extension, 'findSourceLocale');
+        $method->setAccessible(true);
+
+        $result = $method->invoke($extension, (int) $page->ID, Page::class, 'nl_NL');
+
+        self::assertSame('en_US', $result);
+    }
+
+    public function testFindSourceLocaleSkipsDefaultWhenTargetEqualsDefault(): void
+    {
+        $page = $this->createPage();
+        GridTreeFactory::section($page, title: 'EN Section');
+
+        $extension = new \WeDevelop\Grid\Extensions\FluentGridPageExtension();
+        $extension->setOwner($page);
+
+        $method = new \ReflectionMethod($extension, 'findSourceLocale');
+        $method->setAccessible(true);
+
+        // Target == default → the default branch must be skipped.
+        // en_US is the only locale with sections, and it equals the target, so
+        // after the loop also excludes it we end up with null.
+        $result = $method->invoke($extension, (int) $page->ID, Page::class, 'en_US');
+
+        self::assertNull($result);
+    }
+
+    public function testFindSourceLocaleFallsThroughWhenDefaultHasNoSections(): void
+    {
+        $page = $this->createPage();
+
+        // Sections in nl_NL only, not in en_US (default)
+        FluentState::singleton()->withState(function (FluentState $state) use ($page): void {
+            $state->setLocale('nl_NL');
+            GridTreeFactory::section($page, title: 'NL Section');
+        });
+
+        $extension = new \WeDevelop\Grid\Extensions\FluentGridPageExtension();
+        $extension->setOwner($page);
+
+        $method = new \ReflectionMethod($extension, 'findSourceLocale');
+        $method->setAccessible(true);
+
+        // Target is en_US (default). Default has no sections → falls through to
+        // the Locale::getCached() loop, finds nl_NL with sections.
+        $result = $method->invoke($extension, (int) $page->ID, Page::class, 'en_US');
+
+        self::assertSame('nl_NL', $result);
+    }
+
+    public function testFindSourceLocaleReturnsNullWhenNoLocaleHasSections(): void
+    {
+        $page = $this->createPage(); // page has no sections anywhere
+
+        $extension = new \WeDevelop\Grid\Extensions\FluentGridPageExtension();
+        $extension->setOwner($page);
+
+        $method = new \ReflectionMethod($extension, 'findSourceLocale');
+        $method->setAccessible(true);
+
+        $result = $method->invoke($extension, (int) $page->ID, Page::class, 'nl_NL');
+
+        self::assertNull($result, 'No locale has sections → nothing to copy from');
+    }
+
+    /**
+     * Polymorphic-parent filter on Section::get() — the ArrayItemRemoval at
+     * FluentGridPageExtension.php:80 removes `'ParentID' => $page->ID`, leaving
+     * only `'ParentClass' => $page::class`. Two pages of the same class that
+     * share overlapping IDs with other record classes would wrongly be counted
+     * together. Pin it with two unrelated Page records, each with its own
+     * section — the targetSectionCount for page A must not include page B's.
+     */
+    public function testCopyCountsSectionsByParentIdAndClass(): void
+    {
+        $pageA = $this->createPage('Page A');
+        $pageB = Page::create();
+        $pageB->Title = 'Page B';
+        $pageB->URLSegment = 'page-b';
+        $pageB->writeToStage(Versioned::DRAFT);
+
+        GridTreeFactory::section($pageA, title: 'Section A');
+        GridTreeFactory::section($pageB, title: 'Section B');
+
+        // Copy only Page A to Dutch
+        CopyToLocaleService::singleton()->copyToLocale(Page::class, (int) $pageA->ID, 'en_US', 'nl_NL');
+
+        FluentState::singleton()->setLocale('nl_NL');
+
+        // Page A must have its section, but not Page B's
+        $pageASections = Section::get()->filter([
+            'ParentID' => $pageA->ID,
+            'ParentClass' => Page::class,
+        ]);
+        self::assertCount(1, $pageASections);
+        self::assertSame('Section A', $pageASections->first()->Title);
+
+        // Page B must NOT have been auto-copied (we didn't invoke copy on it)
+        $pageBSectionsInNl = Section::get()->filter([
+            'ParentID' => $pageB->ID,
+            'ParentClass' => Page::class,
+        ]);
+        self::assertCount(0, $pageBSectionsInNl);
+    }
+
+    /**
      * Copy should handle multiple zones — both 'main' and 'sidebar'
      * sections should be duplicated.
      */

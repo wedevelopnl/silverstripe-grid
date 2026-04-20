@@ -151,6 +151,113 @@ final class GridElementTest extends SapphireTest
         self::assertSame($originalSort, $reloaded->Sort);
     }
 
+    // ── Polymorphic parent-ID isolation ─────────────────────────────
+    // Pin the `'ParentID' => $this->ParentID` filters in ensureSortSet (432),
+    // ensureDefaultTitle (454), insertAfterSibling (405). Without that key,
+    // sibling queries would return elements from *every* parent of the same
+    // class — a correctness bug hidden by tests that only use a single parent.
+
+    public function testEnsureSortSetIsolatedPerParent(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        // Two columns under same row, each a distinct parent for content elements
+        $columnA = GridTreeFactory::column($row);
+        $columnB = GridTreeFactory::column($row);
+
+        // Column B has 3 elements, Column A has 1
+        GridTreeFactory::contentElement($columnB, title: 'B1');
+        GridTreeFactory::contentElement($columnB, title: 'B2');
+        GridTreeFactory::contentElement($columnB, title: 'B3');
+        $a1 = GridTreeFactory::contentElement($columnA, title: 'A1');
+        self::assertSame(1, $a1->Sort, 'Column A sibling count is 0 → new element Sort=1');
+
+        // Adding another under A must continue from A's own max (=1), not B's (=3)
+        $a2 = GridTreeFactory::contentElement($columnA, title: 'A2');
+        self::assertSame(
+            2,
+            $a2->Sort,
+            'Sort must be scoped to Column A; removing ParentID from the filter would yield 4',
+        );
+    }
+
+    public function testEnsureDefaultTitleCountsOnlySameParentSiblings(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $columnA = GridTreeFactory::column($row);
+        $columnB = GridTreeFactory::column($row);
+
+        // Column B already has 5 unnamed content elements
+        for ($i = 0; $i < 5; ++$i) {
+            GridTreeFactory::contentElement($columnB, title: '');
+        }
+
+        // First default-titled element under Column A should be "Content element 1"
+        // (NOT "Content element 6" which would happen if the filter ignored ParentID)
+        $a1 = GridTreeFactory::contentElement($columnA, title: '');
+        self::assertStringContainsString('1', $a1->Title);
+        self::assertStringNotContainsString('6', $a1->Title);
+    }
+
+    public function testInsertAfterSiblingBumpsOnlySameParentSiblings(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $columnA = GridTreeFactory::column($row);
+        $columnB = GridTreeFactory::column($row);
+
+        $a1 = GridTreeFactory::contentElement($columnA, title: 'A1');
+        $a2 = GridTreeFactory::contentElement($columnA, title: 'A2');
+
+        $b1 = GridTreeFactory::contentElement($columnB, title: 'B1');
+        $b2 = GridTreeFactory::contentElement($columnB, title: 'B2');
+        $originalB1Sort = (int) $b1->Sort;
+        $originalB2Sort = (int) $b2->Sort;
+
+        // Insert new element in Column A after a1 → a2 should bump from 2 → 3.
+        // Column B siblings must NOT be touched.
+        $inserted = ContentElement::create();
+        $inserted->Title = 'Inserted-A';
+        $inserted->ParentID = $columnA->ID;
+        $inserted->ParentClass = $columnA::class;
+        $inserted->write();
+        $inserted->insertAfterSibling((int) $a1->ID);
+
+        $a2 = ContentElement::get()->byID($a2->ID);
+        $b1 = ContentElement::get()->byID($b1->ID);
+        $b2 = ContentElement::get()->byID($b2->ID);
+
+        self::assertSame(3, (int) $a2->Sort, 'Column A sibling must be bumped');
+        self::assertSame($originalB1Sort, (int) $b1->Sort, 'Column B sibling must NOT be bumped');
+        self::assertSame($originalB2Sort, (int) $b2->Sort, 'Column B sibling must NOT be bumped');
+    }
+
+    public function testEnsureDefaultTitleExcludesSelfOnResave(): void
+    {
+        // Pins the `->exclude(['ID' => $this->ID])` in ensureDefaultTitle: without the
+        // self-exclusion, a re-save of a title-cleared element would count itself
+        // among siblings, off-by-one in the generated title.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $e1 = GridTreeFactory::contentElement($column, title: '');
+        self::assertStringContainsString('1', $e1->Title);
+
+        // Clear the title and re-save: sibling count is 0 (itself excluded) → still "1"
+        $e1->Title = '';
+        $e1->write();
+
+        self::assertStringContainsString('1', $e1->Title);
+        self::assertStringNotContainsString('2', $e1->Title);
+    }
+
     // ── getPage() ───────────────────────────────────────────────
 
     public function testGetPageWalksParentChain(): void

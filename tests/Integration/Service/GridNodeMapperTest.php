@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Tests\Integration\Service;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
+use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
@@ -214,5 +215,145 @@ final class GridNodeMapperTest extends SapphireTest
 
         // Cache hit should return identical object (same reference)
         self::assertSame($first, $second);
+    }
+
+    /**
+     * Pins the cache-hit early-return (ReturnRemoval mutation on line 114):
+     * with the `return` removed, the second call re-computes types from config
+     * and would see the second singular_name; the original returns the cached
+     * first value.
+     */
+    public function testGetAllowedTypesCacheShieldsFromSubsequentConfigChanges(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+
+        Config::modify()->set(Row::class, 'singular_name', 'FirstLabel');
+        $first = $this->mapper->getAllowedTypes($section);
+
+        Config::modify()->set(Row::class, 'singular_name', 'SecondLabel');
+        $second = $this->mapper->getAllowedTypes($section);
+
+        self::assertSame('FirstLabel', $first[Row::class]['label']);
+        self::assertSame(
+            'FirstLabel',
+            $second[Row::class]['label'],
+            'Cache-hit path must not re-read config',
+        );
+    }
+
+    // ─── getElementTypeInfo: singular_name / icon / description fallbacks ──
+
+    public function testElementTypeInfoLabelUsesConfiguredSingularName(): void
+    {
+        // Set a singular_name distinct from ClassInfo::shortName so the Ternary
+        // and NotIdentical mutants at line 154 become observable.
+        Config::modify()->set(ContentElement::class, 'singular_name', 'DistinctSingularLabel');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $allowed = $this->mapper->getAllowedTypes($column);
+
+        self::assertSame('DistinctSingularLabel', $allowed[ContentElement::class]['label']);
+    }
+
+    public function testElementTypeInfoLabelFallsBackToShortNameWhenSingularNameEmpty(): void
+    {
+        Config::modify()->set(ContentElement::class, 'singular_name', '');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $allowed = $this->mapper->getAllowedTypes($column);
+
+        self::assertSame(
+            ClassInfo::shortName(ContentElement::class),
+            $allowed[ContentElement::class]['label'],
+        );
+    }
+
+    public function testElementTypeInfoIconUsesConfiguredValue(): void
+    {
+        Config::modify()->set(ContentElement::class, 'icon', 'custom-icon-value');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $allowed = $this->mapper->getAllowedTypes($column);
+
+        self::assertSame('custom-icon-value', $allowed[ContentElement::class]['icon']);
+    }
+
+    public function testElementTypeInfoIconFallsBackWhenEmpty(): void
+    {
+        Config::modify()->set(ContentElement::class, 'icon', '');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $allowed = $this->mapper->getAllowedTypes($column);
+
+        self::assertSame('font-icon-block-content', $allowed[ContentElement::class]['icon']);
+    }
+
+    public function testElementTypeInfoDescriptionUsesConfiguredValue(): void
+    {
+        Config::modify()->set(ContentElement::class, 'class_description', 'My custom description');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $allowed = $this->mapper->getAllowedTypes($column);
+
+        self::assertSame('My custom description', $allowed[ContentElement::class]['description']);
+    }
+
+    public function testElementTypeInfoDescriptionFallsBackToEmptyWhenUnset(): void
+    {
+        Config::modify()->set(ContentElement::class, 'class_description', '');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $allowed = $this->mapper->getAllowedTypes($column);
+
+        self::assertSame('', $allowed[ContentElement::class]['description']);
+    }
+
+    /**
+     * mapToNode icon fallback at line 62 mirrors getElementTypeInfo's icon guard.
+     * Configuring an empty icon pins the LogicalAnd / is_string guard.
+     */
+    public function testMapToNodeIconFallsBackWhenConfigEmpty(): void
+    {
+        Config::modify()->set(Section::class, 'icon', '');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, title: 'My Section');
+
+        $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
+        $node = $this->mapper->mapToNode(
+            $section,
+            $parentRef,
+            ContainerType::Section,
+            null,
+            [],
+            null,
+        );
+
+        self::assertSame('font-icon-block-content', $node->blockSchema['icon']);
     }
 }

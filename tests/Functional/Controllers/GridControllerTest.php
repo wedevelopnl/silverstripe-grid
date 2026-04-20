@@ -1828,4 +1828,186 @@ final class GridControllerTest extends FunctionalTest
         // Should be a simple array (not object) with unique values
         self::assertSame(array_values(array_unique($data)), $data);
     }
+
+    // ─── touchOwningPage version bumps on all write endpoints ────
+
+    /**
+     * Publish the page, capture the LIVE version, run the write action, and
+     * confirm the DRAFT stage Version is higher — proves touchOwningPage() fired.
+     * Each subtest pins one of the five MethodCallRemoval mutants on the
+     * `$this->touchOwningPage(...)` calls inside apiCreateContent / apiDuplicate /
+     * apiDuplicateTo / apiReorder / apiUpdateGridSettings.
+     *
+     * @return array{int, int} [liveVersion, pageId]
+     */
+    private function publishAndCaptureLiveVersion(SiteTree $page): array
+    {
+        $page->publishRecursive();
+        $live = (int) Versioned::withVersionedMode(static function () use ($page): int {
+            Versioned::set_stage(Versioned::LIVE);
+
+            return (int) SiteTree::get()->byID($page->ID)->Version;
+        });
+
+        return [$live, (int) $page->ID];
+    }
+
+    public function testCreateContentTouchesOwningPage(): void
+    {
+        $tree = $this->buildTree();
+        [$liveVersion, $pageId] = $this->publishAndCaptureLiveVersion($this->page());
+
+        $this->jsonPost(self::BASE_URL . '/createContent', [
+            'className' => ContentElement::class,
+            'parentId' => (int) $tree['column']->ID,
+        ]);
+
+        self::assertGreaterThan($liveVersion, (int) SiteTree::get()->byID($pageId)->Version);
+    }
+
+    public function testDuplicateTouchesOwningPage(): void
+    {
+        $tree = $this->buildTree();
+        [$liveVersion, $pageId] = $this->publishAndCaptureLiveVersion($this->page());
+
+        $this->jsonPost(self::BASE_URL . '/duplicate', [
+            'id' => (int) $tree['section']->ID,
+        ]);
+
+        self::assertGreaterThan($liveVersion, (int) SiteTree::get()->byID($pageId)->Version);
+    }
+
+    public function testDuplicateToTouchesOwningPage(): void
+    {
+        $tree = $this->buildTree();
+        $page2 = $this->page2();
+        [$liveVersion, $page2Id] = $this->publishAndCaptureLiveVersion($page2);
+
+        $this->jsonPost(self::BASE_URL . '/duplicateTo', [
+            'id' => (int) $tree['section']->ID,
+            'targetPageId' => $page2Id,
+            'targetZone' => 'main',
+            'targetParent' => $this->ref($page2),
+        ]);
+
+        self::assertGreaterThan($liveVersion, (int) SiteTree::get()->byID($page2Id)->Version);
+    }
+
+    public function testReorderTouchesOwningPage(): void
+    {
+        $page = $this->page();
+        $section = GridTreeFactory::section($page, 'main', 0, 'Section');
+        $row1 = GridTreeFactory::row($section, 1, 'Row 1');
+        $row2 = GridTreeFactory::row($section, 2, 'Row 2');
+        [$liveVersion, $pageId] = $this->publishAndCaptureLiveVersion($page);
+
+        $this->jsonPatch(self::BASE_URL . '/reorder', [
+            'element' => $this->ref($row2),
+            'parent' => $this->ref($section),
+            'after' => null,
+        ]);
+
+        self::assertGreaterThan($liveVersion, (int) SiteTree::get()->byID($pageId)->Version);
+    }
+
+    public function testUpdateGridSettingsTouchesOwningPage(): void
+    {
+        $tree = $this->buildTree();
+        [$liveVersion, $pageId] = $this->publishAndCaptureLiveVersion($this->page());
+
+        $this->jsonPatch(self::BASE_URL . '/updateGridSettings', [
+            'id' => (int) $tree['column']->ID,
+            'viewport' => 'md',
+            'width' => 6,
+            'offset' => 0,
+            'visible' => true,
+        ]);
+
+        self::assertGreaterThan($liveVersion, (int) SiteTree::get()->byID($pageId)->Version);
+    }
+
+    // ─── No-op batch settings reset does not touch page ───────────
+
+    public function testResetOverridesDoesNotTouchPageWhenZeroChanged(): void
+    {
+        // Column has no overrides — resetOverrides returns 0 affected.
+        // Pins `if ($result->unwrap() > 0)`: mutated to `>= 0` would touch the
+        // page even when nothing changed.
+        $page = $this->page();
+        $section = GridTreeFactory::section($page, 'main');
+        $row = GridTreeFactory::row($section);
+        GridTreeFactory::column($row);
+
+        [$liveVersion, $pageId] = $this->publishAndCaptureLiveVersion($page);
+        $draftVersionBefore = (int) SiteTree::get()->byID($pageId)->Version;
+
+        $this->jsonDelete(self::BASE_URL . '/resetGridSettingsOverrides', [
+            'pageId' => $pageId,
+            'zone' => 'main',
+            'viewport' => null,
+        ]);
+
+        // No change — draft version must equal the pre-request version
+        self::assertSame($draftVersionBefore, (int) SiteTree::get()->byID($pageId)->Version);
+        // And still above LIVE from the publish, so we know the publish itself worked
+        self::assertGreaterThanOrEqual($liveVersion, $draftVersionBefore);
+    }
+
+    // ─── apiDuplicateTo type-mapping match arms ──────────────────
+
+    public function testDuplicateToRowIntoSectionReturns204(): void
+    {
+        // Row source → Section target. Pins the `Row => Section` match arm;
+        // if that arm is removed, expectedTargetType becomes null and the
+        // type check rejects with 400.
+        $tree = $this->buildTree();
+        $page2 = $this->page2();
+        $targetSection = GridTreeFactory::section($page2, 'main');
+
+        $response = $this->jsonPost(self::BASE_URL . '/duplicateTo', [
+            'id' => (int) $tree['row']->ID,
+            'targetPageId' => (int) $page2->ID,
+            'targetZone' => 'main',
+            'targetParent' => $this->ref($targetSection),
+        ]);
+
+        self::assertSame(204, $response->getStatusCode());
+    }
+
+    public function testDuplicateToColumnIntoRowReturns204(): void
+    {
+        // Column source → Row target. Pins the `Column => Row` match arm.
+        $tree = $this->buildTree();
+        $page2 = $this->page2();
+        $targetSection = GridTreeFactory::section($page2, 'main');
+        $targetRow = GridTreeFactory::row($targetSection);
+
+        $response = $this->jsonPost(self::BASE_URL . '/duplicateTo', [
+            'id' => (int) $tree['column']->ID,
+            'targetPageId' => (int) $page2->ID,
+            'targetZone' => 'main',
+            'targetParent' => $this->ref($targetRow),
+        ]);
+
+        self::assertSame(204, $response->getStatusCode());
+    }
+
+    public function testDuplicateToElementIntoColumnReturns204(): void
+    {
+        // Element source → Column target. Pins the `Element => Column` match arm.
+        $tree = $this->buildTree();
+        $page2 = $this->page2();
+        $targetSection = GridTreeFactory::section($page2, 'main');
+        $targetRow = GridTreeFactory::row($targetSection);
+        $targetColumn = GridTreeFactory::column($targetRow);
+
+        $response = $this->jsonPost(self::BASE_URL . '/duplicateTo', [
+            'id' => (int) $tree['content']->ID,
+            'targetPageId' => (int) $page2->ID,
+            'targetZone' => 'main',
+            'targetParent' => $this->ref($targetColumn),
+        ]);
+
+        self::assertSame(204, $response->getStatusCode());
+    }
 }

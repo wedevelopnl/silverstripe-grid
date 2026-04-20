@@ -137,6 +137,31 @@ final class SectionTest extends SapphireTest
         self::assertSame(1, $sidebar1Reloaded->Sort);
     }
 
+    public function testEnsureSortSetFiltersByParentPage(): void
+    {
+        // Pins the `'ParentID' => $this->ParentID` filter in Section::ensureSortSet.
+        // Without it, Sort would be computed across ALL pages' sections in the same zone.
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        Config::modify()->set(Row::class, 'auto_scaffold', false);
+
+        $pageA = $this->objFromFixture(Page::class, 'test_page');
+        $pageB = $this->objFromFixture(Page::class, 'test_page_2');
+
+        // Page A already has 3 sections in 'main'
+        GridTreeFactory::section($pageA, zone: 'main');
+        GridTreeFactory::section($pageA, zone: 'main');
+        GridTreeFactory::section($pageA, zone: 'main');
+
+        // First section on Page B (same zone) must get Sort=1, not 4
+        $pageBFirst = GridTreeFactory::section($pageB, zone: 'main');
+
+        self::assertSame(
+            1,
+            (int) $pageBFirst->Sort,
+            'Page B section Sort must start fresh; removing ParentID from filter would return 4',
+        );
+    }
+
     // ── Container behavior (ContainerElementTrait) ──────────────
 
     public function testGetChildrenReturnsRows(): void

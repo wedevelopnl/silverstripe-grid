@@ -570,4 +570,221 @@ final class FieldMapperTest extends TestCase
         self::assertTrue($settings->hasOverride('xs'));
         self::assertSame(1, $settings->getOverride('xs')?->width);
     }
+
+    public function testOverrideWithAllThreeFieldsDifferingFromDefaultProducesOverride(): void
+    {
+        // Size, offset, and visibility all non-zero/non-null and all differ from default —
+        // the "unset" skip guard must evaluate false so the override is emitted.
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 4, 'XS' => 8],
+            'offsetFields' => ['MD' => 0, 'XS' => 2],
+            'visibilityFields' => ['MD' => 'visible', 'XS' => 'hidden'],
+        ]);
+
+        $settings = $this->mapper->mapGridSettings($element, 'MD', ['MD' => 'md', 'XS' => 'xs']);
+
+        self::assertTrue($settings->hasOverride('xs'));
+        $xsOverride = $settings->getOverride('xs');
+        self::assertNotNull($xsOverride);
+        self::assertSame(8, $xsOverride->width);
+        self::assertSame(2, $xsOverride->offset);
+        self::assertFalse($xsOverride->visible);
+    }
+
+    // ─── Constructor override maps ────────────────────────────────────────────
+
+    public function testCustomVerticalAlignMapReplacesDefaults(): void
+    {
+        // When a map is injected, it replaces the constant entirely — the default
+        // 'align-items-center' → 'center' mapping must no longer apply.
+        $mapper = new FieldMapper(verticalAlignMap: ['custom-class' => 'custom-value']);
+
+        self::assertSame(
+            'custom-value',
+            $mapper->mapMediaFields(new LegacyMediaData(['ContentVerticalAlign' => 'custom-class']))->VerticalAlignment,
+        );
+        self::assertSame(
+            'top',
+            $mapper->mapMediaFields(new LegacyMediaData(['ContentVerticalAlign' => 'align-items-center']))->VerticalAlignment,
+            'Default mapping must not apply when overridden',
+        );
+    }
+
+    public function testCustomMediaPositionMapReplacesDefaults(): void
+    {
+        $mapper = new FieldMapper(mediaPositionMap: ['custom-order' => 'custom-position']);
+
+        self::assertSame(
+            'custom-position',
+            $mapper->mapMediaFields(new LegacyMediaData(['MediaPosition' => 'custom-order']))->MediaPosition,
+        );
+        self::assertSame(
+            'first',
+            $mapper->mapMediaFields(new LegacyMediaData(['MediaPosition' => 'order-2']))->MediaPosition,
+            'Default mapping must not apply when overridden',
+        );
+    }
+
+    public function testCustomGapSizeMapReplacesDefaults(): void
+    {
+        // Key 0 exists but maps to 99 instead of 0; entries -1 and 1 are absent so
+        // the "?? 0" default in mapMediaFields must look up [0], not some neighbour.
+        $mapper = new FieldMapper(gapSizeMap: [0 => 99, 5 => 77]);
+
+        self::assertSame(77, $mapper->mapMediaFields(new LegacyMediaData(['ExtraColumnGap' => 5]))->GapSize);
+        self::assertSame(
+            0,
+            $mapper->mapMediaFields(new LegacyMediaData(['ExtraColumnGap' => 7]))->GapSize,
+            'Values outside custom map fall through to 0 fallback',
+        );
+    }
+
+    public function testCustomGapSizeMapDefaultKeyLookupOnMissingField(): void
+    {
+        // ExtraColumnGap absent → $gap defaults to 0 → $gapSizeMap[0] → 99.
+        // This pins the "?? 0" default literal: if mutated to ?? 1 or ?? -1,
+        // those keys aren't in the custom map and the result becomes 0.
+        $mapper = new FieldMapper(gapSizeMap: [0 => 99]);
+
+        self::assertSame(99, $mapper->mapMediaFields(new LegacyMediaData([]))->GapSize);
+    }
+
+    // ─── Default viewport fallbacks ───────────────────────────────────────────
+
+    public function testDefaultViewportVisibilityHiddenProducesFalseDefault(): void
+    {
+        // Pins `?? true` Coalesce: mutated to `true ?? ...` the default always becomes true,
+        // masking explicit 'hidden' on the default viewport.
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8],
+            'offsetFields' => ['MD' => 0],
+            'visibilityFields' => ['MD' => 'hidden'],
+        ]);
+
+        $settings = $this->mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertFalse($settings->default->visible);
+    }
+
+    public function testDefaultViewportSizeFieldMissingDefaultsToColumnCount(): void
+    {
+        // sizeFields key absent → raw width falls back to 0 → > 0 check fails → columnCount.
+        // Kills IncrementInteger on `?? 0` (which would yield raw=1, i.e. width=1).
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => [],
+            'offsetFields' => ['MD' => 0],
+        ]);
+
+        $settings = $this->mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertSame(12, $settings->default->width);
+    }
+
+    public function testDefaultViewportOffsetFieldMissingDefaultsToZero(): void
+    {
+        // offsetFields key absent → `?? 0` → 0. Kills IncrementInteger (`?? 1` would yield offset=1).
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8],
+            'offsetFields' => [],
+        ]);
+
+        $settings = $this->mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertSame(0, $settings->default->offset);
+    }
+
+    public function testOverrideViewportOffsetFieldMissingDefaultsToZero(): void
+    {
+        // Override viewport has a size present (so it enters the override path) but no
+        // offset — the `?? 0` must produce offset 0, not 1 (IncrementInteger mutation).
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8, 'XS' => 6],
+            'offsetFields' => ['MD' => 0],
+        ]);
+
+        $settings = $this->mapper->mapGridSettings($element, 'MD', ['MD' => 'md', 'XS' => 'xs']);
+
+        self::assertTrue($settings->hasOverride('xs'));
+        self::assertSame(0, $settings->getOverride('xs')?->offset);
+    }
+
+    // ─── Clamp-warning log context ────────────────────────────────────────────
+
+    public function testClampLogContextContainsOldAndNewWidthAndOffset(): void
+    {
+        // Pins the log context array keys: removing 'oldWidth'/'oldOffset' (or replacing
+        // `=>` with `>`) must fail the assertion.
+        /** @var array<string, mixed>|null $context */
+        $context = null;
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::atLeastOnce())
+            ->method('warning')
+            ->with(
+                self::anything(),
+                self::callback(static function (array $ctx) use (&$context): bool {
+                    $context = $ctx;
+                    return true;
+                }),
+            );
+
+        $mapper = new FieldMapper(columnCount: 12, logger: $logger);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 15],   // clamps to 12
+            'offsetFields' => ['MD' => 14], // clamps via reclamp to 0
+        ]);
+
+        $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertNotNull($context);
+        self::assertSame(15, $context['oldWidth']);
+        self::assertSame(12, $context['newWidth']);
+        self::assertSame(14, $context['oldOffset']);
+        self::assertSame(0, $context['newOffset']);
+    }
+
+    // ─── Media field integer / boolean defaults ───────────────────────────────
+
+    public function testMediaImageIDDefaultsToZeroWhenAbsent(): void
+    {
+        // `?? 0` default: mutants would yield 1 (Inc), -1 (Dec), or passthrough (Coalesce).
+        $result = $this->mapper->mapMediaFields(new LegacyMediaData([]));
+
+        self::assertSame(0, $result->MediaImageID);
+    }
+
+    public function testMediaImageIDIsPreservedWhenPresent(): void
+    {
+        // Kills `Coalesce` mutant `0 ?? $fields['MediaImageID']` (always returns 0).
+        $result = $this->mapper->mapMediaFields(new LegacyMediaData(['MediaImageID' => 42]));
+
+        self::assertSame(42, $result->MediaImageID);
+    }
+
+    public function testVideoCustomThumbnailIDDefaultsToZeroWhenAbsent(): void
+    {
+        $result = $this->mapper->mapMediaFields(new LegacyMediaData([]));
+
+        self::assertSame(0, $result->VideoCustomThumbnailID);
+    }
+
+    public function testVideoHasOverlayDefaultsToFalseWhenAbsent(): void
+    {
+        // Kills `FalseValue` mutant `?? true`.
+        $result = $this->mapper->mapMediaFields(new LegacyMediaData([]));
+
+        self::assertFalse($result->VideoHasOverlay);
+    }
+
+    public function testMediaTypeAndCaptionArePreservedWhenPresent(): void
+    {
+        // Kills `Coalesce` mutants at MediaType/MediaCaption (`'' ?? $fields[...]` always yields '').
+        $result = $this->mapper->mapMediaFields(new LegacyMediaData([
+            'MediaType' => 'image',
+            'MediaCaption' => 'Hero shot',
+        ]));
+
+        self::assertSame('image', $result->MediaType);
+        self::assertSame('Hero shot', $result->MediaCaption);
+    }
 }

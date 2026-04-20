@@ -260,4 +260,54 @@ final class GridSettingsFieldTest extends SapphireTest
 
         self::assertStringContainsString('lg: 4/12+2 (hidden)', $readonly->dataValue());
     }
+
+    /**
+     * `Selected` flag on width/offset option ArrayData: pins the `$i === $selected`
+     * identical check at lines 180 and 200 — mutating to `!==` inverts the flag
+     * so the selected value becomes unselected and every other value becomes selected.
+     */
+    public function testWidthOptionsMarkMatchingValueAsSelected(): void
+    {
+        $field = $this->createField();
+        $field->setValue(new GridSettings(new ViewportConfig(7, 3, true)));
+
+        $viewportData = $field->getViewportData();
+        $md = $viewportData->find('Key', 'md');
+        self::assertNotNull($md);
+
+        $selectedWidths = [];
+        foreach ($md->WidthOptions as $opt) {
+            if ($opt->Selected) {
+                $selectedWidths[] = $opt->Value;
+            }
+        }
+        self::assertSame([7], $selectedWidths, 'Exactly one width option (=7) must be flagged Selected');
+
+        $selectedOffsets = [];
+        foreach ($md->OffsetOptions as $opt) {
+            if ($opt->Selected) {
+                $selectedOffsets[] = $opt->Value;
+            }
+        }
+        self::assertSame([3], $selectedOffsets, 'Exactly one offset option (=3) must be flagged Selected');
+    }
+
+    /**
+     * Pins `$parsedOffset = is_numeric($offset) ? (int) $offset : 0;` at line 153.
+     * When a form override omits offset, it must default to 0, not 1 or -1.
+     */
+    public function testOverrideWithMissingOffsetDefaultsToZero(): void
+    {
+        $field = $this->createField();
+        $field->setValue([
+            'md' => ['width' => '12', 'offset' => '0', 'visible' => '1'],
+            // Only width + override flag; offset field absent
+            'lg' => ['width' => '6', 'override' => '1', 'visible' => '1'],
+        ]);
+
+        $viewportData = $field->getViewportData();
+        $lg = $viewportData->find('Key', 'lg');
+        self::assertNotNull($lg);
+        self::assertSame(0, $lg->Offset);
+    }
 }

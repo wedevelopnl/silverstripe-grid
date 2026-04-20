@@ -156,4 +156,27 @@ final class ReorderValidatorTest extends SapphireTest
         self::assertSame(ReorderValidator::class . '.PAGE_LEVEL_REJECTED', $error->key);
         self::assertArrayHasKey('element', $error->params);
     }
+
+    public function testParentRejectedErrorParamsIncludeBothElementAndParent(): void
+    {
+        // Section moved into a Column — PARENT_REJECTED path.
+        // Pins the `'element' => ..., 'parent' => ...` array shape: the ArrayItem
+        // mutants replace `=>` with `>` (degenerating one pair into a boolean);
+        // ArrayItemRemoval drops one key entirely.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $sectionB = GridTreeFactory::section($page);
+
+        $result = $this->getValidator()->validate($sectionB, $column);
+
+        self::assertTrue($result->isErr());
+        $error = $result->errors()[0];
+        self::assertSame(ReorderValidator::class . '.PARENT_REJECTED', $error->key);
+        self::assertArrayHasKey('element', $error->params);
+        self::assertArrayHasKey('parent', $error->params);
+        self::assertSame($sectionB->singular_name(), $error->params['element']);
+        self::assertSame($column->singular_name(), $error->params['parent']);
+    }
 }

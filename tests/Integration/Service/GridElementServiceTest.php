@@ -317,4 +317,75 @@ final class GridElementServiceTest extends SapphireTest
         self::assertArrayHasKey('element', $error->params);
         self::assertArrayHasKey('parent', $error->params);
     }
+
+    // ─── Persistence after create / duplicateTo (pin write() calls) ───────
+
+    public function testCreateElementPersistsToDatabaseWithoutInsertAfterSibling(): void
+    {
+        // Without insertAfterElementID, the outer write() is the only path that
+        // persists the new element. Pins the MethodCallRemoval at line 52.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        $result = $this->service->createElement($page, ContainerType::Section, 'main', null);
+        self::assertTrue($result->isOk());
+
+        $section = $result->unwrap();
+        self::assertGreaterThan(0, (int) $section->ID, 'write() must assign an ID');
+        self::assertInstanceOf(Section::class, Section::get()->byID((int) $section->ID));
+    }
+
+    public function testCreateContentElementPersistsToDatabaseWithoutInsertAfterSibling(): void
+    {
+        // Same as above for createContentElement — pins MethodCallRemoval at line 78.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $result = $this->service->createContentElement($column, ContentElement::class, null);
+        self::assertTrue($result->isOk());
+
+        $element = $result->unwrap();
+        self::assertGreaterThan(0, (int) $element->ID);
+        self::assertInstanceOf(ContentElement::class, ContentElement::get()->byID((int) $element->ID));
+    }
+
+    public function testDuplicateElementToPersistsCloneToDatabase(): void
+    {
+        // duplicateElementTo's WriteResult just calls `$clone->write();` with no
+        // insertAfterSibling fallback. Pins MethodCallRemoval at line 168.
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
+        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
+        $section = GridTreeFactory::section($page1, title: 'Persisted Section');
+
+        $result = $this->service->duplicateElementTo($section, $page2, (int) $page2->ID, 'main');
+        self::assertTrue($result->isOk());
+
+        $clone = $result->unwrap();
+        self::assertGreaterThan(0, (int) $clone->ID);
+        self::assertInstanceOf(Section::class, Section::get()->byID((int) $clone->ID));
+    }
+
+    // ─── Ancestor zone-walk in validateOwnership ──────────────────────────
+
+    public function testDuplicateElementToColumnResolvesZoneThroughAncestorChain(): void
+    {
+        // Row's target parent is a Column inside a Row inside a 'sidebar' Section.
+        // validateOwnership walks ancestors up to the Section and compares Zone.
+        // Pins the InstanceOf_ / While_ / Ternary mutants at lines 222-224.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $sidebarSection = GridTreeFactory::section($page, zone: 'sidebar');
+        $row = GridTreeFactory::row($sidebarSection);
+        $column = GridTreeFactory::column($row);
+
+        $elementToMove = GridTreeFactory::contentElement($column, title: 'Mover');
+
+        // Correct zone → succeeds (proves the walk reaches the Section)
+        $ok = $this->service->duplicateElementTo($elementToMove, $column, (int) $page->ID, 'sidebar');
+        self::assertTrue($ok->isOk());
+
+        // Wrong zone → ownership rejection (proves the Zone comparison runs)
+        $mismatch = $this->service->duplicateElementTo($elementToMove, $column, (int) $page->ID, 'main');
+        self::assertTrue($mismatch->isErr());
+    }
 }

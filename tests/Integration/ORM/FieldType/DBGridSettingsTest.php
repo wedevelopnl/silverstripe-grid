@@ -298,4 +298,40 @@ final class DBGridSettingsTest extends SapphireTest
         self::assertNotNull($settings);
         self::assertTrue($settings->default->visible);
     }
+
+    /**
+     * width=1 is a valid minimum. Pins `$width < 1` at line 59 — if mutated to
+     * `<= 1`, width=1 would be falsely treated as "missing data" and the field
+     * would return null.
+     */
+    public function testGetValueWithMinimumWidthOfOne(): void
+    {
+        $field = new DBGridSettings('Settings');
+        $field->setField('DefaultWidth', 1);
+        $field->setField('DefaultOffset', 0);
+        $field->setField('DefaultVisible', true);
+
+        $value = $field->getValue();
+
+        self::assertNotNull($value, 'width=1 must be treated as valid data');
+        self::assertSame(1, $value->default->width);
+    }
+
+    /**
+     * When DefaultVisible is explicitly false in the DB, getValue must preserve it.
+     * Pins both the `(bool) (... ?? true)` Coalesce/TrueValue variants — mutants
+     * that replace the fallback or swap operands would always yield true.
+     */
+    public function testGetValuePreservesExplicitFalseVisible(): void
+    {
+        $field = new DBGridSettings('Settings');
+        $field->setField('DefaultWidth', 6);
+        $field->setField('DefaultOffset', 0);
+        $field->setField('DefaultVisible', false);
+
+        $value = $field->getValue();
+
+        self::assertNotNull($value);
+        self::assertFalse($value->default->visible, 'stored false must not be masked by the ?? true fallback');
+    }
 }
