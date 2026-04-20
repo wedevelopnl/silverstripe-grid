@@ -21,7 +21,7 @@ import type {
 } from '@/api/endpoints';
 import type { ApiError } from '@/api/errors';
 import type { TreeApiResponse } from '@/types/elements';
-import { nodeRefToKey } from '@/types/identity';
+import { NodeIdentity } from '@/types/identity';
 import { applyReorder } from '@/utils/applyReorder';
 import { refreshPreview } from '@/utils/refreshPreview';
 import { showToast } from '@/utils/toast';
@@ -130,9 +130,9 @@ export function useReorderElement(pageId: number, zone: string) {
 
       const snapshot = queryClient.getQueryData<TreeApiResponse>(queryKey);
 
-      const elementKey = nodeRefToKey(params.element);
-      const parentKey = nodeRefToKey(params.parent);
-      const afterKey = params.after === null ? null : nodeRefToKey(params.after);
+      const elementKey = NodeIdentity.toKey(params.element);
+      const parentKey = NodeIdentity.toKey(params.parent);
+      const afterKey = params.after === null ? null : NodeIdentity.toKey(params.after);
 
       const optimistic = applyReorder(tree, elementKey, parentKey, afterKey);
 

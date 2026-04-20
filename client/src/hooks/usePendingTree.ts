@@ -3,7 +3,7 @@ import type { MutableRefObject } from 'react';
 import type { ParsedDraggableId } from '@/types/dnd';
 import { buildDraggableId } from '@/types/dnd';
 import type { TreeApiResponse } from '@/types/elements';
-import { buildNodeKey, type NodeKey } from '@/types/identity';
+import { NodeIdentity, type NodeKey } from '@/types/identity';
 import { buildMaps } from '@/hooks/useElementMaps';
 import type { ElementMaps } from '@/hooks/useElementMaps';
 import { applyReorder } from '@/utils/applyReorder';
@@ -74,9 +74,9 @@ export function usePendingTree(): UsePendingTreeReturn {
       afterElementId: number | null,
       effectiveTree: TreeApiResponse,
     ): { tree: TreeApiResponse; maps: ElementMaps } | null => {
-      const activeKey = buildNodeKey(activeParsed.type, activeParsed.id);
+      const activeKey = NodeIdentity.toKey(activeParsed.type, activeParsed.id);
       const afterKey =
-        afterElementId === null ? null : buildNodeKey(activeParsed.type, afterElementId);
+        afterElementId === null ? null : NodeIdentity.toKey(activeParsed.type, afterElementId);
 
       const newTree = applyReorder(effectiveTree, activeKey, targetParentKey, afterKey);
       if (newTree === effectiveTree) return null;

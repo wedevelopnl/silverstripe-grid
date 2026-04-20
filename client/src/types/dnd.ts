@@ -1,6 +1,6 @@
 import type { ElementNode } from './elements';
 import { isContainerNode } from './elements';
-import { buildNodeKey, parseNodeKey, type NodeKey, type NodeType } from './identity';
+import { NodeIdentity, type NodeKey, type NodeType } from './identity';
 
 export const DRAGGABLE_TYPES = ['section', 'row', 'column', 'element'] as const;
 
@@ -23,15 +23,15 @@ function isDraggableType(value: NodeType): value is DraggableType {
  * so there is no translation layer between the two spaces.
  */
 export function buildDraggableId(type: DraggableType, id: number): NodeKey {
-  return buildNodeKey(type, id);
+  return NodeIdentity.toKey(type, id);
 }
 
 export function parseDraggableId(compositeId: string): ParsedDraggableId | null {
-  const ref = parseNodeKey(compositeId);
+  const ref = NodeIdentity.fromKey(compositeId);
   if (ref === null) return null;
   if (!isDraggableType(ref.type)) return null;
-  // Safe: parseNodeKey validated the template-literal shape, so compositeId
-  // is structurally a NodeKey.
+  // Safe: NodeIdentity.fromKey validated the template-literal shape, so
+  // compositeId is structurally a NodeKey.
   return { type: ref.type, id: ref.id, key: compositeId as NodeKey };
 }
 

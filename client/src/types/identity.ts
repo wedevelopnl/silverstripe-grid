@@ -5,7 +5,12 @@
  * and an element can share the same numeric ID — they live in different tables
  * with independent auto-increment sequences. Anywhere identity is stored as a
  * bare number is a latent collision bug. `NodeRef` (structural) and `NodeKey`
- * (string, for Map/Set keys) always carry the type alongside the id.
+ * (string, for Map/Set keys and dnd-kit IDs) always carry the type alongside
+ * the id.
+ *
+ * All operations on these identities live on the {@link NodeIdentity} namespace
+ * object below — there's no free-function API surface. Contributors only need
+ * to discover `NodeIdentity.*` to work with node identities.
  */
 
 export const NODE_TYPES = ['page', 'section', 'row', 'column', 'element'] as const;
@@ -25,25 +30,16 @@ function isNodeType(value: string): value is NodeType {
   return (NODE_TYPES as readonly string[]).includes(value);
 }
 
-export function buildNodeKey(type: NodeType, id: number): NodeKey {
-  return `${type}${SEPARATOR}${id}`;
+function toKey(type: NodeType, id: number): NodeKey;
+function toKey(ref: NodeRef): NodeKey;
+function toKey(typeOrRef: NodeType | NodeRef, id?: number): NodeKey {
+  if (typeof typeOrRef === 'string') {
+    return `${typeOrRef}${SEPARATOR}${id as number}`;
+  }
+  return `${typeOrRef.type}${SEPARATOR}${typeOrRef.id}`;
 }
 
-export function nodeRefToKey(ref: NodeRef): NodeKey {
-  return buildNodeKey(ref.type, ref.id);
-}
-
-/**
- * Validation boundary: accepts any `string` (dnd-kit IDs, localStorage payloads,
- * URL fragments) and returns a structured {@link NodeRef} only for well-formed
- * `${type}-${id}` keys. Returns null for anything else.
- *
- * The parameter is intentionally `string` rather than {@link NodeKey} — the
- * whole point of this function is to probe whether an untrusted string has the
- * NodeKey shape. Callers that already hold a `NodeKey` (via `buildNodeKey` or
- * narrowed by a previous `parseNodeKey` success) don't need to call this.
- */
-export function parseNodeKey(key: string): NodeRef | null {
+function fromKey(key: string): NodeRef | null {
   const separatorIndex = key.indexOf(SEPARATOR);
   if (separatorIndex <= 0) return null;
 
@@ -56,11 +52,11 @@ export function parseNodeKey(key: string): NodeRef | null {
   return { type, id: numericId };
 }
 
-export function nodeRefEquals(a: NodeRef, b: NodeRef): boolean {
+function equals(a: NodeRef, b: NodeRef): boolean {
   return a.type === b.type && a.id === b.id;
 }
 
-export function assertNodeRef(value: unknown, context: string): NodeRef {
+function assert(value: unknown, context: string): NodeRef {
   if (typeof value !== 'object' || value === null) {
     throw new TypeError(`${context}: expected NodeRef object, got ${typeof value}`);
   }
@@ -75,3 +71,23 @@ export function assertNodeRef(value: unknown, context: string): NodeRef {
   }
   return { type, id };
 }
+
+/**
+ * All operations on {@link NodeRef} / {@link NodeKey} live here so the API
+ * surface stays small and discoverable. Types remain top-level exports
+ * because interfaces/unions are what consumers reference for parameters and
+ * return types — the namespace is purely for *behavior*.
+ *
+ * @example
+ * const key = NodeIdentity.toKey('column', 42);        // 'column-42'
+ * const same = NodeIdentity.toKey(node.self);          // overload for refs
+ * const ref = NodeIdentity.fromKey(untrustedString);   // NodeRef | null
+ * const eq = NodeIdentity.equals(a.self, b.self);
+ * const validated = NodeIdentity.assert(json, 'rootParent');
+ */
+export const NodeIdentity = {
+  toKey,
+  fromKey,
+  equals,
+  assert,
+} as const;

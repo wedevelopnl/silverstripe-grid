@@ -3,7 +3,7 @@ import { resolveReorderParams } from './resolveReorderParams';
 import type { ElementMaps } from '@/hooks/useElementMaps';
 import { createColumnNode, createRowNode, createSimpleElement } from '@/testing/factories';
 import type { ElementNode } from '@/types/elements';
-import { buildNodeKey, type NodeKey } from '@/types/identity';
+import { NodeIdentity, type NodeKey } from '@/types/identity';
 
 function mapsFrom(nodes: ElementNode[]): ElementMaps {
   const nodeMap = new Map<NodeKey, ElementNode>();
@@ -21,12 +21,12 @@ describe('resolveReorderParams', () => {
     const row20 = createRowNode({ id: 20, parent: { type: 'section', id: 5 } });
     const row30 = createRowNode({ id: 30, parent: { type: 'section', id: 5 } });
     const result = resolveReorderParams({
-      activeId: buildNodeKey('row', 10),
+      activeId: NodeIdentity.toKey('row', 10),
       targetParent: { type: 'section', id: 5 },
-      targetParentKey: buildNodeKey('section', 5),
+      targetParentKey: NodeIdentity.toKey('section', 5),
       overIndex: 2,
-      containerItems: [row20.nodeKey, row30.nodeKey, buildNodeKey('row', 10)],
-      sourceParentKey: buildNodeKey('section', 5),
+      containerItems: [row20.nodeKey, row30.nodeKey, NodeIdentity.toKey('row', 10)],
+      sourceParentKey: NodeIdentity.toKey('section', 5),
       sourceIndex: 0,
       maps: mapsFrom([row20, row30]),
     });
@@ -42,12 +42,12 @@ describe('resolveReorderParams', () => {
     const row10 = createRowNode({ id: 10 });
     const row20 = createRowNode({ id: 20 });
     const result = resolveReorderParams({
-      activeId: buildNodeKey('row', 10),
+      activeId: NodeIdentity.toKey('row', 10),
       targetParent: { type: 'section', id: 5 },
-      targetParentKey: buildNodeKey('section', 5),
+      targetParentKey: NodeIdentity.toKey('section', 5),
       overIndex: 0,
       containerItems: [row10.nodeKey, row20.nodeKey],
-      sourceParentKey: buildNodeKey('section', 5),
+      sourceParentKey: NodeIdentity.toKey('section', 5),
       sourceIndex: 0,
       maps: mapsFrom([row10, row20]),
     });
@@ -61,10 +61,10 @@ describe('resolveReorderParams', () => {
       // match the `${NodeType}-${number}` shape even when typed as NodeKey.
       activeId: 'invalid' as NodeKey,
       targetParent: { type: 'section', id: 5 },
-      targetParentKey: buildNodeKey('section', 5),
+      targetParentKey: NodeIdentity.toKey('section', 5),
       overIndex: 0,
-      containerItems: ['invalid' as NodeKey, buildNodeKey('row', 20)],
-      sourceParentKey: buildNodeKey('section', 5),
+      containerItems: ['invalid' as NodeKey, NodeIdentity.toKey('row', 20)],
+      sourceParentKey: NodeIdentity.toKey('section', 5),
       sourceIndex: 1,
       maps: mapsFrom([]),
     });
@@ -76,12 +76,12 @@ describe('resolveReorderParams', () => {
     const col4 = createColumnNode({ id: 4 });
     const col5 = createColumnNode({ id: 5 });
     const result = resolveReorderParams({
-      activeId: buildNodeKey('column', 3),
+      activeId: NodeIdentity.toKey('column', 3),
       targetParent: { type: 'row', id: 10 },
-      targetParentKey: buildNodeKey('row', 10),
+      targetParentKey: NodeIdentity.toKey('row', 10),
       overIndex: 0,
-      containerItems: [buildNodeKey('column', 3), col4.nodeKey, col5.nodeKey],
-      sourceParentKey: buildNodeKey('row', 20),
+      containerItems: [NodeIdentity.toKey('column', 3), col4.nodeKey, col5.nodeKey],
+      sourceParentKey: NodeIdentity.toKey('row', 20),
       sourceIndex: 0,
       maps: mapsFrom([col4, col5]),
     });
@@ -97,17 +97,17 @@ describe('resolveReorderParams', () => {
     const element2 = createSimpleElement({ id: 2 });
     const element3 = createSimpleElement({ id: 3 });
     const result = resolveReorderParams({
-      activeId: buildNodeKey('element', 1),
+      activeId: NodeIdentity.toKey('element', 1),
       targetParent: { type: 'column', id: 100 },
-      targetParentKey: buildNodeKey('column', 100),
+      targetParentKey: NodeIdentity.toKey('column', 100),
       overIndex: 2,
       containerItems: [
         element2.nodeKey,
-        buildNodeKey('element', 1),
-        buildNodeKey('element', 1),
+        NodeIdentity.toKey('element', 1),
+        NodeIdentity.toKey('element', 1),
         element3.nodeKey,
       ],
-      sourceParentKey: buildNodeKey('column', 200),
+      sourceParentKey: NodeIdentity.toKey('column', 200),
       sourceIndex: 0,
       maps: mapsFrom([element2, element3]),
     });
@@ -122,12 +122,12 @@ describe('resolveReorderParams', () => {
   it('handles cross-container move', () => {
     const element10 = createSimpleElement({ id: 10 });
     const result = resolveReorderParams({
-      activeId: buildNodeKey('element', 5),
+      activeId: NodeIdentity.toKey('element', 5),
       targetParent: { type: 'column', id: 50 },
-      targetParentKey: buildNodeKey('column', 50),
+      targetParentKey: NodeIdentity.toKey('column', 50),
       overIndex: 1,
-      containerItems: [element10.nodeKey, buildNodeKey('element', 5)],
-      sourceParentKey: buildNodeKey('column', 30),
+      containerItems: [element10.nodeKey, NodeIdentity.toKey('element', 5)],
+      sourceParentKey: NodeIdentity.toKey('column', 30),
       sourceIndex: 0,
       maps: mapsFrom([element10]),
     });

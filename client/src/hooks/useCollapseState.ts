@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { parseNodeKey, type NodeKey } from '@/types/identity';
+import { NodeIdentity, type NodeKey } from '@/types/identity';
 
 /**
  * Collapse state for a single grid editor instance.
@@ -37,7 +37,8 @@ function readCollapsedKeys(areaId: number): ReadonlySet<NodeKey> {
     if (!Array.isArray(parsed)) return new Set();
 
     const valid = parsed.filter(
-      (value): value is NodeKey => typeof value === 'string' && parseNodeKey(value) !== null,
+      (value): value is NodeKey =>
+        typeof value === 'string' && NodeIdentity.fromKey(value) !== null,
     );
     return new Set(valid);
   } catch {

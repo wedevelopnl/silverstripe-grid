@@ -1,6 +1,6 @@
 import type { ElementNode, TreeApiResponse } from '@/types/elements';
 import { buildMaps } from '@/hooks/useElementMaps';
-import { parseNodeKey, type NodeKey } from '@/types/identity';
+import { NodeIdentity, type NodeKey } from '@/types/identity';
 
 /**
  * Apply a reorder operation to the element tree and return a new tree
@@ -49,7 +49,7 @@ export function applyReorder(
 
   const [movedElement] = clonedSourceChildren.splice(clonedSourceIndex, 1);
 
-  const targetParentRef = parseNodeKey(parentKey);
+  const targetParentRef = NodeIdentity.fromKey(parentKey);
   if (targetParentRef === null) return tree;
 
   const repositionedElement: ElementNode = {

@@ -12,7 +12,7 @@ import {
   resetIdCounter,
 } from '@/testing/factories';
 import type { TreeApiResponse } from '@/types/elements';
-import { buildNodeKey } from '@/types/identity';
+import { NodeIdentity } from '@/types/identity';
 
 beforeEach(() => {
   resetIdCounter();
@@ -69,7 +69,7 @@ describe('usePendingTree', () => {
       act(() => {
         moveResult = result.current.applyPendingMove(
           createParsedDraggableId('element', element.id),
-          buildNodeKey('column', 20),
+          NodeIdentity.toKey('column', 20),
           null,
           tree,
         );
@@ -79,11 +79,11 @@ describe('usePendingTree', () => {
       expect(result.current.pendingTree).not.toBeNull();
 
       const newMaps = moveResult!.maps;
-      const col2Children = newMaps.childrenByParentKey.get(buildNodeKey('column', 20));
+      const col2Children = newMaps.childrenByParentKey.get(NodeIdentity.toKey('column', 20));
       expect(col2Children).toHaveLength(1);
       expect(col2Children?.[0].id).toBe(element.id);
 
-      const col1Children = newMaps.childrenByParentKey.get(buildNodeKey('column', 10));
+      const col1Children = newMaps.childrenByParentKey.get(NodeIdentity.toKey('column', 10));
       expect(col1Children).toHaveLength(0);
     });
 
@@ -94,7 +94,7 @@ describe('usePendingTree', () => {
       act(() => {
         result.current.applyPendingMove(
           createParsedDraggableId('element', element.id),
-          buildNodeKey('column', 20),
+          NodeIdentity.toKey('column', 20),
           null,
           tree,
         );
@@ -110,7 +110,7 @@ describe('usePendingTree', () => {
       act(() => {
         result.current.applyPendingMove(
           createParsedDraggableId('element', element.id),
-          buildNodeKey('column', 20),
+          NodeIdentity.toKey('column', 20),
           null,
           tree,
         );
@@ -130,7 +130,7 @@ describe('usePendingTree', () => {
       act(() => {
         moveResult = result.current.applyPendingMove(
           createParsedDraggableId('element', 5),
-          buildNodeKey('column', 10),
+          NodeIdentity.toKey('column', 10),
           null,
           tree,
         );
@@ -167,7 +167,7 @@ describe('usePendingTree', () => {
       act(() => {
         result.current.applyPendingMove(
           createParsedDraggableId('element', element.id),
-          buildNodeKey('column', 20),
+          NodeIdentity.toKey('column', 20),
           null,
           tree,
         );
@@ -188,7 +188,7 @@ describe('usePendingTree', () => {
         result.current.setSourceSiblings(new Set(['element-1']));
         result.current.applyPendingMove(
           createParsedDraggableId('element', element.id),
-          buildNodeKey('column', 20),
+          NodeIdentity.toKey('column', 20),
           null,
           tree,
         );

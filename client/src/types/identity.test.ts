@@ -1,15 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import {
-  buildNodeKey,
-  parseNodeKey,
-  nodeRefToKey,
-  nodeRefEquals,
-  assertNodeRef,
-  type NodeRef,
-  type NodeType,
-} from './identity';
+import { NodeIdentity, type NodeRef, type NodeType } from './identity';
 
-describe('buildNodeKey', () => {
+describe('NodeIdentity.toKey (from parts)', () => {
   it.each<[NodeType, number, string]>([
     ['page', 1, 'page-1'],
     ['section', 42, 'section-42'],
@@ -17,18 +9,19 @@ describe('buildNodeKey', () => {
     ['column', 99, 'column-99'],
     ['element', 7, 'element-7'],
   ])('builds "%s-%d" as "%s"', (type, id, expected) => {
-    expect(buildNodeKey(type, id)).toBe(expected);
+    expect(NodeIdentity.toKey(type, id)).toBe(expected);
   });
 });
 
-describe('nodeRefToKey', () => {
-  it('matches buildNodeKey for a NodeRef', () => {
+describe('NodeIdentity.toKey (from NodeRef)', () => {
+  it('matches the parts-form result for the same type/id', () => {
     const ref: NodeRef = { type: 'section', id: 3 };
-    expect(nodeRefToKey(ref)).toBe('section-3');
+    expect(NodeIdentity.toKey(ref)).toBe('section-3');
+    expect(NodeIdentity.toKey(ref)).toBe(NodeIdentity.toKey(ref.type, ref.id));
   });
 });
 
-describe('parseNodeKey', () => {
+describe('NodeIdentity.fromKey', () => {
   it.each<[string, NodeRef]>([
     ['page-1', { type: 'page', id: 1 }],
     ['section-42', { type: 'section', id: 42 }],
@@ -36,12 +29,12 @@ describe('parseNodeKey', () => {
     ['column-99', { type: 'column', id: 99 }],
     ['element-7', { type: 'element', id: 7 }],
   ])('parses "%s" → %o', (key, expected) => {
-    expect(parseNodeKey(key)).toEqual(expected);
+    expect(NodeIdentity.fromKey(key)).toEqual(expected);
   });
 
-  it('round-trips with buildNodeKey', () => {
+  it('round-trips with toKey', () => {
     const ref: NodeRef = { type: 'page', id: 1 };
-    expect(parseNodeKey(buildNodeKey(ref.type, ref.id))).toEqual(ref);
+    expect(NodeIdentity.fromKey(NodeIdentity.toKey(ref.type, ref.id))).toEqual(ref);
   });
 
   it.each<[string, string]>([
@@ -54,27 +47,27 @@ describe('parseNodeKey', () => {
     ['floating id', 'row-1.5'],
     ['leading separator', '-5'],
   ])('returns null for %s', (_label, key) => {
-    expect(parseNodeKey(key)).toBeNull();
+    expect(NodeIdentity.fromKey(key)).toBeNull();
   });
 });
 
-describe('nodeRefEquals', () => {
+describe('NodeIdentity.equals', () => {
   it('is true for identical refs', () => {
-    expect(nodeRefEquals({ type: 'row', id: 1 }, { type: 'row', id: 1 })).toBe(true);
+    expect(NodeIdentity.equals({ type: 'row', id: 1 }, { type: 'row', id: 1 })).toBe(true);
   });
 
   it('is false when type differs', () => {
-    expect(nodeRefEquals({ type: 'page', id: 1 }, { type: 'section', id: 1 })).toBe(false);
+    expect(NodeIdentity.equals({ type: 'page', id: 1 }, { type: 'section', id: 1 })).toBe(false);
   });
 
   it('is false when id differs', () => {
-    expect(nodeRefEquals({ type: 'row', id: 1 }, { type: 'row', id: 2 })).toBe(false);
+    expect(NodeIdentity.equals({ type: 'row', id: 1 }, { type: 'row', id: 2 })).toBe(false);
   });
 });
 
-describe('assertNodeRef', () => {
+describe('NodeIdentity.assert', () => {
   it('returns a clean NodeRef for a valid shape', () => {
-    const ref = assertNodeRef({ type: 'section', id: 5 }, 'test');
+    const ref = NodeIdentity.assert({ type: 'section', id: 5 }, 'test');
     expect(ref).toEqual({ type: 'section', id: 5 });
   });
 
@@ -89,6 +82,6 @@ describe('assertNodeRef', () => {
     ['float id', { type: 'section', id: 1.5 }],
     ['string id', { type: 'section', id: '1' }],
   ])('throws for %s', (_label, value) => {
-    expect(() => assertNodeRef(value, 'test')).toThrow(TypeError);
+    expect(() => NodeIdentity.assert(value, 'test')).toThrow(TypeError);
   });
 });

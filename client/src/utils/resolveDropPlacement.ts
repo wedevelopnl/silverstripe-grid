@@ -1,7 +1,7 @@
 import { isContainerNode } from '@/types/elements';
 import type { ParsedDraggableId } from '@/types/dnd';
 import type { ElementMaps } from '@/hooks/useElementMaps';
-import { buildNodeKey, nodeRefToKey, type NodeKey } from '@/types/identity';
+import { NodeIdentity, type NodeKey } from '@/types/identity';
 import { resolveInsertDirection } from '@/utils/resolveInsertDirection';
 import { resolveReorderParams } from '@/utils/resolveReorderParams';
 import type { ReorderElementParams } from '@/api/endpoints';
@@ -35,10 +35,10 @@ export interface DropContext {
 export function resolveDropPlacement(ctx: DropContext): ReorderElementParams | null {
   const { activeParsed, overParsed, pointer, maps, sourceParentKey, sourceIndex, overRect } = ctx;
 
-  const activeKey = buildNodeKey(activeParsed.type, activeParsed.id);
+  const activeKey = NodeIdentity.toKey(activeParsed.type, activeParsed.id);
 
   if (overParsed.type === activeParsed.type) {
-    const overKey = buildNodeKey(overParsed.type, overParsed.id);
+    const overKey = NodeIdentity.toKey(overParsed.type, overParsed.id);
     const overNode = maps.nodeMap.get(overKey);
     if (!overNode) return null;
 
@@ -85,12 +85,12 @@ export function resolveDropPlacement(ctx: DropContext): ReorderElementParams | n
   }
 
   // Over a container — drop at its end.
-  const overKey = buildNodeKey(overParsed.type, overParsed.id);
+  const overKey = NodeIdentity.toKey(overParsed.type, overParsed.id);
   const containerNode = maps.nodeMap.get(overKey);
   if (!containerNode || !isContainerNode(containerNode)) return null;
 
   const targetParent = containerNode.self;
-  const targetParentKey = nodeRefToKey(targetParent);
+  const targetParentKey = NodeIdentity.toKey(targetParent);
   const children = containerNode.children ?? [];
   const compositeIds = children.map((n) => n.nodeKey);
   const filtered = compositeIds.filter((id) => id !== activeKey);

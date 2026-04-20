@@ -13,7 +13,7 @@ import { buildDraggableId, parseDraggableId } from '@/types/dnd';
 import type { DraggableType } from '@/types/dnd';
 import { isContainerNode } from '@/types/elements';
 import type { ElementNode, TreeApiResponse } from '@/types/elements';
-import { buildNodeKey, nodeRefEquals, type NodeRef } from '@/types/identity';
+import { NodeIdentity, type NodeRef } from '@/types/identity';
 import { useElementMaps } from '@/hooks/useElementMaps';
 import { usePendingTree } from '@/hooks/usePendingTree';
 import { resolveDropPlacement } from '@/utils/resolveDropPlacement';
@@ -197,9 +197,9 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
       }
 
       // Same-container: SortableContext handles visual reordering via transforms
-      if (nodeRefEquals(activeNode.parent, targetParent)) return;
+      if (NodeIdentity.equals(activeNode.parent, targetParent)) return;
 
-      const targetParentKey = buildNodeKey(targetParent.type, targetParent.id);
+      const targetParentKey = NodeIdentity.toKey(targetParent.type, targetParent.id);
       pending.applyPendingMove(activeParsed, targetParentKey, after?.id ?? null, effectiveTree);
     },
     [tree, maps, pending],

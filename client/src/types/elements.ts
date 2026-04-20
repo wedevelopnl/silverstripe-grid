@@ -39,7 +39,7 @@ interface BaseFields {
    * sections, and the matching container type for all other levels.
    */
   parent: NodeRef;
-  /** Precomputed composite key for this node (equal to `buildNodeKey(self)`). */
+  /** Precomputed composite key for this node (equal to `NodeIdentity.toKey(self)`). */
   nodeKey: NodeKey;
   /** Precomputed composite key for this node's parent. */
   parentKey: NodeKey;

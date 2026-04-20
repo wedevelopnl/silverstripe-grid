@@ -7,7 +7,7 @@ import {
   useCollapseState,
   type CollapseState,
 } from './useCollapseState';
-import { buildNodeKey } from '@/types/identity';
+import { NodeIdentity } from '@/types/identity';
 
 // jsdom's localStorage under vitest is a Proxy that doesn't expose a usable
 // `setItem`/`clear`. The hook itself wraps reads/writes in try/catch, so
@@ -71,13 +71,13 @@ describe('useCollapseState', () => {
   it('starts with an empty collapse set', () => {
     installMockLocalStorage();
     const { result } = renderHook(() => useCollapseState(areaId));
-    expect(result.current.isCollapsed(buildNodeKey('section', 1))).toBe(false);
+    expect(result.current.isCollapsed(NodeIdentity.toKey('section', 1))).toBe(false);
   });
 
   it('toggle(key) adds the key to the collapsed set', () => {
     installMockLocalStorage();
     const { result } = renderHook(() => useCollapseState(areaId));
-    const key = buildNodeKey('section', 5);
+    const key = NodeIdentity.toKey('section', 5);
 
     act(() => {
       result.current.toggle(key);
@@ -89,7 +89,7 @@ describe('useCollapseState', () => {
   it('toggle(key) twice removes the key', () => {
     installMockLocalStorage();
     const { result } = renderHook(() => useCollapseState(areaId));
-    const key = buildNodeKey('row', 10);
+    const key = NodeIdentity.toKey('row', 10);
 
     act(() => {
       result.current.toggle(key);
@@ -105,7 +105,7 @@ describe('useCollapseState', () => {
   it(`persists collapsed keys to localStorage under grid:collapsed:${areaId}`, () => {
     const mock = installMockLocalStorage();
     const { result } = renderHook(() => useCollapseState(areaId));
-    const key = buildNodeKey('column', 7);
+    const key = NodeIdentity.toKey('column', 7);
 
     act(() => {
       result.current.toggle(key);
@@ -118,15 +118,15 @@ describe('useCollapseState', () => {
 
   it('restores collapsed keys from localStorage on mount', () => {
     const mock = installMockLocalStorage();
-    const key1 = buildNodeKey('section', 1);
-    const key2 = buildNodeKey('row', 2);
+    const key1 = NodeIdentity.toKey('section', 1);
+    const key2 = NodeIdentity.toKey('row', 2);
     mock.setItem(`grid:collapsed:${areaId}`, JSON.stringify([key1, key2]));
 
     const { result } = renderHook(() => useCollapseState(areaId));
 
     expect(result.current.isCollapsed(key1)).toBe(true);
     expect(result.current.isCollapsed(key2)).toBe(true);
-    expect(result.current.isCollapsed(buildNodeKey('row', 99))).toBe(false);
+    expect(result.current.isCollapsed(NodeIdentity.toKey('row', 99))).toBe(false);
   });
 
   it.each<[string, string]>([
@@ -139,26 +139,26 @@ describe('useCollapseState', () => {
 
     const { result } = renderHook(() => useCollapseState(areaId));
 
-    expect(result.current.isCollapsed(buildNodeKey('section', 1))).toBe(false);
-    expect(result.current.isCollapsed(buildNodeKey('row', 10))).toBe(false);
+    expect(result.current.isCollapsed(NodeIdentity.toKey('section', 1))).toBe(false);
+    expect(result.current.isCollapsed(NodeIdentity.toKey('row', 10))).toBe(false);
   });
 
   it('keeps only valid NodeKey entries from a mixed localStorage payload', () => {
     const mock = installMockLocalStorage();
-    const valid = buildNodeKey('section', 1);
+    const valid = NodeIdentity.toKey('section', 1);
     mock.setItem(`grid:collapsed:${areaId}`, JSON.stringify([valid, 99, 'not-a-key', 'row-abc']));
 
     const { result } = renderHook(() => useCollapseState(areaId));
 
     expect(result.current.isCollapsed(valid)).toBe(true);
-    expect(result.current.isCollapsed(buildNodeKey('row', 99))).toBe(false);
+    expect(result.current.isCollapsed(NodeIdentity.toKey('row', 99))).toBe(false);
   });
 
   it('keeps separate state for different areaIds', () => {
     installMockLocalStorage();
     const areaA = areaId;
     const areaB = areaId + 1;
-    const key = buildNodeKey('section', 1);
+    const key = NodeIdentity.toKey('section', 1);
 
     const { result: resultA } = renderHook(() => useCollapseState(areaA));
     const { result: resultB } = renderHook(() => useCollapseState(areaB));

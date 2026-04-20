@@ -9,7 +9,7 @@ import {
   resetIdCounter,
 } from '@/testing/factories';
 import { buildMaps, useElementMaps } from './useElementMaps';
-import { buildNodeKey } from '@/types/identity';
+import { NodeIdentity } from '@/types/identity';
 
 describe('buildMaps', () => {
   it('indexes every node by composite NodeKey and exposes sibling arrays', () => {
@@ -36,21 +36,21 @@ describe('buildMaps', () => {
     const { nodeMap, childrenByParentKey } = buildMaps(tree);
 
     // Every grid node indexed by its composite key.
-    expect(nodeMap.get(buildNodeKey('section', 1))).toBe(section);
-    expect(nodeMap.get(buildNodeKey('row', 20))).toBe(row);
-    expect(nodeMap.get(buildNodeKey('column', 30))).toBe(column);
-    expect(nodeMap.get(buildNodeKey('element', 10))).toBe(element);
+    expect(nodeMap.get(NodeIdentity.toKey('section', 1))).toBe(section);
+    expect(nodeMap.get(NodeIdentity.toKey('row', 20))).toBe(row);
+    expect(nodeMap.get(NodeIdentity.toKey('column', 30))).toBe(column);
+    expect(nodeMap.get(NodeIdentity.toKey('element', 10))).toBe(element);
 
     // Pages are NOT stored in nodeMap — they only live as parent keys.
-    expect(nodeMap.has(buildNodeKey('page', 99))).toBe(false);
+    expect(nodeMap.has(NodeIdentity.toKey('page', 99))).toBe(false);
 
     // Root entry is keyed by the page's composite key.
-    expect(childrenByParentKey.get(buildNodeKey('page', 99))).toEqual([section]);
+    expect(childrenByParentKey.get(NodeIdentity.toKey('page', 99))).toEqual([section]);
 
     // Container children indexed by the container's composite key.
-    expect(childrenByParentKey.get(buildNodeKey('section', 1))).toEqual([row]);
-    expect(childrenByParentKey.get(buildNodeKey('row', 20))).toEqual([column]);
-    expect(childrenByParentKey.get(buildNodeKey('column', 30))).toEqual([element]);
+    expect(childrenByParentKey.get(NodeIdentity.toKey('section', 1))).toEqual([row]);
+    expect(childrenByParentKey.get(NodeIdentity.toKey('row', 20))).toEqual([column]);
+    expect(childrenByParentKey.get(NodeIdentity.toKey('column', 30))).toEqual([element]);
   });
 
   /**
@@ -77,8 +77,8 @@ describe('buildMaps', () => {
     const { nodeMap, childrenByParentKey } = buildMaps(tree);
 
     // The section with id=1 must NOT shadow the page with id=1.
-    const pageKey = buildNodeKey('page', 1);
-    const sectionKey = buildNodeKey('section', 1);
+    const pageKey = NodeIdentity.toKey('page', 1);
+    const sectionKey = NodeIdentity.toKey('section', 1);
     expect(pageKey).not.toBe(sectionKey);
 
     // Page entry contains BOTH sections — not overwritten by section 1's rows.
@@ -89,7 +89,7 @@ describe('buildMaps', () => {
 
     // nodeMap lookups return the correct node despite the numeric collision.
     expect(nodeMap.get(sectionKey)).toBe(section1);
-    expect(nodeMap.get(buildNodeKey('section', 2))).toBe(section2);
+    expect(nodeMap.get(NodeIdentity.toKey('section', 2))).toBe(section2);
   });
 
   it('handles containers with null children gracefully', () => {
@@ -98,8 +98,8 @@ describe('buildMaps', () => {
 
     const { nodeMap, childrenByParentKey } = buildMaps(tree);
 
-    expect(nodeMap.get(buildNodeKey('section', 5))).toBe(section);
-    expect(childrenByParentKey.has(buildNodeKey('section', 5))).toBe(false);
+    expect(nodeMap.get(NodeIdentity.toKey('section', 5))).toBe(section);
+    expect(childrenByParentKey.has(NodeIdentity.toKey('section', 5))).toBe(false);
   });
 
   it('handles an empty tree', () => {
@@ -108,7 +108,7 @@ describe('buildMaps', () => {
 
     expect(nodeMap.size).toBe(0);
     // Only the root entry (pointing at an empty array) exists.
-    expect(childrenByParentKey.get(buildNodeKey('page', 1))).toEqual([]);
+    expect(childrenByParentKey.get(NodeIdentity.toKey('page', 1))).toEqual([]);
   });
 });
 

@@ -11,7 +11,7 @@ import {
   createTreeApiResponse,
   createParsedDraggableId,
 } from '@/testing/factories';
-import { buildNodeKey } from '@/types/identity';
+import { NodeIdentity } from '@/types/identity';
 
 const DEFAULT_RECT = { left: 0, top: 0, width: 200, height: 100 };
 
@@ -78,7 +78,7 @@ describe('resolveDropPlacement', () => {
         overParsed: createParsedDraggableId('column', 23),
         pointer: null,
         maps,
-        sourceParentKey: buildNodeKey('row', 10),
+        sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
       };
@@ -100,7 +100,7 @@ describe('resolveDropPlacement', () => {
         overParsed: createParsedDraggableId('column', 21),
         pointer: null,
         maps,
-        sourceParentKey: buildNodeKey('row', 10),
+        sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
       };
@@ -118,7 +118,7 @@ describe('resolveDropPlacement', () => {
         overParsed: createParsedDraggableId('column', 31),
         pointer: { x: 10, y: 50 },
         maps,
-        sourceParentKey: buildNodeKey('row', 10),
+        sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: { left: 0, top: 0, width: 200, height: 100 },
       };
@@ -138,7 +138,7 @@ describe('resolveDropPlacement', () => {
         overParsed: createParsedDraggableId('column', 31),
         pointer: { x: 150, y: 50 },
         maps,
-        sourceParentKey: buildNodeKey('row', 10),
+        sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: { left: 0, top: 0, width: 200, height: 100 },
       };
@@ -158,7 +158,7 @@ describe('resolveDropPlacement', () => {
         overParsed: createParsedDraggableId('column', 31),
         pointer: null,
         maps,
-        sourceParentKey: buildNodeKey('row', 10),
+        sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
       };
@@ -178,7 +178,7 @@ describe('resolveDropPlacement', () => {
         overParsed: createParsedDraggableId('column', 32),
         pointer: { x: 150, y: 50 },
         maps,
-        sourceParentKey: buildNodeKey('row', 10),
+        sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: { left: 0, top: 0, width: 200, height: 100 },
       };
@@ -222,7 +222,7 @@ describe('resolveDropPlacement', () => {
         overParsed: createParsedDraggableId('column', 51),
         pointer: null,
         maps,
-        sourceParentKey: buildNodeKey('column', 50),
+        sourceParentKey: NodeIdentity.toKey('column', 50),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
       };
@@ -260,7 +260,7 @@ describe('resolveDropPlacement', () => {
         overParsed: createParsedDraggableId('column', 62),
         pointer: null,
         maps,
-        sourceParentKey: buildNodeKey('column', 50),
+        sourceParentKey: NodeIdentity.toKey('column', 50),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
       };
@@ -279,7 +279,7 @@ describe('resolveDropPlacement', () => {
         overParsed: createParsedDraggableId('column', 888),
         pointer: null,
         maps,
-        sourceParentKey: buildNodeKey('row', 1),
+        sourceParentKey: NodeIdentity.toKey('row', 1),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
       };

@@ -10,7 +10,7 @@ import type {
   ViewportSettings,
 } from '@/types/elements';
 import { buildDraggableId, type DraggableType, type ParsedDraggableId } from '@/types/dnd';
-import { buildNodeKey, type NodeRef, type NodeType } from '@/types/identity';
+import { NodeIdentity, type NodeRef, type NodeType } from '@/types/identity';
 
 /** Test-only helper: construct a fully-typed {@link ParsedDraggableId} for unit tests. */
 export function createParsedDraggableId(type: DraggableType, id: number): ParsedDraggableId {
@@ -89,8 +89,8 @@ export function createSimpleElement(
   return {
     self,
     parent,
-    nodeKey: buildNodeKey(self.type, self.id),
-    parentKey: buildNodeKey(parent.type, parent.id),
+    nodeKey: NodeIdentity.toKey(self.type, self.id),
+    parentKey: NodeIdentity.toKey(parent.type, parent.id),
     id: self.id,
     title: overrides?.title ?? `Element ${self.id}`,
     blockSchema: overrides?.blockSchema ?? defaultBlockSchema('Content'),
@@ -127,8 +127,8 @@ export function createColumnNode(
   return {
     self,
     parent,
-    nodeKey: buildNodeKey(self.type, self.id),
-    parentKey: buildNodeKey(parent.type, parent.id),
+    nodeKey: NodeIdentity.toKey(self.type, self.id),
+    parentKey: NodeIdentity.toKey(parent.type, parent.id),
     id: self.id,
     title: overrides?.title ?? `Column ${self.id}`,
     blockSchema: overrides?.blockSchema ?? defaultBlockSchema('Column'),
@@ -169,8 +169,8 @@ export function createRowNode(
   return {
     self,
     parent,
-    nodeKey: buildNodeKey(self.type, self.id),
-    parentKey: buildNodeKey(parent.type, parent.id),
+    nodeKey: NodeIdentity.toKey(self.type, self.id),
+    parentKey: NodeIdentity.toKey(parent.type, parent.id),
     id: self.id,
     title: overrides?.title ?? `Row ${self.id}`,
     blockSchema: overrides?.blockSchema ?? defaultBlockSchema('Row'),
@@ -210,8 +210,8 @@ export function createSectionNode(
   return {
     self,
     parent,
-    nodeKey: buildNodeKey(self.type, self.id),
-    parentKey: buildNodeKey(parent.type, parent.id),
+    nodeKey: NodeIdentity.toKey(self.type, self.id),
+    parentKey: NodeIdentity.toKey(parent.type, parent.id),
     id: self.id,
     title: overrides?.title ?? `Section ${self.id}`,
     blockSchema: overrides?.blockSchema ?? defaultBlockSchema('Section'),

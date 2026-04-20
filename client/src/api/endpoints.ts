@@ -1,7 +1,7 @@
 import type { ContainerType, ElementNode, TreeApiResponse } from '@/types/elements';
 import { isContainerNode } from '@/types/elements';
 import type { AcceptableContainer, PageEntry } from '@/types/duplicateTo';
-import { assertNodeRef, buildNodeKey, type NodeRef } from '@/types/identity';
+import { NodeIdentity, type NodeRef } from '@/types/identity';
 import { apiDelete, apiGet, apiPatch, apiPost } from './client';
 import { getControllerLink } from './config';
 
@@ -42,7 +42,7 @@ export function normaliseTreeResponse(raw: unknown): TreeApiResponse {
     throw new TypeError('tree response: expected an object');
   }
   const data = raw as Record<string, unknown>;
-  const rootParent = assertNodeRef(data.rootParent, 'tree response.rootParent');
+  const rootParent = NodeIdentity.assert(data.rootParent, 'tree response.rootParent');
   if (!Array.isArray(data.nodes)) {
     throw new TypeError('tree response: expected `nodes` to be an array');
   }
@@ -63,7 +63,7 @@ export function normaliseTreeResponse(raw: unknown): TreeApiResponse {
  * Assert that a validated raw node object is a well-formed ElementNode.
  *
  * This assertion is safe after normaliseNode has validated `self` and
- * `parent` via assertNodeRef and attached computed keys. The remaining
+ * `parent` via NodeIdentity.assert and attached computed keys. The remaining
  * fields (title, blockSchema, containerType, etc.) are trusted from the
  * server.
  */
@@ -76,15 +76,15 @@ function normaliseNode(raw: unknown): ElementNode {
     throw new TypeError('tree node: expected an object');
   }
   const node = raw as Record<string, unknown> & { children?: unknown };
-  const self = assertNodeRef(node.self, 'tree node.self');
-  const parent = assertNodeRef(node.parent, 'tree node.parent');
+  const self = NodeIdentity.assert(node.self, 'tree node.self');
+  const parent = NodeIdentity.assert(node.parent, 'tree node.parent');
 
   const normalised = assertElementNode({
     ...node,
     self,
     parent,
-    nodeKey: buildNodeKey(self.type, self.id),
-    parentKey: buildNodeKey(parent.type, parent.id),
+    nodeKey: NodeIdentity.toKey(self.type, self.id),
+    parentKey: NodeIdentity.toKey(parent.type, parent.id),
     id: self.id,
   });
 

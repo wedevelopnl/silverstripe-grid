@@ -8,7 +8,7 @@ import {
   resetIdCounter,
 } from '@/testing/factories';
 import type { ColumnNode, RowNode, SectionNode, SimpleElementNode } from '@/types/elements';
-import { buildNodeKey } from '@/types/identity';
+import { NodeIdentity } from '@/types/identity';
 import { applyReorder } from './applyReorder';
 
 describe('applyReorder', () => {
@@ -29,9 +29,9 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
-        buildNodeKey('element', 10),
-        buildNodeKey('column', 30),
-        buildNodeKey('element', 12),
+        NodeIdentity.toKey('element', 10),
+        NodeIdentity.toKey('column', 30),
+        NodeIdentity.toKey('element', 12),
       );
 
       const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
@@ -54,8 +54,8 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
-        buildNodeKey('element', 11),
-        buildNodeKey('column', 30),
+        NodeIdentity.toKey('element', 11),
+        NodeIdentity.toKey('column', 30),
         null,
       );
 
@@ -78,8 +78,8 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
-        buildNodeKey('element', 10),
-        buildNodeKey('column', 30),
+        NodeIdentity.toKey('element', 10),
+        NodeIdentity.toKey('column', 30),
         null,
       );
 
@@ -103,8 +103,8 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
-        buildNodeKey('element', 10),
-        buildNodeKey('column', 31),
+        NodeIdentity.toKey('element', 10),
+        NodeIdentity.toKey('column', 31),
         null,
       );
 
@@ -114,7 +114,7 @@ describe('applyReorder', () => {
       expect(movedCol30.children).toEqual([]);
       expect(movedCol31.children?.[0].id).toBe(10);
       expect(movedCol31.children?.[0].parent).toEqual({ type: 'column', id: 31 });
-      expect(movedCol31.children?.[0].parentKey).toBe(buildNodeKey('column', 31));
+      expect(movedCol31.children?.[0].parentKey).toBe(NodeIdentity.toKey('column', 31));
     });
   });
 
@@ -140,9 +140,9 @@ describe('applyReorder', () => {
       // Move section 1 after section 2 (page id and section id=1 share `1`).
       const result = applyReorder(
         tree,
-        buildNodeKey('section', 1),
-        buildNodeKey('page', 1),
-        buildNodeKey('section', 2),
+        NodeIdentity.toKey('section', 1),
+        NodeIdentity.toKey('page', 1),
+        NodeIdentity.toKey('section', 2),
       );
 
       expect(result.nodes.map((s) => s.id)).toEqual([2, 1]);
@@ -171,7 +171,12 @@ describe('applyReorder', () => {
         sections: [section1, section2],
       });
 
-      const result = applyReorder(tree, buildNodeKey('row', 10), buildNodeKey('section', 2), null);
+      const result = applyReorder(
+        tree,
+        NodeIdentity.toKey('row', 10),
+        NodeIdentity.toKey('section', 2),
+        null,
+      );
 
       const [movedSection1, movedSection2] = result.nodes as [SectionNode, SectionNode];
       expect(movedSection1.children).toEqual([]);
@@ -186,8 +191,8 @@ describe('applyReorder', () => {
       const tree = createTreeApiResponse({ pageId: 1 });
       const result = applyReorder(
         tree,
-        buildNodeKey('element', 9999),
-        buildNodeKey('column', 30),
+        NodeIdentity.toKey('element', 9999),
+        NodeIdentity.toKey('column', 30),
         null,
       );
       expect(result).toBe(tree);
@@ -196,7 +201,12 @@ describe('applyReorder', () => {
     it('returns the original tree when the target parent is not in the maps', () => {
       const tree = createTreeApiResponse({ pageId: 1 });
       const firstSection = tree.nodes[0] as SectionNode;
-      const result = applyReorder(tree, firstSection.nodeKey, buildNodeKey('page', 9999), null);
+      const result = applyReorder(
+        tree,
+        firstSection.nodeKey,
+        NodeIdentity.toKey('page', 9999),
+        null,
+      );
       expect(result).toBe(tree);
     });
 
@@ -218,9 +228,9 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
-        buildNodeKey('element', 10),
-        buildNodeKey('column', 31),
-        buildNodeKey('element', 9999),
+        NodeIdentity.toKey('element', 10),
+        NodeIdentity.toKey('column', 31),
+        NodeIdentity.toKey('element', 9999),
       );
 
       const row40 = (result.nodes[0] as SectionNode).children?.[0] as RowNode;
@@ -250,9 +260,9 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
-        buildNodeKey('element', 12),
-        buildNodeKey('column', 30),
-        buildNodeKey('element', 11),
+        NodeIdentity.toKey('element', 12),
+        NodeIdentity.toKey('column', 30),
+        NodeIdentity.toKey('element', 11),
       );
 
       expect(result).toBe(tree);
@@ -278,9 +288,9 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
-        buildNodeKey('element', 10),
-        buildNodeKey('column', 30),
-        buildNodeKey('element', 9999),
+        NodeIdentity.toKey('element', 10),
+        NodeIdentity.toKey('column', 30),
+        NodeIdentity.toKey('element', 9999),
       );
 
       expect(result).not.toBe(tree);
@@ -312,9 +322,9 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
-        buildNodeKey('element', 10),
-        buildNodeKey('column', 31),
-        buildNodeKey('element', 20),
+        NodeIdentity.toKey('element', 10),
+        NodeIdentity.toKey('column', 31),
+        NodeIdentity.toKey('element', 20),
       );
 
       const row40 = (result.nodes[0] as SectionNode).children?.[0] as RowNode;
@@ -345,8 +355,8 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
-        buildNodeKey('element', 10),
-        buildNodeKey('column', 31),
+        NodeIdentity.toKey('element', 10),
+        NodeIdentity.toKey('column', 31),
         null,
       );
 
