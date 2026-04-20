@@ -17,7 +17,7 @@ export interface NodeRef {
   readonly id: number;
 }
 
-export type NodeKey = string;
+export type NodeKey = `${NodeType}-${number}`;
 
 const SEPARATOR = '-';
 
@@ -33,7 +33,17 @@ export function nodeRefToKey(ref: NodeRef): NodeKey {
   return buildNodeKey(ref.type, ref.id);
 }
 
-export function parseNodeKey(key: NodeKey): NodeRef | null {
+/**
+ * Validation boundary: accepts any `string` (dnd-kit IDs, localStorage payloads,
+ * URL fragments) and returns a structured {@link NodeRef} only for well-formed
+ * `${type}-${id}` keys. Returns null for anything else.
+ *
+ * The parameter is intentionally `string` rather than {@link NodeKey} — the
+ * whole point of this function is to probe whether an untrusted string has the
+ * NodeKey shape. Callers that already hold a `NodeKey` (via `buildNodeKey` or
+ * narrowed by a previous `parseNodeKey` success) don't need to call this.
+ */
+export function parseNodeKey(key: string): NodeRef | null {
   const separatorIndex = key.indexOf(SEPARATOR);
   if (separatorIndex <= 0) return null;
 

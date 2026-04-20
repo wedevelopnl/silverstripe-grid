@@ -13,9 +13,19 @@ export interface NodeRef {
     readonly type: NodeType;
     readonly id: number;
 }
-export type NodeKey = string;
+export type NodeKey = `${NodeType}-${number}`;
 export declare function buildNodeKey(type: NodeType, id: number): NodeKey;
 export declare function nodeRefToKey(ref: NodeRef): NodeKey;
-export declare function parseNodeKey(key: NodeKey): NodeRef | null;
+/**
+ * Validation boundary: accepts any `string` (dnd-kit IDs, localStorage payloads,
+ * URL fragments) and returns a structured {@link NodeRef} only for well-formed
+ * `${type}-${id}` keys. Returns null for anything else.
+ *
+ * The parameter is intentionally `string` rather than {@link NodeKey} — the
+ * whole point of this function is to probe whether an untrusted string has the
+ * NodeKey shape. Callers that already hold a `NodeKey` (via `buildNodeKey` or
+ * narrowed by a previous `parseNodeKey` success) don't need to call this.
+ */
+export declare function parseNodeKey(key: string): NodeRef | null;
 export declare function nodeRefEquals(a: NodeRef, b: NodeRef): boolean;
 export declare function assertNodeRef(value: unknown, context: string): NodeRef;

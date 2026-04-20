@@ -16,7 +16,6 @@ export default {
     '!client/src/styles/**',
     '!client/src/types/adapter.ts',
     '!client/src/types/duplicateTo.ts',
-    '!client/src/types/enriched.ts',
     '!client/src/types/gridSettings.ts',
     '!client/src/types/silverstripe.d.ts',
     '!client/src/api/endpoints.ts',

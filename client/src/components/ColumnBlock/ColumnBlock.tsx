@@ -142,9 +142,7 @@ function EditableColumnBlock({ column }: ColumnBlockProps) {
       if (value === 'hidden') {
         updateSettings({ visible: false });
       } else {
-        const maxOffset = columnCount - value;
-        // Stryker disable next-line EqualityOperator: Equivalent — offset === maxOffset yields same value either branch
-        const clampedOffset = settings.offset > maxOffset ? maxOffset : settings.offset;
+        const clampedOffset = Math.min(settings.offset, columnCount - value);
         updateSettings({ width: value, visible: true, offset: clampedOffset });
       }
     },

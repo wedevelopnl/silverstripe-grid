@@ -108,7 +108,6 @@ describe('ElementTypePicker', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  // Stryker disable next-line all: jsdom does not implement HTMLDialogElement.showModal/close natively
   it('calls showModal when isOpen transitions to true', () => {
     const { rerender } = render(<ElementTypePicker {...defaultProps} isOpen={false} />);
 

@@ -29,7 +29,7 @@ describe('buildDraggableId', () => {
 describe('parseDraggableId', () => {
   it('round-trips with buildDraggableId', () => {
     const result = parseDraggableId(buildDraggableId('row', 5));
-    expect(result).toEqual({ type: 'row', id: 5 });
+    expect(result).toEqual({ type: 'row', id: 5, key: 'row-5' });
   });
 
   it('returns null for empty string', () => {

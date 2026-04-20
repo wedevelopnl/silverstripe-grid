@@ -135,12 +135,12 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
       const parsed = parseDraggableId(activeId);
       if (!parsed) return;
 
-      const node = maps.nodeMap.get(activeId);
+      const node = maps.nodeMap.get(parsed.key);
       if (!node) return;
 
       const siblings = maps.childrenByParentKey.get(node.parentKey) ?? [];
       // Stryker disable next-line all: Equivalent — sourceContainerItemsRef is consumed only by collision detection (not exercised in synthetic DragEvent tests) and is not exposed on the hook's public API
-      const filteredSiblings = siblings.filter((n) => n.nodeKey !== activeId);
+      const filteredSiblings = siblings.filter((n) => n.nodeKey !== parsed.key);
       pending.setSourceSiblings(
         new Set(filteredSiblings.map((n) => buildDraggableId(parsed.type, n.self.id))),
       );
@@ -157,26 +157,23 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
       const { active, over } = event;
-      // Stryker disable next-line all: Equivalent — downstream nodeRefEquals(activeNode.parent, targetParent) also short-circuits the same-element case without applying a pending move
-      if (!over || active.id === over.id) return;
+      if (!over) return;
+      if (active.id === over.id) return;
 
-      const activeId = String(active.id);
-      const overId = String(over.id);
-
-      const activeParsed = parseDraggableId(activeId);
-      const overParsed = parseDraggableId(overId);
+      const activeParsed = parseDraggableId(String(active.id));
+      const overParsed = parseDraggableId(String(over.id));
       if (!activeParsed || !overParsed) return;
 
       const { tree: effectiveTree, maps: effectiveMaps } = pending.getEffective(tree, maps);
 
-      const activeNode = effectiveMaps.nodeMap.get(activeId);
+      const activeNode = effectiveMaps.nodeMap.get(activeParsed.key);
       if (!activeNode) return;
 
       let targetParent: NodeRef;
       let after: NodeRef | null;
 
       if (overParsed.type === activeParsed.type) {
-        const overNode = effectiveMaps.nodeMap.get(overId);
+        const overNode = effectiveMaps.nodeMap.get(overParsed.key);
         if (!overNode) return;
         targetParent = overNode.parent;
 
@@ -186,13 +183,13 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
           resolveInsertDirection(pointer, over.rect, activeParsed.type) === 'before'
         ) {
           const siblings = effectiveMaps.childrenByParentKey.get(overNode.parentKey) ?? [];
-          const overIdx = siblings.findIndex((n) => n.nodeKey === overId);
+          const overIdx = siblings.findIndex((n) => n.nodeKey === overParsed.key);
           after = overIdx > 0 ? siblings[overIdx - 1].self : null;
         } else {
           after = overNode.self;
         }
       } else {
-        const containerNode = effectiveMaps.nodeMap.get(overId);
+        const containerNode = effectiveMaps.nodeMap.get(overParsed.key);
         if (!containerNode || !isContainerNode(containerNode)) return;
         targetParent = containerNode.self;
         const children = containerNode.children ?? [];
@@ -213,23 +210,23 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
       setDragState(null);
 
       const { active, over } = event;
-      // Stryker disable next-line all: Equivalent — resolveDropPlacement already returns null for same-element drops, falling through to the else branch below with identical observable behavior
-      if (!over || active.id === over.id) {
+      if (!over) {
+        pending.clear();
+        return;
+      }
+      if (active.id === over.id) {
         pending.clear();
         return;
       }
 
-      const activeId = String(active.id);
-      const overId = String(over.id);
-
-      const activeParsed = parseDraggableId(activeId);
-      const overParsed = parseDraggableId(overId);
+      const activeParsed = parseDraggableId(String(active.id));
+      const overParsed = parseDraggableId(String(over.id));
       if (!activeParsed || !overParsed) {
         pending.clear();
         return;
       }
 
-      const activeNode = maps.nodeMap.get(activeId);
+      const activeNode = maps.nodeMap.get(activeParsed.key);
       if (!activeNode) {
         pending.clear();
         return;
@@ -241,7 +238,7 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         pending.clear();
         return;
       }
-      const sourceIndex = sourceChildren.findIndex((n) => n.nodeKey === activeId);
+      const sourceIndex = sourceChildren.findIndex((n) => n.nodeKey === activeParsed.key);
 
       const { maps: effectiveMaps } = pending.getEffective(tree, maps);
 

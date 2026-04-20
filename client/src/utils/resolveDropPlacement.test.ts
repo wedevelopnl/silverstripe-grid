@@ -9,6 +9,7 @@ import {
   createColumnNode,
   createSimpleElement,
   createTreeApiResponse,
+  createParsedDraggableId,
 } from '@/testing/factories';
 import { buildNodeKey } from '@/types/identity';
 
@@ -73,8 +74,8 @@ describe('resolveDropPlacement', () => {
       const maps = buildThreeColumnRow();
 
       const ctx: DropContext = {
-        activeParsed: { type: 'column', id: 21 },
-        overParsed: { type: 'column', id: 23 },
+        activeParsed: createParsedDraggableId('column', 21),
+        overParsed: createParsedDraggableId('column', 23),
         pointer: null,
         maps,
         sourceParentKey: buildNodeKey('row', 10),
@@ -95,8 +96,8 @@ describe('resolveDropPlacement', () => {
       const maps = buildThreeColumnRow();
 
       const ctx: DropContext = {
-        activeParsed: { type: 'column', id: 21 },
-        overParsed: { type: 'column', id: 21 },
+        activeParsed: createParsedDraggableId('column', 21),
+        overParsed: createParsedDraggableId('column', 21),
         pointer: null,
         maps,
         sourceParentKey: buildNodeKey('row', 10),
@@ -113,8 +114,8 @@ describe('resolveDropPlacement', () => {
       const maps = buildTwoRowTree();
 
       const ctx: DropContext = {
-        activeParsed: { type: 'column', id: 21 },
-        overParsed: { type: 'column', id: 31 },
+        activeParsed: createParsedDraggableId('column', 21),
+        overParsed: createParsedDraggableId('column', 31),
         pointer: { x: 10, y: 50 },
         maps,
         sourceParentKey: buildNodeKey('row', 10),
@@ -133,8 +134,8 @@ describe('resolveDropPlacement', () => {
       const maps = buildTwoRowTree();
 
       const ctx: DropContext = {
-        activeParsed: { type: 'column', id: 21 },
-        overParsed: { type: 'column', id: 31 },
+        activeParsed: createParsedDraggableId('column', 21),
+        overParsed: createParsedDraggableId('column', 31),
         pointer: { x: 150, y: 50 },
         maps,
         sourceParentKey: buildNodeKey('row', 10),
@@ -153,8 +154,8 @@ describe('resolveDropPlacement', () => {
       const maps = buildTwoRowTree();
 
       const ctx: DropContext = {
-        activeParsed: { type: 'column', id: 21 },
-        overParsed: { type: 'column', id: 31 },
+        activeParsed: createParsedDraggableId('column', 21),
+        overParsed: createParsedDraggableId('column', 31),
         pointer: null,
         maps,
         sourceParentKey: buildNodeKey('row', 10),
@@ -173,8 +174,8 @@ describe('resolveDropPlacement', () => {
       const maps = buildTwoRowTree();
 
       const ctx: DropContext = {
-        activeParsed: { type: 'column', id: 21 },
-        overParsed: { type: 'column', id: 32 },
+        activeParsed: createParsedDraggableId('column', 21),
+        overParsed: createParsedDraggableId('column', 32),
         pointer: { x: 150, y: 50 },
         maps,
         sourceParentKey: buildNodeKey('row', 10),
@@ -217,8 +218,8 @@ describe('resolveDropPlacement', () => {
       const maps = buildMaps(createTreeApiResponse({ pageId: 1, sections: [section] }));
 
       const ctx: DropContext = {
-        activeParsed: { type: 'element', id: 61 },
-        overParsed: { type: 'column', id: 51 },
+        activeParsed: createParsedDraggableId('element', 61),
+        overParsed: createParsedDraggableId('column', 51),
         pointer: null,
         maps,
         sourceParentKey: buildNodeKey('column', 50),
@@ -255,8 +256,8 @@ describe('resolveDropPlacement', () => {
       const maps = buildMaps(createTreeApiResponse({ pageId: 1, sections: [section] }));
 
       const ctx: DropContext = {
-        activeParsed: { type: 'element', id: 61 },
-        overParsed: { type: 'column', id: 62 },
+        activeParsed: createParsedDraggableId('element', 61),
+        overParsed: createParsedDraggableId('column', 62),
         pointer: null,
         maps,
         sourceParentKey: buildNodeKey('column', 50),
@@ -274,8 +275,8 @@ describe('resolveDropPlacement', () => {
       const maps = buildMaps(createTreeApiResponse({ pageId: 1, sections: [section] }));
 
       const ctx: DropContext = {
-        activeParsed: { type: 'column', id: 999 },
-        overParsed: { type: 'column', id: 888 },
+        activeParsed: createParsedDraggableId('column', 999),
+        overParsed: createParsedDraggableId('column', 888),
         pointer: null,
         maps,
         sourceParentKey: buildNodeKey('row', 1),

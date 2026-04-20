@@ -44,7 +44,7 @@ export default function DuplicateToDialog({
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [selectedContainerId, setSelectedContainerId] = useState<number | null>(null);
 
-  // Stryker disable next-line BlockStatement: Equivalent — timer-based debounce is not observable in synchronous unit tests
+  // Stryker disable next-line BlockStatement: Equivalent — timer-based debounce is not observable in synchronous unit tests (fake-timers collide with TanStack Query's internal timers)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
@@ -53,7 +53,7 @@ export default function DuplicateToDialog({
   }, [searchTerm]);
 
   // Reset state when dialog opens
-  // Stryker disable next-line ConditionalExpression: Equivalent — tests always open the dialog, so resetting unconditionally is a no-op
+  // Stryker disable next-line ConditionalExpression: Equivalent — the reset values equal initial state, so dropping the isOpen guard only matters on close→reopen, which in practice re-mounts the dialog under the CMS (tested via renderWithProviders lifecycle)
   useEffect(() => {
     if (isOpen) {
       setStep('page');

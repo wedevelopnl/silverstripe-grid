@@ -5,6 +5,8 @@ export type DraggableType = (typeof DRAGGABLE_TYPES)[number];
 export interface ParsedDraggableId {
     readonly type: DraggableType;
     readonly id: number;
+    /** The validated NodeKey form of the input string — safe to use at map/set boundaries. */
+    readonly key: NodeKey;
 }
 /**
  * Build a dnd-kit sortable ID. Always returns a {@link NodeKey} string —

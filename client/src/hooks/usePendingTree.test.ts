@@ -4,6 +4,7 @@ import { usePendingTree } from './usePendingTree';
 import { buildMaps } from './useElementMaps';
 import {
   createColumnNode,
+  createParsedDraggableId,
   createRowNode,
   createSectionNode,
   createSimpleElement,
@@ -67,7 +68,7 @@ describe('usePendingTree', () => {
       let moveResult: ReturnType<typeof result.current.applyPendingMove> = null;
       act(() => {
         moveResult = result.current.applyPendingMove(
-          { type: 'element', id: element.id },
+          createParsedDraggableId('element', element.id),
           buildNodeKey('column', 20),
           null,
           tree,
@@ -92,7 +93,7 @@ describe('usePendingTree', () => {
 
       act(() => {
         result.current.applyPendingMove(
-          { type: 'element', id: element.id },
+          createParsedDraggableId('element', element.id),
           buildNodeKey('column', 20),
           null,
           tree,
@@ -108,7 +109,7 @@ describe('usePendingTree', () => {
 
       act(() => {
         result.current.applyPendingMove(
-          { type: 'element', id: element.id },
+          createParsedDraggableId('element', element.id),
           buildNodeKey('column', 20),
           null,
           tree,
@@ -128,7 +129,7 @@ describe('usePendingTree', () => {
       let moveResult: ReturnType<typeof result.current.applyPendingMove> = null;
       act(() => {
         moveResult = result.current.applyPendingMove(
-          { type: 'element', id: 5 },
+          createParsedDraggableId('element', 5),
           buildNodeKey('column', 10),
           null,
           tree,
@@ -165,7 +166,7 @@ describe('usePendingTree', () => {
 
       act(() => {
         result.current.applyPendingMove(
-          { type: 'element', id: element.id },
+          createParsedDraggableId('element', element.id),
           buildNodeKey('column', 20),
           null,
           tree,
@@ -186,7 +187,7 @@ describe('usePendingTree', () => {
       act(() => {
         result.current.setSourceSiblings(new Set(['element-1']));
         result.current.applyPendingMove(
-          { type: 'element', id: element.id },
+          createParsedDraggableId('element', element.id),
           buildNodeKey('column', 20),
           null,
           tree,

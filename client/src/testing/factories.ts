@@ -9,7 +9,13 @@ import type {
   TreeApiResponse,
   ViewportSettings,
 } from '@/types/elements';
+import { buildDraggableId, type DraggableType, type ParsedDraggableId } from '@/types/dnd';
 import { buildNodeKey, type NodeRef, type NodeType } from '@/types/identity';
+
+/** Test-only helper: construct a fully-typed {@link ParsedDraggableId} for unit tests. */
+export function createParsedDraggableId(type: DraggableType, id: number): ParsedDraggableId {
+  return { type, id, key: buildDraggableId(type, id) };
+}
 
 let nextId = 1;
 

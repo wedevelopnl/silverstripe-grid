@@ -9,6 +9,8 @@ export type DraggableType = (typeof DRAGGABLE_TYPES)[number];
 export interface ParsedDraggableId {
   readonly type: DraggableType;
   readonly id: number;
+  /** The validated NodeKey form of the input string — safe to use at map/set boundaries. */
+  readonly key: NodeKey;
 }
 
 function isDraggableType(value: NodeType): value is DraggableType {
@@ -28,7 +30,9 @@ export function parseDraggableId(compositeId: string): ParsedDraggableId | null 
   const ref = parseNodeKey(compositeId);
   if (ref === null) return null;
   if (!isDraggableType(ref.type)) return null;
-  return { type: ref.type, id: ref.id };
+  // Safe: parseNodeKey validated the template-literal shape, so compositeId
+  // is structurally a NodeKey.
+  return { type: ref.type, id: ref.id, key: compositeId as NodeKey };
 }
 
 export function getDraggableType(compositeId: string): DraggableType | null {

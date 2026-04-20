@@ -75,7 +75,6 @@ describe('ConfirmDialog', () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
-  // Stryker disable next-line all: jsdom does not implement HTMLDialogElement.showModal/close natively
   it('calls showModal when isOpen transitions to true', () => {
     const { rerender } = render(<ConfirmDialog {...defaultProps} isOpen={false} />);
 
@@ -84,7 +83,6 @@ describe('ConfirmDialog', () => {
     expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled();
   });
 
-  // Stryker disable next-line all: jsdom does not implement HTMLDialogElement.close natively
   it('calls close when isOpen transitions to false', () => {
     const { rerender } = render(<ConfirmDialog {...defaultProps} isOpen={true} />);
 

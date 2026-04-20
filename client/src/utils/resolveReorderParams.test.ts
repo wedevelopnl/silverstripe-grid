@@ -3,10 +3,10 @@ import { resolveReorderParams } from './resolveReorderParams';
 import type { ElementMaps } from '@/hooks/useElementMaps';
 import { createColumnNode, createRowNode, createSimpleElement } from '@/testing/factories';
 import type { ElementNode } from '@/types/elements';
-import { buildNodeKey } from '@/types/identity';
+import { buildNodeKey, type NodeKey } from '@/types/identity';
 
 function mapsFrom(nodes: ElementNode[]): ElementMaps {
-  const nodeMap = new Map<string, ElementNode>();
+  const nodeMap = new Map<NodeKey, ElementNode>();
   for (const node of nodes) {
     nodeMap.set(node.nodeKey, node);
   }
@@ -57,11 +57,13 @@ describe('resolveReorderParams', () => {
 
   it('returns null for unparseable active id', () => {
     const result = resolveReorderParams({
-      activeId: 'invalid',
+      // Intentionally malformed — the function must reject values that don't
+      // match the `${NodeType}-${number}` shape even when typed as NodeKey.
+      activeId: 'invalid' as NodeKey,
       targetParent: { type: 'section', id: 5 },
       targetParentKey: buildNodeKey('section', 5),
       overIndex: 0,
-      containerItems: ['invalid', buildNodeKey('row', 20)],
+      containerItems: ['invalid' as NodeKey, buildNodeKey('row', 20)],
       sourceParentKey: buildNodeKey('section', 5),
       sourceIndex: 1,
       maps: mapsFrom([]),
