@@ -271,7 +271,7 @@ buildForPage(page, zone)
 
 Elements are keyed by the composite `"ParentClass:ParentID"` string in the lookup map. This prevents false matches when a page ID coincides with an element ID.
 
-Each element is converted to a `GridNode` DTO — a readonly value object that carries base fields (id, parentId, title, blockSchema, version, permissions, statusFlags) and optional container fields (containerType, allowedTypes, children). Column nodes additionally carry `gridSettings`. The `GridNode` implements `JsonSerializable` with conditional field inclusion: leaf nodes omit container fields from the serialized output.
+Each element is converted to a `GridNode` DTO — a readonly value object that carries base fields (id, parentId, title, blockSchema, version, permissions, status) and optional container fields (containerType, allowedTypes, children). Column nodes additionally carry `gridSettings`. The `status` field is a precomputed `ElementStatus` enum (`draft | published | modified | removed`) derived from SilverStripe's `getStatusFlags()` output, so consumers don't re-derive presentation state from the raw flag map. The `GridNode` implements `JsonSerializable` with conditional field inclusion: leaf nodes omit container fields from the serialized output.
 
 The builder provides an `updateElementData` extension point, allowing other modules to inject additional data into each node's `extensions` array.
 

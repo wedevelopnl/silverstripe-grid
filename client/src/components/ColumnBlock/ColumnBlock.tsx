@@ -3,7 +3,6 @@ import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { ColumnNode, ViewportSettings } from '@/types/elements';
 import type { NodeKey } from '@/types/identity';
-import { getElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { useGridEditorContext } from '@/hooks/GridEditorContext';
 import { useReadonly } from '@/hooks/ReadonlyContext';
@@ -90,7 +89,7 @@ function EditableColumnBlock({ column }: ColumnBlockProps) {
   const { pageId, zone } = useGridEditorContext();
   const columnCount = getColumnCount();
   const settings = resolveViewportSettings(column.gridSettings, activeViewport);
-  const status = getElementStatus(column.statusFlags);
+  const status = column.status;
   const { isCollapsed, onToggle } = useColumnCollapse(column);
   const { activeType } = useDragContext();
   const updateGridSettings = useUpdateGridSettings(pageId, zone);
@@ -260,7 +259,7 @@ function EditableColumnBlock({ column }: ColumnBlockProps) {
 function ReadonlyColumnBlock({ column }: ColumnBlockProps) {
   const { activeViewport } = useViewportContext();
   const settings = resolveViewportSettings(column.gridSettings, activeViewport);
-  const status = getElementStatus(column.statusFlags);
+  const status = column.status;
   const { isCollapsed, onToggle } = useColumnCollapse(column);
 
   const innerClasses = buildBlockClasses('column-block', status, {

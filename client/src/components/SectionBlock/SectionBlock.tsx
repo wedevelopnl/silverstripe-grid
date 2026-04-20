@@ -3,7 +3,6 @@ import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { SectionNode } from '@/types/elements';
 import type { NodeKey } from '@/types/identity';
-import { getElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { useReadonly } from '@/hooks/ReadonlyContext';
 import { useCollapse } from '@/hooks/useCollapseState';
@@ -48,7 +47,7 @@ function useChildSortableKeys(section: SectionNode): NodeKey[] {
 }
 
 function EditableSectionBlock({ section }: SectionBlockProps) {
-  const status = getElementStatus(section.statusFlags);
+  const status = section.status;
   const { isCollapsed, onToggle } = useSectionCollapse(section);
   const { activeType } = useDragContext();
 
@@ -118,7 +117,7 @@ function EditableSectionBlock({ section }: SectionBlockProps) {
 }
 
 function ReadonlySectionBlock({ section }: SectionBlockProps) {
-  const status = getElementStatus(section.statusFlags);
+  const status = section.status;
   const { isCollapsed, onToggle } = useSectionCollapse(section);
 
   const rootClasses = buildBlockClasses('section-block', status, {

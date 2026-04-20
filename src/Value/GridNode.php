@@ -7,7 +7,6 @@ namespace WeDevelop\Grid\Value;
 use JsonSerializable;
 use InvalidArgumentException;
 use Override;
-use stdClass;
 
 /**
  * Readonly DTO representing a single element in the tree.
@@ -21,14 +20,13 @@ use stdClass;
  * from the serialized output; container nodes include all three.
  *
  * @phpstan-import-type SerializedNodeRef from NodeRef
- * @phpstan-type SerializedNode array{self: SerializedNodeRef, parent: SerializedNodeRef, title: non-empty-string, blockSchema: array{typeName: string, type: string, title: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, statusFlags: stdClass&object{addedtodraft?: array{text: string, title: string}, modified?: array{text: string, title: string}, removedfromdraft?: array{text: string, title: string}}, containerType?: string, allowedTypes?: array<class-string, array{label: string, icon: string, description: string}>|null, children?: list<mixed>|null, gridSettings?: array{default: array{width: int, offset: int, visible: bool}, overrides: array<non-empty-string, array{width: int, offset: int, visible: bool}>}, extensions?: array<string, mixed>}
+ * @phpstan-type SerializedNode array{self: SerializedNodeRef, parent: SerializedNodeRef, title: non-empty-string, blockSchema: array{typeName: string, type: string, title: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, status: value-of<ElementStatus>, containerType?: string, allowedTypes?: array<class-string, array{label: string, icon: string, description: string}>|null, children?: list<mixed>|null, gridSettings?: array{default: array{width: int, offset: int, visible: bool}, overrides: array<non-empty-string, array{width: int, offset: int, visible: bool}>}, extensions?: array<string, mixed>}
  */
 final readonly class GridNode implements JsonSerializable
 {
     /**
      * @param non-empty-string $title
      * @param array{typeName: string, type: string, title: string, label: string, icon: string} $blockSchema
-     * @param array<string, array{text: string, title: string}> $statusFlags
      * @param array<class-string, array{label: string, icon: string, description: string}>|null $allowedTypes
      * @param list<self>|null $children
      * @param array<string, mixed> $extensions
@@ -45,7 +43,7 @@ final readonly class GridNode implements JsonSerializable
         public bool $canUnpublish,
         public bool $canCreate,
         public ?string $editLink,
-        public array $statusFlags,
+        public ElementStatus $status,
         public ?ContainerType $containerType = null,
         public ?array $allowedTypes = null,
         public ?array $children = null,
@@ -83,9 +81,6 @@ final readonly class GridNode implements JsonSerializable
     #[Override]
     public function jsonSerialize(): array
     {
-        /** @var SerializedNode['statusFlags'] $statusFlags */
-        $statusFlags = (object) $this->statusFlags;
-
         $data = [
             'self' => $this->self->jsonSerialize(),
             'parent' => $this->parent->jsonSerialize(),
@@ -98,7 +93,7 @@ final readonly class GridNode implements JsonSerializable
             'canUnpublish' => $this->canUnpublish,
             'canCreate' => $this->canCreate,
             'editLink' => $this->editLink,
-            'statusFlags' => $statusFlags,
+            'status' => $this->status->value,
         ];
 
         if ($this->containerType instanceof ContainerType) {

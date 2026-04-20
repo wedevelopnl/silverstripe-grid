@@ -156,9 +156,7 @@ describe('SectionBlock', () => {
     it('includes draft status modifier', () => {
       mockFetchSuccess({});
 
-      const section = createSectionNode({
-        statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } },
-      });
+      const section = createSectionNode({ status: 'draft' });
 
       renderWithProviders(<SectionBlock section={section} />);
 
@@ -168,9 +166,7 @@ describe('SectionBlock', () => {
     it('includes modified status modifier', () => {
       mockFetchSuccess({});
 
-      const section = createSectionNode({
-        statusFlags: { modified: { text: 'Modified', title: 'Modified' } },
-      });
+      const section = createSectionNode({ status: 'modified' });
 
       renderWithProviders(<SectionBlock section={section} />);
 
@@ -180,7 +176,7 @@ describe('SectionBlock', () => {
     it('includes published status by default', () => {
       mockFetchSuccess({});
 
-      const section = createSectionNode({ statusFlags: {} });
+      const section = createSectionNode({ status: 'published' });
 
       renderWithProviders(<SectionBlock section={section} />);
 

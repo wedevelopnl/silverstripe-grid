@@ -3,7 +3,6 @@ import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import type { RowNode } from '@/types/elements';
 import type { NodeKey } from '@/types/identity';
-import { getElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { useReadonly } from '@/hooks/ReadonlyContext';
 import { useCollapse } from '@/hooks/useCollapseState';
@@ -45,7 +44,7 @@ function useChildColumnKeys(row: RowNode): NodeKey[] {
 
 function EditableRowBlock({ row }: RowBlockProps) {
   const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid';
-  const status = getElementStatus(row.statusFlags);
+  const status = row.status;
   const { isCollapsed, onToggle } = useRowCollapse(row);
   const { activeType } = useDragContext();
 
@@ -121,7 +120,7 @@ function EditableRowBlock({ row }: RowBlockProps) {
 
 function ReadonlyRowBlock({ row }: RowBlockProps) {
   const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid';
-  const status = getElementStatus(row.statusFlags);
+  const status = row.status;
   const { isCollapsed, onToggle } = useRowCollapse(row);
 
   const rootClasses = buildBlockClasses('row-block', status, {

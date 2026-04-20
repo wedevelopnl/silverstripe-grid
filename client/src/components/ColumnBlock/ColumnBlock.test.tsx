@@ -126,9 +126,7 @@ describe('ColumnBlock', () => {
     it('includes status modifier class for draft status', () => {
       mockFetchSuccess({});
 
-      const column = createColumnNode({
-        statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } },
-      });
+      const column = createColumnNode({ status: 'draft' });
 
       renderWithProviders(<ColumnBlock column={column} />);
 
@@ -138,9 +136,7 @@ describe('ColumnBlock', () => {
     it('includes status modifier class for modified status', () => {
       mockFetchSuccess({});
 
-      const column = createColumnNode({
-        statusFlags: { modified: { text: 'Modified', title: 'Modified' } },
-      });
+      const column = createColumnNode({ status: 'modified' });
 
       renderWithProviders(<ColumnBlock column={column} />);
 
@@ -150,7 +146,7 @@ describe('ColumnBlock', () => {
     it('includes published status by default', () => {
       mockFetchSuccess({});
 
-      const column = createColumnNode({ statusFlags: {} });
+      const column = createColumnNode({ status: 'published' });
 
       renderWithProviders(<ColumnBlock column={column} />);
 

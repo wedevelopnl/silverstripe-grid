@@ -11,6 +11,7 @@ use SilverStripe\Core\Injector\Injectable;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\ElementStatus;
 use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\NodeRef;
@@ -64,6 +65,7 @@ class GridNodeMapper
 
         /** @var array<string, array{text: string, title: string}> $statusFlags */
         $statusFlags = $element->getStatusFlags();
+        $status = ElementStatus::fromStatusFlags($statusFlags);
 
         /** @var array<string, mixed> $extensions */
         $extensions = [];
@@ -91,7 +93,7 @@ class GridNodeMapper
             canUnpublish: $canUnpublish,
             canCreate: $element->canCreate(),
             editLink: $element->getCMSEditLink(),
-            statusFlags: $statusFlags,
+            status: $status,
             containerType: $containerType,
             allowedTypes: $allowedTypes,
             children: $children,

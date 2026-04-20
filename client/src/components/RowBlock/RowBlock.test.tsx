@@ -96,9 +96,7 @@ describe('RowBlock', () => {
     it('includes draft status modifier', () => {
       mockFetchSuccess({});
 
-      const row = createRowNode({
-        statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } },
-      });
+      const row = createRowNode({ status: 'draft' });
 
       renderWithProviders(<RowBlock row={row} />);
 
@@ -108,9 +106,7 @@ describe('RowBlock', () => {
     it('includes modified status modifier', () => {
       mockFetchSuccess({});
 
-      const row = createRowNode({
-        statusFlags: { modified: { text: 'Modified', title: 'Modified' } },
-      });
+      const row = createRowNode({ status: 'modified' });
 
       renderWithProviders(<RowBlock row={row} />);
 
@@ -120,7 +116,7 @@ describe('RowBlock', () => {
     it('includes published status by default', () => {
       mockFetchSuccess({});
 
-      const row = createRowNode({ statusFlags: {} });
+      const row = createRowNode({ status: 'published' });
 
       renderWithProviders(<RowBlock row={row} />);
 

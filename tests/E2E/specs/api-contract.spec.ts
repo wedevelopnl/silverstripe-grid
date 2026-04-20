@@ -2,9 +2,9 @@ import { expect, test } from '@playwright/test';
 import type {
   ColumnNode,
   SectionNode,
-  StatusFlags,
   TreeApiResponse,
 } from '@/types/elements';
+import type { ElementStatus } from '@/types/status';
 import { loadFixture, resetFixtures } from '../helpers/fixtures';
 
 const API_BASE = '/admin/grid/api/readTree';
@@ -32,20 +32,20 @@ test.describe('API contract', () => {
     const { nodes } = await response.json() as TreeApiResponse;
 
     // Collect all containers and leaf elements across the tree
-    type FlaggedNode = { title: string; statusFlags: StatusFlags };
+    type FlaggedNode = { title: string; status: ElementStatus };
     const leaves: FlaggedNode[] = [];
     const containers: FlaggedNode[] = [];
 
     for (const section of nodes) {
       if (!('containerType' in section) || section.containerType !== 'section') continue;
       const sectionNode = section as SectionNode;
-      containers.push({ title: sectionNode.title, statusFlags: sectionNode.statusFlags });
+      containers.push({ title: sectionNode.title, status: sectionNode.status });
       for (const row of sectionNode.children ?? []) {
-        containers.push({ title: row.title, statusFlags: row.statusFlags });
+        containers.push({ title: row.title, status: row.status });
         for (const col of row.children ?? []) {
-          containers.push({ title: col.title, statusFlags: col.statusFlags });
+          containers.push({ title: col.title, status: col.status });
           for (const leaf of col.children ?? []) {
-            leaves.push({ title: leaf.title, statusFlags: leaf.statusFlags });
+            leaves.push({ title: leaf.title, status: leaf.status });
           }
         }
       }
@@ -54,28 +54,28 @@ test.describe('API contract', () => {
     // Leaf assertions: publishRecursive → unpublish draft_leaf → modify modified_leaf
     const draft = leaves.find((l) => l.title === 'Draft Only Block');
     expect(draft, 'Draft Only Block not found in tree').toBeDefined();
-    expect(draft!.statusFlags).toHaveProperty('addedtodraft');
+    expect(draft!.status).toBe('draft');
 
     const published = leaves.find((l) => l.title === 'Published Block');
     expect(published, 'Published Block not found in tree').toBeDefined();
-    expect(Object.keys(published!.statusFlags)).toHaveLength(0);
+    expect(published!.status).toBe('published');
 
     const modified = leaves.find((l) => l.title.startsWith('Modified Text Block'));
     expect(modified, 'Modified Text Block not found in tree').toBeDefined();
-    expect(modified!.statusFlags).toHaveProperty('modified');
+    expect(modified!.status).toBe('modified');
 
     // Container assertions: modify row1 → unpublish section2 (cascades to descendants)
     const publishedSection = containers.find((c) => c.title === 'Main Section');
     expect(publishedSection, 'Main Section not found').toBeDefined();
-    expect(Object.keys(publishedSection!.statusFlags)).toHaveLength(0);
+    expect(publishedSection!.status).toBe('published');
 
     const modifiedRow = containers.find((c) => c.title.startsWith('First Row'));
     expect(modifiedRow, 'First Row not found').toBeDefined();
-    expect(modifiedRow!.statusFlags).toHaveProperty('modified');
+    expect(modifiedRow!.status).toBe('modified');
 
     const draftSection = containers.find((c) => c.title === 'Draft Section');
     expect(draftSection, 'Draft Section not found').toBeDefined();
-    expect(draftSection!.statusFlags).toHaveProperty('addedtodraft');
+    expect(draftSection!.status).toBe('draft');
   });
 
   test('reorder rejects cross-zone section move with 422', async ({ page }) => {

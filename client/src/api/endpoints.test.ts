@@ -76,7 +76,7 @@ describe('normaliseTreeResponse', () => {
           canUnpublish: false,
           canCreate: true,
           editLink: null,
-          statusFlags: {},
+          status: 'published',
           containerType: 'section',
           allowedTypes: null,
           children: [],

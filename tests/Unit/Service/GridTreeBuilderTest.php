@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\ElementStatus;
 use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\NodeRef;
@@ -55,7 +56,7 @@ final class GridTreeBuilderTest extends TestCase
             'canUnpublish' => false,
             'canCreate' => true,
             'editLink' => '/admin/edit/1',
-            'statusFlags' => [],
+            'status' => ElementStatus::Published,
             'containerType' => null,
             'allowedTypes' => null,
             'children' => null,
@@ -77,7 +78,7 @@ final class GridTreeBuilderTest extends TestCase
             canUnpublish: $args['canUnpublish'],
             canCreate: $args['canCreate'],
             editLink: $args['editLink'],
-            statusFlags: $args['statusFlags'],
+            status: $args['status'],
             containerType: $args['containerType'],
             allowedTypes: $args['allowedTypes'],
             children: $args['children'],

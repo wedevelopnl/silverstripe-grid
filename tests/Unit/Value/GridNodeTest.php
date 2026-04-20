@@ -8,8 +8,8 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use stdClass;
 use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\ElementStatus;
 use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\NodeRef;
@@ -45,7 +45,7 @@ final class GridNodeTest extends TestCase
             'canUnpublish' => false,
             'canCreate' => true,
             'editLink' => '/admin/edit/1',
-            'statusFlags' => [],
+            'status' => ElementStatus::Published,
             'containerType' => null,
             'allowedTypes' => null,
             'children' => null,
@@ -67,7 +67,7 @@ final class GridNodeTest extends TestCase
             canUnpublish: $args['canUnpublish'],
             canCreate: $args['canCreate'],
             editLink: $args['editLink'],
-            statusFlags: $args['statusFlags'],
+            status: $args['status'],
             containerType: $args['containerType'],
             allowedTypes: $args['allowedTypes'],
             children: $args['children'],
@@ -145,7 +145,7 @@ final class GridNodeTest extends TestCase
         self::assertFalse($data['canUnpublish']);
         self::assertTrue($data['canCreate']);
         self::assertSame('/admin/edit/1', $data['editLink']);
-        self::assertInstanceOf(stdClass::class, $data['statusFlags']);
+        self::assertSame('published', $data['status']);
 
         self::assertArrayNotHasKey('containerType', $data);
         self::assertArrayNotHasKey('allowedTypes', $data);
@@ -221,14 +221,11 @@ final class GridNodeTest extends TestCase
     }
 
     #[Test]
-    public function jsonSerializeConvertsStatusFlagsToObject(): void
+    public function jsonSerializeIncludesStatusAsEnumValue(): void
     {
-        $flags = ['modified' => ['text' => 'Modified', 'title' => 'Item has unpublished changes']];
-
-        $node = $this->makeNode(['statusFlags' => $flags]);
+        $node = $this->makeNode(['status' => ElementStatus::Modified]);
         $data = $node->jsonSerialize();
 
-        self::assertInstanceOf(stdClass::class, $data['statusFlags']);
-        self::assertSame('Modified', $data['statusFlags']->modified['text']);
+        self::assertSame('modified', $data['status']);
     }
 }

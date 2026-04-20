@@ -41,9 +41,7 @@ describe('ElementCard', () => {
   it('status class applied correctly', () => {
     mockFetchSuccess({});
 
-    const element = createSimpleElement({
-      statusFlags: { addedtodraft: { text: 'Draft', title: 'Draft' } },
-    });
+    const element = createSimpleElement({ status: 'draft' });
 
     renderWithProviders(<ElementCard element={element} />);
 

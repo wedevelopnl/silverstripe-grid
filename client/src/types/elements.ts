@@ -1,4 +1,5 @@
 import type { NodeKey, NodeRef } from './identity';
+import type { ElementStatus } from './status';
 
 // --- Container type constants ---
 
@@ -14,17 +15,6 @@ export interface BlockSchema {
   icon: string;
   type: string;
   title: string;
-}
-
-interface StatusFlagValue {
-  text: string;
-  title: string;
-}
-
-export interface StatusFlags {
-  addedtodraft?: StatusFlagValue;
-  modified?: StatusFlagValue;
-  removedfromdraft?: StatusFlagValue;
 }
 
 interface BaseFields {
@@ -61,7 +51,7 @@ interface BaseFields {
   canUnpublish: boolean;
   canCreate: boolean;
   editLink: string | null;
-  statusFlags: StatusFlags;
+  status: ElementStatus;
   extensions?: Record<string, unknown>;
 }
 

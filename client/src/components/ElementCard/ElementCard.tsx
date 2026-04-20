@@ -1,7 +1,6 @@
 import type { MouseEvent, ReactNode } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import type { SimpleElementNode } from '@/types/elements';
-import { getElementStatus } from '@/types/status';
 import { useReadonly } from '@/hooks/ReadonlyContext';
 import { buildSortableStyle } from '@/utils/sortableStyles';
 import { t } from '@/i18n';
@@ -31,7 +30,7 @@ function EditableElementCard({ element }: ElementCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: element.nodeKey,
   });
-  const status = getElementStatus(element.statusFlags);
+  const status = element.status;
   const editLink = element.editLink;
   const isClickable = editLink !== null;
 
@@ -103,7 +102,7 @@ function EditableElementCard({ element }: ElementCardProps) {
 }
 
 function ReadonlyElementCard({ element }: ElementCardProps) {
-  const status = getElementStatus(element.statusFlags);
+  const status = element.status;
   const cardClasses = `element-card element-card--${status}`;
 
   return (

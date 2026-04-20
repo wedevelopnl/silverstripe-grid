@@ -19,10 +19,12 @@ use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\GridNodeMapper;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\ElementStatus;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
 
 #[CoversClass(GridNodeMapper::class)]
+#[CoversClass(ElementStatus::class)]
 final class GridNodeMapperTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
@@ -89,8 +91,50 @@ final class GridNodeMapperTest extends SapphireTest
 
         // Metadata fields
         self::assertNull($node->obsoleteClassName);
-        self::assertIsArray($node->statusFlags);
+        self::assertSame(ElementStatus::Draft, $node->status);
         self::assertIsArray($node->extensions);
+    }
+
+    public function testMapToNodePublishedSectionResolvesToPublishedStatus(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, title: 'Published Section');
+        $section->publishSingle();
+
+        $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
+        $node = $this->mapper->mapToNode(
+            $section,
+            $parentRef,
+            ContainerType::Section,
+            null,
+            [],
+            null,
+        );
+
+        self::assertSame(ElementStatus::Published, $node->status);
+    }
+
+    public function testMapToNodeModifiedSectionResolvesToModifiedStatus(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, title: 'Section');
+        $section->publishSingle();
+
+        // Modify after publish so getStatusFlags reports 'modified'
+        $section->Title = 'Section (edited)';
+        $section->write();
+
+        $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
+        $node = $this->mapper->mapToNode(
+            $section,
+            $parentRef,
+            ContainerType::Section,
+            null,
+            [],
+            null,
+        );
+
+        self::assertSame(ElementStatus::Modified, $node->status);
     }
 
     public function testMapToNodeUntitledFallback(): void
