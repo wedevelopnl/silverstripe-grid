@@ -1,4 +1,5 @@
 import { NodeKey, NodeRef } from './identity';
+import { ElementStatus } from './status';
 export declare const CONTAINER_TYPES: readonly ["section", "row", "column"];
 export type ContainerType = (typeof CONTAINER_TYPES)[number];
 export interface BlockSchema {
@@ -7,15 +8,6 @@ export interface BlockSchema {
     icon: string;
     type: string;
     title: string;
-}
-interface StatusFlagValue {
-    text: string;
-    title: string;
-}
-export interface StatusFlags {
-    addedtodraft?: StatusFlagValue;
-    modified?: StatusFlagValue;
-    removedfromdraft?: StatusFlagValue;
 }
 interface BaseFields {
     /**
@@ -51,7 +43,7 @@ interface BaseFields {
     canUnpublish: boolean;
     canCreate: boolean;
     editLink: string | null;
-    statusFlags: StatusFlags;
+    status: ElementStatus;
     extensions?: Record<string, unknown>;
 }
 export interface SimpleElementNode extends BaseFields {
