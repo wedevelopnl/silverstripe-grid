@@ -409,5 +409,153 @@ describe('useElementMutations', () => {
         expect(clearPendingTree).toHaveBeenCalled();
       });
     });
+
+    it('skips setQueryData rollback when no snapshot was captured', async () => {
+      // Fresh QueryClient — no pre-seeded tree, so onMutate's
+      // getQueryData returns undefined and onError must NOT attempt to
+      // restore a snapshot. Pins the `if (snapshot !== undefined)` guard
+      // at useElementMutations.ts:152.
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false, gcTime: 0 } },
+      });
+      const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData');
+
+      mockFetchError(500, { message: 'fail' });
+      const dispatch = vi.fn();
+      window.ss!.store = { dispatch };
+
+      const { wrapper } = createProviderWrapper({ queryClient });
+      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
+
+      // Build a minimal tree for the onMutate applyReorder call. The tree
+      // is NOT seeded into the cache — that's the scenario under test.
+      const column = createColumnNode({
+        id: 300,
+        parent: { type: 'row', id: 200 },
+        childCount: 1,
+      });
+      const row = createRowNode({
+        id: 200,
+        parent: { type: 'section', id: 100 },
+        children: [column],
+      });
+      const section = createSectionNode({
+        id: 100,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      });
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] });
+      const elem = column.children?.[0];
+
+      await act(async () => {
+        await result.current
+          .mutateAsync({
+            params: {
+              element: { type: 'element', id: elem!.id },
+              parent: { type: 'column', id: 300 },
+              after: null,
+            },
+            tree,
+          })
+          .catch(() => undefined);
+      });
+
+      await waitFor(() => {
+        expect(dispatch).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'DISPLAY_TOAST',
+            payload: expect.objectContaining({ type: 'error' }),
+          }),
+        );
+      });
+
+      // onMutate ran setQueryData once (optimistic write on undefined
+      // snapshot). onError must NOT have called it again with the
+      // (undefined) snapshot.
+      const restoreCalls = setQueryDataSpy.mock.calls.filter(([, value]) => value === undefined);
+      expect(restoreCalls).toHaveLength(0);
+    });
+
+    it('onMutate cancels the specific tree queryKey, not all queries', async () => {
+      // Pins the ObjectLiteral mutation on cancelQueries({ queryKey })
+      // at useElementMutations.ts:129 — mutated to {} it would cancel
+      // every query, defeating the per-page scope.
+      const { queryClient, tree, column, elemB } = createReorderTree();
+      const cancelQueriesSpy = vi.spyOn(queryClient, 'cancelQueries');
+      mockFetchSuccess({});
+
+      const { wrapper } = createProviderWrapper({ queryClient });
+      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({
+          params: {
+            element: { type: 'element', id: elemB.id },
+            parent: { type: 'column', id: column.id },
+            after: null,
+          },
+          tree,
+        });
+        await Promise.resolve();
+      });
+
+      expect(cancelQueriesSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.elementTree.byPage(1, 'main'),
+      });
+    });
+
+    it('onSuccess invalidates the specific tree queryKey', async () => {
+      // Pins the ObjectLiteral mutation on invalidateQueries({ queryKey })
+      // at useElementMutations.ts:161.
+      const { queryClient, tree, column, elemB } = createReorderTree();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+      mockFetchSuccess({});
+
+      const { wrapper } = createProviderWrapper({ queryClient });
+      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
+
+      await act(async () => {
+        await result.current.mutateAsync({
+          params: {
+            element: { type: 'element', id: elemB.id },
+            parent: { type: 'column', id: column.id },
+            after: null,
+          },
+          tree,
+        });
+      });
+
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.elementTree.byPage(1, 'main'),
+      });
+    });
+  });
+
+  // ─── Shared onSuccess defaults (useStandardMutationOptions) ──────
+  //
+  // Pins the onSuccess body at useElementMutations.ts:41 — without
+  // invalidateQueries the cache stays stale after a write, breaking the
+  // CMS read-after-write contract. All mutations spreading this factory
+  // share the same behaviour; one targeted test proves the factory works.
+
+  describe('useStandardMutationOptions onSuccess', () => {
+    it('invalidates the specific page tree queryKey after a successful mutation', async () => {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false, gcTime: 0 } },
+      });
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+      mockFetchSuccess({});
+
+      const { wrapper } = createProviderWrapper({ queryClient });
+      const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper });
+
+      await act(async () => {
+        await result.current.mutateAsync({ className: 'Content', parentId: 10 });
+      });
+
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.elementTree.byPage(1, 'main'),
+      });
+    });
   });
 });

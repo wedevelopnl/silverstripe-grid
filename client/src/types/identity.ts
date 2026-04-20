@@ -40,8 +40,12 @@ function toKey(typeOrRef: NodeType | NodeRef, id?: number): NodeKey {
 }
 
 function fromKey(key: string): NodeRef | null {
+  // When SEPARATOR is absent, indexOf returns -1 and slice(0, -1) yields
+  // the key minus its last character, which isNodeType rejects. When the
+  // separator is at position 0 (e.g. "-5"), slice(0, 0) yields "", which
+  // isNodeType also rejects. So no explicit separator-index guard is
+  // needed — the type check below catches every malformed shape.
   const separatorIndex = key.indexOf(SEPARATOR);
-  if (separatorIndex <= 0) return null;
 
   const type = key.slice(0, separatorIndex);
   if (!isNodeType(type)) return null;

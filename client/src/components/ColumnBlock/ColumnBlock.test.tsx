@@ -6,6 +6,7 @@ import { resetAdapterCache } from '@/utils/gridAdapter';
 import { mockFetchSuccess, getFetchCalls } from '@/testing/mockFetch';
 import { createColumnNode, createSimpleElement } from '@/testing/factories';
 import { renderWithProviders } from '@/testing/renderWithProviders';
+import { ReadonlyProvider } from '@/hooks/ReadonlyContext';
 
 import ColumnBlock from './ColumnBlock';
 
@@ -659,5 +660,50 @@ describe('ColumnBlock', () => {
 
     expect(screen.queryByTestId('column-edit-link')).not.toBeInTheDocument();
     expect(screen.getByTestId('column-title')).toHaveTextContent(column.title);
+  });
+
+  describe('readonly mode', () => {
+    // Pin the `children.length > 0 ? ... : <EmptyState ...>` ternary at
+    // ColumnBlock.tsx:288 against EqualityOperator (`>= 0` / `<= 0`) and
+    // ConditionalExpression mutations. Readonly is the isolated render path
+    // (no sortable, no mutations, no picker) where the ternary survives.
+
+    it('renders an ElementCard for each child and no empty-state', () => {
+      mockFetchSuccess({});
+
+      const children = [
+        createSimpleElement({ id: 201, title: 'Readonly A' }),
+        createSimpleElement({ id: 202, title: 'Readonly B' }),
+        createSimpleElement({ id: 203, title: 'Readonly C' }),
+      ];
+      const column = createColumnNode({ children, childCount: 0 });
+
+      renderWithProviders(
+        <ReadonlyProvider value={true}>
+          <ColumnBlock column={column} />
+        </ReadonlyProvider>,
+      );
+
+      expect(screen.getAllByTestId('element-card')).toHaveLength(3);
+      expect(screen.getByText('Readonly A')).toBeInTheDocument();
+      expect(screen.getByText('Readonly B')).toBeInTheDocument();
+      expect(screen.getByText('Readonly C')).toBeInTheDocument();
+      expect(screen.queryByText('No content blocks')).not.toBeInTheDocument();
+    });
+
+    it('renders the empty-state message and no ElementCards when children are empty', () => {
+      mockFetchSuccess({});
+
+      const column = createColumnNode({ children: null, childCount: 0 });
+
+      renderWithProviders(
+        <ReadonlyProvider value={true}>
+          <ColumnBlock column={column} />
+        </ReadonlyProvider>,
+      );
+
+      expect(screen.getByText('No content blocks')).toBeInTheDocument();
+      expect(screen.queryAllByTestId('element-card')).toHaveLength(0);
+    });
   });
 });

@@ -7,6 +7,7 @@ import { useDragContext } from '@/hooks/useDragAndDrop';
 import { mockFetchSuccess } from '@/testing/mockFetch';
 import { createRowNode } from '@/testing/factories';
 import { renderWithProviders } from '@/testing/renderWithProviders';
+import { ReadonlyProvider } from '@/hooks/ReadonlyContext';
 
 import RowBlock from './RowBlock';
 
@@ -271,5 +272,49 @@ describe('RowBlock', () => {
 
     expect(screen.queryByTestId('row-edit-link')).not.toBeInTheDocument();
     expect(screen.getByTestId('row-title')).toHaveTextContent(row.title);
+  });
+
+  describe('readonly mode layout', () => {
+    // Pins the `getOffsetStrategy() === 'margin' ? 'flex' : 'grid'` ternary
+    // at RowBlock.tsx:123 and the `layoutMode === 'grid'` guard at :143 —
+    // both live on the ReadonlyRowBlock path, not the editable one. The
+    // existing edit-path tests don't exercise these lines.
+
+    it('uses flex layout and omits --grid-columns when offset strategy is margin', () => {
+      resetAdapterCache();
+      mockFetchSuccess({});
+
+      const row = createRowNode({ columnCount: 1 });
+
+      const { container } = renderWithProviders(
+        <ReadonlyProvider value={true}>
+          <RowBlock row={row} />
+        </ReadonlyProvider>,
+      );
+
+      const columnsDiv = container.querySelector('.row-block__columns') as HTMLElement;
+      expect(columnsDiv).toHaveClass('row-block__columns--flex');
+      expect(columnsDiv).not.toHaveClass('row-block__columns--grid');
+      expect(columnsDiv.style.getPropertyValue('--grid-columns')).toBe('');
+    });
+
+    it('uses grid layout and sets --grid-columns when offset strategy is grid-placement', () => {
+      resetAdapterCache();
+      window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement';
+      mockFetchSuccess({});
+
+      const row = createRowNode({ columnCount: 1 });
+
+      const { container } = renderWithProviders(
+        <ReadonlyProvider value={true}>
+          <RowBlock row={row} />
+        </ReadonlyProvider>,
+      );
+
+      const columnsDiv = container.querySelector('.row-block__columns') as HTMLElement;
+      expect(columnsDiv).toHaveClass('row-block__columns--grid');
+      expect(columnsDiv).not.toHaveClass('row-block__columns--flex');
+      expect(columnsDiv.style.getPropertyValue('--grid-columns')).toBe('12');
+    });
   });
 });
