@@ -1,5 +1,5 @@
 import { ElementNode } from './elements';
-import { NodeKey, NodeType } from './identity';
+import { NodeKey } from './identity';
 export declare const DRAGGABLE_TYPES: readonly ["section", "row", "column", "element"];
 export type DraggableType = (typeof DRAGGABLE_TYPES)[number];
 export interface ParsedDraggableId {
@@ -23,4 +23,9 @@ export declare function getDraggableTypeForNode(node: ElementNode): DraggableTyp
  * Maps a draggable type to the parent type that holds its siblings.
  * Sections live under a page, rows in sections, columns in rows, elements in columns.
  */
-export declare const PARENT_CONTAINER_TYPE: Record<DraggableType, NodeType>;
+export declare const PARENT_CONTAINER_TYPE: {
+    readonly section: "page";
+    readonly row: "section";
+    readonly column: "row";
+    readonly element: "column";
+};
