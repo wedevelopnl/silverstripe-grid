@@ -43,18 +43,27 @@ function EditableElementCard({ element }: ElementCardProps) {
   ].join(' ');
 
   const header: ReactNode = (
-    <div className="element-card__header">
-      <DragHandle
-        listeners={listeners}
-        attributes={attributes}
-        label={t('WeDevelopGrid.ElementCard.MOVE_LABEL', 'Move {title}', { title: element.title })}
-      />
-      <i className={`element-card__icon ${element.blockSchema.icon}`} />
-      <h4 className="element-card__title" data-testid="element-card-title">
-        {element.title}
-      </h4>
-      <ElementActions node={element} />
-    </div>
+    <>
+      <div className="element-card__header">
+        <DragHandle
+          listeners={listeners}
+          attributes={attributes}
+          label={t('WeDevelopGrid.ElementCard.MOVE_LABEL', 'Move {title}', {
+            title: element.title,
+          })}
+        />
+        <i className={`element-card__icon ${element.blockSchema.icon}`} />
+        <h4 className="element-card__title" data-testid="element-card-title">
+          {element.title}
+        </h4>
+        <ElementActions node={element} />
+      </div>
+      {element.summary ? (
+        <p className="element-card__summary" data-testid="element-card-summary">
+          {element.summary}
+        </p>
+      ) : null}
+    </>
   );
 
   if (isClickable) {
@@ -113,6 +122,11 @@ function ReadonlyElementCard({ element }: ElementCardProps) {
           {element.title}
         </h4>
       </div>
+      {element.summary ? (
+        <p className="element-card__summary" data-testid="element-card-summary">
+          {element.summary}
+        </p>
+      ) : null}
     </div>
   );
 }

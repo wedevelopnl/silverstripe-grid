@@ -130,6 +130,40 @@ describe('ElementCard', () => {
     expect(icon).toHaveClass('element-card__icon', 'font-icon-block-content');
   });
 
+  describe('summary', () => {
+    it('renders the summary line when a non-empty value is provided', () => {
+      mockFetchSuccess({});
+
+      const element = createSimpleElement({ summary: 'A short preview of the block' });
+
+      renderWithProviders(<ElementCard element={element} />);
+
+      expect(screen.getByTestId('element-card-summary')).toHaveTextContent(
+        'A short preview of the block',
+      );
+    });
+
+    it('does not render the summary line when the field is absent', () => {
+      mockFetchSuccess({});
+
+      const element = createSimpleElement();
+
+      renderWithProviders(<ElementCard element={element} />);
+
+      expect(screen.queryByTestId('element-card-summary')).toBeNull();
+    });
+
+    it('does not render the summary line when the value is an empty string', () => {
+      mockFetchSuccess({});
+
+      const element = createSimpleElement({ summary: '' });
+
+      renderWithProviders(<ElementCard element={element} />);
+
+      expect(screen.queryByTestId('element-card-summary')).toBeNull();
+    });
+  });
+
   describe('anchor click handling', () => {
     // Pins the handleAnchorClick guards at ElementCard.tsx:68-82 against
     // ConditionalExpression / LogicalOperator / EqualityOperator / BlockStatement

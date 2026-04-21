@@ -67,6 +67,8 @@ class GridNodeMapper
         $statusFlags = $element->getStatusFlags();
         $status = ElementStatus::fromStatusFlags($statusFlags);
 
+        $summary = $element->getSummary();
+
         /** @var array<string, mixed> $extensions */
         $extensions = [];
         $this->extend('updateElementData', $element, $extensions);
@@ -94,6 +96,7 @@ class GridNodeMapper
             canCreate: $element->canCreate(),
             editLink: $element->getCMSEditLink(),
             status: $status,
+            summary: $summary,
             containerType: $containerType,
             allowedTypes: $allowedTypes,
             children: $children,

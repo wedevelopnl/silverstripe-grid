@@ -177,6 +177,18 @@ class GridElement extends DataObject
         return $name !== '' ? $name : ClassInfo::shortName(static::class);
     }
 
+    /**
+     * Short, plain-text description of this element's content for the CMS editor card.
+     *
+     * Default: null — no summary rendered. Override in content-element subclasses
+     * to return a short descriptor (strip HTML and truncate as needed).
+     * An empty string is treated identically to null.
+     */
+    public function getSummary(): ?string
+    {
+        return null;
+    }
+
     /** Anchor-safe identifier for linking within a page. */
     public function getAnchor(): string
     {

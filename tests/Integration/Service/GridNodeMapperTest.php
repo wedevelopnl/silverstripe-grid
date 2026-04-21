@@ -18,6 +18,7 @@ use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\GridNodeMapper;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Tests\Integration\Support\SummarizedContentElement;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\ElementStatus;
 use WeDevelop\Grid\Value\NodeRef;
@@ -93,6 +94,82 @@ final class GridNodeMapperTest extends SapphireTest
         self::assertNull($node->obsoleteClassName);
         self::assertSame(ElementStatus::Draft, $node->status);
         self::assertIsArray($node->extensions);
+    }
+
+    public function testMapToNodeIncludesSummaryWhenElementProvidesOne(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $element = SummarizedContentElement::create();
+        $element->testSummary = 'Hello admin';
+        $element->ParentID = $column->ID;
+        $element->ParentClass = $column::class;
+        $element->write();
+
+        $parentRef = new NodeRef(NodeType::Column, (int) $column->ID);
+        $node = $this->mapper->mapToNode(
+            $element,
+            $parentRef,
+            null,
+            null,
+            null,
+            null,
+        );
+
+        self::assertSame('Hello admin', $node->summary);
+
+        $serialized = $node->jsonSerialize();
+        self::assertArrayHasKey('summary', $serialized);
+        self::assertSame('Hello admin', $serialized['summary']);
+    }
+
+    public function testMapToNodeOmitsSummaryWhenNull(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, title: 'My Section');
+
+        $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
+        $node = $this->mapper->mapToNode(
+            $section,
+            $parentRef,
+            ContainerType::Section,
+            null,
+            [],
+            null,
+        );
+
+        self::assertNull($node->summary);
+        self::assertArrayNotHasKey('summary', $node->jsonSerialize());
+    }
+
+    public function testMapToNodeOmitsSummaryWhenEmptyString(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $element = SummarizedContentElement::create();
+        $element->testSummary = '';
+        $element->ParentID = $column->ID;
+        $element->ParentClass = $column::class;
+        $element->write();
+
+        $parentRef = new NodeRef(NodeType::Column, (int) $column->ID);
+        $node = $this->mapper->mapToNode(
+            $element,
+            $parentRef,
+            null,
+            null,
+            null,
+            null,
+        );
+
+        self::assertSame('', $node->summary);
+        self::assertArrayNotHasKey('summary', $node->jsonSerialize());
     }
 
     public function testMapToNodePublishedSectionResolvesToPublishedStatus(): void

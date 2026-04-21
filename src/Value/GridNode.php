@@ -20,7 +20,7 @@ use Override;
  * from the serialized output; container nodes include all three.
  *
  * @phpstan-import-type SerializedNodeRef from NodeRef
- * @phpstan-type SerializedNode array{self: SerializedNodeRef, parent: SerializedNodeRef, title: non-empty-string, blockSchema: array{typeName: string, type: string, title: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, status: value-of<ElementStatus>, containerType?: string, allowedTypes?: array<class-string, array{label: string, icon: string, description: string}>|null, children?: list<mixed>|null, gridSettings?: array{default: array{width: int, offset: int, visible: bool}, overrides: array<non-empty-string, array{width: int, offset: int, visible: bool}>}, extensions?: array<string, mixed>}
+ * @phpstan-type SerializedNode array{self: SerializedNodeRef, parent: SerializedNodeRef, title: non-empty-string, blockSchema: array{typeName: string, type: string, title: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, status: value-of<ElementStatus>, summary?: non-empty-string, containerType?: string, allowedTypes?: array<class-string, array{label: string, icon: string, description: string}>|null, children?: list<mixed>|null, gridSettings?: array{default: array{width: int, offset: int, visible: bool}, overrides: array<non-empty-string, array{width: int, offset: int, visible: bool}>}, extensions?: array<string, mixed>}
  */
 final readonly class GridNode implements JsonSerializable
 {
@@ -44,6 +44,7 @@ final readonly class GridNode implements JsonSerializable
         public bool $canCreate,
         public ?string $editLink,
         public ElementStatus $status,
+        public ?string $summary = null,
         public ?ContainerType $containerType = null,
         public ?array $allowedTypes = null,
         public ?array $children = null,
@@ -95,6 +96,10 @@ final readonly class GridNode implements JsonSerializable
             'editLink' => $this->editLink,
             'status' => $this->status->value,
         ];
+
+        if ($this->summary !== null && $this->summary !== '') {
+            $data['summary'] = $this->summary;
+        }
 
         if ($this->containerType instanceof ContainerType) {
             $data['containerType'] = $this->containerType->value;
