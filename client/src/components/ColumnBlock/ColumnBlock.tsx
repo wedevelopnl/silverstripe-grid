@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { ColumnNode, ViewportSettings } from '@/types/elements';
 import type { NodeKey } from '@/types/identity';
+import type { ElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { useGridEditorContext } from '@/hooks/GridEditorContext';
 import { useReadonly } from '@/hooks/ReadonlyContext';
@@ -10,7 +11,7 @@ import { useViewportContext } from '@/hooks/ViewportContext';
 import { useCollapse } from '@/hooks/useCollapseState';
 import { useUpdateGridSettings, useCreateContentElement } from '@/hooks/useElementMutations';
 import { buildSortableStyle } from '@/utils/sortableStyles';
-import { buildBlockClasses } from '@/utils/blockClasses';
+import { createBlockClasses } from '@/utils/blockClasses';
 import {
   getColumnCount,
   getOffsetStrategy,
@@ -26,6 +27,10 @@ import GridSettingsPicker from '@/components/GridSettingsPicker/GridSettingsPick
 import ElementCard from '@/components/ElementCard/ElementCard';
 import EmptyState from '@/components/EmptyState/EmptyState';
 import ElementTypePicker from '@/components/ElementTypePicker/ElementTypePicker';
+
+const buildClasses = createBlockClasses<
+  ElementStatus | 'hidden' | 'collapsed' | 'drop-target'
+>('column-block');
 
 interface ColumnBlockProps {
   readonly column: ColumnNode;
@@ -105,11 +110,12 @@ function EditableColumnBlock({ column }: ColumnBlockProps) {
   const isDragActive = activeType !== null;
   const isPickerDisabled = isDragActive || updateGridSettings.isPending;
 
-  const innerClasses = buildBlockClasses('column-block', status, {
-    hidden: !settings.visible,
-    collapsed: isCollapsed,
-    'drop-target': showDropTarget,
-  });
+  const innerClasses = buildClasses(
+    status,
+    !settings.visible && 'hidden',
+    isCollapsed && 'collapsed',
+    showDropTarget && 'drop-target',
+  );
 
   const sortableStyle = buildSortableStyle(transform, transition, isDragging);
   const columnStyle = buildColumnStyle(settings, sortableStyle);
@@ -262,10 +268,7 @@ function ReadonlyColumnBlock({ column }: ColumnBlockProps) {
   const status = column.status;
   const { isCollapsed, onToggle } = useColumnCollapse(column);
 
-  const innerClasses = buildBlockClasses('column-block', status, {
-    hidden: !settings.visible,
-    collapsed: isCollapsed,
-  });
+  const innerClasses = buildClasses(status, !settings.visible && 'hidden', isCollapsed && 'collapsed');
 
   // No sortable transform in readonly mode — pass empty style and let
   // buildColumnStyle layer the --col-width / --col-span variables on top.

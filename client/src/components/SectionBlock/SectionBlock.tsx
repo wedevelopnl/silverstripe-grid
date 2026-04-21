@@ -3,17 +3,22 @@ import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { SectionNode } from '@/types/elements';
 import type { NodeKey } from '@/types/identity';
+import type { ElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { useReadonly } from '@/hooks/ReadonlyContext';
 import { useCollapse } from '@/hooks/useCollapseState';
 import { buildSortableStyle } from '@/utils/sortableStyles';
-import { buildBlockClasses } from '@/utils/blockClasses';
+import { createBlockClasses } from '@/utils/blockClasses';
 import { t } from '@/i18n';
 import DragHandle from '@/components/DragHandle/DragHandle';
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import ElementActions from '@/components/ElementActions/ElementActions';
 import RowBlock from '@/components/RowBlock/RowBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
+
+const buildClasses = createBlockClasses<ElementStatus | 'collapsed' | 'drop-target'>(
+  'section-block',
+);
 
 interface SectionBlockProps {
   readonly section: SectionNode;
@@ -56,10 +61,11 @@ function EditableSectionBlock({ section }: SectionBlockProps) {
 
   const showDropTarget = isOver && activeType === 'section';
 
-  const rootClasses = buildBlockClasses('section-block', status, {
-    collapsed: isCollapsed,
-    'drop-target': showDropTarget,
-  });
+  const rootClasses = buildClasses(
+    status,
+    isCollapsed && 'collapsed',
+    showDropTarget && 'drop-target',
+  );
 
   const style = buildSortableStyle(transform, transition, isDragging);
 
@@ -120,9 +126,7 @@ function ReadonlySectionBlock({ section }: SectionBlockProps) {
   const status = section.status;
   const { isCollapsed, onToggle } = useSectionCollapse(section);
 
-  const rootClasses = buildBlockClasses('section-block', status, {
-    collapsed: isCollapsed,
-  });
+  const rootClasses = buildClasses(status, isCollapsed && 'collapsed');
 
   return (
     <section className={rootClasses} data-testid="section-block">

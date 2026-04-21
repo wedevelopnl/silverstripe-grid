@@ -1,24 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { buildBlockClasses } from './blockClasses';
+import { createBlockClasses } from './blockClasses';
 
-describe('buildBlockClasses', () => {
-  it('combines block name and status modifier', () => {
-    expect(buildBlockClasses('card', 'published', {})).toBe('card card--published');
+describe('createBlockClasses', () => {
+  const build = createBlockClasses<
+    'published' | 'draft' | 'modified' | 'removed' | 'active' | 'highlighted' | 'dragging'
+  >('card');
+
+  it('emits the block name with a single modifier', () => {
+    expect(build('published')).toBe('card card--published');
   });
 
-  it('appends active modifiers', () => {
-    expect(buildBlockClasses('card', 'draft', { active: true, highlighted: true })).toBe(
+  it('appends every truthy modifier', () => {
+    expect(build('draft', 'active', 'highlighted')).toBe(
       'card card--draft card--active card--highlighted',
     );
   });
 
-  it('skips inactive modifiers', () => {
-    expect(buildBlockClasses('card', 'modified', { active: false, dragging: true })).toBe(
-      'card card--modified card--dragging',
-    );
+  it('drops falsy modifiers', () => {
+    expect(build('modified', false, 'dragging')).toBe('card card--modified card--dragging');
   });
 
-  it('works with no modifiers', () => {
-    expect(buildBlockClasses('block', 'removed', {})).toBe('block block--removed');
+  it('emits the bare block name when no modifiers are passed', () => {
+    expect(createBlockClasses('block')()).toBe('block');
   });
 });

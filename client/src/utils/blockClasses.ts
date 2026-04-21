@@ -1,17 +1,15 @@
-import type { ElementStatus } from '@/types/status';
+type BlockModifier<M extends string> = M | false | null | undefined;
 
-export function buildBlockClasses(
-  block: string,
-  status: ElementStatus,
-  modifiers: Record<string, boolean>,
-): string {
-  const classes = [block, `${block}--${status}`];
+export function createBlockClasses<M extends string>(block: string) {
+  return (...modifiers: BlockModifier<M>[]): string => {
+    const classes: string[] = [block];
 
-  for (const [modifier, active] of Object.entries(modifiers)) {
-    if (active) {
-      classes.push(`${block}--${modifier}`);
+    for (const modifier of modifiers) {
+      if (modifier) {
+        classes.push(`${block}--${modifier}`);
+      }
     }
-  }
 
-  return classes.join(' ');
+    return classes.join(' ');
+  };
 }

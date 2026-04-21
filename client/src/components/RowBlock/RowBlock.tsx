@@ -3,11 +3,12 @@ import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import type { RowNode } from '@/types/elements';
 import type { NodeKey } from '@/types/identity';
+import type { ElementStatus } from '@/types/status';
 import { useDragContext } from '@/hooks/useDragAndDrop';
 import { useReadonly } from '@/hooks/ReadonlyContext';
 import { useCollapse } from '@/hooks/useCollapseState';
 import { buildSortableStyle } from '@/utils/sortableStyles';
-import { buildBlockClasses } from '@/utils/blockClasses';
+import { createBlockClasses } from '@/utils/blockClasses';
 import { getOffsetStrategy, getColumnCount } from '@/utils/gridAdapter';
 import { t } from '@/i18n';
 import DragHandle from '@/components/DragHandle/DragHandle';
@@ -15,6 +16,8 @@ import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
 import ElementActions from '@/components/ElementActions/ElementActions';
 import ColumnBlock from '@/components/ColumnBlock/ColumnBlock';
 import AddChildButton from '@/components/AddChildButton/AddChildButton';
+
+const buildClasses = createBlockClasses<ElementStatus | 'collapsed' | 'drop-target'>('row-block');
 
 interface RowBlockProps {
   readonly row: RowNode;
@@ -53,10 +56,11 @@ function EditableRowBlock({ row }: RowBlockProps) {
 
   const showDropTarget = isOver && activeType === 'row';
 
-  const rootClasses = buildBlockClasses('row-block', status, {
-    collapsed: isCollapsed,
-    'drop-target': showDropTarget,
-  });
+  const rootClasses = buildClasses(
+    status,
+    isCollapsed && 'collapsed',
+    showDropTarget && 'drop-target',
+  );
 
   const style = buildSortableStyle(transform, transition, isDragging);
 
@@ -123,9 +127,7 @@ function ReadonlyRowBlock({ row }: RowBlockProps) {
   const status = row.status;
   const { isCollapsed, onToggle } = useRowCollapse(row);
 
-  const rootClasses = buildBlockClasses('row-block', status, {
-    collapsed: isCollapsed,
-  });
+  const rootClasses = buildClasses(status, isCollapsed && 'collapsed');
 
   return (
     <div className={rootClasses} data-testid="row-block">
