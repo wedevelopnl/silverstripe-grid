@@ -28,9 +28,9 @@ import ElementCard from '@/components/ElementCard/ElementCard';
 import EmptyState from '@/components/EmptyState/EmptyState';
 import ElementTypePicker from '@/components/ElementTypePicker/ElementTypePicker';
 
-const buildClasses = createBlockClasses<
-  ElementStatus | 'hidden' | 'collapsed' | 'drop-target'
->('column-block');
+const buildClasses = createBlockClasses<ElementStatus | 'hidden' | 'collapsed' | 'drop-target'>(
+  'column-block',
+);
 
 interface ColumnBlockProps {
   readonly column: ColumnNode;
@@ -268,7 +268,11 @@ function ReadonlyColumnBlock({ column }: ColumnBlockProps) {
   const status = column.status;
   const { isCollapsed, onToggle } = useColumnCollapse(column);
 
-  const innerClasses = buildClasses(status, !settings.visible && 'hidden', isCollapsed && 'collapsed');
+  const innerClasses = buildClasses(
+    status,
+    !settings.visible && 'hidden',
+    isCollapsed && 'collapsed',
+  );
 
   // No sortable transform in readonly mode — pass empty style and let
   // buildColumnStyle layer the --col-width / --col-span variables on top.
