@@ -29,4 +29,40 @@ final class ContentElementTest extends SapphireTest
 
         self::assertFalse($element->getSearchIndexable());
     }
+
+    public function testGetSummaryReturnsEmptyStringWhenHtmlIsEmpty(): void
+    {
+        $element = ContentElement::create();
+
+        self::assertSame('', $element->getSummary());
+    }
+
+    public function testGetSummaryStripsHtmlAndReturnsPlainText(): void
+    {
+        $element = ContentElement::create();
+        $element->HTML = '<p>Hello <strong>editor</strong>, welcome.</p>';
+
+        $summary = $element->getSummary();
+
+        self::assertNotNull($summary);
+        self::assertStringNotContainsString('<', $summary);
+        self::assertStringNotContainsString('>', $summary);
+        self::assertStringContainsString('Hello', $summary);
+        self::assertStringContainsString('editor', $summary);
+    }
+
+    public function testGetSummaryTruncatesAtConfiguredWordCount(): void
+    {
+        Config::modify()->set(ContentElement::class, 'summary_word_count', 3);
+
+        $element = ContentElement::create();
+        $element->HTML = '<p>one two three four five six seven eight</p>';
+
+        $summary = $element->getSummary();
+
+        self::assertNotNull($summary);
+        self::assertStringContainsString('one', $summary);
+        self::assertStringContainsString('three', $summary);
+        self::assertStringNotContainsString('eight', $summary);
+    }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Model;
 
+use Override;
+
 /**
  * Base class for leaf content elements that render visible content.
  *
@@ -30,9 +32,25 @@ class ContentElement extends GridElement
     /** Whether content of this type should be included in search indexes. */
     private static bool $search_indexable = true;
 
+    /** Word budget for the default editor-card summary derived from the HTML field. */
+    private static int $summary_word_count = 20;
+
     /** Whether this element type should be indexed for site search. */
     public function getSearchIndexable(): bool
     {
         return (bool) static::config()->get('search_indexable');
+    }
+
+    /**
+     * Default summary: a plain-text preview of the HTML field, truncated to
+     * `summary_word_count` words. Returns an empty string when HTML is empty —
+     * GridNode drops that from the payload, so the card hides the line.
+     */
+    #[Override]
+    public function getSummary(): ?string
+    {
+        $wordCount = (int) static::config()->get('summary_word_count');
+
+        return (string) $this->dbObject('HTML')->Summary($wordCount);
     }
 }
