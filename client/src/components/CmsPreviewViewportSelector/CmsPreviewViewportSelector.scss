@@ -6,7 +6,7 @@
 
   &__button {
     padding: 4px 10px;
-    border: 1px solid rgba(0, 0, 0, 0.15);
+    border: 1px solid rgb(0 0 0 / 15%);
     background: transparent;
     border-radius: 3px;
     font-size: 12px;
@@ -14,7 +14,7 @@
     cursor: pointer;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.05);
+      background: rgb(0 0 0 / 5%);
     }
 
     &--active {
