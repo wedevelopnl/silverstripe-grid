@@ -44,7 +44,11 @@ function callVendorChangeSize(key: string): void {
     return;
   }
   const selection = jq('.cms-preview');
-  if (selection === undefined || typeof selection.changeSize !== 'function' || selection.length === 0) {
+  if (
+    selection === undefined ||
+    typeof selection.changeSize !== 'function' ||
+    selection.length === 0
+  ) {
     return;
   }
   try {

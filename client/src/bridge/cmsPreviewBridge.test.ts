@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { registerCmsPreviewBridge, teardownCmsPreviewBridge } from './cmsPreviewBridge';
 import { setActiveViewport } from '@/state/activeViewport';
 
@@ -81,7 +81,9 @@ describe('cmsPreviewBridge — resize mechanics', () => {
 
     setActiveViewport('sm');
 
-    const styleTag = document.getElementById('grid-preview-viewport-override') as HTMLStyleElement | null;
+    const styleTag = document.getElementById(
+      'grid-preview-viewport-override',
+    ) as HTMLStyleElement | null;
     expect(styleTag).not.toBeNull();
     expect(styleTag!.textContent).toContain('576px');
   });

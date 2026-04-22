@@ -29,8 +29,12 @@ describe('CmsPreviewViewportSelector', () => {
     setActiveViewport('md');
     render(<CmsPreviewViewportSelector />);
 
-    expect(screen.getByRole('button', { name: 'Medium' }).getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Small' }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('button', { name: 'Medium' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Small' }).getAttribute('aria-pressed')).toBe(
+      'false',
+    );
   });
 
   it('updates the active viewport on click', () => {
