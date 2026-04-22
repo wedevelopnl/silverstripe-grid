@@ -102,7 +102,11 @@ function callVendorChangeSize(key: string): void {
     return;
   }
   const selection = jq('.cms-preview');
-  if (selection === undefined || selection.length === 0 || typeof selection.entwine !== 'function') {
+  if (
+    selection === undefined ||
+    selection.length === 0 ||
+    typeof selection.entwine !== 'function'
+  ) {
     return;
   }
   // Vendor entwine rules for .cms-preview live under namespace `ss.preview`.
