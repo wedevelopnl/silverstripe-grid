@@ -183,6 +183,12 @@ class GridElement extends DataObject
      * Default: null — no summary rendered. Override in content-element subclasses
      * to return a short descriptor (strip HTML and truncate as needed).
      * An empty string is treated identically to null.
+     *
+     * @example
+     *   public function getSummary(): ?string
+     *   {
+     *       return $this->dbObject('HTML')->Summary(20);
+     *   }
      */
     public function getSummary(): ?string
     {
