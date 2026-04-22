@@ -22,8 +22,8 @@ describe('getViewports', () => {
   it('returns viewport configs from adapter config', () => {
     const viewports = getViewports();
     expect(viewports).toHaveLength(6);
-    expect(viewports[0]).toEqual({ key: 'xs', label: 'Extra small' });
-    expect(viewports[2]).toEqual({ key: 'md', label: 'Medium' });
+    expect(viewports[0]).toEqual({ key: 'xs', label: 'Extra small', minWidth: 0 });
+    expect(viewports[2]).toEqual({ key: 'md', label: 'Medium', minWidth: 768 });
   });
 });
 

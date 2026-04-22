@@ -7,12 +7,12 @@ const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController';
 
 const defaultAdapterConfig: AdapterConfig = {
   viewports: [
-    { key: 'xs', label: 'Extra small' },
-    { key: 'sm', label: 'Small' },
-    { key: 'md', label: 'Medium' },
-    { key: 'lg', label: 'Large' },
-    { key: 'xl', label: 'Extra large' },
-    { key: 'xxl', label: 'Extra extra large' },
+    { key: 'xs',  label: 'Extra small',       minWidth: 0 },
+    { key: 'sm',  label: 'Small',             minWidth: 576 },
+    { key: 'md',  label: 'Medium',            minWidth: 768 },
+    { key: 'lg',  label: 'Large',             minWidth: 992 },
+    { key: 'xl',  label: 'Extra large',       minWidth: 1200 },
+    { key: 'xxl', label: 'Extra extra large', minWidth: 1400 },
   ],
   defaultViewport: 'md',
   columnCount: 12,
