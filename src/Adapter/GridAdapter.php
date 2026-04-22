@@ -391,6 +391,17 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
             );
         }
 
+        // Viewport keys flow into `.grid-<key>` CSS class names in the
+        // frontend bridge. Constrain them to identifier-safe characters
+        // so adapter authors can't accidentally emit selectors that break
+        // the cascade (or worse, introduce CSS-injection-shaped bugs).
+        if (preg_match('/^[a-zA-Z0-9_-]+$/', $key) !== 1) {
+            throw InvalidGridValueException::forMalformedViewportDefinition(
+                $key,
+                'viewport key must match /^[a-zA-Z0-9_-]+$/',
+            );
+        }
+
         if (!is_array($definition)) {
             throw InvalidGridValueException::forMalformedViewportDefinition(
                 $key,

@@ -60,4 +60,54 @@ describe('activeViewport store', () => {
 
     expect(listener).not.toHaveBeenCalled();
   });
+
+  it('refuses writes for keys not in the active adapter viewport set', () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeActiveViewport(listener);
+
+    setActiveViewport('nonsense');
+
+    // The write is rejected — store keeps the initial default and
+    // no subscribers are notified.
+    expect(getActiveViewport()).toBe('md');
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+});
+
+describe('activeViewport store — adapter unavailable', () => {
+  afterEach(() => {
+    vi.doUnmock('@/utils/gridAdapter');
+    vi.resetModules();
+  });
+
+  it('refuses setActiveViewport writes when getViewports throws', async () => {
+    // Re-mock the adapter BEFORE importing the store so the fresh
+    // module picks up the throwing stubs instead of the test-file
+    // level mock at the top.
+    vi.resetModules();
+    vi.doMock('@/utils/gridAdapter', () => ({
+      getDefaultViewport: () => {
+        throw new Error('adapter unavailable');
+      },
+      getViewports: () => {
+        throw new Error('adapter unavailable');
+      },
+    }));
+
+    const freshStore = await import('./activeViewport');
+    const listener = vi.fn();
+    const unsubscribe = freshStore.subscribeActiveViewport(listener);
+
+    // Initial value is '' because ensureInitialised caught the error.
+    expect(freshStore.getActiveViewport()).toBe('');
+
+    // Write attempt with any key — must be refused, not silently accepted.
+    freshStore.setActiveViewport('anything-goes');
+
+    expect(freshStore.getActiveViewport()).toBe('');
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
+    freshStore.resetActiveViewportStore();
+  });
 });

@@ -10,6 +10,11 @@ import { getViewports } from '@/utils/gridAdapter';
 
 const VENDOR_SELECT_ID = 'preview-size-dropdown-select';
 const VENDOR_WRAPPER_ID = 'preview-size-dropdown';
+// Presence of the grid editor is the gate for mounting the preview
+// selector. Without this, our bundle would hijack the CMS preview bar
+// on every previewable admin page (Files, Blog, SiteTree non-grid
+// pages) — all of which have the vendor dropdown but no grid.
+const GRID_EDITOR_SELECTOR = '.grid-editor__container';
 const MOUNT_CLASS = 'cms-preview-viewport-mount';
 const STYLE_TAG_ID = 'grid-preview-viewport-styles';
 
@@ -85,37 +90,65 @@ function injectViewportStyles(): void {
  */
 const VENDOR_FRAME_CLASS = 'tablet';
 
-function callVendorChangeSize(key: string): void {
+// Number of retries left for the initial sync if entwine isn't ready
+// yet. Reset by attemptMount before each mount cycle.
+const ENTWINE_READY_RETRIES = 20;
+const ENTWINE_READY_RETRY_MS = 50;
+let pendingSyncRetry: ReturnType<typeof setTimeout> | null = null;
+
+function callVendorChangeSize(key: string, retriesLeft: number = ENTWINE_READY_RETRIES): void {
   // biome-ignore lint/suspicious/noExplicitAny: jQuery global is untyped by design
   const jq = (window as any).jQuery;
-  if (typeof jq !== 'function') {
+  const entwineReady = (): {
+    changeSize: (size: string) => unknown;
+    removeClass: (cls: string) => unknown;
+    addClass: (cls: string) => unknown;
+  } | null => {
+    if (typeof jq !== 'function') return null;
+    const selection = jq('.cms-preview');
+    if (
+      selection === undefined ||
+      selection.length === 0 ||
+      typeof selection.entwine !== 'function'
+    )
+      return null;
+    let ns: { changeSize?: (size: string) => unknown };
+    try {
+      ns = selection.entwine('ss.preview');
+    } catch (error: unknown) {
+      console.warn('[GridEditor] Could not resolve ss.preview entwine namespace.', error);
+      return null;
+    }
+    if (typeof ns.changeSize !== 'function') return null;
+    return {
+      changeSize: ns.changeSize.bind(ns),
+      removeClass: selection.removeClass.bind(selection),
+      addClass: selection.addClass.bind(selection),
+    };
+  };
+
+  const ready = entwineReady();
+  if (ready === null) {
+    // Vendor entwine may attach asynchronously after DOMContentLoaded.
+    // Retry briefly so the initial sync lands once vendor is ready,
+    // then give up rather than hammer the event loop.
+    if (retriesLeft > 0) {
+      if (pendingSyncRetry !== null) {
+        clearTimeout(pendingSyncRetry);
+      }
+      pendingSyncRetry = setTimeout(() => {
+        pendingSyncRetry = null;
+        callVendorChangeSize(key, retriesLeft - 1);
+      }, ENTWINE_READY_RETRY_MS);
+    }
     return;
   }
-  const selection = jq('.cms-preview');
-  if (
-    selection === undefined ||
-    selection.length === 0 ||
-    typeof selection.entwine !== 'function'
-  ) {
-    return;
-  }
-  // Vendor entwine rules for .cms-preview live under namespace `ss.preview`.
-  // `changeSize` isn't exposed on plain jQuery — only via `.entwine('ss.preview')`.
-  let ns: { changeSize?: (size: string) => unknown };
-  try {
-    ns = selection.entwine('ss.preview');
-  } catch (error: unknown) {
-    console.warn('[GridEditor] Could not resolve ss.preview entwine namespace.', error);
-    return;
-  }
-  if (typeof ns.changeSize !== 'function') {
-    return;
-  }
+
   try {
     // 1. Let vendor changeSize set the carrier class (VENDOR_FRAME_CLASS).
     //    This triggers the device-frame styling + localStorage persistence
     //    + iframe redraw via the vendor's own pipeline.
-    ns.changeSize(VENDOR_FRAME_CLASS);
+    ready.changeSize(VENDOR_FRAME_CLASS);
     // 2. Swap any previously-applied grid-<key> class for the new one.
     //    Must happen AFTER changeSize — vendor only strips its own 4
     //    known class names ('auto desktop tablet mobile'), leaving grid-*
@@ -124,9 +157,9 @@ function callVendorChangeSize(key: string): void {
       .map((vp) => `grid-${vp.key}`)
       .join(' ');
     if (gridClasses !== '') {
-      selection.removeClass(gridClasses);
+      ready.removeClass(gridClasses);
     }
-    selection.addClass(`grid-${key}`);
+    ready.addClass(`grid-${key}`);
   } catch (error: unknown) {
     console.warn('[GridEditor] Vendor changeSize failed.', error);
   }
@@ -144,6 +177,13 @@ function syncPreview(): void {
 
 function attemptMount(): void {
   if (mountedRoot !== null) {
+    return;
+  }
+
+  // Gate on grid-editor presence. Without this, our bundle would hijack
+  // the CMS preview bar on every previewable admin page.
+  const editorPresent = document.querySelector(GRID_EDITOR_SELECTOR) !== null;
+  if (!editorPresent) {
     return;
   }
 
@@ -201,6 +241,10 @@ function attemptMount(): void {
  * clean up and no `changeSize` to call.
  */
 function detachForRemount(): void {
+  if (pendingSyncRetry !== null) {
+    clearTimeout(pendingSyncRetry);
+    pendingSyncRetry = null;
+  }
   if (unsubscribe !== null) {
     unsubscribe();
     unsubscribe = null;
@@ -229,11 +273,83 @@ function detachForRemount(): void {
 }
 
 function attemptUnmount(): void {
-  // Pjax swapped the content area out from under us — drop our React
-  // root and state, but leave the observer running so we can remount
-  // when the new vendor DOM appears.
-  if (hiddenVendorWrapper !== null && !hiddenVendorWrapper.isConnected) {
+  if (mountedRoot === null) {
+    return;
+  }
+  // Two conditions drop the mount (but keep the observer alive so a
+  // later mutation can remount):
+  //
+  // 1. The previously-hidden vendor wrapper was detached — e.g. Pjax
+  //    swap of the content area after save/publish.
+  // 2. The grid editor is no longer on the page — e.g. user navigated
+  //    to a non-grid admin section while the bundle is still alive. In
+  //    this case we also restore the vendor preview bar so unrelated
+  //    pages don't see the lingering `tablet` carrier class or our
+  //    injected per-viewport stylesheet.
+  const vendorGone = hiddenVendorWrapper !== null && !hiddenVendorWrapper.isConnected;
+  const editorGone = document.querySelector(GRID_EDITOR_SELECTOR) === null;
+
+  if (vendorGone) {
     detachForRemount();
+    return;
+  }
+  if (editorGone) {
+    // Fully tear down: restore vendor state so we don't leave stale
+    // classes on a non-grid page's preview bar.
+    teardownActiveMount();
+  }
+}
+
+/**
+ * Undo everything `attemptMount` did, but keep the MutationObserver
+ * running so we can remount if the grid editor reappears in this
+ * session (e.g. user navigates back).
+ */
+function teardownActiveMount(): void {
+  // Vendor wrapper is still connected here — reach through the store
+  // to restore auto preview mode and strip grid-<key> classes so the
+  // vendor bar returns to its default state.
+  restoreVendorPreview();
+  detachForRemount();
+  // detachForRemount cleared hiddenVendorWrapper, so re-show the
+  // wrapper BEFORE that — moved into the restore function below.
+}
+
+/**
+ * Best-effort restoration of the vendor preview bar to its default
+ * `auto` state. Called when the grid editor leaves the DOM so a
+ * lingering `tablet` class + our stylesheet don't misrepresent preview
+ * sizing on unrelated admin pages.
+ */
+function restoreVendorPreview(): void {
+  // Re-show the vendor wrapper first so the native UI is available.
+  if (hiddenVendorWrapper !== null) {
+    hiddenVendorWrapper.style.display = '';
+  }
+  // biome-ignore lint/suspicious/noExplicitAny: jQuery is untyped
+  const jq = (window as any).jQuery;
+  if (typeof jq !== 'function') {
+    return;
+  }
+  try {
+    const selection = jq('.cms-preview');
+    if (selection.length === 0) {
+      return;
+    }
+    if (typeof selection.entwine === 'function') {
+      const ns = selection.entwine('ss.preview');
+      if (typeof ns.changeSize === 'function') {
+        ns.changeSize('auto');
+      }
+    }
+    const gridClasses = getViewports()
+      .map((vp) => `grid-${vp.key}`)
+      .join(' ');
+    if (gridClasses !== '') {
+      selection.removeClass(gridClasses);
+    }
+  } catch {
+    // best-effort — ignore failures
   }
 }
 

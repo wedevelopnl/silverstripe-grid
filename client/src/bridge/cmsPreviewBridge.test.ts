@@ -11,9 +11,11 @@ vi.mock('@/utils/gridAdapter', () => ({
   ],
 }));
 
-function createVendorPreviewDom(): HTMLElement {
+function createVendorPreviewDom(options: { withGridEditor?: boolean } = {}): HTMLElement {
+  const { withGridEditor = true } = options;
   const wrapper = document.createElement('div');
   wrapper.innerHTML = `
+    ${withGridEditor ? '<div class="grid-editor__container"></div>' : ''}
     <div class="cms-preview">
       <div class="preview-device-outer"></div>
       <span id="preview-size-dropdown" class="preview-size-selector">
@@ -51,6 +53,18 @@ describe('cmsPreviewBridge', () => {
     await Promise.resolve();
 
     expect(document.querySelector('.cms-preview-viewport-selector')).toBeNull();
+  });
+
+  it('no-ops on non-grid CMS pages (vendor DOM present but no grid editor)', async () => {
+    // Simulates a previewable admin page (Files, Blog, plain SiteTree)
+    // where the vendor preview bar exists but no grid editor is mounted.
+    createVendorPreviewDom({ withGridEditor: false });
+    registerCmsPreviewBridge();
+    await Promise.resolve();
+
+    expect(document.querySelector('.cms-preview-viewport-selector')).toBeNull();
+    const vendor = document.getElementById('preview-size-dropdown');
+    expect(vendor?.style.display).not.toBe('none');
   });
 
   it('tears down on unregister — removes mount and restores vendor select', async () => {

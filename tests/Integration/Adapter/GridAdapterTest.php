@@ -445,6 +445,21 @@ final class GridAdapterTest extends SapphireTest
         new BootstrapAdapter();
     }
 
+    public function testMalformedViewportDefinitionsRejectsInvalidKeyCharacters(): void
+    {
+        // Viewport keys flow into `.grid-<key>` CSS class names in the
+        // frontend, so keys with whitespace or special characters would
+        // produce invalid selectors. The adapter must reject them.
+        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
+            'md dirty' => ['label' => 'Medium', 'min_width' => 768],
+        ]);
+
+        $this->expectException(InvalidGridValueException::class);
+        $this->expectExceptionMessageMatches('/viewport key/i');
+
+        new BootstrapAdapter();
+    }
+
     // -- Enabled viewports filtering -----------------------------------------
 
     public function testEnabledViewportsFiltersCorrectly(): void

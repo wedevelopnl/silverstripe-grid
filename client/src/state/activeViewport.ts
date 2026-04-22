@@ -41,16 +41,17 @@ export function setActiveViewport(key: string): void {
 
   // Reject keys that are not part of the active adapter's viewport set.
   // This preserves the invariant: consumers never observe a viewport key
-  // that doesn't correspond to a real adapter viewport.
+  // that doesn't correspond to a real adapter viewport. If the adapter
+  // config is unavailable (early boot, stub environment), also refuse
+  // the write — accepting arbitrary keys would let invalid values flow
+  // into `.grid-${key}` CSS class names downstream.
   try {
     const viewports = getViewports();
     if (!viewports.some((vp) => vp.key === key)) {
       return;
     }
   } catch {
-    // Adapter unavailable — accept the write; a follow-up read will
-    // still return whatever was set, and the render layer will handle
-    // unknown keys.
+    return;
   }
 
   current = key;
