@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, vi } from 'vitest';
 import type { AdapterConfig } from './client/src/types/adapter';
 import type { SilverStripeConfig, SilverStripeI18n } from './client/src/types/silverstripe';
+import { resetActiveViewportStore } from './client/src/state/activeViewport';
 
 const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController';
 
@@ -60,6 +61,10 @@ beforeEach(() => {
     config: structuredClone(defaultConfig),
     i18n: defaultI18n,
   };
+  // Reset module-scoped viewport store after window.ss is set so the store's
+  // lazy init can resolve getDefaultViewport() from the fresh CMS config on
+  // first read, preventing state leaks across tests.
+  resetActiveViewportStore();
 });
 
 afterEach(() => {
