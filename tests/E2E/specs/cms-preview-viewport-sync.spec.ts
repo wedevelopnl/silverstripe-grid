@@ -119,5 +119,32 @@ test.describe('CMS preview viewport sync', () => {
         .poll(deviceSize, { timeout: 5_000 })
         .toEqual({ width: 992, height: 744 });
     });
+
+    await test.step('surviving a content-area swap remounts the selector and keeps bi-directional sync working', async () => {
+      // Simulate a CMS action that swaps the content area (e.g. save or
+      // publish Pjax). A full reload is the strongest version of that —
+      // if the bridge survives this, it survives every lighter DOM
+      // churn SilverStripe might throw at it. Without the remount fix
+      // the MutationObserver would have been disconnected by the prior
+      // attemptUnmount and the selector would never reappear.
+      await page.reload({ waitUntil: 'load' });
+      await forceSplitViewMode(page);
+
+      // Selector must remount on the fresh DOM.
+      await expect(cmsSelector).toBeVisible({ timeout: 15_000 });
+
+      // Sync still works end-to-end after the remount — switch viewport
+      // via the CMS bar and confirm the editor and iframe dimensions
+      // follow through the freshly-mounted React root.
+      await cmsSelector
+        .getByRole('button', { name: 'Small', exact: true })
+        .click();
+      await expect(
+        editorSwitcher.getByRole('button', { name: 'Small', exact: true }),
+      ).toHaveAttribute('aria-pressed', 'true');
+      await expect
+        .poll(deviceSize, { timeout: 5_000 })
+        .toEqual({ width: 576, height: 500 });
+    });
   });
 });

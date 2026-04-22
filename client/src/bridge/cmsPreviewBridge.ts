@@ -20,16 +20,6 @@ let hiddenVendorWrapper: HTMLElement | null = null;
 let unsubscribe: (() => void) | null = null;
 
 /**
- * Inject per-viewport CSS rules that match the classes the vendor
- * `changeSize()` method adds to `.cms-preview`. Format and specificity
- * mirror the vendor's own viewport rules (`.cms-preview.desktop
- * .preview-device-outer`, etc.), so this layer composes with core
- * rather than fighting it.
- *
- * Runs once on mount — the ruleset is static (derived from adapter
- * config). Vendor `changeSize(grid-<key>)` toggles which rule matches.
- */
-/**
  * Return a sensible device-frame height for a given preview width.
  *
  * Monotonic: a wider viewport always gets a taller (or equal) frame so
@@ -195,11 +185,51 @@ function attemptMount(): void {
   syncPreview(); // initial application
 }
 
+/**
+ * Release the React root and related state so the next mutation can
+ * mount a fresh selector over the NEW vendor DOM. Used when the CMS
+ * Pjax-swaps the content area (e.g. after save/publish) which detaches
+ * our previously-hidden vendor wrapper.
+ *
+ * Unlike `teardownCmsPreviewBridge`, this keeps the MutationObserver
+ * running. It also doesn't touch the vendor preview mode — at this
+ * point the vendor wrapper is already gone, so there's no class to
+ * clean up and no `changeSize` to call.
+ */
+function detachForRemount(): void {
+  if (unsubscribe !== null) {
+    unsubscribe();
+    unsubscribe = null;
+  }
+  if (mountedRoot !== null) {
+    try {
+      mountedRoot.unmount();
+    } catch {
+      // ignore — node may already be detached
+    }
+    mountedRoot = null;
+  }
+  if (mountedHost !== null) {
+    try {
+      mountedHost.remove();
+    } catch {
+      // ignore
+    }
+    mountedHost = null;
+  }
+  hiddenVendorWrapper = null;
+  const style = document.getElementById(STYLE_TAG_ID);
+  if (style !== null) {
+    style.remove();
+  }
+}
+
 function attemptUnmount(): void {
-  // If the vendor wrapper has been removed from the DOM by a CMS navigation,
-  // detach our mount too.
+  // Pjax swapped the content area out from under us — drop our React
+  // root and state, but leave the observer running so we can remount
+  // when the new vendor DOM appears.
   if (hiddenVendorWrapper !== null && !hiddenVendorWrapper.isConnected) {
-    teardownCmsPreviewBridge();
+    detachForRemount();
   }
 }
 
@@ -211,9 +241,12 @@ export function registerCmsPreviewBridge(): void {
     return;
   }
 
+  // Order matters: detach state if the old wrapper is gone BEFORE
+  // attempting to mount against the new DOM. Running mount first would
+  // short-circuit on the stale `mountedRoot` reference.
   observer = new MutationObserver(() => {
-    attemptMount();
     attemptUnmount();
+    attemptMount();
   });
 
   observer.observe(document.body, { childList: true, subtree: true });

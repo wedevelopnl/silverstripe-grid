@@ -64,6 +64,29 @@ describe('cmsPreviewBridge', () => {
     const vendor = root.querySelector<HTMLElement>('#preview-size-dropdown');
     expect(vendor?.style.display).not.toBe('none');
   });
+
+  it('remounts after CMS Pjax swap (save/publish) replaces the content area', async () => {
+    const oldRoot = createVendorPreviewDom();
+    registerCmsPreviewBridge();
+    // Allow the initial MutationObserver tick + mount.
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(document.querySelector('.cms-preview-viewport-selector')).not.toBeNull();
+
+    // Simulate save/publish Pjax: the CMS replaces the old content
+    // area with a freshly-rendered one (same IDs, different DOM
+    // instances).
+    oldRoot.remove();
+    const newRoot = createVendorPreviewDom();
+    // Wait for the observer to detect the removal + re-addition and
+    // remount against the new wrapper.
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(newRoot.querySelector('.cms-preview-viewport-selector')).not.toBeNull();
+    const newVendor = newRoot.querySelector<HTMLElement>('#preview-size-dropdown');
+    expect(newVendor?.style.display).toBe('none');
+  });
 });
 
 describe('cmsPreviewBridge — resize mechanics', () => {
