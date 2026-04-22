@@ -44,6 +44,13 @@ interface BaseFields {
     canCreate: boolean;
     editLink: string | null;
     status: ElementStatus;
+    /**
+     * Optional plain-text content summary shown on leaf element cards.
+     * Absent when the element's `getSummary()` returned null or ''; the
+     * backend drops empty values from the JSON, so this is either a
+     * non-empty string or missing. HTML is not supported — render as text.
+     */
+    summary?: string;
     extensions?: Record<string, unknown>;
 }
 export interface SimpleElementNode extends BaseFields {
