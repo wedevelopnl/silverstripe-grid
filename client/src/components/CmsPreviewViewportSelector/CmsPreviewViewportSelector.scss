@@ -1,0 +1,27 @@
+.cms-preview-viewport-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 8px;
+
+  &__button {
+    padding: 4px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    background: transparent;
+    border-radius: 3px;
+    font-size: 12px;
+    line-height: 1.4;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    &--active {
+      background: #0071c4;
+      color: #fff;
+      border-color: #0071c4;
+      cursor: default;
+    }
+  }
+}
