@@ -55,6 +55,20 @@ final class GridAdapterTest extends SapphireTest
         self::assertSame(['xs', 'sm', 'md', 'lg', 'xl', 'xxl'], $keys);
     }
 
+    public function testGetViewportsExposeMinWidth(): void
+    {
+        $viewports = $this->adapter->getViewports();
+        $byKey = [];
+        foreach ($viewports as $vp) {
+            $byKey[$vp->key] = $vp->minWidth;
+        }
+
+        self::assertSame(
+            ['xs' => 0, 'sm' => 576, 'md' => 768, 'lg' => 992, 'xl' => 1200, 'xxl' => 1400],
+            $byKey,
+        );
+    }
+
     public function testGetColumnCountReturnsPositiveInt(): void
     {
         self::assertSame(12, $this->adapter->getColumnCount());
