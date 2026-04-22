@@ -738,6 +738,7 @@ class GridController extends AdminController
                 static fn (Viewport $vp): array => [
                     'key' => $vp->key,
                     'label' => $vp->label,
+                    'minWidth' => $vp->minWidth,
                 ],
                 $viewports,
             ),
