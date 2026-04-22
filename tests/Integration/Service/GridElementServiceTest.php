@@ -16,6 +16,7 @@ use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\GridElementService;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Validation\ReorderValidator;
 use WeDevelop\Grid\Value\ContainerType;
 
 #[CoversClass(GridElementService::class)]
@@ -34,7 +35,7 @@ final class GridElementServiceTest extends SapphireTest
 
         Versioned::set_stage(Versioned::DRAFT);
 
-        $this->service = new GridElementService();
+        $this->service = new GridElementService(new ReorderValidator());
     }
 
     // ─── createElement ──────────────────────────────────────────
@@ -302,7 +303,7 @@ final class GridElementServiceTest extends SapphireTest
 
         $rowToCopy = GridTreeFactory::row($section, title: 'Rogue Row');
 
-        // Row inside Column violates hierarchy — triggers HIERARCHY_REJECTED
+        // Row inside Column violates hierarchy — rejected by ReorderValidator
         $result = $this->service->duplicateElementTo(
             $rowToCopy,
             $column,
@@ -313,7 +314,7 @@ final class GridElementServiceTest extends SapphireTest
         self::assertTrue($result->isErr());
 
         $error = $result->errors()[0];
-        self::assertSame(GridElementService::class . '.HIERARCHY_REJECTED', $error->key);
+        self::assertSame(ReorderValidator::class . '.PARENT_REJECTED', $error->key);
         self::assertArrayHasKey('element', $error->params);
         self::assertArrayHasKey('parent', $error->params);
     }

@@ -7,7 +7,7 @@ namespace WeDevelop\Grid\Service;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
-use WeDevelop\Grid\Contract\ContainerInterface;
+use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
@@ -26,6 +26,11 @@ use WeDevelop\Grid\Value\WriteResult;
  */
 final class GridElementService
 {
+    public function __construct(
+        private readonly ReorderValidatorInterface $validator,
+    ) {
+    }
+
     /**
      * Create a container element under the given parent.
      *
@@ -138,7 +143,7 @@ final class GridElementService
         }
 
         // C2: Validate hierarchy rules before deep copy
-        $hierarchyResult = $this->validateHierarchy($element, $targetParent);
+        $hierarchyResult = $this->validator->validate($element, $targetParent);
         if ($hierarchyResult->isErr()) {
             return Result::fail(...$hierarchyResult->errors());
         }
@@ -230,36 +235,6 @@ final class GridElementService
                 field: 'ownership',
                 code: ValidationErrorCode::OwnershipDenied,
                 key: self::class . '.OWNERSHIP_ZONE_MISMATCH',
-            ));
-        }
-
-        return Result::ok(null);
-    }
-
-    /**
-     * C2: Validate that the element type is allowed under the target parent.
-     *
-     * Only container-to-container moves need checking. Section-to-page is always
-     * valid (canBeRoot=true).
-     *
-     * @return Result<null>
-     */
-    private function validateHierarchy(GridElement $element, DataObject $targetParent): Result
-    {
-        if (!$targetParent instanceof ContainerInterface) {
-            return Result::ok(null);
-        }
-
-        $containerType = $targetParent->getContainerType();
-        if (!$containerType->isChildAllowed($element::class)) {
-            return Result::fail(new ValidationError(
-                message: sprintf(
-                    '%s cannot be placed inside %s.',
-                    $element->singular_name(),
-                    $targetParent->singular_name(),
-                ),
-                key: self::class . '.HIERARCHY_REJECTED',
-                params: ['element' => $element->singular_name(), 'parent' => $targetParent->singular_name()],
             ));
         }
 

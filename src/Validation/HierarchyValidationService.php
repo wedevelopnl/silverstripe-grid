@@ -24,7 +24,7 @@ class HierarchyValidationService implements HierarchyValidatorInterface
 
         // Page-level: parent is a SiteTree — check canBeRoot via ContainerType
         if ($parent instanceof SiteTree) {
-            if (!$this->canPlaceAtPageLevel($element)) {
+            if (!($element instanceof ContainerInterface && $element->getContainerType()->canBeRoot())) {
                 return Result::fail(new ValidationError(
                     message: sprintf(
                         '%s cannot be placed at page level.',
@@ -54,11 +54,5 @@ class HierarchyValidationService implements HierarchyValidatorInterface
             key: self::class . '.PARENT_REJECTED',
             params: ['element' => $element->singular_name(), 'parent' => $parent->singular_name()],
         ));
-    }
-
-    private function canPlaceAtPageLevel(GridElement $element): bool
-    {
-        return $element instanceof ContainerInterface
-            && $element->getContainerType()->canBeRoot();
     }
 }
