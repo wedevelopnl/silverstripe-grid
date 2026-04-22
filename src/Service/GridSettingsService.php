@@ -16,7 +16,7 @@ use WeDevelop\Grid\Value\WriteResult;
  * Domain service for column grid settings management.
  *
  * Handles viewport-aware settings updates and bulk override resets.
- * Follows the same pattern as {@see ReorderService}: receives already-loaded,
+ * Follows the same pattern as {@see ElementPlacementService}: receives already-loaded,
  * already-authorized objects and returns {@see Result} for domain validation failures.
  */
 final class GridSettingsService

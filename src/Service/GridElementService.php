@@ -21,13 +21,16 @@ use WeDevelop\Grid\Value\WriteResult;
 /**
  * Domain service for grid element lifecycle operations: creation and duplication.
  *
- * Follows the same pattern as {@see ReorderService}: receives already-loaded,
+ * Follows the same pattern as {@see ElementPlacementService}: receives already-loaded,
  * already-authorized objects and returns {@see Result} for domain validation failures.
+ * Delegates all Sort/ParentID mutations to {@see ElementPlacementService} so every
+ * placement path goes through the shared validator.
  */
 final class GridElementService
 {
     public function __construct(
         private readonly ReorderValidatorInterface $validator,
+        private readonly ElementPlacementService $placementService,
     ) {
     }
 
@@ -53,13 +56,16 @@ final class GridElementService
             $newElement->Zone = $zone;
         }
 
-        return WriteResult::from(static function () use ($newElement, $insertAfterElementID): GridElement {
+        $writeResult = WriteResult::from(static function () use ($newElement): GridElement {
             $newElement->write();
-            if ($insertAfterElementID !== null) {
-                $newElement->insertAfterSibling($insertAfterElementID);
-            }
             return $newElement;
         });
+
+        if ($writeResult->isErr() || $insertAfterElementID === null) {
+            return $writeResult;
+        }
+
+        return $this->placementService->insertAfter($newElement, $parent, $insertAfterElementID);
     }
 
     /**
@@ -79,13 +85,16 @@ final class GridElementService
         $newElement->ParentID = $parent->ID;
         $newElement->ParentClass = $parent::class;
 
-        return WriteResult::from(static function () use ($newElement, $insertAfterElementID): GridElement {
+        $writeResult = WriteResult::from(static function () use ($newElement): GridElement {
             $newElement->write();
-            if ($insertAfterElementID !== null) {
-                $newElement->insertAfterSibling($insertAfterElementID);
-            }
             return $newElement;
         });
+
+        if ($writeResult->isErr() || $insertAfterElementID === null) {
+            return $writeResult;
+        }
+
+        return $this->placementService->insertAfter($newElement, $parent, $insertAfterElementID);
     }
 
     /**
@@ -107,11 +116,19 @@ final class GridElementService
         /** @var positive-int $elementId */
         $elementId = (int) $element->ID;
 
-        return WriteResult::from(static function () use ($clone, $elementId): GridElement {
+        $writeResult = WriteResult::from(static function () use ($clone): GridElement {
             $clone->write();
-            $clone->insertAfterSibling($elementId);
             return $clone;
         });
+
+        if ($writeResult->isErr()) {
+            return $writeResult;
+        }
+
+        $parent = $element->Parent();
+        assert($parent instanceof DataObject);
+
+        return $this->placementService->insertAfter($clone, $parent, $elementId);
     }
 
     /**

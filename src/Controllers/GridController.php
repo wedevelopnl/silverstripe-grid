@@ -31,7 +31,7 @@ use WeDevelop\Grid\Service\GridElementService;
 use WeDevelop\Grid\Service\GridSettingsService;
 use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Service\GridTreeWalker;
-use WeDevelop\Grid\Service\ReorderService;
+use WeDevelop\Grid\Service\ElementPlacementService;
 use WeDevelop\Grid\Service\RequestBodyParser;
 use WeDevelop\Grid\Forms\GridEditorField;
 
@@ -40,7 +40,7 @@ use WeDevelop\Grid\Forms\GridEditorField;
  *
  * @property GridElementRepositoryInterface $elementRepository
  * @property GridTreeBuilder $treeBuilder
- * @property ReorderService $reorderService
+ * @property ElementPlacementService $placementService
  * @property GridAdapterInterface $gridAdapter
  * @property RequestBodyParser $requestBodyParser
  * @property GridElementService $elementService
@@ -56,7 +56,7 @@ class GridController extends AdminController
     private static array $dependencies = [
         'elementRepository' => '%$' . GridElementRepositoryInterface::class,
         'treeBuilder' => '%$' . GridTreeBuilder::class,
-        'reorderService' => '%$' . ReorderService::class,
+        'placementService' => '%$' . ElementPlacementService::class,
         'gridAdapter' => '%$' . GridAdapterInterface::class,
         'requestBodyParser' => '%$' . RequestBodyParser::class,
         'elementService' => '%$' . GridElementService::class,
@@ -67,7 +67,7 @@ class GridController extends AdminController
 
     public GridTreeBuilder $treeBuilder;
 
-    public ReorderService $reorderService;
+    public ElementPlacementService $placementService;
 
     public GridAdapterInterface $gridAdapter;
 
@@ -492,7 +492,7 @@ class GridController extends AdminController
             }
         }
 
-        $result = $this->reorderService->reorder($element, $targetParent, $body->after?->id);
+        $result = $this->placementService->reorder($element, $targetParent, $body->after?->id);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
         }

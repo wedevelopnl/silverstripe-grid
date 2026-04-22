@@ -10,20 +10,22 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
-use WeDevelop\Grid\Service\ReorderService;
+use WeDevelop\Grid\Service\ElementPlacementService;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Validation\ReorderValidator;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
 
-#[CoversClass(ReorderService::class)]
-final class ReorderServiceTest extends SapphireTest
+#[CoversClass(ElementPlacementService::class)]
+final class ElementPlacementServiceTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
-    private ReorderService $service;
+    private ElementPlacementService $service;
 
     protected function setUp(): void
     {
@@ -34,7 +36,7 @@ final class ReorderServiceTest extends SapphireTest
 
         Versioned::set_stage(Versioned::DRAFT);
 
-        $this->service = Injector::inst()->get(ReorderService::class);
+        $this->service = Injector::inst()->get(ElementPlacementService::class);
     }
 
     public function testSameParentMoveToFront(): void
@@ -232,7 +234,7 @@ final class ReorderServiceTest extends SapphireTest
         self::assertTrue($result->isErr());
 
         $error = $result->errors()[0];
-        self::assertSame(ReorderService::class . '.AFTER_ELEMENT_NOT_FOUND', $error->key);
+        self::assertSame(ElementPlacementService::class . '.AFTER_ELEMENT_NOT_FOUND', $error->key);
     }
 
     public function testWriteFailureDuringPersistPropagatesAsError(): void
@@ -254,5 +256,118 @@ final class ReorderServiceTest extends SapphireTest
         $result = $this->service->reorder($col1, $row, $col2->ID);
 
         self::assertTrue($result->isErr(), 'Reorder should fail when element write triggers validation error');
+    }
+
+    // ── insertAfter ─────────────────────────────────────────────
+
+    public function testInsertAfterBumpsSort(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $a = GridTreeFactory::contentElement($column, title: 'A');
+        $b = GridTreeFactory::contentElement($column, title: 'B');
+        $c = GridTreeFactory::contentElement($column, title: 'C');
+
+        $inserted = ContentElement::create();
+        $inserted->Title = 'Inserted';
+        $inserted->ParentID = $column->ID;
+        $inserted->ParentClass = $column::class;
+        $inserted->write();
+
+        $result = $this->service->insertAfter($inserted, $column, (int) $a->ID);
+
+        self::assertTrue($result->isOk());
+
+        $a = ContentElement::get()->byID($a->ID);
+        $b = ContentElement::get()->byID($b->ID);
+        $c = ContentElement::get()->byID($c->ID);
+        $inserted = ContentElement::get()->byID($inserted->ID);
+
+        self::assertSame(1, $a->Sort);
+        self::assertSame(2, $inserted->Sort);
+        self::assertSame(3, $b->Sort);
+        self::assertSame(4, $c->Sort);
+        self::assertSame('Inserted', $inserted->Title);
+    }
+
+    public function testInsertAfterNonexistentReferenceFails(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $element = GridTreeFactory::contentElement($column);
+
+        $result = $this->service->insertAfter($element, $column, 999999);
+
+        self::assertTrue($result->isErr());
+        $error = $result->errors()[0];
+        self::assertSame(ElementPlacementService::class . '.AFTER_ELEMENT_NOT_FOUND', $error->key);
+    }
+
+    public function testInsertAfterBumpsOnlySameParentSiblings(): void
+    {
+        // Polymorphic parent-ID isolation: bumping siblings in Column A must
+        // not touch elements in Column B even though both share the same
+        // ParentClass. Removing the ParentClass filter from the sibling
+        // query would bump B's Sort too — this test pins that against
+        // regression.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $columnA = GridTreeFactory::column($row);
+        $columnB = GridTreeFactory::column($row);
+
+        $a1 = GridTreeFactory::contentElement($columnA, title: 'A1');
+        $a2 = GridTreeFactory::contentElement($columnA, title: 'A2');
+
+        $b1 = GridTreeFactory::contentElement($columnB, title: 'B1');
+        $b2 = GridTreeFactory::contentElement($columnB, title: 'B2');
+        $originalB1Sort = (int) $b1->Sort;
+        $originalB2Sort = (int) $b2->Sort;
+
+        $inserted = ContentElement::create();
+        $inserted->Title = 'Inserted-A';
+        $inserted->ParentID = $columnA->ID;
+        $inserted->ParentClass = $columnA::class;
+        $inserted->write();
+
+        $result = $this->service->insertAfter($inserted, $columnA, (int) $a1->ID);
+        self::assertTrue($result->isOk());
+
+        $a2 = ContentElement::get()->byID($a2->ID);
+        $b1 = ContentElement::get()->byID($b1->ID);
+        $b2 = ContentElement::get()->byID($b2->ID);
+
+        self::assertSame(3, (int) $a2->Sort, 'Column A sibling must be bumped');
+        self::assertSame($originalB1Sort, (int) $b1->Sort, 'Column B sibling must NOT be bumped');
+        self::assertSame($originalB2Sort, (int) $b2->Sort, 'Column B sibling must NOT be bumped');
+    }
+
+    public function testInsertAfterRejectsDisallowedChildType(): void
+    {
+        // insertAfter must route through the validator so disallowed
+        // cross-parent placements never persist on the new-element path.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        // A validly-placed Row under its Section (so write() succeeds), then
+        // attempt to place it under a Column — disallowed by ContainerType.
+        $validRow = Row::create();
+        $validRow->ParentID = $section->ID;
+        $validRow->ParentClass = $section::class;
+        $validRow->write();
+
+        $result = $this->service->insertAfter($validRow, $column, null);
+
+        self::assertTrue($result->isErr());
+        $error = $result->errors()[0];
+        self::assertSame(ReorderValidator::class . '.PARENT_REJECTED', $error->key);
     }
 }

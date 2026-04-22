@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Tests\Integration\Service;
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Config\Config;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
@@ -35,7 +36,7 @@ final class GridElementServiceTest extends SapphireTest
 
         Versioned::set_stage(Versioned::DRAFT);
 
-        $this->service = new GridElementService(new ReorderValidator());
+        $this->service = Injector::inst()->get(GridElementService::class);
     }
 
     // ─── createElement ──────────────────────────────────────────
@@ -354,7 +355,7 @@ final class GridElementServiceTest extends SapphireTest
     public function testDuplicateElementToPersistsCloneToDatabase(): void
     {
         // duplicateElementTo's WriteResult just calls `$clone->write();` with no
-        // insertAfterSibling fallback. Pins MethodCallRemoval at line 168.
+        // placement fallback. Pins MethodCallRemoval on the inner write().
         $page1 = $this->objFromFixture(Page::class, 'test_page');
         $page2 = $this->objFromFixture(Page::class, 'test_page_2');
         $section = GridTreeFactory::section($page1, title: 'Persisted Section');

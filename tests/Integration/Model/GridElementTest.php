@@ -101,61 +101,13 @@ final class GridElementTest extends SapphireTest
         self::assertStringContainsString('2', $second->Title);
     }
 
-    // ── insertAfterSibling ──────────────────────────────────────
-
-    public function testInsertAfterSiblingBumpsSort(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
-
-        $a = GridTreeFactory::contentElement($column, title: 'A');
-        $b = GridTreeFactory::contentElement($column, title: 'B');
-        $c = GridTreeFactory::contentElement($column, title: 'C');
-
-        // Create a new element and insert after A
-        $inserted = ContentElement::create();
-        $inserted->Title = 'Inserted';
-        $inserted->ParentID = $column->ID;
-        $inserted->ParentClass = $column::class;
-        $inserted->write();
-        $inserted->insertAfterSibling($a->ID);
-
-        // Reload all from DB
-        $a = ContentElement::get()->byID($a->ID);
-        $b = ContentElement::get()->byID($b->ID);
-        $c = ContentElement::get()->byID($c->ID);
-        $inserted = ContentElement::get()->byID($inserted->ID);
-
-        self::assertSame(1, $a->Sort);
-        self::assertSame(2, $inserted->Sort);
-        self::assertSame(3, $b->Sort);
-        self::assertSame(4, $c->Sort);
-        self::assertSame('Inserted', $inserted->Title);
-    }
-
-    public function testInsertAfterSiblingNonexistentReference(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
-
-        $element = GridTreeFactory::contentElement($column);
-        $originalSort = $element->Sort;
-
-        $element->insertAfterSibling(999999);
-
-        $reloaded = ContentElement::get()->byID($element->ID);
-        self::assertSame($originalSort, $reloaded->Sort);
-    }
-
     // ── Polymorphic parent-ID isolation ─────────────────────────────
-    // Pin the `'ParentID' => $this->ParentID` filters in ensureSortSet (432),
-    // ensureDefaultTitle (454), insertAfterSibling (405). Without that key,
-    // sibling queries would return elements from *every* parent of the same
-    // class — a correctness bug hidden by tests that only use a single parent.
+    // Pin the `'ParentID' => $this->ParentID` filters in ensureSortSet and
+    // ensureDefaultTitle. Without that key, sibling queries would return
+    // elements from *every* parent of the same class — a correctness bug
+    // hidden by tests that only use a single parent. The equivalent
+    // isolation guarantee for placement is covered in
+    // ElementPlacementServiceTest::testInsertAfterBumpsOnlySameParentSiblings.
 
     public function testEnsureSortSetIsolatedPerParent(): void
     {
@@ -201,40 +153,6 @@ final class GridElementTest extends SapphireTest
         $a1 = GridTreeFactory::contentElement($columnA, title: '');
         self::assertStringContainsString('1', $a1->Title);
         self::assertStringNotContainsString('6', $a1->Title);
-    }
-
-    public function testInsertAfterSiblingBumpsOnlySameParentSiblings(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $columnA = GridTreeFactory::column($row);
-        $columnB = GridTreeFactory::column($row);
-
-        $a1 = GridTreeFactory::contentElement($columnA, title: 'A1');
-        $a2 = GridTreeFactory::contentElement($columnA, title: 'A2');
-
-        $b1 = GridTreeFactory::contentElement($columnB, title: 'B1');
-        $b2 = GridTreeFactory::contentElement($columnB, title: 'B2');
-        $originalB1Sort = (int) $b1->Sort;
-        $originalB2Sort = (int) $b2->Sort;
-
-        // Insert new element in Column A after a1 → a2 should bump from 2 → 3.
-        // Column B siblings must NOT be touched.
-        $inserted = ContentElement::create();
-        $inserted->Title = 'Inserted-A';
-        $inserted->ParentID = $columnA->ID;
-        $inserted->ParentClass = $columnA::class;
-        $inserted->write();
-        $inserted->insertAfterSibling((int) $a1->ID);
-
-        $a2 = ContentElement::get()->byID($a2->ID);
-        $b1 = ContentElement::get()->byID($b1->ID);
-        $b2 = ContentElement::get()->byID($b2->ID);
-
-        self::assertSame(3, (int) $a2->Sort, 'Column A sibling must be bumped');
-        self::assertSame($originalB1Sort, (int) $b1->Sort, 'Column B sibling must NOT be bumped');
-        self::assertSame($originalB2Sort, (int) $b2->Sort, 'Column B sibling must NOT be bumped');
     }
 
     public function testEnsureDefaultTitleExcludesSelfOnResave(): void

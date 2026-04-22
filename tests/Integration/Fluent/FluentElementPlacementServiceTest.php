@@ -15,14 +15,14 @@ use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
-use WeDevelop\Grid\Service\ReorderService;
+use WeDevelop\Grid\Service\ElementPlacementService;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 
 /**
- * Verifies that ReorderService correctly reorders elements within a locale
+ * Verifies that ElementPlacementService correctly reorders elements within a locale
  * without cross-locale interference when Fluent locale filtering is active.
  */
-final class FluentReorderServiceTest extends SapphireTest
+final class FluentElementPlacementServiceTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';
 
@@ -31,7 +31,7 @@ final class FluentReorderServiceTest extends SapphireTest
         GridElement::class => [FluentIsolatedExtension::class],
     ];
 
-    private ReorderService $service;
+    private ElementPlacementService $service;
 
     protected function setUp(): void
     {
@@ -48,7 +48,7 @@ final class FluentReorderServiceTest extends SapphireTest
         $locale = $this->objFromFixture(Locale::class, 'en');
         FluentState::singleton()->setLocale($locale->Locale);
 
-        $this->service = Injector::inst()->get(ReorderService::class);
+        $this->service = Injector::inst()->get(ElementPlacementService::class);
     }
 
     private function createPage(string $title = 'Test Page'): SiteTree

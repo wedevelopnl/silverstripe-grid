@@ -13,12 +13,37 @@ use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\WriteResult;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 
-class ReorderService
+/**
+ * Single write-side authority for element placement.
+ *
+ * Handles both moves of existing elements ({@see reorder()}) and placement
+ * of newly-written elements ({@see insertAfter()}). Every mutation runs
+ * through {@see ReorderValidatorInterface::validate()} and the shared
+ * reindex pipeline.
+ */
+class ElementPlacementService
 {
     public function __construct(
         private readonly ReorderValidatorInterface $validator,
         private readonly GridElementRepositoryInterface $elementRepository,
     ) {
+    }
+
+    /**
+     * Place a just-written element after a reference sibling in its parent
+     * (or at the start of the parent when $afterElementId is null).
+     *
+     * The element MUST already have its ParentID/ParentClass set to match
+     * $parent and have been written (so it has an ID). The call runs the
+     * full validator + array-splice reindex pipeline, so it rejects invalid
+     * placements and persists sibling Sort updates atomically.
+     *
+     * @param positive-int|null $afterElementId
+     * @return Result<GridElement>
+     */
+    public function insertAfter(GridElement $element, DataObject $parent, ?int $afterElementId): Result
+    {
+        return $this->reorder($element, $parent, $afterElementId);
     }
 
     /**
