@@ -117,6 +117,11 @@ class Row extends GridElement implements ContainerInterface
             return;
         }
 
+        $childClass = $this->getContainerType()->allowedChildClass();
+        if ($childClass === null) {
+            return;
+        }
+
         $conn = DB::get_conn();
         if ($conn === null) {
             return;
@@ -124,16 +129,16 @@ class Row extends GridElement implements ContainerInterface
 
         // Wrap the check-then-create in a transaction and re-check inside the
         // closure so concurrent writes cannot race past the guard (TOCTOU).
-        $conn->withTransaction(function (): void {
-            if ($this->Columns()->count() > 0) {
+        $conn->withTransaction(function () use ($childClass): void {
+            if ($this->getChildren()->count() > 0) {
                 return;
             }
 
-            $column = Column::create();
-            $column->Title = static::config()->get('default_column_title');
-            $column->ParentID = $this->ID;
-            $column->ParentClass = static::class;
-            $column->write();
+            $child = $childClass::create();
+            $child->Title = static::config()->get('default_column_title');
+            $child->ParentID = $this->ID;
+            $child->ParentClass = static::class;
+            $child->write();
         });
     }
 }
