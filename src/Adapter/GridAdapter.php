@@ -34,7 +34,7 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
     // ─── Grid topology ──────────────────────────────────────────────
 
-    /** @var array<string, string> Viewport key → human label, ordered small→large */
+    /** @var array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}> */
     private static array $viewport_definitions = [];
 
     /** @var positive-int */
@@ -132,13 +132,16 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
     public function __construct()
     {
-        // Build viewport objects from config
-        /** @var array<non-empty-string, non-empty-string> $viewportDefs */
+        // Build viewport objects from config. The viewport_definitions config
+        // is an associative array of key => { label, min_width }. Each entry
+        // is validated before construction — malformed values throw early so
+        // misconfiguration surfaces at boot rather than mid-render.
+        /** @var array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}> $viewportDefs */
         $viewportDefs = static::config()->get('viewport_definitions');
         $allViewports = [];
 
-        foreach ($viewportDefs as $key => $label) {
-            $allViewports[$key] = new Viewport($key, $label, 0);
+        foreach ($viewportDefs as $key => $definition) {
+            $allViewports[$key] = $this->buildViewport($key, $definition);
         }
 
         // Validate and resolve topology
@@ -375,6 +378,69 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
     }
 
     // ─── Config validation helpers ──────────────────────────────────
+
+    /**
+     * @throws InvalidGridValueException
+     */
+    private function buildViewport(string $key, mixed $definition): Viewport
+    {
+        if ($key === '') {
+            throw InvalidGridValueException::forMalformedViewportDefinition(
+                $key,
+                'viewport key must be a non-empty string',
+            );
+        }
+
+        if (!is_array($definition)) {
+            throw InvalidGridValueException::forMalformedViewportDefinition(
+                $key,
+                sprintf('expected array, got %s', get_debug_type($definition)),
+            );
+        }
+
+        if (!array_key_exists('label', $definition)) {
+            throw InvalidGridValueException::forMalformedViewportDefinition(
+                $key,
+                'missing required "label" key',
+            );
+        }
+
+        if (!array_key_exists('min_width', $definition)) {
+            throw InvalidGridValueException::forMalformedViewportDefinition(
+                $key,
+                'missing required "min_width" key',
+            );
+        }
+
+        $label = $definition['label'];
+        $minWidth = $definition['min_width'];
+
+        if (!is_string($label) || $label === '') {
+            throw InvalidGridValueException::forMalformedViewportDefinition(
+                $key,
+                sprintf('label must be a non-empty string, got %s', get_debug_type($label)),
+            );
+        }
+
+        if (!is_int($minWidth)) {
+            throw InvalidGridValueException::forMalformedViewportDefinition(
+                $key,
+                sprintf('min_width must be int, got %s', get_debug_type($minWidth)),
+            );
+        }
+
+        if ($minWidth < 0) {
+            throw InvalidGridValueException::forMalformedViewportDefinition(
+                $key,
+                sprintf('min_width must be >= 0, got %d', $minWidth),
+            );
+        }
+
+        /** @var non-empty-string $key */
+        /** @var non-empty-string $label */
+        /** @var int<0, max> $minWidth */
+        return new Viewport($key, $label, $minWidth);
+    }
 
     /**
      * @param array<string, Viewport> $allViewports

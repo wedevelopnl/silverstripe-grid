@@ -21,14 +21,14 @@ final class BootstrapAdapter extends GridAdapter
 {
     // ─── Grid topology ──────────────────────────────────────────────
 
-    /** @var array<string, string> */
+    /** @var array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}> */
     private static array $viewport_definitions = [
-        'xs' => 'Extra Small',
-        'sm' => 'Small',
-        'md' => 'Medium',
-        'lg' => 'Large',
-        'xl' => 'Extra Large',
-        'xxl' => 'Extra Extra Large',
+        'xs'  => ['label' => 'Extra Small',       'min_width' => 0],
+        'sm'  => ['label' => 'Small',             'min_width' => 576],
+        'md'  => ['label' => 'Medium',            'min_width' => 768],
+        'lg'  => ['label' => 'Large',             'min_width' => 992],
+        'xl'  => ['label' => 'Extra Large',       'min_width' => 1200],
+        'xxl' => ['label' => 'Extra Extra Large', 'min_width' => 1400],
     ];
 
     /** @var positive-int */

@@ -24,13 +24,13 @@ final class BulmaAdapter extends GridAdapter
 {
     // ─── Grid topology ──────────────────────────────────────────────
 
-    /** @var array<string, string> */
+    /** @var array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}> */
     private static array $viewport_definitions = [
-        'mobile' => 'Mobile',
-        'tablet' => 'Tablet',
-        'desktop' => 'Desktop',
-        'widescreen' => 'Widescreen',
-        'fullhd' => 'Full HD',
+        'mobile'     => ['label' => 'Mobile',     'min_width' => 0],
+        'tablet'     => ['label' => 'Tablet',     'min_width' => 769],
+        'desktop'    => ['label' => 'Desktop',    'min_width' => 1024],
+        'widescreen' => ['label' => 'Widescreen', 'min_width' => 1216],
+        'fullhd'     => ['label' => 'Full HD',    'min_width' => 1408],
     ];
 
     /** @var positive-int */

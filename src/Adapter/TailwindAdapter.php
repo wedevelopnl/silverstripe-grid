@@ -25,13 +25,13 @@ final class TailwindAdapter extends GridAdapter
 {
     // ─── Grid topology ──────────────────────────────────────────────
 
-    /** @var array<string, string> */
+    /** @var array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}> */
     private static array $viewport_definitions = [
-        'sm' => 'Small',
-        'md' => 'Medium',
-        'lg' => 'Large',
-        'xl' => 'Extra Large',
-        '2xl' => '2X Large',
+        'sm'  => ['label' => 'Small',       'min_width' => 640],
+        'md'  => ['label' => 'Medium',      'min_width' => 768],
+        'lg'  => ['label' => 'Large',       'min_width' => 1024],
+        'xl'  => ['label' => 'Extra Large', 'min_width' => 1280],
+        '2xl' => ['label' => '2X Large',    'min_width' => 1536],
     ];
 
     /** @var positive-int */
