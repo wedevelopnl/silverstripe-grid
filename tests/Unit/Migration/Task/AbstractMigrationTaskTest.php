@@ -141,7 +141,7 @@ final class AbstractMigrationTaskTest extends TestCase
     private function adapterWithViewportKeys(array $keys): GridAdapterInterface
     {
         $viewports = \array_map(
-            static fn (string $key): Viewport => new Viewport($key, \ucfirst($key)),
+            static fn (string $key): Viewport => new Viewport($key, \ucfirst($key), 0),
             $keys,
         );
 

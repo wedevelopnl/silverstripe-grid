@@ -138,7 +138,7 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
         $allViewports = [];
 
         foreach ($viewportDefs as $key => $label) {
-            $allViewports[$key] = new Viewport($key, $label);
+            $allViewports[$key] = new Viewport($key, $label, 0);
         }
 
         // Validate and resolve topology

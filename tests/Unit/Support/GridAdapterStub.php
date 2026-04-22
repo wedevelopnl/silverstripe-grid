@@ -29,9 +29,9 @@ final class GridAdapterStub implements GridAdapterInterface
         ?Viewport $defaultViewport = null,
     ) {
         $this->viewports = $viewports ?? [
-            new Viewport('xs', 'Extra Small'),
-            new Viewport('md', 'Medium'),
-            new Viewport('lg', 'Large'),
+            new Viewport('xs', 'Extra Small', 0),
+            new Viewport('md', 'Medium', 768),
+            new Viewport('lg', 'Large', 992),
         ];
         $this->defaultViewport = $defaultViewport ?? $this->viewports[0];
     }

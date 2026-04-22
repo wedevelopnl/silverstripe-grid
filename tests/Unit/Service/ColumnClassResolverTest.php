@@ -18,15 +18,15 @@ final class ColumnClassResolverTest extends TestCase
     private static function oneViewportStub(): GridAdapterStub
     {
         return new GridAdapterStub([
-            new Viewport('xs', 'Extra Small'),
+            new Viewport('xs', 'Extra Small', 0),
         ]);
     }
 
     private static function twoViewportStub(): GridAdapterStub
     {
         return new GridAdapterStub([
-            new Viewport('xs', 'Extra Small'),
-            new Viewport('md', 'Medium'),
+            new Viewport('xs', 'Extra Small', 0),
+            new Viewport('md', 'Medium', 768),
         ]);
     }
 

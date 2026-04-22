@@ -16,11 +16,15 @@ namespace WeDevelop\Grid\Value;
 final readonly class Viewport
 {
     /**
-     * @param non-empty-string $key   Adapter-defined key, e.g. 'md', 'desktop', '2xl'
-     * @param non-empty-string $label Human-readable label, e.g. 'Medium', 'Desktop'
+     * @param non-empty-string $key      Adapter-defined key, e.g. 'md', 'desktop', '2xl'
+     * @param non-empty-string $label    Human-readable label, e.g. 'Medium', 'Desktop'
+     * @param int<0, max>      $minWidth Framework breakpoint min-width in pixels.
+     *                                   0 means mobile-first default (no `min-width` media
+     *                                   query). Bootstrap `xs` and Bulma `mobile` use 0.
      */
     public function __construct(
         public string $key,
         public string $label,
+        public int $minWidth,
     ) {}
 }
