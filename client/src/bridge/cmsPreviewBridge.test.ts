@@ -74,36 +74,52 @@ describe('cmsPreviewBridge — resize mechanics', () => {
     (window as any).jQuery = undefined;
   });
 
-  it('injects an inline width style matching the viewport minWidth', async () => {
+  it('injects a stylesheet with width + height rules per viewport on mount', async () => {
     createVendorPreviewDom();
     registerCmsPreviewBridge();
     await Promise.resolve();
-
-    setActiveViewport('sm');
 
     const styleTag = document.getElementById(
-      'grid-preview-viewport-override',
+      'grid-preview-viewport-styles',
     ) as HTMLStyleElement | null;
     expect(styleTag).not.toBeNull();
-    expect(styleTag!.textContent).toContain('576px');
+    const content = styleTag!.textContent ?? '';
+
+    // Monotonic height formula: min(900, max(500, round(width * 0.75)))
+    // xs (minWidth 0 → 375 mobile-first fallback): clamped to 500 floor
+    expect(content).toContain('.cms-preview.grid-xs .preview-device-outer');
+    expect(content).toContain('width: 375px');
+    expect(content).toMatch(/grid-xs[^}]*height: 500px/s);
+
+    // sm (576): 576 * 0.75 = 432, clamped to 500
+    expect(content).toContain('.cms-preview.grid-sm .preview-device-outer');
+    expect(content).toContain('width: 576px');
+    expect(content).toMatch(/grid-sm[^}]*height: 500px/s);
+
+    // md (768): 768 * 0.75 = 576 (above the 500 floor)
+    expect(content).toContain('.cms-preview.grid-md .preview-device-outer');
+    expect(content).toContain('width: 768px');
+    expect(content).toMatch(/grid-md[^}]*height: 576px/s);
+
+    // Dimension readout label reflects both axes
+    expect(content).toContain('375px × 500px');
+    expect(content).toContain('768px × 576px');
   });
 
-  it('falls back to 375px for mobile-first viewports (minWidth 0)', async () => {
-    createVendorPreviewDom();
-    registerCmsPreviewBridge();
-    await Promise.resolve();
-
-    setActiveViewport('xs');
-
-    const styleTag = document.getElementById('grid-preview-viewport-override');
-    expect(styleTag?.textContent).toContain('375px');
-  });
-
-  it('calls vendor changeSize when jQuery is available', async () => {
+  it('applies vendor frame class + our grid-<key> class on viewport change', async () => {
     createVendorPreviewDom();
 
-    const changeSize = vi.fn();
-    const jqFn = vi.fn(() => ({ length: 1, changeSize }));
+    const entwineChangeSize = vi.fn();
+    const entwineNs = { changeSize: entwineChangeSize };
+    const plainRemoveClass = vi.fn();
+    const plainAddClass = vi.fn();
+    const selection = {
+      length: 1,
+      entwine: vi.fn((namespace: string) => (namespace === 'ss.preview' ? entwineNs : {})),
+      removeClass: plainRemoveClass,
+      addClass: plainAddClass,
+    };
+    const jqFn = vi.fn(() => selection);
     // biome-ignore lint/suspicious/noExplicitAny: window jQuery mock
     (window as any).jQuery = jqFn;
 
@@ -111,11 +127,44 @@ describe('cmsPreviewBridge — resize mechanics', () => {
     await Promise.resolve();
     setActiveViewport('md');
 
-    expect(jqFn).toHaveBeenCalledWith('.cms-preview');
-    expect(changeSize).toHaveBeenCalledWith('grid-md');
+    // Vendor changeSize is called with the vendor carrier class — NOT with
+    // our grid-<key>. That's what triggers the device-frame styling.
+    expect(entwineChangeSize).toHaveBeenCalledWith('tablet');
+    // Then we strip any prior grid-<key> class and add the new one so our
+    // width override wins the cascade.
+    expect(plainRemoveClass).toHaveBeenCalledWith('grid-xs grid-sm grid-md');
+    expect(plainAddClass).toHaveBeenCalledWith('grid-md');
   });
 
-  it('no-ops vendor changeSize path when jQuery is absent', async () => {
+  it('cleans up on teardown — removes stylesheet, restores auto, strips grid-<key>', async () => {
+    createVendorPreviewDom();
+
+    const entwineChangeSize = vi.fn();
+    const plainRemoveClass = vi.fn();
+    const plainAddClass = vi.fn();
+    const selection = {
+      length: 1,
+      entwine: vi.fn(() => ({ changeSize: entwineChangeSize })),
+      removeClass: plainRemoveClass,
+      addClass: plainAddClass,
+    };
+    const jqFn = vi.fn(() => selection);
+    // biome-ignore lint/suspicious/noExplicitAny: window jQuery mock
+    (window as any).jQuery = jqFn;
+
+    registerCmsPreviewBridge();
+    await Promise.resolve();
+
+    teardownCmsPreviewBridge();
+
+    expect(document.getElementById('grid-preview-viewport-styles')).toBeNull();
+    // Auto is restored via vendor changeSize.
+    expect(entwineChangeSize).toHaveBeenLastCalledWith('auto');
+    // grid-* classes are then stripped off.
+    expect(plainRemoveClass).toHaveBeenCalledWith('grid-xs grid-sm grid-md');
+  });
+
+  it('no-ops vendor changeSize path when jQuery is absent — stylesheet still injected', async () => {
     createVendorPreviewDom();
     // biome-ignore lint/suspicious/noExplicitAny: window typing for jQuery mock
     (window as any).jQuery = undefined;
@@ -124,8 +173,10 @@ describe('cmsPreviewBridge — resize mechanics', () => {
     await Promise.resolve();
     setActiveViewport('md');
 
-    // Inline style still applied — this confirms the fallback path
-    const styleTag = document.getElementById('grid-preview-viewport-override');
-    expect(styleTag?.textContent).toContain('768px');
+    // Without jQuery we can't toggle the .grid-<key> class, so the preview
+    // won't actually resize — but the stylesheet is still injected for the
+    // general case. No error thrown.
+    const styleTag = document.getElementById('grid-preview-viewport-styles');
+    expect(styleTag).not.toBeNull();
   });
 });
