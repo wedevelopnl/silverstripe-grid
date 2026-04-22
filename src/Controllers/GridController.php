@@ -30,6 +30,7 @@ use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Service\GridElementService;
 use WeDevelop\Grid\Service\GridSettingsService;
 use WeDevelop\Grid\Service\GridTreeBuilder;
+use WeDevelop\Grid\Service\GridTreeWalker;
 use WeDevelop\Grid\Service\ReorderService;
 use WeDevelop\Grid\Service\RequestBodyParser;
 use WeDevelop\Grid\Forms\GridEditorField;
@@ -154,7 +155,7 @@ class GridController extends AdminController
         $pageId = (int) $page->ID;
         /** @var positive-int $pageId — $page was loaded by ID above; byID returns null for non-positive IDs, and the null check jumps to jsonError. */
         $rootNodes = $tree[$pageId] ?? [];
-        $overrideCounts = GridTreeBuilder::countOverrides($rootNodes);
+        $overrideCounts = GridTreeWalker::countOverrides($rootNodes);
 
         return $this->jsonSuccess(200, [
             'rootParent' => (new NodeRef(NodeType::Page, $pageId))->jsonSerialize(),
@@ -226,7 +227,7 @@ class GridController extends AdminController
 
         /** @var positive-int $pageId — $page was loaded by ID above; byID returns null for non-positive IDs, and the null check jumps to jsonError. */
         $rootNodes = $tree[$pageId] ?? [];
-        $overrideCounts = GridTreeBuilder::countOverrides($rootNodes);
+        $overrideCounts = GridTreeWalker::countOverrides($rootNodes);
 
         return $this->jsonSuccess(200, [
             'rootParent' => (new NodeRef(NodeType::Page, $pageId))->jsonSerialize(),
@@ -612,7 +613,7 @@ class GridController extends AdminController
         $rootNodes = $tree[(int) $page->ID] ?? [];
 
         assert($targetContainerType instanceof ContainerType);
-        $containers = GridTreeBuilder::collectContainersOfType($rootNodes, $targetContainerType);
+        $containers = GridTreeWalker::collectContainersOfType($rootNodes, $targetContainerType);
 
         return $this->jsonSuccess(200, $containers);
     }

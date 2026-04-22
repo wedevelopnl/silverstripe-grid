@@ -7,7 +7,7 @@ namespace WeDevelop\Grid\Tests\Unit\Service;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use WeDevelop\Grid\Service\GridTreeBuilder;
+use WeDevelop\Grid\Service\GridTreeWalker;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\ElementStatus;
 use WeDevelop\Grid\Value\GridNode;
@@ -16,8 +16,8 @@ use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
 use WeDevelop\Grid\Value\ViewportConfig;
 
-#[CoversClass(GridTreeBuilder::class)]
-final class GridTreeBuilderTest extends TestCase
+#[CoversClass(GridTreeWalker::class)]
+final class GridTreeWalkerTest extends TestCase
 {
     private const array DEFAULT_BLOCK_SCHEMA = [
         'typeName' => 'Test',
@@ -234,7 +234,7 @@ final class GridTreeBuilderTest extends TestCase
     #[DataProvider('collectContainersOfTypeProvider')]
     public function testCollectContainersOfType(array $nodes, ContainerType $targetType, array $expected): void
     {
-        $result = GridTreeBuilder::collectContainersOfType($nodes, $targetType);
+        $result = GridTreeWalker::collectContainersOfType($nodes, $targetType);
 
         self::assertCount(count($expected), $result);
 
@@ -437,6 +437,6 @@ final class GridTreeBuilderTest extends TestCase
     #[DataProvider('countOverridesProvider')]
     public function testCountOverrides(array $nodes, array $expected): void
     {
-        self::assertSame($expected, GridTreeBuilder::countOverrides($nodes));
+        self::assertSame($expected, GridTreeWalker::countOverrides($nodes));
     }
 }
