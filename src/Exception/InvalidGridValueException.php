@@ -81,4 +81,17 @@ final class InvalidGridValueException extends GridDomainException
             statusCode: self::STATUS_CODE,
         );
     }
+
+    public static function forMalformedViewportDefinition(string $key, string $reason): self
+    {
+        return new self(
+            userMessage: 'A configured viewport is malformed.',
+            detailedMessage: sprintf(
+                'viewport_definitions entry "%s" is malformed: %s.',
+                $key,
+                $reason,
+            ),
+            statusCode: self::STATUS_CODE,
+        );
+    }
 }

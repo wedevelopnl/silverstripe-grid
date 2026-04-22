@@ -25,6 +25,7 @@ use WeDevelop\Grid\Value\Viewport;
 #[CoversClass(AspectRatio::class)]
 #[CoversClass(MediaPosition::class)]
 #[CoversClass(VerticalAlignment::class)]
+#[CoversClass(InvalidGridValueException::class)]
 final class GridAdapterTest extends SapphireTest
 {
     protected $usesDatabase = false;
@@ -354,6 +355,78 @@ final class GridAdapterTest extends SapphireTest
         $this->expectException(InvalidGridValueException::class);
 
         Config::modify()->set(BootstrapAdapter::class, 'container_max_width', 0);
+
+        new BootstrapAdapter();
+    }
+
+    // -- Malformed viewport_definitions rejection ----------------------------
+
+    public function testMalformedViewportDefinitionsRejectsNonArrayValue(): void
+    {
+        $this->expectException(InvalidGridValueException::class);
+        $this->expectExceptionMessageMatches('/viewport_definitions/i');
+
+        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
+            'md' => 'Medium',   // legacy shape — must be rejected
+        ]);
+
+        new BootstrapAdapter();
+    }
+
+    public function testMalformedViewportDefinitionsRejectsMissingLabel(): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
+            'md' => ['min_width' => 768],
+        ]);
+
+        $this->expectException(InvalidGridValueException::class);
+        $this->expectExceptionMessageMatches('/label/');
+
+        new BootstrapAdapter();
+    }
+
+    public function testMalformedViewportDefinitionsRejectsMissingMinWidth(): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
+            'md' => ['label' => 'Medium'],
+        ]);
+
+        $this->expectException(InvalidGridValueException::class);
+        $this->expectExceptionMessageMatches('/min_width/');
+
+        new BootstrapAdapter();
+    }
+
+    public function testMalformedViewportDefinitionsRejectsNegativeMinWidth(): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
+            'md' => ['label' => 'Medium', 'min_width' => -1],
+        ]);
+
+        $this->expectException(InvalidGridValueException::class);
+        $this->expectExceptionMessageMatches('/min_width|negative/');
+
+        new BootstrapAdapter();
+    }
+
+    public function testMalformedViewportDefinitionsRejectsNonIntMinWidth(): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
+            'md' => ['label' => 'Medium', 'min_width' => '768'],
+        ]);
+
+        $this->expectException(InvalidGridValueException::class);
+
+        new BootstrapAdapter();
+    }
+
+    public function testMalformedViewportDefinitionsRejectsEmptyLabel(): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
+            'md' => ['label' => '', 'min_width' => 768],
+        ]);
+
+        $this->expectException(InvalidGridValueException::class);
 
         new BootstrapAdapter();
     }
