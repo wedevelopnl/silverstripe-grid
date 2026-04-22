@@ -161,8 +161,12 @@ function attemptMount(): void {
   // Use a div (not span) because CmsPreviewViewportSelector's root is a
   // div; nesting a div inside a span would be invalid HTML and browsers
   // can close the span early in rare layouts.
+  //
+  // Classes: `preview-selector` piggy-backs on vendor CSS so the mount
+  // floats right and aligns with the vendor mode selector + preview
+  // states pills. MOUNT_CLASS is our own anchor for teardown and tests.
   const host = document.createElement('div');
-  host.className = MOUNT_CLASS;
+  host.className = `${MOUNT_CLASS} preview-selector`;
   wrapper.parentElement?.insertBefore(host, wrapper);
   mountedHost = host;
 
