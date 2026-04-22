@@ -29,17 +29,8 @@ class ContentElement extends GridElement
 
     private static string $class_description = '';
 
-    /** Whether content of this type should be included in search indexes. */
-    private static bool $search_indexable = true;
-
     /** Word budget for the default editor-card summary derived from the HTML field. */
     private static int $summary_word_count = 20;
-
-    /** Whether this element type should be indexed for site search. */
-    public function getSearchIndexable(): bool
-    {
-        return (bool) static::config()->get('search_indexable');
-    }
 
     /**
      * Default summary: a plain-text preview of the HTML field, truncated to

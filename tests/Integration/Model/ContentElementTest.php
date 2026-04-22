@@ -14,22 +14,6 @@ final class ContentElementTest extends SapphireTest
 {
     protected static $fixture_file = null;
 
-    public function testGetSearchIndexableReturnsTrueByDefault(): void
-    {
-        $element = ContentElement::create();
-
-        self::assertTrue($element->getSearchIndexable());
-    }
-
-    public function testGetSearchIndexableRespectsConfig(): void
-    {
-        Config::modify()->set(ContentElement::class, 'search_indexable', false);
-
-        $element = ContentElement::create();
-
-        self::assertFalse($element->getSearchIndexable());
-    }
-
     public function testGetSummaryReturnsEmptyStringWhenHtmlIsEmpty(): void
     {
         $element = ContentElement::create();
