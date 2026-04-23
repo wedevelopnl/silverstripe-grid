@@ -16,12 +16,14 @@ use SilverStripe\Forms\FieldGroup;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\TextField;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DB;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\VersionedAdmin\Forms\HistoryViewerField;
+use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 
 /**
@@ -453,5 +455,55 @@ class GridElement extends DataObject
 
         $this->ensureDefaultTitle();
         $this->ensureSortSet();
+    }
+
+    /**
+     * Auto-scaffold the first child of the container type's allowed child
+     * class when none exists. A no-op on non-containers, on non-draft writes,
+     * and on container types with no allowed child (Column).
+     *
+     * The scaffolded child's title is left empty — {@see ensureDefaultTitle}
+     * in the child's own onBeforeWrite hook produces an auto-numbered title
+     * like "Row 1" or "Column 1".
+     */
+    #[Override]
+    protected function onAfterWrite(): void
+    {
+        parent::onAfterWrite();
+
+        if (!$this instanceof ContainerInterface) {
+            return;
+        }
+
+        if (!static::config()->get('auto_scaffold')) {
+            return;
+        }
+
+        if (Versioned::get_stage() !== Versioned::DRAFT) {
+            return;
+        }
+
+        $childClass = $this->getContainerType()->allowedChildClass();
+        if ($childClass === null) {
+            return;
+        }
+
+        $conn = DB::get_conn();
+        if ($conn === null) {
+            return;
+        }
+
+        // Wrap the check-then-create in a transaction and re-check inside the
+        // closure so concurrent writes cannot race past the guard (TOCTOU).
+        $conn->withTransaction(function () use ($childClass): void {
+            if ($this->getChildren()->count() > 0) {
+                return;
+            }
+
+            $child = $childClass::create();
+            $child->ParentID = $this->ID;
+            $child->ParentClass = static::class;
+            $child->write();
+        });
     }
 }

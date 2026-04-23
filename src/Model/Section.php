@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Model;
 
 use Override;
-use SilverStripe\ORM\DB;
 use SilverStripe\ORM\HasManyList;
-use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Value\ContainerType;
@@ -85,8 +83,6 @@ class Section extends GridElement implements ContainerInterface
         'Rows',
     ];
 
-    private static string $default_row_title = '';
-
     private static bool $auto_scaffold = true;
 
     #[Override]
@@ -131,42 +127,4 @@ class Section extends GridElement implements ContainerInterface
         $this->Sort = (is_numeric($max) ? (int) $max : 0) + 1;
     }
 
-    #[Override]
-    protected function onAfterWrite(): void
-    {
-        parent::onAfterWrite();
-
-        if (!static::config()->get('auto_scaffold')) {
-            return;
-        }
-
-        // Only scaffold on draft stage to avoid duplicates during publish
-        if (Versioned::get_stage() !== Versioned::DRAFT) {
-            return;
-        }
-
-        $childClass = $this->getContainerType()->allowedChildClass();
-        if ($childClass === null) {
-            return;
-        }
-
-        $conn = DB::get_conn();
-        if ($conn === null) {
-            return;
-        }
-
-        // Wrap the check-then-create in a transaction and re-check inside the
-        // closure so concurrent writes cannot race past the guard (TOCTOU).
-        $conn->withTransaction(function () use ($childClass): void {
-            if ($this->getChildren()->count() > 0) {
-                return;
-            }
-
-            $child = $childClass::create();
-            $child->Title = static::config()->get('default_row_title');
-            $child->ParentID = $this->ID;
-            $child->ParentClass = static::class;
-            $child->write();
-        });
-    }
 }
