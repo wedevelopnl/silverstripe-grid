@@ -1,11 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { loadFixture, resetFixtures } from '../helpers/fixtures';
 
-test.describe('Grid settings tab', () => {
+test.describe('Grid settings tab', { tag: '@bootstrap-only' }, () => {
   test.afterAll(async ({ request }) => {
     await resetFixtures(request);
   });
 
+  // Asserts viewport count (6), Bootstrap labels ("Medium"/"Large"), and
+  // GridSettings[md][...] field names — all adapter-specific. Port to an
+  // adapter-agnostic variant before dropping the @bootstrap-only tag.
   test('content editor configures column responsive grid settings via the Grid tab and verifies changes persist', async ({ page }) => {
     const fixture = await loadFixture(page.request, 'element-tree');
     const columnId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\Column']['col1'];

@@ -68,7 +68,7 @@ jobs:
           reporter: java-junit
 
   e2e:
-    name: E2E (${{ matrix.browser }})
+    name: E2E (${{ matrix.browser }} / ${{ matrix.adapter }})
     runs-on: ubuntu-latest
     permissions:
       checks: write
@@ -76,6 +76,9 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium, firefox]
+        adapter: [bootstrap, tailwind]
+    env:
+      SS_GRID_ADAPTER: ${{ matrix.adapter }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -96,18 +99,20 @@ jobs:
           key: playwright-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
       - run: make .docker/.env
       - run: make ensure-up
-      - run: npx playwright test --project=${{ matrix.browser }} --reporter=html,junit
+      - name: Run Playwright
+        run: npx playwright test --project=${{ matrix.browser }} --reporter=html,junit $GREP_INVERT
         env:
+          GREP_INVERT: ${{ matrix.adapter != 'bootstrap' && '--grep-invert=@bootstrap-only' || '' }}
           PLAYWRIGHT_JUNIT_OUTPUT_NAME: reports/playwright-junit.xml
       - uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: E2E Results (${{ matrix.browser }})
+          name: E2E Results (${{ matrix.browser }} / ${{ matrix.adapter }})
           path: reports/playwright-junit.xml
           reporter: java-junit
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report-${{ matrix.browser }}
+          name: playwright-report-${{ matrix.browser }}-${{ matrix.adapter }}
           path: playwright-report/
           retention-days: 7

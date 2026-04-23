@@ -47,7 +47,10 @@ import { loadFixture, resetFixtures } from '../helpers/fixtures';
  * fixture data — verifying that a single-viewport override round-trips
  * through the editor UI and the published frontend markup.
  */
-test.describe('Viewport cascade / override rendering', () => {
+// Asserts md as the default viewport, Bootstrap labels ("Medium"/"Small"/
+// "Large"), and the col-* class chain emitted by the Bootstrap adapter. Port
+// to an adapter-agnostic variant before dropping the @bootstrap-only tag.
+test.describe('Viewport cascade / override rendering', { tag: '@bootstrap-only' }, () => {
   test.afterAll(async ({ request }) => {
     await resetFixtures(request);
   });

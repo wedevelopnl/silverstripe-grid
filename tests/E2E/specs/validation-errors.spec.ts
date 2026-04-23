@@ -89,7 +89,10 @@ test.describe('Validation errors', () => {
     });
   });
 
-  test.describe('GridSettings field validation', () => {
+  // Field names (GridSettings[md][width]) and the "row default = md" sanity
+  // assertion are Bootstrap-specific. Port to an adapter-agnostic variant
+  // before dropping the @bootstrap-only tag.
+  test.describe('GridSettings field validation', { tag: '@bootstrap-only' }, () => {
     test('shows an error when width + offset exceeds the column count', async ({ page }) => {
       const fixture = await loadFixture(page.request, 'validation-errors');
       const columnId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\Column']['col_alpha_1'];

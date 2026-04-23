@@ -13,9 +13,10 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single concrete
 - `src/Adapter/TailwindAdapter.php` — Tailwind CSS preset (zero methods, only statics)
 - `src/Adapter/BulmaAdapter.php` — Bulma preset (zero methods, only statics)
 - `src/Factory/GridAdapterFactory.php` — Injector factory that aliases `ContentLayoutAdapterInterface` to the `GridAdapterInterface` singleton
+- `src/Factory/GridAdapterResolver.php` — Injector factory that selects the adapter preset from the `SS_GRID_ADAPTER` env var
 - `src/Value/Viewport.php` — Value object (`final readonly class`, not an enum)
 - `src/Value/ContainerType.php` — Enum: `Section`, `Row`, `Column`
-- `_config/grid.yml` — DI binding (default: `BootstrapAdapter`)
+- `_config/grid.yml` — DI binding (resolved via `GridAdapterResolver`; default preset: `bootstrap`)
 - `_config/content-layout.yml` — DI alias for `ContentLayoutAdapterInterface` (via `GridAdapterFactory`) + applies `BlockMediaExtension` to `ContentElement`
 
 ## Existing Presets
@@ -160,7 +161,16 @@ Frameworks without a base viewport (Tailwind) set `base_viewport_key` to `null` 
 
 ### 4. Register the Adapter
 
-In `_config/grid.yml` (or project-level YAML):
+`GridAdapterInterface` resolves through `GridAdapterResolver`, which picks the preset from the `SS_GRID_ADAPTER` environment variable (`bootstrap`|`tailwind`|`bulma`, case-insensitive). Unset defaults to `bootstrap`; unknown values throw at boot.
+
+For built-in presets, set the env var (for example in `.docker/compose.yml` or the CI job env):
+
+```yaml
+environment:
+  SS_GRID_ADAPTER: tailwind
+```
+
+For a custom adapter, rebind `GridAdapterInterface` directly in project-level YAML. This bypasses the resolver:
 
 ```yaml
 SilverStripe\Core\Injector\Injector:

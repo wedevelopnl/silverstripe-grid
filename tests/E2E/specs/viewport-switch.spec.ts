@@ -1,7 +1,10 @@
 import { expect, test } from '@playwright/test';
 import { loadFixture, resetFixtures } from '../helpers/fixtures';
 
-test.describe('Viewport switcher', () => {
+// Both tests assert Bootstrap viewport labels ("Medium"/"Large"/"Extra Extra
+// Large"), viewport count (6), and the published col-* class chain. Port to
+// an adapter-agnostic variant before dropping the @bootstrap-only tag.
+test.describe('Viewport switcher', { tag: '@bootstrap-only' }, () => {
   test.afterAll(async ({ request }) => {
     await resetFixtures(request);
   });
