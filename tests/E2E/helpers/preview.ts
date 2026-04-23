@@ -38,53 +38,26 @@ export async function enablePreviewMode(page: Page): Promise<void> {
  * or similar.
  */
 export async function forceSplitViewMode(page: Page): Promise<void> {
-  await setViewMode(page, {
-    iconClass: 'font-icon-columns',
-    containerClass: 'cms-container--split-mode',
-  });
-}
-
-/**
- * Strictly force the CMS into preview-only mode (content panel hidden).
- *
- * Same mechanism as `forceSplitViewMode`, but selects the
- * `font-icon-eye` option and waits for the container to carry
- * `.cms-container--preview-mode`.
- */
-export async function forcePreviewViewMode(page: Page): Promise<void> {
-  await setViewMode(page, {
-    iconClass: 'font-icon-eye',
-    containerClass: 'cms-container--preview-mode',
-  });
-}
-
-async function setViewMode(
-  page: Page,
-  { iconClass, containerClass }: { iconClass: string; containerClass: string },
-): Promise<void> {
   await page
     .locator('#preview-mode-dropdown-in-content-select')
     .waitFor({ state: 'attached', timeout: 15_000 });
 
-  await page.evaluate(
-    ({ iconClass }) => {
-      const select = document.querySelector<HTMLSelectElement>(
-        '#preview-mode-dropdown-in-content-select',
-      );
-      if (select === null) {
-        throw new Error('preview-mode-dropdown-in-content-select not found');
-      }
-      const option = select.querySelector<HTMLOptionElement>(`option.${iconClass}`);
-      if (option === null) {
-        throw new Error(`Mode option with icon class ${iconClass} not found in mode dropdown`);
-      }
-      select.value = option.value;
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-    },
-    { iconClass },
-  );
+  await page.evaluate(() => {
+    const select = document.querySelector<HTMLSelectElement>(
+      '#preview-mode-dropdown-in-content-select',
+    );
+    if (select === null) {
+      throw new Error('preview-mode-dropdown-in-content-select not found');
+    }
+    const option = select.querySelector<HTMLOptionElement>('option.font-icon-columns');
+    if (option === null) {
+      throw new Error('Split mode option not found in mode dropdown');
+    }
+    select.value = option.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
 
-  await expect(page.locator(`.${containerClass}`)).toHaveCount(1, { timeout: 15_000 });
+  await expect(page.locator('.cms-container--split-mode')).toHaveCount(1, { timeout: 15_000 });
   await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
 
   const previewIframe = page.frameLocator('iframe[name="cms-preview-iframe"]');
