@@ -156,9 +156,12 @@ test.describe('Media elements', () => {
       // Caption renders in figcaption
       await expect(mediaFigure.locator('figcaption')).toContainText('Test media caption');
 
-      // Side-by-side layout: the content-element has a row wrapper with two child divs
+      // Side-by-side layout: the content-element has a row wrapper with two child divs.
+      // Identified structurally (direct-child div of .content-element containing the
+      // media figure) rather than by class name — adapters emit different row classes
+      // (Bootstrap `row`, Tailwind `grid grid-cols-*`, etc.).
       const contentElement = page.locator('.content-element').filter({ has: mediaFigure });
-      const rowWrapper = contentElement.locator('[class*="row"]');
+      const rowWrapper = contentElement.locator('> div').filter({ has: mediaFigure });
       await expect(rowWrapper).toBeVisible();
       // Row wrapper has exactly 2 direct child divs (media column + content column)
       await expect(rowWrapper.locator('> div')).toHaveCount(2);
