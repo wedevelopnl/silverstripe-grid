@@ -98,7 +98,6 @@ export interface TreeApiResponse {
     rootParent: NodeRef;
     /** Flat list of root-level nodes (sections). */
     nodes: ElementNode[];
-    overrideCounts: Record<string, number>;
 }
 export declare function isContainerNode(node: ElementNode): node is ContainerNode;
 export declare function isSectionNode(node: ElementNode): node is SectionNode;
