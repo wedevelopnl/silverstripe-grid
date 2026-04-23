@@ -100,12 +100,14 @@ Writing a container on DRAFT stage automatically creates its required child stru
 
 ```
 Section::write()
-  └── onAfterWrite() → creates Row (if no children)
+  └── GridElement::onAfterWrite() → creates Row (if no children)
         └── Row::write()
-              └── onAfterWrite() → creates Column (if no children)
+              └── GridElement::onAfterWrite() → creates Column (if no children)
 ```
 
-A single `Section::create()->write()` produces the full three-level tree. Guards ensure idempotency: scaffolding only runs on DRAFT stage and only when the child collection is empty. Column does not auto-scaffold — it only initializes `GridSettings` on first write.
+Scaffolding lives once in `GridElement::onAfterWrite()` — the child class to create is derived via `ContainerType::allowedChildClass()` rather than duplicated per container subclass.
+
+A single `Section::create()->write()` produces the full three-level tree. Guards ensure idempotency: scaffolding only runs on DRAFT stage and only when the child collection is empty. Column does not auto-scaffold — `allowedChildClass()` returns `null` for leaf containers, so the scaffolding path is skipped.
 
 Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 
@@ -126,16 +128,20 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 │  Service Layer                                              │
 │    ├── RequestBodyParser (JSON → typed request DTOs)        │
 │    │                                                        │
-│    ├── GridTreeBuilder (read path)                          │
-│    │     └── GridElementRepositoryInterface                 │
+│    ├── GridTreeBuilder (read path — BFS batch load)         │
+│    │     ├── GridElementRepositoryInterface                 │
+│    │     └── GridNodeMapper (element → GridNode DTO)        │
 │    │                                                        │
 │    ├── GridElementService (create + duplicate lifecycle)    │
+│    │     ├── ReorderValidatorInterface                      │
+│    │     ├── ElementPlacementService                        │
+│    │     └── TitleGenerator (copy-of title munging)         │
 │    │                                                        │
 │    ├── GridSettingsService (column grid settings writes)    │
 │    │     ├── GridAdapterInterface                           │
 │    │     └── GridTreeBuilder                                │
 │    │                                                        │
-│    ├── ReorderService (validate + reorder + persist)        │
+│    ├── ElementPlacementService (reorder + insert-after)     │
 │    │     ├── ReorderValidatorInterface                      │
 │    │     └── GridElementRepositoryInterface                 │
 │    │                                                        │
@@ -145,9 +151,9 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 │  Validation Layer                                           │
 │    ├── HierarchyValidationExtension (write-time hook)       │
 │    │     └── HierarchyValidatorInterface                    │
-│    ├── GridSettingsFieldValidator (DBField validator)        │
+│    ├── GridSettingsFieldValidator (DBField validator)       │
 │    │     └── Width/offset/combination range checks          │
-│    └── ElementAllowanceTrait (shared allowlist/blocklist)   │
+│    └── ReorderValidator (implements ReorderValidatorInterface)│
 │                                                             │
 │  Repository Layer                                           │
 │    └── OrmGridElementRepository                             │
@@ -160,8 +166,8 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 │    ├── ContentLayoutAdapterInterface (8 methods)            │
 │    ├── GridAdapter (config-driven base, implements both)    │
 │    ├── GridAdapterFactory (DI alias factory)                │
-│    ├── Presets: Bootstrap, Tailwind, Bulma (zero-method)   │
-│    └── BlockMediaExtension (media/video on content elts)   │
+│    ├── Presets: Bootstrap, Tailwind, Bulma (zero-method)    │
+│    └── BlockMediaExtension (media/video on content elts)    │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -174,34 +180,36 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 
 | Method | Route | Purpose | Response |
 |--------|-------|---------|----------|
-| GET | `api/readTree/{PageID}/{Zone}` | Load element tree for a zone on a page (draft) | 200 + `{ tree: Record<int, GridNode[]>, overrideCounts: object }` |
-| GET | `api/readTree/{PageID}/{Zone}/version/{Version}` | Load element tree at a specific historical version | 200 + `{ tree: Record<int, GridNode[]>, overrideCounts: object }` |
+| GET | `api/readTree/{PageID}/{Zone}` | Load element tree for a zone on a page (draft) | 200 + `{ rootParent: NodeRef, nodes: GridNode[] }` |
+| GET | `api/readTree/{PageID}/{Zone}/version/{Version}` | Load element tree at a specific historical version | 200 + `{ rootParent: NodeRef, nodes: GridNode[] }` |
 | POST | `api/create` | Create a container element (Section / Row / Column) under a parent | 204 |
 | POST | `api/createContent` | Create a content element inside a `Column` | 204 |
 | PATCH | `api/publish` | Publish an element recursively | 204 |
 | PATCH | `api/unpublish` | Unpublish an element | 204 |
-| DELETE | `api/delete` | Archive an element | 204 |
+| DELETE | `api/delete` | Archive an element (id on query string) | 204 |
 | POST | `api/duplicate` | Duplicate an element in place (same parent) | 204 |
-| POST | `api/duplicateTo` | Duplicate an element into a specific target parent (and optional page / zone) | 204 |
+| POST | `api/duplicateTo` | Duplicate an element into a specific target parent (and target page / zone) | 204 |
 | PATCH | `api/reorder` | Reorder or move an element within or across parents | 204 |
 | PATCH | `api/updateGridSettings` | Update a column's `GridSettings` for a viewport (default or override) | 204 |
 | DELETE | `api/resetGridSettingsOverrides` | Clear viewport overrides across all columns in a page/zone (optionally scoped to one viewport) | 204 |
-| GET | `api/acceptableContainers/{PageID}/{Zone}/{ElementType}` | List containers on a page/zone that accept the given element type | 200 + `GridNode[]` (empty array when `ElementType=section`) |
+| GET | `api/acceptableContainers/{PageID}/{Zone}/{ElementType}` | List containers on a page/zone that accept the given element type | 200 + `{ id, title, type }[]` (empty array when `ElementType=section`) |
 | GET | `api/zones/{PageID}` | List zones declared by `GridEditorField`s on a page's CMS fields | 200 + `string[]` |
 | GET | `api/pages` | List pages (optional `?search=` by title), for the duplicate-to target picker | 200 + `{ id, title, parentId, hasGridZones }[]` |
 
 All mutations return 204 (no body) on success. The frontend refetches the tree after each mutation to reconcile state.
 
+The tree response is a flat `nodes` array of root children plus an explicit `rootParent: NodeRef` — see [Node Identity](#node-identity) below. Override-count summaries for the "overrides exist" indicator are derived on the client from the returned `GridSettings` rather than sent from the server.
+
 ### Request Validation
 
 The controller delegates body parsing to `RequestBodyParser`, which returns typed request DTOs wrapped in `Result`. Each `parseX()` method returns `Result::fail()` for invalid payloads:
 
-- `parseCreateBody()` — validates `elementClass` (must be `GridElement` subclass), `parentId`, `parentClass`, `insertAfterElementID`, `zone`
-- `parseCreateContentBody()` — validates content element creation fields
-- `parseReorderBody()` — validates `elementID`, `targetParentId`, `afterElementID`
-- `parseUpdateGridSettingsBody()` — validates viewport-scoped width/offset/visibility
-- `parseDuplicateToBody()` — validates target page, zone, and container
-- `parseResetGridSettingsOverridesBody()` — validates page/zone scope and optional viewport filter
+- `parseCreateBody()` — validates `containerType` (enum), `parent` (`NodeRef`), `insertAfterElementID`, `zone`
+- `parseCreateContentBody()` — validates `className` (must be `ContentElement` subclass), `parentId`, `insertAfterElementID`
+- `parseReorderBody()` — validates `element` / `parent` / `after` (all `NodeRef`), with `after.type === element.type` and `element.type !== page`
+- `parseUpdateGridSettingsBody()` — validates viewport-scoped width/offset/visibility (viewport must match an adapter viewport)
+- `parseDuplicateToBody()` — validates source `id`, `targetPageId`, `targetZone`, and target `NodeRef`
+- `parseResetGridSettingsOverridesBody()` — validates `pageId`, `zone`, and optional `viewport` filter (rejects the adapter default viewport — it has no overrides to reset)
 - `parseElementId()` — validates a single `id` field
 
 Invalid payloads produce HTTP 400. Validation failures from the service layer produce HTTP 422 with structured error JSON.
@@ -210,14 +218,16 @@ Invalid payloads produce HTTP 400. Validation failures from the service layer pr
 
 | Check | Applies to |
 |-------|-----------|
-| CSRF token | All mutations |
-| `canView()` on page | Tree reads (draft and versioned) |
-| `canEdit()` on parent | Create, reorder (target parent) |
-| `canCreate()` on element | Create, duplicate |
-| `canEdit()` on element | Reorder |
-| `canEdit()` on source parent | Cross-parent reorder |
+| CSRF token | All mutations (controller `init()` rejects non-GET without valid token) |
+| `canView()` on page | `readTree`, `readTreeAtVersion`, `acceptableContainers`, `zones` |
+| `canEdit()` on target parent | Create, reorder, duplicateTo |
+| `canEdit()` on page | `resetGridSettingsOverrides` |
+| `canCreate()` on element | Duplicate, duplicateTo |
+| `canEdit()` on element | Reorder, updateGridSettings |
+| `canEdit()` on source parent | Duplicate (in-place); cross-parent reorder |
 | `canDelete()` on element | Delete |
 | `canPublish()` / `canUnpublish()` | Publish / unpublish |
+| `canEdit()` on pages in result | `pages` (list is filtered to editable pages) |
 
 Permission resolution delegates to the owning page: `GridElement.canEdit()` walks the parent chain to the nearest `SiteTree` and calls `canEdit()` on it. Orphaned elements (no page in chain) fall back to `CMS_ACCESS` permission.
 
@@ -231,6 +241,7 @@ Permission resolution delegates to the owning page: `GridElement.canEdit()` walk
     'defaultViewport'  => 'md',
     'columnCount'      => 12,
     'rowClasses'       => 'row',
+    'offsetStrategy'   => 'margin',
     'baseWidthClasses' => {'1': 'col-1', '2': 'col-2', ...},
     'baseOffsetClasses'=> {'0': 'offset-0', '1': 'offset-1', ...},
 ]
@@ -246,7 +257,11 @@ Turns raw JSON arrays from incoming `HTTPRequest` bodies into typed, validated r
 
 ### GridElementService
 
-Domain service for element creation and duplication lifecycle (`createElement`, `createContentElement`, `duplicateElement`, `duplicateElementTo`). Mirrors `ReorderService`'s contract: receives already-loaded, already-authorized objects and returns a `Result<GridElement>`. All writes go through `WriteResult::from()` so that thrown `ValidationException`s surface as `Result::fail()` failures. Cross-page duplication (`duplicateElementTo`) additionally validates ownership (C1) and hierarchy (C2) before writing.
+Domain service for element creation and duplication lifecycle (`createElement`, `createContentElement`, `duplicateElement`, `duplicateElementTo`). Mirrors `ElementPlacementService`'s contract: receives already-loaded, already-authorized objects and returns a `Result<GridElement>`. All writes go through `WriteResult::from()` so that thrown `ValidationException`s surface as `Result::fail()` failures.
+
+Creation paths (`createElement`, `createContentElement`, in-place `duplicateElement`) write the new element inside a DB transaction and then delegate placement to `ElementPlacementService::insertAfter()` so the same validator and reindex pipeline runs for both "just-written" and "moving" elements. If placement fails, the transaction rolls back — callers never observe a half-persisted element paired with a failure `Result`.
+
+Cross-page duplication (`duplicateElementTo`) additionally validates ownership (C1: target parent belongs to the claimed page/zone) and hierarchy (C2: element type is allowed under target parent) before deep-copying the subtree. Copy titles are generated via `TitleGenerator::generateCopyTitle()`.
 
 ### GridSettingsService
 
@@ -266,29 +281,45 @@ buildForPage(page, zone)
   │    └─ Level 3: query content elements by all Column IDs
   │
   └─ assembleSubTree()
-       └─ Recursive in-memory assembly from pre-loaded data
+       └─ Recursive in-memory assembly + GridNodeMapper conversion
 ```
 
 Elements are keyed by the composite `"ParentClass:ParentID"` string in the lookup map. This prevents false matches when a page ID coincides with an element ID.
 
-Each element is converted to a `GridNode` DTO — a readonly value object that carries base fields (id, parentId, title, blockSchema, version, permissions, status) and optional container fields (containerType, allowedTypes, children). Column nodes additionally carry `gridSettings`. The `status` field is a precomputed `ElementStatus` enum (`draft | published | modified | removed`) derived from SilverStripe's `getStatusFlags()` output, so consumers don't re-derive presentation state from the raw flag map. The `GridNode` implements `JsonSerializable` with conditional field inclusion: leaf nodes omit container fields from the serialized output.
+`GridTreeBuilder` owns loading and tree assembly; the `GridNodeMapper` it holds owns element → `GridNode` conversion. Split so the mapper can be reused (e.g. the `updateElementData` hook fires once per node regardless of which loading strategy is used) and so the builder's own concerns stay free of view-layer details like icon fallbacks and block schemas.
 
-The builder provides an `updateElementData` extension point, allowing other modules to inject additional data into each node's `extensions` array.
+Two additional entry points sit on the builder alongside `buildForPage()`:
 
-### ReorderService
+- `findColumnsForPage(page, zone)` — returns just the Column model instances, used by `GridSettingsService::resetOverrides()` for bulk writes.
+- `findContainersOfType(page, zone, ContainerType)` — returns a flat `list<{id, title, type}>` of matching containers (backs `apiAcceptableContainers`). Much cheaper than building the full tree when the caller only needs a flat list; still runs through the same loader so polymorphic parent keying and zone scoping match.
 
-Orchestrates element reordering through three phases:
+### GridNodeMapper
+
+Converts a single `GridElement` to a `GridNode` DTO. Reads title (with `(untitled)` fallback), block schema, icon, `canView/canEdit/canCreate/canDelete/canPublish/canUnpublish`, a precomputed `ElementStatus` enum (`draft | published | modified | removed`) derived from `getStatusFlags()`, and `getSummary()` output.
+
+Caches allowed-child-type enumeration per container class (`getAllowedTypes()`) so walking a tree of many Sections doesn't repeat `ClassInfo::subclassesFor()` work per node.
+
+Exposes the `updateElementData` extension point: other modules can inject additional fields into each node's `extensions` array.
+
+### ElementPlacementService
+
+Single write-side authority for element placement. Two entry points, one pipeline:
+
+- `reorder(element, targetParent, afterElementId)` — move an already-placed element.
+- `insertAfter(element, parent, afterElementId)` — place a just-written element after a reference sibling.
+
+Both splice the element into its parent's sibling list and reindex `Sort`. The two methods exist to let call sites express intent; they delegate to the same validator and DB path. `GridElementService` uses `insertAfter()` after writing each newly-created or in-place-duplicated element so every placement goes through the shared validator.
 
 ```
-ReorderService.reorder(element, targetParent, afterElementId)
+reorder(element, targetParent, afterElementId)
   │
-  ├─ Validate (ReorderValidator)
-  │    └─ Hierarchy rule check (cross-parent only)
+  ├─ Validate (ReorderValidatorInterface)
+  │    └─ Hierarchy rule check (applies to both same- and cross-parent)
   │
   ├─ Compute sort order (in-memory)
   │    └─ Load siblings, splice, reindex
   │
-  └─ Persist dirty elements
+  └─ Persist dirty elements (wrapped in DB transaction)
        └─ WriteResult catches ValidationException → Result
 ```
 
@@ -296,20 +327,26 @@ Each step returns a `Result`. If any step fails, the service short-circuits and 
 
 ### Sort Computation
 
-`ReorderService` computes new Sort values entirely in memory:
+`ElementPlacementService` computes new Sort values entirely in memory:
 
 1. Load target siblings (zone-filtered for Sections)
 2. Exclude the moved element from the sibling list
-3. Resolve insertion index from `afterElementId` (`null` means first position)
+3. Resolve insertion index from `afterElementId` (`null` means first position; missing reference sibling returns `Result::fail`)
 4. `array_splice()` the element into position
 5. Reindex Sort values (1-based: 1, 2, 3, ...)
 6. Track dirty elements (only those whose `Sort` or `ParentID` actually changed)
 
 For cross-parent moves, the source parent's siblings are also reindexed to close the gap left by the moved element. The moved element is marked always-dirty even if its Sort value happens to stay the same, because its `ParentID` has changed.
 
+Persistence runs inside a `DB::get_conn()->withTransaction()` so a mid-loop write failure rolls the entire batch back rather than leaving siblings half-reindexed.
+
+### TitleGenerator
+
+Produces `"Original title (Copy)"`, `"Original title (Copy 2)"`, ... titles for `duplicateElement()` and `duplicateElementTo()`. Separated so both duplication paths produce the same user-visible naming convention.
+
 ### WriteResult
 
-The boundary where SilverStripe's `ValidationException` becomes a domain `Result`. Used by `ReorderService` to persist dirty elements and by other write operations throughout the codebase.
+The boundary where SilverStripe's `ValidationException` becomes a domain `Result`. Used by `ElementPlacementService` and `GridElementService` to persist writes and by other write operations throughout the codebase.
 
 ### GridSettingsResolver
 
@@ -506,13 +543,27 @@ WeDevelop\Grid\Model\ContentElement:
 
 `GridAdapterFactory` resolves `GridAdapterInterface` from the Injector and returns the same singleton, so both interfaces share one adapter instance. The factory pattern is used instead of a `%$` alias because it guarantees the singleton is fully constructed before being returned.
 
+## Node Identity
+
+Pages (`SiteTree`) and grid elements live in separate DB tables with independent auto-increment sequences, so a page and an element can share the same numeric ID. Anywhere identity is stored as a bare int is a latent collision bug; the wire format pairs every ID with a discriminator.
+
+| Value | Shape | Role |
+|-------|-------|------|
+| `NodeType` | Enum: `page`, `section`, `row`, `column`, `element` | Discriminator. `fromClass()` resolves a FQCN to the right case; `toClass()` returns the canonical ORM class for lookup (with `element` → `GridElement`). |
+| `NodeRef` | `final readonly { type: NodeType, id: positive-int }` | Scoped identity used on every API boundary — tree responses (`rootParent`), reorder payload (`element`, `parent`, `after`), duplicate-to targets, create parents. Serializes to `{ type, id }` via `JsonSerializable`. |
+
+Server and client use the same shape: the frontend `NodeKey` (`"${NodeType}-${id}"`) string form is produced by `NodeRef::toKey()`. The controller uses `resolveNodeRef()` to pick the right ORM class before loading, avoiding the polymorphic ID collision.
+
 ## Value Objects
 
 | Class | Purpose |
 |-------|---------|
-| `ContainerType` | Enum: Section, Row, Column |
+| `ContainerType` | Enum: Section, Row, Column — with `toElementClass()`, `allowedChildClass()`, `isChildAllowed()` |
+| `NodeType` | Enum: Page, Section, Row, Column, Element — scoped identity discriminator (see [Node Identity](#node-identity)) |
+| `NodeRef` | `final readonly { type, id }` — canonical on-the-wire element reference |
 | `Viewport` | `final readonly class` with `key` and `label` |
-| `GridNode` | Readonly DTO for serialized tree nodes |
+| `GridNode` | Readonly DTO for serialized tree nodes (includes `self: NodeRef`, `parent: NodeRef`, `status: ElementStatus`, `summary`, and optional `containerType`/`allowedTypes`/`children`/`gridSettings`) |
+| `ElementStatus` | Enum: Draft, Published, Modified, Removed — derived from `getStatusFlags()` |
 | `Result<T>` | Generic success/failure container |
 | `ValidationError` | Structured error with message, field, severity, code, and optional i18n key + params |
 | `ValidationErrorCode` | Enum: Generic, OwnershipDenied, HierarchyViolation, InvalidGridSettings |
@@ -523,6 +574,8 @@ WeDevelop\Grid\Model\ContentElement:
 | `ViewportConfig` | Readonly record: width, offset, visible for a single viewport |
 | `GridSettings` | Default `ViewportConfig` + map of per-viewport overrides |
 | `OverrideStrategy` | Enum: Isolated (per-viewport), Cascade (mobile-first carry-forward) |
+| `OffsetStrategy` | Enum: Margin, GridPlacement — how offsets translate to CSS |
+| `WriteResult` | Converts thrown `ValidationException` into `Result::fail()` |
 
 ## Dependency Injection
 
@@ -540,7 +593,7 @@ public GridAdapterInterface $gridAdapter;
 **Constructor injection** — used by services, with explicit `constructor:` config in YAML because the Injector does not auto-wire constructor parameters from interface bindings:
 
 ```yaml
-WeDevelop\Grid\Service\ReorderService:
+WeDevelop\Grid\Service\ElementPlacementService:
   constructor:
     validator: '%$WeDevelop\Grid\Contract\ReorderValidatorInterface'
     elementRepository: '%$WeDevelop\Grid\Repository\GridElementRepositoryInterface'
@@ -548,13 +601,40 @@ WeDevelop\Grid\Service\ReorderService:
 
 ## CMS Integration
 
-`GridPageExtension` (applied to `SiteTree` via YAML) provides the integration point:
+`GridPageExtension` is opt-in — consuming projects apply it to the page classes they want grid editing on (see the module README for setup). Applying it:
 
 - Declares `has_many` to Section (with `owns`, `cascade_deletes`, `cascade_duplicates`)
-- Removes the default `Content` field from the CMS form
+- Adds a `UseGrid` boolean DB field (defaulting to `$use_grid_by_default`)
+- Removes the default `Content` field when the grid is active
 - Injects `GridEditorField` as the React mount point for the grid editor
 
+### Per-page editor toggle
+
+Two class-level statics control the toggle behavior (both overridable per page subclass via YAML):
+
+- `$use_grid_by_default` (default `true`) — initial value of `UseGrid` on newly populated pages (`onAfterPopulateDefaults`).
+- `$enable_editor_toggle` (default `false`) — when `true`, a "Use grid on this page" checkbox appears in the CMS form and the editor rendered reflects the stored `UseGrid`. When `false`, the grid is always rendered regardless of the stored value.
+
 `GridEditorField` is a lightweight `FormField` subclass that renders data attributes (`pageId`, `zone`) and delegates all mutations to the API controller. Its `saveInto()` is a no-op — the grid editor manages persistence through the JSON API, not through the CMS form save cycle.
+
+### Historical tree (version history)
+
+`GridAwareVersionFormFactory` is registered as the `DataObjectVersionFormFactory` alias in `_config/history-viewer.yml`. It reproduces the stock factory's pipeline with one difference: `GridEditorField` survives the `GridField` strip step so the grid editor renders inside the history viewer. `apiReadTreeAtVersion` powers that view by loading the tree in `Versioned` archived reading mode.
+
+A known limitation: archive cutoff is derived from the page version's `LastEdited` which has second precision — rapid sub-second successive publishes of the same page can leak sibling element writes into the historical snapshot. See `GridController::apiReadTreeAtVersion()` docblock for details.
+
+### CMS Reports
+
+`GridElementReport` (`src/Reports/GridElementReport.php`) registers a CMS report listing grid elements with optional `orphaned` filtering. Requires `silverstripe/reports` as an optional dependency.
+
+### Fluent integration (optional)
+
+When `silverstripe-fluent` is installed, `_config/fluent.yml` wires:
+
+- `FluentGridPageExtension` onto `SiteTree` — hooks `onAfterCopyLocale` and `onAfterLocalisedCopy` to duplicate the grid subtree on copy.
+- `GridAwareDeleteLocalisationPolicy` as the Injector alias for `DeleteLocalisationPolicy` — wraps Fluent's original policy and additionally cascades grid element deletion when a locale is cleared.
+
+See `docs/fluent.md` for full setup.
 
 ## Extension Points
 
