@@ -40,6 +40,8 @@ class TeaserBlock extends ContentElement
 
     // font-icon-* classes come from SilverStripe's admin icon font — pick one
     // that matches the block's purpose. It shows up in the CMS type picker.
+    // If the class doesn't resolve, the grid editor falls back silently to
+    // font-icon-block-content.
     private static string $icon = 'font-icon-block-promo';
 
     private static array $db = [
@@ -75,7 +77,7 @@ Key points:
 
 - `$singular_name` appears in the CMS block picker and on the editor card as the "type" label.
 - `$class_description` is shown under the name in the type picker.
-- `$icon` is a SilverStripe admin icon class (e.g. `font-icon-block-promo`, `font-icon-block-content`, `font-icon-block-image`). If you skip it, `font-icon-block-content` is used.
+- `$icon` is a class from `silverstripe/admin`'s admin icon font. `font-icon-block-content` is the safe default (and what everything falls back to when an unknown class is set). Browse the admin scss/sprites for the full catalogue when you want a more specific glyph.
 - Inherited fields: `Title`, `TitleTag`, `ShowTitle`, `ExtraClass`, `Style`, `HTML` (from `ContentElement`). `getCMSFields()` on the base class already renders the title group and history tab — call `parent::getCMSFields()` to keep them.
 
 Run `dev/build` after adding the class so the new table is created.
@@ -133,7 +135,7 @@ Grid elements render through SilverStripe's standard `forTemplate()` pipeline wi
 - `{Element}_holder.ss` — outer wrapper (the default `GridElement_holder.ss` just emits `$Element`).
 - `{Element}.ss` — inner content.
 
-Create `app/templates/App/Grid/Elements/TeaserBlock.ss`:
+The template path mirrors the class FQCN. For `App\Grid\Elements\TeaserBlock`, create `app/templates/App/Grid/Elements/TeaserBlock.ss`:
 
 ```silverstripe
 <article class="teaser">
@@ -190,7 +192,7 @@ Override `provideHolderClasses()` on your element if you want to inject classes 
 - [ ] `dev/build` run
 - [ ] `getCMSFields()` calls `parent::getCMSFields()` to keep the title group and history tab
 - [ ] Optional: override `getSummary()` for a custom editor-card preview
-- [ ] Template under `templates/{Vendor}/{Module}/Elements/{ClassName}.ss`
+- [ ] Template at a path that mirrors the class FQCN under an active template base (e.g. `App\Grid\Elements\TeaserBlock` → `app/templates/App/Grid/Elements/TeaserBlock.ss`)
 - [ ] Restart Vite / `dev/build?flush=1` after adding templates
 
 ## See also

@@ -56,22 +56,22 @@ The module ships holders for `Section`, `Row`, and `Column`. Content elements ty
 
 ### What the default holders produce
 
-```html
+The shipped templates (simplified — the actual files carry conditional class attributes):
+
+```silverstripe
 <!-- Section_holder.ss -->
-<section class="{$HolderClasses}" data-element="section" id="{$Anchor}">
-    <div class="{$ContainerClasses}">
-        {$Element}
-    </div>
+<section class="$HolderClasses.ATT" data-element="$SimpleClassName.LowerCase" id="$Anchor">
+    <div class="$ContainerClasses">$Element</div>
 </section>
 
 <!-- Row_holder.ss -->
-<div class="{$HolderClasses}" data-element="row">{$Element}</div>
+<div class="$HolderClasses.ATT" data-element="$SimpleClassName.LowerCase" id="$Anchor">$Element</div>
 
 <!-- Column_holder.ss -->
-<div class="{$HolderClasses}" data-element="column">{$Element}</div>
+<div class="$HolderClasses.ATT" data-element="$SimpleClassName.LowerCase" id="$Anchor">$Element</div>
 ```
 
-Every holder carries a `data-element` attribute naming the element type (`section`, `row`, `column`, or the lowercased simple class name for content elements). E2E tests and frontend scripts can target these attributes instead of class names.
+Every holder carries a `data-element` attribute derived from `SimpleClassName.LowerCase` — the lowercased short class name. For the shipped containers that's `section`, `row`, and `column`; a subclass like `App\Grid\Sections\HeroSection` would render `data-element="herosection"`. The attribute is stable for E2E selectors and frontend scripts to target, regardless of `ExtraClass` or theme class overrides.
 
 ### Class contribution
 
