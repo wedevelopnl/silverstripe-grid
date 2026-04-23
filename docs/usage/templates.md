@@ -14,9 +14,34 @@ Page types with `GridPageExtension` expose `$UseGrid` and `$Sections`. The canon
 <% end_if %>
 ```
 
-`$UseGrid` always stays `true` unless the per-page editor toggle is enabled (see the README "Enabling the editor toggle" section). If you don't use the toggle, the `<% else %>` branch never fires, and you can simplify to `<% loop $Sections %>$Me<% end_loop %>`.
+`$UseGrid` always stays `true` unless the per-page editor toggle is enabled (see [Per-page editor toggle](#per-page-editor-toggle) below). If you don't use the toggle, the `<% else %>` branch never fires, and you can simplify to `<% loop $Sections %>$Me<% end_loop %>`.
 
 Multi-zone pages declare a `GridEditorField` per zone with different `zone` values (`main`, `sidebar`, …). Each zone becomes an independent `Sections()` collection filtered by the `Zone` field. See `src/Dev/MultiZonePage.php` for a working example.
+
+## Per-page editor toggle
+
+To let CMS users switch between the grid editor and the Content `HTMLEditorField` on a per-page basis, opt in on the page type:
+
+```yaml
+App\Pages\ArticlePage:
+  enable_editor_toggle: true
+```
+
+With the toggle enabled a **"Use grid on this page"** checkbox appears in the CMS form and the editor shown reflects the stored `UseGrid` value. `$UseGrid` in the template resolves to that stored value. With the toggle disabled the checkbox is hidden, `UseGrid` is ignored for rendering, and the grid is always active.
+
+## Default editor on new pages
+
+The grid is enabled by default on newly created pages. Override per page type in YAML:
+
+```yaml
+App\Pages\ArticlePage:
+  use_grid_by_default: true    # default — grid editor on new pages
+
+App\Pages\JobPage:
+  use_grid_by_default: false   # content editor on new pages (only effective when enable_editor_toggle: true)
+```
+
+`use_grid_by_default` only matters in combination with `enable_editor_toggle: true` — without the toggle, the stored `UseGrid` value is never consulted for rendering.
 
 ## The holder chain
 

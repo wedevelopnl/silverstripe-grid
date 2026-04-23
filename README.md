@@ -1,32 +1,32 @@
 # SilverStripe Grid
 
-## Introduction
-
-A grid-based content block system for SilverStripe CMS, enabling structured Section → Row → Column layouts with configurable CSS framework adapters (Bootstrap, Tailwind, Bulma).
+A grid-based content block system for SilverStripe 6 CMS — structured Section → Row → Column layouts with configurable CSS framework adapters (Bootstrap, Tailwind, Bulma).
 
 ## Requirements
 
-* PHP ^8.3
-* silverstripe/framework ^6.0
-* silverstripe/cms ^6.0
-* silverstripe/admin ^3.0
-* silverstripe/versioned ^3.0
-* silverstripe/vendor-plugin ^3.0
-* Node >=24 (for frontend build)
+- PHP ^8.3
+- silverstripe/framework ^6.0, silverstripe/cms ^6.0, silverstripe/admin ^3.0, silverstripe/versioned ^3.0, silverstripe/vendor-plugin ^3.0
+- unclecheese/display-logic ^4.0, wedevelopnl/silverstripe-media-field ^6.0
+- Node >= 24 (only needed if you build the frontend yourself)
 
-> **Optional**: `silverstripe/reports` enables the Grid Elements report in CMS Reports.
+Optional:
 
-> **Conflict**: This module conflicts with `dnadesign/silverstripe-elemental` and replaces its functionality.
+- `silverstripe/reports` — enables the Grid Elements report in CMS Reports
+- `tractorcow/silverstripe-fluent` — multi-locale support with isolated grid records per locale (see [Fluent integration](docs/fluent.md))
+
+> **Conflict**: this module conflicts with `dnadesign/silverstripe-elemental` and replaces its functionality.
 
 ## Installation
 
-```
+```bash
 composer require wedevelopnl/silverstripe-grid
 ```
 
+Then run `dev/build?flush=1` to pick up the new database schema and configuration.
+
 ## Usage
 
-The module ships `GridPageExtension` which adds a grid editor to page types. Apply it to the page types that need grid editing in your project's YAML config:
+Apply `GridPageExtension` to the page types that should have grid editing:
 
 ```yaml
 # app/_config/grid.yml
@@ -35,160 +35,37 @@ Page:
     Grid: WeDevelop\Grid\Extensions\GridPageExtension
 ```
 
-By default each page with the extension uses the grid editor and the standard Content HTMLEditorField is removed from the CMS form.
-
-### Page templates
-
-Use `$UseGrid` in page templates to render grid sections with a fallback to `$Content`:
+Render the grid in the page template:
 
 ```silverstripe
-<% if $UseGrid %>
-    <% loop $Sections %>$Me<% end_loop %>
-<% else %>
-    $Content
-<% end_if %>
+<% loop $Sections %>$Me<% end_loop %>
 ```
 
-This pattern works whether or not the editor toggle is enabled — `$UseGrid` stays `true` when the toggle is off, so the `<% else %>` branch simply never runs. Projects that do not use the toggle can simplify to `<% loop $Sections %>$Me<% end_loop %>`.
+That's a working integration. See [Template integration](docs/usage/templates.md) for the per-page editor toggle, default-behavior configuration, theme overrides, and the holder chain.
 
-### Enabling the editor toggle
-
-To let CMS users switch between the grid editor and the Content HTMLEditorField on a per-page basis, opt in on the page type:
-
-```yaml
-App\Pages\ArticlePage:
-  enable_editor_toggle: true
-```
-
-With the toggle enabled, a **"Use grid on this page"** checkbox appears in the CMS form and the editor shown reflects the stored `UseGrid` value.
-
-### Configuring the default
-
-The grid is enabled by default on new pages. Override this per page type in YAML:
-
-```yaml
-App\Pages\ArticlePage:
-  use_grid_by_default: true    # default — grid editor on new pages
-
-App\Pages\JobPage:
-  use_grid_by_default: false   # content editor on new pages (only effective when enable_editor_toggle: true)
-```
-
-## Development
-
-### Prerequisites
-
-* Docker Desktop (or compatible)
-* Node >=24 (see `.nvmrc`)
-* Composer
-
-### Quick start
-
-```bash
-composer install
-make up                  # Provisions Docker services, prints CMS URL when ready
-npm install
-npm run build            # Vite production build
-```
-
-`make up` provisions a full SilverStripe 6 dev environment (FrankenPHP 8.3 + MySQL 8 + Caddy). It auto-generates `.docker/.env` with deterministic ports hashed from the directory name, builds the Docker images, runs `dev/build`, and prints the CMS URL once the app is healthy.
-
-> First boot takes ~1–2 minutes while Composer installs vendors inside the container and `dev/build` runs. Wait for `make up` to print the URL.
-
-### What you get
-
-* **CMS:** the URL printed by `make up` (typically `https://localhost:80xx` — the exact port lives in `.docker/.env` as `WEB_PORT`)
-* **Admin:** `<that URL>/admin` — login `admin` / `admin`
-* **Database:** MySQL 8 exposed on `127.0.0.1:<DB_PORT>` (also in `.docker/.env`); database `silverstripe`, user `silverstripe`, password `silverstripe`
-* **Optional multi-language profile:** `make ensure-up-fluent` boots a second app container with Fluent installed against database `silverstripe_fluent`
-
-### Day-to-day
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Vite watch mode — rebuilds the client bundle on change |
-| `make dev-build` | Run `dev/build flush=1` inside the container |
-| `make flush` | Clear SilverStripe cache |
-| `make up` | Start (or resume) services |
-| `make down` | Stop services (keeps DB volume) |
-| `make destroy` | Stop services and drop volumes (full reset — wipes DB) |
-
-> **Port conflict after renaming or copying the worktree?** Run `rm .docker/.env && make up` to regenerate a fresh port set.
->
-> **View container logs:** `docker compose -f .docker/compose.yml logs -f app`
-
-### Dev fixture endpoint
-
-When running in the `dev` environment, the module exposes endpoints to load the same YAML fixtures used by E2E tests into the CMS for manual exploration:
-
-| Method | URL | Purpose |
-|--------|-----|---------|
-| `POST` | `/dev/grid-fixtures/load?fixture=<Name>` | Load `tests/E2E/Fixture/<Name>.yml` |
-| `POST` | `/dev/grid-fixtures/reset` | Remove all fixture-created pages |
-
-See `src/Dev/FixtureController.php`. The endpoints are gated by `Director::isDev()` and refuse to run outside the dev environment.
-
-### Testing
-
-| Command | Description |
-|---------|-------------|
-| `make test` | Run all tests (PHP unit + integration + functional + JS) |
-| `make test-unit` | PHP unit tests only (no database/framework) |
-| `make test-integration` | PHP integration tests (full SilverStripe env) |
-| `make test-functional` | PHP functional/HTTP controller tests |
-| `make test-fluent` | Run integration + fluent tests in the Fluent environment |
-| `npm run test` | JavaScript tests (Vitest) |
-| `npm run test:watch` | Vitest in watch mode |
-| `make test-e2e` | Playwright E2E tests (auto-starts Docker if needed) |
-| `make test-e2e-ui` | Playwright E2E tests with the interactive UI |
-
-### Coverage & mutation testing
-
-| Command | Description |
-|---------|-------------|
-| `make coverage` | Merged PHP coverage (HTML + Clover, written to `coverage/`) |
-| `make coverage-unit` | PHP unit test coverage only |
-| `make coverage-integration` | PHP integration test coverage only |
-| `make coverage-functional` | PHP functional test coverage only |
-| `make coverage-js` | JavaScript test coverage (Vitest) |
-| `make coverage-check` | Fail if combined PHP coverage < 90% |
-| `make mutate` | PHP mutation testing (Infection) |
-| `make mutate-js` | JavaScript mutation testing (Stryker) |
-
-### Quality
-
-| Command | Description |
-|---------|-------------|
-| `make analyse` | PHPStan static analysis (level max + Silverstan, 100% type coverage) |
-| `make rector-dry` | Preview Rector refactorings |
-| `make rector` | Apply Rector refactorings |
-| `npm run lint` | Biome (JS/TS) + Stylelint (SCSS) |
-| `npm run format` | Biome format --write (JS/TS) |
-| `npm run typecheck` | TypeScript type checking |
-| `make qa` | Full QA suite — PHPStan + coverage + lint + typecheck + JS tests (parallel) |
-| `make qa-js` | JS-only QA — lint + typecheck + Vitest (parallel) |
+## Documentation
 
 ### Usage guides
 
 - [Custom content elements](docs/usage/custom-elements.md) — subclass `ContentElement`, register CMS fields, add templates
-- [Template integration](docs/usage/templates.md) — holder chain, theme overrides, extension hooks
+- [Template integration](docs/usage/templates.md) — `GridPageExtension` configuration, holder chain, theme overrides, extension hooks
 - [Internationalization](docs/usage/i18n.md) — translating strings, adding a locale, PHP + JS collectors
 
-### Testing
+### Integration guides
 
-- [E2E fixture protocol](docs/testing/e2e-fixtures.md) — YAML schema, post-actions, and the dev-only fixture loader used by Playwright specs
+- [Migrating from Elemental / ElementalGrid](docs/migration.md) — `BuildTask`-based upgrade from SS5 `silverstripe-elemental` / `silverstripe-elemental-grid`
+- [Fluent (multi-locale) support](docs/fluent.md) — optional integration with `tractorcow/silverstripe-fluent`
 
 ### Architecture
 
-See the [architecture documentation](docs/architecture/) for detailed design documents:
-
-- [Backend Architecture](docs/architecture/backend.md) — data model, API layer, service design, validation, grid adapters
+- [Backend architecture](docs/architecture/backend.md) — data model, API layer, service design, validation
 - [Drag and Drop](docs/architecture/drag-and-drop.md) — frontend dnd-kit integration and backend reorder pipeline
 - [Grid Adapter System](docs/architecture/grid-adapter.md) — building a new CSS framework adapter
 
-### Migrating from Elemental / ElementalGrid
+### Contributing
 
-Projects upgrading from WeDevelop ElementalGrid (SS5) or plain `dnadesign/silverstripe-elemental` can use the built-in migration tasks. See [Migrating from Elemental / ElementalGrid](docs/migration.md) for the step-by-step guide, strategy diagrams, and extension hooks.
+- [Contributing guide](docs/contributing.md) — dev environment, test/coverage/QA commands, pull-request conventions
+- [E2E fixture protocol](docs/testing/e2e-fixtures.md) — YAML schema, post-actions, dev fixture endpoint
 
 ## Changelog
 
@@ -196,12 +73,8 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
-See [License](LICENSE)
+See [LICENSE](LICENSE).
 
 ## Maintainers
 
-* [WeDevelop](https://www.wedevelop.nl/) <development@wedevelop.nl>
-
-## Development and contribution
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+[WeDevelop](https://www.wedevelop.nl/) — <development@wedevelop.nl>
