@@ -174,6 +174,10 @@ See `src/Dev/FixtureController.php`. The endpoints are gated by `Director::isDev
 - [Template integration](docs/usage/templates.md) — holder chain, theme overrides, extension hooks
 - [Internationalization](docs/usage/i18n.md) — translating strings, adding a locale, PHP + JS collectors
 
+### Testing
+
+- [E2E fixture protocol](docs/testing/e2e-fixtures.md) — YAML schema, post-actions, and the dev-only fixture loader used by Playwright specs
+
 ### Architecture
 
 See the [architecture documentation](docs/architecture/) for detailed design documents:
