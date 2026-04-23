@@ -16,9 +16,11 @@ use WeDevelop\Grid\Exception\InvalidGridValueException;
  * keyed by viewport key and represent explicit user customizations.
  *
  * JSON output uses `JsonSerializable`: `json_encode($gridSettings)` yields
- * `{default: {...}, overrides: {...}}`. {@see fromJson} parses the same
- * shape for fixture/legacy input. Storage-layer framing for the split
- * composite DB column lives in {@see \WeDevelop\Grid\ORM\FieldType\DBGridSettings}.
+ * `{default: {...}, overrides: {...}}` — or `overrides: []` when the map is
+ * empty, because PHP encodes an empty associative array as a JSON array.
+ * {@see fromJson} accepts either shape for fixture/legacy input. Storage-
+ * layer framing for the split composite DB column lives in
+ * {@see \WeDevelop\Grid\ORM\FieldType\DBGridSettings}.
  */
 final readonly class GridSettings implements JsonSerializable
 {

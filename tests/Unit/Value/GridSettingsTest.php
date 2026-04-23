@@ -213,6 +213,19 @@ final class GridSettingsTest extends TestCase
         );
     }
 
+    public function testJsonEncodeWithEmptyOverridesEmitsJsonArray(): void
+    {
+        // PHP encodes an empty associative array as `[]`, not `{}`. Document
+        // the shape so API consumers don't get surprised — fromJson accepts
+        // both, so round-tripping is unaffected.
+        $settings = GridSettings::initial(12);
+
+        self::assertSame(
+            '{"default":{"width":12,"offset":0,"visible":true},"overrides":[]}',
+            json_encode($settings, JSON_THROW_ON_ERROR),
+        );
+    }
+
     public function testJsonEncodeRoundTripsThroughFromJson(): void
     {
         $original = new GridSettings(
@@ -430,6 +443,9 @@ final class GridSettingsTest extends TestCase
         yield 'offset wrong type' => ['{"default":{"width":6,"offset":"0","visible":true}}'];
         yield 'visible wrong type' => ['{"default":{"width":6,"offset":0,"visible":"yes"}}'];
         yield 'width wrong type' => ['{"default":{"width":"6","offset":0,"visible":true}}'];
+        // Boundary: the tolerant `width <= 0` null-return only fires for ints.
+        // A float width falls through to ViewportConfig::fromArray which throws.
+        yield 'width as float' => ['{"default":{"width":6.5,"offset":0,"visible":true}}'];
     }
 
     #[DataProvider('fromJsonMalformedOverrideProvider')]

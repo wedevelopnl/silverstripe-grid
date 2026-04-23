@@ -73,9 +73,12 @@ final class DBGridSettings extends DBComposite
     /**
      * Decode the `{Name}Overrides` Text sub-column back into typed viewport configs.
      *
-     * Tolerant of NULL or non-JSON content so a single corrupt row can't crash
-     * unrelated page reads; structurally malformed entries still throw via
-     * {@see ViewportConfig::mapFromArray}.
+     * NULL and non-JSON content return an empty map. Structurally malformed
+     * stored JSON — e.g. an override entry missing `width` — still throws
+     * {@see InvalidGridValueException} via {@see ViewportConfig::mapFromArray}
+     * and propagates up through {@see getValue()} to the caller. A future
+     * symmetric read-boundary catch-and-log belongs at the field-type level,
+     * not inside this decoder.
      *
      * @return array<non-empty-string, ViewportConfig>
      */
