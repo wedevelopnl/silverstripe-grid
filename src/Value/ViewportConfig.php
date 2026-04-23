@@ -66,6 +66,32 @@ final readonly class ViewportConfig implements JsonSerializable
     }
 
     /**
+     * Batch-construct a keyed map of viewport configs.
+     *
+     * Entries with empty/non-string keys or non-array values are silently
+     * skipped — legacy data shapes encoded these as "not present." Array
+     * values that are structurally malformed still throw via {@see fromArray}.
+     *
+     * @param array<array-key, mixed> $map
+     * @param non-empty-string $basePath label used as a prefix in error messages, e.g. `overrides`
+     * @return array<non-empty-string, self>
+     */
+    public static function mapFromArray(array $map, string $basePath): array
+    {
+        $result = [];
+        foreach ($map as $key => $data) {
+            if (!is_string($key) || $key === '' || !is_array($data)) {
+                continue;
+            }
+            /** @var array<string, mixed> $data */
+            $result[$key] = self::fromArray($data, sprintf('%s["%s"]', $basePath, $key));
+        }
+
+        /** @var array<non-empty-string, self> $result */
+        return $result;
+    }
+
+    /**
      * @return array{width: int, offset: int, visible: bool}
      */
     public function toArray(): array

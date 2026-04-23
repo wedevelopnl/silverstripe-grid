@@ -15,12 +15,10 @@ use WeDevelop\Grid\Exception\InvalidGridValueException;
  * The default maps to the adapter's default viewport; overrides are
  * keyed by viewport key and represent explicit user customizations.
  *
- * Two JSON formats are supported:
- * - Full: `{default: {...}, overrides: {...}}` — used by the fixture loader
- *   path in {@see \WeDevelop\Grid\ORM\FieldType\DBGridSettings::setValue()}.
- * - Overrides-only: `{md: {...}, lg: {...}}` — stored in the
- *   `{Name}Overrides` Text sub-column of `DBGridSettings`; default viewport
- *   values live in their own typed sub-columns.
+ * JSON output uses `JsonSerializable`: `json_encode($gridSettings)` yields
+ * `{default: {...}, overrides: {...}}`. {@see fromJson} parses the same
+ * shape for fixture/legacy input. Storage-layer framing for the split
+ * composite DB column lives in {@see \WeDevelop\Grid\ORM\FieldType\DBGridSettings}.
  */
 final readonly class GridSettings implements JsonSerializable
 {
@@ -73,76 +71,10 @@ final readonly class GridSettings implements JsonSerializable
 
         $overrides = [];
         if (isset($decoded['overrides']) && is_array($decoded['overrides'])) {
-            $overrides = self::parseOverridesMap($decoded['overrides'], 'overrides');
+            $overrides = ViewportConfig::mapFromArray($decoded['overrides'], 'overrides');
         }
 
         return new self($default, $overrides);
-    }
-
-    /**
-     * Deserialize the overrides-only JSON blob stored in the DB.
-     *
-     * Tolerant of non-string / non-array input (empty map returned) so that
-     * legacy rows with NULL or invalid content do not crash unrelated reads.
-     * Structurally malformed override entries still throw — see {@see fromJson}.
-     *
-     * @return array<non-empty-string, ViewportConfig>
-     */
-    public static function overridesFromJson(mixed $raw): array
-    {
-        if (!is_string($raw)) {
-            return [];
-        }
-
-        $decoded = json_decode($raw, true);
-        if (!is_array($decoded)) {
-            return [];
-        }
-
-        return self::parseOverridesMap($decoded, 'overrides');
-    }
-
-    /**
-     * Serialize overrides for storage in the DB column.
-     *
-     * Returns null when the map is empty — the DB column stores NULL rather
-     * than an empty JSON object, matching the `DBGridSettings` storage contract.
-     *
-     * @param array<non-empty-string, ViewportConfig> $overrides
-     */
-    public static function overridesToJson(array $overrides): ?string
-    {
-        if ($overrides === []) {
-            return null;
-        }
-
-        return json_encode($overrides, JSON_THROW_ON_ERROR);
-    }
-
-    /**
-     * Parse a map of viewport payloads.
-     *
-     * Entries with empty/non-string keys or non-array values are silently
-     * skipped (these come from legacy data shapes). Array values that are
-     * structurally malformed throw via {@see ViewportConfig::fromArray}.
-     *
-     * @param array<array-key, mixed> $map
-     * @param non-empty-string $basePath
-     * @return array<non-empty-string, ViewportConfig>
-     */
-    private static function parseOverridesMap(array $map, string $basePath): array
-    {
-        $result = [];
-        foreach ($map as $key => $data) {
-            if (!is_string($key) || $key === '' || !is_array($data)) {
-                continue;
-            }
-            /** @var array<string, mixed> $data */
-            $result[$key] = ViewportConfig::fromArray($data, sprintf('%s["%s"]', $basePath, $key));
-        }
-
-        /** @var array<non-empty-string, ViewportConfig> $result */
-        return $result;
     }
 
     // ─── Queries ───────────────────────────────────────────────

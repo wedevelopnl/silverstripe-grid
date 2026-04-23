@@ -115,6 +115,65 @@ final class ViewportConfigTest extends TestCase
         );
     }
 
+    // ─── mapFromArray ───────────────────────────────────────────
+
+    public function testMapFromArrayBuildsKeyedViewportConfigs(): void
+    {
+        $map = ViewportConfig::mapFromArray(
+            [
+                'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
+                'lg' => ['width' => 4, 'offset' => 2, 'visible' => false],
+            ],
+            'overrides',
+        );
+
+        self::assertCount(2, $map);
+        self::assertTrue($map['md']->equals(new ViewportConfig(6, 0, true)));
+        self::assertTrue($map['lg']->equals(new ViewportConfig(4, 2, false)));
+    }
+
+    public function testMapFromArraySkipsEmptyKeyAndNonArrayValue(): void
+    {
+        $map = ViewportConfig::mapFromArray(
+            [
+                'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
+                '' => ['width' => 4, 'offset' => 0, 'visible' => true],
+                'lg' => 'not-an-array',
+            ],
+            'overrides',
+        );
+
+        self::assertSame(['md'], array_keys($map));
+    }
+
+    public function testMapFromArrayThrowsOnStructurallyMalformedEntry(): void
+    {
+        $this->expectException(InvalidGridValueException::class);
+
+        ViewportConfig::mapFromArray(
+            ['md' => ['width' => 6, 'visible' => true]],
+            'overrides',
+        );
+    }
+
+    public function testMapFromArrayErrorMessageIncludesKeyPath(): void
+    {
+        try {
+            ViewportConfig::mapFromArray(
+                ['md' => ['width' => 6, 'visible' => true]],
+                'overrides',
+            );
+            self::fail('Expected InvalidGridValueException');
+        } catch (InvalidGridValueException $e) {
+            self::assertStringContainsString('overrides["md"]', $e->getMessage());
+        }
+    }
+
+    public function testMapFromArrayReturnsEmptyForEmptyInput(): void
+    {
+        self::assertSame([], ViewportConfig::mapFromArray([], 'overrides'));
+    }
+
     public function testEqualsReturnsTrueForIdenticalValues(): void
     {
         $first = new ViewportConfig(width: 6, offset: 1, visible: true);

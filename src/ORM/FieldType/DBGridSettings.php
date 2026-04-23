@@ -67,9 +67,30 @@ final class DBGridSettings extends DBComposite
 
         $default = new ViewportConfig($width, $offset, $visible);
 
-        $overrides = GridSettings::overridesFromJson($this->getField('Overrides'));
+        return new GridSettings($default, $this->decodeOverridesColumn($this->getField('Overrides')));
+    }
 
-        return new GridSettings($default, $overrides);
+    /**
+     * Decode the `{Name}Overrides` Text sub-column back into typed viewport configs.
+     *
+     * Tolerant of NULL or non-JSON content so a single corrupt row can't crash
+     * unrelated page reads; structurally malformed entries still throw via
+     * {@see ViewportConfig::mapFromArray}.
+     *
+     * @return array<non-empty-string, ViewportConfig>
+     */
+    private function decodeOverridesColumn(mixed $raw): array
+    {
+        if (!is_string($raw)) {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        return ViewportConfig::mapFromArray($decoded, 'overrides');
     }
 
     /**
@@ -127,7 +148,12 @@ final class DBGridSettings extends DBComposite
         $this->setField('DefaultWidth', $value->default->width);
         $this->setField('DefaultOffset', $value->default->offset);
         $this->setField('DefaultVisible', $value->default->visible);
-        $this->setField('Overrides', GridSettings::overridesToJson($value->overrides));
+        // Empty map → NULL column (not "{}") so `exists()` semantics match the storage contract.
+        // ViewportConfig is JsonSerializable, so json_encode walks the map without a manual loop.
+        $this->setField(
+            'Overrides',
+            $value->overrides === [] ? null : json_encode($value->overrides, JSON_THROW_ON_ERROR),
+        );
 
         return $this;
     }
