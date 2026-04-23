@@ -15,13 +15,13 @@ src/Controllers/      # API controllers (GridController)
 src/Dev/              # Fixture loading for E2E tests (controller, loader, post-actions, result)
 src/Factory/          # Factories (GridAdapterFactory)
 src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement) + ContainerElementTrait
-src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaExtension)
-src/Forms/            # Form field implementations (GridEditorField)
+src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaExtension, FluentGridPageExtension)
+src/Forms/            # Form field implementations (GridEditorField, GridAwareVersionFormFactory)
 src/Migration/        # SS5→SS6 migration (DTOs, strategies, tasks, services)
 src/Reports/          # CMS reports (GridElementReport)
-src/Value/            # Value objects, DTOs, and request objects
-src/Service/          # Domain services (GridTreeBuilder, ReorderService, GridSettingsResolver)
-src/Validation/       # Hierarchy validation, reorder validation, and field validators (HierarchyValidationService, ReorderValidator, ElementAllowanceTrait, GridSettingsFieldValidator)
+src/Value/            # Value objects, DTOs, and request objects (NodeRef, NodeType, ElementStatus, GridNode, Result, ...)
+src/Service/          # Domain services (GridTreeBuilder, GridNodeMapper, ElementPlacementService, GridElementService, GridSettingsService, GridSettingsResolver, TitleGenerator, RequestBodyParser, ColumnClassResolver, GridAwareDeleteLocalisationPolicy)
+src/Validation/       # Write-time + reorder-time validation (HierarchyValidationExtension, HierarchyValidationService, HierarchyValidatorInterface, ReorderValidator, GridSettingsFieldValidator)
 src/Exception/        # Domain exceptions (GridDomainException, InvalidGridValueException)
 src/ORM/FieldType/    # Custom DB field types (DBGridSettings composite field)
 src/Repository/       # Repository interfaces + ORM implementations (GridElementRepositoryInterface, OrmGridElementRepository)
@@ -45,7 +45,7 @@ client/src/testing/   # Test infrastructure (factories, helpers, mocks)
 client/src/i18n/      # Internationalization utilities
 client/dist/          # Vite build output (exposed, created by build)
 scripts/              # Build scripts (i18n collection, parity checks)
-phpstan/              # PHPStan stubs (e.g. AdminController.stub)
+phpstan/stubs/        # PHPStan stubs (e.g. AdminController.stub)
 .docker/              # Docker dev env: Caddy + PHP + MySQL 8
 docs/architecture/    # Architecture documents (backend, drag-and-drop)
 ```

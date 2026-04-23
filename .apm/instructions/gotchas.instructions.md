@@ -15,8 +15,12 @@ applyTo: "**/*"
 
 ## Grid Domain
 
-- **Polymorphic parent ID collisions**: page IDs and element IDs share the same numeric space — lookup maps must key by composite `"ParentClass:ParentID"` not just ParentID
-- **GridSettings overrides column**: The `GridSettingsOverrides` Text column stores `null` when no overrides exist (not empty string or `{}`). `DBGridSettings::serializeOverrides()` enforces this — any non-null value is valid JSON with at least one viewport key
+- **Polymorphic parent ID collisions (PHP)**: page IDs and element IDs share the same numeric space — lookup maps must key by composite `"ParentClass:ParentID"` not just ParentID
+- **Scoped node identity (wire + client)**: the canonical identity shape is `NodeRef { type: NodeType, id: positive-int }`. Anywhere identity is stored or compared as a bare int is a latent collision bug — pair it with the `NodeType` discriminator. Client-side `NodeKey = "${type}-${id}"` is the Map/Set key and dnd-kit draggable ID.
+- **GridSettings overrides column**: The `GridSettingsOverrides` Text column stores `null` when no overrides exist (not empty string or `{}`). `DBGridSettings::applyGridSettings()` enforces this — `json_encode(...)` runs only when the value object has at least one override; an empty overrides map writes `null`. Value objects implement `JsonSerializable` so serialization is inline at the storage boundary, not on a utility static.
+- **Auto-scaffolding is in `GridElement::onAfterWrite()`**: a single site that derives the child class via `ContainerType::allowedChildClass()`. Do not add scaffolding logic back into `Section` or `Row`.
+- **`GridPageExtension` is opt-in**: consuming projects apply it explicitly to their page classes. It adds a `UseGrid` boolean field and (with `enable_editor_toggle: true`) a per-page CMS checkbox that switches between the grid and the default `Content` HTMLEditor.
+- **CMS history viewer needs `GridAwareVersionFormFactory`**: stock `DataObjectVersionFormFactory` strips every `GridField` (which the `GridEditorField` subclasses) from the restored form. The DI alias in `_config/history-viewer.yml` swaps in our factory, which preserves `GridEditorField` while stripping other `GridField` instances.
 - **DnD coordinate spaces and gotchas**: See the `dnd-guide` skill — covers three coordinate spaces, overRectRef capture rules, auto-scroll traps, and the full diagnostic map for DnD bugs
 
 ## SilverStripe 6

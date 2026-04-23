@@ -50,24 +50,26 @@ Writing a container element automatically creates its required child structure o
 
 ### Cascade Chain
 
-1. `Section::onAfterWrite()` → creates a `Row` if no children exist
-2. `Row::onAfterWrite()` → creates a `Column` if no children exist
-3. `Column` does NOT auto-scaffold (only initializes `GridSettings` on first write)
+Scaffolding lives once in `GridElement::onAfterWrite()`. The child class to create is derived via `ContainerType::allowedChildClass()`:
+
+1. `Section` write → scaffolds a `Row`
+2. `Row` write → scaffolds a `Column`
+3. `Column` → `allowedChildClass()` returns `null`; no scaffolding (the Column's own `GridSettings` is initialized on first write via a separate hook)
 
 **Result**: A single `Section::create()->write()` produces the full `Section → Row → Column` tree.
 
 ### Guard Conditions (Idempotency)
 
-Both Section and Row check before scaffolding:
+`GridElement::onAfterWrite()` checks before scaffolding:
 1. `Versioned::get_stage() === Versioned::DRAFT` — no scaffolding on LIVE
 2. `$this->getChildren()->count() > 0` — no scaffolding if children already exist
+3. `static::config()->get('auto_scaffold')` — the subclass has not opted out
 
-Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML. Subsequent writes to the same element do NOT create duplicate children.
+Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML (both `Section` and `Row` default to `true`). Subsequent writes to the same element do NOT create duplicate children.
 
-### Configurable Default Titles
+### Default Titles
 
-- `Section::$default_row_title` (default: `''`)
-- `Row::$default_column_title` (default: `''`)
+Titles for newly scaffolded children are blank by default. `GridElement::ensureDefaultTitle()` applies a translatable fallback (`GridElement.DEFAULT_TITLE`) at render time when the stored `Title` is empty.
 
 ## Hierarchy Validation
 
@@ -85,11 +87,11 @@ Violation throws `ValidationException`, preventing the database write.
 
 ### At Reorder Time: `ReorderValidator`
 
-Called by `ReorderService` before executing a cross-parent move:
+Called by `ElementPlacementService` (used for both `reorder()` and `insertAfter()` paths, including placement of newly-written elements from `GridElementService`):
 
-1. Same-parent move → always `Result::ok()` (no hierarchy change)
-2. Cross-parent move → applies the same `can_be_root` and `isElementAllowed()` checks
-3. Returns `Result::fail()` for violations (uses Result pattern, not exceptions)
+1. Applies the `can_be_root` and `isChildAllowed()` (via `ContainerType::isChildAllowed`) checks against the target parent
+2. Returns `Result::fail()` for violations (uses Result pattern, not exceptions)
+3. Same-parent moves pass the checks trivially — hierarchy cannot have changed
 
 ## Integration Test Implications
 
