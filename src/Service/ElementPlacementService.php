@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Service;
 
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\WriteResult;
-use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 
 /**
  * Single write-side authority for element placement.
@@ -33,10 +34,15 @@ class ElementPlacementService
      * Place a just-written element after a reference sibling in its parent
      * (or at the start of the parent when $afterElementId is null).
      *
-     * The element MUST already have its ParentID/ParentClass set to match
-     * $parent and have been written (so it has an ID). The call runs the
-     * full validator + array-splice reindex pipeline, so it rejects invalid
-     * placements and persists sibling Sort updates atomically.
+     * Semantically equivalent to {@see reorder()} — both splice the element
+     * into its parent's sibling list and reindex Sort. The two methods exist
+     * so call sites can express intent: {@see reorder()} means "this element
+     * already lives somewhere and should move," while {@see insertAfter()}
+     * means "this element was just written and needs its initial position."
+     * Both go through the same validator and DB path.
+     *
+     * Preconditions: $element has been written (has an ID) and its
+     * ParentID/ParentClass already match $parent.
      *
      * @param positive-int|null $afterElementId
      * @return Result<GridElement>
@@ -113,14 +119,28 @@ class ElementPlacementService
     /**
      * Persist dirty elements and return the reordered element.
      *
+     * Wrapped in a DB transaction so a mid-loop write failure cannot leave
+     * siblings half-reindexed. If any dirty write throws, withTransaction
+     * rolls the whole batch back and re-raises — WriteResult then converts
+     * it into a failure Result.
+     *
      * @param list<GridElement> $dirtyElements
      * @return Result<GridElement>
      */
     private function persistAndReturn(array $dirtyElements, GridElement $element): Result
     {
-        $persistResult = WriteResult::from(static function () use ($dirtyElements): null {
-            foreach ($dirtyElements as $dirtyElement) {
-                $dirtyElement->write();
+        $conn = DB::get_conn();
+        $persistResult = WriteResult::from(static function () use ($dirtyElements, $conn): null {
+            $writer = static function () use ($dirtyElements): void {
+                foreach ($dirtyElements as $dirtyElement) {
+                    $dirtyElement->write();
+                }
+            };
+
+            if ($conn === null) {
+                $writer();
+            } else {
+                $conn->withTransaction($writer);
             }
             return null;
         });

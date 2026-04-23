@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Service;
 
+use RuntimeException;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
@@ -28,6 +30,9 @@ use WeDevelop\Grid\Value\WriteResult;
  */
 final class GridElementService
 {
+    /** Sentinel message used to trigger a rollback inside {@see writeAndPlace()}. */
+    private const string ROLLBACK_SIGNAL = 'GridElementService.rollback-after-place';
+
     public function __construct(
         private readonly ReorderValidatorInterface $validator,
         private readonly ElementPlacementService $placementService,
@@ -56,16 +61,7 @@ final class GridElementService
             $newElement->Zone = $zone;
         }
 
-        $writeResult = WriteResult::from(static function () use ($newElement): GridElement {
-            $newElement->write();
-            return $newElement;
-        });
-
-        if ($writeResult->isErr() || $insertAfterElementID === null) {
-            return $writeResult;
-        }
-
-        return $this->placementService->insertAfter($newElement, $parent, $insertAfterElementID);
+        return $this->writeAndPlace($newElement, $parent, $insertAfterElementID);
     }
 
     /**
@@ -85,16 +81,7 @@ final class GridElementService
         $newElement->ParentID = $parent->ID;
         $newElement->ParentClass = $parent::class;
 
-        $writeResult = WriteResult::from(static function () use ($newElement): GridElement {
-            $newElement->write();
-            return $newElement;
-        });
-
-        if ($writeResult->isErr() || $insertAfterElementID === null) {
-            return $writeResult;
-        }
-
-        return $this->placementService->insertAfter($newElement, $parent, $insertAfterElementID);
+        return $this->writeAndPlace($newElement, $parent, $insertAfterElementID);
     }
 
     /**
@@ -116,19 +103,10 @@ final class GridElementService
         /** @var positive-int $elementId */
         $elementId = (int) $element->ID;
 
-        $writeResult = WriteResult::from(static function () use ($clone): GridElement {
-            $clone->write();
-            return $clone;
-        });
-
-        if ($writeResult->isErr()) {
-            return $writeResult;
-        }
-
         $parent = $element->Parent();
         assert($parent instanceof DataObject);
 
-        return $this->placementService->insertAfter($clone, $parent, $elementId);
+        return $this->writeAndPlace($clone, $parent, $elementId);
     }
 
     /**
@@ -137,6 +115,12 @@ final class GridElementService
      * Performs ownership validation (C1: target parent belongs to claimed page/zone)
      * and hierarchy validation (C2: element type is allowed under target parent)
      * before duplicating.
+     *
+     * Unlike {@see createElement()} / {@see createContentElement()} / {@see duplicateElement()},
+     * this path does not go through {@see ElementPlacementService}: the deep-copy
+     * sets Sort = 0 and relies on {@see GridElement::ensureSortSet()} to append at
+     * the end of the target parent. There is no "insert after a sibling" choice
+     * to honour, so no Sort-splice is required.
      *
      * @param positive-int $targetPageId
      * @param non-empty-string $targetZone
@@ -256,5 +240,65 @@ final class GridElementService
         }
 
         return Result::ok(null);
+    }
+
+    /**
+     * Write a newly-prepared element and (optionally) place it after a sibling.
+     *
+     * Wrapped in a DB transaction: if placement fails (e.g. the reference
+     * sibling does not exist, or the hierarchy rule rejects the combination),
+     * the element's write is rolled back so callers never observe a
+     * half-persisted element paired with a failure Result.
+     *
+     * @param positive-int|null $afterElementId
+     * @return Result<GridElement>
+     */
+    private function writeAndPlace(GridElement $element, DataObject $parent, ?int $afterElementId): Result
+    {
+        $conn = DB::get_conn();
+        if ($conn === null) {
+            return $this->writeThenPlace($element, $parent, $afterElementId);
+        }
+
+        /** @var Result<GridElement>|null $captured */
+        $captured = null;
+
+        try {
+            $conn->withTransaction(function () use (&$captured, $element, $parent, $afterElementId): void {
+                $captured = $this->writeThenPlace($element, $parent, $afterElementId);
+                if ($captured->isErr()) {
+                    throw new RuntimeException(self::ROLLBACK_SIGNAL);
+                }
+            });
+        } catch (RuntimeException $e) {
+            if ($e->getMessage() !== self::ROLLBACK_SIGNAL) {
+                throw $e;
+            }
+        }
+
+        /** @var Result<GridElement> $captured Guaranteed populated — the closure always assigns before the sentinel throw. */
+        return $captured;
+    }
+
+    /**
+     * Persist $element then (optionally) hand it to the placement service.
+     * No transaction awareness — callers that need rollback-on-failure use
+     * {@see writeAndPlace()}.
+     *
+     * @param positive-int|null $afterElementId
+     * @return Result<GridElement>
+     */
+    private function writeThenPlace(GridElement $element, DataObject $parent, ?int $afterElementId): Result
+    {
+        $writeResult = WriteResult::from(static function () use ($element): GridElement {
+            $element->write();
+            return $element;
+        });
+
+        if ($writeResult->isErr() || $afterElementId === null) {
+            return $writeResult;
+        }
+
+        return $this->placementService->insertAfter($element, $parent, $afterElementId);
     }
 }

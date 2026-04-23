@@ -26,14 +26,14 @@ use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\ValidationErrorCode;
 use WeDevelop\Grid\Value\Viewport;
+use WeDevelop\Grid\Forms\GridEditorField;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
+use WeDevelop\Grid\Service\ElementPlacementService;
 use WeDevelop\Grid\Service\GridElementService;
 use WeDevelop\Grid\Service\GridSettingsService;
 use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Service\GridTreeWalker;
-use WeDevelop\Grid\Service\ElementPlacementService;
 use WeDevelop\Grid\Service\RequestBodyParser;
-use WeDevelop\Grid\Forms\GridEditorField;
 
 /**
  * @phpstan-type AdapterConfig array{viewports: list<array{key: string, label: string}>, defaultViewport: string, columnCount: positive-int, rowClasses: string, offsetStrategy: 'margin'|'grid-placement', baseWidthClasses: stdClass&object{'1': string, '2': string, '3': string, '4': string, '5': string, '6': string, '7': string, '8': string, '9': string, '10': string, '11': string, '12': string}, baseOffsetClasses: stdClass&object{'0': string, '1': string, '2': string, '3': string, '4': string, '5': string, '6': string, '7': string, '8': string, '9': string, '10': string, '11': string}}

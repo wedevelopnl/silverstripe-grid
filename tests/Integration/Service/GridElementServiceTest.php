@@ -295,6 +295,27 @@ final class GridElementServiceTest extends SapphireTest
         self::assertNotEmpty($result->errors());
     }
 
+    public function testCreateElementRollsBackWriteWhenPlacementFails(): void
+    {
+        // If the requested afterElementID does not exist, placement returns
+        // an error Result — the element's write must roll back so the
+        // caller never observes a persisted element paired with a failure.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        $countBefore = Section::get()->filter(['ParentID' => $page->ID, 'ParentClass' => Page::class])->count();
+
+        $result = $this->service->createElement($page, ContainerType::Section, 'main', 999999);
+
+        self::assertTrue($result->isErr(), 'createElement with a nonexistent afterElementID must fail');
+
+        $countAfter = Section::get()->filter(['ParentID' => $page->ID, 'ParentClass' => Page::class])->count();
+        self::assertSame(
+            $countBefore,
+            $countAfter,
+            'failed placement must roll back the write — no new Section should exist',
+        );
+    }
+
     public function testViolationErrorHasTranslationKey(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
