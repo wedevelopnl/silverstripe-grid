@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loadAndNavigate, resetFixtures } from '../helpers/fixtures';
-import { forceSplitViewMode } from '../helpers/preview';
+import { forcePreviewViewMode, forceSplitViewMode } from '../helpers/preview';
 
 /**
  * Editor tunes a responsive layout across framework breakpoints with the
@@ -141,6 +141,68 @@ test.describe('CMS preview viewport sync', () => {
         .click();
       await expect(
         editorSwitcher.getByRole('button', { name: 'Small', exact: true }),
+      ).toHaveAttribute('aria-pressed', 'true');
+      await expect
+        .poll(deviceSize, { timeout: 5_000 })
+        .toEqual({ width: 576, height: 500 });
+    });
+  });
+
+  test('viewport selector remains functional in preview-only mode', async ({ page }) => {
+    // In preview-only mode the CMS hides the content panel entirely, so
+    // the in-editor ViewportSwitcher isn't reachable — the user only has
+    // the CMS bar selector. This journey proves our selector is the
+    // single control surface that still works, and that toggling back to
+    // split mode preserves the user's last-picked viewport.
+    await loadAndNavigate(page, 'element-tree');
+    await forceSplitViewMode(page);
+
+    const cmsSelector = page.getByTestId('cms-preview-viewport-selector');
+    const editorSwitcher = page.getByTestId('viewport-switcher');
+    const deviceSize = () =>
+      page.evaluate(() => {
+        const iframe = document.querySelector<HTMLIFrameElement>(
+          'iframe[name="cms-preview-iframe"]',
+        );
+        if (iframe === null) return null;
+        const rect = iframe.getBoundingClientRect();
+        return { width: Math.round(rect.width), height: Math.round(rect.height) };
+      });
+
+    await test.step('baseline in split mode — both surfaces present at md default', async () => {
+      await expect(cmsSelector).toBeVisible({ timeout: 15_000 });
+      await expect(editorSwitcher).toBeVisible();
+      await expect(
+        cmsSelector.getByRole('button', { name: 'Medium', exact: true }),
+      ).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    await test.step('switching to preview-only mode hides the editor but keeps the CMS bar selector functional', async () => {
+      await forcePreviewViewMode(page);
+
+      // Editor is no longer visible — users have only the CMS bar selector.
+      await expect(editorSwitcher).toBeHidden();
+      await expect(cmsSelector).toBeVisible();
+
+      // Clicking a viewport in the CMS bar resizes the preview.
+      await cmsSelector.getByRole('button', { name: 'Small', exact: true }).click();
+      await expect(
+        cmsSelector.getByRole('button', { name: 'Small', exact: true }),
+      ).toHaveAttribute('aria-pressed', 'true');
+      await expect
+        .poll(deviceSize, { timeout: 5_000 })
+        .toEqual({ width: 576, height: 500 });
+    });
+
+    await test.step('switching back to split mode preserves the active viewport on both surfaces', async () => {
+      await forceSplitViewMode(page);
+
+      await expect(editorSwitcher).toBeVisible();
+      await expect(
+        editorSwitcher.getByRole('button', { name: 'Small', exact: true }),
+      ).toHaveAttribute('aria-pressed', 'true');
+      await expect(
+        cmsSelector.getByRole('button', { name: 'Small', exact: true }),
       ).toHaveAttribute('aria-pressed', 'true');
       await expect
         .poll(deviceSize, { timeout: 5_000 })
