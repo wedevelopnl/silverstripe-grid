@@ -22,10 +22,10 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
  */
 final class GridAdapterResolver implements Factory
 {
-    private const ENV_VAR = 'SS_GRID_ADAPTER';
+    private const string ENV_VAR = 'SS_GRID_ADAPTER';
 
     /** @var array<string, class-string<GridAdapterInterface>> */
-    private const PRESETS = [
+    private const array PRESETS = [
         'bootstrap' => BootstrapAdapter::class,
         'tailwind' => TailwindAdapter::class,
         'bulma' => BulmaAdapter::class,
