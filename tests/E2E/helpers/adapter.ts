@@ -9,7 +9,7 @@ import type { Locator, Page } from '@playwright/test';
  * values tied to the Bootstrap preset.
  */
 export interface AdapterConfig {
-  viewports: { key: string; label: string }[];
+  viewports: { key: string; label: string; minWidth: number }[];
   defaultViewport: string;
   columnCount: number;
   rowClasses: string;

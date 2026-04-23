@@ -1,4 +1,11 @@
 import { expect, test } from '@playwright/test';
+import {
+  type AdapterConfig,
+  activateViewport,
+  readAdapterConfig,
+  twoNonDefaultViewports,
+  viewportButton,
+} from '../helpers/adapter';
 import { loadAndNavigate, resetFixtures } from '../helpers/fixtures';
 import { forceSplitViewMode } from '../helpers/preview';
 
@@ -9,11 +16,35 @@ import { forceSplitViewMode } from '../helpers/preview';
  * Clicking a viewport in either surface updates the other AND actually
  * resizes the preview iframe — proving the store → React consumer path
  * and the vendor `changeSize` piggyback both wire up end-to-end.
+ *
+ * Adapter-agnostic: reads the active adapter's viewport set at test
+ * time, picks default + two non-defaults, and computes expected iframe
+ * dimensions from the adapter's own `minWidth` values.
  */
 
 // Split mode requires a minimum viewport width — the CMS applies a
 // `split-disabled` guard on narrower screens. Override Playwright's default.
 test.use({ viewport: { width: 1600, height: 900 } });
+
+/**
+ * Matches the bridge's widthForKey + heightForWidth formulas. Kept here
+ * so the spec fails if someone quietly changes either formula without
+ * updating the test.
+ */
+const MOBILE_FIRST_PREVIEW_WIDTH = 375;
+
+function expectedDeviceSize(
+  adapter: AdapterConfig,
+  key: string,
+): { width: number; height: number } {
+  const vp = adapter.viewports.find((v) => v.key === key);
+  if (vp === undefined) {
+    throw new Error(`Viewport "${key}" not in adapter config.`);
+  }
+  const width = vp.minWidth > 0 ? vp.minWidth : MOBILE_FIRST_PREVIEW_WIDTH;
+  const height = Math.min(900, Math.max(500, Math.round(width * 0.75)));
+  return { width, height };
+}
 
 test.describe('CMS preview viewport sync', () => {
   test.afterAll(async ({ request }) => {
@@ -26,13 +57,24 @@ test.describe('CMS preview viewport sync', () => {
     await loadAndNavigate(page, 'element-tree');
     await forceSplitViewMode(page);
 
-    const editorSwitcher = page.getByTestId('viewport-switcher');
+    const adapter = await readAdapterConfig(page);
+    const [viewportA, viewportB] = twoNonDefaultViewports(adapter);
     const cmsSelector = page.getByTestId('cms-preview-viewport-selector');
 
-    // Helper: read the rendered dimensions of the preview iframe. The
-    // iframe fills its `.preview-device-outer` wrapper which our bridge
-    // sizes via the injected stylesheet — assert on the actual rendered
-    // box so we catch any regression where styles inject but don't apply.
+    // CMS bar buttons use the same accessible name as the editor — the
+    // viewport's label from adapter config. We look them up by label so
+    // the spec doesn't assume a specific adapter's vocabulary.
+    const cmsButton = (key: string) => {
+      const label = adapter.viewports.find((v) => v.key === key)?.label;
+      if (label === undefined) {
+        throw new Error(`Viewport "${key}" not in adapter config.`);
+      }
+      return cmsSelector.getByRole('button', { name: label, exact: true });
+    };
+
+    // Read the iframe's rendered dimensions. Our bridge drives these
+    // via the injected stylesheet — asserting on the actual bounding box
+    // catches regressions where styles inject but don't apply.
     const deviceSize = () =>
       page.evaluate(() => {
         const iframe = document.querySelector<HTMLIFrameElement>(
@@ -43,87 +85,59 @@ test.describe('CMS preview viewport sync', () => {
         return { width: Math.round(rect.width), height: Math.round(rect.height) };
       });
 
-    await test.step('split mode renders both viewport selectors at the adapter default (md)', async () => {
-      await expect(editorSwitcher).toBeVisible();
+    await test.step('split mode renders both selectors at the adapter default', async () => {
+      await expect(page.getByTestId('viewport-switcher')).toBeVisible();
       await expect(cmsSelector).toBeVisible({ timeout: 15_000 });
 
-      await expect(
-        editorSwitcher.getByRole('button', { name: 'Medium', exact: true }),
-      ).toHaveAttribute('aria-pressed', 'true');
-      await expect(
-        cmsSelector.getByRole('button', { name: 'Medium', exact: true }),
-      ).toHaveAttribute('aria-pressed', 'true');
+      await expect(viewportButton(page, adapter.defaultViewport)).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      await expect(cmsButton(adapter.defaultViewport)).toHaveAttribute('aria-pressed', 'true');
 
-      // Initial resize — preview iframe narrows to Bootstrap md.
-      // Height comes from min(900, max(500, round(768 * 0.75))) = 576.
       await expect
         .poll(deviceSize, { timeout: 5_000 })
-        .toEqual({ width: 768, height: 576 });
+        .toEqual(expectedDeviceSize(adapter, adapter.defaultViewport));
     });
 
     await test.step('switching viewport in the editor drives the CMS bar and rescales preview', async () => {
-      await editorSwitcher
-        .getByRole('button', { name: 'Extra Small', exact: true })
-        .click();
+      await activateViewport(page, viewportA);
 
-      await expect(
-        cmsSelector.getByRole('button', { name: 'Extra Small', exact: true }),
-      ).toHaveAttribute('aria-pressed', 'true');
-      await expect(
-        cmsSelector.getByRole('button', { name: 'Medium', exact: true }),
-      ).toHaveAttribute('aria-pressed', 'false');
+      await expect(cmsButton(viewportA)).toHaveAttribute('aria-pressed', 'true');
+      await expect(cmsButton(adapter.defaultViewport)).toHaveAttribute('aria-pressed', 'false');
 
-      // Preview iframe narrows to the mobile-first fallback width (375px)
-      // because Bootstrap xs has minWidth: 0. Height is clamped to the
-      // 500px floor of the monotonic formula.
       await expect
         .poll(deviceSize, { timeout: 5_000 })
-        .toEqual({ width: 375, height: 500 });
+        .toEqual(expectedDeviceSize(adapter, viewportA));
     });
 
     await test.step('switching viewport in the CMS bar drives the editor and rescales preview', async () => {
-      await cmsSelector
-        .getByRole('button', { name: 'Large', exact: true })
-        .click();
+      await cmsButton(viewportB).click();
 
-      await expect(
-        editorSwitcher.getByRole('button', { name: 'Large', exact: true }),
-      ).toHaveAttribute('aria-pressed', 'true');
-      await expect(
-        editorSwitcher.getByRole('button', { name: 'Extra Small', exact: true }),
-      ).toHaveAttribute('aria-pressed', 'false');
+      await expect(viewportButton(page, viewportB)).toHaveAttribute('aria-pressed', 'true');
+      await expect(viewportButton(page, viewportA)).toHaveAttribute('aria-pressed', 'false');
 
-      // Preview iframe widens to Bootstrap lg. Height: 992 * 0.75 = 744.
       await expect
         .poll(deviceSize, { timeout: 5_000 })
-        .toEqual({ width: 992, height: 744 });
+        .toEqual(expectedDeviceSize(adapter, viewportB));
     });
 
-    await test.step('surviving a content-area swap remounts the selector and keeps bi-directional sync working', async () => {
-      // Simulate a CMS action that swaps the content area (e.g. save or
-      // publish Pjax). A full reload is the strongest version of that —
-      // if the bridge survives this, it survives every lighter DOM
-      // churn SilverStripe might throw at it. Without the remount fix
-      // the MutationObserver would have been disconnected by the prior
-      // attemptUnmount and the selector would never reappear.
+    await test.step('surviving a content-area swap remounts the selector and keeps sync working', async () => {
+      // Simulate a CMS action that swaps the content area (save/publish
+      // Pjax). A full reload is the strongest version — if the bridge
+      // survives this, lighter DOM churn is covered by construction.
       await page.reload({ waitUntil: 'load' });
       await forceSplitViewMode(page);
 
-      // Selector must remount on the fresh DOM.
       await expect(cmsSelector).toBeVisible({ timeout: 15_000 });
 
-      // Sync still works end-to-end after the remount — switch viewport
-      // via the CMS bar and confirm the editor and iframe dimensions
-      // follow through the freshly-mounted React root.
-      await cmsSelector
-        .getByRole('button', { name: 'Small', exact: true })
-        .click();
-      await expect(
-        editorSwitcher.getByRole('button', { name: 'Small', exact: true }),
-      ).toHaveAttribute('aria-pressed', 'true');
+      // Sync still works after the remount — switch via the CMS bar and
+      // confirm the editor + iframe follow through the fresh React root.
+      await cmsButton(viewportA).click();
+      await expect(viewportButton(page, viewportA)).toHaveAttribute('aria-pressed', 'true');
       await expect
         .poll(deviceSize, { timeout: 5_000 })
-        .toEqual({ width: 576, height: 500 });
+        .toEqual(expectedDeviceSize(adapter, viewportA));
     });
   });
 });
