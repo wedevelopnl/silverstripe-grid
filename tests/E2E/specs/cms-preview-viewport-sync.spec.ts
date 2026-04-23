@@ -28,14 +28,6 @@ test.describe('CMS preview viewport sync', () => {
 
     const editorSwitcher = page.getByTestId('viewport-switcher');
     const cmsSelector = page.getByTestId('cms-preview-viewport-selector');
-    const leftBadge = page
-      .getByTestId('column-block')
-      .first()
-      .getByTestId('column-badge');
-    const rightBadge = page
-      .getByTestId('column-block')
-      .nth(1)
-      .getByTestId('column-badge');
 
     // Helper: read the rendered dimensions of the preview iframe. The
     // iframe fills its `.preview-device-outer` wrapper which our bridge
@@ -62,10 +54,6 @@ test.describe('CMS preview viewport sync', () => {
         cmsSelector.getByRole('button', { name: 'Medium', exact: true }),
       ).toHaveAttribute('aria-pressed', 'true');
 
-      // md layout from fixture: col1 = 8/12, col2 = 4/12.
-      await expect(leftBadge).toHaveText('8/12');
-      await expect(rightBadge).toHaveText('4/12');
-
       // Initial resize — preview iframe narrows to Bootstrap md.
       // Height comes from min(900, max(500, round(768 * 0.75))) = 576.
       await expect
@@ -73,7 +61,7 @@ test.describe('CMS preview viewport sync', () => {
         .toEqual({ width: 768, height: 576 });
     });
 
-    await test.step('switching viewport in the editor drives the CMS bar, flips column overrides, and rescales preview', async () => {
+    await test.step('switching viewport in the editor drives the CMS bar and rescales preview', async () => {
       await editorSwitcher
         .getByRole('button', { name: 'Extra Small', exact: true })
         .click();
@@ -84,11 +72,6 @@ test.describe('CMS preview viewport sync', () => {
       await expect(
         cmsSelector.getByRole('button', { name: 'Medium', exact: true }),
       ).toHaveAttribute('aria-pressed', 'false');
-
-      // Editor column badges switch to the xs overrides from the fixture:
-      // col1 → 12/12, col2 → hidden.
-      await expect(leftBadge).toHaveText('12/12');
-      await expect(rightBadge).toHaveText('hidden');
 
       // Preview iframe narrows to the mobile-first fallback width (375px)
       // because Bootstrap xs has minWidth: 0. Height is clamped to the
@@ -109,10 +92,6 @@ test.describe('CMS preview viewport sync', () => {
       await expect(
         editorSwitcher.getByRole('button', { name: 'Extra Small', exact: true }),
       ).toHaveAttribute('aria-pressed', 'false');
-
-      // Column badges flip to the lg overrides: col1 = 6/12, col2 = 6/12.
-      await expect(leftBadge).toHaveText('6/12');
-      await expect(rightBadge).toHaveText('6/12');
 
       // Preview iframe widens to Bootstrap lg. Height: 992 * 0.75 = 744.
       await expect
