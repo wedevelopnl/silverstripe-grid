@@ -332,5 +332,4 @@ describe('applyReorder', () => {
       expect(col31Result.children?.map((c: SimpleElementNode) => c.id)).toEqual([20, 10, 21]);
     });
   });
-
 });

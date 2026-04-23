@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { countOverrides } from './countOverrides';
-import {
-  createColumnNode,
-  createRowNode,
-  createSectionNode,
-} from '@/testing/factories';
+import { createColumnNode, createRowNode, createSectionNode } from '@/testing/factories';
 import type { ElementNode, ViewportSettings } from '@/types/elements';
 
 const override: ViewportSettings = { width: 6, offset: 0, visible: true };
@@ -21,7 +17,10 @@ describe('countOverrides', () => {
 
   it('counts a single viewport override', () => {
     const column = createColumnNode({
-      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { lg: override } },
+      gridSettings: {
+        default: { width: 12, offset: 0, visible: true },
+        overrides: { lg: override },
+      },
     });
     const row = createRowNode({ children: [column] });
     const section = createSectionNode({ children: [row] });
@@ -44,10 +43,16 @@ describe('countOverrides', () => {
 
   it('aggregates across columns in the same row', () => {
     const a = createColumnNode({
-      gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: { md: override, lg: override } },
+      gridSettings: {
+        default: { width: 6, offset: 0, visible: true },
+        overrides: { md: override, lg: override },
+      },
     });
     const b = createColumnNode({
-      gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: { lg: override } },
+      gridSettings: {
+        default: { width: 6, offset: 0, visible: true },
+        overrides: { lg: override },
+      },
     });
     const row = createRowNode({ children: [a, b] });
     const section = createSectionNode({ children: [row] });
@@ -57,10 +62,16 @@ describe('countOverrides', () => {
 
   it('aggregates across multiple sections and rows', () => {
     const column1 = createColumnNode({
-      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { lg: override } },
+      gridSettings: {
+        default: { width: 12, offset: 0, visible: true },
+        overrides: { lg: override },
+      },
     });
     const column2 = createColumnNode({
-      gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: { md: override, lg: override } },
+      gridSettings: {
+        default: { width: 12, offset: 0, visible: true },
+        overrides: { md: override, lg: override },
+      },
     });
     const section1 = createSectionNode({
       children: [createRowNode({ children: [column1] })],
@@ -74,7 +85,10 @@ describe('countOverrides', () => {
 
   it('does not count columns with no overrides even when siblings have some', () => {
     const withOverride = createColumnNode({
-      gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: { lg: override } },
+      gridSettings: {
+        default: { width: 6, offset: 0, visible: true },
+        overrides: { lg: override },
+      },
     });
     const withoutOverride = createColumnNode({
       gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
