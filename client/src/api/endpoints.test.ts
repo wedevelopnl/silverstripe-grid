@@ -29,7 +29,6 @@ describe('fetchElementTree', () => {
     mockFetchSuccess({
       rootParent: { type: 'page', id: 42 },
       nodes: [],
-      overrideCounts: {},
     });
     const result = await fetchElementTree(42, 'main area');
     const [url] = getFetchCalls()[0];
@@ -38,14 +37,14 @@ describe('fetchElementTree', () => {
   });
 
   it('appends /version/N path segment when version is provided', async () => {
-    mockFetchSuccess({ rootParent: { type: 'page', id: 42 }, nodes: [], overrideCounts: {} });
+    mockFetchSuccess({ rootParent: { type: 'page', id: 42 }, nodes: [] });
     await fetchElementTree(42, 'main', 5);
     const [url] = getFetchCalls()[0];
     expect(url).toBe('/admin/grid/api/readTree/42/main/version/5');
   });
 
   it('omits /version path segment when version is undefined', async () => {
-    mockFetchSuccess({ rootParent: { type: 'page', id: 42 }, nodes: [], overrideCounts: {} });
+    mockFetchSuccess({ rootParent: { type: 'page', id: 42 }, nodes: [] });
     await fetchElementTree(42, 'main');
     const [url] = getFetchCalls()[0];
     expect(url).toBe('/admin/grid/api/readTree/42/main');
@@ -82,14 +81,12 @@ describe('normaliseTreeResponse', () => {
           children: [],
         },
       ],
-      overrideCounts: { md: 2 },
     };
 
     const normalised = normaliseTreeResponse(raw);
     expect(normalised.rootParent).toEqual({ type: 'page', id: 1 });
     expect(normalised.nodes[0].nodeKey).toBe('section-10');
     expect(normalised.nodes[0].parentKey).toBe('page-1');
-    expect(normalised.overrideCounts).toEqual({ md: 2 });
   });
 
   it('throws on malformed payload', () => {

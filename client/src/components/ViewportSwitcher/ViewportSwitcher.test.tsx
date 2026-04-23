@@ -4,11 +4,31 @@ import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 
 import { mockFetchSuccess } from '@/testing/mockFetch';
-import { createTreeApiResponse } from '@/testing/factories';
+import {
+  createColumnNode,
+  createRowNode,
+  createSectionNode,
+  createTreeApiResponse,
+} from '@/testing/factories';
 import { renderWithProviders } from '@/testing/renderWithProviders';
 import { queryKeys } from '@/hooks/queryKeys';
+import type { TreeApiResponse, ViewportSettings } from '@/types/elements';
 
 import ViewportSwitcher from './ViewportSwitcher';
+
+function treeWithOverride(viewport: string): TreeApiResponse {
+  const override: ViewportSettings = { width: 6, offset: 0, visible: true };
+  const column = createColumnNode({
+    gridSettings: {
+      default: { width: 12, offset: 0, visible: true },
+      overrides: { [viewport]: override },
+    },
+    children: [],
+  });
+  const row = createRowNode({ children: [column] });
+  const section = createSectionNode({ parent: { type: 'page', id: 1 }, children: [row] });
+  return createTreeApiResponse({ pageId: 1, sections: [section] });
+}
 
 describe('ViewportSwitcher', () => {
   it('renders buttons for all viewports', () => {
@@ -156,10 +176,7 @@ describe('ViewportSwitcher', () => {
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
 
-    queryClient.setQueryData(
-      queryKeys.elementTree.byPage(1, 'main'),
-      createTreeApiResponse({ overrideCounts: { _total: 5, md: 3 } }),
-    );
+    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('md'));
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md', queryClient });
 
@@ -175,10 +192,7 @@ describe('ViewportSwitcher', () => {
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
 
-    queryClient.setQueryData(
-      queryKeys.elementTree.byPage(1, 'main'),
-      createTreeApiResponse({ overrideCounts: { _total: 5, lg: 2 } }),
-    );
+    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg'));
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'lg', queryClient });
 

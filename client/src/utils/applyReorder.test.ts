@@ -333,35 +333,4 @@ describe('applyReorder', () => {
     });
   });
 
-  describe('overrideCounts preservation', () => {
-    it('copies overrideCounts onto the returned tree when a reorder is applied', () => {
-      // The cloned tree must preserve the original overrideCounts map (spread copy).
-      // If mutated to an empty object, this assertion fails.
-      resetIdCounter();
-      const e1 = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } });
-      const col30 = createColumnNode({ id: 30, children: [e1] });
-      const col31 = createColumnNode({ id: 31, children: [] });
-      const row = createRowNode({ id: 20, children: [col30, col31] });
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
-      });
-      const tree = createTreeApiResponse({
-        pageId: 1,
-        sections: [section],
-        overrideCounts: { 'column-30': 2, 'column-31': 5 },
-      });
-
-      const result = applyReorder(
-        tree,
-        NodeIdentity.toKey('element', 10),
-        NodeIdentity.toKey('column', 31),
-        null,
-      );
-
-      expect(result).not.toBe(tree);
-      expect(result.overrideCounts).toEqual({ 'column-30': 2, 'column-31': 5 });
-    });
-  });
 });

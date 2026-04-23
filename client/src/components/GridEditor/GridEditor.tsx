@@ -21,7 +21,6 @@ function emptyTree(pageId: number | null): TreeApiResponse {
   return {
     rootParent: { type: 'page', id: pageId ?? 1 },
     nodes: [],
-    overrideCounts: {},
   };
 }
 

@@ -248,6 +248,5 @@ export function createTreeApiResponse(
   return {
     rootParent: overrides?.rootParent ?? { type: 'page', id: pageId },
     nodes: sections as ElementNode[],
-    overrideCounts: overrides?.overrideCounts ?? {},
   };
 }

@@ -158,7 +158,6 @@ describe('usePendingTree', () => {
       const canonicalTree: TreeApiResponse = {
         rootParent: { type: 'page', id: 99 },
         nodes: [],
-        overrideCounts: {},
       };
       const canonicalMaps = buildMaps(canonicalTree);
 

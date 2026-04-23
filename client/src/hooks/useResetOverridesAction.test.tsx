@@ -3,9 +3,55 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { QueryClient } from '@tanstack/react-query';
 import { useResetOverridesAction } from './useResetOverridesAction';
 import { createProviderWrapper } from '@/testing/renderWithProviders';
-import { createTreeApiResponse } from '@/testing/factories';
+import {
+  createColumnNode,
+  createRowNode,
+  createSectionNode,
+  createTreeApiResponse,
+} from '@/testing/factories';
 import { mockFetchSuccess, getFetchCalls } from '@/testing/mockFetch';
 import { queryKeys } from './queryKeys';
+import type { ColumnNode, TreeApiResponse, ViewportSettings } from '@/types/elements';
+
+/**
+ * Build a tree fixture whose derived override counts match the given
+ * spec. A `_total` entry is optional; when present, any remainder
+ * beyond the sum of specific viewport counts is padded with `xxl`
+ * overrides so the derived `_total` lands on the requested number.
+ */
+function treeFromCounts(counts: Record<string, number>): TreeApiResponse {
+  const override: ViewportSettings = { width: 6, offset: 0, visible: true };
+  const defaults: ViewportSettings = { width: 12, offset: 0, visible: true };
+  const columns: ColumnNode[] = [];
+
+  let specificTotal = 0;
+  for (const [viewport, n] of Object.entries(counts)) {
+    if (viewport === '_total') continue;
+    specificTotal += n;
+    for (let i = 0; i < n; i++) {
+      columns.push(
+        createColumnNode({
+          gridSettings: { default: defaults, overrides: { [viewport]: override } },
+          children: [],
+        }),
+      );
+    }
+  }
+
+  const total = counts._total ?? specificTotal;
+  for (let i = specificTotal; i < total; i++) {
+    columns.push(
+      createColumnNode({
+        gridSettings: { default: defaults, overrides: { xxl: override } },
+        children: [],
+      }),
+    );
+  }
+
+  const row = createRowNode({ children: columns });
+  const section = createSectionNode({ parent: { type: 'page', id: 1 }, children: [row] });
+  return createTreeApiResponse({ pageId: 1, sections: [section] });
+}
 
 function setupWithOverrides(
   overrideCounts: Record<string, number>,
@@ -19,7 +65,7 @@ function setupWithOverrides(
 
   queryClient.setQueryData(
     queryKeys.elementTree.byPage(pageId, zone),
-    createTreeApiResponse({ overrideCounts }),
+    treeFromCounts(overrideCounts),
   );
 
   const { wrapper } = createProviderWrapper({

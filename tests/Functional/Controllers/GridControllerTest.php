@@ -231,7 +231,6 @@ final class GridControllerTest extends FunctionalTest
         $data = $this->parseJson($response);
         self::assertArrayHasKey('rootParent', $data);
         self::assertArrayHasKey('nodes', $data);
-        self::assertArrayHasKey('overrideCounts', $data);
         $rootParent = (array) $data['rootParent'];
         self::assertSame('page', $rootParent['type']);
         self::assertSame($pageId, $rootParent['id']);
@@ -242,30 +241,6 @@ final class GridControllerTest extends FunctionalTest
         $response = $this->get(self::BASE_URL . '/readTree/999999/main');
 
         self::assertSame(404, $response->getStatusCode());
-    }
-
-    public function testReadTreeCountsViewportOverrides(): void
-    {
-        $page = $this->page();
-        $section = GridTreeFactory::section($page, 'main');
-        $row = GridTreeFactory::row($section);
-
-        $settings = new GridSettings(
-            ViewportConfig::default(12),
-            ['lg' => new ViewportConfig(6, 0, true)],
-        );
-        GridTreeFactory::column($row, 0, $settings);
-
-        $pageId = (int) $page->ID;
-        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main");
-
-        self::assertSame(200, $response->getStatusCode());
-        $data = $this->parseJson($response);
-        $overrides = (array) $data['overrideCounts'];
-        self::assertArrayHasKey('lg', $overrides);
-        self::assertSame(1, $overrides['lg']);
-        self::assertArrayHasKey('_total', $overrides);
-        self::assertSame(1, $overrides['_total']);
     }
 
     public function testReadTreeAtVersionReturnsHistoricalTree(): void
@@ -285,7 +260,6 @@ final class GridControllerTest extends FunctionalTest
         $data = $this->parseJson($response);
         self::assertArrayHasKey('rootParent', $data);
         self::assertArrayHasKey('nodes', $data);
-        self::assertArrayHasKey('overrideCounts', $data);
     }
 
     public function testReadTreeAtVersionReturnsEmptyTreeForPreSectionVersion(): void
@@ -1574,23 +1548,6 @@ final class GridControllerTest extends FunctionalTest
         ]);
 
         self::assertSame(400, $response->getStatusCode());
-    }
-
-    // ─── overrideCounts JSON shape ───────────────────────────────
-
-    public function testReadTreeOverrideCountsIsJsonObject(): void
-    {
-        // When no overrides exist, overrideCounts must still be a JSON object {}
-        // (not an empty array []) for frontend compatibility
-        $this->buildTree();
-        $pageId = (int) $this->page()->ID;
-
-        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main");
-        self::assertSame(200, $response->getStatusCode());
-
-        // Parse as raw JSON to check the actual type
-        $raw = json_decode((string) $response->getBody(), false, 512, JSON_THROW_ON_ERROR);
-        self::assertInstanceOf(\stdClass::class, $raw->overrideCounts);
     }
 
     // ─── Zone assignment on container create ─────────────────────

@@ -127,7 +127,6 @@ export interface TreeApiResponse {
   rootParent: NodeRef;
   /** Flat list of root-level nodes (sections). */
   nodes: ElementNode[];
-  overrideCounts: Record<string, number>;
 }
 
 // --- Type guards ---

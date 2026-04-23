@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchElementTree } from '@/api/endpoints';
 import type { TreeApiResponse } from '@/types/elements';
 import type { ApiError } from '@/api/errors';
+import { countOverrides } from '@/utils/countOverrides';
 import { queryKeys } from './queryKeys';
 
 function treeQueryOptions(pageId: number | null, zone: string, version?: number) {
@@ -23,9 +24,6 @@ function treeQueryOptions(pageId: number | null, zone: string, version?: number)
 /**
  * Fetches and caches the element tree for a CMS page zone.
  * Disabled when pageId is null (no page selected).
- *
- * Returns the full {@link TreeApiResponse} including `rootParent`, `nodes`,
- * and `overrideCounts`.
  */
 export function useElementTree(pageId: number | null, zone: string, version?: number) {
   return useQuery<TreeApiResponse, ApiError>({
@@ -34,8 +32,8 @@ export function useElementTree(pageId: number | null, zone: string, version?: nu
 }
 
 /**
- * Reads per-viewport override counts from the cached tree API response.
- * Shares the same query cache as useElementTree — no extra fetch.
+ * Derives per-viewport grid-settings override counts from the cached tree.
+ * Shares the same query cache as {@link useElementTree} — no extra fetch.
  * Pass `version` to read from a version-specific cache entry.
  */
 export function useViewportOverrideCounts(
@@ -45,7 +43,7 @@ export function useViewportOverrideCounts(
 ): Record<string, number> {
   const { data } = useQuery<TreeApiResponse, ApiError, Record<string, number>>({
     ...treeQueryOptions(pageId, zone, version),
-    select: (response) => response.overrideCounts,
+    select: (response) => countOverrides(response.nodes),
   });
 
   return data ?? {};

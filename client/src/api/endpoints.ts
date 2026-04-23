@@ -46,17 +46,10 @@ export function normaliseTreeResponse(raw: unknown): TreeApiResponse {
   if (!Array.isArray(data.nodes)) {
     throw new TypeError('tree response: expected `nodes` to be an array');
   }
-  const overrideCounts: Record<string, number> = {};
-  const rawCounts = data.overrideCounts;
-  if (typeof rawCounts === 'object' && rawCounts !== null) {
-    for (const [key, value] of Object.entries(rawCounts)) {
-      if (typeof value === 'number') overrideCounts[key] = value;
-    }
-  }
 
   const nodes = data.nodes.map((node: unknown) => normaliseNode(node));
 
-  return { rootParent, nodes, overrideCounts };
+  return { rootParent, nodes };
 }
 
 /**

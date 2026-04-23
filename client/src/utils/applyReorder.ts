@@ -36,7 +36,6 @@ export function applyReorder(
   const cloned: TreeApiResponse = {
     rootParent: tree.rootParent,
     nodes: structuredClone(tree.nodes),
-    overrideCounts: { ...tree.overrideCounts },
   };
   const clonedMaps = buildMaps(cloned);
 

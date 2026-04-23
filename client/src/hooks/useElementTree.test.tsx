@@ -3,9 +3,36 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { useElementTree, useViewportOverrideCounts } from '@/hooks/useElementTree';
 import { createProviderWrapper } from '@/testing/renderWithProviders';
 import { mockFetchSuccess, getFetchCalls } from '@/testing/mockFetch';
-import { createTreeApiResponse, resetIdCounter } from '@/testing/factories';
+import {
+  createColumnNode,
+  createRowNode,
+  createSectionNode,
+  createTreeApiResponse,
+  resetIdCounter,
+} from '@/testing/factories';
 import { queryKeys } from '@/hooks/queryKeys';
 import { QueryClient } from '@tanstack/react-query';
+import type { ColumnNode, TreeApiResponse, ViewportSettings } from '@/types/elements';
+
+const override: ViewportSettings = { width: 6, offset: 0, visible: true };
+const defaults: ViewportSettings = { width: 12, offset: 0, visible: true };
+
+function treeWithOverrides(spec: Record<string, number>): TreeApiResponse {
+  const columns: ColumnNode[] = [];
+  for (const [viewport, count] of Object.entries(spec)) {
+    for (let i = 0; i < count; i++) {
+      columns.push(
+        createColumnNode({
+          gridSettings: { default: defaults, overrides: { [viewport]: override } },
+          children: [],
+        }),
+      );
+    }
+  }
+  const row = createRowNode({ children: columns });
+  const section = createSectionNode({ parent: { type: 'page', id: 1 }, children: [row] });
+  return createTreeApiResponse({ pageId: 1, sections: [section] });
+}
 
 describe('useElementTree', () => {
   beforeEach(() => {
@@ -60,11 +87,10 @@ describe('useViewportOverrideCounts', () => {
     resetIdCounter();
   });
 
-  it('should return overrideCounts from cached response', async () => {
-    const overrideCounts = { md: 3, lg: 1 };
-    const apiResponse = createTreeApiResponse({ overrideCounts });
+  it('should derive counts from cached tree nodes', async () => {
+    // 3 md-override columns, 1 lg-override column → _total=4, md=3, lg=1
+    const apiResponse = treeWithOverrides({ md: 3, lg: 1 });
 
-    // Pre-seed the cache so useViewportOverrideCounts can select from it
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
@@ -74,7 +100,7 @@ describe('useViewportOverrideCounts', () => {
     const { result } = renderHook(() => useViewportOverrideCounts(1, 'main'), { wrapper });
 
     await waitFor(() => {
-      expect(result.current).toEqual({ md: 3, lg: 1 });
+      expect(result.current).toEqual({ _total: 4, md: 3, lg: 1 });
     });
   });
 
@@ -87,8 +113,7 @@ describe('useViewportOverrideCounts', () => {
   });
 
   it('should use version-keyed cache entry when version is provided', async () => {
-    const overrideCounts = { md: 2 };
-    const apiResponse = createTreeApiResponse({ overrideCounts });
+    const apiResponse = treeWithOverrides({ md: 2 });
 
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -99,7 +124,7 @@ describe('useViewportOverrideCounts', () => {
     const { result } = renderHook(() => useViewportOverrideCounts(1, 'main', 5), { wrapper });
 
     await waitFor(() => {
-      expect(result.current).toEqual({ md: 2 });
+      expect(result.current).toEqual({ _total: 2, md: 2 });
     });
   });
 });
