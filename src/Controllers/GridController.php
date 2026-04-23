@@ -603,12 +603,9 @@ class GridController extends AdminController
 
         /** @var non-empty-string $zone Route pattern guarantees non-empty zone segment */
         $zone = (string) $request->param('Zone');
-        $tree = $this->treeBuilder->buildForPage($page, $zone);
-
-        $rootNodes = $tree[(int) $page->ID] ?? [];
 
         assert($targetContainerType instanceof ContainerType);
-        $containers = $this->collectContainersOfType($rootNodes, $targetContainerType);
+        $containers = $this->treeBuilder->findContainersOfType($page, $zone, $targetContainerType);
 
         return $this->jsonSuccess(200, $containers);
     }
@@ -908,31 +905,4 @@ class GridController extends AdminController
         $this->jsonError($statusCode, implode(' ', $messages));
     }
 
-    /**
-     * Recursively collect containers matching the target type from a pre-built tree.
-     *
-     * @param list<\WeDevelop\Grid\Value\GridNode> $nodes
-     * @return list<array{id: positive-int, title: string, type: string}>
-     */
-    private function collectContainersOfType(array $nodes, ContainerType $targetType): array
-    {
-        /** @var list<array{id: positive-int, title: string, type: string}> $containers */
-        $containers = [];
-
-        foreach ($nodes as $node) {
-            if ($node->containerType === $targetType) {
-                $containers[] = [
-                    'id' => $node->getId(),
-                    'title' => $node->title,
-                    'type' => $targetType->value,
-                ];
-            }
-
-            if ($node->children !== null) {
-                $containers = [...$containers, ...$this->collectContainersOfType($node->children, $targetType)];
-            }
-        }
-
-        return $containers;
-    }
 }

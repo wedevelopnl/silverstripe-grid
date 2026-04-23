@@ -188,4 +188,72 @@ final class GridTreeBuilderTest extends SapphireTest
 
         self::assertSame([], $columns);
     }
+
+    public function testFindContainersOfTypeReturnsOnlyRequestedType(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, title: 'Top');
+        $row1 = GridTreeFactory::row($section, title: 'Upper row');
+        $row2 = GridTreeFactory::row($section, title: 'Lower row');
+        GridTreeFactory::column($row1);
+        GridTreeFactory::column($row2);
+
+        $rows = $this->builder->findContainersOfType($page, 'main', ContainerType::Row);
+
+        self::assertCount(2, $rows);
+        $titles = array_column($rows, 'title');
+        self::assertContains('Upper row', $titles);
+        self::assertContains('Lower row', $titles);
+
+        foreach ($rows as $row) {
+            self::assertSame('row', $row['type']);
+            self::assertIsInt($row['id']);
+            self::assertGreaterThan(0, $row['id']);
+        }
+    }
+
+    public function testFindContainersOfTypeRespectsZone(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        GridTreeFactory::section($page, zone: 'main', title: 'Main section');
+        GridTreeFactory::section($page, zone: 'sidebar', title: 'Sidebar section');
+
+        $mainSections = $this->builder->findContainersOfType($page, 'main', ContainerType::Section);
+
+        self::assertCount(1, $mainSections);
+        self::assertSame('Main section', $mainSections[0]['title']);
+    }
+
+    public function testFindContainersOfTypeSubstitutesUntitledForEmptyTitle(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        GridTreeFactory::section($page, title: '');
+
+        $sections = $this->builder->findContainersOfType($page, 'main', ContainerType::Section);
+
+        self::assertCount(1, $sections);
+        self::assertNotSame('', $sections[0]['title'], 'Empty titles must fall back to a placeholder');
+    }
+
+    public function testFindContainersOfTypeFiltersOutNonViewable(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        GridTreeFactory::section($page);
+
+        // Log out so canView returns false (requires CMS_ACCESS)
+        $this->logOut();
+
+        $sections = $this->builder->findContainersOfType($page, 'main', ContainerType::Section);
+
+        self::assertSame([], $sections);
+    }
+
+    public function testFindContainersOfTypeReturnsEmptyForEmptyPage(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        $rows = $this->builder->findContainersOfType($page, 'main', ContainerType::Row);
+
+        self::assertSame([], $rows);
+    }
 }

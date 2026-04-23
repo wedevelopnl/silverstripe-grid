@@ -10,6 +10,7 @@ use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
+use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
@@ -85,6 +86,59 @@ class GridTreeBuilder
         }
 
         return $columns;
+    }
+
+    /**
+     * Find containers of a given type on a page + zone as plain tuples.
+     *
+     * Much cheaper than {@see buildForPage()} when the caller only needs a
+     * flat list of containers (e.g. "which Rows could I duplicate into?"):
+     * skips permission probing on non-target nodes, grid settings, block
+     * schemas, and DTO assembly.
+     *
+     * Still runs through the same breadth-first loader so polymorphic parent
+     * keying and zone scoping at the Section level match the full tree
+     * build. Only viewable elements are included — callers use the output
+     * as a UI list and must not see containers the user can't view.
+     *
+     * @param non-empty-string $zone
+     * @return list<array{id: positive-int, title: string, type: string}>
+     */
+    public function findContainersOfType(SiteTree $page, string $zone, ContainerType $type): array
+    {
+        /** @var positive-int $pageId */
+        $pageId = $page->ID;
+
+        $elementsByParent = $this->loadAllElements($pageId, $page::class, $zone);
+        $targetClass = $type->toElementClass();
+        $typeValue = $type->value;
+
+        /** @var list<array{id: positive-int, title: string, type: string}> $containers */
+        $containers = [];
+        foreach ($elementsByParent as $elements) {
+            foreach ($elements as $element) {
+                if (!$element instanceof $targetClass) {
+                    continue;
+                }
+                if (!$element->canView()) {
+                    continue;
+                }
+                /** @var positive-int $elementId */
+                $elementId = (int) $element->ID;
+                /** @var non-empty-string $title '(untitled)' fallback guarantees non-empty */
+                $title = $element->Title ?: _t(
+                    GridElement::class . '.UNTITLED',
+                    '(untitled)',
+                );
+                $containers[] = [
+                    'id' => $elementId,
+                    'title' => $title,
+                    'type' => $typeValue,
+                ];
+            }
+        }
+
+        return $containers;
     }
 
     /**
