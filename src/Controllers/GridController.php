@@ -32,7 +32,6 @@ use WeDevelop\Grid\Service\ElementPlacementService;
 use WeDevelop\Grid\Service\GridElementService;
 use WeDevelop\Grid\Service\GridSettingsService;
 use WeDevelop\Grid\Service\GridTreeBuilder;
-use WeDevelop\Grid\Service\GridTreeWalker;
 use WeDevelop\Grid\Service\RequestBodyParser;
 
 /**
@@ -155,7 +154,7 @@ class GridController extends AdminController
         $pageId = (int) $page->ID;
         /** @var positive-int $pageId — $page was loaded by ID above; byID returns null for non-positive IDs, and the null check jumps to jsonError. */
         $rootNodes = $tree[$pageId] ?? [];
-        $overrideCounts = GridTreeWalker::countOverrides($rootNodes);
+        $overrideCounts = $this->countOverrides($rootNodes);
 
         return $this->jsonSuccess(200, [
             'rootParent' => (new NodeRef(NodeType::Page, $pageId))->jsonSerialize(),
@@ -227,7 +226,7 @@ class GridController extends AdminController
 
         /** @var positive-int $pageId — $page was loaded by ID above; byID returns null for non-positive IDs, and the null check jumps to jsonError. */
         $rootNodes = $tree[$pageId] ?? [];
-        $overrideCounts = GridTreeWalker::countOverrides($rootNodes);
+        $overrideCounts = $this->countOverrides($rootNodes);
 
         return $this->jsonSuccess(200, [
             'rootParent' => (new NodeRef(NodeType::Page, $pageId))->jsonSerialize(),
@@ -613,7 +612,7 @@ class GridController extends AdminController
         $rootNodes = $tree[(int) $page->ID] ?? [];
 
         assert($targetContainerType instanceof ContainerType);
-        $containers = GridTreeWalker::collectContainersOfType($rootNodes, $targetContainerType);
+        $containers = $this->collectContainersOfType($rootNodes, $targetContainerType);
 
         return $this->jsonSuccess(200, $containers);
     }
@@ -911,5 +910,64 @@ class GridController extends AdminController
         );
 
         $this->jsonError($statusCode, implode(' ', $messages));
+    }
+
+    /**
+     * Walk a pre-built tree and count how many columns have overrides per viewport,
+     * plus a total count of columns with any overrides.
+     *
+     * @param list<\WeDevelop\Grid\Value\GridNode> $nodes
+     * @return array<non-empty-string, int>
+     */
+    private function countOverrides(array $nodes): array
+    {
+        /** @var array<non-empty-string, int> $counts */
+        $counts = [];
+
+        foreach ($nodes as $node) {
+            if ($node->gridSettings !== null && $node->gridSettings->overrides !== []) {
+                $counts['_total'] = ($counts['_total'] ?? 0) + 1;
+
+                foreach (array_keys($node->gridSettings->overrides) as $viewport) {
+                    $counts[$viewport] = ($counts[$viewport] ?? 0) + 1;
+                }
+            }
+
+            if ($node->children !== null) {
+                foreach ($this->countOverrides($node->children) as $key => $value) {
+                    $counts[$key] = ($counts[$key] ?? 0) + $value;
+                }
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Recursively collect containers matching the target type from a pre-built tree.
+     *
+     * @param list<\WeDevelop\Grid\Value\GridNode> $nodes
+     * @return list<array{id: positive-int, title: string, type: string}>
+     */
+    private function collectContainersOfType(array $nodes, ContainerType $targetType): array
+    {
+        /** @var list<array{id: positive-int, title: string, type: string}> $containers */
+        $containers = [];
+
+        foreach ($nodes as $node) {
+            if ($node->containerType === $targetType) {
+                $containers[] = [
+                    'id' => $node->getId(),
+                    'title' => $node->title,
+                    'type' => $targetType->value,
+                ];
+            }
+
+            if ($node->children !== null) {
+                $containers = [...$containers, ...$this->collectContainersOfType($node->children, $targetType)];
+            }
+        }
+
+        return $containers;
     }
 }
