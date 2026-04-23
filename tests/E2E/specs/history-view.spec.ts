@@ -120,7 +120,7 @@ test.describe('History view readonly grid', () => {
     // history. The reset-overrides button stays hidden in readonly.
     await expect(historyGridEditor.getByTestId('viewport-switcher')).toBeVisible();
     await expect(
-      historyGridEditor.getByTestId('viewport-button').first(),
+      historyGridEditor.getByTestId(/^viewport-button-/).first(),
     ).toBeVisible();
 
     // ALL interactive controls must be hidden in readonly mode —

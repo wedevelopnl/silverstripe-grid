@@ -16,6 +16,12 @@ import type { TreeApiResponse, ViewportSettings } from '@/types/elements';
 
 import ViewportSwitcher from './ViewportSwitcher';
 
+// Setup file (client/src/testing/setup.ts) configures 6 viewports in this order.
+const VIEWPORT_KEYS = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl'];
+
+const viewportButtons = () =>
+  VIEWPORT_KEYS.map((key) => screen.getByTestId(`viewport-button-${key}`));
+
 function treeWithOverride(viewport: string): TreeApiResponse {
   const override: ViewportSettings = { width: 6, offset: 0, visible: true };
   const column = createColumnNode({
@@ -36,9 +42,8 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />);
 
-    const buttons = screen.getAllByTestId('viewport-button');
+    const buttons = viewportButtons();
 
-    // Setup file configures 6 viewports: xs, sm, md, lg, xl, xxl
     expect(buttons).toHaveLength(6);
     expect(buttons[0]).toHaveTextContent('Extra small');
     expect(buttons[5]).toHaveTextContent('Extra extra large');
@@ -49,8 +54,7 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
 
-    const buttons = screen.getAllByTestId('viewport-button');
-    const mdButton = buttons[2]; // md is the third viewport
+    const mdButton = screen.getByTestId('viewport-button-md');
 
     expect(mdButton).toHaveClass('viewport-switcher__button--active');
     expect(mdButton).toHaveAttribute('aria-pressed', 'true');
@@ -62,19 +66,16 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
 
-    const buttons = screen.getAllByTestId('viewport-button');
-    const lgButton = buttons[3]; // lg is the fourth viewport
+    const mdButton = screen.getByTestId('viewport-button-md');
+    const lgButton = screen.getByTestId('viewport-button-lg');
 
     expect(lgButton).not.toHaveClass('viewport-switcher__button--active');
 
     await user.click(lgButton);
 
-    // After clicking, lg should become active
     expect(lgButton).toHaveClass('viewport-switcher__button--active');
     expect(lgButton).toHaveAttribute('aria-pressed', 'true');
-
-    // md should no longer be active
-    expect(buttons[2]).not.toHaveClass('viewport-switcher__button--active');
+    expect(mdButton).not.toHaveClass('viewport-switcher__button--active');
   });
 
   it('active button click does not call setActiveViewport', async () => {
@@ -83,12 +84,10 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
 
-    const buttons = screen.getAllByTestId('viewport-button');
-    const mdButton = buttons[2];
+    const mdButton = screen.getByTestId('viewport-button-md');
 
     await user.click(mdButton);
 
-    // md should still be active, no change
     expect(mdButton).toHaveClass('viewport-switcher__button--active');
     expect(mdButton).toHaveAttribute('aria-pressed', 'true');
   });
@@ -106,8 +105,7 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
 
-    const buttons = screen.getAllByTestId('viewport-button');
-    const mdButton = buttons[2];
+    const mdButton = screen.getByTestId('viewport-button-md');
 
     expect(mdButton).toHaveAttribute('aria-disabled', 'true');
   });
@@ -117,11 +115,8 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
 
-    const buttons = screen.getAllByTestId('viewport-button');
-    // xs (index 0) is inactive
-    expect(buttons[0]).not.toHaveAttribute('aria-disabled');
-    // lg (index 3) is inactive
-    expect(buttons[3]).not.toHaveAttribute('aria-disabled');
+    expect(screen.getByTestId('viewport-button-xs')).not.toHaveAttribute('aria-disabled');
+    expect(screen.getByTestId('viewport-button-lg')).not.toHaveAttribute('aria-disabled');
   });
 
   it('inactive buttons do not have active class', () => {
@@ -129,10 +124,10 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
 
-    const buttons = screen.getAllByTestId('viewport-button');
+    const xsButton = screen.getByTestId('viewport-button-xs');
 
-    expect(buttons[0]).not.toHaveClass('viewport-switcher__button--active');
-    expect(buttons[0]).toHaveAttribute('aria-pressed', 'false');
+    expect(xsButton).not.toHaveClass('viewport-switcher__button--active');
+    expect(xsButton).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('clicking active button does not change active state', async () => {
@@ -141,19 +136,18 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
 
-    const buttons = screen.getAllByTestId('viewport-button');
-    const mdButton = buttons[2];
+    const mdButton = screen.getByTestId('viewport-button-md');
 
-    // Click active button
     await user.click(mdButton);
 
-    // md should still be active
     expect(mdButton).toHaveClass('viewport-switcher__button--active');
     expect(mdButton).toHaveAttribute('aria-pressed', 'true');
-
-    // Other buttons should still be inactive
-    expect(buttons[0]).not.toHaveClass('viewport-switcher__button--active');
-    expect(buttons[3]).not.toHaveClass('viewport-switcher__button--active');
+    expect(screen.getByTestId('viewport-button-xs')).not.toHaveClass(
+      'viewport-switcher__button--active',
+    );
+    expect(screen.getByTestId('viewport-button-lg')).not.toHaveClass(
+      'viewport-switcher__button--active',
+    );
   });
 
   it('inactive buttons do not have aria-disabled attribute at all', () => {
@@ -161,11 +155,9 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' });
 
-    const buttons = screen.getAllByTestId('viewport-button');
-    // All non-active buttons should lack aria-disabled entirely
-    for (const [index, button] of buttons.entries()) {
-      if (index === 2) continue; // skip md (active)
-      expect(button).not.toHaveAttribute('aria-disabled');
+    for (const key of VIEWPORT_KEYS) {
+      if (key === 'md') continue;
+      expect(screen.getByTestId(`viewport-button-${key}`)).not.toHaveAttribute('aria-disabled');
     }
   });
 

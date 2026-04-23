@@ -100,9 +100,8 @@ jobs:
       - run: make .docker/.env
       - run: make ensure-up
       - name: Run Playwright
-        run: npx playwright test --project=${{ matrix.browser }} --reporter=html,junit $GREP_INVERT
+        run: npx playwright test --project=${{ matrix.browser }} --reporter=html,junit
         env:
-          GREP_INVERT: ${{ matrix.adapter != 'bootstrap' && '--grep-invert=@bootstrap-only' || '' }}
           PLAYWRIGHT_JUNIT_OUTPUT_NAME: reports/playwright-junit.xml
       - uses: dorny/test-reporter@v1
         if: always()

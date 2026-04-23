@@ -1,23 +1,16 @@
-# E2E fixture for viewport cascade / override behaviour tests.
+# E2E fixture for viewport override-resolution tests.
 #
 # Structure:
 #   Page (E2E Viewport Cascade Test Page):
 #     Section
 #       Row
-#         Cascade Column  — default {width:12, offset:0, visible:true},
-#                           md override {width:6, offset:0, visible:true}
+#         Cascade Column — neutral baseline, full-width default, no overrides.
 #
-# The column stores a single `md` override on top of a full-width default.
-# Under the default "isolated" override strategy (the project-wide DI
-# binding in _config/grid.yml) this produces the effective map:
-#   xs=12, sm=12, md=6, lg=12, xl=12, xxl=12
-#
-# Under the alternative "cascade" strategy (GridSettingsResolver walks
-# largest→smallest), the same data would produce:
-#   xxl=12, xl=12, lg=12, md=6, sm=6, xs=6
-# i.e. an override at md applies from md downwards. That second map is
-# covered by GridSettingsResolverTest at the unit level — see the
-# deviation note in the accompanying spec.
+# The spec sets a non-default-viewport override through the UI at test time.
+# Cascade vs. isolated resolution strategies are exhaustively covered by
+# GridSettingsResolverTest at the unit level; this spec verifies the
+# user-observable path (editor badges + viewport switcher) under the
+# project's default isolated strategy.
 #
 # Top-down ordering: parents before children. Auto-scaffolding is
 # suppressed by FixtureLoader.
@@ -45,4 +38,4 @@ WeDevelop\Grid\Model\Column:
     Title: 'Cascade Column'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row1
-    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{"md":{"width":6,"offset":0,"visible":true}}}'
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'

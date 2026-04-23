@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { loadAndNavigate, loadFixture, resetFixtures } from '../helpers/fixtures';
 import { activateDragByTitle, dropAndSettle } from '../helpers/drag';
+import { readAdapterConfig } from '../helpers/adapter';
 
 /**
  * Covers the user-visible side of validation errors:
@@ -89,44 +90,47 @@ test.describe('Validation errors', () => {
     });
   });
 
-  // Field names (GridSettings[md][width]) and the "row default = md" sanity
-  // assertion are Bootstrap-specific. Port to an adapter-agnostic variant
-  // before dropping the @bootstrap-only tag.
-  test.describe('GridSettings field validation', { tag: '@bootstrap-only' }, () => {
+  test.describe('GridSettings field validation', () => {
     test('shows an error when width + offset exceeds the column count', async ({ page }) => {
       const fixture = await loadFixture(page.request, 'validation-errors');
       const columnId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\Column']['col_alpha_1'];
 
-      // Navigate to the column edit form.
       await page.goto(
         `/admin/pages/edit/EditForm/${fixture.pageId}/field/GridEditor/item/${columnId}/edit`,
       );
       await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 });
 
-      // Open the Grid tab.
+      // Read adapter config so field names and column count come from the
+      // running adapter rather than being hardcoded to a specific preset.
+      const adapter = await readAdapterConfig(page);
+      const defaultKey = adapter.defaultViewport;
+
       await page.getByRole('tab', { name: 'Grid' }).click();
 
-      // Sanity: the default row (md for the Bootstrap adapter) is rendered.
       const settingsTable = page.locator('.grid-settings-field__overrides');
       await expect(settingsTable).toBeVisible();
 
-      // Set default viewport width=6, offset=8 → sum 14 > 12 columns.
-      // The default viewport has no override toggle, so the controls
-      // are always enabled and selectOption works directly.
+      // Pick a width + offset combination that provably exceeds the grid
+      // regardless of column count: half + 2/3 columns > total. The default
+      // viewport row has no override toggle, so its controls are always
+      // enabled and selectOption works directly.
+      const invalidWidth = Math.floor(adapter.columnCount / 2);
+      const invalidOffset = Math.ceil((adapter.columnCount * 2) / 3);
       await page
-        .locator('select[name="GridSettings[md][width]"]')
-        .selectOption('6');
+        .locator(`select[name="GridSettings[${defaultKey}][width]"]`)
+        .selectOption(String(invalidWidth));
       await page
-        .locator('select[name="GridSettings[md][offset]"]')
-        .selectOption('8');
+        .locator(`select[name="GridSettings[${defaultKey}][offset]"]`)
+        .selectOption(String(invalidOffset));
 
-      // Trigger save. The backend's field validator rejects the write,
-      // and SilverStripe surfaces the error either in the form field
-      // holder or via the global CMS toast/alert. Asserting on the page
-      // body covers either surface without coupling to a specific class.
+      // Save — the backend field validator rejects the write and SilverStripe
+      // surfaces the error either in the form field holder or via the global
+      // CMS toast/alert. Asserting on the page body covers either surface.
       await page.getByRole('button', { name: /Save/ }).first().click();
 
-      const errorText = /Width 6 plus offset 8 .* exceeds 12 columns/;
+      const errorText = new RegExp(
+        `Width ${invalidWidth} plus offset ${invalidOffset} .* exceeds ${adapter.columnCount} columns`,
+      );
       await expect(page.locator('body')).toContainText(errorText, { timeout: 10_000 });
     });
   });
