@@ -6,15 +6,11 @@ SilverStripe\Core\Injector\Injector:
   WeDevelop\Grid\Contract\GridAdapterInterface:
     factory: WeDevelop\Grid\Factory\GridAdapterResolver
 
-# The active adapter is selected by the SS_GRID_ADAPTER environment variable
-# (bootstrap|tailwind|bulma, case-insensitive). Unset defaults to bootstrap.
-#
-# To pin an adapter without relying on the env var, rebind the interface
-# directly, e.g.:
-#
-# SilverStripe\Core\Injector\Injector:
-#   WeDevelop\Grid\Contract\GridAdapterInterface:
-#     class: WeDevelop\Grid\Adapter\TailwindAdapter
+# The active adapter is selected by the SS_GRID_ADAPTER environment variable.
+# The value is either a bundled preset name (bootstrap|tailwind|bulma,
+# case-insensitive) or the FQCN of a custom adapter that implements
+# GridAdapterInterface. The variable is required — unset or invalid values
+# throw at container boot.
 #
 # To configure the active adapter:
 #

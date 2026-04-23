@@ -41,11 +41,12 @@ final class GridAdapterResolverTest extends SapphireTest
         parent::tearDown();
     }
 
-    public function testUnsetEnvDefaultsToBootstrap(): void
+    public function testMissingEnvThrows(): void
     {
-        $adapter = (new GridAdapterResolver())->create(GridAdapterInterface::class);
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('SS_GRID_ADAPTER environment variable is not set');
 
-        self::assertInstanceOf(BootstrapAdapter::class, $adapter);
+        (new GridAdapterResolver())->create(GridAdapterInterface::class);
     }
 
     /**
@@ -73,12 +74,31 @@ final class GridAdapterResolverTest extends SapphireTest
         yield 'upper case is normalised' => ['BULMA', BulmaAdapter::class];
     }
 
-    public function testUnknownPresetThrows(): void
+    public function testFqcnResolvesToAdapter(): void
+    {
+        Environment::putEnv('SS_GRID_ADAPTER=' . TailwindAdapter::class);
+
+        $adapter = (new GridAdapterResolver())->create(GridAdapterInterface::class);
+
+        self::assertInstanceOf(TailwindAdapter::class, $adapter);
+    }
+
+    public function testUnknownPresetNameThrows(): void
     {
         Environment::putEnv('SS_GRID_ADAPTER=foundation');
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Unknown SS_GRID_ADAPTER preset "foundation"');
+        $this->expectExceptionMessage('Invalid SS_GRID_ADAPTER value "foundation"');
+
+        (new GridAdapterResolver())->create(GridAdapterInterface::class);
+    }
+
+    public function testFqcnNotImplementingInterfaceThrows(): void
+    {
+        Environment::putEnv('SS_GRID_ADAPTER=' . \stdClass::class);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Invalid SS_GRID_ADAPTER value "stdClass"');
 
         (new GridAdapterResolver())->create(GridAdapterInterface::class);
     }

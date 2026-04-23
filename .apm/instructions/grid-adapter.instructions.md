@@ -18,8 +18,8 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single concrete
 - `src/Adapter/GridAdapter.php` — Config-driven base class implementing both interfaces
 - `src/Adapter/BootstrapAdapter.php` / `TailwindAdapter.php` / `BulmaAdapter.php` — presets
 - `src/Factory/GridAdapterFactory.php` — Injector factory that aliases additional bindings to the `GridAdapterInterface` singleton
-- `src/Factory/GridAdapterResolver.php` — Injector factory that selects the adapter preset from the `SS_GRID_ADAPTER` env var
-- `_config/grid.yml` — DI binding (resolved via `GridAdapterResolver`; default preset: `bootstrap`)
+- `src/Factory/GridAdapterResolver.php` — Injector factory that selects the adapter from the `SS_GRID_ADAPTER` env var (preset name or FQCN)
+- `_config/grid.yml` — DI binding (resolved via `GridAdapterResolver`; `SS_GRID_ADAPTER` is required)
 - `_config/content-layout.yml` — DI alias for `ContentLayoutAdapterInterface` (via `GridAdapterFactory`)
 
 ## Existing Presets
@@ -33,8 +33,8 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single concrete
 ## Core Rules
 
 - A new adapter is a zero-method subclass of `GridAdapter` with `private static` property overrides only — no method overrides.
-- The active preset is selected by the `SS_GRID_ADAPTER` env var (`bootstrap`|`tailwind`|`bulma`, case-insensitive). Unset defaults to `bootstrap`. Unknown values throw at container boot.
-- Projects with a custom adapter can rebind `GridAdapterInterface` directly in YAML to bypass the resolver.
+- The active adapter is selected by the required `SS_GRID_ADAPTER` env var. Accepts a bundled preset name (`bootstrap`|`tailwind`|`bulma`, case-insensitive) or the FQCN of a custom adapter that implements `GridAdapterInterface`. Unset, empty, or invalid values throw at container boot.
+- `.docker/env.sh` seeds `SS_GRID_ADAPTER=bootstrap` into `.docker/.env` so first-run dev works; edit or override via shell env to switch.
 - Any property can be overridden per-project via YAML without writing PHP.
 - `base_viewport_key` identifies the "no infix" viewport (Bootstrap's `xs`, Bulma's `mobile`); set to `null` for frameworks without one (Tailwind).
 - `ContentLayoutAdapterInterface` is implemented by the same `GridAdapter` instance — both interfaces resolve to one singleton via `GridAdapterFactory` in `_config/content-layout.yml`.

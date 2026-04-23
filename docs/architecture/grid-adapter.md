@@ -13,10 +13,10 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single concrete
 - `src/Adapter/TailwindAdapter.php` — Tailwind CSS preset (zero methods, only statics)
 - `src/Adapter/BulmaAdapter.php` — Bulma preset (zero methods, only statics)
 - `src/Factory/GridAdapterFactory.php` — Injector factory that aliases `ContentLayoutAdapterInterface` to the `GridAdapterInterface` singleton
-- `src/Factory/GridAdapterResolver.php` — Injector factory that selects the adapter preset from the `SS_GRID_ADAPTER` env var
+- `src/Factory/GridAdapterResolver.php` — Injector factory that selects the adapter from the `SS_GRID_ADAPTER` env var (preset name or FQCN)
 - `src/Value/Viewport.php` — Value object (`final readonly class`, not an enum)
 - `src/Value/ContainerType.php` — Enum: `Section`, `Row`, `Column`
-- `_config/grid.yml` — DI binding (resolved via `GridAdapterResolver`; default preset: `bootstrap`)
+- `_config/grid.yml` — DI binding (resolved via `GridAdapterResolver`; `SS_GRID_ADAPTER` is required)
 - `_config/content-layout.yml` — DI alias for `ContentLayoutAdapterInterface` (via `GridAdapterFactory`) + applies `BlockMediaExtension` to `ContentElement`
 
 ## Existing Presets
@@ -161,22 +161,23 @@ Frameworks without a base viewport (Tailwind) set `base_viewport_key` to `null` 
 
 ### 4. Register the Adapter
 
-`GridAdapterInterface` resolves through `GridAdapterResolver`, which picks the preset from the `SS_GRID_ADAPTER` environment variable (`bootstrap`|`tailwind`|`bulma`, case-insensitive). Unset defaults to `bootstrap`; unknown values throw at boot.
+`GridAdapterInterface` resolves through `GridAdapterResolver`, which reads the required `SS_GRID_ADAPTER` environment variable. The value is either a bundled preset name (`bootstrap`|`tailwind`|`bulma`, case-insensitive) or the FQCN of an adapter that implements `GridAdapterInterface`. Unset, empty, or invalid values throw at container boot.
 
-For built-in presets, set the env var (for example in `.docker/compose.yml` or the CI job env):
+For a bundled preset:
 
 ```yaml
 environment:
   SS_GRID_ADAPTER: tailwind
 ```
 
-For a custom adapter, rebind `GridAdapterInterface` directly in project-level YAML. This bypasses the resolver:
+For a custom adapter, pass the FQCN through the same variable:
 
 ```yaml
-SilverStripe\Core\Injector\Injector:
-  WeDevelop\Grid\Contract\GridAdapterInterface:
-    class: WeDevelop\Grid\Adapter\YourAdapter
+environment:
+  SS_GRID_ADAPTER: Vendor\App\Adapter\YourAdapter
 ```
+
+`.docker/env.sh` seeds `SS_GRID_ADAPTER=bootstrap` into the generated `.docker/.env`, so first-run `make up` succeeds; edit the file or set the variable in your shell to switch.
 
 ### 5. Optional: YAML Configuration
 

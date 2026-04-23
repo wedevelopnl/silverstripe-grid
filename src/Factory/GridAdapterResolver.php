@@ -15,16 +15,14 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
  * Resolves the active {@see GridAdapterInterface} binding from the SS_GRID_ADAPTER
  * environment variable.
  *
- * Accepts symbolic preset names (bootstrap|tailwind|bulma), case-insensitive.
- * Unset or empty defaults to bootstrap, preserving the pre-refactor behaviour.
- * Projects with a custom adapter can still rebind GridAdapterInterface directly
- * in YAML to sidestep this factory entirely.
+ * Accepts either a bundled preset name (bootstrap|tailwind|bulma, case-insensitive)
+ * or the fully-qualified class name of a custom adapter that implements
+ * {@see GridAdapterInterface}. The variable is required — unset, empty, or
+ * invalid values throw.
  */
 final class GridAdapterResolver implements Factory
 {
     private const ENV_VAR = 'SS_GRID_ADAPTER';
-
-    private const DEFAULT_PRESET = 'bootstrap';
 
     /** @var array<string, class-string<GridAdapterInterface>> */
     private const PRESETS = [
@@ -37,17 +35,28 @@ final class GridAdapterResolver implements Factory
     public function create(string $service, array $params = []): object
     {
         $raw = Environment::getEnv(self::ENV_VAR);
-        $preset = is_string($raw) && $raw !== '' ? strtolower($raw) : self::DEFAULT_PRESET;
 
-        if (!isset(self::PRESETS[$preset])) {
+        if (!is_string($raw) || $raw === '') {
             throw new RuntimeException(sprintf(
-                'Unknown %s preset "%s". Expected one of: %s.',
+                '%s environment variable is not set. Expected a preset (%s) or an FQCN implementing %s.',
                 self::ENV_VAR,
-                $preset,
-                implode(', ', array_keys(self::PRESETS)),
+                implode('|', array_keys(self::PRESETS)),
+                GridAdapterInterface::class,
             ));
         }
 
-        return Injector::inst()->create(self::PRESETS[$preset]);
+        $class = self::PRESETS[strtolower($raw)] ?? $raw;
+
+        if (!is_subclass_of($class, GridAdapterInterface::class)) {
+            throw new RuntimeException(sprintf(
+                'Invalid %s value "%s". Expected a preset (%s) or an FQCN implementing %s.',
+                self::ENV_VAR,
+                $raw,
+                implode('|', array_keys(self::PRESETS)),
+                GridAdapterInterface::class,
+            ));
+        }
+
+        return Injector::inst()->create($class);
     }
 }

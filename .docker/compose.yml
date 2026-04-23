@@ -37,7 +37,7 @@ services:
       SS_DEFAULT_ADMIN_PASSWORD: admin
       SS_ENVIRONMENT_TYPE: dev
       SS_PHPUNIT_FLUSH: 1
-      SS_GRID_ADAPTER: ${SS_GRID_ADAPTER:-}
+      SS_GRID_ADAPTER: ${SS_GRID_ADAPTER}
 
   app-fluent:
     profiles: [fluent]
@@ -77,7 +77,7 @@ services:
       SS_DEFAULT_ADMIN_PASSWORD: admin
       SS_ENVIRONMENT_TYPE: dev
       SS_PHPUNIT_FLUSH: 1
-      SS_GRID_ADAPTER: ${SS_GRID_ADAPTER:-}
+      SS_GRID_ADAPTER: ${SS_GRID_ADAPTER}
 
   db:
     image: mysql:8
