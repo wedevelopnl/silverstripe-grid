@@ -174,6 +174,7 @@ See the [architecture documentation](docs/architecture/) for detailed design doc
 
 - [Backend Architecture](docs/architecture/backend.md) — data model, API layer, service design, validation, grid adapters
 - [Drag and Drop](docs/architecture/drag-and-drop.md) — frontend dnd-kit integration and backend reorder pipeline
+- [Grid Adapter System](docs/architecture/grid-adapter.md) — building a new CSS framework adapter
 
 ### Migrating from Elemental / ElementalGrid
 

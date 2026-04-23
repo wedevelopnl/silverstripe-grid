@@ -159,6 +159,7 @@ If a run finishes with failures, the task exits with a non-zero status and the f
 - **Content body.** `ElementContent.HTML` is copied directly onto `ContentElement.HTML` on both draft and live.
 - **Media fields.** Fields added by `ElementContentExtension` (`ContentColumns`, `ContentVerticalAlign`, `ExtraColumnGap`, `MediaType`, `MediaCaption`, `MediaRatio`, `MediaPosition`, `MediaImage`, video fields) are translated into the equivalent fields on `BlockMediaExtension` — including CSS-class → enum conversions and a discrete scale mapping for `ExtraColumnGap`.
 - **Draft and live stages.** The migration writes the draft hierarchy first, then reconciles the live stage. Elements that exist on both stages reuse the draft IDs; elements that only exist on live get new records on both stages to preserve Versioned integrity.
+- **`UseGrid` flag.** Pages that successfully migrate get `UseGrid = true` so `GridPageExtension` renders the new grid editor immediately. Legacy pages that had `UseElementalGrid = false` on the old extension are carried over as `UseGrid = false` (and are not migrated structurally) so projects with the per-page editor toggle (`enable_editor_toggle: true`) keep their opt-out. The `UseGrid` write happens inside the same transaction as the grid hierarchy writes so partial failures never leave a page flagged as grid-enabled without content.
 
 ## What Is NOT Migrated
 

@@ -4,14 +4,14 @@ This module supports optional multi-locale content via [silverstripe-fluent](htt
 
 ## Requirements
 
-- `tractorcow/silverstripe-fluent` ^8.0
+- A version of `tractorcow/silverstripe-fluent` compatible with your SilverStripe 6 install. The module only references Fluent types at runtime when the class exists (the `_config/fluent.yml` hooks are gated by `classexists`), so no hard composer constraint is pinned. Use the latest Fluent release that supports your SilverStripe version.
 
 ## Setup
 
-Install Fluent:
+Install Fluent (use the Fluent version that matches your SilverStripe release):
 
 ```bash
-composer require tractorcow/silverstripe-fluent ^8.0
+composer require tractorcow/silverstripe-fluent
 ```
 
 Add the following YAML config to your project (e.g. `app/_config/grid-fluent.yml`):

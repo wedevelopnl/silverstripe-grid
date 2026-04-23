@@ -144,7 +144,7 @@ All properties are `private static` on `GridAdapter`. Preset subclasses override
 
 | Property | Type | Purpose |
 |----------|------|---------|
-| `aspect_ratio_classes` | `array<string, ?string>` | AspectRatio value → CSS class |
+| `aspect_ratio_classes` | `array<string, ?string>` | AspectRatio value → CSS class. **Must declare every `AspectRatio` enum case** — `GridAdapter::getAspectRatioClass()` throws `InvalidGridValueException` on a missing key (fail-fast rather than render broken markup). Use `null` for the "no constraint" value (e.g. `'auto' => null`). |
 | `vertical_alignment_classes` | `array<string, string>` | VerticalAlignment value → CSS class |
 | `order_class_format` | `string` | Fixed order (`%d` = position 1 or 2) |
 | `responsive_order_format` | `string` | Responsive order (`%1$s` = viewport, `%2$d` = position) |
