@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Tests\Unit\Value;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
 
@@ -191,6 +192,40 @@ final class GridSettingsTest extends TestCase
         ], $result);
     }
 
+    public function testJsonEncodeProducesSerializationShape(): void
+    {
+        $settings = new GridSettings(
+            new ViewportConfig(12, 0, true),
+            ['md' => new ViewportConfig(6, 1, false)],
+        );
+
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode(json_encode($settings, JSON_THROW_ON_ERROR), true);
+
+        self::assertSame(
+            [
+                'default' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                'overrides' => [
+                    'md' => ['width' => 6, 'offset' => 1, 'visible' => false],
+                ],
+            ],
+            $decoded,
+        );
+    }
+
+    public function testJsonEncodeRoundTripsThroughFromJson(): void
+    {
+        $original = new GridSettings(
+            new ViewportConfig(12, 0, true),
+            ['md' => new ViewportConfig(6, 1, false), 'lg' => new ViewportConfig(4, 2, true)],
+        );
+
+        $roundTripped = GridSettings::fromJson(json_encode($original, JSON_THROW_ON_ERROR));
+
+        self::assertInstanceOf(GridSettings::class, $roundTripped);
+        self::assertTrue($original->equals($roundTripped));
+    }
+
     // ─── equals() ─────────────────────────────────────────────
 
     /**
@@ -283,6 +318,262 @@ final class GridSettingsTest extends TestCase
         self::assertSame($expected, $a->equals($b));
         // Equality must be symmetric.
         self::assertSame($expected, $b->equals($a));
+    }
+
+    // ─── fromJson ───────────────────────────────────────────────
+
+    #[DataProvider('fromJsonNullProvider')]
+    public function testFromJsonReturnsNullForInvalidInput(string $json): void
+    {
+        self::assertNull(GridSettings::fromJson($json));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function fromJsonNullProvider(): iterable
+    {
+        yield 'empty string' => [''];
+        yield 'empty object' => ['{}'];
+        yield 'empty array' => ['[]'];
+        yield 'invalid json' => ['not json'];
+        yield 'missing default key' => ['{"noDefault":true}'];
+        yield 'default not array' => ['{"default":"string"}'];
+        yield 'default width zero' => ['{"default":{"width":0,"offset":0,"visible":true}}'];
+        yield 'default width negative' => ['{"default":{"width":-1,"offset":0,"visible":true}}'];
+    }
+
+    /**
+     * @param array<string, array{width: int, offset: int, visible: bool}> $expectedOverrides
+     */
+    #[DataProvider('fromJsonValidProvider')]
+    public function testFromJsonParsesValidInput(
+        string $json,
+        int $expectedWidth,
+        int $expectedOffset,
+        bool $expectedVisible,
+        array $expectedOverrides,
+    ): void {
+        $result = GridSettings::fromJson($json);
+
+        self::assertInstanceOf(GridSettings::class, $result);
+        self::assertSame($expectedWidth, $result->default->width);
+        self::assertSame($expectedOffset, $result->default->offset);
+        self::assertSame($expectedVisible, $result->default->visible);
+        self::assertCount(count($expectedOverrides), $result->overrides);
+
+        foreach ($expectedOverrides as $viewport => $expected) {
+            self::assertTrue($result->hasOverride($viewport), "Missing override: {$viewport}");
+            self::assertSame($expected['width'], $result->overrides[$viewport]->width);
+            self::assertSame($expected['offset'], $result->overrides[$viewport]->offset);
+            self::assertSame($expected['visible'], $result->overrides[$viewport]->visible);
+        }
+    }
+
+    /**
+     * @return iterable<string, array{string, int, int, bool, array<string, array{width: int, offset: int, visible: bool}>}>
+     */
+    public static function fromJsonValidProvider(): iterable
+    {
+        yield 'default only' => [
+            json_encode(['default' => ['width' => 6, 'offset' => 2, 'visible' => true]], JSON_THROW_ON_ERROR),
+            6, 2, true,
+            [],
+        ];
+
+        yield 'default with overrides' => [
+            json_encode([
+                'default' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                'overrides' => [
+                    'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
+                    'lg' => ['width' => 4, 'offset' => 2, 'visible' => false],
+                ],
+            ], JSON_THROW_ON_ERROR),
+            12, 0, true,
+            ['md' => ['width' => 6, 'offset' => 0, 'visible' => true], 'lg' => ['width' => 4, 'offset' => 2, 'visible' => false]],
+        ];
+
+        yield 'malformed overrides skipped' => [
+            json_encode([
+                'default' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                'overrides' => [
+                    'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
+                    '' => ['width' => 4, 'offset' => 0, 'visible' => true],
+                    'lg' => 'not-an-array',
+                ],
+            ], JSON_THROW_ON_ERROR),
+            12, 0, true,
+            ['md' => ['width' => 6, 'offset' => 0, 'visible' => true]],
+        ];
+
+        yield 'hidden default' => [
+            json_encode(['default' => ['width' => 3, 'offset' => 1, 'visible' => false]], JSON_THROW_ON_ERROR),
+            3, 1, false,
+            [],
+        ];
+    }
+
+    #[DataProvider('fromJsonMalformedDefaultProvider')]
+    public function testFromJsonThrowsOnMalformedDefault(string $json): void
+    {
+        $this->expectException(InvalidGridValueException::class);
+        GridSettings::fromJson($json);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function fromJsonMalformedDefaultProvider(): iterable
+    {
+        yield 'missing offset' => ['{"default":{"width":6,"visible":true}}'];
+        yield 'missing visible' => ['{"default":{"width":6,"offset":0}}'];
+        yield 'offset wrong type' => ['{"default":{"width":6,"offset":"0","visible":true}}'];
+        yield 'visible wrong type' => ['{"default":{"width":6,"offset":0,"visible":"yes"}}'];
+        yield 'width wrong type' => ['{"default":{"width":"6","offset":0,"visible":true}}'];
+    }
+
+    #[DataProvider('fromJsonMalformedOverrideProvider')]
+    public function testFromJsonThrowsOnMalformedOverride(string $json): void
+    {
+        $this->expectException(InvalidGridValueException::class);
+        GridSettings::fromJson($json);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function fromJsonMalformedOverrideProvider(): iterable
+    {
+        $valid = '"default":{"width":12,"offset":0,"visible":true}';
+
+        yield 'override missing width' => ['{' . $valid . ',"overrides":{"md":{"offset":0,"visible":true}}}'];
+        yield 'override missing offset' => ['{' . $valid . ',"overrides":{"md":{"width":6,"visible":true}}}'];
+        yield 'override missing visible' => ['{' . $valid . ',"overrides":{"md":{"width":6,"offset":0}}}'];
+        yield 'override wrong type' => ['{' . $valid . ',"overrides":{"md":{"width":6,"offset":0,"visible":1}}}'];
+    }
+
+    // ─── overridesToJson ────────────────────────────────────────
+
+    public function testOverridesToJsonReturnsNullForEmptyMap(): void
+    {
+        self::assertNull(GridSettings::overridesToJson([]));
+    }
+
+    public function testOverridesToJsonEncodesNonEmptyMap(): void
+    {
+        $json = GridSettings::overridesToJson(['md' => new ViewportConfig(6, 0, true)]);
+
+        self::assertIsString($json);
+        $decoded = json_decode($json, true);
+        self::assertSame(6, $decoded['md']['width']);
+        self::assertSame(0, $decoded['md']['offset']);
+        self::assertTrue($decoded['md']['visible']);
+    }
+
+    public function testOverridesRoundTrip(): void
+    {
+        $overrides = [
+            'md' => new ViewportConfig(6, 1, false),
+            'lg' => new ViewportConfig(4, 2, true),
+        ];
+
+        $json = GridSettings::overridesToJson($overrides);
+        self::assertIsString($json);
+
+        $result = GridSettings::overridesFromJson($json);
+
+        self::assertCount(2, $result);
+        self::assertTrue($result['md']->equals(new ViewportConfig(6, 1, false)));
+        self::assertTrue($result['lg']->equals(new ViewportConfig(4, 2, true)));
+    }
+
+    // ─── overridesFromJson ──────────────────────────────────────
+
+    #[DataProvider('overridesFromJsonEmptyProvider')]
+    public function testOverridesFromJsonReturnsEmptyArrayForInvalidInput(mixed $input): void
+    {
+        self::assertSame([], GridSettings::overridesFromJson($input));
+    }
+
+    /**
+     * @return iterable<string, array{mixed}>
+     */
+    public static function overridesFromJsonEmptyProvider(): iterable
+    {
+        yield 'null' => [null];
+        yield 'integer' => [42];
+        yield 'boolean' => [true];
+        yield 'invalid json' => ['not json'];
+        yield 'empty array' => ['[]'];
+        yield 'empty object' => ['{}'];
+        yield 'empty string' => [''];
+    }
+
+    /**
+     * @param array<string, array{width: int, offset: int, visible: bool}> $expectedOverrides
+     */
+    #[DataProvider('overridesFromJsonValidProvider')]
+    public function testOverridesFromJsonReturnsViewportConfigs(string $json, array $expectedOverrides): void
+    {
+        $result = GridSettings::overridesFromJson($json);
+
+        self::assertCount(count($expectedOverrides), $result);
+
+        foreach ($expectedOverrides as $viewport => $expected) {
+            self::assertArrayHasKey($viewport, $result);
+            self::assertSame($expected['width'], $result[$viewport]->width);
+            self::assertSame($expected['offset'], $result[$viewport]->offset);
+            self::assertSame($expected['visible'], $result[$viewport]->visible);
+        }
+    }
+
+    /**
+     * @return iterable<string, array{string, array<string, array{width: int, offset: int, visible: bool}>}>
+     */
+    public static function overridesFromJsonValidProvider(): iterable
+    {
+        yield 'single viewport' => [
+            json_encode(['md' => ['width' => 6, 'offset' => 0, 'visible' => true]], JSON_THROW_ON_ERROR),
+            ['md' => ['width' => 6, 'offset' => 0, 'visible' => true]],
+        ];
+
+        yield 'multiple viewports' => [
+            json_encode([
+                'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                'lg' => ['width' => 4, 'offset' => 2, 'visible' => false],
+            ], JSON_THROW_ON_ERROR),
+            [
+                'sm' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                'lg' => ['width' => 4, 'offset' => 2, 'visible' => false],
+            ],
+        ];
+
+        yield 'invalid entries skipped' => [
+            json_encode([
+                'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
+                '' => ['width' => 4, 'offset' => 0, 'visible' => true],
+                'lg' => 'not-array',
+            ], JSON_THROW_ON_ERROR),
+            ['md' => ['width' => 6, 'offset' => 0, 'visible' => true]],
+        ];
+    }
+
+    #[DataProvider('overridesFromJsonMalformedProvider')]
+    public function testOverridesFromJsonThrowsOnMalformedEntry(string $json): void
+    {
+        $this->expectException(InvalidGridValueException::class);
+        GridSettings::overridesFromJson($json);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function overridesFromJsonMalformedProvider(): iterable
+    {
+        yield 'missing width' => ['{"md":{"offset":0,"visible":true}}'];
+        yield 'missing offset' => ['{"md":{"width":6,"visible":true}}'];
+        yield 'missing visible' => ['{"md":{"width":6,"offset":0}}'];
+        yield 'wrong type' => ['{"md":{"width":6,"offset":"0","visible":true}}'];
     }
 
     // ─── Immutability ───────────────────────────────────────────

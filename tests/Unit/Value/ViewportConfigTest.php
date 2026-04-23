@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Tests\Unit\Value;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Value\ViewportConfig;
 
 #[CoversClass(ViewportConfig::class)]
@@ -71,6 +72,47 @@ final class ViewportConfigTest extends TestCase
         $config = ViewportConfig::fromArray($data);
 
         self::assertSame($data, $config->toArray());
+    }
+
+    #[DataProvider('malformedPayloadProvider')]
+    public function testFromArrayThrowsOnMalformedPayload(array $data): void
+    {
+        $this->expectException(InvalidGridValueException::class);
+        ViewportConfig::fromArray($data);
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>}>
+     */
+    public static function malformedPayloadProvider(): iterable
+    {
+        yield 'missing width' => [['offset' => 0, 'visible' => true]];
+        yield 'missing offset' => [['width' => 6, 'visible' => true]];
+        yield 'missing visible' => [['width' => 6, 'offset' => 0]];
+        yield 'width wrong type' => [['width' => '6', 'offset' => 0, 'visible' => true]];
+        yield 'offset wrong type' => [['width' => 6, 'offset' => '0', 'visible' => true]];
+        yield 'visible wrong type' => [['width' => 6, 'offset' => 0, 'visible' => 'yes']];
+        yield 'visible as int' => [['width' => 6, 'offset' => 0, 'visible' => 1]];
+    }
+
+    public function testFromArrayIncludesContextInErrorMessage(): void
+    {
+        try {
+            ViewportConfig::fromArray(['width' => 6, 'offset' => 0], 'overrides["md"]');
+            self::fail('Expected InvalidGridValueException');
+        } catch (InvalidGridValueException $e) {
+            self::assertStringContainsString('overrides["md"]', $e->getMessage());
+        }
+    }
+
+    public function testJsonEncodeProducesSerializationShape(): void
+    {
+        $config = new ViewportConfig(width: 4, offset: 1, visible: false);
+
+        self::assertSame(
+            '{"width":4,"offset":1,"visible":false}',
+            json_encode($config, JSON_THROW_ON_ERROR),
+        );
     }
 
     public function testEqualsReturnsTrueForIdenticalValues(): void

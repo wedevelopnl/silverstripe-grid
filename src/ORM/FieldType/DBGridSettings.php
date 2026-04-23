@@ -12,7 +12,6 @@ use SilverStripe\Model\ModelData;
 use SilverStripe\ORM\FieldType\DBComposite;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
-use WeDevelop\Grid\Service\GridSettingsSerializer;
 use WeDevelop\Grid\Validation\GridSettingsFieldValidator;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
@@ -68,7 +67,7 @@ final class DBGridSettings extends DBComposite
 
         $default = new ViewportConfig($width, $offset, $visible);
 
-        $overrides = GridSettingsSerializer::deserializeOverrides($this->getField('Overrides'));
+        $overrides = GridSettings::overridesFromJson($this->getField('Overrides'));
 
         return new GridSettings($default, $overrides);
     }
@@ -90,14 +89,14 @@ final class DBGridSettings extends DBComposite
         }
 
         if (is_string($value)) {
-            // Structurally malformed payloads now raise InvalidGridValueException
-            // from the serializer. At this boundary (ORM field coercion, often
-            // hit by fixture/legacy DB data) we preserve the historical
+            // Structurally malformed payloads raise InvalidGridValueException
+            // from GridSettings::fromJson. At this boundary (ORM field coercion,
+            // often hit by fixture/legacy DB data) we preserve the historical
             // "fall through to parent" behaviour so a bad row does not crash
             // unrelated page reads — the domain error is still thrown by
-            // direct serializer callers.
+            // direct callers of GridSettings::fromJson.
             try {
-                $parsed = GridSettingsSerializer::fromJson($value);
+                $parsed = GridSettings::fromJson($value);
             } catch (InvalidGridValueException) {
                 $parsed = null;
             }
@@ -128,7 +127,7 @@ final class DBGridSettings extends DBComposite
         $this->setField('DefaultWidth', $value->default->width);
         $this->setField('DefaultOffset', $value->default->offset);
         $this->setField('DefaultVisible', $value->default->visible);
-        $this->setField('Overrides', GridSettingsSerializer::serializeOverrides($value->overrides));
+        $this->setField('Overrides', GridSettings::overridesToJson($value->overrides));
 
         return $this;
     }
