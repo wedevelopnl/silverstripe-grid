@@ -33,6 +33,7 @@ apm_modules/
 # Claude Code local config
 .claude/*.local.md
 .claude/*.local.json
+.superpowers/
 
 # StoryFlow local config
 .storyflow/
