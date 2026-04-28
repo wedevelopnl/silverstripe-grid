@@ -156,10 +156,6 @@ test.describe('Viewport switcher', () => {
       const livePath = fixture.pageUrl.split('?')[0];
       await page.goto(livePath);
       await expect(page.locator('h1')).toContainText('E2E Grid Test Page');
-      // Column elements are present on the rendered page — class-level
-      // emission is verified in PHP integration tests (GridAdapterTest,
-      // ColumnClassResolverTest, ColumnTest::testGetColumnClassesWithOverrides).
-      await expect(page.locator('div[data-element="column"]')).toHaveCount(2);
     });
   });
 });

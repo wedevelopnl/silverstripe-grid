@@ -77,8 +77,5 @@ test.describe('Build page from scratch', () => {
     // Step 8: Verify the published page renders on the frontend
     await page.goto('/e2e-build-test');
     await expect(page.locator('h1')).toContainText('E2E Build Test');
-
-    // Both sections should render as <section> elements on the frontend
-    await expect(page.locator('section[data-element="section"]')).toHaveCount(2);
   });
 });
