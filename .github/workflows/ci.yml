@@ -35,6 +35,18 @@ jobs:
           path: reports/vitest-junit.xml
           reporter: java-junit
 
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    env:
+      COMPOSE: docker compose -f .docker/compose.yml
+    steps:
+      - uses: actions/checkout@v4
+      - run: make .docker/.env
+      - run: $COMPOSE up -d --build --wait app
+        name: Start services
+      - run: make analyse
+
   php-qa:
     name: PHP QA (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
@@ -52,7 +64,6 @@ jobs:
       - run: make .docker/.env
       - run: $COMPOSE up -d --build --wait
         name: Start services
-      - run: make analyse
       - run: >-
           $COMPOSE exec app-fluent vendor/bin/phpunit
           --log-junit coverage/junit.xml

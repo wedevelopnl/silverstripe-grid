@@ -1,5 +1,8 @@
 parameters:
     level: max
+    phpVersion:
+        min: 80300
+        max: 80599
     paths:
         - /module/src
     scanFiles:
