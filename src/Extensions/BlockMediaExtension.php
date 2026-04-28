@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Extensions;
 
+use Embed\Embed;
 use LogicException;
 use SilverStripe\AssetAdmin\Forms\UploadField;
 use SilverStripe\Assets\Image;
@@ -394,6 +395,7 @@ class BlockMediaExtension extends Extension
     {
         MediaField::saveEmbed(
             $owner,
+            new Embed(),
             videoFullURLField: 'VideoURL',
             videoEmbeddedURLField: 'VideoEmbedURL',
             videoProviderField: 'VideoProvider',
