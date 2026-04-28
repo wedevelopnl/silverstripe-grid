@@ -7,8 +7,6 @@ description: E2E testing reference for Playwright specs, fixture YAML, test sele
 
 Implementation reference for writing Playwright E2E specs in this project. Covers spec structure, fixture system, available helpers, test selectors, and drag simulation.
 
-The e2e-test-discipline skill governs *when* and *whether* to write E2E tests. This skill governs *how*.
-
 ## Spec Template
 
 Create specs at `tests/E2E/specs/{feature-area}.spec.ts`:
