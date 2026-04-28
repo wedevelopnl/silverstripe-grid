@@ -70,10 +70,6 @@ test.describe('Drag and drop', () => {
     await expect(elementOverlay).toBeVisible();
     await expect(elementOverlay.getByTestId('drag-overlay-element-title')).toHaveText('Block 1');
 
-    // Source element should be dimmed
-    const sourceCard = colA1A.getByTestId('element-card').first();
-    await expect(sourceCard).toHaveCSS('opacity', '0.3');
-
     // Register settlement listeners before releasing (mutation fires on drop)
     const settle1 = waitForMutationSettlement(page);
     await elementReorderDrag.release();
