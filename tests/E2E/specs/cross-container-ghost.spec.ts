@@ -44,7 +44,6 @@ test.describe('Cross container ghost', () => {
     expect(betaRow1Box).not.toBeNull();
     const betaCenterY = betaRow1Box!.y + betaRow1Box!.height / 2;
     await page.mouse.move(fromX, betaCenterY, { steps: 30 });
-    await page.waitForTimeout(300);
 
     // Assert: ghost left Alpha — Alpha now has only 1 row (Alpha-2 moved out)
     await expect(sectionAlpha.getByTestId('row-block')).toHaveCount(1);

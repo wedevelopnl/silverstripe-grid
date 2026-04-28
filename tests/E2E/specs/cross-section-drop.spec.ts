@@ -37,7 +37,6 @@ test.describe('Cross-section row drop positions', () => {
     const box = await firstRow.boundingBox();
     expect(box).not.toBeNull();
     await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2, { steps: 30 });
-    await page.waitForTimeout(300);
     await expect(targetSection.getByTestId('row-block')).toHaveCount(expectedRowCount);
   }
 
@@ -52,7 +51,6 @@ test.describe('Cross-section row drop positions', () => {
     const box = await lastRow.boundingBox();
     expect(box).not.toBeNull();
     await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2 - 40, { steps: 30 });
-    await page.waitForTimeout(300);
     await expect(targetSection.getByTestId('row-block')).toHaveCount(expectedRowCount);
   }
 

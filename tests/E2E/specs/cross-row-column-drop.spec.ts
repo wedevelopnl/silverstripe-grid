@@ -49,7 +49,6 @@ test.describe('Cross-row column drop positions', () => {
     const box = await targetRow.boundingBox();
     expect(box).not.toBeNull();
     await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2, { steps: 30 });
-    await page.waitForTimeout(300);
     await expect(targetRow.getByTestId('column-block')).toHaveCount(expectedColCount);
   }
 

@@ -42,7 +42,6 @@ test.describe('Cross-column element drop positions', () => {
     const box = await targetCol.boundingBox();
     expect(box).not.toBeNull();
     await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2, { steps: 30 });
-    await page.waitForTimeout(300);
     await expect(targetCol.getByTestId('element-card')).toHaveCount(expectedElCount);
   }
 
