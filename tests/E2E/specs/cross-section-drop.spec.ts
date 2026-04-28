@@ -227,7 +227,6 @@ test.describe('Cross-section row drop positions', () => {
       await enterAtFirst(page, sectionBeta, 4);
 
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(500);
 
       await expect(sectionAlpha.getByTestId('row-title')).toHaveText(['Row A1', 'Row A2', 'Row A3']);
       await expect(sectionBeta.getByTestId('row-title')).toHaveText(['Row B1', 'Row B2', 'Row B3']);

@@ -213,7 +213,6 @@ test.describe('Cross-row column drop positions', () => {
       await enterRow(page, rowB, 4);
 
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(500);
 
       await expect.poll(() => getColumnTitles(rowA)).toEqual(['Col A1', 'Col A2', 'Col A3']);
       await expect.poll(() => getColumnTitles(rowB)).toEqual(['Col B1', 'Col B2', 'Col B3']);

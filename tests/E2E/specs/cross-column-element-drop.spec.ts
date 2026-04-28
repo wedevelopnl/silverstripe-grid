@@ -197,7 +197,6 @@ test.describe('Cross-column element drop positions', () => {
       await enterColumn(page, colB, 4);
 
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(500);
 
       await expect(colA.getByTestId('element-card-title')).toHaveText(['Element A1', 'Element A2', 'Element A3']);
       await expect(colB.getByTestId('element-card-title')).toHaveText(['Element B1', 'Element B2', 'Element B3']);
