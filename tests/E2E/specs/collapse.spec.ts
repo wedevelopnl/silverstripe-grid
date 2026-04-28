@@ -99,7 +99,7 @@ test.describe('Collapsible containers', () => {
     // This unmounts the React grid editor without a full browser reload.
     await page.goto(`/admin/pages/edit/show/${otherPageId}`);
     await expect(
-      page.locator('#Form_EditForm_Title'),
+      page.getByRole('textbox', { name: 'Page name' }),
     ).toHaveValue('E2E Other Page', { timeout: 15_000 });
 
     // --- Navigate back to the original page ---
