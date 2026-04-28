@@ -35,23 +35,17 @@ test.describe('Media elements', () => {
     // --- Step 2: Verify MediaType toggles VideoCustomThumbnail visibility ---
     await test.step('Verify MediaType toggles VideoCustomThumbnail visibility', async () => {
       // We're already on the Media tab from Step 1
-      // Native <select> is hidden by Chosen.js — interact with the Chosen widget
-      const mediaTypeHolder = page.locator('[id$="_MediaType_Holder"]');
-      const chosenContainer = mediaTypeHolder.locator('.chosen-container');
       const videoThumbnailHolder = page.locator('[id$="_VideoCustomThumbnail_Holder"]');
 
-      // Initial state: MediaType=image, VideoCustomThumbnail is hidden
-      await expect(page.locator('select[name="MediaType"]')).toHaveValue('image');
+      // Initial state: fixture sets MediaType=image, so VideoCustomThumbnail is hidden
       await expect(videoThumbnailHolder).toBeHidden();
 
       // Switch to video — VideoCustomThumbnail becomes visible
-      await chosenContainer.click();
-      await mediaTypeHolder.locator('.chosen-results li').filter({ hasText: 'Video' }).click();
+      await selectChosenValue(page, 'MediaType', 'video');
       await expect(videoThumbnailHolder).toBeVisible();
 
       // Switch back to image — VideoCustomThumbnail is hidden again
-      await chosenContainer.click();
-      await mediaTypeHolder.locator('.chosen-results li').filter({ hasText: 'Image' }).click();
+      await selectChosenValue(page, 'MediaType', 'image');
       await expect(videoThumbnailHolder).toBeHidden();
     });
 
