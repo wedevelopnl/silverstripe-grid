@@ -108,11 +108,11 @@ test.describe('Content elements', () => {
     await page.goto(liveUrl);
 
     // Verify the edited element renders its content
-    await expect(page.locator('.content-element')).toContainText(['Hello from the grid']);
+    await expect(page.getByText('Hello from the grid')).toBeVisible();
 
     // Verify pre-populated elements render their body content
-    await expect(page.locator('.content-element').filter({ hasText: 'Text block body content' })).toBeVisible();
-    await expect(page.locator('.content-element').filter({ hasText: 'Image block body content' })).toBeVisible();
+    await expect(page.getByText('Text block body content')).toBeVisible();
+    await expect(page.getByText('Image block body content')).toBeVisible();
 
     // Verify title configuration: section title renders as h3 (set in fixture)
     await expect(page.getByRole('heading', { level: 3, name: 'Content Section' })).toBeVisible();

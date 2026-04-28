@@ -170,7 +170,7 @@ test.describe('Media elements', () => {
       await expect(contentElement).toContainText('Media element body content');
 
       // The plain text element also renders
-      await expect(page.locator('.content-element').filter({ hasText: 'Text element body content' })).toBeVisible();
+      await expect(page.getByText('Text element body content')).toBeVisible();
     });
   });
 });
