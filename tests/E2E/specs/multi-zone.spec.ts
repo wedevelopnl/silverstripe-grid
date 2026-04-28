@@ -22,7 +22,6 @@ function waitForMutationSettlement(page: import('@playwright/test').Page) {
   return async () => {
     await reorderDone;
     await refetchDone;
-    await page.waitForTimeout(500);
   };
 }
 
@@ -84,7 +83,6 @@ test.describe('Multi-zone isolation', () => {
     // so a reorder may fire within the main zone. The key invariant:
     // no section moves between zones — counts stay the same.
     await performDrag(page, dragHandle(page, 'Main-Beta'), dragHandle(page, 'Sidebar-Beta'));
-    await page.waitForTimeout(500);
 
     // Both zones still have exactly 2 sections each
     await expect(mainSections).toHaveCount(2);
