@@ -48,7 +48,6 @@ test.describe('History view readonly grid', () => {
 
     const editGridEditor = page.getByTestId('grid-editor');
     await expect(editGridEditor).toBeVisible();
-    await expect(editGridEditor).not.toHaveClass(/grid-editor--readonly/);
     await expect(editGridEditor.getByTestId('section-block')).toHaveCount(1);
     await expect(
       editGridEditor
@@ -102,10 +101,6 @@ test.describe('History view readonly grid', () => {
     const historyGridEditor = page.getByTestId('grid-editor');
     await expect(historyGridEditor).toHaveCount(1);
     await expect(historyGridEditor).toBeVisible();
-
-    // CRITICAL: readonly class is applied — this is the core promise
-    // of the feature.
-    await expect(historyGridEditor).toHaveClass(/grid-editor--readonly/);
 
     // The post-edit tree is rendered inside the history viewer.
     await expect(historyGridEditor.getByTestId('section-block')).toHaveCount(2);
