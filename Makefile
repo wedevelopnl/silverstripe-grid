@@ -1,6 +1,6 @@
 COMPOSE := docker compose -f .docker/compose.yml
 
-.PHONY: up down destroy build test test-unit test-integration test-functional ensure-up-fluent test-fluent test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js
+.PHONY: up down destroy build test test-unit test-integration test-functional ensure-up-fluent test-fluent test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js _qa-build
 
 ## Generate .docker/.env with deterministic ports (auto-runs if missing)
 .docker/.env:
@@ -108,7 +108,7 @@ rector-dry: ensure-up
 
 ## Run full QA suite (all checks in parallel)
 qa: ensure-up ensure-up-fluent
-	$(MAKE) -j6 --output-sync=target _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js
+	$(MAKE) -j7 --output-sync=target _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js _qa-build
 
 ## QA sub-targets (not intended to be called directly)
 _qa-analyse:
@@ -144,6 +144,11 @@ _qa-test-js:
 	npm run test
 	@echo "==> [test-js] done"
 
+_qa-build:
+	@echo "==> [build] running vite build..."
+	npx vite build
+	@echo "==> [build] done"
+
 ## Run E2E tests (Playwright, requires running Docker services)
 test-e2e: ensure-up
 	npx playwright test
@@ -162,4 +167,4 @@ dev-build: ensure-up
 
 ## Run JavaScript QA (lint + typecheck + test, in parallel)
 qa-js:
-	$(MAKE) -j4 _qa-lint _qa-format _qa-typecheck _qa-test-js
+	$(MAKE) -j5 _qa-lint _qa-format _qa-typecheck _qa-test-js _qa-build

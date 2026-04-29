@@ -31,3 +31,14 @@ if ! npm run typecheck; then
   echo "Typecheck failed — push blocked." >&2
   exit 2
 fi
+
+if ! npx vite build; then
+  echo "Vite build failed — push blocked." >&2
+  exit 2
+fi
+
+if ! git diff --quiet -- client/dist; then
+  echo "client/dist is out of sync with source — rebuild and commit before pushing." >&2
+  echo "Run: npm run build && git add client/dist && git commit" >&2
+  exit 2
+fi

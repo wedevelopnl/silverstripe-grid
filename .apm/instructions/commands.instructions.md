@@ -28,7 +28,7 @@ applyTo: "**/*"
 | `npm run test:e2e` | Run Playwright E2E tests |
 | `npm run test:e2e:ui` | Playwright with interactive UI |
 | `npm run test:e2e:debug` | Playwright in debug mode |
-| `npm run qa` | Full QA: lint + format:check + typecheck + test + i18n:check |
+| `npm run qa` | Full QA: lint + format:check + typecheck + test + i18n:check + vite build |
 
 ## PHP (via Makefile — requires Docker)
 
@@ -59,4 +59,4 @@ applyTo: "**/*"
 | `make flush` | Clear SilverStripe cache |
 | `make dev-build` | Run dev/build to rebuild database and manifest |
 | `make qa` | Full QA suite (PHPStan + PHP coverage + JS QA, parallel) |
-| `make qa-js` | JavaScript QA (Biome + Stylelint + typecheck + Vitest) |
+| `make qa-js` | JavaScript QA (Biome + Stylelint + typecheck + Vitest + vite build) |
