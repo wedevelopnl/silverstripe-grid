@@ -17,6 +17,20 @@ echo "Pre-push QA gate: running linters before push..." >&2
 
 cd "$(git rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-.}")"
 
+# vite/esbuild output is not byte-identical across Node majors. The dist diff
+# check below is only meaningful when the local Node major matches CI's
+# (.nvmrc). Refuse to gate on a mismatched runtime instead of producing a
+# false-positive diff that would force a spurious rebuild commit.
+if [[ -f .nvmrc ]]; then
+  pinned_major="$(cut -d. -f1 .nvmrc | tr -d '[:space:]v')"
+  current_major="$(node --version | sed 's/^v//' | cut -d. -f1)"
+  if [[ "$pinned_major" != "$current_major" ]]; then
+    echo "Node major mismatch: running v$current_major, .nvmrc pins v$pinned_major." >&2
+    echo "vite output is not stable across Node majors — switch first (e.g. nvm use), then push." >&2
+    exit 2
+  fi
+fi
+
 if ! npm run lint; then
   echo "Lint failed — push blocked." >&2
   exit 2
