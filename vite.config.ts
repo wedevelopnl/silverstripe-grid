@@ -13,7 +13,7 @@ export default defineConfig({
     dts({
       include: ["client/src/types/**/*.ts"],
       exclude: ["client/src/types/silverstripe.d.ts"],
-      outDir: "client/dist",
+      outDirs: "client/dist",
       // Resolve @/* path aliases to relative imports in .d.ts output
       tsconfigPath: "./tsconfig.json",
       // TypeScript 6 changed rootDir inference — pin it so .d.ts files
