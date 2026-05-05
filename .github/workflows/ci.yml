@@ -39,8 +39,8 @@ jobs:
           path: reports/vitest-junit.xml
           reporter: java-junit
 
-  phpstan:
-    name: PHPStan
+  static-analysis:
+    name: Static Analysis
     runs-on: ubuntu-latest
     env:
       COMPOSE: docker compose -f .docker/compose.yml
@@ -50,6 +50,7 @@ jobs:
       - run: $COMPOSE up -d --build --wait app
         name: Start services
       - run: make analyse
+      - run: make rector-dry
 
   php-qa:
     name: PHP QA (PHP ${{ matrix.php }})
