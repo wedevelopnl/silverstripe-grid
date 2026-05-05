@@ -1,6 +1,6 @@
 COMPOSE := docker compose -f .docker/compose.yml
 
-.PHONY: up down destroy build test test-unit test-integration test-functional ensure-up-fluent test-fluent test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js _qa-build
+.PHONY: up down destroy build test test-unit test-integration test-functional ensure-up-fluent test-fluent test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js _qa-build _qa-rector
 
 ## Generate .docker/.env with deterministic ports (auto-runs if missing)
 .docker/.env:
@@ -108,13 +108,18 @@ rector-dry: ensure-up
 
 ## Run full QA suite (all checks in parallel)
 qa: ensure-up ensure-up-fluent
-	$(MAKE) -j7 --output-sync=target _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js _qa-build
+	$(MAKE) -j8 --output-sync=target _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js _qa-build _qa-rector
 
 ## QA sub-targets (not intended to be called directly)
 _qa-analyse:
 	@echo "==> [analyse] running PHPStan..."
 	$(COMPOSE) exec -T app vendor/bin/phpstan analyse -c phpstan.neon.dist --memory-limit=512M
 	@echo "==> [analyse] done"
+
+_qa-rector:
+	@echo "==> [rector] running Rector (dry-run)..."
+	$(COMPOSE) exec -T app vendor/bin/rector process --dry-run --no-progress-bar
+	@echo "==> [rector] done"
 
 _qa-coverage:
 	@echo "==> [coverage] running PHPUnit with coverage (slow, several minutes)..."

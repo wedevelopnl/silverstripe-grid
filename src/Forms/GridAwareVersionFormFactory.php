@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Forms;
 
+use LogicException;
 use Override;
 use SilverStripe\Control\RequestHandler;
 use SilverStripe\Forms\FieldList;
@@ -38,7 +39,7 @@ class GridAwareVersionFormFactory extends DataObjectVersionFormFactory
     protected function getFormFields(?RequestHandler $controller, $name, $context = []) // @phpstan-ignore typeCoverage.paramTypeCoverage, typeCoverage.paramTypeCoverage (matching the untyped parent signature)
     {
         /** @var DataObject $record */
-        $record = $context['Record'] ?? throw new \LogicException('Missing required context Record');
+        $record = $context['Record'] ?? throw new LogicException('Missing required context Record');
         /** @var FieldList $fields */
         $fields = $record->getCMSFields();
 

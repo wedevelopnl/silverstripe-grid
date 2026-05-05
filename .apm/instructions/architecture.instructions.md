@@ -68,6 +68,7 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 - `.docker/env.sh` — Generates `.docker/.env` with deterministic ports
 - `.docker/app/infection.json5` — Infection mutation testing config
 - `.docker/app/phpstan.neon.dist` — PHPStan config (level max + Silverstan + 100% type coverage)
+- `.docker/app/rector.php` — Rector config (curated rule set, see "Rector" section below)
 
 ## PHP Testing
 
@@ -80,3 +81,14 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 - PHPStan level max with Silverstan (SilverStripe-aware rules)
 - 100% type coverage enforced: return, param, property, constant, declare
 - Runs inside Docker via `make analyse`
+
+## Rector
+
+- Config: `.docker/app/rector.php` (COPYed into the image at build, **not** volume-mounted — after editing, rebuild the image with `make build` or push the file with `docker compose -f .docker/compose.yml cp .docker/app/rector.php app:/app/rector.php`)
+- Scope: `src/` only (tests are excluded)
+- Enforced as a QA gate: `_qa-rector` runs `rector process --dry-run` inside `make qa` and fails the build if any rule would change a file
+- Workflow: contributors run `make rector` locally to apply fixes, commit the result, then push
+- Curated rule set — `codingStyle` prepared set is **not** enabled. The following rules are explicitly skipped via `withSkip()`:
+  - `ChangeOrIfContinueToMultiContinueRector` — splitting `if (!a \|\| !b) continue` into two `if` blocks is often less readable
+  - `FlipTypeControlToUseExclusiveTypeRector` — `$x !== null` on a typed `?Foo` property is more honest about intent than `$x instanceof Foo`
+  - `PostIncDecToPreIncDecRector` — pure micro-style, codebase consistently uses post-increment

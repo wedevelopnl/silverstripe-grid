@@ -95,7 +95,6 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
                 => [(int) $a->Sort, (int) $a->ID] <=> [(int) $b->Sort, (int) $b->ID],
         );
 
-        /** @var list<GridElement> */
         return $merged;
     }
 }

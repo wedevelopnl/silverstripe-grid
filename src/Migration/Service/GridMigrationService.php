@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Migration\Service;
 
+use Throwable;
+use RuntimeException;
 use Psr\Log\LoggerInterface;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\ClassInfo;
@@ -68,7 +70,7 @@ final class GridMigrationService
 
             try {
                 $this->migratePage($pageId, $areaId, $pageClassName, $defaultViewport, $zone, $viewportKeyMap, $dryRun);
-            } catch (\Throwable $exception) {
+            } catch (Throwable $exception) {
                 $failures++;
                 $this->logger->error('Migration failed for page {pageId}: {message}', [
                     'pageId' => $pageId,
@@ -135,7 +137,7 @@ final class GridMigrationService
         // Steps 6-8: Transaction-wrapped write
         $conn = DB::get_conn();
         if ($conn === null) {
-            throw new \RuntimeException('No database connection available for migration.');
+            throw new RuntimeException('No database connection available for migration.');
         }
         $conn->transactionStart();
 
@@ -206,7 +208,7 @@ final class GridMigrationService
                 Section::config()->set('auto_scaffold', true);
                 Row::config()->set('auto_scaffold', true);
             }
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             $conn->transactionRollback();
             throw $exception;
         }
@@ -329,7 +331,7 @@ final class GridMigrationService
         $this->extend('updateClassNameMapping', $newClassName, $oldClassName);
 
         if (!\is_a($newClassName, GridElement::class, true)) {
-            throw new \RuntimeException(\sprintf(
+            throw new RuntimeException(\sprintf(
                 'Resolved class "%s" (from legacy "%s") does not extend %s.',
                 $newClassName,
                 $oldClassName,

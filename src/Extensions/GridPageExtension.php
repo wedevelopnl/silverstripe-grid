@@ -90,8 +90,8 @@ class GridPageExtension extends Extension
         if ($enableToggle) {
             $fields->insertBefore(
                 $insertBefore,
-                CheckboxField::create('UseGrid', _t(__CLASS__ . '.USE_GRID', 'Use grid on this page'))
-                    ->setDescription(_t(__CLASS__ . '.USE_GRID_DESCRIPTION', 'Save the page after changing this setting')),
+                CheckboxField::create('UseGrid', _t(self::class . '.USE_GRID', 'Use grid on this page'))
+                    ->setDescription(_t(self::class . '.USE_GRID_DESCRIPTION', 'Save the page after changing this setting')),
             );
         }
     }

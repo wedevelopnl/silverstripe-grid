@@ -650,10 +650,10 @@ class GridController extends AdminController
         $results = Versioned::withVersionedMode(static function () use ($search): array {
             Versioned::set_stage(Versioned::DRAFT);
 
-            $pages = SiteTree::get()->sort('Title', 'ASC');
+            $pages = SiteTree::get()->sort(['Title' => 'ASC']);
 
             if (is_string($search) && $search !== '') {
-                $pages = $pages->filter('Title:PartialMatch', $search);
+                $pages = $pages->filter(['Title:PartialMatch' => $search]);
             }
 
             $pages = $pages->limit(50);

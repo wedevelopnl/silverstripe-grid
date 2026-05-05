@@ -28,14 +28,14 @@ use WeDevelop\Grid\Value\WriteResult;
  * Delegates all Sort/ParentID mutations to {@see ElementPlacementService} so every
  * placement path goes through the shared validator.
  */
-final class GridElementService
+final readonly class GridElementService
 {
     /** Sentinel message used to trigger a rollback inside {@see writeAndPlace()}. */
     private const string ROLLBACK_SIGNAL = 'GridElementService.rollback-after-place';
 
     public function __construct(
-        private readonly ReorderValidatorInterface $validator,
-        private readonly ElementPlacementService $placementService,
+        private ReorderValidatorInterface $validator,
+        private ElementPlacementService $placementService,
     ) {
     }
 

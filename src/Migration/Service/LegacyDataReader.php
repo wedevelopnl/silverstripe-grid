@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Migration\Service;
 
+use InvalidArgumentException;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Extensible;
@@ -398,7 +399,7 @@ final class LegacyDataReader
     {
         $normalized = \strtolower($stage);
         if ($normalized !== 'draft' && $normalized !== 'live') {
-            throw new \InvalidArgumentException(\sprintf('Invalid stage "%s", expected "draft" or "live"', $stage));
+            throw new InvalidArgumentException(\sprintf('Invalid stage "%s", expected "draft" or "live"', $stage));
         }
 
         return $normalized === 'live' ? $baseTable . '_Live' : $baseTable;

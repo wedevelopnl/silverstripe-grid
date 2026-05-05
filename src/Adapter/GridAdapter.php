@@ -179,8 +179,10 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
     /** @return positive-int */
     public function getColumnPixelWidth(int $columnSpan): int
     {
-        /** @var positive-int */
-        return (int) round($this->containerMaxWidth * $columnSpan / $this->columnCount);
+        /** @var positive-int $pixelWidth */
+        $pixelWidth = (int) round($this->containerMaxWidth * $columnSpan / $this->columnCount);
+
+        return $pixelWidth;
     }
 
     // ─── GridAdapterInterface: CSS class generation ─────────────────

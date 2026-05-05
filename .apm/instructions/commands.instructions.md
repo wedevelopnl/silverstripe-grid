@@ -58,5 +58,5 @@ applyTo: "**/*"
 | `make test-e2e-ui` | Playwright E2E with interactive UI |
 | `make flush` | Clear SilverStripe cache |
 | `make dev-build` | Run dev/build to rebuild database and manifest |
-| `make qa` | Full QA suite (PHPStan + PHP coverage + JS QA, parallel) |
+| `make qa` | Full QA suite (PHPStan + Rector + PHP coverage + JS QA, parallel) |
 | `make qa-js` | JavaScript QA (Biome + Stylelint + typecheck + Vitest + vite build) |

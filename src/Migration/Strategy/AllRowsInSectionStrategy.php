@@ -22,17 +22,17 @@ use WeDevelop\Grid\Value\GridSettings;
  * are taken from the first explicit row; later rows with conflicting
  * values trigger a warning and are discarded.
  */
-final class AllRowsInSectionStrategy implements RowMappingStrategy
+final readonly class AllRowsInSectionStrategy implements RowMappingStrategy
 {
     /**
      * @param array<string, string> $viewportKeyMap Old viewport key → new key (e.g. 'MD' → 'md')
      */
     public function __construct(
-        private readonly ElementGrouper $grouper,
-        private readonly FieldMapper $mapper,
-        private readonly string $defaultViewport,
-        private readonly array $viewportKeyMap,
-        private readonly LoggerInterface $logger,
+        private ElementGrouper $grouper,
+        private FieldMapper $mapper,
+        private string $defaultViewport,
+        private array $viewportKeyMap,
+        private LoggerInterface $logger,
     ) {}
 
     /**

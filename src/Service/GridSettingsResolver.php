@@ -24,16 +24,16 @@ use WeDevelop\Grid\Value\ViewportConfig;
  *     overrideStrategy: cascade
  * ```
  */
-final class GridSettingsResolver
+final readonly class GridSettingsResolver
 {
-    private readonly OverrideStrategy $strategy;
+    private OverrideStrategy $strategy;
 
     /**
      * @param non-empty-string $overrideStrategy 'isolated' or 'cascade'
      * @throws InvalidGridValueException If the strategy string is not valid
      */
     public function __construct(
-        private readonly GridAdapterInterface $adapter,
+        private GridAdapterInterface $adapter,
         string $overrideStrategy = 'isolated',
     ) {
         $strategy = OverrideStrategy::tryFrom($overrideStrategy);

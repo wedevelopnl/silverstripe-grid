@@ -19,11 +19,11 @@ use WeDevelop\Grid\Value\WriteResult;
  * Follows the same pattern as {@see ElementPlacementService}: receives already-loaded,
  * already-authorized objects and returns {@see Result} for domain validation failures.
  */
-final class GridSettingsService
+final readonly class GridSettingsService
 {
     public function __construct(
-        private readonly GridAdapterInterface $gridAdapter,
-        private readonly GridTreeBuilder $treeBuilder,
+        private GridAdapterInterface $gridAdapter,
+        private GridTreeBuilder $treeBuilder,
     ) {
     }
 

@@ -50,6 +50,7 @@ final class DBGridSettings extends DBComposite
      *
      * Returns null when no data has been stored (e.g., unsaved record).
      */
+    #[Override]
     public function getValue(): ?GridSettings
     {
         /** @var int|null $width */

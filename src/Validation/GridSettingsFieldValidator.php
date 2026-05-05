@@ -40,7 +40,6 @@ final class GridSettingsFieldValidator extends FieldValidator
             return $result;
         }
 
-        /** @var GridSettings $settings */
         $settings = $this->value;
 
         $this->validateViewportConfig($result, $settings->default, 'default');

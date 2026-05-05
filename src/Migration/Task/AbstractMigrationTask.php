@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Migration\Task;
 
+use Override;
 use Psr\Log\LoggerInterface;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\BuildTask;
@@ -23,6 +24,7 @@ use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 abstract class AbstractMigrationTask extends BuildTask
 {
     /** @return list<InputOption> */
+    #[Override]
     public function getOptions(): array
     {
         return [
@@ -73,7 +75,7 @@ abstract class AbstractMigrationTask extends BuildTask
 
         $pageIdsArg = $input->getOption('page-ids');
         $pageIds = \is_string($pageIdsArg) && $pageIdsArg !== ''
-            ? \array_map('intval', \explode(',', $pageIdsArg))
+            ? \array_map(intval(...), \explode(',', $pageIdsArg))
             : null;
 
         /** @var GridAdapterInterface $adapter */

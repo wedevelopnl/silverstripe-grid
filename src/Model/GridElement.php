@@ -102,7 +102,6 @@ class GridElement extends DataObject
     #[Override]
     public function forTemplate(): string
     {
-        /** @var DBHTMLText $result */
         $result = $this->renderWith($this->getViewerTemplates('_holder'));
 
         return (string) $result;

@@ -34,8 +34,6 @@ final readonly class NodeRef implements JsonSerializable
 
     /**
      * Parse a NodeRef from a decoded JSON payload.
-     *
-     * @param mixed $data
      */
     public static function fromArray(mixed $data): self
     {

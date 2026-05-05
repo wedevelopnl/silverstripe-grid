@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use Netwerkstatt\SilverstripeRector\Set\SilverstripeLevelSetList;
 use Netwerkstatt\SilverstripeRector\Set\SilverstripeSetList;
+use Rector\CodeQuality\Rector\Identical\FlipTypeControlToUseExclusiveTypeRector;
+use Rector\CodingStyle\Rector\PostInc\PostIncDecToPreIncDecRector;
 use Rector\Config\RectorConfig;
+use Rector\EarlyReturn\Rector\If_\ChangeOrIfContinueToMultiContinueRector;
 
 return RectorConfig::configure()
     ->withPaths([
@@ -13,7 +16,6 @@ return RectorConfig::configure()
     ->withPreparedSets(
         deadCode: true,
         codeQuality: true,
-        codingStyle: true,
         typeDeclarations: true,
         instanceOf: true,
         earlyReturn: true,
@@ -23,4 +25,10 @@ return RectorConfig::configure()
     ->withSets([
         SilverstripeSetList::CODE_STYLE,
         SilverstripeLevelSetList::UP_TO_SS_6_0,
+    ])
+    ->withSkip([
+        // Subjective style — see CLAUDE.md "Rector" section for rationale.
+        ChangeOrIfContinueToMultiContinueRector::class,
+        FlipTypeControlToUseExclusiveTypeRector::class,
+        PostIncDecToPreIncDecRector::class,
     ]);

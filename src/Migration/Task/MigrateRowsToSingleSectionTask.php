@@ -12,7 +12,7 @@ use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 
 class MigrateRowsToSingleSectionTask extends AbstractMigrationTask
 {
-    private static string $segment = 'migrate-grid-rows-to-single-section';
+    protected static string $commandName = 'migrate-grid-rows-to-single-section';
 
     protected string $title = 'Migrate grid rows to single section';
 

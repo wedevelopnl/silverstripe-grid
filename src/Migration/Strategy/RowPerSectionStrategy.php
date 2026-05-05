@@ -18,16 +18,16 @@ use WeDevelop\Grid\Value\GridSettings;
  * This is the default strategy when each legacy row should become
  * an independent section in the new grid hierarchy.
  */
-final class RowPerSectionStrategy implements RowMappingStrategy
+final readonly class RowPerSectionStrategy implements RowMappingStrategy
 {
     /**
      * @param array<string, string> $viewportKeyMap Old viewport key → new key (e.g. 'MD' → 'md')
      */
     public function __construct(
-        private readonly ElementGrouper $grouper,
-        private readonly FieldMapper $mapper,
-        private readonly string $defaultViewport,
-        private readonly array $viewportKeyMap,
+        private ElementGrouper $grouper,
+        private FieldMapper $mapper,
+        private string $defaultViewport,
+        private array $viewportKeyMap,
     ) {}
 
     /**

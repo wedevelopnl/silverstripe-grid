@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Migration\Service;
 
+use WeDevelop\Grid\Model\ContentElement;
 use Psr\Log\LoggerInterface;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
@@ -23,7 +24,7 @@ use WeDevelop\Grid\Value\ViewportConfig;
 final class FieldMapper
 {
     private const array DEFAULT_CLASS_NAME_MAP = [
-        'DNADesign\\Elemental\\Models\\ElementContent' => 'WeDevelop\\Grid\\Model\\ContentElement',
+        'DNADesign\\Elemental\\Models\\ElementContent' => ContentElement::class,
     ];
 
     private const array VERTICAL_ALIGN_MAP = [

@@ -6,7 +6,6 @@ namespace WeDevelop\Grid\Value;
 
 use JsonSerializable;
 use Override;
-use WeDevelop\Grid\Exception\InvalidGridValueException;
 
 /**
  * Immutable value object for column grid settings.

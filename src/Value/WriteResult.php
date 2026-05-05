@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Value;
 
+use Closure;
 use SilverStripe\Core\Validation\ValidationException;
 
 /**
@@ -17,10 +18,10 @@ final class WriteResult
      * Execute an operation, catching ValidationExceptions as Result failures.
      *
      * @template T
-     * @param \Closure(): T $operation
+     * @param Closure():T $operation
      * @return Result<T>
      */
-    public static function from(\Closure $operation): Result
+    public static function from(Closure $operation): Result
     {
         try {
             return Result::ok($operation());

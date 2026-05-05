@@ -12,7 +12,7 @@ use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
 
 class MigrateRowsToSectionsTask extends AbstractMigrationTask
 {
-    private static string $segment = 'migrate-grid-rows-to-sections';
+    protected static string $commandName = 'migrate-grid-rows-to-sections';
 
     protected string $title = 'Migrate grid rows to sections';
 
