@@ -32,19 +32,26 @@ class MultiZonePage extends Page
     #[Override]
     public function getCMSFields(): FieldList
     {
-        $fields = parent::getCMSFields();
-        $fields->removeByName('Content');
-        $fields->removeByName('GridEditor');
+        $this->beforeUpdateCMSFields(function (FieldList $fields): void {
+            $fields->removeByName('Content');
 
-        $fields->addFieldToTab(
-            'Root.Main',
-            GridEditorField::create('GridEditorMain', (int) $this->ID, 'main'),
-        );
-        $fields->addFieldToTab(
-            'Root.Main',
-            GridEditorField::create('GridEditorSidebar', (int) $this->ID, 'sidebar'),
-        );
+            $fields->addFieldToTab(
+                'Root.Main',
+                GridEditorField::create('GridEditorMain', (int) $this->ID, 'main'),
+            );
+            $fields->addFieldToTab(
+                'Root.Main',
+                GridEditorField::create('GridEditorSidebar', (int) $this->ID, 'sidebar'),
+            );
+        });
 
-        return $fields;
+        // GridPageExtension::updateCMSFields() adds a single-zone "GridEditor"
+        // during the extension chain; strip it after the chain so this page
+        // exposes only the zone-specific editors above.
+        $this->afterUpdateCMSFields(function (FieldList $fields): void {
+            $fields->removeByName('GridEditor');
+        });
+
+        return parent::getCMSFields();
     }
 }

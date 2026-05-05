@@ -248,57 +248,58 @@ class GridElement extends DataObject
     #[Override]
     public function getCMSFields(): FieldList
     {
-        $fields = parent::getCMSFields();
-        $fields->removeByName([
-            'Title', 'TitleTag', 'TitleClass', 'ShowTitle',
-            'Sort', 'ExtraClass', 'Style',
-            'ParentID', 'ParentClass',
-            'Zone',
-        ]);
+        $this->beforeUpdateCMSFields(function (FieldList $fields): void {
+            $fields->removeByName([
+                'Title', 'TitleTag', 'TitleClass', 'ShowTitle',
+                'Sort', 'ExtraClass', 'Style',
+                'ParentID', 'ParentClass',
+                'Zone',
+            ]);
 
-        $titleGroup = FieldGroup::create(
-            TextField::create('Title', _t(self::class . '.TITLE', 'Title')),
-            DropdownField::create(
-                'TitleTag',
-                _t(self::class . '.TITLE_TAG', 'Title tag'),
-                array_combine(
-                    ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-                    ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+            $titleGroup = FieldGroup::create(
+                TextField::create('Title', _t(self::class . '.TITLE', 'Title')),
+                DropdownField::create(
+                    'TitleTag',
+                    _t(self::class . '.TITLE_TAG', 'Title tag'),
+                    array_combine(
+                        ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+                        ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+                    ),
                 ),
-            ),
-        );
-        $titleGroup->setName('TitleSettings');
-        $titleGroup->setTitle(_t(self::class . '.TITLE_SETTINGS', 'Title'));
+            );
+            $titleGroup->setName('TitleSettings');
+            $titleGroup->setTitle(_t(self::class . '.TITLE_SETTINGS', 'Title'));
 
-        if (static::config()->get('enable_custom_title_classes')) {
-            /** @var array<string, string> $options */
-            $options = $this->gridAdapter->getTitleClassOptions();
-            $this->extend('updateTitleClassOptions', $options);
+            if (static::config()->get('enable_custom_title_classes')) {
+                /** @var array<string, string> $options */
+                $options = $this->gridAdapter->getTitleClassOptions();
+                $this->extend('updateTitleClassOptions', $options);
+
+                $titleGroup->push(
+                    DropdownField::create(
+                        'TitleClass',
+                        _t(self::class . '.TITLE_CLASS', 'Display as'),
+                        $options,
+                    )->setEmptyString(_t(self::class . '.TITLE_CLASS_DEFAULT', 'Default')),
+                );
+            }
 
             $titleGroup->push(
-                DropdownField::create(
-                    'TitleClass',
-                    _t(self::class . '.TITLE_CLASS', 'Display as'),
-                    $options,
-                )->setEmptyString(_t(self::class . '.TITLE_CLASS_DEFAULT', 'Default')),
+                CheckboxField::create('ShowTitle', _t(self::class . '.SHOW_TITLE', 'Displayed')),
             );
-        }
 
-        $titleGroup->push(
-            CheckboxField::create('ShowTitle', _t(self::class . '.SHOW_TITLE', 'Displayed')),
-        );
+            $mainTab = $fields->findOrMakeTab('Root.Main');
+            $mainTab->unshift($titleGroup);
 
-        $mainTab = $fields->findOrMakeTab('Root.Main');
-        $mainTab->unshift($titleGroup);
+            if ($this->isInDB()) {
+                $fields->addFieldToTab(
+                    'Root.History',
+                    HistoryViewerField::create('ElementHistory'),
+                );
+            }
+        });
 
-        if ($this->isInDB()) {
-            $fields->addFieldToTab(
-                'Root.History',
-                HistoryViewerField::create('ElementHistory'),
-            );
-        }
-
-        return $fields;
+        return parent::getCMSFields();
     }
 
     /**

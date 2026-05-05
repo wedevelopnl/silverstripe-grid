@@ -92,15 +92,16 @@ class Column extends GridElement implements ContainerInterface
     #[Override]
     public function getCMSFields(): FieldList
     {
-        $fields = parent::getCMSFields();
-        $fields->removeByName('GridSettings');
+        $this->beforeUpdateCMSFields(function (FieldList $fields): void {
+            $fields->removeByName('GridSettings');
 
-        $fields->addFieldToTab(
-            'Root.Grid',
-            GridSettingsField::create('GridSettings', $this->gridAdapter),
-        );
+            $fields->addFieldToTab(
+                'Root.Grid',
+                GridSettingsField::create('GridSettings', $this->gridAdapter),
+            );
+        });
 
-        return $fields;
+        return parent::getCMSFields();
     }
 
     /** Returns the default viewport's width as a fraction, e.g. '6/12'. */
