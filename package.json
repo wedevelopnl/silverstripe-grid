@@ -37,7 +37,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.15",
+    "@biomejs/biome": "^2.4.16",
     "@playwright/test": "^1.60.0",
     "@stryker-mutator/core": "^9.5.0",
     "@stryker-mutator/typescript-checker": "^9.6.1",
