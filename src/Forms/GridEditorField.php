@@ -63,7 +63,7 @@ class GridEditorField extends GridField
      * @return DBHTMLText
      */
     #[Override] // @phpstan-ignore method.childReturnType, typeCoverage.returnTypeCoverage (matching untyped parent signature; renderWith returns DBHTMLText, not string)
-    public function FieldHolder($properties = []) // @phpstan-ignore typeCoverage.paramTypeCoverage (matching untyped parent signature)
+    public function FieldHolder($properties = [])
     {
         $context = $this;
 

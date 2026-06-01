@@ -36,7 +36,7 @@ class GridAwareVersionFormFactory extends DataObjectVersionFormFactory
      * @param array{Record?: DataObject, ...} $context
      */
     #[Override] // @phpstan-ignore missingType.return, typeCoverage.returnTypeCoverage, missingType.parameter (matching the untyped parent signature)
-    protected function getFormFields(?RequestHandler $controller, $name, $context = []) // @phpstan-ignore typeCoverage.paramTypeCoverage, typeCoverage.paramTypeCoverage (matching the untyped parent signature)
+    protected function getFormFields(?RequestHandler $controller, $name, $context = [])
     {
         /** @var DataObject $record */
         $record = $context['Record'] ?? throw new LogicException('Missing required context Record');
