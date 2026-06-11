@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Service;
 
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injectable;
+use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
@@ -53,7 +54,7 @@ class GridTreeBuilder
 
         /** @var array<int, list<GridNode>> $tree */
         $tree = [];
-        $tree[$pageId] = $this->assembleSubTree($elementsByParent, $rootKey, $rootParent);
+        $tree[$pageId] = $this->assembleSubTree($elementsByParent, $rootKey, $rootParent, $page);
 
         return $tree;
     }
@@ -197,14 +198,25 @@ class GridTreeBuilder
     /**
      * Recursively assemble tree nodes from pre-loaded element data.
      *
+     * The already-loaded $parentObject is seeded into each element's Parent
+     * has_one component before {@see GridElement::canView()} runs, so the
+     * permission check's {@see GridElement::getPage()} walk resolves entirely
+     * in-memory instead of issuing a fresh ORM fetch per node (avoids N+1).
+     *
      * @param array<string, list<GridElement>> $elementsByParent
      * @return list<GridNode>
      */
-    private function assembleSubTree(array $elementsByParent, string $parentKey, NodeRef $parent): array
-    {
+    private function assembleSubTree(
+        array $elementsByParent,
+        string $parentKey,
+        NodeRef $parent,
+        DataObject $parentObject,
+    ): array {
         $nodes = [];
 
         foreach ($elementsByParent[$parentKey] ?? [] as $element) {
+            $element->setComponent('Parent', $parentObject);
+
             if (!$element->canView()) {
                 continue;
             }
@@ -235,7 +247,7 @@ class GridTreeBuilder
 
             $containerType = $element->getContainerType();
             $allowedTypes = $this->nodeMapper->getAllowedTypes($element);
-            $children = $this->assembleSubTree($elementsByParent, $childKey, $selfRef);
+            $children = $this->assembleSubTree($elementsByParent, $childKey, $selfRef, $element);
         }
 
         if ($element instanceof Column) {

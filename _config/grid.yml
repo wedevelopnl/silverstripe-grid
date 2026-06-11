@@ -5,6 +5,13 @@ Name: grid-adapter
 SilverStripe\Core\Injector\Injector:
   WeDevelop\Grid\Contract\GridAdapterInterface:
     factory: WeDevelop\Grid\Factory\GridAdapterResolver
+  # Resolved through Injector (e.g. on the render path in Column::getColumnClasses)
+  # so the configured override strategy applies. Injector does not auto-wire the
+  # adapter constructor argument, so it is referenced explicitly here.
+  WeDevelop\Grid\Service\GridSettingsResolver:
+    constructor:
+      adapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
+      overrideStrategy: isolated
 
 # The active adapter is selected by the SS_GRID_ADAPTER environment variable.
 # The value is either a bundled preset name (bootstrap|tailwind|bulma,
@@ -23,8 +30,11 @@ SilverStripe\Core\Injector\Injector:
 #   default_viewport: lg
 #   container_max_width: 1400
 #
-# To change the override strategy to cascade:
+# To change the override strategy to cascade, re-declare the constructor
+# (including the adapter reference, since Injector does not auto-wire it):
 #
-# WeDevelop\Grid\Service\GridSettingsResolver:
-#   constructor:
-#     overrideStrategy: cascade
+# SilverStripe\Core\Injector\Injector:
+#   WeDevelop\Grid\Service\GridSettingsResolver:
+#     constructor:
+#       adapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
+#       overrideStrategy: cascade

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Model;
 
 use Override;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Contract\ContainerInterface;
@@ -141,7 +142,8 @@ class Column extends GridElement implements ContainerInterface
     /** CSS classes for the grid column wrapper. */
     public function getColumnClasses(): string
     {
-        $resolver = new GridSettingsResolver($this->gridAdapter);
+        /** @var GridSettingsResolver $resolver */
+        $resolver = Injector::inst()->get(GridSettingsResolver::class);
         $effective = $resolver->resolveEffective($this->getGridSettings());
         $classes = ColumnClassResolver::resolve($effective, $this->gridAdapter);
 

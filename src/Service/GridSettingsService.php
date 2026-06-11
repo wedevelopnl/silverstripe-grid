@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Service;
 
+use RuntimeException;
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
@@ -21,6 +23,9 @@ use WeDevelop\Grid\Value\WriteResult;
  */
 final readonly class GridSettingsService
 {
+    /** Sentinel message used to trigger a rollback inside {@see resetOverrides()}. */
+    private const string ROLLBACK_SIGNAL = 'GridSettingsService.rollback-on-reset-failure';
+
     public function __construct(
         private GridAdapterInterface $gridAdapter,
         private GridTreeBuilder $treeBuilder,
@@ -76,6 +81,47 @@ final readonly class GridSettingsService
     {
         $columns = $this->treeBuilder->findColumnsForPage($page, $zone);
 
+        $conn = DB::get_conn();
+        if ($conn === null) {
+            return $this->resetColumns($columns, $viewport);
+        }
+
+        // Wrap the whole loop in a single transaction: a mid-loop write failure
+        // rolls back every preceding column reset so a page can never be left
+        // partially reset.
+        /** @var Result<int>|null $captured */
+        $captured = null;
+
+        try {
+            $conn->withTransaction(function () use (&$captured, $columns, $viewport): void {
+                $captured = $this->resetColumns($columns, $viewport);
+                if ($captured->isErr()) {
+                    throw new RuntimeException(self::ROLLBACK_SIGNAL);
+                }
+            });
+        } catch (RuntimeException $e) {
+            if ($e->getMessage() !== self::ROLLBACK_SIGNAL) {
+                throw $e;
+            }
+        }
+
+        /** @var Result<int> $captured Guaranteed populated — the closure always assigns before the sentinel throw. */
+        return $captured;
+    }
+
+    /**
+     * Reset overrides on each column and persist it. Returns the count of
+     * modified columns, or the first write failure as an err Result.
+     *
+     * No transaction awareness — {@see resetOverrides()} owns the enclosing
+     * transaction so all writes commit or roll back atomically.
+     *
+     * @param list<Column> $columns
+     * @param non-empty-string|null $viewport
+     * @return Result<int>
+     */
+    private function resetColumns(array $columns, ?string $viewport): Result
+    {
         $affected = 0;
 
         foreach ($columns as $column) {

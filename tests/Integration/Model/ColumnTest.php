@@ -7,11 +7,14 @@ namespace WeDevelop\Grid\Tests\Integration\Model;
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Config\Config;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Service\GridSettingsResolver;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridSettings;
@@ -190,6 +193,50 @@ final class ColumnTest extends SapphireTest
         $classes = $column->getColumnClasses();
 
         self::assertNotEmpty($classes);
+    }
+
+    /**
+     * getColumnClasses() must resolve the GridSettingsResolver through Injector
+     * so the DI-configured override strategy applies. With `cascade` configured,
+     * an override at a larger viewport cascades down to smaller viewports —
+     * producing different classes than the default `isolated` strategy, where
+     * the override applies to its own viewport only.
+     */
+    public function testGetColumnClassesHonoursConfiguredCascadeStrategy(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        // Default width 12, override only at 'lg' (width 6). Under isolated, the
+        // smaller viewports (xs..md) keep the default 12, so the base width class
+        // is col-12 and the override surfaces as col-lg-6. Under cascade, the 'lg'
+        // override flows down to the smallest viewport, so the base width class
+        // becomes col-6 and there is no separate lg class.
+        $settings = GridSettings::initial(12)->withOverride('lg', new ViewportConfig(6, 0, true));
+        $column = GridTreeFactory::column($row, gridSettings: $settings);
+
+        // Baseline: default (isolated) resolver.
+        $isolatedClasses = $column->getColumnClasses();
+        self::assertStringContainsString('col-12', $isolatedClasses);
+        self::assertStringContainsString('col-lg-6', $isolatedClasses);
+
+        // Register a cascade-configured resolver as the active GridSettingsResolver.
+        $adapter = Injector::inst()->get(GridAdapterInterface::class);
+        $cascadeResolver = new GridSettingsResolver($adapter, 'cascade');
+        Injector::inst()->registerService($cascadeResolver, GridSettingsResolver::class);
+
+        $cascadeClasses = $column->getColumnClasses();
+
+        self::assertNotSame(
+            $isolatedClasses,
+            $cascadeClasses,
+            'getColumnClasses() must reflect the Injector-configured cascade strategy, not a hard-coded isolated resolver',
+        );
+
+        // Cascade pushes the width-6 override down to the base (xs) viewport.
+        self::assertStringContainsString('col-6', $cascadeClasses);
+        self::assertStringNotContainsString('col-12', $cascadeClasses);
     }
 
     // ── getCMSFields ────────────────────────────────────────────

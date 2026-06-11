@@ -151,8 +151,11 @@ final readonly class GridElementService
             return Result::fail(...$hierarchyResult->errors());
         }
 
-        // Deep-duplicate the entire subtree (follows cascade_duplicates)
-        $clone = $element->duplicate(true);
+        // Deep-duplicate the entire subtree WITHOUT writing (follows cascade_duplicates).
+        // Children become an UnsavedRelationList on the clone and are persisted by the
+        // single $clone->write() below — so the whole subtree lands at the target parent
+        // in one transaction, never at the original parent first.
+        $clone = $element->duplicate(false);
 
         // Re-parent to target
         /** @var positive-int $targetParentId */
@@ -172,10 +175,35 @@ final readonly class GridElementService
 
         $clone->Sort = 0;
 
-        return WriteResult::from(static function () use ($clone): GridElement {
-            $clone->write();
-            return $clone;
-        });
+        $conn = DB::get_conn();
+        if ($conn === null) {
+            return WriteResult::from(static function () use ($clone): GridElement {
+                $clone->write();
+                return $clone;
+            });
+        }
+
+        /** @var Result<GridElement>|null $captured */
+        $captured = null;
+
+        try {
+            $conn->withTransaction(function () use (&$captured, $clone): void {
+                $captured = WriteResult::from(static function () use ($clone): GridElement {
+                    $clone->write();
+                    return $clone;
+                });
+                if ($captured->isErr()) {
+                    throw new RuntimeException(self::ROLLBACK_SIGNAL);
+                }
+            });
+        } catch (RuntimeException $e) {
+            if ($e->getMessage() !== self::ROLLBACK_SIGNAL) {
+                throw $e;
+            }
+        }
+
+        /** @var Result<GridElement> $captured Guaranteed populated — the closure always assigns before the sentinel throw. */
+        return $captured;
     }
 
     /**
