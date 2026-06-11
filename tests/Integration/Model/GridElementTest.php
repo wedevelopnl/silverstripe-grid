@@ -549,4 +549,82 @@ final class GridElementTest extends SapphireTest
 
         self::assertIsString($result);
     }
+
+    // ── getHolderClasses ────────────────────────────────────────
+    // ContentElement uses the base provideHolderClasses() ([]), so the holder
+    // classes derive solely from Style + ExtraClass.
+
+    public function testGetHolderClassesEmptyWhenNoSourceClasses(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $element = GridTreeFactory::contentElement($column);
+
+        self::assertSame('', $element->getHolderClasses());
+    }
+
+    public function testGetHolderClassesIncludesStyleAndExtraClass(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $element = ContentElement::create();
+        $element->Title = 'Has classes';
+        $element->Style = 'bg-light';
+        $element->ExtraClass = 'mt-3';
+        $element->ParentID = $column->ID;
+        $element->ParentClass = $column::class;
+        $element->write();
+
+        $classes = $element->getHolderClasses();
+
+        // Order is Style then ExtraClass.
+        self::assertSame('bg-light mt-3', $classes);
+    }
+
+    public function testGetHolderClassesFiltersEmptyParts(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        // Style set, ExtraClass empty — the empty part must be filtered so there
+        // is no leading/trailing/doubled separator.
+        $element = ContentElement::create();
+        $element->Title = 'Only style';
+        $element->Style = 'shadow';
+        $element->ExtraClass = '';
+        $element->ParentID = $column->ID;
+        $element->ParentClass = $column::class;
+        $element->write();
+
+        self::assertSame('shadow', $element->getHolderClasses());
+    }
+
+    // ── Leaf write does not scaffold children ───────────────────
+
+    public function testWritingContentElementDoesNotScaffoldChildren(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $countBefore = GridElement::get()->count();
+
+        GridTreeFactory::contentElement($column, title: 'Leaf');
+
+        $countAfter = GridElement::get()->count();
+
+        self::assertSame(
+            $countBefore + 1,
+            $countAfter,
+            'writing a leaf content element must create exactly one record — no scaffold children',
+        );
+    }
 }

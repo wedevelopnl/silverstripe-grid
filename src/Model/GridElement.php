@@ -334,6 +334,8 @@ class GridElement extends DataObject
     {
         $member = $member ?: Security::getCurrentUser();
 
+        // extendedCan expects a non-null member; resolve the current user first
+        // and let extensions veto/grant before delegating to the owning page.
         if ($member !== null) {
             $extended = $this->extendedCan(__FUNCTION__, $member);
             if ($extended !== null) {
@@ -359,6 +361,15 @@ class GridElement extends DataObject
     #[Override]
     public function canEdit(mixed $member = null): bool
     {
+        $member = $member ?: Security::getCurrentUser();
+
+        if ($member !== null) {
+            $extended = $this->extendedCan(__FUNCTION__, $member);
+            if ($extended !== null) {
+                return $extended;
+            }
+        }
+
         $page = $this->getPage();
 
         if ($page instanceof DataObject) {
@@ -377,6 +388,15 @@ class GridElement extends DataObject
     #[Override]
     public function canDelete(mixed $member = null): bool
     {
+        $member = $member ?: Security::getCurrentUser();
+
+        if ($member !== null) {
+            $extended = $this->extendedCan(__FUNCTION__, $member);
+            if ($extended !== null) {
+                return $extended;
+            }
+        }
+
         $page = $this->getPage();
 
         if ($page instanceof DataObject) {
@@ -396,6 +416,15 @@ class GridElement extends DataObject
     #[Override]
     public function canCreate(mixed $member = null, mixed $context = []): bool
     {
+        $member = $member ?: Security::getCurrentUser();
+
+        if ($member !== null) {
+            $extended = $this->extendedCan(__FUNCTION__, $member, $context);
+            if ($extended !== null) {
+                return $extended;
+            }
+        }
+
         $result = Permission::check('CMS_ACCESS', 'any', $member);
         assert(is_bool($result));
 
