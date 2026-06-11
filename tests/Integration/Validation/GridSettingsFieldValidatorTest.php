@@ -149,4 +149,26 @@ final class GridSettingsFieldValidatorTest extends SapphireTest
 
         self::assertFalse($result->isValid());
     }
+
+    public function testNegativeOffsetIsRejected(): void
+    {
+        // offset=-1 is the only violation: width=6 is valid and 6+(-1)=5 <= 12.
+        $settings = new GridSettings(new ViewportConfig(6, -1, true), []);
+        $validator = new GridSettingsFieldValidator('GridSettings', $settings, self::COLUMN_COUNT);
+
+        $result = $validator->validate();
+
+        self::assertFalse($result->isValid());
+        self::assertCount(1, $result->getMessages());
+    }
+
+    public function testOffsetZeroIsAccepted(): void
+    {
+        $settings = new GridSettings(new ViewportConfig(6, 0, true), []);
+        $validator = new GridSettingsFieldValidator('GridSettings', $settings, self::COLUMN_COUNT);
+
+        $result = $validator->validate();
+
+        self::assertTrue($result->isValid());
+    }
 }

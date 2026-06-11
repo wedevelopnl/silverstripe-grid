@@ -144,3 +144,9 @@ nl:
     FILTER_TYPE: Element-type
     ORPHANED: Wees
     TITLE: 'Grid-elementen'
+  WeDevelop\Grid\Validation\HierarchyValidationService:
+    PAGE_LEVEL_REJECTED: 'Een {element} kan niet op paginaniveau worden geplaatst.'
+    PARENT_REJECTED: 'Een {element} kan niet in een {parent} worden geplaatst.'
+  WeDevelop\Grid\Validation\ReorderValidator:
+    PAGE_LEVEL_REJECTED: 'Een {element} kan niet op paginaniveau worden geplaatst.'
+    PARENT_REJECTED: 'Een {element} kan niet in een {parent} worden geplaatst.'

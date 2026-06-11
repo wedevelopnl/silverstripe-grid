@@ -50,4 +50,44 @@ final class HierarchyValidationExtensionTest extends SapphireTest
         $row->ParentClass = $page::class;
         $row->write();
     }
+
+    /**
+     * The write-time path must surface the i18n-translated message (via
+     * ValidationError::translate()), not the raw English message — matching the
+     * API path (GridController maps errors with translate()).
+     *
+     * The module ships an i18n entry for the PAGE_LEVEL_REJECTED key whose
+     * wording differs from the inline English fallback ("...at the page level."
+     * vs the fallback's "...at page level."). Seeing the lang-file phrasing in
+     * the thrown message proves translate() resolved the catalogue rather than
+     * emitting the raw ValidationError::$message, and that the {element} param
+     * was injected.
+     */
+    public function testWriteTimeErrorUsesTranslatedMessage(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        $row = Row::create();
+        $row->ParentID = $page->ID;
+        $row->ParentClass = $page::class;
+
+        try {
+            $row->write();
+            self::fail('Row at page level must fail validation.');
+        } catch (ValidationException $e) {
+            $messages = $e->getResult()->getMessages();
+            $combined = implode("\n", array_column($messages, 'message'));
+
+            self::assertStringContainsString(
+                'cannot be placed at the page level.',
+                $combined,
+                'write-time validation must use ValidationError::translate(), not the raw message',
+            );
+            self::assertStringContainsString(
+                $row->singular_name(),
+                $combined,
+                'the {element} param must be injected into the translated message',
+            );
+        }
+    }
 }

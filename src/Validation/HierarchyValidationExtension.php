@@ -29,7 +29,7 @@ class HierarchyValidationExtension extends Extension
         }
 
         foreach ($serviceResult->errors() as $error) {
-            $result->addError($error->message);
+            $result->addFieldError($error->field ?? '', $error->translate());
         }
     }
 }

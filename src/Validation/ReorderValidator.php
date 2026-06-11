@@ -12,6 +12,7 @@ use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
+use WeDevelop\Grid\Value\ValidationErrorCode;
 
 class ReorderValidator implements ReorderValidatorInterface
 {
@@ -41,6 +42,7 @@ class ReorderValidator implements ReorderValidatorInterface
                         $element->singular_name(),
                     ),
                     field: 'placement',
+                    code: ValidationErrorCode::HierarchyViolation,
                     key: self::class . '.PAGE_LEVEL_REJECTED',
                     params: ['element' => $element->singular_name()],
                 ));
@@ -61,6 +63,7 @@ class ReorderValidator implements ReorderValidatorInterface
                 $targetParent->singular_name(),
             ),
             field: 'placement',
+            code: ValidationErrorCode::HierarchyViolation,
             key: self::class . '.PARENT_REJECTED',
             params: ['element' => $element->singular_name(), 'parent' => $targetParent->singular_name()],
         ));

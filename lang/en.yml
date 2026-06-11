@@ -144,3 +144,9 @@ en:
     FILTER_TYPE: 'Element type'
     ORPHANED: Orphaned
     TITLE: 'Grid Elements'
+  WeDevelop\Grid\Validation\HierarchyValidationService:
+    PAGE_LEVEL_REJECTED: 'A {element} cannot be placed at the page level.'
+    PARENT_REJECTED: 'A {element} cannot be placed inside a {parent}.'
+  WeDevelop\Grid\Validation\ReorderValidator:
+    PAGE_LEVEL_REJECTED: 'A {element} cannot be placed at the page level.'
+    PARENT_REJECTED: 'A {element} cannot be placed inside a {parent}.'

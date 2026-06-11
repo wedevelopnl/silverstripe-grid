@@ -17,6 +17,7 @@ use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Validation\ReorderValidator;
+use WeDevelop\Grid\Value\ValidationErrorCode;
 
 #[CoversClass(ReorderValidator::class)]
 final class ReorderValidatorTest extends SapphireTest
@@ -178,5 +179,34 @@ final class ReorderValidatorTest extends SapphireTest
         self::assertArrayHasKey('parent', $error->params);
         self::assertSame($sectionB->singular_name(), $error->params['element']);
         self::assertSame($column->singular_name(), $error->params['parent']);
+    }
+
+    public function testPageLevelViolationCarriesHierarchyViolationCode(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $pageB = $this->objFromFixture(Page::class, 'test_page_2');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        // Row to page level — PAGE_LEVEL_REJECTED
+        $result = $this->getValidator()->validate($row, $pageB);
+
+        self::assertTrue($result->isErr());
+        self::assertSame(ValidationErrorCode::HierarchyViolation, $result->errors()[0]->code);
+    }
+
+    public function testParentViolationCarriesHierarchyViolationCode(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $sectionB = GridTreeFactory::section($page);
+
+        // Section into a Column — PARENT_REJECTED
+        $result = $this->getValidator()->validate($sectionB, $column);
+
+        self::assertTrue($result->isErr());
+        self::assertSame(ValidationErrorCode::HierarchyViolation, $result->errors()[0]->code);
     }
 }

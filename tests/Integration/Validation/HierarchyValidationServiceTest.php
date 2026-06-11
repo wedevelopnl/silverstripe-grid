@@ -17,6 +17,7 @@ use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Validation\HierarchyValidationService;
 use WeDevelop\Grid\Validation\HierarchyValidatorInterface;
+use WeDevelop\Grid\Value\ValidationErrorCode;
 
 #[CoversClass(HierarchyValidationService::class)]
 final class HierarchyValidationServiceTest extends SapphireTest
@@ -235,5 +236,38 @@ final class HierarchyValidationServiceTest extends SapphireTest
         self::assertSame(HierarchyValidationService::class . '.PARENT_REJECTED', $parentError->key);
         self::assertArrayHasKey('element', $parentError->params);
         self::assertArrayHasKey('parent', $parentError->params);
+    }
+
+    public function testPageLevelViolationCarriesHierarchyViolationCode(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+
+        // Row at page level — PAGE_LEVEL_REJECTED
+        $row = GridTreeFactory::row($section);
+        $row->ParentID = $page->ID;
+        $row->ParentClass = $page::class;
+
+        $result = $this->getService()->validate($row);
+
+        self::assertTrue($result->isErr());
+        self::assertSame(ValidationErrorCode::HierarchyViolation, $result->errors()[0]->code);
+    }
+
+    public function testParentViolationCarriesHierarchyViolationCode(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        // Column directly under a Section — PARENT_REJECTED
+        $column = GridTreeFactory::column($row);
+        $column->ParentID = $section->ID;
+        $column->ParentClass = $section::class;
+
+        $result = $this->getService()->validate($column);
+
+        self::assertTrue($result->isErr());
+        self::assertSame(ValidationErrorCode::HierarchyViolation, $result->errors()[0]->code);
     }
 }

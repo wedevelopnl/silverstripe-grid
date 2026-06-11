@@ -10,6 +10,7 @@ use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
+use WeDevelop\Grid\Value\ValidationErrorCode;
 
 class HierarchyValidationService implements HierarchyValidatorInterface
 {
@@ -31,6 +32,7 @@ class HierarchyValidationService implements HierarchyValidatorInterface
                         $element->singular_name(),
                     ),
                     field: 'placement',
+                    code: ValidationErrorCode::HierarchyViolation,
                     key: self::class . '.PAGE_LEVEL_REJECTED',
                     params: ['element' => $element->singular_name()],
                 ));
@@ -51,6 +53,7 @@ class HierarchyValidationService implements HierarchyValidatorInterface
                 $parent->singular_name(),
             ),
             field: 'placement',
+            code: ValidationErrorCode::HierarchyViolation,
             key: self::class . '.PARENT_REJECTED',
             params: ['element' => $element->singular_name(), 'parent' => $parent->singular_name()],
         ));

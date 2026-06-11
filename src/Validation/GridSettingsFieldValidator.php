@@ -80,6 +80,17 @@ final class GridSettingsFieldValidator extends FieldValidator
             );
         }
 
+        if ($config->offset < 0) {
+            $result->addFieldError(
+                $this->name,
+                sprintf(
+                    'Offset %d for viewport "%s" must be at least 0.',
+                    $config->offset,
+                    $viewport,
+                ),
+            );
+        }
+
         if ($config->offset >= $this->columnCount) {
             $result->addFieldError(
                 $this->name,
