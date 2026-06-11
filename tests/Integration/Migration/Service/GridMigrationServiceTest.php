@@ -585,6 +585,123 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertGreaterThanOrEqual(1, $liveElements->count());
     }
 
+    public function testLiveOnlyContentGetsSameGroupedStructureAsDraftPath(): void
+    {
+        // Live-only content must flow through the same ElementGrouper + strategy
+        // as the draft path, NOT a flat one-element-per-section chain.
+        //
+        // Layout (live-only): [E1(w6), E2(w6)] then a row boundary then [E3(w12)].
+        // Expected grouped structure (RowPerSectionStrategy):
+        //   Section 1 → Row → Column [E1, E2]  (consecutive identical width=6 grouped)
+        //   Section 2 → Row → Column [E3]      (row delimiter starts a new section)
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        // Two consecutive content elements with identical grid settings (live-only)
+        $this->seeder->seedElement(6200, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 6,
+            'Title' => 'LO First',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(6200, [], stage: 'live');
+        $this->seeder->seedElement(6201, $areaId, self::CONTENT_CLASS, 2, [
+            'SizeMD' => 6,
+            'Title' => 'LO Second',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(6201, [], stage: 'live');
+
+        // A row delimiter, then a third element (live-only)
+        $this->seeder->seedElement(6202, $areaId, self::ROW_CLASS, 3, stage: 'live');
+        $this->seeder->seedRow(6202, stage: 'live');
+        $this->seeder->seedElement(6203, $areaId, self::CONTENT_CLASS, 4, [
+            'SizeMD' => 12,
+            'Title' => 'LO Third',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(6203, [], stage: 'live');
+
+        $this->runMigration();
+
+        // The grouped structure must exist on BOTH stages (Versioned integrity)
+        foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
+            Versioned::set_stage($stage);
+
+            $sections = Section::get()->filter([
+                'ParentID' => $pageId,
+                'Zone' => self::ZONE,
+            ])->sort('Sort', 'ASC');
+            self::assertCount(2, $sections, "Stage {$stage}: row boundary should split into 2 sections, not a flat chain");
+
+            $sectionList = $sections->toArray();
+
+            // Section 1: one row, one column holding BOTH grouped elements
+            $firstRow = Row::get()->filter(['ParentID' => $sectionList[0]->ID])->first();
+            self::assertInstanceOf(Row::class, $firstRow);
+            $firstColumns = Column::get()->filter(['ParentID' => $firstRow->ID]);
+            self::assertCount(1, $firstColumns, "Stage {$stage}: identical-grid elements should share one column");
+            $firstColumn = $firstColumns->first();
+            self::assertInstanceOf(Column::class, $firstColumn);
+            self::assertSame(6, $firstColumn->getGridSettings()->default->width);
+            $firstColumnElements = ContentElement::get()
+                ->filter(['ParentID' => $firstColumn->ID])
+                ->sort('Sort', 'ASC');
+            self::assertCount(2, $firstColumnElements, "Stage {$stage}: both grouped elements live in the shared column");
+            self::assertSame('LO First', $firstColumnElements->first()->Title);
+            self::assertSame('LO Second', $firstColumnElements->last()->Title);
+
+            // Section 2: separate section (created by the row boundary), width=12
+            $secondRow = Row::get()->filter(['ParentID' => $sectionList[1]->ID])->first();
+            self::assertInstanceOf(Row::class, $secondRow);
+            $secondColumn = Column::get()->filter(['ParentID' => $secondRow->ID])->first();
+            self::assertInstanceOf(Column::class, $secondColumn);
+            self::assertSame(12, $secondColumn->getGridSettings()->default->width);
+            $thirdElement = ContentElement::get()->filter(['ParentID' => $secondColumn->ID])->first();
+            self::assertInstanceOf(ContentElement::class, $thirdElement);
+            self::assertSame('LO Third', $thirdElement->Title);
+        }
+    }
+
+    public function testLiveOnlySectionsAppendAfterDraftSections(): void
+    {
+        // When a page has both draft content and additional live-only content,
+        // the live-only Sections must be sorted AFTER the draft Sections (offset
+        // past existing sort values), not collide at Sort=1.
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        // Draft + live shared element (becomes Section sort 1)
+        foreach (['draft', 'live'] as $stage) {
+            $this->seeder->seedElement(6300, $areaId, self::CONTENT_CLASS, 1, [
+                'SizeMD' => 12,
+                'Title' => 'Shared',
+            ], stage: $stage);
+            $this->seeder->seedContentMedia(6300, [], stage: $stage);
+        }
+
+        // Live-only element (must append as a new Section after the shared one)
+        $this->seeder->seedElement(6301, $areaId, self::CONTENT_CLASS, 2, [
+            'SizeMD' => 8,
+            'Title' => 'Live Extra',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(6301, [], stage: 'live');
+
+        $this->runMigration();
+
+        Versioned::set_stage(Versioned::LIVE);
+        $sections = Section::get()->filter([
+            'ParentID' => $pageId,
+            'Zone' => self::ZONE,
+        ])->sort('Sort', 'ASC');
+        self::assertCount(2, $sections, 'Live stage: one shared section + one live-only section');
+
+        $sortValues = [];
+        foreach ($sections as $section) {
+            $sortValues[] = (int) $section->Sort;
+        }
+        // Distinct, ascending sort values — live-only section appended, not colliding
+        self::assertSame([1, 2], $sortValues, 'Live-only section must append after the draft section');
+    }
+
     public function testDraftAndLiveMigratedWithSameId(): void
     {
         $pageId = $this->getPageId();
@@ -803,6 +920,54 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertSame('Content In Row', $liveElements->first()->Title);
     }
 
+    public function testDraftAndLiveSortAgreeForElementOnBothStages(): void
+    {
+        // Two elements with identical grid settings group into ONE column, so
+        // they receive column-local Sort 1 and 2 on draft. Their legacy
+        // area-wide sort values are 2 and 3. The live UPDATE must use the
+        // column-local draft Sort (1, 2), not the legacy area-wide value (2, 3),
+        // so both stages order the column's children identically.
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        foreach (['draft', 'live'] as $stage) {
+            $this->seeder->seedElement(5900, $areaId, self::CONTENT_CLASS, 2, [
+                'SizeMD' => 6,
+                'Title' => 'First',
+            ], stage: $stage);
+            $this->seeder->seedContentMedia(5900, [], stage: $stage);
+
+            $this->seeder->seedElement(5901, $areaId, self::CONTENT_CLASS, 3, [
+                'SizeMD' => 6,
+                'Title' => 'Second',
+            ], stage: $stage);
+            $this->seeder->seedContentMedia(5901, [], stage: $stage);
+        }
+
+        $this->runMigration();
+
+        Versioned::set_stage(Versioned::DRAFT);
+        $draftFirst = ContentElement::get()->filter(['Title' => 'First'])->first();
+        $draftSecond = ContentElement::get()->filter(['Title' => 'Second'])->first();
+        self::assertInstanceOf(ContentElement::class, $draftFirst);
+        self::assertInstanceOf(ContentElement::class, $draftSecond);
+
+        Versioned::set_stage(Versioned::LIVE);
+        $liveFirst = ContentElement::get()->filter(['Title' => 'First'])->first();
+        $liveSecond = ContentElement::get()->filter(['Title' => 'Second'])->first();
+        self::assertInstanceOf(ContentElement::class, $liveFirst);
+        self::assertInstanceOf(ContentElement::class, $liveSecond);
+
+        // Draft assigns column-local 1, 2 (not the legacy area-wide 2, 3)
+        self::assertSame(1, (int) $draftFirst->Sort);
+        self::assertSame(2, (int) $draftSecond->Sort);
+
+        // Live Sort must equal the draft Sort for each element
+        self::assertSame((int) $draftFirst->Sort, (int) $liveFirst->Sort, 'First: draft and live Sort must agree');
+        self::assertSame((int) $draftSecond->Sort, (int) $liveSecond->Sort, 'Second: draft and live Sort must agree');
+    }
+
     // ─── Test Group 4: Idempotency + dry-run (tests 19-21) ──────
 
     public function testRunTwiceSkipsSecondRunNoDuplicates(): void
@@ -860,6 +1025,37 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertStringContainsString('1 section(s)', $dryRunLog);
         self::assertStringContainsString('1 row(s)', $dryRunLog);
         self::assertStringContainsString('2 column(s)', $dryRunLog);
+    }
+
+    public function testMigrationRestoresProjectLevelAutoScaffoldFalse(): void
+    {
+        // A project may set auto_scaffold: false on Section/Row. The migration
+        // suppresses scaffolding internally but MUST restore the captured value,
+        // not a hardcoded true, so the project's configuration survives.
+        $originalSection = Section::config()->get('auto_scaffold');
+        $originalRow = Row::config()->get('auto_scaffold');
+
+        Section::config()->set('auto_scaffold', false);
+        Row::config()->set('auto_scaffold', false);
+
+        try {
+            $pageId = $this->getPageId();
+            $this->seedStandardPage($pageId);
+
+            $this->runMigration();
+
+            self::assertFalse(
+                (bool) Section::config()->get('auto_scaffold'),
+                'Section auto_scaffold must be restored to the pre-set false, not clobbered to true',
+            );
+            self::assertFalse(
+                (bool) Row::config()->get('auto_scaffold'),
+                'Row auto_scaffold must be restored to the pre-set false, not clobbered to true',
+            );
+        } finally {
+            Section::config()->set('auto_scaffold', $originalSection);
+            Row::config()->set('auto_scaffold', $originalRow);
+        }
     }
 
     // ─── Test Group 5: Transaction safety (test 22) ──────────────

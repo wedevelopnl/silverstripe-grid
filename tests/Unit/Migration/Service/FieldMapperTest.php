@@ -708,6 +708,126 @@ final class FieldMapperTest extends TestCase
         self::assertSame(0, $settings->getOverride('xs')?->offset);
     }
 
+    // ─── Visibility literal mapping ───────────────────────────────────────────
+
+    /**
+     * Each case: [rawVisibility, expectedDefaultVisible, expectsWarning].
+     *
+     * Drives the default-viewport visibility resolution. '' and null are "not
+     * configured" and fall back to the documented default (true). 'visible' and
+     * 'hidden' map explicitly. Any other non-empty value is unexpected legacy
+     * data: it must NOT silently hide the element (fail closed) — it falls back
+     * to the default and logs a warning.
+     *
+     * @return iterable<string, array{string|null, bool, bool}>
+     */
+    public static function defaultVisibilityProvider(): iterable
+    {
+        yield 'empty string → default true, no warning' => ['', true, false];
+        yield 'null → default true, no warning' => [null, true, false];
+        yield 'visible → true, no warning' => ['visible', true, false];
+        yield 'hidden → false, no warning' => ['hidden', false, false];
+        yield 'unrecognised value → default true + warning' => ['somethingelse', true, true];
+    }
+
+    #[DataProvider('defaultVisibilityProvider')]
+    public function testDefaultViewportVisibilityMapping(?string $rawVisibility, bool $expectedVisible, bool $expectsWarning): void
+    {
+        $warnings = [];
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->method('warning')->willReturnCallback(
+            static function (string|\Stringable $message) use (&$warnings): void {
+                $warnings[] = (string) $message;
+            },
+        );
+
+        $mapper = new FieldMapper(logger: $logger);
+        $element = LegacyElementFactory::content(id: 7, overrides: [
+            'sizeFields' => ['MD' => 8],
+            'offsetFields' => ['MD' => 0],
+            'visibilityFields' => $rawVisibility === null ? [] : ['MD' => $rawVisibility],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertSame($expectedVisible, $settings->default->visible);
+
+        $unrecognisedWarnings = \array_filter(
+            $warnings,
+            static fn (string $msg): bool => \str_contains($msg, 'Unrecognised visibility value'),
+        );
+        if ($expectsWarning) {
+            self::assertNotEmpty($unrecognisedWarnings, 'Expected an unrecognised-visibility warning');
+        } else {
+            self::assertEmpty($unrecognisedWarnings, 'Did not expect an unrecognised-visibility warning');
+        }
+    }
+
+    public function testUnrecognisedVisibilityWarningContainsElementIdValueAndViewport(): void
+    {
+        // Pins the warning context keys so the diagnostic stays actionable.
+        /** @var array<string, mixed>|null $context */
+        $context = null;
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::atLeastOnce())
+            ->method('warning')
+            ->with(
+                self::stringContains('Unrecognised visibility value'),
+                self::callback(static function (array $ctx) use (&$context): bool {
+                    $context = $ctx;
+                    return true;
+                }),
+            );
+
+        $mapper = new FieldMapper(logger: $logger);
+        $element = LegacyElementFactory::content(id: 99, overrides: [
+            'sizeFields' => ['MD' => 8],
+            'offsetFields' => ['MD' => 0],
+            'visibilityFields' => ['MD' => 'bogus'],
+        ]);
+
+        $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertNotNull($context);
+        self::assertSame('bogus', $context['value']);
+        self::assertSame(99, $context['elementId']);
+        self::assertSame('default', $context['viewport']);
+    }
+
+    public function testUnrecognisedVisibilityOnOverrideViewportFallsBackToDefaultWithWarning(): void
+    {
+        // An unrecognised override-viewport visibility must not fabricate a
+        // hidden override; it falls back to the default's visibility (true here)
+        // so no visibility-driven override is produced, and a warning is logged.
+        $warnings = [];
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->method('warning')->willReturnCallback(
+            static function (string|\Stringable $message, array $ctx) use (&$warnings): void {
+                $warnings[] = ['message' => (string) $message, 'context' => $ctx];
+            },
+        );
+
+        $mapper = new FieldMapper(logger: $logger);
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8, 'XS' => 8],
+            'offsetFields' => ['MD' => 0, 'XS' => 0],
+            'visibilityFields' => ['MD' => 'visible', 'XS' => 'weird'],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md', 'XS' => 'xs']);
+
+        // Same size/offset as default, visibility unrecognised → treated as unset → no override.
+        self::assertFalse($settings->hasOverride('xs'));
+
+        $xsWarnings = \array_filter(
+            $warnings,
+            static fn (array $w): bool => \str_contains($w['message'], 'Unrecognised visibility value')
+                && ($w['context']['viewport'] ?? null) === 'xs',
+        );
+        self::assertNotEmpty($xsWarnings, 'Expected a warning tagged with the xs viewport');
+    }
+
     // ─── Clamp-warning log context ────────────────────────────────────────────
 
     public function testClampLogContextContainsOldAndNewWidthAndOffset(): void

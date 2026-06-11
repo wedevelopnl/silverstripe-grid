@@ -106,7 +106,7 @@ final class FieldMapper
         $defaultConfig = new ViewportConfig(
             width: $rawWidth > 0 ? $rawWidth : $this->columnCount,
             offset: $element->offsetFields[$defaultViewport] ?? 0,
-            visible: $this->mapVisibility($element->visibilityFields[$defaultViewport] ?? null) ?? true,
+            visible: $this->mapVisibility($element->visibilityFields[$defaultViewport] ?? null, $element->id, 'default') ?? true,
         );
         $defaultConfig = $this->clampViewportConfig($defaultConfig, $element->id, 'default');
 
@@ -125,7 +125,7 @@ final class FieldMapper
 
             $size = $element->sizeFields[$oldKey] ?? 0;
             $offset = $element->offsetFields[$oldKey] ?? 0;
-            $visible = $this->mapVisibility($element->visibilityFields[$oldKey] ?? null);
+            $visible = $this->mapVisibility($element->visibilityFields[$oldKey] ?? null, $element->id, $newKey);
 
             // Size=0 with no offset and no explicit visibility means the field was never set
             if ($size === 0 && $offset === 0 && $visible === null) {
@@ -247,17 +247,41 @@ final class FieldMapper
     }
 
     /**
-     * Map a visibility string to a boolean, or null when the field is unset.
+     * Map a visibility string to a boolean, or null when the field is unset
+     * or unrecognised.
      *
      * Null and empty string both represent "not explicitly configured" and
-     * allow the caller to fall back to a default.
+     * allow the caller to fall back to a default. The known literals 'visible'
+     * and 'hidden' map to true and false respectively. Any other non-empty
+     * value is unexpected legacy data: rather than silently failing closed
+     * (hiding the element), it is logged and treated as "not configured" so
+     * the caller's documented default applies.
+     *
+     * @param int|string $elementId Element identifier for diagnostic logging
      */
-    private function mapVisibility(?string $value): ?bool
+    private function mapVisibility(?string $value, int|string $elementId, string $viewport): ?bool
     {
         if ($value === null || $value === '') {
             return null;
         }
 
-        return $value === 'visible';
+        if ($value === 'visible') {
+            return true;
+        }
+
+        if ($value === 'hidden') {
+            return false;
+        }
+
+        $this->logger?->warning(
+            'Unrecognised visibility value "{value}" for element {elementId} viewport "{viewport}"; falling back to default.',
+            [
+                'value' => $value,
+                'elementId' => $elementId,
+                'viewport' => $viewport,
+            ],
+        );
+
+        return null;
     }
 }

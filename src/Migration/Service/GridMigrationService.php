@@ -69,7 +69,7 @@ final class GridMigrationService
             $pageClassName = $pageInfo['pageClassName'];
 
             try {
-                $this->migratePage($pageId, $areaId, $pageClassName, $defaultViewport, $zone, $viewportKeyMap, $dryRun);
+                $this->migratePage($pageId, $areaId, $pageClassName, $zone, $dryRun);
             } catch (Throwable $exception) {
                 $failures++;
                 $this->logger->error('Migration failed for page {pageId}: {message}', [
@@ -89,16 +89,17 @@ final class GridMigrationService
     /**
      * Migrate a single page's legacy elements to the new grid hierarchy.
      *
+     * Grid-settings / viewport mapping is handled entirely by the injected
+     * {@see RowMappingStrategy} (constructed with the default viewport and
+     * viewport key map), so those values are not threaded through here.
+     *
      * @param class-string $pageClassName Concrete page class (e.g. 'Page', not 'SiteTree')
-     * @param array<string, string> $viewportKeyMap
      */
     private function migratePage(
         int $pageId,
         int $areaId,
         string $pageClassName,
-        string $defaultViewport,
         string $zone,
-        array $viewportKeyMap,
         bool $dryRun,
     ): void {
         // Step 1: Idempotency — skip if Sections already exist for this page + zone
@@ -141,6 +142,12 @@ final class GridMigrationService
         }
         $conn->transactionStart();
 
+        // Capture the current auto_scaffold values so the finally block can
+        // restore the project's actual configuration rather than a hardcoded
+        // default. A project may legitimately set auto_scaffold: false.
+        $sectionAutoScaffold = (bool) Section::config()->get('auto_scaffold');
+        $rowAutoScaffold = (bool) Row::config()->get('auto_scaffold');
+
         try {
             // Suppress auto-scaffolding process-wide during migration to prevent
             // Section/Row onAfterWrite hooks from creating duplicate child records.
@@ -154,6 +161,8 @@ final class GridMigrationService
                 $oldToNewElementId = [];
                 /** @var array<int, int> $oldToNewColumnId */
                 $oldToNewColumnId = [];
+                /** @var array<int, int> $oldToDraftSort */
+                $oldToDraftSort = [];
 
                 Versioned::withVersionedMode(function () use (
                     $pageId,
@@ -162,9 +171,10 @@ final class GridMigrationService
                     $sections,
                     &$oldToNewElementId,
                     &$oldToNewColumnId,
+                    &$oldToDraftSort,
                 ): void {
                     Versioned::set_stage(Versioned::DRAFT);
-                    $this->writeDraftHierarchy($pageId, $pageClassName, $zone, $sections, $oldToNewElementId, $oldToNewColumnId);
+                    $this->writeDraftHierarchy($pageId, $pageClassName, $zone, $sections, $oldToNewElementId, $oldToNewColumnId, $oldToDraftSort);
                 });
 
                 // Step 7: Publish draft records to live for elements that also existed on live.
@@ -173,15 +183,31 @@ final class GridMigrationService
                 // overwriteLiveContent() then corrects _Live with live-specific values.
                 $liveElements = $this->reader->getElementsForArea($areaId, 'live');
                 if ($liveElements !== []) {
+                    // Build the set of legacy DRAFT element IDs (rows AND content
+                    // elements). A live element is "live-only" only when its legacy
+                    // ID has no draft counterpart in this set; elements present on
+                    // both legacy stages are "shared" and must be published from the
+                    // draft records, never re-created as a live-only hierarchy.
+                    //
+                    // $oldToNewElementId cannot be used for this test: it only holds
+                    // content elements (row delimiters are grouping boundaries and are
+                    // never written as records), so a shared row would be misread as
+                    // live-only and spawn a spurious section.
+                    /** @var array<int, true> $draftLegacyIds */
+                    $draftLegacyIds = [];
+                    foreach ($draftElements as $draftElement) {
+                        $draftLegacyIds[$draftElement->id] = true;
+                    }
+
                     Versioned::withVersionedMode(function () use (
                         $pageId,
                         $pageClassName,
                         $zone,
                         $liveElements,
+                        $draftLegacyIds,
                         $oldToNewElementId,
                         $oldToNewColumnId,
-                        $defaultViewport,
-                        $viewportKeyMap,
+                        $oldToDraftSort,
                     ): void {
                         Versioned::set_stage(Versioned::DRAFT);
                         $this->publishToLive(
@@ -189,10 +215,10 @@ final class GridMigrationService
                             $pageClassName,
                             $zone,
                             $liveElements,
+                            $draftLegacyIds,
                             $oldToNewElementId,
                             $oldToNewColumnId,
-                            $defaultViewport,
-                            $viewportKeyMap,
+                            $oldToDraftSort,
                         );
                     });
                 }
@@ -204,9 +230,9 @@ final class GridMigrationService
 
                 $this->logger->info('Successfully migrated page {pageId}.', ['pageId' => $pageId]);
             } finally {
-                // Step 9: Restore auto-scaffolding
-                Section::config()->set('auto_scaffold', true);
-                Row::config()->set('auto_scaffold', true);
+                // Step 9: Restore auto-scaffolding to the previously captured values.
+                Section::config()->set('auto_scaffold', $sectionAutoScaffold);
+                Row::config()->set('auto_scaffold', $rowAutoScaffold);
             }
         } catch (Throwable $exception) {
             $conn->transactionRollback();
@@ -241,6 +267,7 @@ final class GridMigrationService
      * @param list<MigrationSection> $sections
      * @param array<int, int> $oldToNewElementId Populated by reference
      * @param array<int, int> $oldToNewColumnId Populated by reference
+     * @param array<int, int> $oldToDraftSort Populated by reference: old element ID → column-local Sort assigned on draft
      */
     private function writeDraftHierarchy(
         int $pageId,
@@ -249,6 +276,7 @@ final class GridMigrationService
         array $sections,
         array &$oldToNewElementId,
         array &$oldToNewColumnId,
+        array &$oldToDraftSort,
     ): void {
         foreach ($sections as $migrationSection) {
             $section = $this->createSection($migrationSection, $pageId, $pageClassName, $zone);
@@ -267,6 +295,7 @@ final class GridMigrationService
 
                         $oldToNewElementId[$legacyElement->id] = (int) $newElement->ID;
                         $oldToNewColumnId[$legacyElement->id] = $columnId;
+                        $oldToDraftSort[$legacyElement->id] = $elementSort;
                         $elementSort++;
                     }
                 }
@@ -321,7 +350,7 @@ final class GridMigrationService
      * Build a GridElement from legacy data without writing.
      *
      * Shared by both draft creation (writeDraftHierarchy) and live-only
-     * creation (createLiveOnlyElement) to avoid duplicating the field
+     * creation (createLiveOnlyHierarchy) to avoid duplicating the field
      * mapping, class name resolution, and extension hook logic.
      */
     private function buildContentElement(LegacyElement $legacyElement, int $columnId, int $sort): GridElement
@@ -379,60 +408,79 @@ final class GridMigrationService
      *
      * @param class-string $pageClassName
      * @param list<LegacyElement> $liveElements
+     * @param array<int, true> $draftLegacyIds Set of legacy element IDs present on the draft area (rows + content)
      * @param array<int, int> $oldToNewElementId
      * @param array<int, int> $oldToNewColumnId
-     * @param array<string, string> $viewportKeyMap
+     * @param array<int, int> $oldToDraftSort Old element ID → column-local Sort assigned on draft
      */
     private function publishToLive(
         int $pageId,
         string $pageClassName,
         string $zone,
         array $liveElements,
+        array $draftLegacyIds,
         array $oldToNewElementId,
         array $oldToNewColumnId,
-        string $defaultViewport,
-        array $viewportKeyMap,
+        array $oldToDraftSort,
     ): void {
         // Track which containers we've already published
         /** @var array<int, bool> $publishedContainers */
         $publishedContainers = [];
 
+        // Live-only elements are collected and processed as a single grouped
+        // hierarchy after the loop, mirroring the draft path. Row delimiters are
+        // retained in the collection so ElementGrouper can honour row boundaries.
+        /** @var list<LegacyElement> $liveOnlyElements */
+        $liveOnlyElements = [];
+
         foreach ($liveElements as $liveElement) {
+            $oldId = $liveElement->id;
+            $existsOnDraft = \array_key_exists($oldId, $draftLegacyIds);
+
+            if (!$existsOnDraft) {
+                // Live-only element (or live-only row delimiter) — defer to the
+                // grouped hierarchy build below. Rows carry no draft counterpart
+                // and act purely as grouping boundaries.
+                $liveOnlyElements[] = $liveElement;
+                continue;
+            }
+
+            // Row delimiters that exist on both stages are not written as
+            // records on either stage — skip publishing them. (Shared rows live
+            // in $draftLegacyIds but never in $oldToNewElementId, so they reach
+            // this branch rather than the live-only collection above.)
             if ($liveElement->isRow) {
                 continue;
             }
 
-            $oldId = $liveElement->id;
+            // Element exists on both stages — publish existing draft records to live
+            $newElementId = $oldToNewElementId[$oldId];
+            $newColumnId = $oldToNewColumnId[$oldId];
 
-            if (\array_key_exists($oldId, $oldToNewElementId)) {
-                // Element exists on both stages — publish existing draft records to live
-                $newElementId = $oldToNewElementId[$oldId];
-                $newColumnId = $oldToNewColumnId[$oldId];
+            $this->publishContainerChain($newColumnId, $publishedContainers);
 
-                $this->publishContainerChain($newColumnId, $publishedContainers);
+            $element = GridElement::get()->byID($newElementId);
+            if ($element instanceof GridElement) {
+                // Publish draft structure to live (creates _Live rows with
+                // correct ID, ParentID, ParentClass, ClassName).
+                $element->writeToStage(Versioned::LIVE);
 
-                $element = GridElement::get()->byID($newElementId);
-                if ($element instanceof GridElement) {
-                    // Publish draft structure to live (creates _Live rows with
-                    // correct ID, ParentID, ParentClass, ClassName).
-                    $element->writeToStage(Versioned::LIVE);
-
-                    // Overwrite live content fields with live-specific values,
-                    // since writeToStage copied draft content to live.
-                    $this->overwriteLiveContent($newElementId, $liveElement);
-                }
-            } else {
-                // Live-only element — create new records on both draft and live
-                $this->createLiveOnlyElement(
-                    $liveElement,
-                    $pageId,
-                    $pageClassName,
-                    $zone,
-                    $publishedContainers,
-                    $defaultViewport,
-                    $viewportKeyMap,
-                );
+                // Overwrite live content fields with live-specific values,
+                // since writeToStage copied draft content to live. The Sort is
+                // the column-local value assigned on draft (not the legacy
+                // area-wide value) so both stages order the column identically.
+                $this->overwriteLiveContent($newElementId, $liveElement, $oldToDraftSort[$oldId]);
             }
+        }
+
+        if ($liveOnlyElements !== []) {
+            $this->createLiveOnlyHierarchy(
+                $liveOnlyElements,
+                $pageId,
+                $pageClassName,
+                $zone,
+                $publishedContainers,
+            );
         }
     }
 
@@ -477,8 +525,15 @@ final class GridMigrationService
      * After writeToStage(LIVE) copies draft content to the _Live tables,
      * this method corrects the live rows with the actual live element data.
      * This prevents draft-only changes from leaking onto the live site.
+     *
+     * The Sort written here is the column-local value assigned to the element
+     * on draft, NOT the legacy area-wide {@see LegacyElement::$sort}. Using the
+     * draft Sort keeps both stages ordering the column's children identically;
+     * writing the raw legacy Sort would diverge the two stages.
+     *
+     * @param int $draftSort Column-local Sort assigned to this element on draft
      */
-    private function overwriteLiveContent(int $newElementId, LegacyElement $liveElement): void
+    private function overwriteLiveContent(int $newElementId, LegacyElement $liveElement, int $draftSort): void
     {
         // Base fields on GridElement_Live
         /** @var 'h1'|'h2'|'h3'|'h4'|'h5'|'h6' $titleTag */
@@ -498,7 +553,7 @@ final class GridMigrationService
                 $liveElement->showTitle ? 1 : 0,
                 $titleTag,
                 $liveElement->titleClass,
-                $liveElement->sort,
+                $draftSort,
                 $liveElement->extraClass,
                 $newElementId,
             ],
@@ -541,65 +596,110 @@ final class GridMigrationService
     }
 
     /**
-     * Create a live-only element with its container chain on both stages.
+     * Create the live-only content as a grouped Section → Row → Column → Element
+     * hierarchy on BOTH stages.
      *
-     * Live-only elements need records on BOTH draft and live to maintain
-     * Versioned integrity. We create a minimal Section→Row→Column chain
-     * if one doesn't already exist.
+     * Live-only elements (present on the legacy live area with no draft
+     * counterpart) still require a draft row: SilverStripe's Versioned stores the
+     * canonical record in the base (draft) table, and a freshly created object
+     * written through {@see Versioned::writeToStage()} with stage LIVE inserts the
+     * base-table row regardless (see Versioned::augmentWriteStaged — the pre-insert
+     * DELETE is a no-op for a brand-new record). Both stages are therefore written
+     * explicitly so the records are well-formed (`write()` for draft, then
+     * `writeToStage(LIVE)` to publish).
      *
+     * IMPORTANT: only genuinely live-only legacy elements reach this method. The
+     * caller classifies an element as live-only solely when its legacy ID has no
+     * counterpart on the legacy *draft* area (see $draftLegacyIds in publishToLive),
+     * so shared elements — including shared row delimiters — are never re-created
+     * here. That guard is what keeps draft/live divergence intact: a shared element
+     * is published from its existing draft record, not duplicated as a new section.
+     *
+     * To match the layout the draft path produces, the elements are run through the
+     * same configured strategy (ElementGrouper + grid-settings grouping + row
+     * boundaries) rather than given a dedicated chain each. Records are written
+     * top-down (Section → Row → Column → Element) so each child can reference its
+     * just-written parent ID. The resulting Sections are sorted after any Sections
+     * already created on this page + zone from the draft path; both stages share one
+     * Sort sequence, so the draft max-Sort yields the correct live append offset.
+     *
+     * @param list<LegacyElement> $liveOnlyElements Live-only elements (may include row delimiters), in original order
      * @param class-string $pageClassName
-     * @param array<int, bool> $publishedContainers
-     * @param array<string, string> $viewportKeyMap
+     * @param array<int, bool> $publishedContainers Modified by reference
      */
-    private function createLiveOnlyElement(
-        LegacyElement $liveElement,
+    private function createLiveOnlyHierarchy(
+        array $liveOnlyElements,
         int $pageId,
         string $pageClassName,
         string $zone,
         array &$publishedContainers,
-        string $defaultViewport,
-        array $viewportKeyMap,
     ): void {
-        // Build grid settings for the live-only element
-        $gridSettings = $this->mapper->mapGridSettings($liveElement, $defaultViewport, $viewportKeyMap);
+        $sections = $this->strategy->buildHierarchy($liveOnlyElements, $pageId, $zone);
+        if ($sections === []) {
+            return;
+        }
 
-        // Create Section → Row → Column on draft first
+        // Offset the strategy's 1-based section sort past any sections the draft
+        // path already wrote for this page + zone, so live-only content appends
+        // rather than colliding with existing sort values.
+        $sortOffset = $this->getNextSectionSort($pageId, $pageClassName, $zone) - 1;
+
+        foreach ($sections as $migrationSection) {
+            $sectionSort = $migrationSection->sort + $sortOffset;
+            $section = $this->createSectionWithSort($migrationSection, $pageId, $pageClassName, $zone, $sectionSort);
+            $sectionId = (int) $section->ID;
+
+            foreach ($migrationSection->rows as $migrationRow) {
+                $row = $this->createRow($migrationRow, $sectionId);
+                $rowId = (int) $row->ID;
+
+                foreach ($migrationRow->columns as $migrationColumn) {
+                    $column = $this->createColumn($migrationColumn, $rowId);
+                    $columnId = (int) $column->ID;
+
+                    $elementSort = 1;
+                    foreach ($migrationColumn->elements as $legacyElement) {
+                        $newElement = $this->buildContentElement($legacyElement, $columnId, $elementSort);
+                        $newElement->write();
+                        $newElement->writeToStage(Versioned::LIVE);
+                        $elementSort++;
+                    }
+
+                    $column->writeToStage(Versioned::LIVE);
+                    $publishedContainers[$columnId] = true;
+                }
+
+                $row->writeToStage(Versioned::LIVE);
+                $publishedContainers[$rowId] = true;
+            }
+
+            $section->writeToStage(Versioned::LIVE);
+            $publishedContainers[$sectionId] = true;
+        }
+    }
+
+    /**
+     * Create a Section with an explicit Sort value (overriding the DTO's sort).
+     *
+     * @param class-string $pageClassName
+     */
+    private function createSectionWithSort(
+        MigrationSection $migration,
+        int $pageId,
+        string $pageClassName,
+        string $zone,
+        int $sort,
+    ): Section {
         $section = Section::create();
         $section->Title = '';
         $section->Zone = $zone;
-        $section->Sort = $this->getNextSectionSort($pageId, $pageClassName, $zone);
+        $section->ExtraClass = $migration->extraClass;
+        $section->Sort = $sort;
         $section->ParentID = $pageId;
         $section->ParentClass = $pageClassName;
         $section->write();
 
-        $row = Row::create();
-        $row->Title = '';
-        $row->Sort = 1;
-        $row->ParentID = (int) $section->ID;
-        $row->ParentClass = Section::class;
-        $row->write();
-
-        $column = Column::create();
-        $column->Title = '';
-        $column->Sort = 1;
-        $column->ParentID = (int) $row->ID;
-        $column->ParentClass = Row::class;
-        $column->setGridSettings($gridSettings);
-        $column->write();
-
-        // Create content element on draft using shared builder
-        $newElement = $this->buildContentElement($liveElement, (int) $column->ID, 1);
-        $newElement->write();
-
-        // Publish all to live
-        $section->writeToStage(Versioned::LIVE);
-        $row->writeToStage(Versioned::LIVE);
-        $column->writeToStage(Versioned::LIVE);
-        $newElement->writeToStage(Versioned::LIVE);
-
-        $publishedContainers[(int) $section->ID] = true;
-        $publishedContainers[(int) $row->ID] = true;
-        $publishedContainers[(int) $column->ID] = true;
+        return $section;
     }
 
     /**
