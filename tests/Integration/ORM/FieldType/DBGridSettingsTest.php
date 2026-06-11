@@ -6,7 +6,10 @@ namespace WeDevelop\Grid\Tests\Integration\ORM\FieldType;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use SilverStripe\Core\Config\Config;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -89,6 +92,37 @@ final class DBGridSettingsTest extends SapphireTest
         $field->setValue('not-json');
 
         self::assertNull($field->getValue());
+    }
+
+    /**
+     * A structurally-malformed JSON payload (valid JSON, but an override entry
+     * missing a required key) is swallowed and coerced to null so a bad
+     * legacy/fixture row does not crash reads — but the suppression must be
+     * observable, so a warning is logged via the Injector-bound logger.
+     */
+    public function testSetValueWithMalformedJsonLogsWarningAndCoercesToNull(): void
+    {
+        $logger = new class () extends NullLogger {
+            /** @var list<string> */
+            public array $warnings = [];
+
+            public function warning(string|\Stringable $message, array $context = []): void
+            {
+                $this->warnings[] = (string) $message;
+            }
+        };
+        Injector::inst()->registerService($logger, LoggerInterface::class);
+
+        // Valid JSON, but the "default" object is missing required keys —
+        // ViewportConfig::fromArray throws InvalidGridValueException.
+        $malformed = '{"default":{"width":6},"overrides":{}}';
+
+        $field = DBGridSettings::create('GridSettings');
+        $field->setValue($malformed);
+
+        self::assertNull($field->getValue(), 'malformed JSON must coerce to null, not crash');
+        self::assertCount(1, $logger->warnings);
+        self::assertStringContainsString('DBGridSettings discarded malformed JSON', $logger->warnings[0]);
     }
 
     public function testGetValueWhenNoData(): void
@@ -277,14 +311,70 @@ final class DBGridSettingsTest extends SapphireTest
         self::assertSame(0, $settings->default->offset);
     }
 
-    public function testGetValueTreatsZeroWidthAsMissingData(): void
+    /**
+     * A stored width of 0 is a legitimately-persisted value, not "no data".
+     * getValue() must surface it (rejecting an out-of-range width is the
+     * validator's job at write time) instead of silently dropping the VO.
+     */
+    public function testGetValuePreservesStoredZeroWidth(): void
     {
         $field = new DBGridSettings('Settings');
         $field->setField('DefaultWidth', 0);
         $field->setField('DefaultOffset', 0);
         $field->setField('DefaultVisible', true);
 
-        self::assertNull($field->getValue(), 'zero width from DB must surface as null, not a malformed ViewportConfig');
+        $value = $field->getValue();
+
+        self::assertNotNull($value, 'stored width=0 must not be conflated with missing data');
+        self::assertSame(0, $value->default->width);
+    }
+
+    /**
+     * A row with width=0 plus non-empty overrides must NOT be silently dropped —
+     * the previous `$width < 1` guard discarded the entire VO including overrides.
+     */
+    public function testGetValueWithZeroWidthDoesNotDropOverrides(): void
+    {
+        $field = new DBGridSettings('Settings');
+        $field->setField('DefaultWidth', 0);
+        $field->setField('DefaultOffset', 0);
+        $field->setField('DefaultVisible', true);
+        $field->setField('Overrides', json_encode([
+            'md' => ['width' => 6, 'offset' => 1, 'visible' => false],
+        ]));
+
+        $value = $field->getValue();
+
+        self::assertNotNull($value);
+        self::assertArrayHasKey('md', $value->overrides);
+        self::assertSame(6, $value->overrides['md']->width);
+    }
+
+    /**
+     * exists() and getValue() must agree on presence: a stored width=0 makes
+     * the field exist, and getValue() must therefore return a non-null VO.
+     */
+    public function testExistsAndGetValueAgreeOnZeroWidth(): void
+    {
+        $field = new DBGridSettings('Settings');
+        $field->setField('DefaultWidth', 0);
+        $field->setField('DefaultOffset', 0);
+        $field->setField('DefaultVisible', true);
+
+        self::assertTrue($field->exists());
+        self::assertNotNull($field->getValue());
+    }
+
+    /**
+     * exists() and getValue() must agree on absence: with no stored width the
+     * field does not exist and getValue() returns null.
+     */
+    public function testExistsAndGetValueAgreeWhenNoWidth(): void
+    {
+        $field = new DBGridSettings('Settings');
+
+        self::assertFalse($field->exists());
+        self::assertNull($field->getValue());
     }
 
     public function testGetValueDefaultVisibleIsTrue(): void

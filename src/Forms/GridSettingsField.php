@@ -123,6 +123,18 @@ class GridSettingsField extends FormField
         $defaultOffset = is_array($defaultEntry) && is_numeric($defaultEntry['offset'] ?? null)
             ? (int) $defaultEntry['offset']
             : 0;
+        // KNOWN LIMITATION: the default viewport is always visible on submit.
+        // Visibility is derived from checkbox-presence semantics (an unchecked
+        // box is simply absent from the POST body), so `isset(...['visible'])`
+        // can only ever yield true here when the default entry is present —
+        // hiding the DEFAULT viewport is not representable on this submit path.
+        // Per-viewport OVERRIDE entries (below) intentionally use the same
+        // checkbox-presence semantics. The readonly summary still renders a
+        // "(hidden)" suffix for a stored default with visible=false (e.g. set
+        // programmatically), so do not assume default visibility is invariant
+        // on the read side. Making visible=false round-trip on submit would
+        // require an explicit hidden boolean input; deferred pending a product
+        // decision on whether hiding the default viewport is supported.
         $defaultVisible = is_array($defaultEntry) && isset($defaultEntry['visible']);
 
         $default = new ViewportConfig($defaultWidth, $defaultOffset, $defaultVisible);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\ORM\FieldType;
 
 use Override;
+use Psr\Log\LoggerInterface;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Core\Validation\FieldValidation\CompositeFieldValidator;
 use SilverStripe\Forms\FormField;
@@ -48,7 +49,13 @@ final class DBGridSettings extends DBComposite
     /**
      * Reconstruct the GridSettings VO from sub-fields.
      *
-     * Returns null when no data has been stored (e.g., unsaved record).
+     * "No data" is signalled by `DefaultWidth === null` alone — the same
+     * presence test {@see exists()} uses, so the two never disagree. A stored
+     * width of 0 is a legitimately-persisted value and is NOT treated as
+     * missing: discarding it here would silently drop the whole VO (including
+     * overrides) and contradict `exists()`. Rejecting an out-of-range width
+     * (such as 0) is {@see GridSettingsFieldValidator}'s job at write time, not
+     * a read-boundary concern.
      */
     #[Override]
     public function getValue(): ?GridSettings
@@ -56,11 +63,9 @@ final class DBGridSettings extends DBComposite
         /** @var int|null $width */
         $width = $this->getField('DefaultWidth');
 
-        if ($width === null || $width < 1) {
+        if ($width === null) {
             return null;
         }
-
-        /** @var positive-int $width */
 
         /** @var int $offset */
         $offset = $this->getField('DefaultOffset') ?? 0;
@@ -122,7 +127,13 @@ final class DBGridSettings extends DBComposite
             // direct callers of GridSettings::fromJson.
             try {
                 $parsed = GridSettings::fromJson($value);
-            } catch (InvalidGridValueException) {
+            } catch (InvalidGridValueException $e) {
+                // Suppression is observable: log the message (NOT the payload,
+                // which may carry untrusted data) so a malformed legacy/fixture
+                // row is traceable instead of silently vanishing.
+                Injector::inst()->get(LoggerInterface::class)->warning(
+                    sprintf('DBGridSettings discarded malformed JSON value: %s', $e->getMessage()),
+                );
                 $parsed = null;
             }
 
