@@ -96,28 +96,42 @@ class FluentGridPageExtension extends Extension
 
         // Suppress auto-scaffolding during duplication — the cascade already
         // copies real children, and auto-scaffold would create extras.
+        // FluentState::withState only scopes the locale, not Config, so the
+        // override must be captured and restored explicitly in a finally block —
+        // otherwise it leaks for the rest of the request and a later DRAFT
+        // Section/Row write silently skips scaffolding.
+        /** @var bool $priorSectionScaffold */
+        $priorSectionScaffold = Section::config()->get('auto_scaffold');
+        /** @var bool $priorRowScaffold */
+        $priorRowScaffold = Row::config()->get('auto_scaffold');
+
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
-        FluentState::singleton()->withState(function (FluentState $state) use ($sourceLocale, $page, $targetLocaleId): void {
-            $state->setLocale($sourceLocale);
+        try {
+            FluentState::singleton()->withState(function (FluentState $state) use ($sourceLocale, $page, $targetLocaleId): void {
+                $state->setLocale($sourceLocale);
 
-            foreach ($page->Sections() as $section) {
-                /** @var Section $clone */
-                $clone = $section->duplicate(true);
+                foreach ($page->Sections() as $section) {
+                    /** @var Section $clone */
+                    $clone = $section->duplicate(true);
 
-                // Collect all cloned elements while in source locale (where they're visible)
-                $allCloned = $this->collectTree($clone);
+                    // Collect all cloned elements while in source locale (where they're visible)
+                    $allCloned = $this->collectTree($clone);
 
-                // Reassign all LocaleIDs to the target locale.
-                // FluentIsolatedExtension::onBeforeWrite only auto-assigns when empty,
-                // so we must set it explicitly since duplicate() copies the source LocaleID.
-                foreach ($allCloned as $element) {
-                    $element->LocaleID = $targetLocaleId;
-                    $element->write();
+                    // Reassign all LocaleIDs to the target locale.
+                    // FluentIsolatedExtension::onBeforeWrite only auto-assigns when empty,
+                    // so we must set it explicitly since duplicate() copies the source LocaleID.
+                    foreach ($allCloned as $element) {
+                        $element->LocaleID = $targetLocaleId;
+                        $element->write();
+                    }
                 }
-            }
-        });
+            });
+        } finally {
+            Config::modify()->set(Section::class, 'auto_scaffold', $priorSectionScaffold);
+            Config::modify()->set(Row::class, 'auto_scaffold', $priorRowScaffold);
+        }
     }
 
     /**

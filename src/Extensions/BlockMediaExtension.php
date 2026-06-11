@@ -6,9 +6,11 @@ namespace WeDevelop\Grid\Extensions;
 
 use Embed\Embed;
 use LogicException;
+use Psr\Log\LoggerInterface;
 use SilverStripe\AssetAdmin\Forms\UploadField;
 use SilverStripe\Assets\Image;
 use SilverStripe\Core\Extension;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\ReadonlyField;
@@ -23,6 +25,7 @@ use WeDevelop\Grid\Value\MediaPosition;
 use WeDevelop\Grid\Value\VerticalAlignment;
 use WeDevelop\MediaField\Form\MediaField;
 use WeDevelop\MediaField\Form\MediaType;
+use Throwable;
 
 /**
  * Adds media (image/video) capability with side-by-side layout to any GridElement.
@@ -110,7 +113,10 @@ class BlockMediaExtension extends Extension
             return false;
         }
 
-        $mediaType = MediaType::from($type);
+        $mediaType = MediaType::tryFrom($type);
+        if ($mediaType === null) {
+            return false;
+        }
 
         return match ($mediaType) {
             MediaType::Image => $this->getMediaImage()->exists(),
@@ -386,7 +392,18 @@ class BlockMediaExtension extends Extension
         /** @var bool $changed */
         $changed = $owner->isChanged('VideoURL', DataObject::CHANGE_VALUE);
         if ($changed && $videoUrl !== '') {
-            $this->resolveVideoEmbed($owner);
+            // resolveVideoEmbed performs a synchronous oEmbed HTTP fetch. A
+            // transient network failure or a malformed-but-non-empty URL must
+            // not abort the whole save — log the failure (message only, the URL
+            // may carry untrusted data) and let the write proceed without embed
+            // metadata.
+            try {
+                $this->resolveVideoEmbed($owner);
+            } catch (Throwable $exception) {
+                Injector::inst()->get(LoggerInterface::class)->warning(
+                    sprintf('BlockMediaExtension failed to resolve video embed: %s', $exception->getMessage()),
+                );
+            }
         }
     }
 
@@ -457,21 +474,28 @@ class BlockMediaExtension extends Extension
 
     private function getCalculatedMediaImageWidth(): int
     {
-        /** @var positive-int $colSize */
-        $colSize = $this->getColSize();
-
-        return $this->getOwner()->gridAdapter->getColumnPixelWidth($colSize);
+        return $this->getOwner()->gridAdapter->getColumnPixelWidth($this->getColSize());
     }
 
-    /** Effective column span for the media side. */
+    /**
+     * Effective column span for the media side.
+     *
+     * Clamped to at least 1: when ContentColumns >= the grid column count the
+     * raw difference would be 0 or negative, which violates the positive-int
+     * contract expected by getColumnPixelWidth()/Fill()/ScaleWidth().
+     *
+     * @return positive-int
+     */
     private function getColSize(): int
     {
         $columnCount = $this->getOwner()->gridAdapter->getColumnCount();
         $contentColumns = $this->getContentColumnsValue();
 
-        return $contentColumns > 0
-            ? ($columnCount - $contentColumns)
-            : $columnCount;
+        if ($contentColumns <= 0) {
+            return max(1, $columnCount);
+        }
+
+        return max(1, $columnCount - $contentColumns);
     }
 
     /** Access the ContentLayoutAdapterInterface through the owner's grid adapter. */

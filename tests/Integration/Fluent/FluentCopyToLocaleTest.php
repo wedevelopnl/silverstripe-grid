@@ -250,6 +250,73 @@ final class FluentCopyToLocaleTest extends SapphireTest
     }
 
     /**
+     * copyGridFromLocale suppresses auto_scaffold during duplication, but must
+     * restore the *prior* value afterwards (not hardcode true) — otherwise the
+     * override leaks for the rest of the request and a later DRAFT Section/Row
+     * write silently skips scaffolding. FluentState::withState only scopes the
+     * locale, not Config, so a try/finally restore is required.
+     */
+    public function testCopyRestoresAutoScaffoldToPriorValue(): void
+    {
+        $page = $this->createPage();
+        GridTreeFactory::section($page, title: 'Hero Section');
+
+        // Set a known non-default prior value (setUp set both to false).
+        Config::modify()->set(Section::class, 'auto_scaffold', true);
+        Config::modify()->set(Row::class, 'auto_scaffold', true);
+
+        CopyToLocaleService::singleton()->copyToLocale(
+            Page::class,
+            (int) $page->ID,
+            'en_US',
+            'nl_NL',
+        );
+
+        // After the copy, the prior values must be restored, not left at false
+        // (the in-copy suppression value) and not hardcoded to a default.
+        self::assertTrue(
+            (bool) Section::config()->get('auto_scaffold'),
+            'Section auto_scaffold must be restored to its prior value (true) after copy',
+        );
+        self::assertTrue(
+            (bool) Row::config()->get('auto_scaffold'),
+            'Row auto_scaffold must be restored to its prior value (true) after copy',
+        );
+    }
+
+    /**
+     * Complements the prior-value-true case: when the prior value is false, the
+     * restore must leave it false. A naive restore that hardcodes true (the
+     * pattern GridMigrationService uses) would wrongly flip it on here — this
+     * test pins capture-and-restore over hardcode-the-default.
+     */
+    public function testCopyRestoresAutoScaffoldWhenPriorValueWasFalse(): void
+    {
+        $page = $this->createPage();
+        GridTreeFactory::section($page, title: 'Hero Section');
+
+        // setUp already sets both to false; assert this is the captured prior.
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        Config::modify()->set(Row::class, 'auto_scaffold', false);
+
+        CopyToLocaleService::singleton()->copyToLocale(
+            Page::class,
+            (int) $page->ID,
+            'en_US',
+            'nl_NL',
+        );
+
+        self::assertFalse(
+            (bool) Section::config()->get('auto_scaffold'),
+            'Section auto_scaffold must stay false (prior value), not be hardcoded to true',
+        );
+        self::assertFalse(
+            (bool) Row::config()->get('auto_scaffold'),
+            'Row auto_scaffold must stay false (prior value), not be hardcoded to true',
+        );
+    }
+
+    /**
      * Copy should handle multiple zones — both 'main' and 'sidebar'
      * sections should be duplicated.
      */
