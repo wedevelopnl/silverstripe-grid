@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Repository;
 
+use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Value\NodeRef;
@@ -26,9 +28,22 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
 
         /** @var class-string<GridElement> $class */
         $class = $ref->type->toClass();
+        $id = $ref->id;
 
+        // Pin the DRAFT stage so mutation-endpoint lookups resolve the editable
+        // record regardless of the ambient reading stage, mirroring
+        // GridController::resolveNodeRef and the GET read endpoints. Without
+        // this, a request whose ambient stage is LIVE would fail to find a
+        // DRAFT-only element and the controller would respond 404/400.
         /** @var GridElement|null $record */
-        $record = DataObject::get($class)->byID($ref->id);
+        $record = Versioned::withVersionedMode(static function () use ($class, $id): ?GridElement {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            /** @var GridElement|null $found */
+            $found = DataObject::get($class)->byID($id);
+
+            return $found;
+        });
 
         if ($record === null) {
             return null;
@@ -77,7 +92,13 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
                 'ParentID' => $ids,
             ];
 
-            if ($zone !== null) {
+            // The Zone filter only applies to root-level sections (parented to a
+            // page). Branch on the parent class — not merely on whether a zone
+            // was passed — so a stray zone on a non-page parent never silently
+            // swaps the query base to Section::get(). Child elements (rows,
+            // columns, content) are scoped by their container parent and carry
+            // no zone of their own.
+            if ($zone !== null && is_a($class, SiteTree::class, true)) {
                 $filter['Zone'] = $zone;
                 $list = Section::get();
             } else {

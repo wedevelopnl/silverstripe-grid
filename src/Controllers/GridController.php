@@ -222,7 +222,8 @@ class GridController extends AdminController
             return $treeBuilder->buildForPage($page, $zone);
         });
 
-        /** @var positive-int $pageId — $page was loaded by ID above; byID returns null for non-positive IDs, and the null check jumps to jsonError. */
+        /** @var positive-int $pageId */
+        $pageId = (int) $page->ID;
         $rootNodes = $tree[$pageId] ?? [];
 
         return $this->jsonSuccess(200, [

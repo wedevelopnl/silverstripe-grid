@@ -2,25 +2,31 @@
 
 declare(strict_types=1);
 
-namespace WeDevelop\Grid\Tests\Integration\Controllers;
+namespace WeDevelop\Grid\Tests\Unit\Controllers;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\Core\Injector\Injector;
-use SilverStripe\Dev\SapphireTest;
+use PHPUnit\Framework\TestCase;
 use stdClass;
-use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Controllers\GridController;
+use WeDevelop\Grid\Tests\Unit\Support\GridAdapterStub;
+use WeDevelop\Grid\Value\Viewport;
 
+/**
+ * Pure-static coverage of {@see GridController::buildAdapterConfig()}.
+ *
+ * buildAdapterConfig() is a pure transformation over a GridAdapterInterface —
+ * it needs neither the SilverStripe Injector nor a database, so these cases run
+ * against {@see GridAdapterStub} on a plain PHPUnit TestCase. The Injector-bound
+ * getClientConfig() path stays in the integration test
+ * ({@see \WeDevelop\Grid\Tests\Integration\Controllers\GridControllerAdapterConfigTest}).
+ */
 #[CoversClass(GridController::class)]
-final class GridControllerTest extends SapphireTest
+final class GridControllerUnitTest extends TestCase
 {
-    protected $usesDatabase = false;
-
     public function testBuildAdapterConfigReturnsExpectedStructure(): void
     {
-        $adapter = Injector::inst()->get(GridAdapterInterface::class);
-        $config = GridController::buildAdapterConfig($adapter);
+        $config = GridController::buildAdapterConfig(new GridAdapterStub());
 
         self::assertArrayHasKey('viewports', $config);
         self::assertArrayHasKey('defaultViewport', $config);
@@ -31,10 +37,10 @@ final class GridControllerTest extends SapphireTest
         self::assertArrayHasKey('baseOffsetClasses', $config);
 
         self::assertSame(12, $config['columnCount']);
-        self::assertSame('md', $config['defaultViewport']);
+        self::assertSame('xs', $config['defaultViewport']);
         self::assertSame('row', $config['rowClasses']);
         self::assertSame('margin', $config['offsetStrategy']);
-        self::assertCount(6, $config['viewports']);
+        self::assertCount(3, $config['viewports']);
 
         // Each viewport entry must have 'key', 'label', and 'minWidth'
         foreach ($config['viewports'] as $viewport) {
@@ -47,18 +53,18 @@ final class GridControllerTest extends SapphireTest
             self::assertIsInt($viewport['minWidth']);
             self::assertGreaterThanOrEqual(0, $viewport['minWidth']);
         }
-        // Verify first and last viewport values
+
+        // First and last viewport values mirror the stub's defaults.
         self::assertSame('xs', $config['viewports'][0]['key']);
         self::assertSame('Extra Small', $config['viewports'][0]['label']);
         self::assertSame(0, $config['viewports'][0]['minWidth']);
-        self::assertSame('xxl', $config['viewports'][5]['key']);
-        self::assertSame(1400, $config['viewports'][5]['minWidth']);
+        self::assertSame('lg', $config['viewports'][2]['key']);
+        self::assertSame(992, $config['viewports'][2]['minWidth']);
     }
 
     public function testBuildAdapterConfigWidthClassMap(): void
     {
-        $adapter = Injector::inst()->get(GridAdapterInterface::class);
-        $config = GridController::buildAdapterConfig($adapter);
+        $config = GridController::buildAdapterConfig(new GridAdapterStub());
 
         self::assertInstanceOf(stdClass::class, $config['baseWidthClasses']);
         // 12 width classes (1-12)
@@ -70,8 +76,7 @@ final class GridControllerTest extends SapphireTest
 
     public function testBuildAdapterConfigOffsetClassMap(): void
     {
-        $adapter = Injector::inst()->get(GridAdapterInterface::class);
-        $config = GridController::buildAdapterConfig($adapter);
+        $config = GridController::buildAdapterConfig(new GridAdapterStub());
 
         self::assertInstanceOf(stdClass::class, $config['baseOffsetClasses']);
         // 12 offset classes (0-11)
@@ -81,16 +86,20 @@ final class GridControllerTest extends SapphireTest
         self::assertSame('offset-11', $offsets[11]);
     }
 
-    public function testGetClientConfigIncludesControllerLinkAndAdapter(): void
+    public function testBuildAdapterConfigThrowsWhenAdapterHasNoViewports(): void
     {
-        /** @var GridController $controller */
-        $controller = Injector::inst()->get(GridController::class);
-        $config = $controller->getClientConfig();
+        // An adapter that declares no viewports is a misconfiguration: the
+        // frontend cannot render a grid without at least one breakpoint.
+        // A defaultViewport must be supplied because the stub falls back to
+        // viewports[0] otherwise, which is undefined for an empty set.
+        $adapter = new GridAdapterStub(
+            viewports: [],
+            defaultViewport: new Viewport('xs', 'Extra Small', 0),
+        );
 
-        self::assertArrayHasKey('controllerLink', $config);
-        self::assertArrayHasKey('gridAdapter', $config);
-        self::assertNotEmpty($config['controllerLink']);
-        self::assertIsArray($config['gridAdapter']);
-        self::assertArrayHasKey('columnCount', $config['gridAdapter']);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Adapter must define at least one viewport.');
+
+        GridController::buildAdapterConfig($adapter);
     }
 }
