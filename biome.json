@@ -1,42 +1,179 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
   "files": {
-    "includes": ["client/src/**/*.ts", "client/src/**/*.tsx", "client/src/**/*.js", "client/src/**/*.mjs", "client/src/**/*.cjs"]
+    "includes": [
+      "client/src/**/*.ts",
+      "client/src/**/*.tsx",
+      "client/src/**/*.js",
+      "client/src/**/*.mjs",
+      "client/src/**/*.cjs",
+      "tests/E2E/**/*.ts",
+      "scripts/**/*.mjs",
+      "vite.config.ts",
+      "vitest.setup.ts",
+      "playwright.config.ts"
+    ]
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineWidth": 100
+    "lineWidth": 100,
+    "lineEnding": "lf"
   },
   "javascript": {
     "formatter": {
       "quoteStyle": "single",
-      "semicolons": "always",
+      "jsxQuoteStyle": "double",
+      "semicolons": "asNeeded",
       "trailingCommas": "all",
-      "arrowParentheses": "always"
+      "arrowParentheses": "always",
+      "bracketSpacing": true
     }
   },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
-      "a11y": {
-        "recommended": true
+      "complexity": {
+        "noUselessUndefined": "error"
       },
       "correctness": {
         "useExhaustiveDependencies": "warn",
-        "noUnusedVariables": "warn"
+        "noUnusedVariables": "warn",
+        "noNestedComponentDefinitions": "error"
+      },
+      "performance": {
+        "noAwaitInLoops": "error",
+        "noReExportAll": "error"
+      },
+      "style": {
+        "useImportType": "error",
+        "useExportType": "error",
+        "useConsistentArrowReturn": "error",
+        "noEnum": "error",
+        "noNestedTernary": "error",
+        "noParameterAssign": "error",
+        "noProcessEnv": "error",
+        "useThrowOnlyError": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noImportCycles": "error",
+        "noDeprecatedImports": "error",
+        "noUnusedExpressions": "error",
+        "noDuplicateDependencies": "error",
+        "noReactForwardRef": "error",
+        "noConstantBinaryExpressions": "error",
+        "noEvolvingTypes": "error",
+        "useAwait": "error",
+        "noSkippedTests": "error",
+        "noExportsInTest": "error",
+        "noMisplacedAssertion": "error",
+        "noConsole": "warn"
+      },
+      "nursery": {
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error",
+        "noUnsafePlusOperands": "error",
+        "noDuplicatedSpreadProps": "error",
+        "noJsxLeakedDollar": "error",
+        "noReactStringRefs": "error",
+        "noComponentHookFactories": "error",
+        "noUselessTypeConversion": "error",
+        "noUnnecessaryTemplateExpression": "error",
+        "noUselessReturn": "error",
+        "noImpliedEval": "error",
+        "noScriptUrl": "error",
+        "noProto": "error",
+        "noIdenticalTestTitle": "error",
+        "noConditionalExpect": "error",
+        "noUnnecessaryConditions": "error",
+        "noShadow": "error",
+        "useAwaitThenable": "error",
+        "useArraySortCompare": "error",
+        "useNullishCoalescing": "error",
+        "noPlaywrightWaitForTimeout": "warn",
+        "noPlaywrightNetworkidle": "error",
+        "noPlaywrightForceOption": "error",
+        "noPlaywrightElementHandle": "error",
+        "noPlaywrightMissingAwait": "error",
+        "noPlaywrightWaitForSelector": "error",
+        "noPlaywrightWaitForNavigation": "error",
+        "noPlaywrightPagePause": "error",
+        "noPlaywrightEval": "error",
+        "noPlaywrightUselessAwait": "error"
       }
     }
   },
   "overrides": [
     {
-      "includes": ["**/*.test.ts", "**/*.test.tsx"],
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "client/src/testing/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNestedComponentDefinitions": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
+          },
+          "performance": {
+            "noAwaitInLoops": "off"
+          },
+          "suspicious": {
+            "noMisplacedAssertion": "off"
+          },
+          "nursery": {
+            "noComponentHookFactories": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["tests/E2E/**"],
       "linter": {
         "rules": {
           "style": {
             "noNonNullAssertion": "off"
+          },
+          "performance": {
+            "noAwaitInLoops": "off"
+          },
+          "suspicious": {
+            "noMisplacedAssertion": "off",
+            "noSkippedTests": "off"
+          },
+          "nursery": {
+            "noComponentHookFactories": "off",
+            "noConditionalExpect": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          },
+          "style": {
+            "noProcessEnv": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["vite.config.ts", "vitest.setup.ts", "playwright.config.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noProcessEnv": "off"
           }
         }
       }
@@ -55,5 +192,13 @@
         }
       }
     }
-  ]
+  ],
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
 }
