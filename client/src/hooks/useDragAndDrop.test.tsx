@@ -55,6 +55,31 @@ function makeDragCancelEvent(): DragCancelEvent {
   } as unknown as DragCancelEvent
 }
 
+/**
+ * Drag-end event whose `activatorEvent` is a real PointerEvent. This is the
+ * only way to exercise `getPointerPosition`'s pointer-available branch — it
+ * bails to null unless `activatorEvent instanceof PointerEvent`. The over
+ * element's rect (top/height) is set explicitly so the test controls the
+ * midpoint the resolved pointer is compared against.
+ */
+function makePointerDragEndEvent(
+  activeId: string,
+  overId: string,
+  clientX: number,
+  clientY: number,
+  overRect: { top: number; left: number; width: number; height: number },
+): DragEndEvent {
+  // The active rect's initial === translated (default helper rects), so
+  // getPointerPosition resolves pointer.{x,y} === client{X,Y}.
+  return {
+    active: createActive(activeId),
+    over: createOver(overId, overRect),
+    activatorEvent: new PointerEvent('pointerdown', { clientX, clientY }),
+    collisions: [],
+    delta: { x: 0, y: 0 },
+  } as unknown as DragEndEvent;
+}
+
 // --- Tree builders ---
 
 function buildSingleColumnTree(pageId = 1) {
@@ -314,6 +339,36 @@ describe('useDragAndDrop', () => {
     })
   })
 
+  describe('pendingActive flag (DragContext)', () => {
+    it('drives pendingActive false → true on cross-container onDragOver and back to false on onDragCancel', () => {
+      // GridEditor derives DragContext.pendingActive as `pendingTree !== null`
+      // and provides it to block components. The hook itself owns the pendingTree
+      // transition; pendingActive is that exact boolean. Observe it here.
+      const { tree, element1, col2 } = buildTwoColumnTree();
+      const { result } = renderDndHook({ tree });
+
+      const activeId = buildDraggableId('element', element1.self.id);
+      const overId = buildDraggableId('column', col2.self.id);
+
+      const pendingActive = () => result.current.pendingTree !== null;
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId));
+      });
+      expect(pendingActive()).toBe(false);
+
+      act(() => {
+        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overId));
+      });
+      expect(pendingActive()).toBe(true);
+
+      act(() => {
+        result.current.dndContextProps.onDragCancel(makeDragCancelEvent());
+      });
+      expect(pendingActive()).toBe(false);
+    });
+  });
+
   describe('onDragEnd', () => {
     it('clears dragState when over is null', () => {
       const { tree, element1 } = buildSingleColumnTree()
@@ -456,6 +511,61 @@ describe('useDragAndDrop', () => {
       expect(parent).toEqual({ type: 'column', id: 31 })
       expect(result.current.dragState).toBeNull()
     })
+
+    it.each([
+      {
+        name: 'before (pointer above the over-element midpoint)',
+        clientY: 5,
+        expectedAfter: null,
+      },
+      {
+        name: 'after (pointer below the over-element midpoint)',
+        clientY: 45,
+        expectedAfter: { type: 'element', id: 41 },
+      },
+    ])(
+      'resolves cross-container drop direction from a real PointerEvent: $name',
+      ({ clientY, expectedAfter }) => {
+        // Only a real PointerEvent activatorEvent makes getPointerPosition return
+        // a pointer (every other test uses new Event('pointer'), which bails to
+        // null and exercises only the index-based path). With initial===translated
+        // active rects, getPointerPosition resolves pointer.y === clientY.
+        //
+        // Over element rect top=0,height=50 → midpoint Y=25. clientY=5 → 'before'
+        // (after=null, head of target); clientY=45 → 'after' (after=element 41).
+        const { tree, element1, element2, col2 } = buildTwoColumnTree();
+        const onReorder = vi.fn();
+        const { result } = renderDndHook({ tree, onReorder });
+
+        const activeId = buildDraggableId('element', element1.self.id);
+        const overContainerId = buildDraggableId('column', col2.self.id);
+        const overElementId = buildDraggableId('element', element2.self.id);
+
+        act(() => {
+          result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId));
+        });
+        act(() => {
+          result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overContainerId));
+        });
+
+        act(() => {
+          result.current.dndContextProps.onDragEnd(
+            makePointerDragEndEvent(activeId, overElementId, 100, clientY, {
+              top: 0,
+              left: 0,
+              width: 200,
+              height: 50,
+            }),
+          );
+        });
+
+        expect(onReorder).toHaveBeenCalledTimes(1);
+        const [element, parent, after] = onReorder.mock.calls[0];
+        expect(element).toEqual({ type: 'element', id: element1.self.id });
+        expect(parent).toEqual({ type: 'column', id: 31 });
+        expect(after).toEqual(expectedAfter);
+      },
+    );
 
     it('clears pending tree when active ID is unparseable', () => {
       const { tree } = buildSingleColumnTree()

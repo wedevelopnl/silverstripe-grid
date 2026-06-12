@@ -1,22 +1,24 @@
-import { describe, expect, it } from 'vitest'
+import { describe, it, expect } from 'vitest'
+import { getElementType } from './getElementType'
 import {
-  createColumnNode,
-  createRowNode,
   createSectionNode,
+  createRowNode,
+  createColumnNode,
   createSimpleElement,
   resetIdCounter,
 } from '@/testing/factories'
-import { getElementType } from './getElementType'
 
 beforeEach(() => {
   resetIdCounter()
 })
 
 describe('getElementType', () => {
-  it('returns containerType for container nodes', () => {
-    expect(getElementType(createSectionNode())).toBe('section')
-    expect(getElementType(createRowNode())).toBe('row')
-    expect(getElementType(createColumnNode())).toBe('column')
+  it.each([
+    { name: 'section', create: createSectionNode, expected: 'section' },
+    { name: 'row', create: createRowNode, expected: 'row' },
+    { name: 'column', create: createColumnNode, expected: 'column' },
+  ])('returns containerType "$expected" for a $name container node', ({ create, expected }) => {
+    expect(getElementType(create())).toBe(expected)
   })
 
   it('returns "element" for simple element nodes', () => {

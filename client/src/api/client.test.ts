@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
-import { getFetchCalls, mockFetchError, mockFetchSuccess } from '@/testing/mockFetch'
-import { apiDelete, apiGet, apiPatch, apiPost } from './client'
+import { describe, it, expect, vi } from 'vitest'
+import { apiGet, apiPost, apiPatch, apiDelete } from './client'
 import { ApiError } from './errors'
+import { mockFetchSuccess, mockFetchError, getFetchCalls } from '@/testing/mockFetch'
 
 describe('apiGet', () => {
   it('sends GET with correct headers', async () => {
@@ -136,76 +136,73 @@ describe('error extraction', () => {
     await expect(apiGet('/api/test')).rejects.toThrow('Primary')
   })
 
-  it('falls back to statusText when body is a string (non-object)', async () => {
-    mockFetchError(400, undefined)
-    // Override mock to return a string body
+  /**
+   * Builds a full fetch Response mock whose `json()` resolves the supplied body
+   * (or rejects, for the JSON-parse-failure case). Only status/statusText/json
+   * vary between the statusText-fallback scenarios below; everything else is the
+   * inert remainder of the Response interface.
+   */
+  function mockFetchWithBody(
+    status: number,
+    statusText: string,
+    json: () => Promise<unknown>,
+  ): void {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: false,
+      status,
+      statusText,
+      json,
+      headers: new Headers(),
+      redirected: false,
+      type: 'basic',
+      url: '',
+      clone: vi.fn(),
+      body: null,
+      bodyUsed: false,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+      blob: () => Promise.resolve(new Blob()),
+      bytes: () => Promise.resolve(new Uint8Array()),
+      formData: () => Promise.resolve(new FormData()),
+      text: () => Promise.resolve(''),
+    })
+  }
+
+  it.each([
+    {
+      name: 'body is a string (non-object)',
       status: 400,
       statusText: 'Bad Request',
       json: () => Promise.resolve('plain string'),
-      headers: new Headers(),
-      redirected: false,
-      type: 'basic',
-      url: '',
-      clone: vi.fn(),
-      body: null,
-      bodyUsed: false,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-      blob: () => Promise.resolve(new Blob()),
-      bytes: () => Promise.resolve(new Uint8Array()),
-      formData: () => Promise.resolve(new FormData()),
-      text: () => Promise.resolve(''),
-    })
-
-    await expect(apiGet('/api/test')).rejects.toThrow('Bad Request')
-  })
-
-  it('falls back to statusText when body is null', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: false,
+    },
+    {
+      name: 'body is null',
       status: 500,
       statusText: 'Internal Server Error',
       json: () => Promise.resolve(null),
-      headers: new Headers(),
-      redirected: false,
-      type: 'basic',
-      url: '',
-      clone: vi.fn(),
-      body: null,
-      bodyUsed: false,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-      blob: () => Promise.resolve(new Blob()),
-      bytes: () => Promise.resolve(new Uint8Array()),
-      formData: () => Promise.resolve(new FormData()),
-      text: () => Promise.resolve(''),
-    })
-
-    await expect(apiGet('/api/test')).rejects.toThrow('Internal Server Error')
-  })
-
-  it('falls back to statusText when body is an array', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: false,
+    },
+    {
+      // Arrays pass typeof === 'object' but have no message/errorMessage fields.
+      name: 'body is an array',
       status: 422,
       statusText: 'Unprocessable Entity',
       json: () => Promise.resolve([1, 2, 3]),
-      headers: new Headers(),
-      redirected: false,
-      type: 'basic',
-      url: '',
-      clone: vi.fn(),
-      body: null,
-      bodyUsed: false,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-      blob: () => Promise.resolve(new Blob()),
-      bytes: () => Promise.resolve(new Uint8Array()),
-      formData: () => Promise.resolve(new FormData()),
-      text: () => Promise.resolve(''),
-    })
+    },
+    {
+      name: 'message and errorMessage are both empty strings',
+      status: 400,
+      statusText: 'Bad Request',
+      json: () => Promise.resolve({ message: '', errorMessage: '' }),
+    },
+    {
+      name: 'JSON parsing fails',
+      status: 502,
+      statusText: 'Bad Gateway',
+      json: () => Promise.reject(new SyntaxError('Unexpected token')),
+    },
+  ])('falls back to statusText when $name', async ({ status, statusText, json }) => {
+    mockFetchWithBody(status, statusText, json)
 
-    // Arrays pass typeof === 'object' but have no message/errorMessage fields
-    await expect(apiGet('/api/test')).rejects.toThrow('Unprocessable Entity')
+    await expect(apiGet('/api/test')).rejects.toThrow(statusText)
   })
 
   it('skips empty string message and falls through to errorMessage', async () => {
@@ -213,82 +210,32 @@ describe('error extraction', () => {
 
     await expect(apiGet('/api/test')).rejects.toThrow('Fallback')
   })
-
-  it('skips empty string errorMessage and falls through to statusText', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: false,
-      status: 400,
-      statusText: 'Bad Request',
-      json: () => Promise.resolve({ message: '', errorMessage: '' }),
-      headers: new Headers(),
-      redirected: false,
-      type: 'basic',
-      url: '',
-      clone: vi.fn(),
-      body: null,
-      bodyUsed: false,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-      blob: () => Promise.resolve(new Blob()),
-      bytes: () => Promise.resolve(new Uint8Array()),
-      formData: () => Promise.resolve(new FormData()),
-      text: () => Promise.resolve(''),
-    })
-
-    await expect(apiGet('/api/test')).rejects.toThrow('Bad Request')
-  })
-
-  it('falls back to statusText when JSON parsing fails', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: false,
-      status: 502,
-      statusText: 'Bad Gateway',
-      json: () => Promise.reject(new SyntaxError('Unexpected token')),
-      headers: new Headers(),
-      redirected: false,
-      type: 'basic',
-      url: '',
-      clone: vi.fn(),
-      body: null,
-      bodyUsed: false,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-      blob: () => Promise.resolve(new Blob()),
-      bytes: () => Promise.resolve(new Uint8Array()),
-      formData: () => Promise.resolve(new FormData()),
-      text: () => Promise.resolve(''),
-    })
-
-    await expect(apiGet('/api/test')).rejects.toThrow('Bad Gateway')
-  })
 })
 
 describe('mutation request headers', () => {
-  it('sends exact Content-Type application/json for POST', async () => {
+  it.each([
+    {
+      name: 'sends exact Content-Type application/json for POST',
+      call: () => apiPost('/api/create', { name: 'test' }),
+      expected: 'application/json',
+    },
+    {
+      name: 'sends exact Content-Type application/json for PATCH',
+      call: () => apiPatch('/api/update', { id: 1 }),
+      expected: 'application/json',
+    },
+    {
+      name: 'does not send Content-Type for DELETE (no body)',
+      call: () => apiDelete('/api/remove', { id: 1 }),
+      expected: undefined,
+    },
+  ])('$name', async ({ call, expected }) => {
     mockFetchSuccess({})
 
-    await apiPost('/api/create', { name: 'test' })
+    await call()
 
     const [, init] = getFetchCalls()[0]
     const headers = init?.headers as Record<string, string>
-    expect(headers['Content-Type']).toBe('application/json')
-  })
-
-  it('sends exact Content-Type application/json for PATCH', async () => {
-    mockFetchSuccess({})
-
-    await apiPatch('/api/update', { id: 1 })
-
-    const [, init] = getFetchCalls()[0]
-    const headers = init?.headers as Record<string, string>
-    expect(headers['Content-Type']).toBe('application/json')
-  })
-
-  it('does not send Content-Type for DELETE (no body)', async () => {
-    mockFetchSuccess({})
-
-    await apiDelete('/api/remove', { id: 1 })
-
-    const [, init] = getFetchCalls()[0]
-    const headers = init?.headers as Record<string, string>
-    expect(headers['Content-Type']).toBeUndefined()
+    expect(headers['Content-Type']).toBe(expected)
   })
 })

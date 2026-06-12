@@ -1,5 +1,5 @@
-import type { ClientRect, DroppableContainer } from '@dnd-kit/core'
-import { createDroppable, createDroppableWithRect, makeDomRect } from '@/testing/dndRectFactories'
+import type { DroppableContainer, ClientRect } from '@dnd-kit/core'
+
 import {
   centerCrossing,
   createTypedCollisionDetection,
@@ -8,6 +8,7 @@ import {
   filterSiblings,
   typedCollisionDetection,
 } from './collisionDetection'
+import { createDroppable, createDroppableWithRect, makeDomRect } from '@/testing/dndRectFactories'
 
 describe('filterDroppablesByType', () => {
   const containers = [
@@ -738,6 +739,54 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       expect(collisions.map((c) => c.id)).toEqual(['row-2', 'row-3'])
       expect(collisions[0].data?.value).toBe(5000)
       expect(collisions[1].data?.value).toBe(180000)
+    })
+
+    it('ranks a containing candidate before a closer non-containing one', () => {
+      // Pointer at (500, 500). closestCenterLive references pointerCoordinates.
+      //
+      // containing (row-2): rect (400, 400, 1000, 1000) → right=1400, bottom=1400.
+      //   Pointer is inside (400 ≤ 500 ≤ 1400 on both axes) → contains=true.
+      //   center (900, 900) → dx=-400, dy=-400 → value=320000 (FAR by distance).
+      // closer (row-3): rect (510, 510, 20, 20) → right=530, bottom=530.
+      //   Pointer (500,500) is outside (500 < 510) → contains=false.
+      //   center (520, 520) → dx=-20, dy=-20 → value=800 (much CLOSER by distance).
+      //
+      // The containment discriminant must win: row-2 (contains) ranks first even
+      // though row-3 has a far smaller squared distance. Registered [closer, containing]
+      // so a comparator that ignored `contains` would return [row-3, row-2].
+      const containing = createDroppableWithRect('row-2', {
+        left: 400,
+        top: 400,
+        width: 1000,
+        height: 1000,
+      })
+      const closer = createDroppableWithRect('row-3', {
+        left: 510,
+        top: 510,
+        width: 20,
+        height: 20,
+      })
+      const pendingItems = new Set<string | number>(['row-2', 'row-3'])
+      const detect = createTypedCollisionDetection({
+        hasPendingMoveRef: { current: true },
+        pendingContainerItemsRef: { current: pendingItems },
+      })
+
+      const args = {
+        ...buildPendingPathArgs(
+          [closer, containing],
+          makeDomRect(100, 100, 50, 50),
+          makeDomRect(100, 75, 50, 50),
+        ),
+        pointerCoordinates: { x: 500, y: 500 },
+      }
+      const collisions = detect(args as never)
+
+      expect(collisions.map((c) => c.id)).toEqual(['row-2', 'row-3'])
+      // Confirm the winner is the FARTHER-by-distance one, proving containment
+      // — not proximity — decided the order.
+      expect(collisions[0].data?.value).toBe(320000)
+      expect(collisions[1].data?.value).toBe(800)
     })
   })
 
