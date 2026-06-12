@@ -336,126 +336,87 @@ final class GridAdapterTest extends SapphireTest
 
     // -- Constructor validation ----------------------------------------------
 
-    public function testConstructorThrowsForEmptyViewports(): void
+    /**
+     * Each case sets a single scalar config key to an invalid value that the
+     * adapter constructor must reject.
+     *
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function invalidScalarConfigProvider(): iterable
     {
-        $this->expectException(InvalidGridValueException::class);
-        $this->expectExceptionMessage('The enabled_viewports configuration cannot be an empty array.');
-
-        Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', []);
-
-        new BootstrapAdapter();
+        yield 'empty viewports' => ['enabled_viewports', []];
+        yield 'invalid default viewport' => ['default_viewport', 'invalid'];
+        yield 'zero column count' => ['total_columns', 0];
+        yield 'zero container max width' => ['container_max_width', 0];
     }
 
-    public function testConstructorThrowsForInvalidDefaultViewport(): void
+    #[DataProvider('invalidScalarConfigProvider')]
+    public function testConstructorThrowsForInvalidScalarConfig(string $configKey, mixed $configValue): void
     {
+        Config::modify()->set(BootstrapAdapter::class, $configKey, $configValue);
+
         $this->expectException(InvalidGridValueException::class);
-
-        Config::modify()->set(BootstrapAdapter::class, 'default_viewport', 'invalid');
-
-        new BootstrapAdapter();
-    }
-
-    public function testConstructorThrowsForZeroColumnCount(): void
-    {
-        $this->expectException(InvalidGridValueException::class);
-
-        Config::modify()->set(BootstrapAdapter::class, 'total_columns', 0);
-
-        new BootstrapAdapter();
-    }
-
-    public function testConstructorThrowsForZeroContainerMaxWidth(): void
-    {
-        $this->expectException(InvalidGridValueException::class);
-
-        Config::modify()->set(BootstrapAdapter::class, 'container_max_width', 0);
 
         new BootstrapAdapter();
     }
 
     // -- Malformed viewport_definitions rejection ----------------------------
 
-    public function testMalformedViewportDefinitionsRejectsNonArrayValue(): void
+    /**
+     * Each case: [viewport_definitions, ?messagePattern]. When the pattern is
+     * non-null the detailed message is asserted; otherwise only the exception
+     * type is checked.
+     *
+     * @return iterable<string, array{array<string, mixed>, string|null}>
+     */
+    public static function malformedViewportDefinitionsProvider(): iterable
     {
-        $this->expectException(InvalidGridValueException::class);
-        $this->expectExceptionMessageMatches('/viewport_definitions/i');
-
-        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
-            'md' => 'Medium',   // legacy shape — must be rejected
-        ]);
-
-        new BootstrapAdapter();
-    }
-
-    public function testMalformedViewportDefinitionsRejectsMissingLabel(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
-            'md' => ['min_width' => 768],
-        ]);
-
-        $this->expectException(InvalidGridValueException::class);
-        $this->expectExceptionMessageMatches('/label/');
-
-        new BootstrapAdapter();
-    }
-
-    public function testMalformedViewportDefinitionsRejectsMissingMinWidth(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
-            'md' => ['label' => 'Medium'],
-        ]);
-
-        $this->expectException(InvalidGridValueException::class);
-        $this->expectExceptionMessageMatches('/min_width/');
-
-        new BootstrapAdapter();
-    }
-
-    public function testMalformedViewportDefinitionsRejectsNegativeMinWidth(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
-            'md' => ['label' => 'Medium', 'min_width' => -1],
-        ]);
-
-        $this->expectException(InvalidGridValueException::class);
-        $this->expectExceptionMessageMatches('/min_width|negative/');
-
-        new BootstrapAdapter();
-    }
-
-    public function testMalformedViewportDefinitionsRejectsNonIntMinWidth(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
-            'md' => ['label' => 'Medium', 'min_width' => '768'],
-        ]);
-
-        $this->expectException(InvalidGridValueException::class);
-
-        new BootstrapAdapter();
-    }
-
-    public function testMalformedViewportDefinitionsRejectsEmptyLabel(): void
-    {
-        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
-            'md' => ['label' => '', 'min_width' => 768],
-        ]);
-
-        $this->expectException(InvalidGridValueException::class);
-
-        new BootstrapAdapter();
-    }
-
-    public function testMalformedViewportDefinitionsRejectsInvalidKeyCharacters(): void
-    {
+        yield 'non-array value (legacy shape)' => [
+            ['md' => 'Medium'],
+            '/viewport_definitions/i',
+        ];
+        yield 'missing label' => [
+            ['md' => ['min_width' => 768]],
+            '/label/',
+        ];
+        yield 'missing min_width' => [
+            ['md' => ['label' => 'Medium']],
+            '/min_width/',
+        ];
+        yield 'negative min_width' => [
+            ['md' => ['label' => 'Medium', 'min_width' => -1]],
+            '/min_width|negative/',
+        ];
+        yield 'non-int min_width' => [
+            ['md' => ['label' => 'Medium', 'min_width' => '768']],
+            null,
+        ];
+        yield 'empty label' => [
+            ['md' => ['label' => '', 'min_width' => 768]],
+            null,
+        ];
         // Viewport keys flow into `.grid-<key>` CSS class names in the
         // frontend, so keys with whitespace or special characters would
         // produce invalid selectors. The adapter must reject them.
-        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', [
-            'md dirty' => ['label' => 'Medium', 'min_width' => 768],
-        ]);
+        yield 'invalid key characters' => [
+            ['md dirty' => ['label' => 'Medium', 'min_width' => 768]],
+            '/viewport key/i',
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $definitions
+     */
+    #[DataProvider('malformedViewportDefinitionsProvider')]
+    public function testConstructorRejectsMalformedViewportDefinitions(array $definitions, ?string $messagePattern): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', $definitions);
 
         $this->expectException(InvalidGridValueException::class);
-        $this->expectExceptionMessageMatches('/viewport key/i');
+
+        if ($messagePattern !== null) {
+            $this->expectExceptionMessageMatches($messagePattern);
+        }
 
         new BootstrapAdapter();
     }

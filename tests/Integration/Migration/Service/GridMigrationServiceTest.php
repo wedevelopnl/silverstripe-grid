@@ -332,8 +332,16 @@ final class GridMigrationServiceTest extends SapphireTest
             'MediaRatio' => '16x9',
             'MediaPosition' => 'order-1',
             'MediaImageID' => 42,
+            'MediaCaption' => 'Sample caption',
             'MediaVideoFullURL' => 'https://example.com/video.mp4',
+            'MediaVideoProvider' => 'youtube',
+            'MediaVideoHasOverlay' => 1,
             'MediaVideoCustomThumbnailID' => 99,
+            'MediaVideoEmbeddedName' => 'Embed Name',
+            'MediaVideoEmbeddedURL' => 'https://embed.example.com',
+            'MediaVideoEmbeddedDescription' => 'Embed Description',
+            'MediaVideoEmbeddedThumbnail' => 'https://thumb.example.com',
+            'MediaVideoEmbeddedCreated' => '2024-01-15',
         ]);
 
         $this->runMigration();
@@ -344,16 +352,28 @@ final class GridMigrationServiceTest extends SapphireTest
         ])->first();
         self::assertInstanceOf(ContentElement::class, $contentElement, 'ContentElement should exist with ParentClass=Column');
 
-        // Verify mapped fields
+        // Verify every field MappedMediaFields::toArray() emits lands on the element
+        // with the correct value. Distinct per-field values mean a dropped or
+        // mis-keyed column in toArray() (the serialization is a hand-written map)
+        // fails an assertion here — this is the end-to-end equivalent of the former
+        // MappedMediaFieldsTest::toArray completeness check.
         self::assertSame(6, (int) $contentElement->ContentColumns);
         self::assertSame('center', $contentElement->VerticalAlignment);
         self::assertSame(2, (int) $contentElement->GapSize);
         self::assertSame('image', $contentElement->MediaType);
+        self::assertSame('Sample caption', $contentElement->MediaCaption);
         self::assertSame('16x9', $contentElement->MediaRatio);
         self::assertSame('first', $contentElement->MediaPosition);
         self::assertSame(42, (int) $contentElement->MediaImageID);
         self::assertSame('https://example.com/video.mp4', $contentElement->VideoURL);
+        self::assertSame('youtube', $contentElement->VideoProvider);
+        self::assertTrue((bool) $contentElement->VideoHasOverlay);
         self::assertSame(99, (int) $contentElement->VideoCustomThumbnailID);
+        self::assertSame('Embed Name', $contentElement->VideoEmbedName);
+        self::assertSame('https://embed.example.com', $contentElement->VideoEmbedURL);
+        self::assertSame('Embed Description', $contentElement->VideoEmbedDescription);
+        self::assertSame('https://thumb.example.com', $contentElement->VideoEmbedThumbnail);
+        self::assertSame('2024-01-15', $contentElement->VideoEmbedCreated);
     }
 
     public function testSortOrderPreservedThroughHierarchy(): void

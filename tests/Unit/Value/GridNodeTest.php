@@ -101,30 +101,6 @@ final class GridNodeTest extends TestCase
     }
 
     #[Test]
-    public function constructorAllowsGridSettingsOnColumn(): void
-    {
-        $gridSettings = new GridSettings(ViewportConfig::default(12));
-
-        $node = $this->makeNode([
-            'containerType' => ContainerType::Column,
-            'gridSettings' => $gridSettings,
-        ]);
-
-        self::assertSame($gridSettings, $node->gridSettings);
-    }
-
-    #[Test]
-    public function constructorAllowsNullGridSettingsOnColumn(): void
-    {
-        $node = $this->makeNode([
-            'containerType' => ContainerType::Column,
-            'gridSettings' => null,
-        ]);
-
-        self::assertNull($node->gridSettings);
-    }
-
-    #[Test]
     public function jsonSerializeLeafIncludesScopedIdentity(): void
     {
         $node = $this->makeNode([

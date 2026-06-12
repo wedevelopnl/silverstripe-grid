@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Unit\Exception;
 
+use Closure;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use WeDevelop\Grid\Exception\GridDomainException;
@@ -34,116 +36,92 @@ final class InvalidGridValueExceptionTest extends TestCase
         self::assertSame(0, $exception->getCode());
     }
 
-    public function testForViewportStatusCode(): void
+    /**
+     * Each case: [factory, expectedStatusCode, expectedUserMessage, expectedMessageFragment].
+     *
+     * @return iterable<string, array{Closure(): InvalidGridValueException, int, string, string}>
+     */
+    public static function factoryProvider(): iterable
     {
-        $exception = InvalidGridValueException::forViewport('xxxl');
+        yield 'forViewport' => [
+            static fn (): InvalidGridValueException => InvalidGridValueException::forViewport('xxxl'),
+            422,
+            'The specified viewport is not recognised.',
+            'xxxl',
+        ];
 
-        self::assertSame(422, $exception->statusCode);
+        yield 'forEmptyViewports' => [
+            static fn (): InvalidGridValueException => InvalidGridValueException::forEmptyViewports(),
+            422,
+            'At least one viewport must be enabled.',
+            'enabled_viewports',
+        ];
+
+        yield 'forContainerMaxWidth' => [
+            static fn (): InvalidGridValueException => InvalidGridValueException::forContainerMaxWidth(-100),
+            422,
+            'The configured container max width is invalid.',
+            '-100',
+        ];
+
+        yield 'forColumnCount (string)' => [
+            static fn (): InvalidGridValueException => InvalidGridValueException::forColumnCount('not-a-number'),
+            422,
+            'The configured column count is invalid.',
+            'not-a-number',
+        ];
+
+        yield 'forColumnCount (float reports type)' => [
+            static fn (): InvalidGridValueException => InvalidGridValueException::forColumnCount(3.14),
+            422,
+            'The configured column count is invalid.',
+            'float',
+        ];
+
+        yield 'forMalformedViewportPayload' => [
+            static fn (): InvalidGridValueException => InvalidGridValueException::forMalformedViewportPayload('overrides["md"]', 'missing width'),
+            422,
+            'The grid settings payload is malformed.',
+            'overrides["md"]',
+        ];
+
+        yield 'forAspectRatioClass' => [
+            static fn (): InvalidGridValueException => InvalidGridValueException::forAspectRatioClass('Some\\Adapter', '16x9'),
+            422,
+            'The configured aspect ratio mapping is incomplete.',
+            '16x9',
+        ];
+
+        yield 'forOverrideStrategy' => [
+            static fn (): InvalidGridValueException => InvalidGridValueException::forOverrideStrategy('merge'),
+            422,
+            'The configured override strategy is invalid.',
+            'merge',
+        ];
+
+        yield 'forMalformedViewportDefinition' => [
+            static fn (): InvalidGridValueException => InvalidGridValueException::forMalformedViewportDefinition('md', 'missing label'),
+            422,
+            'A configured viewport is malformed.',
+            'viewport_definitions',
+        ];
     }
 
-    public function testForViewportUserMessage(): void
-    {
-        $exception = InvalidGridValueException::forViewport('xxxl');
+    /**
+     * @param Closure(): InvalidGridValueException $factory
+     */
+    #[DataProvider('factoryProvider')]
+    public function testFactoryProducesExpectedException(
+        Closure $factory,
+        int $expectedStatusCode,
+        string $expectedUserMessage,
+        string $expectedMessageFragment,
+    ): void {
+        $exception = $factory();
 
-        self::assertSame('The specified viewport is not recognised.', $exception->userMessage);
-    }
-
-    public function testForViewportDetailedMessageContainsKey(): void
-    {
-        $exception = InvalidGridValueException::forViewport('xxxl');
-
-        self::assertStringContainsString('xxxl', $exception->getMessage());
-    }
-
-    public function testForEmptyViewportsStatusCode(): void
-    {
-        $exception = InvalidGridValueException::forEmptyViewports();
-
-        self::assertSame(422, $exception->statusCode);
-    }
-
-    public function testForEmptyViewportsUserMessage(): void
-    {
-        $exception = InvalidGridValueException::forEmptyViewports();
-
-        self::assertSame('At least one viewport must be enabled.', $exception->userMessage);
-    }
-
-    public function testForEmptyViewportsDetailedMessage(): void
-    {
-        $exception = InvalidGridValueException::forEmptyViewports();
-
-        self::assertStringContainsString('enabled_viewports', $exception->getMessage());
-    }
-
-    public function testForContainerMaxWidthStatusCode(): void
-    {
-        $exception = InvalidGridValueException::forContainerMaxWidth(-100);
-
-        self::assertSame(422, $exception->statusCode);
-    }
-
-    public function testForContainerMaxWidthUserMessage(): void
-    {
-        $exception = InvalidGridValueException::forContainerMaxWidth(-100);
-
-        self::assertSame('The configured container max width is invalid.', $exception->userMessage);
-    }
-
-    public function testForContainerMaxWidthDetailedMessageContainsValue(): void
-    {
-        $exception = InvalidGridValueException::forContainerMaxWidth(-100);
-
-        self::assertStringContainsString('-100', $exception->getMessage());
-    }
-
-    public function testForColumnCountStatusCode(): void
-    {
-        $exception = InvalidGridValueException::forColumnCount('not-a-number');
-
-        self::assertSame(422, $exception->statusCode);
-    }
-
-    public function testForColumnCountUserMessage(): void
-    {
-        $exception = InvalidGridValueException::forColumnCount('not-a-number');
-
-        self::assertSame('The configured column count is invalid.', $exception->userMessage);
-    }
-
-    public function testForColumnCountDetailedMessageContainsVarExport(): void
-    {
-        $exception = InvalidGridValueException::forColumnCount('not-a-number');
-
-        // var_export('not-a-number', true) produces: 'not-a-number'
-        self::assertStringContainsString('not-a-number', $exception->getMessage());
-    }
-
-    public function testForColumnCountDetailedMessageContainsType(): void
-    {
-        $exception = InvalidGridValueException::forColumnCount(3.14);
-
-        self::assertStringContainsString('float', $exception->getMessage());
-    }
-
-    public function testForOverrideStrategyStatusCode(): void
-    {
-        $exception = InvalidGridValueException::forOverrideStrategy('merge');
-
-        self::assertSame(422, $exception->statusCode);
-    }
-
-    public function testForOverrideStrategyUserMessage(): void
-    {
-        $exception = InvalidGridValueException::forOverrideStrategy('merge');
-
-        self::assertSame('The configured override strategy is invalid.', $exception->userMessage);
-    }
-
-    public function testForOverrideStrategyDetailedMessageContainsValue(): void
-    {
-        $exception = InvalidGridValueException::forOverrideStrategy('merge');
-
-        self::assertStringContainsString('merge', $exception->getMessage());
+        self::assertInstanceOf(InvalidGridValueException::class, $exception);
+        self::assertSame($expectedStatusCode, $exception->statusCode);
+        self::assertSame($expectedUserMessage, $exception->userMessage);
+        self::assertStringContainsString($expectedMessageFragment, $exception->getMessage());
     }
 }

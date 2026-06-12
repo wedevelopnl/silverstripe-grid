@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
@@ -22,6 +23,7 @@ use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
  * Verifies that ElementPlacementService correctly reorders elements within a locale
  * without cross-locale interference when Fluent locale filtering is active.
  */
+#[CoversClass(ElementPlacementService::class)]
 final class FluentElementPlacementServiceTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';

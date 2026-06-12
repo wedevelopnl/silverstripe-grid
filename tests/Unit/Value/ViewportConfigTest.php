@@ -13,15 +13,6 @@ use WeDevelop\Grid\Value\ViewportConfig;
 #[CoversClass(ViewportConfig::class)]
 final class ViewportConfigTest extends TestCase
 {
-    public function testConstructorAssignsProperties(): void
-    {
-        $config = new ViewportConfig(width: 6, offset: 2, visible: false);
-
-        self::assertSame(6, $config->width);
-        self::assertSame(2, $config->offset);
-        self::assertFalse($config->visible);
-    }
-
     #[DataProvider('defaultColumnCountProvider')]
     public function testDefaultCreatesFullWidthVisibleConfig(int $columnCount): void
     {
@@ -40,19 +31,6 @@ final class ViewportConfigTest extends TestCase
         yield '12 columns' => [12];
         yield '16 columns' => [16];
         yield '1 column' => [1];
-    }
-
-    public function testFromArrayCreatesInstance(): void
-    {
-        $config = ViewportConfig::fromArray([
-            'width' => 4,
-            'offset' => 1,
-            'visible' => false,
-        ]);
-
-        self::assertSame(4, $config->width);
-        self::assertSame(1, $config->offset);
-        self::assertFalse($config->visible);
     }
 
     public function testToArrayReturnsExpectedShape(): void

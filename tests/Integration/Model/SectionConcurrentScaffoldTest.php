@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Model;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use Throwable;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
 
+#[CoversClass(GridElement::class)]
 final class SectionConcurrentScaffoldTest extends SapphireTest
 {
     protected $usesDatabase = true;

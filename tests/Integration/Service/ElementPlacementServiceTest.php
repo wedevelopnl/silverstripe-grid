@@ -258,6 +258,16 @@ final class ElementPlacementServiceTest extends SapphireTest
         self::assertTrue($result->isErr(), 'Reorder should fail when element write triggers validation error');
     }
 
+    // NOTE: ElementPlacementService::persistAndReturn() contains a defensive
+    // `if (DB::get_conn() === null)` arm that writes the dirty elements without
+    // wrapping them in a transaction. That branch is intentionally left
+    // untested here: a live SapphireTest always has a real database connection,
+    // and forcing DB::get_conn() to null at runtime would break the framework
+    // state that every other test in this class depends on (and the subsequent
+    // write() calls themselves). The branch is a belt-and-braces guard for
+    // environments without a connection; the transactional happy path is
+    // exercised by every persisting test above.
+
     // ── insertAfter ─────────────────────────────────────────────
 
     public function testInsertAfterBumpsSort(): void

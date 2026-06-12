@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use Page;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -26,6 +27,7 @@ use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
  * Pages are created manually (not via fixture) because FluentExtension
  * needs an active FluentState during write to create localised records.
  */
+#[CoversNothing]
 final class FluentCopyToLocaleTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';

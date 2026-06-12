@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use Page;
+use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -29,6 +30,7 @@ use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
  *   1. For pages with GridPageExtension, cascade-delete Sections in the active locale.
  *   2. Only the current locale's Sections are deleted; other locales stay intact.
  */
+#[CoversClass(GridAwareDeleteLocalisationPolicy::class)]
 final class GridAwareDeleteLocalisationPolicyTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
@@ -23,6 +24,7 @@ use WeDevelop\Grid\Value\ContainerType;
  * Verifies that GridTreeBuilder correctly batch-loads, maps parent keys,
  * and assembles recursive trees when Fluent locale filtering is active.
  */
+#[CoversClass(GridTreeBuilder::class)]
 final class FluentTreeBuilderTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';

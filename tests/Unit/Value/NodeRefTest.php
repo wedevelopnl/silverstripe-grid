@@ -14,12 +14,22 @@ use WeDevelop\Grid\Value\NodeType;
 #[CoversClass(NodeRef::class)]
 final class NodeRefTest extends TestCase
 {
-    public function testConstructStoresTypeAndId(): void
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function nonPositiveIdProvider(): iterable
     {
-        $ref = new NodeRef(NodeType::Section, 42);
+        yield 'zero id' => [0];
+        yield 'negative id' => [-1];
+    }
 
-        self::assertSame(NodeType::Section, $ref->type);
-        self::assertSame(42, $ref->id);
+    #[DataProvider('nonPositiveIdProvider')]
+    public function testConstructorRejectsNonPositiveId(int $id): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('NodeRef id must be a positive integer');
+
+        new NodeRef(NodeType::Section, $id); // @phpstan-ignore argument.type (runtime guard under test)
     }
 
     public function testJsonSerializeEmitsTypeAndId(): void

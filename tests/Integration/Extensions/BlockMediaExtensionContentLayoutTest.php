@@ -2,11 +2,14 @@
 
 namespace WeDevelop\Grid\Tests\Integration\Extensions;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
+use WeDevelop\Grid\Adapter\GridAdapter;
 use WeDevelop\Grid\Contract\ContentLayoutAdapterInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 
+#[CoversClass(GridAdapter::class)]
 final class BlockMediaExtensionContentLayoutTest extends SapphireTest
 {
     public function testContentLayoutInterfaceResolvesToSameSingletonAsGridAdapter(): void

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use Page;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use TractorCow\Fluent\Extension\FluentIsolatedExtension;
@@ -21,6 +22,7 @@ use WeDevelop\Grid\Value\ContainerType;
  * onAfterWrite) produces a complete, queryable hierarchy through the
  * ContainerInterface when Fluent locale filtering is active.
  */
+#[CoversNothing]
 final class FluentAutoScaffoldingTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';

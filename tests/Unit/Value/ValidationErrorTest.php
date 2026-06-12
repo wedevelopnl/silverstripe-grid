@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Unit\Value;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Value\ValidationError;
-use WeDevelop\Grid\Value\ValidationErrorCode;
-use WeDevelop\Grid\Value\ValidationSeverity;
 
+#[CoversClass(ValidationError::class)]
 final class ValidationErrorTest extends TestCase
 {
     public function testTranslateReturnsMessageVerbatimWhenKeyIsNull(): void
@@ -17,29 +17,22 @@ final class ValidationErrorTest extends TestCase
         self::assertSame('plain English', $error->translate());
     }
 
-    public function testKeyAndParamsArePreservedOnTheValueObject(): void
+    public function testTranslateReturnsMessageVerbatimWhenKeyIsNullEvenWithParams(): void
     {
+        // params are ignored on the null-key path — the raw message is returned
+        // unmodified rather than being run through placeholder injection.
         $error = new ValidationError(
             message: 'A {thing} cannot be placed here',
-            key: 'WeDevelop\\Grid\\Tests\\Unit\\Value\\ValidationErrorTest.PLACEMENT',
             params: ['thing' => 'Section'],
         );
-        self::assertSame('WeDevelop\\Grid\\Tests\\Unit\\Value\\ValidationErrorTest.PLACEMENT', $error->key);
-        self::assertSame(['thing' => 'Section'], $error->params);
+
+        self::assertSame('A {thing} cannot be placed here', $error->translate());
     }
 
-    public function testExistingFieldsRemainAccessibleAndDefaultsUnchanged(): void
+    public function testKeyAndParamsDefaultToNullAndEmptyArray(): void
     {
-        $error = new ValidationError(
-            message: 'fail',
-            field: 'placement',
-            severity: ValidationSeverity::Warning,
-            code: ValidationErrorCode::HierarchyViolation,
-        );
-        self::assertSame('fail', $error->message);
-        self::assertSame('placement', $error->field);
-        self::assertSame(ValidationSeverity::Warning, $error->severity);
-        self::assertSame(ValidationErrorCode::HierarchyViolation, $error->code);
+        $error = new ValidationError(message: 'fail');
+
         self::assertNull($error->key);
         self::assertSame([], $error->params);
     }

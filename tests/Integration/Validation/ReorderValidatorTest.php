@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Validation;
 
+use Closure;
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
-use WeDevelop\Grid\Model\Column;
-use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
@@ -55,56 +57,71 @@ final class ReorderValidatorTest extends SapphireTest
 
     // -- Valid cross-parent moves -----------------------------------------
 
-    public function testCrossParentSectionToPagePasses(): void
+    /**
+     * Each case builds a valid cross-parent relocation and returns the moved
+     * element together with its new (allowed) target parent. The closure
+     * receives the test case so it can resolve fixtures.
+     *
+     * @return iterable<string, array{Closure(self): array{GridElement, DataObject}}>
+     */
+    public static function validCrossParentMoveProvider(): iterable
     {
-        $pageA = $this->objFromFixture(Page::class, 'test_page');
-        $pageB = $this->objFromFixture(Page::class, 'test_page_2');
-        $section = GridTreeFactory::section($pageA);
+        yield 'section to another page' => [
+            static function (self $test): array {
+                $pageA = $test->objFromFixture(Page::class, 'test_page');
+                $pageB = $test->objFromFixture(Page::class, 'test_page_2');
+                $section = GridTreeFactory::section($pageA);
 
-        // Move section from pageA to pageB
-        $result = $this->getValidator()->validate($section, $pageB);
+                return [$section, $pageB];
+            },
+        ];
 
-        self::assertTrue($result->isOk());
+        yield 'row to another section' => [
+            static function (self $test): array {
+                $page = $test->objFromFixture(Page::class, 'test_page');
+                $sectionA = GridTreeFactory::section($page);
+                $sectionB = GridTreeFactory::section($page);
+                $row = GridTreeFactory::row($sectionA);
+
+                return [$row, $sectionB];
+            },
+        ];
+
+        yield 'column to another row' => [
+            static function (self $test): array {
+                $page = $test->objFromFixture(Page::class, 'test_page');
+                $section = GridTreeFactory::section($page);
+                $rowA = GridTreeFactory::row($section);
+                $rowB = GridTreeFactory::row($section);
+                $column = GridTreeFactory::column($rowA);
+
+                return [$column, $rowB];
+            },
+        ];
+
+        yield 'content to another column' => [
+            static function (self $test): array {
+                $page = $test->objFromFixture(Page::class, 'test_page');
+                $section = GridTreeFactory::section($page);
+                $row = GridTreeFactory::row($section);
+                $columnA = GridTreeFactory::column($row);
+                $columnB = GridTreeFactory::column($row);
+                $content = GridTreeFactory::contentElement($columnA);
+
+                return [$content, $columnB];
+            },
+        ];
     }
 
-    public function testCrossParentRowToSectionPasses(): void
+    /**
+     * @param Closure(self): array{GridElement, DataObject} $buildMove
+     */
+    #[DataProvider('validCrossParentMoveProvider')]
+    public function testValidCrossParentMovePasses(Closure $buildMove): void
     {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $sectionA = GridTreeFactory::section($page);
-        $sectionB = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($sectionA);
+        [$element, $targetParent] = $buildMove($this);
 
-        // Move row from sectionA to sectionB
-        $result = $this->getValidator()->validate($row, $sectionB);
-
-        self::assertTrue($result->isOk());
-    }
-
-    public function testCrossParentColumnToRowPasses(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $rowA = GridTreeFactory::row($section);
-        $rowB = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($rowA);
-
-        // Move column from rowA to rowB
-        $result = $this->getValidator()->validate($column, $rowB);
-
-        self::assertTrue($result->isOk());
-    }
-
-    public function testCrossParentContentToColumnPasses(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $columnA = GridTreeFactory::column($row);
-        $columnB = GridTreeFactory::column($row);
-        $content = GridTreeFactory::contentElement($columnA);
-
-        // Move content from columnA to columnB
-        $result = $this->getValidator()->validate($content, $columnB);
+        $result = $this->getValidator()->validate($element, $targetParent);
 
         self::assertTrue($result->isOk());
     }

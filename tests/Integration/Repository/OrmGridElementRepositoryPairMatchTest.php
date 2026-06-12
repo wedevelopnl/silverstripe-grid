@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Repository;
 
 use Page;
+use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
@@ -12,6 +13,7 @@ use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Repository\OrmGridElementRepository;
 
+#[CoversClass(OrmGridElementRepository::class)]
 final class OrmGridElementRepositoryPairMatchTest extends SapphireTest
 {
     protected $usesDatabase = true;

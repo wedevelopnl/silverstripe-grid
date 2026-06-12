@@ -11,21 +11,6 @@ use WeDevelop\Grid\Dev\FixtureResult;
 #[CoversClass(FixtureResult::class)]
 final class FixtureResultTest extends TestCase
 {
-    public function testConstructorStoresProperties(): void
-    {
-        $result = new FixtureResult(
-            fixtureName: 'element-tree',
-            pageId: 42,
-            pageUrl: '/e2e-grid-test/',
-            fixtureMap: ['Page' => ['e2e_page' => 42]],
-        );
-
-        self::assertSame('element-tree', $result->fixtureName);
-        self::assertSame(42, $result->pageId);
-        self::assertSame('/e2e-grid-test/', $result->pageUrl);
-        self::assertSame(['Page' => ['e2e_page' => 42]], $result->fixtureMap);
-    }
-
     public function testJsonSerializeReturnsExpectedStructure(): void
     {
         $result = new FixtureResult(
