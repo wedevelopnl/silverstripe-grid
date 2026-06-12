@@ -314,15 +314,12 @@ class GridElement extends DataObject
             return null;
         }
 
-        if ($parent instanceof SiteTree) {
-            return $parent;
-        }
-
         if ($parent instanceof self) {
             return $parent->getPage();
         }
 
-        // Parent is a non-GridElement DataObject — treat it as the owning "page"
+        // Parent is a SiteTree page or any other non-GridElement DataObject —
+        // treat it as the owning "page" and return it directly.
         return $parent;
     }
 

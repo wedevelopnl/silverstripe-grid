@@ -290,11 +290,11 @@ class GridController extends AdminController
             $this->jsonError(400);
         }
 
+        // A null lookup result and a non-Column result both reduce to the same
+        // 400: `null instanceof Column` is false, so the single instanceof
+        // guard below covers the not-found case too (jsonError throws, never
+        // returns), keeping behaviour identical to an explicit null check.
         $parent = $this->elementRepository->findByRef($body->parent);
-        if ($parent === null) {
-            $this->jsonError(400);
-        }
-
         if (!$parent instanceof Column) {
             $this->jsonError(400);
         }
