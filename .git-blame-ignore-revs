@@ -4,3 +4,6 @@
 
 # style: normalize client/src formatting with biome
 4820e69dc68f1ee5ce5c89bcb9e829579384cc96
+
+# style: reformat with biome (semicolons asNeeded, double JSX quotes)
+eee1b76d1e5c998946fa640d13deed28ab388354
