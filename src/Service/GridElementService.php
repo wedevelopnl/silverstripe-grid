@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Service;
 
-use RuntimeException;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
@@ -30,9 +28,6 @@ use WeDevelop\Grid\Value\WriteResult;
  */
 final readonly class GridElementService
 {
-    /** Sentinel message used to trigger a rollback inside {@see writeAndPlace()}. */
-    private const string ROLLBACK_SIGNAL = 'GridElementService.rollback-after-place';
-
     public function __construct(
         private ReorderValidatorInterface $validator,
         private ElementPlacementService $placementService,
@@ -175,35 +170,13 @@ final readonly class GridElementService
 
         $clone->Sort = 0;
 
-        $conn = DB::get_conn();
-        if ($conn === null) {
-            return WriteResult::from(static function () use ($clone): GridElement {
+        /** @var Result<GridElement> */
+        return Transactional::run(static fn (): Result => WriteResult::from(
+            static function () use ($clone): GridElement {
                 $clone->write();
                 return $clone;
-            });
-        }
-
-        /** @var Result<GridElement>|null $captured */
-        $captured = null;
-
-        try {
-            $conn->withTransaction(function () use (&$captured, $clone): void {
-                $captured = WriteResult::from(static function () use ($clone): GridElement {
-                    $clone->write();
-                    return $clone;
-                });
-                if ($captured->isErr()) {
-                    throw new RuntimeException(self::ROLLBACK_SIGNAL);
-                }
-            });
-        } catch (RuntimeException $e) {
-            if ($e->getMessage() !== self::ROLLBACK_SIGNAL) {
-                throw $e;
-            }
-        }
-
-        /** @var Result<GridElement> $captured Guaranteed populated — the closure always assigns before the sentinel throw. */
-        return $captured;
+            },
+        ));
     }
 
     /**
@@ -290,29 +263,9 @@ final readonly class GridElementService
         ?int $afterElementId,
         bool $insertAtStart = false,
     ): Result {
-        $conn = DB::get_conn();
-        if ($conn === null) {
-            return $this->writeThenPlace($element, $parent, $afterElementId, $insertAtStart);
-        }
-
-        /** @var Result<GridElement>|null $captured */
-        $captured = null;
-
-        try {
-            $conn->withTransaction(function () use (&$captured, $element, $parent, $afterElementId, $insertAtStart): void {
-                $captured = $this->writeThenPlace($element, $parent, $afterElementId, $insertAtStart);
-                if ($captured->isErr()) {
-                    throw new RuntimeException(self::ROLLBACK_SIGNAL);
-                }
-            });
-        } catch (RuntimeException $e) {
-            if ($e->getMessage() !== self::ROLLBACK_SIGNAL) {
-                throw $e;
-            }
-        }
-
-        /** @var Result<GridElement> $captured Guaranteed populated — the closure always assigns before the sentinel throw. */
-        return $captured;
+        return Transactional::run(
+            fn (): Result => $this->writeThenPlace($element, $parent, $afterElementId, $insertAtStart),
+        );
     }
 
     /**
