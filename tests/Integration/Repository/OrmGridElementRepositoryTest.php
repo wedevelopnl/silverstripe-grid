@@ -146,6 +146,26 @@ final class OrmGridElementRepositoryTest extends SapphireTest
         self::assertSame((int) $column->ID, (int) $results[0]->ID);
     }
 
+    public function testFindByParentsIgnoresZoneForNonPageParentClass(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, zone: 'main');
+        $row = GridTreeFactory::row($section);
+
+        // A zone only filters root-level sections (page parents). When a zone is
+        // passed alongside a non-page parent class it must be ignored: the query
+        // stays on GridElement::get() with no Zone filter. The old `$zone !== null`
+        // branch would have swapped to Section::get() + a Zone filter, matching no
+        // rows (a Row's parent is a Section, not a page) and returning nothing.
+        $results = $this->repository->findByParents(
+            [Section::class => [(int) $section->ID]],
+            'sidebar',
+        );
+
+        self::assertCount(1, $results);
+        self::assertSame((int) $row->ID, (int) $results[0]->ID);
+    }
+
     public function testFindByParentsMultipleClasses(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
