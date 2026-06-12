@@ -78,6 +78,6 @@ test.describe('Build page from scratch', () => {
 
     // Step 8: Verify the published page renders on the frontend
     await page.goto('/e2e-build-test')
-    await expect(page.locator('h1')).toContainText('E2E Build Test')
+    await expect(page.getByRole('heading', { level: 1, name: /E2E Build Test/ })).toBeVisible()
   })
 })

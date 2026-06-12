@@ -1,7 +1,7 @@
-import type { Locator, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
+import { resetFixtures, loadAndNavigate } from '../helpers/fixtures'
 import { activateDragByTitle, dropAndSettle } from '../helpers/drag'
-import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
 
 /**
  * Cross-section row drop positions — journey tests.
@@ -11,7 +11,76 @@ import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
  * Uses sequential drag operations within a single fixture load to cover
  * all drop positions and directions efficiently.
  */
-test.describe('Cross-section row drop positions', () => {
+// --- Hierarchy-specific helpers (shared across the journey describes) ---
+
+function getSection(page: Page, sectionTitle: string) {
+  return page.getByTestId('section-block').filter({ hasText: sectionTitle })
+}
+
+/**
+ * Enter the target section via its FIRST row center (DOWN direction).
+ * The 30-step mouse move triggers cross-container entry via collision detection.
+ */
+async function enterAtFirst(page: Page, targetSection: Locator, expectedRowCount: number) {
+  const firstRow = targetSection.getByTestId('row-block').first()
+  await firstRow.scrollIntoViewIfNeeded()
+  const box = await firstRow.boundingBox()
+  expect(box).not.toBeNull()
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2, { steps: 30 })
+  await expect(targetSection.getByTestId('row-block')).toHaveCount(expectedRowCount)
+}
+
+/**
+ * Enter the target section from below (UP direction).
+ * The -40px offset past the last row's center ensures the centerCrossing
+ * UP threshold is reliably crossed despite floating-point precision.
+ */
+async function enterFromBelow(page: Page, targetSection: Locator, expectedRowCount: number) {
+  const lastRow = targetSection.getByTestId('row-block').last()
+  await lastRow.scrollIntoViewIfNeeded()
+  const box = await lastRow.boundingBox()
+  expect(box).not.toBeNull()
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2 - 40, { steps: 30 })
+  await expect(targetSection.getByTestId('row-block')).toHaveCount(expectedRowCount)
+}
+
+/**
+ * Compute drop coordinates for a target position within a section.
+ * Uses row TITLES (not DOM indices) to locate rows, avoiding interference
+ * from the active/dragging item which is present in the DOM at opacity 0.3.
+ *
+ * Positioning strategy:
+ * - "before": top quarter of the named row (above center → "before" direction)
+ * - "after": bottom quarter of the named row (below center → "after" direction)
+ * - "between": bottom 85% of the first (upper) row — stable position above insertion point
+ */
+async function rowPosition(
+  targetSection: Locator,
+  position: { before: string } | { after: string } | { between: [string, string] },
+) {
+  const sectionBox = await targetSection.boundingBox()
+  expect(sectionBox).not.toBeNull()
+  const centerX = sectionBox!.x + sectionBox!.width / 2
+
+  if ('before' in position) {
+    const row = targetSection.getByTestId('row-block').filter({ hasText: position.before })
+    const box = await row.boundingBox()
+    expect(box).not.toBeNull()
+    return { x: centerX, y: box!.y + box!.height * 0.15 }
+  }
+  if ('after' in position) {
+    const row = targetSection.getByTestId('row-block').filter({ hasText: position.after })
+    const box = await row.boundingBox()
+    expect(box).not.toBeNull()
+    return { x: centerX, y: box!.y + box!.height * 0.65 }
+  }
+  const row1 = targetSection.getByTestId('row-block').filter({ hasText: position.between[0] })
+  const box1 = await row1.boundingBox()
+  expect(box1).not.toBeNull()
+  return { x: centerX, y: box1!.y + box1!.height * 0.85 }
+}
+
+test.describe('Cross-section row drop — both directions', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
     'DnD pointer simulation is Chromium-specific',
@@ -22,77 +91,6 @@ test.describe('Cross-section row drop positions', () => {
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
   })
-
-  // --- Hierarchy-specific helpers ---
-
-  function getSection(page: Page, sectionTitle: string) {
-    return page.getByTestId('section-block').filter({ hasText: sectionTitle })
-  }
-
-  /**
-   * Enter the target section via its FIRST row center (DOWN direction).
-   * The 30-step mouse move triggers cross-container entry via collision detection.
-   */
-  async function enterAtFirst(page: Page, targetSection: Locator, expectedRowCount: number) {
-    const firstRow = targetSection.getByTestId('row-block').first()
-    await firstRow.scrollIntoViewIfNeeded()
-    const box = await firstRow.boundingBox()
-    expect(box).not.toBeNull()
-    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2, { steps: 30 })
-    await expect(targetSection.getByTestId('row-block')).toHaveCount(expectedRowCount)
-  }
-
-  /**
-   * Enter the target section from below (UP direction).
-   * The -40px offset past the last row's center ensures the centerCrossing
-   * UP threshold is reliably crossed despite floating-point precision.
-   */
-  async function enterFromBelow(page: Page, targetSection: Locator, expectedRowCount: number) {
-    const lastRow = targetSection.getByTestId('row-block').last()
-    await lastRow.scrollIntoViewIfNeeded()
-    const box = await lastRow.boundingBox()
-    expect(box).not.toBeNull()
-    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2 - 40, { steps: 30 })
-    await expect(targetSection.getByTestId('row-block')).toHaveCount(expectedRowCount)
-  }
-
-  /**
-   * Compute drop coordinates for a target position within a section.
-   * Uses row TITLES (not DOM indices) to locate rows, avoiding interference
-   * from the active/dragging item which is present in the DOM at opacity 0.3.
-   *
-   * Positioning strategy:
-   * - "before": top quarter of the named row (above center → "before" direction)
-   * - "after": bottom quarter of the named row (below center → "after" direction)
-   * - "between": bottom 85% of the first (upper) row — stable position above insertion point
-   */
-  async function rowPosition(
-    targetSection: Locator,
-    position: { before: string } | { after: string } | { between: [string, string] },
-  ) {
-    const sectionBox = await targetSection.boundingBox()
-    expect(sectionBox).not.toBeNull()
-    const centerX = sectionBox!.x + sectionBox!.width / 2
-
-    if ('before' in position) {
-      const row = targetSection.getByTestId('row-block').filter({ hasText: position.before })
-      const box = await row.boundingBox()
-      expect(box).not.toBeNull()
-      return { x: centerX, y: box!.y + box!.height * 0.15 }
-    }
-    if ('after' in position) {
-      const row = targetSection.getByTestId('row-block').filter({ hasText: position.after })
-      const box = await row.boundingBox()
-      expect(box).not.toBeNull()
-      return { x: centerX, y: box!.y + box!.height * 0.65 }
-    }
-    const row1 = targetSection.getByTestId('row-block').filter({ hasText: position.between[0] })
-    const box1 = await row1.boundingBox()
-    expect(box1).not.toBeNull()
-    return { x: centerX, y: box1!.y + box1!.height * 0.85 }
-  }
-
-  // --- Journey tests ---
 
   test('moves rows across sections in both directions', async ({ page }) => {
     await loadAndNavigate(page, 'cross-section-drop')
@@ -189,6 +187,19 @@ test.describe('Cross-section row drop positions', () => {
       'Row B1',
       'Row A3',
     ])
+  })
+})
+
+test.describe('Cross-section row drop — source depletion and cancel', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'DnD pointer simulation is Chromium-specific',
+  )
+
+  test.use({ viewport: { width: 1280, height: 1400 } })
+
+  test.afterAll(async ({ request }) => {
+    await resetFixtures(request)
   })
 
   test('handles edge cases: source depletion and cancel mid-drag', async ({ page }) => {

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { activateViewport, firstNonDefaultViewport, readAdapterConfig } from '../helpers/adapter'
 import { loadFixture, resetFixtures } from '../helpers/fixtures'
+import { activateViewport, firstNonDefaultViewport, readAdapterConfig } from '../helpers/adapter'
 
 test.describe('Grid settings tab', () => {
   test.afterAll(async ({ request }) => {
@@ -22,9 +22,16 @@ test.describe('Grid settings tab', () => {
     const overrideKey = firstNonDefaultViewport(adapter)
     const editFormUrl = `/admin/pages/edit/EditForm/${fixture.pageId}/field/GridEditor/item/${columnId}/edit`
 
-    const settingsTable = page.locator('.grid-settings-field__overrides')
-    const rows = settingsTable.locator('tbody tr')
-    const defaultRow = settingsTable.locator('tbody tr.is-default')
+    // The settings table is the only <table> on the Grid tab; its rows carry
+    // the implicit ARIA table/row roles. Form controls are located by their
+    // submit `name` (a stable semantic hook, not a styling class).
+    const settingsTable = page.getByRole('table')
+    // Data rows = all rows minus the header row.
+    const dataRows = settingsTable
+      .getByRole('row')
+      .filter({ hasNot: page.getByRole('columnheader') })
+    const defaultBadge = page.getByText('default', { exact: true })
+    const defaultRow = settingsTable.getByRole('row').filter({ has: defaultBadge })
     const defaultWidthSelect = page.locator(
       `select[name="GridSettings[${adapter.defaultViewport}][width]"]`,
     )
@@ -36,12 +43,15 @@ test.describe('Grid settings tab', () => {
       await page.getByRole('tab', { name: 'Grid' }).click()
 
       await expect(settingsTable).toBeVisible()
-      await expect(rows).toHaveCount(adapter.viewports.length)
+      // One data row per adapter viewport.
+      await expect(dataRows).toHaveCount(adapter.viewports.length)
 
       // Default row: "default" badge, no override toggle (always overridden).
       await expect(defaultRow).toHaveCount(1)
-      await expect(defaultRow.locator('.badge')).toHaveText('default')
-      await expect(defaultRow.locator('.grid-settings-field__override-toggle')).toHaveCount(0)
+      await expect(defaultBadge).toBeVisible()
+      await expect(
+        defaultRow.locator(`input[name="GridSettings[${adapter.defaultViewport}][override]"]`),
+      ).toHaveCount(0)
       // Baseline fixture: default width = full grid, visible.
       await expect(defaultWidthSelect).toHaveValue(String(adapter.columnCount))
 
@@ -65,7 +75,10 @@ test.describe('Grid settings tab', () => {
       await overrideVisible.uncheck()
 
       await page.getByRole('button', { name: /Save/ }).first().click()
-      await expect(page.locator('.toast__content')).toContainText('Saved', {
+      // The save confirmation is rendered by the SilverStripe admin's own
+      // toast component (third-party markup with no test hook of ours), so we
+      // assert on the user-visible "Saved" message it displays.
+      await expect(page.getByText(/Saved/).first()).toBeVisible({
         timeout: 15_000,
       })
     })
@@ -98,7 +111,10 @@ test.describe('Grid settings tab', () => {
     await test.step('clearing the override leaves the row disabled after save', async () => {
       await overrideToggle.uncheck()
       await page.getByRole('button', { name: /Save/ }).first().click()
-      await expect(page.locator('.toast__content')).toContainText('Saved', {
+      // The save confirmation is rendered by the SilverStripe admin's own
+      // toast component (third-party markup with no test hook of ours), so we
+      // assert on the user-visible "Saved" message it displays.
+      await expect(page.getByText(/Saved/).first()).toBeVisible({
         timeout: 15_000,
       })
 

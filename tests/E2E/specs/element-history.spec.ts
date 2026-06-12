@@ -27,10 +27,14 @@ test.describe('Element history — version timeline on element detail form', () 
 
     await test.step('Open the History tab', async () => {
       await page.getByRole('tab', { name: 'History' }).click()
+      // The history viewer is rendered by SilverStripe's silverstripe/versioned-admin
+      // module (third-party markup with no test hook we can add), so we scope to
+      // its container class to confirm the timeline rendered.
       await expect(page.locator('.history-viewer__container')).toBeVisible({ timeout: 15_000 })
     })
 
     await test.step('Verify version rows exist', async () => {
+      // Third-party versioned-admin markup — see the note above.
       const versionRows = page.locator('.history-viewer__row')
       await expect(versionRows.first()).toBeVisible({ timeout: 15_000 })
 

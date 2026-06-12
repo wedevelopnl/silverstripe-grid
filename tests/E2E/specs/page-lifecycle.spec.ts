@@ -28,7 +28,7 @@ test.describe('Page lifecycle', () => {
     const livePath = fixture.pageUrl.split('?')[0]
     await page.goto(livePath)
 
-    await expect(page.locator('h1')).toContainText('E2E Grid Test Page')
+    await expect(page.getByRole('heading', { level: 1, name: /E2E Grid Test Page/ })).toBeVisible()
     await expect(page.getByRole('heading', { level: 2 })).toHaveText('Main Section')
   })
 })

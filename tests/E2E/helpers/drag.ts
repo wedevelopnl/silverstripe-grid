@@ -1,5 +1,5 @@
-import type { Locator, Page } from '@playwright/test'
 import { expect } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
 /**
  * Returns the viewport-relative center coordinates of a locator.
@@ -16,11 +16,41 @@ async function getCenter(locator: Locator): Promise<{ x: number; y: number }> {
 }
 
 /**
- * Small delay for the browser event loop and React reconciliation.
- * dnd-kit processes pointer events synchronously but React state
- * updates are batched and rendered asynchronously.
+ * Matches the drag-overlay *container* dnd-kit renders for any node type
+ * (element/row/column/section). The container's testid is exactly
+ * `drag-overlay-<type>`; its icon/title/meta children carry the same prefix
+ * plus a `-icon`/`-title`/`-meta` suffix, so a prefix match (`^=`) would
+ * resolve to multiple elements and break strict-mode `toBeVisible`. The
+ * anchored regex matches the four container ids and none of the children.
  */
-function tick(page: Page, ms = 100): Promise<void> {
+function dragOverlay(page: Page): Locator {
+  return page.getByTestId(/^drag-overlay-(element|row|column|section)$/)
+}
+
+/**
+ * Wait until the drag overlay is mounted — the user-visible signal that
+ * dnd-kit has activated the drag and React has rendered the DragOverlay.
+ * Replaces a fixed post-activation sleep with the condition it stood in for.
+ */
+async function waitForDragOverlayVisible(page: Page): Promise<void> {
+  await expect(dragOverlay(page)).toBeVisible()
+}
+
+/**
+ * Wait until the drag overlay is gone — the user-visible signal that the
+ * drop completed and dnd-kit tore down the DragOverlay after onDragEnd.
+ */
+async function waitForDragOverlayHidden(page: Page): Promise<void> {
+  await expect(dragOverlay(page)).toBeHidden()
+}
+
+/**
+ * Bounded pause for a dnd-kit/React reconciliation step that has no
+ * user-visible end-state — collision detection settling at a hover
+ * position before the DOM order changes. Kept as a short timeout because
+ * there is no element whose visibility or text flips when this completes.
+ */
+function settleCollision(page: Page, ms = 150): Promise<void> {
   return page.waitForTimeout(ms)
 }
 
@@ -75,21 +105,21 @@ export async function startDrag(page: Page, source: Locator, target: Locator): P
 
   await page.mouse.move(activationX, activationY, { steps: 3 })
 
-  // Let dnd-kit activate the drag and React render the DragOverlay
-  await tick(page, 150)
+  // dnd-kit has activated the drag once the DragOverlay is rendered.
+  await waitForDragOverlayVisible(page)
 
   // Move to target center with many steps for smooth pointer tracking.
   // dnd-kit updates collision detection on each pointermove event.
   await page.mouse.move(to.x, to.y, { steps: 20 })
 
-  // Let collision detection settle at the final position
-  await tick(page, 150)
+  // Let collision detection settle at the final position (no visible end-state).
+  await settleCollision(page)
 
   return {
     release: async () => {
       await page.mouse.up()
-      // Let React process the onDragEnd state update
-      await tick(page, 150)
+      // onDragEnd has completed once the DragOverlay is torn down.
+      await waitForDragOverlayHidden(page)
     },
   }
 }
@@ -126,10 +156,12 @@ export function waitForMutationSettlement(page: Page) {
   return async () => {
     await reorderDone
     await refetchDone
-    // After the refetch response arrives, TanStack Query updates its
-    // cache asynchronously, React batches a re-render, and dnd-kit
-    // re-registers droppable rects. A 500ms pause lets this full
-    // chain settle before the next drag measures element positions.
+    // The PATCH + GET awaits above are the user-observable settle (the
+    // network round-trip). The remaining pause covers dnd-kit re-registering
+    // its droppable rects after React reconciles the refetched tree — an
+    // internal measurement step with NO DOM end-state to assert on. Without
+    // it, the next drag in a journey measures stale rects and drops in the
+    // wrong position (see dnd-guide e2e-testing reference, "API settlement").
     await page.waitForTimeout(500)
   }
 }
@@ -141,7 +173,9 @@ export function waitForMutationSettlement(page: Page) {
  */
 export async function dropAndSettle(page: Page, targetX: number, targetY: number) {
   await page.mouse.move(targetX, targetY, { steps: 15 })
-  await page.waitForTimeout(200)
+  // Let collision detection settle at the final position before releasing
+  // (no visible end-state to assert on).
+  await settleCollision(page)
 
   const settle = waitForMutationSettlement(page)
   await page.mouse.up()
@@ -185,10 +219,15 @@ export async function activateDragByTitle(
   const moveX = axis === 'horizontal' ? x + 10 : x
   const moveY = axis === 'vertical' ? y + 10 : y
   await page.mouse.move(moveX, moveY, { steps: 3 })
-  await page.waitForTimeout(150)
 
+  // The overlay becoming visible is the user-visible signal that dnd-kit
+  // activated the drag — assert on it instead of sleeping. When the caller
+  // names the specific overlay, assert that one; otherwise assert that any
+  // drag overlay rendered.
   if (overlayTestId) {
     await expect(page.getByTestId(overlayTestId)).toBeVisible()
+  } else {
+    await waitForDragOverlayVisible(page)
   }
 
   return { x, y }

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
+import { resetFixtures, loadAndNavigate } from '../helpers/fixtures'
 
 /**
  * Regression test for ghost-jump bug: with exactly 2 sibling rows, starting
@@ -52,38 +52,47 @@ test.describe('Ghost jump regression', () => {
     await page.mouse.move(fromX, fromY)
     await page.mouse.down()
     await page.mouse.move(fromX, fromY - 10, { steps: 3 })
-    await page.waitForTimeout(150)
 
-    // Assert activation: overlay visible, Row 1 hasn't swapped
+    // The drag overlay rendering is the user-visible activation signal — this
+    // assertion replaces a fixed post-activation sleep.
     await expect(page.getByTestId('drag-overlay-row')).toBeVisible()
-    const afterActivation = await rows.nth(0).boundingBox()
-    expect(afterActivation).not.toBeNull()
-    expect(Math.abs(afterActivation!.y - initialY)).toBeLessThan(NO_SWAP_TOLERANCE)
+
+    // Row 1 hasn't swapped on activation. expect.poll re-reads the live
+    // position until it settles, so we assert on the condition rather than
+    // sleeping for a guessed reconciliation duration.
+    const row1OffsetFromInitial = async () => {
+      const box = await rows.nth(0).boundingBox()
+      expect(box).not.toBeNull()
+      return Math.abs(box!.y - initialY)
+    }
+    await expect.poll(row1OffsetFromInitial).toBeLessThan(NO_SWAP_TOLERANCE)
 
     // Move into Row 1's lower quarter (inside rect but before center)
     const row1BoxNow = await rows.nth(0).boundingBox()
     expect(row1BoxNow).not.toBeNull()
     const lowerQuarterY = row1BoxNow!.y + row1BoxNow!.height * 0.75
     await page.mouse.move(fromX, lowerQuarterY, { steps: 10 })
-    await page.waitForTimeout(150)
 
-    // Assert no swap: Row 1 still near original position
-    const afterLowerQuarter = await rows.nth(0).boundingBox()
-    expect(afterLowerQuarter).not.toBeNull()
-    expect(Math.abs(afterLowerQuarter!.y - initialY)).toBeLessThan(NO_SWAP_TOLERANCE)
+    // Assert no swap: Row 1 stays near its original position (poll retries
+    // until dnd-kit has processed the move — no fixed wait needed).
+    await expect.poll(row1OffsetFromInitial).toBeLessThan(NO_SWAP_TOLERANCE)
 
     // Cross Row 1's center: move well above its vertical midpoint
     const aboveCenterY = row1BoxNow!.y + row1BoxNow!.height * 0.2
     await page.mouse.move(fromX, aboveCenterY, { steps: 10 })
-    await page.waitForTimeout(150)
 
-    // Assert swap: Row 1 pushed down by CSS transform (full row height, well beyond tolerance)
-    const afterCrossing = await rows.nth(0).boundingBox()
-    expect(afterCrossing).not.toBeNull()
-    expect(afterCrossing!.y).toBeGreaterThan(initialY + NO_SWAP_TOLERANCE)
+    // Assert swap: Row 1 pushed down by CSS transform (full row height, well
+    // beyond tolerance). Poll until the transform-driven shift lands.
+    await expect
+      .poll(async () => {
+        const box = await rows.nth(0).boundingBox()
+        expect(box).not.toBeNull()
+        return box!.y
+      })
+      .toBeGreaterThan(initialY + NO_SWAP_TOLERANCE)
 
-    // Cleanup: release mouse
+    // Cleanup: release mouse and wait for the overlay teardown.
     await page.mouse.up()
-    await page.waitForTimeout(150)
+    await expect(page.getByTestId('drag-overlay-row')).toBeHidden()
   })
 })

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
 import { enablePreviewMode, waitForPreviewRefresh } from '../helpers/preview'
 
-test.describe('Duplicate element', () => {
+test.describe('Duplicate section in same zone', () => {
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
   })
@@ -47,6 +47,12 @@ test.describe('Duplicate element', () => {
       const titles = page.getByTestId('section-block').getByTestId('section-title')
       await expect(titles).toHaveText(['Source Section', 'Source Section copy'])
     })
+  })
+})
+
+test.describe('Duplicate section to another page and zone', () => {
+  test.afterAll(async ({ request }) => {
+    await resetFixtures(request)
   })
 
   test('duplicate section to different page and zone via dialog', async ({ page }) => {
@@ -128,6 +134,12 @@ test.describe('Duplicate element', () => {
       await expect(copy.getByTestId('column-block')).toHaveCount(2)
       await expect(copy.getByTestId('element-card')).toHaveCount(2)
     })
+  })
+})
+
+test.describe('Duplicate content element to another column', () => {
+  test.afterAll(async ({ request }) => {
+    await resetFixtures(request)
   })
 
   test('duplicate content element to different column on same page via dialog', async ({

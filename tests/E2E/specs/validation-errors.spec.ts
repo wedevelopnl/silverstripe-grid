@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { readAdapterConfig } from '../helpers/adapter'
-import { activateDragByTitle, dropAndSettle } from '../helpers/drag'
 import { loadAndNavigate, loadFixture, resetFixtures } from '../helpers/fixtures'
+import { activateDragByTitle } from '../helpers/drag'
+import { readAdapterConfig } from '../helpers/adapter'
 
 /**
  * Covers the user-visible side of validation errors:
@@ -68,14 +68,21 @@ test.describe('Validation errors', () => {
       await page.mouse.move(alphaBox!.x + alphaBox!.width / 2, alphaBox!.y + alphaBox!.height / 2, {
         steps: 30,
       })
-      await page.waitForTimeout(300)
+
+      // The cross-container pending move has applied once Section Alpha shows
+      // both rows (its own + the dragged Beta row). Asserting on that visible
+      // state replaces a fixed hover-settle sleep.
+      await expect(sectionAlpha.getByTestId('row-block')).toHaveCount(2)
 
       // Release — the mocked 400 response triggers the mutation's onError
       // handler: snapshot restore + showToast(error.message).
       await page.mouse.up()
 
       // Assert: user sees the error toast with the backend-provided message.
-      await expect(page.locator('.toast__content')).toContainText(violationMessage, {
+      // The toast is rendered by the SilverStripe admin's own Redux toast
+      // component (third-party markup), so we target the message text it
+      // displays rather than a class-based selector we do not own.
+      await expect(page.getByText(violationMessage)).toBeVisible({
         timeout: 10_000,
       })
 
@@ -105,8 +112,13 @@ test.describe('Validation errors', () => {
 
       await page.getByRole('tab', { name: 'Grid' }).click()
 
-      const settingsTable = page.locator('.grid-settings-field__overrides')
-      await expect(settingsTable).toBeVisible()
+      // The default-viewport width/offset controls are form <select>s located
+      // by their submit `name` (a stable semantic hook, not a styling class).
+      const defaultWidthSelect = page.locator(`select[name="GridSettings[${defaultKey}][width]"]`)
+      const defaultOffsetSelect = page.locator(`select[name="GridSettings[${defaultKey}][offset]"]`)
+
+      // The Grid tab has rendered once its width control is on screen.
+      await expect(defaultWidthSelect).toBeVisible()
 
       // Pick a width + offset combination that provably exceeds the grid
       // regardless of column count: half + 2/3 columns > total. The default
@@ -114,22 +126,17 @@ test.describe('Validation errors', () => {
       // enabled and selectOption works directly.
       const invalidWidth = Math.floor(adapter.columnCount / 2)
       const invalidOffset = Math.ceil((adapter.columnCount * 2) / 3)
-      await page
-        .locator(`select[name="GridSettings[${defaultKey}][width]"]`)
-        .selectOption(String(invalidWidth))
-      await page
-        .locator(`select[name="GridSettings[${defaultKey}][offset]"]`)
-        .selectOption(String(invalidOffset))
+      await defaultWidthSelect.selectOption(String(invalidWidth))
+      await defaultOffsetSelect.selectOption(String(invalidOffset))
 
       // Save — the backend field validator rejects the write and SilverStripe
-      // surfaces the error either in the form field holder or via the global
-      // CMS toast/alert. Asserting on the page body covers either surface.
+      // surfaces the user-visible error message.
       await page.getByRole('button', { name: /Save/ }).first().click()
 
       const errorText = new RegExp(
         `Width ${invalidWidth} plus offset ${invalidOffset} .* exceeds ${adapter.columnCount} columns`,
       )
-      await expect(page.locator('body')).toContainText(errorText, { timeout: 10_000 })
+      await expect(page.getByText(errorText)).toBeVisible({ timeout: 10_000 })
     })
   })
 })

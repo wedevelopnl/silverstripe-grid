@@ -77,6 +77,9 @@ test.describe('History view readonly grid', () => {
     // --- Open the History tab ---
     await page.goto(`/admin/pages/history/show/${fixture.pageId}`)
 
+    // The version timeline rows are rendered by SilverStripe's
+    // silverstripe/versioned-admin module (third-party markup with no test hook
+    // of ours), so we scope to its row class to drive and assert on the list.
     const versionRows = page.locator('.history-viewer__row')
     await expect(versionRows.first()).toBeVisible({ timeout: 15_000 })
 

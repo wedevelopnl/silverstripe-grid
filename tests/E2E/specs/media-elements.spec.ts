@@ -31,7 +31,9 @@ test.describe('Media elements', () => {
       // Navigate to Media tab and verify image is attached
       await page.getByRole('tab', { name: 'Media' }).click()
 
-      // MediaType should show 'image' and an upload field should have a file
+      // The attached file appears in SilverStripe's own UploadField widget,
+      // whose markup (.uploadfield-item__title) is third-party and carries no
+      // test hook of ours — scope to it to confirm a file is present.
       const uploadField = page.locator('.uploadfield-item__title')
       await expect(uploadField).toBeVisible({ timeout: 10_000 })
     })
@@ -57,43 +59,53 @@ test.describe('Media elements', () => {
     await test.step('Verify column width picker UX behavior', async () => {
       await page.getByRole('tab', { name: 'Layout' }).click()
 
-      const picker = page.locator('.column-width-picker')
-      await expect(picker).toBeVisible()
+      // The picker renders one radio per width option. Its accessible name is
+      // composed of the option's descriptive label plus the split ratio (e.g.
+      // "8/4 (content/media) 8/4", "Full width (no side-by-side) ..."), so we
+      // match the ratio as a substring via regex rather than an exact string.
+      // The radios are visually hidden (opacity:0) and toggled by clicking the
+      // visible label text, so we drive the selection by clicking that text.
+      const fullWidthOption = page.getByRole('radio', { name: /Full width/ })
+      const splitOption8 = page.getByRole('radio', { name: /8\/4/ })
+      const splitOption6 = page.getByRole('radio', { name: /6\/6/ })
+      const fullWidthLabel = page.getByText(/Full width/)
+      const splitLabel8 = page.getByText('8/4', { exact: true })
+      const splitLabel6 = page.getByText('6/6', { exact: true })
 
-      const fullWidthOption = picker.locator('label:has(input[value="0"])')
-      const splitOption8 = picker.locator('label:has(input[value="8"])')
-      const splitOption6 = picker.locator('label:has(input[value="6"])')
+      await expect(fullWidthLabel).toBeVisible()
 
-      // Holder IDs are form-prefixed — match by suffix
+      // Conditional layout fields are toggled by display-logic. Their holders
+      // carry no test hook of ours; the SilverStripe form prefixes the holder
+      // div id with the form name, so we match the field name by id suffix.
       const mediaPositionHolder = page.locator('[id$="_MediaPosition_Holder"]')
       const verticalAlignmentHolder = page.locator('[id$="_VerticalAlignment_Holder"]')
       const gapSizeHolder = page.locator('[id$="_GapSize_Holder"]')
 
       // Initial state: full width is selected, dependent fields are hidden
-      await expect(fullWidthOption.locator('input')).toBeChecked()
+      await expect(fullWidthOption).toBeChecked()
       await expect(mediaPositionHolder).toBeHidden()
       await expect(verticalAlignmentHolder).toBeHidden()
       await expect(gapSizeHolder).toBeHidden()
 
       // Select a column split — dependent fields appear, selected state moves
-      await splitOption8.click()
-      await expect(splitOption8.locator('input')).toBeChecked()
-      await expect(fullWidthOption.locator('input')).not.toBeChecked()
+      await splitLabel8.click()
+      await expect(splitOption8).toBeChecked()
+      await expect(fullWidthOption).not.toBeChecked()
       await expect(mediaPositionHolder).toBeVisible()
       await expect(verticalAlignmentHolder).toBeVisible()
       await expect(gapSizeHolder).toBeVisible()
 
       // Switch to a different split — selected state follows
-      await splitOption6.click()
-      await expect(splitOption6.locator('input')).toBeChecked()
-      await expect(splitOption8.locator('input')).not.toBeChecked()
+      await splitLabel6.click()
+      await expect(splitOption6).toBeChecked()
+      await expect(splitOption8).not.toBeChecked()
       // Dependent fields remain visible for any non-zero split
       await expect(mediaPositionHolder).toBeVisible()
 
       // Switch back to full width — dependent fields hide again
-      await fullWidthOption.click()
-      await expect(fullWidthOption.locator('input')).toBeChecked()
-      await expect(splitOption6.locator('input')).not.toBeChecked()
+      await fullWidthLabel.click()
+      await expect(fullWidthOption).toBeChecked()
+      await expect(splitOption6).not.toBeChecked()
       await expect(mediaPositionHolder).toBeHidden()
       await expect(verticalAlignmentHolder).toBeHidden()
       await expect(gapSizeHolder).toBeHidden()
@@ -101,9 +113,9 @@ test.describe('Media elements', () => {
 
     // --- Step 4: Configure layout settings and save ---
     await test.step('Configure layout settings', async () => {
-      // Select 8/4 split for the save+render test
-      const picker = page.locator('.column-width-picker')
-      await picker.locator('label:has(input[value="8"])').click()
+      // Select 8/4 split for the save+render test (click the visible label;
+      // the underlying radio is opacity:0).
+      await page.getByText('8/4', { exact: true }).click()
       await expect(page.locator('[id$="_MediaPosition_Holder"]')).toBeVisible()
 
       await selectChosenValue(page, 'MediaPosition', 'last')
@@ -111,7 +123,9 @@ test.describe('Media elements', () => {
       await selectChosenValue(page, 'GapSize', '3')
 
       await page.getByRole('button', { name: /Save/ }).first().click()
-      await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 })
+      // The save confirmation is the SilverStripe admin's own toast (third-party
+      // markup), so assert on the visible "Saved" message rather than its class.
+      await expect(page.getByText(/Saved/).first()).toBeVisible({ timeout: 15_000 })
     })
 
     // --- Step 5: Configure media settings ---
@@ -119,10 +133,12 @@ test.describe('Media elements', () => {
       await page.getByRole('tab', { name: 'Media' }).click()
 
       await selectChosenValue(page, 'MediaRatio', '16x9')
-      await page.locator('input[name="MediaCaption"]').fill('Test media caption')
+      await page.getByLabel('Caption', { exact: true }).fill('Test media caption')
 
       await page.getByRole('button', { name: /Save/ }).first().click()
-      await expect(page.locator('.toast__content')).toContainText('Saved', { timeout: 15_000 })
+      // The save confirmation is the SilverStripe admin's own toast (third-party
+      // markup), so assert on the visible "Saved" message rather than its class.
+      await expect(page.getByText(/Saved/).first()).toBeVisible({ timeout: 15_000 })
     })
 
     // --- Step 6: Navigate back and publish ---
@@ -139,25 +155,24 @@ test.describe('Media elements', () => {
       const liveUrl = fixture.pageUrl.split('?')[0]
       await page.goto(liveUrl)
 
-      // Image renders inside a figure with the media-block--image class
-      const mediaFigure = page.locator('figure.media-block--image')
-      await expect(mediaFigure).toBeVisible()
-
-      // Image has alt text from caption
-      const img = mediaFigure.locator('img')
-      await expect(img).toHaveAttribute('alt', 'Test media caption')
+      // The image is what the visitor sees — locate it by its accessible role
+      // and the alt text derived from the caption.
+      const img = page.getByRole('img', { name: 'Test media caption' })
+      await expect(img).toBeVisible()
 
       // Image src is populated (resized/served by SilverStripe)
       const src = await img.getAttribute('src')
       expect(src).toBeTruthy()
 
-      // Caption renders in figcaption
-      await expect(mediaFigure.locator('figcaption')).toContainText('Test media caption')
+      // The image sits inside a <figure> (implicit ARIA role) with its caption.
+      const mediaFigure = page.getByRole('figure').filter({ has: img })
+      await expect(mediaFigure).toContainText('Test media caption')
 
       // Side-by-side layout: the content-element has a row wrapper with two child divs.
       // Identified structurally (direct-child div of .content-element containing the
       // media figure) rather than by class name — adapters emit different row classes
-      // (Bootstrap `row`, Tailwind `grid grid-cols-*`, etc.).
+      // (Bootstrap `row`, Tailwind `grid grid-cols-*`, etc.), so there is no stable
+      // role/label to target; the structural shape IS the behaviour under test.
       const contentElement = page.locator('.content-element').filter({ has: mediaFigure })
       const rowWrapper = contentElement.locator('> div').filter({ has: mediaFigure })
       await expect(rowWrapper).toBeVisible()

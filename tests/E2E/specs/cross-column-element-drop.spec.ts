@@ -1,7 +1,7 @@
-import type { Locator, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
+import { resetFixtures, loadAndNavigate } from '../helpers/fixtures'
 import { activateDragByTitle, dropAndSettle } from '../helpers/drag'
-import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
 
 /**
  * Cross-column element drop positions — journey tests.
@@ -11,7 +11,70 @@ import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
  * directions. Elements use vertical layout (Y-axis) within columns, so
  * direction-aware placement compares pointer Y against center Y.
  */
-test.describe('Cross-column element drop positions', () => {
+// --- Hierarchy-specific helpers (shared across the journey describes) ---
+
+/** Locate a column by its title (via drag handle aria-label). */
+function getColumn(page: Page, colTitle: string) {
+  return page.getByTestId('column-block').filter({
+    has: page.locator(`[aria-label="Move ${colTitle}"]`),
+  })
+}
+
+/**
+ * Enter the target column by moving the pointer to the column's center.
+ * Uses the container center (not a specific child) so the entry trajectory
+ * reliably triggers collision detection regardless of the pointer's starting
+ * position — critical in journey tests where multiple prior operations leave
+ * the pointer at unpredictable coordinates.
+ */
+async function enterColumn(page: Page, targetCol: Locator, expectedElCount: number) {
+  await targetCol.scrollIntoViewIfNeeded()
+  const box = await targetCol.boundingBox()
+  expect(box).not.toBeNull()
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2, { steps: 30 })
+  await expect(targetCol.getByTestId('element-card')).toHaveCount(expectedElCount)
+}
+
+/**
+ * Compute drop coordinates for a target position within a column.
+ * Uses element TITLES to locate elements, avoiding interference from the
+ * active/dragging item which is present in the DOM at opacity 0.3.
+ *
+ * Positioning strategy (Y-axis for vertical layout):
+ * - "before": top 15% of the named element (above center → "before")
+ * - "after": bottom 65% of the named element (below center → "after")
+ * - "between": midpoint of the gap between two elements
+ */
+async function elPosition(
+  targetCol: Locator,
+  position: { before: string } | { after: string } | { between: [string, string] },
+) {
+  const colBox = await targetCol.boundingBox()
+  expect(colBox).not.toBeNull()
+  const centerX = colBox!.x + colBox!.width / 2
+
+  if ('before' in position) {
+    const el = targetCol.getByTestId('element-card').filter({ hasText: position.before })
+    const box = await el.boundingBox()
+    expect(box).not.toBeNull()
+    return { x: centerX, y: box!.y + box!.height * 0.15 }
+  }
+  if ('after' in position) {
+    const el = targetCol.getByTestId('element-card').filter({ hasText: position.after })
+    const box = await el.boundingBox()
+    expect(box).not.toBeNull()
+    return { x: centerX, y: box!.y + box!.height * 0.65 }
+  }
+  const el1 = targetCol.getByTestId('element-card').filter({ hasText: position.between[0] })
+  const el2 = targetCol.getByTestId('element-card').filter({ hasText: position.between[1] })
+  const box1 = await el1.boundingBox()
+  const box2 = await el2.boundingBox()
+  expect(box1).not.toBeNull()
+  expect(box2).not.toBeNull()
+  return { x: centerX, y: (box1!.y + box1!.height + box2!.y) / 2 }
+}
+
+test.describe('Cross-column element drop — both directions', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
     'DnD pointer simulation is Chromium-specific',
@@ -22,71 +85,6 @@ test.describe('Cross-column element drop positions', () => {
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
   })
-
-  // --- Hierarchy-specific helpers ---
-
-  /** Locate a column by its title (via drag handle aria-label). */
-  function getColumn(page: Page, colTitle: string) {
-    return page.getByTestId('column-block').filter({
-      has: page.locator(`[aria-label="Move ${colTitle}"]`),
-    })
-  }
-
-  /**
-   * Enter the target column by moving the pointer to the column's center.
-   * Uses the container center (not a specific child) so the entry trajectory
-   * reliably triggers collision detection regardless of the pointer's starting
-   * position — critical in journey tests where multiple prior operations leave
-   * the pointer at unpredictable coordinates.
-   */
-  async function enterColumn(page: Page, targetCol: Locator, expectedElCount: number) {
-    await targetCol.scrollIntoViewIfNeeded()
-    const box = await targetCol.boundingBox()
-    expect(box).not.toBeNull()
-    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2, { steps: 30 })
-    await expect(targetCol.getByTestId('element-card')).toHaveCount(expectedElCount)
-  }
-
-  /**
-   * Compute drop coordinates for a target position within a column.
-   * Uses element TITLES to locate elements, avoiding interference from the
-   * active/dragging item which is present in the DOM at opacity 0.3.
-   *
-   * Positioning strategy (Y-axis for vertical layout):
-   * - "before": top 15% of the named element (above center → "before")
-   * - "after": bottom 65% of the named element (below center → "after")
-   * - "between": midpoint of the gap between two elements
-   */
-  async function elPosition(
-    targetCol: Locator,
-    position: { before: string } | { after: string } | { between: [string, string] },
-  ) {
-    const colBox = await targetCol.boundingBox()
-    expect(colBox).not.toBeNull()
-    const centerX = colBox!.x + colBox!.width / 2
-
-    if ('before' in position) {
-      const el = targetCol.getByTestId('element-card').filter({ hasText: position.before })
-      const box = await el.boundingBox()
-      expect(box).not.toBeNull()
-      return { x: centerX, y: box!.y + box!.height * 0.15 }
-    }
-    if ('after' in position) {
-      const el = targetCol.getByTestId('element-card').filter({ hasText: position.after })
-      const box = await el.boundingBox()
-      expect(box).not.toBeNull()
-      return { x: centerX, y: box!.y + box!.height * 0.65 }
-    }
-    const el1 = targetCol.getByTestId('element-card').filter({ hasText: position.between[0] })
-    const el2 = targetCol.getByTestId('element-card').filter({ hasText: position.between[1] })
-    const box1 = await el1.boundingBox()
-    const box2 = await el2.boundingBox()
-    expect(box1).not.toBeNull()
-    expect(box2).not.toBeNull()
-    return { x: centerX, y: (box1!.y + box1!.height + box2!.y) / 2 }
-  }
-
-  // --- Journey tests ---
 
   test('moves elements across columns in both directions', async ({ page }) => {
     await loadAndNavigate(page, 'cross-column-element-drop')
@@ -202,6 +200,19 @@ test.describe('Cross-column element drop positions', () => {
       'Element B1',
       'Element A3',
     ])
+  })
+})
+
+test.describe('Cross-column element drop — source depletion and cancel', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'DnD pointer simulation is Chromium-specific',
+  )
+
+  test.use({ viewport: { width: 1280, height: 1400 } })
+
+  test.afterAll(async ({ request }) => {
+    await resetFixtures(request)
   })
 
   test('handles edge cases: source depletion and cancel mid-drag', async ({ page }) => {

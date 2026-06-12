@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test'
+import { loadFixture, resetFixtures } from '../helpers/fixtures'
 import {
   activateViewport,
   readAdapterConfig,
   twoNonDefaultViewports,
   viewportButton,
 } from '../helpers/adapter'
-import { loadFixture, resetFixtures } from '../helpers/fixtures'
 
-test.describe('Viewport switcher', () => {
+test.describe('Viewport switcher — create and reset overrides', () => {
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
   })
@@ -80,6 +80,12 @@ test.describe('Viewport switcher', () => {
         await expect(leftBadge).toHaveText(fullWidth)
       }
     })
+  })
+})
+
+test.describe('Viewport switcher — independent overrides and publish', () => {
+  test.afterAll(async ({ request }) => {
+    await resetFixtures(request)
   })
 
   test('viewport switcher preserves per-viewport overrides independently and publishes successfully', async ({
@@ -158,7 +164,9 @@ test.describe('Viewport switcher', () => {
 
       const livePath = fixture.pageUrl.split('?')[0]
       await page.goto(livePath)
-      await expect(page.locator('h1')).toContainText('E2E Grid Test Page')
+      await expect(
+        page.getByRole('heading', { level: 1, name: /E2E Grid Test Page/ }),
+      ).toBeVisible()
     })
   })
 })

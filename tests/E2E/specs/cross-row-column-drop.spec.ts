@@ -1,7 +1,7 @@
-import type { Locator, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
+import { resetFixtures, loadAndNavigate } from '../helpers/fixtures'
 import { activateDragByTitle, dropAndSettle } from '../helpers/drag'
-import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
 
 /**
  * Cross-row column drop positions — journey tests.
@@ -11,7 +11,90 @@ import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
  * Columns use horizontal layout (X-axis), so direction-aware placement
  * compares pointer X position against the 'over' element's center X.
  */
-test.describe('Cross-row column drop positions', () => {
+// --- Hierarchy-specific helpers (shared across the journey describes) ---
+
+function getRow(page: Page, rowTitle: string) {
+  return page.getByTestId('row-block').filter({ hasText: rowTitle })
+}
+
+/** Extract column titles from collapse-toggle aria-labels within a row. */
+function getColumnTitles(rowLocator: Locator): Promise<string[]> {
+  return rowLocator
+    .getByTestId('column-block')
+    .getByTestId('collapse-toggle')
+    .evaluateAll((els) =>
+      els.map((el) => (el.getAttribute('aria-label') ?? '').replace(/^(Collapse |Expand )/, '')),
+    )
+}
+
+/**
+ * Enter the target row by moving the pointer to the row's center.
+ * Uses the container center (not a specific child) so the entry trajectory
+ * reliably triggers collision detection regardless of the pointer's starting
+ * position — critical in journey tests where multiple prior operations leave
+ * the pointer at unpredictable coordinates.
+ */
+async function enterRow(page: Page, targetRow: Locator, expectedColCount: number) {
+  await targetRow.scrollIntoViewIfNeeded()
+  const box = await targetRow.boundingBox()
+  expect(box).not.toBeNull()
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2, { steps: 30 })
+  await expect(targetRow.getByTestId('column-block')).toHaveCount(expectedColCount)
+}
+
+/**
+ * Locate a column within a row by its title (via collapse-toggle aria-label).
+ */
+function findColumn(page: Page, targetRow: Locator, colTitle: string) {
+  return targetRow.getByTestId('column-block').filter({
+    has: page.locator(`[aria-label="Collapse ${colTitle}"], [aria-label="Expand ${colTitle}"]`),
+  })
+}
+
+/**
+ * Compute drop coordinates for a target position within a row.
+ * Uses column TITLES to locate columns, avoiding interference from the
+ * active/dragging item which is present in the DOM at opacity 0.3.
+ *
+ * The droppable rect is the OUTER grid cell (ref={setNodeRef}), but
+ * column-block is the INNER div. To reliably place before/after, we use
+ * the outer wrapper's bounding box (parent of column-block) for X positioning.
+ *
+ * Positioning strategy (X-axis for horizontal layout):
+ * - "before": left 15% of the outer grid cell (left of center → "before")
+ * - "after": right 65% of the outer grid cell (right of center → "after")
+ * - "between": right 85% of the first (left) outer grid cell
+ */
+async function colPosition(
+  page: Page,
+  targetRow: Locator,
+  position: { before: string } | { after: string } | { between: [string, string] },
+) {
+  async function getOuterBox(colTitle: string) {
+    const col = findColumn(page, targetRow, colTitle)
+    // The droppable rect is the dnd-kit SortableContext wrapper (the column-
+    // block's parent), which has no semantic role or test hook of its own —
+    // it exists purely to host the drop target. We need its box for X-axis
+    // drop positioning, so we reach it structurally via the parent selector.
+    const outer = col.locator('..')
+    const box = await outer.boundingBox()
+    expect(box).not.toBeNull()
+    return box!
+  }
+
+  if ('before' in position) {
+    const box = await getOuterBox(position.before)
+    return { x: box.x + box.width * 0.15, y: box.y + box.height / 2 }
+  }
+  if ('after' in position) {
+    const box = await getOuterBox(position.after)
+    return { x: box.x + box.width * 0.65, y: box.y + box.height / 2 }
+  }
+  const box1 = await getOuterBox(position.between[0])
+  return { x: box1.x + box1.width * 0.85, y: box1.y + box1.height / 2 }
+}
+
+test.describe('Cross-row column drop — both directions', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
     'DnD pointer simulation is Chromium-specific',
@@ -22,87 +105,6 @@ test.describe('Cross-row column drop positions', () => {
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
   })
-
-  // --- Hierarchy-specific helpers ---
-
-  function getRow(page: Page, rowTitle: string) {
-    return page.getByTestId('row-block').filter({ hasText: rowTitle })
-  }
-
-  /** Extract column titles from collapse-toggle aria-labels within a row. */
-  function getColumnTitles(rowLocator: Locator): Promise<string[]> {
-    return rowLocator
-      .getByTestId('column-block')
-      .getByTestId('collapse-toggle')
-      .evaluateAll((els) =>
-        els.map((el) => (el.getAttribute('aria-label') ?? '').replace(/^(Collapse |Expand )/, '')),
-      )
-  }
-
-  /**
-   * Enter the target row by moving the pointer to the row's center.
-   * Uses the container center (not a specific child) so the entry trajectory
-   * reliably triggers collision detection regardless of the pointer's starting
-   * position — critical in journey tests where multiple prior operations leave
-   * the pointer at unpredictable coordinates.
-   */
-  async function enterRow(page: Page, targetRow: Locator, expectedColCount: number) {
-    await targetRow.scrollIntoViewIfNeeded()
-    const box = await targetRow.boundingBox()
-    expect(box).not.toBeNull()
-    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2, { steps: 30 })
-    await expect(targetRow.getByTestId('column-block')).toHaveCount(expectedColCount)
-  }
-
-  /**
-   * Locate a column within a row by its title (via collapse-toggle aria-label).
-   */
-  function findColumn(page: Page, targetRow: Locator, colTitle: string) {
-    return targetRow.getByTestId('column-block').filter({
-      has: page.locator(`[aria-label="Collapse ${colTitle}"], [aria-label="Expand ${colTitle}"]`),
-    })
-  }
-
-  /**
-   * Compute drop coordinates for a target position within a row.
-   * Uses column TITLES to locate columns, avoiding interference from the
-   * active/dragging item which is present in the DOM at opacity 0.3.
-   *
-   * The droppable rect is the OUTER grid cell (ref={setNodeRef}), but
-   * column-block is the INNER div. To reliably place before/after, we use
-   * the outer wrapper's bounding box (parent of column-block) for X positioning.
-   *
-   * Positioning strategy (X-axis for horizontal layout):
-   * - "before": left 15% of the outer grid cell (left of center → "before")
-   * - "after": right 65% of the outer grid cell (right of center → "after")
-   * - "between": right 85% of the first (left) outer grid cell
-   */
-  async function colPosition(
-    page: Page,
-    targetRow: Locator,
-    position: { before: string } | { after: string } | { between: [string, string] },
-  ) {
-    async function getOuterBox(colTitle: string) {
-      const col = findColumn(page, targetRow, colTitle)
-      const outer = col.locator('..')
-      const box = await outer.boundingBox()
-      expect(box).not.toBeNull()
-      return box!
-    }
-
-    if ('before' in position) {
-      const box = await getOuterBox(position.before)
-      return { x: box.x + box.width * 0.15, y: box.y + box.height / 2 }
-    }
-    if ('after' in position) {
-      const box = await getOuterBox(position.after)
-      return { x: box.x + box.width * 0.65, y: box.y + box.height / 2 }
-    }
-    const box1 = await getOuterBox(position.between[0])
-    return { x: box1.x + box1.width * 0.85, y: box1.y + box1.height / 2 }
-  }
-
-  // --- Journey tests ---
 
   test('moves columns across rows in both directions', async ({ page }) => {
     await loadAndNavigate(page, 'cross-row-column-drop')
@@ -205,6 +207,19 @@ test.describe('Cross-row column drop positions', () => {
     await expect
       .poll(() => getColumnTitles(rowBReloaded))
       .toEqual(['Col A1', 'Col B2', 'Col B1', 'Col A3'])
+  })
+})
+
+test.describe('Cross-row column drop — source depletion and cancel', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'DnD pointer simulation is Chromium-specific',
+  )
+
+  test.use({ viewport: { width: 1280, height: 1400 } })
+
+  test.afterAll(async ({ request }) => {
+    await resetFixtures(request)
   })
 
   test('handles edge cases: source depletion and cancel mid-drag', async ({ page }) => {
