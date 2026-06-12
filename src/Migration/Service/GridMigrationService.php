@@ -453,7 +453,21 @@ final class GridMigrationService
                 continue;
             }
 
-            // Element exists on both stages — publish existing draft records to live
+            // Element exists on both stages — publish existing draft records to live.
+            // Every non-row draft element is written by writeDraftHierarchy, so a
+            // shared element is guaranteed to have a mapped record here. A missing
+            // key can only mean the injected RowMappingStrategy dropped a content
+            // element it was handed; fail loudly (rolling back the page) rather than
+            // silently skipping live content via an undefined-key warning and a
+            // byID(null) no-op.
+            if (!\array_key_exists($oldId, $oldToNewElementId)) {
+                throw new RuntimeException(\sprintf(
+                    'Shared legacy element %d has no migrated draft record; '
+                    . 'the configured row mapping strategy dropped a content element.',
+                    $oldId,
+                ));
+            }
+
             $newElementId = $oldToNewElementId[$oldId];
             $newColumnId = $oldToNewColumnId[$oldId];
 
@@ -622,6 +636,14 @@ final class GridMigrationService
      * just-written parent ID. The resulting Sections are sorted after any Sections
      * already created on this page + zone from the draft path; both stages share one
      * Sort sequence, so the draft max-Sort yields the correct live append offset.
+     *
+     * Known limitation: the live-only collection is the original live order with the
+     * shared elements removed, so a shared element that sat between two live-only
+     * elements with identical grid settings no longer separates them. The grouping
+     * pass may then collapse those two into a single column they did not share on the
+     * legacy live stage. This is an accepted layout nuance of a one-shot migration —
+     * no content is lost or reordered; only the column grouping of adjacent
+     * same-settings live-only elements can differ from the legacy layout.
      *
      * @param list<LegacyElement> $liveOnlyElements Live-only elements (may include row delimiters), in original order
      * @param class-string $pageClassName
