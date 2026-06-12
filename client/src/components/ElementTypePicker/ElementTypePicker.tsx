@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef } from 'react';
-import type { AllowedTypeInfo } from '@/types/elements';
-import { t } from '@/i18n';
+import { useCallback, useEffect, useRef } from 'react'
+import { t } from '@/i18n'
+import type { AllowedTypeInfo } from '@/types/elements'
 
 interface ElementTypePickerProps {
-  readonly allowedTypes: Record<string, AllowedTypeInfo>;
-  readonly isOpen: boolean;
-  readonly onClose: () => void;
-  readonly onSelect: (className: string) => void;
+  readonly allowedTypes: Record<string, AllowedTypeInfo>
+  readonly isOpen: boolean
+  readonly onClose: () => void
+  readonly onSelect: (className: string) => void
 }
 
 export default function ElementTypePicker({
@@ -15,32 +15,32 @@ export default function ElementTypePicker({
   onClose,
   onSelect,
 }: ElementTypePickerProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
+    const dialog = dialogRef.current
+    if (dialog === null) return
 
     if (isOpen && !dialog.open) {
-      dialog.showModal();
+      dialog.showModal()
     } else if (!isOpen && dialog.open) {
-      dialog.close();
+      dialog.close()
     }
-  }, [isOpen]);
+  }, [isOpen])
 
   const handleClose = useCallback(() => {
-    onClose();
-  }, [onClose]);
+    onClose()
+  }, [onClose])
 
   const handleTileClick = useCallback(
     (className: string) => {
-      onSelect(className);
-      onClose();
+      onSelect(className)
+      onClose()
     },
     [onSelect, onClose],
-  );
+  )
 
-  const entries = Object.entries(allowedTypes);
+  const entries = Object.entries(allowedTypes)
 
   return (
     <dialog
@@ -93,5 +93,5 @@ export default function ElementTypePicker({
         )}
       </div>
     </dialog>
-  );
+  )
 }

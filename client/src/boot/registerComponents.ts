@@ -1,6 +1,6 @@
-import { getInjector } from '@/bridge/Injector';
-import GridEditor from '@/components/GridEditor/GridEditor';
-import GridEditorField from '@/components/GridEditorField/GridEditorField';
+import { getInjector } from '@/bridge/Injector'
+import GridEditor from '@/components/GridEditor/GridEditor'
+import GridEditorField from '@/components/GridEditorField/GridEditorField'
 
 /**
  * Register all grid editor components with the SilverStripe Injector.
@@ -17,5 +17,5 @@ export function registerComponents(): void {
   getInjector().component.registerMany({
     GridEditor,
     GridEditorField,
-  });
+  })
 }

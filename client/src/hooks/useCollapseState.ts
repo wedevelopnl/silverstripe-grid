@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { NodeIdentity, type NodeKey } from '@/types/identity';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { NodeIdentity, type NodeKey } from '@/types/identity'
 
 /**
  * Collapse state for a single grid editor instance.
@@ -12,12 +12,12 @@ import { NodeIdentity, type NodeKey } from '@/types/identity';
  * directly — callers always look up by NodeKey, never by raw set membership.
  */
 export interface CollapseState {
-  isCollapsed(nodeKey: NodeKey): boolean;
-  toggle(nodeKey: NodeKey): void;
+  isCollapsed(nodeKey: NodeKey): boolean
+  toggle(nodeKey: NodeKey): void
 }
 
 function buildStorageKey(areaId: number): string {
-  return `grid:collapsed:${String(areaId)}`;
+  return `grid:collapsed:${String(areaId)}`
 }
 
 /**
@@ -30,25 +30,25 @@ function buildStorageKey(areaId: number): string {
  */
 function readCollapsedKeys(areaId: number): ReadonlySet<NodeKey> {
   try {
-    const raw = localStorage.getItem(buildStorageKey(areaId));
-    if (raw === null) return new Set();
+    const raw = localStorage.getItem(buildStorageKey(areaId))
+    if (raw === null) return new Set()
 
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return new Set();
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return new Set()
 
     const valid = parsed.filter(
       (value): value is NodeKey =>
         typeof value === 'string' && NodeIdentity.fromKey(value) !== null,
-    );
-    return new Set(valid);
+    )
+    return new Set(valid)
   } catch {
-    return new Set();
+    return new Set()
   }
 }
 
 function writeCollapsedKeys(areaId: number, keys: ReadonlySet<NodeKey>): void {
   try {
-    localStorage.setItem(buildStorageKey(areaId), JSON.stringify([...keys]));
+    localStorage.setItem(buildStorageKey(areaId), JSON.stringify([...keys]))
   } catch {
     // QuotaExceededError / SecurityError — silently ignore, matches the
     // behaviour of the old useTreeEnrichment persistence layer.
@@ -63,30 +63,30 @@ function writeCollapsedKeys(areaId: number, keys: ReadonlySet<NodeKey>): void {
 export function useCollapseState(areaId: number): CollapseState {
   const [collapsedKeys, setCollapsedKeys] = useState<ReadonlySet<NodeKey>>(() =>
     readCollapsedKeys(areaId),
-  );
+  )
 
   const isCollapsed = useCallback(
     (nodeKey: NodeKey): boolean => collapsedKeys.has(nodeKey),
     [collapsedKeys],
-  );
+  )
 
   const toggle = useCallback(
     (nodeKey: NodeKey): void => {
       setCollapsedKeys((prev) => {
-        const next = new Set(prev);
+        const next = new Set(prev)
         if (next.has(nodeKey)) {
-          next.delete(nodeKey);
+          next.delete(nodeKey)
         } else {
-          next.add(nodeKey);
+          next.add(nodeKey)
         }
-        writeCollapsedKeys(areaId, next);
-        return next;
-      });
+        writeCollapsedKeys(areaId, next)
+        return next
+      })
     },
     [areaId],
-  );
+  )
 
-  return useMemo<CollapseState>(() => ({ isCollapsed, toggle }), [isCollapsed, toggle]);
+  return useMemo<CollapseState>(() => ({ isCollapsed, toggle }), [isCollapsed, toggle])
 }
 
 /**
@@ -94,7 +94,7 @@ export function useCollapseState(areaId: number): CollapseState {
  * provider; block components read via {@link useCollapse} instead of threading
  * props down through every level.
  */
-export const CollapseContext = createContext<CollapseState | null>(null);
+export const CollapseContext = createContext<CollapseState | null>(null)
 
 /**
  * Consume the ambient {@link CollapseState} from a {@link CollapseContext}
@@ -102,9 +102,9 @@ export const CollapseContext = createContext<CollapseState | null>(null);
  * null-deref deep inside a block component.
  */
 export function useCollapse(): CollapseState {
-  const ctx = useContext(CollapseContext);
+  const ctx = useContext(CollapseContext)
   if (ctx === null) {
-    throw new Error('useCollapse must be used within a <CollapseContext.Provider>');
+    throw new Error('useCollapse must be used within a <CollapseContext.Provider>')
   }
-  return ctx;
+  return ctx
 }

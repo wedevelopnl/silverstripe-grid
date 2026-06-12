@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { t } from '@/i18n';
+import { useCallback, useEffect, useRef } from 'react'
+import { t } from '@/i18n'
 
 interface ConfirmDialogProps {
-  readonly isOpen: boolean;
-  readonly title: string;
-  readonly message: string;
-  readonly confirmLabel: string;
-  readonly onConfirm: () => void;
-  readonly onCancel: () => void;
-  readonly destructive?: boolean;
+  readonly isOpen: boolean
+  readonly title: string
+  readonly message: string
+  readonly confirmLabel: string
+  readonly onConfirm: () => void
+  readonly onCancel: () => void
+  readonly destructive?: boolean
 }
 
 export default function ConfirmDialog({
@@ -20,22 +20,22 @@ export default function ConfirmDialog({
   onCancel,
   destructive = false,
 }: ConfirmDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
+    const dialog = dialogRef.current
+    if (dialog === null) return
 
     if (isOpen && !dialog.open) {
-      dialog.showModal();
+      dialog.showModal()
     } else if (!isOpen && dialog.open) {
-      dialog.close();
+      dialog.close()
     }
-  }, [isOpen]);
+  }, [isOpen])
 
   const handleClose = useCallback(() => {
-    onCancel();
-  }, [onCancel]);
+    onCancel()
+  }, [onCancel])
 
   return (
     <dialog
@@ -50,8 +50,8 @@ export default function ConfirmDialog({
       // disabled for this file via biome.json overrides (<dialog> is natively
       // interactive; biome's a11y rules do not recognize it).
       onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault()
+        e.stopPropagation()
       }}
     >
       <div className="ssgrid-dialog__header">
@@ -80,5 +80,5 @@ export default function ConfirmDialog({
         </div>
       </div>
     </dialog>
-  );
+  )
 }

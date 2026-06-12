@@ -1,7 +1,7 @@
-import type { SilverStripeConfig } from '@/types/silverstripe';
-import { ConfigError } from './errors';
+import type { SilverStripeConfig } from '@/types/silverstripe'
+import { ConfigError } from './errors'
 
-const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController';
+const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController'
 
 /**
  * Returns the global SilverStripe CMS configuration object.
@@ -9,16 +9,16 @@ const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController';
  * @throws ConfigError if the admin bundle has not loaded
  */
 export function getConfig(): SilverStripeConfig {
-  const config = window.ss?.config;
+  const config = window.ss?.config
 
   if (config === undefined) {
     throw new ConfigError(
       'SilverStripe config is not available. ' +
         'Ensure the admin bundle is loaded before the grid editor.',
-    );
+    )
   }
 
-  return config;
+  return config
 }
 
 /**
@@ -27,7 +27,7 @@ export function getConfig(): SilverStripeConfig {
  * @throws ConfigError if config is not available
  */
 export function getSecurityId(): string {
-  return getConfig().SecurityID;
+  return getConfig().SecurityID
 }
 
 /**
@@ -36,17 +36,17 @@ export function getSecurityId(): string {
  * @throws ConfigError if the controller section is missing
  */
 function getControllerSection() {
-  const config = getConfig();
-  const section = config.sections.find((s) => s.name === CONTROLLER_FQCN);
+  const config = getConfig()
+  const section = config.sections.find((s) => s.name === CONTROLLER_FQCN)
 
   if (section === undefined) {
     throw new ConfigError(
       `Controller section "${CONTROLLER_FQCN}" not found in CMS config. ` +
         'Ensure the grid module is installed.',
-    );
+    )
   }
 
-  return section;
+  return section
 }
 
 /**
@@ -56,7 +56,7 @@ function getControllerSection() {
  * @throws ConfigError if config is not available or the controller section is missing
  */
 export function getControllerLink(): string {
-  return getControllerSection().controllerLink.replace(/\/+$/, '');
+  return getControllerSection().controllerLink.replace(/\/+$/, '')
 }
 
 /**
@@ -65,14 +65,14 @@ export function getControllerLink(): string {
  * @throws ConfigError if config is not available or the adapter config is missing
  */
 export function getAdapterConfig() {
-  const config = getControllerSection().gridAdapter;
+  const config = getControllerSection().gridAdapter
 
   if (config === undefined) {
     throw new ConfigError(
       'Grid adapter configuration is missing. ' +
         'Ensure the grid module is installed and configured.',
-    );
+    )
   }
 
-  return config;
+  return config
 }

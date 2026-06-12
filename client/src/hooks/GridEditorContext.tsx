@@ -1,26 +1,26 @@
-import { createContext, useContext } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactNode } from 'react'
+import { createContext, useContext } from 'react'
 
 export interface GridEditorContextValue {
-  readonly pageId: number;
-  readonly zone: string;
+  readonly pageId: number
+  readonly zone: string
 }
 
-const GridEditorContext = createContext<GridEditorContextValue | null>(null);
+const GridEditorContext = createContext<GridEditorContextValue | null>(null)
 
 interface GridEditorProviderProps {
-  readonly value: GridEditorContextValue;
-  readonly children: ReactNode;
+  readonly value: GridEditorContextValue
+  readonly children: ReactNode
 }
 
 export function GridEditorProvider({ value, children }: GridEditorProviderProps) {
-  return <GridEditorContext.Provider value={value}>{children}</GridEditorContext.Provider>;
+  return <GridEditorContext.Provider value={value}>{children}</GridEditorContext.Provider>
 }
 
 export function useGridEditorContext(): GridEditorContextValue {
-  const value = useContext(GridEditorContext);
+  const value = useContext(GridEditorContext)
   if (value === null) {
-    throw new Error('useGridEditorContext must be used within a GridEditorProvider');
+    throw new Error('useGridEditorContext must be used within a GridEditorProvider')
   }
-  return value;
+  return value
 }

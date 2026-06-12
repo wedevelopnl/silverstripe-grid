@@ -1,4 +1,4 @@
-import type { ViewportConfig } from '@/types/adapter';
+import type { ViewportConfig } from '@/types/adapter'
 
 /**
  * Pick a SilverStripe Admin font-icon glyph that approximates the device
@@ -7,9 +7,9 @@ import type { ViewportConfig } from '@/types/adapter';
  * device category a designer would expect.
  */
 export function getViewportIcon(minWidth: number): string {
-  if (minWidth < 768) return 'font-icon-mobile';
-  if (minWidth < 1024) return 'font-icon-tablet';
-  return 'font-icon-monitor';
+  if (minWidth < 768) return 'font-icon-mobile'
+  if (minWidth < 1024) return 'font-icon-tablet'
+  return 'font-icon-monitor'
 }
 
 /**
@@ -22,9 +22,9 @@ export function getViewportRangeLabel(
   viewport: ViewportConfig,
   viewports: readonly ViewportConfig[],
 ): string | null {
-  const index = viewports.findIndex((v) => v.key === viewport.key);
-  if (index === -1) return null;
-  const next = viewports[index + 1];
-  if (next === undefined) return null;
-  return `<${next.minWidth}`;
+  const index = viewports.findIndex((v) => v.key === viewport.key)
+  if (index === -1) return null
+  const next = viewports[index + 1]
+  if (next === undefined) return null
+  return `<${next.minWidth}`
 }

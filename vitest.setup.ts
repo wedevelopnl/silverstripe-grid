@@ -1,18 +1,18 @@
-import '@testing-library/jest-dom/vitest';
-import { afterEach, vi } from 'vitest';
-import type { AdapterConfig } from './client/src/types/adapter';
-import type { SilverStripeConfig, SilverStripeI18n } from './client/src/types/silverstripe';
-import { resetActiveViewportStore } from './client/src/state/activeViewport';
+import '@testing-library/jest-dom/vitest'
+import { afterEach, vi } from 'vitest'
+import { resetActiveViewportStore } from './client/src/state/activeViewport'
+import type { AdapterConfig } from './client/src/types/adapter'
+import type { SilverStripeConfig, SilverStripeI18n } from './client/src/types/silverstripe'
 
-const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController';
+const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController'
 
 const defaultAdapterConfig: AdapterConfig = {
   viewports: [
-    { key: 'xs',  label: 'Extra small',       minWidth: 0 },
-    { key: 'sm',  label: 'Small',             minWidth: 576 },
-    { key: 'md',  label: 'Medium',            minWidth: 768 },
-    { key: 'lg',  label: 'Large',             minWidth: 992 },
-    { key: 'xl',  label: 'Extra large',       minWidth: 1200 },
+    { key: 'xs', label: 'Extra small', minWidth: 0 },
+    { key: 'sm', label: 'Small', minWidth: 576 },
+    { key: 'md', label: 'Medium', minWidth: 768 },
+    { key: 'lg', label: 'Large', minWidth: 992 },
+    { key: 'xl', label: 'Extra large', minWidth: 1200 },
     { key: 'xxl', label: 'Extra extra large', minWidth: 1400 },
   ],
   defaultViewport: 'md',
@@ -25,7 +25,7 @@ const defaultAdapterConfig: AdapterConfig = {
   baseOffsetClasses: Object.fromEntries(
     Array.from({ length: 12 }, (_, i) => [String(i), `offset-${i}`]),
   ),
-};
+}
 
 const defaultConfig: SilverStripeConfig = {
   SecurityID: 'test-security-id',
@@ -37,7 +37,7 @@ const defaultConfig: SilverStripeConfig = {
       gridAdapter: defaultAdapterConfig,
     },
   ],
-};
+}
 
 // Minimal i18n stub that mirrors the real window.ss.i18n API shape:
 // `_t` is a pure dictionary lookup (no substitution), and `inject` handles
@@ -52,26 +52,26 @@ const defaultI18n: SilverStripeI18n = {
     ),
   addDictionary: () => {},
   currentLocale: 'en',
-};
+}
 
 // Stub CMS globals before each test file — only applies in browser-like environments
 beforeEach(() => {
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return
   window.ss = {
     config: structuredClone(defaultConfig),
     i18n: defaultI18n,
-  };
+  }
   // Reset module-scoped viewport store after window.ss is set so the store's
   // lazy init can resolve getDefaultViewport() from the fresh CMS config on
   // first read, preventing state leaks across tests.
-  resetActiveViewportStore();
-});
+  resetActiveViewportStore()
+})
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  vi.restoreAllMocks()
 
   // Reset fetch if it was mocked
   if (vi.isMockFunction(globalThis.fetch)) {
-    vi.mocked(globalThis.fetch).mockRestore();
+    vi.mocked(globalThis.fetch).mockRestore()
   }
-});
+})

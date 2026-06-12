@@ -1,24 +1,24 @@
-import { useMemo } from 'react';
-import { isContainerNode } from '@/types/elements';
-import type { ElementNode, TreeApiResponse } from '@/types/elements';
-import { NodeIdentity, type NodeKey } from '@/types/identity';
+import { useMemo } from 'react'
+import type { ElementNode, TreeApiResponse } from '@/types/elements'
+import { isContainerNode } from '@/types/elements'
+import { NodeIdentity, type NodeKey } from '@/types/identity'
 
 export interface ElementMaps {
   /** Every node indexed by its composite {@link NodeKey}. Pages are not stored here. */
-  nodeMap: Map<NodeKey, ElementNode>;
+  nodeMap: Map<NodeKey, ElementNode>
   /**
    * Children indexed by parent {@link NodeKey}. The root entry is keyed by the
    * tree's `rootParent` (a page), so `childrenByParentKey.get("page-1")` yields
    * the top-level sections. This is the canonical sibling lookup — it is
    * collision-free across the polymorphic parent namespace.
    */
-  childrenByParentKey: Map<NodeKey, ElementNode[]>;
+  childrenByParentKey: Map<NodeKey, ElementNode[]>
   /**
    * Position of each node within its parent's children array. Lets reorder,
    * drop-placement and collision code do O(1) sibling-index lookups instead of
    * O(n) `findIndex(...)` scans on every drag-over frame.
    */
-  indexByNodeKey: Map<NodeKey, number>;
+  indexByNodeKey: Map<NodeKey, number>
 }
 
 function walkNodes(
@@ -28,13 +28,13 @@ function walkNodes(
   indexByNodeKey: Map<NodeKey, number>,
 ): void {
   for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    nodeMap.set(node.nodeKey, node);
-    indexByNodeKey.set(node.nodeKey, i);
+    const node = nodes[i]
+    nodeMap.set(node.nodeKey, node)
+    indexByNodeKey.set(node.nodeKey, i)
 
     if (isContainerNode(node) && node.children) {
-      childrenByParentKey.set(node.nodeKey, node.children);
-      walkNodes(node.children, nodeMap, childrenByParentKey, indexByNodeKey);
+      childrenByParentKey.set(node.nodeKey, node.children)
+      walkNodes(node.children, nodeMap, childrenByParentKey, indexByNodeKey)
     }
   }
 }
@@ -48,20 +48,20 @@ function walkNodes(
  * - `indexByNodeKey`: node key → position within its parent's children array.
  */
 export function buildMaps(tree: TreeApiResponse): ElementMaps {
-  const nodeMap = new Map<NodeKey, ElementNode>();
-  const childrenByParentKey = new Map<NodeKey, ElementNode[]>();
-  const indexByNodeKey = new Map<NodeKey, number>();
+  const nodeMap = new Map<NodeKey, ElementNode>()
+  const childrenByParentKey = new Map<NodeKey, ElementNode[]>()
+  const indexByNodeKey = new Map<NodeKey, number>()
 
-  const rootKey = NodeIdentity.toKey(tree.rootParent);
-  childrenByParentKey.set(rootKey, tree.nodes);
-  walkNodes(tree.nodes, nodeMap, childrenByParentKey, indexByNodeKey);
+  const rootKey = NodeIdentity.toKey(tree.rootParent)
+  childrenByParentKey.set(rootKey, tree.nodes)
+  walkNodes(tree.nodes, nodeMap, childrenByParentKey, indexByNodeKey)
 
-  return { nodeMap, childrenByParentKey, indexByNodeKey };
+  return { nodeMap, childrenByParentKey, indexByNodeKey }
 }
 
 /**
  * React hook that memoizes element lookup maps from a tree response.
  */
 export function useElementMaps(tree: TreeApiResponse): ElementMaps {
-  return useMemo(() => buildMaps(tree), [tree]);
+  return useMemo(() => buildMaps(tree), [tree])
 }

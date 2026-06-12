@@ -1,122 +1,122 @@
-import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 
-import { mockFetchSuccess, getFetchCalls } from '@/testing/mockFetch';
-import { renderWithProviders } from '@/testing/renderWithProviders';
+import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
+import { renderWithProviders } from '@/testing/renderWithProviders'
 
-import ColumnInsertButton from './ColumnInsertButton';
+import ColumnInsertButton from './ColumnInsertButton'
 
 describe('ColumnInsertButton', () => {
   it('start placement creates a column with insertAtStart', async () => {
-    const user = userEvent.setup();
-    mockFetchSuccess({});
+    const user = userEvent.setup()
+    mockFetchSuccess({})
 
-    renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />);
+    renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />)
 
-    const button = screen.getByTestId('column-insert-start');
-    expect(button).toHaveAccessibleName('Add a column at the start');
+    const button = screen.getByTestId('column-insert-start')
+    expect(button).toHaveAccessibleName('Add a column at the start')
 
-    await user.click(button);
+    await user.click(button)
 
     await waitFor(() => {
-      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
-    });
+      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
+    })
 
-    const [, init] = getFetchCalls()[0];
-    const body = JSON.parse(init!.body as string);
+    const [, init] = getFetchCalls()[0]
+    const body = JSON.parse(init!.body as string)
 
     expect(body).toMatchObject({
       containerType: 'column',
       parent: { type: 'row', id: 7 },
       insertAtStart: true,
-    });
-    expect(body.insertAfterElementID).toBeUndefined();
-  });
+    })
+    expect(body.insertAfterElementID).toBeUndefined()
+  })
 
   it('end placement creates a column directly after the given column', async () => {
-    const user = userEvent.setup();
-    mockFetchSuccess({});
+    const user = userEvent.setup()
+    mockFetchSuccess({})
 
-    renderWithProviders(<ColumnInsertButton rowId={7} placement="end" afterColumnId={42} />);
+    renderWithProviders(<ColumnInsertButton rowId={7} placement="end" afterColumnId={42} />)
 
-    const button = screen.getByTestId('column-insert-end');
-    expect(button).toHaveAccessibleName('Add a column at the end');
+    const button = screen.getByTestId('column-insert-end')
+    expect(button).toHaveAccessibleName('Add a column at the end')
 
-    await user.click(button);
+    await user.click(button)
 
     await waitFor(() => {
-      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
-    });
+      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
+    })
 
-    const [, init] = getFetchCalls()[0];
-    const body = JSON.parse(init!.body as string);
+    const [, init] = getFetchCalls()[0]
+    const body = JSON.parse(init!.body as string)
 
     expect(body).toMatchObject({
       containerType: 'column',
       parent: { type: 'row', id: 7 },
       insertAfterElementID: 42,
-    });
-    expect(body.insertAtStart).toBeUndefined();
-  });
+    })
+    expect(body.insertAtStart).toBeUndefined()
+  })
 
   it('between placement creates a column directly after the column to its left', async () => {
-    const user = userEvent.setup();
-    mockFetchSuccess({});
+    const user = userEvent.setup()
+    mockFetchSuccess({})
 
-    renderWithProviders(<ColumnInsertButton rowId={7} placement="between" afterColumnId={9} />);
+    renderWithProviders(<ColumnInsertButton rowId={7} placement="between" afterColumnId={9} />)
 
-    const button = screen.getByTestId('column-insert-between');
-    expect(button).toHaveAccessibleName('Add a column here');
+    const button = screen.getByTestId('column-insert-between')
+    expect(button).toHaveAccessibleName('Add a column here')
 
-    await user.click(button);
+    await user.click(button)
 
     await waitFor(() => {
-      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
-    });
+      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
+    })
 
-    const [, init] = getFetchCalls()[0];
-    const body = JSON.parse(init!.body as string);
+    const [, init] = getFetchCalls()[0]
+    const body = JSON.parse(init!.body as string)
 
     expect(body).toMatchObject({
       containerType: 'column',
       parent: { type: 'row', id: 7 },
       insertAfterElementID: 9,
-    });
-  });
+    })
+  })
 
   it('between placement carries the gutter-shift CSS var when given gutterShiftPct', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
     renderWithProviders(
       <ColumnInsertButton rowId={1} placement="between" afterColumnId={2} gutterShiftPct={25} />,
-    );
+    )
 
     expect(
       screen.getByTestId('column-insert-between').style.getPropertyValue('--ssgrid-insert-shift'),
-    ).toBe('25%');
-  });
+    ).toBe('25%')
+  })
 
   it('between placement omits the gutter-shift CSS var when gutterShiftPct is 0 or absent', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    renderWithProviders(<ColumnInsertButton rowId={1} placement="between" afterColumnId={2} />);
+    renderWithProviders(<ColumnInsertButton rowId={1} placement="between" afterColumnId={2} />)
 
     expect(
       screen.getByTestId('column-insert-between').style.getPropertyValue('--ssgrid-insert-shift'),
-    ).toBe('');
-  });
+    ).toBe('')
+  })
 
   it('is disabled while the mutation is pending', async () => {
-    const user = userEvent.setup();
-    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup()
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
-    renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />);
+    renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />)
 
-    await user.click(screen.getByTestId('column-insert-start'));
+    await user.click(screen.getByTestId('column-insert-start'))
 
     await waitFor(() => {
-      expect(screen.getByTestId('column-insert-start')).toBeDisabled();
-    });
-  });
-});
+      expect(screen.getByTestId('column-insert-start')).toBeDisabled()
+    })
+  })
+})

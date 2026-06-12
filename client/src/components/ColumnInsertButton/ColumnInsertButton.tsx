@@ -1,8 +1,8 @@
-import { memo } from 'react';
-import { useGridEditorContext } from '@/hooks/GridEditorContext';
-import { useCreateElement } from '@/hooks/useElementMutations';
-import { t } from '@/i18n';
-import type { NodeRef } from '@/types/identity';
+import { memo } from 'react'
+import { useGridEditorContext } from '@/hooks/GridEditorContext'
+import { useCreateElement } from '@/hooks/useElementMutations'
+import { t } from '@/i18n'
+import type { NodeRef } from '@/types/identity'
 
 /**
  * The Figma column-insert affordances on a Row.
@@ -25,28 +25,28 @@ type ColumnInsertButtonProps =
   | { readonly rowId: number; readonly placement: 'start' }
   | { readonly rowId: number; readonly placement: 'end'; readonly afterColumnId: number }
   | {
-      readonly rowId: number;
-      readonly placement: 'between';
-      readonly afterColumnId: number;
+      readonly rowId: number
+      readonly placement: 'between'
+      readonly afterColumnId: number
       /**
        * Shift the handle left by this percentage of the column's width so it
        * lands in the centre of the (offset-widened) gutter rather than glued to
        * the column's edge. 0 / omitted = the default 16px gutter, no shift.
        */
-      readonly gutterShiftPct?: number;
-    };
+      readonly gutterShiftPct?: number
+    }
 
 const ColumnInsertButton = memo(function ColumnInsertButton(props: ColumnInsertButtonProps) {
-  const { pageId, zone } = useGridEditorContext();
-  const { mutate, isPending } = useCreateElement(pageId, zone);
+  const { pageId, zone } = useGridEditorContext()
+  const { mutate, isPending } = useCreateElement(pageId, zone)
 
   function handleClick() {
-    const parent: NodeRef = { type: 'row', id: props.rowId };
+    const parent: NodeRef = { type: 'row', id: props.rowId }
     const placementParams =
       props.placement === 'start'
         ? { insertAtStart: true }
-        : { insertAfterElementID: props.afterColumnId };
-    mutate({ containerType: 'column', parent, ...placementParams });
+        : { insertAfterElementID: props.afterColumnId }
+    mutate({ containerType: 'column', parent, ...placementParams })
   }
 
   const label =
@@ -54,12 +54,12 @@ const ColumnInsertButton = memo(function ColumnInsertButton(props: ColumnInsertB
       ? t('WeDevelopGrid.ColumnInsertButton.PREPEND_LABEL', 'Add a column at the start')
       : props.placement === 'end'
         ? t('WeDevelopGrid.ColumnInsertButton.APPEND_LABEL', 'Add a column at the end')
-        : t('WeDevelopGrid.ColumnInsertButton.INSERT_HERE_LABEL', 'Add a column here');
+        : t('WeDevelopGrid.ColumnInsertButton.INSERT_HERE_LABEL', 'Add a column here')
 
   const shiftStyle =
     props.placement === 'between' && props.gutterShiftPct
       ? ({ '--ssgrid-insert-shift': `${props.gutterShiftPct}%` } as React.CSSProperties)
-      : undefined;
+      : undefined
 
   return (
     <button
@@ -76,7 +76,7 @@ const ColumnInsertButton = memo(function ColumnInsertButton(props: ColumnInsertB
       <span className="ssgrid-column-insert__dot" aria-hidden="true" />
       <i className="ssgrid-column-insert__icon font-icon-plus" aria-hidden="true" />
     </button>
-  );
-});
+  )
+})
 
-export default ColumnInsertButton;
+export default ColumnInsertButton

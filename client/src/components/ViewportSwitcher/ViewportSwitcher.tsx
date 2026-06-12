@@ -1,16 +1,16 @@
-import { useViewportContext } from '@/hooks/ViewportContext';
-import { useReadonly } from '@/hooks/ReadonlyContext';
-import { useResetOverridesAction } from '@/hooks/useResetOverridesAction';
-import { getViewports } from '@/utils/gridAdapter';
-import { t } from '@/i18n';
-import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
-import { getViewportIcon, getViewportRangeLabel } from './viewportPresentation';
+import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog'
+import { useReadonly } from '@/hooks/ReadonlyContext'
+import { useResetOverridesAction } from '@/hooks/useResetOverridesAction'
+import { useViewportContext } from '@/hooks/ViewportContext'
+import { t } from '@/i18n'
+import { getViewports } from '@/utils/gridAdapter'
+import { getViewportIcon, getViewportRangeLabel } from './viewportPresentation'
 
 export default function ViewportSwitcher() {
-  const readonly = useReadonly();
-  const viewports = getViewports();
-  const { activeViewport, setActiveViewport } = useViewportContext();
-  const reset = useResetOverridesAction();
+  const readonly = useReadonly()
+  const viewports = getViewports()
+  const { activeViewport, setActiveViewport } = useViewportContext()
+  const reset = useResetOverridesAction()
 
   return (
     <>
@@ -21,8 +21,8 @@ export default function ViewportSwitcher() {
         data-testid="viewport-switcher"
       >
         {viewports.map((viewport) => {
-          const isActive = viewport.key === activeViewport;
-          const range = getViewportRangeLabel(viewport, viewports);
+          const isActive = viewport.key === activeViewport
+          const range = getViewportRangeLabel(viewport, viewports)
 
           return (
             <button
@@ -34,7 +34,7 @@ export default function ViewportSwitcher() {
               aria-disabled={isActive || undefined}
               onClick={() => {
                 if (!isActive) {
-                  setActiveViewport(viewport.key);
+                  setActiveViewport(viewport.key)
                 }
               }}
             >
@@ -45,7 +45,7 @@ export default function ViewportSwitcher() {
               <span className="ssgrid-viewport-switcher__label">{viewport.label}</span>
               {range !== null && <span className="ssgrid-viewport-switcher__range">{range}</span>}
             </button>
-          );
+          )
         })}
       </div>
       {!readonly && reset.showReset && (
@@ -70,5 +70,5 @@ export default function ViewportSwitcher() {
         />
       )}
     </>
-  );
+  )
 }

@@ -1,29 +1,30 @@
 /// <reference types="vitest/config" />
-import react from "@vitejs/plugin-react";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { defineConfig, esmExternalRequirePlugin } from "vite";
-import dts from "vite-plugin-dts";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import react from '@vitejs/plugin-react'
+import { defineConfig, esmExternalRequirePlugin } from 'vite'
+import dts from 'vite-plugin-dts'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [
     react(),
     dts({
-      include: ["client/src/types/**/*.ts"],
-      exclude: ["client/src/types/silverstripe.d.ts"],
-      outDirs: "client/dist",
+      include: ['client/src/types/**/*.ts'],
+      exclude: ['client/src/types/silverstripe.d.ts'],
+      outDirs: 'client/dist',
       // Resolve @/* path aliases to relative imports in .d.ts output
-      tsconfigPath: "./tsconfig.json",
+      tsconfigPath: './tsconfig.json',
       // TypeScript 6 changed rootDir inference — pin it so .d.ts files
       // emit to client/dist/types/ instead of client/dist/client/src/types/
-      compilerOptions: { rootDir: resolve(__dirname, "client/src") },
+      compilerOptions: { rootDir: resolve(__dirname, 'client/src') },
     }),
   ],
   resolve: {
     alias: {
-      "@": resolve(__dirname, "client/src"),
+      '@': resolve(__dirname, 'client/src'),
     },
   },
   // Vite's lib mode doesn't replace process.env.NODE_ENV automatically
@@ -31,58 +32,56 @@ export default defineConfig({
   // production and development bundles — without it, the literal
   // `process.env.NODE_ENV` appears in the output and crashes in browsers.
   // Scoped to build only: Vitest needs the dev build for act() support.
-  define: process.env.VITEST
-    ? undefined
-    : { "process.env.NODE_ENV": JSON.stringify("production") },
+  define: process.env.VITEST ? undefined : { 'process.env.NODE_ENV': JSON.stringify('production') },
   build: {
-    outDir: "client/dist",
+    outDir: 'client/dist',
     // SilverStripe's vendor-plugin creates symlinks in public/_resources/
     // pointing back to client/dist — copying that would cause infinite recursion.
     copyPublicDir: false,
     lib: {
-      entry: resolve(__dirname, "client/src/bundles/bundle.ts"),
-      name: "Grid",
-      formats: ["iife"],
-      fileName: () => "js/bundle.js",
+      entry: resolve(__dirname, 'client/src/bundles/bundle.ts'),
+      name: 'Grid',
+      formats: ['iife'],
+      fileName: () => 'js/bundle.js',
     },
     rolldownOptions: {
-      external: ["react-dom", "react-dom/client"],
-      plugins: [esmExternalRequirePlugin({ external: ["react"] })],
+      external: ['react-dom', 'react-dom/client'],
+      plugins: [esmExternalRequirePlugin({ external: ['react'] })],
       output: {
         globals: {
-          react: "React",
-          "react-dom": "ReactDom",
-          "react-dom/client": "ReactDomClient",
+          react: 'React',
+          'react-dom': 'ReactDom',
+          'react-dom/client': 'ReactDomClient',
         },
         assetFileNames: (assetInfo) => {
-          if (assetInfo.names.some((name) => name.endsWith(".css"))) {
-            return "styles/bundle.css";
+          if (assetInfo.names.some((name) => name.endsWith('.css'))) {
+            return 'styles/bundle.css'
           }
-          return "assets/[name][extname]";
+          return 'assets/[name][extname]'
         },
       },
     },
   },
   test: {
-    environment: "jsdom",
+    environment: 'jsdom',
     globals: true,
-    include: ["client/src/**/*.{test,spec}.{ts,tsx}", "scripts/**/*.test.mjs"],
-    setupFiles: ["./vitest.setup.ts"],
+    include: ['client/src/**/*.{test,spec}.{ts,tsx}', 'scripts/**/*.test.mjs'],
+    setupFiles: ['./vitest.setup.ts'],
     css: true,
     coverage: {
-      include: ["client/src/**/*.{ts,tsx}"],
+      include: ['client/src/**/*.{ts,tsx}'],
       exclude: [
-        "client/src/bundles/**",
-        "client/src/bridge/**",
-        "client/src/boot/**",
-        "client/src/testing/**",
-        "client/src/**/index.ts",
-        "client/src/types/silverstripe.d.ts",
-        "client/src/types/adapter.ts",
-        "client/src/types/duplicateTo.ts",
-        "client/src/types/gridSettings.ts",
-        "client/src/styles/**",
-        "client/src/**/*.d.ts",
+        'client/src/bundles/**',
+        'client/src/bridge/**',
+        'client/src/boot/**',
+        'client/src/testing/**',
+        'client/src/**/index.ts',
+        'client/src/types/silverstripe.d.ts',
+        'client/src/types/adapter.ts',
+        'client/src/types/duplicateTo.ts',
+        'client/src/types/gridSettings.ts',
+        'client/src/styles/**',
+        'client/src/**/*.d.ts',
       ],
       thresholds: {
         statements: 90,
@@ -92,4 +91,4 @@ export default defineConfig({
       },
     },
   },
-});
+})

@@ -1,20 +1,20 @@
-import type { NodeKey, NodeRef } from './identity';
-import type { ElementStatus } from './status';
+import type { NodeKey, NodeRef } from './identity'
+import type { ElementStatus } from './status'
 
 // --- Container type constants ---
 
-export const CONTAINER_TYPES = ['section', 'row', 'column'] as const;
+export const CONTAINER_TYPES = ['section', 'row', 'column'] as const
 
-export type ContainerType = (typeof CONTAINER_TYPES)[number];
+export type ContainerType = (typeof CONTAINER_TYPES)[number]
 
 // --- Shared types ---
 
 export interface BlockSchema {
-  typeName: string;
-  label: string;
-  icon: string;
-  type: string;
-  title: string;
+  typeName: string
+  label: string
+  icon: string
+  type: string
+  title: string
 }
 
 interface BaseFields {
@@ -23,34 +23,34 @@ interface BaseFields {
    * — always prefer `self`/`nodeKey` over a bare numeric id to avoid
    * polymorphic collisions with pages.
    */
-  self: NodeRef;
+  self: NodeRef
   /**
    * Scoped identity of this node's parent. `parent.type` is `'page'` for
    * sections, and the matching container type for all other levels.
    */
-  parent: NodeRef;
+  parent: NodeRef
   /** Precomputed composite key for this node (equal to `NodeIdentity.toKey(self)`). */
-  nodeKey: NodeKey;
+  nodeKey: NodeKey
   /** Precomputed composite key for this node's parent. */
-  parentKey: NodeKey;
-  title: string;
-  blockSchema: BlockSchema;
-  obsoleteClassName: string | null;
-  version: number;
-  canDelete: boolean;
-  canPublish: boolean;
-  canUnpublish: boolean;
-  canCreate: boolean;
-  editLink: string | null;
-  status: ElementStatus;
+  parentKey: NodeKey
+  title: string
+  blockSchema: BlockSchema
+  obsoleteClassName: string | null
+  version: number
+  canDelete: boolean
+  canPublish: boolean
+  canUnpublish: boolean
+  canCreate: boolean
+  editLink: string | null
+  status: ElementStatus
   /**
    * Optional plain-text content summary shown on leaf element cards.
    * Absent when the element's `getSummary()` returned null or ''; the
    * backend drops empty values from the JSON, so this is either a
    * non-empty string or missing. HTML is not supported — render as text.
    */
-  summary?: string;
-  extensions?: Record<string, unknown>;
+  summary?: string
+  extensions?: Record<string, unknown>
 }
 
 // --- Leaf node type ---
@@ -63,90 +63,90 @@ interface BaseFields {
  * narrowing.
  */
 export interface SimpleElementNode extends BaseFields {
-  containerType?: never;
+  containerType?: never
 }
 
 // --- Grid settings (column-specific) ---
 
 export interface ViewportSettings {
-  width: number;
-  offset: number;
-  visible: boolean;
+  width: number
+  offset: number
+  visible: boolean
 }
 
 export interface GridSettings {
-  default: ViewportSettings;
-  overrides: Record<string, ViewportSettings>;
+  default: ViewportSettings
+  overrides: Record<string, ViewportSettings>
 }
 
 // --- Allowed type info ---
 
 export interface AllowedTypeInfo {
-  label: string;
-  icon: string;
-  description: string;
+  label: string
+  icon: string
+  description: string
 }
 
 // --- Container node types (column → row → section) ---
 
 export interface ColumnNode extends BaseFields {
-  containerType: 'column';
-  allowedTypes: Record<string, AllowedTypeInfo> | null;
-  children: SimpleElementNode[] | null;
-  gridSettings: GridSettings;
+  containerType: 'column'
+  allowedTypes: Record<string, AllowedTypeInfo> | null
+  children: SimpleElementNode[] | null
+  gridSettings: GridSettings
 }
 
 export interface RowNode extends BaseFields {
-  containerType: 'row';
-  allowedTypes: Record<string, AllowedTypeInfo> | null;
-  children: ColumnNode[] | null;
+  containerType: 'row'
+  allowedTypes: Record<string, AllowedTypeInfo> | null
+  children: ColumnNode[] | null
 }
 
 export interface SectionNode extends BaseFields {
-  containerType: 'section';
-  allowedTypes: Record<string, AllowedTypeInfo> | null;
-  children: RowNode[] | null;
+  containerType: 'section'
+  allowedTypes: Record<string, AllowedTypeInfo> | null
+  children: RowNode[] | null
 }
 
 // --- Union types ---
 
-export type ElementNode = SectionNode | RowNode | ColumnNode | SimpleElementNode;
-export type ContainerNode = SectionNode | RowNode | ColumnNode;
+export type ElementNode = SectionNode | RowNode | ColumnNode | SimpleElementNode
+export type ContainerNode = SectionNode | RowNode | ColumnNode
 
 /**
  * Root sections for a single page/zone — flat list. The old `Record<string,
  * ElementNode[]>` shape has been retired in favour of the structured
  * `TreeApiResponse` that carries `rootParent` explicitly.
  */
-export type ElementTreeResponse = ElementNode[];
+export type ElementTreeResponse = ElementNode[]
 
 // --- API response wrapper ---
 
 export interface TreeApiResponse {
   /** Identity of the root container (always a page for the current API). */
-  rootParent: NodeRef;
+  rootParent: NodeRef
   /** Flat list of root-level nodes (sections). */
-  nodes: ElementNode[];
+  nodes: ElementNode[]
 }
 
 // --- Type guards ---
 
 export function isContainerNode(node: ElementNode): node is ContainerNode {
-  return 'containerType' in node;
+  return 'containerType' in node
 }
 
 export function isSectionNode(node: ElementNode): node is SectionNode {
-  return 'containerType' in node && node.containerType === 'section';
+  return 'containerType' in node && node.containerType === 'section'
 }
 
 export function isRowNode(node: ElementNode): node is RowNode {
-  return 'containerType' in node && node.containerType === 'row';
+  return 'containerType' in node && node.containerType === 'row'
 }
 
 export function isColumnNode(node: ElementNode): node is ColumnNode {
-  return 'containerType' in node && node.containerType === 'column';
+  return 'containerType' in node && node.containerType === 'column'
 }
 
 export function isSimpleElementNode(node: ElementNode): node is SimpleElementNode {
-  return !('containerType' in node);
+  return !('containerType' in node)
 }

@@ -1,33 +1,33 @@
-import { describe, it, expect, vi } from 'vitest';
-import { refreshPreview } from './refreshPreview';
+import { describe, expect, it, vi } from 'vitest'
+import { refreshPreview } from './refreshPreview'
 
 describe('refreshPreview', () => {
   it('triggers aftersubmitform on the CMS edit form', () => {
-    const trigger = vi.fn();
-    window.jQuery = vi.fn().mockReturnValue({ length: 1, trigger }) as unknown as JQueryStatic;
+    const trigger = vi.fn()
+    window.jQuery = vi.fn().mockReturnValue({ length: 1, trigger }) as unknown as JQueryStatic
 
-    refreshPreview();
+    refreshPreview()
 
-    expect(window.jQuery).toHaveBeenCalledWith('.cms-edit-form');
+    expect(window.jQuery).toHaveBeenCalledWith('.cms-edit-form')
     expect(trigger).toHaveBeenCalledWith('aftersubmitform', {
       xhr: { getResponseHeader: expect.any(Function) },
-    });
+    })
 
     // Verify the stub getResponseHeader returns null
-    const eventData = trigger.mock.calls[0][1] as { xhr: { getResponseHeader: () => unknown } };
-    expect(eventData.xhr.getResponseHeader()).toBeNull();
-  });
+    const eventData = trigger.mock.calls[0][1] as { xhr: { getResponseHeader: () => unknown } }
+    expect(eventData.xhr.getResponseHeader()).toBeNull()
+  })
 
   it('does nothing when jQuery is not available', () => {
     // @ts-expect-error — testing missing global
-    delete window.jQuery;
+    delete window.jQuery
 
-    expect(() => refreshPreview()).not.toThrow();
-  });
+    expect(() => refreshPreview()).not.toThrow()
+  })
 
   it('does nothing when form element is not found', () => {
-    window.jQuery = vi.fn().mockReturnValue({ length: 0 }) as unknown as JQueryStatic;
+    window.jQuery = vi.fn().mockReturnValue({ length: 0 }) as unknown as JQueryStatic
 
-    expect(() => refreshPreview()).not.toThrow();
-  });
-});
+    expect(() => refreshPreview()).not.toThrow()
+  })
+})

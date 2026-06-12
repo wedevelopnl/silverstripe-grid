@@ -1,30 +1,30 @@
-import { useCallback, useState } from 'react';
-import type { ActionItem } from '@/components/ActionsMenu/ActionsMenu';
-import type { ElementNode } from '@/types/elements';
-import { useGridEditorContext } from './GridEditorContext';
-import { useArchiveElement } from './useElementMutations';
-import { countDescendants } from '@/utils/countDescendants';
-import { showToast } from '@/utils/toast';
-import { t } from '@/i18n';
+import { useCallback, useState } from 'react'
+import type { ActionItem } from '@/components/ActionsMenu/ActionsMenu'
+import { t } from '@/i18n'
+import type { ElementNode } from '@/types/elements'
+import { countDescendants } from '@/utils/countDescendants'
+import { showToast } from '@/utils/toast'
+import { useGridEditorContext } from './GridEditorContext'
+import { useArchiveElement } from './useElementMutations'
 
 interface ArchiveDialogState {
-  readonly isOpen: boolean;
-  readonly title: string;
-  readonly message: string;
-  readonly onConfirm: () => void;
-  readonly onCancel: () => void;
+  readonly isOpen: boolean
+  readonly title: string
+  readonly message: string
+  readonly onConfirm: () => void
+  readonly onCancel: () => void
 }
 
 interface UseArchiveActionResult {
-  readonly action: ActionItem | null;
-  readonly dialog: ArchiveDialogState | null;
+  readonly action: ActionItem | null
+  readonly dialog: ArchiveDialogState | null
 }
 
 function buildArchiveMessage(title: string, descendantCount: number): string {
   if (descendantCount === 0) {
     return t('WeDevelopGrid.useArchiveAction.CONFIRM_MESSAGE_SIMPLE', 'Archive "{title}"?', {
       title,
-    });
+    })
   }
 
   return descendantCount === 1
@@ -37,35 +37,35 @@ function buildArchiveMessage(title: string, descendantCount: number): string {
         'WeDevelopGrid.useArchiveAction.CONFIRM_MESSAGE_MANY_CHILDREN',
         'Archive "{title}" and all {count} child elements?',
         { title, count: descendantCount },
-      );
+      )
 }
 
 export function useArchiveAction(node: ElementNode): UseArchiveActionResult {
-  const { pageId, zone } = useGridEditorContext();
-  const archiveElement = useArchiveElement(pageId, zone);
-  const [isDialogOpen, setDialogOpen] = useState(false);
+  const { pageId, zone } = useGridEditorContext()
+  const archiveElement = useArchiveElement(pageId, zone)
+  const [isDialogOpen, setDialogOpen] = useState(false)
 
-  const descendantCount = countDescendants(node);
+  const descendantCount = countDescendants(node)
 
   const handleOpenDialog = useCallback(() => {
-    setDialogOpen(true);
-  }, []);
+    setDialogOpen(true)
+  }, [])
 
   const handleCancel = useCallback(() => {
-    setDialogOpen(false);
-  }, []);
+    setDialogOpen(false)
+  }, [])
 
   const handleConfirm = useCallback(() => {
-    setDialogOpen(false);
+    setDialogOpen(false)
     archiveElement.mutate(node.self, {
       onError: (error) => {
-        showToast(error.message);
+        showToast(error.message)
       },
-    });
-  }, [archiveElement, node.self]);
+    })
+  }, [archiveElement, node.self])
 
   if (!node.canDelete) {
-    return { action: null, dialog: null };
+    return { action: null, dialog: null }
   }
 
   const action: ActionItem = {
@@ -73,7 +73,7 @@ export function useArchiveAction(node: ElementNode): UseArchiveActionResult {
     label: t('WeDevelopGrid.useArchiveAction.ACTION_LABEL', 'Archive'),
     destructive: true,
     onAction: handleOpenDialog,
-  };
+  }
 
   const dialog: ArchiveDialogState = {
     isOpen: isDialogOpen,
@@ -81,7 +81,7 @@ export function useArchiveAction(node: ElementNode): UseArchiveActionResult {
     message: buildArchiveMessage(node.title, descendantCount),
     onConfirm: handleConfirm,
     onCancel: handleCancel,
-  };
+  }
 
-  return { action, dialog };
+  return { action, dialog }
 }

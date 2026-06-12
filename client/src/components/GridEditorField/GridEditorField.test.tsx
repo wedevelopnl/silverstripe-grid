@@ -1,10 +1,10 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import GridEditorField from './GridEditorField';
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import GridEditorField from './GridEditorField'
 
 describe('GridEditorField (FormBuilder entry point)', () => {
   it('renders the grid editor with pageId and zone from schema data', () => {
-    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
     render(
       <GridEditorField
@@ -13,15 +13,15 @@ describe('GridEditorField (FormBuilder entry point)', () => {
         data={{ pageId: 42, zone: 'main' }}
         readOnly={false}
       />,
-    );
+    )
 
-    const gridEditor = screen.getByTestId('grid-editor');
-    expect(gridEditor).toHaveAttribute('data-page-id', '42');
-    expect(gridEditor).toHaveAttribute('data-zone', 'main');
-  });
+    const gridEditor = screen.getByTestId('grid-editor')
+    expect(gridEditor).toHaveAttribute('data-page-id', '42')
+    expect(gridEditor).toHaveAttribute('data-zone', 'main')
+  })
 
   it('renders in readonly mode when FormBuilder sets readOnly=true', () => {
-    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
     render(
       <GridEditorField
@@ -30,10 +30,10 @@ describe('GridEditorField (FormBuilder entry point)', () => {
         data={{ pageId: 42, zone: 'main', version: 5 }}
         readOnly={true}
       />,
-    );
+    )
 
-    expect(screen.getByTestId('grid-editor')).toHaveAttribute('data-readonly', '');
-  });
+    expect(screen.getByTestId('grid-editor')).toHaveAttribute('data-readonly', '')
+  })
 
   it('returns null when pageId is missing from schema data', () => {
     const { container } = render(
@@ -43,8 +43,8 @@ describe('GridEditorField (FormBuilder entry point)', () => {
         data={{}}
         readOnly={false}
       />,
-    );
+    )
 
-    expect(container).toBeEmptyDOMElement();
-  });
-});
+    expect(container).toBeEmptyDOMElement()
+  })
+})

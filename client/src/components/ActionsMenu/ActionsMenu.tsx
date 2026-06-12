@@ -1,67 +1,67 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { t } from '@/i18n';
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { t } from '@/i18n'
 
 export interface ActionItem {
-  readonly key: string;
-  readonly label: string;
-  readonly destructive?: boolean;
-  readonly onAction: () => void;
+  readonly key: string
+  readonly label: string
+  readonly destructive?: boolean
+  readonly onAction: () => void
 }
 
 interface ActionsMenuProps {
-  readonly actions: readonly ActionItem[];
-  readonly testId?: string;
+  readonly actions: readonly ActionItem[]
+  readonly testId?: string
 }
 
 export default function ActionsMenu({ actions, testId = 'actions-menu' }: ActionsMenuProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   // Stable DOM id prefix so aria-activedescendant references a real element id.
-  const itemIdPrefix = useId();
+  const itemIdPrefix = useId()
 
-  const getItemId = useCallback((index: number) => `${itemIdPrefix}item-${index}`, [itemIdPrefix]);
+  const getItemId = useCallback((index: number) => `${itemIdPrefix}item-${index}`, [itemIdPrefix])
 
-  const close = useCallback(() => setIsOpen(false), []);
+  const close = useCallback(() => setIsOpen(false), [])
 
   // Reset to first item and move focus to the menu container each time it opens
   // so Arrow keys drive the aria-activedescendant roving pattern.
   useEffect(() => {
-    if (!isOpen) return;
-    setActiveIndex(0);
-    menuRef.current?.focus();
-  }, [isOpen]);
+    if (!isOpen) return
+    setActiveIndex(0)
+    menuRef.current?.focus()
+  }, [isOpen])
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return
 
     function handleMouseDown(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        close();
+        close()
       }
     }
 
-    document.addEventListener('mousedown', handleMouseDown);
-    return () => document.removeEventListener('mousedown', handleMouseDown);
-  }, [isOpen, close]);
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [isOpen, close])
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         // Stryker disable next-line all: stopPropagation prevents bubble to parent menus, not observable via RTL
-        e.stopPropagation();
-        close();
-        triggerRef.current?.focus();
+        e.stopPropagation()
+        close()
+        triggerRef.current?.focus()
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, close]);
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, close])
 
   // preventDefault is required because this button may be nested inside a
   // clickable ancestor (ElementCard's <a href>). React synthetic
@@ -69,58 +69,58 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
   // browser's default anchor navigation is cancelled only by preventDefault
   // on the underlying click event.
   function handleTriggerClick(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsOpen((prev) => !prev);
+    e.preventDefault()
+    e.stopPropagation()
+    setIsOpen((prev) => !prev)
   }
 
   function handleItemClick(e: React.MouseEvent, onAction: () => void) {
-    e.preventDefault();
-    e.stopPropagation();
-    onAction();
-    close();
+    e.preventDefault()
+    e.stopPropagation()
+    onAction()
+    close()
   }
 
   function handleMenuKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-    const last = actions.length - 1;
+    const last = actions.length - 1
     switch (e.key) {
       case 'ArrowDown':
-        e.preventDefault();
-        setActiveIndex((i) => (i >= last ? last : i + 1));
-        return;
+        e.preventDefault()
+        setActiveIndex((i) => (i >= last ? last : i + 1))
+        return
       case 'ArrowUp':
-        e.preventDefault();
-        setActiveIndex((i) => (i <= 0 ? 0 : i - 1));
-        return;
+        e.preventDefault()
+        setActiveIndex((i) => (i <= 0 ? 0 : i - 1))
+        return
       case 'Home':
-        e.preventDefault();
-        setActiveIndex(0);
-        return;
+        e.preventDefault()
+        setActiveIndex(0)
+        return
       case 'End':
-        e.preventDefault();
-        setActiveIndex(last);
-        return;
+        e.preventDefault()
+        setActiveIndex(last)
+        return
       case 'Enter':
       case ' ': {
-        e.preventDefault();
-        e.stopPropagation();
-        const current = actions[activeIndex];
+        e.preventDefault()
+        e.stopPropagation()
+        const current = actions[activeIndex]
         if (current) {
-          current.onAction();
-          close();
+          current.onAction()
+          close()
         }
-        return;
+        return
       }
       default:
-        return;
+        return
     }
   }
 
   if (actions.length === 0) {
-    return null;
+    return null
   }
 
-  const menuId = `${testId}-menu`;
+  const menuId = `${testId}-menu`
 
   return (
     <div ref={wrapperRef} className="ssgrid-actions-menu">
@@ -165,5 +165,5 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
         </div>
       )}
     </div>
-  );
+  )
 }

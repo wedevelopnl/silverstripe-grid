@@ -1,14 +1,14 @@
-import { skipToken, useQuery } from '@tanstack/react-query';
-import { fetchPages, fetchZones, fetchAcceptableContainers } from '@/api/endpoints';
-import type { PageEntry, AcceptableContainer } from '@/api/endpoints';
-import { queryKeys } from './queryKeys';
+import { skipToken, useQuery } from '@tanstack/react-query'
+import type { AcceptableContainer, PageEntry } from '@/api/endpoints'
+import { fetchAcceptableContainers, fetchPages, fetchZones } from '@/api/endpoints'
+import { queryKeys } from './queryKeys'
 
 export function usePages(search: string, enabled = true) {
   return useQuery<PageEntry[]>({
     queryKey: queryKeys.pages.search(search),
     queryFn: () => fetchPages(search || undefined),
     enabled,
-  });
+  })
 }
 
 // Disabled queries use a distinct sentinel key so they don't collide with a
@@ -18,7 +18,7 @@ export function useZones(pageId: number | null) {
   return useQuery<string[]>({
     queryKey: pageId !== null ? queryKeys.zones.byPage(pageId) : (['zones', 'disabled'] as const),
     queryFn: pageId !== null ? () => fetchZones(pageId) : skipToken,
-  });
+  })
 }
 
 export function useAcceptableContainers(
@@ -26,11 +26,11 @@ export function useAcceptableContainers(
   zone: string | null,
   elementType: string | null,
 ) {
-  const allPresent = pageId !== null && zone !== null && elementType !== null;
+  const allPresent = pageId !== null && zone !== null && elementType !== null
   return useQuery<AcceptableContainer[]>({
     queryKey: allPresent
       ? queryKeys.acceptableContainers.byTarget(pageId, zone, elementType)
       : (['acceptableContainers', 'disabled'] as const),
     queryFn: allPresent ? () => fetchAcceptableContainers(pageId, zone, elementType) : skipToken,
-  });
+  })
 }

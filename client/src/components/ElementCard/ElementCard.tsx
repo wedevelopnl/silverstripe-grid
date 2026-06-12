@@ -1,14 +1,14 @@
-import { memo, type MouseEvent, type ReactNode } from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import type { SimpleElementNode } from '@/types/elements';
-import { useReadonly } from '@/hooks/ReadonlyContext';
-import { buildSortableStyle } from '@/utils/sortableStyles';
-import { t } from '@/i18n';
-import DragHandle from '@/components/DragHandle/DragHandle';
-import ElementActions from '@/components/ElementActions/ElementActions';
+import { useSortable } from '@dnd-kit/sortable'
+import { type MouseEvent, memo, type ReactNode } from 'react'
+import DragHandle from '@/components/DragHandle/DragHandle'
+import ElementActions from '@/components/ElementActions/ElementActions'
+import { useReadonly } from '@/hooks/ReadonlyContext'
+import { t } from '@/i18n'
+import type { SimpleElementNode } from '@/types/elements'
+import { buildSortableStyle } from '@/utils/sortableStyles'
 
 interface ElementCardProps {
-  readonly element: SimpleElementNode;
+  readonly element: SimpleElementNode
 }
 
 /**
@@ -18,25 +18,25 @@ interface ElementCardProps {
  * just renders the icon and title inside the status-colored border.
  */
 const ElementCard = memo(function ElementCard({ element }: ElementCardProps) {
-  const readonly = useReadonly();
+  const readonly = useReadonly()
   return readonly ? (
     <ReadonlyElementCard element={element} />
   ) : (
     <EditableElementCard element={element} />
-  );
-});
+  )
+})
 
-export default ElementCard;
+export default ElementCard
 
 function EditableElementCard({ element }: ElementCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: element.nodeKey,
-  });
-  const status = element.status;
-  const editLink = element.editLink;
-  const isClickable = editLink !== null;
+  })
+  const status = element.status
+  const editLink = element.editLink
+  const isClickable = editLink !== null
 
-  const style = buildSortableStyle(transform, transition, isDragging);
+  const style = buildSortableStyle(transform, transition, isDragging)
 
   const header: ReactNode = (
     <>
@@ -72,7 +72,7 @@ function EditableElementCard({ element }: ElementCardProps) {
         </p>
       ) : null}
     </>
-  );
+  )
 
   if (isClickable) {
     // Swallow clicks from interactive descendants (drag handle, actions menu,
@@ -83,19 +83,19 @@ function EditableElementCard({ element }: ElementCardProps) {
     // no interactive ancestor inside the card other than the anchor itself.
     const handleAnchorClick = (event: MouseEvent<HTMLAnchorElement>) => {
       if (isDragging) {
-        event.preventDefault();
-        return;
+        event.preventDefault()
+        return
       }
       if (!(event.target instanceof Element)) {
-        return;
+        return
       }
       const interactive = event.target.closest(
         'button, input, select, textarea, [role="button"], [role="menuitem"], [role="listbox"], [role="dialog"]',
-      );
+      )
       if (interactive !== null && event.currentTarget.contains(interactive)) {
-        event.preventDefault();
+        event.preventDefault()
       }
-    };
+    }
 
     return (
       <a
@@ -110,7 +110,7 @@ function EditableElementCard({ element }: ElementCardProps) {
       >
         {header}
       </a>
-    );
+    )
   }
 
   return (
@@ -123,11 +123,11 @@ function EditableElementCard({ element }: ElementCardProps) {
     >
       {header}
     </div>
-  );
+  )
 }
 
 function ReadonlyElementCard({ element }: ElementCardProps) {
-  const status = element.status;
+  const status = element.status
 
   return (
     <div className="ssgrid-block" data-testid="element-card" data-status={status}>
@@ -155,5 +155,5 @@ function ReadonlyElementCard({ element }: ElementCardProps) {
         </p>
       ) : null}
     </div>
-  );
+  )
 }

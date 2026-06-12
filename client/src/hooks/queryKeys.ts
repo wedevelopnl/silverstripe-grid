@@ -17,4 +17,4 @@ export const queryKeys = {
     byTarget: (pageId: number, zone: string, elementType: string) =>
       ['acceptableContainers', pageId, zone, elementType] as const,
   },
-} as const;
+} as const

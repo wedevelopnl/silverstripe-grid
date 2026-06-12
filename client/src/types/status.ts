@@ -1,1 +1,1 @@
-export type ElementStatus = 'draft' | 'published' | 'modified' | 'removed';
+export type ElementStatus = 'draft' | 'published' | 'modified' | 'removed'

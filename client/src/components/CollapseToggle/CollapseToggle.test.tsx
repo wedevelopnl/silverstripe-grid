@@ -1,49 +1,49 @@
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 
-import CollapseToggle from './CollapseToggle';
+import CollapseToggle from './CollapseToggle'
 
 describe('CollapseToggle', () => {
   it('sets aria-expanded to false when collapsed', () => {
-    render(<CollapseToggle isCollapsed={true} onToggle={vi.fn()} label="Section" />);
+    render(<CollapseToggle isCollapsed={true} onToggle={vi.fn()} label="Section" />)
 
-    expect(screen.getByTestId('collapse-toggle')).toHaveAttribute('aria-expanded', 'false');
-  });
+    expect(screen.getByTestId('collapse-toggle')).toHaveAttribute('aria-expanded', 'false')
+  })
 
   it('sets aria-expanded to true when expanded', () => {
-    render(<CollapseToggle isCollapsed={false} onToggle={vi.fn()} label="Section" />);
+    render(<CollapseToggle isCollapsed={false} onToggle={vi.fn()} label="Section" />)
 
-    expect(screen.getByTestId('collapse-toggle')).toHaveAttribute('aria-expanded', 'true');
-  });
+    expect(screen.getByTestId('collapse-toggle')).toHaveAttribute('aria-expanded', 'true')
+  })
 
   it('shows "Expand" in aria-label when collapsed', () => {
-    render(<CollapseToggle isCollapsed={true} onToggle={vi.fn()} label="Section" />);
+    render(<CollapseToggle isCollapsed={true} onToggle={vi.fn()} label="Section" />)
 
-    expect(screen.getByTestId('collapse-toggle')).toHaveAttribute('aria-label', 'Expand Section');
-  });
+    expect(screen.getByTestId('collapse-toggle')).toHaveAttribute('aria-label', 'Expand Section')
+  })
 
   it('shows "Collapse" in aria-label when expanded', () => {
-    render(<CollapseToggle isCollapsed={false} onToggle={vi.fn()} label="Section" />);
+    render(<CollapseToggle isCollapsed={false} onToggle={vi.fn()} label="Section" />)
 
-    expect(screen.getByTestId('collapse-toggle')).toHaveAttribute('aria-label', 'Collapse Section');
-  });
+    expect(screen.getByTestId('collapse-toggle')).toHaveAttribute('aria-label', 'Collapse Section')
+  })
 
   it('calls onToggle when clicked', async () => {
-    const user = userEvent.setup();
-    const onToggle = vi.fn();
+    const user = userEvent.setup()
+    const onToggle = vi.fn()
 
-    render(<CollapseToggle isCollapsed={true} onToggle={onToggle} label="Section" />);
+    render(<CollapseToggle isCollapsed={true} onToggle={onToggle} label="Section" />)
 
-    await user.click(screen.getByTestId('collapse-toggle'));
+    await user.click(screen.getByTestId('collapse-toggle'))
 
-    expect(onToggle).toHaveBeenCalledOnce();
-  });
+    expect(onToggle).toHaveBeenCalledOnce()
+  })
 
   it('chevron span is aria-hidden', () => {
-    render(<CollapseToggle isCollapsed={false} onToggle={vi.fn()} label="Section" />);
+    render(<CollapseToggle isCollapsed={false} onToggle={vi.fn()} label="Section" />)
 
-    const chevron = screen.getByTestId('collapse-toggle').querySelector('span');
-    expect(chevron).toHaveAttribute('aria-hidden', 'true');
-  });
-});
+    const chevron = screen.getByTestId('collapse-toggle').querySelector('span')
+    expect(chevron).toHaveAttribute('aria-hidden', 'true')
+  })
+})

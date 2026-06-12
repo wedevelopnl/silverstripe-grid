@@ -1,12 +1,11 @@
-import { screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { useSortable } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable'
+import { screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createSimpleElement } from '@/testing/factories'
+import { mockFetchSuccess } from '@/testing/mockFetch'
+import { renderWithProviders } from '@/testing/renderWithProviders'
 
-import { mockFetchSuccess } from '@/testing/mockFetch';
-import { createSimpleElement } from '@/testing/factories';
-import { renderWithProviders } from '@/testing/renderWithProviders';
-
-import ElementCard from './ElementCard';
+import ElementCard from './ElementCard'
 
 const defaultSortable = {
   attributes: {},
@@ -15,94 +14,94 @@ const defaultSortable = {
   transform: null,
   transition: undefined,
   isDragging: false,
-};
+}
 
 vi.mock('@dnd-kit/sortable', () => ({
   useSortable: vi.fn(() => ({ ...defaultSortable })),
-}));
+}))
 
 afterEach(() => {
   vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<
     typeof useSortable
-  >);
-});
+  >)
+})
 
 describe('ElementCard', () => {
   it('renders element title', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    const element = createSimpleElement({ title: 'My Content Block' });
+    const element = createSimpleElement({ title: 'My Content Block' })
 
-    renderWithProviders(<ElementCard element={element} />);
+    renderWithProviders(<ElementCard element={element} />)
 
-    expect(screen.getByTestId('element-card-title')).toHaveTextContent('My Content Block');
-  });
+    expect(screen.getByTestId('element-card-title')).toHaveTextContent('My Content Block')
+  })
 
   it('status attribute applied correctly', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    const element = createSimpleElement({ status: 'draft' });
+    const element = createSimpleElement({ status: 'draft' })
 
-    renderWithProviders(<ElementCard element={element} />);
+    renderWithProviders(<ElementCard element={element} />)
 
-    expect(screen.getByTestId('element-card')).toHaveAttribute('data-status', 'draft');
-  });
+    expect(screen.getByTestId('element-card')).toHaveAttribute('data-status', 'draft')
+  })
 
   it('clickable state applied when editLink exists', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' });
+    const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
 
-    renderWithProviders(<ElementCard element={element} />);
+    renderWithProviders(<ElementCard element={element} />)
 
-    expect(screen.getByTestId('element-card')).toHaveAttribute('data-state', 'clickable');
-  });
+    expect(screen.getByTestId('element-card')).toHaveAttribute('data-state', 'clickable')
+  })
 
   it('no clickable state when editLink is null', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    const element = createSimpleElement({ editLink: null });
+    const element = createSimpleElement({ editLink: null })
 
-    renderWithProviders(<ElementCard element={element} />);
+    renderWithProviders(<ElementCard element={element} />)
 
-    expect(screen.getByTestId('element-card')).not.toHaveAttribute('data-state', 'clickable');
-  });
+    expect(screen.getByTestId('element-card')).not.toHaveAttribute('data-state', 'clickable')
+  })
 
   it('renders an anchor with an href so middle-click opens in a new tab', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' });
+    const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
 
-    renderWithProviders(<ElementCard element={element} />);
+    renderWithProviders(<ElementCard element={element} />)
 
-    const link = screen.getByRole('link');
-    expect(link.tagName).toBe('A');
-    expect(link).toHaveAttribute('href', '/admin/pages/edit/show/5');
-  });
+    const link = screen.getByRole('link')
+    expect(link.tagName).toBe('A')
+    expect(link).toHaveAttribute('href', '/admin/pages/edit/show/5')
+  })
 
   it('renders as non-interactive when editLink is null', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    const element = createSimpleElement({ editLink: null });
+    const element = createSimpleElement({ editLink: null })
 
-    renderWithProviders(<ElementCard element={element} />);
+    renderWithProviders(<ElementCard element={element} />)
 
-    expect(screen.queryByRole('link')).toBeNull();
-  });
+    expect(screen.queryByRole('link')).toBeNull()
+  })
 
   it('clickable state is set when editLink is provided', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' });
+    const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
 
-    renderWithProviders(<ElementCard element={element} />);
+    renderWithProviders(<ElementCard element={element} />)
 
-    const card = screen.getByTestId('element-card');
-    expect(card).toHaveAttribute('data-state', 'clickable');
-  });
+    const card = screen.getByTestId('element-card')
+    expect(card).toHaveAttribute('data-state', 'clickable')
+  })
 
   it('renders the icon with the blockSchema icon class', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
     const element = createSimpleElement({
       blockSchema: {
@@ -112,47 +111,47 @@ describe('ElementCard', () => {
         type: 'Content',
         title: 'Content',
       },
-    });
+    })
 
-    renderWithProviders(<ElementCard element={element} />);
+    renderWithProviders(<ElementCard element={element} />)
 
-    const icon = screen.getByTestId('element-card-icon');
-    expect(icon).toHaveClass('font-icon-block-content');
-  });
+    const icon = screen.getByTestId('element-card-icon')
+    expect(icon).toHaveClass('font-icon-block-content')
+  })
 
   describe('summary', () => {
     it('renders the summary line when a non-empty value is provided', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
-      const element = createSimpleElement({ summary: 'A short preview of the block' });
+      const element = createSimpleElement({ summary: 'A short preview of the block' })
 
-      renderWithProviders(<ElementCard element={element} />);
+      renderWithProviders(<ElementCard element={element} />)
 
       expect(screen.getByTestId('element-card-summary')).toHaveTextContent(
         'A short preview of the block',
-      );
-    });
+      )
+    })
 
     it('does not render the summary line when the field is absent', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
-      const element = createSimpleElement();
+      const element = createSimpleElement()
 
-      renderWithProviders(<ElementCard element={element} />);
+      renderWithProviders(<ElementCard element={element} />)
 
-      expect(screen.queryByTestId('element-card-summary')).toBeNull();
-    });
+      expect(screen.queryByTestId('element-card-summary')).toBeNull()
+    })
 
     it('does not render the summary line when the value is an empty string', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
-      const element = createSimpleElement({ summary: '' });
+      const element = createSimpleElement({ summary: '' })
 
-      renderWithProviders(<ElementCard element={element} />);
+      renderWithProviders(<ElementCard element={element} />)
 
-      expect(screen.queryByTestId('element-card-summary')).toBeNull();
-    });
-  });
+      expect(screen.queryByTestId('element-card-summary')).toBeNull()
+    })
+  })
 
   describe('anchor click handling', () => {
     // Pins the handleAnchorClick guards at ElementCard.tsx:68-82 against
@@ -164,55 +163,55 @@ describe('ElementCard', () => {
       vi.mocked(useSortable).mockReturnValue({
         ...defaultSortable,
         isDragging: true,
-      } as unknown as ReturnType<typeof useSortable>);
-      mockFetchSuccess({});
+      } as unknown as ReturnType<typeof useSortable>)
+      mockFetchSuccess({})
 
-      const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' });
-      renderWithProviders(<ElementCard element={element} />);
+      const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
+      renderWithProviders(<ElementCard element={element} />)
 
-      const card = screen.getByTestId('element-card');
-      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
-      const result = card.dispatchEvent(event);
+      const card = screen.getByTestId('element-card')
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true })
+      const result = card.dispatchEvent(event)
 
       // dispatchEvent returns false when preventDefault was called
-      expect(result).toBe(false);
-      expect(event.defaultPrevented).toBe(true);
-    });
+      expect(result).toBe(false)
+      expect(event.defaultPrevented).toBe(true)
+    })
 
     it('prevents navigation when a click originates inside an interactive descendant', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
-      const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' });
-      renderWithProviders(<ElementCard element={element} />);
+      const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
+      renderWithProviders(<ElementCard element={element} />)
 
       // The anchor contains a drag-handle <button> (rendered by DragHandle).
-      const dragHandle = screen.getByTestId('element-card').querySelector('button');
-      expect(dragHandle).not.toBeNull();
+      const dragHandle = screen.getByTestId('element-card').querySelector('button')
+      expect(dragHandle).not.toBeNull()
 
-      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
-      const result = dragHandle!.dispatchEvent(event);
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true })
+      const result = dragHandle!.dispatchEvent(event)
 
-      expect(result).toBe(false);
-      expect(event.defaultPrevented).toBe(true);
-    });
+      expect(result).toBe(false)
+      expect(event.defaultPrevented).toBe(true)
+    })
 
     it('allows navigation when the click target has no interactive ancestor inside the card', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const element = createSimpleElement({
         title: 'Navigate me',
         editLink: '/admin/pages/edit/show/5',
-      });
-      renderWithProviders(<ElementCard element={element} />);
+      })
+      renderWithProviders(<ElementCard element={element} />)
 
       // Title is a plain <h4> — no interactive ancestor inside the card.
-      const title = screen.getByTestId('element-card-title');
-      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
-      const result = title.dispatchEvent(event);
+      const title = screen.getByTestId('element-card-title')
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true })
+      const result = title.dispatchEvent(event)
 
       // Not prevented — anchor navigation would proceed.
-      expect(result).toBe(true);
-      expect(event.defaultPrevented).toBe(false);
-    });
-  });
-});
+      expect(result).toBe(true)
+      expect(event.defaultPrevented).toBe(false)
+    })
+  })
+})

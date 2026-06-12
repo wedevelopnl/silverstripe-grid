@@ -1,8 +1,8 @@
-import type { DraggableType, ViewportRect } from '@/types/dnd';
+import type { DraggableType, ViewportRect } from '@/types/dnd'
 
 interface Point {
-  readonly x: number;
-  readonly y: number;
+  readonly x: number
+  readonly y: number
 }
 
 /**
@@ -17,11 +17,11 @@ export function resolveInsertDirection(
   overRect: ViewportRect,
   type: DraggableType,
 ): 'before' | 'after' {
-  const useXAxis = type === 'column';
-  const pointerPos = useXAxis ? pointer.x : pointer.y;
+  const useXAxis = type === 'column'
+  const pointerPos = useXAxis ? pointer.x : pointer.y
   const overCenter = useXAxis
     ? overRect.left + overRect.width / 2
-    : overRect.top + overRect.height / 2;
+    : overRect.top + overRect.height / 2
 
-  return pointerPos < overCenter ? 'before' : 'after';
+  return pointerPos < overCenter ? 'before' : 'after'
 }

@@ -1,5 +1,5 @@
-import { expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Page } from '@playwright/test'
+import { expect } from '@playwright/test'
 
 /**
  * Enable CMS split mode and wait for the preview iframe to load a real page.
@@ -13,16 +13,16 @@ import type { Page } from '@playwright/test';
 export async function enablePreviewMode(page: Page): Promise<void> {
   // The CMS preview reads mode from localStorage on initialisation
   await page.evaluate(() => {
-    window.localStorage.setItem('cms-preview-state-mode', 'split');
-  });
+    window.localStorage.setItem('cms-preview-state-mode', 'split')
+  })
 
   // Reload so the CMS picks up the stored mode
-  await page.reload({ waitUntil: 'load' });
-  await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+  await page.reload({ waitUntil: 'load' })
+  await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
 
   // Wait for the preview iframe to load a real page (not about:blank)
-  const previewIframe = page.frameLocator('iframe[name="cms-preview-iframe"]');
-  await expect(previewIframe.locator('body')).toBeAttached({ timeout: 15_000 });
+  const previewIframe = page.frameLocator('iframe[name="cms-preview-iframe"]')
+  await expect(previewIframe.locator('body')).toBeAttached({ timeout: 15_000 })
 }
 
 /**
@@ -40,28 +40,28 @@ export async function enablePreviewMode(page: Page): Promise<void> {
 export async function forceSplitViewMode(page: Page): Promise<void> {
   await page
     .locator('#preview-mode-dropdown-in-content-select')
-    .waitFor({ state: 'attached', timeout: 15_000 });
+    .waitFor({ state: 'attached', timeout: 15_000 })
 
   await page.evaluate(() => {
     const select = document.querySelector<HTMLSelectElement>(
       '#preview-mode-dropdown-in-content-select',
-    );
+    )
     if (select === null) {
-      throw new Error('preview-mode-dropdown-in-content-select not found');
+      throw new Error('preview-mode-dropdown-in-content-select not found')
     }
-    const option = select.querySelector<HTMLOptionElement>('option.font-icon-columns');
+    const option = select.querySelector<HTMLOptionElement>('option.font-icon-columns')
     if (option === null) {
-      throw new Error('Split mode option not found in mode dropdown');
+      throw new Error('Split mode option not found in mode dropdown')
     }
-    select.value = option.value;
-    select.dispatchEvent(new Event('change', { bubbles: true }));
-  });
+    select.value = option.value
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+  })
 
-  await expect(page.locator('.cms-container--split-mode')).toHaveCount(1, { timeout: 15_000 });
-  await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+  await expect(page.locator('.cms-container--split-mode')).toHaveCount(1, { timeout: 15_000 })
+  await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
 
-  const previewIframe = page.frameLocator('iframe[name="cms-preview-iframe"]');
-  await expect(previewIframe.locator('body')).toBeAttached({ timeout: 15_000 });
+  const previewIframe = page.frameLocator('iframe[name="cms-preview-iframe"]')
+  await expect(previewIframe.locator('body')).toBeAttached({ timeout: 15_000 })
 }
 
 /**
@@ -79,5 +79,5 @@ export function waitForPreviewRefresh(page: Page): Promise<unknown> {
   return page.waitForEvent('framenavigated', {
     predicate: (frame) => frame.name() === 'cms-preview-iframe',
     timeout: 10_000,
-  });
+  })
 }

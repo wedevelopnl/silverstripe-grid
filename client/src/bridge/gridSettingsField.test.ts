@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * gridSettingsField.ts registers a single entwine rule against the
@@ -11,24 +11,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 type EntwineRule = {
-  onchange(this: unknown): void;
-};
+  onchange(this: unknown): void
+}
 
 interface RowMock {
-  find: ReturnType<typeof vi.fn>;
-  not: ReturnType<typeof vi.fn>;
-  prop: ReturnType<typeof vi.fn>;
-  toggleClass: ReturnType<typeof vi.fn>;
+  find: ReturnType<typeof vi.fn>
+  not: ReturnType<typeof vi.fn>
+  prop: ReturnType<typeof vi.fn>
+  toggleClass: ReturnType<typeof vi.fn>
 }
 
 interface CapturedRegistration {
-  selector: string;
-  rule: EntwineRule;
+  selector: string
+  rule: EntwineRule
 }
 
-let captured: CapturedRegistration | null = null;
-let rowMock: RowMock | null = null;
-let isCheckedValue = false;
+let captured: CapturedRegistration | null = null
+let rowMock: RowMock | null = null
+let isCheckedValue = false
 
 function createRowMock(): RowMock {
   const row: RowMock = {
@@ -36,12 +36,12 @@ function createRowMock(): RowMock {
     not: vi.fn(),
     prop: vi.fn(),
     toggleClass: vi.fn(),
-  };
-  row.find.mockReturnValue(row);
-  row.not.mockReturnValue(row);
-  row.prop.mockReturnValue(row);
-  row.toggleClass.mockReturnValue(row);
-  return row;
+  }
+  row.find.mockReturnValue(row)
+  row.not.mockReturnValue(row)
+  row.prop.mockReturnValue(row)
+  row.toggleClass.mockReturnValue(row)
+  return row
 }
 
 /**
@@ -56,96 +56,96 @@ function installJQueryStub(): void {
       return {
         // selector-registration path
         entwine: (rule: EntwineRule) => {
-          captured = { selector: '<registered>', rule };
+          captured = { selector: '<registered>', rule }
         },
         // onchange runtime path
         closest: (_selector: string): RowMock => {
           if (rowMock === null) {
-            throw new Error('rowMock not initialised');
+            throw new Error('rowMock not initialised')
           }
-          return rowMock;
+          return rowMock
         },
         is: (_selector: string): boolean => isCheckedValue,
-      };
-    };
-    callback($);
-  };
+      }
+    }
+    callback($)
+  }
 
   // biome-ignore lint/suspicious/noExplicitAny: test stub for window.jQuery surface
-  (window as any).jQuery = Object.assign(() => ({}), { entwine: entwineFn });
+  ;(window as any).jQuery = Object.assign(() => ({}), { entwine: entwineFn })
 }
 
 function removeJQueryStub(): void {
   // biome-ignore lint/suspicious/noExplicitAny: cleanup of test stub
-  delete (window as any).jQuery;
+  delete (window as any).jQuery
 }
 
 describe('gridSettingsField entwine guard', () => {
   beforeEach(() => {
-    captured = null;
-    rowMock = null;
-    vi.resetModules();
-  });
+    captured = null
+    rowMock = null
+    vi.resetModules()
+  })
 
   afterEach(() => {
-    removeJQueryStub();
-  });
+    removeJQueryStub()
+  })
 
   it('does not throw when imported without jQuery on the window', async () => {
-    removeJQueryStub();
-    await expect(import('./gridSettingsField')).resolves.toBeDefined();
-    expect(captured).toBeNull();
-  });
+    removeJQueryStub()
+    await expect(import('./gridSettingsField')).resolves.toBeDefined()
+    expect(captured).toBeNull()
+  })
 
   it('registers an entwine rule with an onchange handler when jQuery is present', async () => {
-    installJQueryStub();
-    await import('./gridSettingsField');
+    installJQueryStub()
+    await import('./gridSettingsField')
 
-    expect(captured).not.toBeNull();
-    expect(typeof captured?.rule.onchange).toBe('function');
-  });
-});
+    expect(captured).not.toBeNull()
+    expect(typeof captured?.rule.onchange).toBe('function')
+  })
+})
 
 describe('gridSettingsField onchange handler', () => {
-  let rule: EntwineRule;
+  let rule: EntwineRule
 
   beforeEach(async () => {
-    captured = null;
-    rowMock = createRowMock();
-    vi.resetModules();
-    installJQueryStub();
-    await import('./gridSettingsField');
+    captured = null
+    rowMock = createRowMock()
+    vi.resetModules()
+    installJQueryStub()
+    await import('./gridSettingsField')
     // TS narrows `captured` to `null` across the async import boundary because
     // the outer assignment is not visible to control-flow analysis. Read it
     // through an explicit widening cast so downstream type narrowing works.
-    const registration = captured as CapturedRegistration | null;
+    const registration = captured as CapturedRegistration | null
     if (registration === null) {
-      throw new Error('rule was not registered');
+      throw new Error('rule was not registered')
     }
-    rule = registration.rule;
-  });
+    rule = registration.rule
+  })
 
   afterEach(() => {
-    removeJQueryStub();
-  });
+    removeJQueryStub()
+  })
 
   it('enables the row inputs and adds the is-overridden class when the toggle is checked', () => {
-    isCheckedValue = true;
+    isCheckedValue = true
 
-    rule.onchange.call({});
+    rule.onchange.call({})
 
-    expect(rowMock?.find).toHaveBeenCalledWith('select, input');
-    expect(rowMock?.not).toHaveBeenCalledWith('.grid-settings-field__override-toggle');
-    expect(rowMock?.prop).toHaveBeenCalledWith('disabled', false);
-    expect(rowMock?.toggleClass).toHaveBeenCalledWith('is-overridden', true);
-  });
+    expect(rowMock?.find).toHaveBeenCalledWith('select, input')
+    expect(rowMock?.not).toHaveBeenCalledWith('.grid-settings-field__override-toggle')
+    expect(rowMock?.prop).toHaveBeenCalledWith('disabled', false)
+    expect(rowMock?.toggleClass).toHaveBeenCalledWith('is-overridden', true)
+  })
 
   it('disables the row inputs and removes the is-overridden class when the toggle is unchecked', () => {
-    isCheckedValue = false;
+    isCheckedValue = false
 
-    rule.onchange.call({});
+    rule.onchange.call({})
 
-    expect(rowMock?.prop).toHaveBeenCalledWith('disabled', true);
-    expect(rowMock?.toggleClass).toHaveBeenCalledWith('is-overridden', false);
-  });
-});
+    expect(rowMock?.prop).toHaveBeenCalledWith('disabled', true)
+    expect(rowMock?.toggleClass).toHaveBeenCalledWith('is-overridden', false)
+  })
+})

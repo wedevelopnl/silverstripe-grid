@@ -1,14 +1,14 @@
-import type { Active, Over } from '@dnd-kit/core';
+import type { Active, Over } from '@dnd-kit/core'
 
 interface RectConfig {
-  top?: number;
-  left?: number;
-  width?: number;
-  height?: number;
+  top?: number
+  left?: number
+  width?: number
+  height?: number
 }
 
 function createDOMRect(config: RectConfig = {}): DOMRect {
-  const { top = 0, left = 0, width = 200, height = 50 } = config;
+  const { top = 0, left = 0, width = 200, height = 50 } = config
   return {
     top,
     left,
@@ -19,17 +19,17 @@ function createDOMRect(config: RectConfig = {}): DOMRect {
     x: left,
     y: top,
     toJSON: () => ({}),
-  };
+  }
 }
 
 function createActiveRect(rect: RectConfig = {}) {
-  const domRect = createDOMRect(rect);
+  const domRect = createDOMRect(rect)
   return {
     current: {
       initial: domRect,
       translated: domRect,
     },
-  };
+  }
 }
 
 export function createActive(id: string, rect?: RectConfig): Active {
@@ -37,7 +37,7 @@ export function createActive(id: string, rect?: RectConfig): Active {
     id,
     rect: createActiveRect(rect),
     data: { current: undefined },
-  } as Active;
+  } as Active
 }
 
 export function createOver(id: string, rect?: RectConfig): Over {
@@ -46,30 +46,30 @@ export function createOver(id: string, rect?: RectConfig): Over {
     rect: createDOMRect(rect),
     data: { current: undefined },
     disabled: false,
-  } as Over;
+  } as Over
 }
 
 export interface DragStartEventLike {
-  active: Active;
+  active: Active
 }
 
 export interface DragOverEventLike {
-  active: Active;
-  over: Over | null;
-  collisions: null;
+  active: Active
+  over: Over | null
+  collisions: null
 }
 
 export interface DragEndEventLike {
-  active: Active;
-  over: Over | null;
-  collisions: null;
-  delta: { x: number; y: number };
+  active: Active
+  over: Over | null
+  collisions: null
+  delta: { x: number; y: number }
 }
 
 export function createDragStartEvent(activeId: string, rect?: RectConfig): DragStartEventLike {
   return {
     active: createActive(activeId, rect),
-  };
+  }
 }
 
 export function createDragOverEvent(
@@ -82,7 +82,7 @@ export function createDragOverEvent(
     active: createActive(activeId, activeRect),
     over: overId !== null ? createOver(overId, overRect) : null,
     collisions: null,
-  };
+  }
 }
 
 export function createDragEndEvent(
@@ -96,5 +96,5 @@ export function createDragEndEvent(
     over: overId !== null ? createOver(overId, overRect) : null,
     collisions: null,
     delta: { x: 0, y: 0 },
-  };
+  }
 }

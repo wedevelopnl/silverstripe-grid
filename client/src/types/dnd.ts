@@ -1,10 +1,10 @@
-import type { ElementNode } from './elements';
-import { isContainerNode } from './elements';
-import { NodeIdentity, type NodeKey, type NodeType } from './identity';
+import type { ElementNode } from './elements'
+import { isContainerNode } from './elements'
+import { NodeIdentity, type NodeKey, type NodeType } from './identity'
 
-export const DRAGGABLE_TYPES = ['section', 'row', 'column', 'element'] as const;
+export const DRAGGABLE_TYPES = ['section', 'row', 'column', 'element'] as const
 
-export type DraggableType = (typeof DRAGGABLE_TYPES)[number];
+export type DraggableType = (typeof DRAGGABLE_TYPES)[number]
 
 /**
  * Minimal viewport rectangle used by drop-placement logic. Compatible with
@@ -13,21 +13,21 @@ export type DraggableType = (typeof DRAGGABLE_TYPES)[number];
  * a `RectLike` / `Rect` shape.
  */
 export interface ViewportRect {
-  readonly left: number;
-  readonly top: number;
-  readonly width: number;
-  readonly height: number;
+  readonly left: number
+  readonly top: number
+  readonly width: number
+  readonly height: number
 }
 
 export interface ParsedDraggableId {
-  readonly type: DraggableType;
-  readonly id: number;
+  readonly type: DraggableType
+  readonly id: number
   /** The validated NodeKey form of the input string — safe to use at map/set boundaries. */
-  readonly key: NodeKey;
+  readonly key: NodeKey
 }
 
 function isDraggableType(value: NodeType): value is DraggableType {
-  return value !== 'page';
+  return value !== 'page'
 }
 
 /**
@@ -36,20 +36,20 @@ function isDraggableType(value: NodeType): value is DraggableType {
  * so there is no translation layer between the two spaces.
  */
 export function buildDraggableId(type: DraggableType, id: number): NodeKey {
-  return NodeIdentity.toKey(type, id);
+  return NodeIdentity.toKey(type, id)
 }
 
 export function parseDraggableId(compositeId: string): ParsedDraggableId | null {
-  const ref = NodeIdentity.fromKey(compositeId);
-  if (ref === null) return null;
-  if (!isDraggableType(ref.type)) return null;
+  const ref = NodeIdentity.fromKey(compositeId)
+  if (ref === null) return null
+  if (!isDraggableType(ref.type)) return null
   // Safe: NodeIdentity.fromKey validated the template-literal shape, so
   // compositeId is structurally a NodeKey.
-  return { type: ref.type, id: ref.id, key: compositeId as NodeKey };
+  return { type: ref.type, id: ref.id, key: compositeId as NodeKey }
 }
 
 export function getDraggableType(compositeId: string): DraggableType | null {
-  return parseDraggableId(compositeId)?.type ?? null;
+  return parseDraggableId(compositeId)?.type ?? null
 }
 
 /**
@@ -57,8 +57,8 @@ export function getDraggableType(compositeId: string): DraggableType | null {
  * containerType, leaf nodes are always 'element'.
  */
 export function getDraggableTypeForNode(node: ElementNode): DraggableType {
-  if (!isContainerNode(node)) return 'element';
-  return node.containerType;
+  if (!isContainerNode(node)) return 'element'
+  return node.containerType
 }
 
 /**
@@ -70,4 +70,4 @@ export const PARENT_CONTAINER_TYPE = {
   row: 'section',
   column: 'row',
   element: 'column',
-} as const satisfies Record<DraggableType, NodeType>;
+} as const satisfies Record<DraggableType, NodeType>

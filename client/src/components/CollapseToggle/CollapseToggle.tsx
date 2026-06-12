@@ -1,9 +1,9 @@
-import { t } from '@/i18n';
+import { t } from '@/i18n'
 
 interface CollapseToggleProps {
-  readonly isCollapsed: boolean;
-  readonly onToggle: () => void;
-  readonly label: string;
+  readonly isCollapsed: boolean
+  readonly onToggle: () => void
+  readonly label: string
 }
 
 export default function CollapseToggle({ isCollapsed, onToggle, label }: CollapseToggleProps) {
@@ -20,8 +20,8 @@ export default function CollapseToggle({ isCollapsed, onToggle, label }: Collaps
       data-testid="collapse-toggle"
       data-state={isCollapsed ? 'collapsed' : 'expanded'}
       onClick={(e) => {
-        e.stopPropagation();
-        onToggle();
+        e.stopPropagation()
+        onToggle()
       }}
     >
       <span
@@ -29,5 +29,5 @@ export default function CollapseToggle({ isCollapsed, onToggle, label }: Collaps
         aria-hidden="true"
       />
     </button>
-  );
+  )
 }

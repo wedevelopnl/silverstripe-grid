@@ -1,4 +1,4 @@
-import type { InjectorContainer } from '@/types/silverstripe';
+import type { InjectorContainer } from '@/types/silverstripe'
 
 /**
  * Returns the SilverStripe Injector Container singleton.
@@ -11,10 +11,10 @@ export function getInjector(): InjectorContainer {
     throw new TypeError(
       'SilverStripe Injector is not available. ' +
         'Ensure the admin bundle is loaded before the grid editor.',
-    );
+    )
   }
 
-  return window.Injector.default;
+  return window.Injector.default
 }
 
 /**
@@ -30,8 +30,8 @@ export function loadComponent(
     throw new TypeError(
       'SilverStripe Injector is not available. ' +
         'Ensure the admin bundle is loaded before the grid editor.',
-    );
+    )
   }
 
-  return window.Injector.loadComponent(name, context);
+  return window.Injector.loadComponent(name, context)
 }

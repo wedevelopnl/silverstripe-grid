@@ -1,21 +1,20 @@
-import { Fragment, memo, useCallback, useMemo } from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import type { SectionNode } from '@/types/elements';
-import type { NodeKey } from '@/types/identity';
-import { useDragContext } from '@/hooks/useDragAndDrop';
-import { useReadonly } from '@/hooks/ReadonlyContext';
-import { useCollapse } from '@/hooks/useCollapseState';
-import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles';
-import { t } from '@/i18n';
-import DragHandle from '@/components/DragHandle/DragHandle';
-import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
-import ElementActions from '@/components/ElementActions/ElementActions';
-import RowBlock from '@/components/RowBlock/RowBlock';
-import AddChildButton from '@/components/AddChildButton/AddChildButton';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { Fragment, memo, useCallback, useMemo } from 'react'
+import AddChildButton from '@/components/AddChildButton/AddChildButton'
+import CollapseToggle from '@/components/CollapseToggle/CollapseToggle'
+import DragHandle from '@/components/DragHandle/DragHandle'
+import ElementActions from '@/components/ElementActions/ElementActions'
+import RowBlock from '@/components/RowBlock/RowBlock'
+import { useReadonly } from '@/hooks/ReadonlyContext'
+import { useCollapse } from '@/hooks/useCollapseState'
+import { useDragContext } from '@/hooks/useDragAndDrop'
+import { t } from '@/i18n'
+import type { SectionNode } from '@/types/elements'
+import type { NodeKey } from '@/types/identity'
+import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
 
 interface SectionBlockProps {
-  readonly section: SectionNode;
+  readonly section: SectionNode
 }
 
 /**
@@ -26,42 +25,42 @@ interface SectionBlockProps {
  * ancestor at all.
  */
 const SectionBlock = memo(function SectionBlock({ section }: SectionBlockProps) {
-  const readonly = useReadonly();
+  const readonly = useReadonly()
   return readonly ? (
     <ReadonlySectionBlock section={section} />
   ) : (
     <EditableSectionBlock section={section} />
-  );
-});
+  )
+})
 
-export default SectionBlock;
+export default SectionBlock
 
 function useSectionCollapse(section: SectionNode) {
-  const { isCollapsed: isCollapsedFn, toggle } = useCollapse();
-  const isCollapsed = isCollapsedFn(section.nodeKey);
-  const onToggle = useCallback(() => toggle(section.nodeKey), [toggle, section.nodeKey]);
-  return { isCollapsed, onToggle };
+  const { isCollapsed: isCollapsedFn, toggle } = useCollapse()
+  const isCollapsed = isCollapsedFn(section.nodeKey)
+  const onToggle = useCallback(() => toggle(section.nodeKey), [toggle, section.nodeKey])
+  return { isCollapsed, onToggle }
 }
 
 function useChildSortableKeys(section: SectionNode): NodeKey[] {
-  return useMemo(() => section.children?.map((r) => r.nodeKey) ?? [], [section.children]);
+  return useMemo(() => section.children?.map((r) => r.nodeKey) ?? [], [section.children])
 }
 
 function EditableSectionBlock({ section }: SectionBlockProps) {
-  const status = section.status;
-  const { isCollapsed, onToggle } = useSectionCollapse(section);
-  const { activeType, pendingActive } = useDragContext();
+  const status = section.status
+  const { isCollapsed, onToggle } = useSectionCollapse(section)
+  const { activeType, pendingActive } = useDragContext()
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
-    useSortable({ id: section.nodeKey });
+    useSortable({ id: section.nodeKey })
 
-  const showDropTarget = isOver && activeType === 'section';
+  const showDropTarget = isOver && activeType === 'section'
 
-  const style = buildSortableStyle(transform, transition, isDragging);
+  const style = buildSortableStyle(transform, transition, isDragging)
 
-  const childKeys = useChildSortableKeys(section);
-  const rows = section.children ?? [];
-  const hasRows = rows.length > 0;
+  const childKeys = useChildSortableKeys(section)
+  const rows = section.children ?? []
+  const hasRows = rows.length > 0
 
   return (
     <section
@@ -140,12 +139,12 @@ function EditableSectionBlock({ section }: SectionBlockProps) {
         </SortableContext>
       </div>
     </section>
-  );
+  )
 }
 
 function ReadonlySectionBlock({ section }: SectionBlockProps) {
-  const status = section.status;
-  const { isCollapsed, onToggle } = useSectionCollapse(section);
+  const status = section.status
+  const { isCollapsed, onToggle } = useSectionCollapse(section)
 
   return (
     <section
@@ -174,5 +173,5 @@ function ReadonlySectionBlock({ section }: SectionBlockProps) {
         ))}
       </div>
     </section>
-  );
+  )
 }

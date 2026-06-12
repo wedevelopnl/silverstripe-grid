@@ -1,31 +1,31 @@
-import { describe, it, expect, vi } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { QueryClient } from '@tanstack/react-query'
+import { act, renderHook, waitFor } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { queryKeys } from '@/hooks/queryKeys'
 import {
   useCreateContentElement,
-  useUpdateGridSettings,
-  useResetGridSettingsOverrides,
-  useReorderElement,
   usePublishElement,
+  useReorderElement,
+  useResetGridSettingsOverrides,
   useUnpublishElement,
-} from '@/hooks/useElementMutations';
-import { useElementTree } from '@/hooks/useElementTree';
-import { createProviderWrapper } from '@/testing/renderWithProviders';
+  useUpdateGridSettings,
+} from '@/hooks/useElementMutations'
+import { useElementTree } from '@/hooks/useElementTree'
 import {
-  createSectionNode,
-  createRowNode,
   createColumnNode,
+  createRowNode,
+  createSectionNode,
   createTreeApiResponse,
   resetIdCounter,
-} from '@/testing/factories';
+} from '@/testing/factories'
 import {
-  mockFetchSuccess,
+  getFetchCalls,
   mockFetchError,
   mockFetchSequence,
-  getFetchCalls,
-} from '@/testing/mockFetch';
-import { queryKeys } from '@/hooks/queryKeys';
-import { QueryClient } from '@tanstack/react-query';
-import type { ContainerNode, TreeApiResponse } from '@/types/elements';
+  mockFetchSuccess,
+} from '@/testing/mockFetch'
+import { createProviderWrapper } from '@/testing/renderWithProviders'
+import type { ContainerNode, TreeApiResponse } from '@/types/elements'
 
 /**
  * Build a tree with explicit IDs and consistent parent chains for reorder tests.
@@ -33,77 +33,77 @@ import type { ContainerNode, TreeApiResponse } from '@/types/elements';
 function createReorderTree(pageId = 1, zone = 'main') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  });
+  })
 
   const column = createColumnNode({
     id: 300,
     parent: { type: 'row', id: 200 },
     childCount: 2,
-  });
+  })
   // Re-parent the auto-generated child elements to point at column 300.
   for (const child of column.children ?? []) {
-    (child as { parent: { type: 'column'; id: number }; parentKey: string }).parent = {
+    ;(child as { parent: { type: 'column'; id: number }; parentKey: string }).parent = {
       type: 'column',
       id: 300,
-    };
-    (child as { parent: { type: 'column'; id: number }; parentKey: string }).parentKey =
-      'column-300';
+    }
+    ;(child as { parent: { type: 'column'; id: number }; parentKey: string }).parentKey =
+      'column-300'
   }
 
   const row = createRowNode({
     id: 200,
     parent: { type: 'section', id: 100 },
     children: [column],
-  });
+  })
   const section = createSectionNode({
     id: 100,
     parent: { type: 'page', id: pageId },
     children: [row],
-  });
+  })
 
-  const treeApiResponse = createTreeApiResponse({ pageId, sections: [section] });
+  const treeApiResponse = createTreeApiResponse({ pageId, sections: [section] })
 
-  queryClient.setQueryData(queryKeys.elementTree.byPage(pageId, zone), treeApiResponse);
+  queryClient.setQueryData(queryKeys.elementTree.byPage(pageId, zone), treeApiResponse)
 
-  const [elemA, elemB] = column.children ?? [];
+  const [elemA, elemB] = column.children ?? []
 
-  return { queryClient, tree: treeApiResponse, treeApiResponse, column, elemA, elemB };
+  return { queryClient, tree: treeApiResponse, treeApiResponse, column, elemA, elemB }
 }
 
 describe('useElementMutations', () => {
   beforeEach(() => {
-    resetIdCounter();
-  });
+    resetIdCounter()
+  })
 
   describe('useCreateContentElement', () => {
     it('should call createContent endpoint', async () => {
-      mockFetchSuccess({});
-      const { wrapper } = createProviderWrapper();
-      const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper });
+      mockFetchSuccess({})
+      const { wrapper } = createProviderWrapper()
+      const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper })
 
       act(() => {
-        result.current.mutate({ className: 'Content', parent: { type: 'column', id: 10 } });
-      });
+        result.current.mutate({ className: 'Content', parent: { type: 'column', id: 10 } })
+      })
 
       await waitFor(() => {
-        expect(getFetchCalls().length).toBeGreaterThan(0);
-      });
+        expect(getFetchCalls().length).toBeGreaterThan(0)
+      })
 
-      const [url] = getFetchCalls()[0];
-      expect(url).toContain('/api/createContent');
-    });
+      const [url] = getFetchCalls()[0]
+      expect(url).toContain('/api/createContent')
+    })
 
     it('should show toast on error', async () => {
-      mockFetchError(500, { message: 'Create failed' });
-      const dispatch = vi.fn();
-      window.ss!.store = { dispatch };
+      mockFetchError(500, { message: 'Create failed' })
+      const dispatch = vi.fn()
+      window.ss!.store = { dispatch }
 
-      const { wrapper } = createProviderWrapper();
-      const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper });
+      const { wrapper } = createProviderWrapper()
+      const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper })
 
       act(() => {
-        result.current.mutate({ className: 'Content', parent: { type: 'column', id: 10 } });
-      });
+        result.current.mutate({ className: 'Content', parent: { type: 'column', id: 10 } })
+      })
 
       await waitFor(() => {
         expect(dispatch).toHaveBeenCalledWith(
@@ -111,16 +111,16 @@ describe('useElementMutations', () => {
             type: 'DISPLAY_TOAST',
             payload: expect.objectContaining({ type: 'error' }),
           }),
-        );
-      });
-    });
-  });
+        )
+      })
+    })
+  })
 
   describe('useUpdateGridSettings', () => {
     it('should call updateGridSettings endpoint', async () => {
-      mockFetchSuccess({});
-      const { wrapper } = createProviderWrapper();
-      const { result } = renderHook(() => useUpdateGridSettings(1, 'main'), { wrapper });
+      mockFetchSuccess({})
+      const { wrapper } = createProviderWrapper()
+      const { result } = renderHook(() => useUpdateGridSettings(1, 'main'), { wrapper })
 
       act(() => {
         result.current.mutate({
@@ -129,24 +129,24 @@ describe('useElementMutations', () => {
           width: 6,
           offset: 0,
           visible: true,
-        });
-      });
+        })
+      })
 
       await waitFor(() => {
-        expect(getFetchCalls().length).toBeGreaterThan(0);
-      });
+        expect(getFetchCalls().length).toBeGreaterThan(0)
+      })
 
-      const [url] = getFetchCalls()[0];
-      expect(url).toContain('/api/updateGridSettings');
-    });
+      const [url] = getFetchCalls()[0]
+      expect(url).toContain('/api/updateGridSettings')
+    })
 
     it('should show toast on error', async () => {
-      mockFetchError(422, { message: 'Invalid settings' });
-      const dispatch = vi.fn();
-      window.ss!.store = { dispatch };
+      mockFetchError(422, { message: 'Invalid settings' })
+      const dispatch = vi.fn()
+      window.ss!.store = { dispatch }
 
-      const { wrapper } = createProviderWrapper();
-      const { result } = renderHook(() => useUpdateGridSettings(1, 'main'), { wrapper });
+      const { wrapper } = createProviderWrapper()
+      const { result } = renderHook(() => useUpdateGridSettings(1, 'main'), { wrapper })
 
       act(() => {
         result.current.mutate({
@@ -155,8 +155,8 @@ describe('useElementMutations', () => {
           width: 6,
           offset: 0,
           visible: true,
-        });
-      });
+        })
+      })
 
       await waitFor(() => {
         expect(dispatch).toHaveBeenCalledWith(
@@ -164,40 +164,40 @@ describe('useElementMutations', () => {
             type: 'DISPLAY_TOAST',
             payload: expect.objectContaining({ type: 'error' }),
           }),
-        );
-      });
-    });
-  });
+        )
+      })
+    })
+  })
 
   describe('useResetGridSettingsOverrides', () => {
     it('should call resetGridSettingsOverrides endpoint', async () => {
-      mockFetchSuccess({});
-      const { wrapper } = createProviderWrapper();
-      const { result } = renderHook(() => useResetGridSettingsOverrides(1, 'main'), { wrapper });
+      mockFetchSuccess({})
+      const { wrapper } = createProviderWrapper()
+      const { result } = renderHook(() => useResetGridSettingsOverrides(1, 'main'), { wrapper })
 
       act(() => {
-        result.current.mutate({ pageId: 1, zone: 'main' });
-      });
+        result.current.mutate({ pageId: 1, zone: 'main' })
+      })
 
       await waitFor(() => {
-        expect(getFetchCalls().length).toBeGreaterThan(0);
-      });
+        expect(getFetchCalls().length).toBeGreaterThan(0)
+      })
 
-      const [url] = getFetchCalls()[0];
-      expect(url).toContain('/api/resetGridSettingsOverrides');
-    });
+      const [url] = getFetchCalls()[0]
+      expect(url).toContain('/api/resetGridSettingsOverrides')
+    })
 
     it('should show toast on error', async () => {
-      mockFetchError(500, { message: 'Reset failed' });
-      const dispatch = vi.fn();
-      window.ss!.store = { dispatch };
+      mockFetchError(500, { message: 'Reset failed' })
+      const dispatch = vi.fn()
+      window.ss!.store = { dispatch }
 
-      const { wrapper } = createProviderWrapper();
-      const { result } = renderHook(() => useResetGridSettingsOverrides(1, 'main'), { wrapper });
+      const { wrapper } = createProviderWrapper()
+      const { result } = renderHook(() => useResetGridSettingsOverrides(1, 'main'), { wrapper })
 
       act(() => {
-        result.current.mutate({ pageId: 1, zone: 'main' });
-      });
+        result.current.mutate({ pageId: 1, zone: 'main' })
+      })
 
       await waitFor(() => {
         expect(dispatch).toHaveBeenCalledWith(
@@ -205,23 +205,23 @@ describe('useElementMutations', () => {
             type: 'DISPLAY_TOAST',
             payload: expect.objectContaining({ type: 'error' }),
           }),
-        );
-      });
-    });
-  });
+        )
+      })
+    })
+  })
 
   describe('usePublishElement', () => {
     it('should show toast on error', async () => {
-      mockFetchError(500, { message: 'Publish failed' });
-      const dispatch = vi.fn();
-      window.ss!.store = { dispatch };
+      mockFetchError(500, { message: 'Publish failed' })
+      const dispatch = vi.fn()
+      window.ss!.store = { dispatch }
 
-      const { wrapper } = createProviderWrapper();
-      const { result } = renderHook(() => usePublishElement(1, 'main'), { wrapper });
+      const { wrapper } = createProviderWrapper()
+      const { result } = renderHook(() => usePublishElement(1, 'main'), { wrapper })
 
       act(() => {
-        result.current.mutate({ type: 'section', id: 5 });
-      });
+        result.current.mutate({ type: 'section', id: 5 })
+      })
 
       await waitFor(() => {
         expect(dispatch).toHaveBeenCalledWith(
@@ -232,23 +232,23 @@ describe('useElementMutations', () => {
               text: expect.stringContaining('Publish failed'),
             }),
           }),
-        );
-      });
-    });
-  });
+        )
+      })
+    })
+  })
 
   describe('useUnpublishElement', () => {
     it('should show toast on error', async () => {
-      mockFetchError(500, { message: 'Unpublish failed' });
-      const dispatch = vi.fn();
-      window.ss!.store = { dispatch };
+      mockFetchError(500, { message: 'Unpublish failed' })
+      const dispatch = vi.fn()
+      window.ss!.store = { dispatch }
 
-      const { wrapper } = createProviderWrapper();
-      const { result } = renderHook(() => useUnpublishElement(1, 'main'), { wrapper });
+      const { wrapper } = createProviderWrapper()
+      const { result } = renderHook(() => useUnpublishElement(1, 'main'), { wrapper })
 
       act(() => {
-        result.current.mutate({ type: 'section', id: 5 });
-      });
+        result.current.mutate({ type: 'section', id: 5 })
+      })
 
       await waitFor(() => {
         expect(dispatch).toHaveBeenCalledWith(
@@ -259,18 +259,18 @@ describe('useElementMutations', () => {
               text: expect.stringContaining('Unpublish failed'),
             }),
           }),
-        );
-      });
-    });
-  });
+        )
+      })
+    })
+  })
 
   describe('useReorderElement', () => {
     it('should call reorder endpoint and apply optimistic update', async () => {
-      mockFetchSuccess({});
-      const { queryClient, tree, column, elemA, elemB } = createReorderTree();
-      const queryKey = queryKeys.elementTree.byPage(1, 'main');
-      const { wrapper } = createProviderWrapper({ queryClient });
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
+      mockFetchSuccess({})
+      const { queryClient, tree, column, elemA, elemB } = createReorderTree()
+      const queryKey = queryKeys.elementTree.byPage(1, 'main')
+      const { wrapper } = createProviderWrapper({ queryClient })
+      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
 
       await act(async () => {
         result.current.mutate({
@@ -280,37 +280,37 @@ describe('useElementMutations', () => {
             after: null,
           },
           tree,
-        });
+        })
         // Flush onMutate microtask (cancelQueries)
-        await Promise.resolve();
-      });
+        await Promise.resolve()
+      })
 
       // Verify optimistic update: elemB moved before elemA (check before onSettled invalidates)
-      const cached = queryClient.getQueryData<TreeApiResponse>(queryKey);
-      const cachedSection = cached?.nodes[0] as ContainerNode;
-      const cachedRow = cachedSection.children?.[0] as ContainerNode;
-      const cachedColumn = cachedRow.children?.[0] as ContainerNode;
-      expect(cachedColumn.children?.map((c) => c.self.id)).toEqual([elemB.self.id, elemA.self.id]);
+      const cached = queryClient.getQueryData<TreeApiResponse>(queryKey)
+      const cachedSection = cached?.nodes[0] as ContainerNode
+      const cachedRow = cachedSection.children?.[0] as ContainerNode
+      const cachedColumn = cachedRow.children?.[0] as ContainerNode
+      expect(cachedColumn.children?.map((c) => c.self.id)).toEqual([elemB.self.id, elemA.self.id])
 
       await waitFor(() => {
-        expect(getFetchCalls().length).toBeGreaterThan(0);
-      });
-      const [url] = getFetchCalls()[0];
-      expect(url).toContain('/api/reorder');
-    });
+        expect(getFetchCalls().length).toBeGreaterThan(0)
+      })
+      const [url] = getFetchCalls()[0]
+      expect(url).toContain('/api/reorder')
+    })
 
     it('should show toast and restore snapshot on error', async () => {
-      const { queryClient, tree, treeApiResponse, column, elemB } = createReorderTree();
+      const { queryClient, tree, treeApiResponse, column, elemB } = createReorderTree()
       mockFetchSequence([
         { status: 500, body: { message: 'Reorder failed' } },
         // The onSettled invalidation triggers a refetch — provide the original response
         { status: 200, body: treeApiResponse },
-      ]);
-      const dispatch = vi.fn();
-      window.ss!.store = { dispatch };
+      ])
+      const dispatch = vi.fn()
+      window.ss!.store = { dispatch }
 
-      const { wrapper } = createProviderWrapper({ queryClient });
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
+      const { wrapper } = createProviderWrapper({ queryClient })
+      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
 
       act(() => {
         result.current.mutate({
@@ -320,8 +320,8 @@ describe('useElementMutations', () => {
             after: null,
           },
           tree,
-        });
-      });
+        })
+      })
 
       await waitFor(() => {
         expect(dispatch).toHaveBeenCalledWith(
@@ -329,15 +329,15 @@ describe('useElementMutations', () => {
             type: 'DISPLAY_TOAST',
             payload: expect.objectContaining({ type: 'error' }),
           }),
-        );
-      });
-    });
+        )
+      })
+    })
 
     it('does not refetch after an optimistic rollback', async () => {
-      const { queryClient, tree, treeApiResponse, column, elemB } = createReorderTree();
+      const { queryClient, tree, treeApiResponse, column, elemB } = createReorderTree()
       // Prevent the mounted useElementTree observer from doing its own
       // on-mount background refetch — we only care about the invalidation.
-      queryClient.setDefaultOptions({ queries: { retry: false, gcTime: 0, staleTime: Infinity } });
+      queryClient.setDefaultOptions({ queries: { retry: false, gcTime: 0, staleTime: Infinity } })
       // Queue: the failed reorder POST only. If onSettled invalidates on
       // error, an active tree query observer will trigger a refetch — caught
       // by the "exactly one call" assertion below.
@@ -346,16 +346,16 @@ describe('useElementMutations', () => {
         // Safety net: if the refetch does happen, give it a valid response so
         // the test fails cleanly on the call-count assertion instead of crashing.
         { status: 200, body: treeApiResponse },
-      ]);
-      const dispatch = vi.fn();
-      window.ss!.store = { dispatch };
+      ])
+      const dispatch = vi.fn()
+      window.ss!.store = { dispatch }
 
-      const { wrapper } = createProviderWrapper({ queryClient });
+      const { wrapper } = createProviderWrapper({ queryClient })
       // Mount a reader for the tree query so it becomes an *active* query —
       // TanStack Query only refetches observed queries on invalidation.
-      renderHook(() => useElementTree(1, 'main'), { wrapper });
+      renderHook(() => useElementTree(1, 'main'), { wrapper })
 
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
+      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
 
       await act(async () => {
         await result.current
@@ -367,8 +367,8 @@ describe('useElementMutations', () => {
             },
             tree,
           })
-          .catch(() => undefined);
-      });
+          .catch(() => undefined)
+      })
 
       // Wait for the error toast so the mutation has fully settled.
       await waitFor(() => {
@@ -377,33 +377,33 @@ describe('useElementMutations', () => {
             type: 'DISPLAY_TOAST',
             payload: expect.objectContaining({ type: 'error' }),
           }),
-        );
-      });
+        )
+      })
 
       // Flush any queued microtasks that an invalidate-triggered refetch
       // would use to schedule its fetch.
       await act(async () => {
-        await Promise.resolve();
-      });
+        await Promise.resolve()
+      })
 
       // Exactly one call — the failed reorder POST. No refetch after rollback.
-      const reorderCalls = getFetchCalls().filter(([url]) => String(url).includes('/api/reorder'));
-      const treeCalls = getFetchCalls().filter(([url]) => String(url).includes('/api/readTree'));
-      expect(reorderCalls).toHaveLength(1);
-      expect(treeCalls).toHaveLength(0);
-    });
+      const reorderCalls = getFetchCalls().filter(([url]) => String(url).includes('/api/reorder'))
+      const treeCalls = getFetchCalls().filter(([url]) => String(url).includes('/api/readTree'))
+      expect(reorderCalls).toHaveLength(1)
+      expect(treeCalls).toHaveLength(0)
+    })
 
     it('should call clearPendingTree on error as safety net', async () => {
-      const { queryClient, tree, treeApiResponse, column, elemB } = createReorderTree();
+      const { queryClient, tree, treeApiResponse, column, elemB } = createReorderTree()
       mockFetchSequence([
         { status: 500, body: { message: 'fail' } },
         { status: 200, body: treeApiResponse },
-      ]);
+      ])
 
-      const { wrapper } = createProviderWrapper({ queryClient });
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
+      const { wrapper } = createProviderWrapper({ queryClient })
+      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
 
-      const clearPendingTree = vi.fn();
+      const clearPendingTree = vi.fn()
 
       act(() => {
         result.current.mutate({
@@ -414,13 +414,13 @@ describe('useElementMutations', () => {
           },
           tree,
           clearPendingTree,
-        });
-      });
+        })
+      })
 
       await waitFor(() => {
-        expect(clearPendingTree).toHaveBeenCalled();
-      });
-    });
+        expect(clearPendingTree).toHaveBeenCalled()
+      })
+    })
 
     it('skips setQueryData rollback when no snapshot was captured', async () => {
       // Fresh QueryClient — no pre-seeded tree, so onMutate's
@@ -429,15 +429,15 @@ describe('useElementMutations', () => {
       // at useElementMutations.ts:152.
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false, gcTime: 0 } },
-      });
-      const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData');
+      })
+      const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData')
 
-      mockFetchError(500, { message: 'fail' });
-      const dispatch = vi.fn();
-      window.ss!.store = { dispatch };
+      mockFetchError(500, { message: 'fail' })
+      const dispatch = vi.fn()
+      window.ss!.store = { dispatch }
 
-      const { wrapper } = createProviderWrapper({ queryClient });
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
+      const { wrapper } = createProviderWrapper({ queryClient })
+      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
 
       // Build a minimal tree for the onMutate applyReorder call. The tree
       // is NOT seeded into the cache — that's the scenario under test.
@@ -445,19 +445,19 @@ describe('useElementMutations', () => {
         id: 300,
         parent: { type: 'row', id: 200 },
         childCount: 1,
-      });
+      })
       const row = createRowNode({
         id: 200,
         parent: { type: 'section', id: 100 },
         children: [column],
-      });
+      })
       const section = createSectionNode({
         id: 100,
         parent: { type: 'page', id: 1 },
         children: [row],
-      });
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] });
-      const elem = column.children?.[0];
+      })
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+      const elem = column.children?.[0]
 
       await act(async () => {
         await result.current
@@ -469,8 +469,8 @@ describe('useElementMutations', () => {
             },
             tree,
           })
-          .catch(() => undefined);
-      });
+          .catch(() => undefined)
+      })
 
       await waitFor(() => {
         expect(dispatch).toHaveBeenCalledWith(
@@ -478,26 +478,26 @@ describe('useElementMutations', () => {
             type: 'DISPLAY_TOAST',
             payload: expect.objectContaining({ type: 'error' }),
           }),
-        );
-      });
+        )
+      })
 
       // onMutate ran setQueryData once (optimistic write on undefined
       // snapshot). onError must NOT have called it again with the
       // (undefined) snapshot.
-      const restoreCalls = setQueryDataSpy.mock.calls.filter(([, value]) => value === undefined);
-      expect(restoreCalls).toHaveLength(0);
-    });
+      const restoreCalls = setQueryDataSpy.mock.calls.filter(([, value]) => value === undefined)
+      expect(restoreCalls).toHaveLength(0)
+    })
 
     it('onMutate cancels the specific tree queryKey, not all queries', async () => {
       // Pins the ObjectLiteral mutation on cancelQueries({ queryKey })
       // at useElementMutations.ts:129 — mutated to {} it would cancel
       // every query, defeating the per-page scope.
-      const { queryClient, tree, column, elemB } = createReorderTree();
-      const cancelQueriesSpy = vi.spyOn(queryClient, 'cancelQueries');
-      mockFetchSuccess({});
+      const { queryClient, tree, column, elemB } = createReorderTree()
+      const cancelQueriesSpy = vi.spyOn(queryClient, 'cancelQueries')
+      mockFetchSuccess({})
 
-      const { wrapper } = createProviderWrapper({ queryClient });
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
+      const { wrapper } = createProviderWrapper({ queryClient })
+      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
 
       await act(async () => {
         result.current.mutate({
@@ -507,24 +507,24 @@ describe('useElementMutations', () => {
             after: null,
           },
           tree,
-        });
-        await Promise.resolve();
-      });
+        })
+        await Promise.resolve()
+      })
 
       expect(cancelQueriesSpy).toHaveBeenCalledWith({
         queryKey: queryKeys.elementTree.byPage(1, 'main'),
-      });
-    });
+      })
+    })
 
     it('onSuccess invalidates the specific tree queryKey', async () => {
       // Pins the ObjectLiteral mutation on invalidateQueries({ queryKey })
       // at useElementMutations.ts:161.
-      const { queryClient, tree, column, elemB } = createReorderTree();
-      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
-      mockFetchSuccess({});
+      const { queryClient, tree, column, elemB } = createReorderTree()
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+      mockFetchSuccess({})
 
-      const { wrapper } = createProviderWrapper({ queryClient });
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper });
+      const { wrapper } = createProviderWrapper({ queryClient })
+      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
 
       await act(async () => {
         await result.current.mutateAsync({
@@ -534,14 +534,14 @@ describe('useElementMutations', () => {
             after: null,
           },
           tree,
-        });
-      });
+        })
+      })
 
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: queryKeys.elementTree.byPage(1, 'main'),
-      });
-    });
-  });
+      })
+    })
+  })
 
   // ─── Shared onSuccess defaults (useStandardMutationOptions) ──────
   //
@@ -554,23 +554,23 @@ describe('useElementMutations', () => {
     it('invalidates the specific page tree queryKey after a successful mutation', async () => {
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false, gcTime: 0 } },
-      });
-      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
-      mockFetchSuccess({});
+      })
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+      mockFetchSuccess({})
 
-      const { wrapper } = createProviderWrapper({ queryClient });
-      const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper });
+      const { wrapper } = createProviderWrapper({ queryClient })
+      const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper })
 
       await act(async () => {
         await result.current.mutateAsync({
           className: 'Content',
           parent: { type: 'column', id: 10 },
-        });
-      });
+        })
+      })
 
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: queryKeys.elementTree.byPage(1, 'main'),
-      });
-    });
-  });
-});
+      })
+    })
+  })
+})

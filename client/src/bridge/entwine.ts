@@ -1,40 +1,40 @@
-import { createElement, StrictMode } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
+import { createElement, StrictMode } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
 
-import GridEditorErrorBoundary from '@/components/GridEditorErrorBoundary/GridEditorErrorBoundary';
-import GridQueryProvider from '@/hooks/QueryProvider';
-import { loadComponent } from './Injector';
+import GridEditorErrorBoundary from '@/components/GridEditorErrorBoundary/GridEditorErrorBoundary'
+import GridQueryProvider from '@/hooks/QueryProvider'
+import { loadComponent } from './Injector'
 
 interface BridgeSchema {
-  pageId: number | null;
-  zone: string;
-  readonly: boolean;
-  version: number | undefined;
+  pageId: number | null
+  zone: string
+  readonly: boolean
+  version: number | undefined
 }
 
-const MOUNT_SELECTOR = '[data-react-mount="grid-editor"]';
-const MOUNTED_ATTR = 'data-grid-editor-mounted';
+const MOUNT_SELECTOR = '[data-react-mount="grid-editor"]'
+const MOUNTED_ATTR = 'data-grid-editor-mounted'
 
 // Track roots keyed by the host element so both the entwine path and the
 // MutationObserver path can unmount cleanly without double-mounting. The
 // entwine path additionally stores the root via setReactRoot for backwards
 // compatibility with any CMS code that might read it, but this map is the
 // single source of truth for lifecycle.
-const mountedRoots = new WeakMap<HTMLElement, Root>();
+const mountedRoots = new WeakMap<HTMLElement, Root>()
 
 function parseBridgeData(data: unknown): BridgeSchema {
-  const record = (typeof data === 'object' && data !== null ? data : {}) as Record<string, unknown>;
-  const rawPageId = record['grid-page-id'];
-  const rawZone = record['grid-zone'];
-  const rawReadonly = record['grid-readonly'];
-  const rawVersion = record['grid-version'];
+  const record = (typeof data === 'object' && data !== null ? data : {}) as Record<string, unknown>
+  const rawPageId = record['grid-page-id']
+  const rawZone = record['grid-zone']
+  const rawReadonly = record['grid-readonly']
+  const rawVersion = record['grid-version']
 
   return {
     pageId: typeof rawPageId === 'number' ? rawPageId : null,
     zone: typeof rawZone === 'string' && rawZone !== '' ? rawZone : 'main',
     readonly: rawReadonly === true,
     version: typeof rawVersion === 'number' ? rawVersion : undefined,
-  };
+  }
 }
 
 /**
@@ -44,15 +44,15 @@ function parseBridgeData(data: unknown): BridgeSchema {
  * MutationObserver path has to parse it directly from the attribute.
  */
 function readSchemaFromElement(element: HTMLElement): unknown {
-  const raw = element.getAttribute('data-schema');
+  const raw = element.getAttribute('data-schema')
   if (raw === null || raw === '') {
-    return null;
+    return null
   }
 
   try {
-    return JSON.parse(raw);
+    return JSON.parse(raw)
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -62,16 +62,16 @@ function readSchemaFromElement(element: HTMLElement): unknown {
  */
 export function mountGridEditor(element: HTMLElement, schemaData: unknown): void {
   if (mountedRoots.has(element)) {
-    return;
+    return
   }
 
   try {
-    const GridEditor = loadComponent('GridEditor');
-    const { pageId, zone, readonly, version } = parseBridgeData(schemaData);
+    const GridEditor = loadComponent('GridEditor')
+    const { pageId, zone, readonly, version } = parseBridgeData(schemaData)
 
-    const root = createRoot(element);
-    mountedRoots.set(element, root);
-    element.setAttribute(MOUNTED_ATTR, 'true');
+    const root = createRoot(element)
+    mountedRoots.set(element, root)
+    element.setAttribute(MOUNTED_ATTR, 'true')
 
     // StrictMode documents the intent to run under React's strict checks, but
     // is inert in the CMS: `react-dom` is externalized to silverstripe/admin's
@@ -92,9 +92,9 @@ export function mountGridEditor(element: HTMLElement, schemaData: unknown): void
           ),
         ),
       ),
-    );
+    )
   } catch (error: unknown) {
-    console.warn('[GridEditor] Failed to mount grid editor.', error);
+    console.warn('[GridEditor] Failed to mount grid editor.', error)
   }
 }
 
@@ -103,22 +103,22 @@ export function mountGridEditor(element: HTMLElement, schemaData: unknown): void
  * mounted by this bridge. Safe to call on elements that were never mounted.
  */
 export function unmountGridEditor(element: HTMLElement): void {
-  const root = mountedRoots.get(element);
+  const root = mountedRoots.get(element)
   if (root === undefined) {
-    return;
+    return
   }
 
-  mountedRoots.delete(element);
-  element.removeAttribute(MOUNTED_ATTR);
+  mountedRoots.delete(element)
+  element.removeAttribute(MOUNTED_ATTR)
 
   // React's synchronous unmount walks the rendered subtree and calls
   // removeChild on nodes that may already be detached (e.g. when a CMS Pjax
   // swap detaches the host before our observer fires). Swallow the jsdom
   // NotFoundError from that cleanup — the root is already gone either way.
   try {
-    root.unmount();
+    root.unmount()
   } catch (error: unknown) {
-    console.warn('[GridEditor] Error during unmount (element already detached).', error);
+    console.warn('[GridEditor] Error during unmount (element already detached).', error)
   }
 }
 
@@ -135,70 +135,70 @@ export function unmountGridEditor(element: HTMLElement): void {
  */
 function registerEntwineBridge(): void {
   if (typeof window === 'undefined' || window.jQuery?.entwine === undefined) {
-    return;
+    return
   }
 
   window.jQuery.entwine('ss', ($) => {
     $(`.js-injector-boot ${MOUNT_SELECTOR}`).entwine({
       onmatch() {
-        const element = this[0];
-        mountGridEditor(element, this.data('schema'));
-        const root = mountedRoots.get(element) ?? null;
-        this.setReactRoot(root);
+        const element = this[0]
+        mountGridEditor(element, this.data('schema'))
+        const root = mountedRoots.get(element) ?? null
+        this.setReactRoot(root)
       },
 
       onunmatch() {
-        const element = this[0];
-        unmountGridEditor(element);
-        this.setReactRoot(null);
+        const element = this[0]
+        unmountGridEditor(element)
+        this.setReactRoot(null)
       },
-    });
-  });
+    })
+  })
 }
 
 function observeForPjax(): void {
   if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') {
-    return;
+    return
   }
 
   const handleAdded = (node: Node): void => {
     if (!(node instanceof HTMLElement)) {
-      return;
+      return
     }
     if (node.matches(MOUNT_SELECTOR)) {
-      mountGridEditor(node, readSchemaFromElement(node));
+      mountGridEditor(node, readSchemaFromElement(node))
     }
     for (const candidate of node.querySelectorAll<HTMLElement>(MOUNT_SELECTOR)) {
-      mountGridEditor(candidate, readSchemaFromElement(candidate));
+      mountGridEditor(candidate, readSchemaFromElement(candidate))
     }
-  };
+  }
 
   const handleRemoved = (node: Node): void => {
     if (!(node instanceof HTMLElement)) {
-      return;
+      return
     }
     if (node.matches(MOUNT_SELECTOR)) {
-      unmountGridEditor(node);
+      unmountGridEditor(node)
     }
     for (const candidate of node.querySelectorAll<HTMLElement>(MOUNT_SELECTOR)) {
-      unmountGridEditor(candidate);
+      unmountGridEditor(candidate)
     }
-  };
+  }
 
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
-      mutation.addedNodes.forEach(handleAdded);
-      mutation.removedNodes.forEach(handleRemoved);
+      mutation.addedNodes.forEach(handleAdded)
+      mutation.removedNodes.forEach(handleRemoved)
     }
-  });
+  })
 
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, { childList: true, subtree: true })
 
   // Initial pass: handle any hosts already present when the bridge loads.
   for (const host of document.querySelectorAll<HTMLElement>(MOUNT_SELECTOR)) {
-    mountGridEditor(host, readSchemaFromElement(host));
+    mountGridEditor(host, readSchemaFromElement(host))
   }
 }
 
-registerEntwineBridge();
-observeForPjax();
+registerEntwineBridge()
+observeForPjax()

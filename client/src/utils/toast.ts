@@ -1,8 +1,8 @@
 export function showToast(text: string, type: 'error' | 'success' | 'warning' = 'error'): void {
-  const store = window.ss?.store;
+  const store = window.ss?.store
   if (store === undefined) {
-    console.warn(`[GridEditor] ${type}: ${text}`);
-    return;
+    console.warn(`[GridEditor] ${type}: ${text}`)
+    return
   }
 
   store.dispatch({
@@ -13,5 +13,5 @@ export function showToast(text: string, type: 'error' | 'success' | 'warning' = 
       type,
       stay: type !== 'success',
     },
-  });
+  })
 }

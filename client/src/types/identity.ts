@@ -13,30 +13,30 @@
  * to discover `NodeIdentity.*` to work with node identities.
  */
 
-export const NODE_TYPES = ['page', 'section', 'row', 'column', 'element'] as const;
+export const NODE_TYPES = ['page', 'section', 'row', 'column', 'element'] as const
 
-export type NodeType = (typeof NODE_TYPES)[number];
+export type NodeType = (typeof NODE_TYPES)[number]
 
 export interface NodeRef {
-  readonly type: NodeType;
-  readonly id: number;
+  readonly type: NodeType
+  readonly id: number
 }
 
-export type NodeKey = `${NodeType}-${number}`;
+export type NodeKey = `${NodeType}-${number}`
 
-const SEPARATOR = '-';
+const SEPARATOR = '-'
 
 function isNodeType(value: string): value is NodeType {
-  return (NODE_TYPES as readonly string[]).includes(value);
+  return (NODE_TYPES as readonly string[]).includes(value)
 }
 
-function toKey(type: NodeType, id: number): NodeKey;
-function toKey(ref: NodeRef): NodeKey;
+function toKey(type: NodeType, id: number): NodeKey
+function toKey(ref: NodeRef): NodeKey
 function toKey(typeOrRef: NodeType | NodeRef, id?: number): NodeKey {
   if (typeof typeOrRef === 'string') {
-    return `${typeOrRef}${SEPARATOR}${id as number}`;
+    return `${typeOrRef}${SEPARATOR}${id as number}`
   }
-  return `${typeOrRef.type}${SEPARATOR}${typeOrRef.id}`;
+  return `${typeOrRef.type}${SEPARATOR}${typeOrRef.id}`
 }
 
 function fromKey(key: string): NodeRef | null {
@@ -45,35 +45,35 @@ function fromKey(key: string): NodeRef | null {
   // separator is at position 0 (e.g. "-5"), slice(0, 0) yields "", which
   // isNodeType also rejects. So no explicit separator-index guard is
   // needed — the type check below catches every malformed shape.
-  const separatorIndex = key.indexOf(SEPARATOR);
+  const separatorIndex = key.indexOf(SEPARATOR)
 
-  const type = key.slice(0, separatorIndex);
-  if (!isNodeType(type)) return null;
+  const type = key.slice(0, separatorIndex)
+  if (!isNodeType(type)) return null
 
-  const numericId = Number(key.slice(separatorIndex + 1));
-  if (!Number.isInteger(numericId) || numericId <= 0) return null;
+  const numericId = Number(key.slice(separatorIndex + 1))
+  if (!Number.isInteger(numericId) || numericId <= 0) return null
 
-  return { type, id: numericId };
+  return { type, id: numericId }
 }
 
 function equals(a: NodeRef, b: NodeRef): boolean {
-  return a.type === b.type && a.id === b.id;
+  return a.type === b.type && a.id === b.id
 }
 
 function assert(value: unknown, context: string): NodeRef {
   if (typeof value !== 'object' || value === null) {
-    throw new TypeError(`${context}: expected NodeRef object, got ${typeof value}`);
+    throw new TypeError(`${context}: expected NodeRef object, got ${typeof value}`)
   }
-  const candidate = value as Record<string, unknown>;
-  const type = candidate.type;
-  const id = candidate.id;
+  const candidate = value as Record<string, unknown>
+  const type = candidate.type
+  const id = candidate.id
   if (typeof type !== 'string' || !isNodeType(type)) {
-    throw new TypeError(`${context}: invalid NodeRef.type ${JSON.stringify(type)}`);
+    throw new TypeError(`${context}: invalid NodeRef.type ${JSON.stringify(type)}`)
   }
   if (typeof id !== 'number' || !Number.isInteger(id) || id <= 0) {
-    throw new TypeError(`${context}: invalid NodeRef.id ${JSON.stringify(id)}`);
+    throw new TypeError(`${context}: invalid NodeRef.id ${JSON.stringify(id)}`)
   }
-  return { type, id };
+  return { type, id }
 }
 
 /**
@@ -94,4 +94,4 @@ export const NodeIdentity = {
   fromKey,
   equals,
   assert,
-} as const;
+} as const

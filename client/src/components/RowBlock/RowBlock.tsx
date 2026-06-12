@@ -1,23 +1,22 @@
-import { memo, useCallback, useMemo } from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
-import type { RowNode } from '@/types/elements';
-import type { NodeKey } from '@/types/identity';
-import { useDragContext } from '@/hooks/useDragAndDrop';
-import { useReadonly } from '@/hooks/ReadonlyContext';
-import { useCollapse } from '@/hooks/useCollapseState';
-import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles';
-import { getOffsetStrategy, getColumnCount } from '@/utils/gridAdapter';
-import { t } from '@/i18n';
-import DragHandle from '@/components/DragHandle/DragHandle';
-import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
-import ElementActions from '@/components/ElementActions/ElementActions';
-import ColumnBlock from '@/components/ColumnBlock/ColumnBlock';
-import ColumnInsertButton from '@/components/ColumnInsertButton/ColumnInsertButton';
-import AddChildButton from '@/components/AddChildButton/AddChildButton';
+import { horizontalListSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable'
+import { memo, useCallback, useMemo } from 'react'
+import AddChildButton from '@/components/AddChildButton/AddChildButton'
+import CollapseToggle from '@/components/CollapseToggle/CollapseToggle'
+import ColumnBlock from '@/components/ColumnBlock/ColumnBlock'
+import ColumnInsertButton from '@/components/ColumnInsertButton/ColumnInsertButton'
+import DragHandle from '@/components/DragHandle/DragHandle'
+import ElementActions from '@/components/ElementActions/ElementActions'
+import { useReadonly } from '@/hooks/ReadonlyContext'
+import { useCollapse } from '@/hooks/useCollapseState'
+import { useDragContext } from '@/hooks/useDragAndDrop'
+import { t } from '@/i18n'
+import type { RowNode } from '@/types/elements'
+import type { NodeKey } from '@/types/identity'
+import { getColumnCount, getOffsetStrategy } from '@/utils/gridAdapter'
+import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
 
 interface RowBlockProps {
-  readonly row: RowNode;
+  readonly row: RowNode
 }
 
 /**
@@ -27,11 +26,11 @@ interface RowBlockProps {
  * need a `DndContext` ancestor.
  */
 const RowBlock = memo(function RowBlock({ row }: RowBlockProps) {
-  const readonly = useReadonly();
-  return readonly ? <ReadonlyRowBlock row={row} /> : <EditableRowBlock row={row} />;
-});
+  const readonly = useReadonly()
+  return readonly ? <ReadonlyRowBlock row={row} /> : <EditableRowBlock row={row} />
+})
 
-export default RowBlock;
+export default RowBlock
 
 /**
  * Build a stable per-column lookup for the "+ insert column" gutter between
@@ -43,43 +42,43 @@ function useInsertBeforeByColumnKey(
   row: RowNode,
 ): ReadonlyMap<NodeKey, { rowId: number; afterColumnId: number }> {
   return useMemo(() => {
-    const map = new Map<NodeKey, { rowId: number; afterColumnId: number }>();
-    const cols = row.children ?? [];
+    const map = new Map<NodeKey, { rowId: number; afterColumnId: number }>()
+    const cols = row.children ?? []
     for (let i = 1; i < cols.length; i++) {
-      map.set(cols[i].nodeKey, { rowId: row.self.id, afterColumnId: cols[i - 1].self.id });
+      map.set(cols[i].nodeKey, { rowId: row.self.id, afterColumnId: cols[i - 1].self.id })
     }
-    return map;
-  }, [row.children, row.self.id]);
+    return map
+  }, [row.children, row.self.id])
 }
 
 function useRowCollapse(row: RowNode) {
-  const { isCollapsed: isCollapsedFn, toggle } = useCollapse();
-  const isCollapsed = isCollapsedFn(row.nodeKey);
-  const onToggle = useCallback(() => toggle(row.nodeKey), [toggle, row.nodeKey]);
-  return { isCollapsed, onToggle };
+  const { isCollapsed: isCollapsedFn, toggle } = useCollapse()
+  const isCollapsed = isCollapsedFn(row.nodeKey)
+  const onToggle = useCallback(() => toggle(row.nodeKey), [toggle, row.nodeKey])
+  return { isCollapsed, onToggle }
 }
 
 function useChildColumnKeys(row: RowNode): NodeKey[] {
-  return useMemo(() => row.children?.map((c) => c.nodeKey) ?? [], [row.children]);
+  return useMemo(() => row.children?.map((c) => c.nodeKey) ?? [], [row.children])
 }
 
 function EditableRowBlock({ row }: RowBlockProps) {
-  const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid';
-  const status = row.status;
-  const { isCollapsed, onToggle } = useRowCollapse(row);
-  const { activeType, pendingActive } = useDragContext();
+  const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid'
+  const status = row.status
+  const { isCollapsed, onToggle } = useRowCollapse(row)
+  const { activeType, pendingActive } = useDragContext()
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
-    useSortable({ id: row.nodeKey });
+    useSortable({ id: row.nodeKey })
 
-  const showDropTarget = isOver && activeType === 'row';
+  const showDropTarget = isOver && activeType === 'row'
 
-  const style = buildSortableStyle(transform, transition, isDragging);
+  const style = buildSortableStyle(transform, transition, isDragging)
 
-  const childKeys = useChildColumnKeys(row);
-  const columns = row.children ?? [];
-  const hasColumns = columns.length > 0;
-  const insertBeforeByKey = useInsertBeforeByColumnKey(row);
+  const childKeys = useChildColumnKeys(row)
+  const columns = row.children ?? []
+  const hasColumns = columns.length > 0
+  const insertBeforeByKey = useInsertBeforeByColumnKey(row)
 
   return (
     <div
@@ -167,13 +166,13 @@ function EditableRowBlock({ row }: RowBlockProps) {
         )}
       </div>
     </div>
-  );
+  )
 }
 
 function ReadonlyRowBlock({ row }: RowBlockProps) {
-  const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid';
-  const status = row.status;
-  const { isCollapsed, onToggle } = useRowCollapse(row);
+  const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid'
+  const status = row.status
+  const { isCollapsed, onToggle } = useRowCollapse(row)
 
   return (
     <div
@@ -220,5 +219,5 @@ function ReadonlyRowBlock({ row }: RowBlockProps) {
         ))}
       </div>
     </div>
-  );
+  )
 }

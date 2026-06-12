@@ -1,55 +1,55 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest'
+import { createTreeApiResponse, resetIdCounter } from '@/testing/factories'
+import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
 import {
-  fetchElementTree,
-  createElement,
-  publishElement,
-  unpublishElement,
   archiveElement,
-  duplicateElement,
-  reorderElement,
   createContentElement,
-  updateGridSettings,
-  resetGridSettingsOverrides,
+  createElement,
+  duplicateElement,
   duplicateToElement,
   fetchAcceptableContainers,
-  fetchZones,
+  fetchElementTree,
   fetchPages,
+  fetchZones,
   normaliseTreeResponse,
-} from './endpoints';
-import { mockFetchSuccess, getFetchCalls } from '@/testing/mockFetch';
-import { createTreeApiResponse, resetIdCounter } from '@/testing/factories';
+  publishElement,
+  reorderElement,
+  resetGridSettingsOverrides,
+  unpublishElement,
+  updateGridSettings,
+} from './endpoints'
 
 beforeEach(() => {
-  resetIdCounter();
-  mockFetchSuccess({});
-});
+  resetIdCounter()
+  mockFetchSuccess({})
+})
 
 describe('fetchElementTree', () => {
   it('constructs correct URL with encoded zone and normalises the response', async () => {
     mockFetchSuccess({
       rootParent: { type: 'page', id: 42 },
       nodes: [],
-    });
-    const result = await fetchElementTree(42, 'main area');
-    const [url] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/readTree/42/main%20area');
-    expect(result.rootParent).toEqual({ type: 'page', id: 42 });
-  });
+    })
+    const result = await fetchElementTree(42, 'main area')
+    const [url] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/readTree/42/main%20area')
+    expect(result.rootParent).toEqual({ type: 'page', id: 42 })
+  })
 
   it('appends /version/N path segment when version is provided', async () => {
-    mockFetchSuccess({ rootParent: { type: 'page', id: 42 }, nodes: [] });
-    await fetchElementTree(42, 'main', 5);
-    const [url] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/readTree/42/main/version/5');
-  });
+    mockFetchSuccess({ rootParent: { type: 'page', id: 42 }, nodes: [] })
+    await fetchElementTree(42, 'main', 5)
+    const [url] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/readTree/42/main/version/5')
+  })
 
   it('omits /version path segment when version is undefined', async () => {
-    mockFetchSuccess({ rootParent: { type: 'page', id: 42 }, nodes: [] });
-    await fetchElementTree(42, 'main');
-    const [url] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/readTree/42/main');
-  });
-});
+    mockFetchSuccess({ rootParent: { type: 'page', id: 42 }, nodes: [] })
+    await fetchElementTree(42, 'main')
+    const [url] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/readTree/42/main')
+  })
+})
 
 describe('normaliseTreeResponse', () => {
   it('attaches derived nodeKey and parentKey to every node', () => {
@@ -81,75 +81,75 @@ describe('normaliseTreeResponse', () => {
           children: [],
         },
       ],
-    };
+    }
 
-    const normalised = normaliseTreeResponse(raw);
-    expect(normalised.rootParent).toEqual({ type: 'page', id: 1 });
-    expect(normalised.nodes[0].nodeKey).toBe('section-10');
-    expect(normalised.nodes[0].parentKey).toBe('page-1');
-  });
+    const normalised = normaliseTreeResponse(raw)
+    expect(normalised.rootParent).toEqual({ type: 'page', id: 1 })
+    expect(normalised.nodes[0].nodeKey).toBe('section-10')
+    expect(normalised.nodes[0].parentKey).toBe('page-1')
+  })
 
   it('throws on malformed payload', () => {
     // Schema validation surfaces as ZodError (subclass of Error). Callers in
     // hooks/components surface this as a generic load error to the user.
-    expect(() => normaliseTreeResponse(null)).toThrow();
-    expect(() => normaliseTreeResponse({ rootParent: { type: 'page', id: 1 } })).toThrow();
-  });
-});
+    expect(() => normaliseTreeResponse(null)).toThrow()
+    expect(() => normaliseTreeResponse({ rootParent: { type: 'page', id: 1 } })).toThrow()
+  })
+})
 
 describe('createElement', () => {
   it('sends POST to /api/create with NodeRef parent', async () => {
-    await createElement({ containerType: 'row', parent: { type: 'section', id: 10 } });
-    const [url, init] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/create');
-    expect(init?.method).toBe('POST');
+    await createElement({ containerType: 'row', parent: { type: 'section', id: 10 } })
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/create')
+    expect(init?.method).toBe('POST')
     expect(JSON.parse(init?.body as string)).toEqual({
       containerType: 'row',
       parent: { type: 'section', id: 10 },
-    });
-  });
-});
+    })
+  })
+})
 
 describe('publishElement', () => {
   it('sends PATCH to /api/publish with element NodeRef', async () => {
-    await publishElement({ type: 'section', id: 5 });
-    const [url, init] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/publish');
-    expect(init?.method).toBe('PATCH');
-    expect(JSON.parse(init?.body as string)).toEqual({ element: { type: 'section', id: 5 } });
-  });
-});
+    await publishElement({ type: 'section', id: 5 })
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/publish')
+    expect(init?.method).toBe('PATCH')
+    expect(JSON.parse(init?.body as string)).toEqual({ element: { type: 'section', id: 5 } })
+  })
+})
 
 describe('unpublishElement', () => {
   it('sends PATCH to /api/unpublish with element NodeRef', async () => {
-    await unpublishElement({ type: 'section', id: 5 });
-    const [url, init] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/unpublish');
-    expect(JSON.parse(init?.body as string)).toEqual({ element: { type: 'section', id: 5 } });
-  });
-});
+    await unpublishElement({ type: 'section', id: 5 })
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/unpublish')
+    expect(JSON.parse(init?.body as string)).toEqual({ element: { type: 'section', id: 5 } })
+  })
+})
 
 describe('archiveElement', () => {
   it('sends DELETE to /api/delete with type and id on the query string', async () => {
-    await archiveElement({ type: 'element', id: 5 });
-    const [url, init] = getFetchCalls()[0];
-    const urlString = String(url);
-    expect(urlString).toContain('/admin/grid/api/delete?');
-    expect(urlString).toContain('type=element');
-    expect(urlString).toContain('id=5');
-    expect(init?.method).toBe('DELETE');
-    expect(init?.body).toBeUndefined();
-  });
-});
+    await archiveElement({ type: 'element', id: 5 })
+    const [url, init] = getFetchCalls()[0]
+    const urlString = String(url)
+    expect(urlString).toContain('/admin/grid/api/delete?')
+    expect(urlString).toContain('type=element')
+    expect(urlString).toContain('id=5')
+    expect(init?.method).toBe('DELETE')
+    expect(init?.body).toBeUndefined()
+  })
+})
 
 describe('duplicateElement', () => {
   it('sends POST to /api/duplicate with element NodeRef', async () => {
-    await duplicateElement({ type: 'section', id: 5 });
-    const [url, init] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/duplicate');
-    expect(JSON.parse(init?.body as string)).toEqual({ element: { type: 'section', id: 5 } });
-  });
-});
+    await duplicateElement({ type: 'section', id: 5 })
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/duplicate')
+    expect(JSON.parse(init?.body as string)).toEqual({ element: { type: 'section', id: 5 } })
+  })
+})
 
 describe('reorderElement', () => {
   it('sends PATCH to /api/reorder with scoped NodeRef fields', async () => {
@@ -157,41 +157,41 @@ describe('reorderElement', () => {
       element: { type: 'row', id: 1 },
       parent: { type: 'section', id: 2 },
       after: { type: 'row', id: 3 },
-    });
-    const [url, init] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/reorder');
+    })
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/reorder')
     expect(JSON.parse(init?.body as string)).toEqual({
       element: { type: 'row', id: 1 },
       parent: { type: 'section', id: 2 },
       after: { type: 'row', id: 3 },
-    });
-  });
+    })
+  })
 
   it('sends null after when inserting at the head of the target container', async () => {
     await reorderElement({
       element: { type: 'section', id: 5 },
       parent: { type: 'page', id: 1 },
       after: null,
-    });
-    const [, init] = getFetchCalls()[0];
-    expect(JSON.parse(init?.body as string).after).toBeNull();
-  });
-});
+    })
+    const [, init] = getFetchCalls()[0]
+    expect(JSON.parse(init?.body as string).after).toBeNull()
+  })
+})
 
 describe('createContentElement', () => {
   it('sends POST to /api/createContent with parent NodeRef', async () => {
     await createContentElement({
       className: 'TextBlock',
       parent: { type: 'column', id: 10 },
-    });
-    const [url, init] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/createContent');
+    })
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/createContent')
     expect(JSON.parse(init?.body as string)).toEqual({
       className: 'TextBlock',
       parent: { type: 'column', id: 10 },
-    });
-  });
-});
+    })
+  })
+})
 
 describe('updateGridSettings', () => {
   it('sends PATCH to /api/updateGridSettings with element NodeRef', async () => {
@@ -201,31 +201,31 @@ describe('updateGridSettings', () => {
       width: 6,
       offset: 0,
       visible: true,
-    });
-    const [url, init] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/updateGridSettings');
+    })
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/updateGridSettings')
     expect(JSON.parse(init?.body as string)).toEqual({
       element: { type: 'column', id: 1 },
       viewport: 'md',
       width: 6,
       offset: 0,
       visible: true,
-    });
-  });
-});
+    })
+  })
+})
 
 describe('resetGridSettingsOverrides', () => {
   it('sends DELETE to /api/resetGridSettingsOverrides with params in query string', async () => {
-    await resetGridSettingsOverrides({ pageId: 1, zone: 'main' });
-    const [url, init] = getFetchCalls()[0];
-    const urlString = String(url);
-    expect(urlString).toContain('/admin/grid/api/resetGridSettingsOverrides?');
-    expect(urlString).toContain('pageId=1');
-    expect(urlString).toContain('zone=main');
-    expect(init?.method).toBe('DELETE');
-    expect(init?.body).toBeUndefined();
-  });
-});
+    await resetGridSettingsOverrides({ pageId: 1, zone: 'main' })
+    const [url, init] = getFetchCalls()[0]
+    const urlString = String(url)
+    expect(urlString).toContain('/admin/grid/api/resetGridSettingsOverrides?')
+    expect(urlString).toContain('pageId=1')
+    expect(urlString).toContain('zone=main')
+    expect(init?.method).toBe('DELETE')
+    expect(init?.body).toBeUndefined()
+  })
+})
 
 describe('duplicateToElement', () => {
   it('sends POST to /api/duplicateTo with element + targetParent NodeRefs', async () => {
@@ -234,54 +234,54 @@ describe('duplicateToElement', () => {
       targetPageId: 2,
       targetZone: 'main',
       targetParent: { type: 'column', id: 3 },
-    });
-    const [url, init] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/duplicateTo');
-    const body = JSON.parse(init?.body as string);
-    expect(body.element).toEqual({ type: 'element', id: 1 });
-    expect(body.targetParent).toEqual({ type: 'column', id: 3 });
-  });
-});
+    })
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/duplicateTo')
+    const body = JSON.parse(init?.body as string)
+    expect(body.element).toEqual({ type: 'element', id: 1 })
+    expect(body.targetParent).toEqual({ type: 'column', id: 3 })
+  })
+})
 
 describe('fetchAcceptableContainers', () => {
   it('constructs correct URL with encoded params', async () => {
-    mockFetchSuccess([]);
-    await fetchAcceptableContainers(1, 'main zone', 'Text Block');
-    const [url] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/acceptableContainers/1/main%20zone/Text%20Block');
-  });
-});
+    mockFetchSuccess([])
+    await fetchAcceptableContainers(1, 'main zone', 'Text Block')
+    const [url] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/acceptableContainers/1/main%20zone/Text%20Block')
+  })
+})
 
 describe('fetchZones', () => {
   it('constructs correct URL', async () => {
-    mockFetchSuccess([]);
-    await fetchZones(42);
-    const [url] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/zones/42');
-  });
-});
+    mockFetchSuccess([])
+    await fetchZones(42)
+    const [url] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/zones/42')
+  })
+})
 
 describe('fetchPages', () => {
   it('constructs URL without params when no search', async () => {
-    mockFetchSuccess([]);
-    await fetchPages();
-    const [url] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/pages');
-  });
+    mockFetchSuccess([])
+    await fetchPages()
+    const [url] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/pages')
+  })
 
   it('includes encoded search param', async () => {
-    mockFetchSuccess([]);
-    await fetchPages('my page');
-    const [url] = getFetchCalls()[0];
-    expect(url).toBe('/admin/grid/api/pages?search=my%20page');
-  });
-});
+    mockFetchSuccess([])
+    await fetchPages('my page')
+    const [url] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid/api/pages?search=my%20page')
+  })
+})
 
 describe('factory integration — createTreeApiResponse', () => {
   it('produces a valid tree response shape', () => {
-    const tree = createTreeApiResponse({ pageId: 1 });
-    expect(tree.rootParent).toEqual({ type: 'page', id: 1 });
-    expect(tree.nodes.length).toBeGreaterThan(0);
-    expect(tree.nodes[0].nodeKey).toMatch(/^section-\d+$/);
-  });
-});
+    const tree = createTreeApiResponse({ pageId: 1 })
+    expect(tree.rootParent).toEqual({ type: 'page', id: 1 })
+    expect(tree.nodes.length).toBeGreaterThan(0)
+    expect(tree.nodes[0].nodeKey).toMatch(/^section-\d+$/)
+  })
+})

@@ -13,12 +13,12 @@
  * all other handlers ignore the event data.
  */
 export function refreshPreview(): void {
-  const form = window.jQuery?.('.cms-edit-form');
+  const form = window.jQuery?.('.cms-edit-form')
   if (!form || form.length === 0) {
-    return;
+    return
   }
 
   form.trigger('aftersubmitform', {
     xhr: { getResponseHeader: () => null },
-  });
+  })
 }

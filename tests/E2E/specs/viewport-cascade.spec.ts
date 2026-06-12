@@ -1,11 +1,11 @@
-import { expect, test } from '@playwright/test';
-import { loadFixture, resetFixtures } from '../helpers/fixtures';
+import { expect, test } from '@playwright/test'
 import {
   activateViewport,
   readAdapterConfig,
   twoNonDefaultViewports,
   viewportButton,
-} from '../helpers/adapter';
+} from '../helpers/adapter'
+import { loadFixture, resetFixtures } from '../helpers/fixtures'
 
 /**
  * Isolated-strategy override resolution — user-observable path.
@@ -24,55 +24,55 @@ import {
  */
 test.describe('Viewport override resolution (isolated strategy)', () => {
   test.afterAll(async ({ request }) => {
-    await resetFixtures(request);
-  });
+    await resetFixtures(request)
+  })
 
   test('an override at one viewport does not bleed into siblings', async ({ page }) => {
-    const fixture = await loadFixture(page.request, 'viewport-cascade');
+    const fixture = await loadFixture(page.request, 'viewport-cascade')
 
-    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
-    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 });
+    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`)
+    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
 
-    const adapter = await readAdapterConfig(page);
-    const [overrideViewport, otherViewport] = twoNonDefaultViewports(adapter);
+    const adapter = await readAdapterConfig(page)
+    const [overrideViewport, otherViewport] = twoNonDefaultViewports(adapter)
 
-    const column = page.getByTestId('column-block').filter({ hasText: 'Cascade Column' });
-    const badge = column.getByTestId('column-badge');
+    const column = page.getByTestId('column-block').filter({ hasText: 'Cascade Column' })
+    const badge = column.getByTestId('column-badge')
 
-    const fullWidth = `${adapter.columnCount}/${adapter.columnCount}`;
-    const overrideWidth = `${Math.floor(adapter.columnCount / 2)}/${adapter.columnCount}`;
+    const fullWidth = `${adapter.columnCount}/${adapter.columnCount}`
+    const overrideWidth = `${Math.floor(adapter.columnCount / 2)}/${adapter.columnCount}`
 
     await test.step('default viewport is active on first load, badge shows the stored default', async () => {
       await expect(viewportButton(page, adapter.defaultViewport)).toHaveAttribute(
         'aria-pressed',
         'true',
-      );
-      await expect(badge).toHaveText(fullWidth);
-    });
+      )
+      await expect(badge).toHaveText(fullWidth)
+    })
 
     await test.step('setting a width override at one non-default viewport updates the badge there', async () => {
-      await activateViewport(page, overrideViewport);
-      await badge.click();
+      await activateViewport(page, overrideViewport)
+      await badge.click()
       await column
         .getByTestId('column-badge-listbox')
         .getByRole('option', { name: overrideWidth })
-        .click();
-      await expect(badge).toHaveText(overrideWidth);
-    });
+        .click()
+      await expect(badge).toHaveText(overrideWidth)
+    })
 
     await test.step('a different non-default viewport still shows the column default', async () => {
-      await activateViewport(page, otherViewport);
-      await expect(badge).toHaveText(fullWidth);
-    });
+      await activateViewport(page, otherViewport)
+      await expect(badge).toHaveText(fullWidth)
+    })
 
     await test.step('the default viewport is unaffected by the override', async () => {
-      await activateViewport(page, adapter.defaultViewport);
-      await expect(badge).toHaveText(fullWidth);
-    });
+      await activateViewport(page, adapter.defaultViewport)
+      await expect(badge).toHaveText(fullWidth)
+    })
 
     await test.step('switching back to the override viewport restores the override value', async () => {
-      await activateViewport(page, overrideViewport);
-      await expect(badge).toHaveText(overrideWidth);
-    });
-  });
-});
+      await activateViewport(page, overrideViewport)
+      await expect(badge).toHaveText(overrideWidth)
+    })
+  })
+})

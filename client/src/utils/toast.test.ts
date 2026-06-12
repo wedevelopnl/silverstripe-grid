@@ -1,17 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { showToast } from './toast';
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { showToast } from './toast'
 
 beforeEach(() => {
   // Stub crypto.randomUUID for predictable toast IDs
-  vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-0000-0000-000000000000');
-});
+  vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-0000-0000-000000000000')
+})
 
 describe('showToast', () => {
   it('dispatches DISPLAY_TOAST action when store is available', () => {
-    const dispatch = vi.fn();
-    window.ss!.store = { dispatch };
+    const dispatch = vi.fn()
+    window.ss!.store = { dispatch }
 
-    showToast('Something failed', 'error');
+    showToast('Something failed', 'error')
 
     expect(dispatch).toHaveBeenCalledWith({
       type: 'DISPLAY_TOAST',
@@ -21,40 +21,40 @@ describe('showToast', () => {
         type: 'error',
         stay: true,
       },
-    });
-  });
+    })
+  })
 
   it('sets stay to false for success toasts', () => {
-    const dispatch = vi.fn();
-    window.ss!.store = { dispatch };
+    const dispatch = vi.fn()
+    window.ss!.store = { dispatch }
 
-    showToast('Done!', 'success');
+    showToast('Done!', 'success')
 
     expect(dispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         payload: expect.objectContaining({ stay: false }),
       }),
-    );
-  });
+    )
+  })
 
   it('defaults type to error', () => {
-    const dispatch = vi.fn();
-    window.ss!.store = { dispatch };
+    const dispatch = vi.fn()
+    window.ss!.store = { dispatch }
 
-    showToast('Oops');
+    showToast('Oops')
 
     expect(dispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         payload: expect.objectContaining({ type: 'error' }),
       }),
-    );
-  });
+    )
+  })
 
   it('sets stay to true for warning toasts', () => {
-    const dispatch = vi.fn();
-    window.ss!.store = { dispatch };
+    const dispatch = vi.fn()
+    window.ss!.store = { dispatch }
 
-    showToast('Heads up', 'warning');
+    showToast('Heads up', 'warning')
 
     expect(dispatch).toHaveBeenCalledWith({
       type: 'DISPLAY_TOAST',
@@ -64,15 +64,15 @@ describe('showToast', () => {
         type: 'warning',
         stay: true,
       },
-    });
-  });
+    })
+  })
 
   it('falls back to console.warn when store is unavailable', () => {
-    delete window.ss!.store;
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    delete window.ss!.store
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    showToast('No store', 'warning');
+    showToast('No store', 'warning')
 
-    expect(warnSpy).toHaveBeenCalledWith('[GridEditor] warning: No store');
-  });
-});
+    expect(warnSpy).toHaveBeenCalledWith('[GridEditor] warning: No store')
+  })
+})

@@ -1,146 +1,146 @@
-import { describe, it, expect, vi } from 'vitest';
-import { apiGet, apiPost, apiPatch, apiDelete } from './client';
-import { ApiError } from './errors';
-import { mockFetchSuccess, mockFetchError, getFetchCalls } from '@/testing/mockFetch';
+import { describe, expect, it, vi } from 'vitest'
+import { getFetchCalls, mockFetchError, mockFetchSuccess } from '@/testing/mockFetch'
+import { apiDelete, apiGet, apiPatch, apiPost } from './client'
+import { ApiError } from './errors'
 
 describe('apiGet', () => {
   it('sends GET with correct headers', async () => {
-    mockFetchSuccess({ data: 'test' });
+    mockFetchSuccess({ data: 'test' })
 
-    await apiGet('/api/test');
+    await apiGet('/api/test')
 
-    const [url, init] = getFetchCalls()[0];
-    expect(url).toBe('/api/test');
-    expect(init?.method).toBeUndefined(); // GET is default
-    expect(init?.credentials).toBe('same-origin');
-    expect(init?.headers).toEqual({ Accept: 'application/json' });
-  });
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/api/test')
+    expect(init?.method).toBeUndefined() // GET is default
+    expect(init?.credentials).toBe('same-origin')
+    expect(init?.headers).toEqual({ Accept: 'application/json' })
+  })
 
   it('returns parsed JSON body', async () => {
-    mockFetchSuccess({ items: [1, 2, 3] });
+    mockFetchSuccess({ items: [1, 2, 3] })
 
-    const result = await apiGet<{ items: number[] }>('/api/test');
-    expect(result).toEqual({ items: [1, 2, 3] });
-  });
+    const result = await apiGet<{ items: number[] }>('/api/test')
+    expect(result).toEqual({ items: [1, 2, 3] })
+  })
 
   it('throws ApiError on non-OK status with message from body', async () => {
-    mockFetchError(404, { message: 'Not found' });
+    mockFetchError(404, { message: 'Not found' })
 
-    await expect(apiGet('/api/missing')).rejects.toThrow(ApiError);
-    await expect(apiGet('/api/missing')).rejects.toThrow('Not found');
-  });
+    await expect(apiGet('/api/missing')).rejects.toThrow(ApiError)
+    await expect(apiGet('/api/missing')).rejects.toThrow('Not found')
+  })
 
   it('falls back to statusText when body has no message', async () => {
-    mockFetchError(500, {});
+    mockFetchError(500, {})
 
     try {
-      await apiGet('/api/broken');
+      await apiGet('/api/broken')
     } catch (error) {
-      expect(error).toBeInstanceOf(ApiError);
-      expect((error as ApiError).status).toBe(500);
+      expect(error).toBeInstanceOf(ApiError)
+      expect((error as ApiError).status).toBe(500)
     }
-  });
-});
+  })
+})
 
 describe('apiPost', () => {
   it('sends POST with JSON body and CSRF header', async () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    await apiPost('/api/create', { name: 'test' });
+    await apiPost('/api/create', { name: 'test' })
 
-    const [url, init] = getFetchCalls()[0];
-    expect(url).toBe('/api/create');
-    expect(init?.method).toBe('POST');
-    expect(init?.body).toBe(JSON.stringify({ name: 'test' }));
-    const postHeaders = init?.headers as Record<string, string>;
-    expect(postHeaders['X-SecurityID']).toBe('test-security-id');
-    expect(postHeaders['Content-Type']).toBe('application/json');
-  });
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/api/create')
+    expect(init?.method).toBe('POST')
+    expect(init?.body).toBe(JSON.stringify({ name: 'test' }))
+    const postHeaders = init?.headers as Record<string, string>
+    expect(postHeaders['X-SecurityID']).toBe('test-security-id')
+    expect(postHeaders['Content-Type']).toBe('application/json')
+  })
 
   it('throws ApiError on non-OK status', async () => {
-    mockFetchError(422, { message: 'Validation failed' });
+    mockFetchError(422, { message: 'Validation failed' })
 
-    await expect(apiPost('/api/create', {})).rejects.toThrow('Validation failed');
-  });
-});
+    await expect(apiPost('/api/create', {})).rejects.toThrow('Validation failed')
+  })
+})
 
 describe('apiPatch', () => {
   it('sends PATCH with JSON body and CSRF header', async () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    await apiPatch('/api/update', { id: 1 });
+    await apiPatch('/api/update', { id: 1 })
 
-    const [, init] = getFetchCalls()[0];
-    expect(init?.method).toBe('PATCH');
-    const patchHeaders = init?.headers as Record<string, string>;
-    expect(patchHeaders['X-SecurityID']).toBe('test-security-id');
-  });
-});
+    const [, init] = getFetchCalls()[0]
+    expect(init?.method).toBe('PATCH')
+    const patchHeaders = init?.headers as Record<string, string>
+    expect(patchHeaders['X-SecurityID']).toBe('test-security-id')
+  })
+})
 
 describe('apiDelete', () => {
   it('sends DELETE with CSRF header and no request body', async () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    await apiDelete('/api/remove', { id: 1 });
+    await apiDelete('/api/remove', { id: 1 })
 
-    const [, init] = getFetchCalls()[0];
-    expect(init?.method).toBe('DELETE');
-    expect(init?.body).toBeUndefined();
-    const deleteHeaders = init?.headers as Record<string, string>;
-    expect(deleteHeaders['X-SecurityID']).toBe('test-security-id');
-  });
+    const [, init] = getFetchCalls()[0]
+    expect(init?.method).toBe('DELETE')
+    expect(init?.body).toBeUndefined()
+    const deleteHeaders = init?.headers as Record<string, string>
+    expect(deleteHeaders['X-SecurityID']).toBe('test-security-id')
+  })
 
   it('serializes params as a query string appended to the URL', async () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    await apiDelete('/api/remove', { id: 5, zone: 'main' });
+    await apiDelete('/api/remove', { id: 5, zone: 'main' })
 
-    const [url, init] = getFetchCalls()[0];
-    const urlString = String(url);
-    expect(urlString).toContain('/api/remove?');
-    expect(urlString).toContain('id=5');
-    expect(urlString).toContain('zone=main');
-    expect(init?.body).toBeUndefined();
-  });
+    const [url, init] = getFetchCalls()[0]
+    const urlString = String(url)
+    expect(urlString).toContain('/api/remove?')
+    expect(urlString).toContain('id=5')
+    expect(urlString).toContain('zone=main')
+    expect(init?.body).toBeUndefined()
+  })
 
   it('omits the query string when no params are provided', async () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    await apiDelete('/api/remove');
+    await apiDelete('/api/remove')
 
-    const [url, init] = getFetchCalls()[0];
-    expect(String(url)).toBe('/api/remove');
-    expect(init?.body).toBeUndefined();
-  });
+    const [url, init] = getFetchCalls()[0]
+    expect(String(url)).toBe('/api/remove')
+    expect(init?.body).toBeUndefined()
+  })
 
   it('skips null and undefined param values', async () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    await apiDelete('/api/remove', { id: 5, viewport: null, other: undefined });
+    await apiDelete('/api/remove', { id: 5, viewport: null, other: undefined })
 
-    const [url] = getFetchCalls()[0];
-    const urlString = String(url);
-    expect(urlString).toContain('id=5');
-    expect(urlString).not.toContain('viewport');
-    expect(urlString).not.toContain('other');
-  });
-});
+    const [url] = getFetchCalls()[0]
+    const urlString = String(url)
+    expect(urlString).toContain('id=5')
+    expect(urlString).not.toContain('viewport')
+    expect(urlString).not.toContain('other')
+  })
+})
 
 describe('error extraction', () => {
   it('extracts errorMessage field from response', async () => {
-    mockFetchError(400, { errorMessage: 'Bad request body' });
+    mockFetchError(400, { errorMessage: 'Bad request body' })
 
-    await expect(apiGet('/api/test')).rejects.toThrow('Bad request body');
-  });
+    await expect(apiGet('/api/test')).rejects.toThrow('Bad request body')
+  })
 
   it('prefers message over errorMessage', async () => {
-    mockFetchError(400, { message: 'Primary', errorMessage: 'Secondary' });
+    mockFetchError(400, { message: 'Primary', errorMessage: 'Secondary' })
 
-    await expect(apiGet('/api/test')).rejects.toThrow('Primary');
-  });
+    await expect(apiGet('/api/test')).rejects.toThrow('Primary')
+  })
 
   it('falls back to statusText when body is a string (non-object)', async () => {
-    mockFetchError(400, undefined);
+    mockFetchError(400, undefined)
     // Override mock to return a string body
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: false,
@@ -159,10 +159,10 @@ describe('error extraction', () => {
       bytes: () => Promise.resolve(new Uint8Array()),
       formData: () => Promise.resolve(new FormData()),
       text: () => Promise.resolve(''),
-    });
+    })
 
-    await expect(apiGet('/api/test')).rejects.toThrow('Bad Request');
-  });
+    await expect(apiGet('/api/test')).rejects.toThrow('Bad Request')
+  })
 
   it('falls back to statusText when body is null', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -182,10 +182,10 @@ describe('error extraction', () => {
       bytes: () => Promise.resolve(new Uint8Array()),
       formData: () => Promise.resolve(new FormData()),
       text: () => Promise.resolve(''),
-    });
+    })
 
-    await expect(apiGet('/api/test')).rejects.toThrow('Internal Server Error');
-  });
+    await expect(apiGet('/api/test')).rejects.toThrow('Internal Server Error')
+  })
 
   it('falls back to statusText when body is an array', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -205,17 +205,17 @@ describe('error extraction', () => {
       bytes: () => Promise.resolve(new Uint8Array()),
       formData: () => Promise.resolve(new FormData()),
       text: () => Promise.resolve(''),
-    });
+    })
 
     // Arrays pass typeof === 'object' but have no message/errorMessage fields
-    await expect(apiGet('/api/test')).rejects.toThrow('Unprocessable Entity');
-  });
+    await expect(apiGet('/api/test')).rejects.toThrow('Unprocessable Entity')
+  })
 
   it('skips empty string message and falls through to errorMessage', async () => {
-    mockFetchError(400, { message: '', errorMessage: 'Fallback' } as object);
+    mockFetchError(400, { message: '', errorMessage: 'Fallback' } as object)
 
-    await expect(apiGet('/api/test')).rejects.toThrow('Fallback');
-  });
+    await expect(apiGet('/api/test')).rejects.toThrow('Fallback')
+  })
 
   it('skips empty string errorMessage and falls through to statusText', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -235,10 +235,10 @@ describe('error extraction', () => {
       bytes: () => Promise.resolve(new Uint8Array()),
       formData: () => Promise.resolve(new FormData()),
       text: () => Promise.resolve(''),
-    });
+    })
 
-    await expect(apiGet('/api/test')).rejects.toThrow('Bad Request');
-  });
+    await expect(apiGet('/api/test')).rejects.toThrow('Bad Request')
+  })
 
   it('falls back to statusText when JSON parsing fails', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -258,40 +258,40 @@ describe('error extraction', () => {
       bytes: () => Promise.resolve(new Uint8Array()),
       formData: () => Promise.resolve(new FormData()),
       text: () => Promise.resolve(''),
-    });
+    })
 
-    await expect(apiGet('/api/test')).rejects.toThrow('Bad Gateway');
-  });
-});
+    await expect(apiGet('/api/test')).rejects.toThrow('Bad Gateway')
+  })
+})
 
 describe('mutation request headers', () => {
   it('sends exact Content-Type application/json for POST', async () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    await apiPost('/api/create', { name: 'test' });
+    await apiPost('/api/create', { name: 'test' })
 
-    const [, init] = getFetchCalls()[0];
-    const headers = init?.headers as Record<string, string>;
-    expect(headers['Content-Type']).toBe('application/json');
-  });
+    const [, init] = getFetchCalls()[0]
+    const headers = init?.headers as Record<string, string>
+    expect(headers['Content-Type']).toBe('application/json')
+  })
 
   it('sends exact Content-Type application/json for PATCH', async () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    await apiPatch('/api/update', { id: 1 });
+    await apiPatch('/api/update', { id: 1 })
 
-    const [, init] = getFetchCalls()[0];
-    const headers = init?.headers as Record<string, string>;
-    expect(headers['Content-Type']).toBe('application/json');
-  });
+    const [, init] = getFetchCalls()[0]
+    const headers = init?.headers as Record<string, string>
+    expect(headers['Content-Type']).toBe('application/json')
+  })
 
   it('does not send Content-Type for DELETE (no body)', async () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    await apiDelete('/api/remove', { id: 1 });
+    await apiDelete('/api/remove', { id: 1 })
 
-    const [, init] = getFetchCalls()[0];
-    const headers = init?.headers as Record<string, string>;
-    expect(headers['Content-Type']).toBeUndefined();
-  });
-});
+    const [, init] = getFetchCalls()[0]
+    const headers = init?.headers as Record<string, string>
+    expect(headers['Content-Type']).toBeUndefined()
+  })
+})

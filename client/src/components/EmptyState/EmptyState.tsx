@@ -1,6 +1,6 @@
 interface EmptyStateProps {
-  readonly message: string;
-  readonly variant?: 'centered';
+  readonly message: string
+  readonly variant?: 'centered'
 }
 
 export default function EmptyState({ message, variant }: EmptyStateProps) {
@@ -8,5 +8,5 @@ export default function EmptyState({ message, variant }: EmptyStateProps) {
     <div className="ssgrid-empty-state" data-testid="empty-state" data-state={variant ?? undefined}>
       {message}
     </div>
-  );
+  )
 }

@@ -1,52 +1,51 @@
-import { memo, useCallback, useMemo, useState } from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import type { ColumnNode, ViewportSettings } from '@/types/elements';
-import type { NodeKey } from '@/types/identity';
-import { useDragContext } from '@/hooks/useDragAndDrop';
-import { useGridEditorContext } from '@/hooks/GridEditorContext';
-import { useReadonly } from '@/hooks/ReadonlyContext';
-import { useViewportContext } from '@/hooks/ViewportContext';
-import { useCollapse } from '@/hooks/useCollapseState';
-import { useUpdateGridSettings, useCreateContentElement } from '@/hooks/useElementMutations';
-import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { memo, useCallback, useMemo, useState } from 'react'
+import CollapseToggle from '@/components/CollapseToggle/CollapseToggle'
+import ColumnInsertButton from '@/components/ColumnInsertButton/ColumnInsertButton'
+import DragHandle from '@/components/DragHandle/DragHandle'
+import ElementActions from '@/components/ElementActions/ElementActions'
+import ElementCard from '@/components/ElementCard/ElementCard'
+import ElementTypePicker from '@/components/ElementTypePicker/ElementTypePicker'
+import EmptyState from '@/components/EmptyState/EmptyState'
+import GridSettingsPicker from '@/components/GridSettingsPicker/GridSettingsPicker'
+import { useGridEditorContext } from '@/hooks/GridEditorContext'
+import { useReadonly } from '@/hooks/ReadonlyContext'
+import { useCollapse } from '@/hooks/useCollapseState'
+import { useDragContext } from '@/hooks/useDragAndDrop'
+import { useCreateContentElement, useUpdateGridSettings } from '@/hooks/useElementMutations'
+import { useViewportContext } from '@/hooks/ViewportContext'
+import { t } from '@/i18n'
+import type { ColumnNode, ViewportSettings } from '@/types/elements'
+import type { NodeKey } from '@/types/identity'
 import {
   getColumnCount,
+  getOffsetOptions,
   getOffsetStrategy,
   getWidthOptions,
-  getOffsetOptions,
   resolveViewportSettings,
-} from '@/utils/gridAdapter';
-import { t } from '@/i18n';
-import DragHandle from '@/components/DragHandle/DragHandle';
-import CollapseToggle from '@/components/CollapseToggle/CollapseToggle';
-import ElementActions from '@/components/ElementActions/ElementActions';
-import GridSettingsPicker from '@/components/GridSettingsPicker/GridSettingsPicker';
-import ColumnInsertButton from '@/components/ColumnInsertButton/ColumnInsertButton';
-import ElementCard from '@/components/ElementCard/ElementCard';
-import EmptyState from '@/components/EmptyState/EmptyState';
-import ElementTypePicker from '@/components/ElementTypePicker/ElementTypePicker';
+} from '@/utils/gridAdapter'
+import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
 
 /** Identifies the column gutter just before this column as a "+ insert a column here" slot. */
 interface ColumnInsertBeforeRef {
-  readonly rowId: number;
-  readonly afterColumnId: number;
+  readonly rowId: number
+  readonly afterColumnId: number
 }
 
 interface ColumnBlockProps {
-  readonly column: ColumnNode;
-  readonly insertBefore?: ColumnInsertBeforeRef;
+  readonly column: ColumnNode
+  readonly insertBefore?: ColumnInsertBeforeRef
 }
 
 function useColumnCollapse(column: ColumnNode) {
-  const { isCollapsed: isCollapsedFn, toggle } = useCollapse();
-  const isCollapsed = isCollapsedFn(column.nodeKey);
-  const onToggle = useCallback(() => toggle(column.nodeKey), [toggle, column.nodeKey]);
-  return { isCollapsed, onToggle };
+  const { isCollapsed: isCollapsedFn, toggle } = useCollapse()
+  const isCollapsed = isCollapsedFn(column.nodeKey)
+  const onToggle = useCallback(() => toggle(column.nodeKey), [toggle, column.nodeKey])
+  return { isCollapsed, onToggle }
 }
 
 function useChildElementKeys(column: ColumnNode): NodeKey[] {
-  return useMemo(() => column.children?.map((e) => e.nodeKey) ?? [], [column.children]);
+  return useMemo(() => column.children?.map((e) => e.nodeKey) ?? [], [column.children])
 }
 
 /**
@@ -59,22 +58,22 @@ function useChildElementKeys(column: ColumnNode): NodeKey[] {
  * viewer still re-layouts the readonly tree.
  */
 const ColumnBlock = memo(function ColumnBlock({ column, insertBefore }: ColumnBlockProps) {
-  const readonly = useReadonly();
+  const readonly = useReadonly()
   return readonly ? (
     <ReadonlyColumnBlock column={column} />
   ) : (
     <EditableColumnBlock column={column} insertBefore={insertBefore} />
-  );
-});
+  )
+})
 
-export default ColumnBlock;
+export default ColumnBlock
 
 function buildColumnStyle(
   settings: ViewportSettings,
   sortableStyle: React.CSSProperties,
 ): React.CSSProperties {
-  const columnCount = getColumnCount();
-  const strategy = getOffsetStrategy();
+  const columnCount = getColumnCount()
+  const strategy = getOffsetStrategy()
 
   if (strategy === 'margin') {
     return {
@@ -83,46 +82,46 @@ function buildColumnStyle(
       ...(settings.offset > 0
         ? { '--col-offset': `${(settings.offset / columnCount) * 100}%` }
         : {}),
-    } as React.CSSProperties;
+    } as React.CSSProperties
   }
 
   return {
     ...sortableStyle,
     '--col-span': String(settings.width),
     ...(settings.offset > 0 ? { '--col-start': String(settings.offset + 1) } : {}),
-  } as React.CSSProperties;
+  } as React.CSSProperties
 }
 
 function EditableColumnBlock({ column, insertBefore }: ColumnBlockProps) {
-  const { activeViewport } = useViewportContext();
-  const { pageId, zone } = useGridEditorContext();
-  const columnCount = getColumnCount();
+  const { activeViewport } = useViewportContext()
+  const { pageId, zone } = useGridEditorContext()
+  const columnCount = getColumnCount()
   // Stabilise `settings` so downstream useCallback/useMemo dependencies don't
   // see a fresh object identity on every render of an unrelated parent.
   const settings = useMemo(
     () => resolveViewportSettings(column.gridSettings, activeViewport),
     [column.gridSettings, activeViewport],
-  );
-  const status = column.status;
-  const { isCollapsed, onToggle } = useColumnCollapse(column);
-  const { activeType, pendingActive } = useDragContext();
-  const updateGridSettings = useUpdateGridSettings(pageId, zone);
-  const createContentElement = useCreateContentElement(pageId, zone);
-  const [isPickerOpen, setPickerOpen] = useState(false);
+  )
+  const status = column.status
+  const { isCollapsed, onToggle } = useColumnCollapse(column)
+  const { activeType, pendingActive } = useDragContext()
+  const updateGridSettings = useUpdateGridSettings(pageId, zone)
+  const createContentElement = useCreateContentElement(pageId, zone)
+  const [isPickerOpen, setPickerOpen] = useState(false)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
-    useSortable({ id: column.nodeKey });
+    useSortable({ id: column.nodeKey })
 
-  const childKeys = useChildElementKeys(column);
+  const childKeys = useChildElementKeys(column)
 
-  const showDropTarget = isOver && activeType === 'column';
-  const isDragActive = activeType !== null;
-  const isPickerDisabled = isDragActive || updateGridSettings.isPending;
+  const showDropTarget = isOver && activeType === 'column'
+  const isDragActive = activeType !== null
+  const isPickerDisabled = isDragActive || updateGridSettings.isPending
 
   const columnStyle = useMemo(
     () => buildColumnStyle(settings, buildSortableStyle(transform, transition, isDragging)),
     [settings, transform, transition, isDragging],
-  );
+  )
 
   // A margin offset before this column widens the gutter the "+ insert here"
   // handle sits in; shift the handle (as a % of the column width) back to that
@@ -131,17 +130,17 @@ function EditableColumnBlock({ column, insertBefore }: ColumnBlockProps) {
   const gutterShiftPct =
     getOffsetStrategy() === 'margin' && settings.offset > 0
       ? (settings.offset / settings.width) * 50
-      : 0;
+      : 0
 
-  const widthOptions = getWidthOptions();
-  const offsetOptions = getOffsetOptions(settings.width);
+  const widthOptions = getWidthOptions()
+  const offsetOptions = getOffsetOptions(settings.width)
 
-  const widthLabel = settings.visible ? `${settings.width}/${columnCount}` : 'hidden';
+  const widthLabel = settings.visible ? `${settings.width}/${columnCount}` : 'hidden'
 
-  const widthSelectedValue = settings.visible ? settings.width : ('hidden' as const);
+  const widthSelectedValue = settings.visible ? settings.width : ('hidden' as const)
 
-  const offsetLabel = settings.offset === 0 ? 'none' : `+${settings.offset}`;
-  const isOffsetDisabled = isPickerDisabled || settings.width === columnCount || !settings.visible;
+  const offsetLabel = settings.offset === 0 ? 'none' : `+${settings.offset}`
+  const isOffsetDisabled = isPickerDisabled || settings.width === columnCount || !settings.visible
 
   const updateSettings = useCallback(
     (patch: Partial<ViewportSettings>) => {
@@ -150,54 +149,54 @@ function EditableColumnBlock({ column, insertBefore }: ColumnBlockProps) {
         viewport: activeViewport,
         ...settings,
         ...patch,
-      });
+      })
     },
     [column.self, activeViewport, settings, updateGridSettings],
-  );
+  )
 
   const handleWidthSelect = useCallback(
     (value: number | 'hidden') => {
       if (value === 'hidden') {
-        updateSettings({ visible: false });
+        updateSettings({ visible: false })
       } else {
-        const clampedOffset = Math.min(settings.offset, columnCount - value);
-        updateSettings({ width: value, visible: true, offset: clampedOffset });
+        const clampedOffset = Math.min(settings.offset, columnCount - value)
+        updateSettings({ width: value, visible: true, offset: clampedOffset })
       }
     },
     [updateSettings, columnCount, settings.offset],
-  );
+  )
 
   const handleOffsetSelect = useCallback(
     (value: number | 'hidden') => {
       if (typeof value === 'number') {
-        updateSettings({ offset: value });
+        updateSettings({ offset: value })
       }
     },
     [updateSettings],
-  );
+  )
 
   const handleOpenPicker = useCallback(() => {
-    setPickerOpen(true);
-  }, []);
+    setPickerOpen(true)
+  }, [])
 
   const handleClosePicker = useCallback(() => {
-    setPickerOpen(false);
-  }, []);
+    setPickerOpen(false)
+  }, [])
 
   const handleTypeSelect = useCallback(
     (className: string) => {
       createContentElement.mutate({
         className,
         parent: column.self,
-      });
+      })
     },
     [createContentElement, column.self],
-  );
+  )
 
-  const children = column.children ?? [];
-  const allowedTypes = column.allowedTypes ?? {};
-  const hasChildren = children.length > 0;
-  const hasAllowedTypes = Object.keys(allowedTypes).length > 0;
+  const children = column.children ?? []
+  const allowedTypes = column.allowedTypes ?? {}
+  const hasChildren = children.length > 0
+  const hasAllowedTypes = Object.keys(allowedTypes).length > 0
 
   return (
     <div
@@ -310,20 +309,20 @@ function EditableColumnBlock({ column, insertBefore }: ColumnBlockProps) {
         />
       )}
     </div>
-  );
+  )
 }
 
 function ReadonlyColumnBlock({ column }: ColumnBlockProps) {
-  const { activeViewport } = useViewportContext();
-  const settings = resolveViewportSettings(column.gridSettings, activeViewport);
-  const status = column.status;
-  const { isCollapsed, onToggle } = useColumnCollapse(column);
+  const { activeViewport } = useViewportContext()
+  const settings = resolveViewportSettings(column.gridSettings, activeViewport)
+  const status = column.status
+  const { isCollapsed, onToggle } = useColumnCollapse(column)
 
   // No sortable transform in readonly mode — pass empty style and let
   // buildColumnStyle layer the --col-width / --col-span variables on top.
-  const columnStyle = buildColumnStyle(settings, {});
+  const columnStyle = buildColumnStyle(settings, {})
 
-  const children = column.children ?? [];
+  const children = column.children ?? []
 
   return (
     <div style={columnStyle} className="ssgrid-column" data-testid="column-block-outer">
@@ -365,5 +364,5 @@ function ReadonlyColumnBlock({ column }: ColumnBlockProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

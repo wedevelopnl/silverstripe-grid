@@ -1,4 +1,4 @@
-import { getViewports } from '@/utils/gridAdapter';
+import { getViewports } from '@/utils/gridAdapter'
 
 /**
  * Wrapper around the vendor (`silverstripe/admin`) CMS preview bar.
@@ -14,9 +14,9 @@ import { getViewports } from '@/utils/gridAdapter';
  * to update — nothing outside it should need to change.
  */
 
-const VENDOR_SELECT_ID = 'preview-size-dropdown-select';
-const VENDOR_WRAPPER_ID = 'preview-size-dropdown';
-const VENDOR_ROOT_SELECTOR = '.cms-preview';
+const VENDOR_SELECT_ID = 'preview-size-dropdown-select'
+const VENDOR_WRAPPER_ID = 'preview-size-dropdown'
+const VENDOR_ROOT_SELECTOR = '.cms-preview'
 /**
  * The vendor applies device-frame styling (border, centering, rotate
  * affordance, dimension readout) only when `.cms-preview` carries one
@@ -24,36 +24,36 @@ const VENDOR_ROOT_SELECTOR = '.cms-preview';
  * it enables both the frame AND the rotate hint, and its orientation
  * matches the orientation our overrides will write.
  */
-const VENDOR_FRAME_CLASS = 'tablet';
-const ENTWINE_NAMESPACE = 'ss.preview';
+const VENDOR_FRAME_CLASS = 'tablet'
+const ENTWINE_NAMESPACE = 'ss.preview'
 
-type JQueryLike = ((selector: string) => JQuerySelection) | undefined;
+type JQueryLike = ((selector: string) => JQuerySelection) | undefined
 interface JQuerySelection {
-  length: number;
-  entwine?: (namespace: string) => EntwinePreviewNamespace;
-  addClass: (cls: string) => unknown;
-  removeClass: (cls: string) => unknown;
+  length: number
+  entwine?: (namespace: string) => EntwinePreviewNamespace
+  addClass: (cls: string) => unknown
+  removeClass: (cls: string) => unknown
 }
 interface EntwinePreviewNamespace {
-  changeSize?: (size: string) => unknown;
+  changeSize?: (size: string) => unknown
 }
 
 function getJQuery(): JQueryLike {
-  return (window as unknown as { jQuery?: JQueryLike }).jQuery;
+  return (window as unknown as { jQuery?: JQueryLike }).jQuery
 }
 
 function getEntwine(): EntwinePreviewNamespace | null {
-  const jq = getJQuery();
-  if (typeof jq !== 'function') return null;
-  const selection = jq(VENDOR_ROOT_SELECTOR);
-  if (selection.length === 0 || typeof selection.entwine !== 'function') return null;
+  const jq = getJQuery()
+  if (typeof jq !== 'function') return null
+  const selection = jq(VENDOR_ROOT_SELECTOR)
+  if (selection.length === 0 || typeof selection.entwine !== 'function') return null
   try {
-    const ns = selection.entwine(ENTWINE_NAMESPACE);
-    if (typeof ns.changeSize !== 'function') return null;
-    return ns;
+    const ns = selection.entwine(ENTWINE_NAMESPACE)
+    if (typeof ns.changeSize !== 'function') return null
+    return ns
   } catch (error: unknown) {
-    console.warn('[GridEditor] Could not resolve ss.preview entwine namespace.', error);
-    return null;
+    console.warn('[GridEditor] Could not resolve ss.preview entwine namespace.', error)
+    return null
   }
 }
 
@@ -61,7 +61,7 @@ function getEntwine(): EntwinePreviewNamespace | null {
 function gridClasses(): string {
   return getViewports()
     .map((vp) => `grid-${vp.key}`)
-    .join(' ');
+    .join(' ')
 }
 
 export interface VendorPreview {
@@ -70,10 +70,10 @@ export interface VendorPreview {
    * into its parent. The returned host is where the bridge mounts its
    * React root.
    */
-  takeOver(hostClassName: string): HTMLElement;
+  takeOver(hostClassName: string): HTMLElement
 
   /** Undo `takeOver`: remove the host and re-show the vendor wrapper. */
-  release(): void;
+  release(): void
 
   /**
    * Apply a viewport key. Uses the vendor `changeSize` path so the
@@ -84,14 +84,14 @@ export interface VendorPreview {
    * No-op if vendor entwine isn't ready yet — caller should await
    * `whenReady()` before the initial apply.
    */
-  applyViewport(key: string): void;
+  applyViewport(key: string): void
 
   /**
    * Restore the vendor preview to its default `auto` state and strip
    * any lingering `grid-<key>` classes. Used on teardown so unrelated
    * admin pages don't inherit our carrier class.
    */
-  resetToAuto(): void;
+  resetToAuto(): void
 
   /**
    * Resolve once vendor entwine has attached to `.cms-preview`. Best-
@@ -100,7 +100,7 @@ export interface VendorPreview {
    * `applyViewport` call will no-op. The idea is to give vendor boot
    * one chance to catch up without building a retry loop.
    */
-  whenReady(): Promise<void>;
+  whenReady(): Promise<void>
 }
 
 /**
@@ -108,83 +108,83 @@ export interface VendorPreview {
  * expected vendor DOM (select + wrapper) isn't present.
  */
 export function openVendorPreview(): VendorPreview | null {
-  const select = document.getElementById(VENDOR_SELECT_ID);
-  const wrapper = document.getElementById(VENDOR_WRAPPER_ID);
+  const select = document.getElementById(VENDOR_SELECT_ID)
+  const wrapper = document.getElementById(VENDOR_WRAPPER_ID)
   if (select === null || wrapper === null || !(wrapper instanceof HTMLElement)) {
-    return null;
+    return null
   }
 
-  let host: HTMLElement | null = null;
+  let host: HTMLElement | null = null
 
   const takeOver = (hostClassName: string): HTMLElement => {
-    wrapper.style.display = 'none';
+    wrapper.style.display = 'none'
     // Use a div (not span) because the React component's root is a div
     // and span > div is invalid HTML that some browsers silently fix by
     // closing the span early.
-    host = document.createElement('div');
-    host.className = hostClassName;
-    wrapper.parentElement?.insertBefore(host, wrapper);
-    return host;
-  };
+    host = document.createElement('div')
+    host.className = hostClassName
+    wrapper.parentElement?.insertBefore(host, wrapper)
+    return host
+  }
 
   const release = (): void => {
     if (host !== null) {
-      host.remove();
-      host = null;
+      host.remove()
+      host = null
     }
-    wrapper.style.display = '';
-  };
+    wrapper.style.display = ''
+  }
 
   const applyViewport = (key: string): void => {
-    const ns = getEntwine();
-    if (ns === null) return;
+    const ns = getEntwine()
+    if (ns === null) return
     try {
       // 1. Vendor changeSize applies the carrier class (frame styling),
       //    persists the choice, and redraws the iframe.
-      ns.changeSize?.(VENDOR_FRAME_CLASS);
+      ns.changeSize?.(VENDOR_FRAME_CLASS)
       // 2. Vendor only strips its own four known class names, so any
       //    previously-applied grid-<key> stays until we strip it.
-      const jq = getJQuery();
-      if (typeof jq !== 'function') return;
-      const selection = jq(VENDOR_ROOT_SELECTOR);
-      const classes = gridClasses();
-      if (classes !== '') selection.removeClass(classes);
-      selection.addClass(`grid-${key}`);
+      const jq = getJQuery()
+      if (typeof jq !== 'function') return
+      const selection = jq(VENDOR_ROOT_SELECTOR)
+      const classes = gridClasses()
+      if (classes !== '') selection.removeClass(classes)
+      selection.addClass(`grid-${key}`)
     } catch (error: unknown) {
-      console.warn('[GridEditor] Vendor applyViewport failed.', error);
+      console.warn('[GridEditor] Vendor applyViewport failed.', error)
     }
-  };
+  }
 
   const resetToAuto = (): void => {
-    const ns = getEntwine();
-    const jq = getJQuery();
+    const ns = getEntwine()
+    const jq = getJQuery()
     try {
-      ns?.changeSize?.('auto');
+      ns?.changeSize?.('auto')
       if (typeof jq === 'function') {
-        const classes = gridClasses();
-        if (classes !== '') jq(VENDOR_ROOT_SELECTOR).removeClass(classes);
+        const classes = gridClasses()
+        if (classes !== '') jq(VENDOR_ROOT_SELECTOR).removeClass(classes)
       }
     } catch {
       // best-effort cleanup
     }
-  };
+  }
 
   const whenReady = (): Promise<void> =>
     new Promise<void>((resolve) => {
       if (getEntwine() !== null) {
-        resolve();
-        return;
+        resolve()
+        return
       }
       // Single retry on the next frame. If entwine still isn't ready
       // by then, resolve anyway and let the first applyViewport no-op.
       // Users hitting this path will see the initial preview at the
       // vendor default; a subsequent viewport click recovers.
       if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => resolve());
+        requestAnimationFrame(() => resolve())
       } else {
-        resolve();
+        resolve()
       }
-    });
+    })
 
-  return { takeOver, release, applyViewport, resetToAuto, whenReady };
+  return { takeOver, release, applyViewport, resetToAuto, whenReady }
 }

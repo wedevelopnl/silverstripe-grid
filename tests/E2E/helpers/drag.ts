@@ -1,5 +1,5 @@
-import { expect } from '@playwright/test';
-import type { Locator, Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test'
+import { expect } from '@playwright/test'
 
 /**
  * Returns the viewport-relative center coordinates of a locator.
@@ -8,11 +8,11 @@ import type { Locator, Page } from '@playwright/test';
  * measuring to avoid scroll-induced coordinate drift.
  */
 async function getCenter(locator: Locator): Promise<{ x: number; y: number }> {
-  const box = await locator.boundingBox();
+  const box = await locator.boundingBox()
   if (box === null) {
-    throw new Error('Element not visible — cannot compute center for drag');
+    throw new Error('Element not visible — cannot compute center for drag')
   }
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
 
 /**
@@ -21,7 +21,7 @@ async function getCenter(locator: Locator): Promise<{ x: number; y: number }> {
  * updates are batched and rendered asynchronously.
  */
 function tick(page: Page, ms = 100): Promise<void> {
-  return page.waitForTimeout(ms);
+  return page.waitForTimeout(ms)
 }
 
 /**
@@ -39,7 +39,7 @@ function tick(page: Page, ms = 100): Promise<void> {
 
 interface DragHandle {
   /** Release the mouse to complete the drop. */
-  release: () => Promise<void>;
+  release: () => Promise<void>
 }
 
 /**
@@ -51,51 +51,47 @@ interface DragHandle {
  * Both `source` and `target` should be drag-handle locators
  * (or any visible element whose center is the desired pointer position).
  */
-export async function startDrag(
-  page: Page,
-  source: Locator,
-  target: Locator,
-): Promise<DragHandle> {
+export async function startDrag(page: Page, source: Locator, target: Locator): Promise<DragHandle> {
   // Scroll both elements into view before measuring. Target first (further
   // down), then source (closer to top) — scrolling the source last ensures
   // its coordinates are fresh for the imminent mouse-down. Without this,
   // scrolling the target can shift the source out of its measured position.
-  await target.scrollIntoViewIfNeeded();
-  await source.scrollIntoViewIfNeeded();
+  await target.scrollIntoViewIfNeeded()
+  await source.scrollIntoViewIfNeeded()
 
-  const from = await getCenter(source);
-  const to = await getCenter(target);
+  const from = await getCenter(source)
+  const to = await getCenter(target)
 
   // Move to source center and press
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
 
   // Move 10px toward target to exceed PointerSensor's 8px activation threshold
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  const activationX = from.x + (dx / dist) * 10;
-  const activationY = from.y + (dy / dist) * 10;
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const dist = Math.sqrt(dx * dx + dy * dy)
+  const activationX = from.x + (dx / dist) * 10
+  const activationY = from.y + (dy / dist) * 10
 
-  await page.mouse.move(activationX, activationY, { steps: 3 });
+  await page.mouse.move(activationX, activationY, { steps: 3 })
 
   // Let dnd-kit activate the drag and React render the DragOverlay
-  await tick(page, 150);
+  await tick(page, 150)
 
   // Move to target center with many steps for smooth pointer tracking.
   // dnd-kit updates collision detection on each pointermove event.
-  await page.mouse.move(to.x, to.y, { steps: 20 });
+  await page.mouse.move(to.x, to.y, { steps: 20 })
 
   // Let collision detection settle at the final position
-  await tick(page, 150);
+  await tick(page, 150)
 
   return {
     release: async () => {
-      await page.mouse.up();
+      await page.mouse.up()
       // Let React process the onDragEnd state update
-      await tick(page, 150);
+      await tick(page, 150)
     },
-  };
+  }
 }
 
 /**
@@ -104,13 +100,9 @@ export async function startDrag(
  * Both `source` and `target` should be drag-handle locators
  * (or any visible element whose center is the desired pointer position).
  */
-export async function performDrag(
-  page: Page,
-  source: Locator,
-  target: Locator,
-): Promise<void> {
-  const handle = await startDrag(page, source, target);
-  await handle.release();
+export async function performDrag(page: Page, source: Locator, target: Locator): Promise<void> {
+  const handle = await startDrag(page, source, target)
+  await handle.release()
 }
 
 /**
@@ -126,20 +118,20 @@ export async function performDrag(
 export function waitForMutationSettlement(page: Page) {
   const reorderDone = page.waitForResponse(
     (resp) => resp.url().includes('/api/reorder') && resp.ok(),
-  );
+  )
   const refetchDone = page.waitForResponse(
     (resp) => resp.url().includes('/api/readTree/') && resp.ok(),
-  );
+  )
 
   return async () => {
-    await reorderDone;
-    await refetchDone;
+    await reorderDone
+    await refetchDone
     // After the refetch response arrives, TanStack Query updates its
     // cache asynchronously, React batches a re-render, and dnd-kit
     // re-registers droppable rects. A 500ms pause lets this full
     // chain settle before the next drag measures element positions.
-    await page.waitForTimeout(500);
-  };
+    await page.waitForTimeout(500)
+  }
 }
 
 /**
@@ -148,19 +140,19 @@ export function waitForMutationSettlement(page: Page) {
  * into a single call for cross-container drop tests.
  */
 export async function dropAndSettle(page: Page, targetX: number, targetY: number) {
-  await page.mouse.move(targetX, targetY, { steps: 15 });
-  await page.waitForTimeout(200);
+  await page.mouse.move(targetX, targetY, { steps: 15 })
+  await page.waitForTimeout(200)
 
-  const settle = waitForMutationSettlement(page);
-  await page.mouse.up();
-  await settle();
+  const settle = waitForMutationSettlement(page)
+  await page.mouse.up()
+  await settle()
 }
 
 interface ActivateDragOptions {
   /** Axis for the 10px activation move. Default: 'vertical' (y+10). */
-  axis?: 'vertical' | 'horizontal';
+  axis?: 'vertical' | 'horizontal'
   /** If provided, asserts this overlay test ID is visible after activation. */
-  overlayTestId?: string;
+  overlayTestId?: string
 }
 
 /**
@@ -176,28 +168,28 @@ export async function activateDragByTitle(
   title: string,
   options: ActivateDragOptions = {},
 ): Promise<{ x: number; y: number }> {
-  const { axis = 'vertical', overlayTestId } = options;
+  const { axis = 'vertical', overlayTestId } = options
 
-  const handle = page.locator(`[data-testid="drag-handle"][aria-label="Move ${title}"]`);
-  await handle.scrollIntoViewIfNeeded();
-  const box = await handle.boundingBox();
+  const handle = page.locator(`[data-testid="drag-handle"][aria-label="Move ${title}"]`)
+  await handle.scrollIntoViewIfNeeded()
+  const box = await handle.boundingBox()
   if (box === null) {
-    throw new Error(`Drag handle for "${title}" not visible — cannot activate drag`);
+    throw new Error(`Drag handle for "${title}" not visible — cannot activate drag`)
   }
-  const x = box.x + box.width / 2;
-  const y = box.y + box.height / 2;
+  const x = box.x + box.width / 2
+  const y = box.y + box.height / 2
 
-  await page.mouse.move(x, y);
-  await page.mouse.down();
+  await page.mouse.move(x, y)
+  await page.mouse.down()
 
-  const moveX = axis === 'horizontal' ? x + 10 : x;
-  const moveY = axis === 'vertical' ? y + 10 : y;
-  await page.mouse.move(moveX, moveY, { steps: 3 });
-  await page.waitForTimeout(150);
+  const moveX = axis === 'horizontal' ? x + 10 : x
+  const moveY = axis === 'vertical' ? y + 10 : y
+  await page.mouse.move(moveX, moveY, { steps: 3 })
+  await page.waitForTimeout(150)
 
   if (overlayTestId) {
-    await expect(page.getByTestId(overlayTestId)).toBeVisible();
+    await expect(page.getByTestId(overlayTestId)).toBeVisible()
   }
 
-  return { x, y };
+  return { x, y }
 }

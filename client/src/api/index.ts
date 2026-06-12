@@ -1,12 +1,12 @@
-export { ApiError, ConfigError } from './errors';
-export { getConfig, getSecurityId, getControllerLink } from './config';
-export { apiGet, apiPost, apiPatch, apiDelete } from './client';
+export { apiDelete, apiGet, apiPatch, apiPost } from './client'
+export { getConfig, getControllerLink, getSecurityId } from './config'
+export type { CreateElementParams } from './endpoints'
 export {
-  fetchElementTree,
+  archiveElement,
   createElement,
+  duplicateElement,
+  fetchElementTree,
   publishElement,
   unpublishElement,
-  archiveElement,
-  duplicateElement,
-} from './endpoints';
-export type { CreateElementParams } from './endpoints';
+} from './endpoints'
+export { ApiError, ConfigError } from './errors'

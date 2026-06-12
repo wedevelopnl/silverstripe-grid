@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePages, useZones, useAcceptableContainers } from '@/hooks/useDuplicateToQueries';
-import { t } from '@/i18n';
-import type { NodeRef, NodeType } from '@/types/identity';
-import type { ElementTypeKey } from '@/utils/getElementType';
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useAcceptableContainers, usePages, useZones } from '@/hooks/useDuplicateToQueries'
+import { t } from '@/i18n'
+import type { NodeRef, NodeType } from '@/types/identity'
+import type { ElementTypeKey } from '@/utils/getElementType'
 
-type Step = 'page' | 'zone' | 'container' | 'confirm';
+type Step = 'page' | 'zone' | 'container' | 'confirm'
 
 /**
  * Maps a grid element type to the type of its expected parent. Total over
@@ -16,15 +16,15 @@ const PARENT_TYPE_FOR_ELEMENT = {
   row: 'section',
   column: 'row',
   element: 'column',
-} as const satisfies Record<ElementTypeKey, NodeType>;
+} as const satisfies Record<ElementTypeKey, NodeType>
 
 interface DuplicateToDialogProps {
-  readonly isOpen: boolean;
-  readonly elementType: ElementTypeKey;
-  readonly currentPageId: number;
-  readonly onConfirm: (targetPageId: number, targetZone: string, targetParent: NodeRef) => void;
-  readonly onCancel: () => void;
-  readonly error?: string | null;
+  readonly isOpen: boolean
+  readonly elementType: ElementTypeKey
+  readonly currentPageId: number
+  readonly onConfirm: (targetPageId: number, targetZone: string, targetParent: NodeRef) => void
+  readonly onCancel: () => void
+  readonly error?: string | null
 }
 
 export default function DuplicateToDialog({
@@ -35,57 +35,57 @@ export default function DuplicateToDialog({
   onCancel,
   error,
 }: DuplicateToDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null)
 
-  const [step, setStep] = useState<Step>('page');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedPageId, setSelectedPageId] = useState<number>(currentPageId);
-  const [selectedZone, setSelectedZone] = useState<string | null>(null);
-  const [selectedContainerId, setSelectedContainerId] = useState<number | null>(null);
+  const [step, setStep] = useState<Step>('page')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [selectedPageId, setSelectedPageId] = useState<number>(currentPageId)
+  const [selectedZone, setSelectedZone] = useState<string | null>(null)
+  const [selectedContainerId, setSelectedContainerId] = useState<number | null>(null)
 
   // Stryker disable next-line BlockStatement: Equivalent — timer-based debounce is not observable in synchronous unit tests (fake-timers collide with TanStack Query's internal timers)
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+      setDebouncedSearch(searchTerm)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
   // Reset state when dialog opens
   // Stryker disable next-line ConditionalExpression: Equivalent — the reset values equal initial state, so dropping the isOpen guard only matters on close→reopen, which in practice re-mounts the dialog under the CMS (tested via renderWithProviders lifecycle)
   useEffect(() => {
     if (isOpen) {
-      setStep('page');
-      setSearchTerm('');
-      setDebouncedSearch('');
-      setSelectedPageId(currentPageId);
-      setSelectedZone(null);
-      setSelectedContainerId(null);
+      setStep('page')
+      setSearchTerm('')
+      setDebouncedSearch('')
+      setSelectedPageId(currentPageId)
+      setSelectedZone(null)
+      setSelectedContainerId(null)
     }
-  }, [isOpen, currentPageId]);
+  }, [isOpen, currentPageId])
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
+    const dialog = dialogRef.current
+    if (dialog === null) return
 
     if (isOpen && !dialog.open) {
-      dialog.showModal();
+      dialog.showModal()
     } else if (!isOpen && dialog.open) {
-      dialog.close();
+      dialog.close()
     }
-  }, [isOpen]);
+  }, [isOpen])
 
   const handleClose = useCallback(() => {
-    onCancel();
-  }, [onCancel]);
+    onCancel()
+  }, [onCancel])
 
   // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — TanStack Query enabled flag doesn't affect mocked test data
-  const pages = usePages(debouncedSearch, step === 'page');
+  const pages = usePages(debouncedSearch, step === 'page')
   // Keep zones queried on 'confirm' too — goBack needs zones.data to decide
   // whether to return to 'page' (single zone) or 'zone' (multi-zone).
   // Stryker disable next-line ConditionalExpression,EqualityOperator,LogicalOperator: Equivalent — TanStack Query enabled flag doesn't affect mocked test data
-  const zones = useZones(step !== 'page' ? selectedPageId : null);
+  const zones = useZones(step !== 'page' ? selectedPageId : null)
   const containers = useAcceptableContainers(
     // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — TanStack Query enabled flag doesn't affect mocked test data
     step === 'container' ? selectedPageId : null,
@@ -93,74 +93,74 @@ export default function DuplicateToDialog({
     step === 'container' ? selectedZone : null,
     // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — TanStack Query enabled flag doesn't affect mocked test data
     step === 'container' ? elementType : null,
-  );
+  )
 
   const handlePageSelect = useCallback((pageId: number) => {
-    setSelectedPageId(pageId);
-  }, []);
+    setSelectedPageId(pageId)
+  }, [])
 
   const advanceFromPage = useCallback(() => {
-    setStep('zone');
-  }, []);
+    setStep('zone')
+  }, [])
 
   // Auto-select zone and advance when there is exactly one zone
   useEffect(() => {
     if (step === 'zone' && zones.data !== undefined && zones.data.length === 1) {
-      setSelectedZone(zones.data[0]);
+      setSelectedZone(zones.data[0])
       if (elementType === 'section') {
         // Sections need no container selection — show confirmation step
-        setStep('confirm');
+        setStep('confirm')
       } else {
-        setStep('container');
+        setStep('container')
       }
     }
-  }, [step, zones.data, elementType]);
+  }, [step, zones.data, elementType])
 
   const handleZoneSelect = useCallback((zone: string) => {
-    setSelectedZone(zone);
-  }, []);
+    setSelectedZone(zone)
+  }, [])
 
   const advanceFromZone = useCallback(() => {
-    if (selectedZone === null) return;
+    if (selectedZone === null) return
 
     if (elementType === 'section') {
-      setStep('confirm');
+      setStep('confirm')
     } else {
-      setStep('container');
+      setStep('container')
     }
-  }, [elementType, selectedZone]);
+  }, [elementType, selectedZone])
 
   const handleContainerSelect = useCallback((containerId: number) => {
-    setSelectedContainerId(containerId);
-  }, []);
+    setSelectedContainerId(containerId)
+  }, [])
 
   const handleConfirm = useCallback(() => {
-    if (selectedZone === null) return;
+    if (selectedZone === null) return
 
     if (step === 'confirm') {
       // Section duplication — page is the parent.
-      onConfirm(selectedPageId, selectedZone, { type: 'page', id: selectedPageId });
+      onConfirm(selectedPageId, selectedZone, { type: 'page', id: selectedPageId })
     } else if (selectedContainerId !== null) {
-      const parentType = PARENT_TYPE_FOR_ELEMENT[elementType];
-      onConfirm(selectedPageId, selectedZone, { type: parentType, id: selectedContainerId });
+      const parentType = PARENT_TYPE_FOR_ELEMENT[elementType]
+      onConfirm(selectedPageId, selectedZone, { type: parentType, id: selectedContainerId })
     }
-  }, [onConfirm, selectedPageId, selectedZone, selectedContainerId, step, elementType]);
+  }, [onConfirm, selectedPageId, selectedZone, selectedContainerId, step, elementType])
 
   const goBack = useCallback(() => {
     if (step === 'zone') {
-      setStep('page');
-      setSelectedZone(null);
+      setStep('page')
+      setSelectedZone(null)
     } else if (step === 'container') {
-      setStep('zone');
-      setSelectedContainerId(null);
+      setStep('zone')
+      setSelectedContainerId(null)
     } else if (step === 'confirm') {
-      setSelectedZone(null);
+      setSelectedZone(null)
       // When there's only one zone, the zone step auto-advances — going back
       // to 'zone' would immediately bounce forward again, silently breaking
       // the back button. Skip straight to 'page' instead.
-      setStep(zones.data !== undefined && zones.data.length === 1 ? 'page' : 'zone');
+      setStep(zones.data !== undefined && zones.data.length === 1 ? 'page' : 'zone')
     }
-  }, [step, zones.data]);
+  }, [step, zones.data])
 
   return (
     <dialog
@@ -175,8 +175,8 @@ export default function DuplicateToDialog({
       // disabled for this file via biome.json overrides (<dialog> is natively
       // interactive; biome's a11y rules do not recognize it).
       onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault()
+        e.stopPropagation()
       }}
     >
       <div className="ssgrid-dialog__header">
@@ -228,7 +228,7 @@ export default function DuplicateToDialog({
                     onKeyDown={
                       page.hasGridZones
                         ? (e) => {
-                            if (e.key === 'Enter' || e.key === ' ') handlePageSelect(page.id);
+                            if (e.key === 'Enter' || e.key === ' ') handlePageSelect(page.id)
                           }
                         : undefined
                     }
@@ -264,7 +264,7 @@ export default function DuplicateToDialog({
                     data-testid="duplicate-to-zone-item"
                     onClick={() => handleZoneSelect(zone)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') handleZoneSelect(zone);
+                      if (e.key === 'Enter' || e.key === ' ') handleZoneSelect(zone)
                     }}
                     tabIndex={0}
                   >
@@ -309,7 +309,7 @@ export default function DuplicateToDialog({
                     data-testid="duplicate-to-container-item"
                     onClick={() => handleContainerSelect(container.id)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') handleContainerSelect(container.id);
+                      if (e.key === 'Enter' || e.key === ' ') handleContainerSelect(container.id)
                     }}
                     tabIndex={0}
                   >
@@ -405,5 +405,5 @@ export default function DuplicateToDialog({
         </div>
       </div>
     </dialog>
-  );
+  )
 }

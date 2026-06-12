@@ -2,14 +2,14 @@
  * Thrown when an API request returns a non-OK HTTP status.
  */
 export class ApiError extends Error {
-  readonly status: number;
-  readonly statusText: string;
+  readonly status: number
+  readonly statusText: string
 
   constructor(status: number, statusText: string) {
-    super(`API error ${status}: ${statusText}`);
-    this.name = 'ApiError';
-    this.status = status;
-    this.statusText = statusText;
+    super(`API error ${status}: ${statusText}`)
+    this.name = 'ApiError'
+    this.status = status
+    this.statusText = statusText
   }
 }
 
@@ -19,7 +19,7 @@ export class ApiError extends Error {
  */
 export class ConfigError extends Error {
   constructor(message: string) {
-    super(message);
-    this.name = 'ConfigError';
+    super(message)
+    this.name = 'ConfigError'
   }
 }

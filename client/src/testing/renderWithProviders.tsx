@@ -1,29 +1,29 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, type RenderResult } from '@testing-library/react';
-import { StrictMode, type ReactNode } from 'react';
-import { vi } from 'vitest';
-import { GridEditorProvider } from '@/hooks/GridEditorContext';
-import { ViewportProvider } from '@/hooks/ViewportContext';
-import { CollapseContext, type CollapseState } from '@/hooks/useCollapseState';
-import type { NodeKey } from '@/types/identity';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { type RenderResult, render } from '@testing-library/react'
+import { type ReactNode, StrictMode } from 'react'
+import { vi } from 'vitest'
+import { GridEditorProvider } from '@/hooks/GridEditorContext'
+import { CollapseContext, type CollapseState } from '@/hooks/useCollapseState'
+import { ViewportProvider } from '@/hooks/ViewportContext'
+import type { NodeKey } from '@/types/identity'
 
 export interface RenderOptions {
-  pageId?: number;
-  zone?: string;
-  viewport?: string;
-  queryClient?: QueryClient;
+  pageId?: number
+  zone?: string
+  viewport?: string
+  queryClient?: QueryClient
   /**
    * Seed which node keys start out collapsed. Wraps the rendered tree in a
    * {@link CollapseContext.Provider} whose `toggle` is a `vi.fn()` — tests
    * that want to assert on toggling should capture the mock via
    * `createCollapseStateStub` and pass it directly.
    */
-  collapsedKeys?: Iterable<NodeKey>;
+  collapsedKeys?: Iterable<NodeKey>
   /**
    * Explicit collapse state to inject. Overrides `collapsedKeys`. Use when a
    * test needs to spy on `toggle` or inspect the stub's mock calls.
    */
-  collapseState?: CollapseState;
+  collapseState?: CollapseState
 }
 
 /**
@@ -32,24 +32,24 @@ export interface RenderOptions {
  * the set — so tests can both assert calls and observe state transitions.
  */
 export function createCollapseStateStub(seed: Iterable<NodeKey> = []): CollapseState & {
-  toggle: ReturnType<typeof vi.fn>;
+  toggle: ReturnType<typeof vi.fn>
 } {
-  const collapsed = new Set<NodeKey>(seed);
+  const collapsed = new Set<NodeKey>(seed)
   const toggle = vi.fn((key: NodeKey) => {
     if (collapsed.has(key)) {
-      collapsed.delete(key);
+      collapsed.delete(key)
     } else {
-      collapsed.add(key);
+      collapsed.add(key)
     }
-  });
+  })
   return {
     isCollapsed: (key: NodeKey) => collapsed.has(key),
     toggle,
-  };
+  }
 }
 
 export interface RenderWithProvidersResult extends RenderResult {
-  queryClient: QueryClient;
+  queryClient: QueryClient
 }
 
 function createTestQueryClient(): QueryClient {
@@ -60,7 +60,7 @@ function createTestQueryClient(): QueryClient {
         gcTime: 0,
       },
     },
-  });
+  })
 }
 
 export function renderWithProviders(
@@ -74,10 +74,10 @@ export function renderWithProviders(
     queryClient = createTestQueryClient(),
     collapsedKeys,
     collapseState,
-  } = options;
+  } = options
 
   const resolvedCollapse: CollapseState =
-    collapseState ?? createCollapseStateStub(collapsedKeys ?? []);
+    collapseState ?? createCollapseStateStub(collapsedKeys ?? [])
 
   const result = render(
     <StrictMode>
@@ -89,9 +89,9 @@ export function renderWithProviders(
         </GridEditorProvider>
       </QueryClientProvider>
     </StrictMode>,
-  );
+  )
 
-  return { ...result, queryClient };
+  return { ...result, queryClient }
 }
 
 /**
@@ -105,10 +105,10 @@ export function createProviderWrapper(options: RenderOptions = {}) {
     queryClient = createTestQueryClient(),
     collapsedKeys,
     collapseState,
-  } = options;
+  } = options
 
   const resolvedCollapse: CollapseState =
-    collapseState ?? createCollapseStateStub(collapsedKeys ?? []);
+    collapseState ?? createCollapseStateStub(collapsedKeys ?? [])
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -123,8 +123,8 @@ export function createProviderWrapper(options: RenderOptions = {}) {
           </GridEditorProvider>
         </QueryClientProvider>
       </StrictMode>
-    );
+    )
   }
 
-  return { wrapper: Wrapper, queryClient };
+  return { wrapper: Wrapper, queryClient }
 }

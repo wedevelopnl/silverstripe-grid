@@ -1,4 +1,4 @@
-import type { ClientRect, DroppableContainer } from '@dnd-kit/core';
+import type { ClientRect, DroppableContainer } from '@dnd-kit/core'
 
 /**
  * DOMRect-compatible factory for dnd-kit tests.
@@ -11,7 +11,7 @@ export function makeDomRect(left: number, top: number, width: number, height: nu
     height,
     right: left + width,
     bottom: top + height,
-  } as ClientRect;
+  } as ClientRect
 }
 
 /**
@@ -26,7 +26,7 @@ export function createDroppable(id: string): DroppableContainer {
     disabled: false,
     node: { current: null },
     rect: { current: null },
-  } as unknown as DroppableContainer;
+  } as unknown as DroppableContainer
 }
 
 /**
@@ -49,7 +49,7 @@ export function createDroppableWithRect(
       y: domRect.top,
       toJSON: () => ({}),
     }),
-  } as unknown as HTMLElement;
+  } as unknown as HTMLElement
 
   return {
     id,
@@ -58,5 +58,5 @@ export function createDroppableWithRect(
     disabled: false,
     node: { current: mockNode },
     rect: { current: null },
-  } as unknown as DroppableContainer;
+  } as unknown as DroppableContainer
 }

@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import type { GridSettingsOption } from '@/types/gridSettings';
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import type { GridSettingsOption } from '@/types/gridSettings'
 
-export type { GridSettingsOption } from '@/types/gridSettings';
+export type { GridSettingsOption } from '@/types/gridSettings'
 
 interface GridSettingsPickerProps {
-  readonly label: string;
-  readonly options: readonly GridSettingsOption[];
-  readonly selectedValue: number | 'hidden';
-  readonly disabled: boolean;
-  readonly testId: string;
-  readonly className?: string;
-  readonly onSelect: (value: number | 'hidden') => void;
+  readonly label: string
+  readonly options: readonly GridSettingsOption[]
+  readonly selectedValue: number | 'hidden'
+  readonly disabled: boolean
+  readonly testId: string
+  readonly className?: string
+  readonly onSelect: (value: number | 'hidden') => void
 }
 
 export default function GridSettingsPicker({
@@ -22,105 +22,105 @@ export default function GridSettingsPicker({
   className,
   onSelect,
 }: GridSettingsPickerProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const listboxRef = useRef<HTMLDivElement>(null);
-  const listboxId = `${testId}-listbox`;
+  const [isOpen, setIsOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const listboxRef = useRef<HTMLDivElement>(null)
+  const listboxId = `${testId}-listbox`
   // Stable prefix for option DOM ids so aria-activedescendant has a target to reference.
-  const optionIdPrefix = useId();
+  const optionIdPrefix = useId()
 
   const getOptionId = useCallback(
     (index: number) => `${optionIdPrefix}opt-${index}`,
     [optionIdPrefix],
-  );
+  )
 
-  const close = useCallback(() => setIsOpen(false), []);
+  const close = useCallback(() => setIsOpen(false), [])
 
   // Seed activeIndex to the currently-selected option each time the listbox opens
   // so keyboard navigation starts from the user's current choice.
   useEffect(() => {
-    if (!isOpen) return;
-    const selectedIdx = options.findIndex((o) => o.value === selectedValue);
-    setActiveIndex(selectedIdx >= 0 ? selectedIdx : 0);
+    if (!isOpen) return
+    const selectedIdx = options.findIndex((o) => o.value === selectedValue)
+    setActiveIndex(selectedIdx >= 0 ? selectedIdx : 0)
     // Move focus to the listbox so Arrow keys target it (aria-activedescendant pattern).
-    listboxRef.current?.focus();
-  }, [isOpen, options, selectedValue]);
+    listboxRef.current?.focus()
+  }, [isOpen, options, selectedValue])
 
   // Close on outside click
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return
 
     function handleMouseDown(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        close();
+        close()
       }
     }
 
-    document.addEventListener('mousedown', handleMouseDown);
-    return () => document.removeEventListener('mousedown', handleMouseDown);
-  }, [isOpen, close]);
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [isOpen, close])
 
   // Close on Escape (window-level so it works regardless of focus target) and restore trigger focus.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         // Stryker disable next-line all: stopPropagation prevents bubble to parent pickers, not observable via RTL
-        e.stopPropagation();
-        close();
-        triggerRef.current?.focus();
+        e.stopPropagation()
+        close()
+        triggerRef.current?.focus()
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, close]);
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, close])
 
   function handleTriggerClick(e: React.MouseEvent) {
-    e.stopPropagation();
+    e.stopPropagation()
     if (!disabled) {
-      setIsOpen((prev) => !prev);
+      setIsOpen((prev) => !prev)
     }
   }
 
   function handleOptionClick(value: number | 'hidden') {
-    onSelect(value);
-    close();
+    onSelect(value)
+    close()
   }
 
   function handleListboxKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-    const last = options.length - 1;
+    const last = options.length - 1
     switch (e.key) {
       case 'ArrowDown':
-        e.preventDefault();
-        setActiveIndex((i) => (i >= last ? last : i + 1));
-        return;
+        e.preventDefault()
+        setActiveIndex((i) => (i >= last ? last : i + 1))
+        return
       case 'ArrowUp':
-        e.preventDefault();
-        setActiveIndex((i) => (i <= 0 ? 0 : i - 1));
-        return;
+        e.preventDefault()
+        setActiveIndex((i) => (i <= 0 ? 0 : i - 1))
+        return
       case 'Home':
-        e.preventDefault();
-        setActiveIndex(0);
-        return;
+        e.preventDefault()
+        setActiveIndex(0)
+        return
       case 'End':
-        e.preventDefault();
-        setActiveIndex(last);
-        return;
+        e.preventDefault()
+        setActiveIndex(last)
+        return
       case 'Enter':
       case ' ': {
-        e.preventDefault();
-        const current = options[activeIndex];
+        e.preventDefault()
+        const current = options[activeIndex]
         if (current) {
-          handleOptionClick(current.value);
+          handleOptionClick(current.value)
         }
-        return;
+        return
       }
       default:
-        return;
+        return
     }
   }
 
@@ -173,5 +173,5 @@ export default function GridSettingsPicker({
         </div>
       )}
     </div>
-  );
+  )
 }

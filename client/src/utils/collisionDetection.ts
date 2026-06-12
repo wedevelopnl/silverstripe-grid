@@ -1,11 +1,11 @@
 import {
-  closestCenter,
-  type CollisionDetection,
   type Collision,
+  type CollisionDetection,
+  closestCenter,
   type DroppableContainer,
-} from '@dnd-kit/core';
+} from '@dnd-kit/core'
 
-import { getDraggableType, PARENT_CONTAINER_TYPE } from '@/types/dnd';
+import { getDraggableType, PARENT_CONTAINER_TYPE } from '@/types/dnd'
 
 /**
  * Like closestCenter, but reads live DOM rects via getBoundingClientRect()
@@ -27,36 +27,36 @@ import { getDraggableType, PARENT_CONTAINER_TYPE } from '@/types/dnd';
  *    fallback, lands the drop at the container's end instead of where aimed.
  */
 const closestCenterLive: CollisionDetection = (args) => {
-  const { collisionRect, droppableContainers, pointerCoordinates } = args;
-  const refX = pointerCoordinates?.x ?? collisionRect.left + collisionRect.width / 2;
-  const refY = pointerCoordinates?.y ?? collisionRect.top + collisionRect.height / 2;
-  const collisions: Collision[] = [];
+  const { collisionRect, droppableContainers, pointerCoordinates } = args
+  const refX = pointerCoordinates?.x ?? collisionRect.left + collisionRect.width / 2
+  const refY = pointerCoordinates?.y ?? collisionRect.top + collisionRect.height / 2
+  const collisions: Collision[] = []
 
   for (const container of droppableContainers) {
-    const domNode = container.node.current;
-    if (!domNode) continue;
+    const domNode = container.node.current
+    if (!domNode) continue
 
-    const rect = domNode.getBoundingClientRect();
-    const targetCX = rect.left + rect.width / 2;
-    const targetCY = rect.top + rect.height / 2;
-    const dx = refX - targetCX;
-    const dy = refY - targetCY;
+    const rect = domNode.getBoundingClientRect()
+    const targetCX = rect.left + rect.width / 2
+    const targetCY = rect.top + rect.height / 2
+    const dx = refX - targetCX
+    const dy = refY - targetCY
     const contains =
-      refX >= rect.left && refX <= rect.right && refY >= rect.top && refY <= rect.bottom;
+      refX >= rect.left && refX <= rect.right && refY >= rect.top && refY <= rect.bottom
 
     collisions.push({
       id: container.id,
       data: { droppableContainer: container, value: dx * dx + dy * dy, contains },
-    });
+    })
   }
 
   return collisions.sort((a, b) => {
-    const aContains = (a.data as { contains: boolean }).contains;
-    const bContains = (b.data as { contains: boolean }).contains;
-    if (aContains !== bContains) return aContains ? -1 : 1;
-    return (a.data?.value as number) - (b.data?.value as number);
-  });
-};
+    const aContains = (a.data as { contains: boolean }).contains
+    const bContains = (b.data as { contains: boolean }).contains
+    if (aContains !== bContains) return aContains ? -1 : 1
+    return (a.data?.value as number) - (b.data?.value as number)
+  })
+}
 
 /**
  * Filters droppable containers to only those valid for the given active item.
@@ -71,24 +71,24 @@ export function filterDroppablesByType(
   activeId: string,
   containers: DroppableContainer[],
 ): DroppableContainer[] {
-  const activeType = getDraggableType(activeId);
-  if (activeType === null) return [];
+  const activeType = getDraggableType(activeId)
+  if (activeType === null) return []
 
-  const parentType = PARENT_CONTAINER_TYPE[activeType];
+  const parentType = PARENT_CONTAINER_TYPE[activeType]
 
   return containers.filter((container) => {
-    const containerType = getDraggableType(String(container.id));
+    const containerType = getDraggableType(String(container.id))
 
-    if (containerType === activeType) return true;
+    if (containerType === activeType) return true
 
-    if (containerType === parentType) return true;
+    if (containerType === parentType) return true
 
     // Sections live under a page — the sortable context wrapping sections has
     // an unparseable droppable id, so `containerType` is null. Accept it.
-    if (parentType === 'page' && containerType === null) return true;
+    if (parentType === 'page' && containerType === null) return true
 
-    return false;
-  });
+    return false
+  })
 }
 
 /**
@@ -98,10 +98,10 @@ export function filterSiblings(
   activeId: string,
   containers: DroppableContainer[],
 ): DroppableContainer[] {
-  const activeType = getDraggableType(activeId);
-  if (activeType === null) return [];
+  const activeType = getDraggableType(activeId)
+  if (activeType === null) return []
 
-  return containers.filter((container) => getDraggableType(String(container.id)) === activeType);
+  return containers.filter((container) => getDraggableType(String(container.id)) === activeType)
 }
 
 /**
@@ -112,18 +112,18 @@ export function filterParentContainers(
   activeId: string,
   containers: DroppableContainer[],
 ): DroppableContainer[] {
-  const activeType = getDraggableType(activeId);
-  if (activeType === null) return [];
+  const activeType = getDraggableType(activeId)
+  if (activeType === null) return []
 
-  const parentType = PARENT_CONTAINER_TYPE[activeType];
+  const parentType = PARENT_CONTAINER_TYPE[activeType]
 
   return containers.filter((container) => {
-    const containerType = getDraggableType(String(container.id));
+    const containerType = getDraggableType(String(container.id))
 
-    if (parentType === 'page') return containerType === null;
+    if (parentType === 'page') return containerType === null
 
-    return containerType === parentType;
-  });
+    return containerType === parentType
+  })
 }
 
 /**
@@ -152,13 +152,13 @@ export function filterParentContainers(
  * between collisionRect (sensor-delta-based) and droppableRects.
  */
 export const centerCrossing: CollisionDetection = (args) => {
-  const { active, collisionRect, droppableContainers, droppableRects, pointerCoordinates } = args;
+  const { active, collisionRect, droppableContainers, droppableRects, pointerCoordinates } = args
 
-  const initialRect = active.rect.current.initial;
-  if (initialRect === null) return [];
+  const initialRect = active.rect.current.initial
+  if (initialRect === null) return []
 
-  const initialCX = initialRect.left + initialRect.width / 2;
-  const initialCY = initialRect.top + initialRect.height / 2;
+  const initialCX = initialRect.left + initialRect.width / 2
+  const initialCY = initialRect.top + initialRect.height / 2
 
   // Use whichever position — pointer or collisionRect center — is furthest
   // along the drag direction. The collisionRect center drifts from the
@@ -166,16 +166,16 @@ export const centerCrossing: CollisionDetection = (args) => {
   // a column header at its left edge shifts the center rightward, helping
   // rightward drags but hurting leftward ones. Using the maximum advance
   // ensures the threshold is reachable regardless of grab offset.
-  const crCX = collisionRect.left + collisionRect.width / 2;
-  const crCY = collisionRect.top + collisionRect.height / 2;
-  const ptrX = pointerCoordinates?.x ?? crCX;
-  const ptrY = pointerCoordinates?.y ?? crCY;
+  const crCX = collisionRect.left + collisionRect.width / 2
+  const crCY = collisionRect.top + collisionRect.height / 2
+  const ptrX = pointerCoordinates?.x ?? crCX
+  const ptrY = pointerCoordinates?.y ?? crCY
 
-  const collisions: Collision[] = [];
+  const collisions: Collision[] = []
 
   for (const container of droppableContainers) {
-    const rect = droppableRects.get(container.id);
-    if (rect === undefined) continue;
+    const rect = droppableRects.get(container.id)
+    if (rect === undefined) continue
 
     // No proximity gate here. centerCrossing is only called for
     // same-container sibling reordering (no pending cross-container move).
@@ -191,8 +191,8 @@ export const centerCrossing: CollisionDetection = (args) => {
     //    pointer after the first detection — causing oscillation between
     //    detected/not-detected states.
 
-    const targetCX = rect.left + rect.width / 2;
-    const targetCY = rect.top + rect.height / 2;
+    const targetCX = rect.left + rect.width / 2
+    const targetCY = rect.top + rect.height / 2
 
     // Direction-aware threshold adapts to the overlay-to-target size ratio.
     //
@@ -207,27 +207,27 @@ export const centerCrossing: CollisionDetection = (args) => {
     const thresholdY =
       initialCY < targetCY
         ? rect.top + collisionRect.height / 2
-        : Math.min(rect.top + rect.height - collisionRect.height / 2, targetCY);
+        : Math.min(rect.top + rect.height - collisionRect.height / 2, targetCY)
 
     const thresholdX =
       initialCX < targetCX
         ? rect.left + collisionRect.width / 2
-        : Math.min(rect.left + rect.width - collisionRect.width / 2, targetCX);
+        : Math.min(rect.left + rect.width - collisionRect.width / 2, targetCX)
 
     // Use the position furthest along the drag direction for crossing.
     // Moving toward target (initialCX < targetCX): use the rightmost
     // position. Moving away (initialCX > targetCX): use the leftmost.
     // This ensures the threshold is reachable regardless of grab offset.
-    const currentCX = initialCX < targetCX ? Math.max(crCX, ptrX) : Math.min(crCX, ptrX);
-    const currentCY = initialCY < targetCY ? Math.max(crCY, ptrY) : Math.min(crCY, ptrY);
+    const currentCX = initialCX < targetCX ? Math.max(crCX, ptrX) : Math.min(crCX, ptrX)
+    const currentCY = initialCY < targetCY ? Math.max(crCY, ptrY) : Math.min(crCY, ptrY)
 
     const crossedY =
       (initialCY > thresholdY && currentCY <= thresholdY) ||
-      (initialCY < thresholdY && currentCY >= thresholdY);
+      (initialCY < thresholdY && currentCY >= thresholdY)
 
     const crossedX =
       (initialCX > thresholdX && currentCX <= thresholdX) ||
-      (initialCX < thresholdX && currentCX >= thresholdX);
+      (initialCX < thresholdX && currentCX >= thresholdX)
 
     // Overlap gate: the pointer must be near the target rect.
     // Uses pointer coordinates (viewport-relative) to avoid the
@@ -242,44 +242,44 @@ export const centerCrossing: CollisionDetection = (args) => {
     //   pointer stays put. Observed drift: ~60px in 10 cycles.
     // - X: 50px — tight enough to avoid matching elements in adjacent
     //   columns (column gaps are typically 100px+ in narrow layouts).
-    const MARGIN_X = 50;
-    const MARGIN_Y = 150;
-    const overlapX = ptrX > rect.left - MARGIN_X && ptrX < rect.left + rect.width + MARGIN_X;
-    const overlapY = ptrY > rect.top - MARGIN_Y && ptrY < rect.top + rect.height + MARGIN_Y;
+    const MARGIN_X = 50
+    const MARGIN_Y = 150
+    const overlapX = ptrX > rect.left - MARGIN_X && ptrX < rect.left + rect.width + MARGIN_X
+    const overlapY = ptrY > rect.top - MARGIN_Y && ptrY < rect.top + rect.height + MARGIN_Y
 
     if ((crossedY || crossedX) && overlapX && overlapY) {
-      const dx = crCX - targetCX;
-      const dy = crCY - targetCY;
+      const dx = crCX - targetCX
+      const dy = crCY - targetCY
 
       collisions.push({
         id: container.id,
         data: { droppableContainer: container, value: dx * dx + dy * dy },
-      });
+      })
     }
   }
 
   // Sort by distance to center (closest first)
-  return collisions.sort((a, b) => (a.data?.value as number) - (b.data?.value as number));
-};
+  return collisions.sort((a, b) => (a.data?.value as number) - (b.data?.value as number))
+}
 
 export interface OverRectSnapshot {
-  id: string | number;
+  id: string | number
   /** DOM node ref — dereference at consumption time and call
    * getBoundingClientRect() for a rect that's always in sync with
    * pointer viewport coordinates (including SortableContext CSS transforms).
    * Stored as a ref (not raw HTMLElement) so React re-renders that replace
    * the DOM element are reflected automatically. */
-  nodeRef: { readonly current: HTMLElement | null };
+  nodeRef: { readonly current: HTMLElement | null }
 }
 
 export interface TypedCollisionDetectionOptions {
-  hasPendingMoveRef: { current: boolean };
+  hasPendingMoveRef: { current: boolean }
   /** Set of composite droppable IDs belonging to the active item's pending container. */
-  pendingContainerItemsRef?: { current: ReadonlySet<string | number> | null };
+  pendingContainerItemsRef?: { current: ReadonlySet<string | number> | null }
   /** Set of composite droppable IDs in the active item's source (original) container. */
-  sourceContainerItemsRef?: { current: ReadonlySet<string | number> | null };
+  sourceContainerItemsRef?: { current: ReadonlySet<string | number> | null }
   /** Updated on every collision detection cycle with the winning element's rect. */
-  overRectRef?: { current: OverRectSnapshot | null };
+  overRectRef?: { current: OverRectSnapshot | null }
 }
 
 /**
@@ -300,18 +300,18 @@ export function createTypedCollisionDetection(
   // Track whether centerCrossing has detected a sibling during this drag.
   // Used to distinguish "threshold not yet crossed" (ghost-jump prevention)
   // from "centerCrossing missed due to stale droppableRects" (maintain over).
-  let hadSiblingHit = false;
-  let lastSourceItems: ReadonlySet<string | number> | null | undefined;
+  let hadSiblingHit = false
+  let lastSourceItems: ReadonlySet<string | number> | null | undefined
 
   return (args) => {
-    const activeId = String(args.active.id);
+    const activeId = String(args.active.id)
 
     // Reset between drags: sourceContainerItemsRef is replaced on each
     // drag start and set to null on drag end/cancel.
-    const currentSourceItems = options.sourceContainerItemsRef?.current;
+    const currentSourceItems = options.sourceContainerItemsRef?.current
     if (currentSourceItems !== lastSourceItems) {
-      hadSiblingHit = false;
-      lastSourceItems = currentSourceItems;
+      hadSiblingHit = false
+      lastSourceItems = currentSourceItems
     }
 
     // dnd-kit v6 does not exclude the active item from droppableContainers.
@@ -319,11 +319,11 @@ export function createTypedCollisionDetection(
     // closestCenter can return it as the closest target — causing a no-op drop.
     // Build a single id→container index here and reuse it for the winner lookup
     // below (O(1) instead of an O(n) find on every collision cycle).
-    const nonActiveContainers: DroppableContainer[] = [];
-    const containerById = new Map<string | number, DroppableContainer>();
+    const nonActiveContainers: DroppableContainer[] = []
+    const containerById = new Map<string | number, DroppableContainer>()
     for (const container of args.droppableContainers) {
-      if (container.id !== args.active.id) nonActiveContainers.push(container);
-      containerById.set(container.id, container);
+      if (container.id !== args.active.id) nonActiveContainers.push(container)
+      containerById.set(container.id, container)
     }
 
     /**
@@ -336,19 +336,19 @@ export function createTypedCollisionDetection(
      */
     const captureWinnerNode = (collisions: Collision[]) => {
       if (options.overRectRef && collisions.length > 0) {
-        const winnerId = collisions[0].id;
-        const container = containerById.get(winnerId);
+        const winnerId = collisions[0].id
+        const container = containerById.get(winnerId)
         if (container?.node.current) {
           options.overRectRef.current = {
             id: winnerId,
             nodeRef: container.node as { readonly current: HTMLElement | null },
-          };
+          }
         }
       }
-      return collisions;
-    };
+      return collisions
+    }
 
-    const siblings = filterSiblings(activeId, nonActiveContainers);
+    const siblings = filterSiblings(activeId, nonActiveContainers)
 
     if (options.hasPendingMoveRef.current) {
       // After a pending cross-container move, SortableContext CSS transforms
@@ -359,16 +359,16 @@ export function createTypedCollisionDetection(
       //
       // Also filter to only siblings in the pending container to prevent
       // wrong-container bouncing.
-      const pendingItems = options.pendingContainerItemsRef?.current;
+      const pendingItems = options.pendingContainerItemsRef?.current
       const pendingSiblings =
         pendingItems !== null && pendingItems !== undefined
           ? siblings.filter((s) => pendingItems.has(s.id))
-          : siblings;
+          : siblings
 
       const siblingCollisions = closestCenterLive({
         ...args,
         droppableContainers: pendingSiblings,
-      });
+      })
 
       if (siblingCollisions.length > 0) {
         // Skip overRectRef capture for pending-path siblings. At drop time,
@@ -380,7 +380,7 @@ export function createTypedCollisionDetection(
         // includes dnd-kit's scroll adjustments, but getBoundingClientRect
         // reflects the viewport-relative position which shifts oppositely
         // during auto-scroll.
-        return siblingCollisions;
+        return siblingCollisions
       }
     } else {
       // Pass 1: prefer sibling collisions — centerCrossing requires the
@@ -396,20 +396,20 @@ export function createTypedCollisionDetection(
       // siblings directly. Without this, the parent container fallback
       // would always fire, placing the item at the container's end instead
       // of at the pointer's position relative to target siblings.
-      const sourceItems = options.sourceContainerItemsRef?.current;
+      const sourceItems = options.sourceContainerItemsRef?.current
       const sameContainerSiblings =
         sourceItems && sourceItems.size > 0
           ? siblings.filter((s) => sourceItems.has(s.id))
-          : siblings;
+          : siblings
 
       const siblingCollisions = centerCrossing({
         ...args,
         droppableContainers: sameContainerSiblings,
-      });
+      })
 
       if (siblingCollisions.length > 0) {
-        hadSiblingHit = true;
-        return captureWinnerNode(siblingCollisions);
+        hadSiblingHit = true
+        return captureWinnerNode(siblingCollisions)
       }
 
       // Guard: if the pointer is inside a SOURCE-container sibling rect (but
@@ -425,20 +425,20 @@ export function createTypedCollisionDetection(
       // Uses pointer coordinates (viewport-relative) rather than collision
       // rect center because dnd-kit's scroll-adjusted translate can drift
       // from the droppable rect coordinate space after panel scrolling.
-      const { pointerCoordinates, droppableRects } = args;
+      const { pointerCoordinates, droppableRects } = args
 
       if (pointerCoordinates && sourceItems && sourceItems.size > 0) {
         const pointerInsideSourceSibling = sameContainerSiblings.some((sibling) => {
-          const rect = droppableRects.get(sibling.id);
-          if (rect === undefined) return false;
+          const rect = droppableRects.get(sibling.id)
+          if (rect === undefined) return false
 
           return (
             pointerCoordinates.x >= rect.left &&
             pointerCoordinates.x <= rect.left + rect.width &&
             pointerCoordinates.y >= rect.top &&
             pointerCoordinates.y <= rect.top + rect.height
-          );
-        });
+          )
+        })
 
         if (pointerInsideSourceSibling) {
           if (hadSiblingHit) {
@@ -450,14 +450,14 @@ export function createTypedCollisionDetection(
             const liveCollisions = closestCenterLive({
               ...args,
               droppableContainers: sameContainerSiblings,
-            });
+            })
 
             if (liveCollisions.length > 0) {
-              return captureWinnerNode(liveCollisions);
+              return captureWinnerNode(liveCollisions)
             }
           }
 
-          return [];
+          return []
         }
       }
     }
@@ -468,27 +468,27 @@ export function createTypedCollisionDetection(
     // containers when the cursor is near the boundary between a tall and
     // short section — the short section's center is closer even though the
     // cursor is visually inside the tall section.
-    const parents = filterParentContainers(activeId, nonActiveContainers);
+    const parents = filterParentContainers(activeId, nonActiveContainers)
 
     if (args.pointerCoordinates) {
-      const pointer = args.pointerCoordinates;
+      const pointer = args.pointerCoordinates
       const containingParent = parents.find((parent) => {
-        const rect = args.droppableRects.get(parent.id);
-        if (rect === undefined) return false;
+        const rect = args.droppableRects.get(parent.id)
+        if (rect === undefined) return false
         return (
           pointer.x >= rect.left &&
           pointer.x <= rect.left + rect.width &&
           pointer.y >= rect.top &&
           pointer.y <= rect.top + rect.height
-        );
-      });
+        )
+      })
       if (containingParent) {
         return captureWinnerNode([
           {
             id: containingParent.id,
             data: { droppableContainer: containingParent, value: 0 },
           },
-        ]);
+        ])
       }
     }
 
@@ -499,8 +499,8 @@ export function createTypedCollisionDetection(
         ...args,
         droppableContainers: parents,
       }),
-    );
-  };
+    )
+  }
 }
 
 /**
@@ -509,4 +509,4 @@ export function createTypedCollisionDetection(
  */
 export const typedCollisionDetection: CollisionDetection = createTypedCollisionDetection({
   hasPendingMoveRef: { current: false },
-});
+})

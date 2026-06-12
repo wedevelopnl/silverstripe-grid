@@ -1,9 +1,9 @@
-import { memo } from 'react';
-import type { ContainerType } from '@/types/elements';
-import { useGridEditorContext } from '@/hooks/GridEditorContext';
-import { useCreateElement } from '@/hooks/useElementMutations';
-import { t } from '@/i18n';
-import type { NodeRef, NodeType } from '@/types/identity';
+import { memo } from 'react'
+import { useGridEditorContext } from '@/hooks/GridEditorContext'
+import { useCreateElement } from '@/hooks/useElementMutations'
+import { t } from '@/i18n'
+import type { ContainerType } from '@/types/elements'
+import type { NodeRef, NodeType } from '@/types/identity'
 
 interface AddChildButtonProps {
   /**
@@ -11,29 +11,29 @@ interface AddChildButtonProps {
    * NodeType is inferred from `childType` (a section parent is always a page,
    * a row parent is always a section, a column parent is always a row).
    */
-  readonly parentId: number;
-  readonly childType: ContainerType;
-  readonly childLabel: string;
+  readonly parentId: number
+  readonly childType: ContainerType
+  readonly childLabel: string
   /**
    * - `empty-state` — the only child slot, shown with a hint line above it.
    * - `append` — full-width button after the last child.
    * - `between` — full-width button sitting in the gap between two children;
    *   pair it with {@link insertAfterId} so the new child lands in that gap.
    */
-  readonly variant: 'empty-state' | 'append' | 'between';
+  readonly variant: 'empty-state' | 'append' | 'between'
   /**
    * DB id of the sibling the new child should be inserted *after*. Omit to
    * append at the end of the parent's child list (the backend has no "insert
    * before the first child" path, so a leading slot is intentionally absent).
    */
-  readonly insertAfterId?: number;
+  readonly insertAfterId?: number
 }
 
 const PARENT_TYPE_FOR_CHILD: Record<ContainerType, NodeType> = {
   section: 'page',
   row: 'section',
   column: 'row',
-};
+}
 
 const AddChildButton = memo(function AddChildButton({
   parentId,
@@ -42,21 +42,21 @@ const AddChildButton = memo(function AddChildButton({
   variant,
   insertAfterId,
 }: AddChildButtonProps) {
-  const { pageId, zone } = useGridEditorContext();
-  const { mutate, isPending } = useCreateElement(pageId, zone);
+  const { pageId, zone } = useGridEditorContext()
+  const { mutate, isPending } = useCreateElement(pageId, zone)
 
   function handleClick() {
     const parent: NodeRef = {
       type: PARENT_TYPE_FOR_CHILD[childType],
       id: parentId,
-    };
+    }
 
     mutate({
       containerType: childType,
       parent,
       ...(insertAfterId !== undefined ? { insertAfterElementID: insertAfterId } : {}),
       ...(childType === 'section' ? { zone } : {}),
-    });
+    })
   }
 
   const button = (
@@ -76,7 +76,7 @@ const AddChildButton = memo(function AddChildButton({
           : t('WeDevelopGrid.AddChildButton.ADD_LABEL', 'Add {childLabel}', { childLabel })}
       </span>
     </button>
-  );
+  )
 
   if (variant === 'empty-state') {
     return (
@@ -88,7 +88,7 @@ const AddChildButton = memo(function AddChildButton({
         </p>
         {button}
       </div>
-    );
+    )
   }
 
   if (variant === 'between') {
@@ -96,14 +96,14 @@ const AddChildButton = memo(function AddChildButton({
       <div className="ssgrid-add-child ssgrid-add-child--between" data-testid="add-child-between">
         {button}
       </div>
-    );
+    )
   }
 
   return (
     <div className="ssgrid-add-child ssgrid-add-child--append" data-testid="add-child-append">
       {button}
     </div>
-  );
-});
+  )
+})
 
-export default AddChildButton;
+export default AddChildButton

@@ -1,10 +1,10 @@
-import { expect, test } from '@playwright/test';
-import { loadFixture, resetFixtures } from '../helpers/fixtures';
-import { performDrag } from '../helpers/drag';
+import { expect, test } from '@playwright/test'
+import { performDrag } from '../helpers/drag'
+import { loadFixture, resetFixtures } from '../helpers/fixtures'
 
 /** Get a drag handle by its aria-label (e.g. "Move Main-Alpha"). */
 function dragHandle(page: import('@playwright/test').Page, name: string) {
-  return page.locator(`[data-testid="drag-handle"][aria-label="Move ${name}"]`);
+  return page.locator(`[data-testid="drag-handle"][aria-label="Move ${name}"]`)
 }
 
 /**
@@ -14,102 +14,116 @@ function dragHandle(page: import('@playwright/test').Page, name: string) {
 function waitForMutationSettlement(page: import('@playwright/test').Page) {
   const reorderDone = page.waitForResponse(
     (resp) => resp.url().includes('/api/reorder') && resp.ok(),
-  );
+  )
   const refetchDone = page.waitForResponse(
     (resp) => resp.url().includes('/api/readTree/') && resp.ok(),
-  );
+  )
 
   return async () => {
-    await reorderDone;
-    await refetchDone;
-  };
+    await reorderDone
+    await refetchDone
+  }
 }
 
 test.describe('Multi-zone isolation', () => {
-  test.skip(({ browserName }) => browserName !== 'chromium',
-    'DnD pointer simulation is Chromium-specific');
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'DnD pointer simulation is Chromium-specific',
+  )
 
   // Two zones stacked vertically need a tall viewport
-  test.use({ viewport: { width: 1280, height: 1400 } });
+  test.use({ viewport: { width: 1280, height: 1400 } })
 
   test.afterAll(async ({ request }) => {
-    await resetFixtures(request);
-  });
+    await resetFixtures(request)
+  })
 
-  test('zones render independently, reorder within zones, and reject cross-zone drags', async ({ page }) => {
-    const fixture = await loadFixture(page.request, 'multi-zone');
-    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`);
+  test('zones render independently, reorder within zones, and reject cross-zone drags', async ({
+    page,
+  }) => {
+    const fixture = await loadFixture(page.request, 'multi-zone')
+    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`)
 
     // Wait for both grid editors to finish loading
-    const gridEditors = page.getByTestId('grid-editor');
-    await expect(page.getByTestId('grid-editor-loading')).toHaveCount(0, { timeout: 15_000 });
-    await expect(gridEditors).toHaveCount(2);
+    const gridEditors = page.getByTestId('grid-editor')
+    await expect(page.getByTestId('grid-editor-loading')).toHaveCount(0, { timeout: 15_000 })
+    await expect(gridEditors).toHaveCount(2)
 
     // Identify zones by data-zone attribute — combine the testid locator
     // with the zone attribute via `and()` instead of a raw compound CSS
     // selector so the locator stays role/testid-shaped.
-    const mainZone = gridEditors.and(page.locator('[data-zone="main"]'));
-    const sidebarZone = gridEditors.and(page.locator('[data-zone="sidebar"]'));
+    const mainZone = gridEditors.and(page.locator('[data-zone="main"]'))
+    const sidebarZone = gridEditors.and(page.locator('[data-zone="sidebar"]'))
 
     // --- Phase 1: Verify both zones render independently ---
-    const mainSections = mainZone.getByTestId('section-block');
-    const sidebarSections = sidebarZone.getByTestId('section-block');
+    const mainSections = mainZone.getByTestId('section-block')
+    const sidebarSections = sidebarZone.getByTestId('section-block')
 
-    await expect(mainSections).toHaveCount(2);
-    await expect(sidebarSections).toHaveCount(2);
+    await expect(mainSections).toHaveCount(2)
+    await expect(sidebarSections).toHaveCount(2)
 
-    await expect(mainSections.getByTestId('section-title')).toHaveText(['Main-Alpha', 'Main-Beta']);
-    await expect(sidebarSections.getByTestId('section-title')).toHaveText(['Sidebar-Alpha', 'Sidebar-Beta']);
+    await expect(mainSections.getByTestId('section-title')).toHaveText(['Main-Alpha', 'Main-Beta'])
+    await expect(sidebarSections.getByTestId('section-title')).toHaveText([
+      'Sidebar-Alpha',
+      'Sidebar-Beta',
+    ])
 
     // --- Phase 2: Reorder within main zone ---
-    const settle1 = waitForMutationSettlement(page);
-    await performDrag(page, dragHandle(page, 'Main-Alpha'), dragHandle(page, 'Main-Beta'));
-    await settle1();
+    const settle1 = waitForMutationSettlement(page)
+    await performDrag(page, dragHandle(page, 'Main-Alpha'), dragHandle(page, 'Main-Beta'))
+    await settle1()
 
     // Main-Beta should now be first
-    await expect(mainSections.getByTestId('section-title')).toHaveText(['Main-Beta', 'Main-Alpha']);
+    await expect(mainSections.getByTestId('section-title')).toHaveText(['Main-Beta', 'Main-Alpha'])
     // Sidebar unchanged
-    await expect(sidebarSections.getByTestId('section-title')).toHaveText(['Sidebar-Alpha', 'Sidebar-Beta']);
+    await expect(sidebarSections.getByTestId('section-title')).toHaveText([
+      'Sidebar-Alpha',
+      'Sidebar-Beta',
+    ])
 
     // --- Phase 3: Reorder within sidebar zone ---
-    const settle2 = waitForMutationSettlement(page);
-    await performDrag(page, dragHandle(page, 'Sidebar-Alpha'), dragHandle(page, 'Sidebar-Beta'));
-    await settle2();
+    const settle2 = waitForMutationSettlement(page)
+    await performDrag(page, dragHandle(page, 'Sidebar-Alpha'), dragHandle(page, 'Sidebar-Beta'))
+    await settle2()
 
-    await expect(sidebarSections.getByTestId('section-title')).toHaveText(['Sidebar-Beta', 'Sidebar-Alpha']);
+    await expect(sidebarSections.getByTestId('section-title')).toHaveText([
+      'Sidebar-Beta',
+      'Sidebar-Alpha',
+    ])
     // Main unchanged
-    await expect(mainSections.getByTestId('section-title')).toHaveText(['Main-Beta', 'Main-Alpha']);
+    await expect(mainSections.getByTestId('section-title')).toHaveText(['Main-Beta', 'Main-Alpha'])
 
     // --- Phase 4: Cross-zone drag cannot move sections between zones ---
     // dnd-kit resolves to the nearest same-zone collision (not cross-zone),
     // so a reorder may fire within the main zone. The key invariant:
     // no section moves between zones — counts stay the same.
-    await performDrag(page, dragHandle(page, 'Main-Beta'), dragHandle(page, 'Sidebar-Beta'));
+    await performDrag(page, dragHandle(page, 'Main-Beta'), dragHandle(page, 'Sidebar-Beta'))
 
     // Both zones still have exactly 2 sections each
-    await expect(mainSections).toHaveCount(2);
-    await expect(sidebarSections).toHaveCount(2);
+    await expect(mainSections).toHaveCount(2)
+    await expect(sidebarSections).toHaveCount(2)
     // Sidebar order is unchanged (never affected by main-zone drag)
-    await expect(sidebarSections.getByTestId('section-title')).toHaveText(['Sidebar-Beta', 'Sidebar-Alpha']);
+    await expect(sidebarSections.getByTestId('section-title')).toHaveText([
+      'Sidebar-Beta',
+      'Sidebar-Alpha',
+    ])
 
     // --- Phase 5: Publish and verify all sections render on frontend ---
-    await page.getByRole('button', { name: /Publish/ }).click();
-    await expect(
-      page.getByRole('button', { name: /Published/ }),
-    ).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('button', { name: /Publish/ }).click()
+    await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 10_000 })
 
-    const livePath = fixture.pageUrl.split('?')[0];
-    await page.goto(livePath);
+    const livePath = fixture.pageUrl.split('?')[0]
+    await page.goto(livePath)
 
     // All 4 section headings should be present on the frontend.
     // Order depends on Sort + zone interleaving (not grouped by zone),
     // so we just verify all titles appear.
-    const frontendHeadings = page.getByRole('heading', { level: 2 });
-    await expect(frontendHeadings).toHaveCount(4);
-    const headingTexts = await frontendHeadings.allTextContents();
-    expect(headingTexts).toContain('Main-Alpha');
-    expect(headingTexts).toContain('Main-Beta');
-    expect(headingTexts).toContain('Sidebar-Alpha');
-    expect(headingTexts).toContain('Sidebar-Beta');
-  });
-});
+    const frontendHeadings = page.getByRole('heading', { level: 2 })
+    await expect(frontendHeadings).toHaveCount(4)
+    const headingTexts = await frontendHeadings.allTextContents()
+    expect(headingTexts).toContain('Main-Alpha')
+    expect(headingTexts).toContain('Main-Beta')
+    expect(headingTexts).toContain('Sidebar-Alpha')
+    expect(headingTexts).toContain('Sidebar-Beta')
+  })
+})

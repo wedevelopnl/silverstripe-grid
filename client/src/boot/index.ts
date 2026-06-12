@@ -1,9 +1,9 @@
-import { registerComponents } from './registerComponents';
+import { registerComponents } from './registerComponents'
 
 document.addEventListener('DOMContentLoaded', () => {
   try {
-    registerComponents();
+    registerComponents()
   } catch (error: unknown) {
-    console.warn('[GridEditor] Failed to register components.', error);
+    console.warn('[GridEditor] Failed to register components.', error)
   }
-});
+})

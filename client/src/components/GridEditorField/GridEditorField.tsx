@@ -1,16 +1,16 @@
-import GridQueryProvider from '@/hooks/QueryProvider';
-import GridEditor from '@/components/GridEditor/GridEditor';
-import GridEditorErrorBoundary from '@/components/GridEditorErrorBoundary/GridEditorErrorBoundary';
+import GridEditor from '@/components/GridEditor/GridEditor'
+import GridEditorErrorBoundary from '@/components/GridEditorErrorBoundary/GridEditorErrorBoundary'
+import GridQueryProvider from '@/hooks/QueryProvider'
 
 /**
  * Shape of the schema data sub-object that PHP's
  * `GridEditorField::getSchemaDataDefaults()` ships under the `data` key.
  */
 interface GridEditorFieldSchemaData {
-  readonly pageId?: number;
-  readonly zone?: string;
-  readonly readonly?: boolean;
-  readonly version?: number;
+  readonly pageId?: number
+  readonly zone?: string
+  readonly readonly?: boolean
+  readonly version?: number
 }
 
 /**
@@ -22,10 +22,10 @@ interface GridEditorFieldSchemaData {
  * Reference: vendor/silverstripe/framework/src/Forms/FormField.php:1472-1510
  */
 interface GridEditorFieldProps {
-  readonly name: string;
-  readonly id: string;
-  readonly data?: GridEditorFieldSchemaData;
-  readonly readOnly?: boolean;
+  readonly name: string
+  readonly id: string
+  readonly data?: GridEditorFieldSchemaData
+  readonly readOnly?: boolean
 }
 
 /**
@@ -44,16 +44,16 @@ interface GridEditorFieldProps {
  * entry point.
  */
 export default function GridEditorField({ data, readOnly }: GridEditorFieldProps) {
-  const pageId = typeof data?.pageId === 'number' ? data.pageId : null;
-  const zone = typeof data?.zone === 'string' ? data.zone : 'main';
-  const version = typeof data?.version === 'number' && data.version > 0 ? data.version : undefined;
+  const pageId = typeof data?.pageId === 'number' ? data.pageId : null
+  const zone = typeof data?.zone === 'string' ? data.zone : 'main'
+  const version = typeof data?.version === 'number' && data.version > 0 ? data.version : undefined
 
   // FormBuilder's readOnly is the source of truth — it reflects
   // Form::makeReadonly() state. data.readonly is a safety fallback.
-  const isReadonly = readOnly === true || data?.readonly === true;
+  const isReadonly = readOnly === true || data?.readonly === true
 
   if (pageId === null) {
-    return null;
+    return null
   }
 
   return (
@@ -62,5 +62,5 @@ export default function GridEditorField({ data, readOnly }: GridEditorFieldProps
         <GridEditor pageId={pageId} zone={zone} readonly={isReadonly} version={version} />
       </GridEditorErrorBoundary>
     </GridQueryProvider>
-  );
+  )
 }

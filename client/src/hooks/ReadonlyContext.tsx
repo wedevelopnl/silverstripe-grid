@@ -1,16 +1,16 @@
-import { type ReactNode, createContext, useContext } from 'react';
+import { createContext, type ReactNode, useContext } from 'react'
 
-const ReadonlyContext = createContext<boolean>(false);
+const ReadonlyContext = createContext<boolean>(false)
 
 interface ReadonlyProviderProps {
-  readonly value: boolean;
-  readonly children: ReactNode;
+  readonly value: boolean
+  readonly children: ReactNode
 }
 
 export function ReadonlyProvider({ value, children }: ReadonlyProviderProps): ReactNode {
-  return <ReadonlyContext.Provider value={value}>{children}</ReadonlyContext.Provider>;
+  return <ReadonlyContext.Provider value={value}>{children}</ReadonlyContext.Provider>
 }
 
 export function useReadonly(): boolean {
-  return useContext(ReadonlyContext);
+  return useContext(ReadonlyContext)
 }

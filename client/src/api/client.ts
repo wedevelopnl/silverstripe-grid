@@ -1,5 +1,5 @@
-import { getSecurityId } from './config';
-import { ApiError } from './errors';
+import { getSecurityId } from './config'
+import { ApiError } from './errors'
 
 /**
  * Try to extract a human-readable error message from a JSON response body.
@@ -7,20 +7,20 @@ import { ApiError } from './errors';
  */
 async function extractErrorMessage(response: Response): Promise<string> {
   try {
-    const body: unknown = await response.json();
+    const body: unknown = await response.json()
     if (typeof body === 'object' && body !== null) {
-      const record = body as Record<string, unknown>;
+      const record = body as Record<string, unknown>
       if (typeof record.message === 'string' && record.message !== '') {
-        return record.message;
+        return record.message
       }
       if (typeof record.errorMessage === 'string' && record.errorMessage !== '') {
-        return record.errorMessage;
+        return record.errorMessage
       }
     }
   } catch {
     // Response has no JSON body — fall back to statusText
   }
-  return response.statusText;
+  return response.statusText
 }
 
 /**
@@ -32,14 +32,14 @@ export async function apiGet<T>(url: string): Promise<T> {
   const response = await fetch(url, {
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
-  });
+  })
 
   if (!response.ok) {
-    const message = await extractErrorMessage(response);
-    throw new ApiError(response.status, message);
+    const message = await extractErrorMessage(response)
+    throw new ApiError(response.status, message)
   }
 
-  return response.json() as Promise<T>;
+  return response.json() as Promise<T>
 }
 
 /**
@@ -57,11 +57,11 @@ async function apiMutate(method: 'POST' | 'PATCH', url: string, body: object): P
       'X-SecurityID': getSecurityId(),
     },
     body: JSON.stringify(body),
-  });
+  })
 
   if (!response.ok) {
-    const message = await extractErrorMessage(response);
-    throw new ApiError(response.status, message);
+    const message = await extractErrorMessage(response)
+    throw new ApiError(response.status, message)
   }
 }
 
@@ -71,7 +71,7 @@ async function apiMutate(method: 'POST' | 'PATCH', url: string, body: object): P
  * @throws ApiError on non-OK HTTP status
  */
 export async function apiPost(url: string, body: object): Promise<void> {
-  return apiMutate('POST', url, body);
+  return apiMutate('POST', url, body)
 }
 
 /**
@@ -80,7 +80,7 @@ export async function apiPost(url: string, body: object): Promise<void> {
  * @throws ApiError on non-OK HTTP status
  */
 export async function apiPatch(url: string, body: object): Promise<void> {
-  return apiMutate('PATCH', url, body);
+  return apiMutate('PATCH', url, body)
 }
 
 /**
@@ -94,19 +94,19 @@ export async function apiPatch(url: string, body: object): Promise<void> {
  */
 function buildDeleteQueryString(params: Record<string, unknown> | undefined): string {
   if (params === undefined) {
-    return '';
+    return ''
   }
 
-  const search = new URLSearchParams();
+  const search = new URLSearchParams()
   for (const [key, value] of Object.entries(params)) {
     if (value === null || value === undefined) {
-      continue;
+      continue
     }
-    search.append(key, String(value));
+    search.append(key, String(value))
   }
 
-  const serialized = search.toString();
-  return serialized === '' ? '' : `?${serialized}`;
+  const serialized = search.toString()
+  return serialized === '' ? '' : `?${serialized}`
 }
 
 /**
@@ -119,7 +119,7 @@ function buildDeleteQueryString(params: Record<string, unknown> | undefined): st
  * @throws ApiError on non-OK HTTP status
  */
 export async function apiDelete(url: string, params?: Record<string, unknown>): Promise<void> {
-  const fullUrl = `${url}${buildDeleteQueryString(params)}`;
+  const fullUrl = `${url}${buildDeleteQueryString(params)}`
   const response = await fetch(fullUrl, {
     method: 'DELETE',
     credentials: 'same-origin',
@@ -127,10 +127,10 @@ export async function apiDelete(url: string, params?: Record<string, unknown>): 
       Accept: 'application/json',
       'X-SecurityID': getSecurityId(),
     },
-  });
+  })
 
   if (!response.ok) {
-    const message = await extractErrorMessage(response);
-    throw new ApiError(response.status, message);
+    const message = await extractErrorMessage(response)
+    throw new ApiError(response.status, message)
   }
 }

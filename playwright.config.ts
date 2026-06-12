@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { defineConfig, devices } from '@playwright/test';
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { defineConfig, devices } from '@playwright/test'
 
 /**
  * Resolve the base URL from environment or .docker/.env.
@@ -9,23 +9,21 @@ import { defineConfig, devices } from '@playwright/test';
  */
 function resolveBaseUrl(): string {
   if (process.env.E2E_BASE_URL) {
-    return process.env.E2E_BASE_URL;
+    return process.env.E2E_BASE_URL
   }
 
-  const envPath = resolve(__dirname, '.docker/.env');
+  const envPath = resolve(__dirname, '.docker/.env')
   try {
-    const envContent = readFileSync(envPath, 'utf-8');
-    const match = envContent.match(/^WEB_PORT=(\d+)$/m);
+    const envContent = readFileSync(envPath, 'utf-8')
+    const match = envContent.match(/^WEB_PORT=(\d+)$/m)
     if (match) {
-      return `https://localhost:${match[1]}`;
+      return `https://localhost:${match[1]}`
     }
   } catch {
     // .docker/.env not generated yet — fall through
   }
 
-  throw new Error(
-    'Cannot determine base URL. Set E2E_BASE_URL or run .docker/env.sh first.',
-  );
+  throw new Error('Cannot determine base URL. Set E2E_BASE_URL or run .docker/env.sh first.')
 }
 
 export default defineConfig({
@@ -78,4 +76,4 @@ export default defineConfig({
         ]
       : []),
   ],
-});
+})

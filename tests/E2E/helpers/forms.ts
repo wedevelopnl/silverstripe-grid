@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Page } from '@playwright/test'
 
 /**
  * Sets the value of a SilverStripe Chosen.js-wrapped <select> field.
@@ -18,15 +18,11 @@ import type { Page } from '@playwright/test';
  * @param name - `name` attribute of the underlying <select>
  * @param value - option value (not label)
  */
-export async function selectChosenValue(
-  page: Page,
-  name: string,
-  value: string,
-): Promise<void> {
+export async function selectChosenValue(page: Page, name: string, value: string): Promise<void> {
   await page.evaluate(
     ({ name, value }) => {
-      jQuery(`select[name="${name}"]`).val(value).trigger('change').trigger('chosen:updated');
+      jQuery(`select[name="${name}"]`).val(value).trigger('change').trigger('chosen:updated')
     },
     { name, value },
-  );
+  )
 }

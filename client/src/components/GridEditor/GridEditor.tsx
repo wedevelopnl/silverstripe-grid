@@ -1,28 +1,28 @@
-import { Fragment, useCallback, useMemo } from 'react';
-import { DndContext, DragOverlay, MeasuringStrategy } from '@dnd-kit/core';
-import { t } from '@/i18n';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useElementTree } from '@/hooks/useElementTree';
-import { useDragAndDrop, DragContext } from '@/hooks/useDragAndDrop';
-import { useReorderElement } from '@/hooks/useElementMutations';
-import { CollapseContext, useCollapse, useCollapseState } from '@/hooks/useCollapseState';
-import { ViewportProvider } from '@/hooks/ViewportContext';
-import { GridEditorProvider } from '@/hooks/GridEditorContext';
-import { ReadonlyProvider } from '@/hooks/ReadonlyContext';
-import { isSectionNode } from '@/types/elements';
-import type { SectionNode } from '@/types/elements';
-import type { NodeRef } from '@/types/identity';
-import ViewportSwitcher from '@/components/ViewportSwitcher/ViewportSwitcher';
-import SectionBlock from '@/components/SectionBlock/SectionBlock';
-import AddChildButton from '@/components/AddChildButton/AddChildButton';
-import EmptyState from '@/components/EmptyState/EmptyState';
-import DragOverlayContent from '@/components/DragOverlayContent/DragOverlayContent';
+import { DndContext, DragOverlay, MeasuringStrategy } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { Fragment, useCallback, useMemo } from 'react'
+import AddChildButton from '@/components/AddChildButton/AddChildButton'
+import DragOverlayContent from '@/components/DragOverlayContent/DragOverlayContent'
+import EmptyState from '@/components/EmptyState/EmptyState'
+import SectionBlock from '@/components/SectionBlock/SectionBlock'
+import ViewportSwitcher from '@/components/ViewportSwitcher/ViewportSwitcher'
+import { GridEditorProvider } from '@/hooks/GridEditorContext'
+import { ReadonlyProvider } from '@/hooks/ReadonlyContext'
+import { CollapseContext, useCollapse, useCollapseState } from '@/hooks/useCollapseState'
+import { DragContext, useDragAndDrop } from '@/hooks/useDragAndDrop'
+import { useReorderElement } from '@/hooks/useElementMutations'
+import { useElementTree } from '@/hooks/useElementTree'
+import { ViewportProvider } from '@/hooks/ViewportContext'
+import { t } from '@/i18n'
+import type { SectionNode } from '@/types/elements'
+import { isSectionNode } from '@/types/elements'
+import type { NodeRef } from '@/types/identity'
 
 interface GridEditorProps {
-  readonly pageId: number | null;
-  readonly zone: string;
-  readonly readonly?: boolean;
-  readonly version?: number;
+  readonly pageId: number | null
+  readonly zone: string
+  readonly readonly?: boolean
+  readonly version?: number
 }
 
 /**
@@ -57,23 +57,23 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
           variant="centered"
         />
       </div>
-    );
+    )
   }
 
-  return <GridEditorBody pageId={pageId} zone={zone} readonly={readonly} version={version} />;
+  return <GridEditorBody pageId={pageId} zone={zone} readonly={readonly} version={version} />
 }
 
 interface GridEditorBodyProps {
-  readonly pageId: number;
-  readonly zone: string;
-  readonly readonly: boolean;
-  readonly version: number | undefined;
+  readonly pageId: number
+  readonly zone: string
+  readonly readonly: boolean
+  readonly version: number | undefined
 }
 
 function GridEditorBody({ pageId, zone, readonly, version }: GridEditorBodyProps) {
-  const { data, isLoading, error } = useElementTree(pageId, zone, readonly ? version : undefined);
+  const { data, isLoading, error } = useElementTree(pageId, zone, readonly ? version : undefined)
 
-  const reorderMutation = useReorderElement(pageId, zone);
+  const reorderMutation = useReorderElement(pageId, zone)
 
   // useDragAndDrop puts onReorder in its handleDragEnd useCallback deps. An
   // inline arrow here would burn that memoisation on every parent render and
@@ -82,39 +82,39 @@ function GridEditorBody({ pageId, zone, readonly, version }: GridEditorBodyProps
   // here doesn't widen the bust footprint.
   const onReorder = useCallback(
     (element: NodeRef, parent: NodeRef, after: NodeRef | null, clearPendingTree: () => void) => {
-      if (data === undefined) return;
+      if (data === undefined) return
       reorderMutation.mutate({
         params: { element, parent, after },
         tree: data,
         clearPendingTree,
-      });
+      })
     },
     [data, reorderMutation],
-  );
+  )
 
   const { dndContextProps, dragState, pendingTree } = useDragAndDrop({
     tree: data ?? { rootParent: { type: 'page', id: pageId }, nodes: [] },
     onReorder,
-  });
+  })
 
   // Use pending tree during cross-container drags for visual feedback
-  const effectiveData = pendingTree ?? data;
+  const effectiveData = pendingTree ?? data
 
-  const sections = effectiveData === undefined ? [] : effectiveData.nodes.filter(isSectionNode);
+  const sections = effectiveData === undefined ? [] : effectiveData.nodes.filter(isSectionNode)
 
-  const collapseState = useCollapseState(pageId);
+  const collapseState = useCollapseState(pageId)
 
-  const sectionIds = useMemo(() => sections.map((s) => s.nodeKey), [sections]);
+  const sectionIds = useMemo(() => sections.map((s) => s.nodeKey), [sections])
 
   const dragContextValue = useMemo(
     () => ({ activeType: dragState?.activeType ?? null, pendingActive: pendingTree !== null }),
     [dragState?.activeType, pendingTree],
-  );
+  )
 
-  const gridEditorContextValue = useMemo(() => ({ pageId, zone }), [pageId, zone]);
+  const gridEditorContextValue = useMemo(() => ({ pageId, zone }), [pageId, zone])
 
-  const hasSections = sections.length > 0;
-  const anyModified = sections.some((section) => section.status === 'modified');
+  const hasSections = sections.length > 0
+  const anyModified = sections.some((section) => section.status === 'modified')
 
   const sectionList = hasSections ? (
     sections.map((section) => <SectionBlock key={section.nodeKey} section={section} />)
@@ -129,7 +129,7 @@ function GridEditorBody({ pageId, zone, readonly, version }: GridEditorBodyProps
       childLabel="Section"
       variant="empty-state"
     />
-  );
+  )
 
   // Editable list: the sections, with "+ Add section" in every gap and after
   // the last one (Figma "Frame 1" — the add-button slots double as the inter-
@@ -159,7 +159,7 @@ function GridEditorBody({ pageId, zone, readonly, version }: GridEditorBodyProps
       childLabel="Section"
       variant="empty-state"
     />
-  );
+  )
 
   return (
     <div
@@ -226,7 +226,7 @@ function GridEditorBody({ pageId, zone, readonly, version }: GridEditorBodyProps
         </GridEditorProvider>
       )}
     </div>
-  );
+  )
 }
 
 /**
@@ -240,29 +240,29 @@ function GridAreaHeader({
   sections,
   readonly,
 }: {
-  readonly sections: SectionNode[];
-  readonly readonly: boolean;
+  readonly sections: SectionNode[]
+  readonly readonly: boolean
 }) {
-  const { isCollapsed, toggle } = useCollapse();
+  const { isCollapsed, toggle } = useCollapse()
 
   // When every section is already collapsed the button flips to "expand all";
   // any expanded section keeps it in "collapse all" mode.
   const allCollapsed =
-    sections.length > 0 && sections.every((section) => isCollapsed(section.nodeKey));
+    sections.length > 0 && sections.every((section) => isCollapsed(section.nodeKey))
 
   const toggleAll = useCallback(() => {
     for (const section of sections) {
       if (isCollapsed(section.nodeKey) === allCollapsed) {
-        toggle(section.nodeKey);
+        toggle(section.nodeKey)
       }
     }
-  }, [sections, isCollapsed, toggle, allCollapsed]);
+  }, [sections, isCollapsed, toggle, allCollapsed])
 
-  const canToggleAll = !readonly && sections.length > 0;
+  const canToggleAll = !readonly && sections.length > 0
 
   const toggleAllLabel = allCollapsed
     ? t('WeDevelopGrid.GridEditor.ACTION_EXPAND_ALL', 'Expand all sections')
-    : t('WeDevelopGrid.GridEditor.ACTION_COLLAPSE_ALL', 'Collapse all sections');
+    : t('WeDevelopGrid.GridEditor.ACTION_COLLAPSE_ALL', 'Collapse all sections')
 
   return (
     <header className="ssgrid-editor__header">
@@ -312,5 +312,5 @@ function GridAreaHeader({
         </button>
       </div>
     </header>
-  );
+  )
 }

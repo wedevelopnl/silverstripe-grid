@@ -1,15 +1,14 @@
-import { Component } from 'react';
-import type { ErrorInfo, ReactNode } from 'react';
-
-import { showToast } from '@/utils/toast';
-import { t } from '@/i18n';
+import type { ErrorInfo, ReactNode } from 'react'
+import { Component } from 'react'
+import { t } from '@/i18n'
+import { showToast } from '@/utils/toast'
 
 interface Props {
-  readonly children: ReactNode;
+  readonly children: ReactNode
 }
 
 interface State {
-  hasError: boolean;
+  hasError: boolean
 }
 
 /**
@@ -18,20 +17,20 @@ interface State {
  * instead of crashing the entire CMS panel.
  */
 export default class GridEditorErrorBoundary extends Component<Props, State> {
-  override state: State = { hasError: false };
+  override state: State = { hasError: false }
 
   static getDerivedStateFromError(): State {
-    return { hasError: true };
+    return { hasError: true }
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error('[GridEditor] Render error:', error, info);
+    console.error('[GridEditor] Render error:', error, info)
     showToast(
       t(
         'WeDevelopGrid.GridEditorErrorBoundary.TOAST_ERROR',
         'The grid editor encountered an error and could not render.',
       ),
-    );
+    )
   }
 
   override render(): ReactNode {
@@ -43,9 +42,9 @@ export default class GridEditorErrorBoundary extends Component<Props, State> {
             'The grid editor failed to render. Try reloading the page.',
           )}
         </p>
-      );
+      )
     }
 
-    return this.props.children;
+    return this.props.children
   }
 }

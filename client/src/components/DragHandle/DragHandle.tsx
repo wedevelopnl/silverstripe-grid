@@ -1,11 +1,11 @@
-import { memo } from 'react';
-import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core';
-import { t } from '@/i18n';
+import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core'
+import { memo } from 'react'
+import { t } from '@/i18n'
 
 interface DragHandleProps {
-  readonly listeners: DraggableSyntheticListeners;
-  readonly attributes: DraggableAttributes;
-  readonly label?: string;
+  readonly listeners: DraggableSyntheticListeners
+  readonly attributes: DraggableAttributes
+  readonly label?: string
 }
 
 const DragHandle = memo(function DragHandle({
@@ -28,7 +28,7 @@ const DragHandle = memo(function DragHandle({
         aria-hidden="true"
       />
     </button>
-  );
-});
+  )
+})
 
-export default DragHandle;
+export default DragHandle

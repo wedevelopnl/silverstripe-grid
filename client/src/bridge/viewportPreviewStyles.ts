@@ -1,5 +1,5 @@
-import { MOBILE_FIRST_PREVIEW_WIDTH } from '@/state/activeViewport';
-import { getViewports } from '@/utils/gridAdapter';
+import { MOBILE_FIRST_PREVIEW_WIDTH } from '@/state/activeViewport'
+import { getViewports } from '@/utils/gridAdapter'
 
 /**
  * Pure CSS generator for the CMS preview device frame.
@@ -11,7 +11,7 @@ import { getViewports } from '@/utils/gridAdapter';
  * or the bridge lifecycle.
  */
 
-export const STYLE_TAG_ID = 'grid-preview-viewport-styles';
+export const STYLE_TAG_ID = 'grid-preview-viewport-styles'
 
 /**
  * Monotonic device-frame height for a given preview width.
@@ -23,17 +23,17 @@ export const STYLE_TAG_ID = 'grid-preview-viewport-styles';
  * split-mode panel.
  */
 export function heightForWidth(width: number): number {
-  const floor = 500;
-  const cap = 900;
-  return Math.min(cap, Math.max(floor, Math.round(width * 0.75)));
+  const floor = 500
+  const cap = 900
+  return Math.min(cap, Math.max(floor, Math.round(width * 0.75)))
 }
 
 function buildRules(): string {
   return getViewports()
     .map((vp) => {
-      const width = vp.minWidth > 0 ? vp.minWidth : MOBILE_FIRST_PREVIEW_WIDTH;
-      const height = heightForWidth(width);
-      const selectorBase = `.cms-preview.grid-${vp.key}`;
+      const width = vp.minWidth > 0 ? vp.minWidth : MOBILE_FIRST_PREVIEW_WIDTH
+      const height = heightForWidth(width)
+      const selectorBase = `.cms-preview.grid-${vp.key}`
       return [
         `${selectorBase} .preview-device-outer {`,
         `  width: ${width}px;`,
@@ -46,9 +46,9 @@ function buildRules(): string {
         `${selectorBase} .preview__device::after {`,
         `  content: '${vp.label} · ${width}px × ${height}px';`,
         `}`,
-      ].join('\n');
+      ].join('\n')
     })
-    .join('\n');
+    .join('\n')
 }
 
 /**
@@ -56,19 +56,19 @@ function buildRules(): string {
  * twice with the same adapter config replaces the existing content.
  */
 export function installViewportStyles(): void {
-  let style = document.getElementById(STYLE_TAG_ID) as HTMLStyleElement | null;
+  let style = document.getElementById(STYLE_TAG_ID) as HTMLStyleElement | null
   if (style === null) {
-    style = document.createElement('style');
-    style.id = STYLE_TAG_ID;
-    document.head.appendChild(style);
+    style = document.createElement('style')
+    style.id = STYLE_TAG_ID
+    document.head.appendChild(style)
   }
-  style.textContent = buildRules();
+  style.textContent = buildRules()
 }
 
 /** Remove the stylesheet if present. Safe to call when it isn't installed. */
 export function removeViewportStyles(): void {
-  const style = document.getElementById(STYLE_TAG_ID);
+  const style = document.getElementById(STYLE_TAG_ID)
   if (style !== null) {
-    style.remove();
+    style.remove()
   }
 }

@@ -1,27 +1,26 @@
-import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetAdapterCache } from '@/utils/gridAdapter';
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ReadonlyProvider } from '@/hooks/ReadonlyContext'
+import { createColumnNode, createSimpleElement } from '@/testing/factories'
+import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
+import { renderWithProviders } from '@/testing/renderWithProviders'
+import { resetAdapterCache } from '@/utils/gridAdapter'
 
-import { mockFetchSuccess, getFetchCalls } from '@/testing/mockFetch';
-import { createColumnNode, createSimpleElement } from '@/testing/factories';
-import { renderWithProviders } from '@/testing/renderWithProviders';
-import { ReadonlyProvider } from '@/hooks/ReadonlyContext';
-
-import ColumnBlock from './ColumnBlock';
+import ColumnBlock from './ColumnBlock'
 
 // jsdom doesn't support native dialog showModal/close
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = vi.fn(function showModal(this: HTMLDialogElement) {
-    this.setAttribute('open', '');
-  });
+    this.setAttribute('open', '')
+  })
   HTMLDialogElement.prototype.close = vi.fn(function close(this: HTMLDialogElement) {
-    this.removeAttribute('open');
-  });
-});
+    this.removeAttribute('open')
+  })
+})
 
-import { useSortable } from '@dnd-kit/sortable';
-import { useDragContext } from '@/hooks/useDragAndDrop';
+import { useSortable } from '@dnd-kit/sortable'
+import { useDragContext } from '@/hooks/useDragAndDrop'
 
 const defaultSortable = {
   attributes: {},
@@ -31,63 +30,63 @@ const defaultSortable = {
   transition: undefined,
   isDragging: false,
   isOver: false,
-};
+}
 
 vi.mock('@dnd-kit/sortable', () => ({
   useSortable: vi.fn(() => ({ ...defaultSortable })),
   SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   verticalListSortingStrategy: {},
   horizontalListSortingStrategy: {},
-}));
+}))
 
 vi.mock('@dnd-kit/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@dnd-kit/core')>();
+  const actual = await importOriginal<typeof import('@dnd-kit/core')>()
   return {
     ...actual,
     DndContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  };
-});
+  }
+})
 
 vi.mock('@/hooks/useDragAndDrop', () => ({
   useDragContext: vi.fn(() => ({ activeType: null, pendingActive: false })),
-}));
+}))
 
 afterEach(() => {
   vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<
     typeof useSortable
-  >);
-  vi.mocked(useDragContext).mockReturnValue({ activeType: null, pendingActive: false });
-});
+  >)
+  vi.mocked(useDragContext).mockReturnValue({ activeType: null, pendingActive: false })
+})
 
 describe('ColumnBlock', () => {
   it('renders column children (element cards)', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
     const children = [
       createSimpleElement({ id: 101, title: 'Content A' }),
       createSimpleElement({ id: 102, title: 'Content B' }),
-    ];
-    const column = createColumnNode({ children, childCount: 0 });
+    ]
+    const column = createColumnNode({ children, childCount: 0 })
 
-    renderWithProviders(<ColumnBlock column={column} />);
+    renderWithProviders(<ColumnBlock column={column} />)
 
-    expect(screen.getAllByTestId('element-card')).toHaveLength(2);
-    expect(screen.getByText('Content A')).toBeInTheDocument();
-    expect(screen.getByText('Content B')).toBeInTheDocument();
-  });
+    expect(screen.getAllByTestId('element-card')).toHaveLength(2)
+    expect(screen.getByText('Content A')).toBeInTheDocument()
+    expect(screen.getByText('Content B')).toBeInTheDocument()
+  })
 
   it('shows empty state when no children and no allowed types', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    const column = createColumnNode({ children: null, childCount: 0, allowedTypes: null });
+    const column = createColumnNode({ children: null, childCount: 0, allowedTypes: null })
 
-    renderWithProviders(<ColumnBlock column={column} />);
+    renderWithProviders(<ColumnBlock column={column} />)
 
-    expect(screen.getByText('No content blocks')).toBeInTheDocument();
-  });
+    expect(screen.getByText('No content blocks')).toBeInTheDocument()
+  })
 
   it('does not show empty state when no children but allowedTypes exist', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
     const column = createColumnNode({
       children: null,
@@ -95,432 +94,432 @@ describe('ColumnBlock', () => {
       allowedTypes: {
         'App\\Model\\ContentBlock': { label: 'Content Block', icon: '', description: '' },
       },
-    });
+    })
 
-    renderWithProviders(<ColumnBlock column={column} />);
+    renderWithProviders(<ColumnBlock column={column} />)
 
-    expect(screen.queryByText('No content blocks')).not.toBeInTheDocument();
-  });
+    expect(screen.queryByText('No content blocks')).not.toBeInTheDocument()
+  })
 
   it('does not show "Add content" button when allowedTypes is null', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    const column = createColumnNode({ allowedTypes: null });
+    const column = createColumnNode({ allowedTypes: null })
 
-    renderWithProviders(<ColumnBlock column={column} />);
+    renderWithProviders(<ColumnBlock column={column} />)
 
-    expect(screen.queryByTestId('add-content-button')).not.toBeInTheDocument();
-  });
+    expect(screen.queryByTestId('add-content-button')).not.toBeInTheDocument()
+  })
 
   it('does not show "Add content" button when allowedTypes is empty object', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    const column = createColumnNode({ allowedTypes: {} });
+    const column = createColumnNode({ allowedTypes: {} })
 
-    renderWithProviders(<ColumnBlock column={column} />);
+    renderWithProviders(<ColumnBlock column={column} />)
 
-    expect(screen.queryByTestId('add-content-button')).not.toBeInTheDocument();
-  });
+    expect(screen.queryByTestId('add-content-button')).not.toBeInTheDocument()
+  })
 
   describe('status and state attributes', () => {
     it('includes draft status attribute', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
-      const column = createColumnNode({ status: 'draft' });
+      const column = createColumnNode({ status: 'draft' })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'draft');
-    });
+      expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'draft')
+    })
 
     it('includes modified status attribute', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
-      const column = createColumnNode({ status: 'modified' });
+      const column = createColumnNode({ status: 'modified' })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'modified');
-    });
+      expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'modified')
+    })
 
     it('includes published status attribute by default', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
-      const column = createColumnNode({ status: 'published' });
+      const column = createColumnNode({ status: 'published' })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'published');
-    });
+      expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'published')
+    })
 
     it('sets data-hidden when column is not visible', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-block')).toHaveAttribute('data-hidden', '');
-    });
+      expect(screen.getByTestId('column-block')).toHaveAttribute('data-hidden', '')
+    })
 
     it('does not set data-hidden when column is visible', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-hidden');
-    });
+      expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-hidden')
+    })
 
     it('sets data-collapsed when the column is collapsed in the context', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
-      const column = createColumnNode({});
+      const column = createColumnNode({})
 
       renderWithProviders(<ColumnBlock column={column} />, {
         collapsedKeys: [column.nodeKey],
-      });
+      })
 
-      expect(screen.getByTestId('column-block')).toHaveAttribute('data-collapsed', '');
-    });
+      expect(screen.getByTestId('column-block')).toHaveAttribute('data-collapsed', '')
+    })
 
     it('sets data-drop-target when isOver and activeType is column', () => {
       vi.mocked(useSortable).mockReturnValue({
         ...defaultSortable,
         isOver: true,
-      } as unknown as ReturnType<typeof useSortable>);
-      vi.mocked(useDragContext).mockReturnValue({ activeType: 'column', pendingActive: false });
-      mockFetchSuccess({});
+      } as unknown as ReturnType<typeof useSortable>)
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'column', pendingActive: false })
+      mockFetchSuccess({})
 
-      const column = createColumnNode({});
+      const column = createColumnNode({})
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-block')).toHaveAttribute('data-drop-target', '');
-    });
+      expect(screen.getByTestId('column-block')).toHaveAttribute('data-drop-target', '')
+    })
 
     it('does not set data-drop-target when isOver but activeType is not column', () => {
       vi.mocked(useSortable).mockReturnValue({
         ...defaultSortable,
         isOver: true,
-      } as unknown as ReturnType<typeof useSortable>);
-      vi.mocked(useDragContext).mockReturnValue({ activeType: 'row', pendingActive: false });
-      mockFetchSuccess({});
+      } as unknown as ReturnType<typeof useSortable>)
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'row', pendingActive: false })
+      mockFetchSuccess({})
 
-      const column = createColumnNode({});
+      const column = createColumnNode({})
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-drop-target');
-    });
+      expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-drop-target')
+    })
 
     it('does not set data-drop-target when activeType is column but not isOver', () => {
       vi.mocked(useSortable).mockReturnValue({
         ...defaultSortable,
         isOver: false,
-      } as unknown as ReturnType<typeof useSortable>);
-      vi.mocked(useDragContext).mockReturnValue({ activeType: 'column', pendingActive: false });
-      mockFetchSuccess({});
+      } as unknown as ReturnType<typeof useSortable>)
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'column', pendingActive: false })
+      mockFetchSuccess({})
 
-      const column = createColumnNode({});
+      const column = createColumnNode({})
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-drop-target');
-    });
-  });
+      expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-drop-target')
+    })
+  })
 
   describe('width picker', () => {
     it('shows current width label', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-badge')).toHaveTextContent('6/12');
-    });
+      expect(screen.getByTestId('column-badge')).toHaveTextContent('6/12')
+    })
 
     it('shows "hidden" label when column is not visible', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-badge')).toHaveTextContent('hidden');
-    });
+      expect(screen.getByTestId('column-badge')).toHaveTextContent('hidden')
+    })
 
     it('width selection calls updateGridSettings with new width and visible=true', async () => {
-      const user = userEvent.setup();
-      mockFetchSuccess({});
+      const user = userEvent.setup()
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         id: 50,
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' });
+      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' })
 
-      await user.click(screen.getByTestId('column-badge'));
+      await user.click(screen.getByTestId('column-badge'))
 
-      const options = screen.getAllByRole('option');
-      const option = options.find((opt) => opt.textContent === '8/12');
-      expect(option).toBeDefined();
-      await user.click(option!);
+      const options = screen.getAllByRole('option')
+      const option = options.find((opt) => opt.textContent === '8/12')
+      expect(option).toBeDefined()
+      await user.click(option!)
 
       await waitFor(() => {
-        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
-      });
+        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
+      })
 
-      const [url, init] = getFetchCalls()[0];
-      const body = JSON.parse(init!.body as string);
+      const [url, init] = getFetchCalls()[0]
+      const body = JSON.parse(init!.body as string)
 
-      expect(url).toContain('updateGridSettings');
+      expect(url).toContain('updateGridSettings')
       expect(body).toMatchObject({
         element: { type: 'column', id: 50 },
         viewport: 'md',
         width: 8,
         visible: true,
         offset: 0,
-      });
-    });
+      })
+    })
 
     it('selecting "hidden" calls updateGridSettings with visible=false', async () => {
-      const user = userEvent.setup();
-      mockFetchSuccess({});
+      const user = userEvent.setup()
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         id: 51,
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' });
+      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' })
 
-      await user.click(screen.getByTestId('column-badge'));
+      await user.click(screen.getByTestId('column-badge'))
 
-      const options = screen.getAllByRole('option');
-      const hiddenOption = options.find((opt) => opt.textContent === 'hidden');
-      expect(hiddenOption).toBeDefined();
-      await user.click(hiddenOption!);
+      const options = screen.getAllByRole('option')
+      const hiddenOption = options.find((opt) => opt.textContent === 'hidden')
+      expect(hiddenOption).toBeDefined()
+      await user.click(hiddenOption!)
 
       await waitFor(() => {
-        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
-      });
+        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
+      })
 
-      const [, init] = getFetchCalls()[0];
-      const body = JSON.parse(init!.body as string);
+      const [, init] = getFetchCalls()[0]
+      const body = JSON.parse(init!.body as string)
 
       expect(body).toMatchObject({
         element: { type: 'column', id: 51 },
         viewport: 'md',
         visible: false,
-      });
-    });
+      })
+    })
 
     it('clamps offset when selecting a width that makes current offset too large', async () => {
-      const user = userEvent.setup();
-      mockFetchSuccess({});
+      const user = userEvent.setup()
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         id: 52,
         gridSettings: { default: { width: 4, offset: 7, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' });
+      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' })
 
-      await user.click(screen.getByTestId('column-badge'));
+      await user.click(screen.getByTestId('column-badge'))
 
       // Select width 10 — max offset is 12-10=2, but current offset is 7
-      const options = screen.getAllByRole('option');
-      const option = options.find((opt) => opt.textContent === '10/12');
-      expect(option).toBeDefined();
-      await user.click(option!);
+      const options = screen.getAllByRole('option')
+      const option = options.find((opt) => opt.textContent === '10/12')
+      expect(option).toBeDefined()
+      await user.click(option!)
 
       await waitFor(() => {
-        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
-      });
+        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
+      })
 
-      const [, init] = getFetchCalls()[0];
-      const body = JSON.parse(init!.body as string);
+      const [, init] = getFetchCalls()[0]
+      const body = JSON.parse(init!.body as string)
 
       expect(body).toMatchObject({
         element: { type: 'column', id: 52 },
         width: 10,
         offset: 2,
         visible: true,
-      });
-    });
-  });
+      })
+    })
+  })
 
   describe('offset picker', () => {
     it('shows "none" label when offset is 0', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('none');
-    });
+      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('none')
+    })
 
     it('shows "+N" label when offset is non-zero', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 3, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('+3');
-    });
+      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('+3')
+    })
 
     it('disabled when width equals column count', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-offset-badge')).toBeDisabled();
-    });
+      expect(screen.getByTestId('column-offset-badge')).toBeDisabled()
+    })
 
     it('disabled when column is not visible', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-offset-badge')).toBeDisabled();
-    });
+      expect(screen.getByTestId('column-offset-badge')).toBeDisabled()
+    })
 
     it('enabled when width < column count and visible', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-offset-badge')).not.toBeDisabled();
-    });
+      expect(screen.getByTestId('column-offset-badge')).not.toBeDisabled()
+    })
 
     it('offset selection calls updateGridSettings with offset value', async () => {
-      const user = userEvent.setup();
-      mockFetchSuccess({});
+      const user = userEvent.setup()
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         id: 53,
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' });
+      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' })
 
-      await user.click(screen.getByTestId('column-offset-badge'));
+      await user.click(screen.getByTestId('column-offset-badge'))
 
-      const options = screen.getAllByRole('option');
-      const option = options.find((opt) => opt.textContent === '+3');
-      expect(option).toBeDefined();
-      await user.click(option!);
+      const options = screen.getAllByRole('option')
+      const option = options.find((opt) => opt.textContent === '+3')
+      expect(option).toBeDefined()
+      await user.click(option!)
 
       await waitFor(() => {
-        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
-      });
+        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
+      })
 
-      const [, init] = getFetchCalls()[0];
-      const body = JSON.parse(init!.body as string);
+      const [, init] = getFetchCalls()[0]
+      const body = JSON.parse(init!.body as string)
 
       expect(body).toMatchObject({
         element: { type: 'column', id: 53 },
         viewport: 'md',
         offset: 3,
-      });
-    });
-  });
+      })
+    })
+  })
 
   describe('column style (margin strategy)', () => {
     it('sets --col-width CSS variable based on width/columnCount', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      const outerDiv = screen.getByTestId('column-block-outer');
-      expect(outerDiv.style.getPropertyValue('--col-width')).toBe('50%');
-    });
+      const outerDiv = screen.getByTestId('column-block-outer')
+      expect(outerDiv.style.getPropertyValue('--col-width')).toBe('50%')
+    })
 
     it('sets --col-offset CSS variable when offset > 0', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 3, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      const outerDiv = screen.getByTestId('column-block-outer');
-      expect(outerDiv.style.getPropertyValue('--col-offset')).toBe('25%');
-    });
+      const outerDiv = screen.getByTestId('column-block-outer')
+      expect(outerDiv.style.getPropertyValue('--col-offset')).toBe('25%')
+    })
 
     it('does not set --col-offset when offset is 0', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      const outerDiv = screen.getByTestId('column-block-outer');
-      expect(outerDiv.style.getPropertyValue('--col-offset')).toBe('');
-    });
-  });
+      const outerDiv = screen.getByTestId('column-block-outer')
+      expect(outerDiv.style.getPropertyValue('--col-offset')).toBe('')
+    })
+  })
 
   describe('column style (grid-placement strategy)', () => {
     it('sets --col-span and --col-start CSS variables', () => {
       // Override the adapter config to use grid-placement
-      resetAdapterCache();
-      window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement';
+      resetAdapterCache()
+      window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
 
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 4, offset: 2, visible: true }, overrides: {} },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      const outerDiv = screen.getByTestId('column-block-outer');
-      expect(outerDiv.style.getPropertyValue('--col-span')).toBe('4');
+      const outerDiv = screen.getByTestId('column-block-outer')
+      expect(outerDiv.style.getPropertyValue('--col-span')).toBe('4')
       // offset + 1 = 3 for grid-column-start
-      expect(outerDiv.style.getPropertyValue('--col-start')).toBe('3');
-    });
-  });
+      expect(outerDiv.style.getPropertyValue('--col-start')).toBe('3')
+    })
+  })
 
   describe('element type picker', () => {
     it('shows "Add content" button when allowedTypes exist', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         children: null,
@@ -528,16 +527,16 @@ describe('ColumnBlock', () => {
         allowedTypes: {
           'App\\Model\\ContentBlock': { label: 'Content Block', icon: '', description: '' },
         },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />);
+      renderWithProviders(<ColumnBlock column={column} />)
 
-      expect(screen.getByTestId('add-content-button')).toHaveTextContent('+ Add content');
-    });
+      expect(screen.getByTestId('add-content-button')).toHaveTextContent('+ Add content')
+    })
 
     it('opens type picker on "Add content" click and calls createContentElement on select', async () => {
-      const user = userEvent.setup();
-      mockFetchSuccess({});
+      const user = userEvent.setup()
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         id: 60,
@@ -550,62 +549,62 @@ describe('ColumnBlock', () => {
             description: 'A text block',
           },
         },
-      });
+      })
 
-      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' });
+      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' })
 
       // Open the type picker (component is React.lazy, so await its mount)
-      await user.click(screen.getByTestId('add-content-button'));
-      await screen.findByTestId('element-type-picker');
+      await user.click(screen.getByTestId('add-content-button'))
+      await screen.findByTestId('element-type-picker')
 
       // Click the tile
-      await user.click(screen.getByTestId('element-type-tile'));
+      await user.click(screen.getByTestId('element-type-tile'))
 
       await waitFor(() => {
-        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled();
-      });
+        expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
+      })
 
-      const [url, init] = getFetchCalls()[0];
-      const body = JSON.parse(init!.body as string);
+      const [url, init] = getFetchCalls()[0]
+      const body = JSON.parse(init!.body as string)
 
-      expect(url).toContain('createContent');
+      expect(url).toContain('createContent')
       expect(body).toMatchObject({
         className: 'App\\Model\\TextBlock',
         parent: { type: 'column', id: 60 },
-      });
-    });
-  });
+      })
+    })
+  })
 
   it('shows EmptyState when children is empty array and no allowedTypes', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
     const column = createColumnNode({
       children: [] as never,
       childCount: 0,
       allowedTypes: null,
-    });
+    })
 
-    renderWithProviders(<ColumnBlock column={column} />);
+    renderWithProviders(<ColumnBlock column={column} />)
 
-    expect(screen.getByText('No content blocks')).toBeInTheDocument();
-  });
+    expect(screen.getByText('No content blocks')).toBeInTheDocument()
+  })
 
   it('disables width picker when a drag is active', () => {
-    vi.mocked(useDragContext).mockReturnValue({ activeType: 'column', pendingActive: false });
-    mockFetchSuccess({});
+    vi.mocked(useDragContext).mockReturnValue({ activeType: 'column', pendingActive: false })
+    mockFetchSuccess({})
 
     const column = createColumnNode({
       gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-    });
+    })
 
-    renderWithProviders(<ColumnBlock column={column} />);
+    renderWithProviders(<ColumnBlock column={column} />)
 
-    expect(screen.getByTestId('column-badge')).toBeDisabled();
-  });
+    expect(screen.getByTestId('column-badge')).toBeDisabled()
+  })
 
   it('closes the element type picker when close handler is invoked', async () => {
-    const user = userEvent.setup();
-    mockFetchSuccess({});
+    const user = userEvent.setup()
+    mockFetchSuccess({})
 
     const column = createColumnNode({
       children: null,
@@ -617,45 +616,45 @@ describe('ColumnBlock', () => {
           description: 'A text block',
         },
       },
-    });
+    })
 
-    renderWithProviders(<ColumnBlock column={column} />);
+    renderWithProviders(<ColumnBlock column={column} />)
 
     // Open the picker (component is React.lazy, so await its mount)
-    await user.click(screen.getByTestId('add-content-button'));
-    await screen.findByTestId('element-type-picker');
+    await user.click(screen.getByTestId('add-content-button'))
+    await screen.findByTestId('element-type-picker')
 
     // Close it via the close button — the picker is mounted only while open,
     // so closing unmounts it.
-    await user.click(screen.getByTestId('element-type-picker-close'));
+    await user.click(screen.getByTestId('element-type-picker-close'))
 
     await waitFor(() => {
-      expect(screen.queryByTestId('element-type-picker')).not.toBeInTheDocument();
-    });
-  });
+      expect(screen.queryByTestId('element-type-picker')).not.toBeInTheDocument()
+    })
+  })
 
   it('renders edit link when editLink is set', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    const column = createColumnNode({ editLink: '/admin/pages/edit/show/42' });
+    const column = createColumnNode({ editLink: '/admin/pages/edit/show/42' })
 
-    renderWithProviders(<ColumnBlock column={column} />);
+    renderWithProviders(<ColumnBlock column={column} />)
 
-    const link = screen.getByTestId('column-edit-link');
-    expect(link).toHaveAttribute('href', '/admin/pages/edit/show/42');
-    expect(link).toHaveTextContent(column.title);
-  });
+    const link = screen.getByTestId('column-edit-link')
+    expect(link).toHaveAttribute('href', '/admin/pages/edit/show/42')
+    expect(link).toHaveTextContent(column.title)
+  })
 
   it('renders title as plain text when editLink is null', () => {
-    mockFetchSuccess({});
+    mockFetchSuccess({})
 
-    const column = createColumnNode({ editLink: null });
+    const column = createColumnNode({ editLink: null })
 
-    renderWithProviders(<ColumnBlock column={column} />);
+    renderWithProviders(<ColumnBlock column={column} />)
 
-    expect(screen.queryByTestId('column-edit-link')).not.toBeInTheDocument();
-    expect(screen.getByTestId('column-title')).toHaveTextContent(column.title);
-  });
+    expect(screen.queryByTestId('column-edit-link')).not.toBeInTheDocument()
+    expect(screen.getByTestId('column-title')).toHaveTextContent(column.title)
+  })
 
   describe('readonly mode', () => {
     // Pin the `children.length > 0 ? ... : <EmptyState ...>` ternary at
@@ -664,78 +663,78 @@ describe('ColumnBlock', () => {
     // (no sortable, no mutations, no picker) where the ternary survives.
 
     it('renders an ElementCard for each child and no empty-state', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
       const children = [
         createSimpleElement({ id: 201, title: 'Readonly A' }),
         createSimpleElement({ id: 202, title: 'Readonly B' }),
         createSimpleElement({ id: 203, title: 'Readonly C' }),
-      ];
-      const column = createColumnNode({ children, childCount: 0 });
+      ]
+      const column = createColumnNode({ children, childCount: 0 })
 
       renderWithProviders(
         <ReadonlyProvider value={true}>
           <ColumnBlock column={column} />
         </ReadonlyProvider>,
-      );
+      )
 
-      expect(screen.getAllByTestId('element-card')).toHaveLength(3);
-      expect(screen.getByText('Readonly A')).toBeInTheDocument();
-      expect(screen.getByText('Readonly B')).toBeInTheDocument();
-      expect(screen.getByText('Readonly C')).toBeInTheDocument();
-      expect(screen.queryByText('No content blocks')).not.toBeInTheDocument();
-    });
+      expect(screen.getAllByTestId('element-card')).toHaveLength(3)
+      expect(screen.getByText('Readonly A')).toBeInTheDocument()
+      expect(screen.getByText('Readonly B')).toBeInTheDocument()
+      expect(screen.getByText('Readonly C')).toBeInTheDocument()
+      expect(screen.queryByText('No content blocks')).not.toBeInTheDocument()
+    })
 
     it('renders the empty-state message and no ElementCards when children are empty', () => {
-      mockFetchSuccess({});
+      mockFetchSuccess({})
 
-      const column = createColumnNode({ children: null, childCount: 0 });
+      const column = createColumnNode({ children: null, childCount: 0 })
 
       renderWithProviders(
         <ReadonlyProvider value={true}>
           <ColumnBlock column={column} />
         </ReadonlyProvider>,
-      );
+      )
 
-      expect(screen.getByText('No content blocks')).toBeInTheDocument();
-      expect(screen.queryAllByTestId('element-card')).toHaveLength(0);
-    });
-  });
+      expect(screen.getByText('No content blocks')).toBeInTheDocument()
+      expect(screen.queryAllByTestId('element-card')).toHaveLength(0)
+    })
+  })
 
   describe('between-column insert handle', () => {
     it('passes an offset-aware gutter shift to the handle when the column has a margin offset', () => {
-      resetAdapterCache();
-      mockFetchSuccess({});
+      resetAdapterCache()
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 2, offset: 1, visible: true }, overrides: {} },
-      });
+      })
 
       renderWithProviders(
         <ColumnBlock column={column} insertBefore={{ rowId: 9, afterColumnId: 3 }} />,
-      );
+      )
 
       // (offset / width) * 50 → (1 / 2) * 50 = 25
       expect(
         screen.getByTestId('column-insert-between').style.getPropertyValue('--ssgrid-insert-shift'),
-      ).toBe('25%');
-    });
+      ).toBe('25%')
+    })
 
     it('omits the gutter shift when the column has no offset', () => {
-      resetAdapterCache();
-      mockFetchSuccess({});
+      resetAdapterCache()
+      mockFetchSuccess({})
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-      });
+      })
 
       renderWithProviders(
         <ColumnBlock column={column} insertBefore={{ rowId: 9, afterColumnId: 3 }} />,
-      );
+      )
 
       expect(
         screen.getByTestId('column-insert-between').style.getPropertyValue('--ssgrid-insert-shift'),
-      ).toBe('');
-    });
-  });
-});
+      ).toBe('')
+    })
+  })
+})

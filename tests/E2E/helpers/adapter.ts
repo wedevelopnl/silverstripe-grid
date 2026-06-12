@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test'
 
 /**
  * Shape of the adapter config exposed by GridController::buildAdapterConfig()
@@ -9,14 +9,14 @@ import type { Locator, Page } from '@playwright/test';
  * values tied to the Bootstrap preset.
  */
 export interface AdapterConfig {
-  viewports: { key: string; label: string; minWidth: number }[];
-  defaultViewport: string;
-  columnCount: number;
-  rowClasses: string;
-  offsetStrategy: 'margin' | 'grid-placement';
+  viewports: { key: string; label: string; minWidth: number }[]
+  defaultViewport: string
+  columnCount: number
+  rowClasses: string
+  offsetStrategy: 'margin' | 'grid-placement'
 }
 
-const GRID_CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController';
+const GRID_CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController'
 
 /**
  * Read the active adapter's runtime config from the CMS page.
@@ -26,21 +26,21 @@ const GRID_CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController';
  */
 export async function readAdapterConfig(page: Page): Promise<AdapterConfig> {
   return page.evaluate((controllerFqcn) => {
-    const ss = (window as unknown as { ss?: { config?: { sections: { name: string }[] } } }).ss;
+    const ss = (window as unknown as { ss?: { config?: { sections: { name: string }[] } } }).ss
     if (!ss?.config) {
-      throw new Error('window.ss.config is not available — load an admin page first.');
+      throw new Error('window.ss.config is not available — load an admin page first.')
     }
 
     const section = ss.config.sections.find((s) => s.name === controllerFqcn) as
       | { gridAdapter?: AdapterConfig }
-      | undefined;
+      | undefined
 
     if (!section?.gridAdapter) {
-      throw new Error(`Grid adapter config missing from section "${controllerFqcn}".`);
+      throw new Error(`Grid adapter config missing from section "${controllerFqcn}".`)
     }
 
-    return section.gridAdapter;
-  }, GRID_CONTROLLER_FQCN);
+    return section.gridAdapter
+  }, GRID_CONTROLLER_FQCN)
 }
 
 /**
@@ -51,7 +51,7 @@ export async function readAdapterConfig(page: Page): Promise<AdapterConfig> {
  * produce their own unique testids at render time.
  */
 export function viewportButton(page: Page, key: string): Locator {
-  return page.getByTestId(`viewport-button-${key}`);
+  return page.getByTestId(`viewport-button-${key}`)
 }
 
 /**
@@ -62,11 +62,11 @@ export function viewportButton(page: Page, key: string): Locator {
  * adapter viewport must use this helper rather than an unconditional click.
  */
 export async function activateViewport(page: Page, key: string): Promise<void> {
-  const button = viewportButton(page, key);
+  const button = viewportButton(page, key)
   if ((await button.getAttribute('aria-pressed')) === 'true') {
-    return;
+    return
   }
-  await button.click();
+  await button.click()
 }
 
 /**
@@ -77,11 +77,11 @@ export async function activateViewport(page: Page, key: string): Promise<void> {
  * from `config.viewports`.
  */
 export function firstNonDefaultViewport(config: AdapterConfig): string {
-  const nonDefault = config.viewports.find((vp) => vp.key !== config.defaultViewport);
+  const nonDefault = config.viewports.find((vp) => vp.key !== config.defaultViewport)
   if (nonDefault === undefined) {
-    throw new Error('Adapter has only one viewport — no non-default to pick.');
+    throw new Error('Adapter has only one viewport — no non-default to pick.')
   }
-  return nonDefault.key;
+  return nonDefault.key
 }
 
 /**
@@ -91,11 +91,11 @@ export function firstNonDefaultViewport(config: AdapterConfig): string {
 export function twoNonDefaultViewports(config: AdapterConfig): [string, string] {
   const nonDefault = config.viewports
     .filter((vp) => vp.key !== config.defaultViewport)
-    .map((vp) => vp.key);
+    .map((vp) => vp.key)
   if (nonDefault.length < 2) {
     throw new Error(
       `Adapter exposes ${nonDefault.length} non-default viewport(s); need at least 2.`,
-    );
+    )
   }
-  return [nonDefault[0], nonDefault[1]];
+  return [nonDefault[0], nonDefault[1]]
 }

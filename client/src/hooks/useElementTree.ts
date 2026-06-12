@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
-import { fetchElementTree } from '@/api/endpoints';
-import type { TreeApiResponse } from '@/types/elements';
-import type { ApiError } from '@/api/errors';
-import { countOverrides } from '@/utils/countOverrides';
-import { queryKeys } from './queryKeys';
+import { useQuery } from '@tanstack/react-query'
+import { fetchElementTree } from '@/api/endpoints'
+import type { ApiError } from '@/api/errors'
+import type { TreeApiResponse } from '@/types/elements'
+import { countOverrides } from '@/utils/countOverrides'
+import { queryKeys } from './queryKeys'
 
 function treeQueryOptions(pageId: number | null, zone: string, version?: number) {
   return {
@@ -13,12 +13,12 @@ function treeQueryOptions(pageId: number | null, zone: string, version?: number)
         : (['elementTree', 'disabled'] as const),
     queryFn: () => {
       if (pageId === null) {
-        throw new Error('pageId is required — query should be disabled');
+        throw new Error('pageId is required — query should be disabled')
       }
-      return fetchElementTree(pageId, zone, version);
+      return fetchElementTree(pageId, zone, version)
     },
     enabled: pageId !== null,
-  };
+  }
 }
 
 /**
@@ -28,7 +28,7 @@ function treeQueryOptions(pageId: number | null, zone: string, version?: number)
 export function useElementTree(pageId: number | null, zone: string, version?: number) {
   return useQuery<TreeApiResponse, ApiError>({
     ...treeQueryOptions(pageId, zone, version),
-  });
+  })
 }
 
 /**
@@ -44,7 +44,7 @@ export function useViewportOverrideCounts(
   const { data } = useQuery<TreeApiResponse, ApiError, Record<string, number>>({
     ...treeQueryOptions(pageId, zone, version),
     select: (response) => countOverrides(response.nodes),
-  });
+  })
 
-  return data ?? {};
+  return data ?? {}
 }

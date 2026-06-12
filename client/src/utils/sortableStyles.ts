@@ -1,8 +1,8 @@
-import type { SortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import type { Transform } from '@dnd-kit/utilities';
+import type { SortingStrategy } from '@dnd-kit/sortable'
+import type { Transform } from '@dnd-kit/utilities'
+import { CSS } from '@dnd-kit/utilities'
 
-const DRAGGING_OPACITY = 0.3;
+const DRAGGING_OPACITY = 0.3
 
 /**
  * A `SortableContext` strategy that applies no transforms. Used while a
@@ -13,7 +13,7 @@ const DRAGGING_OPACITY = 0.3;
  * collision/direction math on the next cycle. Items simply stay where the
  * (pending) DOM puts them.
  */
-export const noopSortingStrategy: SortingStrategy = () => null;
+export const noopSortingStrategy: SortingStrategy = () => null
 
 export function buildSortableStyle(
   transform: Transform | null,
@@ -24,5 +24,5 @@ export function buildSortableStyle(
     transform: CSS.Transform.toString(transform),
     transition: transition ?? undefined,
     opacity: isDragging ? DRAGGING_OPACITY : undefined,
-  };
+  }
 }
