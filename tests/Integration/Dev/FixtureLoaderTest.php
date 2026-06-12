@@ -155,4 +155,23 @@ final class FixtureLoaderTest extends SapphireTest
         self::assertNotNull($page);
         self::assertSame(Page::class, $page::class);
     }
+
+    public function testLoadWithArrayConfigButNoPostActionsSucceeds(): void
+    {
+        // Array config carrying a `path` but no `post_actions` key. resolvePostActions()
+        // guards with `!is_array($config) || !isset($config['post_actions'])`; flipping
+        // the `||` to `&&` would fall through and dereference the absent `post_actions`.
+        Config::modify()->merge(FixtureLoader::class, 'fixtures', [
+            'array-no-post-actions' => [
+                'path' => 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/EmptyPage.yml',
+            ],
+        ]);
+
+        $loader = FixtureLoader::create();
+        $result = $loader->load('array-no-post-actions');
+
+        self::assertInstanceOf(FixtureResult::class, $result);
+        self::assertGreaterThan(0, $result->pageId);
+        self::assertSame('array-no-post-actions', $result->fixtureName);
+    }
 }

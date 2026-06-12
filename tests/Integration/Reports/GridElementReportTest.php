@@ -72,10 +72,18 @@ final class GridElementReportTest extends SapphireTest
         GridTreeFactory::section($page);
         $section2 = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section2);
-        GridTreeFactory::column($row);
+        $column = GridTreeFactory::column($row);
 
         $records = $this->report()->sourceRecords(['ClassName' => Section::class]);
 
+        $ids = array_map('intval', $records->column('ID'));
+
+        // Only Section records survive the ClassName filter — the Row and Column
+        // are excluded. Negating the `$classFilter !== null` guard (or dropping the
+        // (string) cast that derives it) would skip the filter and leak them in.
+        self::assertContains((int) $section2->ID, $ids);
+        self::assertNotContains((int) $row->ID, $ids);
+        self::assertNotContains((int) $column->ID, $ids);
         foreach ($records as $record) {
             self::assertInstanceOf(Section::class, $record);
         }
@@ -215,19 +223,20 @@ final class GridElementReportTest extends SapphireTest
         $page1 = $this->objFromFixture(Page::class, 'test_page');
         $page2 = $this->objFromFixture(Page::class, 'test_page_2');
 
-        GridTreeFactory::section($page1, 'main', 0, 'Page1 Section');
-        GridTreeFactory::section($page2, 'main', 0, 'Page2 Section');
+        $section1 = GridTreeFactory::section($page1, 'main', 0, 'Page1 Section');
+        $section2 = GridTreeFactory::section($page2, 'main', 0, 'Page2 Section');
 
-        // Filter to page1 only — page2 elements should be excluded
+        // Filter to page1 only — page2 elements must be excluded entirely.
         $records = $this->report()->sourceRecords([
             'PageID' => (string) $page1->ID,
         ]);
 
-        foreach ($records as $record) {
-            if ($record->PageTitle !== null) {
-                self::assertSame((string) $page1->Title, $record->PageTitle);
-            }
-        }
+        $ids = array_map('intval', $records->column('ID'));
+
+        // page1's section is present, page2's is absent. Dropping the `continue` on
+        // the PageID mismatch (or flipping the `!==`) would leak page2's section in.
+        self::assertContains((int) $section1->ID, $ids);
+        self::assertNotContains((int) $section2->ID, $ids);
     }
 
     public function testColumnsFormattingCallbacksReturnStrings(): void

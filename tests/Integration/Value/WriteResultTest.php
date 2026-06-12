@@ -46,6 +46,27 @@ final class WriteResultTest extends SapphireTest
         self::assertSame('Title', $errors[0]->field);
     }
 
+    public function testTranslatesAllFieldErrors(): void
+    {
+        // Pins that every message is translated into its own ValidationError —
+        // a mutant that emits only the first (or last) entry would fail the count.
+        $validationResult = ValidationResult::create();
+        $validationResult->addFieldError('Title', 'Title is required');
+        $validationResult->addFieldError('Zone', 'Zone is invalid');
+
+        $result = WriteResult::from(static function () use ($validationResult): never {
+            throw new ValidationException($validationResult);
+        });
+
+        self::assertTrue($result->isErr());
+        $errors = $result->errors();
+        self::assertCount(2, $errors);
+
+        $messages = array_map(static fn ($error): string => $error->message, $errors);
+        self::assertContains('Title is required', $messages);
+        self::assertContains('Zone is invalid', $messages);
+    }
+
     public function testEmptyExceptionMessagesFallback(): void
     {
         // ValidationResult with no messages

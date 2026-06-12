@@ -137,6 +137,24 @@ final class SectionTest extends SapphireTest
         self::assertSame(1, $sidebar1Reloaded->Sort);
     }
 
+    public function testEnsureSortSetPreservesExplicitSort(): void
+    {
+        // Pins the `if ($this->Sort > 0) return;` guard in Section::ensureSortSet.
+        // Removing it would overwrite the explicit Sort with the computed max+1 (=1
+        // for the first section in the zone), losing the caller-supplied value.
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        Config::modify()->set(Row::class, 'auto_scaffold', false);
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        $section = GridTreeFactory::section($page, zone: 'main', sort: 5);
+
+        self::assertSame(5, $section->Sort);
+
+        $reloaded = Section::get()->byID($section->ID);
+        self::assertSame(5, $reloaded->Sort, 'explicit Sort must survive the write, not be reassigned');
+    }
+
     public function testEnsureSortSetFiltersByParentPage(): void
     {
         // Pins the `'ParentID' => $this->ParentID` filter in Section::ensureSortSet.

@@ -386,6 +386,31 @@ final class LegacyDataReaderTest extends SapphireTest
         }
     }
 
+    public function testGetEligiblePagesFromSiteTreeBaseTable(): void
+    {
+        // Apply the extension to the SiteTree BASE table (not Page). The reader must
+        // still find the page, which requires the base SiteTree class itself to be
+        // included in the table scan. Pins ClassInfo::subclassesFor(SiteTree, true):
+        // dropping the `includeBase` flag would exclude SiteTree's own table and
+        // return no pages.
+        $this->seeder->addExtensionColumns('SiteTree');
+
+        try {
+            $page = $this->objFromFixture(Page::class, 'test_page');
+            $pageId = (int) $page->ID;
+            $this->seeder->seedPageOnTable('SiteTree', $pageId, 700);
+
+            $result = $this->reader->getEligiblePages('draft');
+
+            self::assertCount(1, $result);
+            self::assertSame($pageId, $result[0]['pageId']);
+            self::assertSame(700, $result[0]['areaId']);
+            self::assertSame(Page::class, $result[0]['pageClassName']);
+        } finally {
+            $this->seeder->removeExtensionColumns('SiteTree');
+        }
+    }
+
     // ─── Invalid stage handling ──────────────────────────────────
 
     public function testGetEligiblePagesThrowsOnInvalidStage(): void

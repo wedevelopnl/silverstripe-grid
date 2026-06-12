@@ -23,6 +23,33 @@ final class ColumnWidthPickerFieldTest extends SapphireTest
 
     private const int TOTAL_COLUMNS = 12;
 
+    /**
+     * A split whose diagram PNG exists on disk (8/4 → horizontal_8-4.png)
+     * must resolve to a non-empty public URL, while a split whose PNG is
+     * absent (1/11 → horizontal_1-11.png does not ship) must fall back to
+     * an empty string. Both arms of the resource-existence guard and the
+     * filename construction are exercised in one assertion pair.
+     */
+    public function testImageUrlResolvesForPresentPngAndEmptyForMissingPng(): void
+    {
+        $field = new ColumnWidthPickerField(
+            'Layout',
+            'Layout',
+            [8 => '8/4 split', 1 => '1/11 split'],
+            self::TOTAL_COLUMNS,
+        );
+
+        $options = $field->getPickerOptions();
+
+        $present = $options->find('Value', 8);
+        self::assertNotNull($present);
+        self::assertNotSame('', $present->ImageURL, 'Present PNG (8/4) must resolve to a non-empty URL');
+
+        $missing = $options->find('Value', 1);
+        self::assertNotNull($missing);
+        self::assertSame('', $missing->ImageURL, 'Missing PNG (1/11) must fall back to an empty URL');
+    }
+
     public function testGetTotalColumnsReturnsConstructorValue(): void
     {
         $field = new ColumnWidthPickerField('Layout', 'Layout', self::SOURCE, self::TOTAL_COLUMNS);

@@ -55,6 +55,19 @@ final class AbstractMigrationTaskTest extends TestCase
         self::assertSame(['MD' => 'md', 'XL' => 'xl'], $map);
     }
 
+    public function testExplicitViewportMapArgumentPreservesEqualsInValue(): void
+    {
+        // A pair value that itself contains '=' must survive intact: the split is
+        // limited to two parts, so only the FIRST '=' separates key from value.
+        // Pins the explode limit of 2 — a limit of 3 would drop the 'b' segment
+        // entirely and yield ['X' => 'a'] instead of ['X' => 'a=b'].
+        $adapter = $this->adapterWithViewportKeys(['md']);
+
+        $map = $this->invokeResolveViewportKeyMap('X=a=b', $adapter);
+
+        self::assertSame(['X' => 'a=b'], $map);
+    }
+
     public function testExplicitViewportMapArgumentWinsOverAdapterAutoDerive(): void
     {
         // Adapter has no 'md' at all, but the explicit map still takes precedence

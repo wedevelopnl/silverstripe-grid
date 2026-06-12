@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Tests\Integration\Model;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
@@ -17,12 +18,20 @@ use SilverStripe\VersionedAdmin\Forms\HistoryViewerField;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Support\CustomSchemaContentElement;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Tests\Integration\Support\PermissionDenyingPage;
 
 #[CoversClass(GridElement::class)]
 final class GridElementTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
+
+    /** @var array<class-string> */
+    protected static $extra_dataobjects = [
+        CustomSchemaContentElement::class,
+        PermissionDenyingPage::class,
+    ];
 
     protected function setUp(): void
     {
@@ -200,6 +209,18 @@ final class GridElementTest extends SapphireTest
         self::assertNull($element->getPage());
     }
 
+    public function testGetPageReturnsNullWhenParentDoesNotExist(): void
+    {
+        // Pins the `!$parent->exists()` guard: a parent reference pointing at a
+        // non-existent record must resolve to null, not be walked as a real page.
+        // The mutant that removes the early `return null;` would fall through.
+        $element = ContentElement::create();
+        $element->ParentClass = Section::class;
+        $element->ParentID = 999999;
+
+        self::assertNull($element->getPage());
+    }
+
     // ── Permissions ─────────────────────────────────────────────
 
     public function testCanViewDelegatesToPage(): void
@@ -230,6 +251,42 @@ final class GridElementTest extends SapphireTest
         $section = GridTreeFactory::section($page);
 
         self::assertTrue($section->canDelete());
+    }
+
+    /**
+     * Pins the page delegation in canView/canEdit/canDelete: when the element's
+     * owning page DENIES the permission, the element must report false even
+     * though the member holds CMS access (which the orphan fallback would grant).
+     * A mutant that skips the `$page->can*()` delegation and falls through to the
+     * `Permission::check('CMS_ACCESS', ...)` fallback would return true.
+     *
+     * @param 'canView'|'canEdit'|'canDelete' $method
+     */
+    #[DataProvider('pageDenyingPermissionProvider')]
+    public function testCanPermissionFollowsDenyingPage(string $method): void
+    {
+        $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
+
+        $page = PermissionDenyingPage::create();
+        $page->Title = 'Denied';
+        $page->write();
+
+        $section = GridTreeFactory::section($page);
+
+        self::assertFalse(
+            $section->{$method}(),
+            sprintf('%s must follow the denying page, not the CMS_ACCESS fallback', $method),
+        );
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function pageDenyingPermissionProvider(): iterable
+    {
+        yield 'canView' => ['canView'];
+        yield 'canEdit' => ['canEdit'];
+        yield 'canDelete' => ['canDelete'];
     }
 
     public function testCanCreateChecksCmsAccess(): void
@@ -331,6 +388,29 @@ final class GridElementTest extends SapphireTest
         self::assertSame('My Block', $schema['title']);
         self::assertSame('Content element', $schema['type']);
         self::assertStringNotContainsString('\\', $schema['typeName']);
+    }
+
+    public function testGetBlockSchemaMergesSubclassProvidedKeys(): void
+    {
+        // Pins the array_merge in getBlockSchema: a mutant that drops the merged
+        // map (returning only the base schema) loses the subclass key.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $element = CustomSchemaContentElement::create();
+        $element->ParentID = $column->ID;
+        $element->ParentClass = $column::class;
+        $element->write();
+
+        $schema = $element->getBlockSchema();
+
+        self::assertArrayHasKey('custom', $schema);
+        self::assertSame('x', $schema['custom']);
+        // Base keys must remain present alongside the merged ones.
+        self::assertArrayHasKey('id', $schema);
+        self::assertArrayHasKey('type', $schema);
     }
 
     // ── Title size class ────────────────────────────────────────
@@ -625,6 +705,34 @@ final class GridElementTest extends SapphireTest
             $countBefore + 1,
             $countAfter,
             'writing a leaf content element must create exactly one record — no scaffold children',
+        );
+    }
+
+    public function testWritingLeafShortCircuitsBeforeContainerScaffolding(): void
+    {
+        // Pins the `!$this instanceof ContainerInterface` early return in
+        // onAfterWrite. With auto_scaffold enabled on the leaf class, removing
+        // that return would let onAfterWrite reach getContainerType() — a method
+        // ContentElement does not have — raising an Error and failing the write.
+        // The leaf guard must short-circuit first, so the write succeeds and
+        // produces exactly one record.
+        Config::modify()->set(ContentElement::class, 'auto_scaffold', true);
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $countBefore = GridElement::get()->count();
+
+        // Reaches getContainerType() and raises an Error if the leaf guard is removed.
+        $element = GridTreeFactory::contentElement($column, title: 'Leaf');
+
+        self::assertTrue($element->isInDB());
+        self::assertSame(
+            $countBefore + 1,
+            GridElement::get()->count(),
+            'leaf write must succeed and create exactly one record despite auto_scaffold being enabled',
         );
     }
 }

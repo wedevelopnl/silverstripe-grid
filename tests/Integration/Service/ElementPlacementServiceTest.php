@@ -205,21 +205,33 @@ final class ElementPlacementServiceTest extends SapphireTest
         $page1 = $this->objFromFixture(Page::class, 'test_page');
         $page2 = $this->objFromFixture(Page::class, 'test_page_2');
 
-        $main1 = GridTreeFactory::section($page1, zone: 'main');
-        $main2 = GridTreeFactory::section($page1, zone: 'main');
-        $sidebar1 = GridTreeFactory::section($page1, zone: 'sidebar');
+        // main zone: 1, 2 (moved away), 3 — removing #2 leaves a gap that the
+        // source reindex must close (main3: 3 → 2).
+        $main1 = GridTreeFactory::section($page1, zone: 'main', sort: 1);
+        $main2 = GridTreeFactory::section($page1, zone: 'main', sort: 2);
+        $main3 = GridTreeFactory::section($page1, zone: 'main', sort: 3);
+        // sidebar zone: an independent Sort space the source reindex must NOT
+        // touch. If L110 stopped zone-filtering the source siblings, sidebar1
+        // would be folded into the main reindex and its Sort would change.
+        $sidebar1 = GridTreeFactory::section($page1, zone: 'sidebar', sort: 1);
+        $sidebar2 = GridTreeFactory::section($page1, zone: 'sidebar', sort: 2);
 
         // Move main2 from page1 to page2
         $result = $this->service->reorder($main2, $page2, null);
 
         self::assertTrue($result->isOk());
 
-        // Reload and verify sort values are unchanged for unaffected elements
+        // Source main zone: gap closed, contiguous 1..2
         $main1 = GridElement::get()->byID($main1->ID);
+        $main3 = GridElement::get()->byID($main3->ID);
         self::assertSame(1, $main1->Sort, 'main1 sort should remain 1');
+        self::assertSame(2, $main3->Sort, 'main3 should slide down to close the gap left by main2');
 
+        // Sidebar zone untouched — different zone is excluded from the source reindex
         $sidebar1 = GridElement::get()->byID($sidebar1->ID);
+        $sidebar2 = GridElement::get()->byID($sidebar2->ID);
         self::assertSame(1, $sidebar1->Sort, 'sidebar1 sort should remain 1 (different zone)');
+        self::assertSame(2, $sidebar2->Sort, 'sidebar2 sort should remain 2 (different zone)');
     }
 
     public function testInvalidReferenceErrorHasTranslationKey(): void

@@ -6,10 +6,14 @@ namespace WeDevelop\Grid\Tests\Integration\Extensions;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use Page;
+use SilverStripe\Assets\Dev\TestAssetStore;
 use SilverStripe\Assets\Image;
 use SilverStripe\Core\Config\Config;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Adapter\BootstrapAdapter;
+use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Extensions\BlockMediaExtension;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
@@ -26,12 +30,49 @@ final class BlockMediaExtensionTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
+    private const TEST_IMAGE_PATH = __DIR__ . '/../../E2E/Fixture/assets/test-image.png';
+
     protected function setUp(): void
     {
         parent::setUp();
         Versioned::set_stage(Versioned::DRAFT);
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
+        TestAssetStore::activate('BlockMediaExtensionTest');
+    }
+
+    protected function tearDown(): void
+    {
+        TestAssetStore::reset();
+        parent::tearDown();
+    }
+
+    /**
+     * Write a real PNG (200x150, non-square) into the active TestAssetStore and
+     * attach it to the element so getMediaImage()->exists() is true and the
+     * source dimensions drive the Auto aspect-ratio path.
+     */
+    private function attachRealImage(ContentElement $element): Image
+    {
+        $image = Image::create();
+        $image->setFromLocalFile(self::TEST_IMAGE_PATH, 'media-test.png');
+        $image->write();
+
+        $element->MediaType = 'image';
+        $element->MediaImageID = $image->ID;
+        $element->write();
+
+        return $image;
+    }
+
+    /**
+     * Rebuild the GridAdapter singleton so a Config change to total_columns
+     * (read in the adapter constructor) takes effect for elements created after
+     * this call.
+     */
+    private function rebuildGridAdapter(): void
+    {
+        Injector::inst()->unregisterNamedObject(GridAdapterInterface::class);
     }
 
     private function createContentElement(): ContentElement
@@ -319,6 +360,20 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertSame(110, $element->getMediaImageWidth());
     }
 
+    public function testGetMediaImageWidthClampsNegativeContentColumns(): void
+    {
+        // A negative ContentColumns hits the `$contentColumns <= 0` arm of
+        // getColSize(), which returns max(1, columnCount) = the full grid span.
+        // Removing that return (ReturnRemoval mutant) would fall through to the
+        // `columnCount - contentColumns` branch (12 - (-3) = 15) and produce a
+        // different width, so this pins the negative-input clamp.
+        $element = $this->createContentElement();
+        $element->ContentColumns = -3;
+
+        // Full grid width → round(1320 * 12 / 12) = 1320
+        self::assertSame(1320, $element->getMediaImageWidth());
+    }
+
     public function testGetMediaImageHeightSquare(): void
     {
         $element = $this->createContentElement();
@@ -389,6 +444,44 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element->MediaImageID = 0;
 
         self::assertNull($element->getMediaImageSourceURL());
+    }
+
+    public function testGetMediaImageSourceURLReturnsURLWhenImageExists(): void
+    {
+        // With a real attached image, getMediaImage()->exists() is true so the
+        // method falls through the `!$image->exists()` guard and resamples the
+        // image, returning a non-empty URL. Pins the early-return-null mutants
+        // on the exists() check (a mutated `$image->exists()` to true/false or a
+        // removed guard would change this from a real URL to null/crash).
+        $element = $this->createContentElement();
+        $element->ContentColumns = 6;
+        $this->attachRealImage($element);
+
+        $url = $element->getMediaImageSourceURL();
+
+        self::assertNotNull($url);
+        self::assertNotSame('', $url);
+    }
+
+    public function testGetMediaImageHeightAutoUsesSourceAspectRatio(): void
+    {
+        // Auto ratio with a real 200x150 source: height tracks the source aspect
+        // ratio, not the width. round(width * sourceHeight / sourceWidth) with a
+        // non-square source produces a height distinct from the width, pinning the
+        // `!$image->exists()` guard and the dimension arithmetic in
+        // getHeightFromSource().
+        $element = $this->createContentElement();
+        $element->ContentColumns = 6;
+        $element->MediaRatio = AspectRatio::Auto->value;
+        $this->attachRealImage($element);
+
+        $width = $element->getMediaImageWidth();
+
+        // Source is 200x150 → expected height = round(width * 150 / 200)
+        $expectedHeight = (int) round($width * 150 / 200);
+
+        self::assertSame($expectedHeight, $element->getMediaImageHeight());
+        self::assertNotSame($width, $element->getMediaImageHeight());
     }
 
     // ── onBeforeWrite ───────────────────────────────────────────
@@ -468,6 +561,31 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertSame('4/8 (content/media)', $source[4]);
         self::assertSame('5/7 (content/media)', $source[5]);
         self::assertSame('8/4 (content/media)', $source[8]);
+    }
+
+    public function testContentColumnOptionsReserveTwoMediaColumns(): void
+    {
+        // With total_columns=9, the content-column loop bound is min(8, total-2)
+        // = min(8, 7) = 7, reserving 2 columns for media at the top end. Key 8
+        // must NOT appear (that would leave only 1 media column). Pins the
+        // `min(8, total - 2)` arithmetic: mutating `- 2` to `+ 2` or `min` to
+        // `max` would admit key 8 (or more).
+        Config::modify()->set(BootstrapAdapter::class, 'total_columns', 9);
+        $this->rebuildGridAdapter();
+
+        $element = $this->createContentElement();
+        $fields = $element->getCMSFields();
+
+        $field = $fields->dataFieldByName('ContentColumns');
+        self::assertNotNull($field);
+
+        /** @var array<int, string> $source */
+        $source = $field->getSource();
+        $keys = array_keys($source);
+        sort($keys);
+
+        // Full-width (0) prepended plus range [4..7] — key 8 reserved out
+        self::assertSame([0, 4, 5, 6, 7], $keys);
     }
 
     // ── getContentPaddingDirection: both Last and LastOnDesktop → right ─────

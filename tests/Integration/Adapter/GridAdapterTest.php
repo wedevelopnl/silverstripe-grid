@@ -140,6 +140,16 @@ final class GridAdapterTest extends SapphireTest
         self::assertSame('offset-md-3', $class);
     }
 
+    public function testGetOffsetClassAppliesAdjustment(): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'offset_adjustment', 1);
+        $adapter = new BootstrapAdapter();
+
+        // offset=2, adjustment=1 → 2+1=3, so the responsive class uses 3.
+        // The mutant flips + to -, which would yield 2-1=1 → 'offset-md-1'.
+        self::assertSame('offset-md-3', $adapter->getOffsetClass('md', 2));
+    }
+
     // -- Visibility classes --------------------------------------------------
 
     public function testGetVisibilityClassesForMiddleViewport(): void
@@ -356,6 +366,19 @@ final class GridAdapterTest extends SapphireTest
         Config::modify()->set(BootstrapAdapter::class, $configKey, $configValue);
 
         $this->expectException(InvalidGridValueException::class);
+
+        new BootstrapAdapter();
+    }
+
+    public function testConstructorThrowsEmptyViewportsMessageForEmptyEnabledViewports(): void
+    {
+        Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', []);
+
+        $this->expectException(InvalidGridValueException::class);
+        // Substring unique to forEmptyViewports(): the downstream forViewport() throw
+        // (also InvalidGridValueException) carries "is not a valid breakpoint" instead,
+        // so asserting only the class lets the L473 throw-removal mutant survive.
+        $this->expectExceptionMessageMatches('/cannot be an empty array/');
 
         new BootstrapAdapter();
     }

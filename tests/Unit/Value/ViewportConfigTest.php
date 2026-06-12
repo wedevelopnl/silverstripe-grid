@@ -124,6 +124,24 @@ final class ViewportConfigTest extends TestCase
         self::assertSame(['md'], array_keys($map));
     }
 
+    public function testMapFromArraySkipsNonArrayValueAndKeepsLaterValidEntry(): void
+    {
+        // Pins the `!is_array($data)` arm of the skip guard. A valid key with a
+        // non-array value must be silently skipped, not routed to fromArray
+        // (which would throw and abort the whole map). Ordering the non-array
+        // first proves the skip happens inline rather than aborting the loop.
+        $map = ViewportConfig::mapFromArray(
+            [
+                'md' => 'not-an-array',
+                'lg' => ['width' => 4, 'offset' => 2, 'visible' => false],
+            ],
+            'overrides',
+        );
+
+        self::assertSame(['lg'], array_keys($map));
+        self::assertTrue($map['lg']->equals(new ViewportConfig(4, 2, false)));
+    }
+
     public function testMapFromArrayThrowsOnStructurallyMalformedEntry(): void
     {
         $this->expectException(InvalidGridValueException::class);

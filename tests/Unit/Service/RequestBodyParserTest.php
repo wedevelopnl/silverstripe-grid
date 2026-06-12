@@ -89,6 +89,14 @@ final class RequestBodyParserTest extends TestCase
             ['containerType' => 'column', 'parent' => ['type' => 'row', 'id' => 3], 'insertAtStart' => true],
             ContainerType::Column, new NodeRef(NodeType::Row, 3), null, 'main', true,
         ];
+
+        // Boundary: insertAfterElementID = 1 is the smallest accepted value.
+        // The `$afterElementID < 1` guard must reject 0 but accept 1; a mutant
+        // widening it to `<= 1` would wrongly reject this case.
+        yield 'boundary insertAfterElementID of one' => [
+            ['containerType' => 'row', 'parent' => ['type' => 'section', 'id' => 5], 'insertAfterElementID' => 1],
+            ContainerType::Row, new NodeRef(NodeType::Section, 5), 1, 'main', false,
+        ];
     }
 
     /**

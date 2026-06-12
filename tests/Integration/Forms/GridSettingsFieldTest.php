@@ -59,6 +59,17 @@ final class GridSettingsFieldTest extends SapphireTest
         self::assertTrue($md->Visible);
     }
 
+    public function testConstructorFallsBackToTranslatedDefaultTitle(): void
+    {
+        // Field name 'Layout' does NOT name_to_label to 'Grid Settings', so a
+        // 'Grid Settings' title can only come from the explicit `_t` fallback.
+        // Pins the `$title ?? _t(...)` default: dropping the fallback would let
+        // FormField derive the title from the name ('Layout') instead.
+        $field = new GridSettingsField('Layout', $this->adapter);
+
+        self::assertSame('Grid Settings', $field->Title());
+    }
+
     // ── setValue with GridSettings VO ────────────────────────────
 
     public function testSetValueWithGridSettingsVO(): void
@@ -146,6 +157,32 @@ final class GridSettingsFieldTest extends SapphireTest
         $lg = $field->getViewportData()->find('Key', 'lg');
         self::assertNotNull($lg);
         self::assertFalse($lg->Override);
+    }
+
+    public function testEarlyViewportWithoutOverrideDoesNotDropLaterOverride(): void
+    {
+        // 'xs' is an early non-default viewport with no override flag; 'lg' is a
+        // later viewport that DOES carry one. The loop must `continue` past xs
+        // and still register lg's override. A `break` mutant would abort on xs
+        // and silently drop the lg override.
+        $field = $this->createField();
+        $field->setValue([
+            'md' => ['width' => '12', 'offset' => '0', 'visible' => '1'],
+            'xs' => ['width' => '6', 'offset' => '0'],
+            'lg' => ['width' => '4', 'offset' => '2', 'override' => '1', 'visible' => '1'],
+        ]);
+
+        $viewportData = $field->getViewportData();
+
+        $xs = $viewportData->find('Key', 'xs');
+        self::assertNotNull($xs);
+        self::assertFalse($xs->Override, 'xs carries no override flag');
+
+        $lg = $viewportData->find('Key', 'lg');
+        self::assertNotNull($lg);
+        self::assertTrue($lg->Override, 'lg override must survive an earlier override-less viewport');
+        self::assertSame(4, $lg->Width);
+        self::assertSame(2, $lg->Offset);
     }
 
     // ── getViewportData ─────────────────────────────────────────

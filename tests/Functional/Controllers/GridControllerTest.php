@@ -262,6 +262,21 @@ final class GridControllerTest extends FunctionalTest
         self::assertArrayHasKey('nodes', $data);
     }
 
+    public function testReadTreeAtVersionOneReturns200(): void
+    {
+        // Requesting version 1 of a page that genuinely has a version 1 must
+        // succeed. Pins the `min_range => 1` lower bound on the version
+        // filter_var: bumping it to 2 would reject version 1 as out-of-range
+        // and surface a 404 instead of this 200.
+        $page = $this->page();
+        $page->write();
+        $pageId = (int) $page->ID;
+
+        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/main/version/1");
+
+        self::assertSame(200, $response->getStatusCode());
+    }
+
     public function testReadTreeAtVersionReturnsEmptyTreeForPreSectionVersion(): void
     {
         // Publish v1: page exists, no sections.
@@ -435,6 +450,23 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(400, $response->getStatusCode());
     }
 
+    public function testCreateContentReturns400ForElementTypedColumnParent(): void
+    {
+        // The parent NodeRef carries type='element' but a real Column ID.
+        // The early `type !== NodeType::Column` guard is the only thing that
+        // rejects this: removing it lets findByRef resolve GridElement::byID
+        // to the actual Column (Column IS-A GridElement), passing the later
+        // `instanceof Column` check and reaching createContentElement (204).
+        $tree = $this->buildTree();
+
+        $response = $this->jsonPost(self::BASE_URL . '/createContent', [
+            'className' => ContentElement::class,
+            'parent' => $this->syntheticRef('element', (int) $tree['column']->ID),
+        ]);
+
+        self::assertSame(400, $response->getStatusCode());
+    }
+
     // ─── publish ──────────────────────────────────────────────────
 
     public function testPublishReturns204(): void
@@ -560,6 +592,27 @@ final class GridControllerTest extends FunctionalTest
         ]);
 
         self::assertSame(400, $response->getStatusCode());
+    }
+
+    public function testDuplicateReturns403WhenParentNoLongerExists(): void
+    {
+        // The row's source parent (its Section) is deleted out from under it,
+        // so Parent()->exists() is false. The duplicate endpoint must refuse
+        // with 403 — pins the `!$parent->exists()` arm of the parent guard.
+        $tree = $this->buildTree();
+        $row = $tree['row'];
+        $sectionId = (int) $tree['section']->ID;
+
+        DB::query(sprintf(
+            "DELETE FROM \"GridElement\" WHERE \"ID\" = %d",
+            $sectionId,
+        ));
+
+        $response = $this->jsonPost(self::BASE_URL . '/duplicate', [
+            'element' => $this->ref($row),
+        ]);
+
+        self::assertSame(403, $response->getStatusCode());
     }
 
     // ─── duplicateTo ──────────────────────────────────────────────
@@ -1175,6 +1228,24 @@ final class GridControllerTest extends FunctionalTest
         $response = $this->jsonPatch(self::BASE_URL . '/reorder', [
             'element' => $this->ref($restricted['row']),
             'parent' => $this->ref($restricted['section']),
+            'after' => null,
+        ]);
+
+        self::assertSame(403, $response->getStatusCode());
+    }
+
+    public function testReorderRejectsNonEditableElementBeforeResolvingTargetParent(): void
+    {
+        // Non-editable element AND an unresolvable target parent (id 999999).
+        // The element canEdit() guard runs first, so the response is 403, not
+        // the 400 that an unresolvable target parent would otherwise produce.
+        // Pins the ordering: removing the canEdit() guard would let the
+        // unresolvable-parent path turn this into a 400.
+        $restricted = $this->buildRestrictedTree();
+
+        $response = $this->jsonPatch(self::BASE_URL . '/reorder', [
+            'element' => $this->ref($restricted['row']),
+            'parent' => $this->syntheticRef('section', 999999),
             'after' => null,
         ]);
 

@@ -522,6 +522,26 @@ final class FieldMapperTest extends TestCase
         // size=0 but offset=1 → not "unset", override should exist
         self::assertTrue($settings->hasOverride('xs'));
         self::assertSame(1, $settings->getOverride('xs')?->offset);
+        // size=0 is NOT > 0, so the override inherits the default width (8) — it is
+        // NOT clamped to 1. Pins the `$size > 0` guard against a `>=` mutation that
+        // would treat 0 as a real width and emit width=0 (clamped up to 1).
+        self::assertSame(8, $settings->getOverride('xs')?->width);
+    }
+
+    public function testOverrideViewportSizeFieldMissingDoesNotFabricateOverride(): void
+    {
+        // The override viewport (XS) has no size, offset, or visibility set at all.
+        // The `?? 0` on the size lookup must yield 0 → the unset-skip guard fires →
+        // no override. A mutation to `?? 1` would fabricate a width-1 xs override.
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8],
+            'offsetFields' => ['MD' => 0],
+            'visibilityFields' => [],
+        ]);
+
+        $settings = $this->mapper->mapGridSettings($element, 'MD', ['MD' => 'md', 'XS' => 'xs']);
+
+        self::assertFalse($settings->hasOverride('xs'));
     }
 
     public function testSizeZeroWithExplicitVisibilityProducesOverride(): void
@@ -775,6 +795,24 @@ final class FieldMapperTest extends TestCase
         self::assertSame('bogus', $context['value']);
         self::assertSame(99, $context['elementId']);
         self::assertSame('default', $context['viewport']);
+    }
+
+    public function testUnrecognisedVisibilityWithNullLoggerDoesNotThrow(): void
+    {
+        // With no logger injected (the default), an unrecognised visibility value
+        // must still resolve cleanly: the `?->warning(...)` null-safe call is a
+        // no-op and the element falls back to the documented default (visible=true).
+        // A mutation that drops the null-safe operator would fatal here.
+        $mapper = new FieldMapper();
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8],
+            'offsetFields' => ['MD' => 0],
+            'visibilityFields' => ['MD' => 'bogus'],
+        ]);
+
+        $settings = $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
+
+        self::assertTrue($settings->default->visible);
     }
 
     public function testUnrecognisedVisibilityOnOverrideViewportFallsBackToDefaultWithWarning(): void

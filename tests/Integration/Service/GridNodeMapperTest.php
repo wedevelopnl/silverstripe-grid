@@ -454,6 +454,25 @@ final class GridNodeMapperTest extends SapphireTest
         self::assertSame('', $allowed[ContentElement::class]['description']);
     }
 
+    public function testElementTypeInfoDescriptionFallsBackToEmptyForNonStringConfig(): void
+    {
+        // class_description is the is_string() arm of the description guard:
+        //   is_string($description) && $description !== '' ? $description : ''
+        // A non-string config value (here an int) must fall back to ''. The
+        // LogicalAnd mutant (`&&` → `||`) would short-circuit on the truthy
+        // `$description !== ''` and leak the int through, so this case kills it.
+        Config::modify()->set(ContentElement::class, 'class_description', 123);
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $allowed = $this->mapper->getAllowedTypes($column);
+
+        self::assertSame('', $allowed[ContentElement::class]['description']);
+    }
+
     /**
      * mapToNode icon fallback at line 62 mirrors getElementTypeInfo's icon guard.
      * Configuring an empty icon pins the LogicalAnd / is_string guard.

@@ -133,6 +133,36 @@ final class GridEditorFieldTest extends SapphireTest
         self::assertArrayNotHasKey('grid-version', $schema);
     }
 
+    public function testReadonlyFieldIncludesVersionForVersionOneRecord(): void
+    {
+        // A record whose Version is exactly 1 must still surface 'grid-version'.
+        // Pins the `min_range => 1` lower bound on the version filter_var:
+        // bumping it to 2 would reject Version 1 and drop the key entirely.
+        // A page written exactly once is at Version 1.
+        $page = new Page();
+        $page->Title = 'Version One Page';
+        $page->write();
+        self::assertSame(1, (int) $page->Version, 'A page written once must be at Version 1 for this guard test');
+
+        $field = new GridEditorField('GridEditor', (int) $page->ID);
+        $form = Form::create(
+            Controller::create(),
+            'TestForm',
+            FieldList::create($field),
+            FieldList::create(),
+        );
+        $form->setFormAction('/test');
+        $form->loadDataFrom($page);
+
+        $readonly = $field->performReadonlyTransformation();
+        $this->attachToForm($readonly);
+
+        $schema = $readonly->getSchemaDataDefaults();
+
+        self::assertArrayHasKey('grid-version', $schema);
+        self::assertSame(1, $schema['grid-version']);
+    }
+
     public function testFieldHolderReturnsDBHTMLText(): void
     {
         $field = new GridEditorField('GridEditor', 42);

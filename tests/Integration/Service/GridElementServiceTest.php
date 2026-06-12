@@ -96,6 +96,30 @@ final class GridElementServiceTest extends SapphireTest
         self::assertGreaterThan($newRow->Sort, $row2->Sort);
     }
 
+    public function testCreateElementWithoutReferenceAppendsAfterExistingSiblings(): void
+    {
+        // afterElementId === null short-circuits in writeThenPlace and keeps the
+        // appended Sort assigned by ensureSortSet() — the new row lands at the
+        // END of the sibling list. The ReturnRemoval mutant on that early return
+        // would fall through to insertAfter(..., null), which splices at index 0
+        // and prepends the row instead.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $existing1 = GridTreeFactory::row($section, title: 'Row 1');
+        $existing2 = GridTreeFactory::row($section, title: 'Row 2');
+
+        $result = $this->service->createElement($section, ContainerType::Row, 'main', null);
+
+        self::assertTrue($result->isOk());
+
+        $newRow = GridElement::get()->byID($result->unwrap()->ID);
+        $existing1 = GridElement::get()->byID($existing1->ID);
+        $existing2 = GridElement::get()->byID($existing2->ID);
+
+        self::assertGreaterThan($existing1->Sort, $newRow->Sort, 'New row appends after the first sibling');
+        self::assertGreaterThan($existing2->Sort, $newRow->Sort, 'New row appends after the last sibling');
+    }
+
     public function testCreateElementInsertAtStart(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -222,6 +246,29 @@ final class GridElementServiceTest extends SapphireTest
         self::assertSame((int) $page2->ID, $clone->ParentID);
         self::assertSame('main', $clone->Zone);
         self::assertNotSame((int) $section->ID, (int) $clone->ID);
+    }
+
+    public function testDuplicateSectionToDifferentZoneRezonesClone(): void
+    {
+        // duplicateElementTo re-zones a Section to the target zone via the
+        // `if ($clone instanceof Section)` guard. Source zone ('main') must
+        // DIFFER from the target zone ('sidebar') so the InstanceOf_ mutant
+        // (which would skip the rezone and leave the copied 'main') is killed.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, zone: 'main', title: 'Main Section');
+
+        $result = $this->service->duplicateElementTo(
+            $section,
+            $page,
+            (int) $page->ID,
+            'sidebar',
+        );
+
+        self::assertTrue($result->isOk());
+
+        $clone = $result->unwrap();
+        self::assertInstanceOf(Section::class, $clone);
+        self::assertSame('sidebar', $clone->Zone, 'Clone must be rezoned to the target zone, not keep the source zone');
     }
 
     public function testDuplicateRowToAnotherSection(): void

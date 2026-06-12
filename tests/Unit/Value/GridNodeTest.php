@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Tests\Unit\Value;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Value\ContainerType;
@@ -46,6 +47,7 @@ final class GridNodeTest extends TestCase
             'canCreate' => true,
             'editLink' => '/admin/edit/1',
             'status' => ElementStatus::Published,
+            'summary' => null,
             'containerType' => null,
             'allowedTypes' => null,
             'children' => null,
@@ -68,6 +70,7 @@ final class GridNodeTest extends TestCase
             canCreate: $args['canCreate'],
             editLink: $args['editLink'],
             status: $args['status'],
+            summary: $args['summary'],
             containerType: $args['containerType'],
             allowedTypes: $args['allowedTypes'],
             children: $args['children'],
@@ -194,6 +197,41 @@ final class GridNodeTest extends TestCase
         $data = $node->jsonSerialize();
 
         self::assertArrayNotHasKey('extensions', $data);
+    }
+
+    /**
+     * Pins the `summary !== null && summary !== ''` guard in jsonSerialize:
+     * a non-empty summary surfaces under the `summary` key with its value,
+     * while both null and empty-string omit the key entirely.
+     *
+     * @param non-empty-string|null $summary
+     */
+    #[Test]
+    #[DataProvider('summarySerializationProvider')]
+    public function jsonSerializeIncludesSummaryOnlyWhenNonEmpty(
+        ?string $summary,
+        bool $expectKey,
+    ): void {
+        $node = $this->makeNode(['summary' => $summary]);
+
+        $data = $node->jsonSerialize();
+
+        if ($expectKey) {
+            self::assertArrayHasKey('summary', $data);
+            self::assertSame($summary, $data['summary']);
+        } else {
+            self::assertArrayNotHasKey('summary', $data);
+        }
+    }
+
+    /**
+     * @return iterable<string, array{?string, bool}>
+     */
+    public static function summarySerializationProvider(): iterable
+    {
+        yield 'non-empty summary present' => ['A summary', true];
+        yield 'null summary omitted' => [null, false];
+        yield 'empty-string summary omitted' => ['', false];
     }
 
     #[Test]

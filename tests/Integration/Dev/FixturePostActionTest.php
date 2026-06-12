@@ -179,5 +179,13 @@ final class FixturePostActionTest extends SapphireTest
 
         $image = Image::get()->byID((int) $reloaded->MediaImageID);
         self::assertNotNull($image);
+
+        // applyAttachImage() calls publishSingle() so the image is on LIVE. Without it,
+        // the published page would reference a draft-only image (broken on the live site).
+        Versioned::set_stage(Versioned::LIVE);
+        self::assertNotNull(
+            Image::get()->byID((int) $reloaded->MediaImageID),
+            'Attached image must be published to the LIVE stage',
+        );
     }
 }
