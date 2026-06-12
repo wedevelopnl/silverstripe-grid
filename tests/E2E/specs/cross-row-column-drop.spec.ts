@@ -30,7 +30,7 @@ test.describe('Cross-row column drop positions', () => {
   }
 
   /** Extract column titles from collapse-toggle aria-labels within a row. */
-  async function getColumnTitles(rowLocator: Locator): Promise<string[]> {
+  function getColumnTitles(rowLocator: Locator): Promise<string[]> {
     return rowLocator
       .getByTestId('column-block')
       .getByTestId('collapse-toggle')

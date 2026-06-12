@@ -47,30 +47,32 @@ export function useResetOverridesAction(): ResetOverridesState {
         { viewport: viewportLabel },
       )
 
-  const dialogMessage =
-    isDefaultViewport && affectedCount === 1
-      ? t(
-          'WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_ONE',
-          'Reset all viewport overrides across {count} column?',
-          { count: affectedCount },
-        )
-      : isDefaultViewport
+  const dialogMessage = ((): string => {
+    if (isDefaultViewport) {
+      return affectedCount === 1
         ? t(
+            'WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_ONE',
+            'Reset all viewport overrides across {count} column?',
+            { count: affectedCount },
+          )
+        : t(
             'WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_MANY',
             'Reset all viewport overrides across {count} columns?',
             { count: affectedCount },
           )
-        : affectedCount === 1
-          ? t(
-              'WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_ONE',
-              'Reset overrides for {count} column on {viewport}?',
-              { count: affectedCount, viewport: viewportLabel },
-            )
-          : t(
-              'WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_MANY',
-              'Reset overrides for {count} columns on {viewport}?',
-              { count: affectedCount, viewport: viewportLabel },
-            )
+    }
+    return affectedCount === 1
+      ? t(
+          'WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_ONE',
+          'Reset overrides for {count} column on {viewport}?',
+          { count: affectedCount, viewport: viewportLabel },
+        )
+      : t(
+          'WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_MANY',
+          'Reset overrides for {count} columns on {viewport}?',
+          { count: affectedCount, viewport: viewportLabel },
+        )
+  })()
 
   const handleResetClick = useCallback(() => {
     setDialogOpen(true)

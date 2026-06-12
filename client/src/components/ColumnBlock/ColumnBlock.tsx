@@ -57,7 +57,7 @@ function useChildElementKeys(column: ColumnNode): NodeKey[] {
  * `resolveViewportSettings` so that viewport switching in the history
  * viewer still re-layouts the readonly tree.
  */
-const ColumnBlock = memo(function ColumnBlock({ column, insertBefore }: ColumnBlockProps) {
+const ColumnBlock = memo(function ColumnBlockComponent({ column, insertBefore }: ColumnBlockProps) {
   const readonly = useReadonly()
   return readonly ? (
     <ReadonlyColumnBlock column={column} />

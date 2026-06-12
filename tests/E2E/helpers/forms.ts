@@ -20,8 +20,11 @@ import type { Page } from '@playwright/test'
  */
 export async function selectChosenValue(page: Page, name: string, value: string): Promise<void> {
   await page.evaluate(
-    ({ name, value }) => {
-      jQuery(`select[name="${name}"]`).val(value).trigger('change').trigger('chosen:updated')
+    ({ name: selectName, value: selectValue }) => {
+      jQuery(`select[name="${selectName}"]`)
+        .val(selectValue)
+        .trigger('change')
+        .trigger('chosen:updated')
     },
     { name, value },
   )

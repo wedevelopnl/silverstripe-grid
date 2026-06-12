@@ -25,7 +25,7 @@ interface RowBlockProps {
  * variants never call `useSortable`, so a readonly grid tree doesn't
  * need a `DndContext` ancestor.
  */
-const RowBlock = memo(function RowBlock({ row }: RowBlockProps) {
+const RowBlock = memo(function RowBlockComponent({ row }: RowBlockProps) {
   const readonly = useReadonly()
   return readonly ? <ReadonlyRowBlock row={row} /> : <EditableRowBlock row={row} />
 })

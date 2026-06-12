@@ -24,7 +24,7 @@ const GRID_CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController'
  * Must be called from a page that has loaded the SilverStripe admin bundle
  * (`window.ss.config` is populated). Frontend-only pages do not expose this.
  */
-export async function readAdapterConfig(page: Page): Promise<AdapterConfig> {
+export function readAdapterConfig(page: Page): Promise<AdapterConfig> {
   return page.evaluate((controllerFqcn) => {
     const ss = (window as unknown as { ss?: { config?: { sections: { name: string }[] } } }).ss
     if (!ss?.config) {

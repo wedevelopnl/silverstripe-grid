@@ -24,7 +24,7 @@ interface SectionBlockProps {
  * hook — meaning the readonly grid tree doesn't need a `DndContext`
  * ancestor at all.
  */
-const SectionBlock = memo(function SectionBlock({ section }: SectionBlockProps) {
+const SectionBlock = memo(function SectionBlockComponent({ section }: SectionBlockProps) {
   const readonly = useReadonly()
   return readonly ? (
     <ReadonlySectionBlock section={section} />

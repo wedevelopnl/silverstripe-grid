@@ -116,20 +116,26 @@ function GridEditorBody({ pageId, zone, readonly, version }: GridEditorBodyProps
   const hasSections = sections.length > 0
   const anyModified = sections.some((section) => section.status === 'modified')
 
-  const sectionList = hasSections ? (
-    sections.map((section) => <SectionBlock key={section.nodeKey} section={section} />)
-  ) : readonly ? (
-    <p className="ssgrid-empty-state" data-testid="grid-editor-empty">
-      {t('WeDevelopGrid.GridEditor.NO_SECTIONS_READONLY', 'No sections in this version')}
-    </p>
-  ) : (
-    <AddChildButton
-      parentId={pageId}
-      childType="section"
-      childLabel="Section"
-      variant="empty-state"
-    />
-  )
+  const sectionList = ((): React.ReactNode => {
+    if (hasSections) {
+      return sections.map((section) => <SectionBlock key={section.nodeKey} section={section} />)
+    }
+    if (readonly) {
+      return (
+        <p className="ssgrid-empty-state" data-testid="grid-editor-empty">
+          {t('WeDevelopGrid.GridEditor.NO_SECTIONS_READONLY', 'No sections in this version')}
+        </p>
+      )
+    }
+    return (
+      <AddChildButton
+        parentId={pageId}
+        childType="section"
+        childLabel="Section"
+        variant="empty-state"
+      />
+    )
+  })()
 
   // Editable list: the sections, with "+ Add section" in every gap and after
   // the last one (Figma "Frame 1" — the add-button slots double as the inter-

@@ -35,7 +35,7 @@ const PARENT_TYPE_FOR_CHILD: Record<ContainerType, NodeType> = {
   column: 'row',
 }
 
-const AddChildButton = memo(function AddChildButton({
+const AddChildButton = memo(function AddChildButtonComponent({
   parentId,
   childType,
   childLabel,

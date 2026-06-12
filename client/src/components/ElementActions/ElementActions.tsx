@@ -124,16 +124,19 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
 
   const editLink = node.editLink
 
-  const collapseLabel =
-    collapse === undefined
-      ? t('WeDevelopGrid.ElementActions.ACTION_COLLAPSE', 'Collapse')
-      : collapse.isCollapsed
-        ? t('WeDevelopGrid.ElementActions.EXPAND_LABEL', 'Expand {title}', {
-            title: collapse.label,
-          })
-        : t('WeDevelopGrid.ElementActions.COLLAPSE_LABEL', 'Collapse {title}', {
-            title: collapse.label,
-          })
+  const collapseLabel = ((): string => {
+    if (collapse === undefined) {
+      return t('WeDevelopGrid.ElementActions.ACTION_COLLAPSE', 'Collapse')
+    }
+    if (collapse.isCollapsed) {
+      return t('WeDevelopGrid.ElementActions.EXPAND_LABEL', 'Expand {title}', {
+        title: collapse.label,
+      })
+    }
+    return t('WeDevelopGrid.ElementActions.COLLAPSE_LABEL', 'Collapse {title}', {
+      title: collapse.label,
+    })
+  })()
 
   return (
     <>

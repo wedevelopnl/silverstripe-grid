@@ -311,11 +311,10 @@ describe('centerCrossing', () => {
     // Both should be detected; the farRect's threshold = 400+25=425 (crossed at 450)
     // The near target center is at 325, far center at 450.
     // Current center at 450, closer to far target.
-    if (collisions.length === 2) {
-      expect(collisions[0].data?.value as number).toBeLessThanOrEqual(
-        collisions[1].data?.value as number,
-      )
-    }
+    expect(collisions).toHaveLength(2)
+    expect(collisions[0].data?.value as number).toBeLessThanOrEqual(
+      collisions[1].data?.value as number,
+    )
   })
 })
 

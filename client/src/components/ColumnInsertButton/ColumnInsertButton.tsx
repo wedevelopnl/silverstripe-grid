@@ -36,7 +36,9 @@ type ColumnInsertButtonProps =
       readonly gutterShiftPct?: number
     }
 
-const ColumnInsertButton = memo(function ColumnInsertButton(props: ColumnInsertButtonProps) {
+const ColumnInsertButton = memo(function ColumnInsertButtonComponent(
+  props: ColumnInsertButtonProps,
+) {
   const { pageId, zone } = useGridEditorContext()
   const { mutate, isPending } = useCreateElement(pageId, zone)
 
@@ -49,12 +51,15 @@ const ColumnInsertButton = memo(function ColumnInsertButton(props: ColumnInsertB
     mutate({ containerType: 'column', parent, ...placementParams })
   }
 
-  const label =
-    props.placement === 'start'
-      ? t('WeDevelopGrid.ColumnInsertButton.PREPEND_LABEL', 'Add a column at the start')
-      : props.placement === 'end'
-        ? t('WeDevelopGrid.ColumnInsertButton.APPEND_LABEL', 'Add a column at the end')
-        : t('WeDevelopGrid.ColumnInsertButton.INSERT_HERE_LABEL', 'Add a column here')
+  const label = ((): string => {
+    if (props.placement === 'start') {
+      return t('WeDevelopGrid.ColumnInsertButton.PREPEND_LABEL', 'Add a column at the start')
+    }
+    if (props.placement === 'end') {
+      return t('WeDevelopGrid.ColumnInsertButton.APPEND_LABEL', 'Add a column at the end')
+    }
+    return t('WeDevelopGrid.ColumnInsertButton.INSERT_HERE_LABEL', 'Add a column here')
+  })()
 
   const shiftStyle =
     props.placement === 'between' && props.gutterShiftPct

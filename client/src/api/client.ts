@@ -70,7 +70,7 @@ async function apiMutate(method: 'POST' | 'PATCH', url: string, body: object): P
  *
  * @throws ApiError on non-OK HTTP status
  */
-export async function apiPost(url: string, body: object): Promise<void> {
+export function apiPost(url: string, body: object): Promise<void> {
   return apiMutate('POST', url, body)
 }
 
@@ -79,7 +79,7 @@ export async function apiPost(url: string, body: object): Promise<void> {
  *
  * @throws ApiError on non-OK HTTP status
  */
-export async function apiPatch(url: string, body: object): Promise<void> {
+export function apiPatch(url: string, body: object): Promise<void> {
   return apiMutate('PATCH', url, body)
 }
 

@@ -8,7 +8,7 @@ interface DragHandleProps {
   readonly label?: string
 }
 
-const DragHandle = memo(function DragHandle({
+const DragHandle = memo(function DragHandleComponent({
   listeners,
   attributes,
   label = t('WeDevelopGrid.DragHandle.DEFAULT_LABEL', 'Drag to reorder'),

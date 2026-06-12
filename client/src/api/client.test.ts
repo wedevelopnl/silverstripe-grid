@@ -33,12 +33,9 @@ describe('apiGet', () => {
   it('falls back to statusText when body has no message', async () => {
     mockFetchError(500, {})
 
-    try {
-      await apiGet('/api/broken')
-    } catch (error) {
-      expect(error).toBeInstanceOf(ApiError)
-      expect((error as ApiError).status).toBe(500)
-    }
+    const error = await apiGet('/api/broken').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect((error as ApiError).status).toBe(500)
   })
 })
 

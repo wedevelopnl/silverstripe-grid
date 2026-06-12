@@ -6,6 +6,13 @@ import { renderWithProviders } from '@/testing/renderWithProviders'
 
 import DuplicateToDialog from './DuplicateToDialog'
 
+/** Normalize a fetch `input` (string | URL | Request) to its URL string. */
+function resolveRequestUrl(input: string | URL | Request): string {
+  if (typeof input === 'string') return input
+  if (input instanceof URL) return input.toString()
+  return input.url
+}
+
 // jsdom doesn't support native dialog showModal/close — stub them
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = vi.fn(function showModal(this: HTMLDialogElement) {
@@ -44,16 +51,15 @@ function mockApiRoutes(overrides?: {
   const zones = overrides?.zones ?? ZONES
   const containers = overrides?.containers ?? CONTAINERS
 
-  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: string | URL | Request) => {
-    const url =
-      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+  vi.spyOn(globalThis, 'fetch').mockImplementation((input: string | URL | Request) => {
+    const url = resolveRequestUrl(input)
 
     let body: unknown = {}
     if (url.includes('/api/pages')) body = pages
     else if (url.includes('/api/zones/')) body = zones
     else if (url.includes('/api/acceptableContainers/')) body = containers
 
-    return {
+    return Promise.resolve({
       ok: true,
       status: 200,
       statusText: 'OK',
@@ -72,7 +78,7 @@ function mockApiRoutes(overrides?: {
       bytes: () => Promise.resolve(new Uint8Array()),
       formData: () => Promise.resolve(new FormData()),
       text: () => Promise.resolve(JSON.stringify(body)),
-    } as Response
+    } as Response)
   })
 }
 
@@ -143,7 +149,7 @@ describe('DuplicateToDialog', () => {
       expect(screen.getByText('Legacy')).toBeInTheDocument()
     })
 
-    it('shows title "Select target page"', async () => {
+    it('shows title "Select target page"', () => {
       mockApiRoutes()
       renderDialog()
 
@@ -682,12 +688,11 @@ describe('DuplicateToDialog', () => {
         } as Response
       }
 
-      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: string | URL | Request) => {
-        const url =
-          typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      vi.spyOn(globalThis, 'fetch').mockImplementation((input: string | URL | Request) => {
+        const url = resolveRequestUrl(input)
 
         if (url.includes('/api/pages')) {
-          return createUrlResponse(PAGES)
+          return Promise.resolve(createUrlResponse(PAGES))
         }
 
         // Zones never resolve
@@ -734,12 +739,11 @@ describe('DuplicateToDialog', () => {
         } as Response
       }
 
-      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: string | URL | Request) => {
-        const url =
-          typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      vi.spyOn(globalThis, 'fetch').mockImplementation((input: string | URL | Request) => {
+        const url = resolveRequestUrl(input)
 
-        if (url.includes('/api/pages')) return createUrlResponse(PAGES)
-        if (url.includes('/api/zones/')) return createUrlResponse(ZONES)
+        if (url.includes('/api/pages')) return Promise.resolve(createUrlResponse(PAGES))
+        if (url.includes('/api/zones/')) return Promise.resolve(createUrlResponse(ZONES))
 
         // Containers never resolve
         return new Promise(() => {})

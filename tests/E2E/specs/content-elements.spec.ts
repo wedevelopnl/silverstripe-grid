@@ -2,6 +2,17 @@ import { expect, test } from '@playwright/test'
 import { loadAndNavigate, loadFixture, resetFixtures } from '../helpers/fixtures'
 import { selectChosenValue } from '../helpers/forms'
 
+/** Minimal shape of the TinyMCE global the CMS injects, for typed `window` access. */
+interface TinyMceWindow {
+  tinymce?: {
+    activeEditor?: {
+      initialized?: boolean
+      setContent(html: string): void
+      fire(event: string): void
+    }
+  }
+}
+
 test.describe('Content elements', () => {
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
@@ -77,16 +88,21 @@ test.describe('Content elements', () => {
 
     // Set HTML content — try TinyMCE API first, fall back to textarea
     const hasTinyMce = await page
-      .waitForFunction(() => (window as any).tinymce?.activeEditor?.initialized, null, {
-        timeout: 5_000,
-      })
+      .waitForFunction(
+        () => (window as unknown as TinyMceWindow).tinymce?.activeEditor?.initialized,
+        null,
+        {
+          timeout: 5_000,
+        },
+      )
       .then(() => true)
       .catch(() => false)
 
     if (hasTinyMce) {
       await page.evaluate(() => {
-        ;(window as any).tinymce.activeEditor.setContent('<p>Hello from the grid</p>')
-        ;(window as any).tinymce.activeEditor.fire('change')
+        const editor = (window as unknown as TinyMceWindow).tinymce?.activeEditor
+        editor?.setContent('<p>Hello from the grid</p>')
+        editor?.fire('change')
       })
     } else {
       const htmlField = page.locator('textarea[name="HTML"]')

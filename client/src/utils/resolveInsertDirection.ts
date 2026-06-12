@@ -17,9 +17,9 @@ export function resolveInsertDirection(
   overRect: ViewportRect,
   type: DraggableType,
 ): 'before' | 'after' {
-  const useXAxis = type === 'column'
-  const pointerPos = useXAxis ? pointer.x : pointer.y
-  const overCenter = useXAxis
+  const isXAxis = type === 'column'
+  const pointerPos = isXAxis ? pointer.x : pointer.y
+  const overCenter = isXAxis
     ? overRect.left + overRect.width / 2
     : overRect.top + overRect.height / 2
 

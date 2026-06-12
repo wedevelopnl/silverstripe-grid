@@ -17,7 +17,7 @@ interface ElementCardProps {
  * `useSortable`, navigation callbacks, and interactive controls —
  * just renders the icon and title inside the status-colored border.
  */
-const ElementCard = memo(function ElementCard({ element }: ElementCardProps) {
+const ElementCard = memo(function ElementCardComponent({ element }: ElementCardProps) {
   const readonly = useReadonly()
   return readonly ? (
     <ReadonlyElementCard element={element} />

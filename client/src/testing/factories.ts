@@ -13,8 +13,8 @@ import type {
 import { NodeIdentity, type NodeRef, type NodeType } from '@/types/identity'
 
 /** Test-only helper: construct a fully-typed {@link ParsedDraggableId} for unit tests. */
-export function createParsedDraggableId(type: DraggableType, id: number): ParsedDraggableId {
-  return { type, id, key: buildDraggableId(type, id) }
+export function createParsedDraggableId(type: DraggableType, nodeId: number): ParsedDraggableId {
+  return { type, id: nodeId, key: buildDraggableId(type, nodeId) }
 }
 
 let nextId = 1
@@ -112,14 +112,17 @@ export function createColumnNode(
   const parent = resolveParent('row', overrides ?? {}, 100)
   const childCount = overrides?.childCount ?? 1
 
-  const children: SimpleElementNode[] | null =
-    overrides?.children !== undefined
-      ? overrides.children
-      : childCount > 0
-        ? Array.from({ length: childCount }, () =>
-            createSimpleElement({ parent: { type: 'column', id: self.id } }),
-          )
-        : null
+  const children: SimpleElementNode[] | null = ((): SimpleElementNode[] | null => {
+    if (overrides?.children !== undefined) {
+      return overrides.children
+    }
+    if (childCount > 0) {
+      return Array.from({ length: childCount }, () =>
+        createSimpleElement({ parent: { type: 'column', id: self.id } }),
+      )
+    }
+    return null
+  })()
 
   const { parentId: _omitParentId, childCount: _omitChildCount, ...rest } = overrides ?? {}
 
@@ -153,14 +156,17 @@ export function createRowNode(
   const parent = resolveParent('section', overrides ?? {}, 100)
   const columnCount = overrides?.columnCount ?? 1
 
-  const children: ColumnNode[] | null =
-    overrides?.children !== undefined
-      ? overrides.children
-      : columnCount > 0
-        ? Array.from({ length: columnCount }, () =>
-            createColumnNode({ parent: { type: 'row', id: self.id } }),
-          )
-        : null
+  const children: ColumnNode[] | null = ((): ColumnNode[] | null => {
+    if (overrides?.children !== undefined) {
+      return overrides.children
+    }
+    if (columnCount > 0) {
+      return Array.from({ length: columnCount }, () =>
+        createColumnNode({ parent: { type: 'row', id: self.id } }),
+      )
+    }
+    return null
+  })()
 
   const { parentId: _omitParentId, columnCount: _omitColumnCount, ...rest } = overrides ?? {}
 
@@ -193,14 +199,17 @@ export function createSectionNode(
   const parent = resolveParent('page', overrides ?? {}, 1)
   const rowCount = overrides?.rowCount ?? 1
 
-  const children: RowNode[] | null =
-    overrides?.children !== undefined
-      ? overrides.children
-      : rowCount > 0
-        ? Array.from({ length: rowCount }, () =>
-            createRowNode({ parent: { type: 'section', id: self.id } }),
-          )
-        : null
+  const children: RowNode[] | null = ((): RowNode[] | null => {
+    if (overrides?.children !== undefined) {
+      return overrides.children
+    }
+    if (rowCount > 0) {
+      return Array.from({ length: rowCount }, () =>
+        createRowNode({ parent: { type: 'section', id: self.id } }),
+      )
+    }
+    return null
+  })()
 
   const { parentId: _omitParentId, rowCount: _omitRowCount, ...rest } = overrides ?? {}
 

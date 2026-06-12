@@ -36,7 +36,9 @@ describe('applyReorder', () => {
 
       const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
         .children?.[0] as ColumnNode
-      expect(movedColumn.children?.map((c: SimpleElementNode) => c.self.id)).toEqual([11, 12, 10])
+      expect(movedColumn.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
+        11, 12, 10,
+      ])
     })
 
     it('prepends when afterKey is null', () => {
@@ -61,7 +63,9 @@ describe('applyReorder', () => {
 
       const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
         .children?.[0] as ColumnNode
-      expect(movedColumn.children?.map((c: SimpleElementNode) => c.self.id)).toEqual([11, 10])
+      expect(movedColumn.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
+        11, 10,
+      ])
     })
 
     it('returns the same reference when the element is already at the target position', () => {
@@ -235,7 +239,9 @@ describe('applyReorder', () => {
 
       const row40 = (result.nodes[0] as SectionNode).children?.[0] as RowNode
       const col31Result = row40.children?.[1] as ColumnNode
-      expect(col31Result.children?.map((c: SimpleElementNode) => c.self.id)).toEqual([20, 10])
+      expect(col31Result.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
+        20, 10,
+      ])
     })
   })
 
@@ -296,7 +302,9 @@ describe('applyReorder', () => {
       expect(result).not.toBe(tree)
       const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
         .children?.[0] as ColumnNode
-      expect(movedColumn.children?.map((c: SimpleElementNode) => c.self.id)).toEqual([11, 12, 10])
+      expect(movedColumn.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
+        11, 12, 10,
+      ])
     })
   })
 
@@ -329,7 +337,9 @@ describe('applyReorder', () => {
 
       const row40 = (result.nodes[0] as SectionNode).children?.[0] as RowNode
       const col31Result = row40.children?.[1] as ColumnNode
-      expect(col31Result.children?.map((c: SimpleElementNode) => c.self.id)).toEqual([20, 10, 21])
+      expect(col31Result.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
+        20, 10, 21,
+      ])
     })
   })
 })
