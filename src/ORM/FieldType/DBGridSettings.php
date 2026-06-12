@@ -56,6 +56,11 @@ final class DBGridSettings extends DBComposite
      * overrides) and contradict `exists()`. Rejecting an out-of-range width
      * (such as 0) is {@see GridSettingsFieldValidator}'s job at write time, not
      * a read-boundary concern.
+     *
+     * A structurally-malformed `Overrides` column degrades to empty overrides
+     * (the default still applies to every viewport) and logs a warning, rather
+     * than throwing — symmetric with {@see setValue()}, so a single corrupt
+     * legacy/fixture row cannot crash an otherwise-valid page render.
      */
     #[Override]
     public function getValue(): ?GridSettings
@@ -73,18 +78,27 @@ final class DBGridSettings extends DBComposite
 
         $default = new ViewportConfig($width, $offset, $visible);
 
-        return new GridSettings($default, $this->decodeOverridesColumn($this->getField('Overrides')));
+        try {
+            $overrides = $this->decodeOverridesColumn($this->getField('Overrides'));
+        } catch (InvalidGridValueException $e) {
+            $this->logDiscardedValue(
+                sprintf('DBGridSettings discarded malformed overrides column: %s', $e->getMessage()),
+            );
+            $overrides = [];
+        }
+
+        return new GridSettings($default, $overrides);
     }
 
     /**
      * Decode the `{Name}Overrides` Text sub-column back into typed viewport configs.
      *
      * NULL and non-JSON content return an empty map. Structurally malformed
-     * stored JSON — e.g. an override entry missing `width` — still throws
-     * {@see InvalidGridValueException} via {@see ViewportConfig::mapFromArray}
-     * and propagates up through {@see getValue()} to the caller. A future
-     * symmetric read-boundary catch-and-log belongs at the field-type level,
-     * not inside this decoder.
+     * stored JSON — e.g. an override entry missing `width` — throws
+     * {@see InvalidGridValueException} via {@see ViewportConfig::mapFromArray}.
+     * The catch-and-log lives in {@see getValue()} (the field-type boundary),
+     * not inside this decoder, so the decoder stays a pure parse and callers
+     * that want the strict failure can use it directly.
      *
      * @return array<non-empty-string, ViewportConfig>
      */
@@ -128,10 +142,7 @@ final class DBGridSettings extends DBComposite
             try {
                 $parsed = GridSettings::fromJson($value);
             } catch (InvalidGridValueException $e) {
-                // Suppression is observable: log the message (NOT the payload,
-                // which may carry untrusted data) so a malformed legacy/fixture
-                // row is traceable instead of silently vanishing.
-                Injector::inst()->get(LoggerInterface::class)->warning(
+                $this->logDiscardedValue(
                     sprintf('DBGridSettings discarded malformed JSON value: %s', $e->getMessage()),
                 );
                 $parsed = null;
@@ -171,6 +182,20 @@ final class DBGridSettings extends DBComposite
         );
 
         return $this;
+    }
+
+    /**
+     * Record an observable warning when a malformed value is discarded at this
+     * field-type boundary (write-side JSON coercion or read-side overrides
+     * decode). Logs the reason only — never the payload, which may carry
+     * untrusted data — so a bad legacy/fixture row is traceable instead of
+     * silently vanishing.
+     *
+     * @param non-empty-string $message
+     */
+    private function logDiscardedValue(string $message): void
+    {
+        Injector::inst()->get(LoggerInterface::class)->warning($message);
     }
 
     /**

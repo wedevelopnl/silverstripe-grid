@@ -125,6 +125,45 @@ final class DBGridSettingsTest extends SapphireTest
         self::assertStringContainsString('DBGridSettings discarded malformed JSON', $logger->warnings[0]);
     }
 
+    /**
+     * A structurally-malformed stored `Overrides` column (valid JSON, but an
+     * override entry missing a required key) must not crash the read path. The
+     * default still decodes, overrides degrade to empty, and the suppression is
+     * observable via a logged warning — symmetric with the write-side
+     * malformed-JSON handling.
+     */
+    public function testGetValueWithMalformedOverridesColumnLogsWarningAndDegrades(): void
+    {
+        $logger = new class () extends NullLogger {
+            /** @var list<string> */
+            public array $warnings = [];
+
+            public function warning(string|\Stringable $message, array $context = []): void
+            {
+                $this->warnings[] = (string) $message;
+            }
+        };
+        Injector::inst()->registerService($logger, LoggerInterface::class);
+
+        $field = new DBGridSettings('Settings');
+        $field->setField('DefaultWidth', 6);
+        $field->setField('DefaultOffset', 0);
+        $field->setField('DefaultVisible', true);
+        // Valid JSON, but the "md" override is missing the required "width" key —
+        // ViewportConfig::fromArray throws InvalidGridValueException on decode.
+        $field->setField('Overrides', json_encode([
+            'md' => ['offset' => 1, 'visible' => true],
+        ]));
+
+        $value = $field->getValue();
+
+        self::assertNotNull($value, 'malformed overrides must not crash the read path');
+        self::assertSame(6, $value->default->width, 'the valid default must still decode');
+        self::assertSame([], $value->overrides, 'malformed overrides degrade to empty');
+        self::assertCount(1, $logger->warnings);
+        self::assertStringContainsString('DBGridSettings discarded malformed overrides column', $logger->warnings[0]);
+    }
+
     public function testGetValueWhenNoData(): void
     {
         $field = DBGridSettings::create('GridSettings');
