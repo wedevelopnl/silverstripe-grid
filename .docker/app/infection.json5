@@ -10,6 +10,20 @@
     },
     mutators: {
         "@default": true,
+        // KNOWN EQUIVALENT SURVIVORS — considered, deliberately NOT suppressed (no safe
+        // narrow regex or proof too weak to scope without risking a killable mutant):
+        //   - BlockMediaExtension L113 ReturnRemoval (`return false;` text recurs across the class)
+        //   - ReorderValidator L27 ReturnRemoval (`return Result::ok($element);` collides with killable L51)
+        //   - GridElementService L289 FalseValue (same source text as the killable L264 case)
+        //   - HierarchyValidationExtension L28 ReturnRemoval (bare `return;` text recurs)
+        //   - DBGridSettings L156 ReturnRemoval / L170 InstanceOf_ / L171 MethodCallRemoval
+        //     (`parent::setValue(null, ...)` text collides between L156 and L171 — no safe scope)
+        //   - GridElementReport L116 ReturnRemoval (`return sprintf('<em>...')` — left as survivor;
+        //     the killable L115 `$link === null` branch is what we assert, not the markup)
+        //   - ElementPlacementService L140 Identical (`$conn === null` appears in 4 unrelated guards
+        //     — GridElement L518, Transactional L44, GridMigrationService L140 — no line-unique scope)
+        //   - GridEditorField filter_var min_range / FieldMapper sizeFields[$oldKey] Increment:
+        //     these specific Increments ARE killed by tests; only their Decrement twins are ignored
         // SilverStripe calls methods by name via reflection (extend, $dependencies, Injector).
         // Visibility changes don't break tests but would break the framework at runtime.
         "PublicVisibility": false,
@@ -30,6 +44,9 @@
                 // Raw SQL result arrays — same as ORM property casts above but via
                 // array access. PHP coerces transparently; casts are for PHPStan.
                 ".*\\(int\\)\\s*\\(?\\$row\\[.*",
+                // ContentElement L43: summary_word_count is a typed int config static; the (int)
+                // cast on its getter is PHPStan-only — the value is already an int at runtime.
+                ".*\\(int\\)\\s*static::config\\(\\)->get\\(.*",
             ],
         },
         "CastString": {
@@ -40,6 +57,14 @@
                 ".*\\(string\\)\\s*\\$request->param\\(.*",
                 // Raw SQL result arrays — cast documents type for PHPStan, not behavior
                 ".*\\(string\\)\\s*\\(?\\$row\\[.*",
+                // ContentElement L45: DBHTMLText::Summary() already returns string — cast is PHPStan-only
+                ".*\\(string\\)\\s*\\$this->dbObject\\(.*->Summary\\(.*",
+                // FieldMapper L189: ternary guarantees a non-empty string before the cast on $ratio
+                ".*\\? 'auto' : \\(string\\) \\$ratio.*",
+                // LegacyDataReader L338: $value comes from a varchar column and is already a string
+                ".*\\? null : \\(string\\) \\$value.*",
+                // GridElementReport L172: $raw is narrowed by is_string()||is_int(); cast is PHPStan-only
+                ".*\\(string\\)\\s*\\$raw\\b.*",
             ],
         },
         "CastBool": {
@@ -49,6 +74,9 @@
                 // Symfony Console getOption() for VALUE_NONE already returns bool;
                 // explicit cast is for PHPStan type narrowing
                 ".*\\(bool\\)\\s*\\$input->getOption\\(.*",
+                // GridPageExtension L77: cast feeds a ||/if; truthiness is identical for any
+                // Boolean-column value, so removing the (bool) cast changes nothing observable
+                ".*\\(bool\\)\\s*\\$\\w+->UseGrid\\b.*",
             ],
         },
         "TrueValue": {
@@ -59,6 +87,15 @@
                 // Dedup marker values: $seen[$id] = true is only probed via isset(),
                 // so the assigned value is behaviourally irrelevant
                 ".*\\$seen\\[[^\\]]+\\]\\s*=\\s*true\\b.*",
+                // LegacyDataReader L383: $checked is probed only via isset(); the assigned value
+                // is irrelevant (same rationale as the $seen rule above)
+                ".*\\$checked\\[[^\\]]+\\]\\s*=\\s*true\\b.*",
+                // DBGridSettings L77: DefaultVisible is Boolean NOT NULL DEFAULT 0, read only after a
+                // DefaultWidth !== null guard — so the `?? true` fallback is unreachable
+                ".*getField\\('DefaultVisible'\\)\\s*\\?\\?\\s*true.*",
+                // DBGridSettings L129: setValue()'s $markChanged default mirrors the framework
+                // contract; every caller passes it explicitly, so the default is never read
+                ".*bool \\$markChanged = true.*",
             ],
         },
         "FalseValue": {
@@ -71,6 +108,15 @@
                 // NOT NULL with DEFAULT 0, so `(bool) ($row[...] ?? false)` is
                 // defensive dead code
                 ".*\\(bool\\)\\s*\\(\\$row\\[.*\\]\\s*\\?\\?\\s*false\\).*",
+                // GridTreeBuilder L178: zone is only applied for SiteTree parents, and Sections only
+                // sit at root (already true), so the deeper-level $isRootLevel = false is inert
+                ".*\\$isRootLevel = false;.*",
+                // CreateElementRequest L23: sole caller (RequestBodyParser::parseCreateBody) always
+                // passes $insertAtStart explicitly, so this constructor default is dead
+                ".*public bool \\$insertAtStart = false.*",
+                // GridElementService L91/L153: cascade_duplicates follows regardless of $doWrite;
+                // duplicate(true) leaves an identical end-state after writeAndPlace
+                ".*->duplicate\\(false\\).*",
             ],
         },
         "Concat": {
@@ -103,6 +149,8 @@
                 ".*\\$this->ID\\(\\)\\s*\\.\\s*'_'.*",
                 // Validation-error field prefixes (see Concat comment above)
                 ".*'\\w+:\\s*'\\s*\\.\\s*\\$e->getMessage\\(\\).*",
+                // FixturePostAction L155: only the stored asset filename; never read by any caller assertion
+                ".*'Uploads/' \\. basename.*",
             ],
         },
         "MethodCallRemoval": {
@@ -143,6 +191,19 @@
                 // Task CLI output (writeln) is user feedback, not business logic.
                 // Tests assert return codes and DB state, not output text.
                 ".*->writeln\\(.*",
+                // BlockMediaExtension L403: warning log on embed-resolve failure; observability only
+                // (NullLogger). Scoped to the multi-line call form so it does NOT match the inline
+                // DBGridSettings L198 ->warning($message) whose removal may be killable.
+                ".*LoggerInterface::class\\)->warning\\($",
+                // BlockMediaExtension L413: synchronous oEmbed network call; only observable via live
+                // network (out of bounds for the test suite)
+                ".*MediaField::saveEmbed\\(.*",
+                // GridTreeBuilder L218: N+1 pre-seed of an already-loaded parent; canView resolves
+                // identically via the ORM fetch when the component is not pre-seeded
+                ".*->setComponent\\('Parent',.*",
+                // FixtureLoader L85: idempotency reset; the test DB starts empty so the pre-load reset
+                // removes nothing
+                ".*\\$this->reset\\(\\);.*",
             ],
         },
         // Private methods returning pure option arrays (aspect ratio labels, media position
@@ -188,6 +249,39 @@
                 // NOT NULL with DEFAULT 0, so `(int) ($row[...] ?? 0)` is
                 // defensive dead code that can't be exercised via the DB
                 ".*\\(int\\)\\s*\\(\\$row\\[.*\\]\\s*\\?\\?\\s*0\\).*",
+                // FieldMapper L104: only consumer is `> 0 ? : columnCount`; 0 and -1 both fail it
+                ".*sizeFields\\[\\$defaultViewport\\]\\s*\\?\\?\\s*0.*",
+                // FieldMapper L108: clamp max(0, min(-1, ..)) == 0, identical to the ?? 0 path
+                ".*offsetFields\\[\\$defaultViewport\\]\\s*\\?\\?\\s*0.*",
+                // FieldMapper L126: override collapses to default; not emitted in either case
+                ".*sizeFields\\[\\$oldKey\\]\\s*\\?\\?\\s*0.*",
+                // FieldMapper L127: clamped offset is 0 in both branches
+                ".*offsetFields\\[\\$oldKey\\]\\s*\\?\\?\\s*0.*",
+                // FieldMapper L131: pure early-out; a fully-unset override collapses to default downstream
+                ".*\\$size === 0 && \\$offset === 0 && \\$visible === null.*",
+                // FieldMapper L223: width is always >= 1 by construction, so max(1,..) == max(0,..)
+                ".*\\\\max\\(1, \\\\min\\(\\$config->width.*",
+                // BlockMediaExtension L495: columnCount is positive-int, so max(1,n) == max(0,n)
+                ".*return max\\(1, \\$columnCount\\);.*",
+                // BlockMediaExtension L554/L562: ContentColumns/GapSize are Int NOT NULL DEFAULT 0; ?? 0 is dead
+                ".*\\$this->getOwner\\(\\)->(?:ContentColumns|GapSize)\\s*\\?\\?\\s*0.*",
+                // GridEditorField L148 (Decrement only — the GridController twin is separately scoped):
+                // Version is always >= 1, so the min_range floor of 1 vs 0 is unobservable
+                ".*filter_var\\(\\$rawVersion.*min_range.*1\\]\\].*",
+                // DBGridSettings L76 (Decrement): DefaultOffset is Int NOT NULL DEFAULT 0, read only after
+                // a DefaultWidth !== null guard
+                ".*getField\\('DefaultOffset'\\)\\s*\\?\\?\\s*0.*",
+                // ColumnClassResolver L29: $width is positive-int >= 1; any sentinel <= 0 yields an identical first emit
+                ".*\\$prevWidth = 0;.*",
+                // GridElementService L96/L171: ensureSortSet's `> 0` guard treats 0 and -1 identically;
+                // placement reindexes the sort anyway
+                ".*\\$clone->Sort\\s*=\\s*0\\b.*",
+                // FixtureLoader L318: getId() returns >= 1 or false, never 0; the `=== 0` operand is already dead
+                ".*\\$id === false \\|\\| \\$id === 0.*",
+                // GridSettingsFieldValidator L101 (Decrement): cosmetic max value in the multi-line error
+                // message; the pass/fail decision is independent (the existing same-line sprintf rule
+                // does not cover this argument-on-its-own-line form)
+                ".*\\$this->columnCount - 1,.*",
             ],
         },
         "IncrementInteger": {
@@ -201,6 +295,15 @@
                 ".*array_fill\\(\\d+.*'\\?'.*",
                 // Legacy DB reader null-coalesce defaults (see DecrementInteger comment)
                 ".*\\(int\\)\\s*\\(\\$row\\[.*\\]\\s*\\?\\?\\s*0\\).*",
+                // BlockMediaExtension L495 (Increment): differs only at columnCount == 1 (a degenerate,
+                // unusable layout); inert for any usable config
+                ".*return max\\(1, \\$columnCount\\);.*",
+                // BlockMediaExtension L554/L562 (see DecrementInteger comment)
+                ".*\\$this->getOwner\\(\\)->(?:ContentColumns|GapSize)\\s*\\?\\?\\s*0.*",
+                // DBGridSettings L76 (Increment, see DecrementInteger comment)
+                ".*getField\\('DefaultOffset'\\)\\s*\\?\\?\\s*0.*",
+                // GridSettingsFieldValidator L101 (Increment): cosmetic max value in the error message
+                ".*\\$this->columnCount - 1,.*",
             ],
         },
         // FunctionalTest::setUp() calls SecurityToken::disable(), making the CSRF
@@ -221,6 +324,104 @@
         "Minus": {
             ignoreSourceCodeByRegex: [
                 ".*sprintf\\(.*\\$this->columnCount\\s*-\\s*1.*",
+                // FieldMapper L224 (Minus only — the Decrement here is killed by clampingProvider):
+                // the min() ceiling is shadowed by the L226-227 reclamp, so + vs - agree downstream
+                ".*\\\\min\\(\\$config->offset, \\$this->columnCount - 1\\).*",
+                // GridSettingsFieldValidator L101 (Minus): cosmetic max value in the error message
+                ".*\\$this->columnCount - 1,.*",
+            ],
+        },
+        "GreaterThan": {
+            ignoreSourceCodeByRegex: [
+                // FieldMapper L226: at the boundary the reclamp is idempotent, so > and >= agree
+                ".*\\$width \\+ \\$offset > \\$this->columnCount.*",
+            ],
+        },
+        "Ternary": {
+            ignoreSourceCodeByRegex: [
+                // GridElementService L94/L168: after duplicate(false) the clone Title equals the source
+                // Title, so reordering the `?:` operands is indistinguishable
+                ".*\\?:\\s*\\$element->Title\\s*\\?:\\s*'Untitled'.*",
+            ],
+        },
+        "Coalesce": {
+            ignoreSourceCodeByRegex: [
+                // GridController L156/L227: GridTreeBuilder::buildForPage always sets $tree[$pageId],
+                // so the key is guaranteed present and the ?? [] fallback is unreachable
+                ".*\\$tree\\[\\$pageId\\]\\s*\\?\\?\\s*\\[\\].*",
+                // GridEditorField L105: FormField::getSchemaDataDefaults always includes 'data' => []
+                ".*\\$schemaData\\['data'\\]\\s*\\?\\?\\s*\\[\\].*",
+                // HierarchyValidationExtension L32: HierarchyValidationService always sets a non-null field
+                ".*\\$error->field \\?\\? ''.*",
+            ],
+        },
+        "Identical": {
+            ignoreSourceCodeByRegex: [
+                // FixtureLoader L199: every registered fixture's only SiteTree class is Page; the
+                // fallback captures the identical [Page::class, id]
+                ".*\\$class === Page::class.*",
+                // ReorderValidator L24: same-parent shortcut; checkHierarchyRules returns an identical
+                // ok Result for a genuine same-parent move whether the shortcut fires or not
+                ".*\\(int\\) \\$element->ParentID === \\(int\\) \\$targetParent->ID.*",
+                // GridElementReport L115: only difference is <em> vs <a> markup (forbidden assertion)
+                ".*\\$link === null.*",
+            ],
+        },
+        "LogicalOr": {
+            ignoreSourceCodeByRegex: [
+                // FixtureLoader L102: findPageInFactory sets both or neither, so the operands are always equal
+                ".*\\$pageClass === null \\|\\| \\$pageId === null.*",
+                // LegacyDataReader L380: the && variant only stops deduping; callers re-dedup by page id via $seen
+                ".*\\$table === null \\|\\| isset\\(\\$checked\\[\\$table\\]\\).*",
+            ],
+        },
+        "ArrayOneItem": {
+            ignoreSourceCodeByRegex: [
+                // LegacyDataReader L300: single-element literal; keep-first is identity
+                ".*\\$pages\\[\\] = \\['pageId' => \\$pageId\\].*",
+                // GridNodeMapper L125: the only array literal in range is the empty init; nothing to reduce
+                ".*\\$types = \\[\\];.*",
+            ],
+        },
+        "NullSafePropertyCall": {
+            ignoreSourceCodeByRegex: [
+                // AllRowsInSectionStrategy L95: log-context array (forbidden assertion) AND non-null
+                // rowData always pairs with a non-null row
+                ".*'rowId' => \\$group\\['row'\\]\\?->id.*",
+            ],
+        },
+        "UnwrapArrayMap": {
+            ignoreSourceCodeByRegex: [
+                // AbstractMigrationTask L78: ids become PDO IN-params; MySQL coerces string '123' to the
+                // int column identically, so unwrapping the intval map is unobservable
+                ".*\\\\array_map\\(intval\\(\\.\\.\\.\\), \\\\explode\\(',', \\$pageIdsArg\\)\\).*",
+            ],
+        },
+        "UnwrapArrayKeys": {
+            ignoreSourceCodeByRegex: [
+                // GridAdapterResolver L43/L55: only feeds human-readable exception message text (forbidden)
+                ".*implode\\('\\|', array_keys\\(self::PRESETS\\)\\).*",
+            ],
+        },
+        "UnwrapArrayValues": {
+            ignoreSourceCodeByRegex: [
+                // ElementPlacementService L185: every caller re-sequences via excludeElement's array_values
+                // before any key-sensitive consumer
+                ".*static fn \\(GridElement \\$s\\): bool => \\$s instanceof Section.*",
+            ],
+        },
+        "UnwrapArrayCombine": {
+            ignoreSourceCodeByRegex: [
+                // GridElement L265-266: array_combine(X, X) over an identical list; unwrap yields the same
+                // option values, consumed only as a Dropdown source (UI)
+                ".*\\['h1', 'h2', 'h3', 'h4', 'h5', 'h6'\\].*",
+            ],
+        },
+        "ReturnRemoval": {
+            ignoreSourceCodeByRegex: [
+                // FixtureLoader L200: Page is the sole page class; the fallback return captures the
+                // identical [Page::class, id], so removing this early return falls through to the same value
+                ".*return \\[\\$class, \\$firstId\\];.*",
             ],
         },
     },
