@@ -95,11 +95,6 @@ async function colPosition(
 }
 
 test.describe('Cross-row column drop — both directions', () => {
-  test.skip(
-    ({ browserName }) => browserName !== 'chromium',
-    'DnD pointer simulation is Chromium-specific',
-  )
-
   test.use({ viewport: { width: 1280, height: 1400 } })
 
   test.afterAll(async ({ request }) => {
@@ -211,11 +206,6 @@ test.describe('Cross-row column drop — both directions', () => {
 })
 
 test.describe('Cross-row column drop — source depletion and cancel', () => {
-  test.skip(
-    ({ browserName }) => browserName !== 'chromium',
-    'DnD pointer simulation is Chromium-specific',
-  )
-
   test.use({ viewport: { width: 1280, height: 1400 } })
 
   test.afterAll(async ({ request }) => {

@@ -13,11 +13,6 @@ import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
  * away, preventing Pass 2 (parent containers) from firing.
  */
 test.describe('Cross container ghost', () => {
-  test.skip(
-    ({ browserName }) => browserName !== 'chromium',
-    'DnD pointer simulation is Chromium-specific',
-  )
-
   test.use({ viewport: { width: 1280, height: 1400 } })
 
   test.afterAll(async ({ request }) => {

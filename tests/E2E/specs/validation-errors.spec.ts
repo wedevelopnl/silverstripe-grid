@@ -26,11 +26,6 @@ test.describe('Validation errors', () => {
   })
 
   test.describe('Reorder error toast and rollback', () => {
-    test.skip(
-      ({ browserName }) => browserName !== 'chromium',
-      'DnD pointer simulation is Chromium-specific',
-    )
-
     test.use({ viewport: { width: 1280, height: 1400 } })
 
     test('shows error toast and restores previous tree when reorder is rejected', async ({

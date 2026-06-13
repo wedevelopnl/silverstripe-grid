@@ -75,11 +75,6 @@ async function elPosition(
 }
 
 test.describe('Cross-column element drop — both directions', () => {
-  test.skip(
-    ({ browserName }) => browserName !== 'chromium',
-    'DnD pointer simulation is Chromium-specific',
-  )
-
   test.use({ viewport: { width: 1280, height: 1400 } })
 
   test.afterAll(async ({ request }) => {
@@ -204,11 +199,6 @@ test.describe('Cross-column element drop — both directions', () => {
 })
 
 test.describe('Cross-column element drop — source depletion and cancel', () => {
-  test.skip(
-    ({ browserName }) => browserName !== 'chromium',
-    'DnD pointer simulation is Chromium-specific',
-  )
-
   test.use({ viewport: { width: 1280, height: 1400 } })
 
   test.afterAll(async ({ request }) => {
