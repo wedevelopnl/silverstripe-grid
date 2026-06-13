@@ -29,6 +29,18 @@ describe('CollapseToggle', () => {
     expect(screen.getByTestId('collapse-toggle')).toHaveAttribute('aria-label', 'Collapse Section')
   })
 
+  it('sets data-state to "collapsed" when collapsed', () => {
+    render(<CollapseToggle isCollapsed={true} onToggle={vi.fn()} label="Section" />)
+
+    expect(screen.getByTestId('collapse-toggle')).toHaveAttribute('data-state', 'collapsed')
+  })
+
+  it('sets data-state to "expanded" when expanded', () => {
+    render(<CollapseToggle isCollapsed={false} onToggle={vi.fn()} label="Section" />)
+
+    expect(screen.getByTestId('collapse-toggle')).toHaveAttribute('data-state', 'expanded')
+  })
+
   it('calls onToggle when clicked', async () => {
     const user = userEvent.setup()
     const onToggle = vi.fn()

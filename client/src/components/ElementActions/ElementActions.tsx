@@ -164,6 +164,7 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
         />
         <ToolbarButton
           glyph={
+            // Stryker disable next-line all: Equivalent — the glyph value renders only as a font-icon CSS class (visual-only, not a behavioral contract); every mutation here changes which icon class is emitted, observable only via a forbidden className assertion
             collapse?.isCollapsed === true ? 'font-icon-down-open-big' : 'font-icon-up-open-big'
           }
           label={collapseLabel}

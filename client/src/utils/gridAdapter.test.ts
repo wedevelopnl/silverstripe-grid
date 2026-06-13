@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import type { AdapterConfig } from '@/types/adapter'
 import type { GridSettings } from '@/types/elements'
 import {
   getColumnCount,
@@ -35,6 +36,20 @@ describe('getDefaultViewport', () => {
 
 describe('getColumnCount', () => {
   it('returns the column count', () => {
+    expect(getColumnCount()).toBe(12)
+  })
+
+  it('caches the adapter config: a later config replacement is not re-fetched', () => {
+    // First read resolves and caches the adapter config object (columnCount 12).
+    expect(getColumnCount()).toBe(12)
+
+    // Swap in a brand-new adapter config object on the live CMS config. Because
+    // config() only fetches when its cache is empty, the cached reference is
+    // kept and the replacement is NOT observed.
+    const current = window.ss!.config.sections[0].gridAdapter as AdapterConfig
+    const replacement: AdapterConfig = { ...current, columnCount: 6 }
+    window.ss!.config.sections[0].gridAdapter = replacement
+
     expect(getColumnCount()).toBe(12)
   })
 })

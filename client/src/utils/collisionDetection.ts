@@ -300,6 +300,7 @@ export function createTypedCollisionDetection(
   // Track whether centerCrossing has detected a sibling during this drag.
   // Used to distinguish "threshold not yet crossed" (ghost-jump prevention)
   // from "centerCrossing missed due to stale droppableRects" (maintain over).
+  // Stryker disable next-line BooleanLiteral: Equivalent — hadSiblingHit is only read at L444 inside the L430 guard (sourceItems non-empty Set); whenever that holds, the first invocation's reset at L313 (lastSourceItems starts undefined) always assigns false before any read, so the initializer value is never observable
   let hadSiblingHit = false
   let lastSourceItems: ReadonlySet<string | number> | null | undefined
 

@@ -199,6 +199,7 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
           resolveInsertDirection(pointer, over.rect, activeParsed.type) === 'before'
         ) {
           const siblings = effectiveMaps.childrenByParentKey.get(overNode.parentKey) ?? []
+          // Stryker disable next-line UnaryOperator: Equivalent — overNode was confirmed present in nodeMap (above), and useElementMaps populates indexByNodeKey alongside nodeMap in one walk, so .get() is never undefined and the `?? -1` sentinel is unreachable
           const overIdx = effectiveMaps.indexByNodeKey.get(overParsed.key) ?? -1
           after = overIdx > 0 ? siblings[overIdx - 1].self : null
         } else {
@@ -254,6 +255,7 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         pending.clear()
         return
       }
+      // Stryker disable next-line UnaryOperator: Equivalent — activeNode was confirmed present in nodeMap (above), and useElementMaps populates indexByNodeKey alongside nodeMap in one walk, so .get() is never undefined and the `?? -1` sentinel is unreachable
       const sourceIndex = maps.indexByNodeKey.get(activeParsed.key) ?? -1
 
       const { maps: effectiveMaps } = pending.getEffective(tree, maps)

@@ -44,6 +44,7 @@ export function resolveDropPlacement(ctx: DropContext): ReorderElementParams | n
     if (sourceParentKey === targetParentKey) {
       // Same container: use the over element's index in the full list.
       // O(1) via the precomputed index map.
+      // Stryker disable next-line UnaryOperator: Equivalent — a same-container over node is always present in indexByNodeKey (built alongside nodeMap in one walk), so .get() never returns undefined and the `?? -1` sentinel is unreachable
       const overOriginalIdx = maps.indexByNodeKey.get(overKey) ?? -1
       insertIndex = overOriginalIdx === -1 ? filtered.length : overOriginalIdx
       filtered.splice(insertIndex, 0, activeKey)

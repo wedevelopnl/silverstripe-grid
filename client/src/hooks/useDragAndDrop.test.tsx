@@ -1,7 +1,14 @@
-import type { DragCancelEvent, DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core'
+import type {
+  ClientRect,
+  DragCancelEvent,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+} from '@dnd-kit/core'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createActive, createOver } from '@/testing/dndHelpers'
+import { createDroppable, createDroppableWithRect, makeDomRect } from '@/testing/dndRectFactories'
 import {
   createColumnNode,
   createRowNode,
@@ -13,7 +20,7 @@ import {
 import { buildDraggableId } from '@/types/dnd'
 import type { TreeApiResponse } from '@/types/elements'
 import type { UseDragAndDropOptions } from './useDragAndDrop'
-import { useDragAndDrop } from './useDragAndDrop'
+import { useDragAndDrop, useDragContext } from './useDragAndDrop'
 
 beforeEach(() => {
   resetIdCounter()
@@ -68,16 +75,71 @@ function makePointerDragEndEvent(
   clientX: number,
   clientY: number,
   overRect: { top: number; left: number; width: number; height: number },
+  activeRects?: { initial: RectLike; translated: RectLike },
 ): DragEndEvent {
-  // The active rect's initial === translated (default helper rects), so
-  // getPointerPosition resolves pointer.{x,y} === client{X,Y}.
+  // By default the active rect's initial === translated (default helper rects),
+  // so getPointerPosition resolves pointer.{x,y} === client{X,Y}. Pass distinct
+  // `activeRects` to exercise the grab-point offset math in getPointerPosition
+  // at DROP time (the only place onReorder's `after` is computed).
+  const over = createOver(overId, overRect)
+  if (activeRects) {
+    return {
+      active: {
+        id: activeId,
+        rect: { current: { initial: activeRects.initial, translated: activeRects.translated } },
+        data: { current: undefined },
+      },
+      over,
+      activatorEvent: new PointerEvent('pointerdown', { clientX, clientY }),
+      collisions: [],
+      delta: { x: 0, y: 0 },
+    } as unknown as DragEndEvent
+  }
   return {
     active: createActive(activeId),
-    over: createOver(overId, overRect),
+    over,
     activatorEvent: new PointerEvent('pointerdown', { clientX, clientY }),
     collisions: [],
     delta: { x: 0, y: 0 },
   } as unknown as DragEndEvent
+}
+
+interface RectLike {
+  top: number
+  left: number
+  width: number
+  height: number
+}
+
+/**
+ * Drag-over event whose `activatorEvent` is a real PointerEvent, so
+ * `getPointerPosition` resolves a non-null pointer and the same-type branch's
+ * direction logic (lines 196-206) runs. `initialRect`/`translatedRect` default
+ * to the same zero-origin rect (pointer === client coords); pass distinct
+ * values to exercise the grab-point offset math in `getPointerPosition`.
+ */
+function makePointerDragOverEvent(
+  activeId: string,
+  overId: string,
+  clientX: number,
+  clientY: number,
+  overRect: RectLike,
+  activeRects?: { initial: RectLike; translated: RectLike },
+): DragOverEvent {
+  const baseRect: RectLike = { top: 0, left: 0, width: 200, height: 50 }
+  const initial = activeRects?.initial ?? baseRect
+  const translated = activeRects?.translated ?? baseRect
+  return {
+    active: {
+      id: activeId,
+      rect: { current: { initial, translated } },
+      data: { current: undefined },
+    },
+    over: createOver(overId, overRect),
+    activatorEvent: new PointerEvent('pointerdown', { clientX, clientY }),
+    collisions: [],
+    delta: { x: 0, y: 0 },
+  } as unknown as DragOverEvent
 }
 
 // --- Tree builders ---
@@ -156,6 +218,19 @@ describe('useDragAndDrop', () => {
       expect(typeof result.current.dndContextProps.onDragOver).toBe('function')
       expect(typeof result.current.dndContextProps.onDragEnd).toBe('function')
       expect(typeof result.current.dndContextProps.onDragCancel).toBe('function')
+    })
+  })
+
+  describe('useDragContext default', () => {
+    it('defaults pendingActive to false with no provider in the tree', () => {
+      // DragContext's default value is what block components read when they sit
+      // outside an active provider (e.g. before the first drag). pendingActive
+      // must default to false so SortableContext uses its normal sorting
+      // strategy — a `true` default would switch every block to the no-op
+      // strategy permanently, breaking same-container reorder previews.
+      const { result } = renderHook(() => useDragContext())
+      expect(result.current.pendingActive).toBe(false)
+      expect(result.current.activeType).toBeNull()
     })
   })
 
@@ -336,6 +411,294 @@ describe('useDragAndDrop', () => {
       })
 
       expect(result.current.pendingTree).not.toBeNull()
+    })
+  })
+
+  describe('onDragOver same-type cross-container direction', () => {
+    // These exercise the same-type branch (element over element in a DIFFERENT
+    // container) WITH a real pointer, which the synthetic-Event tests never
+    // reach: getPointerPosition bails to null on a plain Event, short-circuiting
+    // the `pointer !== null && resolveInsertDirection(...) === 'before'` guard.
+    // The resulting pending-tree order is the observable contract.
+
+    // col30 holds the dragged element; col31 is the cross-container target whose
+    // membership varies per test. Both columns share row20.
+    function buildCrossContainerElementTree(
+      col31Children: ReturnType<typeof createSimpleElement>[],
+    ) {
+      const moved = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })
+      const col30 = createColumnNode({
+        id: 30,
+        parent: { type: 'row', id: 20 },
+        children: [moved],
+      })
+      const col31 = createColumnNode({
+        id: 31,
+        parent: { type: 'row', id: 20 },
+        children: col31Children,
+      })
+      const row = createRowNode({
+        id: 20,
+        parent: { type: 'section', id: 10 },
+        children: [col30, col31],
+      })
+      const section = createSectionNode({
+        id: 10,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      })
+      return { tree: createTreeApiResponse({ pageId: 1, sections: [section] }), moved }
+    }
+
+    function targetColumnChildIds(pendingTree: TreeApiResponse | null): number[] {
+      // section → row → col31 (second column) → its children ids
+      const section = pendingTree?.nodes[0] as ReturnType<typeof createSectionNode>
+      const row = section.children?.[0] as ReturnType<typeof createRowNode>
+      const col31 = row.children?.[1] as ReturnType<typeof createColumnNode>
+      return col31.children?.map((c) => c.self.id) ?? []
+    }
+
+    // Over-element (id 41) rect: top=0 height=50 → midpoint Y=25. clientY=5 is
+    // ABOVE the midpoint ('before'); clientY=45 is BELOW it ('after').
+    const OVER_RECT = { top: 0, left: 0, width: 200, height: 50 }
+
+    it('places before an over-element that has a prior sibling (after = that sibling)', () => {
+      // col31 = [x(50), element2(41)]. Drag element1(40) before element2 →
+      // overIdx=1 (>0) so after = siblings[0] = x(50) → [x, element1, element2].
+      const x = createSimpleElement({ id: 50, parent: { type: 'column', id: 31 } })
+      const element2 = createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })
+      const { tree } = buildCrossContainerElementTree([x, element2])
+      const { result } = renderDndHook({ tree })
+
+      const activeId = buildDraggableId('element', 40)
+      const overId = buildDraggableId('element', 41)
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+      act(() => {
+        result.current.dndContextProps.onDragOver(
+          makePointerDragOverEvent(activeId, overId, 100, 5, OVER_RECT),
+        )
+      })
+
+      expect(targetColumnChildIds(result.current.pendingTree)).toEqual([50, 40, 41])
+    })
+
+    it('places before an over-element at the container head (after = null)', () => {
+      // col31 = [element2(41)] only. Drag element1(40) before element2 →
+      // overIdx=0 (NOT >0) so after = null → element1 at head → [element1, element2].
+      const element2 = createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })
+      const { tree } = buildCrossContainerElementTree([element2])
+      const { result } = renderDndHook({ tree })
+
+      const activeId = buildDraggableId('element', 40)
+      const overId = buildDraggableId('element', 41)
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+      act(() => {
+        result.current.dndContextProps.onDragOver(
+          makePointerDragOverEvent(activeId, overId, 100, 5, OVER_RECT),
+        )
+      })
+
+      expect(targetColumnChildIds(result.current.pendingTree)).toEqual([40, 41])
+    })
+
+    it('places after an over-element when the pointer is below its midpoint (after = over-element)', () => {
+      // col31 = [element2(41)]. Drag element1(40) AFTER element2 (clientY below
+      // midpoint) → after = overNode.self = element2 → [element2, element1].
+      const element2 = createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })
+      const { tree } = buildCrossContainerElementTree([element2])
+      const { result } = renderDndHook({ tree })
+
+      const activeId = buildDraggableId('element', 40)
+      const overId = buildDraggableId('element', 41)
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+      act(() => {
+        result.current.dndContextProps.onDragOver(
+          makePointerDragOverEvent(activeId, overId, 100, 45, OVER_RECT),
+        )
+      })
+
+      expect(targetColumnChildIds(result.current.pendingTree)).toEqual([41, 40])
+    })
+  })
+
+  describe('getPointerPosition grab-point offset', () => {
+    // getPointerPosition computes the true pointer viewport position by offsetting
+    // the scroll-adjusted `translated` rect by the grab distance within the
+    // `initial` rect: pointer = translated + (client - initial). When initial and
+    // translated diverge (element dragged away from its origin) and the grab point
+    // is offset from the rect origin, the arithmetic must combine them correctly —
+    // otherwise the resolved direction (before/after) flips. Zero-origin rects
+    // (every other test) hide this because the offsets cancel.
+
+    it('resolves Y direction using translated + (clientY - initialTop) for an element drop', () => {
+      // The DROP-time pointer is the only input to onReorder's `after`, so the
+      // divergent active rects must be on the drag-END event — not just the
+      // drag-over (whose pending-tree order does not feed `after`).
+      //
+      // initialTop=100, translatedTop=300 (dragged 200px down), clientY=110
+      // (grabbed 10px below the element top). True pointer.y = 300 + (110-100) = 310.
+      // Over-element rect top=300 height=220 → midpoint Y=410. 310 < 410 → 'before'
+      // → after=null (target column head).
+      //   Mutant `clientY + initialTop`: 300 + (110+100) = 510 → 510 > 410 → 'after'
+      //   → after=element2. The asserted `after=null` distinguishes them.
+      const activeRects = {
+        initial: { top: 100, left: 0, width: 200, height: 50 },
+        translated: { top: 300, left: 0, width: 200, height: 50 },
+      }
+      const element2 = createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })
+      const col30 = createColumnNode({
+        id: 30,
+        parent: { type: 'row', id: 20 },
+        children: [createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })],
+      })
+      const col31 = createColumnNode({
+        id: 31,
+        parent: { type: 'row', id: 20 },
+        children: [element2],
+      })
+      const row = createRowNode({
+        id: 20,
+        parent: { type: 'section', id: 10 },
+        children: [col30, col31],
+      })
+      const section = createSectionNode({
+        id: 10,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      })
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+
+      const onReorder = vi.fn()
+      const { result } = renderDndHook({ tree, onReorder })
+
+      const activeId = buildDraggableId('element', 40)
+      const overContainerId = buildDraggableId('column', 31)
+      const overElementId = buildDraggableId('element', 41)
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+      act(() => {
+        result.current.dndContextProps.onDragOver(
+          makePointerDragOverEvent(
+            activeId,
+            overContainerId,
+            100,
+            110,
+            {
+              top: 300,
+              left: 0,
+              width: 200,
+              height: 220,
+            },
+            activeRects,
+          ),
+        )
+      })
+      act(() => {
+        result.current.dndContextProps.onDragEnd(
+          makePointerDragEndEvent(
+            activeId,
+            overElementId,
+            100,
+            110,
+            {
+              top: 300,
+              left: 0,
+              width: 200,
+              height: 220,
+            },
+            activeRects,
+          ),
+        )
+      })
+
+      expect(onReorder).toHaveBeenCalledTimes(1)
+      const [, , after] = onReorder.mock.calls[0]
+      expect(after).toBeNull()
+    })
+
+    it.each([
+      {
+        name: 'outer subtraction mutant: distinguished by a center between mutant and correct X',
+        // initialLeft=100, translatedLeft=300, clientX=110 → true x = 300+(110-100)=310.
+        // Mutant `translatedLeft - (clientX - initialLeft)` = 300-10 = 290.
+        // overRect centerX=300 (left=200,width=200): correct 310 > 300 → 'after';
+        // mutant 290 < 300 → 'before'. Different column order.
+        overRect: { top: 0, left: 200, width: 200, height: 50 },
+        expectedOrder: [31, 30],
+      },
+      {
+        name: 'inner addition mutant: distinguished by a center between correct and mutant X',
+        // True x=310. Mutant `clientX + initialLeft` = 300+(110+100)=510.
+        // overRect centerX=410 (left=310,width=200): correct 310 < 410 → 'before';
+        // mutant 510 > 410 → 'after'. Different column order.
+        overRect: { top: 0, left: 310, width: 200, height: 50 },
+        expectedOrder: [30, 31],
+      },
+    ])('resolves column X direction using the grab offset — $name', ({
+      overRect,
+      expectedOrder,
+    }) => {
+      // Two rows so col30 → row21 is a genuine cross-container column move.
+      // row21 = [col31] only; dropping col30 before/after col31 reorders row21.
+      const col30 = createColumnNode({
+        id: 30,
+        parent: { type: 'row', id: 20 },
+        children: [createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })],
+      })
+      const col31 = createColumnNode({
+        id: 31,
+        parent: { type: 'row', id: 21 },
+        children: [createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })],
+      })
+      const row20 = createRowNode({
+        id: 20,
+        parent: { type: 'section', id: 10 },
+        children: [col30],
+      })
+      const row21 = createRowNode({
+        id: 21,
+        parent: { type: 'section', id: 10 },
+        children: [col31],
+      })
+      const section = createSectionNode({
+        id: 10,
+        parent: { type: 'page', id: 1 },
+        children: [row20, row21],
+      })
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+
+      const { result } = renderDndHook({ tree })
+
+      const activeId = buildDraggableId('column', 30)
+      const overId = buildDraggableId('column', 31)
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+      act(() => {
+        result.current.dndContextProps.onDragOver(
+          makePointerDragOverEvent(activeId, overId, 110, 25, overRect, {
+            initial: { top: 0, left: 100, width: 200, height: 50 },
+            translated: { top: 0, left: 300, width: 200, height: 50 },
+          }),
+        )
+      })
+
+      // row21 (second row) now holds both columns in the resolved order.
+      const section0 = result.current.pendingTree?.nodes[0] as ReturnType<typeof createSectionNode>
+      const targetRow = section0.children?.[1] as ReturnType<typeof createRowNode>
+      expect(targetRow.children?.map((c) => c.self.id)).toEqual(expectedOrder)
     })
   })
 
@@ -816,6 +1179,151 @@ describe('useDragAndDrop', () => {
       expect(result.current.dragState).not.toBeNull()
       expect(result.current.dragState?.activeType).toBe('section')
       expect(result.current.dragState?.activeNode.self.id).toBe(1)
+    })
+  })
+
+  describe('drag-start primes collision detection with the source siblings', () => {
+    // handleDragStart records the active element's OTHER container siblings into
+    // pending.sourceContainerItemsRef. That set is consumed by the hook's own
+    // collision detection (dndContextProps.collisionDetection) to (a) restrict
+    // sibling matching to same-container siblings and (b) gate the
+    // "pointer-inside-source-sibling" short-circuit on `sourceItems.size > 0`.
+    // The set is observable only by driving that public collision function, so
+    // these two cases verify it is built with the right membership.
+
+    // Active row sits above the target sibling; the pointer is inside the
+    // sibling rect but has NOT crossed the centerCrossing threshold. With the
+    // source set populated, the guard short-circuits to [] (ghost-jump
+    // prevention). With the set empty, the guard is skipped and detection falls
+    // through to the parent section.
+    const SIBLING_RECT = makeDomRect(50, 275, 200, 100) // y 275-375, center 325
+    const PARENT_RECT = makeDomRect(0, 0, 800, 600)
+
+    function buildRowCollisionArgs(activeRowId: string, siblingRowId: string) {
+      const sibling = createDroppableWithRect(siblingRowId, {
+        left: 50,
+        top: 275,
+        width: 200,
+        height: 100,
+      })
+      const parent = createDroppable('section-10')
+      const collisionRect = makeDomRect(100, 265, 100, 50) // currentCY 290
+      const initialRect = makeDomRect(100, 75, 100, 50) // initialCY 100 (above target)
+      return {
+        active: {
+          id: activeRowId,
+          rect: { current: { initial: initialRect, translated: collisionRect } },
+          data: { current: undefined },
+        },
+        collisionRect,
+        droppableContainers: [sibling, parent],
+        droppableRects: new Map<string | number, ClientRect>([
+          [siblingRowId, SIBLING_RECT],
+          ['section-10', PARENT_RECT],
+        ]),
+        // Pointer (150, 290) is inside the sibling rect but thresholdY = 300, so
+        // 290 has not crossed → centerCrossing yields no sibling hit.
+        pointerCoordinates: { x: 150, y: 290 },
+      }
+    }
+
+    it('excludes the active element so the source set holds only the real siblings (loop body runs)', () => {
+      // section-10 has [row-1 (dragged), row-2 (sibling)]. After drag-start the
+      // source set must be {row-2}. Driving collision with the pointer inside
+      // row-2 (no threshold crossing) makes the pointer-inside-source-sibling
+      // guard fire → []. If the set-building loop never adds row-2 (empty set),
+      // `sourceItems.size > 0` is false, the guard is skipped, and detection
+      // returns the parent section-10 instead.
+      const row1 = createRowNode({ id: 1, parent: { type: 'section', id: 10 }, children: [] })
+      const row2 = createRowNode({ id: 2, parent: { type: 'section', id: 10 }, children: [] })
+      const section = createSectionNode({
+        id: 10,
+        parent: { type: 'page', id: 1 },
+        children: [row1, row2],
+      })
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+      const { result } = renderDndHook({ tree })
+
+      const activeId = buildDraggableId('row', 1)
+      const siblingId = buildDraggableId('row', 2)
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+
+      const collisions = result.current.dndContextProps.collisionDetection(
+        buildRowCollisionArgs(activeId, siblingId) as never,
+      )
+
+      // Guard fired: empty result, NOT the parent fallback.
+      expect(collisions).toEqual([])
+    })
+
+    it('excludes only the active id, keeping source depletion empty so ALL siblings are scanned', () => {
+      // Source depletion: section-10 holds ONLY row-1 (the dragged row); a SECOND
+      // container section-20 holds row-9 (same type, different container). The
+      // correct loop adds nothing for row-1 → empty source set → `size > 0` is
+      // false → detection scans ALL same-type siblings, letting centerCrossing
+      // detect the cross-container row-9 (the depletion fallback).
+      //
+      // A mutant that drops the `sibling.nodeKey !== parsed.key` guard would add
+      // row-1's OWN id → size 1 → detection filters same-type siblings to the
+      // source set, which excludes row-9 → empty → no sibling hit → it returns
+      // the parent section instead of row-9.
+      const row1 = createRowNode({ id: 1, parent: { type: 'section', id: 10 }, children: [] })
+      const row9 = createRowNode({ id: 9, parent: { type: 'section', id: 20 }, children: [] })
+      const section10 = createSectionNode({
+        id: 10,
+        parent: { type: 'page', id: 1 },
+        children: [row1],
+      })
+      const section20 = createSectionNode({
+        id: 20,
+        parent: { type: 'page', id: 1 },
+        children: [row9],
+      })
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section10, section20] })
+      const { result } = renderDndHook({ tree })
+
+      const activeId = buildDraggableId('row', 1)
+      const targetSiblingId = buildDraggableId('row', 9)
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+
+      // row-9 rect center 325; thresholdY = 275 + 25 = 300. collisionRect center
+      // currentCY = 310 (>= 300) → crosses downward → centerCrossing hits row-9
+      // when row-9 is actually scanned. Pointer (150, 310) is within the overlap
+      // gate of row-9.
+      const targetRow = createDroppableWithRect(targetSiblingId, {
+        left: 50,
+        top: 275,
+        width: 200,
+        height: 100,
+      })
+      const parent = createDroppable('section-20')
+      const collisionRect = makeDomRect(100, 285, 100, 50) // currentCY 310
+      const initialRect = makeDomRect(100, 75, 100, 50) // initialCY 100 (above target)
+
+      const collisions = result.current.dndContextProps.collisionDetection({
+        active: {
+          id: activeId,
+          rect: { current: { initial: initialRect, translated: collisionRect } },
+          data: { current: undefined },
+        },
+        collisionRect,
+        droppableContainers: [targetRow, parent],
+        droppableRects: new Map<string | number, ClientRect>([
+          [targetSiblingId, makeDomRect(50, 275, 200, 100)],
+          ['section-20', PARENT_RECT],
+        ]),
+        pointerCoordinates: { x: 150, y: 310 },
+      } as never)
+
+      // Empty source set → ALL siblings scanned → centerCrossing detects row-9.
+      expect(collisions).toHaveLength(1)
+      expect(String(collisions[0].id)).toBe(targetSiblingId)
     })
   })
 })

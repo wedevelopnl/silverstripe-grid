@@ -1,11 +1,13 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ReadonlyProvider } from '@/hooks/ReadonlyContext'
 import { useDragContext } from '@/hooks/useDragAndDrop'
 import { createRowNode } from '@/testing/factories'
 import { mockFetchSuccess } from '@/testing/mockFetch'
-import { renderWithProviders } from '@/testing/renderWithProviders'
+import { createCollapseStateStub, renderWithProviders } from '@/testing/renderWithProviders'
+import type { NodeKey } from '@/types/identity'
 import { resetAdapterCache } from '@/utils/gridAdapter'
 
 import RowBlock from './RowBlock'
@@ -322,6 +324,183 @@ describe('RowBlock', () => {
       const columnsDiv = screen.getByTestId('row-block-columns')
       expect(columnsDiv).toHaveAttribute('data-layout-mode', 'grid')
       expect((columnsDiv as HTMLElement).style.getPropertyValue('--grid-columns')).toBe('12')
+    })
+  })
+
+  describe('drag handle label', () => {
+    it('names the drag handle with the row title', () => {
+      mockFetchSuccess({})
+
+      // No child columns, so the only DragHandle in the tree is the row's own.
+      const row = createRowNode({ title: 'Hero Row', children: null })
+
+      renderWithProviders(<RowBlock row={row} />)
+
+      // The DragHandle exposes its label as the button's accessible name; the
+      // `t(...MOVE_LABEL, 'Move {title}', { title })` call must substitute the
+      // row title. Empty-string and dropped-params mutants change this text.
+      expect(screen.getByTestId('drag-handle')).toHaveAccessibleName('Move Hero Row')
+    })
+  })
+
+  describe('collapse toggle', () => {
+    it('toggles the row collapse state with the row key when clicked', async () => {
+      mockFetchSuccess({})
+
+      // No child columns, so the only CollapseToggle is the row's own.
+      const row = createRowNode({ children: null })
+      const collapseState = createCollapseStateStub()
+
+      renderWithProviders(<RowBlock row={row} />, { collapseState })
+
+      // RowBlock's `onToggle = useCallback(() => toggle(row.nodeKey), ...)` — a
+      // mutant that drops the body must leave `toggle` uncalled on click.
+      await userEvent.click(screen.getByTestId('collapse-toggle'))
+
+      expect(collapseState.toggle).toHaveBeenCalledWith(row.nodeKey)
+    })
+  })
+
+  describe('modified indicator', () => {
+    it('renders the indicator with its label when status is modified', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({ status: 'modified' })
+
+      renderWithProviders(<RowBlock row={row} />)
+
+      const indicator = screen.getByTestId('row-modified-indicator')
+      expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
+    })
+
+    it('does not render the indicator when status is not modified', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({ status: 'draft' })
+
+      renderWithProviders(<RowBlock row={row} />)
+
+      expect(screen.queryByTestId('row-modified-indicator')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('column count meta', () => {
+    it('renders the column count text when the row has columns', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({ columnCount: 3 })
+
+      renderWithProviders(<RowBlock row={row} />)
+
+      expect(screen.getByTestId('row-column-count')).toHaveTextContent('3 columns')
+    })
+
+    it('does not render the column count meta when children is an empty array', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({ children: [] as never })
+
+      renderWithProviders(<RowBlock row={row} />)
+
+      // `row.children.length > 0` is false for an empty array, so no meta. A
+      // `>= 0` mutant would (wrongly) render "0 columns" here.
+      expect(screen.queryByTestId('row-column-count')).not.toBeInTheDocument()
+    })
+
+    it('does not render the column count meta when children is null', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({ children: null })
+
+      renderWithProviders(<RowBlock row={row} />)
+
+      expect(screen.queryByTestId('row-column-count')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('readonly mode content', () => {
+    function renderReadonly(row: ReturnType<typeof createRowNode>, collapsedKeys?: NodeKey[]) {
+      return renderWithProviders(
+        <ReadonlyProvider value={true}>
+          <RowBlock row={row} />
+        </ReadonlyProvider>,
+        collapsedKeys ? { collapsedKeys } : {},
+      )
+    }
+
+    it('renders child columns', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({ columnCount: 2 })
+
+      renderReadonly(row)
+
+      // ReadonlyRowBlock maps `row.children` to <ColumnBlock>; a mutant that
+      // turns the map callback into `() => undefined` renders no columns.
+      expect(screen.getAllByTestId('column-block')).toHaveLength(2)
+    })
+
+    it('sets data-collapsed to empty string when collapsed', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({})
+
+      renderReadonly(row, [row.nodeKey])
+
+      expect(screen.getByTestId('row-block')).toHaveAttribute('data-collapsed', '')
+    })
+
+    it('does not set data-collapsed when expanded', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({})
+
+      renderReadonly(row)
+
+      expect(screen.getByTestId('row-block')).not.toHaveAttribute('data-collapsed')
+    })
+
+    it('renders the modified indicator with its label when status is modified', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({ status: 'modified' })
+
+      renderReadonly(row)
+
+      expect(screen.getByTestId('row-modified-indicator')).toHaveAttribute(
+        'aria-label',
+        'Has unpublished changes',
+      )
+    })
+
+    it('does not render the modified indicator when status is not modified', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({ status: 'draft' })
+
+      renderReadonly(row)
+
+      expect(screen.queryByTestId('row-modified-indicator')).not.toBeInTheDocument()
+    })
+
+    it('renders the column count text when the row has columns', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({ columnCount: 2 })
+
+      renderReadonly(row)
+
+      expect(screen.getByTestId('row-column-count')).toHaveTextContent('2 columns')
+    })
+
+    it('does not render the column count meta when children is an empty array', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({ children: [] as never })
+
+      renderReadonly(row)
+
+      expect(screen.queryByTestId('row-column-count')).not.toBeInTheDocument()
     })
   })
 })

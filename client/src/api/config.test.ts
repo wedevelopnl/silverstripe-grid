@@ -41,6 +41,16 @@ describe('getControllerLink', () => {
 
     expect(getControllerLink()).toBe('/admin/grid')
   })
+
+  it('throws ConfigError when only a differently-named section is present', () => {
+    // A non-matching section must not be returned: the section is selected by
+    // an exact name match, not merely by being the first entry.
+    window.ss!.config.sections[0].name = 'Some\\Other\\Controller'
+
+    expect(() => getControllerLink()).toThrow(
+      'Controller section "WeDevelop\\Grid\\Controllers\\GridController" not found in CMS config. Ensure the grid module is installed.',
+    )
+  })
 })
 
 describe('getAdapterConfig', () => {

@@ -63,6 +63,14 @@ describe('parseDraggableId', () => {
   it('returns null when separator is first character', () => {
     expect(parseDraggableId('-5')).toBeNull()
   })
+
+  it('returns null for a page key — a valid NodeKey type that is not draggable', () => {
+    // 'page-5' parses as a structurally valid NodeKey (NodeIdentity.fromKey
+    // accepts it), so the only thing rejecting it is the `value !== 'page'`
+    // guard in isDraggableType. A mutant turning that guard into `true` would
+    // wrongly accept pages as draggable.
+    expect(parseDraggableId('page-5')).toBeNull()
+  })
 })
 
 describe('getDraggableType', () => {

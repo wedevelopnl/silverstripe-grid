@@ -78,7 +78,12 @@ export default function ElementTypePicker({
                 />
                 <span className="ssgrid-dialog__tile-label">{info.label}</span>
                 {info.description !== '' && (
-                  <span className="ssgrid-dialog__tile-description">{info.description}</span>
+                  <span
+                    className="ssgrid-dialog__tile-description"
+                    data-testid="element-type-description"
+                  >
+                    {info.description}
+                  </span>
                 )}
               </button>
             ))}

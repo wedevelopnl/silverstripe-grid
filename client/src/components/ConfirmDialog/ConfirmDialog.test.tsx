@@ -75,6 +75,25 @@ describe('ConfirmDialog', () => {
     expect(onCancel).toHaveBeenCalledOnce()
   })
 
+  it('stops clicks inside the dialog from bubbling to ancestors and prevents default', async () => {
+    const user = userEvent.setup()
+    const onAncestorClick = vi.fn()
+
+    // The dialog is rendered inside an interactive ElementCard anchor in
+    // production; the guard exists to stop clicks reaching that anchor's
+    // React onClick handler. Model that with an anchor ancestor here.
+    render(
+      <a href="/edit" onClick={onAncestorClick} data-testid="ancestor">
+        <ConfirmDialog {...defaultProps} />
+      </a>,
+    )
+
+    // Click the message paragraph (a non-button region of the dialog).
+    await user.click(screen.getByText('Are you sure you want to delete this element?'))
+
+    expect(onAncestorClick).not.toHaveBeenCalled()
+  })
+
   it('calls showModal when isOpen transitions to true', () => {
     const { rerender } = render(<ConfirmDialog {...defaultProps} isOpen={false} />)
 

@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ReadonlyProvider } from '@/hooks/ReadonlyContext'
 import { createSimpleElement } from '@/testing/factories'
 import { mockFetchSuccess } from '@/testing/mockFetch'
 import { renderWithProviders } from '@/testing/renderWithProviders'
@@ -212,6 +213,116 @@ describe('ElementCard', () => {
       // Not prevented — anchor navigation would proceed.
       expect(result).toBe(true)
       expect(event.defaultPrevented).toBe(false)
+    })
+  })
+
+  describe('drag handle label', () => {
+    // Pins the MOVE_LABEL fallback string and the interpolation params object
+    // at ElementCard.tsx:47-49 — both surface as the drag handle's aria-label.
+
+    it('labels the drag handle with the interpolated element title', () => {
+      mockFetchSuccess({})
+
+      const element = createSimpleElement({ title: 'Hero Banner' })
+
+      renderWithProviders(<ElementCard element={element} />)
+
+      // Fallback "Move {title}" with params { title } => "Move Hero Banner".
+      // Killing the fallback StringLiteral ("" => empty label) and the params
+      // ObjectLiteral ({} => no substitution, label stays "Move {title}").
+      expect(screen.getByTestId('drag-handle')).toHaveAttribute('aria-label', 'Move Hero Banner')
+    })
+  })
+
+  describe('modified indicator', () => {
+    // Pins the `status === 'modified'` conditional at ElementCard.tsx:59 (editable)
+    // and :143 (readonly): the unpublished-changes dot must appear only for the
+    // 'modified' status, and its aria-label fallback (MODIFIED_LABEL) is asserted.
+
+    it('renders the modified indicator with its label when status is modified', () => {
+      mockFetchSuccess({})
+
+      const element = createSimpleElement({ status: 'modified' })
+
+      renderWithProviders(<ElementCard element={element} />)
+
+      const indicator = screen.getByTestId('element-card-modified-indicator')
+      expect(indicator).toBeInTheDocument()
+      expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
+    })
+
+    it('does not render the modified indicator when status is not modified', () => {
+      mockFetchSuccess({})
+
+      const element = createSimpleElement({ status: 'published' })
+
+      renderWithProviders(<ElementCard element={element} />)
+
+      expect(screen.queryByTestId('element-card-modified-indicator')).toBeNull()
+    })
+  })
+
+  describe('readonly variant', () => {
+    // Pins the readonly branch (ElementCard.tsx:129-159): icon class template
+    // (:136), modified-indicator conditional (:143) and its label (:147).
+
+    function renderReadonly(element: ReturnType<typeof createSimpleElement>) {
+      return renderWithProviders(
+        <ReadonlyProvider value={true}>
+          <ElementCard element={element} />
+        </ReadonlyProvider>,
+      )
+    }
+
+    it('renders the block icon class', () => {
+      mockFetchSuccess({})
+
+      const element = createSimpleElement({
+        blockSchema: {
+          typeName: 'Content',
+          label: 'Content',
+          icon: 'font-icon-block-content',
+          type: 'Content',
+          title: 'Content',
+        },
+      })
+
+      renderReadonly(element)
+
+      expect(screen.getByTestId('element-card-icon')).toHaveClass('font-icon-block-content')
+    })
+
+    it('renders the modified indicator with its label when status is modified', () => {
+      mockFetchSuccess({})
+
+      const element = createSimpleElement({ status: 'modified' })
+
+      renderReadonly(element)
+
+      const indicator = screen.getByTestId('element-card-modified-indicator')
+      expect(indicator).toBeInTheDocument()
+      expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
+    })
+
+    it('does not render the modified indicator when status is not modified', () => {
+      mockFetchSuccess({})
+
+      const element = createSimpleElement({ status: 'published' })
+
+      renderReadonly(element)
+
+      expect(screen.queryByTestId('element-card-modified-indicator')).toBeNull()
+    })
+
+    it('renders the title and no drag handle', () => {
+      mockFetchSuccess({})
+
+      const element = createSimpleElement({ title: 'Readonly Block' })
+
+      renderReadonly(element)
+
+      expect(screen.getByTestId('element-card-title')).toHaveTextContent('Readonly Block')
+      expect(screen.queryByTestId('drag-handle')).toBeNull()
     })
   })
 })

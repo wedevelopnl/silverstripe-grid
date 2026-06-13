@@ -120,4 +120,46 @@ describe('AddChildButton', () => {
     expect(screen.getByTestId('add-child-append')).toBeInTheDocument()
     expect(screen.queryByText('No rows yet')).not.toBeInTheDocument()
   })
+
+  it('between variant renders the between wrapper', () => {
+    mockFetchSuccess({})
+
+    renderWithProviders(
+      <AddChildButton parentId={10} childType="row" childLabel="Row" variant="between" />,
+    )
+
+    expect(screen.getByTestId('add-child-between')).toBeInTheDocument()
+    expect(screen.queryByTestId('add-child-append')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('add-child-empty')).not.toBeInTheDocument()
+  })
+
+  it('includes insertAfterElementID in the mutation payload when insertAfterId is given', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+
+    renderWithProviders(
+      <AddChildButton
+        parentId={10}
+        childType="row"
+        childLabel="Row"
+        variant="between"
+        insertAfterId={7}
+      />,
+    )
+
+    await user.click(screen.getByTestId('add-child-button'))
+
+    await waitFor(() => {
+      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
+    })
+
+    const [, init] = getFetchCalls()[0]
+    const body = JSON.parse(init!.body as string)
+
+    expect(body).toMatchObject({
+      containerType: 'row',
+      parent: { type: 'section', id: 10 },
+      insertAfterElementID: 7,
+    })
+  })
 })

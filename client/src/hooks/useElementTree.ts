@@ -13,6 +13,7 @@ function treeQueryOptions(pageId: number | null, zone: string, version?: number)
         : (['elementTree', 'disabled'] as const),
     queryFn: () => {
       if (pageId === null) {
+        // Stryker disable next-line StringLiteral: Equivalent — defensive invariant; queryFn only runs when `enabled` is true (pageId !== null), so this throw is unreachable and its message is never observable
         throw new Error('pageId is required — query should be disabled')
       }
       return fetchElementTree(pageId, zone, version)

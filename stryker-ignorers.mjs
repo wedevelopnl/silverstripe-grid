@@ -113,6 +113,41 @@ function isInsideClassNameTemplateLiteral(path) {
   return false;
 }
 
+/**
+ * Check if the path is the entire value of a `className` JSX attribute —
+ * either `className="literal"` (StringLiteral directly on the attribute) or
+ * `className={`...`}` / `className={'...'}` (literal/template wrapped in a
+ * JSXExpressionContainer).
+ *
+ * @param {import('@stryker-mutator/api/ignore').NodePath} path
+ * @returns {boolean}
+ */
+function isClassNameAttributeValue(path) {
+  const parent = path.parentPath;
+  if (!parent) return false;
+
+  // className="..."
+  if (
+    parent.isJSXAttribute() &&
+    parent.node.name?.type === 'JSXIdentifier' &&
+    parent.node.name.name === 'className'
+  ) {
+    return true;
+  }
+
+  // className={`...`} or className={'...'}
+  if (
+    parent.isJSXExpressionContainer() &&
+    parent.parentPath?.isJSXAttribute() &&
+    parent.parentPath.node.name?.type === 'JSXIdentifier' &&
+    parent.parentPath.node.name.name === 'className'
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 /** @type {import('@stryker-mutator/api/ignore').Ignorer} */
 const reactIgnorer = {
   shouldIgnore(path) {
@@ -141,6 +176,21 @@ const reactIgnorer = {
     }
     if (path.isConditionalExpression() && isInsideClassNameTemplateLiteral(path)) {
       return 'CSS className conditional in template literal';
+    }
+
+    // Pattern 2b: the className value *itself* (whole StringLiteral or whole
+    // TemplateLiteral). Pattern 2 only catches literals *nested inside* a
+    // className template (the conditional class arms); Stryker also empties the
+    // entire `className={`...`}` / `className="..."` value (reported as a
+    // StringLiteral mutation to ``). That changes only the CSS class string —
+    // visual-only, not a behavioral contract — so it cannot be killed by a good
+    // test (components assert via role/text/testid/data-* attributes, not class
+    // names). Same rationale as Pattern 2.
+    if (
+      (path.isStringLiteral() || path.isTemplateLiteral()) &&
+      isClassNameAttributeValue(path)
+    ) {
+      return 'CSS className attribute value';
     }
 
     // Pattern 3: useEffect/useLayoutEffect cleanup return functions

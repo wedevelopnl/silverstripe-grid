@@ -423,6 +423,80 @@ describe('useElementMutations', () => {
       })
     })
 
+    it('restores the snapshot tree into the cache on error', async () => {
+      // Pins the `if (snapshot !== undefined) setQueryData(snapshot)` rollback
+      // at useElementMutations.ts:169. onMutate writes an optimistic order
+      // [elemB, elemA]; the reorder POST fails; onError must restore the cache
+      // to the captured snapshot order [elemA, elemB]. No tree observer is
+      // mounted, so the success-only invalidation cannot refetch and overwrite.
+      // gcTime: Infinity from construction keeps the rolled-back cache entry
+      // alive for inspection — with gcTime 0 and no mounted observer the entry
+      // is garbage-collected the moment the mutation settles.
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+      })
+      const queryKey = queryKeys.elementTree.byPage(1, 'main')
+
+      const column = createColumnNode({ id: 300, parent: { type: 'row', id: 200 }, childCount: 2 })
+      for (const child of column.children ?? []) {
+        ;(child as { parent: { type: 'column'; id: number }; parentKey: string }).parent = {
+          type: 'column',
+          id: 300,
+        }
+        ;(child as { parent: { type: 'column'; id: number }; parentKey: string }).parentKey =
+          'column-300'
+      }
+      const row = createRowNode({
+        id: 200,
+        parent: { type: 'section', id: 100 },
+        children: [column],
+      })
+      const section = createSectionNode({
+        id: 100,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      })
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+      queryClient.setQueryData(queryKey, tree)
+      const [elemA, elemB] = column.children ?? []
+
+      mockFetchError(500, { message: 'Reorder failed' })
+      const dispatch = vi.fn()
+      window.ss!.store = { dispatch }
+
+      const { wrapper } = createProviderWrapper({ queryClient })
+      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
+
+      await act(async () => {
+        await result.current
+          .mutateAsync({
+            params: {
+              element: { type: 'element', id: elemB.self.id },
+              parent: { type: 'column', id: column.self.id },
+              after: null,
+            },
+            tree,
+          })
+          .catch(() => undefined)
+      })
+
+      await waitFor(() => {
+        expect(dispatch).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'DISPLAY_TOAST',
+            payload: expect.objectContaining({ type: 'error' }),
+          }),
+        )
+      })
+
+      // Cache must reflect the restored snapshot order, not the optimistic swap.
+      const cached = queryClient.getQueryData<TreeApiResponse>(queryKey)
+      const cachedSection = cached?.nodes[0] as ContainerNode
+      const cachedRow = cachedSection.children?.[0] as ContainerNode
+      const cachedColumn = cachedRow.children?.[0] as ContainerNode
+      expect(cachedColumn.children?.map((c) => c.self.id)).toEqual([elemA.self.id, elemB.self.id])
+    })
+
     it('skips setQueryData rollback when no snapshot was captured', async () => {
       // Fresh QueryClient — no pre-seeded tree, so onMutate's
       // getQueryData returns undefined and onError must NOT attempt to

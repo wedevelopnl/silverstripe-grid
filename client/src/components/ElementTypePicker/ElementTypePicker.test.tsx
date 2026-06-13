@@ -74,9 +74,18 @@ describe('ElementTypePicker', () => {
     render(<ElementTypePicker {...defaultProps} />)
 
     expect(screen.getByText('A rich text block')).toBeInTheDocument()
-    // ImageBlock has description '' so no description element should render for it
-    const descriptions = screen.getAllByText(/rich text/)
+    // Two tiles render, but only TextBlock has a non-empty description.
+    // ImageBlock has description '' so its description element must be omitted
+    // entirely (not rendered as an empty span).
+    const descriptions = screen.getAllByTestId('element-type-description')
     expect(descriptions).toHaveLength(1)
+    expect(descriptions[0]).toHaveTextContent('A rich text block')
+  })
+
+  it('uses "Close" as the accessible label for the close button', () => {
+    render(<ElementTypePicker {...defaultProps} />)
+
+    expect(screen.getByTestId('element-type-picker-close')).toHaveAttribute('aria-label', 'Close')
   })
 
   it('tile icons have correct class from allowedTypes icon field', () => {

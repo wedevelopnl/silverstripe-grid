@@ -31,6 +31,13 @@ describe('useDuplicateAction', () => {
     expect(result.current.action?.key).toBe('duplicate')
   })
 
+  it('labels the action "Duplicate"', () => {
+    const node = createSimpleElement({ canCreate: true })
+    const { result } = renderDuplicateAction(node)
+
+    expect(result.current.action?.label).toBe('Duplicate')
+  })
+
   it('should trigger duplicate mutation with correct URL on action', async () => {
     mockFetchSuccess({})
     const node = createSimpleElement({ id: 42 })

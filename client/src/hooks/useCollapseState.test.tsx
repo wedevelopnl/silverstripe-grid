@@ -152,6 +152,13 @@ describe('useCollapseState', () => {
 
     expect(result.current.isCollapsed(valid)).toBe(true)
     expect(result.current.isCollapsed(NodeIdentity.toKey('row', 99))).toBe(false)
+    // The invalid raw entries must be filtered out of the set — looking them
+    // up by their literal stored value must report not-collapsed. Without the
+    // .filter()'s string-typeof + fromKey guard, these survive into the set
+    // and would read back as collapsed.
+    expect(result.current.isCollapsed('not-a-key' as never)).toBe(false)
+    expect(result.current.isCollapsed('row-abc' as never)).toBe(false)
+    expect(result.current.isCollapsed(99 as never)).toBe(false)
   })
 
   it('keeps separate state for different areaIds', () => {

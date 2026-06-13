@@ -215,6 +215,52 @@ describe('GridSettingsPicker', () => {
     expect(screen.getByText('Hidden')).toHaveAttribute('data-separator', 'true')
   })
 
+  it('non-hidden options do not have a separator attribute', async () => {
+    const user = userEvent.setup()
+
+    renderPicker()
+
+    await user.click(screen.getByTestId('width-picker'))
+
+    expect(screen.getByText('6 columns')).not.toHaveAttribute('data-separator')
+    expect(screen.getByText('12 columns')).not.toHaveAttribute('data-separator')
+  })
+
+  it('exposes the listbox under the derived listbox testId', async () => {
+    const user = userEvent.setup()
+
+    renderPicker()
+
+    await user.click(screen.getByTestId('width-picker'))
+
+    expect(screen.getByTestId('width-picker-listbox')).toBe(screen.getByRole('listbox'))
+  })
+
+  it('appends a provided className to the trigger class list', () => {
+    renderPicker({ className: 'custom-class' })
+
+    expect(screen.getByTestId('width-picker')).toHaveClass(
+      'ssgrid-settings-picker__trigger',
+      'custom-class',
+    )
+  })
+
+  it('omits any extra trigger class when no className is provided', () => {
+    renderPicker()
+
+    expect(screen.getByTestId('width-picker').className).toBe('ssgrid-settings-picker__trigger')
+  })
+
+  it('keeps the listbox itself out of the tab order', async () => {
+    const user = userEvent.setup()
+
+    renderPicker()
+
+    await user.click(screen.getByTestId('width-picker'))
+
+    expect(screen.getByRole('listbox').tabIndex).toBe(-1)
+  })
+
   it('outside click while picker is closed does not open it', async () => {
     const user = userEvent.setup()
 
@@ -339,6 +385,91 @@ describe('GridSettingsPicker', () => {
       await user.keyboard('{Escape}')
 
       expect(document.activeElement).toBe(trigger)
+    })
+
+    it('seeds the active option to the currently-selected value on open', async () => {
+      const user = userEvent.setup()
+
+      renderPicker({ selectedValue: 12 })
+
+      await user.click(screen.getByTestId('width-picker'))
+
+      const listbox = screen.getByRole('listbox')
+      const options = screen.getAllByRole('option')
+      // selectedValue 12 is the second option, so it should be active, not the first.
+      expect(listbox.getAttribute('aria-activedescendant')).toBe(options[1].id)
+      expect(options[1].tabIndex).toBe(0)
+    })
+
+    it('seeds the active option to the first option when the selected value is absent', async () => {
+      const user = userEvent.setup()
+
+      renderPicker({ selectedValue: 99 })
+
+      await user.click(screen.getByTestId('width-picker'))
+
+      const listbox = screen.getByRole('listbox')
+      const options = screen.getAllByRole('option')
+      expect(listbox.getAttribute('aria-activedescendant')).toBe(options[0].id)
+    })
+
+    it('ArrowDown at the last option keeps the active option on the last', async () => {
+      const user = userEvent.setup()
+
+      renderPicker()
+
+      await user.click(screen.getByTestId('width-picker'))
+      const listbox = screen.getByRole('listbox')
+      const options = screen.getAllByRole('option')
+
+      await user.keyboard('{End}{ArrowDown}')
+
+      expect(listbox.getAttribute('aria-activedescendant')).toBe(options[options.length - 1].id)
+    })
+
+    it('ArrowUp at the first option keeps the active option on the first', async () => {
+      const user = userEvent.setup()
+
+      renderPicker()
+
+      await user.click(screen.getByTestId('width-picker'))
+      const listbox = screen.getByRole('listbox')
+      const options = screen.getAllByRole('option')
+
+      await user.keyboard('{Home}{ArrowUp}')
+
+      expect(listbox.getAttribute('aria-activedescendant')).toBe(options[0].id)
+    })
+
+    it('Space selects the active option', async () => {
+      const user = userEvent.setup()
+      const onSelect = vi.fn()
+
+      renderPicker({ onSelect })
+
+      await user.click(screen.getByTestId('width-picker'))
+      await user.keyboard('{ArrowDown}[Space]')
+
+      expect(onSelect).toHaveBeenCalledWith(12)
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    })
+
+    it('ignores unhandled keys without selecting or closing the listbox', async () => {
+      const user = userEvent.setup()
+      const onSelect = vi.fn()
+
+      renderPicker({ onSelect })
+
+      await user.click(screen.getByTestId('width-picker'))
+      const listbox = screen.getByRole('listbox')
+      const options = screen.getAllByRole('option')
+
+      await user.keyboard('a')
+
+      expect(onSelect).not.toHaveBeenCalled()
+      expect(screen.getByRole('listbox')).toBeInTheDocument()
+      // Active option is unchanged by an unhandled key.
+      expect(listbox.getAttribute('aria-activedescendant')).toBe(options[0].id)
     })
   })
 })

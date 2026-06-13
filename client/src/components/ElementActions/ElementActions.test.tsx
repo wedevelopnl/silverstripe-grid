@@ -1,11 +1,48 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSimpleElement } from '@/testing/factories'
 import { mockFetchSuccess } from '@/testing/mockFetch'
 import { renderWithProviders } from '@/testing/renderWithProviders'
 
 import ElementActions from './ElementActions'
+
+// jsdom doesn't implement native <dialog> showModal/close — stub them so the
+// archive/duplicate-to dialogs can actually open under test.
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function showModal(this: HTMLDialogElement) {
+    this.setAttribute('open', '')
+  })
+  HTMLDialogElement.prototype.close = vi.fn(function close(this: HTMLDialogElement) {
+    this.removeAttribute('open')
+  })
+})
+
+const originalLocation = window.location
+
+afterEach(() => {
+  // Restore the real jsdom location if a test swapped it out.
+  if (window.location !== originalLocation) {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
+    })
+  }
+})
+
+/**
+ * jsdom's `window.location.assign` is non-configurable, so it can't be spied
+ * directly. Replace the whole `location` with a stub exposing a mock `assign`
+ * (`afterEach` restores the original). Returns the mock for assertions.
+ */
+function stubLocationAssign(): ReturnType<typeof vi.fn> {
+  const assign = vi.fn()
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { ...originalLocation, assign },
+  })
+  return assign
+}
 
 describe('ElementActions', () => {
   it('renders the action toolbar with duplicate/archive enabled when permitted', async () => {
@@ -97,5 +134,246 @@ describe('ElementActions', () => {
 
     expect(screen.queryByTestId('element-toolbar')).not.toBeInTheDocument()
     expect(screen.getByTestId('actions-menu-trigger')).toBeInTheDocument()
+  })
+
+  it('surfaces duplicate, duplicate-to and archive in the kebab-only overflow menu', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+
+    const node = createSimpleElement({ canDelete: true, canCreate: true })
+
+    renderWithProviders(<ElementActions node={node} kebabOnly />)
+
+    await user.click(screen.getByTestId('actions-menu-trigger'))
+
+    // All three permitted actions appear in the overflow menu. Dropping any of
+    // the spread guards in `kebabActions` would silently omit one.
+    const menu = screen.getByRole('menu')
+    expect(screen.getByText('Duplicate', { selector: '[role="menuitem"]' })).toBeInTheDocument()
+    expect(screen.getByText(/duplicate to/i)).toBeInTheDocument()
+    expect(screen.getByText('Archive', { selector: '[role="menuitem"]' })).toBeInTheDocument()
+    expect(menu.querySelectorAll('[role="menuitem"]')).toHaveLength(3)
+  })
+
+  it('omits archive from the kebab-only menu when the element cannot be deleted', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+
+    const node = createSimpleElement({ canDelete: false, canCreate: true })
+
+    renderWithProviders(<ElementActions node={node} kebabOnly />)
+
+    await user.click(screen.getByTestId('actions-menu-trigger'))
+
+    expect(screen.queryByText('Archive', { selector: '[role="menuitem"]' })).not.toBeInTheDocument()
+    // Duplicate and Duplicate-to remain.
+    expect(screen.getByText('Duplicate', { selector: '[role="menuitem"]' })).toBeInTheDocument()
+    expect(screen.getByText(/duplicate to/i)).toBeInTheDocument()
+  })
+
+  it('omits the duplicate actions from the kebab-only menu when the element cannot be created', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+
+    const node = createSimpleElement({ canDelete: true, canCreate: false })
+
+    renderWithProviders(<ElementActions node={node} kebabOnly />)
+
+    await user.click(screen.getByTestId('actions-menu-trigger'))
+
+    expect(
+      screen.queryByText('Duplicate', { selector: '[role="menuitem"]' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/duplicate to/i)).not.toBeInTheDocument()
+    // Only Archive remains.
+    expect(screen.getByText('Archive', { selector: '[role="menuitem"]' })).toBeInTheDocument()
+  })
+
+  it('labels every toolbar button with its visible action name', () => {
+    mockFetchSuccess({})
+
+    const node = createSimpleElement({ canDelete: true, canCreate: true })
+
+    renderWithProviders(<ElementActions node={node} />)
+
+    expect(screen.getByTestId('element-action-history')).toHaveAttribute('title', 'View history')
+    expect(screen.getByTestId('element-action-history')).toHaveAccessibleName('View history')
+    expect(screen.getByTestId('element-action-duplicate')).toHaveAttribute('title', 'Duplicate')
+    expect(screen.getByTestId('element-action-open')).toHaveAttribute('title', 'Open in a new tab')
+    expect(screen.getByTestId('element-action-edit')).toHaveAttribute('title', 'Edit')
+    expect(screen.getByTestId('element-action-archive')).toHaveAttribute('title', 'Archive')
+  })
+
+  it('marks only the archive button as destructive', () => {
+    mockFetchSuccess({})
+
+    const node = createSimpleElement({ canDelete: true, canCreate: true })
+
+    renderWithProviders(<ElementActions node={node} />)
+
+    // The trash action is flagged destructive so styling/confirmation can key off it.
+    expect(screen.getByTestId('element-action-archive')).toHaveAttribute('data-destructive', 'true')
+    // A non-destructive button carries no such flag.
+    expect(screen.getByTestId('element-action-duplicate')).not.toHaveAttribute('data-destructive')
+  })
+
+  it('labels the fold icon "Collapse" with no title when no collapse control is supplied', () => {
+    mockFetchSuccess({})
+
+    const node = createSimpleElement({ canDelete: true, canCreate: true })
+
+    renderWithProviders(<ElementActions node={node} />)
+
+    const fold = screen.getByTestId('element-action-collapse')
+    expect(fold).toHaveAttribute('title', 'Collapse')
+    expect(fold).toBeDisabled()
+  })
+
+  it('labels the fold icon to collapse the named block when it is expanded', () => {
+    mockFetchSuccess({})
+
+    const node = createSimpleElement({ canDelete: true, canCreate: true })
+
+    renderWithProviders(
+      <ElementActions
+        node={node}
+        collapse={{ isCollapsed: false, onToggle: () => {}, label: 'My block' }}
+      />,
+    )
+
+    const fold = screen.getByTestId('element-action-collapse')
+    // Expanded state offers the "collapse" affordance, interpolating the block title.
+    expect(fold).toHaveAttribute('title', 'Collapse My block')
+    expect(fold).toBeEnabled()
+  })
+
+  it('labels the fold icon to expand the named block when it is collapsed', () => {
+    mockFetchSuccess({})
+
+    const node = createSimpleElement({ canDelete: true, canCreate: true })
+
+    renderWithProviders(
+      <ElementActions
+        node={node}
+        collapse={{ isCollapsed: true, onToggle: () => {}, label: 'My block' }}
+      />,
+    )
+
+    const fold = screen.getByTestId('element-action-collapse')
+    // Collapsed state offers the "expand" affordance instead.
+    expect(fold).toHaveAttribute('title', 'Expand My block')
+  })
+
+  it('navigates to the element history tab when the history action is clicked', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+    const assign = stubLocationAssign()
+
+    const node = createSimpleElement({ canDelete: true, canCreate: true })
+
+    renderWithProviders(<ElementActions node={node} />)
+
+    await user.click(screen.getByTestId('element-action-history'))
+
+    expect(assign).toHaveBeenCalledWith(`${node.editLink}#Root_History`)
+  })
+
+  it('does not navigate to history when the element has no edit link', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+    const assign = stubLocationAssign()
+
+    const node = createSimpleElement({ editLink: null })
+
+    renderWithProviders(<ElementActions node={node} />)
+
+    const history = screen.getByTestId('element-action-history')
+    expect(history).toBeDisabled()
+    await user.click(history)
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('navigates to the element edit form when the edit action is clicked', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+    const assign = stubLocationAssign()
+
+    const node = createSimpleElement({ canDelete: true, canCreate: true })
+
+    renderWithProviders(<ElementActions node={node} />)
+
+    await user.click(screen.getByTestId('element-action-edit'))
+
+    expect(assign).toHaveBeenCalledWith(node.editLink)
+  })
+
+  it('disables the edit action when the element has no edit link', () => {
+    mockFetchSuccess({})
+
+    const node = createSimpleElement({ editLink: null })
+
+    renderWithProviders(<ElementActions node={node} />)
+
+    expect(screen.getByTestId('element-action-edit')).toBeDisabled()
+  })
+
+  it('opens the element edit form in a new tab when the open action is clicked', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+
+    const node = createSimpleElement({ canDelete: true, canCreate: true })
+
+    renderWithProviders(<ElementActions node={node} />)
+
+    await user.click(screen.getByTestId('element-action-open'))
+
+    expect(open).toHaveBeenCalledWith(node.editLink, '_blank', 'noopener,noreferrer')
+  })
+
+  it('disables the open-in-new-tab action when the element has no edit link', () => {
+    mockFetchSuccess({})
+
+    const node = createSimpleElement({ editLink: null })
+
+    renderWithProviders(<ElementActions node={node} />)
+
+    expect(screen.getByTestId('element-action-open')).toBeDisabled()
+  })
+
+  it('opens the archive confirmation dialog from the toolbar with the Archive confirm label', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+
+    const node = createSimpleElement({ canDelete: true, canCreate: true, title: 'Hero' })
+
+    renderWithProviders(<ElementActions node={node} />)
+
+    // No dialog before the archive button is pressed.
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+
+    await user.click(screen.getByTestId('element-action-archive'))
+
+    const dialog = screen.getByTestId('confirm-dialog')
+    expect(dialog).toBeInTheDocument()
+    // The confirm button (scoped to the dialog, distinct from the toolbar's
+    // archive button) carries the toolbar-supplied "Archive" confirm label.
+    expect(within(dialog).getByRole('button', { name: 'Archive' })).toBeInTheDocument()
+  })
+
+  it('opens the duplicate-to dialog from the overflow menu', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+
+    const node = createSimpleElement({ canDelete: true, canCreate: true })
+
+    renderWithProviders(<ElementActions node={node} />)
+
+    expect(screen.queryByTestId('duplicate-to-dialog')).not.toBeInTheDocument()
+
+    await user.click(screen.getByTestId('actions-menu-trigger'))
+    await user.click(screen.getByText(/duplicate to/i))
+
+    expect(screen.getByTestId('duplicate-to-dialog')).toBeInTheDocument()
   })
 })

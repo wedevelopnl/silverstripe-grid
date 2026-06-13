@@ -26,6 +26,24 @@ describe('GridQueryProvider', () => {
     expect(defaults.queries?.retry).toBe(false)
   })
 
+  it('should set gcTime to 5 minutes (5 * 60_000 ms)', () => {
+    const { result } = renderHook(() => useQueryClient(), {
+      wrapper: Wrapper,
+    })
+
+    const defaults = result.current.getDefaultOptions()
+    expect(defaults.queries?.gcTime).toBe(300_000)
+  })
+
+  it('should disable refetchOnWindowFocus', () => {
+    const { result } = renderHook(() => useQueryClient(), {
+      wrapper: Wrapper,
+    })
+
+    const defaults = result.current.getDefaultOptions()
+    expect(defaults.queries?.refetchOnWindowFocus).toBe(false)
+  })
+
   it('should create isolated QueryClient per mount', () => {
     const { result: first } = renderHook(() => useQueryClient(), {
       wrapper: Wrapper,

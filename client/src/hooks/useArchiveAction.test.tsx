@@ -84,6 +84,23 @@ describe('useArchiveAction', () => {
     })
   })
 
+  describe('action and dialog presentation', () => {
+    it('labels the action "Archive" and marks it destructive', () => {
+      const node = createSimpleElement({ canDelete: true })
+      const { result } = renderArchiveAction(node)
+
+      expect(result.current.action?.label).toBe('Archive')
+      expect(result.current.action?.destructive).toBe(true)
+    })
+
+    it('titles the confirmation dialog "Confirm archive"', () => {
+      const node = createSimpleElement({ canDelete: true })
+      const { result } = renderArchiveAction(node)
+
+      expect(result.current.dialog?.title).toBe('Confirm archive')
+    })
+  })
+
   describe('dialog open/cancel cycle', () => {
     it('should open dialog on action and close on cancel', () => {
       const node = createSimpleElement()

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
-import { apiGet, apiPost, apiPatch, apiDelete } from './client'
+import { describe, expect, it, vi } from 'vitest'
+import { getFetchCalls, mockFetchError, mockFetchSuccess } from '@/testing/mockFetch'
+import { apiDelete, apiGet, apiPatch, apiPost } from './client'
 import { ApiError } from './errors'
-import { mockFetchSuccess, mockFetchError, getFetchCalls } from '@/testing/mockFetch'
 
 describe('apiGet', () => {
   it('sends GET with correct headers', async () => {
@@ -85,6 +85,16 @@ describe('apiDelete', () => {
     expect(init?.body).toBeUndefined()
     const deleteHeaders = init?.headers as Record<string, string>
     expect(deleteHeaders['X-SecurityID']).toBe('test-security-id')
+    expect(deleteHeaders.Accept).toBe('application/json')
+  })
+
+  it('omits the query string when params are present but all values are skipped', async () => {
+    mockFetchSuccess({})
+
+    await apiDelete('/api/remove', { viewport: null, other: undefined })
+
+    const [url] = getFetchCalls()[0]
+    expect(String(url)).toBe('/api/remove')
   })
 
   it('serializes params as a query string appended to the URL', async () => {
@@ -237,5 +247,24 @@ describe('mutation request headers', () => {
     const [, init] = getFetchCalls()[0]
     const headers = init?.headers as Record<string, string>
     expect(headers['Content-Type']).toBe(expected)
+  })
+
+  it.each([
+    {
+      name: 'sends Accept application/json for POST',
+      call: () => apiPost('/api/create', { name: 'test' }),
+    },
+    {
+      name: 'sends Accept application/json for PATCH',
+      call: () => apiPatch('/api/update', { id: 1 }),
+    },
+  ])('$name', async ({ call }) => {
+    mockFetchSuccess({})
+
+    await call()
+
+    const [, init] = getFetchCalls()[0]
+    const headers = init?.headers as Record<string, string>
+    expect(headers.Accept).toBe('application/json')
   })
 })

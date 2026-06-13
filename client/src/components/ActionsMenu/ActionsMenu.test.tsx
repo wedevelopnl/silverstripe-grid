@@ -256,6 +256,32 @@ describe('ActionsMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
+  it('Escape while menu is closed does not steal focus to the trigger', async () => {
+    // Pins the `if (!isOpen) return` guard at ActionsMenu.tsx:58 — the document
+    // keydown handler must NOT be registered while the menu is closed. Without
+    // the guard, a global Escape would run close()+trigger.focus(), grabbing
+    // focus onto a trigger the user never opened.
+    const user = userEvent.setup()
+
+    render(
+      <>
+        <button type="button" data-testid="outside-button">
+          Outside
+        </button>
+        <ActionsMenu actions={createActions()} />
+      </>,
+    )
+
+    const outside = screen.getByTestId('outside-button')
+    outside.focus()
+    expect(document.activeElement).toBe(outside)
+
+    await user.keyboard('{Escape}')
+
+    // Focus must remain on the outside button, not jump to the menu trigger.
+    expect(document.activeElement).toBe(outside)
+  })
+
   describe('roving tabindex and focus management', () => {
     it('sets roving tabindex with exactly one menuitem tab-reachable on open', async () => {
       const user = userEvent.setup()
@@ -405,6 +431,164 @@ describe('ActionsMenu', () => {
       await user.keyboard('{Escape}')
 
       expect(document.activeElement).toBe(trigger)
+    })
+
+    it('preserves the active index when the actions list grows', async () => {
+      // Pins the clamp at ActionsMenu.tsx:41 — Math.min(i, max(0, len-1)) must
+      // keep the live index `i` when the list is large enough to hold it, not
+      // collapse it to 0. Dropping `i` (=> Math.min(0, len-1)) would reset to 0.
+      const user = userEvent.setup()
+
+      const twoActions: ActionItem[] = [
+        { key: 'a', label: 'Alpha', onAction: vi.fn() },
+        { key: 'b', label: 'Beta', onAction: vi.fn() },
+      ]
+
+      const { rerender } = render(<ActionsMenu actions={twoActions} />)
+
+      await user.click(screen.getByTestId('actions-menu-trigger'))
+      const menu = screen.getByRole('menu')
+
+      // Move active to the second item.
+      await user.keyboard('{ArrowDown}')
+      expect(menu.getAttribute('aria-activedescendant')).toBe(screen.getAllByRole('menuitem')[1].id)
+
+      // Grow the list — index 1 is still valid and must be preserved.
+      rerender(
+        <ActionsMenu actions={[...twoActions, { key: 'c', label: 'Gamma', onAction: vi.fn() }]} />,
+      )
+
+      const items = screen.getAllByRole('menuitem')
+      expect(items).toHaveLength(3)
+      expect(menu.getAttribute('aria-activedescendant')).toBe(items[1].id)
+    })
+
+    it('ArrowDown clamps at the last item instead of running past the end', async () => {
+      // Pins the boundary at ActionsMenu.tsx:96 (i >= last). Jump to the last
+      // item with End, then press ArrowDown ONCE: the active item must stay on
+      // the last id. The `i > last` mutant computes last + 1 on this single
+      // press (dead aria-activedescendant). A multi-press sequence would mask
+      // the mutant — it overshoots to last + 1 then clamps back on the next
+      // press, so it must be exactly one press from the last item.
+      const user = userEvent.setup()
+
+      render(<ActionsMenu actions={createActions()} />)
+
+      await user.click(screen.getByTestId('actions-menu-trigger'))
+      const menu = screen.getByRole('menu')
+      const items = screen.getAllByRole('menuitem')
+
+      await user.keyboard('{End}')
+      expect(menu.getAttribute('aria-activedescendant')).toBe(items[items.length - 1].id)
+
+      await user.keyboard('{ArrowDown}')
+
+      expect(menu.getAttribute('aria-activedescendant')).toBe(items[items.length - 1].id)
+    })
+
+    it('ArrowDown steps to the next item rather than jumping straight to the last', async () => {
+      // Pins the increment branch at ActionsMenu.tsx:96. With three items, one
+      // ArrowDown from index 0 must land on index 1 (i + 1), not on the last
+      // index 2 (which a "=> last" collapse of the conditional would produce).
+      const user = userEvent.setup()
+
+      const threeActions: ActionItem[] = [
+        { key: 'a', label: 'Alpha', onAction: vi.fn() },
+        { key: 'b', label: 'Beta', onAction: vi.fn() },
+        { key: 'c', label: 'Gamma', onAction: vi.fn() },
+      ]
+
+      render(<ActionsMenu actions={threeActions} />)
+
+      await user.click(screen.getByTestId('actions-menu-trigger'))
+      const menu = screen.getByRole('menu')
+      const items = screen.getAllByRole('menuitem')
+
+      await user.keyboard('{ArrowDown}')
+
+      expect(menu.getAttribute('aria-activedescendant')).toBe(items[1].id)
+    })
+
+    it('ArrowUp steps to the previous item rather than jumping straight to the first', async () => {
+      // Pins the decrement branch at ActionsMenu.tsx:100. With three items, from
+      // the last item one ArrowUp must land on index 1 (i - 1), not on index 0
+      // (which a "=> 0" collapse of the conditional would produce).
+      const user = userEvent.setup()
+
+      const threeActions: ActionItem[] = [
+        { key: 'a', label: 'Alpha', onAction: vi.fn() },
+        { key: 'b', label: 'Beta', onAction: vi.fn() },
+        { key: 'c', label: 'Gamma', onAction: vi.fn() },
+      ]
+
+      render(<ActionsMenu actions={threeActions} />)
+
+      await user.click(screen.getByTestId('actions-menu-trigger'))
+      const menu = screen.getByRole('menu')
+      const items = screen.getAllByRole('menuitem')
+
+      await user.keyboard('{End}')
+      expect(menu.getAttribute('aria-activedescendant')).toBe(items[2].id)
+
+      await user.keyboard('{ArrowUp}')
+
+      expect(menu.getAttribute('aria-activedescendant')).toBe(items[1].id)
+    })
+
+    it('ArrowUp clamps at the first item instead of running below zero', async () => {
+      // Pins the boundary at ActionsMenu.tsx:100 (i <= 0). Pressing ArrowUp while
+      // already on the first item must stay at index 0; `i < 0` would decrement
+      // to -1 on this single press (dead aria-activedescendant). A second press
+      // would clamp -1 back to 0 and mask the mutant, so press exactly ONCE
+      // from the first item.
+      const user = userEvent.setup()
+
+      render(<ActionsMenu actions={createActions()} />)
+
+      await user.click(screen.getByTestId('actions-menu-trigger'))
+      const menu = screen.getByRole('menu')
+      const items = screen.getAllByRole('menuitem')
+
+      // Already at index 0 on open; a single ArrowUp must not move below it.
+      await user.keyboard('{ArrowUp}')
+
+      expect(menu.getAttribute('aria-activedescendant')).toBe(items[0].id)
+    })
+
+    it('keeps the menu container out of the sequential tab order', async () => {
+      // Pins the menu container tabIndex at ActionsMenu.tsx:153. The roving
+      // pattern focuses the menu programmatically (menuRef.focus) but the
+      // container must NOT be in the natural tab sequence — tabIndex must be -1.
+      // The UnaryOperator mutant (-1 => +1) makes it tabIndex 1, dragging the
+      // container into (and reordering) the tab sequence.
+      const user = userEvent.setup()
+
+      render(<ActionsMenu actions={createActions()} />)
+
+      await user.click(screen.getByTestId('actions-menu-trigger'))
+
+      expect(screen.getByRole('menu').tabIndex).toBe(-1)
+    })
+
+    it('inactive menu items are removed from the tab order', async () => {
+      // Pins the roving tabindex at ActionsMenu.tsx:165/153: inactive items get
+      // tabIndex -1. The UnaryOperator mutant (-1 => +1) would make them
+      // tab-reachable, breaking the single-tab-stop roving pattern.
+      const user = userEvent.setup()
+
+      render(<ActionsMenu actions={createActions()} />)
+
+      await user.click(screen.getByTestId('actions-menu-trigger'))
+
+      const items = screen.getAllByRole('menuitem')
+      const inactive = items.filter(
+        (item) => item.id !== screen.getByRole('menu').getAttribute('aria-activedescendant'),
+      )
+
+      expect(inactive.length).toBeGreaterThan(0)
+      for (const item of inactive) {
+        expect(item.tabIndex).toBe(-1)
+      }
     })
   })
 })

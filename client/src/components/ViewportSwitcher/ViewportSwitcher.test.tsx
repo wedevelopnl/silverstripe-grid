@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '@/hooks/queryKeys'
 import {
   createColumnNode,
@@ -36,6 +36,12 @@ function treeWithOverride(viewport: string): TreeApiResponse {
 }
 
 describe('ViewportSwitcher', () => {
+  beforeEach(() => {
+    // jsdom does not implement HTMLDialogElement.showModal/close
+    HTMLDialogElement.prototype.showModal = vi.fn()
+    HTMLDialogElement.prototype.close = vi.fn()
+  })
+
   it('renders buttons for all viewports', () => {
     mockFetchSuccess({})
 
@@ -181,5 +187,70 @@ describe('ViewportSwitcher', () => {
     const resetButton = screen.getByTestId('reset-overrides-button')
     expect(resetButton).toBeInTheDocument()
     expect(resetButton).toHaveTextContent('Reset viewport')
+  })
+
+  it('exposes an accessible toolbar name', () => {
+    mockFetchSuccess({})
+
+    renderWithProviders(<ViewportSwitcher />)
+
+    expect(screen.getByRole('toolbar', { name: 'Viewport size' })).toBeInTheDocument()
+  })
+
+  it('renders the upper-bound range label for a non-final viewport', () => {
+    mockFetchSuccess({})
+
+    renderWithProviders(<ViewportSwitcher />)
+
+    // The first viewport (xs) is followed by sm (minWidth 576), so its
+    // range label reads the next viewport's lower bound.
+    const xsButton = screen.getByTestId('viewport-button-xs')
+    expect(xsButton).toHaveTextContent('<576')
+  })
+
+  it('omits the range label for the final viewport', () => {
+    mockFetchSuccess({})
+
+    renderWithProviders(<ViewportSwitcher />)
+
+    // xxl is the last viewport — it has no upper bound, so no range text.
+    const xxlButton = screen.getByTestId('viewport-button-xxl')
+    expect(xxlButton).not.toHaveTextContent('<')
+    expect(xxlButton).toHaveTextContent('Extra extra large')
+  })
+
+  it('does not render the confirm dialog until reset is clicked', () => {
+    mockFetchSuccess({})
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    })
+
+    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg'))
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'lg', queryClient })
+
+    expect(screen.queryByText('Reset Large overrides')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+  })
+
+  it('opens the confirm dialog with title, message and confirm label on reset click', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    })
+
+    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg'))
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'lg', queryClient })
+
+    await user.click(screen.getByTestId('reset-overrides-button'))
+
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    expect(screen.getByText('Reset Large overrides')).toBeInTheDocument()
+    expect(screen.getByText('Reset overrides for 1 column on Large?')).toBeInTheDocument()
+    expect(screen.getByText('Reset')).toBeInTheDocument()
   })
 })

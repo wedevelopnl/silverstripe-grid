@@ -18,4 +18,16 @@ describe('useGridEditorContext', () => {
     expect(result.current.pageId).toBe(42)
     expect(result.current.zone).toBe('sidebar')
   })
+
+  it('throws a clear error when used outside a provider', () => {
+    const prevError = console.error
+    console.error = () => {}
+    try {
+      expect(() => renderHook(() => useGridEditorContext())).toThrow(
+        'useGridEditorContext must be used within a GridEditorProvider',
+      )
+    } finally {
+      console.error = prevError
+    }
+  })
 })

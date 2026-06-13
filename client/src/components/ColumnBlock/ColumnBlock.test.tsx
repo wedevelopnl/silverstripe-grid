@@ -1,10 +1,10 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ReadonlyProvider } from '@/hooks/ReadonlyContext'
 import { createColumnNode, createSimpleElement } from '@/testing/factories'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
-import { renderWithProviders } from '@/testing/renderWithProviders'
+import { createCollapseStateStub, renderWithProviders } from '@/testing/renderWithProviders'
 import { resetAdapterCache } from '@/utils/gridAdapter'
 
 import ColumnBlock from './ColumnBlock'
@@ -656,6 +656,83 @@ describe('ColumnBlock', () => {
     expect(screen.getByTestId('column-title')).toHaveTextContent(column.title)
   })
 
+  describe('collapse toggle', () => {
+    it('toggles this column when the collapse control is clicked', async () => {
+      const user = userEvent.setup()
+      mockFetchSuccess({})
+
+      const column = createColumnNode({})
+      const collapseState = createCollapseStateStub()
+
+      renderWithProviders(<ColumnBlock column={column} />, { collapseState })
+
+      await user.click(screen.getByTestId('collapse-toggle'))
+
+      expect(collapseState.toggle).toHaveBeenCalledWith(column.nodeKey)
+    })
+  })
+
+  describe('modified indicator (editable)', () => {
+    it('renders the indicator with its accessible label when status is modified', () => {
+      mockFetchSuccess({})
+
+      const column = createColumnNode({ status: 'modified' })
+
+      renderWithProviders(<ColumnBlock column={column} />)
+
+      const indicator = screen.getByTestId('column-modified-indicator')
+      expect(indicator).toBeInTheDocument()
+      expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
+    })
+
+    it('does not render the indicator when status is not modified', () => {
+      mockFetchSuccess({})
+
+      const column = createColumnNode({ status: 'published' })
+
+      renderWithProviders(<ColumnBlock column={column} />)
+
+      expect(screen.queryByTestId('column-modified-indicator')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('drag handle label', () => {
+    it('labels the drag handle with the column title', () => {
+      mockFetchSuccess({})
+
+      const column = createColumnNode({ title: 'Hero column' })
+
+      renderWithProviders(<ColumnBlock column={column} />)
+
+      const header = screen.getByTestId('column-header')
+      expect(within(header).getByTestId('drag-handle')).toHaveAttribute(
+        'aria-label',
+        'Move Hero column',
+      )
+    })
+  })
+
+  it('does not render the type picker until "Add content" is clicked', () => {
+    mockFetchSuccess({})
+
+    const column = createColumnNode({
+      children: null,
+      childCount: 0,
+      allowedTypes: {
+        'App\\Model\\TextBlock': {
+          label: 'Text Block',
+          icon: 'font-icon-text',
+          description: 'A text block',
+        },
+      },
+    })
+
+    renderWithProviders(<ColumnBlock column={column} />)
+
+    expect(screen.queryByTestId('element-type-picker')).not.toBeInTheDocument()
+    expect(screen.getByTestId('add-content-button')).toBeInTheDocument()
+  })
+
   describe('readonly mode', () => {
     // Pin the `children.length > 0 ? ... : <EmptyState ...>` ternary at
     // ColumnBlock.tsx:288 against EqualityOperator (`>= 0` / `<= 0`) and
@@ -699,6 +776,97 @@ describe('ColumnBlock', () => {
       expect(screen.getByText('No content blocks')).toBeInTheDocument()
       expect(screen.queryAllByTestId('element-card')).toHaveLength(0)
     })
+
+    it('sets data-collapsed (empty value) when collapsed', () => {
+      mockFetchSuccess({})
+
+      const column = createColumnNode({})
+
+      renderWithProviders(
+        <ReadonlyProvider value={true}>
+          <ColumnBlock column={column} />
+        </ReadonlyProvider>,
+        { collapsedKeys: [column.nodeKey] },
+      )
+
+      expect(screen.getByTestId('column-block')).toHaveAttribute('data-collapsed', '')
+    })
+
+    it('does not set data-collapsed when expanded', () => {
+      mockFetchSuccess({})
+
+      const column = createColumnNode({})
+
+      renderWithProviders(
+        <ReadonlyProvider value={true}>
+          <ColumnBlock column={column} />
+        </ReadonlyProvider>,
+      )
+
+      expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-collapsed')
+    })
+
+    it('sets data-hidden (empty value) when the column is not visible', () => {
+      mockFetchSuccess({})
+
+      const column = createColumnNode({
+        gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
+      })
+
+      renderWithProviders(
+        <ReadonlyProvider value={true}>
+          <ColumnBlock column={column} />
+        </ReadonlyProvider>,
+      )
+
+      expect(screen.getByTestId('column-block')).toHaveAttribute('data-hidden', '')
+    })
+
+    it('does not set data-hidden when the column is visible', () => {
+      mockFetchSuccess({})
+
+      const column = createColumnNode({
+        gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+      })
+
+      renderWithProviders(
+        <ReadonlyProvider value={true}>
+          <ColumnBlock column={column} />
+        </ReadonlyProvider>,
+      )
+
+      expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-hidden')
+    })
+
+    it('renders the modified indicator with its accessible label when status is modified', () => {
+      mockFetchSuccess({})
+
+      const column = createColumnNode({ status: 'modified' })
+
+      renderWithProviders(
+        <ReadonlyProvider value={true}>
+          <ColumnBlock column={column} />
+        </ReadonlyProvider>,
+      )
+
+      const indicator = screen.getByTestId('column-modified-indicator')
+      expect(indicator).toBeInTheDocument()
+      expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
+    })
+
+    it('does not render the modified indicator when status is not modified', () => {
+      mockFetchSuccess({})
+
+      const column = createColumnNode({ status: 'published' })
+
+      renderWithProviders(
+        <ReadonlyProvider value={true}>
+          <ColumnBlock column={column} />
+        </ReadonlyProvider>,
+      )
+
+      expect(screen.queryByTestId('column-modified-indicator')).not.toBeInTheDocument()
+    })
   })
 
   describe('between-column insert handle', () => {
@@ -726,6 +894,27 @@ describe('ColumnBlock', () => {
 
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+      })
+
+      renderWithProviders(
+        <ColumnBlock column={column} insertBefore={{ rowId: 9, afterColumnId: 3 }} />,
+      )
+
+      expect(
+        screen.getByTestId('column-insert-between').style.getPropertyValue('--ssgrid-insert-shift'),
+      ).toBe('')
+    })
+
+    it('omits the gutter shift under the grid-placement strategy even with an offset', () => {
+      // Gutter shift is a margin-strategy concern only. Under grid-placement
+      // the offset is expressed via grid-column-start, so no handle nudge is
+      // applied regardless of the column's offset.
+      resetAdapterCache()
+      window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
+      mockFetchSuccess({})
+
+      const column = createColumnNode({
+        gridSettings: { default: { width: 2, offset: 1, visible: true }, overrides: {} },
       })
 
       renderWithProviders(

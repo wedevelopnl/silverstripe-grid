@@ -308,6 +308,161 @@ describe('applyReorder', () => {
     })
   })
 
+  describe('same-parent splice adjustment', () => {
+    it('lands directly after the anchor when moving from before it (forward move)', () => {
+      // Column [A, B, C, D]. Move A (index 0) after C (index 2). The anchor sits
+      // ahead of the source, so removing A shifts C left by one — the resolver
+      // must subtract 1 from the anchor index before re-inserting. Expected
+      // order: [B, C, A, D].
+      //
+      // Kills three mutants on the adjustment in resolveAfterIndexInTarget:
+      //   - `afterIndex - 1` → `afterIndex + 1` would yield [B, C, D, A]
+      //   - removing the `{ return afterIndex - 1 }` block would yield [B, C, D, A]
+      //   - flipping `afterIndex > source` to `afterIndex <= source` skips the
+      //     subtraction, also yielding [B, C, D, A]
+      resetIdCounter()
+      const a = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
+      const b = createSimpleElement({ id: 11, parent: { type: 'column', id: 30 } })
+      const c = createSimpleElement({ id: 12, parent: { type: 'column', id: 30 } })
+      const d = createSimpleElement({ id: 13, parent: { type: 'column', id: 30 } })
+      const column = createColumnNode({ id: 30, children: [a, b, c, d] })
+      const row = createRowNode({ id: 20, children: [column] })
+      const section = createSectionNode({
+        id: 1,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      })
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+
+      const result = applyReorder(
+        tree,
+        NodeIdentity.toKey('element', 10),
+        NodeIdentity.toKey('column', 30),
+        NodeIdentity.toKey('element', 12),
+      )
+
+      const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
+        .children?.[0] as ColumnNode
+      expect(movedColumn.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
+        11, 12, 10, 13,
+      ])
+    })
+
+    it('does NOT subtract 1 on a cross-container move (anchor unaffected by source splice)', () => {
+      // Source col30 = [10]; target col31 = [20, 21]. Move 10 after 21 (index 1
+      // in target). Because source and target differ, the source splice cannot
+      // shift the target anchor, so no `-1` adjustment applies → [20, 21, 10].
+      // A mutant forcing the same-parent condition to `true` would subtract 1 and
+      // produce [20, 10, 21] instead.
+      resetIdCounter()
+      const moved = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
+      const col30 = createColumnNode({ id: 30, children: [moved] })
+      const e20 = createSimpleElement({ id: 20, parent: { type: 'column', id: 31 } })
+      const e21 = createSimpleElement({ id: 21, parent: { type: 'column', id: 31 } })
+      const col31 = createColumnNode({ id: 31, children: [e20, e21] })
+      const row = createRowNode({ id: 40, children: [col30, col31] })
+      const section = createSectionNode({
+        id: 1,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      })
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+
+      const result = applyReorder(
+        tree,
+        NodeIdentity.toKey('element', 10),
+        NodeIdentity.toKey('column', 31),
+        NodeIdentity.toKey('element', 21),
+      )
+
+      const row40 = (result.nodes[0] as SectionNode).children?.[0] as RowNode
+      const col31Result = row40.children?.[1] as ColumnNode
+      expect(col31Result.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
+        20, 21, 10,
+      ])
+    })
+
+    it('appends when afterKey is a real node that lives in the source, not the target', () => {
+      // Source col30 = [10, 99]; target col31 = [20, 21, 22]. Move 10 to col31
+      // with afterKey = 99 — a valid node, but a sibling of the SOURCE, not the
+      // target. resolveAfterIndexInTarget must reject it (parentKey mismatch) and
+      // append → [20, 21, 22, 10].
+      //
+      // A mutant dropping the `afterNode.parentKey !== targetParentKey` guard
+      // (or the whole condition) would treat 99's source index (1) as a target
+      // index and splice → [20, 21, 10, 22].
+      resetIdCounter()
+      const moved = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
+      const sourceSibling = createSimpleElement({ id: 99, parent: { type: 'column', id: 30 } })
+      const col30 = createColumnNode({ id: 30, children: [moved, sourceSibling] })
+      const e20 = createSimpleElement({ id: 20, parent: { type: 'column', id: 31 } })
+      const e21 = createSimpleElement({ id: 21, parent: { type: 'column', id: 31 } })
+      const e22 = createSimpleElement({ id: 22, parent: { type: 'column', id: 31 } })
+      const col31 = createColumnNode({ id: 31, children: [e20, e21, e22] })
+      const row = createRowNode({ id: 40, children: [col30, col31] })
+      const section = createSectionNode({
+        id: 1,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      })
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+
+      const result = applyReorder(
+        tree,
+        NodeIdentity.toKey('element', 10),
+        NodeIdentity.toKey('column', 31),
+        NodeIdentity.toKey('element', 99),
+      )
+
+      const row40 = (result.nodes[0] as SectionNode).children?.[0] as RowNode
+      const col31Result = row40.children?.[1] as ColumnNode
+      expect(col31Result.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
+        20, 21, 22, 10,
+      ])
+    })
+
+    it('applies the move (not a no-op) when afterKey belongs to a different parent', () => {
+      // Same-container move of B within col30 = [A, B, C], with afterKey pointing
+      // at X in col31 (index 0). The numeric coincidence `afterIndex + 1 ===
+      // sourceIndex` (0 + 1 === 1) would falsely flag a no-op IF the isNoOp guard
+      // skipped its "afterKey must be a sibling of the source" check. The guard
+      // returns false (X is not a col30 sibling) so the move proceeds: B is removed
+      // and appended → [A, C, B].
+      //
+      // A mutant forcing that guard's condition to `false` skips it, hits the
+      // coincidental `afterIndex + 1 === sourceIndex`, and returns the tree
+      // unchanged (wrong no-op).
+      resetIdCounter()
+      const a = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
+      const b = createSimpleElement({ id: 11, parent: { type: 'column', id: 30 } })
+      const c = createSimpleElement({ id: 12, parent: { type: 'column', id: 30 } })
+      const col30 = createColumnNode({ id: 30, children: [a, b, c] })
+      const x = createSimpleElement({ id: 50, parent: { type: 'column', id: 31 } })
+      const col31 = createColumnNode({ id: 31, children: [x] })
+      const row = createRowNode({ id: 40, children: [col30, col31] })
+      const section = createSectionNode({
+        id: 1,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      })
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+
+      const result = applyReorder(
+        tree,
+        NodeIdentity.toKey('element', 11),
+        NodeIdentity.toKey('column', 30),
+        NodeIdentity.toKey('element', 50),
+      )
+
+      expect(result).not.toBe(tree)
+      const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
+        .children?.[0] as ColumnNode
+      expect(movedColumn.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
+        10, 12, 11,
+      ])
+    })
+  })
+
   describe('insertIntoArray with matching afterKey', () => {
     it('inserts after the matching sibling when afterKey is found with multiple target children', () => {
       // Target column has two existing children [20, 21]. Moving element 10 cross-container

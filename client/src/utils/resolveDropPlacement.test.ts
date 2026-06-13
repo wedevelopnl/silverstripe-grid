@@ -92,6 +92,31 @@ describe('resolveDropPlacement', () => {
       })
     })
 
+    it('inserts directly after the over element when over sits at its original index 1', () => {
+      // Columns [21, 22, 23]; move 21 over 22 (over's original index === 1).
+      // filtered (minus active 21) = [22, 23]; insertIndex = overOriginalIdx = 1
+      // → splice → [22, 21, 23] → after = 22.
+      // Mutant `overOriginalIdx === +1 ? filtered.length : overOriginalIdx`
+      // would set insertIndex = 2 → [22, 23, 21] → after = 23, a different result.
+      const maps = buildThreeColumnRow()
+
+      const ctx: DropContext = {
+        activeParsed: createParsedDraggableId('column', 21),
+        overParsed: createParsedDraggableId('column', 22),
+        pointer: null,
+        maps,
+        sourceParentKey: NodeIdentity.toKey('row', 10),
+        sourceIndex: 0,
+        overRect: DEFAULT_RECT,
+      }
+
+      expect(resolveDropPlacement(ctx)).toEqual({
+        element: { type: 'column', id: 21 },
+        parent: { type: 'row', id: 10 },
+        after: { type: 'column', id: 22 },
+      })
+    })
+
     it('returns null when item does not move', () => {
       const maps = buildThreeColumnRow()
 
@@ -167,6 +192,31 @@ describe('resolveDropPlacement', () => {
         element: { type: 'column', id: 21 },
         parent: { type: 'row', id: 11 },
         after: null,
+      })
+    })
+
+    it('inserts before the over element when it sits at target index 1 and pointer is before', () => {
+      // Target row 11 has columns [31, 32]. Move column 21 over column 32
+      // (overIdx in filtered === 1) with a pointer left of centre → direction
+      // 'before' keeps insertIndex = 1 → [31, 21, 32] → after = 31.
+      // Mutant `overIdx === +1 ? append` would set insertIndex = filtered.length
+      // → [31, 32, 21] → after = 32, a different result.
+      const maps = buildTwoRowTree()
+
+      const ctx: DropContext = {
+        activeParsed: createParsedDraggableId('column', 21),
+        overParsed: createParsedDraggableId('column', 32),
+        pointer: { x: 10, y: 50 },
+        maps,
+        sourceParentKey: NodeIdentity.toKey('row', 10),
+        sourceIndex: 0,
+        overRect: { left: 0, top: 0, width: 200, height: 100 },
+      }
+
+      expect(resolveDropPlacement(ctx)).toEqual({
+        element: { type: 'column', id: 21 },
+        parent: { type: 'row', id: 11 },
+        after: { type: 'column', id: 31 },
       })
     })
 

@@ -126,7 +126,7 @@ function isNoOp(
   if (maps.nodeMap.get(afterKey)?.parentKey !== sourceParentKey) return false
 
   const afterIndex = maps.indexByNodeKey.get(afterKey)
-  // Stryker disable next-line ConditionalExpression: Equivalent — afterKey is in nodeMap (checked above), so it must also be in indexByNodeKey (both populated by the same walk)
+  // Stryker disable next-line ConditionalExpression,BooleanLiteral: Equivalent — afterKey is in nodeMap (checked above), so it must also be in indexByNodeKey (both populated by the same walk); the guard never fires, so both the condition and the `return false` value are unreachable
   if (afterIndex === undefined) return false
 
   return afterIndex + 1 === sourceIndex
