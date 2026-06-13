@@ -27,7 +27,7 @@ function waitForMutationSettlement(page: import('@playwright/test').Page) {
 
 test.describe('Multi-zone isolation', () => {
   // Two zones stacked vertically need a tall viewport
-  test.use({ viewport: { width: 1280, height: 1400 } })
+  test.use({ viewport: { width: 1280, height: 3600 } })
 
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)

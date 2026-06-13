@@ -73,6 +73,46 @@ interface DragHandle {
 }
 
 /**
+ * Complete a drag by releasing at viewport coordinate (x, y).
+ *
+ * Playwright's Firefox driver does not deliver the `pointerup` from
+ * `page.mouse.up()` to the page after a synthetic drag — the page sees the
+ * `pointerdown` and every `pointermove`, but never the release. dnd-kit's
+ * PointerSensor listens for that `pointerup` on the document to end the drag,
+ * so without it the drag never finishes: `onDragEnd` never fires, no reorder
+ * request is sent, and the DragOverlay stays mounted. (This is a Playwright
+ * test-driver limitation, not a product bug — real Firefox delivers the event.)
+ *
+ * We dispatch a genuine `pointerup` PointerEvent at the release coordinate so
+ * the sensor's real handler runs and dnd-kit resolves the drop from the `over`
+ * established by the preceding `pointermove`s — i.e. the exact product code path
+ * (collision → `handleDragEnd` → reorder API), with the same drop placement a
+ * real release produces. `page.mouse.up()` still follows to reset Playwright's
+ * button state; engines that deliver the native release have already torn down
+ * the sensor's listeners by then, so the duplicate is a harmless no-op.
+ */
+export async function releaseDrag(page: Page, x: number, y: number): Promise<void> {
+  await page.evaluate(
+    ({ clientX, clientY }) => {
+      const target = document.elementFromPoint(clientX, clientY) ?? document.body
+      target.dispatchEvent(
+        new PointerEvent('pointerup', {
+          bubbles: true,
+          cancelable: true,
+          clientX,
+          clientY,
+          button: 0,
+          pointerType: 'mouse',
+          isPrimary: true,
+        }),
+      )
+    },
+    { clientX: x, clientY: y },
+  )
+  await page.mouse.up()
+}
+
+/**
  * Start a drag from `source` toward `target` and pause mid-drag,
  * hovering over the target. Returns a handle to release the mouse,
  * enabling mid-drag assertions (e.g. overlay visibility, drop-target
@@ -117,7 +157,7 @@ export async function startDrag(page: Page, source: Locator, target: Locator): P
 
   return {
     release: async () => {
-      await page.mouse.up()
+      await releaseDrag(page, to.x, to.y)
       // onDragEnd has completed once the DragOverlay is torn down.
       await waitForDragOverlayHidden(page)
     },
@@ -178,7 +218,7 @@ export async function dropAndSettle(page: Page, targetX: number, targetY: number
   await settleCollision(page)
 
   const settle = waitForMutationSettlement(page)
-  await page.mouse.up()
+  await releaseDrag(page, targetX, targetY)
   await settle()
 }
 

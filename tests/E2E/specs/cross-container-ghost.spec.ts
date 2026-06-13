@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { activateDragByTitle, waitForMutationSettlement } from '../helpers/drag'
+import { activateDragByTitle, releaseDrag, waitForMutationSettlement } from '../helpers/drag'
 import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
 
 /**
@@ -13,7 +13,7 @@ import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
  * away, preventing Pass 2 (parent containers) from firing.
  */
 test.describe('Cross container ghost', () => {
-  test.use({ viewport: { width: 1280, height: 1400 } })
+  test.use({ viewport: { width: 1280, height: 2800 } })
 
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
@@ -38,11 +38,16 @@ test.describe('Cross container ghost', () => {
       overlayTestId: 'drag-overlay-row',
     })
 
-    // Move pointer into Beta's area — at Beta-1's vertical center
+    // Move pointer into Beta's area — into the LOWER portion of Beta-1, not its
+    // exact center. The center is the before/after boundary of direction
+    // detection, where sub-pixel coordinate differences between engines flip
+    // the resolved side (Chromium → after, Firefox → before). The lower 75%
+    // mark resolves unambiguously to "after Beta-1" on every engine, matching
+    // the appended-at-end outcome this test asserts below.
     const betaRow1Box = await betaRow1.boundingBox()
     expect(betaRow1Box).not.toBeNull()
-    const betaCenterY = betaRow1Box!.y + betaRow1Box!.height / 2
-    await page.mouse.move(fromX, betaCenterY, { steps: 30 })
+    const betaLowerY = betaRow1Box!.y + betaRow1Box!.height * 0.75
+    await page.mouse.move(fromX, betaLowerY, { steps: 30 })
 
     // Assert: ghost left Alpha — Alpha now has only 1 row (Alpha-2 moved out)
     await expect(sectionAlpha.getByTestId('row-block')).toHaveCount(1)
@@ -56,7 +61,7 @@ test.describe('Cross container ghost', () => {
 
     // Release and await mutation settlement
     const settle = waitForMutationSettlement(page)
-    await page.mouse.up()
+    await releaseDrag(page, fromX, betaLowerY)
     await settle()
 
     // Verify: Alpha has 1 row and Beta has 2 rows

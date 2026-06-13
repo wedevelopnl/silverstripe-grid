@@ -36,7 +36,7 @@ test.describe('Drag and drop', () => {
   // The DnD fixture renders a deep hierarchy (~900px tall) that exceeds the
   // default Desktop Chrome viewport (720px). A taller viewport ensures all
   // drag handles are reachable by page.mouse without mid-drag scrolling.
-  test.use({ viewport: { width: 1280, height: 1400 } })
+  test.use({ viewport: { width: 1280, height: 2800 } })
 
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)

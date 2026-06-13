@@ -81,7 +81,7 @@ async function rowPosition(
 }
 
 test.describe('Cross-section row drop — both directions', () => {
-  test.use({ viewport: { width: 1280, height: 1400 } })
+  test.use({ viewport: { width: 1280, height: 2800 } })
 
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
@@ -186,7 +186,7 @@ test.describe('Cross-section row drop — both directions', () => {
 })
 
 test.describe('Cross-section row drop — source depletion and cancel', () => {
-  test.use({ viewport: { width: 1280, height: 1400 } })
+  test.use({ viewport: { width: 1280, height: 2800 } })
 
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
