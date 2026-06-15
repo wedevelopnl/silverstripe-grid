@@ -5,6 +5,85 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0-alpha.6] - 2026-06-15
+
+### Added
+
+- **Grid editor visual redesign** — the CMS grid editor is restyled end to end. Adds a base design-token layer, styled Section/Row/Column blocks and element cards, a styled viewport-switcher toolbar, and styled popovers, dialogs, and drag overlay. The editor gains a dedicated shell with a Grid-area header and positioned add buttons; the per-element kebab menu is replaced by a 6-icon element toolbar, and the "Add column" bar becomes "+" insert squares
+- **CMS preview viewport sync** — the CMS preview pane width now follows the editor's active viewport. A viewport selector mounts into the preview toolbar (piggy-backing on the vendor toolbar) and an `activeViewport` pub-sub store keeps editor and preview in sync
+- **Per-viewport `min_width`** — `viewport_definitions` carries a `min_width` per entry, exposed on the `Viewport` value object, serialised into the adapter config, and surfaced to the frontend via `ViewportConfig.minWidth`. A `forMalformedViewportDefinition` exception factory guards malformed entries
+- **`ContentElement::getSummary()`** — content elements ship a default summary derived from their HTML field, surfaced on grid editor cards so integrators get a meaningful preview label without custom code. See [`docs`](docs) for the integrator example
+- **Insert element before first sibling** — the API and the "+" insert squares allow creating an element at the start of a container, not just appended
+- **Collapse/expand-all toggle** — the Grid-area header button toggles between collapsing and expanding all containers
+- **Element history toolbar button** — wired to open the CMS version-history tab for the element
+- **API responses validated with Zod at the boundary** — runtime validation of API responses is reintroduced via Zod, scoped to the API boundary only (alpha.3 had removed Zod from the frontend runtime entirely). PHP empty-array maps are coerced to objects so they parse correctly
+
+### Changed
+
+- **`GridPageExtension` and the per-page editor toggle are now opt-in** — the extension is no longer auto-applied to every page; projects enable the grid editor per page type explicitly
+- **Adapter selection requires the `SS_GRID_ADAPTER` env var** — the active adapter is selected via `SS_GRID_ADAPTER`, which accepts a bundled preset name or the FQCN of a custom adapter; unset/empty/invalid values throw at container boot (see the Grid Adapter System docs)
+- **Element mutation unified via `ElementPlacementService`** — reorder, insert, and placement now flow through a single service; `GridTreeBuilder` is split into a builder and a walker, and tree-walk helpers moved to private controller methods
+- **Auto-scaffolding consolidated in `GridElement::onAfterWrite()`** — the child class to scaffold is derived from `ContainerType` rather than per-subclass logic
+- **Single-target mutations migrated from bare IDs to `NodeRef`** — completing the `NodeRef` identity migration across the frontend mutation layer; the redundant `id` field is dropped from `BaseFields`
+- **`ElementStatus` shipped precomputed** — the API ships a precomputed `ElementStatus` instead of raw `StatusFlags` for the client to assemble
+- **`GridSettings` serialisation inlined via `JsonSerializable`** — the value objects serialise themselves at the storage boundary; the standalone serializer utility statics are removed
+- **Editor blocks styled via BEM classes and a `data-react-mount` attribute** — component styling is decoupled from `data-testid` selectors, and mount detection (entwine + CMS preview bridge) switches to a dedicated `data-react-mount` attribute
+
+### Fixed
+
+- `can*` permission checks not honouring `extendedCan`, ignoring extension-provided permission decisions
+- Multi-element writes not wrapped in a database transaction, risking partial state on failure; grid settings override strategy now resolved via DI
+- Mutation lookups not pinned to the DRAFT stage, risking reads against the wrong stage
+- `DBGridSettings` read-path overrides asymmetry; zero-width settings no longer dropped, and malformed writes are logged rather than silently suppressed
+- Hierarchy validation messages not localised, lacking an explicit error code, and missing a column-offset guard
+- Migration: silent skip on a missing shared-element record (now fails loud), inconsistent sort across stages, ungrouped live-only layout, implicit visibility, and a hardcoded `UseGrid` table name (now resolved dynamically)
+- `BlockMediaExtension` media parsing, embed error handling, and `auto_scaffold` scoping hardened against malformed input
+- Frontend: section list not memoised, keyboard a11y gaps, viewport schema accepting out-of-bounds values, destination tree not invalidated after a cross-container move, and the error channel left untyped
+- CMS preview bridge not surviving CMS content-area swaps (save/publish Pjax) and not actually rescaling the preview
+- Element actions toolbar missing its ARIA role and label
+- Editor visuals: row card chrome and modified-state wiring, element card underlining its header on hover, between-column insert handle off-centre in offset gutters, "Add row / Add section" button outline, and column width/offset layout in row columns
+- Cross-container drops mis-aimed with the larger redesigned blocks
+- `getCMSFields` manipulations not wrapped in `beforeUpdateCMSFields`
+- Dev fixture reset not scoped to fixture page classes, allowing it to touch real pages
+
+### Performance
+
+- Dialogs mounted only while open, with `content-visibility` applied to off-screen sections
+- Tree leaves memoised and their props stabilised to cut editor re-renders
+- DnD per-frame linear scans replaced with O(1) map lookups
+
+### Dependencies
+
+- `@tanstack/react-query` 5.99 → 5.100.14
+- `zod` ^4.4.3 (re-added, scoped to the API boundary)
+- `@biomejs/biome` 2.4 → 2.5.0
+- `@playwright/test` 1.59.1 → 1.60.0
+- `@stryker-mutator/typescript-checker` 9.5 → 9.6.1
+- `@stryker-mutator/vitest-runner` 9.5 → 9.6.1
+- `@vitejs/plugin-react` 6.0.1 → 6.0.2
+- `@vitest/coverage-v8` 4.1.2 → 4.1.8
+- `@types/node` 25.6 → 25.9.3
+- TypeScript 6.0.2 → 6.0.3
+- Vite 8.0.8 → 8.0.16
+- `vite-plugin-dts` 4.5.4 → 5.0.2
+- Vitest 4.1.4 → 4.1.8
+- jsdom 29.0.2 → 29.1.1
+- sass-embedded 1.99 → 1.100.0
+- Stylelint 17.8 → 17.13.0
+- `js-yaml` 4.1.1 → 4.2.0
+- `infection/infection` ^0.32 → ^0.33
+- `wedevelopnl/silverstripe-media-field` ^6.0 → ^6.0.0-rc3
+
+### Developer Experience
+
+- **Stricter Biome config** — Biome lint/format scope expanded from `client/src/` to the whole repo, and `vite build` added to `npm run qa` to gate compile errors and stale `dist` output
+- **CI hardening** — Rector dry-run enforced as a static-analysis gate, PHPStan run once across the supported PHP range, the E2E suite run as a matrix across the Bootstrap and Tailwind adapters, and the Node major version asserted against `.nvmrc` before the QA diff check
+- **Mutation testing hardened** — PHP Infection score raised from 87% to 92% with behavioural tests and centrally-documented equivalent-mutant ignores; escaped Stryker (JS) mutants killed and smelly inline suppressions removed
+- **E2E discipline pass** — specs refactored to one user journey per `describe`, hardcoded waits and class-based selectors removed in favour of visible-state and role/test-id locators, and specs made adapter-agnostic
+- **Vitest suite runs under React StrictMode** to surface unsafe effects
+- **`type-coverage` 2.2 adopted**, dropping obsolete `paramTypeCoverage` ignores
+- **Documentation overhaul** — README refocused as an entry point with a separate contributing guide; new integrator guides for custom elements, templates, and i18n; an E2E fixture protocol guide; and refreshed architecture docs for `ElementPlacementService`, the DnD `NodeRef` identity model, and grid-settings serialisation
+
 ## [6.0.0-alpha.5] - 2026-04-16
 
 ### Added
@@ -280,6 +359,7 @@ Ground-up rewrite for SilverStripe 6. This is a new package (`wedevelopnl/silver
 - Makefile with targets for testing, coverage, static analysis, and mutation testing
 - Pre-push QA gate hook
 
+[6.0.0-alpha.6]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.6
 [6.0.0-alpha.5]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.5
 [6.0.0-alpha.4]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.4
 [6.0.0-alpha.3]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.3
