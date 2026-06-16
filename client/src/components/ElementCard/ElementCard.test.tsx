@@ -1,12 +1,12 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ReadonlyProvider } from '@/hooks/ReadonlyContext'
 import { createSimpleElement } from '@/testing/factories'
 import { mockFetchSuccess } from '@/testing/mockFetch'
 import { renderWithProviders } from '@/testing/renderWithProviders'
 
-import ElementCard from './ElementCard'
+import EditableElementCard from './EditableElementCard'
+import ReadonlyElementCard from './ReadonlyElementCard'
 
 const defaultSortable = {
   attributes: {},
@@ -27,13 +27,13 @@ afterEach(() => {
   >)
 })
 
-describe('ElementCard', () => {
+describe('EditableElementCard', () => {
   it('renders element title', () => {
     mockFetchSuccess({})
 
     const element = createSimpleElement({ title: 'My Content Block' })
 
-    renderWithProviders(<ElementCard element={element} />)
+    renderWithProviders(<EditableElementCard element={element} />)
 
     expect(screen.getByTestId('element-card-title')).toHaveTextContent('My Content Block')
   })
@@ -43,62 +43,52 @@ describe('ElementCard', () => {
 
     const element = createSimpleElement({ status: 'draft' })
 
-    renderWithProviders(<ElementCard element={element} />)
+    renderWithProviders(<EditableElementCard element={element} />)
 
     expect(screen.getByTestId('element-card')).toHaveAttribute('data-status', 'draft')
   })
 
-  it('clickable state applied when editLink exists', () => {
+  it('renders an anchor with the editLink href when editLink is set', () => {
     mockFetchSuccess({})
 
     const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
 
-    renderWithProviders(<ElementCard element={element} />)
-
-    expect(screen.getByTestId('element-card')).toHaveAttribute('data-state', 'clickable')
-  })
-
-  it('no clickable state when editLink is null', () => {
-    mockFetchSuccess({})
-
-    const element = createSimpleElement({ editLink: null })
-
-    renderWithProviders(<ElementCard element={element} />)
-
-    expect(screen.getByTestId('element-card')).not.toHaveAttribute('data-state', 'clickable')
-  })
-
-  it('renders an anchor with an href so middle-click opens in a new tab', () => {
-    mockFetchSuccess({})
-
-    const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
-
-    renderWithProviders(<ElementCard element={element} />)
+    renderWithProviders(<EditableElementCard element={element} />)
 
     const link = screen.getByRole('link')
     expect(link.tagName).toBe('A')
     expect(link).toHaveAttribute('href', '/admin/pages/edit/show/5')
   })
 
-  it('renders as non-interactive when editLink is null', () => {
+  it('renders a div with no link when editLink is null', () => {
     mockFetchSuccess({})
 
     const element = createSimpleElement({ editLink: null })
 
-    renderWithProviders(<ElementCard element={element} />)
+    renderWithProviders(<EditableElementCard element={element} />)
 
     expect(screen.queryByRole('link')).toBeNull()
+    expect(screen.getByTestId('element-card').tagName).toBe('DIV')
   })
 
-  it('clickable state is set when editLink is provided', () => {
+  it('sets the clickable state when editLink is provided', () => {
     mockFetchSuccess({})
 
     const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
 
-    renderWithProviders(<ElementCard element={element} />)
+    renderWithProviders(<EditableElementCard element={element} />)
 
-    const card = screen.getByTestId('element-card')
-    expect(card).toHaveAttribute('data-state', 'clickable')
+    expect(screen.getByTestId('element-card')).toHaveAttribute('data-state', 'clickable')
+  })
+
+  it('does not set the clickable state when editLink is null', () => {
+    mockFetchSuccess({})
+
+    const element = createSimpleElement({ editLink: null })
+
+    renderWithProviders(<EditableElementCard element={element} />)
+
+    expect(screen.getByTestId('element-card')).not.toHaveAttribute('data-state', 'clickable')
   })
 
   it('renders the icon with the blockSchema icon class', () => {
@@ -114,10 +104,9 @@ describe('ElementCard', () => {
       },
     })
 
-    renderWithProviders(<ElementCard element={element} />)
+    renderWithProviders(<EditableElementCard element={element} />)
 
-    const icon = screen.getByTestId('element-card-icon')
-    expect(icon).toHaveClass('font-icon-block-content')
+    expect(screen.getByTestId('element-card-icon')).toHaveClass('font-icon-block-content')
   })
 
   describe('summary', () => {
@@ -126,7 +115,7 @@ describe('ElementCard', () => {
 
       const element = createSimpleElement({ summary: 'A short preview of the block' })
 
-      renderWithProviders(<ElementCard element={element} />)
+      renderWithProviders(<EditableElementCard element={element} />)
 
       expect(screen.getByTestId('element-card-summary')).toHaveTextContent(
         'A short preview of the block',
@@ -138,7 +127,7 @@ describe('ElementCard', () => {
 
       const element = createSimpleElement()
 
-      renderWithProviders(<ElementCard element={element} />)
+      renderWithProviders(<EditableElementCard element={element} />)
 
       expect(screen.queryByTestId('element-card-summary')).toBeNull()
     })
@@ -148,17 +137,53 @@ describe('ElementCard', () => {
 
       const element = createSimpleElement({ summary: '' })
 
-      renderWithProviders(<ElementCard element={element} />)
+      renderWithProviders(<EditableElementCard element={element} />)
 
       expect(screen.queryByTestId('element-card-summary')).toBeNull()
     })
   })
 
+  describe('drag handle', () => {
+    it('renders the drag handle with the interpolated element title label', () => {
+      mockFetchSuccess({})
+
+      const element = createSimpleElement({ title: 'Hero Banner' })
+
+      renderWithProviders(<EditableElementCard element={element} />)
+
+      // Fallback "Move {title}" with params { title } => "Move Hero Banner".
+      expect(screen.getByTestId('drag-handle')).toHaveAttribute('aria-label', 'Move Hero Banner')
+    })
+  })
+
+  describe('modified indicator', () => {
+    it('renders the modified indicator with its label when status is modified', () => {
+      mockFetchSuccess({})
+
+      const element = createSimpleElement({ status: 'modified' })
+
+      renderWithProviders(<EditableElementCard element={element} />)
+
+      const indicator = screen.getByTestId('element-card-modified-indicator')
+      expect(indicator).toBeInTheDocument()
+      expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
+    })
+
+    it('does not render the modified indicator when status is not modified', () => {
+      mockFetchSuccess({})
+
+      const element = createSimpleElement({ status: 'published' })
+
+      renderWithProviders(<EditableElementCard element={element} />)
+
+      expect(screen.queryByTestId('element-card-modified-indicator')).toBeNull()
+    })
+  })
+
   describe('anchor click handling', () => {
-    // Pins the handleAnchorClick guards at ElementCard.tsx:68-82 against
-    // ConditionalExpression / LogicalOperator / EqualityOperator / BlockStatement
-    // mutations. Each branch (isDragging short-circuit, interactive-descendant
-    // detection, plain-text click) is asserted independently.
+    // Pins the handleAnchorClick guards (drag-in-progress short-circuit,
+    // interactive-descendant detection, plain-text click) moved verbatim from
+    // the old dispatcher. Each branch is asserted independently.
 
     it('prevents navigation while a drag is in progress', () => {
       vi.mocked(useSortable).mockReturnValue({
@@ -168,7 +193,7 @@ describe('ElementCard', () => {
       mockFetchSuccess({})
 
       const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
-      renderWithProviders(<ElementCard element={element} />)
+      renderWithProviders(<EditableElementCard element={element} />)
 
       const card = screen.getByTestId('element-card')
       const event = new MouseEvent('click', { bubbles: true, cancelable: true })
@@ -183,7 +208,7 @@ describe('ElementCard', () => {
       mockFetchSuccess({})
 
       const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
-      renderWithProviders(<ElementCard element={element} />)
+      renderWithProviders(<EditableElementCard element={element} />)
 
       // The anchor contains a drag-handle <button> (rendered by DragHandle).
       const dragHandle = screen.getByTestId('element-card').querySelector('button')
@@ -203,7 +228,7 @@ describe('ElementCard', () => {
         title: 'Navigate me',
         editLink: '/admin/pages/edit/show/5',
       })
-      renderWithProviders(<ElementCard element={element} />)
+      renderWithProviders(<EditableElementCard element={element} />)
 
       // Title is a plain <h4> — no interactive ancestor inside the card.
       const title = screen.getByTestId('element-card-title')
@@ -215,114 +240,75 @@ describe('ElementCard', () => {
       expect(event.defaultPrevented).toBe(false)
     })
   })
+})
 
-  describe('drag handle label', () => {
-    // Pins the MOVE_LABEL fallback string and the interpolation params object
-    // at ElementCard.tsx:47-49 — both surface as the drag handle's aria-label.
+describe('ReadonlyElementCard', () => {
+  it('renders element title', () => {
+    const element = createSimpleElement({ title: 'Readonly Block' })
 
-    it('labels the drag handle with the interpolated element title', () => {
-      mockFetchSuccess({})
+    renderWithProviders(<ReadonlyElementCard element={element} />)
 
-      const element = createSimpleElement({ title: 'Hero Banner' })
-
-      renderWithProviders(<ElementCard element={element} />)
-
-      // Fallback "Move {title}" with params { title } => "Move Hero Banner".
-      // Killing the fallback StringLiteral ("" => empty label) and the params
-      // ObjectLiteral ({} => no substitution, label stays "Move {title}").
-      expect(screen.getByTestId('drag-handle')).toHaveAttribute('aria-label', 'Move Hero Banner')
-    })
+    expect(screen.getByTestId('element-card-title')).toHaveTextContent('Readonly Block')
   })
 
-  describe('modified indicator', () => {
-    // Pins the `status === 'modified'` conditional at ElementCard.tsx:59 (editable)
-    // and :143 (readonly): the unpublished-changes dot must appear only for the
-    // 'modified' status, and its aria-label fallback (MODIFIED_LABEL) is asserted.
-
-    it('renders the modified indicator with its label when status is modified', () => {
-      mockFetchSuccess({})
-
-      const element = createSimpleElement({ status: 'modified' })
-
-      renderWithProviders(<ElementCard element={element} />)
-
-      const indicator = screen.getByTestId('element-card-modified-indicator')
-      expect(indicator).toBeInTheDocument()
-      expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
+  it('renders the icon with the blockSchema icon class', () => {
+    const element = createSimpleElement({
+      blockSchema: {
+        typeName: 'Content',
+        label: 'Content',
+        icon: 'font-icon-block-content',
+        type: 'Content',
+        title: 'Content',
+      },
     })
 
-    it('does not render the modified indicator when status is not modified', () => {
-      mockFetchSuccess({})
+    renderWithProviders(<ReadonlyElementCard element={element} />)
 
-      const element = createSimpleElement({ status: 'published' })
-
-      renderWithProviders(<ElementCard element={element} />)
-
-      expect(screen.queryByTestId('element-card-modified-indicator')).toBeNull()
-    })
+    expect(screen.getByTestId('element-card-icon')).toHaveClass('font-icon-block-content')
   })
 
-  describe('readonly variant', () => {
-    // Pins the readonly branch (ElementCard.tsx:129-159): icon class template
-    // (:136), modified-indicator conditional (:143) and its label (:147).
+  it('renders no drag handle', () => {
+    const element = createSimpleElement()
 
-    function renderReadonly(element: ReturnType<typeof createSimpleElement>) {
-      return renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <ElementCard element={element} />
-        </ReadonlyProvider>,
-      )
-    }
+    renderWithProviders(<ReadonlyElementCard element={element} />)
 
-    it('renders the block icon class', () => {
-      mockFetchSuccess({})
+    expect(screen.queryByTestId('drag-handle')).toBeNull()
+  })
 
-      const element = createSimpleElement({
-        blockSchema: {
-          typeName: 'Content',
-          label: 'Content',
-          icon: 'font-icon-block-content',
-          type: 'Content',
-          title: 'Content',
-        },
-      })
+  it('renders no link even when editLink is set (always a div)', () => {
+    const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
 
-      renderReadonly(element)
+    renderWithProviders(<ReadonlyElementCard element={element} />)
 
-      expect(screen.getByTestId('element-card-icon')).toHaveClass('font-icon-block-content')
-    })
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(screen.getByTestId('element-card').tagName).toBe('DIV')
+  })
 
-    it('renders the modified indicator with its label when status is modified', () => {
-      mockFetchSuccess({})
+  it('renders the modified indicator with its label when status is modified', () => {
+    const element = createSimpleElement({ status: 'modified' })
 
-      const element = createSimpleElement({ status: 'modified' })
+    renderWithProviders(<ReadonlyElementCard element={element} />)
 
-      renderReadonly(element)
+    const indicator = screen.getByTestId('element-card-modified-indicator')
+    expect(indicator).toBeInTheDocument()
+    expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
+  })
 
-      const indicator = screen.getByTestId('element-card-modified-indicator')
-      expect(indicator).toBeInTheDocument()
-      expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
-    })
+  it('does not render the modified indicator when status is not modified', () => {
+    const element = createSimpleElement({ status: 'published' })
 
-    it('does not render the modified indicator when status is not modified', () => {
-      mockFetchSuccess({})
+    renderWithProviders(<ReadonlyElementCard element={element} />)
 
-      const element = createSimpleElement({ status: 'published' })
+    expect(screen.queryByTestId('element-card-modified-indicator')).toBeNull()
+  })
 
-      renderReadonly(element)
+  it('renders the summary line when a non-empty value is provided', () => {
+    const element = createSimpleElement({ summary: 'A short preview of the block' })
 
-      expect(screen.queryByTestId('element-card-modified-indicator')).toBeNull()
-    })
+    renderWithProviders(<ReadonlyElementCard element={element} />)
 
-    it('renders the title and no drag handle', () => {
-      mockFetchSuccess({})
-
-      const element = createSimpleElement({ title: 'Readonly Block' })
-
-      renderReadonly(element)
-
-      expect(screen.getByTestId('element-card-title')).toHaveTextContent('Readonly Block')
-      expect(screen.queryByTestId('drag-handle')).toBeNull()
-    })
+    expect(screen.getByTestId('element-card-summary')).toHaveTextContent(
+      'A short preview of the block',
+    )
   })
 })
