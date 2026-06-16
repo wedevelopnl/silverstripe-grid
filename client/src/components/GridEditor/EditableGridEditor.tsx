@@ -3,7 +3,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Fragment } from 'react'
 import AddChildButton from '@/components/AddChildButton/AddChildButton'
 import DragOverlayContent from '@/components/DragOverlayContent/DragOverlayContent'
-import SectionBlock from '@/components/SectionBlock/SectionBlock'
+import EditableSectionBlock from '@/components/SectionBlock/EditableSectionBlock'
 import { DragContext } from '@/hooks/useDragAndDrop'
 import { useElementTree } from '@/hooks/useElementTree'
 import GridEditorShell, { resolveGridEditorStatus } from './GridEditorShell'
@@ -41,7 +41,7 @@ export default function EditableGridEditor({ pageId, zone }: EditableGridEditorP
                 insertAfterId={sections[index - 1].self.id}
               />
             )}
-            <SectionBlock section={section} />
+            <EditableSectionBlock section={section} />
           </Fragment>
         ))}
         <AddChildButton

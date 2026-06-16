@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import SectionBlock from '@/components/SectionBlock/SectionBlock'
+import ReadonlySectionBlock from '@/components/SectionBlock/ReadonlySectionBlock'
 import { useElementTree } from '@/hooks/useElementTree'
 import { t } from '@/i18n'
 import GridEditorShell, { resolveGridEditorStatus } from './GridEditorShell'
@@ -27,7 +27,7 @@ export default function ReadonlyGridEditor({ pageId, zone, version }: ReadonlyGr
       sections={sections}
     >
       {sections.length > 0 ? (
-        sections.map((section) => <SectionBlock key={section.nodeKey} section={section} />)
+        sections.map((section) => <ReadonlySectionBlock key={section.nodeKey} section={section} />)
       ) : (
         <p className="ssgrid-empty-state" data-testid="grid-editor-empty">
           {t('WeDevelopGrid.GridEditor.NO_SECTIONS_READONLY', 'No sections in this version')}
