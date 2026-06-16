@@ -25,7 +25,7 @@ class Section extends GridElement implements ContainerInterface
     /** @use ContainerElementTrait<Row> */
     use ContainerElementTrait;
 
-    private static string $table_name = 'Section';
+    private static string $table_name = 'WeDevelop_Grid_Section';
 
     private static string $singular_name = 'Section';
 

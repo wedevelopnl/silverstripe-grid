@@ -603,8 +603,10 @@ final class GridControllerTest extends FunctionalTest
         $row = $tree['row'];
         $sectionId = (int) $tree['section']->ID;
 
+        $table = DataObject::getSchema()->tableName(GridElement::class);
         DB::query(sprintf(
-            "DELETE FROM \"GridElement\" WHERE \"ID\" = %d",
+            "DELETE FROM \"%s\" WHERE \"ID\" = %d",
+            $table,
             $sectionId,
         ));
 
@@ -1663,8 +1665,10 @@ final class GridControllerTest extends FunctionalTest
         $sectionId = (int) $tree['section']->ID;
 
         // Orphan the row by removing its source parent via raw SQL
+        $table = DataObject::getSchema()->tableName(GridElement::class);
         DB::query(sprintf(
-            "DELETE FROM \"GridElement\" WHERE \"ID\" = %d",
+            "DELETE FROM \"%s\" WHERE \"ID\" = %d",
+            $table,
             $sectionId,
         ));
 
@@ -1714,8 +1718,10 @@ final class GridControllerTest extends FunctionalTest
         $tree = $this->buildTree();
         $contentId = (int) $tree['content']->ID;
 
+        $table = DataObject::getSchema()->tableName(GridElement::class);
         DB::query(sprintf(
-            "UPDATE \"GridElement\" SET \"ParentID\" = 0 WHERE \"ID\" = %d",
+            "UPDATE \"%s\" SET \"ParentID\" = 0 WHERE \"ID\" = %d",
+            $table,
             $contentId,
         ));
 

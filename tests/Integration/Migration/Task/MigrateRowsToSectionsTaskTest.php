@@ -140,11 +140,11 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
     private function cleanGridTables(): void
     {
         $tables = [
-            'ContentElement', 'ContentElement_Live',
-            'Column', 'Column_Live',
-            'Row', 'Row_Live',
-            'Section', 'Section_Live',
-            'GridElement', 'GridElement_Live',
+            'WeDevelop_Grid_ContentElement', 'WeDevelop_Grid_ContentElement_Live',
+            'WeDevelop_Grid_Column', 'WeDevelop_Grid_Column_Live',
+            'WeDevelop_Grid_Row', 'WeDevelop_Grid_Row_Live',
+            'WeDevelop_Grid_Section', 'WeDevelop_Grid_Section_Live',
+            'WeDevelop_Grid_GridElement', 'WeDevelop_Grid_GridElement_Live',
         ];
 
         $allTables = \SilverStripe\ORM\DB::table_list();

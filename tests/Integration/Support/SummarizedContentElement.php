@@ -16,7 +16,7 @@ use WeDevelop\Grid\Model\ContentElement;
  */
 class SummarizedContentElement extends ContentElement implements TestOnly
 {
-    private static string $table_name = 'GridTestSummarizedContentElement';
+    private static string $table_name = 'WeDevelop_Grid_Test_SummarizedContentElement';
 
     public ?string $testSummary = null;
 

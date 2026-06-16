@@ -29,7 +29,7 @@ class Column extends GridElement implements ContainerInterface
     /** @use ContainerElementTrait<GridElement> */
     use ContainerElementTrait;
 
-    private static string $table_name = 'Column';
+    private static string $table_name = 'WeDevelop_Grid_Column';
 
     private static string $singular_name = 'Column';
 

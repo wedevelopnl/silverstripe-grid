@@ -14,7 +14,7 @@ use Override;
  */
 class ContentElement extends GridElement
 {
-    private static string $table_name = 'ContentElement';
+    private static string $table_name = 'WeDevelop_Grid_ContentElement';
 
     private static string $singular_name = 'Content element';
 

@@ -13,7 +13,7 @@ use SilverStripe\ORM\DataObject;
  */
 class UnversionedDataObject extends DataObject implements TestOnly
 {
-    private static string $table_name = 'GridTestUnversioned';
+    private static string $table_name = 'WeDevelop_Grid_Test_Unversioned';
 
     /** @var array<string, string> */
     private static array $db = [

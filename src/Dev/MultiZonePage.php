@@ -20,7 +20,7 @@ use WeDevelop\Grid\Forms\GridEditorField;
  */
 class MultiZonePage extends Page
 {
-    private static string $table_name = 'GridMultiZonePage';
+    private static string $table_name = 'WeDevelop_Grid_MultiZonePage';
 
     private static string $singular_name = 'Multi-Zone Page';
 

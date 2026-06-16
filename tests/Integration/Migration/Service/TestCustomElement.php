@@ -14,7 +14,7 @@ use WeDevelop\Grid\Model\GridElement;
  */
 class TestCustomElement extends GridElement implements TestOnly
 {
-    private static string $table_name = 'TestCustomElement';
+    private static string $table_name = 'WeDevelop_Grid_Test_CustomElement';
 
     /** @var array<string, string> */
     private static array $db = [

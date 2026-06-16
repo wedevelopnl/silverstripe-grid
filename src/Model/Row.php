@@ -23,7 +23,7 @@ class Row extends GridElement implements ContainerInterface
     /** @use ContainerElementTrait<Column> */
     use ContainerElementTrait;
 
-    private static string $table_name = 'Row';
+    private static string $table_name = 'WeDevelop_Grid_Row';
 
     private static string $singular_name = 'Row';
 

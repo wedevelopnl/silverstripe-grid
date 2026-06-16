@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
@@ -71,8 +72,10 @@ final class GridSettingsServiceRollbackTest extends SapphireTest
 
         // Inject the failure marker via raw SQL so the initial write succeeded
         // and only the reset re-validation trips the extension.
+        $table = DataObject::getSchema()->tableName(GridElement::class);
         DB::query(sprintf(
-            "UPDATE \"GridElement\" SET \"ExtraClass\" = '%s' WHERE \"ID\" = %d",
+            "UPDATE \"%s\" SET \"ExtraClass\" = '%s' WHERE \"ID\" = %d",
+            $table,
             RejectMarkedColumnExtension::FAIL_MARKER,
             $markedColumn->ID,
         ));

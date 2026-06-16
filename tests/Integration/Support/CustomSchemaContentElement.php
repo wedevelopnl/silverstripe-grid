@@ -15,7 +15,7 @@ use WeDevelop\Grid\Model\ContentElement;
  */
 class CustomSchemaContentElement extends ContentElement implements TestOnly
 {
-    private static string $table_name = 'GridTestCustomSchemaContentElement';
+    private static string $table_name = 'WeDevelop_Grid_Test_CustomSchemaContentElement';
 
     /**
      * @return array<string, mixed>

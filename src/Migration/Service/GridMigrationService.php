@@ -549,12 +549,12 @@ final class GridMigrationService
      */
     private function overwriteLiveContent(int $newElementId, LegacyElement $liveElement, int $draftSort): void
     {
-        // Base fields on GridElement_Live
+        // Base fields on WeDevelop_Grid_GridElement_Live
         /** @var 'h1'|'h2'|'h3'|'h4'|'h5'|'h6' $titleTag */
         $titleTag = $liveElement->titleTag !== '' ? $liveElement->titleTag : 'h2';
 
         DB::prepared_query(
-            'UPDATE "GridElement_Live" SET
+            'UPDATE "WeDevelop_Grid_GridElement_Live" SET
                 "Title" = ?,
                 "ShowTitle" = ?,
                 "TitleTag" = ?,
@@ -573,7 +573,7 @@ final class GridMigrationService
             ],
         );
 
-        // Subclass fields on ContentElement_Live (HTML + media)
+        // Subclass fields on WeDevelop_Grid_ContentElement_Live (HTML + media)
         if ($liveElement->mediaData === null) {
             return;
         }
@@ -602,7 +602,7 @@ final class GridMigrationService
 
         DB::prepared_query(
             \sprintf(
-                'UPDATE "ContentElement_Live" SET %s WHERE "ID" = ?',
+                'UPDATE "WeDevelop_Grid_ContentElement_Live" SET %s WHERE "ID" = ?',
                 \implode(', ', $setClauses),
             ),
             $params,

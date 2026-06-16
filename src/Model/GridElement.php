@@ -46,7 +46,7 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
  */
 class GridElement extends DataObject
 {
-    private static string $table_name = 'GridElement';
+    private static string $table_name = 'WeDevelop_Grid_GridElement';
 
     private static string $singular_name = 'Grid element';
 

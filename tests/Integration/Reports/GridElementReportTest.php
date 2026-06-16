@@ -10,6 +10,7 @@ use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Forms\DropdownField;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
@@ -118,8 +119,10 @@ final class GridElementReportTest extends SapphireTest
         // Create an orphan: write with valid parent, then orphan via raw SQL and reload
         $orphan = GridTreeFactory::contentElement($column);
         $orphanId = (int) $orphan->ID;
+        $table = DataObject::getSchema()->tableName(GridElement::class);
         DB::query(sprintf(
-            "UPDATE \"GridElement\" SET \"ParentID\" = 0, \"ParentClass\" = '' WHERE \"ID\" = %d",
+            "UPDATE \"%s\" SET \"ParentID\" = 0, \"ParentClass\" = '' WHERE \"ID\" = %d",
+            $table,
             $orphanId,
         ));
 
@@ -158,8 +161,10 @@ final class GridElementReportTest extends SapphireTest
         $orphan = GridTreeFactory::contentElement($column);
         $orphanId = (int) $orphan->ID;
 
+        $table = DataObject::getSchema()->tableName(GridElement::class);
         DB::query(sprintf(
-            "UPDATE \"GridElement\" SET \"ParentID\" = 0, \"ParentClass\" = '' WHERE \"ID\" = %d",
+            "UPDATE \"%s\" SET \"ParentID\" = 0, \"ParentClass\" = '' WHERE \"ID\" = %d",
+            $table,
             $orphanId,
         ));
 

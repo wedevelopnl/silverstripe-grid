@@ -10,6 +10,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
@@ -333,8 +334,10 @@ final class GridElementTest extends SapphireTest
         $element = GridTreeFactory::contentElement($column);
 
         // Orphan via raw SQL to bypass polymorphic has_one validation
+        $table = DataObject::getSchema()->tableName(GridElement::class);
         DB::query(sprintf(
-            "UPDATE \"GridElement\" SET \"ParentID\" = 0, \"ParentClass\" = '' WHERE \"ID\" = %d",
+            "UPDATE \"%s\" SET \"ParentID\" = 0, \"ParentClass\" = '' WHERE \"ID\" = %d",
+            $table,
             $element->ID,
         ));
 
@@ -604,8 +607,10 @@ final class GridElementTest extends SapphireTest
         $column = GridTreeFactory::column($row);
         $element = GridTreeFactory::contentElement($column);
 
+        $table = DataObject::getSchema()->tableName(GridElement::class);
         DB::query(sprintf(
-            "UPDATE \"GridElement\" SET \"ParentID\" = 0, \"ParentClass\" = '' WHERE \"ID\" = %d",
+            "UPDATE \"%s\" SET \"ParentID\" = 0, \"ParentClass\" = '' WHERE \"ID\" = %d",
+            $table,
             $element->ID,
         ));
 

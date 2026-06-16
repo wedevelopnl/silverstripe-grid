@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use Page;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
@@ -341,7 +342,8 @@ final class LegacyDataReaderTest extends SapphireTest
 
     public function testGetEligiblePagesFromSubclassTable(): void
     {
-        $this->seeder->addExtensionColumns('TestPage');
+        $table = DataObject::getSchema()->tableName(TestPage::class);
+        $this->seeder->addExtensionColumns($table);
 
         try {
             $page = TestPage::create();
@@ -349,7 +351,7 @@ final class LegacyDataReaderTest extends SapphireTest
             $page->URLSegment = 'subclass-table-test';
             $page->write();
 
-            $this->seeder->seedPageOnTable('TestPage', (int) $page->ID, 600);
+            $this->seeder->seedPageOnTable($table, (int) $page->ID, 600);
 
             $result = $this->reader->getEligiblePages('draft');
 
@@ -358,13 +360,14 @@ final class LegacyDataReaderTest extends SapphireTest
             self::assertSame(600, $result[0]['areaId']);
             self::assertSame(TestPage::class, $result[0]['pageClassName']);
         } finally {
-            $this->seeder->removeExtensionColumns('TestPage');
+            $this->seeder->removeExtensionColumns($table);
         }
     }
 
     public function testGetEligiblePagesFromSubclassTableWithPageIdFilter(): void
     {
-        $this->seeder->addExtensionColumns('TestPage');
+        $table = DataObject::getSchema()->tableName(TestPage::class);
+        $this->seeder->addExtensionColumns($table);
 
         try {
             $page = TestPage::create();
@@ -373,7 +376,7 @@ final class LegacyDataReaderTest extends SapphireTest
             $page->write();
 
             $pageId = (int) $page->ID;
-            $this->seeder->seedPageOnTable('TestPage', $pageId, 601);
+            $this->seeder->seedPageOnTable($table, $pageId, 601);
 
             $result = $this->reader->getEligiblePages('draft', [$pageId]);
             self::assertCount(1, $result);
@@ -382,7 +385,7 @@ final class LegacyDataReaderTest extends SapphireTest
             $result = $this->reader->getEligiblePages('draft', [999999]);
             self::assertSame([], $result);
         } finally {
-            $this->seeder->removeExtensionColumns('TestPage');
+            $this->seeder->removeExtensionColumns($table);
         }
     }
 

@@ -12,7 +12,7 @@ use SilverStripe\Dev\TestOnly;
  */
 class TestPage extends \Page implements TestOnly
 {
-    private static string $table_name = 'TestPage';
+    private static string $table_name = 'WeDevelop_Grid_Test_Page';
 
     /** @var array<string, string> */
     private static array $db = [

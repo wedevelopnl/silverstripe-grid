@@ -19,7 +19,7 @@ use SilverStripe\Security\Member;
  */
 class PermissionDenyingPage extends Page implements TestOnly
 {
-    private static string $table_name = 'GridTestPermissionDenyingPage';
+    private static string $table_name = 'WeDevelop_Grid_Test_PermissionDenyingPage';
 
     #[Override]
     public function canView($member = null): bool
