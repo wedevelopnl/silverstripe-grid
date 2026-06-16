@@ -131,10 +131,10 @@ tasks:
       - "{{.COMPOSE}} exec app vendor/bin/phpunit --testsuite functional"
 
   test-modules:
-    desc: Run integration + functional + fluent + userforms + admintoolbar tests in the optional-modules environment
+    desc: Run integration + functional + fluent + userforms + admintoolbar + keysforcache tests in the optional-modules environment
     deps: [ensure-up-modules]
     cmds:
-      - "{{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,functional,fluent,userforms,admintoolbar"
+      - "{{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,functional,fluent,userforms,admintoolbar,keysforcache"
 
   test-js:
     desc: Run JavaScript tests (Vitest)
@@ -185,7 +185,7 @@ tasks:
     deps: [ensure-up-modules]
     cmds:
       - >-
-        {{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,fluent,userforms,admintoolbar
+        {{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,fluent,userforms,admintoolbar,keysforcache
         --coverage-html coverage/integration/html
         --coverage-clover coverage/integration/clover.xml
 
