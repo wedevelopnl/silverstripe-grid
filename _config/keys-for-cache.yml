@@ -1,0 +1,16 @@
+---
+Name: grid-keys-for-cache
+Only:
+  moduleexists: silverstripe-terraformers/keys-for-cache
+---
+WeDevelop\Grid\Model\GridElement:
+  has_cache_key: true
+WeDevelop\Grid\Model\Section:
+  cares:
+    - Rows
+WeDevelop\Grid\Model\Row:
+  cares:
+    - Columns
+WeDevelop\Grid\Model\Column:
+  cares:
+    - Elements
