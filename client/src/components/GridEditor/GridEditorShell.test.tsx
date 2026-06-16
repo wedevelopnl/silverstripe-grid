@@ -1,8 +1,10 @@
 import { screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { createSectionNode, resetIdCounter } from '@/testing/factories'
+import { ApiError } from '@/api/errors'
+import { createSectionNode, createTreeApiResponse, resetIdCounter } from '@/testing/factories'
 import { renderWithProviders } from '@/testing/renderWithProviders'
-import GridEditorShell from './GridEditorShell'
+import type { TreeApiResponse } from '@/types/elements'
+import GridEditorShell, { type GridEditorStatus, resolveGridEditorStatus } from './GridEditorShell'
 
 describe('GridEditorShell', () => {
   it('renders only the loading notice in loading status', () => {
@@ -82,5 +84,30 @@ describe('GridEditorShell', () => {
     expect(root).toHaveAttribute('data-page-id', '7')
     expect(root).toHaveAttribute('data-zone', 'sidebar')
     expect(root).toHaveAttribute('data-readonly', '')
+  })
+})
+
+describe('resolveGridEditorStatus', () => {
+  const tree: TreeApiResponse = createTreeApiResponse({ pageId: 1, sections: [] })
+  const apiError = new ApiError(500, 'boom')
+
+  it.each<{
+    name: string
+    data: TreeApiResponse | undefined
+    error: ApiError | null
+    expected: GridEditorStatus
+  }>([
+    { name: 'data present and no error', data: tree, error: null, expected: 'ready' },
+    // Precedence: a loaded tree wins even when a (background-refetch) error is set.
+    {
+      name: 'data present and error set (data wins)',
+      data: tree,
+      error: apiError,
+      expected: 'ready',
+    },
+    { name: 'no data and error set', data: undefined, error: apiError, expected: 'error' },
+    { name: 'no data and no error', data: undefined, error: null, expected: 'loading' },
+  ])('returns "$expected" when $name', ({ data, error, expected }) => {
+    expect(resolveGridEditorStatus(data, error)).toBe(expected)
   })
 })

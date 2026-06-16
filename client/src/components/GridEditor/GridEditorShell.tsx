@@ -13,8 +13,15 @@ export type GridEditorStatus = 'loading' | 'error' | 'ready'
 
 /**
  * Collapse a query's `data`/`error` into the single status the Shell renders.
- * `data` defined wins (a loaded tree renders even mid background-refetch); an
- * error with no data shows the error notice; otherwise we're still loading.
+ * `data` defined wins (a loaded tree renders even mid background-refetch, and a
+ * failed background refetch keeps showing the last-good tree rather than
+ * replacing it with an error banner); an error with no data shows the error
+ * notice; otherwise we're still loading.
+ *
+ * Assumes the caller's query is always enabled — the editor's is, since
+ * `pageId` is guaranteed numeric past the boundary guard. `loading` is the
+ * fallback for every non-ready, non-error state, so a disabled/idle query
+ * (e.g. `skipToken`) would render a spurious loading notice.
  */
 export function resolveGridEditorStatus(
   data: TreeApiResponse | undefined,
