@@ -4,7 +4,7 @@ import { type ReactNode, StrictMode } from 'react'
 import { vi } from 'vitest'
 import { GridEditorProvider } from '@/hooks/GridEditorContext'
 import { CollapseContext, type CollapseState } from '@/hooks/useCollapseState'
-import { ViewportProvider } from '@/hooks/ViewportContext'
+import { setActiveViewport } from '@/state/activeViewport'
 import type { NodeKey } from '@/types/identity'
 
 export interface RenderOptions {
@@ -79,13 +79,13 @@ export function renderWithProviders(
   const resolvedCollapse: CollapseState =
     collapseState ?? createCollapseStateStub(collapsedKeys ?? [])
 
+  setActiveViewport(viewport)
+
   const result = render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <GridEditorProvider value={{ pageId, zone }}>
-          <ViewportProvider initialViewport={viewport}>
-            <CollapseContext.Provider value={resolvedCollapse}>{ui}</CollapseContext.Provider>
-          </ViewportProvider>
+          <CollapseContext.Provider value={resolvedCollapse}>{ui}</CollapseContext.Provider>
         </GridEditorProvider>
       </QueryClientProvider>
     </StrictMode>,
@@ -110,16 +110,14 @@ export function createProviderWrapper(options: RenderOptions = {}) {
   const resolvedCollapse: CollapseState =
     collapseState ?? createCollapseStateStub(collapsedKeys ?? [])
 
+  setActiveViewport(viewport)
+
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <StrictMode>
         <QueryClientProvider client={queryClient}>
           <GridEditorProvider value={{ pageId, zone }}>
-            <ViewportProvider initialViewport={viewport}>
-              <CollapseContext.Provider value={resolvedCollapse}>
-                {children}
-              </CollapseContext.Provider>
-            </ViewportProvider>
+            <CollapseContext.Provider value={resolvedCollapse}>{children}</CollapseContext.Provider>
           </GridEditorProvider>
         </QueryClientProvider>
       </StrictMode>

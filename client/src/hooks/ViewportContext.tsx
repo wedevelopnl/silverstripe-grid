@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react'
-import { useLayoutEffect, useMemo, useSyncExternalStore } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import {
   getActiveViewport,
   setActiveViewport as storeSet,
@@ -11,27 +10,11 @@ export interface ViewportContextValue {
   readonly setActiveViewport: (key: string) => void
 }
 
-interface ViewportProviderProps {
-  readonly initialViewport?: string
-  readonly children: ReactNode
-}
-
 /**
- * Provider retained for backwards compatibility with the grid editor tree.
- * Internally it no longer owns state — the shared `activeViewport` store is
- * the single source of truth so the in-editor ViewportSwitcher and the
- * CMS preview bar selector observe the same value.
+ * Reads the shared `activeViewport` store. The in-editor ViewportSwitcher and
+ * the CMS preview bar selector observe the same value through this hook — there
+ * is no provider; the store is the single source of truth.
  */
-export function ViewportProvider({ initialViewport, children }: ViewportProviderProps) {
-  useLayoutEffect(() => {
-    if (initialViewport !== undefined) {
-      storeSet(initialViewport)
-    }
-  }, [initialViewport])
-
-  return <>{children}</>
-}
-
 export function useViewportContext(): ViewportContextValue {
   const activeViewport = useSyncExternalStore(
     subscribeActiveViewport,

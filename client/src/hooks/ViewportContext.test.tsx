@@ -1,41 +1,25 @@
 import { act, renderHook } from '@testing-library/react'
-import type { ReactNode } from 'react'
-import { describe, expect, it } from 'vitest'
-import { useViewportContext, ViewportProvider } from './ViewportContext'
+import { afterEach, describe, expect, it } from 'vitest'
+import { resetActiveViewportStore, setActiveViewport } from '@/state/activeViewport'
+import { useViewportContext } from './ViewportContext'
 
 describe('useViewportContext', () => {
-  it('initializes from initialViewport prop', () => {
-    function Wrapper({ children }: { children: ReactNode }) {
-      return <ViewportProvider initialViewport="lg">{children}</ViewportProvider>
-    }
+  afterEach(() => {
+    resetActiveViewportStore()
+  })
 
-    const { result } = renderHook(() => useViewportContext(), {
-      wrapper: Wrapper,
-    })
+  it('reads the active viewport from the shared store', () => {
+    setActiveViewport('lg')
+
+    const { result } = renderHook(() => useViewportContext())
 
     expect(result.current.activeViewport).toBe('lg')
   })
 
-  it('falls back to default viewport when no prop given', () => {
-    function Wrapper({ children }: { children: ReactNode }) {
-      return <ViewportProvider>{children}</ViewportProvider>
-    }
+  it('reflects store updates made through the returned setter', () => {
+    setActiveViewport('md')
 
-    const { result } = renderHook(() => useViewportContext(), {
-      wrapper: Wrapper,
-    })
-
-    expect(result.current.activeViewport).toBe('md')
-  })
-
-  it('updates viewport via setter', () => {
-    function Wrapper({ children }: { children: ReactNode }) {
-      return <ViewportProvider initialViewport="sm">{children}</ViewportProvider>
-    }
-
-    const { result } = renderHook(() => useViewportContext(), {
-      wrapper: Wrapper,
-    })
+    const { result } = renderHook(() => useViewportContext())
 
     act(() => {
       result.current.setActiveViewport('xl')
