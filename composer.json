@@ -41,6 +41,7 @@
     ]
   },
   "suggest": {
+    "silverstripe-terraformers/keys-for-cache": "Gives every grid element a cache key that changes with its content, for <% cached %> blocks (^3.0)",
     "silverstripe/reports": "Enables the Grid Elements and Shared Blocks reports in CMS → Reports",
     "silverstripe/userforms": "Adds a Form grid element: a CMS-built form whose fields, recipients and submissions belong to the block",
     "tractorcow/silverstripe-fluent": "Required for multi-locale support with isolated element records per locale",
