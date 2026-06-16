@@ -31,13 +31,6 @@
     gap: 8px;
   }
 
-  // Readonly variant wraps the title group in this element for structural
-  // parity with the editable header; display:contents lets its children sit in
-  // the header flex row directly so both variants lay out identically.
-  &__header-title {
-    display: contents;
-  }
-
   &__title {
     flex: 1 1 auto;
     min-width: 0;
