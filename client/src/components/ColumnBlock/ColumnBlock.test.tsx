@@ -1,13 +1,15 @@
+import { useSortable } from '@dnd-kit/sortable'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ReadonlyProvider } from '@/hooks/ReadonlyContext'
+import { useDragContext } from '@/hooks/useDragAndDrop'
 import { createColumnNode, createSimpleElement } from '@/testing/factories'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
 import { createCollapseStateStub, renderWithProviders } from '@/testing/renderWithProviders'
 import { resetAdapterCache } from '@/utils/gridAdapter'
 
-import ColumnBlock from './ColumnBlock'
+import EditableColumnBlock from './EditableColumnBlock'
+import ReadonlyColumnBlock from './ReadonlyColumnBlock'
 
 // jsdom doesn't support native dialog showModal/close
 beforeEach(() => {
@@ -18,9 +20,6 @@ beforeEach(() => {
     this.removeAttribute('open')
   })
 })
-
-import { useSortable } from '@dnd-kit/sortable'
-import { useDragContext } from '@/hooks/useDragAndDrop'
 
 const defaultSortable = {
   attributes: {},
@@ -58,7 +57,7 @@ afterEach(() => {
   vi.mocked(useDragContext).mockReturnValue({ activeType: null, pendingActive: false })
 })
 
-describe('ColumnBlock', () => {
+describe('EditableColumnBlock', () => {
   it('renders column children (element cards)', () => {
     mockFetchSuccess({})
 
@@ -68,7 +67,7 @@ describe('ColumnBlock', () => {
     ]
     const column = createColumnNode({ children, childCount: 0 })
 
-    renderWithProviders(<ColumnBlock column={column} />)
+    renderWithProviders(<EditableColumnBlock column={column} />)
 
     expect(screen.getAllByTestId('element-card')).toHaveLength(2)
     expect(screen.getByText('Content A')).toBeInTheDocument()
@@ -80,7 +79,7 @@ describe('ColumnBlock', () => {
 
     const column = createColumnNode({ children: null, childCount: 0, allowedTypes: null })
 
-    renderWithProviders(<ColumnBlock column={column} />)
+    renderWithProviders(<EditableColumnBlock column={column} />)
 
     expect(screen.getByText('No content blocks')).toBeInTheDocument()
   })
@@ -96,7 +95,7 @@ describe('ColumnBlock', () => {
       },
     })
 
-    renderWithProviders(<ColumnBlock column={column} />)
+    renderWithProviders(<EditableColumnBlock column={column} />)
 
     expect(screen.queryByText('No content blocks')).not.toBeInTheDocument()
   })
@@ -106,7 +105,7 @@ describe('ColumnBlock', () => {
 
     const column = createColumnNode({ allowedTypes: null })
 
-    renderWithProviders(<ColumnBlock column={column} />)
+    renderWithProviders(<EditableColumnBlock column={column} />)
 
     expect(screen.queryByTestId('add-content-button')).not.toBeInTheDocument()
   })
@@ -116,7 +115,7 @@ describe('ColumnBlock', () => {
 
     const column = createColumnNode({ allowedTypes: {} })
 
-    renderWithProviders(<ColumnBlock column={column} />)
+    renderWithProviders(<EditableColumnBlock column={column} />)
 
     expect(screen.queryByTestId('add-content-button')).not.toBeInTheDocument()
   })
@@ -127,7 +126,7 @@ describe('ColumnBlock', () => {
 
       const column = createColumnNode({ status: 'draft' })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'draft')
     })
@@ -137,7 +136,7 @@ describe('ColumnBlock', () => {
 
       const column = createColumnNode({ status: 'modified' })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'modified')
     })
@@ -147,7 +146,7 @@ describe('ColumnBlock', () => {
 
       const column = createColumnNode({ status: 'published' })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'published')
     })
@@ -159,7 +158,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-block')).toHaveAttribute('data-hidden', '')
     })
@@ -171,7 +170,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-hidden')
     })
@@ -181,7 +180,7 @@ describe('ColumnBlock', () => {
 
       const column = createColumnNode({})
 
-      renderWithProviders(<ColumnBlock column={column} />, {
+      renderWithProviders(<EditableColumnBlock column={column} />, {
         collapsedKeys: [column.nodeKey],
       })
 
@@ -198,7 +197,7 @@ describe('ColumnBlock', () => {
 
       const column = createColumnNode({})
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-block')).toHaveAttribute('data-drop-target', '')
     })
@@ -213,7 +212,7 @@ describe('ColumnBlock', () => {
 
       const column = createColumnNode({})
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-drop-target')
     })
@@ -228,7 +227,7 @@ describe('ColumnBlock', () => {
 
       const column = createColumnNode({})
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-drop-target')
     })
@@ -242,7 +241,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-badge')).toHaveTextContent('6/12')
     })
@@ -254,7 +253,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-badge')).toHaveTextContent('hidden')
     })
@@ -268,7 +267,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' })
+      renderWithProviders(<EditableColumnBlock column={column} />, { viewport: 'md' })
 
       await user.click(screen.getByTestId('column-badge'))
 
@@ -303,7 +302,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' })
+      renderWithProviders(<EditableColumnBlock column={column} />, { viewport: 'md' })
 
       await user.click(screen.getByTestId('column-badge'))
 
@@ -335,7 +334,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 4, offset: 7, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' })
+      renderWithProviders(<EditableColumnBlock column={column} />, { viewport: 'md' })
 
       await user.click(screen.getByTestId('column-badge'))
 
@@ -359,6 +358,19 @@ describe('ColumnBlock', () => {
         visible: true,
       })
     })
+
+    it('disables the width picker when a drag is active', () => {
+      vi.mocked(useDragContext).mockReturnValue({ activeType: 'column', pendingActive: false })
+      mockFetchSuccess({})
+
+      const column = createColumnNode({
+        gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+      })
+
+      renderWithProviders(<EditableColumnBlock column={column} />)
+
+      expect(screen.getByTestId('column-badge')).toBeDisabled()
+    })
   })
 
   describe('offset picker', () => {
@@ -369,7 +381,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('none')
     })
@@ -381,7 +393,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 3, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('+3')
     })
@@ -393,7 +405,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-offset-badge')).toBeDisabled()
     })
@@ -405,7 +417,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-offset-badge')).toBeDisabled()
     })
@@ -417,7 +429,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('column-offset-badge')).not.toBeDisabled()
     })
@@ -431,7 +443,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' })
+      renderWithProviders(<EditableColumnBlock column={column} />, { viewport: 'md' })
 
       await user.click(screen.getByTestId('column-offset-badge'))
 
@@ -463,7 +475,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       const outerDiv = screen.getByTestId('column-block-outer')
       expect(outerDiv.style.getPropertyValue('--col-width')).toBe('50%')
@@ -476,7 +488,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 3, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       const outerDiv = screen.getByTestId('column-block-outer')
       expect(outerDiv.style.getPropertyValue('--col-offset')).toBe('25%')
@@ -489,7 +501,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       const outerDiv = screen.getByTestId('column-block-outer')
       expect(outerDiv.style.getPropertyValue('--col-offset')).toBe('')
@@ -508,7 +520,7 @@ describe('ColumnBlock', () => {
         gridSettings: { default: { width: 4, offset: 2, visible: true }, overrides: {} },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       const outerDiv = screen.getByTestId('column-block-outer')
       expect(outerDiv.style.getPropertyValue('--col-span')).toBe('4')
@@ -529,7 +541,7 @@ describe('ColumnBlock', () => {
         },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.getByTestId('add-content-button')).toHaveTextContent('+ Add content')
     })
@@ -551,7 +563,7 @@ describe('ColumnBlock', () => {
         },
       })
 
-      renderWithProviders(<ColumnBlock column={column} />, { viewport: 'md' })
+      renderWithProviders(<EditableColumnBlock column={column} />, { viewport: 'md' })
 
       // Open the type picker (component is React.lazy, so await its mount)
       await user.click(screen.getByTestId('add-content-button'))
@@ -573,6 +585,58 @@ describe('ColumnBlock', () => {
         parent: { type: 'column', id: 60 },
       })
     })
+
+    it('does not render the type picker until "Add content" is clicked', () => {
+      mockFetchSuccess({})
+
+      const column = createColumnNode({
+        children: null,
+        childCount: 0,
+        allowedTypes: {
+          'App\\Model\\TextBlock': {
+            label: 'Text Block',
+            icon: 'font-icon-text',
+            description: 'A text block',
+          },
+        },
+      })
+
+      renderWithProviders(<EditableColumnBlock column={column} />)
+
+      expect(screen.queryByTestId('element-type-picker')).not.toBeInTheDocument()
+      expect(screen.getByTestId('add-content-button')).toBeInTheDocument()
+    })
+
+    it('closes the element type picker when close handler is invoked', async () => {
+      const user = userEvent.setup()
+      mockFetchSuccess({})
+
+      const column = createColumnNode({
+        children: null,
+        childCount: 0,
+        allowedTypes: {
+          'App\\Model\\TextBlock': {
+            label: 'Text Block',
+            icon: 'font-icon-text',
+            description: 'A text block',
+          },
+        },
+      })
+
+      renderWithProviders(<EditableColumnBlock column={column} />)
+
+      // Open the picker (component is React.lazy, so await its mount)
+      await user.click(screen.getByTestId('add-content-button'))
+      await screen.findByTestId('element-type-picker')
+
+      // Close it via the close button — the picker is mounted only while open,
+      // so closing unmounts it.
+      await user.click(screen.getByTestId('element-type-picker-close'))
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('element-type-picker')).not.toBeInTheDocument()
+      })
+    })
   })
 
   it('shows EmptyState when children is empty array and no allowedTypes', () => {
@@ -584,53 +648,9 @@ describe('ColumnBlock', () => {
       allowedTypes: null,
     })
 
-    renderWithProviders(<ColumnBlock column={column} />)
+    renderWithProviders(<EditableColumnBlock column={column} />)
 
     expect(screen.getByText('No content blocks')).toBeInTheDocument()
-  })
-
-  it('disables width picker when a drag is active', () => {
-    vi.mocked(useDragContext).mockReturnValue({ activeType: 'column', pendingActive: false })
-    mockFetchSuccess({})
-
-    const column = createColumnNode({
-      gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-    })
-
-    renderWithProviders(<ColumnBlock column={column} />)
-
-    expect(screen.getByTestId('column-badge')).toBeDisabled()
-  })
-
-  it('closes the element type picker when close handler is invoked', async () => {
-    const user = userEvent.setup()
-    mockFetchSuccess({})
-
-    const column = createColumnNode({
-      children: null,
-      childCount: 0,
-      allowedTypes: {
-        'App\\Model\\TextBlock': {
-          label: 'Text Block',
-          icon: 'font-icon-text',
-          description: 'A text block',
-        },
-      },
-    })
-
-    renderWithProviders(<ColumnBlock column={column} />)
-
-    // Open the picker (component is React.lazy, so await its mount)
-    await user.click(screen.getByTestId('add-content-button'))
-    await screen.findByTestId('element-type-picker')
-
-    // Close it via the close button — the picker is mounted only while open,
-    // so closing unmounts it.
-    await user.click(screen.getByTestId('element-type-picker-close'))
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('element-type-picker')).not.toBeInTheDocument()
-    })
   })
 
   it('renders edit link when editLink is set', () => {
@@ -638,7 +658,7 @@ describe('ColumnBlock', () => {
 
     const column = createColumnNode({ editLink: '/admin/pages/edit/show/42' })
 
-    renderWithProviders(<ColumnBlock column={column} />)
+    renderWithProviders(<EditableColumnBlock column={column} />)
 
     const link = screen.getByTestId('column-edit-link')
     expect(link).toHaveAttribute('href', '/admin/pages/edit/show/42')
@@ -650,7 +670,7 @@ describe('ColumnBlock', () => {
 
     const column = createColumnNode({ editLink: null })
 
-    renderWithProviders(<ColumnBlock column={column} />)
+    renderWithProviders(<EditableColumnBlock column={column} />)
 
     expect(screen.queryByTestId('column-edit-link')).not.toBeInTheDocument()
     expect(screen.getByTestId('column-title')).toHaveTextContent(column.title)
@@ -664,7 +684,7 @@ describe('ColumnBlock', () => {
       const column = createColumnNode({})
       const collapseState = createCollapseStateStub()
 
-      renderWithProviders(<ColumnBlock column={column} />, { collapseState })
+      renderWithProviders(<EditableColumnBlock column={column} />, { collapseState })
 
       await user.click(screen.getByTestId('collapse-toggle'))
 
@@ -672,13 +692,13 @@ describe('ColumnBlock', () => {
     })
   })
 
-  describe('modified indicator (editable)', () => {
+  describe('modified indicator', () => {
     it('renders the indicator with its accessible label when status is modified', () => {
       mockFetchSuccess({})
 
       const column = createColumnNode({ status: 'modified' })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       const indicator = screen.getByTestId('column-modified-indicator')
       expect(indicator).toBeInTheDocument()
@@ -690,7 +710,7 @@ describe('ColumnBlock', () => {
 
       const column = createColumnNode({ status: 'published' })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       expect(screen.queryByTestId('column-modified-indicator')).not.toBeInTheDocument()
     })
@@ -702,170 +722,13 @@ describe('ColumnBlock', () => {
 
       const column = createColumnNode({ title: 'Hero column' })
 
-      renderWithProviders(<ColumnBlock column={column} />)
+      renderWithProviders(<EditableColumnBlock column={column} />)
 
       const header = screen.getByTestId('column-header')
       expect(within(header).getByTestId('drag-handle')).toHaveAttribute(
         'aria-label',
         'Move Hero column',
       )
-    })
-  })
-
-  it('does not render the type picker until "Add content" is clicked', () => {
-    mockFetchSuccess({})
-
-    const column = createColumnNode({
-      children: null,
-      childCount: 0,
-      allowedTypes: {
-        'App\\Model\\TextBlock': {
-          label: 'Text Block',
-          icon: 'font-icon-text',
-          description: 'A text block',
-        },
-      },
-    })
-
-    renderWithProviders(<ColumnBlock column={column} />)
-
-    expect(screen.queryByTestId('element-type-picker')).not.toBeInTheDocument()
-    expect(screen.getByTestId('add-content-button')).toBeInTheDocument()
-  })
-
-  describe('readonly mode', () => {
-    // Pin the `children.length > 0 ? ... : <EmptyState ...>` ternary at
-    // ColumnBlock.tsx:288 against EqualityOperator (`>= 0` / `<= 0`) and
-    // ConditionalExpression mutations. Readonly is the isolated render path
-    // (no sortable, no mutations, no picker) where the ternary survives.
-
-    it('renders an ElementCard for each child and no empty-state', () => {
-      mockFetchSuccess({})
-
-      const children = [
-        createSimpleElement({ id: 201, title: 'Readonly A' }),
-        createSimpleElement({ id: 202, title: 'Readonly B' }),
-        createSimpleElement({ id: 203, title: 'Readonly C' }),
-      ]
-      const column = createColumnNode({ children, childCount: 0 })
-
-      renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <ColumnBlock column={column} />
-        </ReadonlyProvider>,
-      )
-
-      expect(screen.getAllByTestId('element-card')).toHaveLength(3)
-      expect(screen.getByText('Readonly A')).toBeInTheDocument()
-      expect(screen.getByText('Readonly B')).toBeInTheDocument()
-      expect(screen.getByText('Readonly C')).toBeInTheDocument()
-      expect(screen.queryByText('No content blocks')).not.toBeInTheDocument()
-    })
-
-    it('renders the empty-state message and no ElementCards when children are empty', () => {
-      mockFetchSuccess({})
-
-      const column = createColumnNode({ children: null, childCount: 0 })
-
-      renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <ColumnBlock column={column} />
-        </ReadonlyProvider>,
-      )
-
-      expect(screen.getByText('No content blocks')).toBeInTheDocument()
-      expect(screen.queryAllByTestId('element-card')).toHaveLength(0)
-    })
-
-    it('sets data-collapsed (empty value) when collapsed', () => {
-      mockFetchSuccess({})
-
-      const column = createColumnNode({})
-
-      renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <ColumnBlock column={column} />
-        </ReadonlyProvider>,
-        { collapsedKeys: [column.nodeKey] },
-      )
-
-      expect(screen.getByTestId('column-block')).toHaveAttribute('data-collapsed', '')
-    })
-
-    it('does not set data-collapsed when expanded', () => {
-      mockFetchSuccess({})
-
-      const column = createColumnNode({})
-
-      renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <ColumnBlock column={column} />
-        </ReadonlyProvider>,
-      )
-
-      expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-collapsed')
-    })
-
-    it('sets data-hidden (empty value) when the column is not visible', () => {
-      mockFetchSuccess({})
-
-      const column = createColumnNode({
-        gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
-      })
-
-      renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <ColumnBlock column={column} />
-        </ReadonlyProvider>,
-      )
-
-      expect(screen.getByTestId('column-block')).toHaveAttribute('data-hidden', '')
-    })
-
-    it('does not set data-hidden when the column is visible', () => {
-      mockFetchSuccess({})
-
-      const column = createColumnNode({
-        gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
-      })
-
-      renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <ColumnBlock column={column} />
-        </ReadonlyProvider>,
-      )
-
-      expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-hidden')
-    })
-
-    it('renders the modified indicator with its accessible label when status is modified', () => {
-      mockFetchSuccess({})
-
-      const column = createColumnNode({ status: 'modified' })
-
-      renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <ColumnBlock column={column} />
-        </ReadonlyProvider>,
-      )
-
-      const indicator = screen.getByTestId('column-modified-indicator')
-      expect(indicator).toBeInTheDocument()
-      expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
-    })
-
-    it('does not render the modified indicator when status is not modified', () => {
-      mockFetchSuccess({})
-
-      const column = createColumnNode({ status: 'published' })
-
-      renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <ColumnBlock column={column} />
-        </ReadonlyProvider>,
-      )
-
-      expect(screen.queryByTestId('column-modified-indicator')).not.toBeInTheDocument()
     })
   })
 
@@ -879,7 +742,7 @@ describe('ColumnBlock', () => {
       })
 
       renderWithProviders(
-        <ColumnBlock column={column} insertBefore={{ rowId: 9, afterColumnId: 3 }} />,
+        <EditableColumnBlock column={column} insertBefore={{ rowId: 9, afterColumnId: 3 }} />,
       )
 
       // (offset / width) * 50 → (1 / 2) * 50 = 25
@@ -897,7 +760,7 @@ describe('ColumnBlock', () => {
       })
 
       renderWithProviders(
-        <ColumnBlock column={column} insertBefore={{ rowId: 9, afterColumnId: 3 }} />,
+        <EditableColumnBlock column={column} insertBefore={{ rowId: 9, afterColumnId: 3 }} />,
       )
 
       expect(
@@ -918,12 +781,174 @@ describe('ColumnBlock', () => {
       })
 
       renderWithProviders(
-        <ColumnBlock column={column} insertBefore={{ rowId: 9, afterColumnId: 3 }} />,
+        <EditableColumnBlock column={column} insertBefore={{ rowId: 9, afterColumnId: 3 }} />,
       )
 
       expect(
         screen.getByTestId('column-insert-between').style.getPropertyValue('--ssgrid-insert-shift'),
       ).toBe('')
     })
+  })
+})
+
+describe('ReadonlyColumnBlock', () => {
+  // Pin the `children.length > 0 ? ... : <EmptyState ...>` ternary against
+  // EqualityOperator (`>= 0` / `<= 0`) and ConditionalExpression mutations.
+  // Readonly is the isolated render path (no sortable, no mutations, no
+  // picker) where the ternary survives.
+
+  it('renders an ElementCard for each child and no empty-state', () => {
+    mockFetchSuccess({})
+
+    const children = [
+      createSimpleElement({ id: 201, title: 'Readonly A' }),
+      createSimpleElement({ id: 202, title: 'Readonly B' }),
+      createSimpleElement({ id: 203, title: 'Readonly C' }),
+    ]
+    const column = createColumnNode({ children, childCount: 0 })
+
+    renderWithProviders(<ReadonlyColumnBlock column={column} />)
+
+    expect(screen.getAllByTestId('element-card')).toHaveLength(3)
+    expect(screen.getByText('Readonly A')).toBeInTheDocument()
+    expect(screen.getByText('Readonly B')).toBeInTheDocument()
+    expect(screen.getByText('Readonly C')).toBeInTheDocument()
+    expect(screen.queryByText('No content blocks')).not.toBeInTheDocument()
+  })
+
+  it('renders the empty-state message and no ElementCards when children are empty', () => {
+    mockFetchSuccess({})
+
+    const column = createColumnNode({ children: null, childCount: 0 })
+
+    renderWithProviders(<ReadonlyColumnBlock column={column} />)
+
+    expect(screen.getByText('No content blocks')).toBeInTheDocument()
+    expect(screen.queryAllByTestId('element-card')).toHaveLength(0)
+  })
+
+  it('sets data-collapsed (empty value) when collapsed', () => {
+    mockFetchSuccess({})
+
+    const column = createColumnNode({})
+
+    renderWithProviders(<ReadonlyColumnBlock column={column} />, {
+      collapsedKeys: [column.nodeKey],
+    })
+
+    expect(screen.getByTestId('column-block')).toHaveAttribute('data-collapsed', '')
+  })
+
+  it('does not set data-collapsed when expanded', () => {
+    mockFetchSuccess({})
+
+    const column = createColumnNode({})
+
+    renderWithProviders(<ReadonlyColumnBlock column={column} />)
+
+    expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-collapsed')
+  })
+
+  it('sets data-hidden (empty value) when the column is not visible', () => {
+    mockFetchSuccess({})
+
+    const column = createColumnNode({
+      gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
+    })
+
+    renderWithProviders(<ReadonlyColumnBlock column={column} />)
+
+    expect(screen.getByTestId('column-block')).toHaveAttribute('data-hidden', '')
+  })
+
+  it('does not set data-hidden when the column is visible', () => {
+    mockFetchSuccess({})
+
+    const column = createColumnNode({
+      gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+    })
+
+    renderWithProviders(<ReadonlyColumnBlock column={column} />)
+
+    expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-hidden')
+  })
+
+  it('renders the modified indicator with its accessible label when status is modified', () => {
+    mockFetchSuccess({})
+
+    const column = createColumnNode({ status: 'modified' })
+
+    renderWithProviders(<ReadonlyColumnBlock column={column} />)
+
+    const indicator = screen.getByTestId('column-modified-indicator')
+    expect(indicator).toBeInTheDocument()
+    expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
+  })
+
+  it('does not render the modified indicator when status is not modified', () => {
+    mockFetchSuccess({})
+
+    const column = createColumnNode({ status: 'published' })
+
+    renderWithProviders(<ReadonlyColumnBlock column={column} />)
+
+    expect(screen.queryByTestId('column-modified-indicator')).not.toBeInTheDocument()
+  })
+
+  it('renders no drag handle, badges or add-content button', () => {
+    mockFetchSuccess({})
+
+    const column = createColumnNode({
+      allowedTypes: {
+        'App\\Model\\TextBlock': { label: 'Text Block', icon: 'font-icon-text', description: '' },
+      },
+    })
+
+    renderWithProviders(<ReadonlyColumnBlock column={column} />)
+
+    expect(screen.queryByTestId('drag-handle')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('column-badge')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('column-offset-badge')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('add-content-button')).not.toBeInTheDocument()
+  })
+
+  it('renders the title as plain text even when editLink is set', () => {
+    mockFetchSuccess({})
+
+    const column = createColumnNode({ editLink: '/admin/pages/edit/show/42' })
+
+    renderWithProviders(<ReadonlyColumnBlock column={column} />)
+
+    expect(screen.queryByTestId('column-edit-link')).not.toBeInTheDocument()
+    expect(screen.getByTestId('column-title')).toHaveTextContent(column.title)
+  })
+
+  it('applies the --col-width CSS variable via buildColumnStyle (margin strategy)', () => {
+    resetAdapterCache()
+    mockFetchSuccess({})
+
+    const column = createColumnNode({
+      gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
+    })
+
+    renderWithProviders(<ReadonlyColumnBlock column={column} />)
+
+    expect(screen.getByTestId('column-block-outer').style.getPropertyValue('--col-width')).toBe(
+      '50%',
+    )
+  })
+
+  it('applies the --col-span CSS variable via buildColumnStyle (grid-placement strategy)', () => {
+    resetAdapterCache()
+    window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
+    mockFetchSuccess({})
+
+    const column = createColumnNode({
+      gridSettings: { default: { width: 4, offset: 0, visible: true }, overrides: {} },
+    })
+
+    renderWithProviders(<ReadonlyColumnBlock column={column} />)
+
+    expect(screen.getByTestId('column-block-outer').style.getPropertyValue('--col-span')).toBe('4')
   })
 })
