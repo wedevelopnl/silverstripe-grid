@@ -39,14 +39,14 @@ services:
       SS_PHPUNIT_FLUSH: 1
       SS_GRID_ADAPTER: ${SS_GRID_ADAPTER}
 
-  app-fluent:
-    profiles: [fluent]
+  app-modules:
+    profiles: [modules]
     build:
       context: .
       dockerfile: Dockerfile
       args:
         PHP_VERSION: ${PHP_VERSION:-8.3}
-        COMPOSER_FILE: app/composer.fluent.json
+        COMPOSER_FILE: app/composer.modules.json
     volumes:
       - ../composer.json:/module/composer.json:ro
       - ../src:/module/src
@@ -59,7 +59,7 @@ services:
       - ../lang:/module/lang
       - ../templates:/module/templates:ro
       - ../coverage:/app/coverage
-      - vendor-fluent:/app/vendor
+      - vendor-modules:/app/vendor
     healthcheck:
       test: test -f /tmp/.app-ready
       interval: 3s
@@ -70,7 +70,7 @@ services:
         condition: service_healthy
     environment:
       SS_DATABASE_SERVER: db
-      SS_DATABASE_NAME: silverstripe_fluent
+      SS_DATABASE_NAME: silverstripe_modules
       SS_DATABASE_USERNAME: silverstripe
       SS_DATABASE_PASSWORD: silverstripe
       SS_DEFAULT_ADMIN_USERNAME: admin
@@ -98,5 +98,5 @@ services:
 
 volumes:
   vendor:
-  vendor-fluent:
+  vendor-modules:
   db-data:

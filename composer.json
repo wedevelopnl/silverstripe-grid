@@ -40,6 +40,7 @@
     ]
   },
   "suggest": {
+    "silverstripe-terraformers/keys-for-cache": "Enables automatic cache-key generation and invalidation for grid elements (see docs/architecture/keys-for-cache.md)",
     "silverstripe/reports": "Enables the Grid Elements report in CMS → Reports",
     "tractorcow/silverstripe-fluent": "Required for multi-locale support with isolated element records per locale"
   },

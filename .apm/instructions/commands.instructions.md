@@ -42,7 +42,7 @@ applyTo: "**/*"
 | `make test-unit` | Run PHP unit tests (no database/framework) |
 | `make test-integration` | Run PHP integration tests (full SilverStripe env) |
 | `make test-functional` | Run PHP functional tests (HTTP/controller tests) |
-| `make test-fluent` | Run integration + functional + fluent tests in Fluent env |
+| `make test-modules` | Run integration + functional + fluent + kfc tests in the optional-modules env (Fluent + keys-for-cache installed) |
 | `make test-js` | Run JavaScript tests (Vitest, no Docker needed) |
 | `make coverage` | Merged PHP coverage report (HTML + Clover) |
 | `make coverage-unit` | PHP unit test coverage only |

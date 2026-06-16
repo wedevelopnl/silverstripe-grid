@@ -1,5 +1,5 @@
 {
-    "_comment": "Keep in sync with composer.fluent.json (adds Fluent dependency)",
+    "_comment": "Keep in sync with composer.modules.json (which adds the optional Fluent and keys-for-cache dependencies)",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {

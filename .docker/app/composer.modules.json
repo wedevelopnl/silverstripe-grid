@@ -1,9 +1,10 @@
 {
-    "_comment": "Fluent variant of composer.json — keep in sync, only difference is tractorcow/silverstripe-fluent in require",
+    "_comment": "Optional-modules variant of composer.json — keep in sync with composer.json; adds tractorcow/silverstripe-fluent and silverstripe-terraformers/keys-for-cache to require",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
         "silverstripe/recipe-cms": "^6.0",
+        "silverstripe-terraformers/keys-for-cache": "^3.0",
         "tractorcow/silverstripe-fluent": "^8.0",
         "wedevelopnl/silverstripe-grid": "*"
     },

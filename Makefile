@@ -1,6 +1,6 @@
 COMPOSE := docker compose -f .docker/compose.yml
 
-.PHONY: up down destroy build test test-unit test-integration test-functional ensure-up-fluent test-fluent test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js _qa-build _qa-rector
+.PHONY: up down destroy build test test-unit test-integration test-functional ensure-up-modules test-modules test-js test-e2e test-e2e-ui coverage coverage-unit coverage-integration coverage-functional coverage-js coverage-check mutate mutate-js analyse rector rector-dry qa qa-js flush dev-build _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js _qa-build _qa-rector
 
 ## Generate .docker/.env with deterministic ports (auto-runs if missing)
 .docker/.env:
@@ -42,21 +42,21 @@ test-integration: ensure-up
 test-functional: ensure-up
 	$(COMPOSE) exec app vendor/bin/phpunit --testsuite functional
 
-## Ensure Fluent services are running and ready
-ensure-up-fluent: .docker/.env
-	@$(COMPOSE) --profile fluent exec app-fluent true 2>/dev/null || $(COMPOSE) --profile fluent up -d --build --wait
+## Ensure optional-module services are running and ready
+ensure-up-modules: .docker/.env
+	@$(COMPOSE) --profile modules exec app-modules true 2>/dev/null || $(COMPOSE) --profile modules up -d --build --wait
 
-## Run all integration + fluent tests in Fluent environment
-test-fluent: ensure-up-fluent
-	$(COMPOSE) exec app-fluent vendor/bin/phpunit --testsuite integration,functional,fluent
+## Run all integration + functional + fluent + kfc tests in the optional-modules environment
+test-modules: ensure-up-modules
+	$(COMPOSE) exec app-modules vendor/bin/phpunit --testsuite integration,functional,fluent,kfc
 
 ## Run JavaScript tests (Vitest)
 test-js:
 	npm run test
 
 ## Run all tests with merged coverage (HTML + Clover XML)
-coverage: ensure-up-fluent
-	$(COMPOSE) exec app-fluent vendor/bin/phpunit \
+coverage: ensure-up-modules
+	$(COMPOSE) exec app-modules vendor/bin/phpunit \
 		--coverage-html coverage/combined/html \
 		--coverage-clover coverage/combined/clover.xml
 
@@ -67,8 +67,8 @@ coverage-unit: ensure-up
 		--coverage-clover coverage/unit/clover.xml
 
 ## Run integration tests with coverage (individual report)
-coverage-integration: ensure-up-fluent
-	$(COMPOSE) exec app-fluent vendor/bin/phpunit --testsuite integration,fluent \
+coverage-integration: ensure-up-modules
+	$(COMPOSE) exec app-modules vendor/bin/phpunit --testsuite integration,fluent,kfc \
 		--coverage-html coverage/integration/html \
 		--coverage-clover coverage/integration/clover.xml
 
@@ -87,8 +87,8 @@ coverage-check: coverage
 	$(COMPOSE) exec app vendor/bin/coverage-check coverage/combined/clover.xml 90
 
 ## Run PHP mutation testing (Infection) — uses Fluent container so all tests run
-mutate: ensure-up-fluent
-	$(COMPOSE) exec app-fluent php -d memory_limit=256M vendor/bin/infection --threads=4
+mutate: ensure-up-modules
+	$(COMPOSE) exec app-modules php -d memory_limit=256M vendor/bin/infection --threads=4
 
 ## Run JavaScript mutation testing (Stryker)
 mutate-js:
@@ -107,7 +107,7 @@ rector-dry: ensure-up
 	$(COMPOSE) exec app vendor/bin/rector process --dry-run
 
 ## Run full QA suite (all checks in parallel)
-qa: ensure-up ensure-up-fluent
+qa: ensure-up ensure-up-modules
 	$(MAKE) -j8 --output-sync=target _qa-analyse _qa-coverage _qa-lint _qa-format _qa-typecheck _qa-test-js _qa-build _qa-rector
 
 ## QA sub-targets (not intended to be called directly)
@@ -123,10 +123,10 @@ _qa-rector:
 
 _qa-coverage:
 	@echo "==> [coverage] running PHPUnit with coverage (slow, several minutes)..."
-	$(COMPOSE) exec -T app-fluent vendor/bin/phpunit \
+	$(COMPOSE) exec -T app-modules vendor/bin/phpunit \
 		--coverage-html coverage/combined/html \
 		--coverage-clover coverage/combined/clover.xml
-	$(COMPOSE) exec -T app-fluent vendor/bin/coverage-check coverage/combined/clover.xml 90
+	$(COMPOSE) exec -T app-modules vendor/bin/coverage-check coverage/combined/clover.xml 90
 	@echo "==> [coverage] done"
 
 _qa-lint:

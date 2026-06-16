@@ -73,7 +73,7 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 ## PHP Testing
 
 - PHPUnit 11 — runs inside Docker via `make test`
-- PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, and `fluent` testsuites, selected via `--testsuite` flag)
+- PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, `fluent`, and `kfc` testsuites, selected via `--testsuite` flag; `fluent` and `kfc` require the optional-modules env — `make test-modules`)
 - Test namespace: `WeDevelop\Grid\Tests\` → `tests/` (Unit/ + Integration/)
 
 ## Static Analysis

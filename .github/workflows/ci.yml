@@ -63,18 +63,18 @@ jobs:
         php: ['8.3', '8.4', '8.5']
     env:
       PHP_VERSION: ${{ matrix.php }}
-      COMPOSE: docker compose -f .docker/compose.yml --profile fluent
+      COMPOSE: docker compose -f .docker/compose.yml --profile modules
     steps:
       - uses: actions/checkout@v4
       - run: make .docker/.env
       - run: $COMPOSE up -d --build --wait
         name: Start services
       - run: >-
-          $COMPOSE exec app-fluent vendor/bin/phpunit
+          $COMPOSE exec app-modules vendor/bin/phpunit
           --log-junit coverage/junit.xml
           --coverage-clover coverage/clover.xml
         name: Run all tests with coverage
-      - run: $COMPOSE exec app-fluent vendor/bin/coverage-check coverage/clover.xml 90
+      - run: $COMPOSE exec app-modules vendor/bin/coverage-check coverage/clover.xml 90
         name: Check coverage threshold (90%)
       - uses: dorny/test-reporter@v1
         if: always()
