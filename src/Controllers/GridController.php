@@ -561,6 +561,10 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
+        // A null viewport is intentional, not missing data: it means "reset
+        // overrides across all viewports" (used when the editor is on the
+        // default viewport, which has no overrides of its own). A non-null key
+        // resets only that single viewport. See ResetGridSettingsOverridesRequest.
         $result = $this->settingsService->resetOverrides($page, $body->zone, $body->viewport);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
