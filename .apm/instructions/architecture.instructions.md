@@ -92,7 +92,7 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 ## PHP Testing
 
 - PHPUnit 12 — runs inside Docker via `task test`
-- PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, `fluent`, `userforms` and `admintoolbar` testsuites — the last three run in `app-modules` only, selected via `--testsuite` flag). COPYed into the image at build, **not** volume-mounted — after editing, rebuild with `task build` or push it with `docker compose -f .docker/compose.yml cp .docker/app/phpunit.xml.dist app:/app/phpunit.xml.dist` (and the same to `app-modules`)
+- PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, `fluent`, `userforms`, `admintoolbar` and `keysforcache` testsuites — the last four run in `app-modules` only, selected via `--testsuite` flag). COPYed into the image at build, **not** volume-mounted — after editing, rebuild with `task build` or push it with `docker compose -f .docker/compose.yml cp .docker/app/phpunit.xml.dist app:/app/phpunit.xml.dist` (and the same to `app-modules`)
 - `failOnRisky` + `failOnWarning` are on: a test that asserts nothing fails the run rather than being reported as risky and exiting 0
 - Test namespace: `WeDevelop\Grid\Tests\` → `tests/` (mirrors the subdirectory: `Tests\Functional\Controllers` → `tests/Functional/Controllers/`)
 
