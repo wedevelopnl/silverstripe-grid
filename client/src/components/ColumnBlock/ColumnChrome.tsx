@@ -15,8 +15,8 @@ interface ColumnChromeProps {
   readonly dropTarget?: boolean
   readonly setNodeRef?: (node: HTMLElement | null) => void
   readonly insertBefore?: ReactNode
-  readonly dragHandle?: ReactNode
-  readonly actions?: ReactNode
+  readonly leading?: ReactNode
+  readonly trailing?: ReactNode
   readonly layoutSettings?: ReactNode
   readonly children: ReactNode
   readonly footer?: ReactNode
@@ -41,8 +41,8 @@ export default function ColumnChrome({
   dropTarget,
   setNodeRef,
   insertBefore,
-  dragHandle,
-  actions,
+  leading,
+  trailing,
   layoutSettings,
   children,
   footer,
@@ -66,7 +66,7 @@ export default function ColumnChrome({
       >
         <div className="ssgrid-column__header" data-testid="column-header">
           <div className="ssgrid-column__toolbar">
-            {dragHandle}
+            {leading}
             <CollapseToggle isCollapsed={isCollapsed} onToggle={onToggle} label={title} />
             <i className={`ssgrid-column__icon ${icon}`} aria-hidden="true" />
             <span className="ssgrid-column__title" data-testid="column-title">
@@ -79,7 +79,7 @@ export default function ColumnChrome({
               )}
             </span>
             {status === 'modified' && <ModifiedIndicator testId="column-modified-indicator" />}
-            {actions}
+            {trailing}
           </div>
           {layoutSettings !== undefined && (
             <div className="ssgrid-column__layout-settings">{layoutSettings}</div>

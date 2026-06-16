@@ -70,14 +70,16 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
       dropTarget={showDropTarget}
       setNodeRef={setNodeRef}
       style={style}
-      dragHandle={
+      leading={
         <DragHandle
           listeners={listeners}
           attributes={attributes}
           label={t('WeDevelopGrid.RowBlock.MOVE_LABEL', 'Move {title}', { title: row.title })}
         />
       }
-      actions={<ElementActions node={row} collapse={{ isCollapsed, onToggle, label: row.title }} />}
+      trailing={
+        <ElementActions node={row} collapse={{ isCollapsed, onToggle, label: row.title }} />
+      }
     >
       <div className="ssgrid-row__columns-area" data-testid="row-block-columns-area">
         {hasColumns && <ColumnInsertButton rowId={row.self.id} placement="start" />}

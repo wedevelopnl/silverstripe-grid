@@ -96,8 +96,8 @@ describe('ColumnChrome', () => {
       <ColumnChrome
         {...baseProps}
         insertBefore={<span data-testid="insert-slot" />}
-        dragHandle={<span data-testid="handle-slot" />}
-        actions={<span data-testid="actions-slot" />}
+        leading={<span data-testid="leading-slot" />}
+        trailing={<span data-testid="trailing-slot" />}
         layoutSettings={<span data-testid="layout-slot" />}
         footer={<span data-testid="footer-slot" />}
         overlay={<span data-testid="overlay-slot" />}
@@ -105,8 +105,8 @@ describe('ColumnChrome', () => {
     )
 
     expect(screen.getByTestId('insert-slot')).toBeInTheDocument()
-    expect(screen.getByTestId('handle-slot')).toBeInTheDocument()
-    expect(screen.getByTestId('actions-slot')).toBeInTheDocument()
+    expect(screen.getByTestId('leading-slot')).toBeInTheDocument()
+    expect(screen.getByTestId('trailing-slot')).toBeInTheDocument()
     expect(screen.getByTestId('layout-slot')).toBeInTheDocument()
     expect(screen.getByTestId('footer-slot')).toBeInTheDocument()
     expect(screen.getByTestId('overlay-slot')).toBeInTheDocument()
@@ -116,8 +116,8 @@ describe('ColumnChrome', () => {
     render(<ColumnChrome {...baseProps} />)
 
     expect(screen.queryByTestId('insert-slot')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('handle-slot')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('actions-slot')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('leading-slot')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('trailing-slot')).not.toBeInTheDocument()
     expect(screen.queryByTestId('layout-slot')).not.toBeInTheDocument()
     expect(screen.queryByTestId('footer-slot')).not.toBeInTheDocument()
     expect(screen.queryByTestId('overlay-slot')).not.toBeInTheDocument()

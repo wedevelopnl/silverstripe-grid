@@ -14,16 +14,16 @@ interface RowChromeProps {
   readonly dropTarget?: boolean
   readonly setNodeRef?: (node: HTMLElement | null) => void
   readonly style?: React.CSSProperties
-  readonly dragHandle?: ReactNode
-  readonly actions?: ReactNode
+  readonly leading?: ReactNode
+  readonly trailing?: ReactNode
   readonly children: ReactNode
 }
 
 /**
  * Presentational shell for a row. Owns the frame + the (reconciled, flat)
- * header — drag handle, collapse toggle, title, modified dot, column-count
- * meta, actions. The columns body differs structurally between modes, so it is
- * an opaque `children` slot. Never branches on mode, only on data.
+ * header — leading slot, collapse toggle, title, modified dot, column-count
+ * meta, trailing slot. The columns body differs structurally between modes, so
+ * it is an opaque `children` slot. Never branches on mode, only on data.
  */
 export default function RowChrome({
   status,
@@ -35,8 +35,8 @@ export default function RowChrome({
   dropTarget,
   setNodeRef,
   style,
-  dragHandle,
-  actions,
+  leading,
+  trailing,
   children,
 }: RowChromeProps) {
   return (
@@ -50,7 +50,7 @@ export default function RowChrome({
       data-drop-target={dropTarget ? '' : undefined}
     >
       <div className="ssgrid-row__header" data-testid="row-header">
-        {dragHandle}
+        {leading}
         <CollapseToggle isCollapsed={isCollapsed} onToggle={onToggle} label={title} />
         <h3 className="ssgrid-row__title" data-testid="row-title">
           {titleHref !== undefined ? (
@@ -67,7 +67,7 @@ export default function RowChrome({
             {t('WeDevelopGrid.RowBlock.COLUMN_COUNT', '{count} columns', { count: columnCount })}
           </span>
         )}
-        {actions}
+        {trailing}
       </div>
       {children}
     </div>

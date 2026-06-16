@@ -176,7 +176,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
           />
         ) : undefined
       }
-      dragHandle={
+      leading={
         <DragHandle
           listeners={listeners}
           attributes={attributes}
@@ -185,7 +185,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
           })}
         />
       }
-      actions={<ElementActions node={column} kebabOnly />}
+      trailing={<ElementActions node={column} kebabOnly />}
       layoutSettings={
         <>
           <GridSettingsPicker

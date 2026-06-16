@@ -48,7 +48,7 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
       dropTarget={showDropTarget}
       setNodeRef={setNodeRef}
       style={style}
-      dragHandle={
+      leading={
         <DragHandle
           listeners={listeners}
           attributes={attributes}
@@ -57,7 +57,7 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
           })}
         />
       }
-      actions={
+      trailing={
         <ElementActions node={section} collapse={{ isCollapsed, onToggle, label: section.title }} />
       }
     >

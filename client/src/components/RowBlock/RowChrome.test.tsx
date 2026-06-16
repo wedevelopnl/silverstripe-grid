@@ -89,24 +89,24 @@ describe('RowChrome', () => {
     expect(screen.queryByTestId('row-column-count')).not.toBeInTheDocument()
   })
 
-  it('renders the dragHandle and actions slots when provided', () => {
+  it('renders the leading and trailing slots when provided', () => {
     render(
       <RowChrome
         {...baseProps}
-        dragHandle={<span data-testid="handle-slot" />}
-        actions={<span data-testid="actions-slot" />}
+        leading={<span data-testid="leading-slot" />}
+        trailing={<span data-testid="trailing-slot" />}
       />,
     )
 
-    expect(screen.getByTestId('handle-slot')).toBeInTheDocument()
-    expect(screen.getByTestId('actions-slot')).toBeInTheDocument()
+    expect(screen.getByTestId('leading-slot')).toBeInTheDocument()
+    expect(screen.getByTestId('trailing-slot')).toBeInTheDocument()
   })
 
-  it('omits the dragHandle and actions slots when absent', () => {
+  it('omits the leading and trailing slots when absent', () => {
     render(<RowChrome {...baseProps} />)
 
-    expect(screen.queryByTestId('handle-slot')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('actions-slot')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('leading-slot')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('trailing-slot')).not.toBeInTheDocument()
   })
 
   it('renders children inside the frame', () => {

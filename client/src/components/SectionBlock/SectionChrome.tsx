@@ -12,15 +12,15 @@ interface SectionChromeProps {
   readonly dropTarget?: boolean
   readonly setNodeRef?: (node: HTMLElement | null) => void
   readonly style?: React.CSSProperties
-  readonly dragHandle?: ReactNode
-  readonly actions?: ReactNode
+  readonly leading?: ReactNode
+  readonly trailing?: ReactNode
   readonly children: ReactNode
 }
 
 /**
  * Presentational shell for a section. Owns the <section> frame and header
- * (drag handle, collapse toggle, title, modified dot, actions); body is an
- * opaque `children` slot. Never branches on mode, only on data.
+ * (leading slot, collapse toggle, title, modified dot, trailing slot); body is
+ * an opaque `children` slot. Never branches on mode, only on data.
  */
 export default function SectionChrome({
   status,
@@ -31,8 +31,8 @@ export default function SectionChrome({
   dropTarget,
   setNodeRef,
   style,
-  dragHandle,
-  actions,
+  leading,
+  trailing,
   children,
 }: SectionChromeProps) {
   return (
@@ -46,7 +46,7 @@ export default function SectionChrome({
       data-drop-target={dropTarget ? '' : undefined}
     >
       <div className="ssgrid-section__header" data-testid="section-header">
-        {dragHandle}
+        {leading}
         <CollapseToggle isCollapsed={isCollapsed} onToggle={onToggle} label={title} />
         <h2 className="ssgrid-section__title" data-testid="section-title">
           {titleHref !== undefined ? (
@@ -58,7 +58,7 @@ export default function SectionChrome({
           )}
         </h2>
         {status === 'modified' && <ModifiedIndicator testId="section-modified-indicator" />}
-        {actions}
+        {trailing}
       </div>
       <div className="ssgrid-section__body">{children}</div>
     </section>
