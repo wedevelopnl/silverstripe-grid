@@ -2,13 +2,13 @@ import { useSortable } from '@dnd-kit/sortable'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ReadonlyProvider } from '@/hooks/ReadonlyContext'
 import { useDragContext } from '@/hooks/useDragAndDrop'
 import { createSectionNode } from '@/testing/factories'
 import { mockFetchSuccess } from '@/testing/mockFetch'
 import { createCollapseStateStub, renderWithProviders } from '@/testing/renderWithProviders'
 
-import SectionBlock from './SectionBlock'
+import EditableSectionBlock from './EditableSectionBlock'
+import ReadonlySectionBlock from './ReadonlySectionBlock'
 
 const defaultSortable = {
   attributes: {},
@@ -38,13 +38,13 @@ afterEach(() => {
   vi.mocked(useDragContext).mockReturnValue({ activeType: null, pendingActive: false })
 })
 
-describe('SectionBlock', () => {
+describe('EditableSectionBlock', () => {
   it('renders section title', () => {
     mockFetchSuccess({})
 
     const section = createSectionNode({ title: 'Hero Section' })
 
-    renderWithProviders(<SectionBlock section={section} />)
+    renderWithProviders(<EditableSectionBlock section={section} />)
 
     expect(screen.getByTestId('section-title')).toHaveTextContent('Hero Section')
   })
@@ -54,7 +54,7 @@ describe('SectionBlock', () => {
 
     const section = createSectionNode({ rowCount: 2 })
 
-    renderWithProviders(<SectionBlock section={section} />)
+    renderWithProviders(<EditableSectionBlock section={section} />)
 
     expect(screen.getAllByTestId('row-block')).toHaveLength(2)
   })
@@ -64,10 +64,20 @@ describe('SectionBlock', () => {
 
     const section = createSectionNode({ children: null })
 
-    renderWithProviders(<SectionBlock section={section} />)
+    renderWithProviders(<EditableSectionBlock section={section} />)
 
     expect(screen.getByTestId('add-child-empty')).toBeInTheDocument()
     expect(screen.getByText('No rows yet')).toBeInTheDocument()
+  })
+
+  it('shows empty state when children is an empty array', () => {
+    mockFetchSuccess({})
+
+    const section = createSectionNode({ children: [] as never })
+
+    renderWithProviders(<EditableSectionBlock section={section} />)
+
+    expect(screen.getByTestId('add-child-empty')).toBeInTheDocument()
   })
 
   it('shows append AddChildButton when children exist', () => {
@@ -75,7 +85,7 @@ describe('SectionBlock', () => {
 
     const section = createSectionNode({ rowCount: 1 })
 
-    renderWithProviders(<SectionBlock section={section} />)
+    renderWithProviders(<EditableSectionBlock section={section} />)
 
     // Section's own append button + child row/column append buttons
     const appendButtons = screen.getAllByTestId('add-child-append')
@@ -85,38 +95,25 @@ describe('SectionBlock', () => {
     expect(screen.queryByTestId('add-child-empty')).not.toBeInTheDocument()
   })
 
-  it('collapse hides children', async () => {
-    const user = userEvent.setup()
+  it('renders a between button in the gap separating two rows', () => {
     mockFetchSuccess({})
 
-    const section = createSectionNode({ rowCount: 1 })
-    const collapseState = createCollapseStateStub()
+    const section = createSectionNode({ rowCount: 2 })
 
-    renderWithProviders(<SectionBlock section={section} />, { collapseState })
+    renderWithProviders(<EditableSectionBlock section={section} />)
 
-    // Initially expanded — section should not have data-collapsed attribute
-    expect(screen.getByTestId('section-block')).not.toHaveAttribute('data-collapsed')
-
-    // There are multiple collapse toggles (section + child rows/columns).
-    // The first one belongs to the section header.
-    const toggles = screen.getAllByTestId('collapse-toggle')
-    await user.click(toggles[0])
-
-    // The toggle callback was called with the section's NodeKey.
-    expect(collapseState.toggle).toHaveBeenCalledOnce()
-    expect(collapseState.toggle).toHaveBeenCalledWith(section.nodeKey)
+    // Two rows produce exactly one gap → one "between" insert button.
+    expect(screen.getAllByTestId('add-child-between')).toHaveLength(1)
   })
 
-  it('applies collapsed class when the section is collapsed in the context', () => {
+  it('renders no between button with a single row', () => {
     mockFetchSuccess({})
 
     const section = createSectionNode({ rowCount: 1 })
 
-    renderWithProviders(<SectionBlock section={section} />, {
-      collapsedKeys: [section.nodeKey],
-    })
+    renderWithProviders(<EditableSectionBlock section={section} />)
 
-    expect(screen.getByTestId('section-block')).toHaveAttribute('data-collapsed', '')
+    expect(screen.queryByTestId('add-child-between')).not.toBeInTheDocument()
   })
 
   it('edit link rendered when editLink exists', () => {
@@ -124,7 +121,7 @@ describe('SectionBlock', () => {
 
     const section = createSectionNode({ editLink: '/admin/pages/edit/show/5' })
 
-    renderWithProviders(<SectionBlock section={section} />)
+    renderWithProviders(<EditableSectionBlock section={section} />)
 
     const link = screen.getByTestId('section-edit-link')
     expect(link).toHaveAttribute('href', '/admin/pages/edit/show/5')
@@ -136,20 +133,10 @@ describe('SectionBlock', () => {
 
     const section = createSectionNode({ editLink: null })
 
-    renderWithProviders(<SectionBlock section={section} />)
+    renderWithProviders(<EditableSectionBlock section={section} />)
 
     expect(screen.queryByTestId('section-edit-link')).not.toBeInTheDocument()
     expect(screen.getByTestId('section-title')).toHaveTextContent(section.title)
-  })
-
-  it('shows empty state when children is an empty array', () => {
-    mockFetchSuccess({})
-
-    const section = createSectionNode({ children: [] as never })
-
-    renderWithProviders(<SectionBlock section={section} />)
-
-    expect(screen.getByTestId('add-child-empty')).toBeInTheDocument()
   })
 
   describe('status and state attributes', () => {
@@ -158,7 +145,7 @@ describe('SectionBlock', () => {
 
       const section = createSectionNode({ status: 'draft' })
 
-      renderWithProviders(<SectionBlock section={section} />)
+      renderWithProviders(<EditableSectionBlock section={section} />)
 
       expect(screen.getByTestId('section-block')).toHaveAttribute('data-status', 'draft')
     })
@@ -168,7 +155,7 @@ describe('SectionBlock', () => {
 
       const section = createSectionNode({ status: 'modified' })
 
-      renderWithProviders(<SectionBlock section={section} />)
+      renderWithProviders(<EditableSectionBlock section={section} />)
 
       expect(screen.getByTestId('section-block')).toHaveAttribute('data-status', 'modified')
     })
@@ -178,7 +165,7 @@ describe('SectionBlock', () => {
 
       const section = createSectionNode({ status: 'published' })
 
-      renderWithProviders(<SectionBlock section={section} />)
+      renderWithProviders(<EditableSectionBlock section={section} />)
 
       expect(screen.getByTestId('section-block')).toHaveAttribute('data-status', 'published')
     })
@@ -193,7 +180,7 @@ describe('SectionBlock', () => {
 
       const section = createSectionNode({})
 
-      renderWithProviders(<SectionBlock section={section} />)
+      renderWithProviders(<EditableSectionBlock section={section} />)
 
       expect(screen.getByTestId('section-block')).toHaveAttribute('data-drop-target', '')
     })
@@ -208,7 +195,7 @@ describe('SectionBlock', () => {
 
       const section = createSectionNode({})
 
-      renderWithProviders(<SectionBlock section={section} />)
+      renderWithProviders(<EditableSectionBlock section={section} />)
 
       expect(screen.getByTestId('section-block')).not.toHaveAttribute('data-drop-target')
     })
@@ -223,7 +210,7 @@ describe('SectionBlock', () => {
 
       const section = createSectionNode({})
 
-      renderWithProviders(<SectionBlock section={section} />)
+      renderWithProviders(<EditableSectionBlock section={section} />)
 
       expect(screen.getByTestId('section-block')).not.toHaveAttribute('data-drop-target')
     })
@@ -235,7 +222,7 @@ describe('SectionBlock', () => {
 
       const section = createSectionNode({ status: 'modified' })
 
-      renderWithProviders(<SectionBlock section={section} />)
+      renderWithProviders(<EditableSectionBlock section={section} />)
 
       expect(screen.getByRole('img', { name: 'Has unpublished changes' })).toBeInTheDocument()
     })
@@ -245,7 +232,7 @@ describe('SectionBlock', () => {
 
       const section = createSectionNode({ status: 'published' })
 
-      renderWithProviders(<SectionBlock section={section} />)
+      renderWithProviders(<EditableSectionBlock section={section} />)
 
       expect(screen.queryByRole('img', { name: 'Has unpublished changes' })).not.toBeInTheDocument()
     })
@@ -257,92 +244,112 @@ describe('SectionBlock', () => {
 
       const section = createSectionNode({ title: 'Hero Section', children: null })
 
-      renderWithProviders(<SectionBlock section={section} />)
+      renderWithProviders(<EditableSectionBlock section={section} />)
 
       // With no child rows the only drag handle belongs to the section itself.
       expect(screen.getByTestId('drag-handle')).toHaveAttribute('aria-label', 'Move Hero Section')
     })
   })
 
-  describe('between AddChildButton', () => {
-    it('renders a between button in the gap separating two rows', () => {
+  describe('collapse', () => {
+    it('calls toggle with the section node key when the collapse toggle is clicked', async () => {
+      const user = userEvent.setup()
       mockFetchSuccess({})
 
-      const section = createSectionNode({ rowCount: 2 })
+      const section = createSectionNode({ rowCount: 1 })
+      const collapseState = createCollapseStateStub()
 
-      renderWithProviders(<SectionBlock section={section} />)
+      renderWithProviders(<EditableSectionBlock section={section} />, { collapseState })
 
-      // Two rows produce exactly one gap → one "between" insert button.
-      expect(screen.getAllByTestId('add-child-between')).toHaveLength(1)
+      // Initially expanded — section should not have data-collapsed attribute
+      expect(screen.getByTestId('section-block')).not.toHaveAttribute('data-collapsed')
+
+      // There are multiple collapse toggles (section + child rows/columns).
+      // The first one belongs to the section header.
+      const toggles = screen.getAllByTestId('collapse-toggle')
+      await user.click(toggles[0])
+
+      // The toggle callback was called with the section's NodeKey.
+      expect(collapseState.toggle).toHaveBeenCalledOnce()
+      expect(collapseState.toggle).toHaveBeenCalledWith(section.nodeKey)
     })
 
-    it('renders no between button with a single row', () => {
+    it('applies collapsed attribute when the section is collapsed in the context', () => {
       mockFetchSuccess({})
 
       const section = createSectionNode({ rowCount: 1 })
 
-      renderWithProviders(<SectionBlock section={section} />)
-
-      expect(screen.queryByTestId('add-child-between')).not.toBeInTheDocument()
-    })
-  })
-
-  describe('readonly variant', () => {
-    it('renders child rows in the readonly tree', () => {
-      mockFetchSuccess({})
-
-      const section = createSectionNode({ rowCount: 2 })
-
-      renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <SectionBlock section={section} />
-        </ReadonlyProvider>,
-      )
-
-      expect(screen.getAllByTestId('row-block')).toHaveLength(2)
-    })
-
-    it('marks a collapsed readonly section with an empty data-collapsed attribute', () => {
-      mockFetchSuccess({})
-
-      const section = createSectionNode({ rowCount: 1 })
-
-      renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <SectionBlock section={section} />
-        </ReadonlyProvider>,
-        { collapsedKeys: [section.nodeKey] },
-      )
+      renderWithProviders(<EditableSectionBlock section={section} />, {
+        collapsedKeys: [section.nodeKey],
+      })
 
       expect(screen.getByTestId('section-block')).toHaveAttribute('data-collapsed', '')
     })
+  })
+})
 
-    it('renders an accessible modified indicator when a readonly section is modified', () => {
-      mockFetchSuccess({})
+describe('ReadonlySectionBlock', () => {
+  it('renders child rows in the readonly tree', () => {
+    mockFetchSuccess({})
 
-      const section = createSectionNode({ status: 'modified' })
+    const section = createSectionNode({ rowCount: 2 })
 
-      renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <SectionBlock section={section} />
-        </ReadonlyProvider>,
-      )
+    renderWithProviders(<ReadonlySectionBlock section={section} />)
 
-      expect(screen.getByRole('img', { name: 'Has unpublished changes' })).toBeInTheDocument()
+    expect(screen.getAllByTestId('row-block')).toHaveLength(2)
+  })
+
+  it('marks a collapsed readonly section with an empty data-collapsed attribute', () => {
+    mockFetchSuccess({})
+
+    const section = createSectionNode({ rowCount: 1 })
+
+    renderWithProviders(<ReadonlySectionBlock section={section} />, {
+      collapsedKeys: [section.nodeKey],
     })
 
-    it('omits the modified indicator when a readonly section is not modified', () => {
-      mockFetchSuccess({})
+    expect(screen.getByTestId('section-block')).toHaveAttribute('data-collapsed', '')
+  })
 
-      const section = createSectionNode({ status: 'published' })
+  it('renders an accessible modified indicator when a readonly section is modified', () => {
+    mockFetchSuccess({})
 
-      renderWithProviders(
-        <ReadonlyProvider value={true}>
-          <SectionBlock section={section} />
-        </ReadonlyProvider>,
-      )
+    const section = createSectionNode({ status: 'modified' })
 
-      expect(screen.queryByRole('img', { name: 'Has unpublished changes' })).not.toBeInTheDocument()
-    })
+    renderWithProviders(<ReadonlySectionBlock section={section} />)
+
+    expect(screen.getByRole('img', { name: 'Has unpublished changes' })).toBeInTheDocument()
+  })
+
+  it('omits the modified indicator when a readonly section is not modified', () => {
+    mockFetchSuccess({})
+
+    const section = createSectionNode({ status: 'published' })
+
+    renderWithProviders(<ReadonlySectionBlock section={section} />)
+
+    expect(screen.queryByRole('img', { name: 'Has unpublished changes' })).not.toBeInTheDocument()
+  })
+
+  it('renders no drag handle or add-child buttons', () => {
+    mockFetchSuccess({})
+
+    const section = createSectionNode({ rowCount: 1 })
+
+    renderWithProviders(<ReadonlySectionBlock section={section} />)
+
+    expect(screen.queryByTestId('drag-handle')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('add-child-append')).not.toBeInTheDocument()
+  })
+
+  it('renders title as plain text even when editLink is set', () => {
+    mockFetchSuccess({})
+
+    const section = createSectionNode({ editLink: '/admin/pages/edit/show/5' })
+
+    renderWithProviders(<ReadonlySectionBlock section={section} />)
+
+    expect(screen.queryByTestId('section-edit-link')).not.toBeInTheDocument()
+    expect(screen.getByTestId('section-title')).toHaveTextContent(section.title)
   })
 })
