@@ -1,4 +1,4 @@
-import type { ViewportKey } from '@/types/adapter'
+import type { ViewportConfig, ViewportKey } from '@/types/adapter'
 import { getDefaultViewport, getViewports } from '@/utils/gridAdapter'
 
 /**
@@ -46,7 +46,7 @@ export function setActiveViewport(key: string): void {
   // config is unavailable (early boot, stub environment), also refuse
   // the write — accepting arbitrary keys would let invalid values flow
   // into `.grid-${key}` CSS class names downstream.
-  let match: { key: ViewportKey } | undefined
+  let match: ViewportConfig | undefined
   try {
     match = getViewports().find((vp) => vp.key === key)
   } catch {
