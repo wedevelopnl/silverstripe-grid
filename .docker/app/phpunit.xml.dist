@@ -18,6 +18,7 @@
             <exclude>vendor/wedevelopnl/silverstripe-grid/tests/Integration/Fluent</exclude>
             <exclude>vendor/wedevelopnl/silverstripe-grid/tests/Integration/UserForms</exclude>
             <exclude>vendor/wedevelopnl/silverstripe-grid/tests/Integration/AdminToolbar</exclude>
+            <exclude>vendor/wedevelopnl/silverstripe-grid/tests/Integration/KeysForCache</exclude>
         </testsuite>
         <testsuite name="functional">
             <directory>vendor/wedevelopnl/silverstripe-grid/tests/Functional</directory>
@@ -34,6 +35,9 @@
         <testsuite name="admintoolbar">
             <directory>vendor/wedevelopnl/silverstripe-grid/tests/Integration/AdminToolbar</directory>
             <directory>vendor/wedevelopnl/silverstripe-grid/tests/Functional/AdminToolbar</directory>
+        </testsuite>
+        <testsuite name="keysforcache">
+            <directory>vendor/wedevelopnl/silverstripe-grid/tests/Integration/KeysForCache</directory>
         </testsuite>
     </testsuites>
     <source>

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1f369611e21deb1417735c0ad1d6c09b",
+    "content-hash": "412692b3b7249a6dcfee47cbf3924fa4",
     "packages": [
         {
             "name": "composer/ca-bundle",
@@ -2518,6 +2518,63 @@
                 "source": "https://github.com/sensiolabs/ansi-to-html/tree/v1.3.0"
             },
             "time": "2024-11-25T09:31:54+00:00"
+        },
+        {
+            "name": "silverstripe-terraformers/keys-for-cache",
+            "version": "3.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/silverstripe-terraformers/keys-for-cache.git",
+                "reference": "aa636dd5eb1a8d2644665cdaa630c9755defa9d6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/silverstripe-terraformers/keys-for-cache/zipball/aa636dd5eb1a8d2644665cdaa630c9755defa9d6",
+                "reference": "aa636dd5eb1a8d2644665cdaa630c9755defa9d6",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.1",
+                "silverstripe/framework": "^6"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^11.5",
+                "silverstripe/cms": "^6",
+                "slevomat/coding-standard": "~8.8.0",
+                "tractorcow/silverstripe-fluent": "^8"
+            },
+            "type": "silverstripe-vendormodule",
+            "autoload": {
+                "psr-4": {
+                    "Terraformers\\KeysForCache\\": "src/",
+                    "Terraformers\\KeysForCache\\Tests\\": "tests/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "Adrian Humphreys",
+                    "email": "adrhumphreys@gmail.com"
+                },
+                {
+                    "name": "Christopher David Penny",
+                    "email": "chris.penny@gmail.com"
+                }
+            ],
+            "description": "Silverstripe cache key management",
+            "keywords": [
+                "cache",
+                "keys",
+                "silverstripe"
+            ],
+            "support": {
+                "issues": "https://github.com/silverstripe-terraformers/keys-for-cache/issues",
+                "source": "https://github.com/silverstripe-terraformers/keys-for-cache/tree/3.0.0"
+            },
+            "time": "2025-08-06T20:24:18+00:00"
         },
         {
             "name": "silverstripe/admin",
