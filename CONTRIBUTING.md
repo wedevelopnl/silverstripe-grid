@@ -13,14 +13,17 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 - PHP 8.3+
 - Node.js 24+ (see `.nvmrc`)
 - Docker (for PHP tests and the development environment)
+- [Task](https://taskfile.dev) (task runner): `brew install go-task/tap/go-task` — see [installation options](https://taskfile.dev/installation)
 
 ### Setting Up the Development Environment
 
 1. Clone the repository
 2. Install PHP dependencies: `composer install`
 3. Install Node dependencies: `npm install`
-4. Start the Docker environment: `make up`
+4. Start the Docker environment: `task up`
 5. Build the frontend: `npm run build` (or `npm run dev` for watch mode)
+
+Run `task --list` to see all available tasks.
 
 The Docker environment provides Caddy, PHP, and MySQL 8. Default admin credentials are `admin`/`admin`.
 
@@ -53,7 +56,7 @@ The Docker environment provides Caddy, PHP, and MySQL 8. Default admin credentia
 
 - Follow PSR-4 autoloading (`WeDevelop\Grid\` maps to `src/`)
 - 4-space indentation
-- PHPStan level max must pass with no errors (`make analyse`)
+- PHPStan level max must pass with no errors (`task analyse`)
 - Use the Result pattern for service-layer validation (not exceptions)
 - Use SilverStripe dependency injection conventions
 
@@ -82,7 +85,7 @@ Before submitting a PR, ensure the relevant checks pass:
 
 ```bash
 # PHP: static analysis + unit + integration tests
-make qa
+task qa
 
 # JavaScript: lint + typecheck + unit tests
 npm run qa
@@ -92,9 +95,9 @@ npm run qa
 
 | Command | Scope |
 | ------- | ----- |
-| `make analyse` | PHPStan static analysis |
-| `make test-unit` | PHP unit tests |
-| `make test-integration` | PHP integration tests (requires Docker) |
+| `task analyse` | PHPStan static analysis |
+| `task test-unit` | PHP unit tests |
+| `task test-integration` | PHP integration tests (requires Docker) |
 | `npm run lint` | Biome (JS/TS) + Stylelint (SCSS) |
 | `npm run format` | Biome format --write (JS/TS) |
 | `npm run typecheck` | TypeScript type checking |
@@ -105,7 +108,7 @@ npm run qa
 E2E tests require running Docker services and are not part of the standard QA suite:
 
 ```bash
-make test-e2e
+task test-e2e
 ```
 
 ### Git Blame

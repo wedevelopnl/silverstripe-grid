@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Build tooling migrated from `make` to [Task](https://taskfile.dev)** — the `Makefile` is replaced by `Taskfile.yml`. Run `task <name>` (e.g. `task up`, `task qa`, `task test`); the target names are unchanged. Contributors must install Task (`brew install go-task/tap/go-task`); CI installs it via `arduino/setup-task`. The QA suite now runs its checks in parallel through Task's `deps` instead of `make -j8`.
+
 ## [6.0.0-alpha.6] - 2026-06-15
 
 ### Added

@@ -63,7 +63,7 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 - `tsconfig.json` — TypeScript config
 - `playwright.config.ts` — Playwright E2E test config (base URL from `.docker/.env` or `E2E_BASE_URL`)
 - `stryker.config.mjs` — Stryker JS mutation testing config
-- `Makefile` — Docker-based PHP test/coverage commands
+- `Taskfile.yml` — Docker-based PHP test/coverage commands (run via [Task](https://taskfile.dev))
 - `.docker/compose.yml` — Docker service definitions
 - `.docker/env.sh` — Generates `.docker/.env` with deterministic ports
 - `.docker/app/infection.json5` — Infection mutation testing config
@@ -72,7 +72,7 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 
 ## PHP Testing
 
-- PHPUnit 11 — runs inside Docker via `make test`
+- PHPUnit 11 — runs inside Docker via `task test`
 - PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, and `fluent` testsuites, selected via `--testsuite` flag)
 - Test namespace: `WeDevelop\Grid\Tests\` → `tests/` (Unit/ + Integration/)
 
@@ -80,14 +80,14 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 
 - PHPStan level max with Silverstan (SilverStripe-aware rules)
 - 100% type coverage enforced: return, param, property, constant, declare
-- Runs inside Docker via `make analyse`
+- Runs inside Docker via `task analyse`
 
 ## Rector
 
-- Config: `.docker/app/rector.php` (COPYed into the image at build, **not** volume-mounted — after editing, rebuild the image with `make build` or push the file with `docker compose -f .docker/compose.yml cp .docker/app/rector.php app:/app/rector.php`)
+- Config: `.docker/app/rector.php` (COPYed into the image at build, **not** volume-mounted — after editing, rebuild the image with `task build` or push the file with `docker compose -f .docker/compose.yml cp .docker/app/rector.php app:/app/rector.php`)
 - Scope: `src/` only (tests are excluded)
-- Enforced as a QA gate: `_qa-rector` runs `rector process --dry-run` inside `make qa` and fails the build if any rule would change a file
-- Workflow: contributors run `make rector` locally to apply fixes, commit the result, then push
+- Enforced as a QA gate: the internal `qa-rector` task runs `rector process --dry-run` inside `task qa` and fails the build if any rule would change a file
+- Workflow: contributors run `task rector` locally to apply fixes, commit the result, then push
 - Curated rule set — `codingStyle` prepared set is **not** enabled. The following rules are explicitly skipped via `withSkip()`:
   - `ChangeOrIfContinueToMultiContinueRector` — splitting `if (!a \|\| !b) continue` into two `if` blocks is often less readable
   - `FlipTypeControlToUseExclusiveTypeRector` — `$x !== null` on a typed `?Foo` property is more honest about intent than `$x instanceof Foo`

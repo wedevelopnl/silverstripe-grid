@@ -314,4 +314,4 @@ Global setup (`tests/E2E/global.setup.ts`) authenticates as `admin`/`admin` and 
 - Self-signed certs: `ignoreHTTPSErrors: true`
 - Base URL from `E2E_BASE_URL` env var or parsed from `.docker/.env`
 - Run specific spec: `npx playwright test specs/{file}`
-- Run full suite: `make test-e2e`
+- Run full suite: `task test-e2e`

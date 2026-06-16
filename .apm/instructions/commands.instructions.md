@@ -1,5 +1,5 @@
 ---
-description: Available npm and Makefile commands for development, testing, and QA
+description: Available npm and Task (Taskfile) commands for development, testing, and QA
 applyTo: "**/*"
 ---
 
@@ -30,33 +30,35 @@ applyTo: "**/*"
 | `npm run test:e2e:debug` | Playwright in debug mode |
 | `npm run qa` | Full QA: lint + format:check + typecheck + test + i18n:check + vite build |
 
-## PHP (via Makefile — requires Docker)
+## PHP (via Task — requires Docker)
+
+Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go-task/tap/go-task` (see https://taskfile.dev/installation). List all tasks with `task --list`.
 
 | Command | Description |
 |---------|-------------|
-| `make up` | Start Docker services (build if needed) |
-| `make down` | Stop Docker services |
-| `make destroy` | Stop services and remove volumes |
-| `make build` | Build Docker images without starting |
-| `make test` | Run all tests (PHP unit + integration + functional + JS) |
-| `make test-unit` | Run PHP unit tests (no database/framework) |
-| `make test-integration` | Run PHP integration tests (full SilverStripe env) |
-| `make test-functional` | Run PHP functional tests (HTTP/controller tests) |
-| `make test-fluent` | Run integration + functional + fluent tests in Fluent env |
-| `make test-js` | Run JavaScript tests (Vitest, no Docker needed) |
-| `make coverage` | Merged PHP coverage report (HTML + Clover) |
-| `make coverage-unit` | PHP unit test coverage only |
-| `make coverage-integration` | PHP integration test coverage only |
-| `make coverage-functional` | PHP functional test coverage only |
-| `make coverage-js` | JavaScript test coverage (Vitest) |
-| `make mutate` | PHP mutation testing (Infection) |
-| `make mutate-js` | JS mutation testing (Stryker) |
-| `make analyse` | Run PHPStan static analysis |
-| `make rector` | Run Rector refactoring (applies changes) |
-| `make rector-dry` | Run Rector in dry-run mode (preview only) |
-| `make test-e2e` | Run Playwright E2E tests (requires Docker) |
-| `make test-e2e-ui` | Playwright E2E with interactive UI |
-| `make flush` | Clear SilverStripe cache |
-| `make dev-build` | Run dev/build to rebuild database and manifest |
-| `make qa` | Full QA suite (PHPStan + Rector + PHP coverage + JS QA, parallel) |
-| `make qa-js` | JavaScript QA (Biome + Stylelint + typecheck + Vitest + vite build) |
+| `task up` | Start Docker services (build if needed) |
+| `task down` | Stop Docker services |
+| `task destroy` | Stop services and remove volumes |
+| `task build` | Build Docker images without starting |
+| `task test` | Run all tests (PHP unit + integration + functional + JS) |
+| `task test-unit` | Run PHP unit tests (no database/framework) |
+| `task test-integration` | Run PHP integration tests (full SilverStripe env) |
+| `task test-functional` | Run PHP functional tests (HTTP/controller tests) |
+| `task test-fluent` | Run integration + functional + fluent tests in Fluent env |
+| `task test-js` | Run JavaScript tests (Vitest, no Docker needed) |
+| `task coverage` | Merged PHP coverage report (HTML + Clover) |
+| `task coverage-unit` | PHP unit test coverage only |
+| `task coverage-integration` | PHP integration test coverage only |
+| `task coverage-functional` | PHP functional test coverage only |
+| `task coverage-js` | JavaScript test coverage (Vitest) |
+| `task mutate` | PHP mutation testing (Infection) |
+| `task mutate-js` | JS mutation testing (Stryker) |
+| `task analyse` | Run PHPStan static analysis |
+| `task rector` | Run Rector refactoring (applies changes) |
+| `task rector-dry` | Run Rector in dry-run mode (preview only) |
+| `task test-e2e` | Run Playwright E2E tests (requires Docker) |
+| `task test-e2e-ui` | Playwright E2E with interactive UI |
+| `task flush` | Clear SilverStripe cache |
+| `task dev-build` | Run dev/build to rebuild database and manifest |
+| `task qa` | Full QA suite (PHPStan + Rector + PHP coverage + JS QA, parallel) |
+| `task qa-js` | JavaScript QA (Biome + Stylelint + typecheck + Vitest + vite build) |

@@ -63,8 +63,8 @@ SilverStripe\Core\Injector\Injector:
 ## Step 4: Verify
 
 After generating the preset:
-1. Run `make analyse` to verify PHPStan compliance (level max, 100% type coverage)
-2. Run `make test-integration` to verify the adapter works with the real config system
+1. Run `task analyse` to verify PHPStan compliance (level max, 100% type coverage)
+2. Run `task test-integration` to verify the adapter works with the real config system
 3. Verify visibility classes generate correct hide/restore pairs for all viewport combinations
 
 ## Step 5: Write Integration Tests

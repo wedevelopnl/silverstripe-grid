@@ -46,11 +46,15 @@ jobs:
       COMPOSE: docker compose -f .docker/compose.yml
     steps:
       - uses: actions/checkout@v4
-      - run: make .docker/.env
+      - uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: task docker-env
       - run: $COMPOSE up -d --build --wait app
         name: Start services
-      - run: make analyse
-      - run: make rector-dry
+      - run: task analyse
+      - run: task rector-dry
 
   php-qa:
     name: PHP QA (PHP ${{ matrix.php }})
@@ -66,7 +70,11 @@ jobs:
       COMPOSE: docker compose -f .docker/compose.yml --profile fluent
     steps:
       - uses: actions/checkout@v4
-      - run: make .docker/.env
+      - uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: task docker-env
       - run: $COMPOSE up -d --build --wait
         name: Start services
       - run: >-
@@ -97,6 +105,10 @@ jobs:
       SS_GRID_ADAPTER: ${{ matrix.adapter }}
     steps:
       - uses: actions/checkout@v4
+      - uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -113,8 +125,8 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
-      - run: make .docker/.env
-      - run: make ensure-up
+      - run: task docker-env
+      - run: task ensure-up
       - name: Run Playwright
         run: npx playwright test --project=${{ matrix.browser }} --reporter=html,junit
         env:
