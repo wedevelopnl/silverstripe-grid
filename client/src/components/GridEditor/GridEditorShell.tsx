@@ -6,10 +6,28 @@ import { GridEditorProvider } from '@/hooks/GridEditorContext'
 import { ReadonlyProvider } from '@/hooks/ReadonlyContext'
 import { CollapseContext, useCollapseState } from '@/hooks/useCollapseState'
 import { t } from '@/i18n'
-import type { SectionNode } from '@/types/elements'
+import type { SectionNode, TreeApiResponse } from '@/types/elements'
 import GridAreaHeader from './GridAreaHeader'
 
 export type GridEditorStatus = 'loading' | 'error' | 'ready'
+
+/**
+ * Collapse a query's `data`/`error` into the single status the Shell renders.
+ * `data` defined wins (a loaded tree renders even mid background-refetch); an
+ * error with no data shows the error notice; otherwise we're still loading.
+ */
+export function resolveGridEditorStatus(
+  data: TreeApiResponse | undefined,
+  error: ApiError | null,
+): GridEditorStatus {
+  if (data !== undefined) {
+    return 'ready'
+  }
+  if (error !== null) {
+    return 'error'
+  }
+  return 'loading'
+}
 
 interface GridEditorShellProps {
   readonly pageId: number
