@@ -44,10 +44,20 @@ export default function EditableGridEditor({ pageId, zone }: EditableGridEditorP
             <SectionBlock section={section} />
           </Fragment>
         ))}
-        <AddChildButton parentId={pageId} childType="section" childLabel="Section" variant="append" />
+        <AddChildButton
+          parentId={pageId}
+          childType="section"
+          childLabel="Section"
+          variant="append"
+        />
       </>
     ) : (
-      <AddChildButton parentId={pageId} childType="section" childLabel="Section" variant="empty-state" />
+      <AddChildButton
+        parentId={pageId}
+        childType="section"
+        childLabel="Section"
+        variant="empty-state"
+      />
     )
 
   return (

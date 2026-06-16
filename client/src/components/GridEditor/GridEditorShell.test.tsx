@@ -7,7 +7,14 @@ import GridEditorShell from './GridEditorShell'
 describe('GridEditorShell', () => {
   it('renders only the loading notice in loading status', () => {
     renderWithProviders(
-      <GridEditorShell pageId={1} zone="main" readonly={false} status="loading" error={null} sections={[]}>
+      <GridEditorShell
+        pageId={1}
+        zone="main"
+        readonly={false}
+        status="loading"
+        error={null}
+        sections={[]}
+      >
         <div data-testid="canvas-child" />
       </GridEditorShell>,
     )
@@ -18,11 +25,20 @@ describe('GridEditorShell', () => {
 
   it('renders children inside the canvas in ready status', () => {
     renderWithProviders(
-      <GridEditorShell pageId={1} zone="main" readonly={false} status="ready" error={null} sections={[]}>
+      <GridEditorShell
+        pageId={1}
+        zone="main"
+        readonly={false}
+        status="ready"
+        error={null}
+        sections={[]}
+      >
         <div data-testid="canvas-child" />
       </GridEditorShell>,
     )
-    expect(screen.getByTestId('grid-editor-canvas')).toContainElement(screen.getByTestId('canvas-child'))
+    expect(screen.getByTestId('grid-editor-canvas')).toContainElement(
+      screen.getByTestId('canvas-child'),
+    )
     expect(screen.getByTestId('viewport-switcher')).toBeInTheDocument()
   })
 
@@ -35,7 +51,14 @@ describe('GridEditorShell', () => {
       status: 'modified',
     })
     renderWithProviders(
-      <GridEditorShell pageId={1} zone="main" readonly={false} status="ready" error={null} sections={[section]}>
+      <GridEditorShell
+        pageId={1}
+        zone="main"
+        readonly={false}
+        status="ready"
+        error={null}
+        sections={[section]}
+      >
         <div />
       </GridEditorShell>,
     )
@@ -44,7 +67,14 @@ describe('GridEditorShell', () => {
 
   it('sets data-page-id, data-zone and data-readonly on the root', () => {
     renderWithProviders(
-      <GridEditorShell pageId={7} zone="sidebar" readonly status="loading" error={null} sections={[]}>
+      <GridEditorShell
+        pageId={7}
+        zone="sidebar"
+        readonly
+        status="loading"
+        error={null}
+        sections={[]}
+      >
         <div />
       </GridEditorShell>,
     )

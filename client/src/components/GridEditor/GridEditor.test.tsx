@@ -634,9 +634,10 @@ describe('GridEditor', () => {
     })
 
     it('does not fire the reorder mutation while the tree is still loading (data undefined guard)', () => {
-      // Fetch never resolves → data stays undefined. GridEditorBody still runs
-      // and hands onReorder to the (mocked) hook, so the callback exists even
-      // though the editor body JSX is unmounted. Invoking it must hit the
+      // Fetch never resolves → data stays undefined. EditableGridEditor still
+      // mounts and useGridEditorDnd hands onReorder to the (mocked) hook, so the
+      // callback exists even though the editor body JSX is unmounted. Invoking
+      // it must hit the
       // `if (data === undefined) return` guard and skip the mutation entirely.
       // A mutant that drops the guard would call mutate({ tree: undefined }).
       vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
