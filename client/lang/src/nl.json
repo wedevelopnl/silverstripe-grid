@@ -57,6 +57,7 @@
   "WeDevelopGrid.GridEditor.NO_SECTIONS_READONLY": "Geen secties in deze versie",
   "WeDevelopGrid.GridEditorErrorBoundary.RENDER_FALLBACK": "De grid-editor kon niet worden weergegeven. Probeer de pagina opnieuw te laden.",
   "WeDevelopGrid.GridEditorErrorBoundary.TOAST_ERROR": "De grid-editor is tegen een fout aangelopen en kon niet worden weergegeven.",
+  "WeDevelopGrid.ModifiedIndicator.LABEL": "Heeft niet-gepubliceerde wijzigingen",
   "WeDevelopGrid.RowBlock.COLUMN_COUNT": "{count} kolommen",
   "WeDevelopGrid.RowBlock.MODIFIED_LABEL": "Heeft niet-gepubliceerde wijzigingen",
   "WeDevelopGrid.RowBlock.MOVE_LABEL": "{title} verplaatsen",
