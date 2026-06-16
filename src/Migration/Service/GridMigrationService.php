@@ -549,19 +549,24 @@ final class GridMigrationService
      */
     private function overwriteLiveContent(int $newElementId, LegacyElement $liveElement, int $draftSort): void
     {
-        // Base fields on WeDevelop_Grid_GridElement_Live
+        $schema = DataObject::getSchema();
+
+        // Base fields on the GridElement live table
         /** @var 'h1'|'h2'|'h3'|'h4'|'h5'|'h6' $titleTag */
         $titleTag = $liveElement->titleTag !== '' ? $liveElement->titleTag : 'h2';
 
         DB::prepared_query(
-            'UPDATE "WeDevelop_Grid_GridElement_Live" SET
-                "Title" = ?,
-                "ShowTitle" = ?,
-                "TitleTag" = ?,
-                "TitleClass" = ?,
-                "Sort" = ?,
-                "ExtraClass" = ?
-            WHERE "ID" = ?',
+            \sprintf(
+                'UPDATE "%s_Live" SET
+                    "Title" = ?,
+                    "ShowTitle" = ?,
+                    "TitleTag" = ?,
+                    "TitleClass" = ?,
+                    "Sort" = ?,
+                    "ExtraClass" = ?
+                WHERE "ID" = ?',
+                $schema->tableName(GridElement::class),
+            ),
             [
                 $liveElement->title,
                 $liveElement->showTitle ? 1 : 0,
@@ -573,7 +578,7 @@ final class GridMigrationService
             ],
         );
 
-        // Subclass fields on WeDevelop_Grid_ContentElement_Live (HTML + media)
+        // Subclass fields on the ContentElement live table (HTML + media)
         if ($liveElement->mediaData === null) {
             return;
         }
@@ -602,7 +607,8 @@ final class GridMigrationService
 
         DB::prepared_query(
             \sprintf(
-                'UPDATE "WeDevelop_Grid_ContentElement_Live" SET %s WHERE "ID" = ?',
+                'UPDATE "%s_Live" SET %s WHERE "ID" = ?',
+                $schema->tableName(ContentElement::class),
                 \implode(', ', $setClauses),
             ),
             $params,
