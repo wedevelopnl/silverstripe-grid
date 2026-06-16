@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
+use Symfony\Component\Console\Input\InputOption;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\Task\AbstractMigrationTask;
 use WeDevelop\Grid\Migration\Task\MigrateRowsToSectionsTask;
@@ -26,6 +27,21 @@ use WeDevelop\Grid\Value\Viewport;
 #[CoversClass(AbstractMigrationTask::class)]
 final class AbstractMigrationTaskTest extends TestCase
 {
+    // ─── getOptions: no -f shortcut (sake reserves it for --flush) ───────────
+
+    public function testNoOptionClaimsTheFShortcutReservedBySakeFlush(): void
+    {
+        // sake registers a global `--flush` with the `-f` shortcut. A task option
+        // also claiming `-f` makes Symfony Console throw at registration, which
+        // aborts every `sake dev/tasks/<segment>` run. Guard against regressions.
+        $shortcuts = \array_filter(\array_map(
+            static fn (InputOption $option): ?string => $option->getShortcut(),
+            (new MigrateRowsToSectionsTask())->getOptions(),
+        ));
+
+        self::assertNotContains('f', $shortcuts);
+    }
+
     // ─── resolveViewportKeyMap: explicit --viewport-map argument ─────────────
 
     public function testExplicitViewportMapArgumentParsedIntoKeyPairs(): void

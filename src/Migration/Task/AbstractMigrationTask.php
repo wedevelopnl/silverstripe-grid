@@ -31,7 +31,10 @@ abstract class AbstractMigrationTask extends BuildTask
             new InputOption('default-viewport', null, InputOption::VALUE_REQUIRED, 'Old module default viewport (e.g. MD)'),
             new InputOption('zone', null, InputOption::VALUE_REQUIRED, 'Target zone for new Sections (e.g. main)'),
             new InputOption('dry-run', null, InputOption::VALUE_NONE, 'Log what would be migrated without writing'),
-            new InputOption('force', 'f', InputOption::VALUE_NONE, 'Skip the interactive confirmation prompt (required for non-interactive runs)'),
+            // No short flag: sake reserves "-f" for its global --flush, so a task
+            // option claiming "-f" makes Symfony Console throw "An option with
+            // shortcut \"f\" already exists" and aborts every `sake dev/tasks/...` run.
+            new InputOption('force', null, InputOption::VALUE_NONE, 'Skip the interactive confirmation prompt (required for non-interactive runs)'),
             new InputOption('viewport-map', null, InputOption::VALUE_REQUIRED, 'Comma-separated old=new viewport key pairs'),
             new InputOption('page-ids', null, InputOption::VALUE_REQUIRED, 'Comma-separated page IDs to migrate'),
         ];

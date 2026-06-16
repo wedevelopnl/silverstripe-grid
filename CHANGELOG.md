@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **i18n key renamed: the four `*.MODIFIED_LABEL` keys collapse into one `WeDevelopGrid.ModifiedIndicator.LABEL`** — `WeDevelopGrid.ColumnBlock.MODIFIED_LABEL`, `WeDevelopGrid.ElementCard.MODIFIED_LABEL`, `WeDevelopGrid.RowBlock.MODIFIED_LABEL`, and `WeDevelopGrid.SectionBlock.MODIFIED_LABEL` (shipped in `6.0.0-alpha.6`) are replaced by a single `WeDevelopGrid.ModifiedIndicator.LABEL`. The bundled `en`/`nl` text is unchanged, so default output is identical — but any project that overrode one of the four old JS i18n keys must move that override to the new key, or it will silently stop applying.
 - **Build tooling migrated from `make` to [Task](https://taskfile.dev)** — the `Makefile` is replaced by `Taskfile.yml`. Run `task <name>` (e.g. `task up`, `task qa`, `task test`); the target names are unchanged. Contributors must install Task (`brew install go-task/tap/go-task`); CI installs it via `arduino/setup-task`. The QA suite now runs its checks in parallel through Task's `deps` instead of `make -j8`.
 
+### Fixed
+
+- **Migration tasks aborted under `sake`** — `--force` no longer claims the `-f` short flag. `sake` registers a global `--flush` with the `-f` shortcut, so the migration task's own `-f` made Symfony Console throw `An option with shortcut "f" already exists` and every `sake dev/tasks/migrate-grid-rows-to-sections` (and `…-single-section`) invocation aborted before running. Use the long `--force` flag for non-interactive runs.
+
 ## [6.0.0-alpha.6] - 2026-06-15
 
 ### Added
