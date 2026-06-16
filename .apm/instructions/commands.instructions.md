@@ -37,7 +37,7 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | Command | Description |
 |---------|-------------|
 | `task up` | Start Docker services (build if needed) |
-| `task up-modules` | Start the optional-modules testbed (Fluent + userforms + admin toolbar) on `MODULES_WEB_PORT` |
+| `task up-modules` | Start the optional-modules testbed (Fluent + userforms + admin toolbar + keys-for-cache) on `MODULES_WEB_PORT` |
 | `task down` | Stop Docker services |
 | `task destroy` | Stop services and remove volumes |
 | `task build` | Build Docker images without starting |
@@ -45,7 +45,7 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task test-unit` | Run PHP unit tests (no database/framework) |
 | `task test-integration` | Run PHP integration tests (full SilverStripe env) |
 | `task test-functional` | Run PHP functional tests (HTTP/controller tests) |
-| `task test-modules` | Run integration + functional + fluent + userforms + admintoolbar tests in the optional-modules env (Fluent + userforms + admin toolbar installed) |
+| `task test-modules` | Run integration + functional + fluent + userforms + admintoolbar + keysforcache tests in the optional-modules env (Fluent + userforms + admin toolbar + keys-for-cache installed) |
 | `task test-js` | Run JavaScript tests (Vitest, no Docker needed) |
 | `task coverage` | Merged PHP coverage report (HTML + Clover) |
 | `task coverage-unit` | PHP unit test coverage only |
