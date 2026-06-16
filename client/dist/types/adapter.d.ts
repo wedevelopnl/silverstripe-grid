@@ -1,5 +1,17 @@
+/**
+ * A viewport key proven to belong to the active adapter's viewport set.
+ *
+ * Branded so it can only originate at the two trust boundaries that establish
+ * validity: the adapter config (every {@link ViewportConfig.key} is valid by
+ * definition) and `setActiveViewport`, which validates an arbitrary string
+ * against that set before minting. Never produce one with a bare `as` cast —
+ * derive it from a `ViewportConfig.key` so the proof is real, not asserted.
+ */
+export type ViewportKey = string & {
+    readonly __viewportKey: unique symbol;
+};
 export interface ViewportConfig {
-    key: string;
+    key: ViewportKey;
     label: string;
     /**
      * Framework breakpoint min-width in pixels. 0 indicates the mobile-first
@@ -11,7 +23,7 @@ export interface ViewportConfig {
 export type OffsetStrategy = 'margin' | 'grid-placement';
 export interface AdapterConfig {
     viewports: ViewportConfig[];
-    defaultViewport: string;
+    defaultViewport: ViewportKey;
     columnCount: number;
     rowClasses: string;
     offsetStrategy: OffsetStrategy;

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { viewportKey } from '@/testing/factories'
 import type { ViewportConfig } from '@/types/adapter'
 import { getViewportIcon, getViewportRangeLabel } from './viewportPresentation'
 
@@ -18,10 +19,10 @@ describe('getViewportIcon', () => {
 
 describe('getViewportRangeLabel', () => {
   const viewports: readonly ViewportConfig[] = [
-    { key: 'xs', label: 'Extra small', minWidth: 0 },
-    { key: 'sm', label: 'Small', minWidth: 576 },
-    { key: 'md', label: 'Medium', minWidth: 768 },
-    { key: 'xxl', label: 'Extra extra large', minWidth: 1400 },
+    { key: viewportKey('xs'), label: 'Extra small', minWidth: 0 },
+    { key: viewportKey('sm'), label: 'Small', minWidth: 576 },
+    { key: viewportKey('md'), label: 'Medium', minWidth: 768 },
+    { key: viewportKey('xxl'), label: 'Extra extra large', minWidth: 1400 },
   ]
 
   it('returns the next viewport min-width prefixed with <', () => {
@@ -35,7 +36,7 @@ describe('getViewportRangeLabel', () => {
   })
 
   it('returns null for a viewport not in the list', () => {
-    const stranger: ViewportConfig = { key: 'unknown', label: '?', minWidth: 0 }
+    const stranger: ViewportConfig = { key: viewportKey('unknown'), label: '?', minWidth: 0 }
     expect(getViewportRangeLabel(stranger, viewports)).toBeNull()
   })
 })

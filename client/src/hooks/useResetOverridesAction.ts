@@ -19,13 +19,15 @@ interface ResetOverridesState {
 }
 
 export function useResetOverridesAction(): ResetOverridesState {
-  const { activeViewport } = useViewportContext()
+  const { activeViewport: selectedViewport } = useViewportContext()
   const { pageId, zone } = useGridEditorContext()
   const overrideCounts = useViewportOverrideCounts(pageId, zone)
   const { mutate: resetOverrides } = useResetGridSettingsOverrides(pageId, zone)
   const [isDialogOpen, setDialogOpen] = useState(false)
 
   const defaultViewport = getDefaultViewport()
+  // No selection resolves to the adapter default, which drives "reset all".
+  const activeViewport = selectedViewport ?? defaultViewport
   const isDefaultViewport = activeViewport === defaultViewport
 
   const affectedCount = isDefaultViewport

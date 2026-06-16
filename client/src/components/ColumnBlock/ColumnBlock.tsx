@@ -19,6 +19,7 @@ import type { ColumnNode, ViewportSettings } from '@/types/elements'
 import type { NodeKey } from '@/types/identity'
 import {
   getColumnCount,
+  getDefaultViewport,
   getOffsetOptions,
   getOffsetStrategy,
   getWidthOptions,
@@ -93,7 +94,10 @@ function buildColumnStyle(
 }
 
 function EditableColumnBlock({ column, insertBefore }: ColumnBlockProps) {
-  const { activeViewport } = useViewportContext()
+  // No selection yet resolves to the adapter default — the same viewport whose
+  // base layout `default` settings represent — so edits target `default`.
+  const { activeViewport: selectedViewport } = useViewportContext()
+  const activeViewport = selectedViewport ?? getDefaultViewport()
   const { pageId, zone } = useGridEditorContext()
   const columnCount = getColumnCount()
   // Stabilise `settings` so downstream useCallback/useMemo dependencies don't

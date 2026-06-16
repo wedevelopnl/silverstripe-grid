@@ -1,5 +1,5 @@
 import { getAdapterConfig } from '@/api/config'
-import type { AdapterConfig, OffsetStrategy, ViewportConfig } from '@/types/adapter'
+import type { AdapterConfig, OffsetStrategy, ViewportConfig, ViewportKey } from '@/types/adapter'
 import type { GridSettings, ViewportSettings } from '@/types/elements'
 import type { GridSettingsOption } from '@/types/gridSettings'
 
@@ -22,7 +22,7 @@ export function getViewports(): readonly ViewportConfig[] {
   return config().viewports
 }
 
-export function getDefaultViewport(): string {
+export function getDefaultViewport(): ViewportKey {
   return config().defaultViewport
 }
 
@@ -78,10 +78,15 @@ export function getOffsetOptions(currentWidth?: number): readonly GridSettingsOp
  * Resolve effective viewport settings for a given viewport.
  *
  * Returns the viewport's override if present, otherwise the default settings.
+ * A `null` viewport (no selection yet / adapter unavailable) resolves to the
+ * default — there is no per-viewport override to apply.
  */
 export function resolveViewportSettings(
   gridSettings: GridSettings,
-  activeViewport: string,
+  activeViewport: ViewportKey | null,
 ): ViewportSettings {
+  if (activeViewport === null) {
+    return gridSettings.default
+  }
   return gridSettings.overrides[activeViewport] ?? gridSettings.default
 }

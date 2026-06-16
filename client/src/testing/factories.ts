@@ -1,3 +1,4 @@
+import type { ViewportKey } from '@/types/adapter'
 import { buildDraggableId, type DraggableType, type ParsedDraggableId } from '@/types/dnd'
 import type {
   BlockSchema,
@@ -15,6 +16,15 @@ import { NodeIdentity, type NodeRef, type NodeType } from '@/types/identity'
 /** Test-only helper: construct a fully-typed {@link ParsedDraggableId} for unit tests. */
 export function createParsedDraggableId(type: DraggableType, nodeId: number): ParsedDraggableId {
   return { type, id: nodeId, key: buildDraggableId(type, nodeId) }
+}
+
+/**
+ * Test-only helper: mint a {@link ViewportKey} from a plain string. Fixtures
+ * are a trust boundary — the test author vouches for the key — so the brand is
+ * asserted here rather than derived from a real adapter config.
+ */
+export function viewportKey(key: string): ViewportKey {
+  return key as ViewportKey
 }
 
 let nextId = 1

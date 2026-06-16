@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { viewportKey } from '@/testing/factories'
 import type { AdapterConfig } from '@/types/adapter'
 import type { GridSettings } from '@/types/elements'
 import {
@@ -126,7 +127,7 @@ describe('resolveViewportSettings', () => {
   }
 
   it('returns override settings when viewport has an override', () => {
-    expect(resolveViewportSettings(settings, 'sm')).toEqual({
+    expect(resolveViewportSettings(settings, viewportKey('sm'))).toEqual({
       width: 6,
       offset: 3,
       visible: true,
@@ -134,7 +135,7 @@ describe('resolveViewportSettings', () => {
   })
 
   it('returns default settings when viewport has no override', () => {
-    expect(resolveViewportSettings(settings, 'lg')).toEqual({
+    expect(resolveViewportSettings(settings, viewportKey('lg'))).toEqual({
       width: 12,
       offset: 0,
       visible: true,

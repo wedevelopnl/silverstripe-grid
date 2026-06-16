@@ -4,9 +4,10 @@ import {
   setActiveViewport as storeSet,
   subscribeActiveViewport,
 } from '@/state/activeViewport'
+import type { ViewportKey } from '@/types/adapter'
 
 export interface ViewportContextValue {
-  readonly activeViewport: string
+  readonly activeViewport: ViewportKey | null
   readonly setActiveViewport: (key: string) => void
 }
 

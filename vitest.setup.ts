@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { afterEach, vi } from 'vitest'
 import { resetActiveViewportStore } from './client/src/state/activeViewport'
+import { viewportKey } from './client/src/testing/factories'
 import type { AdapterConfig } from './client/src/types/adapter'
 import type { SilverStripeConfig, SilverStripeI18n } from './client/src/types/silverstripe'
 
@@ -8,14 +9,14 @@ const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController'
 
 const defaultAdapterConfig: AdapterConfig = {
   viewports: [
-    { key: 'xs', label: 'Extra small', minWidth: 0 },
-    { key: 'sm', label: 'Small', minWidth: 576 },
-    { key: 'md', label: 'Medium', minWidth: 768 },
-    { key: 'lg', label: 'Large', minWidth: 992 },
-    { key: 'xl', label: 'Extra large', minWidth: 1200 },
-    { key: 'xxl', label: 'Extra extra large', minWidth: 1400 },
+    { key: viewportKey('xs'), label: 'Extra small', minWidth: 0 },
+    { key: viewportKey('sm'), label: 'Small', minWidth: 576 },
+    { key: viewportKey('md'), label: 'Medium', minWidth: 768 },
+    { key: viewportKey('lg'), label: 'Large', minWidth: 992 },
+    { key: viewportKey('xl'), label: 'Extra large', minWidth: 1200 },
+    { key: viewportKey('xxl'), label: 'Extra extra large', minWidth: 1400 },
   ],
-  defaultViewport: 'md',
+  defaultViewport: viewportKey('md'),
   columnCount: 12,
   rowClasses: 'row',
   offsetStrategy: 'margin',

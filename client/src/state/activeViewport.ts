@@ -1,3 +1,4 @@
+import type { ViewportKey } from '@/types/adapter'
 import { getDefaultViewport, getViewports } from '@/utils/gridAdapter'
 
 /**
@@ -9,7 +10,7 @@ export const MOBILE_FIRST_PREVIEW_WIDTH = 375
 
 type Listener = () => void
 
-let current: string | null = null
+let current: ViewportKey | null = null
 const listeners = new Set<Listener>()
 
 function ensureInitialised(): void {
@@ -27,9 +28,9 @@ function ensureInitialised(): void {
   }
 }
 
-export function getActiveViewport(): string {
+export function getActiveViewport(): ViewportKey | null {
   ensureInitialised()
-  return current ?? ''
+  return current
 }
 
 export function setActiveViewport(key: string): void {
@@ -45,16 +46,19 @@ export function setActiveViewport(key: string): void {
   // config is unavailable (early boot, stub environment), also refuse
   // the write — accepting arbitrary keys would let invalid values flow
   // into `.grid-${key}` CSS class names downstream.
+  let match: { key: ViewportKey } | undefined
   try {
-    const viewports = getViewports()
-    if (!viewports.some((vp) => vp.key === key)) {
-      return
-    }
+    match = getViewports().find((vp) => vp.key === key)
   } catch {
     return
   }
+  if (match === undefined) {
+    return
+  }
 
-  current = key
+  // Mint the brand from the matched config key — never cast `key` directly,
+  // so a ViewportKey only ever originates from a validated adapter viewport.
+  current = match.key
   for (const listener of listeners) {
     listener()
   }

@@ -56,12 +56,18 @@ function attemptMount(): void {
   }
 
   installViewportStyles()
-  unsubscribe = subscribeActiveViewport(() => vendor?.applyViewport(getActiveViewport()))
+  const applyActiveViewport = (): void => {
+    const key = getActiveViewport()
+    if (key !== null) {
+      vendor?.applyViewport(key)
+    }
+  }
+  unsubscribe = subscribeActiveViewport(applyActiveViewport)
 
   // Apply the current viewport once entwine is ready. If it isn't by
   // the next frame, the first apply no-ops and the preview stays at
   // vendor default until the user interacts.
-  vendor.whenReady().then(() => vendor?.applyViewport(getActiveViewport()))
+  vendor.whenReady().then(applyActiveViewport)
 }
 
 /**

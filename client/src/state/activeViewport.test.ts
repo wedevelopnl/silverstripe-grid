@@ -99,13 +99,13 @@ describe('activeViewport store — adapter unavailable', () => {
     const listener = vi.fn()
     const unsubscribe = freshStore.subscribeActiveViewport(listener)
 
-    // Initial value is '' because ensureInitialised caught the error.
-    expect(freshStore.getActiveViewport()).toBe('')
+    // Initial value is null because ensureInitialised caught the error.
+    expect(freshStore.getActiveViewport()).toBeNull()
 
     // Write attempt with any key — must be refused, not silently accepted.
     freshStore.setActiveViewport('anything-goes')
 
-    expect(freshStore.getActiveViewport()).toBe('')
+    expect(freshStore.getActiveViewport()).toBeNull()
     expect(listener).not.toHaveBeenCalled()
     unsubscribe()
     freshStore.resetActiveViewportStore()
