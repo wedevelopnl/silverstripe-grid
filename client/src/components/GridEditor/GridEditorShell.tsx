@@ -3,7 +3,6 @@ import { useMemo } from 'react'
 import ViewportSwitcher from '@/components/ViewportSwitcher/ViewportSwitcher'
 import type { ApiError } from '@/api/errors'
 import { GridEditorProvider } from '@/hooks/GridEditorContext'
-import { ReadonlyProvider } from '@/hooks/ReadonlyContext'
 import { CollapseContext, useCollapseState } from '@/hooks/useCollapseState'
 import { t } from '@/i18n'
 import type { SectionNode, TreeApiResponse } from '@/types/elements'
@@ -87,21 +86,19 @@ export default function GridEditorShell({
       )}
       {status === 'ready' && (
         <GridEditorProvider value={gridEditorContextValue}>
-          <ReadonlyProvider value={readonly}>
-            <CollapseContext.Provider value={collapseState}>
-              <div className="ssgrid-editor">
-                <ViewportSwitcher />
-                <GridAreaHeader sections={sections} readonly={readonly} />
-                <div
-                  className="ssgrid-editor__canvas"
-                  data-testid="grid-editor-canvas"
-                  data-status={anyModified ? 'modified' : undefined}
-                >
-                  {children}
-                </div>
+          <CollapseContext.Provider value={collapseState}>
+            <div className="ssgrid-editor">
+              <ViewportSwitcher readonly={readonly} />
+              <GridAreaHeader sections={sections} readonly={readonly} />
+              <div
+                className="ssgrid-editor__canvas"
+                data-testid="grid-editor-canvas"
+                data-status={anyModified ? 'modified' : undefined}
+              >
+                {children}
               </div>
-            </CollapseContext.Provider>
-          </ReadonlyProvider>
+            </div>
+          </CollapseContext.Provider>
         </GridEditorProvider>
       )}
     </div>

@@ -1,13 +1,15 @@
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog'
-import { useReadonly } from '@/hooks/ReadonlyContext'
 import { useResetOverridesAction } from '@/hooks/useResetOverridesAction'
 import { useViewportContext } from '@/hooks/ViewportContext'
 import { t } from '@/i18n'
 import { getViewports } from '@/utils/gridAdapter'
 import { getViewportIcon, getViewportRangeLabel } from './viewportPresentation'
 
-export default function ViewportSwitcher() {
-  const readonly = useReadonly()
+interface ViewportSwitcherProps {
+  readonly readonly?: boolean
+}
+
+export default function ViewportSwitcher({ readonly = false }: ViewportSwitcherProps) {
   const viewports = getViewports()
   const { activeViewport, setActiveViewport } = useViewportContext()
   const reset = useResetOverridesAction()

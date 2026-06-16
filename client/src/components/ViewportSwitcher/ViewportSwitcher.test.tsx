@@ -173,6 +173,35 @@ describe('ViewportSwitcher', () => {
     expect(resetButton).toHaveTextContent('Reset all')
   })
 
+  it('shows the reset button by default (readonly omitted) when overrides exist', () => {
+    mockFetchSuccess({})
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    })
+
+    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('md'))
+
+    renderWithProviders(<ViewportSwitcher readonly={false} />, { viewport: 'md', queryClient })
+
+    expect(screen.getByTestId('reset-overrides-button')).toBeInTheDocument()
+  })
+
+  it('hides the reset button and dialog when readonly even with overrides present', () => {
+    mockFetchSuccess({})
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    })
+
+    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('md'))
+
+    renderWithProviders(<ViewportSwitcher readonly />, { viewport: 'md', queryClient })
+
+    expect(screen.queryByTestId('reset-overrides-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+  })
+
   it('shows "Reset viewport" label for non-default viewport with overrides', () => {
     mockFetchSuccess({})
 

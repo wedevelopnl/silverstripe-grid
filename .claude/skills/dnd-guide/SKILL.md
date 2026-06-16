@@ -166,7 +166,7 @@ The reorder pipeline (`ReorderValidator → ReorderExecutor → ElementPersisten
 | `client/src/hooks/useElementMaps.ts` | O(1) lookup maps: `nodeMap`, `childrenByParentId` |
 | `client/src/hooks/useElementMutations.ts` | TanStack Query mutation: optimistic update, rollback, toast |
 | `client/src/types/dnd.ts` | Composite IDs (`type-numericId`), `PARENT_CONTAINER_TYPE` hierarchy |
-| `client/src/components/GridEditor/GridEditor.tsx` | `DndContext` + `effectiveData = pendingTree ?? data` |
+| `client/src/components/GridEditor/EditableGridEditor.tsx` | `DndContext` owner (`effectiveData`/pending-tree wiring now lives in `client/src/components/GridEditor/useGridEditorDnd.ts`) |
 | `src/Validation/ReorderValidator.php` | Hierarchy enforcement via `ContainerType::isChildAllowed()` |
 | `src/Service/ReorderExecutor.php` | Sort calculation, dirty tracking, cross-parent reindex |
 
