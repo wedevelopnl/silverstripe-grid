@@ -97,10 +97,8 @@ describe('SectionChrome', () => {
   })
 
   it('renders children inside the section body', () => {
-    const { container } = render(<SectionChrome {...baseProps} />)
+    render(<SectionChrome {...baseProps} />)
 
-    const body = container.querySelector('.ssgrid-section__body')
-    expect(body).not.toBeNull()
-    expect(body).toContainElement(screen.getByTestId('body-slot'))
+    expect(screen.getByTestId('section-body')).toContainElement(screen.getByTestId('body-slot'))
   })
 })

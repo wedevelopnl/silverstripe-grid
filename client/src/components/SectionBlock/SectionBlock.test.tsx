@@ -299,6 +299,16 @@ describe('ReadonlySectionBlock', () => {
     expect(screen.getAllByTestId('row-block')).toHaveLength(2)
   })
 
+  it('renders no rows when children is null', () => {
+    mockFetchSuccess({})
+
+    const section = createSectionNode({ children: null })
+
+    renderWithProviders(<ReadonlySectionBlock section={section} />)
+
+    expect(screen.queryByTestId('row-block')).not.toBeInTheDocument()
+  })
+
   it('marks a collapsed readonly section with an empty data-collapsed attribute', () => {
     mockFetchSuccess({})
 

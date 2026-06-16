@@ -60,7 +60,9 @@ export default function SectionChrome({
         {status === 'modified' && <ModifiedIndicator testId="section-modified-indicator" />}
         {trailing}
       </div>
-      <div className="ssgrid-section__body">{children}</div>
+      <div className="ssgrid-section__body" data-testid="section-body">
+        {children}
+      </div>
     </section>
   )
 }
