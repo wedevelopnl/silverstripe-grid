@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Grid editor blocks split into chrome + editable/readonly variants** — each block (`ElementCard`, `ColumnBlock`, `RowBlock`, `SectionBlock`) is now a presentational `*Chrome` plus an `Editable*`/`Readonly*` variant; editor mode is decided once at the root instead of per-node. No public API or rendered output changes for integrators.
+- **i18n key renamed: the four `*.MODIFIED_LABEL` keys collapse into one `WeDevelopGrid.ModifiedIndicator.LABEL`** — `WeDevelopGrid.ColumnBlock.MODIFIED_LABEL`, `WeDevelopGrid.ElementCard.MODIFIED_LABEL`, `WeDevelopGrid.RowBlock.MODIFIED_LABEL`, and `WeDevelopGrid.SectionBlock.MODIFIED_LABEL` (shipped in `6.0.0-alpha.6`) are replaced by a single `WeDevelopGrid.ModifiedIndicator.LABEL`. The bundled `en`/`nl` text is unchanged, so default output is identical — but any project that overrode one of the four old JS i18n keys must move that override to the new key, or it will silently stop applying.
 - **Build tooling migrated from `make` to [Task](https://taskfile.dev)** — the `Makefile` is replaced by `Taskfile.yml`. Run `task <name>` (e.g. `task up`, `task qa`, `task test`); the target names are unchanged. Contributors must install Task (`brew install go-task/tap/go-task`); CI installs it via `arduino/setup-task`. The QA suite now runs its checks in parallel through Task's `deps` instead of `make -j8`.
 
 ## [6.0.0-alpha.6] - 2026-06-15
