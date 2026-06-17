@@ -84,6 +84,15 @@
   // with a percentage flex-basis overflows the line and forces an unwanted
   // wrap (two 6/12 columns => 100% + gap > 100%).
   &__columns {
+    // Overflow safety for long content: allow the track to shrink below its
+    // content's min-content width. In the editable row this is also set via
+    // `&__columns-area > &__columns`, but the readonly row renders this track
+    // as a direct child of `.ssgrid-row` (no `__columns-area` wrapper), so it
+    // needs the rule here too. `flex: 1 1 auto` stays scoped to the area rule —
+    // the readonly track is a flex item in a column-direction container, where
+    // growing would stretch it vertically.
+    min-width: 0;
+
     &[data-layout-mode='flex'] {
       display: flex;
       flex-wrap: wrap;
