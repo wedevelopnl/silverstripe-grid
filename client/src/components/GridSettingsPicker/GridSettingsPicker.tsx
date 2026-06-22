@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noUnnecessaryConditions: biome's type inference treats the switch(e.key) cases as unreachable, but they handle real KeyboardEvent.key values (arrow/Home/End/Enter) at runtime.
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { GridSettingsOption } from '@/types/gridSettings'
 

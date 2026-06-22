@@ -18,6 +18,7 @@ export function countOverrides(nodes: ElementNode[]): Record<string, number> {
 function walk(nodes: ElementNode[], counts: Record<string, number>): void {
   for (const node of nodes) {
     if (isColumnNode(node) && Object.keys(node.gridSettings.overrides).length > 0) {
+      // biome-ignore lint/suspicious/noUnnecessaryConditions: Record index is typed `number`, but counts._total is `undefined` until the first write; the ?? 0 fallback is runtime-required.
       counts._total = (counts._total ?? 0) + 1
       for (const viewport of Object.keys(node.gridSettings.overrides)) {
         counts[viewport] = (counts[viewport] ?? 0) + 1

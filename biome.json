@@ -128,7 +128,8 @@
             "noAwaitInLoops": "off"
           },
           "suspicious": {
-            "noMisplacedAssertion": "off"
+            "noMisplacedAssertion": "off",
+            "noConsole": "off"
           },
           "nursery": {
             "noComponentHookFactories": "off"

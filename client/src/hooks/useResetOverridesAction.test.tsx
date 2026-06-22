@@ -38,6 +38,7 @@ function treeFromCounts(counts: Record<string, number>): TreeApiResponse {
     }
   }
 
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: Record index is typed `number`, but counts._total is `undefined` when the case omits it; the ?? specificTotal fallback derives the total at runtime.
   const total = counts._total ?? specificTotal
   for (let i = specificTotal; i < total; i++) {
     columns.push(

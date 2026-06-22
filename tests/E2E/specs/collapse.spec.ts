@@ -12,7 +12,7 @@ test.describe('Collapsible containers', () => {
     // Fixture: Section A (Row A1 [Col A1-L, Col A1-R], Row A2 [Col A2]), Section B (Row B1 [Col B1])
     // Plus a second page (e2e_other_page) for CMS navigation testing
     const fixture = await loadFixture(page.request, 'collapse-test')
-    const otherPageId = fixture.fixtureMap['Page']['e2e_other_page']
+    const otherPageId = fixture.fixtureMap.Page.e2e_other_page
 
     await page.goto(`/admin/pages/edit/show/${fixture.pageId}`)
     await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })

@@ -57,8 +57,7 @@ test.describe('Duplicate section to another page and zone', () => {
 
   test('duplicate section to different page and zone via dialog', async ({ page }) => {
     const fixture = await loadAndNavigate(page, 'duplicate-test')
-    const targetPageId =
-      fixture.fixtureMap['WeDevelop\\Grid\\Dev\\MultiZonePage']['e2e_target_page']
+    const targetPageId = fixture.fixtureMap['WeDevelop\\Grid\\Dev\\MultiZonePage'].e2e_target_page
 
     await test.step('Open "Duplicate to…" dialog from Source Section', async () => {
       const section = page.getByTestId('section-block').filter({ hasText: 'Source Section' })
