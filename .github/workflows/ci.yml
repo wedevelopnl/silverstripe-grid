@@ -44,8 +44,19 @@ jobs:
     runs-on: ubuntu-latest
     env:
       COMPOSE: docker compose -f .docker/compose.yml
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - uses: actions/checkout@v4
+      # Authenticate to Docker Hub to lift the anonymous pull rate limit
+      # (~100 pulls/6h per shared runner IP) that can fail image pulls. Guarded
+      # on the secret so fork/Dependabot PRs without secrets fall back to
+      # anonymous pulls rather than erroring on empty credentials.
+      - name: Log in to Docker Hub
+        if: env.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: arduino/setup-task@v2
         with:
           version: 3.x
@@ -68,8 +79,15 @@ jobs:
     env:
       PHP_VERSION: ${{ matrix.php }}
       COMPOSE: docker compose -f .docker/compose.yml --profile fluent
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - uses: actions/checkout@v4
+      - name: Log in to Docker Hub
+        if: env.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: arduino/setup-task@v2
         with:
           version: 3.x
@@ -103,8 +121,15 @@ jobs:
         adapter: [bootstrap, tailwind]
     env:
       SS_GRID_ADAPTER: ${{ matrix.adapter }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - uses: actions/checkout@v4
+      - name: Log in to Docker Hub
+        if: env.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: arduino/setup-task@v2
         with:
           version: 3.x
