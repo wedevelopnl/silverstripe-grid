@@ -11,7 +11,7 @@ test.describe('Grid settings tab', () => {
     page,
   }) => {
     const fixture = await loadFixture(page.request, 'element-tree')
-    const columnId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\Column']['col1']
+    const columnId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\Column'].col1
 
     await page.goto(
       `/admin/pages/edit/EditForm/${fixture.pageId}/field/GridEditor/item/${columnId}/edit`,

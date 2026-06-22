@@ -31,7 +31,8 @@ export function useResetOverridesAction(): ResetOverridesState {
   const isDefaultViewport = activeViewport === defaultViewport
 
   const affectedCount = isDefaultViewport
-    ? (overrideCounts._total ?? 0)
+    ? // biome-ignore lint/suspicious/noUnnecessaryConditions: Record index is typed `number`, but overrideCounts._total is `undefined` when no overrides exist; the ?? 0 fallback is runtime-required (dropping it yields undefined, not 0).
+      (overrideCounts._total ?? 0)
     : (overrideCounts[activeViewport] ?? 0)
 
   const viewportLabel =

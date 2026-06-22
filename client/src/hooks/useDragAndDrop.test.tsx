@@ -127,7 +127,9 @@ function makePointerDragOverEvent(
   activeRects?: { initial: RectLike; translated: RectLike },
 ): DragOverEvent {
   const baseRect: RectLike = { top: 0, left: 0, width: 200, height: 50 }
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: activeRects is an optional param (`… | undefined`); the ?? baseRect fallback is required — dropping it fails typecheck.
   const initial = activeRects?.initial ?? baseRect
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: activeRects is an optional param (`… | undefined`); the ?? baseRect fallback is required — dropping it fails typecheck.
   const translated = activeRects?.translated ?? baseRect
   return {
     active: {

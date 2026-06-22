@@ -93,7 +93,7 @@ test.describe('Validation errors', () => {
   test.describe('GridSettings field validation', () => {
     test('shows an error when width + offset exceeds the column count', async ({ page }) => {
       const fixture = await loadFixture(page.request, 'validation-errors')
-      const columnId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\Column']['col_alpha_1']
+      const columnId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\Column'].col_alpha_1
 
       await page.goto(
         `/admin/pages/edit/EditForm/${fixture.pageId}/field/GridEditor/item/${columnId}/edit`,

@@ -50,6 +50,7 @@ function attemptMount(): void {
     // Vitest suite, which uses react-dom.development).
     mountedRoot.render(createElement(StrictMode, null, createElement(CmsPreviewViewportSelector)))
   } catch (error: unknown) {
+    // biome-ignore lint/suspicious/noConsole: intentional operator diagnostic — surfaces a preview-selector mount failure in the CMS bridge.
     console.warn('[GridEditor] Failed to mount CMS preview viewport selector.', error)
     teardownMount({ restoreVendor: false })
     return
@@ -87,6 +88,7 @@ function teardownMount({ restoreVendor }: { restoreVendor: boolean }): void {
     try {
       mountedRoot.unmount()
     } catch (error: unknown) {
+      // biome-ignore lint/suspicious/noConsole: intentional operator diagnostic — logs the swallowed preview-selector unmount error.
       console.warn('[GridEditor] Error during CMS preview selector unmount.', error)
     }
     mountedRoot = null

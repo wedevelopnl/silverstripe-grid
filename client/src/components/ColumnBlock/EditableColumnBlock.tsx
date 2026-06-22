@@ -39,6 +39,7 @@ interface EditableColumnBlockProps {
 }
 
 function useChildElementKeys(column: ColumnNode): NodeKey[] {
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: column.children is `SimpleElementNode[] | null`; the ?? [] fallback is required — dropping it fails typecheck.
   return useMemo(() => column.children?.map((e) => e.nodeKey) ?? [], [column.children])
 }
 

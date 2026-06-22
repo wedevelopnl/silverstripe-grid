@@ -17,6 +17,7 @@ interface EditableSectionBlockProps {
 }
 
 function useChildSortableKeys(section: SectionNode): NodeKey[] {
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: section.children is `RowNode[] | null`; the ?? [] fallback is required — dropping it fails typecheck.
   return useMemo(() => section.children?.map((r) => r.nodeKey) ?? [], [section.children])
 }
 

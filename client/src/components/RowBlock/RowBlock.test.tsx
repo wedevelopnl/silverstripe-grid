@@ -6,7 +6,6 @@ import { useDragContext } from '@/hooks/useDragAndDrop'
 import { createRowNode } from '@/testing/factories'
 import { mockFetchSuccess } from '@/testing/mockFetch'
 import { createCollapseStateStub, renderWithProviders } from '@/testing/renderWithProviders'
-import type { NodeKey } from '@/types/identity'
 import { resetAdapterCache } from '@/utils/gridAdapter'
 
 import EditableRowBlock from './EditableRowBlock'

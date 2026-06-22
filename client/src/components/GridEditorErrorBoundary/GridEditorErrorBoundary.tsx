@@ -24,6 +24,7 @@ export default class GridEditorErrorBoundary extends Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
+    // biome-ignore lint/suspicious/noConsole: intentional operator diagnostic — logs the caught render error alongside the user-facing toast.
     console.error('[GridEditor] Render error:', error, info)
     showToast(
       t(

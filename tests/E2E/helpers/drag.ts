@@ -51,6 +51,7 @@ async function waitForDragOverlayHidden(page: Page): Promise<void> {
  * there is no element whose visibility or text flips when this completes.
  */
 function settleCollision(page: Page, ms = 150): Promise<void> {
+  // biome-ignore lint/nursery/noPlaywrightWaitForTimeout: intentional bounded pause for a dnd-kit collision-settling step with no user-visible end-state (see doc comment above).
   return page.waitForTimeout(ms)
 }
 
@@ -202,6 +203,7 @@ export function waitForMutationSettlement(page: Page) {
     // internal measurement step with NO DOM end-state to assert on. Without
     // it, the next drag in a journey measures stale rects and drops in the
     // wrong position (see dnd-guide e2e-testing reference, "API settlement").
+    // biome-ignore lint/nursery/noPlaywrightWaitForTimeout: intentional pause for dnd-kit droppable-rect re-measurement after refetch — no DOM end-state to assert on (see comment above).
     await page.waitForTimeout(500)
   }
 }

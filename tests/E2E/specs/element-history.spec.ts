@@ -16,7 +16,7 @@ test.describe('Element history — version timeline on element detail form', () 
 
   test('editor opens element edit form and sees version history', async ({ page }) => {
     const fixture = await loadFixture(page.request, 'complex-page')
-    const leafId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\ContentElement']['modified_leaf']
+    const leafId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\ContentElement'].modified_leaf
 
     await test.step('Navigate to element edit form', async () => {
       await page.goto(

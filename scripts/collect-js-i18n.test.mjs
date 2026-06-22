@@ -61,6 +61,7 @@ describe('collect()', () => {
   it('rejects dynamic key (template literal)', () => {
     writeSource(
       'Component.tsx',
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the ${v} is literal fixture source, asserting the collector rejects dynamic (template-literal) i18n keys.
       "import { t } from \"@/i18n\";\nconst v = 'x';\nexport const x = t(`WeDevelopGrid.Foo.${v}`, 'fallback');",
     )
     const { errors } = run()

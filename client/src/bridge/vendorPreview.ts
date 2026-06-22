@@ -52,6 +52,7 @@ function getEntwine(): EntwinePreviewNamespace | null {
     if (typeof ns.changeSize !== 'function') return null
     return ns
   } catch (error: unknown) {
+    // biome-ignore lint/suspicious/noConsole: intentional operator diagnostic — surfaces a failure to resolve the ss.preview entwine namespace.
     console.warn('[GridEditor] Could not resolve ss.preview entwine namespace.', error)
     return null
   }
@@ -151,6 +152,7 @@ export function openVendorPreview(): VendorPreview | null {
       if (classes !== '') selection.removeClass(classes)
       selection.addClass(`grid-${key}`)
     } catch (error: unknown) {
+      // biome-ignore lint/suspicious/noConsole: intentional operator diagnostic — logs a vendor applyViewport failure in the preview bridge.
       console.warn('[GridEditor] Vendor applyViewport failed.', error)
     }
   }

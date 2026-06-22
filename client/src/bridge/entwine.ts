@@ -94,6 +94,7 @@ export function mountGridEditor(element: HTMLElement, schemaData: unknown): void
       ),
     )
   } catch (error: unknown) {
+    // biome-ignore lint/suspicious/noConsole: intentional operator diagnostic — surfaces a grid-editor mount failure in the CMS bridge.
     console.warn('[GridEditor] Failed to mount grid editor.', error)
   }
 }
@@ -118,6 +119,7 @@ export function unmountGridEditor(element: HTMLElement): void {
   try {
     root.unmount()
   } catch (error: unknown) {
+    // biome-ignore lint/suspicious/noConsole: intentional operator diagnostic — logs the swallowed unmount error (element already detached).
     console.warn('[GridEditor] Error during unmount (element already detached).', error)
   }
 }
