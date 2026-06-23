@@ -7,7 +7,7 @@ applyTo: "**/*.{ts,tsx}"
 
 ## Stack
 
-- React 18, TypeScript 6, Vite 8, SCSS
+- React 19, TypeScript 6, Vite 8, SCSS
 - dnd-kit for drag & drop
 - TanStack Query for data fetching
 - Zod for runtime validation and schema definitions

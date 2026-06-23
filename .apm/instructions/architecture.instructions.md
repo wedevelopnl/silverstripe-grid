@@ -51,7 +51,7 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 ```
 
 - PSR-4 namespace: `WeDevelop\Grid\` → `src/`
-- Frontend: React 18, TypeScript 6, Vite 8, SCSS
+- Frontend: React 19, TypeScript 6, Vite 8, SCSS
 - Key frontend libs: dnd-kit (drag & drop), TanStack Query (data fetching), Zod (validation)
 - Testing: Vitest + React Testing Library (jsdom), PHPUnit 11, Playwright (E2E)
 - Node: >=24 (pinned to 24.13 in `.nvmrc`)
