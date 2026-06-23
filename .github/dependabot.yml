@@ -5,6 +5,22 @@ updates:
     directory: /
     schedule:
       interval: daily
+    ignore:
+      # react / react-dom are externalized to silverstripe/admin's runtime
+      # React global (see vite.config.ts) — the CMS provides React at runtime,
+      # so this module must match admin's version. admin ^3.0 ships React 18;
+      # a major bump here builds the editor against a React the host doesn't
+      # provide and breaks every mount. Drop these ignores once admin ships
+      # React 19. The @types packages are pinned for the same reason: their
+      # major must track the runtime React, not lead it.
+      - dependency-name: react
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react-dom
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: composer
     directory: /
