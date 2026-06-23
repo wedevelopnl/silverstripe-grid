@@ -8,7 +8,7 @@
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import yaml from 'js-yaml'
+import { load } from 'js-yaml'
 
 const ROOT = resolve(import.meta.dirname, '..')
 
@@ -28,7 +28,7 @@ export function flattenYaml(obj, prefix = '') {
 
 export function loadYaml(path) {
   const raw = readFileSync(path, 'utf8')
-  const parsed = yaml.load(raw)
+  const parsed = load(raw)
   if (parsed && typeof parsed === 'object') {
     const topKeys = Object.keys(parsed)
     if (topKeys.length === 1) {
