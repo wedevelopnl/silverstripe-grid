@@ -500,16 +500,17 @@ final class MigrationAcceptanceTest extends SapphireTest
             ],
         ]);
 
-        // Assert live: 1 section. Grid settings (Column width) are published
-        // from draft via writeToStage(LIVE) — overwriteLiveContent only corrects
-        // element content fields, not Column grid settings.
+        // Assert live: 1 section. The live Column width is reconciled from the
+        // live element Size (6), NOT the draft-derived width (8): the draft
+        // structure is published via writeToStage(LIVE), then the live Column
+        // grid settings are corrected from the live element Size.
         $this->assertMigratedHierarchy($pageId, self::ZONE, Versioned::LIVE, [
             [
                 'rows' => [
                     [
                         'columns' => [
                             [
-                                'gridDefault' => ['width' => 8, 'offset' => 0, 'visible' => true],
+                                'gridDefault' => ['width' => 6, 'offset' => 0, 'visible' => true],
                                 'gridOverrides' => [],
                                 'element' => [
                                     'className' => ContentElement::class,
