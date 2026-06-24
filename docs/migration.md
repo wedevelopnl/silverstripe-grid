@@ -11,7 +11,7 @@ The migration runs as a `BuildTask`, is idempotent, supports dry-runs, and handl
 
 - This module is installed, configured and `dev/build` has been run successfully.
 - The legacy database tables (`BaseElement`, `ElementalArea`, `ElementContent`, optionally `ElementRow`) are still present in the database. The old PHP code does **not** need to be installed — the migration reads the old tables via raw SQL.
-- A `GridAdapterInterface` implementation is bound via DI (the default is `BootstrapAdapter`).
+- The `SS_GRID_ADAPTER` environment variable **must** be set to a bundled preset (`bootstrap`, `tailwind`, or `bulma`, case-insensitive) or to the fully-qualified class name of a custom adapter implementing `GridAdapterInterface`. There is no default: when the variable is unset, empty, or invalid the container throws a `RuntimeException` at boot, which aborts `dev/build` **and** every migration task before any work is done. Set it in your environment (e.g. `.env`) before migrating.
 
 ## Before You Begin
 
@@ -341,3 +341,5 @@ For field-level tweaks on individual element subclasses, `updateElementFieldMapp
 **Viewport overrides are missing after migration.** — The automatic viewport-key mapping is case-insensitive but requires at least a case-insensitive match between legacy keys (`XS`, `SM`, `MD`, `LG`, `XL`) and the active adapter's viewport keys. Migrating to an adapter with different names (for example Bulma's `mobile`, `tablet`, `desktop`) requires an explicit `--viewport-map` argument.
 
 **Draft-deleted content reappeared on draft.** — This is expected. Live-only elements are recreated on both stages to preserve Versioned integrity.
+
+**"SS_GRID_ADAPTER environment variable is not set" (or "Invalid SS_GRID_ADAPTER value …").** — The active grid adapter is selected from the required `SS_GRID_ADAPTER` environment variable and there is no default. The container throws this `RuntimeException` at boot, so it surfaces during `dev/build` and on every migration task before any data is read or written. Set `SS_GRID_ADAPTER` to a preset (`bootstrap`, `tailwind`, `bulma`) or an FQCN implementing `GridAdapterInterface` — see [Requirements](#requirements) — then re-run the task.
