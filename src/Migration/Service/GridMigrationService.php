@@ -23,6 +23,7 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Value\GridSettings;
 
 /**
  * Orchestrates the full migration from legacy elemental tables to the new grid hierarchy.
@@ -74,7 +75,7 @@ final class GridMigrationService
             $pageClassName = $pageInfo['pageClassName'];
 
             try {
-                $this->migratePage($pageId, $areaId, $pageClassName, $zone, $dryRun);
+                $this->migratePage($pageId, $areaId, $pageClassName, $zone, $dryRun, $defaultViewport, $viewportKeyMap);
             } catch (Throwable $exception) {
                 $failures++;
                 $this->logger->error('Migration failed for page {pageId}: {message}', [
@@ -99,6 +100,8 @@ final class GridMigrationService
      * viewport key map), so those values are not threaded through here.
      *
      * @param class-string $pageClassName Concrete page class (e.g. 'Page', not 'SiteTree')
+     * @param string $defaultViewport Old viewport key used as default (e.g. 'MD'), for live grid-settings reconciliation
+     * @param array<string, string> $viewportKeyMap Old viewport key → new key, for live grid-settings reconciliation
      */
     private function migratePage(
         int $pageId,
@@ -106,6 +109,8 @@ final class GridMigrationService
         string $pageClassName,
         string $zone,
         bool $dryRun,
+        string $defaultViewport,
+        array $viewportKeyMap,
     ): void {
         // Step 1: Idempotency — skip if Sections already exist for this page + zone
         if ($this->hasExistingSections($pageId, $pageClassName, $zone)) {
@@ -213,6 +218,8 @@ final class GridMigrationService
                         $oldToNewElementId,
                         $oldToNewColumnId,
                         $oldToDraftSort,
+                        $defaultViewport,
+                        $viewportKeyMap,
                     ): void {
                         Versioned::set_stage(Versioned::DRAFT);
                         $this->publishToLive(
@@ -224,6 +231,8 @@ final class GridMigrationService
                             $oldToNewElementId,
                             $oldToNewColumnId,
                             $oldToDraftSort,
+                            $defaultViewport,
+                            $viewportKeyMap,
                         );
                     });
                 }
@@ -417,6 +426,8 @@ final class GridMigrationService
      * @param array<int, int> $oldToNewElementId
      * @param array<int, int> $oldToNewColumnId
      * @param array<int, int> $oldToDraftSort Old element ID → column-local Sort assigned on draft
+     * @param string $defaultViewport Old viewport key used as default (e.g. 'MD')
+     * @param array<string, string> $viewportKeyMap Old viewport key → new key
      */
     private function publishToLive(
         int $pageId,
@@ -427,10 +438,17 @@ final class GridMigrationService
         array $oldToNewElementId,
         array $oldToNewColumnId,
         array $oldToDraftSort,
+        string $defaultViewport,
+        array $viewportKeyMap,
     ): void {
         // Track which containers we've already published
         /** @var array<int, bool> $publishedContainers */
         $publishedContainers = [];
+
+        // Live elements grouped by their target (new) Column ID, so the Column's
+        // live GridSettings can be reconciled from the live Size after publish.
+        /** @var array<int, list<LegacyElement>> $liveElementsByColumn */
+        $liveElementsByColumn = [];
 
         // Live-only elements are collected and processed as a single grouped
         // hierarchy after the loop, mirroring the draft path. Row delimiters are
@@ -476,6 +494,8 @@ final class GridMigrationService
             $newElementId = $oldToNewElementId[$oldId];
             $newColumnId = $oldToNewColumnId[$oldId];
 
+            $liveElementsByColumn[$newColumnId][] = $liveElement;
+
             $this->publishContainerChain($newColumnId, $publishedContainers);
 
             $element = GridElement::get()->byID($newElementId);
@@ -492,6 +512,12 @@ final class GridMigrationService
             }
         }
 
+        // Reconcile each published Column's live GridSettings from the live
+        // element Size. The Column width was derived from the draft Size and
+        // copied to live by writeToStage(); without this pass a draft↔live Size
+        // difference leaves the wrong width on the published front-end.
+        $this->reconcileColumnLiveGridSettings($liveElementsByColumn, $defaultViewport, $viewportKeyMap);
+
         if ($liveOnlyElements !== []) {
             $this->createLiveOnlyHierarchy(
                 $liveOnlyElements,
@@ -501,6 +527,123 @@ final class GridMigrationService
                 $publishedContainers,
             );
         }
+    }
+
+    /**
+     * Reconcile published Columns' live GridSettings from the live element Size.
+     *
+     * The Column's GridSettings is derived from the DRAFT element Size in
+     * {@see createColumn()} and copied to the live table by writeToStage(LIVE).
+     * For an element shared between draft and live whose legacy Size differs,
+     * this would leave the live Column showing the draft-derived width. Here the
+     * live settings are recomputed from the live Size (using the same mapper and
+     * viewport configuration the draft grouping used) and written to the live
+     * stage only when they differ from the published (draft-derived) settings.
+     *
+     * The live row is updated with raw SQL (mirroring {@see overwriteLiveContent()})
+     * rather than `setGridSettings()` + `writeToStage(LIVE)`: the ORM path,
+     * starting from a draft-stage object, also rewrites the draft GridSettings,
+     * which would corrupt the draft Column width. A targeted `_Live` UPDATE keeps
+     * the draft untouched.
+     *
+     * @param array<int, list<LegacyElement>> $liveElementsByColumn New Column ID → live elements published into it
+     * @param array<string, string> $viewportKeyMap Old viewport key → new key
+     */
+    private function reconcileColumnLiveGridSettings(
+        array $liveElementsByColumn,
+        string $defaultViewport,
+        array $viewportKeyMap,
+    ): void {
+        if ($liveElementsByColumn === []) {
+            return;
+        }
+
+        $columnLiveTable = DataObject::getSchema()->tableName(Column::class) . '_Live';
+
+        foreach ($liveElementsByColumn as $columnId => $liveElements) {
+            if ($liveElements === []) {
+                continue;
+            }
+
+            $column = Column::get()->byID($columnId);
+            if (!$column instanceof Column) {
+                continue;
+            }
+
+            $liveSettings = $this->reconcileGridSettings($liveElements, $defaultViewport, $viewportKeyMap, $columnId);
+
+            // The loaded column is on the draft stage and carries the
+            // draft-derived settings (also just copied to live by writeToStage).
+            // Skip the write when the live Size produces the same settings — the
+            // common case, and keeps the pass idempotent.
+            if ($liveSettings->equals($column->getGridSettings())) {
+                continue;
+            }
+
+            // DBGridSettings stores the VO across four prefixed columns; Overrides
+            // is NULL when empty, else JSON — matching DBGridSettings::applyGridSettings.
+            $overrides = $liveSettings->overrides === []
+                ? null
+                : \json_encode($liveSettings->overrides, \JSON_THROW_ON_ERROR);
+
+            DB::prepared_query(
+                \sprintf(
+                    'UPDATE "%s" SET
+                        "GridSettingsDefaultWidth" = ?,
+                        "GridSettingsDefaultOffset" = ?,
+                        "GridSettingsDefaultVisible" = ?,
+                        "GridSettingsOverrides" = ?
+                    WHERE "ID" = ?',
+                    $columnLiveTable,
+                ),
+                [
+                    $liveSettings->default->width,
+                    $liveSettings->default->offset,
+                    $liveSettings->default->visible ? 1 : 0,
+                    $overrides,
+                    $columnId,
+                ],
+            );
+        }
+    }
+
+    /**
+     * Resolve a single GridSettings for a Column from its live elements.
+     *
+     * Draft grouping keys on the draft settings, so the live settings of the
+     * elements in one Column can diverge. A Column can only carry one width, so
+     * the first element's live settings win; any divergence is logged.
+     *
+     * @param non-empty-list<LegacyElement> $liveElements
+     * @param array<string, string> $viewportKeyMap Old viewport key → new key
+     */
+    private function reconcileGridSettings(
+        array $liveElements,
+        string $defaultViewport,
+        array $viewportKeyMap,
+        int $columnId,
+    ): GridSettings {
+        $settings = null;
+
+        foreach ($liveElements as $liveElement) {
+            $candidate = $this->mapper->mapGridSettings($liveElement, $defaultViewport, $viewportKeyMap);
+
+            if ($settings === null) {
+                $settings = $candidate;
+                continue;
+            }
+
+            if (!$candidate->equals($settings)) {
+                $this->logger->warning(
+                    'Live grid settings diverge within migrated column {columnId}; '
+                    . 'using the first element\'s settings (a single column cannot express multiple widths).',
+                    ['columnId' => $columnId],
+                );
+            }
+        }
+
+        /** @var GridSettings $settings Non-null: callers only pass non-empty element lists. */
+        return $settings;
     }
 
     /**
