@@ -330,6 +330,18 @@ For field-level tweaks on individual element subclasses, `updateElementFieldMapp
 3. Review the log output for `warning` entries — each one corresponds to a clamp, an unresolved mapping, or a `customSectionClass` conflict resolved by Strategy B.
 4. Once you are satisfied, drop the legacy tables manually (`BaseElement`, `BaseElement_Live`, `ElementRow`, `ElementRow_Live`, `ElementContent`, `ElementContent_Live`, `ElementalArea`, `ElementalArea_Live`, and any legacy subclass tables) in a separate migration step.
 
+## Related Migrations
+
+### Converting `gorriecoe/silverstripe-link` to `silverstripe/linkfield`
+
+Many SS4/SS5 sites store element link fields with `gorriecoe/silverstripe-link`. On SS6 those become `silverstripe/linkfield` links. This conversion is **not** part of the grid migration — it is owned by `silverstripe/linkfield`, which ships its own `SilverStripe\LinkField\Tasks\GorriecoeMigrationTask`. The only thing that matters for the grid is the **ordering**:
+
+- Run `GorriecoeMigrationTask` **after** the grid migration (and after any project-specific step that re-parents block relations onto the new element IDs).
+- The task **preserves Link IDs**, so any link foreign keys copied onto migrated content elements (for example a block's `PrimaryLinkID`) keep resolving once the links are converted.
+- Running it **before** the grid migration leaves the grid pass copying link FKs that point at rows the link conversion later moves, so button labels render as placeholders.
+
+Carry the block link FK fields across during the grid pass with the `updateElementFieldMapping` hook (see [Customising the Migration](#customising-the-migration)), then run the link conversion last.
+
 ## Troubleshooting
 
 **"Page X already migrated for zone Y, skipping."** — The idempotency check found at least one `Section` for that page and zone on draft. If you need to redo the page, delete its new Section tree first.
