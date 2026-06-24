@@ -152,6 +152,108 @@ final class LegacyDataReader
     }
 
     /**
+     * Eligible pages with their ElementalArea resolved for a specific locale.
+     *
+     * For each page carrying ElementalAreaID, the area for $localeCode is read
+     * from the `<PageTable>_Localised` companion. When a page has no localised
+     * row for the locale, the base-column area is used only for the default
+     * locale ($isDefault); other locales omit the page (no content there).
+     *
+     * Reads legacy tables with raw SQL only — independent of whether Fluent is
+     * installed in the running application.
+     *
+     * @param non-empty-string $localeCode
+     * @param list<int>|null $pageIds Optional filter to restrict to specific pages
+     * @return list<array{pageId: int, areaId: int, pageClassName: class-string}>
+     */
+    public function getEligiblePagesForLocale(string $stage, string $localeCode, bool $isDefault, ?array $pageIds = null): array
+    {
+        $basePages = $this->getEligiblePages($stage, $pageIds);
+        $resolved = [];
+
+        foreach ($basePages as $page) {
+            $localisedAreaId = $this->getLocalisedAreaId($page['pageId'], $localeCode, $stage);
+
+            if ($localisedAreaId !== null) {
+                $resolved[] = [
+                    'pageId' => $page['pageId'],
+                    'areaId' => $localisedAreaId,
+                    'pageClassName' => $page['pageClassName'],
+                ];
+                continue;
+            }
+
+            if ($isDefault) {
+                // The base ElementalAreaID is the default-locale area.
+                $resolved[] = $page;
+            }
+        }
+
+        return $resolved;
+    }
+
+    /**
+     * Resolve a page's localised ElementalAreaID for a locale, or null when the
+     * `<PageTable>_Localised` companion is absent or has no matching row with
+     * an area greater than zero.
+     *
+     * @return positive-int|null
+     */
+    private function getLocalisedAreaId(int $pageId, string $localeCode, string $stage): ?int
+    {
+        $baseTable = $this->localisedBaseTableFor();
+        if ($baseTable === null) {
+            return null;
+        }
+
+        $localisedTable = $this->stageTable($baseTable . '_Localised', $stage);
+        if (!\array_key_exists(\strtolower($localisedTable), DB::table_list())) {
+            return null;
+        }
+
+        $result = DB::prepared_query(
+            "SELECT \"ElementalAreaID\" FROM \"{$localisedTable}\" WHERE \"RecordID\" = ? AND \"Locale\" = ?",
+            [$pageId, $localeCode],
+        );
+
+        if ($result->numRecords() === 0) {
+            return null;
+        }
+
+        /** @var array<string, int|string|null> $row */
+        $row = $result->record();
+        $areaId = (int) ($row['ElementalAreaID'] ?? 0);
+
+        if ($areaId <= 0) {
+            return null;
+        }
+
+        /** @var positive-int $areaId */
+        return $areaId;
+    }
+
+    /**
+     * The base table whose `_Localised` companion carries ElementalAreaID, or
+     * null when no page table in the hierarchy has the column.
+     *
+     * The legacy ElementalArea relation lives on a single page table site-wide
+     * (the first match owns it); projects that split the column across multiple
+     * page tables are out of scope.
+     *
+     * @return non-empty-string|null
+     */
+    private function localisedBaseTableFor(): ?string
+    {
+        foreach ($this->findPageTablesWithColumn('ElementalAreaID') as $table) {
+            if ($table !== '') {
+                return $table;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Load all legacy elements for an ElementalArea, sorted by position.
      *
      * Hydrates each row into a LegacyElement DTO, eagerly fetching associated

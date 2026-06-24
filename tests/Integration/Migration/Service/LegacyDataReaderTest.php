@@ -43,10 +43,48 @@ final class LegacyDataReaderTest extends SapphireTest
 
     protected function tearDown(): void
     {
+        $this->seeder->removeLocalisedAreaColumn('Page');
         $this->seeder->removeExtensionColumns('Page');
         $this->seeder->dropTables();
 
         parent::tearDown();
+    }
+
+    public function testGetEligiblePagesForLocaleReadsLocalisedArea(): void
+    {
+        $pageId = (int) $this->objFromFixture(Page::class, 'test_page')->ID;
+        $this->seeder->seedPage($pageId, 100);
+        $this->seeder->addLocalisedAreaColumn('Page');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'nl_NL', 200);
+
+        $pages = $this->reader->getEligiblePagesForLocale('draft', 'nl_NL', isDefault: false);
+
+        self::assertCount(1, $pages);
+        self::assertSame($pageId, $pages[0]['pageId']);
+        self::assertSame(200, $pages[0]['areaId'], 'nl_NL resolves to the localised area, not the base area');
+    }
+
+    public function testGetEligiblePagesForLocaleSkipsNonDefaultLocaleWithoutLocalisedRow(): void
+    {
+        $pageId = (int) $this->objFromFixture(Page::class, 'test_page')->ID;
+        $this->seeder->seedPage($pageId, 100);
+        $this->seeder->addLocalisedAreaColumn('Page');
+
+        $pages = $this->reader->getEligiblePagesForLocale('draft', 'nl_NL', isDefault: false);
+
+        self::assertSame([], $pages, 'A non-default locale with no localised area is omitted');
+    }
+
+    public function testGetEligiblePagesForLocaleFallsBackToBaseAreaForDefaultLocale(): void
+    {
+        $pageId = (int) $this->objFromFixture(Page::class, 'test_page')->ID;
+        $this->seeder->seedPage($pageId, 100);
+        $this->seeder->addLocalisedAreaColumn('Page');
+
+        $pages = $this->reader->getEligiblePagesForLocale('draft', 'en_US', isDefault: true);
+
+        self::assertCount(1, $pages);
+        self::assertSame(100, $pages[0]['areaId'], 'Default locale falls back to the base ElementalAreaID');
     }
 
     public function testGetEligiblePagesReturnsGridEnabledPages(): void

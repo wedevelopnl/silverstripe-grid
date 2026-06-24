@@ -166,6 +166,56 @@ final class LegacyTableSeeder
     }
 
     /**
+     * Create the Fluent localised companion tables for a page table (draft + _Live).
+     *
+     * Simulates a legacy site where the page's `ElementalArea` has_one was
+     * localised by Fluent: the per-locale area ID lives in `<table>_Localised`
+     * keyed by RecordID + Locale, not on the base page table.
+     */
+    public function addLocalisedAreaColumn(string $table): void
+    {
+        foreach ([$table . '_Localised', $table . '_Localised_Live'] as $target) {
+            DB::query(<<<SQL
+                CREATE TABLE IF NOT EXISTS "{$target}" (
+                    "ID" int NOT NULL PRIMARY KEY AUTO_INCREMENT,
+                    "RecordID" int NOT NULL DEFAULT 0,
+                    "Locale" varchar(10) NOT NULL DEFAULT '',
+                    "ElementalAreaID" int NOT NULL DEFAULT 0
+                )
+                SQL);
+        }
+    }
+
+    /**
+     * Seed a per-locale ElementalArea row in `<table>_Localised(_Live)` plus the
+     * matching ElementalArea record.
+     */
+    public function seedLocalisedArea(string $table, int $pageId, string $locale, int $areaId, string $stage = 'draft'): void
+    {
+        $target = $this->stageTable($table . '_Localised', $stage);
+
+        DB::prepared_query(
+            "INSERT INTO \"{$target}\" (\"RecordID\", \"Locale\", \"ElementalAreaID\") VALUES (?, ?, ?)",
+            [$pageId, $locale, $areaId],
+        );
+
+        DB::prepared_query(
+            'INSERT INTO "ElementalArea" ("ID", "OwnerClassName") VALUES (?, ?)',
+            [$areaId, 'SilverStripe\\CMS\\Model\\SiteTree'],
+        );
+    }
+
+    /**
+     * Drop the Fluent localised companion tables for a page table.
+     */
+    public function removeLocalisedAreaColumn(string $table): void
+    {
+        foreach ([$table . '_Localised', $table . '_Localised_Live'] as $target) {
+            DB::query("DROP TABLE IF EXISTS \"{$target}\"");
+        }
+    }
+
+    /**
      * Seed a plain elemental page (ElementalAreaID only, no UseElementalGrid).
      */
     public function seedPlainElementalPage(int $pageId, int $areaId): void
