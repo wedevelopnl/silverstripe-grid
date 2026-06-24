@@ -988,6 +988,165 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertSame((int) $draftSecond->Sort, (int) $liveSecond->Sort, 'Second: draft and live Sort must agree');
     }
 
+    public function testLiveColumnWidthReconciledFromLiveElementSize(): void
+    {
+        // An element present on BOTH stages whose live Size differs from its
+        // draft Size. The Column's GridSettings is derived from the draft Size
+        // and published to live; the live Column width must be reconciled from
+        // the live Size, otherwise the published front-end renders the wrong
+        // column width.
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        $this->seeder->seedElement(6100, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 6,
+            'Title' => 'Widthy',
+        ], stage: 'draft');
+        $this->seeder->seedContentMedia(6100, [], stage: 'draft');
+
+        $this->seeder->seedElement(6100, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 10,
+            'Title' => 'Widthy',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(6100, [], stage: 'live');
+
+        $this->runMigration();
+
+        // Draft Column keeps the draft-derived width.
+        Versioned::set_stage(Versioned::DRAFT);
+        $draftElement = ContentElement::get()->filter(['Title' => 'Widthy'])->first();
+        self::assertInstanceOf(ContentElement::class, $draftElement);
+        $draftColumn = Column::get()->byID((int) $draftElement->ParentID);
+        self::assertInstanceOf(Column::class, $draftColumn);
+        self::assertSame(6, $draftColumn->getGridSettings()->default->width, 'Draft column width derives from the draft Size');
+
+        // Live Column must reflect the live element Size, not the draft Size.
+        Versioned::set_stage(Versioned::LIVE);
+        $liveElement = ContentElement::get()->filter(['Title' => 'Widthy'])->first();
+        self::assertInstanceOf(ContentElement::class, $liveElement);
+        $liveColumn = Column::get()->byID((int) $liveElement->ParentID);
+        self::assertInstanceOf(Column::class, $liveColumn);
+        self::assertSame(10, $liveColumn->getGridSettings()->default->width, 'Live column width must reconcile from the live Size');
+    }
+
+    public function testLiveColumnWidthUnchangedWhenDraftAndLiveSizesMatch(): void
+    {
+        // Shared element with identical draft/live Size — reconciliation must be
+        // a no-op and leave both stages at the same width.
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        foreach (['draft', 'live'] as $stage) {
+            $this->seeder->seedElement(6200, $areaId, self::CONTENT_CLASS, 1, [
+                'SizeMD' => 7,
+                'Title' => 'Stable',
+            ], stage: $stage);
+            $this->seeder->seedContentMedia(6200, [], stage: $stage);
+        }
+
+        $this->runMigration();
+
+        foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
+            Versioned::set_stage($stage);
+            $element = ContentElement::get()->filter(['Title' => 'Stable'])->first();
+            self::assertInstanceOf(ContentElement::class, $element);
+            $column = Column::get()->byID((int) $element->ParentID);
+            self::assertInstanceOf(Column::class, $column);
+            self::assertSame(7, $column->getGridSettings()->default->width, "Width on {$stage} stays 7");
+        }
+    }
+
+    public function testLiveColumnWidthUsesFirstElementWhenLiveSizesDiverge(): void
+    {
+        // Two elements share the same DRAFT Size, so they group into one Column.
+        // On live their Size diverges; a single Column cannot express two widths,
+        // so the first element's live settings win and a warning is logged.
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        $this->seeder->seedElement(6300, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 6,
+            'Title' => 'DivA',
+        ], stage: 'draft');
+        $this->seeder->seedContentMedia(6300, [], stage: 'draft');
+        $this->seeder->seedElement(6301, $areaId, self::CONTENT_CLASS, 2, [
+            'SizeMD' => 6,
+            'Title' => 'DivB',
+        ], stage: 'draft');
+        $this->seeder->seedContentMedia(6301, [], stage: 'draft');
+
+        $this->seeder->seedElement(6300, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 10,
+            'Title' => 'DivA',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(6300, [], stage: 'live');
+        $this->seeder->seedElement(6301, $areaId, self::CONTENT_CLASS, 2, [
+            'SizeMD' => 4,
+            'Title' => 'DivB',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(6301, [], stage: 'live');
+
+        $this->runMigration();
+
+        Versioned::set_stage(Versioned::LIVE);
+        $liveA = ContentElement::get()->filter(['Title' => 'DivA'])->first();
+        self::assertInstanceOf(ContentElement::class, $liveA);
+        $liveColumn = Column::get()->byID((int) $liveA->ParentID);
+        self::assertInstanceOf(Column::class, $liveColumn);
+        self::assertSame(10, $liveColumn->getGridSettings()->default->width, 'First element\'s live Size wins');
+
+        $diverged = false;
+        foreach ($this->getLogMessages('warning') as $message) {
+            if (str_contains($message, 'diverge') && str_contains($message, (string) $liveColumn->ID)) {
+                $diverged = true;
+            }
+        }
+        self::assertTrue($diverged, 'Divergent live grid settings should log a warning naming the column');
+    }
+
+    public function testLiveColumnOverrideReconciledFromLiveElementSize(): void
+    {
+        // The live element gains a per-viewport override (SizeLG) that the draft
+        // element lacks. The live Column must carry that override; the draft must not.
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        $this->seeder->seedElement(6400, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 6,
+            'Title' => 'Override',
+        ], stage: 'draft');
+        $this->seeder->seedContentMedia(6400, [], stage: 'draft');
+
+        $this->seeder->seedElement(6400, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 6,
+            'SizeLG' => 4,
+            'Title' => 'Override',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(6400, [], stage: 'live');
+
+        $this->runMigration();
+
+        Versioned::set_stage(Versioned::DRAFT);
+        $draftElement = ContentElement::get()->filter(['Title' => 'Override'])->first();
+        self::assertInstanceOf(ContentElement::class, $draftElement);
+        $draftColumn = Column::get()->byID((int) $draftElement->ParentID);
+        self::assertInstanceOf(Column::class, $draftColumn);
+        self::assertArrayNotHasKey('lg', $draftColumn->getGridSettings()->overrides, 'Draft column has no lg override');
+
+        Versioned::set_stage(Versioned::LIVE);
+        $liveElement = ContentElement::get()->filter(['Title' => 'Override'])->first();
+        self::assertInstanceOf(ContentElement::class, $liveElement);
+        $liveColumn = Column::get()->byID((int) $liveElement->ParentID);
+        self::assertInstanceOf(Column::class, $liveColumn);
+        $liveOverrides = $liveColumn->getGridSettings()->overrides;
+        self::assertArrayHasKey('lg', $liveOverrides, 'Live column gains the lg override from the live Size');
+        self::assertSame(4, $liveOverrides['lg']->width, 'Live lg override width is reconciled to 4');
+    }
+
     // ─── Test Group 4: Idempotency + dry-run (tests 19-21) ──────
 
     public function testRunTwiceSkipsSecondRunNoDuplicates(): void
