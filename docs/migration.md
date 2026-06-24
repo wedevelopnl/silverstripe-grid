@@ -23,6 +23,7 @@ Read this section before running the task on a production database.
 - **Only `ElementContent` is mapped by default.** The built-in field mapper converts `DNADesign\Elemental\Models\ElementContent` to `WeDevelop\Grid\Model\ContentElement`. Any custom element subclass must either already extend `GridElement`, or be registered via the `updateClassNameMapping` extension hook described in [Customising the Migration](#customising-the-migration).
 - **Media-field CSS values are Bootstrap-specific.** Field values like `ContentVerticalAlign` (`align-items-center` → `center`) and `MediaPosition` (`order-1 order-md-2` → `last-on-desktop`) are translated using hardcoded Bootstrap class names. Sites that used the old module with a different CSS framework need a custom `FieldMapper` — see [Customising the Migration](#customising-the-migration).
 - **Draft-deleted content will reappear on draft.** To keep the Versioned contract intact, elements that only exist on live are inserted on **both** draft and live. If your editors had deleted content from draft without publishing, those elements will become visible on draft again after migration.
+- **Multi-locale (Fluent) sites need extra preparation.** When Fluent is installed the migration runs per locale and reads each locale's area from the legacy `<PageTable>_Localised` tables, which must still be present. See [Migrating Elemental Content under Fluent](fluent.md#migrating-elemental-content-under-fluent) before running.
 
 ## Choosing a Strategy
 
