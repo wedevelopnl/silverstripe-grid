@@ -13,6 +13,8 @@ use SilverStripe\Core\Extensible;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
+use TractorCow\Fluent\Model\Locale;
+use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\MigrationColumn;
 use WeDevelop\Grid\Migration\DTO\MigrationRow;
@@ -61,7 +63,33 @@ final class GridMigrationService
         bool $dryRun = false,
         ?array $pageIds = null,
     ): int {
-        $eligiblePages = $this->reader->getEligiblePages('draft', $pageIds);
+        // Without Fluent the migration runs once against the base ElementalArea —
+        // unchanged behaviour. With Fluent it runs per locale so each locale's
+        // legacy area is migrated into locale-isolated grid elements.
+        if (!class_exists(FluentState::class)) {
+            $eligiblePages = $this->reader->getEligiblePages('draft', $pageIds);
+
+            return $this->runForEligiblePages($eligiblePages, $zone, $dryRun, $defaultViewport, $viewportKeyMap);
+        }
+
+        return $this->runPerLocale($zone, $dryRun, $defaultViewport, $viewportKeyMap, $pageIds);
+    }
+
+    /**
+     * Migrate a resolved set of eligible pages and carry forward grid-disabled
+     * page flags. Shared by the non-Fluent run and each per-locale Fluent pass.
+     *
+     * @param list<array{pageId: int, areaId: int, pageClassName: class-string}> $eligiblePages
+     * @param array<string, string> $viewportKeyMap Old viewport key → new key
+     * @return int<0, max> Number of pages that failed to migrate
+     */
+    private function runForEligiblePages(
+        array $eligiblePages,
+        string $zone,
+        bool $dryRun,
+        string $defaultViewport,
+        array $viewportKeyMap,
+    ): int {
         $failures = 0;
 
         foreach ($eligiblePages as $pageInfo) {
@@ -82,6 +110,68 @@ final class GridMigrationService
 
         if (!$dryRun) {
             $this->migrateDisabledGridPages();
+        }
+
+        return $failures;
+    }
+
+    /**
+     * Run the migration once per Fluent locale, default locale first.
+     *
+     * Each pass resolves each page's locale-specific legacy ElementalArea and
+     * writes inside that locale's {@see FluentState}, so {@see FluentIsolatedExtension}
+     * stamps the correct LocaleID and scopes the idempotency guard per locale.
+     * The default locale is processed first so base elements receive the default
+     * LocaleID before any non-default pass runs.
+     *
+     * @param array<string, string> $viewportKeyMap Old viewport key → new key
+     * @param list<int>|null $pageIds Optional filter to restrict to specific pages
+     * @return int<0, max> Number of pages that failed to migrate
+     */
+    private function runPerLocale(
+        string $zone,
+        bool $dryRun,
+        string $defaultViewport,
+        array $viewportKeyMap,
+        ?array $pageIds,
+    ): int {
+        $default = Locale::getDefault();
+        $defaultCode = $default?->Locale;
+
+        // Build the ordered, de-duplicated locale list: default first, then the rest.
+        $candidates = [];
+        if ($defaultCode !== null) {
+            $candidates[] = $defaultCode;
+        }
+        foreach (Locale::getCached() as $locale) {
+            $candidates[] = $locale->Locale;
+        }
+
+        /** @var list<non-empty-string> $orderedCodes */
+        $orderedCodes = [];
+        /** @var array<non-empty-string, true> $seen */
+        $seen = [];
+        foreach ($candidates as $code) {
+            if (isset($seen[$code])) {
+                continue;
+            }
+            $seen[$code] = true;
+            $orderedCodes[] = $code;
+        }
+
+        $failures = 0;
+
+        foreach ($orderedCodes as $code) {
+            $isDefault = $code === $defaultCode;
+
+            $failures += FluentState::singleton()->withState(
+                function (FluentState $state) use ($code, $isDefault, $zone, $dryRun, $defaultViewport, $viewportKeyMap, $pageIds): int {
+                    $state->setLocale($code);
+                    $pages = $this->reader->getEligiblePagesForLocale('draft', $code, $isDefault, $pageIds);
+
+                    return $this->runForEligiblePages($pages, $zone, $dryRun, $defaultViewport, $viewportKeyMap);
+                }
+            );
         }
 
         return $failures;
