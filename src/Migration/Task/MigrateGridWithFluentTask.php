@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Migration\Task;
 
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
@@ -30,6 +31,17 @@ class MigrateGridWithFluentTask extends AbstractMigrationTask
         if (!class_exists(FluentState::class)) {
             return 'tractorcow/silverstripe-fluent is not installed; cannot migrate per locale. '
                 . 'Install Fluent, or use "migrate-grid" for a single-locale site.';
+        }
+
+        // Resolve the localisation model now — before the destructive-write
+        // confirmation prompt. detect() throws on an ambiguous mixed Fluent
+        // config; without this, that throw would only fire later inside the
+        // orchestrator (after the operator confirmed) and escape run() as a
+        // raw stack trace instead of a clean Command::FAILURE.
+        try {
+            (new LegacyLocalisationDetector())->detect();
+        } catch (RuntimeException $exception) {
+            return $exception->getMessage();
         }
 
         return null;

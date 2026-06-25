@@ -52,4 +52,25 @@ final class MigrateGridTaskGuardTest extends SapphireTest
 
         self::assertSame(Command::FAILURE, $result, 'must refuse on localised legacy data');
     }
+
+    public function testRefusesCleanlyOnAmbiguousLegacyConfiguration(): void
+    {
+        // Both the field-localised table and the isolated LocaleID column present
+        // is an unsupported mixed Fluent config. The detector throws on it; the
+        // task must convert that into a clean Command::FAILURE with the message
+        // rather than letting the exception escape run() as a raw stack trace.
+        $this->seeder->addFieldLocalisedTables();
+        $this->seeder->addLocaleIdColumn();
+
+        $task = new MigrateGridTask();
+        $definition = new InputDefinition($task->getOptions());
+        $input = new ArrayInput(['--default-viewport' => 'MD', '--zone' => 'main', '--dry-run' => true], $definition);
+        $buffered = new BufferedOutput();
+        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+
+        $result = $task->execute($input, $output);
+
+        self::assertSame(Command::FAILURE, $result);
+        self::assertStringContainsString('Ambiguous legacy localisation', $buffered->fetch());
+    }
 }

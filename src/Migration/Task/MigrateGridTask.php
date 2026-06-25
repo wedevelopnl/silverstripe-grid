@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Migration\Task;
 
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use TractorCow\Fluent\Extension\FluentIsolatedExtension;
 use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
@@ -37,7 +38,16 @@ class MigrateGridTask extends AbstractMigrationTask
         $targetIsLocaleIsolated = class_exists(FluentState::class)
             && GridElement::has_extension(FluentIsolatedExtension::class);
 
-        if ($targetIsLocaleIsolated || (new LegacyLocalisationDetector())->hasLocalisedContent()) {
+        // detect() throws on an ambiguous mixed Fluent config. Surface that as a
+        // clean preflight error (returned, not thrown) so the operator gets a
+        // Command::FAILURE message rather than a raw stack trace out of run().
+        try {
+            $hasLocalisedContent = (new LegacyLocalisationDetector())->hasLocalisedContent();
+        } catch (RuntimeException $exception) {
+            return $exception->getMessage();
+        }
+
+        if ($targetIsLocaleIsolated || $hasLocalisedContent) {
             return 'Fluent site detected (locale-isolated grid or localised legacy tables). '
                 . 'Run "migrate-grid-with-fluent" instead — this task migrates content without '
                 . 'locale context and would write records invisible in every locale.';
