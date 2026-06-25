@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Service;
 
+use NoDiscard;
 use RuntimeException;
 use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Value\Result;
@@ -38,6 +39,7 @@ final class Transactional
      * @param callable(): Result<T> $operation
      * @return Result<T>
      */
+    #[NoDiscard('The Result reports whether the transaction succeeded; discarding it silently swallows the write/validation failure it rolls back on.')]
     public static function run(callable $operation): Result
     {
         $conn = DB::get_conn();
