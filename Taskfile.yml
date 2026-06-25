@@ -178,6 +178,12 @@ tasks:
     cmds:
       - "{{.COMPOSE}} exec app vendor/bin/phpstan analyse -c phpstan.neon.dist --memory-limit=512M"
 
+  analyse-php85:
+    desc: Run PHPStan with the analysis target pinned to PHP 8.5 (in addition to the 8.3-range primary pass)
+    deps: [ensure-up]
+    cmds:
+      - "{{.COMPOSE}} exec app vendor/bin/phpstan analyse -c phpstan-php85.neon.dist --memory-limit=512M"
+
   rector:
     desc: Run Rector refactoring (applies changes)
     deps: [ensure-up]
@@ -227,6 +233,7 @@ tasks:
     internal: true
     deps:
       - qa-analyse
+      - qa-analyse-php85
       - qa-rector
       - qa-coverage
       - qa-lint
@@ -241,6 +248,13 @@ tasks:
       - 'echo "==> [analyse] running PHPStan..."'
       - "{{.COMPOSE}} exec -T app vendor/bin/phpstan analyse -c phpstan.neon.dist --memory-limit=512M"
       - 'echo "==> [analyse] done"'
+
+  qa-analyse-php85:
+    internal: true
+    cmds:
+      - 'echo "==> [analyse-php85] running PHPStan (PHP 8.5 analysis target)..."'
+      - "{{.COMPOSE}} exec -T app vendor/bin/phpstan analyse -c phpstan-php85.neon.dist --memory-limit=512M"
+      - 'echo "==> [analyse-php85] done"'
 
   qa-rector:
     internal: true

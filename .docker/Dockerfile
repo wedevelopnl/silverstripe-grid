@@ -35,6 +35,7 @@ COPY app/templates/ /app/templates/
 COPY app/infection.json5 /app/infection.json5
 COPY app/phpunit.xml.dist /app/phpunit.xml.dist
 COPY app/phpstan.neon.dist /app/phpstan.neon.dist
+COPY app/phpstan-php85.neon.dist /app/phpstan-php85.neon.dist
 COPY app/rector.php /app/rector.php
 
 COPY assets/css/ /app/public/css/

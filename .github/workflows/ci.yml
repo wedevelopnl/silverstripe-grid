@@ -71,6 +71,10 @@ jobs:
       - run: $COMPOSE up -d --build --wait app
         name: Start services
       - run: task analyse
+      # Second PHPStan pass with the analysis target pinned to PHP 8.5. PHPStan gates
+      # some checks on the target version rather than the runtime PHP (e.g. #[\NoDiscard],
+      # which only fires at >= 8.5); the primary pass above keeps verifying the 8.3 floor.
+      - run: task analyse-php85
       - run: task rector-dry
 
   php-qa:

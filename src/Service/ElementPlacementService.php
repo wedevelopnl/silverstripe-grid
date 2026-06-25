@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Service;
 
+use NoDiscard;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
@@ -47,6 +48,7 @@ class ElementPlacementService
      * @param positive-int|null $afterElementId
      * @return Result<GridElement>
      */
+    #[NoDiscard('The Result reports placement validation failures; discarding it silently accepts an invalid placement.')]
     public function insertAfter(GridElement $element, DataObject $parent, ?int $afterElementId): Result
     {
         return $this->reorder($element, $parent, $afterElementId);
@@ -56,6 +58,7 @@ class ElementPlacementService
      * @param positive-int|null $afterElementId
      * @return Result<GridElement>
      */
+    #[NoDiscard('The Result reports reorder validation failures; discarding it silently accepts an invalid move.')]
     public function reorder(GridElement $element, DataObject $targetParent, ?int $afterElementId): Result
     {
         $validationResult = $this->validator->validate($element, $targetParent);

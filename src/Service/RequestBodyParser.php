@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Service;
 
+use NoDiscard;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\ContentElement;
 use InvalidArgumentException;
@@ -31,6 +32,7 @@ final readonly class RequestBodyParser
      * @param array<string, mixed> $data
      * @return Result<CreateElementRequest>
      */
+    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
     public function parseCreateBody(array $data): Result
     {
         $containerTypeValue = $data['containerType'] ?? null;
@@ -78,6 +80,7 @@ final readonly class RequestBodyParser
      * @param array<string, mixed> $data
      * @return Result<CreateContentRequest>
      */
+    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
     public function parseCreateContentBody(array $data): Result
     {
         $className = $data['className'] ?? null;
@@ -113,6 +116,7 @@ final readonly class RequestBodyParser
      * @param array<string, mixed> $data
      * @return Result<ReorderRequest>
      */
+    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
     public function parseReorderBody(array $data): Result
     {
         try {
@@ -152,6 +156,7 @@ final readonly class RequestBodyParser
      * @param array<string, mixed> $data
      * @return Result<UpdateGridSettingsRequest>
      */
+    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
     public function parseUpdateGridSettingsBody(array $data): Result
     {
         $viewport = $data['viewport'] ?? null;
@@ -198,6 +203,7 @@ final readonly class RequestBodyParser
      * @param array<string, mixed> $data
      * @return Result<DuplicateToRequest>
      */
+    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
     public function parseDuplicateToBody(array $data): Result
     {
         $targetPageId = $data['targetPageId'] ?? null;
@@ -235,6 +241,7 @@ final readonly class RequestBodyParser
      * @param array<string, mixed> $data
      * @return Result<ResetGridSettingsOverridesRequest>
      */
+    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
     public function parseResetGridSettingsOverridesBody(array $data): Result
     {
         $pageId = $data['pageId'] ?? null;
@@ -280,6 +287,7 @@ final readonly class RequestBodyParser
      * @param array<string, mixed> $data
      * @return Result<NodeRef>
      */
+    #[NoDiscard('The Result carries the parsed element ref or validation errors; discarding it silently drops malformed-input failures.')]
     public function parseElementRef(array $data): Result
     {
         try {

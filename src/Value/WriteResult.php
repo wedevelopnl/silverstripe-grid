@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Value;
 
+use NoDiscard;
 use Closure;
 use SilverStripe\Core\Validation\ValidationException;
 
@@ -21,6 +22,7 @@ final class WriteResult
      * @param Closure():T $operation
      * @return Result<T>
      */
+    #[NoDiscard('The Result reports whether the write succeeded; discarding it silently swallows write/validation failures.')]
     public static function from(Closure $operation): Result
     {
         try {

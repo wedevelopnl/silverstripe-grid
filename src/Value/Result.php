@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Value;
 
+use NoDiscard;
 use LogicException;
 
 /**
@@ -32,6 +33,7 @@ final readonly class Result
      * @param U $value
      * @return self<U>
      */
+    #[NoDiscard('A Result exists to be inspected (isOk/isErr/unwrap); discarding it defeats its purpose.')]
     public static function ok(mixed $value): self
     {
         return new self(ok: true, value: $value, errors: []);
@@ -40,6 +42,7 @@ final readonly class Result
     /**
      * @return self<never>
      */
+    #[NoDiscard('A failed Result must be surfaced to the caller; discarding it silently swallows the errors.')]
     public static function fail(ValidationError $first, ValidationError ...$rest): self
     {
         /** @var list<ValidationError> $errors Variadic ...$rest is always a list */
@@ -89,6 +92,7 @@ final readonly class Result
      * @param callable(T): U $fn
      * @return self<U>
      */
+    #[NoDiscard('map() returns a new Result; discarding it loses the transformation and any errors.')]
     public function map(callable $fn): self
     {
         if (!$this->ok) {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Validation;
 
+use NoDiscard;
 use Override;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\ORM\DataObject;
@@ -17,6 +18,7 @@ use WeDevelop\Grid\Value\ValidationErrorCode;
 class ReorderValidator implements ReorderValidatorInterface
 {
     /** @return Result<GridElement> */
+    #[NoDiscard('The Result reports whether the move is valid; discarding it silently accepts an invalid reorder.')]
     #[Override]
     public function validate(GridElement $element, DataObject $targetParent): Result
     {

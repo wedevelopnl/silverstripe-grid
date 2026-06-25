@@ -1,0 +1,17 @@
+# Secondary PHPStan pass with the analysis target pinned to PHP 8.5.
+#
+# The module supports PHP ^8.3, so the primary pass (phpstan.neon.dist) analyses
+# across the 8.3-8.5 range. Some PHPStan checks are gated on the configured analysis
+# *target* version rather than the PHP runtime executing PHPStan -- they only run when
+# the target is high enough. This pass pins the target to 8.5 so those checks run in CI
+# while the primary pass keeps verifying the 8.3 floor.
+#
+# Current motivating case: #[\NoDiscard] enforcement (method.resultDiscarded), which
+# PhpVersion::supportsNoDiscardAttribute() gates on >= 8.5. More target-gated checks may
+# land here over time.
+includes:
+    - phpstan.neon.dist
+parameters:
+    phpVersion:
+        min: 80500
+        max: 80599

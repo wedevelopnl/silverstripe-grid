@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Service;
 
+use NoDiscard;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
@@ -42,6 +43,7 @@ final readonly class GridElementService
      * @param bool $insertAtStart Place the new element before all existing siblings (ignored when $insertAfterElementID is given)
      * @return Result<GridElement>
      */
+    #[NoDiscard('The Result carries the created element and any validation errors; discarding it silently drops write failures.')]
     public function createElement(
         DataObject $parent,
         ContainerType $containerType,
@@ -68,6 +70,7 @@ final readonly class GridElementService
      * @param positive-int|null $insertAfterElementID
      * @return Result<GridElement>
      */
+    #[NoDiscard('The Result carries the created element and any validation errors; discarding it silently drops write failures.')]
     public function createContentElement(
         Column $parent,
         string $className,
@@ -86,6 +89,7 @@ final readonly class GridElementService
      *
      * @return Result<GridElement>
      */
+    #[NoDiscard('The Result carries the duplicated element and any validation errors; discarding it silently drops write failures.')]
     public function duplicateElement(GridElement $element): Result
     {
         $clone = $element->duplicate(false);
@@ -123,6 +127,7 @@ final readonly class GridElementService
      * @param non-empty-string $targetZone
      * @return Result<GridElement>
      */
+    #[NoDiscard('The Result carries the duplicated element and any ownership/hierarchy validation errors; discarding it silently drops failures.')]
     public function duplicateElementTo(
         GridElement $element,
         DataObject $targetParent,
