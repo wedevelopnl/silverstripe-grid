@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`migrate-grid-with-fluent` task** — migrates legacy Elemental content per locale on Fluent sites. The legacy localisation model is auto-detected from database table shape (`BaseElement_Localised` ⇒ field-localised; `BaseElement.LocaleID` ⇒ isolated; neither ⇒ single-locale). Layout (column grouping, Size/Offset/Visibility) is derived from base rows and is locale-invariant; only content (Title, HTML, media text) differs per locale. Untranslated elements fall back to their base content rather than being omitted, matching Fluent's render-time behaviour. See [`docs/fluent.md`](docs/fluent.md).
+
 ### Changed
 
+- **BREAKING: `migrate-grid-rows-to-sections` and `migrate-grid-rows-to-single-section` removed** — replaced by a single `migrate-grid` task with a `--strategy=sections|single-section` option (default `sections`). Update any CI scripts or runbooks that reference the old task segments. The plain `migrate-grid` task refuses to run when localised legacy tables are detected; use `migrate-grid-with-fluent` on Fluent sites instead.
 - **Grid editor blocks split into chrome + editable/readonly variants** — each block (`ElementCard`, `ColumnBlock`, `RowBlock`, `SectionBlock`) is now a presentational `*Chrome` plus an `Editable*`/`Readonly*` variant; editor mode is decided once at the root instead of per-node. No public API or rendered output changes for integrators.
 - **i18n key renamed: the four `*.MODIFIED_LABEL` keys collapse into one `WeDevelopGrid.ModifiedIndicator.LABEL`** — `WeDevelopGrid.ColumnBlock.MODIFIED_LABEL`, `WeDevelopGrid.ElementCard.MODIFIED_LABEL`, `WeDevelopGrid.RowBlock.MODIFIED_LABEL`, and `WeDevelopGrid.SectionBlock.MODIFIED_LABEL` (shipped in `6.0.0-alpha.6`) are replaced by a single `WeDevelopGrid.ModifiedIndicator.LABEL`. The bundled `en`/`nl` text is unchanged, so default output is identical — but any project that overrode one of the four old JS i18n keys must move that override to the new key, or it will silently stop applying.
 - **Build tooling migrated from `make` to [Task](https://taskfile.dev)** — the `Makefile` is replaced by `Taskfile.yml`. Run `task <name>` (e.g. `task up`, `task qa`, `task test`); the target names are unchanged. Contributors must install Task (`brew install go-task/tap/go-task`); CI installs it via `arduino/setup-task`. The QA suite now runs its checks in parallel through Task's `deps` instead of `make -j8`.
