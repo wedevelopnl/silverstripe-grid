@@ -37,7 +37,7 @@ final class GridMigrationService
     use Extensible;
 
     public function __construct(
-        private readonly LegacyDataReader $reader,
+        private readonly LegacyElementSource $reader,
         private readonly FieldMapper $mapper,
         private readonly RowMappingStrategy $strategy,
         private readonly LoggerInterface $logger,
