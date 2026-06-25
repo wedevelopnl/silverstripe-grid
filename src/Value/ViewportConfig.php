@@ -13,6 +13,10 @@ use WeDevelop\Grid\Exception\InvalidGridValueException;
  */
 final readonly class ViewportConfig implements JsonSerializable
 {
+    /**
+     * @param positive-int $width
+     * @param int<0, max>  $offset
+     */
     public function __construct(
         public int $width,
         public int $offset,
@@ -62,7 +66,13 @@ final readonly class ViewportConfig implements JsonSerializable
             );
         }
 
-        return new self($data['width'], $data['offset'], $data['visible']);
+        /** @var positive-int $width */
+        $width = $data['width'];
+        /** @var int<0, max> $offset */
+        $offset = $data['offset'];
+        $visible = $data['visible'];
+
+        return new self($width, $offset, $visible);
     }
 
     /**
@@ -92,7 +102,7 @@ final readonly class ViewportConfig implements JsonSerializable
     }
 
     /**
-     * @return array{width: int, offset: int, visible: bool}
+     * @return array{width: positive-int, offset: int<0, max>, visible: bool}
      */
     public function toArray(): array
     {
@@ -104,7 +114,7 @@ final readonly class ViewportConfig implements JsonSerializable
     }
 
     /**
-     * @return array{width: int, offset: int, visible: bool}
+     * @return array{width: positive-int, offset: int<0, max>, visible: bool}
      */
     #[Override]
     public function jsonSerialize(): array

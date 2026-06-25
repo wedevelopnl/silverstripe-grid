@@ -8,6 +8,8 @@ final readonly class UpdateGridSettingsRequest
 {
     /**
      * @param non-empty-string $viewport
+     * @param positive-int $width
+     * @param int<0, max> $offset
      */
     public function __construct(
         public NodeRef $element,

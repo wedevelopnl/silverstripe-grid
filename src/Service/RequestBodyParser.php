@@ -188,6 +188,17 @@ final readonly class RequestBodyParser
             return Result::fail(new ValidationError('offset must be an integer.'));
         }
 
+        if ($width < 1) {
+            return Result::fail(new ValidationError('width must be at least 1.'));
+        }
+
+        if ($offset < 0) {
+            return Result::fail(new ValidationError('offset must not be negative.'));
+        }
+
+        /** @var positive-int $width */
+        /** @var int<0, max> $offset */
+
         if (!is_bool($visible)) {
             return Result::fail(new ValidationError('visible must be a boolean.'));
         }

@@ -65,14 +65,14 @@ final class DBGridSettings extends DBComposite
     #[Override]
     public function getValue(): ?GridSettings
     {
-        /** @var int|null $width */
+        /** @var positive-int|null $width */
         $width = $this->getField('DefaultWidth');
 
         if ($width === null) {
             return null;
         }
 
-        /** @var int $offset */
+        /** @var int<0, max> $offset */
         $offset = $this->getField('DefaultOffset') ?? 0;
         $visible = (bool) ($this->getField('DefaultVisible') ?? true);
 

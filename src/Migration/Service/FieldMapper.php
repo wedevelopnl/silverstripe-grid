@@ -103,9 +103,11 @@ final class FieldMapper
         // Size=0 means "not set" (column missing or never configured) — default to full width
         $rawWidth = $element->sizeFields[$defaultViewport] ?? 0;
 
+        /** @var int<0, max> $defaultRawOffset */
+        $defaultRawOffset = $element->offsetFields[$defaultViewport] ?? 0;
         $defaultConfig = new ViewportConfig(
             width: $rawWidth > 0 ? $rawWidth : $this->columnCount,
-            offset: $element->offsetFields[$defaultViewport] ?? 0,
+            offset: $defaultRawOffset,
             visible: $this->mapVisibility($element->visibilityFields[$defaultViewport] ?? null, $element->id, 'default') ?? true,
         );
         $defaultConfig = $this->clampViewportConfig($defaultConfig, $element->id, 'default');
@@ -132,6 +134,7 @@ final class FieldMapper
                 continue;
             }
 
+            /** @var int<0, max> $offset */
             $overrideConfig = new ViewportConfig(
                 width: $size > 0 ? $size : $defaultConfig->width,
                 offset: $offset,
@@ -220,10 +223,13 @@ final class FieldMapper
      */
     private function clampViewportConfig(ViewportConfig $config, int $elementId, string $viewport): ViewportConfig
     {
+        /** @var positive-int $width */
         $width = \max(1, \min($config->width, $this->columnCount));
+        /** @var int<0, max> $offset */
         $offset = \max(0, \min($config->offset, $this->columnCount - 1));
 
         if ($width + $offset > $this->columnCount) {
+            /** @var int<0, max> $offset */
             $offset = $this->columnCount - $width;
         }
 

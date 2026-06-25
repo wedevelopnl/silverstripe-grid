@@ -36,6 +36,8 @@ final readonly class GridSettingsService
      * (redundant override cleanup); otherwise the override is set.
      *
      * @param non-empty-string $viewport
+     * @param positive-int $width
+     * @param int<0, max> $offset
      * @return Result<GridElement>
      */
     #[NoDiscard('The Result reports write/validation failures; discarding it silently swallows them.')]
