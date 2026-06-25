@@ -58,6 +58,16 @@ abstract class AbstractMigrationTask extends BuildTask
         /** @var string $defaultViewport */
         /** @var string $zone */
 
+        // Validate --strategy explicitly: an unknown value must fail loudly rather
+        // than silently fall through to the default and write a different hierarchy
+        // on a destructive migration (e.g. a "--strategy=single" typo).
+        /** @var string $strategyName */
+        $strategyName = $input->getOption('strategy') ?: 'sections';
+        if (!\in_array($strategyName, ['sections', 'single-section'], true)) {
+            $output->writeln(\sprintf('<error>Invalid --strategy "%s". Use "sections" or "single-section".</error>', $strategyName));
+            return Command::FAILURE;
+        }
+
         // Preflight checks (DB / class existence) run before the destructive-write
         // confirmation so operators are not asked to confirm and then immediately
         // refused. Both implementations depend only on DB table shape or class
@@ -106,8 +116,6 @@ abstract class AbstractMigrationTask extends BuildTask
         $mapper = $this->buildFieldMapper($adapter, $logger);
         $grouper = new ElementGrouper();
 
-        /** @var string $strategyName */
-        $strategyName = $input->getOption('strategy') ?: 'sections';
         $strategy = $this->createStrategy($strategyName, $grouper, $mapper, $defaultViewport, $viewportKeyMap, $logger);
 
         $failures = $this->performMigration(

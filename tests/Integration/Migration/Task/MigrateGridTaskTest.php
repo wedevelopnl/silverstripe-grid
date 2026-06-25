@@ -174,6 +174,22 @@ final class MigrateGridTaskTest extends SapphireTest
         self::assertCount(0, Section::get());
     }
 
+    public function testUnknownStrategyReturnsFailure(): void
+    {
+        // A typo like "--strategy=single" must fail loudly rather than silently
+        // running the default "sections" strategy on a destructive migration.
+        $result = $this->executeTaskRaw([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--strategy' => 'single',
+            '--force' => true,
+        ]);
+
+        self::assertSame(Command::FAILURE, $result['exitCode']);
+        self::assertStringContainsString('Invalid --strategy', $result['output']);
+        self::assertCount(0, Section::get());
+    }
+
     public function testExecuteWithValidArgsCreatesHierarchy(): void
     {
         $pageId = $this->getPageId();
