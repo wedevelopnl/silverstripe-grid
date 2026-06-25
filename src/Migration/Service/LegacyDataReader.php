@@ -13,6 +13,7 @@ use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\DTO\LegacyRowData;
+use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
 
 /**
  * Reads legacy elemental data from old database tables using raw SQL.
@@ -171,34 +172,61 @@ final class LegacyDataReader
         );
 
         $elements = [];
-
         foreach ($result as $row) {
             /** @var array<string, int|string|null> $row */
-            /** @var positive-int $elementId */
-            $elementId = (int) $row['ID'];
-            $className = (string) ($row['ClassName'] ?? '');
-            $isRow = $className === self::ROW_CLASS_NAME;
+            $elements[] = $this->hydrateElement($row, $stage, null);
+        }
 
-            $rowData = $isRow ? $this->getRowData($elementId, $stage) : null;
+        $this->extend('updateLegacyElements', $elements, $areaId, $stage);
 
-            $mediaData = $this->getContentMediaData($elementId, $stage);
+        /** @var list<LegacyElement> $elements */
+        return $elements;
+    }
 
-            $elements[] = new LegacyElement(
-                id: $elementId,
-                className: $className,
-                title: (string) ($row['Title'] ?? ''),
-                showTitle: (bool) ($row['ShowTitle'] ?? false),
-                titleTag: (string) ($row['TitleTag'] ?? ''),
-                titleClass: (string) ($row['TitleClass'] ?? ''),
-                sort: (int) ($row['Sort'] ?? 0),
-                extraClass: (string) ($row['ExtraClass'] ?? ''),
-                isRow: $isRow,
-                sizeFields: $this->extractViewportFields($row, 'Size'),
-                offsetFields: $this->extractViewportFields($row, 'Offset'),
-                visibilityFields: $this->extractVisibilityFields($row),
-                rowData: $rowData,
-                mediaData: $mediaData,
+    /**
+     * Locale-aware variant of {@see getElementsForArea()}.
+     *
+     * @param non-empty-string $localeCode Fluent locale code (e.g. 'nl_NL')
+     * @param positive-int $localeId Fluent Locale record ID (used by the Isolated model)
+     * @return list<LegacyElement>
+     */
+    public function getElementsForAreaInLocale(
+        int $areaId,
+        string $stage,
+        LegacyLocalisationModel $model,
+        string $localeCode,
+        int $localeId,
+    ): array {
+        if ($model === LegacyLocalisationModel::None) {
+            return $this->getElementsForArea($areaId, $stage);
+        }
+
+        $table = $this->stageTable('BaseElement', $stage);
+
+        if ($model === LegacyLocalisationModel::Isolated) {
+            $result = DB::prepared_query(
+                "SELECT * FROM \"{$table}\" WHERE \"ParentID\" = ? AND \"LocaleID\" = ? ORDER BY \"Sort\" ASC",
+                [$areaId, $localeId],
             );
+        } else {
+            // FieldLocalised: shared base rows, overlaid per locale below.
+            $result = DB::prepared_query(
+                "SELECT * FROM \"{$table}\" WHERE \"ParentID\" = ? ORDER BY \"Sort\" ASC",
+                [$areaId],
+            );
+        }
+
+        $overlayLocale = $model === LegacyLocalisationModel::FieldLocalised ? $localeCode : null;
+
+        $elements = [];
+        foreach ($result as $row) {
+            /** @var array<string, int|string|null> $row */
+            if ($overlayLocale !== null) {
+                /** @var positive-int $elementId */
+                $elementId = (int) $row['ID'];
+                $row = $this->overlayLocalised($row, 'BaseElement', $elementId, $overlayLocale, $stage);
+            }
+            $elements[] = $this->hydrateElement($row, $stage, $overlayLocale);
         }
 
         $this->extend('updateLegacyElements', $elements, $areaId, $stage);
@@ -302,6 +330,122 @@ final class LegacyDataReader
         }
 
         return $pages;
+    }
+
+    /**
+     * Build a LegacyElement from a BaseElement row. When $overlayLocale is set,
+     * content media fields are overlaid from ElementContent_Localised for that locale.
+     *
+     * @param array<string, int|string|null> $row
+     * @param non-empty-string|null $overlayLocale
+     */
+    private function hydrateElement(array $row, string $stage, ?string $overlayLocale): LegacyElement
+    {
+        /** @var positive-int $elementId */
+        $elementId = (int) $row['ID'];
+        $className = (string) ($row['ClassName'] ?? '');
+        $isRow = $className === self::ROW_CLASS_NAME;
+
+        $rowData = $isRow ? $this->getRowData($elementId, $stage) : null;
+        $mediaData = $overlayLocale !== null
+            ? $this->getContentMediaDataInLocale($elementId, $stage, $overlayLocale)
+            : $this->getContentMediaData($elementId, $stage);
+
+        return new LegacyElement(
+            id: $elementId,
+            className: $className,
+            title: (string) ($row['Title'] ?? ''),
+            showTitle: (bool) ($row['ShowTitle'] ?? false),
+            titleTag: (string) ($row['TitleTag'] ?? ''),
+            titleClass: (string) ($row['TitleClass'] ?? ''),
+            sort: (int) ($row['Sort'] ?? 0),
+            extraClass: (string) ($row['ExtraClass'] ?? ''),
+            isRow: $isRow,
+            sizeFields: $this->extractViewportFields($row, 'Size'),
+            offsetFields: $this->extractViewportFields($row, 'Offset'),
+            visibilityFields: $this->extractVisibilityFields($row),
+            rowData: $rowData,
+            mediaData: $mediaData,
+        );
+    }
+
+    /**
+     * Overlay non-null values from a <baseTable>_Localised companion onto a base row.
+     *
+     * @param array<string, int|string|null> $row
+     * @param non-empty-string $localeCode
+     * @return array<string, int|string|null>
+     */
+    private function overlayLocalised(array $row, string $baseTable, int $recordId, string $localeCode, string $stage): array
+    {
+        $localisedTable = $this->localisedTable($baseTable, $stage);
+        if (!\array_key_exists(\strtolower($localisedTable), DB::table_list())) {
+            return $row;
+        }
+
+        $result = DB::prepared_query(
+            "SELECT * FROM \"{$localisedTable}\" WHERE \"RecordID\" = ? AND \"Locale\" = ?",
+            [$recordId, $localeCode],
+        );
+        if ($result->numRecords() === 0) {
+            return $row;
+        }
+
+        /** @var array<string, int|string|null> $localised */
+        $localised = $result->record();
+        foreach ($localised as $column => $value) {
+            // Skip Fluent bookkeeping columns; overlay only populated localised values.
+            if (\in_array($column, ['ID', 'RecordID', 'Locale'], true)) {
+                continue;
+            }
+            if ($value !== null) {
+                $row[$column] = $value;
+            }
+        }
+
+        return $row;
+    }
+
+    /**
+     * Locale-aware variant of {@see getContentMediaData()}: overlays
+     * ElementContent_Localised values for the locale onto the base media row.
+     *
+     * @param non-empty-string $localeCode
+     */
+    private function getContentMediaDataInLocale(int $elementId, string $stage, string $localeCode): ?LegacyMediaData
+    {
+        $table = $this->stageTable('ElementContent', $stage);
+
+        $result = DB::prepared_query(
+            "SELECT * FROM \"{$table}\" WHERE \"ID\" = ?",
+            [$elementId],
+        );
+        if ($result->numRecords() === 0) {
+            return null;
+        }
+
+        /** @var array<string, int|string|null> $row */
+        $row = $result->record();
+        $row = $this->overlayLocalised($row, 'ElementContent', $elementId, $localeCode, $stage);
+
+        $fields = [];
+        foreach (self::MEDIA_FIELDS as $field) {
+            if (\array_key_exists($field, $row)) {
+                $fields[$field] = $row[$field];
+            }
+        }
+
+        return new LegacyMediaData(fields: $fields);
+    }
+
+    /**
+     * Resolve a <baseTable>_Localised companion table name for a stage.
+     */
+    private function localisedTable(string $baseTable, string $stage): string
+    {
+        return \strtolower($stage) === 'live'
+            ? $baseTable . '_Localised_Live'
+            : $baseTable . '_Localised';
     }
 
     /**
