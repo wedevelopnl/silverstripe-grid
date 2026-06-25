@@ -38,6 +38,7 @@ final class LegacyTableSeeder
      */
     public function createTables(): void
     {
+        $this->ensureDatabaseSelected();
         $this->createBaseElementTable('BaseElement');
         $this->createBaseElementTable('BaseElement_Live');
         $this->createElementRowTable('ElementRow');
@@ -46,6 +47,36 @@ final class LegacyTableSeeder
         $this->createElementContentTable('ElementContent_Live');
         $this->createElementalAreaTable('ElementalArea');
         $this->createElementalAreaTable('ElementalArea_Live');
+    }
+
+    /**
+     * Reselect the configured database if the connection has none selected.
+     *
+     * Test classes that issue raw DDL but declare neither `$extra_dataobjects`
+     * nor a `$fixture_file` never trigger SapphireTest's schema rebuild, which
+     * is the step that (re)selects the database on the connection. When such a
+     * class runs after a `usesTransactions = false` class whose DDL teardown
+     * left the connection with no database selected (SapphireTest's
+     * tearDownAfterClass deselects the temp DB), the next class's DDL fails with
+     * "No database selected". Reselecting here makes the seeder self-sufficient
+     * at the DDL boundary, independent of test-class run order.
+     */
+    private function ensureDatabaseSelected(): void
+    {
+        $conn = DB::get_conn();
+
+        if ($conn->getSelectedDatabase() !== '' && $conn->getSelectedDatabase() !== null) {
+            return;
+        }
+
+        $config = DB::getConfig();
+        $database = \is_array($config) ? ($config['database'] ?? '') : '';
+
+        if (!\is_string($database) || $database === '') {
+            return;
+        }
+
+        $conn->selectDatabase($database, false, false);
     }
 
     /**
