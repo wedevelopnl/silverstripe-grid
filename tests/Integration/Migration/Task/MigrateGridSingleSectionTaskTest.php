@@ -13,13 +13,13 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Output\BufferedOutput;
-use WeDevelop\Grid\Migration\Task\MigrateRowsToSingleSectionTask;
+use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 
-#[CoversClass(MigrateRowsToSingleSectionTask::class)]
-final class MigrateRowsToSingleSectionTaskTest extends SapphireTest
+#[CoversClass(MigrateGridTask::class)]
+final class MigrateGridSingleSectionTaskTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
 
@@ -64,11 +64,13 @@ final class MigrateRowsToSingleSectionTaskTest extends SapphireTest
      */
     private function executeTask(array $options): int
     {
-        // Inject --force so the new confirmation gate doesn't block non-interactive tests.
+        // Inject --force so the new confirmation gate doesn't block non-interactive tests,
+        // and --strategy=single-section to select the AllRowsInSection strategy (the
+        // behaviour the former MigrateRowsToSingleSectionTask hard-coded).
         // Using += preserves any per-test override (e.g. --dry-run).
-        $options += ['--force' => true];
+        $options += ['--force' => true, '--strategy' => 'single-section'];
 
-        $task = new MigrateRowsToSingleSectionTask();
+        $task = new MigrateGridTask();
         $definition = new InputDefinition($task->getOptions());
         $input = new ArrayInput($options, $definition);
         $buffered = new BufferedOutput();

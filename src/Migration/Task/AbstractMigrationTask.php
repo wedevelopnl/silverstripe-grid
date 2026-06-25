@@ -17,9 +17,10 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
-use WeDevelop\Grid\Migration\Service\GridMigrationService;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
+use WeDevelop\Grid\Migration\Strategy\AllRowsInSectionStrategy;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
+use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
 
 abstract class AbstractMigrationTask extends BuildTask
 {
@@ -37,6 +38,7 @@ abstract class AbstractMigrationTask extends BuildTask
             new InputOption('force', null, InputOption::VALUE_NONE, 'Skip the interactive confirmation prompt (required for non-interactive runs)'),
             new InputOption('viewport-map', null, InputOption::VALUE_REQUIRED, 'Comma-separated old=new viewport key pairs'),
             new InputOption('page-ids', null, InputOption::VALUE_REQUIRED, 'Comma-separated page IDs to migrate'),
+            new InputOption('strategy', null, InputOption::VALUE_REQUIRED, 'Row mapping strategy: "sections" (default) or "single-section"', 'sections'),
         ];
     }
 
@@ -89,14 +91,32 @@ abstract class AbstractMigrationTask extends BuildTask
             $adapter,
         );
 
+        $preflightError = $this->preflight();
+        if ($preflightError !== null) {
+            $output->writeln(\sprintf('<error>%s</error>', $preflightError));
+            return Command::FAILURE;
+        }
+
         $logger = Injector::inst()->get(LoggerInterface::class);
         $reader = new LegacyDataReader();
         $mapper = $this->buildFieldMapper($adapter, $logger);
         $grouper = new ElementGrouper();
-        $strategy = $this->createStrategy($grouper, $mapper, $defaultViewport, $viewportKeyMap, $logger);
 
-        $service = new GridMigrationService($reader, $mapper, $strategy, $logger);
-        $failures = $service->run($defaultViewport, $zone, $viewportKeyMap, $dryRun, $pageIds);
+        /** @var string $strategyName */
+        $strategyName = $input->getOption('strategy') ?: 'sections';
+        $strategy = $this->createStrategy($strategyName, $grouper, $mapper, $defaultViewport, $viewportKeyMap, $logger);
+
+        $failures = $this->performMigration(
+            $reader,
+            $mapper,
+            $strategy,
+            $logger,
+            $defaultViewport,
+            $zone,
+            $viewportKeyMap,
+            $dryRun,
+            $pageIds,
+        );
 
         if ($failures > 0) {
             $output->writeln(\sprintf('%d page(s) failed to migrate. Check logs for details.', $failures));
@@ -109,13 +129,48 @@ abstract class AbstractMigrationTask extends BuildTask
     /**
      * @param array<string, string> $viewportKeyMap
      */
-    abstract protected function createStrategy(
+    protected function createStrategy(
+        string $strategyName,
         ElementGrouper $grouper,
         FieldMapper $mapper,
         string $defaultViewport,
         array $viewportKeyMap,
         LoggerInterface $logger,
-    ): RowMappingStrategy;
+    ): RowMappingStrategy {
+        return match ($strategyName) {
+            'single-section' => new AllRowsInSectionStrategy($grouper, $mapper, $defaultViewport, $viewportKeyMap, $logger),
+            default => new RowPerSectionStrategy($grouper, $mapper, $defaultViewport, $viewportKeyMap),
+        };
+    }
+
+    /**
+     * Optional preflight check. Return an error message to abort before any
+     * migration runs, or null to proceed. Default: no preflight.
+     */
+    protected function preflight(): ?string
+    {
+        return null;
+    }
+
+    /**
+     * Run the migration. Each concrete task wires the appropriate engine
+     * (plain service vs Fluent orchestrator).
+     *
+     * @param array<string, string> $viewportKeyMap
+     * @param list<int>|null $pageIds
+     * @return int<0, max> Number of pages that failed to migrate
+     */
+    abstract protected function performMigration(
+        LegacyDataReader $reader,
+        FieldMapper $mapper,
+        RowMappingStrategy $strategy,
+        LoggerInterface $logger,
+        string $defaultViewport,
+        string $zone,
+        array $viewportKeyMap,
+        bool $dryRun,
+        ?array $pageIds,
+    ): int;
 
     /**
      * Build the FieldMapper used for the migration, allowing extensions to

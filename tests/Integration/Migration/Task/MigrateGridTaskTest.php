@@ -13,7 +13,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Output\BufferedOutput;
-use WeDevelop\Grid\Migration\Task\MigrateRowsToSectionsTask;
+use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
@@ -22,8 +22,8 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\FieldMapperConfigStubExte
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 use WeDevelop\Grid\Value\VerticalAlignment;
 
-#[CoversClass(MigrateRowsToSectionsTask::class)]
-final class MigrateRowsToSectionsTaskTest extends SapphireTest
+#[CoversClass(MigrateGridTask::class)]
+final class MigrateGridTaskTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
 
@@ -86,7 +86,7 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
      */
     private function executeTaskRaw(array $options): array
     {
-        $task = new MigrateRowsToSectionsTask();
+        $task = new MigrateGridTask();
         $definition = new InputDefinition($task->getOptions());
         $input = new ArrayInput($options, $definition);
         $input->setInteractive(false);
@@ -467,7 +467,7 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
 
     public function testUpdateFieldMapperConfigExtensionReplacesVerticalAlignMap(): void
     {
-        MigrateRowsToSectionsTask::add_extension(FieldMapperConfigStubExtension::class);
+        MigrateGridTask::add_extension(FieldMapperConfigStubExtension::class);
 
         try {
             $pageId = $this->getPageId();
@@ -499,7 +499,7 @@ final class MigrateRowsToSectionsTaskTest extends SapphireTest
             self::assertInstanceOf(ContentElement::class, $content);
             self::assertSame(VerticalAlignment::Bottom->value, $content->VerticalAlignment);
         } finally {
-            MigrateRowsToSectionsTask::remove_extension(FieldMapperConfigStubExtension::class);
+            MigrateGridTask::remove_extension(FieldMapperConfigStubExtension::class);
         }
     }
 

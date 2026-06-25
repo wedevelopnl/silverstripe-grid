@@ -11,7 +11,7 @@ use ReflectionMethod;
 use Symfony\Component\Console\Input\InputOption;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\Task\AbstractMigrationTask;
-use WeDevelop\Grid\Migration\Task\MigrateRowsToSectionsTask;
+use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Value\Viewport;
 
 /**
@@ -36,7 +36,7 @@ final class AbstractMigrationTaskTest extends TestCase
         // aborts every `sake dev/tasks/<segment>` run. Guard against regressions.
         $shortcuts = \array_filter(\array_map(
             static fn (InputOption $option): ?string => $option->getShortcut(),
-            (new MigrateRowsToSectionsTask())->getOptions(),
+            (new MigrateGridTask())->getOptions(),
         ));
 
         self::assertNotContains('f', $shortcuts);
@@ -188,7 +188,7 @@ final class AbstractMigrationTaskTest extends TestCase
      */
     private function invokeResolveViewportKeyMap(?string $viewportMapArg, GridAdapterInterface $adapter): array
     {
-        $task = new MigrateRowsToSectionsTask();
+        $task = new MigrateGridTask();
         $method = new ReflectionMethod(AbstractMigrationTask::class, 'resolveViewportKeyMap');
         /** @var array<string, string> $result */
         $result = $method->invoke($task, $viewportMapArg, $adapter);
