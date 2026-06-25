@@ -68,17 +68,27 @@ jobs:
       - run: task rector-dry
 
   php-qa:
-    name: PHP QA (PHP ${{ matrix.php }})
+    name: PHP QA (${{ matrix.variant }} / PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
     permissions:
       checks: write
     strategy:
       fail-fast: false
+      # Explicit combinations: both variants run the full PHP matrix. The
+      # Fluent variant runs all suites and owns the 90% coverage gate; the
+      # base (non-Fluent) variant runs unit+integration+functional only, to
+      # catch regressions that Fluent's extensions would otherwise mask.
       matrix:
-        php: ['8.3', '8.4', '8.5']
+        include:
+          - { variant: fluent, php: '8.3', profile: '--profile fluent', service: app-fluent }
+          - { variant: fluent, php: '8.4', profile: '--profile fluent', service: app-fluent }
+          - { variant: fluent, php: '8.5', profile: '--profile fluent', service: app-fluent }
+          - { variant: base, php: '8.3', profile: '', service: app }
+          - { variant: base, php: '8.4', profile: '', service: app }
+          - { variant: base, php: '8.5', profile: '', service: app }
     env:
       PHP_VERSION: ${{ matrix.php }}
-      COMPOSE: docker compose -f .docker/compose.yml --profile fluent
+      COMPOSE: docker compose -f .docker/compose.yml ${{ matrix.profile }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - uses: actions/checkout@v4
@@ -95,17 +105,27 @@ jobs:
       - run: task docker-env
       - run: $COMPOSE up -d --build --wait
         name: Start services
-      - run: >-
-          $COMPOSE exec app-fluent vendor/bin/phpunit
+      # Base variant: non-Fluent suites only (mirrors `task test`), no coverage gate.
+      - if: matrix.variant == 'base'
+        name: Run tests (no Fluent)
+        run: >-
+          $COMPOSE exec ${{ matrix.service }} vendor/bin/phpunit
+          --testsuite unit,integration,functional
+          --log-junit coverage/junit.xml
+      # Fluent variant: all suites with coverage + 90% threshold gate.
+      - if: matrix.variant == 'fluent'
+        name: Run all tests with coverage
+        run: >-
+          $COMPOSE exec ${{ matrix.service }} vendor/bin/phpunit
           --log-junit coverage/junit.xml
           --coverage-clover coverage/clover.xml
-        name: Run all tests with coverage
-      - run: $COMPOSE exec app-fluent vendor/bin/coverage-check coverage/clover.xml 90
+      - if: matrix.variant == 'fluent'
         name: Check coverage threshold (90%)
+        run: $COMPOSE exec ${{ matrix.service }} vendor/bin/coverage-check coverage/clover.xml 90
       - uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: PHPUnit Results (PHP ${{ matrix.php }})
+          name: PHPUnit Results (${{ matrix.variant }} / PHP ${{ matrix.php }})
           path: coverage/junit.xml
           reporter: java-junit
 
