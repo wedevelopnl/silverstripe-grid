@@ -9,6 +9,7 @@ The migration runs as a `BuildTask`, is idempotent, supports dry-runs, and handl
 
 ## Requirements
 
+- **The source site must be a working SilverStripe 5 site.** This migration does not support a SilverStripe 4 database that has skipped the SS4→SS5 upgrade. If you are on SS4, perform SilverStripe's standard SS4→SS5 upgrade first, then upgrade to SS6 and run this migration.
 - This module is installed, configured and `dev/build` has been run successfully.
 - The legacy database tables (`BaseElement`, `ElementalArea`, `ElementContent`, optionally `ElementRow`) are still present in the database. The old PHP code does **not** need to be installed — the migration reads the old tables via raw SQL.
 - The `SS_GRID_ADAPTER` environment variable **must** be set to a bundled preset (`bootstrap`, `tailwind`, or `bulma`, case-insensitive) or to the fully-qualified class name of a custom adapter implementing `GridAdapterInterface`. There is no default: when the variable is unset, empty, or invalid the container throws a `RuntimeException` at boot, which aborts `dev/build` **and** every migration task before any work is done. Set it in your environment (e.g. `.env`) before migrating.
@@ -26,12 +27,12 @@ Read this section before running the task on a production database.
 
 ## Choosing a Strategy
 
-The tool provides two tasks. They differ only in how they map legacy `ElementRow` records into the new hierarchy.
+The `migrate-grid` task accepts a `--strategy` option that controls how legacy `ElementRow` records are mapped into the new hierarchy.
 
-| Task | Segment | When to use |
-|------|---------|-------------|
-| `MigrateRowsToSectionsTask` | `migrate-grid-rows-to-sections` | Each legacy `ElementRow` becomes its own `Section` (with one `Row` inside). Use when rows were used as semantic section boundaries. |
-| `MigrateRowsToSingleSectionTask` | `migrate-grid-rows-to-single-section` | All legacy rows become `Row`s under a single `Section` per page. Use when rows were literal grid rows inside one visual section. |
+| `--strategy` value | When to use |
+|--------------------|-------------|
+| `sections` (default) | Each legacy `ElementRow` becomes its own `Section` (with one `Row` inside). Use when rows were used as semantic section boundaries. |
+| `single-section` | All legacy rows become `Row`s under a single `Section` per page. Use when rows were literal grid rows inside one visual section. |
 
 For sites migrating from **plain `dnadesign/silverstripe-elemental`** (no rows at all) both strategies behave identically: each page becomes one `Section` with one `Row` containing all content.
 
@@ -53,7 +54,7 @@ Page "About Us"
     └── [7] ElementContent "Team member C"  (md=4)
 ```
 
-### Strategy A — `MigrateRowsToSectionsTask`
+### Strategy A — `--strategy=sections`
 
 One Section per legacy `ElementRow`. Each Section contains exactly one Row.
 
@@ -76,7 +77,7 @@ Page "About Us"
             └── Content "Team member C"
 ```
 
-### Strategy B — `MigrateRowsToSingleSectionTask`
+### Strategy B — `--strategy=single-section`
 
 A single Section per page, with legacy rows preserved as Rows inside it.
 
@@ -100,31 +101,31 @@ Page "About Us"
 
 **Note on Section titles.** Migrated Sections are created with an empty `Title` field. The legacy `ElementRow.Title` is carried over to the new `Row.Title`, not the Section. Adjust titles in the CMS afterwards if needed.
 
-**Note on `CustomSectionClass`.** In Strategy A the `CustomSectionClass` from each `ElementRow` becomes the `ExtraClass` of its matching Section. In Strategy B the `CustomSectionClass` of the **first** row is used for the single Section; conflicting values from later rows are discarded and a warning is logged.
+**Note on `CustomSectionClass`.** With `--strategy=sections` the `CustomSectionClass` from each `ElementRow` becomes the `ExtraClass` of its matching Section. With `--strategy=single-section` the `CustomSectionClass` of the **first** row is used for the single Section; conflicting values from later rows are discarded and a warning is logged.
 
 ## Running the Migration
 
-Both tasks are standard SilverStripe `BuildTask`s and accept the same options. Always start with a dry run.
+`migrate-grid` is a standard SilverStripe `BuildTask`. Always start with a dry run.
 
 ```bash
 # Dry run — writes nothing, logs what would be created (no confirmation prompt)
-vendor/bin/sake dev/tasks/migrate-grid-rows-to-sections \
-    --default-viewport=MD --zone=main --dry-run
+vendor/bin/sake dev/tasks/migrate-grid \
+    --default-viewport=MD --zone=main --strategy=sections --dry-run
 
 # Full migration — prompts for confirmation before writing anything
-vendor/bin/sake dev/tasks/migrate-grid-rows-to-sections \
-    --default-viewport=MD --zone=main
+vendor/bin/sake dev/tasks/migrate-grid \
+    --default-viewport=MD --zone=main --strategy=sections
 
 # Full migration, non-interactive (CI, scripts): --force skips the confirmation prompt
-vendor/bin/sake dev/tasks/migrate-grid-rows-to-sections \
-    --default-viewport=MD --zone=main --force
+vendor/bin/sake dev/tasks/migrate-grid \
+    --default-viewport=MD --zone=main --strategy=sections --force
 
 # Migrate specific pages only (useful for staged rollouts)
-vendor/bin/sake dev/tasks/migrate-grid-rows-to-sections \
-    --default-viewport=MD --zone=main --page-ids=1,5,12 --force
+vendor/bin/sake dev/tasks/migrate-grid \
+    --default-viewport=MD --zone=main --strategy=sections --page-ids=1,5,12 --force
 ```
 
-Replace `migrate-grid-rows-to-sections` with `migrate-grid-rows-to-single-section` to use Strategy B.
+Replace `--strategy=sections` with `--strategy=single-section` to use Strategy B. The `--strategy` option defaults to `sections` when omitted.
 
 ### Confirmation prompt
 
@@ -134,16 +135,21 @@ When stdin is not a TTY (CI pipelines, `sake` called from a script), there is no
 
 ### Options Reference
 
-| Option | Required | Example | Description |
+| Option | Required | Default | Description |
 |--------|----------|---------|-------------|
-| `--default-viewport` | yes | `MD` | Legacy viewport key used as the default for the new `GridSettings`. The element's value in this viewport becomes `default`; other viewports are written as overrides only when they differ. |
-| `--zone` | yes | `main` | Zone name for the created Sections. Sort order is scoped per zone. |
+| `--default-viewport` | yes | — | Legacy viewport key used as the default for the new `GridSettings`. The element's value in this viewport becomes `default`; other viewports are written as overrides only when they differ. |
+| `--zone` | yes | — | Zone name for the created Sections. Sort order is scoped per zone. |
+| `--strategy` | no | `sections` | Row mapping strategy: `sections` (one Section per legacy ElementRow) or `single-section` (all rows under one Section per page). Default `sections`. |
 | `--dry-run` | no | (flag) | Log planned writes and skip all database changes. Bypasses the confirmation prompt. Exit code is 0 on success even when nothing was written. |
 | `--force` / `-f` | no | (flag) | Skip the interactive confirmation prompt. Required for non-interactive runs (CI, piped invocations) when not using `--dry-run`. |
-| `--viewport-map` | no | `XS=xs,SM=sm,MD=md,LG=lg,XL=xl` | Map legacy viewport keys to the active adapter's viewport keys. Derived automatically via case-insensitive matching when omitted — provide this explicitly when migrating across CSS frameworks with different viewport names. |
-| `--page-ids` | no | `1,5,12` | Comma-separated page IDs to migrate. If omitted, all eligible pages are migrated. |
+| `--viewport-map` | no | — | Map legacy viewport keys to the active adapter's viewport keys. Derived automatically via case-insensitive matching when omitted — provide this explicitly when migrating across CSS frameworks with different viewport names. |
+| `--page-ids` | no | — | Comma-separated page IDs to migrate. If omitted, all eligible pages are migrated. |
 
 If a run finishes with failures, the task exits with a non-zero status and the failing page IDs are logged as errors. Pages that failed remain un-migrated and can be re-run after the cause is fixed.
+
+## Multi-locale (Fluent)
+
+On Fluent sites, use `migrate-grid-with-fluent` (not `migrate-grid`) — the plain task refuses to run when localised legacy tables are present. See [Migrating Elemental content under Fluent](fluent.md).
 
 ## What Gets Migrated
 

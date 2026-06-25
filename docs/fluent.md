@@ -56,6 +56,55 @@ This is handled by `FluentGridPageExtension` (applied to SiteTree) and `GridAwar
 
 Do **NOT** configure `apply_isolated_locales_to_admin: false` under `WeDevelop\Grid\Model\GridElement` in YAML. That Fluent setting disables locale filtering in the CMS admin, which would cause all locales' grid elements to appear together and break the tree structure.
 
+## Migrating Elemental content under Fluent
+
+Use the dedicated `migrate-grid-with-fluent` task to migrate legacy `dnadesign/silverstripe-elemental` (or `wedevelopnl/silverstripe-elemental-grid`) content into the new grid on a Fluent site. The plain `migrate-grid` task **refuses to run** when localised legacy tables are detected and directs you here instead.
+
+### How the task works
+
+The task migrates per locale: the default locale is migrated first, then each additional locale in turn, each inside a `FluentState` context, writing isolated per-locale `GridElement` trees.
+
+**Auto-detection of the legacy localisation model.** The task inspects the database table shape to determine which Fluent strategy was used in the SS5 site:
+
+| Legacy table shape | Detected model | Behaviour |
+|--------------------|----------------|-----------|
+| `BaseElement_Localised` present | Field-localised | Shared element structure; per-locale content read from `*_Localised` tables and overlaid onto the base row. |
+| `BaseElement.LocaleID` column present | Isolated | Separate element rows exist per locale; each locale's rows are filtered by `LocaleID`. |
+| Neither | Single-locale | No locale-specific data; elements are migrated once into the default locale only. |
+| Both | Unsupported | Ambiguous mixed configuration — the task aborts with an error. |
+
+### Layout vs content
+
+**Layout is locale-invariant.** Column grouping and `Size`/`Offset`/`Visibility` grid settings are derived from the base element rows and applied equally across all locales. Per-locale layout differences present in the legacy data are not honoured — this is an accepted limitation of a one-shot migration.
+
+Only content fields (`Title`, `HTML`, media text) differ per locale.
+
+### Untranslated elements
+
+Elements in the field-localised model that have no `*_Localised` row for a given locale are migrated using their base content. This matches Fluent's render-time fallback behaviour and ensures no content is silently omitted.
+
+### `UseGrid` flag
+
+`UseGrid` is treated as a non-localised shared page flag. It is excluded from Fluent localisation in this module's `_config/fluent.yml` and is set once on the page record (not per locale) when migration completes successfully.
+
+### Distinction from `AssignGridLocaleTask`
+
+This migration is distinct from the post-migration `AssignGridLocaleTask` recipe described in [Migration from Existing Data](#migration-from-existing-data) below. `AssignGridLocaleTask` re-localises already-migrated, locale-blind grid data (records with `LocaleID = 0`). `migrate-grid-with-fluent` is for migrating from a legacy `dnadesign/silverstripe-elemental` source — it reads legacy tables directly and writes fully-localised `GridElement` trees from scratch.
+
+### Prerequisites
+
+- **The legacy `BaseElement_Localised` / `*_Localised` (and `_Live`) tables must still be present.** If `dev/build` moved them to `_obsolete_*` after the old element relation was dropped, rename them back before migrating — the migration reads legacy tables by name.
+- The source site must be a working SilverStripe 5 site. See the [source-version prerequisite](migration.md#requirements) in the migration guide.
+
+Run the task via CLI:
+
+```bash
+vendor/bin/sake dev/tasks/migrate-grid-with-fluent \
+    --default-viewport=MD --zone=main --strategy=sections --dry-run
+```
+
+The task accepts the same options as `migrate-grid` (see the [Options Reference](migration.md#options-reference)).
+
 ## Migration from Existing Data
 
 If you enable Fluent on a site with existing grid content, those records will have `LocaleID = 0` and become invisible in all locales. You must assign a locale to existing records. (If you are coming from an installation that ran Fluent previously, verify your orphaned records actually have `LocaleID = 0` before running this task — records created under a different setup may use other sentinel values.)
