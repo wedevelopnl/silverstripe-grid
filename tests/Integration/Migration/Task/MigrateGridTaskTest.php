@@ -13,11 +13,13 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Output\BufferedOutput;
+use WeDevelop\Grid\Migration\Service\GridMigrationService;
 use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Migration\Service\TestFailingMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\FieldMapperConfigStubExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 use WeDevelop\Grid\Value\VerticalAlignment;
@@ -90,6 +92,38 @@ final class MigrateGridTaskTest extends SapphireTest
         $definition = new InputDefinition($task->getOptions());
         $input = new ArrayInput($options, $definition);
         $input->setInteractive(false);
+        $buffered = new BufferedOutput();
+        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+
+        return [
+            'exitCode' => $task->execute($input, $output),
+            'output' => $buffered->fetch(),
+        ];
+    }
+
+    /**
+     * Execute the task with an interactive STDIN-style stream so the destructive
+     * confirmation prompt is actually answered (rather than skipped via --force or
+     * --dry-run). The answer is written to an in-memory stream that Symfony's
+     * QuestionHelper reads from, exercising the real [y/N] gate.
+     *
+     * @param array<string, mixed> $options
+     * @param string               $answer Raw stream content fed to the prompt (e.g. "y\n" or "n\n")
+     * @return array{exitCode: int, output: string}
+     */
+    private function executeTaskInteractive(array $options, string $answer): array
+    {
+        $task = new MigrateGridTask();
+        $definition = new InputDefinition($task->getOptions());
+        $input = new ArrayInput($options, $definition);
+        $input->setInteractive(true);
+
+        $stream = fopen('php://memory', 'r+');
+        self::assertIsResource($stream);
+        fwrite($stream, $answer);
+        rewind($stream);
+        $input->setStream($stream);
+
         $buffered = new BufferedOutput();
         $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
 
@@ -292,6 +326,70 @@ final class MigrateGridTaskTest extends SapphireTest
         self::assertCount(0, Section::get());
         self::assertCount(0, Row::get());
         self::assertCount(0, Column::get());
+    }
+
+    public function testInteractiveConfirmationAcceptedRunsMigration(): void
+    {
+        $pageId = $this->getPageId();
+        $this->seedStandardPage($pageId);
+
+        // Answering "y" at the [y/N] prompt proceeds with the destructive write.
+        $result = $this->executeTaskInteractive([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+        ], "y\n");
+
+        self::assertSame(Command::SUCCESS, $result['exitCode']);
+        self::assertCount(1, Section::get()->filter(['ParentID' => $pageId, 'Zone' => 'main']));
+    }
+
+    public function testInteractiveConfirmationDeclinedAbortsMigration(): void
+    {
+        $pageId = $this->getPageId();
+        $this->seedStandardPage($pageId);
+
+        // Answering "n" at the [y/N] prompt aborts without writing anything.
+        $result = $this->executeTaskInteractive([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+        ], "n\n");
+
+        self::assertSame(Command::SUCCESS, $result['exitCode']);
+        self::assertStringContainsString('Migration aborted.', $result['output']);
+        self::assertCount(0, Section::get());
+        self::assertCount(0, Row::get());
+        self::assertCount(0, Column::get());
+    }
+
+    public function testFailedPageMigrationReportsFailureCount(): void
+    {
+        // A page whose element throws during the write rolls back and is counted
+        // as a failure; the task must surface that count and exit FAILURE.
+        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+
+        try {
+            $pageId = $this->getPageId();
+            $areaId = 1100;
+            $this->seeder->seedPage($pageId, $areaId);
+            $this->seeder->seedElement(11001, $areaId, self::CONTENT_CLASS, 1, [
+                'Title' => 'FAIL_ME',
+                'SizeMD' => 12,
+            ]);
+            $this->seeder->seedContentMedia(11001);
+
+            $result = $this->executeTaskRaw([
+                '--default-viewport' => 'MD',
+                '--zone' => 'main',
+                '--force' => true,
+            ]);
+
+            self::assertSame(Command::FAILURE, $result['exitCode']);
+            self::assertStringContainsString('failed to migrate', $result['output']);
+            // The deliberate failure rolled back — no partial hierarchy persisted.
+            self::assertCount(0, Section::get()->filter(['ParentID' => $pageId, 'Zone' => 'main']));
+        } finally {
+            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+        }
     }
 
     public function testDryRunCreatesNoRecords(): void
