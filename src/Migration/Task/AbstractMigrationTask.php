@@ -58,6 +58,16 @@ abstract class AbstractMigrationTask extends BuildTask
         /** @var string $defaultViewport */
         /** @var string $zone */
 
+        // Preflight checks (DB / class existence) run before the destructive-write
+        // confirmation so operators are not asked to confirm and then immediately
+        // refused. Both implementations depend only on DB table shape or class
+        // existence, not on the adapter, viewport map, or page-ids resolved below.
+        $preflightError = $this->preflight();
+        if ($preflightError !== null) {
+            $output->writeln(\sprintf('<error>%s</error>', $preflightError));
+            return Command::FAILURE;
+        }
+
         $dryRun = (bool) $input->getOption('dry-run');
         $force = (bool) $input->getOption('force');
 
@@ -90,12 +100,6 @@ abstract class AbstractMigrationTask extends BuildTask
             \is_string($input->getOption('viewport-map')) ? $input->getOption('viewport-map') : null,
             $adapter,
         );
-
-        $preflightError = $this->preflight();
-        if ($preflightError !== null) {
-            $output->writeln(\sprintf('<error>%s</error>', $preflightError));
-            return Command::FAILURE;
-        }
 
         $logger = Injector::inst()->get(LoggerInterface::class);
         $reader = new LegacyDataReader();

@@ -70,6 +70,8 @@ The task migrates per locale: the default locale is migrated first, then each ad
 |--------------------|----------------|-----------|
 | `BaseElement_Localised` present | Field-localised | Shared element structure; per-locale content read from `*_Localised` tables and overlaid onto the base row. |
 | `BaseElement.LocaleID` column present | Isolated | Separate element rows exist per locale; each locale's rows are filtered by `LocaleID`. |
+
+> **Isolated model prerequisite — Locale IDs must be stable.** The migration filters legacy element rows by `LocaleID`, treating those integer values as equal to the current Fluent `Locale` record IDs. This assumption holds for a standard in-place SilverStripe 5 → 6 upgrade, where the same database is carried forward and the `Locale` table rows retain their original IDs. **If the `Locale` records were deleted and recreated between the time the legacy content was authored and when you run the migration, the IDs will differ, and the Isolated per-locale filter may select the wrong content or return no results at all.** Verify that your `Locale` table IDs are unchanged before running `migrate-grid-with-fluent` on an Isolated site.
 | Neither | Single-locale | No locale-specific data; elements are migrated once into the default locale only. |
 | Both | Unsupported | Ambiguous mixed configuration — the task aborts with an error. |
 
