@@ -221,12 +221,12 @@ final class LegacyDataReader implements LegacyElementSource
         $elements = [];
         foreach ($result as $row) {
             /** @var array<string, int|string|null> $row */
+            /** @var positive-int $elementId */
+            $elementId = (int) $row['ID'];
             if ($overlayLocale !== null) {
-                /** @var positive-int $elementId */
-                $elementId = (int) $row['ID'];
                 $row = $this->overlayLocalised($row, 'BaseElement', $elementId, $overlayLocale, $stage);
             }
-            $elements[] = $this->hydrateElement($row, $stage, $overlayLocale);
+            $elements[] = $this->hydrateElement($row, $stage, $overlayLocale, $elementId);
         }
 
         $this->extend('updateLegacyElements', $elements, $areaId, $stage);
@@ -336,17 +336,25 @@ final class LegacyDataReader implements LegacyElementSource
      * Build a LegacyElement from a BaseElement row. When $overlayLocale is set,
      * content media fields are overlaid from ElementContent_Localised for that locale.
      *
+     * $elementId may be supplied by the caller (already cast from $row['ID']) to
+     * avoid a redundant cast on the hot path; when omitted it is derived here.
+     *
      * @param array<string, int|string|null> $row
      * @param non-empty-string|null $overlayLocale
+     * @param positive-int|null $elementId Pre-cast ID; derived from $row['ID'] when null.
      */
-    private function hydrateElement(array $row, string $stage, ?string $overlayLocale): LegacyElement
+    private function hydrateElement(array $row, string $stage, ?string $overlayLocale, ?int $elementId = null): LegacyElement
     {
         /** @var positive-int $elementId */
-        $elementId = (int) $row['ID'];
+        $elementId ??= (int) $row['ID'];
         $className = (string) ($row['ClassName'] ?? '');
         $isRow = $className === self::ROW_CLASS_NAME;
 
         $rowData = $isRow ? $this->getRowData($elementId, $stage) : null;
+        // For the field-localised model, $overlayLocale is set and we read the
+        // per-locale ElementContent_Localised companion table. For the Isolated
+        // model, $overlayLocale is null because each BaseElement row already
+        // belongs to exactly one locale — there is no _Localised companion to overlay.
         $mediaData = $overlayLocale !== null
             ? $this->getContentMediaDataInLocale($elementId, $stage, $overlayLocale)
             : $this->getContentMediaData($elementId, $stage);
@@ -440,12 +448,13 @@ final class LegacyDataReader implements LegacyElementSource
 
     /**
      * Resolve a <baseTable>_Localised companion table name for a stage.
+     *
+     * Delegates to {@see stageTable()} so stage validation is not bypassed and
+     * the resulting names stay exactly `<base>_Localised` (draft) / `<base>_Localised_Live` (live).
      */
     private function localisedTable(string $baseTable, string $stage): string
     {
-        return \strtolower($stage) === 'live'
-            ? $baseTable . '_Localised_Live'
-            : $baseTable . '_Localised';
+        return $this->stageTable($baseTable . '_Localised', $stage);
     }
 
     /**
