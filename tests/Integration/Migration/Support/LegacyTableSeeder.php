@@ -334,6 +334,91 @@ final class LegacyTableSeeder
         );
     }
 
+    public function addFieldLocalisedTables(): void
+    {
+        foreach (['BaseElement_Localised', 'BaseElement_Localised_Live'] as $target) {
+            DB::query(<<<SQL
+                CREATE TABLE IF NOT EXISTS "{$target}" (
+                    "ID" int NOT NULL PRIMARY KEY AUTO_INCREMENT,
+                    "RecordID" int NOT NULL DEFAULT 0,
+                    "Locale" varchar(10) NOT NULL DEFAULT '',
+                    "Title" varchar(255) DEFAULT NULL
+                )
+                SQL);
+        }
+
+        foreach (['ElementContent_Localised', 'ElementContent_Localised_Live'] as $target) {
+            DB::query(<<<SQL
+                CREATE TABLE IF NOT EXISTS "{$target}" (
+                    "ID" int NOT NULL PRIMARY KEY AUTO_INCREMENT,
+                    "RecordID" int NOT NULL DEFAULT 0,
+                    "Locale" varchar(10) NOT NULL DEFAULT '',
+                    "HTML" mediumtext
+                )
+                SQL);
+        }
+    }
+
+    public function removeFieldLocalisedTables(): void
+    {
+        foreach ([
+            'BaseElement_Localised', 'BaseElement_Localised_Live',
+            'ElementContent_Localised', 'ElementContent_Localised_Live',
+        ] as $target) {
+            DB::query("DROP TABLE IF EXISTS \"{$target}\"");
+        }
+    }
+
+    public function addLocaleIdColumn(): void
+    {
+        foreach (['BaseElement', 'BaseElement_Live'] as $target) {
+            $columns = DB::field_list($target);
+            if (!\array_key_exists('LocaleID', $columns)) {
+                DB::query("ALTER TABLE \"{$target}\" ADD COLUMN \"LocaleID\" int NOT NULL DEFAULT 0");
+            }
+        }
+    }
+
+    public function removeLocaleIdColumn(): void
+    {
+        foreach (['BaseElement', 'BaseElement_Live'] as $target) {
+            $columns = DB::field_list($target);
+            if (\array_key_exists('LocaleID', $columns)) {
+                DB::query("ALTER TABLE \"{$target}\" DROP COLUMN \"LocaleID\"");
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $fields Localised column overrides (e.g. ['Title' => 'NL Title'])
+     */
+    public function seedLocalisedElement(int $recordId, string $locale, array $fields, string $stage = 'draft'): void
+    {
+        $target = \strtolower($stage) === 'live' ? 'BaseElement_Localised_Live' : 'BaseElement_Localised';
+        $data = \array_merge(['RecordID' => $recordId, 'Locale' => $locale], $fields);
+        $columns = \implode('", "', \array_keys($data));
+        $placeholders = \implode(', ', \array_fill(0, \count($data), '?'));
+        DB::prepared_query(
+            "INSERT INTO \"{$target}\" (\"{$columns}\") VALUES ({$placeholders})",
+            \array_values($data),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $fields Localised column overrides (e.g. ['HTML' => '<p>NL</p>'])
+     */
+    public function seedLocalisedContent(int $recordId, string $locale, array $fields, string $stage = 'draft'): void
+    {
+        $target = \strtolower($stage) === 'live' ? 'ElementContent_Localised_Live' : 'ElementContent_Localised';
+        $data = \array_merge(['RecordID' => $recordId, 'Locale' => $locale], $fields);
+        $columns = \implode('", "', \array_keys($data));
+        $placeholders = \implode(', ', \array_fill(0, \count($data), '?'));
+        DB::prepared_query(
+            "INSERT INTO \"{$target}\" (\"{$columns}\") VALUES ({$placeholders})",
+            \array_values($data),
+        );
+    }
+
     private function createBaseElementTable(string $name): void
     {
         DB::query(<<<SQL
