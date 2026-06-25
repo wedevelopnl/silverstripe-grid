@@ -71,7 +71,10 @@ final readonly class FluentMigrationOrchestrator
                     $source = new LocaleScopedLegacySource($this->reader, $model, $localeCode, $localeId);
                     $service = new GridMigrationService($source, $this->mapper, $this->strategy, $this->logger);
 
-                    return $service->run($defaultViewport, $zone, $viewportKeyMap, $dryRun, $pageIds);
+                    // Reconcile grid-disabled pages once: the UseGrid writes hit
+                    // locale-invariant base tables, so only the default-locale pass
+                    // needs them — repeating per locale is redundant I/O and log noise.
+                    return $service->run($defaultViewport, $zone, $viewportKeyMap, $dryRun, $pageIds, $isDefault);
                 },
             );
         }

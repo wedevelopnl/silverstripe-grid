@@ -345,8 +345,8 @@ final class LegacyDataReader implements LegacyElementSource
      */
     private function hydrateElement(array $row, string $stage, ?string $overlayLocale, ?int $elementId = null): LegacyElement
     {
-        /** @var positive-int $elementId */
         $elementId ??= (int) $row['ID'];
+        /** @var positive-int $elementId */
         $className = (string) ($row['ClassName'] ?? '');
         $isRow = $className === self::ROW_CLASS_NAME;
 

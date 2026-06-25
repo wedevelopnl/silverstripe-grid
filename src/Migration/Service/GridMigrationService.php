@@ -51,6 +51,10 @@ final class GridMigrationService
      * @param array<string, string> $viewportKeyMap Old viewport key → new key (e.g. 'MD' → 'md')
      * @param bool $dryRun When true, log what would be created without writing
      * @param list<int>|null $pageIds Optional filter to restrict to specific pages
+     * @param bool $reconcileDisabledPages Carry over UseGrid = 0 for grid-disabled pages.
+     *     The Fluent orchestrator runs this once (on the default-locale pass) because the
+     *     UseGrid writes target locale-invariant base/_Live tables; running it per locale
+     *     would repeat identical writes and log lines N times.
      * @return int<0, max> Number of pages that failed to migrate
      */
     public function run(
@@ -59,6 +63,7 @@ final class GridMigrationService
         array $viewportKeyMap,
         bool $dryRun = false,
         ?array $pageIds = null,
+        bool $reconcileDisabledPages = true,
     ): int {
         $eligiblePages = $this->reader->getEligiblePages('draft', $pageIds);
         $failures = 0;
@@ -79,7 +84,7 @@ final class GridMigrationService
             }
         }
 
-        if (!$dryRun) {
+        if (!$dryRun && $reconcileDisabledPages) {
             $this->migrateDisabledGridPages();
         }
 

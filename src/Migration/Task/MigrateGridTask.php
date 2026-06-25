@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Migration\Task;
 
 use Psr\Log\LoggerInterface;
+use TractorCow\Fluent\Extension\FluentIsolatedExtension;
+use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\GridMigrationService;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Migration\Service\LegacyLocalisationDetector;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
+use WeDevelop\Grid\Model\GridElement;
 
 /**
  * Migrates legacy Elemental content to the grid hierarchy on non-localised
@@ -26,9 +29,18 @@ class MigrateGridTask extends AbstractMigrationTask
 
     protected function preflight(): ?string
     {
-        if ((new LegacyLocalisationDetector())->hasLocalisedContent()) {
-            return 'Localised legacy Elemental tables detected (Fluent). Run "migrate-grid-with-fluent" instead — '
-                . 'this task would migrate content without locale context and lose per-locale data.';
+        // Refuse on any Fluent-isolated grid, not just when localised legacy tables
+        // are present: the target's isolation is the real capability boundary. This
+        // task writes outside any FluentState, so on a locale-isolated grid every
+        // record lands at LocaleID = 0 (invisible in every locale) — including the
+        // single-locale (None) legacy model, which table-shape detection cannot see.
+        $targetIsLocaleIsolated = class_exists(FluentState::class)
+            && GridElement::has_extension(FluentIsolatedExtension::class);
+
+        if ($targetIsLocaleIsolated || (new LegacyLocalisationDetector())->hasLocalisedContent()) {
+            return 'Fluent site detected (locale-isolated grid or localised legacy tables). '
+                . 'Run "migrate-grid-with-fluent" instead — this task migrates content without '
+                . 'locale context and would write records invisible in every locale.';
         }
 
         return null;
