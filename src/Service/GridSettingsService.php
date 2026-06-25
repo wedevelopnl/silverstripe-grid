@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Service;
 
+use NoDiscard;
 use SilverStripe\CMS\Model\SiteTree;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\Column;
@@ -37,6 +38,7 @@ final readonly class GridSettingsService
      * @param non-empty-string $viewport
      * @return Result<GridElement>
      */
+    #[NoDiscard('The Result reports write/validation failures; discarding it silently swallows them.')]
     public function updateSettings(Column $column, string $viewport, int $width, int $offset, bool $visible): Result
     {
         $settings = $column->getGridSettings();
@@ -72,6 +74,7 @@ final readonly class GridSettingsService
      * @param non-empty-string|null $viewport
      * @return Result<int> Count of columns that were modified
      */
+    #[NoDiscard('The Result reports write/validation failures and the modified-column count; discarding it silently swallows them.')]
     public function resetOverrides(SiteTree $page, string $zone, ?string $viewport): Result
     {
         $columns = $this->treeBuilder->findColumnsForPage($page, $zone);

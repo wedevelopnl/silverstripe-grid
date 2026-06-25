@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Validation;
 
+use NoDiscard;
 use Override;
 use SilverStripe\CMS\Model\SiteTree;
 use WeDevelop\Grid\Contract\ContainerInterface;
@@ -15,6 +16,7 @@ use WeDevelop\Grid\Value\ValidationErrorCode;
 class HierarchyValidationService implements HierarchyValidatorInterface
 {
     /** @return Result<GridElement> */
+    #[NoDiscard('The Result reports whether the element placement is valid; discarding it silently skips the hierarchy check.')]
     #[Override]
     public function validate(GridElement $element): Result
     {
