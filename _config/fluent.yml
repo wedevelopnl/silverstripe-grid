@@ -8,6 +8,12 @@ After:
 SilverStripe\CMS\Model\SiteTree:
   extensions:
     FluentGrid: WeDevelop\Grid\Extensions\FluentGridPageExtension
+  # UseGrid is structural config, not per-locale content. The SS5->SS6 migration
+  # writes it on the page base table via raw SQL (GridMigrationService::setUseGridOnPage),
+  # so excluding it from Fluent field-localisation keeps that write authoritative
+  # across every locale rather than scoped to the active one.
+  field_exclude:
+    - UseGrid
 
 SilverStripe\Core\Injector\Injector:
   TractorCow\Fluent\Model\Delete\DeleteLocalisationPolicy:
