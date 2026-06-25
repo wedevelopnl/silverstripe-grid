@@ -118,10 +118,10 @@ class GridSettingsField extends FormField
         // Extract default viewport values
         $defaultEntry = $formData[$defaultKey] ?? null;
         $defaultWidth = is_array($defaultEntry) && is_numeric($defaultEntry['width'] ?? null)
-            ? (int) $defaultEntry['width']
+            ? max(1, (int) $defaultEntry['width'])
             : $columnCount;
         $defaultOffset = is_array($defaultEntry) && is_numeric($defaultEntry['offset'] ?? null)
-            ? (int) $defaultEntry['offset']
+            ? max(0, (int) $defaultEntry['offset'])
             : 0;
         // KNOWN LIMITATION: the default viewport is always visible on submit.
         // Visibility is derived from checkbox-presence semantics (an unchecked
@@ -161,8 +161,8 @@ class GridSettingsField extends FormField
             $width = $entry['width'] ?? null;
             $offset = $entry['offset'] ?? null;
 
-            $parsedWidth = is_numeric($width) ? (int) $width : $columnCount;
-            $parsedOffset = is_numeric($offset) ? (int) $offset : 0;
+            $parsedWidth = is_numeric($width) ? max(1, (int) $width) : $columnCount;
+            $parsedOffset = is_numeric($offset) ? max(0, (int) $offset) : 0;
 
             $overrides[$key] = new ViewportConfig(
                 $parsedWidth,

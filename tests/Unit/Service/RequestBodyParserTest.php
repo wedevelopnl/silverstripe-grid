@@ -409,6 +409,33 @@ final class RequestBodyParserTest extends TestCase
         ];
     }
 
+    #[DataProvider('invalidWidthOffsetProvider')]
+    public function testParseUpdateGridSettingsRejectsOutOfRangeWidthOffset(
+        int $width,
+        int $offset,
+        string $expectedMessageFragment,
+    ): void {
+        $data = ['element' => ['type' => 'column', 'id' => 1], 'viewport' => 'md', 'width' => $width, 'offset' => $offset, 'visible' => true];
+        $result = $this->parser->parseUpdateGridSettingsBody($data);
+
+        self::assertTrue($result->isErr());
+        self::assertStringContainsString($expectedMessageFragment, $result->errors()[0]->translate());
+    }
+
+    /** @return iterable<string, array{int, int, string}> */
+    public static function invalidWidthOffsetProvider(): iterable
+    {
+        yield 'zero width'      => [0, 0, 'width must be at least 1'];
+        yield 'negative width'  => [-1, 0, 'width must be at least 1'];
+        yield 'negative offset' => [1, -1, 'offset must not be negative'];
+    }
+
+    public function testParseUpdateGridSettingsAcceptsBoundaryWidthOffset(): void
+    {
+        $data = ['element' => ['type' => 'column', 'id' => 1], 'viewport' => 'md', 'width' => 1, 'offset' => 0, 'visible' => true];
+        self::assertTrue($this->parser->parseUpdateGridSettingsBody($data)->isOk());
+    }
+
     // ── parseDuplicateToBody ────────────────────────────────────
 
     public function testParseDuplicateToBodyValid(): void

@@ -347,4 +347,37 @@ final class GridSettingsFieldTest extends SapphireTest
         self::assertNotNull($lg);
         self::assertSame(0, $lg->Offset);
     }
+
+    /**
+     * Tampered POST input with out-of-range lower-bound values must be clamped
+     * server-side, not passed through raw. The normal UI never produces width=0
+     * or negative offsets, but a crafted POST can — and width=0 is the sentinel
+     * in ColumnClassResolver that yields wrong output.
+     *
+     * Default viewport: width "0" → clamped to 1; offset "-3" → clamped to 0.
+     * Override viewport: width "-5" → clamped to 1; offset "-1" → clamped to 0.
+     */
+    public function testNormalizeFormDataClampsTamperedWidthAndOffset(): void
+    {
+        $field = $this->createField();
+        $field->setValue([
+            // Tampered default: width=0, negative offset
+            'md' => ['width' => '0', 'offset' => '-3', 'visible' => '1'],
+            // Tampered override: negative width and offset
+            'lg' => ['width' => '-5', 'offset' => '-1', 'override' => '1', 'visible' => '1'],
+        ]);
+
+        $viewportData = $field->getViewportData();
+
+        $md = $viewportData->find('Key', 'md');
+        self::assertNotNull($md);
+        self::assertSame(1, $md->Width, 'width=0 in POST must be clamped to 1 (minimum positive-int)');
+        self::assertSame(0, $md->Offset, 'negative offset in POST must be clamped to 0');
+
+        $lg = $viewportData->find('Key', 'lg');
+        self::assertNotNull($lg);
+        self::assertTrue($lg->Override);
+        self::assertSame(1, $lg->Width, 'negative width in POST override must be clamped to 1');
+        self::assertSame(0, $lg->Offset, 'negative offset in POST override must be clamped to 0');
+    }
 }
