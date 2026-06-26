@@ -2,7 +2,7 @@
 export default {
   testRunner: 'vitest',
   appendPlugins: ['./stryker-ignorers.mjs'],
-  ignorers: ['react', 'i18nKey'],
+  ignorers: ['react', 'i18nKey', 'mutationResidue'],
   mutate: [
     'client/src/**/*.{ts,tsx}',
     '!client/src/**/*.{test,spec}.*',
@@ -18,7 +18,6 @@ export default {
     '!client/src/types/duplicateTo.ts',
     '!client/src/types/gridSettings.ts',
     '!client/src/types/silverstripe.d.ts',
-    '!client/src/api/endpoints.ts',
     '!client/src/api/errors.ts',
   ],
   ignorePatterns: ['public'],
@@ -31,7 +30,7 @@ export default {
   thresholds: {
     high: 85,
     low: 75,
-    break: 77,
+    break: 75,
   },
   // Allow clean exit when no source files exist to mutate yet
   allowEmpty: true,

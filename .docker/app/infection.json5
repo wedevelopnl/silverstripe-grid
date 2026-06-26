@@ -24,8 +24,12 @@
         //     — GridElement L518, Transactional L44, GridMigrationService L140 — no line-unique scope)
         //   - GridEditorField filter_var min_range / FieldMapper sizeFields[$oldKey] Increment:
         //     these specific Increments ARE killed by tests; only their Decrement twins are ignored
-        // SilverStripe calls methods by name via reflection (extend, $dependencies, Injector).
-        // Visibility changes don't break tests but would break the framework at runtime.
+        // PublicVisibility/ProtectedVisibility are disabled because the framework
+        // resolves specific members reflectively where a visibility change would break
+        // runtime wiring without failing a test: extension hooks dispatched via
+        // ->extend('hook', …), property injection through $dependencies, and Injector
+        // factory/service resolution. This is targeted at those DI seams — not a blanket
+        // claim that every method's visibility is untestable.
         "PublicVisibility": false,
         "ProtectedVisibility": false,
         "CastInt": {
@@ -155,9 +159,9 @@
         },
         "MethodCallRemoval": {
             ignoreSourceCodeByRegex: [
-                // Extension point hooks: ->extend('updateX', $var) are contracts for third-party
-                // code. Removing them has no effect without active extensions in test env.
-                ".*->extend\\(.*",
+                // SilverStripe extension-hook dispatch (->extend('hook', …)); third-party contract, inert without active extensions in the test env. Two forms: single-line and the multi-line opener (AbstractMigrationTask::extend).
+                ".*->extend\\('[a-zA-Z]+',.*",
+                ".*->extend\\($",
                 // Parent lifecycle calls (parent::onAfterWrite, parent::onBeforeWrite) are
                 // framework contracts. Removing them breaks the lifecycle chain but tests
                 // don't observe the parent's side effects directly.

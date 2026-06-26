@@ -11,8 +11,11 @@
  * - i18n translation keys (first arg of `t(…)` calls — tests assert the
  *   rendered fallback string, not the key)
  *
- * Exported as two plugins (`react` and `i18nKey`) so they can be toggled
- * independently via `ignorers` in stryker.config.mjs.
+ * Exported as three plugins (`react`, `i18nKey`, and `mutationResidue`) so they
+ * can be toggled independently via `ignorers` in stryker.config.mjs. The
+ * `mutationResidue` plugin centralizes three formerly-inline `// Stryker disable`
+ * families (TanStack enabled-flag args, `stopPropagation` calls, applyReorder's
+ * sourceIndex guard) — see its docblock below.
  *
  * @see https://stryker-mutator.io/docs/stryker-js/disable-mutants/
  */
@@ -244,6 +247,187 @@ const i18nKeyIgnorer = {
   },
 };
 
+/** @type {ReadonlySet<string>} */
+const TANSTACK_ENABLED_HOOKS = new Set([
+  'usePages',
+  'useZones',
+  'useAcceptableContainers',
+]);
+
+/**
+ * True when `path` is positioned inside the enabled-flag argument of a
+ * CallExpression whose callee Identifier is one of the TanStack enabled-flag
+ * hooks (usePages/useZones/useAcceptableContainers). Walks ancestors, and at
+ * each CallExpression to a matching hook confirms the path's subtree is reached
+ * *through* one of that call's arguments — AND that the ascended argument node
+ * is itself a BinaryExpression or ConditionalExpression (the `step === 'page'` /
+ * `step !== 'page' ? id : null` enabled-flag shape). This excludes the bare
+ * first-arg Identifier (e.g. `debouncedSearch`) and the hook call itself, so
+ * only the documented enabled-flag mutant surface matches.
+ *
+ * @param {import('@stryker-mutator/api/ignore').NodePath} path
+ * @returns {boolean}
+ */
+function isTanStackEnabledArgument(path) {
+  let current = path.parentPath;
+  let previous = path;
+  while (current) {
+    if (
+      current.isCallExpression() &&
+      current.node.callee.type === 'Identifier' &&
+      TANSTACK_ENABLED_HOOKS.has(current.node.callee.name) &&
+      current.node.arguments.some(
+        (arg) =>
+          arg === previous.node &&
+          (arg.type === 'BinaryExpression' ||
+            arg.type === 'ConditionalExpression'),
+      )
+    ) {
+      return true;
+    }
+    previous = current;
+    current = current.parentPath;
+  }
+  return false;
+}
+
+/**
+ * True when `path` is, or is nested inside, a CallExpression of the form
+ * `<expr>.stopPropagation()`. Walks ancestors (including the path itself) so a
+ * mutant on the call, its callee MemberExpression, or any argument is covered.
+ *
+ * @param {import('@stryker-mutator/api/ignore').NodePath} path
+ * @returns {boolean}
+ */
+function isStopPropagationCall(path) {
+  /** @type {import('@stryker-mutator/api/ignore').NodePath | null} */
+  let current = path;
+  while (current) {
+    if (
+      current.isCallExpression() &&
+      current.node.callee.type === 'MemberExpression' &&
+      current.node.callee.property.type === 'Identifier' &&
+      current.node.callee.property.name === 'stopPropagation'
+    ) {
+      return true;
+    }
+    current = current.parentPath;
+  }
+  return false;
+}
+
+/**
+ * True when `node` is the binary test `sourceIndex === undefined`
+ * (`applyReorder`'s source-index guard).
+ *
+ * @param {object} node
+ * @returns {boolean}
+ */
+function isSourceIndexUndefinedTest(node) {
+  return (
+    node?.type === 'BinaryExpression' &&
+    node.operator === '===' &&
+    node.left?.type === 'Identifier' &&
+    node.left.name === 'sourceIndex' &&
+    node.right?.type === 'Identifier' &&
+    node.right.name === 'undefined'
+  );
+}
+
+/**
+ * True when the IfStatement's consequent is exactly `return tree` (either a bare
+ * ReturnStatement or a single-statement block wrapping it).
+ *
+ * @param {object} consequent
+ * @returns {boolean}
+ */
+function isReturnTreeConsequent(consequent) {
+  if (!consequent || typeof consequent !== 'object') return false;
+
+  /** @type {object | undefined} */
+  let returnStatement;
+  if (consequent.type === 'ReturnStatement') {
+    returnStatement = consequent;
+  } else if (
+    consequent.type === 'BlockStatement' &&
+    Array.isArray(consequent.body) &&
+    consequent.body.length === 1
+  ) {
+    returnStatement = consequent.body[0];
+  } else {
+    return false;
+  }
+
+  return (
+    returnStatement?.type === 'ReturnStatement' &&
+    returnStatement.argument?.type === 'Identifier' &&
+    returnStatement.argument.name === 'tree'
+  );
+}
+
+/**
+ * True for a mutant whose node is the `sourceIndex === undefined` test of an
+ * `if (sourceIndex === undefined) return tree` guard. Matches whether the mutant
+ * node is the IfStatement's BinaryExpression test directly (ConditionalExpression
+ * mutator) or the IfStatement itself, then confirms the consequent is
+ * `return tree` so only `applyReorder`'s guard shape qualifies.
+ *
+ * @param {import('@stryker-mutator/api/ignore').NodePath} path
+ * @returns {boolean}
+ */
+function isApplyReorderSourceIndexGuard(path) {
+  // Mutant on the binary test: parent is the IfStatement, node is its test.
+  if (
+    isSourceIndexUndefinedTest(path.node) &&
+    path.parentPath?.isIfStatement() &&
+    path.parentPath.node.test === path.node &&
+    isReturnTreeConsequent(path.parentPath.node.consequent)
+  ) {
+    return true;
+  }
+
+  // Mutant on the IfStatement itself.
+  if (
+    path.isIfStatement() &&
+    isSourceIndexUndefinedTest(path.node.test) &&
+    isReturnTreeConsequent(path.node.consequent)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Lifts three previously-inline `// Stryker disable` families into one central
+ * ignorer (the project's stated pattern — skip centrally rather than sprinkling
+ * disable comments):
+ *
+ *  1. TanStack `enabled`-flag arguments to usePages/useZones/useAcceptableContainers
+ *     — the mocked test data ignores the `enabled` flag, so mutating the ternary
+ *     argument is semantically invisible.
+ *  2. `<expr>.stopPropagation()` calls — prevent event bubble to parent
+ *     menus/pickers; not observable via React Testing Library.
+ *  3. `applyReorder`'s `if (sourceIndex === undefined) return tree` guard —
+ *     unreachable in well-formed trees (buildMaps indexes every node in nodeMap).
+ *
+ * @type {import('@stryker-mutator/api/ignore').Ignorer}
+ */
+const mutationResidueIgnorer = {
+  shouldIgnore(path) {
+    if (isTanStackEnabledArgument(path)) {
+      return 'TanStack enabled-flag argument (mocked test data ignores enabled)';
+    }
+    if (isStopPropagationCall(path)) {
+      return 'stopPropagation (event bubble not observable via RTL)';
+    }
+    if (isApplyReorderSourceIndexGuard(path)) {
+      return 'applyReorder sourceIndex guard (unreachable in well-formed trees)';
+    }
+    return undefined;
+  },
+};
+
 /** @type {import('@stryker-mutator/api/plugin').ValuePlugin<import('@stryker-mutator/api/plugin').PluginKind.Ignore>} */
 const reactPlugin = {
   kind: 'Ignore',
@@ -258,4 +442,11 @@ const i18nPlugin = {
   value: i18nKeyIgnorer,
 };
 
-export const strykerPlugins = [reactPlugin, i18nPlugin];
+/** @type {import('@stryker-mutator/api/plugin').ValuePlugin<import('@stryker-mutator/api/plugin').PluginKind.Ignore>} */
+const mutationResiduePlugin = {
+  kind: 'Ignore',
+  name: 'mutationResidue',
+  value: mutationResidueIgnorer,
+};
+
+export const strykerPlugins = [reactPlugin, i18nPlugin, mutationResiduePlugin];
