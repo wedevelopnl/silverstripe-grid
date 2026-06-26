@@ -933,4 +933,60 @@ final class FieldMapperTest extends TestCase
         self::assertSame('image', $result->MediaType);
         self::assertSame('Hero shot', $result->MediaCaption);
     }
+
+    // ─── Media field mapping: schema-missing warnings ─────────────────────────
+
+    public function testMissingMediaColumnLogsWarning(): void
+    {
+        // Keys entirely absent from fields (schema-missing) must trigger a warning
+        // naming the absent column(s) and the label "schema-missing".
+        // Only ContentColumns and ContentVerticalAlign are present; the remaining
+        // expected keys are absent → warning must name at least MediaImageID.
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::atLeastOnce())
+            ->method('warning')
+            ->with(
+                self::stringContains('schema-missing'),
+                self::callback(static fn (array $ctx): bool =>
+                    \is_string($ctx['columns'] ?? null)
+                    && \str_contains($ctx['columns'], 'MediaImageID')
+                ),
+            );
+
+        $mapper = new FieldMapper(logger: $logger);
+        $mapper->mapMediaFields(new LegacyMediaData([
+            'ContentColumns' => '6',
+            'ContentVerticalAlign' => '',
+            // All other expected media keys deliberately omitted → schema-missing
+        ]));
+    }
+
+    public function testPresentButEmptyMediaColumnDoesNotLogMissing(): void
+    {
+        // Keys present with empty/null values are normal empty data, not schema gaps.
+        // No schema-missing warning must be emitted when all expected keys exist.
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::never())->method('warning');
+
+        $mapper = new FieldMapper(logger: $logger);
+        $mapper->mapMediaFields(new LegacyMediaData([
+            'ContentColumns'             => '',
+            'ContentVerticalAlign'       => '',
+            'ExtraColumnGap'             => 0,
+            'MediaType'                  => '',
+            'MediaCaption'               => '',
+            'MediaRatio'                 => null,
+            'MediaPosition'              => null,
+            'MediaImageID'               => null,
+            'MediaVideoFullURL'          => '',
+            'MediaVideoProvider'         => '',
+            'MediaVideoHasOverlay'       => false,
+            'MediaVideoCustomThumbnailID' => 0,
+            'MediaVideoEmbeddedName'     => '',
+            'MediaVideoEmbeddedURL'      => '',
+            'MediaVideoEmbeddedDescription' => '',
+            'MediaVideoEmbeddedThumbnail' => '',
+            'MediaVideoEmbeddedCreated'  => '',
+        ]));
+    }
 }
