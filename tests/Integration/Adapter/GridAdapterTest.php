@@ -383,6 +383,28 @@ final class GridAdapterTest extends SapphireTest
         new BootstrapAdapter();
     }
 
+    public function testEnabledViewportsResolveInBreakpointOrderNotConfigOrder(): void
+    {
+        // enabled_viewports supplied out of breakpoint order; the adapter must
+        // resolve them in viewport_definitions (ascending breakpoint) order so
+        // the cascade and visibility "next viewport" logic stay correct.
+        Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', ['md', 'sm', 'lg']);
+
+        $adapter = new BootstrapAdapter();
+
+        $keys = array_map(
+            static fn (Viewport $vp): string => $vp->key,
+            $adapter->getViewports(),
+        );
+        self::assertSame(['sm', 'md', 'lg'], $keys, 'viewports must be breakpoint-ordered, not config-list-ordered');
+
+        // The "next enabled viewport" used for the restore class must follow
+        // breakpoint order: sm restores at md (the next enabled key), not at the
+        // config-list neighbour.
+        $smVisibility = $adapter->getVisibilityClasses('sm');
+        self::assertSame(['d-sm-none', 'd-md-block'], $smVisibility);
+    }
+
     // -- Malformed viewport_definitions rejection ----------------------------
 
     /**
