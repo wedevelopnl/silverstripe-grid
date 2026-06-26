@@ -722,6 +722,64 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertSame([1, 2], $sortValues, 'Live-only section must append after the draft section');
     }
 
+    public function testLiveOnlyElementsAreInfoLoggedForSpotCheck(): void
+    {
+        // Positive case: a page with live-only elements must emit an info log
+        // naming the page ID and element count so an operator can spot-check
+        // that the adjacent same-settings grouping produced the expected layout.
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        // Two elements that exist only on live (no draft counterpart).
+        $this->seeder->seedElement(7100, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 6,
+            'Title' => 'Live Only A',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(7100, [], stage: 'live');
+        $this->seeder->seedElement(7101, $areaId, self::CONTENT_CLASS, 2, [
+            'SizeMD' => 6,
+            'Title' => 'Live Only B',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(7101, [], stage: 'live');
+
+        $this->runMigration();
+
+        $liveOnlyLog = null;
+        foreach ($this->getLogMessages('info') as $msg) {
+            if (\str_contains($msg, 'live-only')) {
+                $liveOnlyLog = $msg;
+                break;
+            }
+        }
+        self::assertNotNull($liveOnlyLog, 'An info log must be emitted when live-only elements are found');
+        self::assertStringContainsString((string) $pageId, $liveOnlyLog, 'The log must name the page ID');
+        self::assertStringContainsString('2', $liveOnlyLog, 'The log must name the live-only element count');
+
+        // Negative case: a page with only shared elements (draft + live) must
+        // not emit a live-only info log — the grouping caveat does not apply.
+        $this->logger->messages = [];
+
+        $pageId2 = $this->getPageId2();
+        $areaId2 = 200;
+        $this->seeder->seedPage($pageId2, $areaId2);
+        foreach (['draft', 'live'] as $stage) {
+            $this->seeder->seedElement(7200, $areaId2, self::CONTENT_CLASS, 1, [
+                'SizeMD' => 12,
+                'Title' => 'Shared',
+            ], stage: $stage);
+            $this->seeder->seedContentMedia(7200, [], stage: $stage);
+        }
+
+        $this->runMigration(pageId: $pageId2);
+
+        $liveOnlyMessages = \array_values(\array_filter(
+            $this->getLogMessages('info'),
+            static fn (string $msg): bool => \str_contains($msg, 'live-only'),
+        ));
+        self::assertSame([], $liveOnlyMessages, 'A page with no live-only elements must not emit a live-only info log');
+    }
+
     public function testDraftAndLiveMigratedWithSameId(): void
     {
         $pageId = $this->getPageId();

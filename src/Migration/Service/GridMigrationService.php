@@ -562,6 +562,14 @@ final class GridMigrationService
         $this->reconcileColumnLiveGridSettings($liveElementsByColumn, $defaultViewport, $viewportKeyMap);
 
         if ($liveOnlyElements !== []) {
+            $this->logger->info(
+                'Page {pageId}: {liveOnlyCount} live-only legacy element(s) found; '
+                . 'adjacent same-settings elements may be grouped into shared columns — verify live layout.',
+                [
+                    'pageId' => $pageId,
+                    'liveOnlyCount' => \count($liveOnlyElements),
+                ],
+            );
             $this->createLiveOnlyHierarchy(
                 $liveOnlyElements,
                 $pageId,
