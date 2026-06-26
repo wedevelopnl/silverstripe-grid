@@ -49,18 +49,21 @@ final class CharacterizationDraftOnlyTest extends CharacterizationTestCase
         $pageId = $this->pageId();
         $this->seedDraftOnlyPage($pageId);
 
+        // Clear the page's UseGrid flag on DRAFT before migrating so the
+        // post-migration `UseGrid === 1` assertion proves the migration enabled
+        // it, rather than passing on the Boolean(1) DB default (the legacy seeder
+        // never writes UseGrid).
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $page->UseGrid = false;
+        $page->write();
+
         $this->runMigration($pageId);
 
         $tree = MigrationTreeSnapshot::snapshotTree($pageId, Page::class, self::ZONE, Versioned::DRAFT);
 
         // Column C's raw overrides JSON is format-sensitive; assert its content
         // separately, then normalise it to a sentinel for the structural diff.
-        $columnCRaw = $tree[0]['rows'][0]['columns'][2]['overridesColumnRaw'] ?? null;
-        self::assertIsString($columnCRaw, 'Column C must persist a non-null JSON overrides column');
-        self::assertStringContainsString('"lg"', $columnCRaw, 'Column C carries the lg override');
-        $decoded = json_decode($columnCRaw, true);
-        self::assertIsArray($decoded);
-        self::assertSame(3, $decoded['lg']['width'] ?? null, 'lg override width is 3');
+        MigrationTreeSnapshot::assertLgOverrideWidth($tree[0]['rows'][0]['columns'][2]['overridesColumnRaw'] ?? null, 3);
 
         $tree[0]['rows'][0]['columns'][2]['overridesColumnRaw'] = self::COLUMN_C_OVERRIDES;
 
@@ -70,7 +73,7 @@ final class CharacterizationDraftOnlyTest extends CharacterizationTestCase
         // setUseGridOnPage runs with includeLive: false.
         self::assertSame(1, MigrationTreeSnapshot::useGridFlag($pageId, Versioned::DRAFT));
         self::assertTrue(
-            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId, self::ZONE, Versioned::DRAFT),
+            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId, Page::class, self::ZONE, Versioned::DRAFT),
             'The migrated Section exists on DRAFT',
         );
 
@@ -78,7 +81,7 @@ final class CharacterizationDraftOnlyTest extends CharacterizationTestCase
         self::assertSame([], MigrationTreeSnapshot::snapshotTree($pageId, Page::class, self::ZONE, Versioned::LIVE));
         self::assertSame(0, MigrationTreeSnapshot::useGridFlag($pageId, Versioned::LIVE));
         self::assertFalse(
-            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId, self::ZONE, Versioned::LIVE),
+            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId, Page::class, self::ZONE, Versioned::LIVE),
             'No Section is published to LIVE for a draft-only page',
         );
     }
@@ -141,7 +144,7 @@ final class CharacterizationDraftOnlyTest extends CharacterizationTestCase
      *         sort: int,
      *         columns: list<array{
      *             sort: int,
-     *             gridDefault: array{width: int, offset: int, visible: bool},
+     *             gridDefault: array{width: positive-int, offset: int<0, max>, visible: bool},
      *             overridesColumnRaw: string|null,
      *             elements: list<array{
      *                 title: string,

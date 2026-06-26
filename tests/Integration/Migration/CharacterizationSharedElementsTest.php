@@ -62,8 +62,16 @@ final class CharacterizationSharedElementsTest extends CharacterizationTestCase
         $pageId2 = $this->pageId('test_page_2');
 
         $this->seedSharedRowPage($pageId1);
-        $this->publishPage1ToLive($pageId1);
+        $this->publishPageToLive($pageId1, self::AREA_ID_1);
         $this->seedDraftOnlyPage($pageId2);
+
+        // Page 2 is draft-only; clear its UseGrid flag on DRAFT before migrating
+        // so the post-migration `UseGrid === 1` assertion proves the migration
+        // enabled it rather than passing on the Boolean(1) DB default. (Page 1's
+        // DRAFT+LIVE clear is handled by publishPageToLive above.)
+        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
+        $page2->UseGrid = false;
+        $page2->write();
 
         // Multi-page run: the base runMigration() is single-page, so drive the
         // service directly with both page IDs in one call.
@@ -89,12 +97,7 @@ final class CharacterizationSharedElementsTest extends CharacterizationTestCase
         // ── Page 2: draft-only, with a per-viewport override ─────────
         // Column B's raw overrides JSON is format-sensitive; assert its decoded
         // content separately, then normalise it to a sentinel for the diff.
-        $page2ColumnBRaw = $page2Draft[0]['rows'][0]['columns'][1]['overridesColumnRaw'] ?? null;
-        self::assertIsString($page2ColumnBRaw, 'Page 2 Column B persists a non-null JSON overrides column');
-        self::assertStringContainsString('"lg"', $page2ColumnBRaw, 'Page 2 Column B carries the lg override');
-        $decoded = json_decode($page2ColumnBRaw, true);
-        self::assertIsArray($decoded);
-        self::assertSame(3, $decoded['lg']['width'] ?? null, 'Page 2 Column B lg override width is 3');
+        MigrationTreeSnapshot::assertLgOverrideWidth($page2Draft[0]['rows'][0]['columns'][1]['overridesColumnRaw'] ?? null, 3);
 
         $page2Draft[0]['rows'][0]['columns'][1]['overridesColumnRaw'] = self::PAGE2_COLUMN_B_OVERRIDES;
         self::assertSame($this->expectedPage2DraftTree(), $page2Draft);
@@ -108,8 +111,8 @@ final class CharacterizationSharedElementsTest extends CharacterizationTestCase
         self::assertSame([1, 2], $page2ColumnSorts, 'Page 2 columns are sorted ascending');
 
         // ── No cross-page title leakage ──────────────────────────────
-        self::assertSame(['P1 Body'], $this->allElementTitles($page1Draft), 'Page 1 holds only its own elements');
-        self::assertSame(['P2 Body A', 'P2 Body B'], $this->allElementTitles($page2Draft), 'Page 2 holds only its own elements');
+        self::assertSame(['P1 Body'], MigrationTreeSnapshot::allElementTitles($page1Draft), 'Page 1 holds only its own elements');
+        self::assertSame(['P2 Body A', 'P2 Body B'], MigrationTreeSnapshot::allElementTitles($page2Draft), 'Page 2 holds only its own elements');
 
         // ── Polymorphic parent correctness (ParentClass:ParentID) ────
         // Each migrated Section points at its OWN page. On DRAFT both pages have
@@ -208,39 +211,20 @@ final class CharacterizationSharedElementsTest extends CharacterizationTestCase
     }
 
     /**
-     * Publish page 1 to LIVE and flag legacy grid on `Page_Live`, mirroring the
-     * draft↔live characterization setup, so the migration exercises the published
-     * live path for the shared row.
-     *
-     * @param positive-int $pageId
-     */
-    private function publishPage1ToLive(int $pageId): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $page->UseGrid = false;
-        $page->write();
-        $page->publishSingle();
-        DB::prepared_query(
-            'UPDATE "Page_Live" SET "UseElementalGrid" = 1, "ElementalAreaID" = ? WHERE "ID" = ?',
-            [self::AREA_ID_1, $pageId],
-        );
-    }
-
-    /**
      * Pinned tree for page 1 (identical on DRAFT and LIVE): one Section
      * ('p1-sec'), one Row ('P1 Row'/'p1-row'), one Column (width 6, no override),
      * one content element ('P1 Body').
      *
      * @return list<array{
      *     extraClass: string,
-     *     sort: int,
+     *     sort: positive-int,
      *     rows: list<array{
      *         title: string,
      *         extraClass: string,
-     *         sort: int,
+     *         sort: positive-int,
      *         columns: list<array{
-     *             sort: int,
-     *             gridDefault: array{width: int, offset: int, visible: bool},
+     *             sort: positive-int,
+     *             gridDefault: array{width: positive-int, offset: int<0, max>, visible: bool},
      *             overridesColumnRaw: string|null,
      *             elements: list<array{
      *                 title: string,
@@ -248,7 +232,7 @@ final class CharacterizationSharedElementsTest extends CharacterizationTestCase
      *                 titleTag: string,
      *                 titleClass: string,
      *                 extraClass: string,
-     *                 sort: int,
+     *                 sort: positive-int,
      *                 className: string,
      *                 html: string|null,
      *             }>,
@@ -299,14 +283,14 @@ final class CharacterizationSharedElementsTest extends CharacterizationTestCase
      *
      * @return list<array{
      *     extraClass: string,
-     *     sort: int,
+     *     sort: positive-int,
      *     rows: list<array{
      *         title: string,
      *         extraClass: string,
-     *         sort: int,
+     *         sort: positive-int,
      *         columns: list<array{
-     *             sort: int,
-     *             gridDefault: array{width: int, offset: int, visible: bool},
+     *             sort: positive-int,
+     *             gridDefault: array{width: positive-int, offset: int<0, max>, visible: bool},
      *             overridesColumnRaw: string|null,
      *             elements: list<array{
      *                 title: string,
@@ -314,7 +298,7 @@ final class CharacterizationSharedElementsTest extends CharacterizationTestCase
      *                 titleTag: string,
      *                 titleClass: string,
      *                 extraClass: string,
-     *                 sort: int,
+     *                 sort: positive-int,
      *                 className: string,
      *                 html: string|null,
      *             }>,
@@ -376,36 +360,13 @@ final class CharacterizationSharedElementsTest extends CharacterizationTestCase
     }
 
     /**
-     * Every element Title in a snapshot tree, in tree order.
-     *
-     * @param list<array<string, mixed>> $tree
-     *
-     * @return list<string>
-     */
-    private function allElementTitles(array $tree): array
-    {
-        $titles = [];
-        foreach ($tree as $section) {
-            foreach ($section['rows'] as $row) {
-                foreach ($row['columns'] as $column) {
-                    foreach ($column['elements'] as $element) {
-                        $titles[] = (string) $element['title'];
-                    }
-                }
-            }
-        }
-
-        return $titles;
-    }
-
-    /**
      * Parent references for every migrated Section on a stage, read directly from
      * the stage-appropriate base GridElement table (the snapshot helper
      * intentionally does not expose IDs/parents).
      *
      * @param non-empty-string $stage
      *
-     * @return list<array{ParentClass: string, ParentID: int}>
+     * @return list<array{ParentClass: string, ParentID: positive-int}>
      */
     private function sectionParentRefs(string $stage): array
     {
@@ -420,9 +381,11 @@ final class CharacterizationSharedElementsTest extends CharacterizationTestCase
 
         $refs = [];
         foreach ($query as $row) {
+            $parentId = (int) $row['ParentID'];
+            \assert($parentId > 0);
             $refs[] = [
                 'ParentClass' => (string) $row['ParentClass'],
-                'ParentID' => (int) $row['ParentID'],
+                'ParentID' => $parentId,
             ];
         }
 

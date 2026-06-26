@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Migration\Support;
 
+use PHPUnit\Framework\Assert;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
@@ -31,6 +32,34 @@ use WeDevelop\Grid\Model\Section;
  *    the storage tri-state (`NULL` = no overrides, JSON string = at least one
  *    viewport override). The golden master must distinguish those, so it reads
  *    the column bytes directly.
+ *
+ * @phpstan-type SnapshotElement array{
+ *     title: string,
+ *     showTitle: bool,
+ *     titleTag: string,
+ *     titleClass: string,
+ *     extraClass: string,
+ *     sort: int,
+ *     className: string,
+ *     html: string|null,
+ * }
+ * @phpstan-type SnapshotColumn array{
+ *     sort: int,
+ *     gridDefault: array{width: positive-int, offset: int<0, max>, visible: bool},
+ *     overridesColumnRaw: string|null,
+ *     elements: list<SnapshotElement>,
+ * }
+ * @phpstan-type SnapshotRow array{
+ *     title: string,
+ *     extraClass: string,
+ *     sort: int,
+ *     columns: list<SnapshotColumn>,
+ * }
+ * @phpstan-type SnapshotSection array{
+ *     extraClass: string,
+ *     sort: int,
+ *     rows: list<SnapshotRow>,
+ * }
  */
 final class MigrationTreeSnapshot
 {
@@ -46,30 +75,7 @@ final class MigrationTreeSnapshot
      * @param non-empty-string $zone
      * @param non-empty-string $stage  one of {@see Versioned::DRAFT} / {@see Versioned::LIVE}
      *
-     * @return list<array{
-     *     extraClass: string,
-     *     sort: int,
-     *     rows: list<array{
-     *         title: string,
-     *         extraClass: string,
-     *         sort: int,
-     *         columns: list<array{
-     *             sort: int,
-     *             gridDefault: array{width: positive-int, offset: int<0, max>, visible: bool},
-     *             overridesColumnRaw: string|null,
-     *             elements: list<array{
-     *                 title: string,
-     *                 showTitle: bool,
-     *                 titleTag: string,
-     *                 titleClass: string,
-     *                 extraClass: string,
-     *                 sort: int,
-     *                 className: string,
-     *                 html: string|null,
-     *             }>,
-     *         }>,
-     *     }>,
-     * }>
+     * @return list<SnapshotSection>
      */
     public static function snapshotTree(int $pageId, string $pageClass, string $zone, string $stage): array
     {
@@ -123,10 +129,11 @@ final class MigrationTreeSnapshot
      *
      * @param non-empty-string $gridTable Section ORM table (e.g. `WeDevelop_Grid_Section`)
      * @param positive-int     $pageId
+     * @param class-string     $pageClass polymorphic parent class (page IDs and element IDs share a numeric namespace)
      * @param non-empty-string $zone
      * @param non-empty-string $stage
      */
-    public static function recordExistsOnStage(string $gridTable, int $pageId, string $zone, string $stage): bool
+    public static function recordExistsOnStage(string $gridTable, int $pageId, string $pageClass, string $zone, string $stage): bool
     {
         $subTable = self::stageTable($gridTable, $stage);
         $baseTable = self::stageTable(self::GRID_ELEMENT_TABLE, $stage);
@@ -135,20 +142,121 @@ final class MigrationTreeSnapshot
             \sprintf(
                 'SELECT COUNT(*) FROM "%s" AS "sub" '
                 . 'INNER JOIN "%s" AS "base" ON "base"."ID" = "sub"."ID" '
-                . 'WHERE "base"."ParentID" = ? AND "sub"."Zone" = ?',
+                . 'WHERE "base"."ParentID" = ? AND "base"."ParentClass" = ? AND "sub"."Zone" = ?',
                 $subTable,
                 $baseTable,
             ),
-            [$pageId, $zone],
+            [$pageId, $pageClass, $zone],
         )->value();
 
         return (int) $count > 0;
     }
 
     /**
+     * Every element Title in the snapshot tree, in tree order.
+     *
+     * @param list<SnapshotSection> $tree
+     *
+     * @return list<string>
+     */
+    public static function allElementTitles(array $tree): array
+    {
+        $titles = [];
+        foreach ($tree as $section) {
+            foreach ($section['rows'] as $row) {
+                foreach ($row['columns'] as $column) {
+                    foreach (self::columnElementTitles($column) as $title) {
+                        $titles[] = $title;
+                    }
+                }
+            }
+        }
+
+        return $titles;
+    }
+
+    /**
+     * Titles of the elements in one snapshot column, in element order.
+     *
+     * @param SnapshotColumn $column
+     *
+     * @return list<string>
+     */
+    public static function columnElementTitles(array $column): array
+    {
+        $titles = [];
+        foreach ($column['elements'] as $element) {
+            $titles[] = $element['title'];
+        }
+
+        return $titles;
+    }
+
+    /**
+     * The first column array whose elements include $title, or null.
+     *
+     * @param list<SnapshotSection> $tree
+     * @param non-empty-string      $title
+     *
+     * @return SnapshotColumn|null
+     */
+    public static function findColumnContaining(array $tree, string $title): ?array
+    {
+        foreach ($tree as $section) {
+            foreach ($section['rows'] as $row) {
+                foreach ($row['columns'] as $column) {
+                    if (\in_array($title, self::columnElementTitles($column), true)) {
+                        return $column;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * HTML of the element with $title inside one snapshot column, or null.
+     *
+     * @param SnapshotColumn   $column
+     * @param non-empty-string $title
+     */
+    public static function elementHtml(array $column, string $title): ?string
+    {
+        foreach ($column['elements'] as $element) {
+            if ($element['title'] === $title) {
+                return $element['html'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Assert a Column's raw GridSettingsOverrides JSON carries the expected
+     * per-viewport width override (the WS4 tri-state content check).
+     *
+     * @param positive-int     $expectedWidth
+     * @param non-empty-string $viewport
+     */
+    public static function assertLgOverrideWidth(?string $raw, int $expectedWidth, string $viewport = 'lg'): void
+    {
+        Assert::assertIsString($raw, 'Column must persist a non-null JSON overrides column');
+        Assert::assertStringContainsString('"' . $viewport . '"', $raw, \sprintf('Column carries the %s override', $viewport));
+        $decoded = json_decode($raw, true);
+        Assert::assertIsArray($decoded);
+        Assert::assertArrayHasKey($viewport, $decoded, \sprintf('Overrides JSON contains the %s viewport key', $viewport));
+        Assert::assertSame(
+            $expectedWidth,
+            $decoded[$viewport]['width'] ?? null,
+            \sprintf('%s override width is %d', $viewport, $expectedWidth),
+        );
+    }
+
+    /**
      * @param non-empty-string $stage
      *
-     * @return list<array{title: string, extraClass: string, sort: int, columns: list<array<string, mixed>>}>
+     * @return list<SnapshotRow>
      */
     private static function snapshotRows(int $sectionId, string $stage): array
     {
@@ -173,12 +281,7 @@ final class MigrationTreeSnapshot
     /**
      * @param non-empty-string $stage
      *
-     * @return list<array{
-     *     sort: int,
-     *     gridDefault: array{width: positive-int, offset: int<0, max>, visible: bool},
-     *     overridesColumnRaw: string|null,
-     *     elements: list<array<string, mixed>>,
-     * }>
+     * @return list<SnapshotColumn>
      */
     private static function snapshotColumns(int $rowId, string $stage): array
     {
@@ -204,16 +307,7 @@ final class MigrationTreeSnapshot
     /**
      * @param non-empty-string $stage
      *
-     * @return list<array{
-     *     title: string,
-     *     showTitle: bool,
-     *     titleTag: string,
-     *     titleClass: string,
-     *     extraClass: string,
-     *     sort: int,
-     *     className: string,
-     *     html: string|null,
-     * }>
+     * @return list<SnapshotElement>
      */
     private static function snapshotElements(int $columnId, string $stage): array
     {
