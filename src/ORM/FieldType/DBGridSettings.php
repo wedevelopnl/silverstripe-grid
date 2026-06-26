@@ -228,6 +228,8 @@ final class DBGridSettings extends DBComposite
      */
     public function getColumnCount(): int
     {
+        // A DBComposite field is constructed by the ORM without DI wiring and
+        // cannot use $dependencies — resolve the adapter from the container.
         return Injector::inst()->get(GridAdapterInterface::class)->getColumnCount();
     }
 

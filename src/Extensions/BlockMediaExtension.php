@@ -400,6 +400,8 @@ class BlockMediaExtension extends Extension
             try {
                 $this->resolveVideoEmbed($owner);
             } catch (Throwable $exception) {
+                // Extensions cannot use $dependencies (framework instantiates
+                // them without DI args) — resolve the logger from the container.
                 Injector::inst()->get(LoggerInterface::class)->warning(
                     sprintf('BlockMediaExtension failed to resolve video embed: %s', $exception->getMessage()),
                 );

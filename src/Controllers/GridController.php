@@ -665,6 +665,13 @@ class GridController extends AdminController
         return $this->jsonSuccess(200, array_values(array_unique($zones)));
     }
 
+    /**
+     * Return up to 50 pages the current member can edit, for the duplicate-to
+     * picker. The DB query is capped at 50 rows BEFORE the per-row canEdit()
+     * filter, so the response holds "up to 50 editable matches" — not "the
+     * first 50 editable pages". The search box (Title:PartialMatch) is the
+     * real navigation affordance; the cap bounds the unfiltered listing.
+     */
     public function apiPages(HTTPRequest $request): HTTPResponse
     {
         $search = $request->getVar('search');
