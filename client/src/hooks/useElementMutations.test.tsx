@@ -680,5 +680,24 @@ describe('useElementMutations', () => {
         queryKey: queryKeys.elementTree.byPage(1, 'main'),
       })
     })
+
+    it('invalidates the acceptableContainers query after a successful create', async () => {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false, gcTime: 0 } },
+      })
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+      mockFetchSuccess({})
+
+      const { wrapper } = createProviderWrapper({ queryClient })
+      const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper })
+
+      await act(async () => {
+        await result.current.mutateAsync({ className: 'Content', parent: { type: 'column', id: 10 } })
+      })
+
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.acceptableContainers.all(),
+      })
+    })
   })
 })

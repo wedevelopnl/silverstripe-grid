@@ -14,6 +14,7 @@ export const queryKeys = {
     byPage: (pageId: number) => ['zones', pageId] as const,
   },
   acceptableContainers: {
+    all: () => ['acceptableContainers'] as const,
     byTarget: (pageId: number, zone: string, elementType: string) =>
       ['acceptableContainers', pageId, zone, elementType] as const,
   },
