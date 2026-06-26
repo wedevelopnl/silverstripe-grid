@@ -5,9 +5,8 @@ import { queryKeys } from './queryKeys'
 
 export function usePages(search: string, enabled = true) {
   return useQuery<PageEntry[]>({
-    queryKey: queryKeys.pages.search(search),
-    queryFn: () => fetchPages(search || undefined),
-    enabled,
+    queryKey: enabled ? queryKeys.pages.search(search) : (['pages', 'disabled'] as const),
+    queryFn: enabled ? () => fetchPages(search || undefined) : skipToken,
   })
 }
 

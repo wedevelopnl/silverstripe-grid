@@ -129,4 +129,13 @@ describe('disabled query key sentinels', () => {
       queryClient.getQueryCache().find({ queryKey: ['acceptableContainers', 'disabled'] }),
     ).toBeDefined()
   })
+
+  it('usePages uses a disabled sentinel key when disabled', () => {
+    const { Wrapper, queryClient } = createWrapperWithClient()
+
+    renderHook(() => usePages('home', false), { wrapper: Wrapper })
+
+    expect(queryClient.getQueryCache().find({ queryKey: ['pages', 'home'] })).toBeUndefined()
+    expect(queryClient.getQueryCache().find({ queryKey: ['pages', 'disabled'] })).toBeDefined()
+  })
 })
