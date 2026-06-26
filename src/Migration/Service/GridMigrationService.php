@@ -84,48 +84,70 @@ final class GridMigrationService
         /** @var list<int> $failed */
         $failed = [];
 
-        foreach ($eligiblePages as $pageInfo) {
-            $pageId = $pageInfo['pageId'];
-            $areaId = $pageInfo['areaId'];
-            $pageClassName = $pageInfo['pageClassName'];
+        // Suppress Section and Row auto-scaffolding for the entire batch.
+        // Auto-scaffolding (onAfterWrite hooks on Section and Row) would insert
+        // duplicate child records alongside the hierarchy the migration writes
+        // explicitly. Suppressing it once here — rather than toggling per-page —
+        // minimises toggle points and protects every write in the batch, including
+        // migrateDisabledGridPages() below.
+        //
+        // OFFLINE / NO-CONCURRENCY ASSUMPTION: this mutates SilverStripe's
+        // process-wide Config for the duration of the batch. It is safe only when
+        // no other PHP process (e.g. a web request) writes Section or Row records
+        // concurrently. Run the migration during a maintenance window or against
+        // an offline dataset.
+        $sectionAutoScaffold = (bool) Section::config()->get('auto_scaffold');
+        $rowAutoScaffold = (bool) Row::config()->get('auto_scaffold');
+        Section::config()->set('auto_scaffold', false);
+        Row::config()->set('auto_scaffold', false);
 
-            try {
-                $this->migratePage($pageId, $areaId, $pageClassName, $zone, $dryRun, $defaultViewport, $viewportKeyMap);
-                $succeeded[] = $pageId;
-            } catch (Throwable $exception) {
-                $failures++;
-                $failed[] = $pageId;
-                $this->logger->error('Migration failed for page {pageId}: {message}', [
-                    'pageId' => $pageId,
-                    'areaId' => $areaId,
-                    'message' => $exception->getMessage(),
-                    'exception' => $exception,
-                ]);
+        try {
+            foreach ($eligiblePages as $pageInfo) {
+                $pageId = $pageInfo['pageId'];
+                $areaId = $pageInfo['areaId'];
+                $pageClassName = $pageInfo['pageClassName'];
 
-                if ($stopOnFirstFailure) {
-                    break;
+                try {
+                    $this->migratePage($pageId, $areaId, $pageClassName, $zone, $dryRun, $defaultViewport, $viewportKeyMap);
+                    $succeeded[] = $pageId;
+                } catch (Throwable $exception) {
+                    $failures++;
+                    $failed[] = $pageId;
+                    $this->logger->error('Migration failed for page {pageId}: {message}', [
+                        'pageId' => $pageId,
+                        'areaId' => $areaId,
+                        'message' => $exception->getMessage(),
+                        'exception' => $exception,
+                    ]);
+
+                    if ($stopOnFirstFailure) {
+                        break;
+                    }
                 }
             }
-        }
 
-        if ($failed === []) {
-            $this->logger->info(
-                'Migration batch complete: {succeeded} page(s) succeeded, 0 failed.',
-                ['succeeded' => \count($succeeded)],
-            );
-        } else {
-            $this->logger->warning(
-                'Migration batch complete: {succeeded} page(s) succeeded, {failedCount} failed (page IDs: {failedIds}).',
-                [
-                    'succeeded' => \count($succeeded),
-                    'failedCount' => \count($failed),
-                    'failedIds' => \implode(', ', $failed),
-                ],
-            );
-        }
+            if ($failed === []) {
+                $this->logger->info(
+                    'Migration batch complete: {succeeded} page(s) succeeded, 0 failed.',
+                    ['succeeded' => \count($succeeded)],
+                );
+            } else {
+                $this->logger->warning(
+                    'Migration batch complete: {succeeded} page(s) succeeded, {failedCount} failed (page IDs: {failedIds}).',
+                    [
+                        'succeeded' => \count($succeeded),
+                        'failedCount' => \count($failed),
+                        'failedIds' => \implode(', ', $failed),
+                    ],
+                );
+            }
 
-        if (!$dryRun && $reconcileDisabledPages) {
-            $this->migrateDisabledGridPages();
+            if (!$dryRun && $reconcileDisabledPages) {
+                $this->migrateDisabledGridPages();
+            }
+        } finally {
+            Section::config()->set('auto_scaffold', $sectionAutoScaffold);
+            Row::config()->set('auto_scaffold', $rowAutoScaffold);
         }
 
         return $failures;
@@ -191,64 +213,64 @@ final class GridMigrationService
         }
         $conn->transactionStart();
 
-        // Capture the current auto_scaffold values so the finally block can
-        // restore the project's actual configuration rather than a hardcoded
-        // default. A project may legitimately set auto_scaffold: false.
-        $sectionAutoScaffold = (bool) Section::config()->get('auto_scaffold');
-        $rowAutoScaffold = (bool) Row::config()->get('auto_scaffold');
-
         try {
-            // Suppress auto-scaffolding process-wide during migration to prevent
-            // Section/Row onAfterWrite hooks from creating duplicate child records.
-            // Restored in the finally block below.
-            Section::config()->set('auto_scaffold', false);
-            Row::config()->set('auto_scaffold', false);
+            // Step 6: Write draft hierarchy
+            /** @var array<int, int> $oldToNewElementId */
+            $oldToNewElementId = [];
+            /** @var array<int, int> $oldToNewColumnId */
+            $oldToNewColumnId = [];
+            /** @var array<int, int> $oldToDraftSort */
+            $oldToDraftSort = [];
 
-            try {
-                // Step 6: Write draft hierarchy
-                /** @var array<int, int> $oldToNewElementId */
-                $oldToNewElementId = [];
-                /** @var array<int, int> $oldToNewColumnId */
-                $oldToNewColumnId = [];
-                /** @var array<int, int> $oldToDraftSort */
-                $oldToDraftSort = [];
+            Versioned::withVersionedMode(function () use (
+                $pageId,
+                $pageClassName,
+                $zone,
+                $sections,
+                &$oldToNewElementId,
+                &$oldToNewColumnId,
+                &$oldToDraftSort,
+            ): void {
+                Versioned::set_stage(Versioned::DRAFT);
+                $this->writeDraftHierarchy($pageId, $pageClassName, $zone, $sections, $oldToNewElementId, $oldToNewColumnId, $oldToDraftSort);
+            });
+
+            // Step 7: Publish draft records to live for elements that also existed on live.
+            // Stage is set to DRAFT because we read the draft-created records
+            // and then call writeToStage(LIVE) to copy them to _Live tables.
+            // overwriteLiveContent() then corrects _Live with live-specific values.
+            $liveElements = $this->reader->getElementsForArea($areaId, 'live');
+            if ($liveElements !== []) {
+                // Build the set of legacy DRAFT element IDs (rows AND content
+                // elements). A live element is "live-only" only when its legacy
+                // ID has no draft counterpart in this set; elements present on
+                // both legacy stages are "shared" and must be published from the
+                // draft records, never re-created as a live-only hierarchy.
+                //
+                // $oldToNewElementId cannot be used for this test: it only holds
+                // content elements (row delimiters are grouping boundaries and are
+                // never written as records), so a shared row would be misread as
+                // live-only and spawn a spurious section.
+                /** @var array<int, true> $draftLegacyIds */
+                $draftLegacyIds = [];
+                foreach ($draftElements as $draftElement) {
+                    $draftLegacyIds[$draftElement->id] = true;
+                }
 
                 Versioned::withVersionedMode(function () use (
                     $pageId,
                     $pageClassName,
                     $zone,
-                    $sections,
-                    &$oldToNewElementId,
-                    &$oldToNewColumnId,
-                    &$oldToDraftSort,
+                    $liveElements,
+                    $draftLegacyIds,
+                    $oldToNewElementId,
+                    $oldToNewColumnId,
+                    $oldToDraftSort,
+                    $defaultViewport,
+                    $viewportKeyMap,
                 ): void {
                     Versioned::set_stage(Versioned::DRAFT);
-                    $this->writeDraftHierarchy($pageId, $pageClassName, $zone, $sections, $oldToNewElementId, $oldToNewColumnId, $oldToDraftSort);
-                });
-
-                // Step 7: Publish draft records to live for elements that also existed on live.
-                // Stage is set to DRAFT because we read the draft-created records
-                // and then call writeToStage(LIVE) to copy them to _Live tables.
-                // overwriteLiveContent() then corrects _Live with live-specific values.
-                $liveElements = $this->reader->getElementsForArea($areaId, 'live');
-                if ($liveElements !== []) {
-                    // Build the set of legacy DRAFT element IDs (rows AND content
-                    // elements). A live element is "live-only" only when its legacy
-                    // ID has no draft counterpart in this set; elements present on
-                    // both legacy stages are "shared" and must be published from the
-                    // draft records, never re-created as a live-only hierarchy.
-                    //
-                    // $oldToNewElementId cannot be used for this test: it only holds
-                    // content elements (row delimiters are grouping boundaries and are
-                    // never written as records), so a shared row would be misread as
-                    // live-only and spawn a spurious section.
-                    /** @var array<int, true> $draftLegacyIds */
-                    $draftLegacyIds = [];
-                    foreach ($draftElements as $draftElement) {
-                        $draftLegacyIds[$draftElement->id] = true;
-                    }
-
-                    Versioned::withVersionedMode(function () use (
+                    $this->publishToLive(
                         $pageId,
                         $pageClassName,
                         $zone,
@@ -259,34 +281,16 @@ final class GridMigrationService
                         $oldToDraftSort,
                         $defaultViewport,
                         $viewportKeyMap,
-                    ): void {
-                        Versioned::set_stage(Versioned::DRAFT);
-                        $this->publishToLive(
-                            $pageId,
-                            $pageClassName,
-                            $zone,
-                            $liveElements,
-                            $draftLegacyIds,
-                            $oldToNewElementId,
-                            $oldToNewColumnId,
-                            $oldToDraftSort,
-                            $defaultViewport,
-                            $viewportKeyMap,
-                        );
-                    });
-                }
-
-                $hasLiveContent = $liveElements !== [];
-                $this->setUseGridOnPage($pageId, true, includeLive: $hasLiveContent);
-
-                $conn->transactionEnd();
-
-                $this->logger->info('Successfully migrated page {pageId}.', ['pageId' => $pageId]);
-            } finally {
-                // Step 9: Restore auto-scaffolding to the previously captured values.
-                Section::config()->set('auto_scaffold', $sectionAutoScaffold);
-                Row::config()->set('auto_scaffold', $rowAutoScaffold);
+                    );
+                });
             }
+
+            $hasLiveContent = $liveElements !== [];
+            $this->setUseGridOnPage($pageId, true, includeLive: $hasLiveContent);
+
+            $conn->transactionEnd();
+
+            $this->logger->info('Successfully migrated page {pageId}.', ['pageId' => $pageId]);
         } catch (Throwable $exception) {
             $conn->transactionRollback();
             throw $exception;
