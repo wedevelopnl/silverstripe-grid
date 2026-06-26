@@ -64,40 +64,40 @@ final class CharacterizationDraftLiveTest extends CharacterizationTestCase
         // ── DRAFT stage ──────────────────────────────────────────────
         // Shared element X keeps its draft Title/HTML and the draft-derived
         // width (6); no per-viewport override → NULL overrides column.
-        $draftX = $this->findColumnContaining($draftTree, 'Draft X');
+        $draftX = MigrationTreeSnapshot::findColumnContaining($draftTree, 'Draft X');
         self::assertNotNull($draftX, 'Shared element X is present on DRAFT under its draft Title');
         self::assertSame(6, $draftX['gridDefault']['width'], 'Draft X column width derives from the draft Size');
         self::assertSame(0, $draftX['gridDefault']['offset']);
         self::assertTrue($draftX['gridDefault']['visible']);
         self::assertNull($draftX['overridesColumnRaw'], 'Draft X column has no per-viewport override');
-        self::assertSame('<p>draft</p>', $this->elementHtml($draftX, 'Draft X'), 'Draft X keeps draft HTML');
+        self::assertSame('<p>draft</p>', MigrationTreeSnapshot::elementHtml($draftX, 'Draft X'), 'Draft X keeps draft HTML');
 
         // Draft-only element Y is present on DRAFT.
-        self::assertContains('Draft Y', $this->allElementTitles($draftTree), 'Draft-only element Y is on DRAFT');
+        self::assertContains('Draft Y', MigrationTreeSnapshot::allElementTitles($draftTree), 'Draft-only element Y is on DRAFT');
 
         // OBSERVED-AND-PINNED (truth #1): live-only element Z. createLiveOnlyHierarchy
         // writes live-only content to BOTH stages (write() for draft, then
         // writeToStage(LIVE)), so Z's records DO appear on DRAFT. Pin the observed
         // presence; do not assume it is live-only.
-        self::assertContains('Live Z', $this->allElementTitles($draftTree), 'Live-only Z is written to DRAFT too');
+        self::assertContains('Live Z', MigrationTreeSnapshot::allElementTitles($draftTree), 'Live-only Z is written to DRAFT too');
 
         // ── LIVE stage ───────────────────────────────────────────────
         // Shared element X on live: width reconciled to the live Size (10), and
         // Title/HTML overwritten with the live values (overwriteLiveContent).
-        $liveX = $this->findColumnContaining($liveTree, 'Live X');
+        $liveX = MigrationTreeSnapshot::findColumnContaining($liveTree, 'Live X');
         self::assertNotNull($liveX, 'Shared element X is published to LIVE under its live Title');
         self::assertSame(10, $liveX['gridDefault']['width'], 'Live X column width reconciles from the live Size');
-        self::assertSame('<p>live</p>', $this->elementHtml($liveX, 'Live X'), 'Live X carries the live HTML');
+        self::assertSame('<p>live</p>', MigrationTreeSnapshot::elementHtml($liveX, 'Live X'), 'Live X carries the live HTML');
 
         // The draft-stage Title is NOT on live, proving the live record was
         // overwritten rather than left as the published draft copy.
-        self::assertNotContains('Draft X', $this->allElementTitles($liveTree), 'Live X is not the draft Title');
+        self::assertNotContains('Draft X', MigrationTreeSnapshot::allElementTitles($liveTree), 'Live X is not the draft Title');
 
         // Draft-only Y is absent on LIVE (never published).
-        self::assertNotContains('Draft Y', $this->allElementTitles($liveTree), 'Draft-only Y is not on LIVE');
+        self::assertNotContains('Draft Y', MigrationTreeSnapshot::allElementTitles($liveTree), 'Draft-only Y is not on LIVE');
 
         // Live-only Z is present on LIVE.
-        self::assertContains('Live Z', $this->allElementTitles($liveTree), 'Live-only Z is on LIVE');
+        self::assertContains('Live Z', MigrationTreeSnapshot::allElementTitles($liveTree), 'Live-only Z is on LIVE');
 
         // Shared element X has the SAME record ID on both stages — it was
         // published from the draft record, not re-created live-only.
@@ -128,28 +128,23 @@ final class CharacterizationDraftLiveTest extends CharacterizationTestCase
 
         // DRAFT: both elements share one column (same draft Size 6).
         $draftTree = MigrationTreeSnapshot::snapshotTree($pageId, Page::class, self::ZONE, Versioned::DRAFT);
-        $draftColumn = $this->findColumnContaining($draftTree, 'Draft P');
+        $draftColumn = MigrationTreeSnapshot::findColumnContaining($draftTree, 'Draft P');
         self::assertNotNull($draftColumn);
         self::assertSame(6, $draftColumn['gridDefault']['width'], 'Draft column width derives from the shared draft Size');
-        $draftTitles = $this->columnElementTitles($draftColumn);
+        $draftTitles = MigrationTreeSnapshot::columnElementTitles($draftColumn);
         self::assertSame(['Draft P', 'Draft Q'], $draftTitles, 'Both elements group into the one draft column');
 
         // LIVE: the column takes the FIRST element (P) live settings — width 10
         // and P's per-viewport lg override — not Q's divergent live width.
         $liveTree = MigrationTreeSnapshot::snapshotTree($pageId, Page::class, self::ZONE, Versioned::LIVE);
-        $liveColumn = $this->findColumnContaining($liveTree, 'Live P');
+        $liveColumn = MigrationTreeSnapshot::findColumnContaining($liveTree, 'Live P');
         self::assertNotNull($liveColumn);
         self::assertSame(10, $liveColumn['gridDefault']['width'], 'Live column takes the first element P live width');
 
         // OBSERVED-AND-PINNED (truth #2): the live column's raw overrides reflect
         // P's live settings. Assert the decoded content, then normalise the
         // format-sensitive JSON to a sentinel and pin the FULL live column struct.
-        $overridesRaw = $liveColumn['overridesColumnRaw'];
-        self::assertIsString($overridesRaw, 'Divergent live column persists P\'s per-viewport override as JSON');
-        self::assertStringContainsString('"lg"', $overridesRaw, 'Live column carries P\'s lg override');
-        $decoded = json_decode($overridesRaw, true);
-        self::assertIsArray($decoded);
-        self::assertSame(5, $decoded['lg']['width'] ?? null, 'Live lg override width is reconciled to P\'s 5');
+        MigrationTreeSnapshot::assertLgOverrideWidth($liveColumn['overridesColumnRaw'], 5);
 
         // Substitute the sentinel, then pin the whole live column — both shared
         // elements P and Q are published into the one column, P first, with P's
@@ -160,14 +155,10 @@ final class CharacterizationDraftLiveTest extends CharacterizationTestCase
 
         // A divergence warning naming the column was logged (Q diverges from P).
         $warnings = $this->logMessages('warning');
-        $diverged = false;
-        foreach ($warnings as $message) {
-            if (str_contains($message, 'diverge')) {
-                $diverged = true;
-                break;
-            }
-        }
-        self::assertTrue($diverged, 'Divergent live grid settings log a warning');
+        self::assertNotEmpty(
+            array_filter($warnings, static fn (string $message): bool => str_contains($message, 'diverge')),
+            'Divergent live grid settings log a warning',
+        );
     }
 
     /**
@@ -178,7 +169,7 @@ final class CharacterizationDraftLiveTest extends CharacterizationTestCase
      *
      * @return array{
      *     sort: int,
-     *     gridDefault: array{width: int, offset: int, visible: bool},
+     *     gridDefault: array{width: positive-int, offset: int<0, max>, visible: bool},
      *     overridesColumnRaw: string,
      *     elements: list<array{
      *         title: string,
@@ -297,106 +288,6 @@ final class CharacterizationDraftLiveTest extends CharacterizationTestCase
             'Title' => 'Live Q',
         ], 'live');
         $this->seeder->seedContentMedia(6301, ['HTML' => '<p>q-live</p>'], 'live');
-    }
-
-    /**
-     * Publish the page to LIVE and flag legacy grid on `Page_Live`, mirroring
-     * GridMigrationServiceTest's UseGrid-live setup, so the migration exercises
-     * the published live path.
-     *
-     * @param positive-int $pageId
-     * @param positive-int $areaId
-     */
-    private function publishPageToLive(int $pageId, int $areaId): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $page->UseGrid = false;
-        $page->write();
-        $page->publishSingle();
-        DB::prepared_query(
-            'UPDATE "Page_Live" SET "UseElementalGrid" = 1, "ElementalAreaID" = ? WHERE "ID" = ?',
-            [$areaId, $pageId],
-        );
-    }
-
-    /**
-     * Every element Title in the snapshot tree, in tree order.
-     *
-     * @param list<array<string, mixed>> $tree
-     *
-     * @return list<string>
-     */
-    private function allElementTitles(array $tree): array
-    {
-        $titles = [];
-        foreach ($tree as $section) {
-            foreach ($section['rows'] as $row) {
-                foreach ($row['columns'] as $column) {
-                    foreach ($this->columnElementTitles($column) as $title) {
-                        $titles[] = $title;
-                    }
-                }
-            }
-        }
-
-        return $titles;
-    }
-
-    /**
-     * The first column array whose elements include $title, or null.
-     *
-     * @param list<array<string, mixed>> $tree
-     * @param non-empty-string $title
-     *
-     * @return array<string, mixed>|null
-     */
-    private function findColumnContaining(array $tree, string $title): ?array
-    {
-        foreach ($tree as $section) {
-            foreach ($section['rows'] as $row) {
-                foreach ($row['columns'] as $column) {
-                    if (\in_array($title, $this->columnElementTitles($column), true)) {
-                        return $column;
-                    }
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Titles of the elements in one snapshot column, in element order.
-     *
-     * @param array<string, mixed> $column
-     *
-     * @return list<string>
-     */
-    private function columnElementTitles(array $column): array
-    {
-        $titles = [];
-        foreach ($column['elements'] as $element) {
-            $titles[] = (string) $element['title'];
-        }
-
-        return $titles;
-    }
-
-    /**
-     * HTML of the element with $title inside one snapshot column.
-     *
-     * @param array<string, mixed> $column
-     * @param non-empty-string $title
-     */
-    private function elementHtml(array $column, string $title): ?string
-    {
-        foreach ($column['elements'] as $element) {
-            if ((string) $element['title'] === $title) {
-                return $element['html'];
-            }
-        }
-
-        return null;
     }
 
     /**

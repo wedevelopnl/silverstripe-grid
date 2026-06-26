@@ -8,6 +8,7 @@ use Page;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
@@ -190,6 +191,32 @@ abstract class CharacterizationTestCase extends SapphireTest
         );
 
         self::assertSame(0, $failures, 'Migration should complete without failures');
+    }
+
+    /**
+     * Publish a fixture page to LIVE and flag legacy grid on `Page_Live`,
+     * mirroring GridMigrationServiceTest's UseGrid-live setup, so the migration
+     * exercises the published live path.
+     *
+     * Clears the page's `UseGrid` flag on DRAFT before publishing so the
+     * post-migration `UseGrid === 1` assertion proves the migration enabled it,
+     * rather than passing on the `Boolean(1)` DB default (the legacy seeder never
+     * writes `UseGrid`). The cleared value is carried to LIVE by `publishSingle`.
+     *
+     * @param positive-int     $pageId
+     * @param positive-int     $areaId
+     * @param non-empty-string $handle fixture handle from page.yml
+     */
+    protected function publishPageToLive(int $pageId, int $areaId, string $handle = 'test_page'): void
+    {
+        $page = $this->objFromFixture(Page::class, $handle);
+        $page->UseGrid = false;
+        $page->write();
+        $page->publishSingle();
+        DB::prepared_query(
+            'UPDATE "Page_Live" SET "UseElementalGrid" = 1, "ElementalAreaID" = ? WHERE "ID" = ?',
+            [$areaId, $pageId],
+        );
     }
 
     /**

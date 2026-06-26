@@ -82,6 +82,14 @@ final class CharacterizationFluentLocaleTest extends FluentMigrationTestCase
         $pageId = $this->pageId();
         $this->seedIsolatedLocalePage($pageId);
 
+        // Clear the shared (non-localised) UseGrid flag on DRAFT before migrating
+        // so the post-migration `useGridInLocale(...) === true` assertions prove
+        // the migration enabled it rather than passing on the Boolean(1) DB
+        // default (the legacy seeder never writes UseGrid).
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $page->UseGrid = false;
+        $page->write();
+
         self::assertSame(0, $this->runMigration($pageId), 'Multi-locale migration completes without cross-locale failures');
 
         // ── No cross-locale content duplication ──────────────────────
@@ -103,12 +111,7 @@ final class CharacterizationFluentLocaleTest extends FluentMigrationTestCase
         $nlColumn = $this->columnSnapshotInLocale($pageId, 'nl_NL');
         self::assertSame(4, $nlColumn['gridDefault']['width'], 'nl_NL column default width is 4');
 
-        $nlOverridesRaw = $nlColumn['overridesColumnRaw'];
-        self::assertIsString($nlOverridesRaw, 'nl_NL column persists a non-null JSON overrides column (JSON tri-state)');
-        self::assertStringContainsString('"lg"', $nlOverridesRaw, 'nl_NL column carries the lg override');
-        $decoded = json_decode($nlOverridesRaw, true);
-        self::assertIsArray($decoded);
-        self::assertSame(3, $decoded['lg']['width'] ?? null, 'nl_NL column lg override width is 3');
+        MigrationTreeSnapshot::assertLgOverrideWidth($nlColumn['overridesColumnRaw'], 3);
     }
 
     /**

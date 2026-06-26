@@ -56,6 +56,15 @@ final class CharacterizationDisabledGridTest extends CharacterizationTestCase
         ]);
         $this->seeder->seedContentMedia($pageId1 + 1000, ['HTML' => '<p>p1</p>']);
 
+        // Clear page 1's UseGrid flag on DRAFT before migrating so the
+        // post-migration `UseGrid === 1` assertion proves the migration enabled
+        // it rather than passing on the Boolean(1) DB default (the legacy seeder
+        // never writes UseGrid). Page 2 is disabled and asserts === 0 against the
+        // reconciliation pass, so it needs no precondition.
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
+        $page1->UseGrid = false;
+        $page1->write();
+
         // Page 2: grid-DISABLED, no content. Also exercise the live-disabled path
         // by publishing the page and flagging the legacy grid off on _Live.
         $this->seeder->seedPage($pageId2, self::AREA_ID_2, useGrid: false);
@@ -79,11 +88,11 @@ final class CharacterizationDisabledGridTest extends CharacterizationTestCase
         self::assertSame([], MigrationTreeSnapshot::snapshotTree($pageId2, Page::class, self::ZONE, Versioned::DRAFT), 'Disabled page has no DRAFT tree');
         self::assertSame([], MigrationTreeSnapshot::snapshotTree($pageId2, Page::class, self::ZONE, Versioned::LIVE), 'Disabled page has no LIVE tree');
         self::assertFalse(
-            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId2, self::ZONE, Versioned::DRAFT),
+            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId2, Page::class, self::ZONE, Versioned::DRAFT),
             'No Section is created on DRAFT for a grid-disabled page',
         );
         self::assertFalse(
-            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId2, self::ZONE, Versioned::LIVE),
+            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId2, Page::class, self::ZONE, Versioned::LIVE),
             'No Section is created on LIVE for a grid-disabled page',
         );
 
@@ -94,7 +103,7 @@ final class CharacterizationDisabledGridTest extends CharacterizationTestCase
         // ── Page 1: grid-enabled — migrated normally ─────────────────
         self::assertSame(1, MigrationTreeSnapshot::useGridFlag($pageId1, Versioned::DRAFT), 'Enabled sibling draft UseGrid is 1');
         self::assertTrue(
-            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId1, self::ZONE, Versioned::DRAFT),
+            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId1, Page::class, self::ZONE, Versioned::DRAFT),
             'The enabled sibling migrated a Section on DRAFT',
         );
     }
