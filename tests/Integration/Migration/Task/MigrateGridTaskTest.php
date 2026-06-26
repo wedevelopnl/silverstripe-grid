@@ -674,4 +674,81 @@ final class MigrateGridTaskTest extends SapphireTest
         self::assertSame(8, $settings->default->width);
         self::assertTrue($settings->hasOverride('xl'));
     }
+
+    public function testStopOnFirstFailureFlagHaltsAfterFirstPage(): void
+    {
+        // Both pages fail; with --stop-on-first-failure only the first should be attempted,
+        // so the task reports 1 failure (not 2) and exits FAILURE.
+        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+
+        try {
+            $pageId1 = $this->getPageId();
+            $pageId2 = $this->getPageId2();
+
+            $this->seeder->seedPage($pageId1, 1200);
+            $this->seeder->seedElement(12001, 1200, self::CONTENT_CLASS, 1, [
+                'Title' => 'FAIL_ME',
+                'SizeMD' => 12,
+            ]);
+            $this->seeder->seedContentMedia(12001);
+
+            $this->seeder->seedPage($pageId2, 1300);
+            $this->seeder->seedElement(13001, 1300, self::CONTENT_CLASS, 1, [
+                'Title' => 'FAIL_ME',
+                'SizeMD' => 12,
+            ]);
+            $this->seeder->seedContentMedia(13001);
+
+            $result = $this->executeTaskRaw([
+                '--default-viewport' => 'MD',
+                '--zone' => 'main',
+                '--force' => true,
+                '--stop-on-first-failure' => true,
+            ]);
+
+            self::assertSame(Command::FAILURE, $result['exitCode']);
+            // Only 1 page was attempted before the loop broke
+            self::assertStringContainsString('1 page(s) failed to migrate', $result['output']);
+        } finally {
+            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+        }
+    }
+
+    public function testWithoutStopOnFirstFailureBothPagesAttempted(): void
+    {
+        // Both pages fail; without --stop-on-first-failure both must be attempted,
+        // so the task reports 2 failures and exits FAILURE.
+        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+
+        try {
+            $pageId1 = $this->getPageId();
+            $pageId2 = $this->getPageId2();
+
+            $this->seeder->seedPage($pageId1, 1400);
+            $this->seeder->seedElement(14001, 1400, self::CONTENT_CLASS, 1, [
+                'Title' => 'FAIL_ME',
+                'SizeMD' => 12,
+            ]);
+            $this->seeder->seedContentMedia(14001);
+
+            $this->seeder->seedPage($pageId2, 1500);
+            $this->seeder->seedElement(15001, 1500, self::CONTENT_CLASS, 1, [
+                'Title' => 'FAIL_ME',
+                'SizeMD' => 12,
+            ]);
+            $this->seeder->seedContentMedia(15001);
+
+            $result = $this->executeTaskRaw([
+                '--default-viewport' => 'MD',
+                '--zone' => 'main',
+                '--force' => true,
+                // --stop-on-first-failure is absent — both pages must be attempted
+            ]);
+
+            self::assertSame(Command::FAILURE, $result['exitCode']);
+            self::assertStringContainsString('2 page(s) failed to migrate', $result['output']);
+        } finally {
+            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+        }
+    }
 }

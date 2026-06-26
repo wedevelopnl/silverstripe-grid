@@ -57,6 +57,7 @@ class MigrateGridWithFluentTask extends AbstractMigrationTask
         array $viewportKeyMap,
         bool $dryRun,
         ?array $pageIds,
+        bool $stopOnFirstFailure,
     ): int {
         $orchestrator = new FluentMigrationOrchestrator(
             $reader,
@@ -66,6 +67,6 @@ class MigrateGridWithFluentTask extends AbstractMigrationTask
             $logger,
         );
 
-        return $orchestrator->run($defaultViewport, $zone, $viewportKeyMap, $dryRun, $pageIds);
+        return $orchestrator->run($defaultViewport, $zone, $viewportKeyMap, $dryRun, $pageIds, $stopOnFirstFailure);
     }
 }

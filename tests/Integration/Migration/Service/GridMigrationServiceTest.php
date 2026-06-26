@@ -2164,4 +2164,168 @@ final class GridMigrationServiceTest extends SapphireTest
         $liveRow = DB::prepared_query('SELECT "UseGrid" FROM "Page_Live" WHERE "ID" = ?', [$pageId])->record();
         self::assertSame(0, (int) $liveRow['UseGrid'], 'Live UseGrid should be 0 — grid was disabled on live');
     }
+
+    // ─── Test Group 13: Batch summary + stop-on-first-failure ───────
+
+    public function testRunLogsBatchSummaryOfSucceededAndFailedPageIds(): void
+    {
+        // Page 1: will fail (FAIL_ME element triggers TestFailingMigrationExtension)
+        // Page 2: will succeed (normal element title)
+        $pageId1 = $this->getPageId();
+        $pageId2 = $this->getPageId2();
+
+        $this->seeder->seedPage($pageId1, 10100);
+        $this->seeder->seedElement(10101, 10100, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'FAIL_ME',
+        ]);
+        $this->seeder->seedContentMedia(10101);
+
+        $this->seeder->seedPage($pageId2, 10200);
+        $this->seeder->seedElement(10201, 10200, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'Normal Element',
+        ]);
+        $this->seeder->seedContentMedia(10201);
+
+        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+
+        try {
+            $service = $this->createService();
+            $service->run(
+                self::DEFAULT_VIEWPORT,
+                self::ZONE,
+                self::VIEWPORT_KEY_MAP,
+                dryRun: false,
+                pageIds: [$pageId1, $pageId2],
+            );
+
+            // Summary must be emitted at warning level (one failure present)
+            $warningMessages = $this->getLogMessages('warning');
+            $summaryFound = false;
+            foreach ($warningMessages as $msg) {
+                if (\str_contains($msg, 'Migration batch complete')) {
+                    $summaryFound = true;
+                    self::assertStringContainsString('1 page(s) succeeded', $msg, 'Summary must name the succeeded count');
+                    self::assertStringContainsString('1 failed', $msg, 'Summary must name the failed count');
+                    self::assertStringContainsString((string) $pageId1, $msg, 'Summary must list the failing page ID');
+                }
+            }
+            self::assertTrue($summaryFound, 'A batch summary warning must be emitted when pages fail');
+        } finally {
+            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+        }
+    }
+
+    public function testStopOnFirstFailureHaltsRemainingPages(): void
+    {
+        // Both pages have FAIL_ME elements — with stopOnFirstFailure only the first is attempted
+        $pageId1 = $this->getPageId();
+        $pageId2 = $this->getPageId2();
+
+        $this->seeder->seedPage($pageId1, 10300);
+        $this->seeder->seedElement(10301, 10300, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'FAIL_ME',
+        ]);
+        $this->seeder->seedContentMedia(10301);
+
+        $this->seeder->seedPage($pageId2, 10400);
+        $this->seeder->seedElement(10401, 10400, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'FAIL_ME',
+        ]);
+        $this->seeder->seedContentMedia(10401);
+
+        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+
+        try {
+            $service = $this->createService();
+            $failures = $service->run(
+                self::DEFAULT_VIEWPORT,
+                self::ZONE,
+                self::VIEWPORT_KEY_MAP,
+                dryRun: false,
+                pageIds: [$pageId1, $pageId2],
+                stopOnFirstFailure: true,
+            );
+
+            // Only the first page in the loop was attempted; the break halted the rest
+            self::assertSame(1, $failures, 'stop-on-first-failure must halt after the first failing page');
+
+            // Only one error was logged (one page attempted)
+            $errors = $this->getLogMessages('error');
+            self::assertCount(1, $errors, 'Only the first page failure should be logged');
+
+            // Summary reflects 1 failure and 0 succeeded
+            $warningMessages = $this->getLogMessages('warning');
+            $summaryFound = false;
+            foreach ($warningMessages as $msg) {
+                if (\str_contains($msg, 'Migration batch complete')) {
+                    $summaryFound = true;
+                    self::assertStringContainsString('0 page(s) succeeded', $msg);
+                    self::assertStringContainsString('1 failed', $msg);
+                }
+            }
+            self::assertTrue($summaryFound, 'A batch summary must be emitted after stop-on-first-failure halts');
+        } finally {
+            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+        }
+    }
+
+    public function testStopOnFirstFailureFalseContinuesPastFailure(): void
+    {
+        // Both pages fail; without stopOnFirstFailure both must be attempted
+        $pageId1 = $this->getPageId();
+        $pageId2 = $this->getPageId2();
+
+        $this->seeder->seedPage($pageId1, 10500);
+        $this->seeder->seedElement(10501, 10500, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'FAIL_ME',
+        ]);
+        $this->seeder->seedContentMedia(10501);
+
+        $this->seeder->seedPage($pageId2, 10600);
+        $this->seeder->seedElement(10601, 10600, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'FAIL_ME',
+        ]);
+        $this->seeder->seedContentMedia(10601);
+
+        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+
+        try {
+            $service = $this->createService();
+            $failures = $service->run(
+                self::DEFAULT_VIEWPORT,
+                self::ZONE,
+                self::VIEWPORT_KEY_MAP,
+                dryRun: false,
+                pageIds: [$pageId1, $pageId2],
+                // stopOnFirstFailure defaults to false — loop must continue
+            );
+
+            self::assertSame(2, $failures, 'Without stop-on-first-failure, both failing pages must be attempted');
+
+            $errors = $this->getLogMessages('error');
+            self::assertCount(2, $errors, 'Both page failures must be logged');
+
+            // Summary lists both failed page IDs
+            $warningMessages = $this->getLogMessages('warning');
+            $summaryFound = false;
+            foreach ($warningMessages as $msg) {
+                if (\str_contains($msg, 'Migration batch complete')) {
+                    $summaryFound = true;
+                    self::assertStringContainsString('0 page(s) succeeded', $msg);
+                    self::assertStringContainsString('2 failed', $msg);
+                    self::assertStringContainsString((string) $pageId1, $msg);
+                    self::assertStringContainsString((string) $pageId2, $msg);
+                }
+            }
+            self::assertTrue($summaryFound, 'A batch summary warning must be emitted listing all failed page IDs');
+        } finally {
+            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+        }
+    }
 }
