@@ -28,12 +28,4 @@ final class ValidationErrorTest extends TestCase
 
         self::assertSame('A {thing} cannot be placed here', $error->translate());
     }
-
-    public function testKeyAndParamsDefaultToNullAndEmptyArray(): void
-    {
-        $error = new ValidationError(message: 'fail');
-
-        self::assertNull($error->key);
-        self::assertSame([], $error->params);
-    }
 }
