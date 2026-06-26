@@ -260,6 +260,11 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
+        $newElementClass = $body->containerType->toElementClass();
+        if (!singleton($newElementClass)->canCreate()) {
+            $this->jsonError(403);
+        }
+
         $result = $this->elementService->createElement(
             $parent,
             $body->containerType,
@@ -300,6 +305,10 @@ class GridController extends AdminController
         }
 
         if (!$parent->canEdit()) {
+            $this->jsonError(403);
+        }
+
+        if (!singleton($body->className)->canCreate()) {
             $this->jsonError(403);
         }
 

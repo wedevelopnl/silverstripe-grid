@@ -22,6 +22,7 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Support\DenyCreateExtension;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
@@ -1138,6 +1139,35 @@ final class GridControllerTest extends FunctionalTest
         $response = $this->jsonPost(self::BASE_URL . '/createContent', [
             'className' => ContentElement::class,
             'parent' => $this->ref($restricted['column']),
+        ]);
+
+        self::assertSame(403, $response->getStatusCode());
+    }
+
+    public function testCreateReturns403WhenCanCreateDenied(): void
+    {
+        // Parent page is editable, but Section::canCreate() is vetoed — the new
+        // gate must reject with 403 even though the parent canEdit() gate passes.
+        Section::add_extension(DenyCreateExtension::class);
+
+        $response = $this->jsonPost(self::BASE_URL . '/create', [
+            'containerType' => 'section',
+            'parent' => $this->ref($this->page()),
+            'zone' => 'main',
+        ]);
+
+        self::assertSame(403, $response->getStatusCode());
+    }
+
+    public function testCreateContentReturns403WhenCanCreateDenied(): void
+    {
+        // Column parent is editable, but ContentElement::canCreate() is vetoed.
+        $tree = $this->buildTree();
+        ContentElement::add_extension(DenyCreateExtension::class);
+
+        $response = $this->jsonPost(self::BASE_URL . '/createContent', [
+            'className' => ContentElement::class,
+            'parent' => $this->ref($tree['column']),
         ]);
 
         self::assertSame(403, $response->getStatusCode());
