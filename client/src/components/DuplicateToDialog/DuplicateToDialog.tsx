@@ -80,18 +80,13 @@ export default function DuplicateToDialog({
     onCancel()
   }, [onCancel])
 
-  // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — TanStack Query enabled flag doesn't affect mocked test data
   const pages = usePages(debouncedSearch, step === 'page')
   // Keep zones queried on 'confirm' too — goBack needs zones.data to decide
   // whether to return to 'page' (single zone) or 'zone' (multi-zone).
-  // Stryker disable next-line ConditionalExpression,EqualityOperator,LogicalOperator: Equivalent — TanStack Query enabled flag doesn't affect mocked test data
   const zones = useZones(step !== 'page' ? selectedPageId : null)
   const containers = useAcceptableContainers(
-    // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — TanStack Query enabled flag doesn't affect mocked test data
     step === 'container' ? selectedPageId : null,
-    // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — TanStack Query enabled flag doesn't affect mocked test data
     step === 'container' ? selectedZone : null,
-    // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — TanStack Query enabled flag doesn't affect mocked test data
     step === 'container' ? elementType : null,
   )
 

@@ -25,7 +25,6 @@ export function applyReorder(
   if (!sourceChildren) return tree
 
   const sourceIndex = maps.indexByNodeKey.get(elementKey)
-  // Stryker disable next-line ConditionalExpression: Equivalent — unreachable in well-formed trees (buildMaps derives indexByNodeKey alongside childrenByParentKey, so a node present in nodeMap is always indexed)
   if (sourceIndex === undefined) return tree
 
   if (isNoOp(sourceParentKey, sourceIndex, parentKey, afterKey, maps)) {
