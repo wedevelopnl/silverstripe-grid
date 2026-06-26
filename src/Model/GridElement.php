@@ -522,7 +522,17 @@ class GridElement extends DataObject
         // Wrap the check-then-create in a transaction and re-check inside the
         // closure so concurrent writes cannot race past the guard (TOCTOU).
         $conn->withTransaction(function () use ($childClass): void {
-            if ($this->getChildren()->count() > 0) {
+            // Re-query with a fresh ORM query (not $this->getChildren(), which
+            // can return an eager-loaded/relation-cached stale list) so the
+            // check reflects committed state inside the transaction.
+            $existing = $childClass::get()
+                ->filter([
+                    'ParentID' => $this->ID,
+                    'ParentClass' => static::class,
+                ])
+                ->count();
+
+            if ($existing > 0) {
                 return;
             }
 

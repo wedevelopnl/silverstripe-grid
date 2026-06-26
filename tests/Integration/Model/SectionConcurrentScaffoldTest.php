@@ -44,6 +44,31 @@ final class SectionConcurrentScaffoldTest extends SapphireTest
         );
     }
 
+    public function testScaffoldDoesNotDuplicateWhenChildrenListWasPreMaterialised(): void
+    {
+        $page = SiteTree::create(['Title' => 'P']);
+        $page->write();
+
+        $section = Section::create();
+        $section->ParentID = $page->ID;
+        $section->ParentClass = SiteTree::class;
+        $section->write();
+
+        // First write already scaffolded one Row. Pre-materialise the relation
+        // (and any eager-loaded snapshot) so a stale read could mislead the guard.
+        $section->getChildren()->toArray();
+
+        // A second write must consult a FRESH child count and skip scaffolding,
+        // leaving exactly one Row.
+        $section->write();
+
+        self::assertSame(
+            1,
+            Section::get()->byID($section->ID)->getChildren()->count(),
+            'Pre-materialised children list must not cause a duplicate scaffold',
+        );
+    }
+
     public function testScaffoldSurvivesTransactionRollback(): void
     {
         $page = SiteTree::create(['Title' => 'P']);
