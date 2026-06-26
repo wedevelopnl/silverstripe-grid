@@ -692,7 +692,10 @@ describe('useElementMutations', () => {
       const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper })
 
       await act(async () => {
-        await result.current.mutateAsync({ className: 'Content', parent: { type: 'column', id: 10 } })
+        await result.current.mutateAsync({
+          className: 'Content',
+          parent: { type: 'column', id: 10 },
+        })
       })
 
       expect(invalidateSpy).toHaveBeenCalledWith({
