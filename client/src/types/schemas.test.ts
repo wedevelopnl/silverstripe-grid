@@ -101,6 +101,37 @@ describe('elementNodeWireSchema leaf discriminant', () => {
   })
 })
 
+describe('editLink scheme validation', () => {
+  it.each([
+    ['relative CMS path', '/admin/pages/edit/show/5'],
+    ['https absolute URL', 'https://example.com/edit'],
+    ['http absolute URL', 'http://example.com/edit'],
+  ])('accepts a %s', (_label, editLink) => {
+    expect(elementNodeWireSchema.safeParse({ ...baseLeaf, editLink }).success).toBe(true)
+  })
+
+  it('accepts a null editLink', () => {
+    expect(elementNodeWireSchema.safeParse({ ...baseLeaf, editLink: null }).success).toBe(true)
+  })
+
+  it.each([
+    ['javascript: scheme', 'javascript:alert(1)'],
+    ['data: scheme', 'data:text/html,<script>alert(1)</script>'],
+    ['vbscript: scheme', 'vbscript:msgbox(1)'],
+    ['protocol-relative URL', '//evil.example.com/edit'],
+    ['bare token', 'not-a-url'],
+    ['backslash open redirect', '/\\evil.com'],
+    ['double backslash open redirect', '/\\\\evil.com'],
+    ['mixed-case javascript', 'JavaScript:alert(1)'],
+    ['uppercase data', 'DATA:text/html,x'],
+    ['tab-injected open redirect', '/\t/evil.com'],
+    ['newline-injected open redirect', '/\n/evil.com'],
+    ['carriage-return-injected open redirect', '/\r/evil.com'],
+  ])('rejects a %s', (_label, editLink) => {
+    expect(elementNodeWireSchema.safeParse({ ...baseLeaf, editLink }).success).toBe(false)
+  })
+})
+
 describe('section allowedTypes (allowedTypeInfoSchema + emptyArrayToObject)', () => {
   const sectionWith = (allowedTypes: unknown) => ({
     ...baseLeaf,
