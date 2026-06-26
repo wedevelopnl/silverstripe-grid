@@ -80,7 +80,9 @@ final class GridMigrationService
                 $failures++;
                 $this->logger->error('Migration failed for page {pageId}: {message}', [
                     'pageId' => $pageId,
+                    'areaId' => $areaId,
                     'message' => $exception->getMessage(),
+                    'exception' => $exception,
                 ]);
             }
         }
