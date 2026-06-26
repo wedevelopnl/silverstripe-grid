@@ -104,6 +104,31 @@ final class GridNodeTest extends TestCase
     }
 
     #[Test]
+    public function constructorThrowsWhenLeafCarriesChildren(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('children and allowedTypes require a container type');
+
+        // containerType null (leaf) but children provided — inconsistent.
+        $this->makeNode([
+            'containerType' => null,
+            'children' => [],
+        ]);
+    }
+
+    #[Test]
+    public function constructorThrowsWhenLeafCarriesAllowedTypes(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('children and allowedTypes require a container type');
+
+        $this->makeNode([
+            'containerType' => null,
+            'allowedTypes' => ['SomeClass' => ['label' => 'X', 'icon' => 'i', 'description' => 'd']],
+        ]);
+    }
+
+    #[Test]
     public function jsonSerializeLeafIncludesScopedIdentity(): void
     {
         $node = $this->makeNode([

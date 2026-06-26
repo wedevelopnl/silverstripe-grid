@@ -56,6 +56,12 @@ final readonly class GridNode implements JsonSerializable
                 'gridSettings may only be provided for Column container type',
             );
         }
+
+        if ($containerType === null && ($children !== null || $allowedTypes !== null)) {
+            throw new InvalidArgumentException(
+                'children and allowedTypes require a container type',
+            );
+        }
     }
 
     /**

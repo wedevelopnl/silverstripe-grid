@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Service;
 
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Value\ViewportConfig;
 
 /**
@@ -32,6 +33,10 @@ final class ColumnClassResolver
 
         foreach ($viewports as $viewport) {
             $key = $viewport->key;
+            if (!isset($effective[$key])) {
+                throw InvalidGridValueException::forViewport($key);
+            }
+
             $config = $effective[$key];
 
             /** @var positive-int $width Validated by GridSettingsFieldValidator at write time */

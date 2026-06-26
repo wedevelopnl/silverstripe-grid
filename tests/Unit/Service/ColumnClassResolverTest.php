@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Tests\Unit\Service;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Service\ColumnClassResolver;
 use WeDevelop\Grid\Tests\Unit\Support\GridAdapterStub;
 use WeDevelop\Grid\Value\Viewport;
@@ -142,5 +143,18 @@ final class ColumnClassResolverTest extends TestCase
     public function testResolve(array $effective, GridAdapterStub $adapter, string $expected): void
     {
         self::assertSame($expected, ColumnClassResolver::resolve($effective, $adapter));
+    }
+
+    public function testResolveThrowsWhenEffectiveMapOmitsAViewport(): void
+    {
+        // threeViewportStub() exposes xs, md, lg — supply a map missing 'lg'.
+        $effective = [
+            'xs' => new ViewportConfig(12, 0, true),
+            'md' => new ViewportConfig(6, 0, true),
+        ];
+
+        $this->expectException(InvalidGridValueException::class);
+
+        ColumnClassResolver::resolve($effective, self::threeViewportStub());
     }
 }
