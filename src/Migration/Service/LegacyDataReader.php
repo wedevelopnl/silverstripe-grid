@@ -37,6 +37,21 @@ final class LegacyDataReader implements LegacyElementSource
 
     private const array VIEWPORT_KEYS = ['XS', 'SM', 'MD', 'LG', 'XL'];
 
+    /**
+     * Instance-level cache for DB::table_list(). Populated on first call to
+     * tableHasColumn(); null means not yet fetched.
+     *
+     * @var array<string, mixed>|null
+     */
+    private ?array $tableListCache = null;
+
+    /**
+     * Instance-level cache for DB::field_list(), keyed by table name.
+     *
+     * @var array<string, array<string, mixed>>
+     */
+    private array $fieldListCache = [];
+
     private const array MEDIA_FIELDS = [
         'HTML',
         'ContentColumns',
@@ -499,19 +514,31 @@ final class LegacyDataReader implements LegacyElementSource
      *
      * Used to detect whether the old extension was applied to SiteTree or Page,
      * since both are valid targets for the UseElementalGrid/ElementalAreaID columns.
+     *
+     * The cache lives on the per-migration reader instance; the reader is constructed
+     * fresh per task run so there is no cross-run staleness — the migration never adds
+     * tables or columns mid-run.
      */
     private function tableHasColumn(string $table, string $column): bool
     {
-        $tables = DB::table_list();
+        if ($this->tableListCache === null) {
+            /** @var array<string, mixed> $tableList */
+            $tableList = DB::table_list();
+            $this->tableListCache = $tableList;
+        }
 
         // table_list() returns lowercase table names as keys
-        if (!\array_key_exists(\strtolower($table), $tables)) {
+        if (!\array_key_exists(\strtolower($table), $this->tableListCache)) {
             return false;
         }
 
-        $columns = DB::field_list($table);
+        if (!isset($this->fieldListCache[$table])) {
+            /** @var array<string, mixed> $columns */
+            $columns = DB::field_list($table);
+            $this->fieldListCache[$table] = $columns;
+        }
 
-        return \array_key_exists($column, $columns);
+        return \array_key_exists($column, $this->fieldListCache[$table]);
     }
 
     /**
