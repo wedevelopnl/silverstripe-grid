@@ -2328,4 +2328,117 @@ final class GridMigrationServiceTest extends SapphireTest
             GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
         }
     }
+
+    // ─── Test Group 14: Batch-level scaffold suppression ────────────
+
+    public function testScaffoldingSuppressedAcrossEntireBatch(): void
+    {
+        // Capture the natural config values before run() so the restore
+        // assertion is independent of whatever the project default happens to be.
+        $sectionAutoScaffoldBefore = (bool) Section::config()->get('auto_scaffold');
+        $rowAutoScaffoldBefore = (bool) Row::config()->get('auto_scaffold');
+
+        $pageId1 = $this->getPageId();
+        $pageId2 = $this->getPageId2();
+
+        // Page 1: one content element, no explicit row → implicit Section
+        $this->seeder->seedPage($pageId1, 10700);
+        $this->seeder->seedElement(10701, 10700, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'Batch Element Page 1',
+        ]);
+        $this->seeder->seedContentMedia(10701);
+
+        // Page 2: one content element, no explicit row → implicit Section
+        $this->seeder->seedPage($pageId2, 10800);
+        $this->seeder->seedElement(10801, 10800, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'Batch Element Page 2',
+        ]);
+        $this->seeder->seedContentMedia(10801);
+
+        $service = $this->createService();
+        $failures = $service->run(
+            self::DEFAULT_VIEWPORT,
+            self::ZONE,
+            self::VIEWPORT_KEY_MAP,
+            dryRun: false,
+            pageIds: [$pageId1, $pageId2],
+        );
+        self::assertSame(0, $failures, 'Both pages must migrate without failures');
+
+        // Auto-scaffold config must be restored to its original values after run()
+        // returns, regardless of the suppression strategy (per-page or batch-level).
+        // The existing testMigrationRestoresProjectLevelAutoScaffoldFalse test already
+        // pins the single-page case; this asserts it holds for a two-page batch.
+        self::assertSame(
+            $sectionAutoScaffoldBefore,
+            (bool) Section::config()->get('auto_scaffold'),
+            'Section::auto_scaffold must be restored to its original value after run() returns',
+        );
+        self::assertSame(
+            $rowAutoScaffoldBefore,
+            (bool) Row::config()->get('auto_scaffold'),
+            'Row::auto_scaffold must be restored to its original value after run() returns',
+        );
+
+        // Verify no duplicate auto-scaffolded Rows or Columns were inserted.
+        // The strategy produces exactly 1 Section → 1 Row → 1 Column → 1 element
+        // per page (no explicit row delimiter → one implicit section). If
+        // auto_scaffold were active during any Section write, an extra Row would
+        // appear (Section::onAfterWrite → Row). If active during a Row write, an
+        // extra Column would appear (Row::onAfterWrite → Column).
+        Versioned::set_stage(Versioned::DRAFT);
+
+        foreach ([$pageId1, $pageId2] as $pageId) {
+            $sections = Section::get()->filter([
+                'ParentID' => $pageId,
+                'Zone' => self::ZONE,
+            ]);
+            self::assertCount(
+                1,
+                $sections,
+                "Page {$pageId}: strategy produces exactly 1 Section; auto-scaffold during Section write would add duplicates",
+            );
+
+            $section = $sections->first();
+            self::assertInstanceOf(Section::class, $section);
+
+            $rows = Row::get()->filter([
+                'ParentID' => $section->ID,
+                'ParentClass' => Section::class,
+            ]);
+            self::assertCount(
+                1,
+                $rows,
+                "Page {$pageId}: strategy produces exactly 1 Row; auto-scaffold during Section write would add a spurious Row",
+            );
+
+            $row = $rows->first();
+            self::assertInstanceOf(Row::class, $row);
+
+            $columns = Column::get()->filter([
+                'ParentID' => $row->ID,
+                'ParentClass' => Row::class,
+            ]);
+            self::assertCount(
+                1,
+                $columns,
+                "Page {$pageId}: strategy produces exactly 1 Column; auto-scaffold during Row write would add a spurious Column",
+            );
+
+            $column = $columns->first();
+            self::assertInstanceOf(Column::class, $column);
+
+            $elements = GridElement::get()->filter([
+                'ParentID' => $column->ID,
+                'ParentClass' => Column::class,
+            ]);
+            self::assertCount(
+                1,
+                $elements,
+                "Page {$pageId}: exactly 1 content element expected from strategy output",
+            );
+        }
+    }
 }
