@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTreeApiResponse, resetIdCounter } from '@/testing/factories'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
+import { isColumnNode } from '@/types/elements'
 import {
   archiveElement,
   createContentElement,
@@ -94,6 +95,67 @@ describe('normaliseTreeResponse', () => {
     // hooks/components surface this as a generic load error to the user.
     expect(() => normaliseTreeResponse(null)).toThrow()
     expect(() => normaliseTreeResponse({ rootParent: { type: 'page', id: 1 } })).toThrow()
+  })
+
+  it('rejects a node carrying an unknown wire field that bypasses the schema', () => {
+    // A future server field must be caught by the wire schema, not silently
+    // spread through attachDerivedFields. Zod is strict on the discriminated
+    // container variants — an unexpected shape (container fields without a
+    // valid containerType) must throw rather than produce a malformed node.
+    const raw = {
+      rootParent: { type: 'page', id: 1 },
+      nodes: [
+        {
+          self: { type: 'section', id: 10 },
+          parent: { type: 'page', id: 1 },
+          title: 'S',
+          blockSchema: { typeName: 'S', label: 'S', icon: 'i', type: 's', title: 'S' },
+          obsoleteClassName: null,
+          version: 1,
+          canDelete: true,
+          canPublish: true,
+          canUnpublish: false,
+          canCreate: true,
+          editLink: null,
+          status: 'published',
+          // container-only fields present, but containerType is a bogus value:
+          containerType: 'nonsense',
+          allowedTypes: null,
+          children: [],
+        },
+      ],
+    }
+    expect(() => normaliseTreeResponse(raw)).toThrow()
+  })
+
+  it('attaches derived fields to a column node without losing gridSettings', () => {
+    const raw = {
+      rootParent: { type: 'page', id: 1 },
+      nodes: [
+        {
+          self: { type: 'column', id: 30 },
+          parent: { type: 'row', id: 20 },
+          title: 'Col',
+          blockSchema: { typeName: 'Column', label: 'Column', icon: 'i', type: 'column', title: 'Col' },
+          obsoleteClassName: null,
+          version: 1,
+          canDelete: true,
+          canPublish: true,
+          canUnpublish: false,
+          canCreate: true,
+          editLink: null,
+          status: 'draft',
+          containerType: 'column',
+          allowedTypes: null,
+          children: [],
+          gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
+        },
+      ],
+    }
+    const result = normaliseTreeResponse(raw)
+    const node = result.nodes[0]
+    expect(node.nodeKey).toBe('column-30')
+    expect(isColumnNode(node) && node.gridSettings.default.width).toBe(12)
   })
 })
 

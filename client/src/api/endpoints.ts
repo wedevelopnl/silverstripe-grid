@@ -1,6 +1,13 @@
 import type { AcceptableContainer, PageEntry } from '@/types/duplicateTo'
-import type { ContainerType, ElementNode, TreeApiResponse } from '@/types/elements'
-import { isContainerNode } from '@/types/elements'
+import type {
+  ColumnNode,
+  ContainerType,
+  ElementNode,
+  RowNode,
+  SectionNode,
+  SimpleElementNode,
+  TreeApiResponse,
+} from '@/types/elements'
 import { NodeIdentity, type NodeRef } from '@/types/identity'
 import {
   acceptableContainerListSchema,
@@ -53,21 +60,72 @@ export function normaliseTreeResponse(raw: unknown): TreeApiResponse {
 type NodeWire = (typeof treeApiResponseWireSchema._output)['nodes'][number]
 
 function attachDerivedFields(node: NodeWire): ElementNode {
-  const enriched = {
-    ...node,
-    nodeKey: NodeIdentity.toKey(node.self.type, node.self.id),
-    parentKey: NodeIdentity.toKey(node.parent.type, node.parent.id),
-  } as ElementNode
+  const nodeKey = NodeIdentity.toKey(node.self.type, node.self.id)
+  const parentKey = NodeIdentity.toKey(node.parent.type, node.parent.id)
 
-  if (isContainerNode(enriched) && enriched.children !== null) {
-    // The wire schema validated `children` as recursive NodeWire arrays; the
-    // mapped result is a fully-typed ElementNode array of the same length.
-    ;(enriched as { children: ElementNode[] }).children = enriched.children.map((child) =>
-      attachDerivedFields(child as unknown as NodeWire),
-    )
+  if (node.containerType === 'section') {
+    // The PHP domain layer enforces the Section→Row→Column→leaf hierarchy.
+    // The wire schema's childrenSchema is shared across all container variants
+    // and does NOT distinguish children by type, so this cast relies on the
+    // server's hierarchy invariant, not on Zod. TypeScript cannot express the
+    // narrower RowNode[] invariant without a cast because attachDerivedFields
+    // returns the wide ElementNode union.
+    const children = node.children !== null
+      ? (node.children.map(attachDerivedFields) as RowNode[])
+      : null
+    return {
+      ...node,
+      nodeKey,
+      parentKey,
+      containerType: 'section',
+      allowedTypes: node.allowedTypes,
+      children,
+    } satisfies SectionNode
   }
 
-  return enriched
+  if (node.containerType === 'row') {
+    // Same cast rationale as section: the server's hierarchy invariant (not Zod)
+    // guarantees a row's children are columns.
+    const children = node.children !== null
+      ? (node.children.map(attachDerivedFields) as ColumnNode[])
+      : null
+    return {
+      ...node,
+      nodeKey,
+      parentKey,
+      containerType: 'row',
+      allowedTypes: node.allowedTypes,
+      children,
+    } satisfies RowNode
+  }
+
+  if (node.containerType === 'column') {
+    // Same cast rationale as section: the server's hierarchy invariant (not Zod)
+    // guarantees a column's children are simple (leaf) elements.
+    const children = node.children !== null
+      ? (node.children.map(attachDerivedFields) as SimpleElementNode[])
+      : null
+    return {
+      ...node,
+      nodeKey,
+      parentKey,
+      containerType: 'column',
+      allowedTypes: node.allowedTypes,
+      children,
+      gridSettings: node.gridSettings,
+    } satisfies ColumnNode
+  }
+
+  // Leaf element — containerType is absent on the wire shape. Destructure it
+  // out so the spread does not carry the union's containerType variants into
+  // the returned object, which would conflict with SimpleElementNode's
+  // `containerType?: never` declaration.
+  const { containerType: _ct, ...leafFields } = node
+  return {
+    ...leafFields,
+    nodeKey,
+    parentKey,
+  } satisfies SimpleElementNode
 }
 
 export interface CreateElementParams {
