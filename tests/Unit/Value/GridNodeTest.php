@@ -7,7 +7,6 @@ namespace WeDevelop\Grid\Tests\Unit\Value;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\ElementStatus;
@@ -79,8 +78,7 @@ final class GridNodeTest extends TestCase
         );
     }
 
-    #[Test]
-    public function getIdAndGetParentIdReturnNumericIdsFromRefs(): void
+    public function testGetIdAndGetParentIdReturnNumericIdsFromRefs(): void
     {
         $node = $this->makeNode([
             'self' => new NodeRef(NodeType::Row, 42),
@@ -91,8 +89,7 @@ final class GridNodeTest extends TestCase
         self::assertSame(7, $node->getParentId());
     }
 
-    #[Test]
-    public function constructorThrowsWhenGridSettingsProvidedForSection(): void
+    public function testConstructorThrowsWhenGridSettingsProvidedForSection(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('gridSettings may only be provided for Column container type');
@@ -103,8 +100,7 @@ final class GridNodeTest extends TestCase
         ]);
     }
 
-    #[Test]
-    public function constructorThrowsWhenLeafCarriesChildren(): void
+    public function testConstructorThrowsWhenLeafCarriesChildren(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('children and allowedTypes require a container type');
@@ -116,8 +112,7 @@ final class GridNodeTest extends TestCase
         ]);
     }
 
-    #[Test]
-    public function constructorThrowsWhenLeafCarriesAllowedTypes(): void
+    public function testConstructorThrowsWhenLeafCarriesAllowedTypes(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('children and allowedTypes require a container type');
@@ -128,8 +123,7 @@ final class GridNodeTest extends TestCase
         ]);
     }
 
-    #[Test]
-    public function jsonSerializeLeafIncludesScopedIdentity(): void
+    public function testJsonSerializeLeafIncludesScopedIdentity(): void
     {
         $node = $this->makeNode([
             'self' => new NodeRef(NodeType::Element, 1),
@@ -156,8 +150,7 @@ final class GridNodeTest extends TestCase
         self::assertArrayNotHasKey('children', $data);
     }
 
-    #[Test]
-    public function jsonSerializeContainerIncludesContainerFields(): void
+    public function testJsonSerializeContainerIncludesContainerFields(): void
     {
         $allowedTypes = ['SomeClass' => ['label' => 'Row', 'icon' => 'icon', 'description' => 'desc']];
 
@@ -174,8 +167,7 @@ final class GridNodeTest extends TestCase
         self::assertSame([], $data['children']);
     }
 
-    #[Test]
-    public function jsonSerializeColumnWithGridSettingsIncludesGridSettingsKey(): void
+    public function testJsonSerializeColumnWithGridSettingsIncludesGridSettingsKey(): void
     {
         $gridSettings = new GridSettings(ViewportConfig::default(12));
 
@@ -190,8 +182,7 @@ final class GridNodeTest extends TestCase
         self::assertSame($gridSettings->toArray(), $data['gridSettings']);
     }
 
-    #[Test]
-    public function jsonSerializeColumnWithNullGridSettingsOmitsGridSettingsKey(): void
+    public function testJsonSerializeColumnWithNullGridSettingsOmitsGridSettingsKey(): void
     {
         $node = $this->makeNode([
             'containerType' => ContainerType::Column,
@@ -203,8 +194,7 @@ final class GridNodeTest extends TestCase
         self::assertArrayNotHasKey('gridSettings', $data);
     }
 
-    #[Test]
-    public function jsonSerializeIncludesExtensionsWhenNonEmpty(): void
+    public function testJsonSerializeIncludesExtensionsWhenNonEmpty(): void
     {
         $extensions = ['mediaLayout' => ['aspectRatio' => '16x9']];
 
@@ -215,8 +205,7 @@ final class GridNodeTest extends TestCase
         self::assertSame($extensions, $data['extensions']);
     }
 
-    #[Test]
-    public function jsonSerializeOmitsExtensionsWhenEmpty(): void
+    public function testJsonSerializeOmitsExtensionsWhenEmpty(): void
     {
         $node = $this->makeNode(['extensions' => []]);
         $data = $node->jsonSerialize();
@@ -231,9 +220,8 @@ final class GridNodeTest extends TestCase
      *
      * @param non-empty-string|null $summary
      */
-    #[Test]
     #[DataProvider('summarySerializationProvider')]
-    public function jsonSerializeIncludesSummaryOnlyWhenNonEmpty(
+    public function testJsonSerializeIncludesSummaryOnlyWhenNonEmpty(
         ?string $summary,
         bool $expectKey,
     ): void {
@@ -259,8 +247,7 @@ final class GridNodeTest extends TestCase
         yield 'empty-string summary omitted' => ['', false];
     }
 
-    #[Test]
-    public function jsonSerializeIncludesStatusAsEnumValue(): void
+    public function testJsonSerializeIncludesStatusAsEnumValue(): void
     {
         $node = $this->makeNode(['status' => ElementStatus::Modified]);
         $data = $node->jsonSerialize();

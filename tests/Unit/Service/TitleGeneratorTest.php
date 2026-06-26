@@ -6,7 +6,6 @@ namespace WeDevelop\Grid\Tests\Unit\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use WeDevelop\Grid\Service\TitleGenerator;
 
@@ -30,9 +29,8 @@ final class TitleGeneratorTest extends TestCase
         yield 'trailing text after copy pattern' => ['Block copy 2 extra', 'Block copy 2 extra copy'];
     }
 
-    #[Test]
     #[DataProvider('copyTitleProvider')]
-    public function generateCopyTitleProducesExpectedResult(string $input, string $expected): void
+    public function testGenerateCopyTitleProducesExpectedResult(string $input, string $expected): void
     {
         self::assertSame($expected, TitleGenerator::generateCopyTitle($input));
     }
