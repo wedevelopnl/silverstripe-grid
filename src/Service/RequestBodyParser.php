@@ -174,11 +174,7 @@ final readonly class RequestBodyParser
             return Result::fail(new ValidationError('viewport must be a string.'));
         }
 
-        $validKeys = array_map(
-            static fn (Viewport $vp): string => $vp->key,
-            $this->gridAdapter->getViewports(),
-        );
-        if (!in_array($viewport, $validKeys, true)) {
+        if (!$this->isValidViewportKey($viewport)) {
             return Result::fail(new ValidationError('viewport is not a valid viewport key.'));
         }
 
@@ -261,11 +257,7 @@ final readonly class RequestBodyParser
                 return Result::fail(new ValidationError('viewport must be a non-empty string or null.'));
             }
 
-            $validKeys = array_map(
-                static fn (Viewport $vp): string => $vp->key,
-                $this->gridAdapter->getViewports(),
-            );
-            if (!in_array($viewport, $validKeys, true)) {
+            if (!$this->isValidViewportKey($viewport)) {
                 return Result::fail(new ValidationError('viewport is not a valid viewport key.'));
             }
 
@@ -301,5 +293,23 @@ final readonly class RequestBodyParser
         }
 
         return Result::ok($element);
+    }
+
+    /**
+     * Viewport keys the active adapter recognises.
+     *
+     * @return list<non-empty-string>
+     */
+    private function validViewportKeys(): array
+    {
+        return array_map(
+            static fn (Viewport $vp): string => $vp->key,
+            $this->gridAdapter->getViewports(),
+        );
+    }
+
+    private function isValidViewportKey(string $key): bool
+    {
+        return in_array($key, $this->validViewportKeys(), true);
     }
 }
