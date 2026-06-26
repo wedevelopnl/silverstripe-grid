@@ -214,6 +214,16 @@ final class FieldMapper
         /** @var string|null $cols */
         $cols = $fields['ContentColumns'] ?? '';
 
+        // Warn on non-empty, non-numeric values (e.g. corrupt legacy data) so the
+        // migration log surfaces them. Empty/null are the documented "not set" case
+        // and are silently normalised to 0.
+        if ($cols !== '' && $cols !== null && !is_numeric($cols)) {
+            $this->logger?->warning(
+                'Unrecognised ContentColumns value "{value}"; falling back to 0.',
+                ['value' => $cols],
+            );
+        }
+
         // ExtraColumnGap → GapSize using discrete scale mapping
         /** @var int $gap */
         $gap = $fields['ExtraColumnGap'] ?? 0;
@@ -221,7 +231,7 @@ final class FieldMapper
         /** @var array<string, string|int|bool|null> $fields */
 
         return new MappedMediaFields(
-            ContentColumns: ($cols === '' || $cols === null) ? 0 : (int) $cols,
+            ContentColumns: ($cols === '' || $cols === null || !is_numeric($cols)) ? 0 : (int) $cols,
             VerticalAlignment: $this->verticalAlignMap[$align] ?? 'top',
             GapSize: $this->gapSizeMap[$gap] ?? 0,
             MediaType: (string) ($fields['MediaType'] ?? ''),

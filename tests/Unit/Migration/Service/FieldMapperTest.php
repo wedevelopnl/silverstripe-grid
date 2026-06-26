@@ -989,4 +989,94 @@ final class FieldMapperTest extends TestCase
             'MediaVideoEmbeddedCreated'  => '',
         ]));
     }
+
+    // ─── ContentColumns: non-numeric warning ──────────────────────────────────
+
+    public function testNonNumericContentColumnsLogsWarningAndResetsToZero(): void
+    {
+        // A non-empty, non-numeric ContentColumns value (e.g. corrupt legacy data)
+        // must log a warning naming the field and the offending value, then fall
+        // back to 0. All other expected keys are present so no schema-missing
+        // warning fires — the assertion is ContentColumns-specific.
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())
+            ->method('warning')
+            ->with(
+                self::stringContains('ContentColumns'),
+                self::callback(static fn (array $ctx): bool => ($ctx['value'] ?? null) === 'abc'),
+            );
+
+        $mapper = new FieldMapper(logger: $logger);
+        $result = $mapper->mapMediaFields(new LegacyMediaData(
+            \array_merge(self::allMediaFieldsPresent(), ['ContentColumns' => 'abc'])
+        ));
+
+        self::assertSame(0, $result->ContentColumns);
+    }
+
+    public function testNumericContentColumnsDoesNotWarn(): void
+    {
+        // A numeric string ContentColumns value must be converted to int with no
+        // warning at all. All expected keys are present so no schema-missing
+        // warning fires either.
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::never())->method('warning');
+
+        $mapper = new FieldMapper(logger: $logger);
+        $result = $mapper->mapMediaFields(new LegacyMediaData(
+            \array_merge(self::allMediaFieldsPresent(), ['ContentColumns' => '3'])
+        ));
+
+        self::assertSame(3, $result->ContentColumns);
+    }
+
+    public function testEmptyContentColumnsDoesNotWarn(): void
+    {
+        // Empty string and null both represent "not set" and must silently yield 0
+        // without any warning — they are not bad data.
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::never())->method('warning');
+
+        $mapper = new FieldMapper(logger: $logger);
+
+        $resultEmpty = $mapper->mapMediaFields(new LegacyMediaData(
+            \array_merge(self::allMediaFieldsPresent(), ['ContentColumns' => ''])
+        ));
+        self::assertSame(0, $resultEmpty->ContentColumns);
+
+        $resultNull = $mapper->mapMediaFields(new LegacyMediaData(
+            \array_merge(self::allMediaFieldsPresent(), ['ContentColumns' => null])
+        ));
+        self::assertSame(0, $resultNull->ContentColumns);
+    }
+
+    /**
+     * Full set of expected media keys with inert values.
+     * Providing every key prevents the schema-missing warning from Task 4,
+     * so warning-isolation tests can use expects(never) cleanly.
+     *
+     * @return array<string, string|int|bool|null>
+     */
+    private static function allMediaFieldsPresent(): array
+    {
+        return [
+            'ContentColumns'                 => '',
+            'ContentVerticalAlign'           => '',
+            'ExtraColumnGap'                 => 0,
+            'MediaType'                      => '',
+            'MediaCaption'                   => '',
+            'MediaRatio'                     => null,
+            'MediaPosition'                  => null,
+            'MediaImageID'                   => null,
+            'MediaVideoFullURL'              => '',
+            'MediaVideoProvider'             => '',
+            'MediaVideoHasOverlay'           => false,
+            'MediaVideoCustomThumbnailID'    => 0,
+            'MediaVideoEmbeddedName'         => '',
+            'MediaVideoEmbeddedURL'          => '',
+            'MediaVideoEmbeddedDescription'  => '',
+            'MediaVideoEmbeddedThumbnail'    => '',
+            'MediaVideoEmbeddedCreated'      => '',
+        ];
+    }
 }
