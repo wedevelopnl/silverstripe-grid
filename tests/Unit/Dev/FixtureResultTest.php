@@ -11,7 +11,7 @@ use WeDevelop\Grid\Dev\FixtureResult;
 #[CoversClass(FixtureResult::class)]
 final class FixtureResultTest extends TestCase
 {
-    public function testJsonSerializeReturnsExpectedStructure(): void
+    public function testJsonSerializeReturnsFullShapeWithoutFixtureName(): void
     {
         $result = new FixtureResult(
             fixtureName: 'element-tree',
@@ -20,26 +20,13 @@ final class FixtureResultTest extends TestCase
             fixtureMap: ['Page' => ['e2e_page' => 42]],
         );
 
-        $json = $result->jsonSerialize();
-
-        self::assertArrayHasKey('pageId', $json);
-        self::assertArrayHasKey('pageUrl', $json);
-        self::assertArrayHasKey('fixtureMap', $json);
-        self::assertSame(42, $json['pageId']);
-        self::assertSame('/e2e-grid-test/', $json['pageUrl']);
-    }
-
-    public function testJsonSerializeOmitsFixtureName(): void
-    {
-        $result = new FixtureResult(
-            fixtureName: 'element-tree',
-            pageId: 1,
-            pageUrl: '/',
-            fixtureMap: [],
+        self::assertSame(
+            [
+                'pageId' => 42,
+                'pageUrl' => '/e2e-grid-test/',
+                'fixtureMap' => ['Page' => ['e2e_page' => 42]],
+            ],
+            $result->jsonSerialize(),
         );
-
-        $json = $result->jsonSerialize();
-
-        self::assertArrayNotHasKey('fixtureName', $json);
     }
 }
