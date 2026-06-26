@@ -37,6 +37,10 @@ describe('queryKeys', () => {
   })
 
   describe('acceptableContainers', () => {
+    it('should return base key for all()', () => {
+      expect(queryKeys.acceptableContainers.all()).toEqual(['acceptableContainers'])
+    })
+
     it('should return full tuple for byTarget()', () => {
       expect(queryKeys.acceptableContainers.byTarget(1, 'main', 'Section')).toEqual([
         'acceptableContainers',

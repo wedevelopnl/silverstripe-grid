@@ -42,6 +42,9 @@ function useStandardMutationOptions(pageId: number, zone: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.elementTree.byPage(pageId, zone),
       })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.acceptableContainers.all(),
+      })
       refreshPreview()
     },
     onError: (error: ApiError) => {
