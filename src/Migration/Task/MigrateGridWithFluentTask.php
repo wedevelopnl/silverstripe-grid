@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Migration\Task;
 
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use TractorCow\Fluent\Model\Locale;
 use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
@@ -42,6 +43,20 @@ class MigrateGridWithFluentTask extends AbstractMigrationTask
             (new LegacyLocalisationDetector())->detect();
         } catch (RuntimeException $exception) {
             return $exception->getMessage();
+        }
+
+        // Require a resolvable default locale. Fluent's Locale::getDefault()
+        // returns null only when no locales exist at all (with one or more
+        // configured it falls back to the first), so a null here means the site
+        // has no locales. The orchestrator builds its per-locale plan from the
+        // default locale plus the cached locales, so a null default yields an
+        // EMPTY plan: every per-locale pass is skipped, the grid-disabled
+        // reconciliation never runs, and the task would report SUCCESS having
+        // migrated nothing. Fail loudly instead of silently no-opping.
+        if (Locale::getDefault() === null) {
+            return 'No Fluent default locale resolves; configure at least one locale '
+                . '(and a global default) before migrating per locale, or use '
+                . '"migrate-grid" for a single-locale site.';
         }
 
         return null;
