@@ -1,12 +1,4 @@
-import { ContainerType } from './elements';
-export interface AcceptableContainer {
-    id: number;
-    title: string;
-    type: ContainerType;
-}
-export interface PageEntry {
-    id: number;
-    title: string;
-    parentId: number;
-    hasGridZones: boolean;
-}
+import { z } from 'zod';
+import { acceptableContainerSchema, pageEntrySchema } from './schemas';
+export type AcceptableContainer = z.infer<typeof acceptableContainerSchema>;
+export type PageEntry = z.infer<typeof pageEntrySchema>;
