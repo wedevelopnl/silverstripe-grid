@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Validation;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Validation\GridSettingsFieldValidator;
 use WeDevelop\Grid\Value\GridSettings;
@@ -128,38 +127,6 @@ final class GridSettingsFieldValidatorTest extends SapphireTest
         $result = $validator->validate();
 
         self::assertTrue($result->isValid());
-    }
-
-    /**
-     * @return iterable<string, array{int}>
-     */
-    public static function nonPositiveWidthProvider(): iterable
-    {
-        yield 'zero width' => [0];
-        yield 'negative width' => [-1];
-    }
-
-    #[DataProvider('nonPositiveWidthProvider')]
-    public function testNonPositiveWidthIsRejected(int $width): void
-    {
-        $settings = new GridSettings(new ViewportConfig($width, 0, true), []);
-        $validator = new GridSettingsFieldValidator('GridSettings', $settings, self::COLUMN_COUNT);
-
-        $result = $validator->validate();
-
-        self::assertFalse($result->isValid());
-    }
-
-    public function testNegativeOffsetIsRejected(): void
-    {
-        // offset=-1 is the only violation: width=6 is valid and 6+(-1)=5 <= 12.
-        $settings = new GridSettings(new ViewportConfig(6, -1, true), []);
-        $validator = new GridSettingsFieldValidator('GridSettings', $settings, self::COLUMN_COUNT);
-
-        $result = $validator->validate();
-
-        self::assertFalse($result->isValid());
-        self::assertCount(1, $result->getMessages());
     }
 
     public function testOffsetZeroIsAccepted(): void

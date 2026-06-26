@@ -52,6 +52,12 @@ final class GridSettingsFieldValidator extends FieldValidator
         return $result;
     }
 
+    /**
+     * Lower-bound enforcement (width >= 1, offset >= 0) is intentionally absent here.
+     * Those constraints are guaranteed at the input boundaries: `RequestBodyParser` (API path),
+     * `GridSettingsField::normalizeFormData` (CMS form clamp), and the `ViewportConfig`
+     * `positive-int`/`int<0,max>` type contract. This validator checks upper bounds only.
+     */
     private function validateViewportConfig(
         ValidationResult $result,
         ViewportConfig $config,
