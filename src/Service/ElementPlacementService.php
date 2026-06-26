@@ -123,9 +123,10 @@ class ElementPlacementService
      * Persist dirty elements and return the reordered element.
      *
      * Wrapped in a DB transaction so a mid-loop write failure cannot leave
-     * siblings half-reindexed. If any dirty write throws, withTransaction
-     * rolls the whole batch back and re-raises — WriteResult then converts
-     * it into a failure Result.
+     * siblings half-reindexed. If a write throws, withTransaction rolls the
+     * whole batch back and re-raises. Only a ValidationException is then
+     * translated into a failure Result by WriteResult::from; any other
+     * exception propagates uncaught and surfaces as a 500.
      *
      * @param list<GridElement> $dirtyElements
      * @return Result<GridElement>

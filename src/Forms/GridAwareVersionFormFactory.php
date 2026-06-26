@@ -33,6 +33,10 @@ class GridAwareVersionFormFactory extends DataObjectVersionFormFactory
      * Rebuilds the parent's private `getFormFields()` pipeline with one
      * difference: `GridEditorField` survives the `GridField` strip step.
      *
+     * @see DataObjectVersionFormFactory::getFormFields the shadowed parent
+     *     method this re-implements; keep this pipeline in sync if the base
+     *     factory's field-stripping flow changes upstream.
+     *
      * @param array{Record?: DataObject, ...} $context
      */
     #[Override] // @phpstan-ignore missingType.return, typeCoverage.returnTypeCoverage, missingType.parameter (matching the untyped parent signature)
