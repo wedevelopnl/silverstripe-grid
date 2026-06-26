@@ -55,8 +55,8 @@ abstract class AbstractMigrationTask extends BuildTask
             return Command::FAILURE;
         }
 
-        /** @var string $defaultViewport */
-        /** @var string $zone */
+        /** @var non-empty-string $defaultViewport */
+        /** @var non-empty-string $zone */
 
         // Validate --strategy explicitly: an unknown value must fail loudly rather
         // than silently fall through to the default and write a different hierarchy
@@ -139,6 +139,7 @@ abstract class AbstractMigrationTask extends BuildTask
     }
 
     /**
+     * @param non-empty-string      $defaultViewport
      * @param array<string, string> $viewportKeyMap
      */
     protected function createStrategy(

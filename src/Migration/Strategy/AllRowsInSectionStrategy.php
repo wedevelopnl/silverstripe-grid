@@ -25,7 +25,8 @@ use WeDevelop\Grid\Value\GridSettings;
 final readonly class AllRowsInSectionStrategy implements RowMappingStrategy
 {
     /**
-     * @param array<string, string> $viewportKeyMap Old viewport key → new key (e.g. 'MD' → 'md')
+     * @param non-empty-string      $defaultViewport
+     * @param array<string, string> $viewportKeyMap  Old viewport key → new key (e.g. 'MD' → 'md')
      */
     public function __construct(
         private ElementGrouper $grouper,
