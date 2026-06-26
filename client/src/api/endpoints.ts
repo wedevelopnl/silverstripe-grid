@@ -70,9 +70,8 @@ function attachDerivedFields(node: NodeWire): ElementNode {
     // server's hierarchy invariant, not on Zod. TypeScript cannot express the
     // narrower RowNode[] invariant without a cast because attachDerivedFields
     // returns the wide ElementNode union.
-    const children = node.children !== null
-      ? (node.children.map(attachDerivedFields) as RowNode[])
-      : null
+    const children =
+      node.children !== null ? (node.children.map(attachDerivedFields) as RowNode[]) : null
     return {
       ...node,
       nodeKey,
@@ -86,9 +85,8 @@ function attachDerivedFields(node: NodeWire): ElementNode {
   if (node.containerType === 'row') {
     // Same cast rationale as section: the server's hierarchy invariant (not Zod)
     // guarantees a row's children are columns.
-    const children = node.children !== null
-      ? (node.children.map(attachDerivedFields) as ColumnNode[])
-      : null
+    const children =
+      node.children !== null ? (node.children.map(attachDerivedFields) as ColumnNode[]) : null
     return {
       ...node,
       nodeKey,
@@ -102,9 +100,10 @@ function attachDerivedFields(node: NodeWire): ElementNode {
   if (node.containerType === 'column') {
     // Same cast rationale as section: the server's hierarchy invariant (not Zod)
     // guarantees a column's children are simple (leaf) elements.
-    const children = node.children !== null
-      ? (node.children.map(attachDerivedFields) as SimpleElementNode[])
-      : null
+    const children =
+      node.children !== null
+        ? (node.children.map(attachDerivedFields) as SimpleElementNode[])
+        : null
     return {
       ...node,
       nodeKey,
