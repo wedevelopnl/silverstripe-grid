@@ -74,6 +74,8 @@ export function usePendingTree(): UsePendingTreeReturn {
       afterElementId: number | null,
       effectiveTree: TreeApiResponse,
     ): { tree: TreeApiResponse; maps: ElementMaps } | null => {
+      // Entering the pending (tier-2) path: a tier-1 snapshot must not survive — see dnd-guide invariant #5.
+      overRectRef.current = null
       const activeKey = NodeIdentity.toKey(activeParsed.type, activeParsed.id)
       const afterKey =
         afterElementId === null ? null : NodeIdentity.toKey(activeParsed.type, afterElementId)

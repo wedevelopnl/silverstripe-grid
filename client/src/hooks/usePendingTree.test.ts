@@ -139,6 +139,54 @@ describe('usePendingTree', () => {
       expect(moveResult).toBeNull()
       expect(result.current.pendingTree).toBeNull()
     })
+
+    it('clears a stale overRectRef snapshot when entering the pending path', () => {
+      const { tree, element } = buildTwoColumnTree()
+      const { result } = renderHook(() => usePendingTree())
+
+      // Simulate a tier-1 (same-container) snapshot captured before the
+      // cross-container transition.
+      act(() => {
+        result.current.collisionRefs.overRectRef.current = {
+          id: 'element-5',
+          nodeRef: { current: null },
+        }
+      })
+
+      act(() => {
+        result.current.applyPendingMove(
+          createParsedDraggableId('element', element.self.id),
+          NodeIdentity.toKey('column', 20),
+          null,
+          tree,
+        )
+      })
+
+      expect(result.current.collisionRefs.overRectRef.current).toBeNull()
+    })
+
+    it('clears overRectRef even for a no-op move (same position)', () => {
+      const { tree } = buildTwoColumnTree()
+      const { result } = renderHook(() => usePendingTree())
+
+      act(() => {
+        result.current.collisionRefs.overRectRef.current = {
+          id: 'element-5',
+          nodeRef: { current: null },
+        }
+      })
+
+      act(() => {
+        result.current.applyPendingMove(
+          createParsedDraggableId('element', 5),
+          NodeIdentity.toKey('column', 10),
+          null,
+          tree,
+        )
+      })
+
+      expect(result.current.collisionRefs.overRectRef.current).toBeNull()
+    })
   })
 
   describe('getEffective', () => {
