@@ -2007,6 +2007,45 @@ final class GridMigrationServiceTest extends SapphireTest
         }
     }
 
+    public function testFailedPageLogsExceptionContext(): void
+    {
+        $pageId = $this->getPageId();
+        $areaId = 100;
+
+        $this->seeder->seedPage($pageId, $areaId);
+        $this->seeder->seedElement(9400, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'FAIL_ME',
+        ]);
+        $this->seeder->seedContentMedia(9400);
+
+        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+        try {
+            $service = $this->createService();
+            $service->run(
+                self::DEFAULT_VIEWPORT,
+                self::ZONE,
+                self::VIEWPORT_KEY_MAP,
+                dryRun: false,
+                pageIds: [$pageId],
+            );
+
+            $errorEntries = \array_values(\array_filter(
+                $this->logger->messages,
+                static fn (array $entry): bool => $entry['level'] === 'error',
+            ));
+            self::assertNotEmpty($errorEntries, 'At least one error-level entry must be logged');
+
+            $entry = $errorEntries[0];
+            self::assertSame($pageId, $entry['context']['pageId'], 'context[pageId] must equal the failed page ID');
+            self::assertSame($areaId, $entry['context']['areaId'], 'context[areaId] must equal the area ID');
+            self::assertArrayHasKey('exception', $entry['context'], 'context[exception] key must be present');
+            self::assertInstanceOf(\Throwable::class, $entry['context']['exception'], 'context[exception] must hold the Throwable');
+        } finally {
+            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+        }
+    }
+
     // ─── UseGrid flag migration ──────────────────────────────────
 
     public function testMigrationSetsUseGridOnDraftPage(): void
