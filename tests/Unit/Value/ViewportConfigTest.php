@@ -170,6 +170,28 @@ final class ViewportConfigTest extends TestCase
         self::assertSame([], ViewportConfig::mapFromArray([], 'overrides'));
     }
 
+    #[DataProvider('degenerateBoundsProvider')]
+    public function testConstructorDoesNotThrowOnDegenerateBounds(int $width, int $offset): void
+    {
+        // Invariant width>=1/offset>=0 is documented, NOT constructor-enforced, so
+        // degenerate values must construct without throwing — pinning the
+        // degrade-don't-throw contract DBGridSettings::getValue() depends on.
+        $config = new ViewportConfig($width, $offset, true);
+
+        self::assertSame($width, $config->width);
+        self::assertSame($offset, $config->offset);
+    }
+
+    /**
+     * @return iterable<string, array{int, int}>
+     */
+    public static function degenerateBoundsProvider(): iterable
+    {
+        yield 'zero width' => [0, 0];
+        yield 'negative width' => [-1, 0];
+        yield 'negative offset' => [6, -1];
+    }
+
     public function testEqualsReturnsTrueForIdenticalValues(): void
     {
         $first = new ViewportConfig(width: 6, offset: 1, visible: true);
