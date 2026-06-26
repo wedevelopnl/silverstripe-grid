@@ -536,4 +536,36 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertContains((int) $page1->ID, $pageIds);
         self::assertNotContains((int) $page2->ID, $pageIds);
     }
+
+    /**
+     * Regression guard: repeated invocations across the same reader instance return
+     * identical results after the tableHasColumn() cache is warm.
+     *
+     * NOTE: This test is designed to pass BOTH before and after the memoisation
+     * refactor — it is a characterisation/regression guard, not a red-first TDD test.
+     * Both getEligiblePages() and getPagesWithGridDisabled() funnel through
+     * findPageTablesWithColumn() → tableHasColumn(), so repeated calls exercise the
+     * instance-level cache path introduced by the refactor without changing observable
+     * behaviour.
+     */
+    public function testTableHasColumnResultsAreIdempotentAcrossRepeatedCalls(): void
+    {
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
+        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
+
+        $this->seeder->seedPage((int) $page1->ID, 100, useGrid: true);
+        $this->seeder->seedPage((int) $page2->ID, 200, useGrid: false);
+
+        // First invocations — caches are cold on the reader from setUp()
+        $eligible1 = $this->reader->getEligiblePages('draft');
+        $disabled1 = $this->reader->getPagesWithGridDisabled('draft');
+
+        // Second invocations on the SAME instance — caches are warm after memoisation;
+        // results must be byte-for-byte identical to the cold-cache calls above.
+        $eligible2 = $this->reader->getEligiblePages('draft');
+        $disabled2 = $this->reader->getPagesWithGridDisabled('draft');
+
+        self::assertSame($eligible1, $eligible2);
+        self::assertSame($disabled1, $disabled2);
+    }
 }
