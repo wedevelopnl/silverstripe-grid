@@ -154,6 +154,7 @@ final class ColumnClassResolverTest extends TestCase
         ];
 
         $this->expectException(InvalidGridValueException::class);
+        $this->expectExceptionMessage('Viewport key "lg" is not a valid breakpoint.');
 
         ColumnClassResolver::resolve($effective, self::threeViewportStub());
     }

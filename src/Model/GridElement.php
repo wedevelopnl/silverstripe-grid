@@ -78,11 +78,11 @@ class GridElement extends DataObject
     ];
 
     /**
-     * Declares the inverse of the parent's $owns so versioned publish/ownership
-     * traversal can locate the owning record. Required because the polymorphic
-     * 'Parent' has_one is skipped by RecursivePublishable's reverse-owner lookup
-     * (it guards out relations declared as DataObject::class); the explicit
-     * $owned_by forces the framework to follow Parent() via ParentClass.
+     * Declares this element's owner so versioned publish/ownership traversal can
+     * locate it. The polymorphic 'Parent' has_one is otherwise skipped by
+     * RecursivePublishable's reverse-owner lookup (it guards out relations declared
+     * as DataObject::class); the explicit $owned_by forces the framework to follow
+     * Parent() via ParentClass.
      *
      * @var list<string>
      */
