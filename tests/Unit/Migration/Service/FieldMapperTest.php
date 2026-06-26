@@ -72,27 +72,22 @@ final class FieldMapperTest extends TestCase
     }
 
     /**
-     * Override-viewport visibility against a visible default (size/offset match
-     * the default, so only visibility can drive an override).
+     * Override-viewport visibility values that do NOT produce an override:
+     * they either match the visible default or are "unset". Size/offset match
+     * the default in all cases, so only visibility could drive an override.
      *
-     * Each case: [rawOverrideVisibility, expectsOverride, ?expectedOverrideVisible].
-     *
-     * @return iterable<string, array{string|null, bool, bool|null}>
+     * @return iterable<string, array{string|null}>
      */
-    public static function overrideVisibilityProvider(): iterable
+    public static function noOverrideVisibilityProvider(): iterable
     {
-        yield 'visible matches default → no override' => ['visible', false, null];
-        yield 'hidden differs from default → override visible=false' => ['hidden', true, false];
-        yield 'empty string is unset → no override' => ['', false, null];
-        yield 'null is unset → no override' => [null, false, null];
+        yield 'visible matches default → no override' => ['visible'];
+        yield 'empty string is unset → no override' => [''];
+        yield 'null is unset → no override' => [null];
     }
 
-    #[DataProvider('overrideVisibilityProvider')]
-    public function testOverrideViewportVisibilityMapping(
-        ?string $rawVisibility,
-        bool $expectsOverride,
-        ?bool $expectedVisible,
-    ): void {
+    #[DataProvider('noOverrideVisibilityProvider')]
+    public function testOverrideVisibilityMatchingOrUnsetProducesNoOverride(?string $rawVisibility): void
+    {
         $element = LegacyElementFactory::content(overrides: [
             'sizeFields' => ['MD' => 8, 'XS' => 8],
             'offsetFields' => ['MD' => 0, 'XS' => 0],
@@ -103,10 +98,21 @@ final class FieldMapperTest extends TestCase
 
         $settings = $this->mapper->mapGridSettings($element, 'MD', ['MD' => 'md', 'XS' => 'xs']);
 
-        self::assertSame($expectsOverride, $settings->hasOverride('xs'));
-        if ($expectedVisible !== null) {
-            self::assertSame($expectedVisible, $settings->getOverride('xs')?->visible);
-        }
+        self::assertFalse($settings->hasOverride('xs'));
+    }
+
+    public function testOverrideVisibilityHiddenAgainstVisibleDefaultProducesHiddenOverride(): void
+    {
+        $element = LegacyElementFactory::content(overrides: [
+            'sizeFields' => ['MD' => 8, 'XS' => 8],
+            'offsetFields' => ['MD' => 0, 'XS' => 0],
+            'visibilityFields' => ['MD' => 'visible', 'XS' => 'hidden'],
+        ]);
+
+        $settings = $this->mapper->mapGridSettings($element, 'MD', ['MD' => 'md', 'XS' => 'xs']);
+
+        self::assertTrue($settings->hasOverride('xs'));
+        self::assertFalse($settings->getOverride('xs')?->visible);
     }
 
     public function testViewportKeyMappingApplied(): void
