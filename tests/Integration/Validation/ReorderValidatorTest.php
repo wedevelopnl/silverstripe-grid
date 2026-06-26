@@ -128,31 +128,37 @@ final class ReorderValidatorTest extends SapphireTest
 
     // -- Invalid cross-parent moves ---------------------------------------
 
-    public function testCrossParentRowToPageFails(): void
+    /**
+     * @return iterable<string, array{Closure(self): array{GridElement, DataObject}}>
+     */
+    public static function invalidCrossParentMoveProvider(): iterable
     {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $pageB = $this->objFromFixture(Page::class, 'test_page_2');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-
-        // Move row to page level — violates can_be_root: false
-        $result = $this->getValidator()->validate($row, $pageB);
-
-        self::assertTrue($result->isErr());
-        self::assertNotEmpty($result->errors());
+        yield 'row to page level' => [static function (self $test): array {
+            $page = $test->objFromFixture(Page::class, 'test_page');
+            $pageB = $test->objFromFixture(Page::class, 'test_page_2');
+            $section = GridTreeFactory::section($page);
+            $row = GridTreeFactory::row($section);
+            return [$row, $pageB];
+        }];
+        yield 'section into column' => [static function (self $test): array {
+            $page = $test->objFromFixture(Page::class, 'test_page');
+            $section = GridTreeFactory::section($page);
+            $row = GridTreeFactory::row($section);
+            $column = GridTreeFactory::column($row);
+            $sectionB = GridTreeFactory::section($page);
+            return [$sectionB, $column];
+        }];
     }
 
-    public function testCrossParentSectionToColumnFails(): void
+    /**
+     * @param Closure(self): array{GridElement, DataObject} $buildMove
+     */
+    #[DataProvider('invalidCrossParentMoveProvider')]
+    public function testInvalidCrossParentMoveFails(Closure $buildMove): void
     {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        [$element, $targetParent] = $buildMove($this);
 
-        $sectionB = GridTreeFactory::section($page);
-
-        // Move section into a column — Section is disallowed in Column
-        $result = $this->getValidator()->validate($sectionB, $column);
+        $result = $this->getValidator()->validate($element, $targetParent);
 
         self::assertTrue($result->isErr());
         self::assertNotEmpty($result->errors());
@@ -198,30 +204,37 @@ final class ReorderValidatorTest extends SapphireTest
         self::assertSame($column->singular_name(), $error->params['parent']);
     }
 
-    public function testPageLevelViolationCarriesHierarchyViolationCode(): void
+    /**
+     * @return iterable<string, array{Closure(self): array{GridElement, DataObject}}>
+     */
+    public static function hierarchyViolationCodeMoveProvider(): iterable
     {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $pageB = $this->objFromFixture(Page::class, 'test_page_2');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-
-        // Row to page level — PAGE_LEVEL_REJECTED
-        $result = $this->getValidator()->validate($row, $pageB);
-
-        self::assertTrue($result->isErr());
-        self::assertSame(ValidationErrorCode::HierarchyViolation, $result->errors()[0]->code);
+        yield 'page-level move' => [static function (self $test): array {
+            $page = $test->objFromFixture(Page::class, 'test_page');
+            $pageB = $test->objFromFixture(Page::class, 'test_page_2');
+            $section = GridTreeFactory::section($page);
+            $row = GridTreeFactory::row($section);
+            return [$row, $pageB];
+        }];
+        yield 'parent-rejected move' => [static function (self $test): array {
+            $page = $test->objFromFixture(Page::class, 'test_page');
+            $section = GridTreeFactory::section($page);
+            $row = GridTreeFactory::row($section);
+            $column = GridTreeFactory::column($row);
+            $sectionB = GridTreeFactory::section($page);
+            return [$sectionB, $column];
+        }];
     }
 
-    public function testParentViolationCarriesHierarchyViolationCode(): void
+    /**
+     * @param Closure(self): array{GridElement, DataObject} $buildMove
+     */
+    #[DataProvider('hierarchyViolationCodeMoveProvider')]
+    public function testViolationCarriesHierarchyViolationCode(Closure $buildMove): void
     {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
-        $sectionB = GridTreeFactory::section($page);
+        [$element, $targetParent] = $buildMove($this);
 
-        // Section into a Column — PARENT_REJECTED
-        $result = $this->getValidator()->validate($sectionB, $column);
+        $result = $this->getValidator()->validate($element, $targetParent);
 
         self::assertTrue($result->isErr());
         self::assertSame(ValidationErrorCode::HierarchyViolation, $result->errors()[0]->code);

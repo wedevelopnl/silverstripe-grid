@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Validation;
 
+use Closure;
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
@@ -103,102 +106,77 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
     // -- Invalid placements ------------------------------------------------
 
-    public function testRowAtPageLevelFails(): void
+    /**
+     * Each case builds an element and mutates it onto a disallowed parent,
+     * returning the subject to validate. The closure resolves fixtures.
+     *
+     * @return iterable<string, array{Closure(self): GridElement}>
+     */
+    public static function invalidPlacementProvider(): iterable
     {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-
-        // Create Row with valid parent first, then mutate to invalid placement
-        $row = GridTreeFactory::row($section);
-        $row->ParentID = $page->ID;
-        $row->ParentClass = $page::class;
-
-        $result = $this->getService()->validate($row);
-
-        self::assertTrue($result->isErr());
+        yield 'row at page level' => [static function (self $test): GridElement {
+            $page = $test->objFromFixture(Page::class, 'test_page');
+            $section = GridTreeFactory::section($page);
+            $row = GridTreeFactory::row($section);
+            $row->ParentID = $page->ID;
+            $row->ParentClass = $page::class;
+            return $row;
+        }];
+        yield 'column at page level' => [static function (self $test): GridElement {
+            $page = $test->objFromFixture(Page::class, 'test_page');
+            $section = GridTreeFactory::section($page);
+            $row = GridTreeFactory::row($section);
+            $column = GridTreeFactory::column($row);
+            $column->ParentID = $page->ID;
+            $column->ParentClass = $page::class;
+            return $column;
+        }];
+        yield 'content element at page level' => [static function (self $test): GridElement {
+            $page = $test->objFromFixture(Page::class, 'test_page');
+            $section = GridTreeFactory::section($page);
+            $row = GridTreeFactory::row($section);
+            $column = GridTreeFactory::column($row);
+            $content = GridTreeFactory::contentElement($column);
+            $content->ParentID = $page->ID;
+            $content->ParentClass = $page::class;
+            return $content;
+        }];
+        yield 'section inside section' => [static function (self $test): GridElement {
+            $page = $test->objFromFixture(Page::class, 'test_page');
+            $sectionA = GridTreeFactory::section($page);
+            $sectionB = GridTreeFactory::section($page);
+            $sectionB->ParentID = $sectionA->ID;
+            $sectionB->ParentClass = $sectionA::class;
+            return $sectionB;
+        }];
+        yield 'column inside section' => [static function (self $test): GridElement {
+            $page = $test->objFromFixture(Page::class, 'test_page');
+            $section = GridTreeFactory::section($page);
+            $row = GridTreeFactory::row($section);
+            $column = GridTreeFactory::column($row);
+            $column->ParentID = $section->ID;
+            $column->ParentClass = $section::class;
+            return $column;
+        }];
+        yield 'row inside column' => [static function (self $test): GridElement {
+            $page = $test->objFromFixture(Page::class, 'test_page');
+            $section = GridTreeFactory::section($page);
+            $row = GridTreeFactory::row($section);
+            $column = GridTreeFactory::column($row);
+            $row2 = GridTreeFactory::row($section);
+            $row2->ParentID = $column->ID;
+            $row2->ParentClass = $column::class;
+            return $row2;
+        }];
     }
 
-    public function testColumnAtPageLevelFails(): void
+    /**
+     * @param Closure(self): GridElement $build
+     */
+    #[DataProvider('invalidPlacementProvider')]
+    public function testInvalidPlacementFails(Closure $build): void
     {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-
-        // Create Column with valid parent first, then mutate
-        $column = GridTreeFactory::column($row);
-        $column->ParentID = $page->ID;
-        $column->ParentClass = $page::class;
-
-        $result = $this->getService()->validate($column);
-
-        self::assertTrue($result->isErr());
-        self::assertNotEmpty($result->errors());
-    }
-
-    public function testContentElementAtPageLevelFails(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
-
-        // Create ContentElement with valid parent first, then mutate
-        $content = GridTreeFactory::contentElement($column);
-        $content->ParentID = $page->ID;
-        $content->ParentClass = $page::class;
-
-        $result = $this->getService()->validate($content);
-
-        self::assertTrue($result->isErr());
-        self::assertNotEmpty($result->errors());
-    }
-
-    public function testSectionInsideSectionFails(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $sectionA = GridTreeFactory::section($page);
-        $sectionB = GridTreeFactory::section($page);
-
-        // Mutate B to be child of A
-        $sectionB->ParentID = $sectionA->ID;
-        $sectionB->ParentClass = $sectionA::class;
-
-        $result = $this->getService()->validate($sectionB);
-
-        self::assertTrue($result->isErr());
-        self::assertNotEmpty($result->errors());
-    }
-
-    public function testColumnInsideSectionFails(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-
-        // Create Column with valid parent first, then mutate
-        $column = GridTreeFactory::column($row);
-        $column->ParentID = $section->ID;
-        $column->ParentClass = $section::class;
-
-        $result = $this->getService()->validate($column);
-
-        self::assertTrue($result->isErr());
-        self::assertNotEmpty($result->errors());
-    }
-
-    public function testRowInsideColumnFails(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
-
-        // Create a second Row with valid parent, then mutate into Column
-        $row2 = GridTreeFactory::row($section);
-        $row2->ParentID = $column->ID;
-        $row2->ParentClass = $column::class;
-
-        $result = $this->getService()->validate($row2);
+        $result = $this->getService()->validate($build($this));
 
         self::assertTrue($result->isErr());
         self::assertNotEmpty($result->errors());
@@ -238,34 +216,37 @@ final class HierarchyValidationServiceTest extends SapphireTest
         self::assertArrayHasKey('parent', $parentError->params);
     }
 
-    public function testPageLevelViolationCarriesHierarchyViolationCode(): void
+    /**
+     * @return iterable<string, array{Closure(self): GridElement}>
+     */
+    public static function hierarchyViolationCodeProvider(): iterable
     {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-
-        // Row at page level — PAGE_LEVEL_REJECTED
-        $row = GridTreeFactory::row($section);
-        $row->ParentID = $page->ID;
-        $row->ParentClass = $page::class;
-
-        $result = $this->getService()->validate($row);
-
-        self::assertTrue($result->isErr());
-        self::assertSame(ValidationErrorCode::HierarchyViolation, $result->errors()[0]->code);
+        yield 'page-level violation' => [static function (self $test): GridElement {
+            $page = $test->objFromFixture(Page::class, 'test_page');
+            $section = GridTreeFactory::section($page);
+            $row = GridTreeFactory::row($section);
+            $row->ParentID = $page->ID;
+            $row->ParentClass = $page::class;
+            return $row;
+        }];
+        yield 'parent violation' => [static function (self $test): GridElement {
+            $page = $test->objFromFixture(Page::class, 'test_page');
+            $section = GridTreeFactory::section($page);
+            $row = GridTreeFactory::row($section);
+            $column = GridTreeFactory::column($row);
+            $column->ParentID = $section->ID;
+            $column->ParentClass = $section::class;
+            return $column;
+        }];
     }
 
-    public function testParentViolationCarriesHierarchyViolationCode(): void
+    /**
+     * @param Closure(self): GridElement $build
+     */
+    #[DataProvider('hierarchyViolationCodeProvider')]
+    public function testViolationCarriesHierarchyViolationCode(Closure $build): void
     {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-
-        // Column directly under a Section — PARENT_REJECTED
-        $column = GridTreeFactory::column($row);
-        $column->ParentID = $section->ID;
-        $column->ParentClass = $section::class;
-
-        $result = $this->getService()->validate($column);
+        $result = $this->getService()->validate($build($this));
 
         self::assertTrue($result->isErr());
         self::assertSame(ValidationErrorCode::HierarchyViolation, $result->errors()[0]->code);
