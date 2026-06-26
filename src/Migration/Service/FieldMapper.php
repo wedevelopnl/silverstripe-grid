@@ -103,8 +103,7 @@ final class FieldMapper
         // Size=0 means "not set" (column missing or never configured) — default to full width
         $rawWidth = $element->sizeFields[$defaultViewport] ?? 0;
 
-        /** @var int<0, max> $defaultRawOffset */
-        $defaultRawOffset = $element->offsetFields[$defaultViewport] ?? 0;
+        $defaultRawOffset = \max(0, $element->offsetFields[$defaultViewport] ?? 0);
         $defaultConfig = new ViewportConfig(
             width: $rawWidth > 0 ? $rawWidth : $this->columnCount,
             offset: $defaultRawOffset,
@@ -126,7 +125,7 @@ final class FieldMapper
             }
 
             $size = $element->sizeFields[$oldKey] ?? 0;
-            $offset = $element->offsetFields[$oldKey] ?? 0;
+            $offset = \max(0, $element->offsetFields[$oldKey] ?? 0);
             $visible = $this->mapVisibility($element->visibilityFields[$oldKey] ?? null, $element->id, $newKey);
 
             // Size=0 with no offset and no explicit visibility means the field was never set
@@ -134,7 +133,6 @@ final class FieldMapper
                 continue;
             }
 
-            /** @var int<0, max> $offset */
             $overrideConfig = new ViewportConfig(
                 width: $size > 0 ? $size : $defaultConfig->width,
                 offset: $offset,
