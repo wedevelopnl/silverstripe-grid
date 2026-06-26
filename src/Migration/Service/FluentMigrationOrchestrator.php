@@ -32,6 +32,8 @@ final readonly class FluentMigrationOrchestrator
     /**
      * @param array<string, string> $viewportKeyMap
      * @param list<int>|null $pageIds
+     * @param bool $stopOnFirstFailure When true, halt the batch after the first page that
+     *     fails to migrate. Forwarded to each per-locale {@see GridMigrationService::run()}.
      * @return int<0, max> Total pages that failed to migrate across all locales
      */
     public function run(
@@ -40,6 +42,7 @@ final readonly class FluentMigrationOrchestrator
         array $viewportKeyMap,
         bool $dryRun = false,
         ?array $pageIds = null,
+        bool $stopOnFirstFailure = false,
     ): int {
         $model = $this->detector->detect();
 
@@ -60,6 +63,7 @@ final readonly class FluentMigrationOrchestrator
                     $dryRun,
                     $pageIds,
                     $isDefault,
+                    $stopOnFirstFailure,
                 ): int {
                     $state->setLocale($localeCode);
 
@@ -74,7 +78,7 @@ final readonly class FluentMigrationOrchestrator
                     // Reconcile grid-disabled pages once: the UseGrid writes hit
                     // locale-invariant base tables, so only the default-locale pass
                     // needs them — repeating per locale is redundant I/O and log noise.
-                    return $service->run($defaultViewport, $zone, $viewportKeyMap, $dryRun, $pageIds, $isDefault);
+                    return $service->run($defaultViewport, $zone, $viewportKeyMap, $dryRun, $pageIds, $isDefault, $stopOnFirstFailure);
                 },
             );
         }

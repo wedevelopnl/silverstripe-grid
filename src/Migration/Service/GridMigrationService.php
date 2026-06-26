@@ -47,6 +47,13 @@ final class GridMigrationService
     /**
      * Run the migration for all eligible pages (or a filtered subset).
      *
+     * **Per-page atomicity**: each page is wrapped in its own database transaction
+     * ({@see migratePage()}). A failure mid-batch leaves already-migrated pages
+     * committed; they will be skipped on a re-run via the idempotency guard in
+     * {@see hasExistingSections()}. The batch continues past the failure by
+     * default; pass `$stopOnFirstFailure = true` to halt after the first page that
+     * fails.
+     *
      * @param string $defaultViewport Old viewport key used as default (e.g. 'MD')
      * @param string $zone Zone name for created Sections
      * @param array<string, string> $viewportKeyMap Old viewport key → new key (e.g. 'MD' → 'md')
@@ -56,6 +63,9 @@ final class GridMigrationService
      *     The Fluent orchestrator runs this once (on the default-locale pass) because the
      *     UseGrid writes target locale-invariant base/_Live tables; running it per locale
      *     would repeat identical writes and log lines N times.
+     * @param bool $stopOnFirstFailure When true, halt the batch after the first page that
+     *     fails to migrate. Already-migrated pages remain committed and are skippable on
+     *     re-run via the idempotency guard.
      * @return int<0, max> Number of pages that failed to migrate
      */
     public function run(
@@ -65,9 +75,14 @@ final class GridMigrationService
         bool $dryRun = false,
         ?array $pageIds = null,
         bool $reconcileDisabledPages = true,
+        bool $stopOnFirstFailure = false,
     ): int {
         $eligiblePages = $this->reader->getEligiblePages('draft', $pageIds);
         $failures = 0;
+        /** @var list<int> $succeeded */
+        $succeeded = [];
+        /** @var list<int> $failed */
+        $failed = [];
 
         foreach ($eligiblePages as $pageInfo) {
             $pageId = $pageInfo['pageId'];
@@ -76,15 +91,37 @@ final class GridMigrationService
 
             try {
                 $this->migratePage($pageId, $areaId, $pageClassName, $zone, $dryRun, $defaultViewport, $viewportKeyMap);
+                $succeeded[] = $pageId;
             } catch (Throwable $exception) {
                 $failures++;
+                $failed[] = $pageId;
                 $this->logger->error('Migration failed for page {pageId}: {message}', [
                     'pageId' => $pageId,
                     'areaId' => $areaId,
                     'message' => $exception->getMessage(),
                     'exception' => $exception,
                 ]);
+
+                if ($stopOnFirstFailure) {
+                    break;
+                }
             }
+        }
+
+        if ($failed === []) {
+            $this->logger->info(
+                'Migration batch complete: {succeeded} page(s) succeeded, 0 failed.',
+                ['succeeded' => \count($succeeded)],
+            );
+        } else {
+            $this->logger->warning(
+                'Migration batch complete: {succeeded} page(s) succeeded, {failedCount} failed (page IDs: {failedIds}).',
+                [
+                    'succeeded' => \count($succeeded),
+                    'failedCount' => \count($failed),
+                    'failedIds' => \implode(', ', $failed),
+                ],
+            );
         }
 
         if (!$dryRun && $reconcileDisabledPages) {

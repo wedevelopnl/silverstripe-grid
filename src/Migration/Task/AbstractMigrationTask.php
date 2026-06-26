@@ -39,6 +39,7 @@ abstract class AbstractMigrationTask extends BuildTask
             new InputOption('viewport-map', null, InputOption::VALUE_REQUIRED, 'Comma-separated old=new viewport key pairs'),
             new InputOption('page-ids', null, InputOption::VALUE_REQUIRED, 'Comma-separated page IDs to migrate'),
             new InputOption('strategy', null, InputOption::VALUE_REQUIRED, 'Row mapping strategy: "sections" (default) or "single-section"', 'sections'),
+            new InputOption('stop-on-first-failure', null, InputOption::VALUE_NONE, 'Halt the batch after the first page that fails to migrate'),
         ];
     }
 
@@ -80,6 +81,7 @@ abstract class AbstractMigrationTask extends BuildTask
 
         $dryRun = (bool) $input->getOption('dry-run');
         $force = (bool) $input->getOption('force');
+        $stopOnFirstFailure = (bool) $input->getOption('stop-on-first-failure');
 
         if (!$dryRun && !$force) {
             if (!$input->isInteractive()) {
@@ -128,6 +130,7 @@ abstract class AbstractMigrationTask extends BuildTask
             $viewportKeyMap,
             $dryRun,
             $pageIds,
+            $stopOnFirstFailure,
         );
 
         if ($failures > 0) {
@@ -183,6 +186,7 @@ abstract class AbstractMigrationTask extends BuildTask
         array $viewportKeyMap,
         bool $dryRun,
         ?array $pageIds,
+        bool $stopOnFirstFailure,
     ): int;
 
     /**
