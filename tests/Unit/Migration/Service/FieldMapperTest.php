@@ -12,6 +12,7 @@ use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
+use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 
 #[CoversClass(FieldMapper::class)]
@@ -1048,6 +1049,37 @@ final class FieldMapperTest extends TestCase
             \array_merge(self::allMediaFieldsPresent(), ['ContentColumns' => null])
         ));
         self::assertSame(0, $resultNull->ContentColumns);
+    }
+
+    // ─── Media key set parity: EXPECTED_MEDIA_KEYS ↔ MEDIA_FIELDS ───────────
+
+    public function testExpectedMediaKeysMatchesMediaFieldsMinusHtml(): void
+    {
+        // EXPECTED_MEDIA_KEYS is the non-HTML subset of LegacyDataReader::MEDIA_FIELDS.
+        // HTML is handled separately via LegacyElement->extraData and is intentionally
+        // excluded from the mapping path. Both constants are private, so reflection
+        // is used here — we do NOT widen visibility just to enable a test.
+        //
+        // Order is not semantically significant for these field lists, so
+        // assertEqualsCanonicalizing is used: a reordering won't produce a false
+        // failure, but a missing or extra entry will.
+        //
+        // This test will FAIL if a field is added to MEDIA_FIELDS but not to
+        // EXPECTED_MEDIA_KEYS (or vice versa), surfacing the drift immediately.
+        $expectedMediaKeys = (new \ReflectionClassConstant(FieldMapper::class, 'EXPECTED_MEDIA_KEYS'))->getValue();
+        $mediaFields = (new \ReflectionClassConstant(LegacyDataReader::class, 'MEDIA_FIELDS'))->getValue();
+
+        $mediaFieldsWithoutHtml = \array_values(\array_filter(
+            $mediaFields,
+            static fn (string $field): bool => $field !== 'HTML',
+        ));
+
+        self::assertEqualsCanonicalizing(
+            $mediaFieldsWithoutHtml,
+            $expectedMediaKeys,
+            'EXPECTED_MEDIA_KEYS must equal MEDIA_FIELDS minus "HTML"; '
+            . 'add any new media field to both constants, or document the intentional exclusion.',
+        );
     }
 
     /**

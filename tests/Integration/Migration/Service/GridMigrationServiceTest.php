@@ -754,7 +754,7 @@ final class GridMigrationServiceTest extends SapphireTest
         }
         self::assertNotNull($liveOnlyLog, 'An info log must be emitted when live-only elements are found');
         self::assertStringContainsString((string) $pageId, $liveOnlyLog, 'The log must name the page ID');
-        self::assertStringContainsString('2', $liveOnlyLog, 'The log must name the live-only element count');
+        self::assertStringContainsString('2 live-only', $liveOnlyLog, 'The log must name the live-only element count');
 
         // Negative case: a page with only shared elements (draft + live) must
         // not emit a live-only info log — the grouping caveat does not apply.

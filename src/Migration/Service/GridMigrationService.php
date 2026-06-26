@@ -65,7 +65,9 @@ final class GridMigrationService
      *     would repeat identical writes and log lines N times.
      * @param bool $stopOnFirstFailure When true, halt the batch after the first page that
      *     fails to migrate. Already-migrated pages remain committed and are skippable on
-     *     re-run via the idempotency guard.
+     *     re-run via the idempotency guard. Note: halts only the per-page loop —
+     *     {@see migrateDisabledGridPages()} still runs afterward (it writes UseGrid = 0
+     *     only on already-disabled pages, a disjoint set, so it is safe to continue).
      * @return int<0, max> Number of pages that failed to migrate
      */
     public function run(
