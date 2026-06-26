@@ -473,17 +473,25 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
             throw InvalidGridValueException::forEmptyViewports();
         }
 
-        $filtered = [];
-
+        // Validate every enabled key exists before filtering, so a typo in
+        // enabled_viewports surfaces at boot rather than silently dropping a key.
         foreach ($enabled as $key) {
             if (!isset($allViewports[$key])) {
                 throw InvalidGridValueException::forViewport($key);
             }
-
-            $filtered[$key] = $allViewports[$key];
         }
 
-        return $filtered;
+        $enabledLookup = array_fill_keys($enabled, true);
+
+        // Iterate $allViewports (definition / breakpoint order) so the resolved
+        // map is always ascending, independent of the order keys appear in
+        // enabled_viewports. Downstream cascade dedupe (ColumnClassResolver) and
+        // getVisibilityClasses() derive the "next viewport" by array position.
+        return array_filter(
+            $allViewports,
+            static fn (string $key): bool => isset($enabledLookup[$key]),
+            ARRAY_FILTER_USE_KEY,
+        );
     }
 
     /**
