@@ -30,6 +30,16 @@ final readonly class FluentMigrationOrchestrator
     ) {}
 
     /**
+     * Precondition: a Fluent default locale must resolve. {@see localePlan()}
+     * derives its passes from {@see Locale::getDefault()} plus the cached
+     * locales, so when no default resolves (Fluent returns null only when zero
+     * locales exist) the plan is EMPTY: the loop runs zero passes, no content
+     * migrates, and the grid-disabled reconciliation never fires. The Fluent
+     * task enforces this upstream — {@see \WeDevelop\Grid\Migration\Task\MigrateGridWithFluentTask::preflight()}
+     * fails with a clear "no default locale" error rather than letting this
+     * method silently no-op. When a default IS resolvable, reconciliation runs
+     * on exactly the default-locale pass.
+     *
      * @param array<string, string> $viewportKeyMap
      * @param list<int>|null $pageIds
      * @param bool $stopOnFirstFailure When true, halt the batch after the first page that

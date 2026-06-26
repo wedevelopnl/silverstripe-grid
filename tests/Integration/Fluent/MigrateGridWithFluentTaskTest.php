@@ -11,6 +11,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Output\BufferedOutput;
+use TractorCow\Fluent\Model\Locale;
 use WeDevelop\Grid\Migration\Task\MigrateGridWithFluentTask;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 
@@ -77,5 +78,35 @@ final class MigrateGridWithFluentTaskTest extends SapphireTest
 
         self::assertSame(Command::FAILURE, $result);
         self::assertStringContainsString('Ambiguous legacy localisation', $buffered->fetch());
+    }
+
+    public function testRefusesWhenNoDefaultLocaleResolves(): void
+    {
+        // With no locales configured, Locale::getDefault() resolves to null
+        // (Fluent falls back to the first locale only when one exists). The
+        // orchestrator's per-locale plan is then empty, so its entire loop —
+        // including the grid-disabled reconciliation pass — silently no-ops and
+        // the task would report SUCCESS having migrated nothing. The preflight
+        // must catch the missing default locale and fail loudly instead.
+        Locale::get()->removeAll();
+        Locale::clearCached();
+
+        $task = new MigrateGridWithFluentTask();
+        $definition = new InputDefinition($task->getOptions());
+        // --dry-run bypasses the confirmation gate, so any FAILURE here is the
+        // preflight guard (which runs before the gate), not the gate itself.
+        $input = new ArrayInput([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--dry-run' => true,
+        ], $definition);
+        $input->setInteractive(false);
+        $buffered = new BufferedOutput();
+        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+
+        $exitCode = $task->execute($input, $output);
+
+        self::assertSame(Command::FAILURE, $exitCode);
+        self::assertStringContainsString('default locale', $buffered->fetch());
     }
 }
