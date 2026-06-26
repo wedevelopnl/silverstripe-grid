@@ -42,6 +42,7 @@ describe('GridEditorShell', () => {
       screen.getByTestId('canvas-child'),
     )
     expect(screen.getByTestId('viewport-switcher')).toBeInTheDocument()
+    expect(screen.getByTestId('grid-editor-canvas')).not.toHaveAttribute('data-status')
   })
 
   it('flags the canvas modified when any section is modified', () => {

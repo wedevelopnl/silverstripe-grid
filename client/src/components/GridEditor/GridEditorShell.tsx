@@ -63,7 +63,10 @@ export default function GridEditorShell({
 }: GridEditorShellProps) {
   const collapseState = useCollapseState(pageId)
   const gridEditorContextValue = useMemo(() => ({ pageId, zone }), [pageId, zone])
-  const anyModified = sections.some((section) => section.status === 'modified')
+  const anyModified = useMemo(
+    () => sections.some((section) => section.status === 'modified'),
+    [sections],
+  )
 
   return (
     <div
