@@ -39,7 +39,7 @@ client/src/js/bridge/ # SilverStripe CMS integration (entwine, Injector)
 client/src/js/bundles/ # Entry points
 client/src/js/components/ # React components
 client/src/js/hooks/  # React hooks, query keys, TanStack Query, mutations
-client/src/js/types/  # Zod schemas, TypeScript types
+client/src/js/types/  # Valibot schemas, TypeScript types
 client/src/js/utils/  # Frontend utility functions
 client/src/js/testing/ # Test infrastructure (factories, helpers, mocks)
 client/src/js/i18n/   # Internationalization utilities
@@ -53,7 +53,7 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 
 - PSR-4 namespace: `WeDevelop\Grid\` → `src/`
 - Frontend: React 18, TypeScript 6, Vite 8, SCSS
-- Key frontend libs: dnd-kit (drag & drop), TanStack Query (data fetching), Zod (validation)
+- Key frontend libs: dnd-kit (drag & drop), TanStack Query (data fetching), Valibot (validation)
 - Testing: Vitest + React Testing Library (jsdom), PHPUnit 11, Playwright (E2E)
 - Node: >=26 (pinned to 26.4.0 in `.nvmrc`)
 - Docker dev env: Caddy + PHP + MySQL 8 (see `.docker/`)

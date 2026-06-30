@@ -10,7 +10,7 @@ applyTo: "**/*.{ts,tsx}"
 - React 18, TypeScript 6, Vite 8, SCSS
 - dnd-kit for drag & drop
 - TanStack Query for data fetching
-- Zod for runtime validation and schema definitions
+- Valibot for runtime validation and schema definitions
 
 ## Structure
 
@@ -28,7 +28,7 @@ applyTo: "**/*.{ts,tsx}"
 
 ## Key Patterns
 
-- **Zod-first types**: Schemas defined first in `client/src/js/types/`, TS types inferred via `z.infer<>`. Discriminated unions for element nodes. Type guards for narrowing.
+- **Valibot-first types**: Schemas defined first in `client/src/js/types/`, TS types inferred via `v.InferOutput<>`. Discriminated unions for element nodes. Type guards for narrowing.
 - **Query key factory**: `client/src/js/hooks/queryKeys.ts` provides factories for TanStack Query cache keys. Required for correct cache invalidation across mutations.
 - **API client layers**: 4-file architecture in `client/src/js/api/` — `client.ts` (HTTP primitives), `endpoints.ts` (business operations), `config.ts` (CMS globals like security token, base URL), `errors.ts` (typed error classes).
 - **Bridge pattern**: entwine in `client/src/js/bridge/` mounts React components into jQuery DOM. Injector wraps SilverStripe DI. New components registered via `client/src/js/boot/registerComponents.ts`.

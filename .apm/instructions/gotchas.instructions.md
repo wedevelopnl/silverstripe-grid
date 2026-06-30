@@ -32,6 +32,12 @@ applyTo: "**/*"
 - **Entwine `onmatch` does NOT fire for Pjax-loaded content**: jQuery.entwine `onmatch` is unreliable for elements loaded via SilverStripe CMS Pjax navigation, even when the entwine callback registers successfully. Use a vanilla `MutationObserver` instead for detecting elements in AJAX-loaded CMS forms. See `client/src/js/bridge/blockMediaFields.ts` for the working pattern
 - **`silverstripe.d.ts` has a top-level `import`** which makes it a module — interfaces like `JQueryEntwineElement`, `JQueryStatic`, `EntwineRules` must live inside the `declare global {}` block to be globally available. Module-scoped interfaces are only accessible within that file or via explicit import
 
+## Valibot (API boundary validation)
+
+- **`v.record` accepts arrays as records** (unlike zod's `z.record`, which rejects them): a non-empty array validates as `{ "0": …, "1": … }`. PHP-encoded map fields (`gridSettings.overrides`, `allowedTypes`) must coerce the empty-array sentinel `[]`→`{}` AND reject non-empty arrays — see the `phpMapSchema` helper in `client/src/js/types/schemas.ts`. Fields that are never PHP's empty-map sentinel (e.g. `extensions`) reject ALL arrays with a leading `v.custom` guard (no `[]`→`{}` coercion), matching the original zod behaviour. Verify any "must be an object map" field empirically — `v.record` alone is not strict enough.
+- **Recursive discriminated-union schemas need an `as v.GenericSchema<T>` cast at the boundary**: valibot's `~standard` (StandardSchema) output inference cannot resolve the recursive node union and widens map fields to `unknown`, even though `v.InferOutput` resolves correctly and runtime validation is intact. `elementNodeWireSchema` casts the union to `v.GenericSchema<ElementNodeWire>`. This is a type-only escape hatch, not a validation gap.
+- **`v.pipe` output inference**: in a coerce-then-validate pipe, the array/type guard (`v.custom`) must come BEFORE the `v.transform`/`v.record`, so the trailing schema determines the pipe's output type. An action placed after the transform pins the output to `unknown`.
+
 ## Tooling
 
 - **CLAUDE.md and AGENTS.md are regenerated from `.apm/instructions/` on every `apm compile`** — direct edits to the generated files get overwritten silently. Edit the APM sources instead.
