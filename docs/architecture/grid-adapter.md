@@ -177,7 +177,7 @@ environment:
   SS_GRID_ADAPTER: Vendor\App\Adapter\YourAdapter
 ```
 
-`.docker/env.sh` seeds `SS_GRID_ADAPTER=bootstrap` into the generated `.docker/.env`, so first-run `task up` succeeds; edit the file or set the variable in your shell to switch.
+`.docker/env.sh` seeds `SS_GRID_ADAPTER=tailwind` into the generated `.docker/.env`, so first-run `task up` succeeds; edit the file or set the variable in your shell to switch.
 
 ### 5. Optional: YAML Configuration
 

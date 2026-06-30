@@ -7,10 +7,10 @@ namespace WeDevelop\Grid\Tests\Integration\Forms;
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Config\Config;
-use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Forms\GridSettingsField;
 use WeDevelop\Grid\Model\Column;
@@ -34,7 +34,12 @@ final class GridSettingsFieldTest extends SapphireTest
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
-        $this->adapter = Injector::inst()->get(GridAdapterInterface::class);
+        // Wire the field to a concrete instance of the default preset (Tailwind)
+        // rather than resolving GridAdapterInterface from the container, so the
+        // viewport assertions below are deterministic and independent of whatever
+        // adapter the container happens to be configured with. Tailwind's topology
+        // (5 viewports, default `sm`, 12 columns) drives the expected values.
+        $this->adapter = new TailwindAdapter();
     }
 
     private function createField(string $name = 'GridSettings'): GridSettingsField
@@ -90,17 +95,17 @@ final class GridSettingsFieldTest extends SapphireTest
     {
         $field = $this->createField();
         $field->setValue([
-            'md' => ['width' => '6', 'offset' => '2', 'visible' => '1'],
+            'sm' => ['width' => '6', 'offset' => '2', 'visible' => '1'],
             'lg' => ['width' => '4', 'offset' => '1', 'override' => '1', 'visible' => '1'],
         ]);
 
         $viewportData = $field->getViewportData();
 
-        $md = $viewportData->find('Key', 'md');
-        self::assertNotNull($md);
-        self::assertSame(6, $md->Width);
-        self::assertSame(2, $md->Offset);
-        self::assertTrue($md->Visible);
+        $sm = $viewportData->find('Key', 'sm');
+        self::assertNotNull($sm);
+        self::assertSame(6, $sm->Width);
+        self::assertSame(2, $sm->Offset);
+        self::assertTrue($sm->Visible);
 
         $lg = $viewportData->find('Key', 'lg');
         self::assertNotNull($lg);
@@ -113,32 +118,32 @@ final class GridSettingsFieldTest extends SapphireTest
     {
         $field = $this->createField();
         $field->setValue([
-            'md' => [],
+            'sm' => [],
         ]);
 
-        $md = $field->getViewportData()->find('Key', 'md');
-        self::assertNotNull($md);
+        $sm = $field->getViewportData()->find('Key', 'sm');
+        self::assertNotNull($sm);
         // Missing width defaults to columnCount (12)
-        self::assertSame(12, $md->Width);
+        self::assertSame(12, $sm->Width);
         // Missing offset defaults to 0
-        self::assertSame(0, $md->Offset);
+        self::assertSame(0, $sm->Offset);
         // Missing visible checkbox means false
-        self::assertFalse($md->Visible);
+        self::assertFalse($sm->Visible);
     }
 
     public function testSetValueWithFormArrayNoOverrides(): void
     {
         $field = $this->createField();
         $field->setValue([
-            'md' => ['width' => '8', 'offset' => '0', 'visible' => '1'],
+            'sm' => ['width' => '8', 'offset' => '0', 'visible' => '1'],
         ]);
 
         $viewportData = $field->getViewportData();
 
         // Non-default viewports should not have overrides
-        $xs = $viewportData->find('Key', 'xs');
-        self::assertNotNull($xs);
-        self::assertFalse($xs->Override);
+        $md = $viewportData->find('Key', 'md');
+        self::assertNotNull($md);
+        self::assertFalse($md->Override);
 
         $lg = $viewportData->find('Key', 'lg');
         self::assertNotNull($lg);
@@ -149,7 +154,7 @@ final class GridSettingsFieldTest extends SapphireTest
     {
         $field = $this->createField();
         $field->setValue([
-            'md' => ['width' => '6', 'offset' => '0', 'visible' => '1'],
+            'sm' => ['width' => '6', 'offset' => '0', 'visible' => '1'],
             'lg' => ['width' => '4', 'offset' => '1'],
         ]);
 
@@ -161,22 +166,22 @@ final class GridSettingsFieldTest extends SapphireTest
 
     public function testEarlyViewportWithoutOverrideDoesNotDropLaterOverride(): void
     {
-        // 'xs' is an early non-default viewport with no override flag; 'lg' is a
-        // later viewport that DOES carry one. The loop must `continue` past xs
-        // and still register lg's override. A `break` mutant would abort on xs
-        // and silently drop the lg override.
+        // 'md' is an early non-default viewport with no override flag; 'lg' is a
+        // later viewport that DOES carry one. The loop must `continue` past md
+        // and still register lg's override. A `break` mutant would abort on md
+        // and silently drop the lg override. ('sm' is the default viewport.)
         $field = $this->createField();
         $field->setValue([
-            'md' => ['width' => '12', 'offset' => '0', 'visible' => '1'],
-            'xs' => ['width' => '6', 'offset' => '0'],
+            'sm' => ['width' => '12', 'offset' => '0', 'visible' => '1'],
+            'md' => ['width' => '6', 'offset' => '0'],
             'lg' => ['width' => '4', 'offset' => '2', 'override' => '1', 'visible' => '1'],
         ]);
 
         $viewportData = $field->getViewportData();
 
-        $xs = $viewportData->find('Key', 'xs');
-        self::assertNotNull($xs);
-        self::assertFalse($xs->Override, 'xs carries no override flag');
+        $md = $viewportData->find('Key', 'md');
+        self::assertNotNull($md);
+        self::assertFalse($md->Override, 'md carries no override flag');
 
         $lg = $viewportData->find('Key', 'lg');
         self::assertNotNull($lg);
@@ -191,8 +196,8 @@ final class GridSettingsFieldTest extends SapphireTest
     {
         $field = $this->createField();
 
-        // Bootstrap adapter has 6 viewports: xs, sm, md, lg, xl, xxl
-        self::assertCount(6, $field->getViewportData());
+        // Tailwind adapter has 5 viewports: sm, md, lg, xl, 2xl
+        self::assertCount(5, $field->getViewportData());
     }
 
     public function testGetViewportDataMarksDefaultViewport(): void
@@ -201,18 +206,18 @@ final class GridSettingsFieldTest extends SapphireTest
         $field->setValue(new GridSettings(new ViewportConfig(8, 1, true)));
         $viewportData = $field->getViewportData();
 
-        $md = $viewportData->find('Key', 'md');
-        self::assertNotNull($md);
-        self::assertTrue($md->IsDefault);
-        self::assertSame(8, $md->Width);
-        self::assertSame(1, $md->Offset);
-        self::assertTrue($md->Visible);
-        self::assertSame('Medium', $md->Label);
-        self::assertSame('GridSettings', $md->FieldName);
+        $sm = $viewportData->find('Key', 'sm');
+        self::assertNotNull($sm);
+        self::assertTrue($sm->IsDefault);
+        self::assertSame(8, $sm->Width);
+        self::assertSame(1, $sm->Offset);
+        self::assertTrue($sm->Visible);
+        self::assertSame('Small', $sm->Label);
+        self::assertSame('GridSettings', $sm->FieldName);
 
-        $xs = $viewportData->find('Key', 'xs');
-        self::assertNotNull($xs);
-        self::assertFalse($xs->IsDefault);
+        $lg = $viewportData->find('Key', 'lg');
+        self::assertNotNull($lg);
+        self::assertFalse($lg->IsDefault);
     }
 
     public function testGetViewportDataIncludesWidthAndOffsetOptions(): void
@@ -282,7 +287,7 @@ final class GridSettingsFieldTest extends SapphireTest
         $readonly = $field->performReadonlyTransformation();
 
         // visible=true produces no suffix — kills the ternary mutant on the visibility guard
-        self::assertSame('md: 6/12+0', $readonly->dataValue());
+        self::assertSame('sm: 6/12+0', $readonly->dataValue());
     }
 
     public function testReadonlySummaryIncludesOverrides(): void
@@ -337,7 +342,7 @@ final class GridSettingsFieldTest extends SapphireTest
     {
         $field = $this->createField();
         $field->setValue([
-            'md' => ['width' => '12', 'offset' => '0', 'visible' => '1'],
+            'sm' => ['width' => '12', 'offset' => '0', 'visible' => '1'],
             // Only width + override flag; offset field absent
             'lg' => ['width' => '6', 'override' => '1', 'visible' => '1'],
         ]);
@@ -362,17 +367,17 @@ final class GridSettingsFieldTest extends SapphireTest
         $field = $this->createField();
         $field->setValue([
             // Tampered default: width=0, negative offset
-            'md' => ['width' => '0', 'offset' => '-3', 'visible' => '1'],
+            'sm' => ['width' => '0', 'offset' => '-3', 'visible' => '1'],
             // Tampered override: negative width and offset
             'lg' => ['width' => '-5', 'offset' => '-1', 'override' => '1', 'visible' => '1'],
         ]);
 
         $viewportData = $field->getViewportData();
 
-        $md = $viewportData->find('Key', 'md');
-        self::assertNotNull($md);
-        self::assertSame(1, $md->Width, 'width=0 in POST must be clamped to 1 (minimum positive-int)');
-        self::assertSame(0, $md->Offset, 'negative offset in POST must be clamped to 0');
+        $sm = $viewportData->find('Key', 'sm');
+        self::assertNotNull($sm);
+        self::assertSame(1, $sm->Width, 'width=0 in POST must be clamped to 1 (minimum positive-int)');
+        self::assertSame(0, $sm->Offset, 'negative offset in POST must be clamped to 0');
 
         $lg = $viewportData->find('Key', 'lg');
         self::assertNotNull($lg);

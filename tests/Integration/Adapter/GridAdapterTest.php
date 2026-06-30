@@ -7,11 +7,11 @@ namespace WeDevelop\Grid\Tests\Integration\Adapter;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\Core\Config\Config;
-use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
+use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Adapter\GridAdapter;
-use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
 use WeDevelop\Grid\Value\AspectRatio;
 use WeDevelop\Grid\Value\MediaPosition;
@@ -19,7 +19,30 @@ use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\VerticalAlignment;
 use WeDevelop\Grid\Value\Viewport;
 
+/**
+ * Behaviour of the config-driven {@see GridAdapter} base class, asserted against
+ * every shipped preset.
+ *
+ * These methods emit framework-specific CSS classes and topology, so each output
+ * is parametrised over all three presets (Bootstrap, Tailwind, Bulma) with the
+ * expected value per preset. A new preset added to this matrix is verified end to
+ * end; a base-class change that breaks one framework's output fails loudly here.
+ *
+ * Providers yield the adapter class-string (not an instance): PHPUnit evaluates
+ * data providers before the SilverStripe config manifest is booted, and the
+ * adapter constructor reads config, so each test instantiates inside its body.
+ *
+ * The no-infix base-viewport branch (the TRUE arm of `$viewport === base_viewport_key`)
+ * only applies to presets that declare a base viewport — Bootstrap (`xs`) and Bulma
+ * (`mobile`); Tailwind has none, so it is excluded from those providers and only ever
+ * exercises the responsive arm. Generic base-class validation (malformed config,
+ * pixel rounding) is not framework-specific output, so it is asserted once against
+ * the default preset (Tailwind) rather than redundantly across all three.
+ */
 #[CoversClass(GridAdapter::class)]
+#[CoversClass(BootstrapAdapter::class)]
+#[CoversClass(TailwindAdapter::class)]
+#[CoversClass(BulmaAdapter::class)]
 #[CoversClass(Viewport::class)]
 #[CoversClass(OffsetStrategy::class)]
 #[CoversClass(AspectRatio::class)]
@@ -30,76 +53,149 @@ final class GridAdapterTest extends SapphireTest
 {
     protected $usesDatabase = false;
 
-    private GridAdapterInterface $adapter;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $this->adapter = Injector::inst()->get(GridAdapterInterface::class);
-    }
-
     // -- Grid topology -------------------------------------------------------
 
-    public function testGetViewportsReturnsNonEmptyList(): void
+    /**
+     * @return iterable<string, array{class-string<GridAdapter>, list<string>}>
+     */
+    public static function viewportKeysProvider(): iterable
     {
-        $viewports = $this->adapter->getViewports();
-
-        self::assertCount(6, $viewports);
-
-        $keys = array_map(
-            static fn (Viewport $vp): string => $vp->key,
-            $viewports,
-        );
-
-        self::assertSame(['xs', 'sm', 'md', 'lg', 'xl', 'xxl'], $keys);
+        yield 'bootstrap' => [BootstrapAdapter::class, ['xs', 'sm', 'md', 'lg', 'xl', 'xxl']];
+        yield 'tailwind' => [TailwindAdapter::class, ['sm', 'md', 'lg', 'xl', '2xl']];
+        yield 'bulma' => [BulmaAdapter::class, ['mobile', 'tablet', 'desktop', 'widescreen', 'fullhd']];
     }
 
-    public function testGetViewportsExposeMinWidth(): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     * @param list<string> $expectedKeys
+     */
+    #[DataProvider('viewportKeysProvider')]
+    public function testGetViewportsReturnsKeysInBreakpointOrder(string $adapterClass, array $expectedKeys): void
     {
-        $viewports = $this->adapter->getViewports();
+        $keys = array_map(
+            static fn (Viewport $vp): string => $vp->key,
+            (new $adapterClass())->getViewports(),
+        );
+
+        self::assertSame($expectedKeys, $keys);
+    }
+
+    /**
+     * @return iterable<string, array{class-string<GridAdapter>, array<string, int>}>
+     */
+    public static function viewportMinWidthProvider(): iterable
+    {
+        yield 'bootstrap' => [BootstrapAdapter::class, ['xs' => 0, 'sm' => 576, 'md' => 768, 'lg' => 992, 'xl' => 1200, 'xxl' => 1400]];
+        yield 'tailwind' => [TailwindAdapter::class, ['sm' => 640, 'md' => 768, 'lg' => 1024, 'xl' => 1280, '2xl' => 1536]];
+        yield 'bulma' => [BulmaAdapter::class, ['mobile' => 0, 'tablet' => 769, 'desktop' => 1024, 'widescreen' => 1216, 'fullhd' => 1408]];
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     * @param array<string, int> $expected
+     */
+    #[DataProvider('viewportMinWidthProvider')]
+    public function testGetViewportsExposeMinWidth(string $adapterClass, array $expected): void
+    {
         $byKey = [];
-        foreach ($viewports as $vp) {
+        foreach ((new $adapterClass())->getViewports() as $vp) {
             $byKey[$vp->key] = $vp->minWidth;
         }
 
-        self::assertSame(
-            ['xs' => 0, 'sm' => 576, 'md' => 768, 'lg' => 992, 'xl' => 1200, 'xxl' => 1400],
-            $byKey,
-        );
+        self::assertSame($expected, $byKey);
     }
 
-    public function testGetColumnCountReturnsPositiveInt(): void
+    /**
+     * @return iterable<string, array{class-string<GridAdapter>}>
+     */
+    public static function allAdaptersProvider(): iterable
     {
-        self::assertSame(12, $this->adapter->getColumnCount());
+        yield 'bootstrap' => [BootstrapAdapter::class];
+        yield 'tailwind' => [TailwindAdapter::class];
+        yield 'bulma' => [BulmaAdapter::class];
     }
 
-    public function testGetDefaultViewportReturnsValidViewport(): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('allAdaptersProvider')]
+    public function testGetColumnCountReturnsTwelve(string $adapterClass): void
     {
-        $default = $this->adapter->getDefaultViewport();
-
-        self::assertInstanceOf(Viewport::class, $default);
-        self::assertSame('md', $default->key);
-        self::assertSame('Medium', $default->label);
+        self::assertSame(12, (new $adapterClass())->getColumnCount());
     }
 
-    public function testGetContainerMaxWidthReturnsPositiveInt(): void
+    /**
+     * @return iterable<string, array{class-string<GridAdapter>, string, string}>
+     */
+    public static function defaultViewportProvider(): iterable
     {
-        self::assertSame(1320, $this->adapter->getContainerMaxWidth());
+        yield 'bootstrap' => [BootstrapAdapter::class, 'md', 'Medium'];
+        yield 'tailwind' => [TailwindAdapter::class, 'sm', 'Small'];
+        yield 'bulma' => [BulmaAdapter::class, 'desktop', 'Desktop'];
     }
 
-    public function testGetColumnPixelWidth(): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('defaultViewportProvider')]
+    public function testGetDefaultViewport(string $adapterClass, string $expectedKey, string $expectedLabel): void
     {
-        self::assertSame(660, $this->adapter->getColumnPixelWidth(6));
-        self::assertSame(1320, $this->adapter->getColumnPixelWidth(12));
+        $default = (new $adapterClass())->getDefaultViewport();
+
+        self::assertSame($expectedKey, $default->key);
+        self::assertSame($expectedLabel, $default->label);
+    }
+
+    /**
+     * @return iterable<string, array{class-string<GridAdapter>, int}>
+     */
+    public static function containerMaxWidthProvider(): iterable
+    {
+        yield 'bootstrap' => [BootstrapAdapter::class, 1320];
+        yield 'tailwind' => [TailwindAdapter::class, 1536];
+        yield 'bulma' => [BulmaAdapter::class, 1344];
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('containerMaxWidthProvider')]
+    public function testGetContainerMaxWidth(string $adapterClass, int $expected): void
+    {
+        self::assertSame($expected, (new $adapterClass())->getContainerMaxWidth());
+    }
+
+    /**
+     * Pixel width for half (6/12) and full (12/12) of the container.
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, int, int}>
+     */
+    public static function columnPixelWidthProvider(): iterable
+    {
+        yield 'bootstrap' => [BootstrapAdapter::class, 660, 1320];
+        yield 'tailwind' => [TailwindAdapter::class, 768, 1536];
+        yield 'bulma' => [BulmaAdapter::class, 672, 1344];
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('columnPixelWidthProvider')]
+    public function testGetColumnPixelWidth(string $adapterClass, int $expectedHalf, int $expectedFull): void
+    {
+        $adapter = new $adapterClass();
+
+        self::assertSame($expectedHalf, $adapter->getColumnPixelWidth(6));
+        self::assertSame($expectedFull, $adapter->getColumnPixelWidth(12));
     }
 
     public function testGetColumnPixelWidthRoundsCorrectly(): void
     {
-        // Use a container width that doesn't divide evenly by 12 to distinguish
-        // round() from floor() and ceil().
-        Config::modify()->set(BootstrapAdapter::class, 'container_max_width', 1000);
-        $adapter = new BootstrapAdapter();
+        // Generic rounding logic (not framework-specific output): assert once against
+        // the default preset. Use a container width that doesn't divide evenly by 12
+        // to distinguish round() from floor() and ceil().
+        Config::modify()->set(TailwindAdapter::class, 'container_max_width', 1000);
+        $adapter = new TailwindAdapter();
 
         // 1000 * 5 / 12 = 416.666... → round=417, floor=416 (kills floor mutant)
         self::assertSame(417, $adapter->getColumnPixelWidth(5));
@@ -110,96 +206,233 @@ final class GridAdapterTest extends SapphireTest
 
     // -- Width classes -------------------------------------------------------
 
-    public function testGetWidthClassForBaseViewport(): void
+    /**
+     * Width class for a responsive (non-base) viewport, width 6.
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, string, string}>
+     */
+    public static function responsiveWidthClassProvider(): iterable
     {
-        $class = $this->adapter->getWidthClass('xs', 6);
-
-        self::assertSame('col-6', $class);
+        yield 'bootstrap' => [BootstrapAdapter::class, 'md', 'col-md-6'];
+        yield 'tailwind' => [TailwindAdapter::class, 'md', 'md:col-span-6'];
+        yield 'bulma' => [BulmaAdapter::class, 'tablet', 'is-6-tablet'];
     }
 
-    public function testGetWidthClassForResponsiveViewport(): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('responsiveWidthClassProvider')]
+    public function testGetWidthClassForResponsiveViewport(string $adapterClass, string $viewport, string $expected): void
     {
-        $class = $this->adapter->getWidthClass('md', 6);
+        self::assertSame($expected, (new $adapterClass())->getWidthClass($viewport, 6));
+    }
 
-        self::assertSame('col-md-6', $class);
+    /**
+     * Width class for the no-infix base viewport, width 6. Only presets that
+     * declare a base viewport reach this branch; Tailwind has none.
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, string, string}>
+     */
+    public static function baseViewportWidthClassProvider(): iterable
+    {
+        yield 'bootstrap' => [BootstrapAdapter::class, 'xs', 'col-6'];
+        yield 'bulma' => [BulmaAdapter::class, 'mobile', 'is-6'];
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('baseViewportWidthClassProvider')]
+    public function testGetWidthClassForBaseViewportOmitsInfix(string $adapterClass, string $baseViewport, string $expected): void
+    {
+        self::assertSame($expected, (new $adapterClass())->getWidthClass($baseViewport, 6));
     }
 
     // -- Offset classes ------------------------------------------------------
 
-    public function testGetOffsetClassForBaseViewport(): void
+    /**
+     * Offset class for a responsive viewport, offset 3. Tailwind's offset_adjustment
+     * is 1 (col-start is 1-based) so 3 becomes 4; margin presets keep 3.
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, string, string}>
+     */
+    public static function responsiveOffsetClassProvider(): iterable
     {
-        $class = $this->adapter->getOffsetClass('xs', 3);
-
-        self::assertSame('offset-3', $class);
+        yield 'bootstrap' => [BootstrapAdapter::class, 'md', 'offset-md-3'];
+        yield 'tailwind' => [TailwindAdapter::class, 'md', 'md:col-start-4'];
+        yield 'bulma' => [BulmaAdapter::class, 'tablet', 'is-offset-3-tablet'];
     }
 
-    public function testGetOffsetClassForResponsiveViewport(): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('responsiveOffsetClassProvider')]
+    public function testGetOffsetClassForResponsiveViewport(string $adapterClass, string $viewport, string $expected): void
     {
-        $class = $this->adapter->getOffsetClass('md', 3);
+        self::assertSame($expected, (new $adapterClass())->getOffsetClass($viewport, 3));
+    }
 
-        self::assertSame('offset-md-3', $class);
+    /**
+     * Offset class for the no-infix base viewport, offset 3. Base-viewport presets only.
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, string, string}>
+     */
+    public static function baseViewportOffsetClassProvider(): iterable
+    {
+        yield 'bootstrap' => [BootstrapAdapter::class, 'xs', 'offset-3'];
+        yield 'bulma' => [BulmaAdapter::class, 'mobile', 'is-offset-3'];
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('baseViewportOffsetClassProvider')]
+    public function testGetOffsetClassForBaseViewportOmitsInfix(string $adapterClass, string $baseViewport, string $expected): void
+    {
+        self::assertSame($expected, (new $adapterClass())->getOffsetClass($baseViewport, 3));
     }
 
     public function testGetOffsetClassAppliesAdjustment(): void
     {
-        Config::modify()->set(BootstrapAdapter::class, 'offset_adjustment', 1);
-        $adapter = new BootstrapAdapter();
+        // Generic +adjustment arithmetic, asserted against the default preset.
+        // offset=2, adjustment=1 → 2+1=3. The +→- mutant would yield 1 → 'md:col-start-1'.
+        Config::modify()->set(TailwindAdapter::class, 'offset_adjustment', 1);
+        $adapter = new TailwindAdapter();
 
-        // offset=2, adjustment=1 → 2+1=3, so the responsive class uses 3.
-        // The mutant flips + to -, which would yield 2-1=1 → 'offset-md-1'.
-        self::assertSame('offset-md-3', $adapter->getOffsetClass('md', 2));
+        self::assertSame('md:col-start-3', $adapter->getOffsetClass('md', 2));
     }
 
     // -- Visibility classes --------------------------------------------------
 
-    public function testGetVisibilityClassesForMiddleViewport(): void
+    /**
+     * Visibility classes for a middle (non-first, non-last) viewport. Bulma has no
+     * symmetric restore utility (responsive_restore_format = ''), so it emits only
+     * the hide class.
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, string, list<string>}>
+     */
+    public static function middleViewportVisibilityProvider(): iterable
     {
-        $classes = $this->adapter->getVisibilityClasses('md');
-
-        self::assertSame(['d-md-none', 'd-lg-block'], $classes);
+        yield 'bootstrap' => [BootstrapAdapter::class, 'md', ['d-md-none', 'd-lg-block']];
+        yield 'tailwind' => [TailwindAdapter::class, 'md', ['md:hidden', 'lg:block']];
+        yield 'bulma' => [BulmaAdapter::class, 'tablet', ['is-hidden-tablet-only']];
     }
 
-    public function testGetVisibilityClassesForLastViewport(): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     * @param list<string> $expected
+     */
+    #[DataProvider('middleViewportVisibilityProvider')]
+    public function testGetVisibilityClassesForMiddleViewport(string $adapterClass, string $viewport, array $expected): void
     {
-        $classes = $this->adapter->getVisibilityClasses('xxl');
-
-        self::assertSame(['d-xxl-none'], $classes);
+        self::assertSame($expected, (new $adapterClass())->getVisibilityClasses($viewport));
     }
 
-    public function testGetVisibilityClassesForBaseViewport(): void
+    /**
+     * Visibility classes for the last viewport: hide only, no restore.
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, string, list<string>}>
+     */
+    public static function lastViewportVisibilityProvider(): iterable
     {
-        $classes = $this->adapter->getVisibilityClasses('xs');
-
-        self::assertSame(['d-none', 'd-sm-block'], $classes);
+        yield 'bootstrap' => [BootstrapAdapter::class, 'xxl', ['d-xxl-none']];
+        yield 'tailwind' => [TailwindAdapter::class, '2xl', ['2xl:hidden']];
+        yield 'bulma' => [BulmaAdapter::class, 'fullhd', ['is-hidden-fullhd-only']];
     }
 
-    public function testGetVisibilityClassesThrowsForInvalidViewport(): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     * @param list<string> $expected
+     */
+    #[DataProvider('lastViewportVisibilityProvider')]
+    public function testGetVisibilityClassesForLastViewport(string $adapterClass, string $viewport, array $expected): void
+    {
+        self::assertSame($expected, (new $adapterClass())->getVisibilityClasses($viewport));
+    }
+
+    /**
+     * Visibility classes for the no-infix base viewport: uses base_hide_class.
+     * Base-viewport presets only.
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, string, list<string>}>
+     */
+    public static function baseViewportVisibilityProvider(): iterable
+    {
+        yield 'bootstrap' => [BootstrapAdapter::class, 'xs', ['d-none', 'd-sm-block']];
+        yield 'bulma' => [BulmaAdapter::class, 'mobile', ['is-hidden-mobile-only']];
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     * @param list<string> $expected
+     */
+    #[DataProvider('baseViewportVisibilityProvider')]
+    public function testGetVisibilityClassesForBaseViewport(string $adapterClass, string $baseViewport, array $expected): void
+    {
+        self::assertSame($expected, (new $adapterClass())->getVisibilityClasses($baseViewport));
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('allAdaptersProvider')]
+    public function testGetVisibilityClassesThrowsForInvalidViewport(string $adapterClass): void
     {
         $this->expectException(InvalidGridValueException::class);
 
-        $this->adapter->getVisibilityClasses('nonexistent');
+        (new $adapterClass())->getVisibilityClasses('nonexistent');
     }
 
     // -- Row, container, title -----------------------------------------------
 
-    public function testGetRowClassesReturnsNonEmptyString(): void
+    /**
+     * @return iterable<string, array{class-string<GridAdapter>, string}>
+     */
+    public static function rowClassesProvider(): iterable
     {
-        self::assertSame('row', $this->adapter->getRowClasses());
+        yield 'bootstrap' => [BootstrapAdapter::class, 'row'];
+        yield 'tailwind' => [TailwindAdapter::class, 'grid grid-cols-12'];
+        yield 'bulma' => [BulmaAdapter::class, 'columns is-multiline'];
     }
 
-    public function testGetContainerClassNonFluid(): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('rowClassesProvider')]
+    public function testGetRowClasses(string $adapterClass, string $expected): void
     {
-        self::assertSame('container', $this->adapter->getContainerClass(false));
+        self::assertSame($expected, (new $adapterClass())->getRowClasses());
     }
 
-    public function testGetContainerClassFluid(): void
+    /**
+     * @return iterable<string, array{class-string<GridAdapter>, string, string}>
+     */
+    public static function containerClassProvider(): iterable
     {
-        self::assertSame('container-fluid', $this->adapter->getContainerClass(true));
+        yield 'bootstrap' => [BootstrapAdapter::class, 'container', 'container-fluid'];
+        yield 'tailwind' => [TailwindAdapter::class, 'container mx-auto', 'w-full'];
+        yield 'bulma' => [BulmaAdapter::class, 'container', 'container is-fluid'];
     }
 
-    public function testGetTitleClassOptionsReturnsNonEmptyArray(): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('containerClassProvider')]
+    public function testGetContainerClass(string $adapterClass, string $expectedFixed, string $expectedFluid): void
     {
-        $options = $this->adapter->getTitleClassOptions();
+        $adapter = new $adapterClass();
+
+        self::assertSame($expectedFixed, $adapter->getContainerClass(false));
+        self::assertSame($expectedFluid, $adapter->getContainerClass(true));
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('allAdaptersProvider')]
+    public function testGetTitleClassOptionsReturnsNonEmptyArray(string $adapterClass): void
+    {
+        $options = (new $adapterClass())->getTitleClassOptions();
 
         self::assertNotEmpty($options);
         self::assertIsArray($options);
@@ -207,65 +440,121 @@ final class GridAdapterTest extends SapphireTest
 
     // -- Base width/offset classes -------------------------------------------
 
-    public function testGetBaseWidthClass(): void
+    /**
+     * @return iterable<string, array{class-string<GridAdapter>, string}>
+     */
+    public static function baseWidthClassProvider(): iterable
     {
-        self::assertSame('col-6', $this->adapter->getBaseWidthClass(6));
+        yield 'bootstrap' => [BootstrapAdapter::class, 'col-6'];
+        yield 'tailwind' => [TailwindAdapter::class, 'col-span-6'];
+        yield 'bulma' => [BulmaAdapter::class, 'is-6'];
     }
 
-    public function testGetBaseOffsetClass(): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('baseWidthClassProvider')]
+    public function testGetBaseWidthClass(string $adapterClass, string $expected): void
     {
-        self::assertSame('offset-3', $this->adapter->getBaseOffsetClass(3));
+        self::assertSame($expected, (new $adapterClass())->getBaseWidthClass(6));
+    }
+
+    /**
+     * Base offset class for offset 3. Tailwind adds its offset_adjustment of 1 → col-start-4.
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, string}>
+     */
+    public static function baseOffsetClassProvider(): iterable
+    {
+        yield 'bootstrap' => [BootstrapAdapter::class, 'offset-3'];
+        yield 'tailwind' => [TailwindAdapter::class, 'col-start-4'];
+        yield 'bulma' => [BulmaAdapter::class, 'is-offset-3'];
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('baseOffsetClassProvider')]
+    public function testGetBaseOffsetClass(string $adapterClass, string $expected): void
+    {
+        self::assertSame($expected, (new $adapterClass())->getBaseOffsetClass(3));
     }
 
     public function testGetBaseOffsetClassAppliesAdjustment(): void
     {
-        Config::modify()->set(BootstrapAdapter::class, 'offset_adjustment', 1);
-        $adapter = new BootstrapAdapter();
+        // Generic +adjustment arithmetic, asserted against the default preset.
+        // offset=2, adjustment=1 → 2+1=3. The +→- mutant would yield 1.
+        Config::modify()->set(TailwindAdapter::class, 'offset_adjustment', 1);
+        $adapter = new TailwindAdapter();
 
-        // offset=2, adjustment=1 → 2+1=3, so class should use 3
-        // Mutant changes + to -, which would give 2-1=1
-        self::assertSame('offset-3', $adapter->getBaseOffsetClass(2));
+        self::assertSame('col-start-3', $adapter->getBaseOffsetClass(2));
     }
 
     // -- Offset strategy -----------------------------------------------------
 
-    public function testGetOffsetStrategyReturnsEnum(): void
+    /**
+     * @return iterable<string, array{class-string<GridAdapter>, OffsetStrategy}>
+     */
+    public static function offsetStrategyProvider(): iterable
     {
-        self::assertSame(OffsetStrategy::Margin, $this->adapter->getOffsetStrategy());
+        yield 'bootstrap' => [BootstrapAdapter::class, OffsetStrategy::Margin];
+        yield 'tailwind' => [TailwindAdapter::class, OffsetStrategy::GridPlacement];
+        yield 'bulma' => [BulmaAdapter::class, OffsetStrategy::Margin];
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('offsetStrategyProvider')]
+    public function testGetOffsetStrategy(string $adapterClass, OffsetStrategy $expected): void
+    {
+        self::assertSame($expected, (new $adapterClass())->getOffsetStrategy());
     }
 
     // -- Content layout: aspect ratio ----------------------------------------
 
-    public function testGetAspectRatioClassAutoReturnsNull(): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('allAdaptersProvider')]
+    public function testGetAspectRatioClassAutoReturnsNull(string $adapterClass): void
     {
-        self::assertNull($this->adapter->getAspectRatioClass(AspectRatio::Auto));
+        self::assertNull((new $adapterClass())->getAspectRatioClass(AspectRatio::Auto));
     }
 
     /**
-     * @return array<string, array{AspectRatio, string}>
+     * @return iterable<string, array{class-string<GridAdapter>, AspectRatio, string}>
      */
-    public static function nonAutoAspectRatioProvider(): array
+    public static function nonAutoAspectRatioProvider(): iterable
     {
-        return [
-            'Square' => [AspectRatio::Square, 'ratio ratio-1x1'],
-            'FourByThree' => [AspectRatio::FourByThree, 'ratio ratio-4x3'],
-            'SixteenByNine' => [AspectRatio::SixteenByNine, 'ratio ratio-16x9'],
-        ];
+        yield 'bootstrap 1x1' => [BootstrapAdapter::class, AspectRatio::Square, 'ratio ratio-1x1'];
+        yield 'bootstrap 4x3' => [BootstrapAdapter::class, AspectRatio::FourByThree, 'ratio ratio-4x3'];
+        yield 'bootstrap 16x9' => [BootstrapAdapter::class, AspectRatio::SixteenByNine, 'ratio ratio-16x9'];
+        yield 'tailwind 1x1' => [TailwindAdapter::class, AspectRatio::Square, 'aspect-square'];
+        yield 'tailwind 4x3' => [TailwindAdapter::class, AspectRatio::FourByThree, 'aspect-[4/3]'];
+        yield 'tailwind 16x9' => [TailwindAdapter::class, AspectRatio::SixteenByNine, 'aspect-video'];
+        yield 'bulma 1x1' => [BulmaAdapter::class, AspectRatio::Square, 'is-1by1'];
+        yield 'bulma 4x3' => [BulmaAdapter::class, AspectRatio::FourByThree, 'is-4by3'];
+        yield 'bulma 16x9' => [BulmaAdapter::class, AspectRatio::SixteenByNine, 'is-16by9'];
     }
 
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
     #[DataProvider('nonAutoAspectRatioProvider')]
-    public function testGetAspectRatioClassNonAutoReturnsString(AspectRatio $ratio, string $expected): void
+    public function testGetAspectRatioClassNonAutoReturnsString(string $adapterClass, AspectRatio $ratio, string $expected): void
     {
-        self::assertSame($expected, $this->adapter->getAspectRatioClass($ratio));
+        self::assertSame($expected, (new $adapterClass())->getAspectRatioClass($ratio));
     }
 
     public function testGetAspectRatioClassThrowsOnMissingConfig(): void
     {
-        Config::modify()->set(BootstrapAdapter::class, 'aspect_ratio_classes', []);
-        $adapter = new BootstrapAdapter();
+        // Generic guard (missing config entry → throw), asserted against the default preset.
+        Config::modify()->set(TailwindAdapter::class, 'aspect_ratio_classes', []);
+        $adapter = new TailwindAdapter();
 
         $this->expectException(InvalidGridValueException::class);
-        $this->expectExceptionMessage(BootstrapAdapter::class);
+        $this->expectExceptionMessage(TailwindAdapter::class);
         $this->expectExceptionMessage('1x1');
 
         $adapter->getAspectRatioClass(AspectRatio::Square);
@@ -274,77 +563,157 @@ final class GridAdapterTest extends SapphireTest
     // -- Content layout: vertical alignment ----------------------------------
 
     /**
-     * @return array<string, array{VerticalAlignment, string}>
+     * @return iterable<string, array{class-string<GridAdapter>, VerticalAlignment, string}>
      */
-    public static function verticalAlignmentProvider(): array
+    public static function verticalAlignmentProvider(): iterable
     {
-        return [
-            'Top' => [VerticalAlignment::Top, 'align-items-start'],
-            'Center' => [VerticalAlignment::Center, 'align-items-center'],
-            'Bottom' => [VerticalAlignment::Bottom, 'align-items-end'],
-        ];
+        yield 'bootstrap top' => [BootstrapAdapter::class, VerticalAlignment::Top, 'align-items-start'];
+        yield 'bootstrap center' => [BootstrapAdapter::class, VerticalAlignment::Center, 'align-items-center'];
+        yield 'bootstrap bottom' => [BootstrapAdapter::class, VerticalAlignment::Bottom, 'align-items-end'];
+        yield 'tailwind top' => [TailwindAdapter::class, VerticalAlignment::Top, 'items-start'];
+        yield 'tailwind center' => [TailwindAdapter::class, VerticalAlignment::Center, 'items-center'];
+        yield 'tailwind bottom' => [TailwindAdapter::class, VerticalAlignment::Bottom, 'items-end'];
+        yield 'bulma top' => [BulmaAdapter::class, VerticalAlignment::Top, 'is-flex-start'];
+        yield 'bulma center' => [BulmaAdapter::class, VerticalAlignment::Center, 'is-vcentered'];
+        yield 'bulma bottom' => [BulmaAdapter::class, VerticalAlignment::Bottom, 'is-flex-end'];
     }
 
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
     #[DataProvider('verticalAlignmentProvider')]
-    public function testGetVerticalAlignmentClass(VerticalAlignment $alignment, string $expected): void
+    public function testGetVerticalAlignmentClass(string $adapterClass, VerticalAlignment $alignment, string $expected): void
     {
-        self::assertSame($expected, $this->adapter->getVerticalAlignmentClass($alignment));
+        self::assertSame($expected, (new $adapterClass())->getVerticalAlignmentClass($alignment));
     }
 
     // -- Content layout: media/content order ---------------------------------
 
     /**
-     * @return array<string, array{MediaPosition, string, string}>
+     * LastOnDesktop appends the responsive override at each preset's default viewport
+     * (Bootstrap md, Tailwind sm, Bulma desktop).
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, MediaPosition, string, string}>
      */
-    public static function mediaPositionProvider(): array
+    public static function orderClassesProvider(): iterable
     {
-        return [
-            'First' => [MediaPosition::First, 'order-1', 'order-2'],
-            'Last' => [MediaPosition::Last, 'order-2', 'order-1'],
-            'LastOnDesktop' => [MediaPosition::LastOnDesktop, 'order-1 order-md-2', 'order-2 order-md-1'],
-        ];
+        yield 'bootstrap First' => [BootstrapAdapter::class, MediaPosition::First, 'order-1', 'order-2'];
+        yield 'bootstrap Last' => [BootstrapAdapter::class, MediaPosition::Last, 'order-2', 'order-1'];
+        yield 'bootstrap LastOnDesktop' => [BootstrapAdapter::class, MediaPosition::LastOnDesktop, 'order-1 order-md-2', 'order-2 order-md-1'];
+        yield 'tailwind First' => [TailwindAdapter::class, MediaPosition::First, 'order-1', 'order-2'];
+        yield 'tailwind Last' => [TailwindAdapter::class, MediaPosition::Last, 'order-2', 'order-1'];
+        yield 'tailwind LastOnDesktop' => [TailwindAdapter::class, MediaPosition::LastOnDesktop, 'order-1 sm:order-2', 'order-2 sm:order-1'];
+        yield 'bulma First' => [BulmaAdapter::class, MediaPosition::First, 'has-order-1', 'has-order-2'];
+        yield 'bulma Last' => [BulmaAdapter::class, MediaPosition::Last, 'has-order-2', 'has-order-1'];
+        yield 'bulma LastOnDesktop' => [BulmaAdapter::class, MediaPosition::LastOnDesktop, 'has-order-1 has-order-2-desktop', 'has-order-2 has-order-1-desktop'];
     }
 
-    #[DataProvider('mediaPositionProvider')]
-    public function testGetMediaOrderClasses(MediaPosition $position, string $expectedMedia): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('orderClassesProvider')]
+    public function testGetMediaOrderClasses(string $adapterClass, MediaPosition $position, string $expectedMedia): void
     {
-        self::assertSame($expectedMedia, $this->adapter->getMediaOrderClasses($position));
+        self::assertSame($expectedMedia, (new $adapterClass())->getMediaOrderClasses($position));
     }
 
-    #[DataProvider('mediaPositionProvider')]
-    public function testGetContentOrderClasses(MediaPosition $position, string $_expectedMedia, string $expectedContent): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('orderClassesProvider')]
+    public function testGetContentOrderClasses(string $adapterClass, MediaPosition $position, string $_expectedMedia, string $expectedContent): void
     {
-        self::assertSame($expectedContent, $this->adapter->getContentOrderClasses($position));
+        self::assertSame($expectedContent, (new $adapterClass())->getContentOrderClasses($position));
     }
 
     // -- Content layout: media/content width ---------------------------------
 
-    public function testGetMediaWidthClass(): void
+    /**
+     * Media/content width classes for 6 content columns, emitted at each preset's
+     * default viewport. Media gets the complement (12 - 6 = 6) columns.
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, string}>
+     */
+    public static function mediaContentWidthProvider(): iterable
     {
-        self::assertSame('col-md-6', $this->adapter->getMediaWidthClass(6));
+        yield 'bootstrap' => [BootstrapAdapter::class, 'col-md-6'];
+        yield 'tailwind' => [TailwindAdapter::class, 'sm:col-span-6'];
+        yield 'bulma' => [BulmaAdapter::class, 'is-6-desktop'];
     }
 
-    public function testGetContentWidthClass(): void
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('mediaContentWidthProvider')]
+    public function testGetMediaWidthClass(string $adapterClass, string $expected): void
     {
-        self::assertSame('col-md-6', $this->adapter->getContentWidthClass(6));
+        self::assertSame($expected, (new $adapterClass())->getMediaWidthClass(6));
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('mediaContentWidthProvider')]
+    public function testGetContentWidthClass(string $adapterClass, string $expected): void
+    {
+        self::assertSame($expected, (new $adapterClass())->getContentWidthClass(6));
     }
 
     // -- Content layout: padding ---------------------------------------------
 
-    public function testGetPaddingClass(): void
+    /**
+     * Directional padding at size 3, emitted at each preset's default viewport.
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, string, string}>
+     */
+    public static function paddingClassProvider(): iterable
     {
-        self::assertSame('ps-md-3', $this->adapter->getPaddingClass('left', 3));
-        self::assertSame('pe-md-3', $this->adapter->getPaddingClass('right', 3));
+        yield 'bootstrap' => [BootstrapAdapter::class, 'ps-md-3', 'pe-md-3'];
+        yield 'tailwind' => [TailwindAdapter::class, 'sm:pl-3', 'sm:pr-3'];
+        yield 'bulma' => [BulmaAdapter::class, 'pl-3-desktop', 'pr-3-desktop'];
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('paddingClassProvider')]
+    public function testGetPaddingClass(string $adapterClass, string $expectedLeft, string $expectedRight): void
+    {
+        $adapter = new $adapterClass();
+
+        self::assertSame($expectedLeft, $adapter->getPaddingClass('left', 3));
+        self::assertSame($expectedRight, $adapter->getPaddingClass('right', 3));
     }
 
     // -- Content layout: base column class -----------------------------------
 
-    public function testGetBaseColumnClassReturnsNullForBootstrap(): void
+    /**
+     * Bulma requires a `column` base class on every grid column; Bootstrap and
+     * Tailwind need none (null).
+     *
+     * @return iterable<string, array{class-string<GridAdapter>, string|null}>
+     */
+    public static function baseColumnClassProvider(): iterable
     {
-        self::assertNull($this->adapter->getBaseColumnClass());
+        yield 'bootstrap' => [BootstrapAdapter::class, null];
+        yield 'tailwind' => [TailwindAdapter::class, null];
+        yield 'bulma' => [BulmaAdapter::class, 'column'];
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('baseColumnClassProvider')]
+    public function testGetBaseColumnClass(string $adapterClass, ?string $expected): void
+    {
+        self::assertSame($expected, (new $adapterClass())->getBaseColumnClass());
     }
 
     // -- Constructor validation ----------------------------------------------
+    //
+    // The constructor's validation lives entirely in the GridAdapter base class and
+    // is not framework-specific output, so it is asserted once against the default
+    // preset (Tailwind) rather than redundantly across every preset.
 
     /**
      * Each case sets a single scalar config key to an invalid value that the
@@ -363,24 +732,24 @@ final class GridAdapterTest extends SapphireTest
     #[DataProvider('invalidScalarConfigProvider')]
     public function testConstructorThrowsForInvalidScalarConfig(string $configKey, mixed $configValue): void
     {
-        Config::modify()->set(BootstrapAdapter::class, $configKey, $configValue);
+        Config::modify()->set(TailwindAdapter::class, $configKey, $configValue);
 
         $this->expectException(InvalidGridValueException::class);
 
-        new BootstrapAdapter();
+        new TailwindAdapter();
     }
 
     public function testConstructorThrowsEmptyViewportsMessageForEmptyEnabledViewports(): void
     {
-        Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', []);
+        Config::modify()->set(TailwindAdapter::class, 'enabled_viewports', []);
 
         $this->expectException(InvalidGridValueException::class);
         // Substring unique to forEmptyViewports(): the downstream forViewport() throw
         // (also InvalidGridValueException) carries "is not a valid breakpoint" instead,
-        // so asserting only the class lets the L473 throw-removal mutant survive.
+        // so asserting only the class lets the throw-removal mutant survive.
         $this->expectExceptionMessageMatches('/cannot be an empty array/');
 
-        new BootstrapAdapter();
+        new TailwindAdapter();
     }
 
     public function testEnabledViewportsResolveInBreakpointOrderNotConfigOrder(): void
@@ -388,9 +757,9 @@ final class GridAdapterTest extends SapphireTest
         // enabled_viewports supplied out of breakpoint order; the adapter must
         // resolve them in viewport_definitions (ascending breakpoint) order so
         // the cascade and visibility "next viewport" logic stay correct.
-        Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', ['md', 'sm', 'lg']);
+        Config::modify()->set(TailwindAdapter::class, 'enabled_viewports', ['md', 'sm', 'lg']);
 
-        $adapter = new BootstrapAdapter();
+        $adapter = new TailwindAdapter();
 
         $keys = array_map(
             static fn (Viewport $vp): string => $vp->key,
@@ -402,7 +771,7 @@ final class GridAdapterTest extends SapphireTest
         // breakpoint order: sm restores at md (the next enabled key), not at the
         // config-list neighbour.
         $smVisibility = $adapter->getVisibilityClasses('sm');
-        self::assertSame(['d-sm-none', 'd-md-block'], $smVisibility);
+        self::assertSame(['sm:hidden', 'md:block'], $smVisibility);
     }
 
     // -- Malformed viewport_definitions rejection ----------------------------
@@ -455,7 +824,7 @@ final class GridAdapterTest extends SapphireTest
     #[DataProvider('malformedViewportDefinitionsProvider')]
     public function testConstructorRejectsMalformedViewportDefinitions(array $definitions, ?string $messagePattern): void
     {
-        Config::modify()->set(BootstrapAdapter::class, 'viewport_definitions', $definitions);
+        Config::modify()->set(TailwindAdapter::class, 'viewport_definitions', $definitions);
 
         $this->expectException(InvalidGridValueException::class);
 
@@ -463,18 +832,18 @@ final class GridAdapterTest extends SapphireTest
             $this->expectExceptionMessageMatches($messagePattern);
         }
 
-        new BootstrapAdapter();
+        new TailwindAdapter();
     }
 
     // -- Enabled viewports filtering -----------------------------------------
 
     public function testEnabledViewportsFiltersCorrectly(): void
     {
-        Config::modify()->set(BootstrapAdapter::class, 'enabled_viewports', ['sm', 'md', 'lg']);
+        Config::modify()->set(TailwindAdapter::class, 'enabled_viewports', ['sm', 'md', 'lg']);
         // Default viewport must be within the enabled set
-        Config::modify()->set(BootstrapAdapter::class, 'default_viewport', 'md');
+        Config::modify()->set(TailwindAdapter::class, 'default_viewport', 'md');
 
-        $filtered = new BootstrapAdapter();
+        $filtered = new TailwindAdapter();
 
         self::assertCount(3, $filtered->getViewports());
 

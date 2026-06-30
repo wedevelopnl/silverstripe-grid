@@ -1,0 +1,68 @@
+/*
+ * Source for the vendored Tailwind grid stylesheet used by the dev testbed.
+ *
+ * The grid's TailwindAdapter emits utility classes dynamically (col-span-N,
+ * {bp}:col-start-N, {bp}:hidden, grid-cols-N, order-N, {bp}:pl-N, ...). Tailwind
+ * is JIT and only generates classes it finds by scanning content, so the testbed
+ * (which renders server-side, with no source for Tailwind to scan) needs these
+ * classes force-generated. @source inline() safelists them — including the full
+ * numeric range, so project YAML overrides (e.g. total_columns: 16) still render.
+ *
+ * Ranges are deliberately wider than the default 12-column / 5-viewport topology
+ * so any in-range override works without regenerating. Tailwind v4 emits dynamic
+ * numeric values, so col-span-15, order-9, pl-13, etc. all resolve.
+ *
+ * Regenerate with (see ../README.md):
+ *   npx @tailwindcss/cli \
+ *     -i .docker/assets/css/tailwind/input.css \
+ *     -o .docker/assets/css/tailwind.min.css --minify
+ */
+
+@import "tailwindcss";
+
+/* Row container + column grid (base only — row_class_format has no responsive variant). */
+@source inline("grid");
+@source inline("grid-cols-{1..16}");
+
+/* Column width: col-span-N at every viewport + base. */
+@source inline("{sm:,md:,lg:,xl:,2xl:,}col-span-{1..16}");
+
+/* Column offset (grid-placement strategy): col-start-N, 1-based up to total_columns + 1. */
+@source inline("{sm:,md:,lg:,xl:,2xl:,}col-start-{1..17}");
+
+/* Visibility toggles. */
+@source inline("{sm:,md:,lg:,xl:,2xl:,}hidden");
+@source inline("{sm:,md:,lg:,xl:,2xl:,}block");
+
+/* Container wrappers. */
+@source inline("container");
+@source inline("mx-auto");
+@source inline("w-full");
+
+/* Title size options. */
+@source inline("text-base");
+@source inline("text-lg");
+@source inline("text-xl");
+@source inline("text-2xl");
+@source inline("text-3xl");
+@source inline("text-4xl");
+
+/* Content layout: aspect ratios. */
+@source inline("aspect-square");
+@source inline("aspect-video");
+@source inline("aspect-[4/3]");
+
+/* Content layout: vertical alignment. */
+@source inline("items-start");
+@source inline("items-center");
+@source inline("items-end");
+
+/* Content layout: media ordering (base + responsive). */
+@source inline("{sm:,md:,lg:,xl:,2xl:,}order-{1..12}");
+@source inline("order-first");
+@source inline("order-last");
+@source inline("order-none");
+
+/* Content layout: directional padding (gap between columns), base + responsive. */
+@source inline("{sm:,md:,lg:,xl:,2xl:,}pl-{0..16}");
+@source inline("{sm:,md:,lg:,xl:,2xl:,}pr-{0..16}");

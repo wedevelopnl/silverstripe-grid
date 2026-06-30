@@ -10,6 +10,8 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Adapter\TailwindAdapter;
+use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
@@ -35,6 +37,13 @@ final class GridSettingsServiceTest extends SapphireTest
 
         Versioned::set_stage(Versioned::DRAFT);
 
+        // Pin the active adapter to the default preset (Tailwind) so the
+        // default-viewport key the service treats as the base config is
+        // deterministic ('sm'), independent of the container's SS_GRID_ADAPTER.
+        // Registered before the service is resolved so its adapter dependency
+        // is wired to this instance.
+        Injector::inst()->registerService(new TailwindAdapter(), GridAdapterInterface::class);
+
         $this->service = Injector::inst()->get(GridSettingsService::class);
     }
 
@@ -47,8 +56,8 @@ final class GridSettingsServiceTest extends SapphireTest
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        // Bootstrap default viewport is 'md'
-        $result = $this->service->updateSettings($column, 'md', 6, 2, true);
+        // Tailwind's default viewport is 'sm'
+        $result = $this->service->updateSettings($column, 'sm', 6, 2, true);
 
         self::assertTrue($result->isOk());
 
@@ -112,7 +121,7 @@ final class GridSettingsServiceTest extends SapphireTest
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        $this->service->updateSettings($column, 'md', 8, 1, true);
+        $this->service->updateSettings($column, 'sm', 8, 1, true);
 
         /** @var Column $reloaded */
         $reloaded = GridElement::get()->byID($column->ID);

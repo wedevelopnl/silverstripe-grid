@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <% base_tag %>
-    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/grid-framework.css">
     $MetaTags
 </head>
 <body>
