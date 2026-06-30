@@ -207,22 +207,24 @@ final class GridMigrationService
             return;
         }
 
-        // Steps 6-8: Transaction-wrapped write
+        // Steps 6-8: Transaction-wrapped write.
+        //
+        // Manual transaction handling (not $conn->withTransaction()) is
+        // deliberate: withTransaction() only rolls back on \Exception, so a
+        // non-Exception \Throwable — e.g. a \TypeError from a project
+        // updateElementFieldMapping hook or a bad __set of a mapped media field —
+        // would escape with the transaction still open. In a multi-page batch the
+        // next page's transactionStart() then implicitly commits this page's
+        // partial Section/Row/Column writes. Catching \Throwable rolls the page
+        // back as a unit before re-throwing to the batch loop.
         $conn = DB::get_conn();
         if ($conn === null) {
             throw new RuntimeException('No database connection available for migration.');
         }
 
-        $conn->withTransaction(function () use (
-            $pageId,
-            $pageClassName,
-            $zone,
-            $sections,
-            $draftElements,
-            $liveElements,
-            $defaultViewport,
-            $viewportKeyMap,
-        ): void {
+        $conn->transactionStart();
+
+        try {
             // A single MigrationIdMap carries the legacy→new id/sort maps and the
             // published-container bookkeeping across the draft write and the live
             // publish stage (previously four shared by-ref arrays).
@@ -244,7 +246,13 @@ final class GridMigrationService
             }
 
             $this->pageFlagWriter->setUseGridOnPage($pageId, true, includeLive: $liveElements !== []);
-        });
+
+            $conn->transactionEnd();
+        } catch (Throwable $exception) {
+            $conn->transactionRollback();
+
+            throw $exception;
+        }
 
         $this->logger->info('Successfully migrated page {pageId}.', ['pageId' => $pageId]);
     }

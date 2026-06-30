@@ -10,7 +10,6 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
-use WeDevelop\Grid\Migration\DTO\MigrationSection;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
@@ -453,7 +452,7 @@ final readonly class LivePublisher
 
         foreach ($sections as $migrationSection) {
             $sectionSort = $migrationSection->sort + $sortOffset;
-            $section = $this->createSectionWithSort($migrationSection, $pageId, $pageClassName, $zone, $sectionSort);
+            $section = $this->draftWriter->createSection($migrationSection, $pageId, $pageClassName, $zone, $sectionSort);
             // Freshly written record carries a valid (positive) ID.
             /** @var positive-int $sectionId */
             $sectionId = (int) $section->ID;
@@ -487,30 +486,6 @@ final readonly class LivePublisher
             $section->writeToStage(Versioned::LIVE);
             $idMap->markContainerPublished($sectionId);
         }
-    }
-
-    /**
-     * Create a Section with an explicit Sort value (overriding the DTO's sort).
-     *
-     * @param class-string $pageClassName
-     */
-    private function createSectionWithSort(
-        MigrationSection $migration,
-        int $pageId,
-        string $pageClassName,
-        string $zone,
-        int $sort,
-    ): Section {
-        $section = Section::create();
-        $section->Title = '';
-        $section->Zone = $zone;
-        $section->ExtraClass = $migration->extraClass;
-        $section->Sort = $sort;
-        $section->ParentID = $pageId;
-        $section->ParentClass = $pageClassName;
-        $section->write();
-
-        return $section;
     }
 
     /**

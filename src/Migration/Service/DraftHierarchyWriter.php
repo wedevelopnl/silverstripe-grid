@@ -45,13 +45,17 @@ final class DraftHierarchyWriter
     ): void {
         foreach ($sections as $migrationSection) {
             $section = $this->createSection($migrationSection, $pageId, $pageClassName, $zone);
+            // Freshly written records carry a valid (positive) ID.
+            /** @var positive-int $sectionId */
+            $sectionId = (int) $section->ID;
 
             foreach ($migrationSection->rows as $migrationRow) {
-                $row = $this->createRow($migrationRow, (int) $section->ID);
+                $row = $this->createRow($migrationRow, $sectionId);
+                /** @var positive-int $rowId */
+                $rowId = (int) $row->ID;
 
                 foreach ($migrationRow->columns as $migrationColumn) {
-                    $column = $this->createColumn($migrationColumn, (int) $row->ID);
-                    // Freshly written record carries a valid (positive) ID.
+                    $column = $this->createColumn($migrationColumn, $rowId);
                     /** @var positive-int $columnId */
                     $columnId = (int) $column->ID;
 
@@ -72,14 +76,21 @@ final class DraftHierarchyWriter
 
     /**
      * @param class-string $pageClassName
+     * @param int|null $sort Explicit Sort override; defaults to the DTO's own sort.
+     *                       Used by the live-only path to append past existing sections.
      */
-    public function createSection(MigrationSection $migration, int $pageId, string $pageClassName, string $zone): Section
-    {
+    public function createSection(
+        MigrationSection $migration,
+        int $pageId,
+        string $pageClassName,
+        string $zone,
+        ?int $sort = null,
+    ): Section {
         $section = Section::create();
         $section->Title = '';
         $section->Zone = $zone;
         $section->ExtraClass = $migration->extraClass;
-        $section->Sort = $migration->sort;
+        $section->Sort = $sort ?? $migration->sort;
         $section->ParentID = $pageId;
         $section->ParentClass = $pageClassName;
         $section->write();
@@ -87,6 +98,9 @@ final class DraftHierarchyWriter
         return $section;
     }
 
+    /**
+     * @param positive-int $sectionId
+     */
     public function createRow(MigrationRow $migration, int $sectionId): Row
     {
         $row = Row::create();
@@ -100,6 +114,9 @@ final class DraftHierarchyWriter
         return $row;
     }
 
+    /**
+     * @param positive-int $rowId
+     */
     public function createColumn(MigrationColumn $migration, int $rowId): Column
     {
         $column = Column::create();
@@ -119,6 +136,9 @@ final class DraftHierarchyWriter
      * Shared by both draft creation (writeDraftHierarchy) and live-only
      * creation (createLiveOnlyHierarchy) to avoid duplicating the field
      * mapping, class name resolution, and extension hook logic.
+     *
+     * @param positive-int $columnId
+     * @param positive-int $sort
      */
     public function buildContentElement(LegacyElement $legacyElement, int $columnId, int $sort): GridElement
     {

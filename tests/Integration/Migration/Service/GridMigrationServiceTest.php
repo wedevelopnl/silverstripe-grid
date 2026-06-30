@@ -1354,6 +1354,70 @@ final class GridMigrationServiceTest extends SapphireTest
         }
     }
 
+    public function testNonExceptionThrowableMidPageRollsBackThatPage(): void
+    {
+        // Regression guard: a non-Exception Throwable (e.g. a TypeError from a
+        // project hook) raised mid-write must still roll the page back. The
+        // framework's withTransaction() only catches \Exception, so an \Error
+        // would otherwise leak an open transaction — and the next page's
+        // transactionStart() would implicitly commit this page's partial writes.
+        $pageId1 = $this->getPageId();
+        $pageId2 = $this->getPageId2();
+        $areaId1 = 100;
+        $areaId2 = 200;
+
+        // Page 1: element titled "ERROR_ME" triggers a \TypeError mid-write.
+        $this->seeder->seedPage($pageId1, $areaId1);
+        $this->seeder->seedElement(6200, $areaId1, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'ERROR_ME',
+        ]);
+        $this->seeder->seedContentMedia(6200);
+
+        // Page 2: normal element that should succeed after page 1 is rolled back.
+        $this->seeder->seedPage($pageId2, $areaId2);
+        $this->seeder->seedElement(6300, $areaId2, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 12,
+            'Title' => 'Normal Element',
+        ]);
+        $this->seeder->seedContentMedia(6300);
+
+        DraftHierarchyWriter::add_extension(TestErrorThrowingMigrationExtension::class);
+
+        try {
+            $service = $this->createService();
+            $service->run(
+                self::DEFAULT_VIEWPORT,
+                self::ZONE,
+                self::VIEWPORT_KEY_MAP,
+                dryRun: false,
+                pageIds: [$pageId1, $pageId2],
+            );
+
+            // Page 1 must be fully rolled back — no partial hierarchy persisted.
+            self::assertCount(0, Section::get()->filter([
+                'ParentID' => $pageId1,
+                'Zone' => self::ZONE,
+            ]));
+
+            // Page 2 must be unaffected by the leaked transaction and succeed.
+            self::assertGreaterThan(0, Section::get()->filter([
+                'ParentID' => $pageId2,
+                'Zone' => self::ZONE,
+            ])->count());
+
+            // The connection must be left with no open transaction.
+            self::assertSame(0, DB::get_conn()->transactionDepth());
+
+            // The error should have been logged.
+            $errors = $this->getLogMessages('error');
+            self::assertNotEmpty($errors);
+            self::assertStringContainsString('non-Exception Throwable', $errors[0]);
+        } finally {
+            DraftHierarchyWriter::remove_extension(TestErrorThrowingMigrationExtension::class);
+        }
+    }
+
     // ─── Test Group 6: Pseudo rows (tests 23-25) ─────────────────
 
     public function testElementsBeforeFirstRowCreateImplicitSection(): void
