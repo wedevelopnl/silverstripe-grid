@@ -10,6 +10,7 @@ use Psr\Log\LoggerInterface;
 use SilverStripe\Core\Extensible;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Model\Row;
@@ -189,10 +190,9 @@ final class GridMigrationService
         $draftElements = $this->reader->getElementsForArea($areaId, 'draft');
 
         // Step 3-4: Build hierarchy via strategy (works on draft elements)
-        $sections = [];
-        if ($draftElements !== []) {
-            $sections = $this->strategy->buildHierarchy($draftElements, $pageId, $zone);
-        }
+        $sections = $draftElements !== []
+            ? $this->strategy->buildHierarchy($draftElements, $pageId, $zone)
+            : [];
 
         // Step 5: Dry-run — log and return
         if ($dryRun) {
@@ -200,13 +200,11 @@ final class GridMigrationService
             return;
         }
 
-        // No draft elements and no live elements means nothing to migrate
-        if ($sections === []) {
-            $liveElements = $this->reader->getElementsForArea($areaId, 'live');
-            if ($liveElements === []) {
-                $this->logger->info('Page {pageId} has no elements to migrate.', ['pageId' => $pageId]);
-                return;
-            }
+        // No draft sections and no live elements means nothing to migrate
+        $liveElements = $this->reader->getElementsForArea($areaId, 'live');
+        if ($sections === [] && $liveElements === []) {
+            $this->logger->info('Page {pageId} has no elements to migrate.', ['pageId' => $pageId]);
+            return;
         }
 
         // Steps 6-8: Transaction-wrapped write
@@ -214,82 +212,128 @@ final class GridMigrationService
         if ($conn === null) {
             throw new RuntimeException('No database connection available for migration.');
         }
-        $conn->transactionStart();
 
-        try {
-            // Step 6: Write draft hierarchy.
+        $conn->withTransaction(function () use (
+            $pageId,
+            $pageClassName,
+            $zone,
+            $sections,
+            $draftElements,
+            $liveElements,
+            $defaultViewport,
+            $viewportKeyMap,
+        ): void {
             // A single MigrationIdMap carries the legacy→new id/sort maps and the
             // published-container bookkeeping across the draft write and the live
-            // publish closure below (previously four shared by-ref arrays).
+            // publish stage (previously four shared by-ref arrays).
             $idMap = new MigrationIdMap();
 
-            Versioned::withVersionedMode(function () use (
-                $pageId,
-                $pageClassName,
-                $zone,
-                $sections,
-                $idMap,
-            ): void {
-                Versioned::set_stage(Versioned::DRAFT);
-                $this->draftWriter->writeDraftHierarchy($pageId, $pageClassName, $zone, $sections, $idMap);
-            });
+            $this->writeDraftStage($pageId, $pageClassName, $zone, $sections, $idMap);
 
-            // Step 7: Publish draft records to live for elements that also existed on live.
-            // Stage is set to DRAFT because we read the draft-created records
-            // and then call writeToStage(LIVE) to copy them to _Live tables.
-            // overwriteLiveContent() then corrects _Live with live-specific values.
-            $liveElements = $this->reader->getElementsForArea($areaId, 'live');
             if ($liveElements !== []) {
-                // Build the set of legacy DRAFT element IDs (rows AND content
-                // elements). A live element is "live-only" only when its legacy
-                // ID has no draft counterpart in this set; elements present on
-                // both legacy stages are "shared" and must be published from the
-                // draft records, never re-created as a live-only hierarchy.
-                //
-                // The id map cannot be used for this test: it only holds content
-                // elements (row delimiters are grouping boundaries and are never
-                // written as records), so a shared row would be misread as
-                // live-only and spawn a spurious section.
-                /** @var array<int, true> $draftLegacyIds */
-                $draftLegacyIds = [];
-                foreach ($draftElements as $draftElement) {
-                    $draftLegacyIds[$draftElement->id] = true;
-                }
-
-                Versioned::withVersionedMode(function () use (
+                $this->publishLiveStage(
                     $pageId,
                     $pageClassName,
                     $zone,
                     $liveElements,
-                    $draftLegacyIds,
+                    $draftElements,
                     $idMap,
                     $defaultViewport,
                     $viewportKeyMap,
-                ): void {
-                    Versioned::set_stage(Versioned::DRAFT);
-                    $this->livePublisher->publishToLive(
-                        $pageId,
-                        $pageClassName,
-                        $zone,
-                        $liveElements,
-                        $draftLegacyIds,
-                        $idMap,
-                        $defaultViewport,
-                        $viewportKeyMap,
-                    );
-                });
+                );
             }
 
-            $hasLiveContent = $liveElements !== [];
-            $this->pageFlagWriter->setUseGridOnPage($pageId, true, includeLive: $hasLiveContent);
+            $this->pageFlagWriter->setUseGridOnPage($pageId, true, includeLive: $liveElements !== []);
+        });
 
-            $conn->transactionEnd();
+        $this->logger->info('Successfully migrated page {pageId}.', ['pageId' => $pageId]);
+    }
 
-            $this->logger->info('Successfully migrated page {pageId}.', ['pageId' => $pageId]);
-        } catch (Throwable $exception) {
-            $conn->transactionRollback();
-            throw $exception;
+    /**
+     * Write the draft Section/Row/Column hierarchy on the DRAFT stage.
+     *
+     * @param class-string $pageClassName
+     * @param list<MigrationSection> $sections
+     */
+    private function writeDraftStage(
+        int $pageId,
+        string $pageClassName,
+        string $zone,
+        array $sections,
+        MigrationIdMap $idMap,
+    ): void {
+        Versioned::withVersionedMode(function () use (
+            $pageId,
+            $pageClassName,
+            $zone,
+            $sections,
+            $idMap,
+        ): void {
+            Versioned::set_stage(Versioned::DRAFT);
+            $this->draftWriter->writeDraftHierarchy($pageId, $pageClassName, $zone, $sections, $idMap);
+        });
+    }
+
+    /**
+     * Publish draft records to live for elements that also existed on legacy live.
+     *
+     * Stage is set to DRAFT because we read the draft-created records and then
+     * call writeToStage(LIVE) to copy them to _Live tables. overwriteLiveContent()
+     * then corrects _Live with live-specific values.
+     *
+     * @param class-string $pageClassName
+     * @param list<LegacyElement> $liveElements
+     * @param list<LegacyElement> $draftElements
+     * @param array<string, string> $viewportKeyMap Old viewport key → new key, for live grid-settings reconciliation
+     */
+    private function publishLiveStage(
+        int $pageId,
+        string $pageClassName,
+        string $zone,
+        array $liveElements,
+        array $draftElements,
+        MigrationIdMap $idMap,
+        string $defaultViewport,
+        array $viewportKeyMap,
+    ): void {
+        // Build the set of legacy DRAFT element IDs (rows AND content
+        // elements). A live element is "live-only" only when its legacy
+        // ID has no draft counterpart in this set; elements present on
+        // both legacy stages are "shared" and must be published from the
+        // draft records, never re-created as a live-only hierarchy.
+        //
+        // The id map cannot be used for this test: it only holds content
+        // elements (row delimiters are grouping boundaries and are never
+        // written as records), so a shared row would be misread as
+        // live-only and spawn a spurious section.
+        /** @var array<int, true> $draftLegacyIds */
+        $draftLegacyIds = [];
+        foreach ($draftElements as $draftElement) {
+            $draftLegacyIds[$draftElement->id] = true;
         }
+
+        Versioned::withVersionedMode(function () use (
+            $pageId,
+            $pageClassName,
+            $zone,
+            $liveElements,
+            $draftLegacyIds,
+            $idMap,
+            $defaultViewport,
+            $viewportKeyMap,
+        ): void {
+            Versioned::set_stage(Versioned::DRAFT);
+            $this->livePublisher->publishToLive(
+                $pageId,
+                $pageClassName,
+                $zone,
+                $liveElements,
+                $draftLegacyIds,
+                $idMap,
+                $defaultViewport,
+                $viewportKeyMap,
+            );
+        });
     }
 
     /**
