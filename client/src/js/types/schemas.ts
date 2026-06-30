@@ -1,5 +1,5 @@
 /**
- * Zod schemas for API responses.
+ * Valibot schemas for API responses.
  *
  * These describe the JSON shape on the wire — what the PHP `GridController`
  * emits — and are used at the API boundary in `client/src/js/api/endpoints.ts`
@@ -12,32 +12,32 @@
  * derived fields on top.
  */
 
-import { z } from 'zod'
+import * as v from 'valibot'
 import { CONTAINER_TYPES } from './elements'
 import { NODE_TYPES } from './identity'
 
-const nodeTypeSchema = z.enum(NODE_TYPES)
-const containerTypeSchema = z.enum(CONTAINER_TYPES)
+const nodeTypeSchema = v.picklist(NODE_TYPES)
+const containerTypeSchema = v.picklist(CONTAINER_TYPES)
 
-export const nodeRefSchema = z.object({
+export const nodeRefSchema = v.object({
   type: nodeTypeSchema,
-  id: z.number().int().positive(),
+  id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 })
 
-const elementStatusSchema = z.enum(['draft', 'published', 'modified', 'removed'])
+const elementStatusSchema = v.picklist(['draft', 'published', 'modified', 'removed'])
 
-const blockSchemaSchema = z.object({
-  typeName: z.string(),
-  label: z.string(),
-  icon: z.string(),
-  type: z.string(),
-  title: z.string(),
+const blockSchemaSchema = v.object({
+  typeName: v.string(),
+  label: v.string(),
+  icon: v.string(),
+  type: v.string(),
+  title: v.string(),
 })
 
-export const viewportSettingsSchema = z.object({
-  width: z.number().int().positive(),
-  offset: z.number().int().nonnegative(),
-  visible: z.boolean(),
+export const viewportSettingsSchema = v.object({
+  width: v.pipe(v.number(), v.integer(), v.minValue(1)),
+  offset: v.pipe(v.number(), v.integer(), v.minValue(0)),
+  visible: v.boolean(),
 })
 
 /**
@@ -51,15 +51,39 @@ function emptyArrayToObject(value: unknown): unknown {
   return Array.isArray(value) && value.length === 0 ? {} : value
 }
 
-const gridSettingsSchema = z.object({
+/**
+ * Build a schema for a PHP-encoded string-keyed map. Coerces the empty-array
+ * sentinel (`[]`) to `{}`, and rejects NON-empty arrays up front — valibot's
+ * `v.record` otherwise accepts an array as a record keyed by `"0"`, `"1"`, …
+ * (unlike zod's `z.record`, which rejects arrays). The array guard MUST run
+ * before the transform/record: an action placed after the transform pins the
+ * pipe's output type to `unknown` and breaks downstream inference, so the
+ * trailing `v.record` is what determines the output type.
+ */
+/**
+ * Build a schema for a PHP-encoded string-keyed map. Coerces the empty-array
+ * sentinel (`[]`) to `{}`, and rejects NON-empty arrays up front — valibot's
+ * `v.record` otherwise accepts an array as a record keyed by `"0"`, `"1"`, …
+ * (unlike zod's `z.record`, which rejects arrays). The array guard runs before
+ * the transform/record so the trailing `v.record` validates the coerced value.
+ */
+function phpMapSchema<TValue extends v.GenericSchema>(valueSchema: TValue) {
+  return v.pipe(
+    v.custom<unknown>((value) => !Array.isArray(value) || value.length === 0),
+    v.transform(emptyArrayToObject),
+    v.record(v.string(), valueSchema),
+  )
+}
+
+const gridSettingsSchema = v.object({
   default: viewportSettingsSchema,
-  overrides: z.preprocess(emptyArrayToObject, z.record(z.string(), viewportSettingsSchema)),
+  overrides: phpMapSchema(viewportSettingsSchema),
 })
 
-const allowedTypeInfoSchema = z.object({
-  label: z.string(),
-  icon: z.string(),
-  description: z.string(),
+const allowedTypeInfoSchema = v.object({
+  label: v.string(),
+  icon: v.string(),
+  description: v.string(),
 })
 
 /**
@@ -93,26 +117,27 @@ function isSafeEditLink(value: string): boolean {
   }
 }
 
-const baseFieldsWireSchema = z.object({
+const baseFieldsWireSchema = v.object({
   self: nodeRefSchema,
   parent: nodeRefSchema,
-  title: z.string(),
+  title: v.string(),
   blockSchema: blockSchemaSchema,
-  obsoleteClassName: z.string().nullable(),
-  version: z.number().int(),
-  canDelete: z.boolean(),
-  canPublish: z.boolean(),
-  canUnpublish: z.boolean(),
-  canCreate: z.boolean(),
-  editLink: z
-    .string()
-    .nullable()
-    .refine((value) => value === null || isSafeEditLink(value), {
-      message: 'editLink must be a relative path or an http(s) URL',
-    }),
+  obsoleteClassName: v.nullable(v.string()),
+  version: v.pipe(v.number(), v.integer()),
+  canDelete: v.boolean(),
+  canPublish: v.boolean(),
+  canUnpublish: v.boolean(),
+  canCreate: v.boolean(),
+  editLink: v.pipe(
+    v.nullable(v.string()),
+    v.check(
+      (value) => value === null || isSafeEditLink(value),
+      'editLink must be a relative path or an http(s) URL',
+    ),
+  ),
   status: elementStatusSchema,
-  summary: z.string().min(1).optional(),
-  extensions: z.record(z.string(), z.unknown()).optional(),
+  summary: v.optional(v.pipe(v.string(), v.minLength(1))),
+  extensions: v.optional(v.record(v.string(), v.unknown())),
 })
 
 /**
@@ -120,89 +145,97 @@ const baseFieldsWireSchema = z.object({
  * `containerType`/`allowedTypes`/`children` only on container nodes and
  * `gridSettings` only on columns; leaf elements omit all four fields.
  *
- * Modeled as a discriminated union once `containerType` is widened with
- * `.optional()` for the leaf variant — Zod's `discriminatedUnion` requires
- * every variant to declare the discriminant key, so leaves declare it as
- * the literal `undefined`.
+ * Modeled as a union of four variants. The leaf variant declares
+ * `containerType` as optional-`undefined`, so a node carrying a container type
+ * but missing the container fields matches no variant and is rejected.
  */
-type ElementNodeWire = z.infer<typeof baseFieldsWireSchema> &
+type ElementNodeWire = v.InferOutput<typeof baseFieldsWireSchema> &
   (
     | { containerType?: undefined }
     | {
         containerType: 'section' | 'row'
-        allowedTypes: Record<string, z.infer<typeof allowedTypeInfoSchema>> | null
+        allowedTypes: Record<string, v.InferOutput<typeof allowedTypeInfoSchema>> | null
         children: ElementNodeWire[] | null
       }
     | {
         containerType: 'column'
-        allowedTypes: Record<string, z.infer<typeof allowedTypeInfoSchema>> | null
+        allowedTypes: Record<string, v.InferOutput<typeof allowedTypeInfoSchema>> | null
         children: ElementNodeWire[] | null
-        gridSettings: z.infer<typeof gridSettingsSchema>
+        gridSettings: v.InferOutput<typeof gridSettingsSchema>
       }
   )
 
-const childrenSchema: z.ZodType<ElementNodeWire[] | null> = z.lazy(() =>
+const childrenSchema: v.GenericSchema<ElementNodeWire[] | null> = v.lazy(() =>
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
-  z.array(elementNodeWireSchema).nullable(),
+  v.nullable(v.array(elementNodeWireSchema)),
 )
 
-const allowedTypesSchema = z.preprocess(
-  emptyArrayToObject,
-  z.record(z.string(), allowedTypeInfoSchema).nullable(),
-)
+const allowedTypesSchema = v.nullable(phpMapSchema(allowedTypeInfoSchema))
 
-const sectionWireSchema = baseFieldsWireSchema.extend({
-  containerType: z.literal('section'),
+const sectionWireSchema = v.object({
+  ...baseFieldsWireSchema.entries,
+  containerType: v.literal('section'),
   allowedTypes: allowedTypesSchema,
   children: childrenSchema,
 })
 
-const rowWireSchema = baseFieldsWireSchema.extend({
-  containerType: z.literal('row'),
+const rowWireSchema = v.object({
+  ...baseFieldsWireSchema.entries,
+  containerType: v.literal('row'),
   allowedTypes: allowedTypesSchema,
   children: childrenSchema,
 })
 
-const columnWireSchema = baseFieldsWireSchema.extend({
-  containerType: z.literal('column'),
+const columnWireSchema = v.object({
+  ...baseFieldsWireSchema.entries,
+  containerType: v.literal('column'),
   allowedTypes: allowedTypesSchema,
   children: childrenSchema,
   gridSettings: gridSettingsSchema,
 })
 
-const simpleElementWireSchema = baseFieldsWireSchema.extend({
-  containerType: z.undefined().optional(),
+const simpleElementWireSchema = v.object({
+  ...baseFieldsWireSchema.entries,
+  containerType: v.optional(v.undefined_()),
 })
 
-export const elementNodeWireSchema: z.ZodType<ElementNodeWire> = z.union([
+/**
+ * Cast to `GenericSchema<ElementNodeWire>` at the recursive boundary. valibot's
+ * `~standard` (StandardSchema) output inference cannot resolve this recursive
+ * discriminated union — it widens the PHP-map fields (`allowedTypes`) to
+ * `unknown` even though `InferOutput` resolves them correctly and `v.record`
+ * validates them at runtime. The cast pins the precise `ElementNodeWire` output
+ * that downstream consumers (`endpoints.ts`) depend on.
+ */
+export const elementNodeWireSchema = v.union([
   sectionWireSchema,
   rowWireSchema,
   columnWireSchema,
   simpleElementWireSchema,
-])
+]) as v.GenericSchema<ElementNodeWire>
 
-export const treeApiResponseWireSchema = z.object({
+export const treeApiResponseWireSchema = v.object({
   rootParent: nodeRefSchema,
-  nodes: z.array(elementNodeWireSchema),
+  nodes: v.array(elementNodeWireSchema),
 })
 
 // --- Response schemas for non-tree endpoints ---
 
-export const acceptableContainerSchema = z.object({
-  id: z.number().int().positive(),
-  title: z.string(),
+export const acceptableContainerSchema = v.object({
+  id: v.pipe(v.number(), v.integer(), v.minValue(1)),
+  title: v.string(),
   type: containerTypeSchema,
 })
 
-export const acceptableContainerListSchema = z.array(acceptableContainerSchema)
+export const acceptableContainerListSchema = v.array(acceptableContainerSchema)
 
-export const pageEntrySchema = z.object({
-  id: z.number().int().positive(),
-  title: z.string(),
-  parentId: z.number().int().nonnegative(),
-  hasGridZones: z.boolean(),
+export const pageEntrySchema = v.object({
+  id: v.pipe(v.number(), v.integer(), v.minValue(1)),
+  title: v.string(),
+  parentId: v.pipe(v.number(), v.integer(), v.minValue(0)),
+  hasGridZones: v.boolean(),
 })
 
-export const pageEntryListSchema = z.array(pageEntrySchema)
+export const pageEntryListSchema = v.array(pageEntrySchema)
 
-export const zoneListSchema = z.array(z.string().min(1))
+export const zoneListSchema = v.array(v.pipe(v.string(), v.minLength(1)))

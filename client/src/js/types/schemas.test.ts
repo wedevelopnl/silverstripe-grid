@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import * as v from 'valibot'
 import { elementNodeWireSchema, viewportSettingsSchema } from './schemas'
 
 /**
@@ -26,12 +27,12 @@ describe('viewportSettingsSchema', () => {
   const base = { width: 6, offset: 0, visible: true }
 
   it('accepts a valid positive width with a non-negative offset', () => {
-    const result = viewportSettingsSchema.safeParse(base)
+    const result = v.safeParse(viewportSettingsSchema, base)
     expect(result.success).toBe(true)
   })
 
   it('accepts a zero offset (int<0, max> domain)', () => {
-    expect(viewportSettingsSchema.safeParse({ ...base, offset: 0 }).success).toBe(true)
+    expect(v.safeParse(viewportSettingsSchema, { ...base, offset: 0 }).success).toBe(true)
   })
 
   describe('width', () => {
@@ -41,7 +42,7 @@ describe('viewportSettingsSchema', () => {
       ['zero', 0],
       ['fractional', 1.5],
     ])('rejects a %s width', (_label, width) => {
-      expect(viewportSettingsSchema.safeParse({ ...base, width }).success).toBe(false)
+      expect(v.safeParse(viewportSettingsSchema, { ...base, width }).success).toBe(false)
     })
   })
 
@@ -51,36 +52,38 @@ describe('viewportSettingsSchema', () => {
       ['negative', -1],
       ['fractional', 1.5],
     ])('rejects a %s offset', (_label, offset) => {
-      expect(viewportSettingsSchema.safeParse({ ...base, offset }).success).toBe(false)
+      expect(v.safeParse(viewportSettingsSchema, { ...base, offset }).success).toBe(false)
     })
   })
 })
 
 describe('elementNodeWireSchema status enum', () => {
   it.each(['draft', 'published', 'modified', 'removed'])('accepts the %s status', (status) => {
-    expect(elementNodeWireSchema.safeParse({ ...baseLeaf, status }).success).toBe(true)
+    expect(v.safeParse(elementNodeWireSchema, { ...baseLeaf, status }).success).toBe(true)
   })
 
   it('rejects a status outside the enum', () => {
-    expect(elementNodeWireSchema.safeParse({ ...baseLeaf, status: 'archived' }).success).toBe(false)
+    expect(v.safeParse(elementNodeWireSchema, { ...baseLeaf, status: 'archived' }).success).toBe(
+      false,
+    )
   })
 })
 
 describe('elementNodeWireSchema summary', () => {
   it('accepts a multi-character summary', () => {
-    const result = elementNodeWireSchema.safeParse({ ...baseLeaf, summary: 'A longer summary' })
+    const result = v.safeParse(elementNodeWireSchema, { ...baseLeaf, summary: 'A longer summary' })
     expect(result.success).toBe(true)
-    expect(result.success && 'summary' in result.data && result.data.summary).toBe(
+    expect(result.success && 'summary' in result.output && result.output.summary).toBe(
       'A longer summary',
     )
   })
 
   it('rejects an empty-string summary (min length 1)', () => {
-    expect(elementNodeWireSchema.safeParse({ ...baseLeaf, summary: '' }).success).toBe(false)
+    expect(v.safeParse(elementNodeWireSchema, { ...baseLeaf, summary: '' }).success).toBe(false)
   })
 
   it('accepts a node with no summary (optional)', () => {
-    expect(elementNodeWireSchema.safeParse(baseLeaf).success).toBe(true)
+    expect(v.safeParse(elementNodeWireSchema, baseLeaf).success).toBe(true)
   })
 })
 
@@ -89,15 +92,15 @@ describe('elementNodeWireSchema leaf discriminant', () => {
     // A node with containerType set must satisfy a container variant (which
     // requires allowedTypes + children). With only base fields it must NOT
     // fall through to the leaf (undefined-containerType) variant.
-    expect(elementNodeWireSchema.safeParse({ ...baseLeaf, containerType: 'section' }).success).toBe(
-      false,
-    )
+    expect(
+      v.safeParse(elementNodeWireSchema, { ...baseLeaf, containerType: 'section' }).success,
+    ).toBe(false)
   })
 
   it('accepts an explicit undefined containerType on a leaf', () => {
-    expect(elementNodeWireSchema.safeParse({ ...baseLeaf, containerType: undefined }).success).toBe(
-      true,
-    )
+    expect(
+      v.safeParse(elementNodeWireSchema, { ...baseLeaf, containerType: undefined }).success,
+    ).toBe(true)
   })
 })
 
@@ -107,11 +110,11 @@ describe('editLink scheme validation', () => {
     ['https absolute URL', 'https://example.com/edit'],
     ['http absolute URL', 'http://example.com/edit'],
   ])('accepts a %s', (_label, editLink) => {
-    expect(elementNodeWireSchema.safeParse({ ...baseLeaf, editLink }).success).toBe(true)
+    expect(v.safeParse(elementNodeWireSchema, { ...baseLeaf, editLink }).success).toBe(true)
   })
 
   it('accepts a null editLink', () => {
-    expect(elementNodeWireSchema.safeParse({ ...baseLeaf, editLink: null }).success).toBe(true)
+    expect(v.safeParse(elementNodeWireSchema, { ...baseLeaf, editLink: null }).success).toBe(true)
   })
 
   it.each([
@@ -128,7 +131,7 @@ describe('editLink scheme validation', () => {
     ['newline-injected open redirect', '/\n/evil.com'],
     ['carriage-return-injected open redirect', '/\r/evil.com'],
   ])('rejects a %s', (_label, editLink) => {
-    expect(elementNodeWireSchema.safeParse({ ...baseLeaf, editLink }).success).toBe(false)
+    expect(v.safeParse(elementNodeWireSchema, { ...baseLeaf, editLink }).success).toBe(false)
   })
 })
 
@@ -141,25 +144,29 @@ describe('section allowedTypes (allowedTypeInfoSchema + emptyArrayToObject)', ()
   })
 
   it('parses a populated allowedTypes record and preserves entries', () => {
-    const result = elementNodeWireSchema.safeParse(sectionWith({ Foo: allowedTypeInfo }))
+    const result = v.safeParse(elementNodeWireSchema, sectionWith({ Foo: allowedTypeInfo }))
     expect(result.success).toBe(true)
-    expect(result.success && 'allowedTypes' in result.data && result.data.allowedTypes).toEqual({
-      Foo: allowedTypeInfo,
-    })
+    expect(result.success && 'allowedTypes' in result.output && result.output.allowedTypes).toEqual(
+      {
+        Foo: allowedTypeInfo,
+      },
+    )
   })
 
   it('coerces an empty array to an empty object', () => {
-    const result = elementNodeWireSchema.safeParse(sectionWith([]))
+    const result = v.safeParse(elementNodeWireSchema, sectionWith([]))
     expect(result.success).toBe(true)
-    expect(result.success && 'allowedTypes' in result.data && result.data.allowedTypes).toEqual({})
+    expect(result.success && 'allowedTypes' in result.output && result.output.allowedTypes).toEqual(
+      {},
+    )
   })
 
   it('rejects a non-empty array of allowed types (stays an array, not a record)', () => {
-    expect(elementNodeWireSchema.safeParse(sectionWith([allowedTypeInfo])).success).toBe(false)
+    expect(v.safeParse(elementNodeWireSchema, sectionWith([allowedTypeInfo])).success).toBe(false)
   })
 
   it('requires label, icon and description on each allowed-type entry', () => {
-    expect(elementNodeWireSchema.safeParse(sectionWith({ Foo: { label: 'L' } })).success).toBe(
+    expect(v.safeParse(elementNodeWireSchema, sectionWith({ Foo: { label: 'L' } })).success).toBe(
       false,
     )
   })

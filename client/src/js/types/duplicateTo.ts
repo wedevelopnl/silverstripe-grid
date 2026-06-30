@@ -1,5 +1,5 @@
-import type { z } from 'zod'
+import type * as v from 'valibot'
 import type { acceptableContainerSchema, pageEntrySchema } from './schemas'
 
-export type AcceptableContainer = z.infer<typeof acceptableContainerSchema>
-export type PageEntry = z.infer<typeof pageEntrySchema>
+export type AcceptableContainer = v.InferOutput<typeof acceptableContainerSchema>
+export type PageEntry = v.InferOutput<typeof pageEntrySchema>
