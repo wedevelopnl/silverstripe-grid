@@ -22,6 +22,15 @@ Read this section before running the task on a production database.
 - **Element IDs change.** Migrated content elements receive new primary keys when inserted into `GridElement`. External references to the old `BaseElement` IDs (shortcodes in other content, custom reports, outbound links) will not follow automatically.
 - **Legacy tables are left intact.** The tool does not drop `BaseElement`, `ElementRow`, `ElementContent`, or `ElementalArea`. Orphaned rows in those tables let you re-run the migration if something looks wrong. Drop them manually once you are satisfied with the result.
 - **Only `ElementContent` is mapped by default.** The built-in field mapper converts `DNADesign\Elemental\Models\ElementContent` to `WeDevelop\Grid\Model\ContentElement`. Any custom element subclass must either already extend `GridElement`, or be registered via the `updateClassNameMapping` extension hook described in [Customising the Migration](#customising-the-migration).
+- **Apply `BlockMediaExtension` before migrating media.** Media capability is opt-in: `ContentElement` ships lean (HTML only), so the media columns (`MediaType`, `MediaImage`, video fields, …) only exist once you apply `BlockMediaExtension` to it (or to your own content subclass). If your legacy content used media and the extension is not applied to the destination class, those fields have nowhere to land. Add it in your app config before running the task:
+
+  ```yaml
+  WeDevelop\Grid\Model\ContentElement:
+    extensions:
+      - WeDevelop\Grid\Extensions\BlockMediaExtension
+  ```
+
+  When you remap to a custom class via `updateClassNameMapping`, apply the extension to that class instead.
 - **Media-field CSS values are Bootstrap-specific.** Field values like `ContentVerticalAlign` (`align-items-center` → `center`) and `MediaPosition` (`order-1 order-md-2` → `last-on-desktop`) are translated using hardcoded Bootstrap class names. Sites that used the old module with a different CSS framework need a custom `FieldMapper` — see [Customising the Migration](#customising-the-migration).
 - **Draft-deleted content will reappear on draft.** To keep the Versioned contract intact, elements that only exist on live are inserted on **both** draft and live. If your editors had deleted content from draft without publishing, those elements will become visible on draft again after migration.
 
