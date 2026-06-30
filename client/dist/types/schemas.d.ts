@@ -64,7 +64,7 @@ declare const baseFieldsWireSchema: v.ObjectSchema<{
     readonly editLink: v.SchemaWithPipe<readonly [v.NullableSchema<v.StringSchema<undefined>, undefined>, v.CheckAction<string | null, "editLink must be a relative path or an http(s) URL">]>;
     readonly status: v.PicklistSchema<["draft", "published", "modified", "removed"], undefined>;
     readonly summary: v.OptionalSchema<v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.MinLengthAction<string, 1, undefined>]>, undefined>;
-    readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.UnknownSchema, undefined>, undefined>;
+    readonly extensions: v.OptionalSchema<v.SchemaWithPipe<readonly [v.CustomSchema<unknown, undefined>, v.RecordSchema<v.StringSchema<undefined>, v.UnknownSchema, undefined>]>, undefined>;
 }, undefined>;
 /**
  * Recursive node schema. PHP's `GridNode::jsonSerialize()` emits
