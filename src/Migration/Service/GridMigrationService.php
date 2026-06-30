@@ -427,7 +427,6 @@ final class GridMigrationService
             ));
         }
 
-        /** @var GridElement $newElement */
         $newElement = $newClassName::create();
 
         $newElement->Title = $legacyElement->title;
@@ -695,7 +694,6 @@ final class GridMigrationService
             }
         }
 
-        /** @var GridSettings $settings Non-null: callers only pass non-empty element lists. */
         return $settings;
     }
 

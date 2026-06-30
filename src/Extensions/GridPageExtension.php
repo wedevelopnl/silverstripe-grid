@@ -56,7 +56,6 @@ class GridPageExtension extends Extension
 
     public function onAfterPopulateDefaults(): void
     {
-        /** @var SiteTree $owner */
         $owner = $this->getOwner();
 
         /** @var bool $useGrid */
@@ -66,7 +65,6 @@ class GridPageExtension extends Extension
 
     public function updateCMSFields(FieldList $fields): void
     {
-        /** @var SiteTree $owner */
         $owner = $this->getOwner();
 
         $fields->removeByName('Sections');

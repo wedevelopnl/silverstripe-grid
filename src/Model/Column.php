@@ -117,7 +117,6 @@ class Column extends GridElement implements ContainerInterface
     /** Retrieve grid settings from the composite DB field. */
     public function getGridSettings(): GridSettings
     {
-        /** @var DBGridSettings $field */
         $field = $this->dbObject('GridSettings');
 
         return $field->getValue() ?? GridSettings::initial($this->gridAdapter->getColumnCount());
@@ -132,7 +131,6 @@ class Column extends GridElement implements ContainerInterface
      */
     public function setGridSettings(GridSettings|string $settings): static
     {
-        /** @var DBGridSettings $field */
         $field = $this->dbObject('GridSettings');
         $field->setValue($settings);
 
@@ -142,7 +140,6 @@ class Column extends GridElement implements ContainerInterface
     /** CSS classes for the grid column wrapper. */
     public function getColumnClasses(): string
     {
-        /** @var GridSettingsResolver $resolver */
         $resolver = Injector::inst()->get(GridSettingsResolver::class);
         $effective = $resolver->resolveEffective($this->getGridSettings());
         $classes = ColumnClassResolver::resolve($effective, $this->gridAdapter);
@@ -166,7 +163,6 @@ class Column extends GridElement implements ContainerInterface
     {
         parent::onBeforeWrite();
 
-        /** @var DBGridSettings $gridSettings */
         $gridSettings = $this->dbObject('GridSettings');
         if (!$this->isInDB() && !$gridSettings->exists()) {
             $this->setGridSettings(GridSettings::initial($this->gridAdapter->getColumnCount()));

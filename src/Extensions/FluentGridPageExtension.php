@@ -48,7 +48,6 @@ class FluentGridPageExtension extends Extension
             return;
         }
 
-        /** @var SiteTree $page */
         $page = $this->getOwner();
 
         /** @var positive-int $pageId */
@@ -68,7 +67,6 @@ class FluentGridPageExtension extends Extension
             return;
         }
 
-        /** @var SiteTree $page */
         $page = $this->getOwner();
 
         if (!$page->hasExtension(GridPageExtension::class)) {
@@ -113,7 +111,6 @@ class FluentGridPageExtension extends Extension
                 $state->setLocale($sourceLocale);
 
                 foreach ($page->Sections() as $section) {
-                    /** @var Section $clone */
                     $clone = $section->duplicate(true);
 
                     // Collect all cloned elements while in source locale (where they're visible)

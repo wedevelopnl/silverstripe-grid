@@ -37,14 +37,13 @@ class GridAwareVersionFormFactory extends DataObjectVersionFormFactory
      *     method this re-implements; keep this pipeline in sync if the base
      *     factory's field-stripping flow changes upstream.
      *
+     * @param string $name
      * @param array{Record?: DataObject, ...} $context
      */
-    #[Override] // @phpstan-ignore missingType.return, typeCoverage.returnTypeCoverage, missingType.parameter (matching the untyped parent signature)
-    protected function getFormFields(?RequestHandler $controller, $name, $context = [])
+    #[Override]
+    protected function getFormFields(?RequestHandler $controller, $name, $context = []): FieldList
     {
-        /** @var DataObject $record */
         $record = $context['Record'] ?? throw new LogicException('Missing required context Record');
-        /** @var FieldList $fields */
         $fields = $record->getCMSFields();
 
         $this->removeHistoryViewerFields($fields);
@@ -53,6 +52,11 @@ class GridAwareVersionFormFactory extends DataObjectVersionFormFactory
 
         // Parent extension hook — matches the stock factory's flow.
         $this->invokeWithExtensions('updateFormFields', $fields, $controller, $name, $context);
+
+        // `invokeWithExtensions()` takes its arguments by reference, so PHPStan
+        // widens `$fields` to the union of all passed argument types. Assert the
+        // invariant the call actually preserves.
+        \assert($fields instanceof FieldList);
 
         return $fields;
     }
