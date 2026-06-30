@@ -55,17 +55,9 @@ function emptyArrayToObject(value: unknown): unknown {
  * Build a schema for a PHP-encoded string-keyed map. Coerces the empty-array
  * sentinel (`[]`) to `{}`, and rejects NON-empty arrays up front — valibot's
  * `v.record` otherwise accepts an array as a record keyed by `"0"`, `"1"`, …
- * (unlike zod's `z.record`, which rejects arrays). The array guard MUST run
- * before the transform/record: an action placed after the transform pins the
- * pipe's output type to `unknown` and breaks downstream inference, so the
- * trailing `v.record` is what determines the output type.
- */
-/**
- * Build a schema for a PHP-encoded string-keyed map. Coerces the empty-array
- * sentinel (`[]`) to `{}`, and rejects NON-empty arrays up front — valibot's
- * `v.record` otherwise accepts an array as a record keyed by `"0"`, `"1"`, …
- * (unlike zod's `z.record`, which rejects arrays). The array guard runs before
- * the transform/record so the trailing `v.record` validates the coerced value.
+ * (verified at runtime, unlike zod's `z.record`, which rejects arrays). The
+ * array guard runs before the empty-array→`{}` transform, so the trailing
+ * `v.record` only ever validates an object.
  */
 function phpMapSchema<TValue extends v.GenericSchema>(valueSchema: TValue) {
   return v.pipe(
