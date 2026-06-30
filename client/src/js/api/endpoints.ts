@@ -9,6 +9,7 @@ import type {
   TreeApiResponse,
 } from '@/types/elements'
 import { NodeIdentity, type NodeRef } from '@/types/identity'
+import * as v from 'valibot'
 import {
   acceptableContainerListSchema,
   pageEntryListSchema,
@@ -49,7 +50,7 @@ export async function fetchElementTree(
  * the post-parse step is purely additive.
  */
 export function normaliseTreeResponse(raw: unknown): TreeApiResponse {
-  const parsed = treeApiResponseWireSchema.parse(raw)
+  const parsed = v.parse(treeApiResponseWireSchema, raw)
 
   return {
     rootParent: parsed.rootParent,
@@ -57,7 +58,7 @@ export function normaliseTreeResponse(raw: unknown): TreeApiResponse {
   }
 }
 
-type NodeWire = (typeof treeApiResponseWireSchema._output)['nodes'][number]
+type NodeWire = v.InferOutput<typeof treeApiResponseWireSchema>['nodes'][number]
 
 function attachDerivedFields(node: NodeWire): ElementNode {
   const nodeKey = NodeIdentity.toKey(node.self.type, node.self.id)
@@ -244,7 +245,7 @@ export async function fetchAcceptableContainers(
   const raw = await apiGet<unknown>(
     `${base}/api/acceptableContainers/${pageId}/${encodeURIComponent(zone)}/${encodeURIComponent(elementType)}`,
   )
-  return acceptableContainerListSchema.parse(raw)
+  return v.parse(acceptableContainerListSchema, raw)
 }
 
 // --- Zones ---
@@ -252,7 +253,7 @@ export async function fetchAcceptableContainers(
 export async function fetchZones(pageId: number): Promise<string[]> {
   const base = getControllerLink()
   const raw = await apiGet<unknown>(`${base}/api/zones/${pageId}`)
-  return zoneListSchema.parse(raw)
+  return v.parse(zoneListSchema, raw)
 }
 
 // --- Pages ---
@@ -263,5 +264,5 @@ export async function fetchPages(search?: string): Promise<PageEntry[]> {
   const base = getControllerLink()
   const params = search ? `?search=${encodeURIComponent(search)}` : ''
   const raw = await apiGet<unknown>(`${base}/api/pages${params}`)
-  return pageEntryListSchema.parse(raw)
+  return v.parse(pageEntryListSchema, raw)
 }
