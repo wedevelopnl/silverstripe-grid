@@ -1,146 +1,129 @@
-import { z } from 'zod';
-export declare const nodeRefSchema: z.ZodObject<{
-    type: z.ZodEnum<{
-        section: "section";
-        page: "page";
-        row: "row";
-        column: "column";
-        element: "element";
-    }>;
-    id: z.ZodNumber;
-}, z.core.$strip>;
-export declare const viewportSettingsSchema: z.ZodObject<{
-    width: z.ZodNumber;
-    offset: z.ZodNumber;
-    visible: z.ZodBoolean;
-}, z.core.$strip>;
-declare const gridSettingsSchema: z.ZodObject<{
-    default: z.ZodObject<{
-        width: z.ZodNumber;
-        offset: z.ZodNumber;
-        visible: z.ZodBoolean;
-    }, z.core.$strip>;
-    overrides: z.ZodPreprocess<z.ZodRecord<z.ZodString, z.ZodObject<{
-        width: z.ZodNumber;
-        offset: z.ZodNumber;
-        visible: z.ZodBoolean;
-    }, z.core.$strip>>>;
-}, z.core.$strip>;
-declare const allowedTypeInfoSchema: z.ZodObject<{
-    label: z.ZodString;
-    icon: z.ZodString;
-    description: z.ZodString;
-}, z.core.$strip>;
-declare const baseFieldsWireSchema: z.ZodObject<{
-    self: z.ZodObject<{
-        type: z.ZodEnum<{
-            section: "section";
-            page: "page";
-            row: "row";
-            column: "column";
-            element: "element";
-        }>;
-        id: z.ZodNumber;
-    }, z.core.$strip>;
-    parent: z.ZodObject<{
-        type: z.ZodEnum<{
-            section: "section";
-            page: "page";
-            row: "row";
-            column: "column";
-            element: "element";
-        }>;
-        id: z.ZodNumber;
-    }, z.core.$strip>;
-    title: z.ZodString;
-    blockSchema: z.ZodObject<{
-        typeName: z.ZodString;
-        label: z.ZodString;
-        icon: z.ZodString;
-        type: z.ZodString;
-        title: z.ZodString;
-    }, z.core.$strip>;
-    obsoleteClassName: z.ZodNullable<z.ZodString>;
-    version: z.ZodNumber;
-    canDelete: z.ZodBoolean;
-    canPublish: z.ZodBoolean;
-    canUnpublish: z.ZodBoolean;
-    canCreate: z.ZodBoolean;
-    editLink: z.ZodNullable<z.ZodString>;
-    status: z.ZodEnum<{
-        draft: "draft";
-        published: "published";
-        modified: "modified";
-        removed: "removed";
-    }>;
-    summary: z.ZodOptional<z.ZodString>;
-    extensions: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-}, z.core.$strip>;
+/**
+ * Valibot schemas for API responses.
+ *
+ * These describe the JSON shape on the wire — what the PHP `GridController`
+ * emits — and are used at the API boundary in `client/src/js/api/endpoints.ts`
+ * to validate every server response before it flows into the rest of the
+ * frontend.
+ *
+ * The in-memory types in `./elements.ts` enrich nodes with derived fields
+ * (`nodeKey`, `parentKey`, `id`) that the wire shape does not include.
+ * `normaliseTreeResponse` parses with these schemas first, then layers the
+ * derived fields on top.
+ */
+import * as v from 'valibot';
+export declare const nodeRefSchema: v.ObjectSchema<{
+    readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element"], undefined>;
+    readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+}, undefined>;
+export declare const viewportSettingsSchema: v.ObjectSchema<{
+    readonly width: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+    readonly offset: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 0, undefined>]>;
+    readonly visible: v.BooleanSchema<undefined>;
+}, undefined>;
+declare const gridSettingsSchema: v.ObjectSchema<{
+    readonly default: v.ObjectSchema<{
+        readonly width: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+        readonly offset: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 0, undefined>]>;
+        readonly visible: v.BooleanSchema<undefined>;
+    }, undefined>;
+    readonly overrides: v.SchemaWithPipe<readonly [v.CustomSchema<unknown, undefined>, v.TransformAction<unknown, unknown>, v.RecordSchema<v.StringSchema<undefined>, v.ObjectSchema<{
+        readonly width: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+        readonly offset: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 0, undefined>]>;
+        readonly visible: v.BooleanSchema<undefined>;
+    }, undefined>, undefined>]>;
+}, undefined>;
+declare const allowedTypeInfoSchema: v.ObjectSchema<{
+    readonly label: v.StringSchema<undefined>;
+    readonly icon: v.StringSchema<undefined>;
+    readonly description: v.StringSchema<undefined>;
+}, undefined>;
+declare const baseFieldsWireSchema: v.ObjectSchema<{
+    readonly self: v.ObjectSchema<{
+        readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element"], undefined>;
+        readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+    }, undefined>;
+    readonly parent: v.ObjectSchema<{
+        readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element"], undefined>;
+        readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+    }, undefined>;
+    readonly title: v.StringSchema<undefined>;
+    readonly blockSchema: v.ObjectSchema<{
+        readonly typeName: v.StringSchema<undefined>;
+        readonly label: v.StringSchema<undefined>;
+        readonly icon: v.StringSchema<undefined>;
+        readonly type: v.StringSchema<undefined>;
+        readonly title: v.StringSchema<undefined>;
+    }, undefined>;
+    readonly obsoleteClassName: v.NullableSchema<v.StringSchema<undefined>, undefined>;
+    readonly version: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>;
+    readonly canDelete: v.BooleanSchema<undefined>;
+    readonly canPublish: v.BooleanSchema<undefined>;
+    readonly canUnpublish: v.BooleanSchema<undefined>;
+    readonly canCreate: v.BooleanSchema<undefined>;
+    readonly editLink: v.SchemaWithPipe<readonly [v.NullableSchema<v.StringSchema<undefined>, undefined>, v.CheckAction<string | null, "editLink must be a relative path or an http(s) URL">]>;
+    readonly status: v.PicklistSchema<["draft", "published", "modified", "removed"], undefined>;
+    readonly summary: v.OptionalSchema<v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.MinLengthAction<string, 1, undefined>]>, undefined>;
+    readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.UnknownSchema, undefined>, undefined>;
+}, undefined>;
 /**
  * Recursive node schema. PHP's `GridNode::jsonSerialize()` emits
  * `containerType`/`allowedTypes`/`children` only on container nodes and
  * `gridSettings` only on columns; leaf elements omit all four fields.
  *
- * Modeled as a discriminated union once `containerType` is widened with
- * `.optional()` for the leaf variant — Zod's `discriminatedUnion` requires
- * every variant to declare the discriminant key, so leaves declare it as
- * the literal `undefined`.
+ * Modeled as a union of four variants. The leaf variant declares
+ * `containerType` as optional-`undefined`, so a node carrying a container type
+ * but missing the container fields matches no variant and is rejected.
  */
-type ElementNodeWire = z.infer<typeof baseFieldsWireSchema> & ({
+type ElementNodeWire = v.InferOutput<typeof baseFieldsWireSchema> & ({
     containerType?: undefined;
 } | {
     containerType: 'section' | 'row';
-    allowedTypes: Record<string, z.infer<typeof allowedTypeInfoSchema>> | null;
+    allowedTypes: Record<string, v.InferOutput<typeof allowedTypeInfoSchema>> | null;
     children: ElementNodeWire[] | null;
 } | {
     containerType: 'column';
-    allowedTypes: Record<string, z.infer<typeof allowedTypeInfoSchema>> | null;
+    allowedTypes: Record<string, v.InferOutput<typeof allowedTypeInfoSchema>> | null;
     children: ElementNodeWire[] | null;
-    gridSettings: z.infer<typeof gridSettingsSchema>;
+    gridSettings: v.InferOutput<typeof gridSettingsSchema>;
 });
-export declare const elementNodeWireSchema: z.ZodType<ElementNodeWire>;
-export declare const treeApiResponseWireSchema: z.ZodObject<{
-    rootParent: z.ZodObject<{
-        type: z.ZodEnum<{
-            section: "section";
-            page: "page";
-            row: "row";
-            column: "column";
-            element: "element";
-        }>;
-        id: z.ZodNumber;
-    }, z.core.$strip>;
-    nodes: z.ZodArray<z.ZodType<ElementNodeWire, unknown, z.core.$ZodTypeInternals<ElementNodeWire, unknown>>>;
-}, z.core.$strip>;
-export declare const acceptableContainerSchema: z.ZodObject<{
-    id: z.ZodNumber;
-    title: z.ZodString;
-    type: z.ZodEnum<{
-        section: "section";
-        row: "row";
-        column: "column";
-    }>;
-}, z.core.$strip>;
-export declare const acceptableContainerListSchema: z.ZodArray<z.ZodObject<{
-    id: z.ZodNumber;
-    title: z.ZodString;
-    type: z.ZodEnum<{
-        section: "section";
-        row: "row";
-        column: "column";
-    }>;
-}, z.core.$strip>>;
-export declare const pageEntrySchema: z.ZodObject<{
-    id: z.ZodNumber;
-    title: z.ZodString;
-    parentId: z.ZodNumber;
-    hasGridZones: z.ZodBoolean;
-}, z.core.$strip>;
-export declare const pageEntryListSchema: z.ZodArray<z.ZodObject<{
-    id: z.ZodNumber;
-    title: z.ZodString;
-    parentId: z.ZodNumber;
-    hasGridZones: z.ZodBoolean;
-}, z.core.$strip>>;
-export declare const zoneListSchema: z.ZodArray<z.ZodString>;
+/**
+ * Cast to `GenericSchema<ElementNodeWire>` at the recursive boundary. valibot's
+ * `~standard` (StandardSchema) output inference cannot resolve this recursive
+ * discriminated union — it widens the PHP-map fields (`allowedTypes`) to
+ * `unknown` even though `InferOutput` resolves them correctly and `v.record`
+ * validates them at runtime. The cast pins the precise `ElementNodeWire` output
+ * that downstream consumers (`endpoints.ts`) depend on.
+ */
+export declare const elementNodeWireSchema: v.GenericSchema<ElementNodeWire>;
+export declare const treeApiResponseWireSchema: v.ObjectSchema<{
+    readonly rootParent: v.ObjectSchema<{
+        readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element"], undefined>;
+        readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+    }, undefined>;
+    readonly nodes: v.ArraySchema<v.GenericSchema<ElementNodeWire>, undefined>;
+}, undefined>;
+export declare const acceptableContainerSchema: v.ObjectSchema<{
+    readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+    readonly title: v.StringSchema<undefined>;
+    readonly type: v.PicklistSchema<readonly ["section", "row", "column"], undefined>;
+}, undefined>;
+export declare const acceptableContainerListSchema: v.ArraySchema<v.ObjectSchema<{
+    readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+    readonly title: v.StringSchema<undefined>;
+    readonly type: v.PicklistSchema<readonly ["section", "row", "column"], undefined>;
+}, undefined>, undefined>;
+export declare const pageEntrySchema: v.ObjectSchema<{
+    readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+    readonly title: v.StringSchema<undefined>;
+    readonly parentId: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 0, undefined>]>;
+    readonly hasGridZones: v.BooleanSchema<undefined>;
+}, undefined>;
+export declare const pageEntryListSchema: v.ArraySchema<v.ObjectSchema<{
+    readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+    readonly title: v.StringSchema<undefined>;
+    readonly parentId: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 0, undefined>]>;
+    readonly hasGridZones: v.BooleanSchema<undefined>;
+}, undefined>, undefined>;
+export declare const zoneListSchema: v.ArraySchema<v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.MinLengthAction<string, 1, undefined>]>, undefined>;
 export {};
