@@ -12,7 +12,7 @@ use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
-use WeDevelop\Grid\Migration\Service\LegacyDataReader;
+use WeDevelop\Grid\Migration\Service\LegacyElementReader;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 
 #[CoversClass(FieldMapper::class)]
@@ -1055,7 +1055,7 @@ final class FieldMapperTest extends TestCase
 
     public function testExpectedMediaKeysMatchesMediaFieldsMinusHtml(): void
     {
-        // EXPECTED_MEDIA_KEYS is the non-HTML subset of LegacyDataReader::MEDIA_FIELDS.
+        // EXPECTED_MEDIA_KEYS is the non-HTML subset of LegacyElementReader::MEDIA_FIELDS.
         // HTML is handled separately via LegacyElement->extraData and is intentionally
         // excluded from the mapping path. Both constants are private, so reflection
         // is used here — we do NOT widen visibility just to enable a test.
@@ -1067,7 +1067,7 @@ final class FieldMapperTest extends TestCase
         // This test will FAIL if a field is added to MEDIA_FIELDS but not to
         // EXPECTED_MEDIA_KEYS (or vice versa), surfacing the drift immediately.
         $expectedMediaKeys = (new \ReflectionClassConstant(FieldMapper::class, 'EXPECTED_MEDIA_KEYS'))->getValue();
-        $mediaFields = (new \ReflectionClassConstant(LegacyDataReader::class, 'MEDIA_FIELDS'))->getValue();
+        $mediaFields = (new \ReflectionClassConstant(LegacyElementReader::class, 'MEDIA_FIELDS'))->getValue();
 
         $mediaFieldsWithoutHtml = \array_values(\array_filter(
             $mediaFields,
