@@ -103,11 +103,21 @@ class GridElement extends DataObject
 
     private static string $default_sort = '"Sort" ASC';
 
-    /** @var array<string, array<string, string|list<string>>> */
+    /**
+     * Covers the module's hottest access path — every child fetch, sort
+     * assignment, default-title count and scaffold re-check filters on
+     * (ParentClass, ParentID) and orders by Sort. Equality columns lead, the
+     * ORDER BY column trails, so the index serves both the WHERE and the sort
+     * in one read. Section's zone-scoped variant additionally filters Zone,
+     * which lives on the Section subclass table and so cannot join this
+     * base-table index — Section keeps its own single-column Zone index.
+     *
+     * @var array<string, array<string, string|list<string>>>
+     */
     private static array $indexes = [
-        'Sort' => [
+        'ParentSort' => [
             'type' => 'index',
-            'columns' => ['Sort'],
+            'columns' => ['ParentClass', 'ParentID', 'Sort'],
         ],
     ];
 
