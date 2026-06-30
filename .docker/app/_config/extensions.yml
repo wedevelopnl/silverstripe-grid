@@ -4,3 +4,10 @@ Name: app-grid
 Page:
   extensions:
     - WeDevelop\Grid\Extensions\GridPageExtension
+
+# Media capability is opt-in in the shipped module (see _config/content-layout.yml).
+# The test app applies it to ContentElement so the module's own media E2E specs,
+# media integration tests, and SS5->SS6 migration tests exercise the full block.
+WeDevelop\Grid\Model\ContentElement:
+  extensions:
+    - WeDevelop\Grid\Extensions\BlockMediaExtension

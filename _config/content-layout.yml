@@ -8,6 +8,15 @@ SilverStripe\Core\Injector\Injector:
   WeDevelop\Grid\Contract\ContentLayoutAdapterInterface:
     factory: WeDevelop\Grid\Factory\GridAdapterFactory
 
-WeDevelop\Grid\Model\ContentElement:
-  extensions:
-    BlockMedia: WeDevelop\Grid\Extensions\BlockMediaExtension
+# BlockMediaExtension is intentionally NOT applied here. ContentElement ships
+# lean (HTML only); image/video capability is opt-in. Projects that want the
+# side-by-side media block apply the extension to ContentElement (or their own
+# content subclass) in their app config:
+#
+#   WeDevelop\Grid\Model\ContentElement:
+#     extensions:
+#       - WeDevelop\Grid\Extensions\BlockMediaExtension
+#
+# The SS5->SS6 migration's default class map targets ContentElement, so a
+# project running the migration with media data must opt the extension in first
+# (or remap FieldMapper::classNameMap to its own media class). See docs/migration.md.
