@@ -189,7 +189,15 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      # On a cache hit the browser binaries are already restored, so install
+      # without --with-deps to skip the ~24s apt-get of system libraries. On a
+      # miss, do the full install (download browser + system deps). Trade-off:
+      # if the runner image ever drops a required lib, browser launch fails
+      # loudly (not flakily) until the next cache miss reinstalls deps.
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install ${{ matrix.browser }}
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps ${{ matrix.browser }}
       - uses: actions/cache/save@v4
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         with:
