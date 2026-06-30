@@ -91,7 +91,7 @@ describe('normaliseTreeResponse', () => {
   })
 
   it('throws on malformed payload', () => {
-    // Schema validation surfaces as ZodError (subclass of Error). Callers in
+    // Schema validation surfaces as ValiError (subclass of Error). Callers in
     // hooks/components surface this as a generic load error to the user.
     expect(() => normaliseTreeResponse(null)).toThrow()
     expect(() => normaliseTreeResponse({ rootParent: { type: 'page', id: 1 } })).toThrow()
@@ -99,7 +99,7 @@ describe('normaliseTreeResponse', () => {
 
   it('rejects a node carrying an unknown wire field that bypasses the schema', () => {
     // A future server field must be caught by the wire schema, not silently
-    // spread through attachDerivedFields. Zod is strict on the discriminated
+    // spread through attachDerivedFields. valibot is strict on the discriminated
     // container variants — an unexpected shape (container fields without a
     // valid containerType) must throw rather than produce a malformed node.
     const raw = {

@@ -129,7 +129,17 @@ const baseFieldsWireSchema = v.object({
   ),
   status: elementStatusSchema,
   summary: v.optional(v.pipe(v.string(), v.minLength(1))),
-  extensions: v.optional(v.record(v.string(), v.unknown())),
+  // Reject arrays before `v.record`: valibot's `v.record` accepts an array as a
+  // record keyed "0", "1", … (unlike zod's `z.record`, which rejects arrays).
+  // `extensions` is never PHP's empty-map `[]` sentinel, so — unlike the
+  // `phpMapSchema` fields — it rejects ALL arrays with no empty→`{}` coercion,
+  // matching the original zod `z.record(...)` (which rejected `[]` and `[x]`).
+  extensions: v.optional(
+    v.pipe(
+      v.custom<unknown>((value) => !Array.isArray(value)),
+      v.record(v.string(), v.unknown()),
+    ),
+  ),
 })
 
 /**

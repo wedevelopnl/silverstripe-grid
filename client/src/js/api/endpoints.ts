@@ -44,7 +44,7 @@ export async function fetchElementTree(
 }
 
 /**
- * Validate the tree response shape from the server with Zod, then attach the
+ * Validate the tree response shape from the server with valibot, then attach the
  * derived `nodeKey`/`parentKey`/`id` fields that downstream code expects on
  * every node. The wire schema rejects invalid shapes with a structured error;
  * the post-parse step is purely additive.
@@ -68,7 +68,7 @@ function attachDerivedFields(node: NodeWire): ElementNode {
     // The PHP domain layer enforces the Section→Row→Column→leaf hierarchy.
     // The wire schema's childrenSchema is shared across all container variants
     // and does NOT distinguish children by type, so this cast relies on the
-    // server's hierarchy invariant, not on Zod. TypeScript cannot express the
+    // server's hierarchy invariant, not on valibot. TypeScript cannot express the
     // narrower RowNode[] invariant without a cast because attachDerivedFields
     // returns the wide ElementNode union.
     const children =
@@ -84,7 +84,7 @@ function attachDerivedFields(node: NodeWire): ElementNode {
   }
 
   if (node.containerType === 'row') {
-    // Same cast rationale as section: the server's hierarchy invariant (not Zod)
+    // Same cast rationale as section: the server's hierarchy invariant (not valibot)
     // guarantees a row's children are columns.
     const children =
       node.children !== null ? (node.children.map(attachDerivedFields) as ColumnNode[]) : null
@@ -99,7 +99,7 @@ function attachDerivedFields(node: NodeWire): ElementNode {
   }
 
   if (node.containerType === 'column') {
-    // Same cast rationale as section: the server's hierarchy invariant (not Zod)
+    // Same cast rationale as section: the server's hierarchy invariant (not valibot)
     // guarantees a column's children are simple (leaf) elements.
     const children =
       node.children !== null
