@@ -26,12 +26,13 @@ mkdir -p "$_res/client"
 # Point the testbed's front-end stylesheet at the CSS framework matching the
 # active grid adapter, so the rendered grid's emitted classes have matching CSS.
 # Page.ss links the stable /css/grid-framework.css name; we symlink it per boot
-# from $SS_GRID_ADAPTER. Bundled CSS exists for bootstrap and tailwind only; any
-# other value (bulma preset, custom FQCN) gets an empty file rather than a 404.
+# from $SS_GRID_ADAPTER. Bundled CSS exists for the three shipped presets; any
+# other value (a custom FQCN) gets an empty file rather than a 404.
 _css=/app/public/css
 case "$(printf '%s' "${SS_GRID_ADAPTER:-}" | tr '[:upper:]' '[:lower:]')" in
     bootstrap) ln -sfn bootstrap.min.css "$_css/grid-framework.css" ;;
     tailwind)  ln -sfn tailwind.min.css  "$_css/grid-framework.css" ;;
+    bulma)     ln -sfn bulma.min.css     "$_css/grid-framework.css" ;;
     *)         : > "$_css/grid-framework.css" ;;
 esac
 

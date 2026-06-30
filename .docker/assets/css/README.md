@@ -31,3 +31,13 @@ npx @tailwindcss/cli \
 Both files are baked into the image at build time (`Dockerfile` COPYs `assets/css/`
 into `/app/public/css/`), so rebuild with `task build` after regenerating. The
 entrypoint symlinks `grid-framework.css` to the file matching `SS_GRID_ADAPTER`.
+
+## Bulma
+
+- **File:** `bulma.min.css`
+- **Version:** 1.0.2
+- **Source:** https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css
+
+To update, download the new `bulma.min.css` for the desired version and replace
+the file here. Like Bootstrap, Bulma ships a fixed set of grid classes, so the
+stock distribution is vendored as-is (no build step).
