@@ -33,7 +33,11 @@ case "$(printf '%s' "${SS_GRID_ADAPTER:-}" | tr '[:upper:]' '[:lower:]')" in
     bootstrap) ln -sfn bootstrap.min.css "$_css/grid-framework.css" ;;
     tailwind)  ln -sfn tailwind.min.css  "$_css/grid-framework.css" ;;
     bulma)     ln -sfn bulma.min.css     "$_css/grid-framework.css" ;;
-    *)         : > "$_css/grid-framework.css" ;;
+    # Custom adapter (FQCN): no bundled CSS. Remove any symlink left by a prior
+    # boot *before* writing the empty placeholder — `: >` follows a symlink and
+    # would otherwise truncate the vendored file it points at (e.g. zeroing
+    # bootstrap.min.css) rather than replacing the link.
+    *)         rm -f "$_css/grid-framework.css" && : > "$_css/grid-framework.css" ;;
 esac
 
 vendor/bin/sake dev/build flush=1
