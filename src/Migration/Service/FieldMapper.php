@@ -55,7 +55,7 @@ final class FieldMapper
     private const array OLD_VIEWPORTS = ['XS', 'SM', 'MD', 'LG', 'XL'];
 
     /**
-     * Subset of LegacyDataReader::MEDIA_FIELDS that mapMediaFields() actually reads.
+     * Subset of LegacyElementReader::MEDIA_FIELDS that mapMediaFields() actually reads.
      * HTML is excluded — it is carried by LegacyElement->extraData, not mapped here.
      * Used to detect schema-missing columns (key entirely absent from LegacyMediaData::$fields).
      */
