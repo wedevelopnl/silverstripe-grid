@@ -11,6 +11,7 @@ use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use Psr\Log\NullLogger;
+use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\GridMigrationService;
@@ -975,7 +976,7 @@ final class MigrationAcceptanceTest extends SapphireTest
 
         // Register both extensions to complete the custom element migration chain
         LegacyDataReader::add_extension(TestCustomElementReaderExtension::class);
-        GridMigrationService::add_extension(TestCustomElementMigrationExtension::class);
+        DraftHierarchyWriter::add_extension(TestCustomElementMigrationExtension::class);
 
         try {
             $this->runRowPerSection($pageId);
@@ -1014,7 +1015,7 @@ final class MigrationAcceptanceTest extends SapphireTest
                 ],
             ]);
         } finally {
-            GridMigrationService::remove_extension(TestCustomElementMigrationExtension::class);
+            DraftHierarchyWriter::remove_extension(TestCustomElementMigrationExtension::class);
             LegacyDataReader::remove_extension(TestCustomElementReaderExtension::class);
             DB::query('DROP TABLE IF EXISTS "LegacyHeroBlock"');
         }

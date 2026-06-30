@@ -13,7 +13,7 @@ use SilverStripe\Core\Extension;
  * Set {@see $sourceClass} to restrict which old class names are remapped
  * (null matches all).
  *
- * @extends Extension<GridMigrationService>
+ * @extends Extension<\WeDevelop\Grid\Migration\Service\DraftHierarchyWriter>
  */
 final class TestClassNameMappingExtension extends Extension
 {

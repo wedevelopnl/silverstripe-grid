@@ -13,7 +13,7 @@ use WeDevelop\Grid\Model\GridElement;
  *
  * Used to verify transaction rollback behaviour in migration tests.
  *
- * @extends Extension<GridMigrationService>
+ * @extends Extension<\WeDevelop\Grid\Migration\Service\DraftHierarchyWriter>
  */
 final class TestFailingMigrationExtension extends Extension
 {
