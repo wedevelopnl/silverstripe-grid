@@ -45,12 +45,19 @@ class BlockMediaExtension extends Extension
     /** @var array<string, string> */
     private static array $db = [
         'ContentColumns' => 'Int',
-        'VerticalAlignment' => 'Varchar(20)',
+        // Enum members mirror the VerticalAlignment value enum exactly; the
+        // GridSettingsEnumParityTest guards against drift between the two.
+        'VerticalAlignment' => "Enum('top,center,bottom', 'center')",
         'GapSize' => 'Int',
+        // MediaType stays a Varchar, not an Enum: '' (no media selected) is a
+        // meaningful tri-state value that getHasMedia() relies on, so the column
+        // is {image, video, ∅} — not the two-case MediaField enum alone.
         'MediaType' => 'Varchar(5)',
         'MediaCaption' => 'Varchar(255)',
-        'MediaRatio' => 'Varchar(10)',
-        'MediaPosition' => 'Varchar(20)',
+        // Members mirror the AspectRatio value enum exactly (see parity test).
+        'MediaRatio' => "Enum('auto,1x1,4x3,16x9', 'auto')",
+        // Members mirror the MediaPosition value enum exactly (see parity test).
+        'MediaPosition' => "Enum('first,last,last-on-desktop', 'first')",
         'VideoURL' => 'Varchar(512)',
         'VideoProvider' => 'Varchar(100)',
         'VideoHasOverlay' => 'Boolean(false)',
