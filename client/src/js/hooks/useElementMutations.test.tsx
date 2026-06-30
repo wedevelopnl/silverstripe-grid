@@ -77,7 +77,7 @@ describe('useElementMutations', () => {
   })
 
   describe('useCreateContentElement', () => {
-    it('should call createContent endpoint', async () => {
+    it('should call create endpoint', async () => {
       mockFetchSuccess({})
       const { wrapper } = createProviderWrapper()
       const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper })
@@ -91,7 +91,7 @@ describe('useElementMutations', () => {
       })
 
       const [url] = getFetchCalls()[0]
-      expect(url).toContain('/api/createContent')
+      expect(url).toContain('/api/create')
     })
 
     it('should show toast on error', async () => {

@@ -579,7 +579,7 @@ describe('EditableColumnBlock', () => {
       const [url, init] = getFetchCalls()[0]
       const body = JSON.parse(init!.body as string)
 
-      expect(url).toContain('createContent')
+      expect(url).toContain('/api/create')
       expect(body).toMatchObject({
         className: 'App\\Model\\TextBlock',
         parent: { type: 'column', id: 60 },
