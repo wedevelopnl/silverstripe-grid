@@ -1,0 +1,33 @@
+# CI-only overlay that adds GitHub Actions layer caching to the image builds.
+#
+# Used exclusively by .github/workflows/ci.yml, layered after compose.yml:
+#   COMPOSE_BAKE=true docker compose -f .docker/compose.yml -f .docker/compose.ci.yml build <service>
+#
+# COMPOSE_BAKE delegates the build to buildx (Bake), which honours cache_from/
+# cache_to. The heavy `install-php-extensions` layer (Dockerfile) depends only on
+# the base image, so it restores from cache on every fresh runner.
+#
+# Local `task up` never references this file, so developer builds are unaffected
+# and don't need the buildx `gha` cache backend (which only exists inside GHA).
+#
+# CACHE_SCOPE namespaces the cache per built image (service + PHP version) so the
+# base and Fluent variants — and the different PHP versions — don't clobber each
+# other's manifests. CI sets it per job; the `:-` fallbacks keep manual runs sane.
+#
+# cache_to uses ignore-error=true so fork/Dependabot PRs (read-only token, no
+# Actions cache write access) degrade to an uncached build with a warning rather
+# than failing the job.
+services:
+  app:
+    build:
+      cache_from:
+        - type=gha,scope=${CACHE_SCOPE:-app}
+      cache_to:
+        - type=gha,mode=max,scope=${CACHE_SCOPE:-app},ignore-error=true
+
+  app-fluent:
+    build:
+      cache_from:
+        - type=gha,scope=${CACHE_SCOPE:-app-fluent}
+      cache_to:
+        - type=gha,mode=max,scope=${CACHE_SCOPE:-app-fluent},ignore-error=true
