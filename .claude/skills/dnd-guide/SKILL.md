@@ -156,17 +156,17 @@ The reorder pipeline (`ReorderValidator → ReorderExecutor → ElementPersisten
 
 | File | Responsibility |
 |------|---------------|
-| `client/src/hooks/useDragAndDrop.ts` | Orchestrator: sensors, event handlers, `getPointerPosition()` |
-| `client/src/hooks/usePendingTree.ts` | Pending tree state + `CollisionRefs` for cross-container drags |
-| `client/src/utils/collisionDetection.ts` | 3-tier collision detection, type filtering, `centerCrossing`, `closestCenterLive` |
-| `client/src/utils/applyReorder.ts` | Pure immutable tree mutation for optimistic updates |
-| `client/src/utils/resolveDropPlacement.ts` | Same-container: index (L58-67) / Cross-container: direction (L69-85) |
-| `client/src/utils/resolveInsertDirection.ts` | Pointer vs rect center → `'before' \| 'after'` (X for columns, Y for rest) |
-| `client/src/utils/resolveReorderParams.ts` | dnd-kit context → API payload (`afterElementID`) |
-| `client/src/hooks/useElementMaps.ts` | O(1) lookup maps: `nodeMap`, `childrenByParentId` |
-| `client/src/hooks/useElementMutations.ts` | TanStack Query mutation: optimistic update, rollback, toast |
-| `client/src/types/dnd.ts` | Composite IDs (`type-numericId`), `PARENT_CONTAINER_TYPE` hierarchy |
-| `client/src/components/GridEditor/EditableGridEditor.tsx` | `DndContext` owner (`effectiveData`/pending-tree wiring now lives in `client/src/components/GridEditor/useGridEditorDnd.ts`) |
+| `client/src/js/hooks/useDragAndDrop.ts` | Orchestrator: sensors, event handlers, `getPointerPosition()` |
+| `client/src/js/hooks/usePendingTree.ts` | Pending tree state + `CollisionRefs` for cross-container drags |
+| `client/src/js/utils/collisionDetection.ts` | 3-tier collision detection, type filtering, `centerCrossing`, `closestCenterLive` |
+| `client/src/js/utils/applyReorder.ts` | Pure immutable tree mutation for optimistic updates |
+| `client/src/js/utils/resolveDropPlacement.ts` | Same-container: index (L58-67) / Cross-container: direction (L69-85) |
+| `client/src/js/utils/resolveInsertDirection.ts` | Pointer vs rect center → `'before' \| 'after'` (X for columns, Y for rest) |
+| `client/src/js/utils/resolveReorderParams.ts` | dnd-kit context → API payload (`afterElementID`) |
+| `client/src/js/hooks/useElementMaps.ts` | O(1) lookup maps: `nodeMap`, `childrenByParentId` |
+| `client/src/js/hooks/useElementMutations.ts` | TanStack Query mutation: optimistic update, rollback, toast |
+| `client/src/js/types/dnd.ts` | Composite IDs (`type-numericId`), `PARENT_CONTAINER_TYPE` hierarchy |
+| `client/src/js/components/GridEditor/EditableGridEditor.tsx` | `DndContext` owner (`effectiveData`/pending-tree wiring now lives in `client/src/js/components/GridEditor/useGridEditorDnd.ts`) |
 | `src/Validation/ReorderValidator.php` | Hierarchy enforcement via `ContainerType::isChildAllowed()` |
 | `src/Service/ReorderExecutor.php` | Sort calculation, dirty tracking, cross-parent reindex |
 

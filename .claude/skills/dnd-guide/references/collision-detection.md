@@ -1,6 +1,6 @@
 # Collision Detection Deep Dive
 
-Read this before modifying `client/src/utils/collisionDetection.ts`. This code went through 6+ iterations of bug fixes. Each decision has a reason — changing one part without understanding the others will likely reintroduce a fixed bug.
+Read this before modifying `client/src/js/utils/collisionDetection.ts`. This code went through 6+ iterations of bug fixes. Each decision has a reason — changing one part without understanding the others will likely reintroduce a fixed bug.
 
 ## Table of Contents
 

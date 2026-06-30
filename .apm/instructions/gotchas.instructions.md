@@ -29,7 +29,7 @@ applyTo: "**/*"
 
 ## Frontend / Bridge
 
-- **Entwine `onmatch` does NOT fire for Pjax-loaded content**: jQuery.entwine `onmatch` is unreliable for elements loaded via SilverStripe CMS Pjax navigation, even when the entwine callback registers successfully. Use a vanilla `MutationObserver` instead for detecting elements in AJAX-loaded CMS forms. See `client/src/bridge/blockMediaFields.ts` for the working pattern
+- **Entwine `onmatch` does NOT fire for Pjax-loaded content**: jQuery.entwine `onmatch` is unreliable for elements loaded via SilverStripe CMS Pjax navigation, even when the entwine callback registers successfully. Use a vanilla `MutationObserver` instead for detecting elements in AJAX-loaded CMS forms. See `client/src/js/bridge/blockMediaFields.ts` for the working pattern
 - **`silverstripe.d.ts` has a top-level `import`** which makes it a module — interfaces like `JQueryEntwineElement`, `JQueryStatic`, `EntwineRules` must live inside the `declare global {}` block to be globally available. Module-scoped interfaces are only accessible within that file or via explicit import
 
 ## Tooling

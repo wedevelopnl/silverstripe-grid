@@ -51,7 +51,7 @@ The drag-and-drop system enables visual reordering of elements within the grid e
 
 Every node carries a scoped identity shaped as `NodeRef = { type: NodeType, id: number }` where `NodeType` is one of `page | section | row | column | element`. A page's ID and an element's ID can collide — they come from independent auto-increment sequences — so every map, every dnd-kit draggable, every API payload pairs the numeric id with its type.
 
-The flat-string form is `NodeKey = '${type}-${id}'` (e.g. `row-42`, `column-17`). Helpers live in `client/src/types/identity.ts` under the `NodeIdentity` namespace: `toKey`, `fromKey`, `equals`, `assert`. Every composite ID dnd-kit sees is a `NodeKey`.
+The flat-string form is `NodeKey = '${type}-${id}'` (e.g. `row-42`, `column-17`). Helpers live in `client/src/js/types/identity.ts` under the `NodeIdentity` namespace: `toKey`, `fromKey`, `equals`, `assert`. Every composite ID dnd-kit sees is a `NodeKey`.
 
 ### Element Tree
 
@@ -98,7 +98,7 @@ This contract is shared between the frontend optimistic update and the backend A
 
 ### Lookup Maps
 
-The tree is a nested structure optimized for rendering, not for lookups. Two maps provide O(1) access during drag operations (see `client/src/hooks/useElementMaps.ts`):
+The tree is a nested structure optimized for rendering, not for lookups. Two maps provide O(1) access during drag operations (see `client/src/js/hooks/useElementMaps.ts`):
 
 - **nodeMap** (`Map<NodeKey, ElementNode>`) — find any node by its composite key
 - **childrenByParentKey** (`Map<NodeKey, ElementNode[]>`) — find siblings of any node
@@ -113,7 +113,7 @@ dnd-kit identifies draggables and droppables by string ID. The system uses `Node
 
 The active (dragged) item is first excluded from the droppable container list. dnd-kit v6 does not do this automatically — the active item's original-position rect remains registered as a droppable, so `closestCenter` can return it as the nearest target, causing a no-op drop (snap-back).
 
-Beyond that, collision detection branches on whether a pending cross-container move is in flight. The full algorithm lives in `client/src/utils/collisionDetection.ts`; the working model is:
+Beyond that, collision detection branches on whether a pending cross-container move is in flight. The full algorithm lives in `client/src/js/utils/collisionDetection.ts`; the working model is:
 
 1. **Pass 1 — Siblings** (when no pending move): run `centerCrossing` against same-type containers only (row vs row). This custom strategy detects a collision only when (a) the collision rect geometrically overlaps the target's bounding rect, *and* (b) the collision rect center has crossed a direction-aware threshold. The threshold sits at the target's near edge plus half the collision rect height, clamped to the target center. This adapts to DragOverlay measurement asymmetry: overlays similar in size to the target (rows) → threshold at target center (prevents ghost jumps); much smaller overlays (sections) → threshold near the target edge (stays reachable). The overlap gate lets Pass 2 take over when the collision rect leaves sibling territory. Works on both vertical (Y) and horizontal (X) axes via OR.
 2. **Pass 1′ — Sibling fallback for pending moves**: when a cross-container move has already been staged in the pending tree, sibling matching switches to `closestCenterLive` which reads live `getBoundingClientRect` values rather than dnd-kit's cached `droppableRects`. This bypasses the stale rects produced by the optimistic tree reshuffle.
@@ -184,7 +184,7 @@ Raw tree nodes already arrive with every piece of data the UI needs — there is
 - **`self` / `parent`** — structural `NodeRef`s for code that prefers the typed form.
 - **children / allowedTypes / gridSettings** — populated per container type.
 
-Per-node collapse state (`isCollapsed`, toggle) lives in a separate `CollapseContext` (`client/src/hooks/useCollapseState.ts`), consumed via the `useCollapse()` hook. It is persisted to `localStorage` and is decoupled from the tree shape so toggling a collapse state does not invalidate tree memos.
+Per-node collapse state (`isCollapsed`, toggle) lives in a separate `CollapseContext` (`client/src/js/hooks/useCollapseState.ts`), consumed via the `useCollapse()` hook. It is persisted to `localStorage` and is decoupled from the tree shape so toggling a collapse state does not invalidate tree memos.
 
 ### Re-render Characteristics
 
