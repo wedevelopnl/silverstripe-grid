@@ -9,7 +9,7 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "paths": {
-      "@/*": ["../../client/src/*"]
+      "@/*": ["../../client/src/js/*"]
     }
   },
   "include": [

@@ -12,19 +12,19 @@ export default defineConfig({
   plugins: [
     react(),
     dts({
-      include: ['client/src/types/**/*.ts'],
-      exclude: ['client/src/types/silverstripe.d.ts'],
+      include: ['client/src/js/types/**/*.ts'],
+      exclude: ['client/src/js/types/silverstripe.d.ts'],
       outDirs: 'client/dist',
       // Resolve @/* path aliases to relative imports in .d.ts output
       tsconfigPath: './tsconfig.json',
       // TypeScript 6 changed rootDir inference — pin it so .d.ts files
-      // emit to client/dist/types/ instead of client/dist/client/src/types/
-      compilerOptions: { rootDir: resolve(__dirname, 'client/src') },
+      // emit to client/dist/types/ instead of client/dist/client/src/js/types/
+      compilerOptions: { rootDir: resolve(__dirname, 'client/src/js') },
     }),
   ],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'client/src'),
+      '@': resolve(__dirname, 'client/src/js'),
     },
   },
   // Vite's lib mode doesn't replace process.env.NODE_ENV automatically
@@ -39,7 +39,7 @@ export default defineConfig({
     // pointing back to client/dist — copying that would cause infinite recursion.
     copyPublicDir: false,
     lib: {
-      entry: resolve(__dirname, 'client/src/bundles/bundle.ts'),
+      entry: resolve(__dirname, 'client/src/js/bundles/bundle.ts'),
       name: 'Grid',
       formats: ['iife'],
       fileName: () => 'js/bundle.js',
@@ -65,23 +65,22 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['client/src/**/*.{test,spec}.{ts,tsx}', 'scripts/**/*.test.mjs'],
+    include: ['client/src/js/**/*.{test,spec}.{ts,tsx}', 'scripts/**/*.test.mjs'],
     setupFiles: ['./vitest.setup.ts'],
     css: true,
     coverage: {
-      include: ['client/src/**/*.{ts,tsx}'],
+      include: ['client/src/js/**/*.{ts,tsx}'],
       exclude: [
-        'client/src/bundles/**',
-        'client/src/bridge/**',
-        'client/src/boot/**',
-        'client/src/testing/**',
-        'client/src/**/index.ts',
-        'client/src/types/silverstripe.d.ts',
-        'client/src/types/adapter.ts',
-        'client/src/types/duplicateTo.ts',
-        'client/src/types/gridSettings.ts',
-        'client/src/styles/**',
-        'client/src/**/*.d.ts',
+        'client/src/js/bundles/**',
+        'client/src/js/bridge/**',
+        'client/src/js/boot/**',
+        'client/src/js/testing/**',
+        'client/src/js/**/index.ts',
+        'client/src/js/types/silverstripe.d.ts',
+        'client/src/js/types/adapter.ts',
+        'client/src/js/types/duplicateTo.ts',
+        'client/src/js/types/gridSettings.ts',
+        'client/src/js/**/*.d.ts',
       ],
       thresholds: {
         statements: 90,

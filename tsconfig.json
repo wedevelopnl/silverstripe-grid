@@ -14,8 +14,8 @@
     "noEmit": true,
     "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {
-      "@/*": ["./client/src/*"]
+      "@/*": ["./client/src/js/*"]
     }
   },
-  "include": ["client/src/**/*", "vite.config.ts", "vitest.setup.ts", "playwright.config.ts"]
+  "include": ["client/src/js/**/*", "vite.config.ts", "vitest.setup.ts", "playwright.config.ts"]
 }

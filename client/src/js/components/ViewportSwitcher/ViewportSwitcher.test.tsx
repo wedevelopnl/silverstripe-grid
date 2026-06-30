@@ -15,7 +15,7 @@ import type { TreeApiResponse, ViewportSettings } from '@/types/elements'
 
 import ViewportSwitcher from './ViewportSwitcher'
 
-// Setup file (client/src/testing/setup.ts) configures 6 viewports in this order.
+// Setup file (client/src/js/testing/setup.ts) configures 6 viewports in this order.
 const VIEWPORT_KEYS = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl']
 
 const viewportButtons = () =>

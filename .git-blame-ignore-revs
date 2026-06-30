@@ -7,3 +7,6 @@
 
 # style: reformat with biome (semicolons asNeeded, double JSX quotes)
 eee1b76d1e5c998946fa640d13deed28ab388354
+
+# refactor: move JS/TS source under client/src/js/ (pure rename)
+91c6ba5ddb0f4d6fe8fd4a1e6c771e368f50dd0f
