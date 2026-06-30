@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Controllers;
 
 use Override;
-use InvalidArgumentException;
 use LogicException;
-use stdClass;
 use SilverStripe\Admin\AdminController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPRequest;
@@ -19,13 +17,13 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Extensions\GridPageExtension;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Value\AdapterConfig;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\ValidationErrorCode;
-use WeDevelop\Grid\Value\Viewport;
 use WeDevelop\Grid\Forms\GridEditorField;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Service\ElementPlacementService;
@@ -35,8 +33,6 @@ use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Service\RequestBodyParser;
 
 /**
- * @phpstan-type AdapterConfig array{viewports: list<array{key: string, label: string}>, defaultViewport: string, columnCount: positive-int, rowClasses: string, offsetStrategy: 'margin'|'grid-placement', baseWidthClasses: stdClass&object{'1': string, '2': string, '3': string, '4': string, '5': string, '6': string, '7': string, '8': string, '9': string, '10': string, '11': string, '12': string}, baseOffsetClasses: stdClass&object{'0': string, '1': string, '2': string, '3': string, '4': string, '5': string, '6': string, '7': string, '8': string, '9': string, '10': string, '11': string}}
- *
  * @property GridElementRepositoryInterface $elementRepository
  * @property GridTreeBuilder $treeBuilder
  * @property ElementPlacementService $placementService
@@ -723,62 +719,9 @@ class GridController extends AdminController
         /** @var array<string, mixed> $clientConfig */
         $clientConfig = parent::getClientConfig();
         $clientConfig['controllerLink'] = $this->Link();
-        $clientConfig['gridAdapter'] = self::buildAdapterConfig($this->gridAdapter);
+        $clientConfig['gridAdapter'] = AdapterConfig::fromAdapter($this->gridAdapter);
 
         return $clientConfig;
-    }
-
-    /**
-     * Build the grid adapter config for frontend consumption.
-     *
-     * Exposed as a static method so unit tests can verify the adapter config
-     * shape without requiring the full SilverStripe framework bootstrap that
-     * {@see getClientConfig()} depends on via its parent class.
-     *
-     * @return AdapterConfig
-     */
-    public static function buildAdapterConfig(GridAdapterInterface $adapter): array
-    {
-        $viewports = $adapter->getViewports();
-
-        if ($viewports === []) {
-            throw new InvalidArgumentException('Adapter must define at least one viewport.');
-        }
-
-        $columnCount = $adapter->getColumnCount();
-
-        $widthClasses = [];
-        for ($width = 1; $width <= $columnCount; ++$width) {
-            $widthClasses[$width] = $adapter->getBaseWidthClass($width);
-        }
-
-        $offsetClasses = [];
-        for ($offset = 0; $offset < $columnCount; ++$offset) {
-            $offsetClasses[$offset] = $adapter->getBaseOffsetClass($offset);
-        }
-
-        /** @var AdapterConfig['baseWidthClasses'] $baseWidthClasses */
-        $baseWidthClasses = (object) $widthClasses;
-
-        /** @var AdapterConfig['baseOffsetClasses'] $baseOffsetClasses */
-        $baseOffsetClasses = (object) $offsetClasses;
-
-        return [
-            'viewports' => array_map(
-                static fn (Viewport $vp): array => [
-                    'key' => $vp->key,
-                    'label' => $vp->label,
-                    'minWidth' => $vp->minWidth,
-                ],
-                $viewports,
-            ),
-            'defaultViewport' => $adapter->getDefaultViewport()->key,
-            'columnCount' => $columnCount,
-            'rowClasses' => $adapter->getRowClasses(),
-            'offsetStrategy' => $adapter->getOffsetStrategy()->value,
-            'baseWidthClasses' => $baseWidthClasses,
-            'baseOffsetClasses' => $baseOffsetClasses,
-        ];
     }
 
     /**
