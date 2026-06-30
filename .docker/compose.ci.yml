@@ -17,7 +17,14 @@
 # cache_to uses ignore-error=true so fork/Dependabot PRs (read-only token, no
 # Actions cache write access) degrade to an uncached build with a warning rather
 # than failing the job.
+#
+# The db image is pulled from mirror.gcr.io (same image, identical digest) so the
+# daemon-side `compose up` pull doesn't hit Docker Hub's rate limit. Build-time
+# pulls are mirrored separately via .github/actions/setup-docker-mirror.
 services:
+  db:
+    image: mirror.gcr.io/library/mysql:8
+
   app:
     build:
       cache_from:
