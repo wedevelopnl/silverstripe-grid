@@ -31,18 +31,19 @@ tests/E2E/            # Playwright E2E tests
 tests/E2E/Fixture/    # YAML fixtures for E2E test data
 tests/E2E/specs/      # E2E test specs
 tests/E2E/helpers/    # Shared E2E test utilities
-client/src/           # Frontend source (React/TS/SCSS)
-client/src/api/       # API client layers (client, endpoints, config, errors)
-client/src/boot/      # Component registration
-client/src/bridge/    # SilverStripe CMS integration (entwine, Injector)
-client/src/bundles/   # Entry points
-client/src/components/ # React components
-client/src/hooks/     # React hooks, query keys, TanStack Query, mutations
+client/src/           # Frontend source (React/TS/SCSS): js/ + styles/
+client/src/js/        # React/TS source
+client/src/js/api/    # API client layers (client, endpoints, config, errors)
+client/src/js/boot/   # Component registration
+client/src/js/bridge/ # SilverStripe CMS integration (entwine, Injector)
+client/src/js/bundles/ # Entry points
+client/src/js/components/ # React components
+client/src/js/hooks/  # React hooks, query keys, TanStack Query, mutations
+client/src/js/types/  # Zod schemas, TypeScript types
+client/src/js/utils/  # Frontend utility functions
+client/src/js/testing/ # Test infrastructure (factories, helpers, mocks)
+client/src/js/i18n/   # Internationalization utilities
 client/src/styles/    # SCSS styles
-client/src/types/     # Zod schemas, TypeScript types
-client/src/utils/     # Frontend utility functions
-client/src/testing/   # Test infrastructure (factories, helpers, mocks)
-client/src/i18n/      # Internationalization utilities
 client/dist/          # Vite build output (exposed, created by build)
 scripts/              # Build scripts (i18n collection, parity checks)
 phpstan/stubs/        # PHPStan stubs (e.g. AdminController.stub)
@@ -59,7 +60,7 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 
 ## Key Files
 
-- `vite.config.ts` — Build config + Vitest test config, `@` alias → `client/src`
+- `vite.config.ts` — Build config + Vitest test config, `@` alias → `client/src/js`
 - `tsconfig.json` — TypeScript config
 - `playwright.config.ts` — Playwright E2E test config (base URL from `.docker/.env` or `E2E_BASE_URL`)
 - `stryker.config.mjs` — Stryker JS mutation testing config

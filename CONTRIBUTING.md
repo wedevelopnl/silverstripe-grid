@@ -63,9 +63,9 @@ The Docker environment provides Caddy, PHP, and MySQL 8. Default admin credentia
 ### TypeScript / React
 
 - 2-space indentation
-- Zod-first type definitions (schemas in `client/src/types/`, infer TS types)
-- Use the `@` path alias for imports from `client/src/`
-- Follow existing component patterns in `client/src/components/`
+- Zod-first type definitions (schemas in `client/src/js/types/`, infer TS types)
+- Use the `@` path alias for imports from `client/src/js/`
+- Follow existing component patterns in `client/src/js/components/`
 
 ### CSS / SCSS
 
