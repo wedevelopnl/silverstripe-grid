@@ -38,7 +38,8 @@
 /apm.lock                export-ignore
 /apm.yml                 export-ignore
 /CLAUDE.md               export-ignore
-/Makefile                export-ignore
+/GEMINI.md               export-ignore
+/Taskfile.yml            export-ignore
 /biome.json              export-ignore
 /package.json            export-ignore
 /package-lock.json       export-ignore
