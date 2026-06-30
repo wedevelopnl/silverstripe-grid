@@ -235,7 +235,7 @@ Four extension points are available via `SilverStripe\Core\Extensible`. Register
 
 ### 1. Custom element class mapping
 
-`GridMigrationService` calls `updateClassNameMapping($newClassName, $oldClassName)` before instantiating each new element. Use this to redirect legacy subclasses to their new-world equivalents.
+`DraftHierarchyWriter` calls `updateClassNameMapping($newClassName, $oldClassName)` before instantiating each new element. Use this to redirect legacy subclasses to their new-world equivalents.
 
 ```php
 use SilverStripe\Core\Extension;
@@ -254,7 +254,7 @@ class MyMigrationExtension extends Extension
 Register it in YAML:
 
 ```yaml
-WeDevelop\Grid\Migration\Service\GridMigrationService:
+WeDevelop\Grid\Migration\Service\DraftHierarchyWriter:
   extensions:
     - App\Migration\MyMigrationExtension
 ```
@@ -263,7 +263,7 @@ The resolved class **must** extend `WeDevelop\Grid\Model\GridElement`, otherwise
 
 ### 2. Post-processing individual elements
 
-`GridMigrationService` also calls `updateElementFieldMapping($newElement, $legacyElement)` after the default field mapping has been applied. Use this to copy subclass-specific fields that the default mapper does not know about.
+`DraftHierarchyWriter` also calls `updateElementFieldMapping($newElement, $legacyElement)` after the default field mapping has been applied. Use this to copy subclass-specific fields that the default mapper does not know about.
 
 ```php
 public function updateElementFieldMapping(
