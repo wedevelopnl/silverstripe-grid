@@ -2,7 +2,7 @@
  * Zod schemas for API responses.
  *
  * These describe the JSON shape on the wire — what the PHP `GridController`
- * emits — and are used at the API boundary in `client/src/api/endpoints.ts`
+ * emits — and are used at the API boundary in `client/src/js/api/endpoints.ts`
  * to validate every server response before it flows into the rest of the
  * frontend.
  *

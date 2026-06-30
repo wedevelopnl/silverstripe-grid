@@ -8,7 +8,7 @@ import { registerCmsPreviewBridge } from '../bridge/cmsPreviewBridge'
 import '../boot'
 
 // Styles — extracted by Vite into a separate CSS bundle
-import '../styles/bundle.scss'
+import '../../styles/bundle.scss'
 
 // Activate the CMS preview viewport selector. Runs on DOM ready so the
 // vendor preview bar has a chance to render before the observer starts.

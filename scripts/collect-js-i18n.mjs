@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Collects t(key, fallback, params?) calls from client/src/** and emits
+// Collects t(key, fallback, params?) calls from client/src/js/** and emits
 // client/lang/src/{en,nl}.json + client/lang/{en,nl}.js runtime bundles.
 //
 // Hard errors:
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const SRC = join(ROOT, 'client/src')
+const SRC = join(ROOT, 'client/src/js')
 const LANG_SRC_EN = join(ROOT, 'client/lang/src/en.json')
 const LANG_SRC_NL = join(ROOT, 'client/lang/src/nl.json')
 const LANG_RUNTIME_EN = join(ROOT, 'client/lang/en.js')

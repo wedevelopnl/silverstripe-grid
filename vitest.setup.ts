@@ -1,9 +1,9 @@
 import '@testing-library/jest-dom/vitest'
 import { afterEach, vi } from 'vitest'
-import { resetActiveViewportStore } from './client/src/state/activeViewport'
-import { viewportKey } from './client/src/testing/factories'
-import type { AdapterConfig } from './client/src/types/adapter'
-import type { SilverStripeConfig, SilverStripeI18n } from './client/src/types/silverstripe'
+import { resetActiveViewportStore } from './client/src/js/state/activeViewport'
+import { viewportKey } from './client/src/js/testing/factories'
+import type { AdapterConfig } from './client/src/js/types/adapter'
+import type { SilverStripeConfig, SilverStripeI18n } from './client/src/js/types/silverstripe'
 
 const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController'
 
