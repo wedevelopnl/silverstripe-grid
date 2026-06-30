@@ -143,12 +143,12 @@ export async function createElement(params: CreateElementParams): Promise<void> 
 
 export async function publishElement(element: NodeRef): Promise<void> {
   const base = getControllerLink()
-  await apiPatch(`${base}/api/publish`, { element })
+  await apiPatch(`${base}/api/setPublished`, { element, published: true })
 }
 
 export async function unpublishElement(element: NodeRef): Promise<void> {
   const base = getControllerLink()
-  await apiPatch(`${base}/api/unpublish`, { element })
+  await apiPatch(`${base}/api/setPublished`, { element, published: false })
 }
 
 export async function archiveElement(element: NodeRef): Promise<void> {
@@ -182,7 +182,7 @@ export interface CreateContentElementParams {
 
 export async function createContentElement(params: CreateContentElementParams): Promise<void> {
   const base = getControllerLink()
-  await apiPost(`${base}/api/createContent`, params)
+  await apiPost(`${base}/api/create`, params)
 }
 
 export interface UpdateGridSettingsParams {

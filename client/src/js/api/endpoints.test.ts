@@ -179,21 +179,27 @@ describe('createElement', () => {
 })
 
 describe('publishElement', () => {
-  it('sends PATCH to /api/publish with element NodeRef', async () => {
+  it('sends PATCH to /api/setPublished with element NodeRef and published:true', async () => {
     await publishElement({ type: 'section', id: 5 })
     const [url, init] = getFetchCalls()[0]
-    expect(url).toBe('/admin/grid/api/publish')
+    expect(url).toBe('/admin/grid/api/setPublished')
     expect(init?.method).toBe('PATCH')
-    expect(JSON.parse(init?.body as string)).toEqual({ element: { type: 'section', id: 5 } })
+    expect(JSON.parse(init?.body as string)).toEqual({
+      element: { type: 'section', id: 5 },
+      published: true,
+    })
   })
 })
 
 describe('unpublishElement', () => {
-  it('sends PATCH to /api/unpublish with element NodeRef', async () => {
+  it('sends PATCH to /api/setPublished with element NodeRef and published:false', async () => {
     await unpublishElement({ type: 'section', id: 5 })
     const [url, init] = getFetchCalls()[0]
-    expect(url).toBe('/admin/grid/api/unpublish')
-    expect(JSON.parse(init?.body as string)).toEqual({ element: { type: 'section', id: 5 } })
+    expect(url).toBe('/admin/grid/api/setPublished')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      element: { type: 'section', id: 5 },
+      published: false,
+    })
   })
 })
 
@@ -247,13 +253,13 @@ describe('reorderElement', () => {
 })
 
 describe('createContentElement', () => {
-  it('sends POST to /api/createContent with parent NodeRef', async () => {
+  it('sends POST to /api/create with parent NodeRef', async () => {
     await createContentElement({
       className: 'TextBlock',
       parent: { type: 'column', id: 10 },
     })
     const [url, init] = getFetchCalls()[0]
-    expect(url).toBe('/admin/grid/api/createContent')
+    expect(url).toBe('/admin/grid/api/create')
     expect(JSON.parse(init?.body as string)).toEqual({
       className: 'TextBlock',
       parent: { type: 'column', id: 10 },
