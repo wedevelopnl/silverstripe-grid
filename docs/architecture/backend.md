@@ -182,10 +182,8 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 |--------|-------|---------|----------|
 | GET | `api/readTree/{PageID}/{Zone}` | Load element tree for a zone on a page (draft) | 200 + `{ rootParent: NodeRef, nodes: GridNode[] }` |
 | GET | `api/readTree/{PageID}/{Zone}/version/{Version}` | Load element tree at a specific historical version | 200 + `{ rootParent: NodeRef, nodes: GridNode[] }` |
-| POST | `api/create` | Create a container element (Section / Row / Column) under a parent | 204 |
-| POST | `api/createContent` | Create a content element inside a `Column` | 204 |
-| PATCH | `api/publish` | Publish an element recursively | 204 |
-| PATCH | `api/unpublish` | Unpublish an element | 204 |
+| POST | `api/create` | Create an element under a parent — a container (Section / Row / Column, via `containerType`) or a content element inside a `Column` (via `className`); the controller dispatches on whichever discriminator is present | 204 |
+| PATCH | `api/setPublished` | Publish (`published: true`, recursive) or unpublish (`published: false`) an element | 204 |
 | DELETE | `api/delete` | Archive an element (id on query string) | 204 |
 | POST | `api/duplicate` | Duplicate an element in place (same parent) | 204 |
 | POST | `api/duplicateTo` | Duplicate an element into a specific target parent (and target page / zone) | 204 |
