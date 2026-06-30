@@ -14,6 +14,11 @@ description: >-
 runs:
   using: composite
   steps:
+    # Export ACTIONS_CACHE_URL / ACTIONS_RUNTIME_TOKEN into the job env. GitHub
+    # only exposes these to JavaScript actions, not to `run:` steps — so without
+    # this, the `type=gha` cache used by `docker compose build` (a run step)
+    # silently no-ops (cache_to ignore-error swallows it) and every build is cold.
+    - uses: crazy-max/ghaction-github-runtime@v3
     - uses: docker/setup-buildx-action@v3
       with:
         # Pull the buildkit container image from the mirror too (it lives on
