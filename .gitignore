@@ -24,6 +24,9 @@ test-results/
 playwright-report/
 blob-report/
 
+# Source maps (never commit — they can leak original source on a misconfigured build)
+*.map
+
 # APM
 apm_modules/
 
