@@ -171,3 +171,24 @@ describe('section allowedTypes (allowedTypeInfoSchema + emptyArrayToObject)', ()
     )
   })
 })
+
+describe('extensions (object record, never an array)', () => {
+  it('accepts an object-valued extensions map', () => {
+    const result = v.safeParse(elementNodeWireSchema, { ...baseLeaf, extensions: { fluent: true } })
+    expect(result.success).toBe(true)
+    expect(result.success && 'extensions' in result.output && result.output.extensions).toEqual({
+      fluent: true,
+    })
+  })
+
+  it('accepts a node with no extensions (optional)', () => {
+    expect(v.safeParse(elementNodeWireSchema, baseLeaf).success).toBe(true)
+  })
+
+  it.each([
+    ['a non-empty array', [1]],
+    ['an empty array', []],
+  ])('rejects %s (parity with zod z.record, which rejects all arrays)', (_label, extensions) => {
+    expect(v.safeParse(elementNodeWireSchema, { ...baseLeaf, extensions }).success).toBe(false)
+  })
+})
