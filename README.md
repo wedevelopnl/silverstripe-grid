@@ -7,7 +7,7 @@ A grid-based content block system for SilverStripe 6 CMS — structured Section 
 - PHP ^8.3
 - silverstripe/framework ^6.0, silverstripe/cms ^6.0, silverstripe/admin ^3.0, silverstripe/versioned ^3.0, silverstripe/vendor-plugin ^3.0
 - unclecheese/display-logic ^4.0, wedevelopnl/silverstripe-media-field ^6.0
-- Node >= 24 (only needed if you build the frontend yourself)
+- Node >= 26 (only needed if you build the frontend yourself)
 
 Optional:
 

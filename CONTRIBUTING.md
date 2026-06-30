@@ -11,7 +11,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 ### Prerequisites
 
 - PHP 8.3+
-- Node.js 24+ (see `.nvmrc`)
+- Node.js 26+ (see `.nvmrc`)
 - Docker (for PHP tests and the development environment)
 - [Task](https://taskfile.dev) (task runner): `brew install go-task/tap/go-task` — see [installation options](https://taskfile.dev/installation)
 

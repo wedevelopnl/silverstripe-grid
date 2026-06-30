@@ -5,7 +5,7 @@ Everything you need to run the module locally, make changes, and run the full QA
 ## Prerequisites
 
 - Docker Desktop (or compatible)
-- Node >= 24 (see `.nvmrc`)
+- Node >= 26 (see `.nvmrc`)
 - Composer
 - [Task](https://taskfile.dev) — `brew install go-task/tap/go-task` (see [installation options](https://taskfile.dev/installation)). Run `task --list` to see all tasks.
 
