@@ -77,7 +77,6 @@ class GridController extends AdminController
         'GET api/readTree/$PageID!/$Zone!/version/$Version!' => 'apiReadTreeAtVersion',
         'GET api/readTree/$PageID!/$Zone!' => 'apiReadTree',
         'POST api/create' => 'apiCreate',
-        'POST api/createContent' => 'apiCreateContent',
         'PATCH api/setPublished' => 'apiSetPublished',
         'DELETE api/delete' => 'apiDelete',
         'POST api/duplicate' => 'apiDuplicate',
@@ -95,7 +94,6 @@ class GridController extends AdminController
         'apiReadTree',
         'apiReadTreeAtVersion',
         'apiCreate',
-        'apiCreateContent',
         'apiSetPublished',
         'apiDelete',
         'apiDuplicate',
@@ -228,6 +226,30 @@ class GridController extends AdminController
     public function apiCreate(HTTPRequest $request): HTTPResponse
     {
         $data = $this->parseJsonBody($request);
+
+        $hasContainerType = array_key_exists('containerType', $data);
+        $hasClassName = array_key_exists('className', $data);
+
+        // Exactly one discriminator must be present. Both (ambiguous) or
+        // neither (no discriminator) is a malformed request.
+        if ($hasContainerType === $hasClassName) {
+            $this->jsonError(400);
+        }
+
+        if ($hasContainerType) {
+            return $this->createContainer($data);
+        }
+
+        return $this->createContent($data);
+    }
+
+    /**
+     * Create a container element (Section/Row/Column) under its parent.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function createContainer(array $data): HTTPResponse
+    {
         $parseResult = $this->requestBodyParser->parseCreateBody($data);
         if ($parseResult->isErr()) {
             return $this->resultToResponse($parseResult, 400);
@@ -274,9 +296,13 @@ class GridController extends AdminController
         return $this->jsonSuccess(204);
     }
 
-    public function apiCreateContent(HTTPRequest $request): HTTPResponse
+    /**
+     * Create a content (leaf) element under a Column parent.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function createContent(array $data): HTTPResponse
     {
-        $data = $this->parseJsonBody($request);
         $parseResult = $this->requestBodyParser->parseCreateContentBody($data);
         if ($parseResult->isErr()) {
             return $this->resultToResponse($parseResult, 400);

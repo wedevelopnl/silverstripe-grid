@@ -418,13 +418,27 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(400, $response->getStatusCode());
     }
 
+    public function testCreateReturns400WhenBothDiscriminatorsPresent(): void
+    {
+        $page = $this->page();
+
+        $response = $this->jsonPost(self::BASE_URL . '/create', [
+            'containerType' => 'section',
+            'className' => ContentElement::class,
+            'parent' => $this->ref($page),
+            'zone' => 'main',
+        ]);
+
+        self::assertSame(400, $response->getStatusCode());
+    }
+
     // ─── createContent ────────────────────────────────────────────
 
     public function testCreateContentReturns204(): void
     {
         $tree = $this->buildTree();
 
-        $response = $this->jsonPost(self::BASE_URL . '/createContent', [
+        $response = $this->jsonPost(self::BASE_URL . '/create', [
             'className' => ContentElement::class,
             'parent' => $this->ref($tree['column']),
         ]);
@@ -436,17 +450,10 @@ final class GridControllerTest extends FunctionalTest
     {
         $tree = $this->buildTree();
 
-        $response = $this->jsonPost(self::BASE_URL . '/createContent', [
+        $response = $this->jsonPost(self::BASE_URL . '/create', [
             'className' => ContentElement::class,
             'parent' => $this->ref($tree['section']),
         ]);
-
-        self::assertSame(400, $response->getStatusCode());
-    }
-
-    public function testCreateContentReturns400ForInvalidBody(): void
-    {
-        $response = $this->jsonPost(self::BASE_URL . '/createContent', []);
 
         self::assertSame(400, $response->getStatusCode());
     }
@@ -460,7 +467,7 @@ final class GridControllerTest extends FunctionalTest
         // `instanceof Column` check and reaching createContentElement (204).
         $tree = $this->buildTree();
 
-        $response = $this->jsonPost(self::BASE_URL . '/createContent', [
+        $response = $this->jsonPost(self::BASE_URL . '/create', [
             'className' => ContentElement::class,
             'parent' => $this->syntheticRef('element', (int) $tree['column']->ID),
         ]);
@@ -1074,7 +1081,7 @@ final class GridControllerTest extends FunctionalTest
         // chosen name does not correspond to any defined class.
         $tree = $this->buildTree();
 
-        $response = $this->jsonPost(self::BASE_URL . '/createContent', [
+        $response = $this->jsonPost(self::BASE_URL . '/create', [
             'className' => 'WeDevelop\\Grid\\Tests\\DoesNotExist\\MaliciousClass',
             'parent' => $this->ref($tree['column']),
         ]);
@@ -1088,7 +1095,7 @@ final class GridControllerTest extends FunctionalTest
 
     public function testCreateContentForNonExistentParentReturns400(): void
     {
-        $response = $this->jsonPost(self::BASE_URL . '/createContent', [
+        $response = $this->jsonPost(self::BASE_URL . '/create', [
             'className' => ContentElement::class,
             'parent' => $this->syntheticRef('column', 999999),
         ]);
@@ -1152,7 +1159,7 @@ final class GridControllerTest extends FunctionalTest
     {
         $restricted = $this->buildRestrictedTree();
 
-        $response = $this->jsonPost(self::BASE_URL . '/createContent', [
+        $response = $this->jsonPost(self::BASE_URL . '/create', [
             'className' => ContentElement::class,
             'parent' => $this->ref($restricted['column']),
         ]);
@@ -1181,7 +1188,7 @@ final class GridControllerTest extends FunctionalTest
         $tree = $this->buildTree();
         ContentElement::add_extension(DenyCreateExtension::class);
 
-        $response = $this->jsonPost(self::BASE_URL . '/createContent', [
+        $response = $this->jsonPost(self::BASE_URL . '/create', [
             'className' => ContentElement::class,
             'parent' => $this->ref($tree['column']),
         ]);
@@ -1516,7 +1523,7 @@ final class GridControllerTest extends FunctionalTest
         GridTreeFactory::contentElement($column, 2, 'Content 2');
 
         // Create new content element inserted after content1
-        $response = $this->jsonPost(self::BASE_URL . '/createContent', [
+        $response = $this->jsonPost(self::BASE_URL . '/create', [
             'className' => ContentElement::class,
             'parent' => $this->ref($column),
             'insertAfterElementID' => (int) $content1->ID,
@@ -2050,7 +2057,7 @@ final class GridControllerTest extends FunctionalTest
      * Publish the page, capture the LIVE version, run the write action, and
      * confirm the DRAFT stage Version is higher — proves touchOwningPage() fired.
      * Each subtest pins one of the five MethodCallRemoval mutants on the
-     * `$this->touchOwningPage(...)` calls inside apiCreateContent / apiDuplicate /
+     * `$this->touchOwningPage(...)` calls inside createContent / apiDuplicate /
      * apiDuplicateTo / apiReorder / apiUpdateGridSettings.
      *
      * @return array{int, int} [liveVersion, pageId]
@@ -2072,7 +2079,7 @@ final class GridControllerTest extends FunctionalTest
         $tree = $this->buildTree();
         [$liveVersion, $pageId] = $this->publishAndCaptureLiveVersion($this->page());
 
-        $this->jsonPost(self::BASE_URL . '/createContent', [
+        $this->jsonPost(self::BASE_URL . '/create', [
             'className' => ContentElement::class,
             'parent' => $this->ref($tree['column']),
         ]);
