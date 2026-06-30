@@ -10,6 +10,7 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\Row;
@@ -31,6 +32,11 @@ final class ColumnTest extends SapphireTest
         Versioned::set_stage(Versioned::DRAFT);
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
+
+        // Pin the active adapter to a concrete instance of the default preset
+        // (Tailwind) so column-class output is deterministic regardless of the
+        // container's configured SS_GRID_ADAPTER.
+        Injector::inst()->registerService(new TailwindAdapter(), GridAdapterInterface::class);
     }
 
     // ── GridSettings lifecycle ──────────────────────────────────
@@ -209,17 +215,18 @@ final class ColumnTest extends SapphireTest
         $row = GridTreeFactory::row($section);
 
         // Default width 12, override only at 'lg' (width 6). Under isolated, the
-        // smaller viewports (xs..md) keep the default 12, so the base width class
-        // is col-12 and the override surfaces as col-lg-6. Under cascade, the 'lg'
-        // override flows down to the smallest viewport, so the base width class
-        // becomes col-6 and there is no separate lg class.
+        // smaller viewports keep the default 12, so the default viewport (Tailwind
+        // `sm`) renders sm:col-span-12 and the override surfaces as lg:col-span-6.
+        // Under cascade, the 'lg' override flows down to the smallest viewport, so
+        // the default width becomes 6 (sm:col-span-6) and the standalone 12 class
+        // disappears.
         $settings = GridSettings::initial(12)->withOverride('lg', new ViewportConfig(6, 0, true));
         $column = GridTreeFactory::column($row, gridSettings: $settings);
 
         // Baseline: default (isolated) resolver.
         $isolatedClasses = $column->getColumnClasses();
-        self::assertStringContainsString('col-12', $isolatedClasses);
-        self::assertStringContainsString('col-lg-6', $isolatedClasses);
+        self::assertStringContainsString('sm:col-span-12', $isolatedClasses);
+        self::assertStringContainsString('lg:col-span-6', $isolatedClasses);
 
         // Register a cascade-configured resolver as the active GridSettingsResolver.
         $adapter = Injector::inst()->get(GridAdapterInterface::class);
@@ -234,9 +241,9 @@ final class ColumnTest extends SapphireTest
             'getColumnClasses() must reflect the Injector-configured cascade strategy, not a hard-coded isolated resolver',
         );
 
-        // Cascade pushes the width-6 override down to the base (xs) viewport.
-        self::assertStringContainsString('col-6', $cascadeClasses);
-        self::assertStringNotContainsString('col-12', $cascadeClasses);
+        // Cascade pushes the width-6 override down to the smallest viewport.
+        self::assertStringContainsString('sm:col-span-6', $cascadeClasses);
+        self::assertStringNotContainsString('sm:col-span-12', $cascadeClasses);
     }
 
     // ── getCMSFields ────────────────────────────────────────────

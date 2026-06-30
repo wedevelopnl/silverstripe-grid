@@ -9,10 +9,11 @@ use Page;
 use SilverStripe\Assets\Dev\TestAssetStore;
 use SilverStripe\Assets\Image;
 use SilverStripe\Core\Config\Config;
+use SilverStripe\Core\Environment;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
-use WeDevelop\Grid\Adapter\BootstrapAdapter;
+use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Extensions\BlockMediaExtension;
 use WeDevelop\Grid\Model\ContentElement;
@@ -32,18 +33,31 @@ final class BlockMediaExtensionTest extends SapphireTest
 
     private const TEST_IMAGE_PATH = __DIR__ . '/../../E2E/Fixture/assets/test-image.png';
 
+    private string|false $previousAdapterEnv = false;
+
     protected function setUp(): void
     {
         parent::setUp();
         Versioned::set_stage(Versioned::DRAFT);
         Config::modify()->set(Section::class, 'auto_scaffold', false);
         Config::modify()->set(Row::class, 'auto_scaffold', false);
+
+        // Pin the active adapter to the default preset (Tailwind) so the
+        // extension's layout/dimension output is deterministic regardless of the
+        // container's configured SS_GRID_ADAPTER. The env var (not a registered
+        // instance) is used so the rebuildGridAdapter() re-resolution in the
+        // total_columns/container_max_width override tests still yields Tailwind.
+        $this->previousAdapterEnv = Environment::getEnv('SS_GRID_ADAPTER');
+        Environment::putEnv('SS_GRID_ADAPTER=tailwind');
+        $this->rebuildGridAdapter();
+
         TestAssetStore::activate('BlockMediaExtensionTest');
     }
 
     protected function tearDown(): void
     {
         TestAssetStore::reset();
+        Environment::putEnv('SS_GRID_ADAPTER=' . ($this->previousAdapterEnv === false ? '' : $this->previousAdapterEnv));
         parent::tearDown();
     }
 
@@ -235,8 +249,8 @@ final class BlockMediaExtensionTest extends SapphireTest
 
         $classes = $element->getLayoutRowClasses();
 
-        self::assertStringContainsString('row', $classes);
-        self::assertStringContainsString('align-items-center', $classes);
+        self::assertStringContainsString('grid grid-cols-12', $classes);
+        self::assertStringContainsString('items-center', $classes);
     }
 
     public function testGetMediaColumnClasses(): void
@@ -247,8 +261,8 @@ final class BlockMediaExtensionTest extends SapphireTest
 
         $classes = $element->getMediaColumnClasses();
 
-        // Exact match kills the !== null guard on getBaseColumnClass() (Bootstrap returns null)
-        self::assertSame('col-md-6 order-1', $classes);
+        // Exact match kills the !== null guard on getBaseColumnClass() (Tailwind returns null)
+        self::assertSame('sm:col-span-6 order-1', $classes);
     }
 
     public function testGetContentColumnClasses(): void
@@ -259,8 +273,8 @@ final class BlockMediaExtensionTest extends SapphireTest
 
         $classes = $element->getContentColumnClasses();
 
-        // Exact match kills the !== null guard on getBaseColumnClass() (Bootstrap returns null)
-        self::assertSame('col-md-6 order-2', $classes);
+        // Exact match kills the !== null guard on getBaseColumnClass() (Tailwind returns null)
+        self::assertSame('sm:col-span-6 order-2', $classes);
     }
 
     public function testGetContentPaddingClassesWithGap(): void
@@ -269,7 +283,7 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element->GapSize = 3;
         $element->MediaPosition = MediaPosition::First->value;
 
-        self::assertSame('ps-md-3', $element->getContentPaddingClasses());
+        self::assertSame('sm:pl-3', $element->getContentPaddingClasses());
     }
 
     public function testGetContentPaddingClassesWithoutGap(): void
@@ -286,10 +300,10 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element->GapSize = 3;
 
         $element->MediaPosition = MediaPosition::Last->value;
-        self::assertSame('pe-md-3', $element->getContentPaddingClasses());
+        self::assertSame('sm:pr-3', $element->getContentPaddingClasses());
 
         $element->MediaPosition = MediaPosition::First->value;
-        self::assertSame('ps-md-3', $element->getContentPaddingClasses());
+        self::assertSame('sm:pl-3', $element->getContentPaddingClasses());
     }
 
     public function testGetMediaRatioClassAutoReturnsNull(): void
@@ -305,7 +319,7 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element = $this->createContentElement();
         $element->MediaRatio = AspectRatio::SixteenByNine->value;
 
-        self::assertSame('ratio ratio-16x9', $element->getMediaRatioClass());
+        self::assertSame('aspect-video', $element->getMediaRatioClass());
     }
 
     // ── Image dimensions ────────────────────────────────────────
@@ -315,8 +329,8 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element = $this->createContentElement();
         $element->ContentColumns = 6;
 
-        // 12 total - 6 content = 6 media columns → 660px (1320 * 6/12)
-        self::assertSame(660, $element->getMediaImageWidth());
+        // 12 total - 6 content = 6 media columns → 768px (1536 * 6/12)
+        self::assertSame(768, $element->getMediaImageWidth());
     }
 
     public function testGetMediaImageWidthFullWidthWhenNoColumns(): void
@@ -324,8 +338,8 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element = $this->createContentElement();
         $element->ContentColumns = 0;
 
-        // Full grid width → 1320px
-        self::assertSame(1320, $element->getMediaImageWidth());
+        // Full grid width → 1536px
+        self::assertSame(1536, $element->getMediaImageWidth());
     }
 
     public function testGetMediaImageWidthWithOneContentColumn(): void
@@ -333,8 +347,8 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element = $this->createContentElement();
         $element->ContentColumns = 1;
 
-        // 12 - 1 = 11 media columns → round(1320 * 11 / 12) = 1210
-        self::assertSame(1210, $element->getMediaImageWidth());
+        // 12 - 1 = 11 media columns → round(1536 * 11 / 12) = 1408
+        self::assertSame(1408, $element->getMediaImageWidth());
     }
 
     public function testGetMediaImageWidthClampsToOneColumnWhenContentEqualsTotal(): void
@@ -345,8 +359,8 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element = $this->createContentElement();
         $element->ContentColumns = 12;
 
-        // colSize clamped to 1 → round(1320 * 1 / 12) = 110
-        self::assertSame(110, $element->getMediaImageWidth());
+        // colSize clamped to 1 → round(1536 * 1 / 12) = 128
+        self::assertSame(128, $element->getMediaImageWidth());
     }
 
     public function testGetMediaImageWidthClampsToOneColumnWhenContentExceedsTotal(): void
@@ -356,8 +370,8 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element = $this->createContentElement();
         $element->ContentColumns = 15;
 
-        // colSize clamped to 1 → round(1320 * 1 / 12) = 110
-        self::assertSame(110, $element->getMediaImageWidth());
+        // colSize clamped to 1 → round(1536 * 1 / 12) = 128
+        self::assertSame(128, $element->getMediaImageWidth());
     }
 
     public function testGetMediaImageWidthClampsNegativeContentColumns(): void
@@ -370,8 +384,8 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element = $this->createContentElement();
         $element->ContentColumns = -3;
 
-        // Full grid width → round(1320 * 12 / 12) = 1320
-        self::assertSame(1320, $element->getMediaImageWidth());
+        // Full grid width → round(1536 * 12 / 12) = 1536
+        self::assertSame(1536, $element->getMediaImageWidth());
     }
 
     public function testGetMediaImageHeightSquare(): void
@@ -380,7 +394,7 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element->ContentColumns = 6;
         $element->MediaRatio = AspectRatio::Square->value;
 
-        self::assertSame(660, $element->getMediaImageHeight());
+        self::assertSame(768, $element->getMediaImageHeight());
     }
 
     public function testGetMediaImageHeightSixteenByNine(): void
@@ -389,19 +403,26 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element->ContentColumns = 6;
         $element->MediaRatio = AspectRatio::SixteenByNine->value;
 
-        // round(660 * 9/16) = 371
-        self::assertSame(371, $element->getMediaImageHeight());
+        // width 768 → round(768 * 9/16) = 432
+        self::assertSame(432, $element->getMediaImageHeight());
     }
 
     public function testGetMediaImageHeightSixteenByNineRoundsCorrectly(): void
     {
+        // Tailwind's 1536 container divides evenly by 12, so ratio results are exact
+        // integers that would not distinguish round() from floor(). Override the
+        // container width to a value that yields a fractional result, isolating the
+        // rounding behaviour under test.
+        Config::modify()->set(TailwindAdapter::class, 'container_max_width', 1000);
+        $this->rebuildGridAdapter();
+
         $element = $this->createContentElement();
         $element->ContentColumns = 3;
         $element->MediaRatio = AspectRatio::SixteenByNine->value;
 
-        // mediaColumns=9, width=round(1320*9/12)=990
-        // round(990 * 9/16) = round(556.875) = 557 (floor would give 556)
-        self::assertSame(557, $element->getMediaImageHeight());
+        // mediaColumns=9, width=round(1000*9/12)=750
+        // round(750 * 9/16) = round(421.875) = 422 (floor would give 421)
+        self::assertSame(422, $element->getMediaImageHeight());
     }
 
     public function testGetMediaImageHeightFourByThree(): void
@@ -410,19 +431,24 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element->ContentColumns = 6;
         $element->MediaRatio = AspectRatio::FourByThree->value;
 
-        // round(660 * 3/4) = 495
-        self::assertSame(495, $element->getMediaImageHeight());
+        // width 768 → round(768 * 3/4) = 576
+        self::assertSame(576, $element->getMediaImageHeight());
     }
 
     public function testGetMediaImageHeightFourByThreeRoundsCorrectly(): void
     {
+        // See the 16:9 rounding test: override the evenly-divisible Tailwind
+        // container width so the ratio math produces a fractional result.
+        Config::modify()->set(TailwindAdapter::class, 'container_max_width', 1000);
+        $this->rebuildGridAdapter();
+
         $element = $this->createContentElement();
-        $element->ContentColumns = 5;
+        $element->ContentColumns = 7;
         $element->MediaRatio = AspectRatio::FourByThree->value;
 
-        // mediaColumns=7, width=round(1320*7/12)=770
-        // round(770 * 3/4) = round(577.5) = 578 (floor would give 577)
-        self::assertSame(578, $element->getMediaImageHeight());
+        // mediaColumns=5, width=round(1000*5/12)=417
+        // round(417 * 3/4) = round(312.75) = 313 (floor would give 312)
+        self::assertSame(313, $element->getMediaImageHeight());
     }
 
     public function testGetMediaImageHeightAutoWithoutImage(): void
@@ -433,7 +459,7 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element->MediaImageID = 0;
 
         // No image → falls back to width as height
-        self::assertSame(660, $element->getMediaImageHeight());
+        self::assertSame(768, $element->getMediaImageHeight());
     }
 
     // ── getMediaImageSourceURL ──────────────────────────────────
@@ -537,7 +563,7 @@ final class BlockMediaExtensionTest extends SapphireTest
     // ── ContentColumns field options (loop bounds) ──────────────────────────
 
     /**
-     * With the default Bootstrap adapter (column_count=12), getContentColumnOptions
+     * With the default adapter's column_count of 12, getContentColumnOptions
      * produces keys [4..8] → assertArrayHasKey/NotHasKey pins each loop boundary.
      * The ColumnWidthPickerField source also includes 0 (full-width).
      */
@@ -570,7 +596,7 @@ final class BlockMediaExtensionTest extends SapphireTest
         // must NOT appear (that would leave only 1 media column). Pins the
         // `min(8, total - 2)` arithmetic: mutating `- 2` to `+ 2` or `min` to
         // `max` would admit key 8 (or more).
-        Config::modify()->set(BootstrapAdapter::class, 'total_columns', 9);
+        Config::modify()->set(TailwindAdapter::class, 'total_columns', 9);
         $this->rebuildGridAdapter();
 
         $element = $this->createContentElement();
@@ -598,7 +624,7 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element->GapSize = 3;
         $element->MediaPosition = MediaPosition::LastOnDesktop->value;
 
-        self::assertSame('pe-md-3', $element->getContentPaddingClasses());
+        self::assertSame('sm:pr-3', $element->getContentPaddingClasses());
     }
 
     // ── updateCMSFields VideoEmbed tab visibility ───────────────────────────

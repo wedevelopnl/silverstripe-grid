@@ -23,6 +23,18 @@ mkdir -p "$_res/client"
 [ -d /module/client/lang ] && ln -sfn /module/client/lang "$_res/client/lang"
 [ -d /module/lang ] && ln -sfn /module/lang "$_res/lang"
 
+# Point the testbed's front-end stylesheet at the CSS framework matching the
+# active grid adapter, so the rendered grid's emitted classes have matching CSS.
+# Page.ss links the stable /css/grid-framework.css name; we symlink it per boot
+# from $SS_GRID_ADAPTER. Bundled CSS exists for bootstrap and tailwind only; any
+# other value (bulma preset, custom FQCN) gets an empty file rather than a 404.
+_css=/app/public/css
+case "$(printf '%s' "${SS_GRID_ADAPTER:-}" | tr '[:upper:]' '[:lower:]')" in
+    bootstrap) ln -sfn bootstrap.min.css "$_css/grid-framework.css" ;;
+    tailwind)  ln -sfn tailwind.min.css  "$_css/grid-framework.css" ;;
+    *)         : > "$_css/grid-framework.css" ;;
+esac
+
 vendor/bin/sake dev/build flush=1
 
 touch /tmp/.app-ready
