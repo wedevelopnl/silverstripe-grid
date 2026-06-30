@@ -46,7 +46,7 @@ class BlockMediaExtension extends Extension
     private static array $db = [
         'ContentColumns' => 'Int',
         // Enum members mirror the VerticalAlignment value enum exactly; the
-        // GridSettingsEnumParityTest guards against drift between the two.
+        // DatabaseEnumParityTest guards against drift between the two.
         'VerticalAlignment' => "Enum('top,center,bottom', 'center')",
         'GapSize' => 'Int',
         // MediaType stays a Varchar, not an Enum: '' (no media selected) is a
