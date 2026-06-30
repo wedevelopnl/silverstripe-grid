@@ -476,8 +476,9 @@ final class GridControllerTest extends FunctionalTest
         $section = $tree['section'];
         $sectionId = (int) $section->ID;
 
-        $response = $this->jsonPatch(self::BASE_URL . '/publish', [
+        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
             'element' => $this->ref($section),
+            'published' => true,
         ]);
 
         self::assertSame(204, $response->getStatusCode());
@@ -493,8 +494,21 @@ final class GridControllerTest extends FunctionalTest
 
     public function testPublishReturns400ForNonExistentElement(): void
     {
-        $response = $this->jsonPatch(self::BASE_URL . '/publish', [
+        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
             'element' => $this->syntheticRef('section', 999999),
+            'published' => true,
+        ]);
+
+        self::assertSame(400, $response->getStatusCode());
+    }
+
+    public function testSetPublishedReturns400ForNonBoolPublished(): void
+    {
+        $tree = $this->buildTree();
+
+        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
+            'element' => $this->ref($tree['section']),
+            'published' => 'yes',
         ]);
 
         self::assertSame(400, $response->getStatusCode());
@@ -509,8 +523,9 @@ final class GridControllerTest extends FunctionalTest
         $section->publishRecursive();
         $sectionId = (int) $section->ID;
 
-        $response = $this->jsonPatch(self::BASE_URL . '/unpublish', [
+        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
             'element' => $this->ref($section),
+            'published' => false,
         ]);
 
         self::assertSame(204, $response->getStatusCode());
@@ -526,8 +541,9 @@ final class GridControllerTest extends FunctionalTest
 
     public function testUnpublishReturns400ForNonExistentElement(): void
     {
-        $response = $this->jsonPatch(self::BASE_URL . '/unpublish', [
+        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
             'element' => $this->syntheticRef('section', 999999),
+            'published' => false,
         ]);
 
         self::assertSame(400, $response->getStatusCode());
@@ -1177,8 +1193,9 @@ final class GridControllerTest extends FunctionalTest
     {
         $restricted = $this->buildRestrictedTree();
 
-        $response = $this->jsonPatch(self::BASE_URL . '/publish', [
+        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
             'element' => $this->ref($restricted['section']),
+            'published' => true,
         ]);
 
         self::assertSame(403, $response->getStatusCode());
@@ -1192,8 +1209,9 @@ final class GridControllerTest extends FunctionalTest
         // on; the canUnpublish() guard must still reject the request with 403.
         $restricted['section']->publishRecursive();
 
-        $response = $this->jsonPatch(self::BASE_URL . '/unpublish', [
+        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
             'element' => $this->ref($restricted['section']),
+            'published' => false,
         ]);
 
         self::assertSame(403, $response->getStatusCode());
@@ -1747,8 +1765,8 @@ final class GridControllerTest extends FunctionalTest
 
     public function testPublishReturns400ForMissingElement(): void
     {
-        // Body without 'element' — parseElementRef returns fail → jsonError(400)
-        $response = $this->jsonPatch(self::BASE_URL . '/publish', []);
+        // Body without 'published' — non-bool published → jsonError(400)
+        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', []);
 
         self::assertSame(400, $response->getStatusCode());
     }

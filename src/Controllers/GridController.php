@@ -78,8 +78,7 @@ class GridController extends AdminController
         'GET api/readTree/$PageID!/$Zone!' => 'apiReadTree',
         'POST api/create' => 'apiCreate',
         'POST api/createContent' => 'apiCreateContent',
-        'PATCH api/publish' => 'apiPublish',
-        'PATCH api/unpublish' => 'apiUnpublish',
+        'PATCH api/setPublished' => 'apiSetPublished',
         'DELETE api/delete' => 'apiDelete',
         'POST api/duplicate' => 'apiDuplicate',
         'POST api/duplicateTo' => 'apiDuplicateTo',
@@ -97,8 +96,7 @@ class GridController extends AdminController
         'apiReadTreeAtVersion',
         'apiCreate',
         'apiCreateContent',
-        'apiPublish',
-        'apiUnpublish',
+        'apiSetPublished',
         'apiDelete',
         'apiDuplicate',
         'apiDuplicateTo',
@@ -317,33 +315,38 @@ class GridController extends AdminController
         return $this->jsonSuccess(204);
     }
 
-    public function apiPublish(HTTPRequest $request): HTTPResponse
+    public function apiSetPublished(HTTPRequest $request): HTTPResponse
     {
-        $ref = $this->requireElementRefFromRequest($request);
-        $element = $this->requireElementWithPermission(
-            $ref,
-            static fn (GridElement $e): bool => $e->canPublish(),
-        );
+        $data = $this->parseJsonBody($request);
 
-        $element->publishRecursive();
+        $published = $data['published'] ?? null;
+        if (!is_bool($published)) {
+            $this->jsonError(400);
+        }
 
-        return $this->jsonSuccess(204);
-    }
+        $parseResult = $this->requestBodyParser->parseElementRef($data);
+        if ($parseResult->isErr()) {
+            $this->jsonError(400);
+        }
 
-    public function apiUnpublish(HTTPRequest $request): HTTPResponse
-    {
-        $ref = $this->requireElementRefFromRequest($request);
-        $element = $this->requireElementWithPermission(
-            $ref,
-            static function (GridElement $e): bool {
+        $ref = $parseResult->unwrap();
+
+        $permissionCheck = $published
+            ? static fn (GridElement $e): bool => $e->canPublish()
+            : static function (GridElement $e): bool {
                 $result = $e->canUnpublish();
                 assert(is_bool($result));
 
                 return $result;
-            },
-        );
+            };
 
-        $element->doUnpublish();
+        $element = $this->requireElementWithPermission($ref, $permissionCheck);
+
+        if ($published) {
+            $element->publishRecursive();
+        } else {
+            $element->doUnpublish();
+        }
 
         return $this->jsonSuccess(204);
     }
