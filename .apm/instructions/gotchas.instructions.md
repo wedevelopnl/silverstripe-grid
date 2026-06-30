@@ -38,6 +38,10 @@ applyTo: "**/*"
 - **Recursive discriminated-union schemas need an `as v.GenericSchema<T>` cast at the boundary**: valibot's `~standard` (StandardSchema) output inference cannot resolve the recursive node union and widens map fields to `unknown`, even though `v.InferOutput` resolves correctly and runtime validation is intact. `elementNodeWireSchema` casts the union to `v.GenericSchema<ElementNodeWire>`. This is a type-only escape hatch, not a validation gap.
 - **`v.pipe` output inference**: in a coerce-then-validate pipe, the array/type guard (`v.custom`) must come BEFORE the `v.transform`/`v.record`, so the trailing schema determines the pipe's output type. An action placed after the transform pins the output to `unknown`.
 
+## Migration
+
+- **Migration extension hooks fire from extracted collaborators, not `GridMigrationService`**: `updateClassNameMapping` and `updateElementFieldMapping` fire from `DraftHierarchyWriter`; `updateLegacyElements` still fires from `LegacyDataReader` (the facade). Extensions targeting these hooks must be registered on the class that fires the hook, not on `GridMigrationService`.
+
 ## Tooling
 
 - **CLAUDE.md and AGENTS.md are regenerated from `.apm/instructions/` on every `apm compile`** — direct edits to the generated files get overwritten silently. Edit the APM sources instead.
