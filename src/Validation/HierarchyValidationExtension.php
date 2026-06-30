@@ -23,7 +23,6 @@ class HierarchyValidationExtension extends Extension
         // Extensions are instantiated by the framework without DI args, so
         // they cannot declare a $dependencies-injected service property —
         // resolve the validator from the container here instead.
-        /** @var HierarchyValidatorInterface $service */
         $service = Injector::inst()->get(HierarchyValidatorInterface::class);
         $serviceResult = $service->validate($this->getOwner());
 

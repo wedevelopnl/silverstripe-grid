@@ -105,7 +105,6 @@ class FixtureLoader
             );
         }
 
-        /** @var SiteTree|null $page */
         $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
             Versioned::set_stage(Versioned::DRAFT);
 

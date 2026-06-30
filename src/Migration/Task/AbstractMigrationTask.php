@@ -105,7 +105,6 @@ abstract class AbstractMigrationTask extends BuildTask
             ? \array_map(intval(...), \explode(',', $pageIdsArg))
             : null;
 
-        /** @var GridAdapterInterface $adapter */
         $adapter = Injector::inst()->get(GridAdapterInterface::class);
 
         $viewportKeyMap = $this->resolveViewportKeyMap(

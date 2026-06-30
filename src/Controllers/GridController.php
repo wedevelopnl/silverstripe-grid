@@ -129,7 +129,6 @@ class GridController extends AdminController
         /** @var non-empty-string $zone Route pattern guarantees non-empty zone segment */
         $zone = (string) $request->param('Zone');
 
-        /** @var SiteTree|null $page */
         $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
             Versioned::set_stage(Versioned::DRAFT);
 
@@ -551,7 +550,6 @@ class GridController extends AdminController
 
         $body = $parseResult->unwrap();
 
-        /** @var SiteTree|null $page */
         $page = Versioned::withVersionedMode(static function () use ($body): ?SiteTree {
             Versioned::set_stage(Versioned::DRAFT);
 
@@ -605,7 +603,6 @@ class GridController extends AdminController
             return $this->jsonSuccess(200, []);
         }
 
-        /** @var SiteTree|null $page */
         $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
             Versioned::set_stage(Versioned::DRAFT);
 
@@ -633,7 +630,6 @@ class GridController extends AdminController
     {
         $pageId = (int) $request->param('PageID');
 
-        /** @var SiteTree|null $page */
         $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
             Versioned::set_stage(Versioned::DRAFT);
 
@@ -861,10 +857,7 @@ class GridController extends AdminController
             /** @var class-string<DataObject> $class */
             $class = $ref->type->toClass();
 
-            /** @var DataObject|null $record */
-            $record = DataObject::get($class)->byID($ref->id);
-
-            return $record;
+            return DataObject::get($class)->byID($ref->id);
         });
     }
 

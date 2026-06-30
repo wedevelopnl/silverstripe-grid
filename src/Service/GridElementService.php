@@ -51,7 +51,6 @@ final readonly class GridElementService
         ?int $insertAfterElementID,
         bool $insertAtStart = false,
     ): Result {
-        /** @var GridElement $newElement */
         $newElement = Injector::inst()->create($containerType->toElementClass());
         $newElement->ParentID = $parent->ID;
         $newElement->ParentClass = $parent::class;
@@ -76,7 +75,6 @@ final readonly class GridElementService
         string $className,
         ?int $insertAfterElementID,
     ): Result {
-        /** @var GridElement $newElement ContentElement extends GridElement */
         $newElement = Injector::inst()->create($className);
         $newElement->ParentID = $parent->ID;
         $newElement->ParentClass = $parent::class;

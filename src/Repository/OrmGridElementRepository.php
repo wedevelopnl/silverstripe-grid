@@ -35,7 +35,6 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
         // GridController::resolveNodeRef and the GET read endpoints. Without
         // this, a request whose ambient stage is LIVE would fail to find a
         // DRAFT-only element and the controller would respond 404/400.
-        /** @var GridElement|null $record */
         $record = Versioned::withVersionedMode(static function () use ($class, $id): ?GridElement {
             Versioned::set_stage(Versioned::DRAFT);
 
