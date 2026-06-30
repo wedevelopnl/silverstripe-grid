@@ -10,13 +10,13 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Tests\Integration\Migration\Service\TestCustomElement;
 
 /**
- * Test extension on GridMigrationService that handles custom element
+ * Test extension on DraftHierarchyWriter that handles custom element
  * ClassName mapping and field migration via extraData.
  *
  * Simulates what a real project would do: map their old element class
  * to the new one, and copy custom fields from extraData to the new record.
  *
- * @extends Extension<\WeDevelop\Grid\Migration\Service\GridMigrationService>
+ * @extends Extension<\WeDevelop\Grid\Migration\Service\DraftHierarchyWriter>
  */
 final class TestCustomElementMigrationExtension extends Extension
 {

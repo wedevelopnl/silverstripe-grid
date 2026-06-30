@@ -11,7 +11,7 @@ use WeDevelop\Grid\Model\GridElement;
 /**
  * Test extension for verifying updateElementFieldMapping hook.
  *
- * @extends Extension<GridMigrationService>
+ * @extends Extension<\WeDevelop\Grid\Migration\Service\DraftHierarchyWriter>
  */
 final class TestMigrationExtension extends Extension
 {

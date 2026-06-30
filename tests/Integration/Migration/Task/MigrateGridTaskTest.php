@@ -13,7 +13,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Output\BufferedOutput;
-use WeDevelop\Grid\Migration\Service\GridMigrationService;
+use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
 use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
@@ -365,7 +365,7 @@ final class MigrateGridTaskTest extends SapphireTest
     {
         // A page whose element throws during the write rolls back and is counted
         // as a failure; the task must surface that count and exit FAILURE.
-        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+        DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
 
         try {
             $pageId = $this->getPageId();
@@ -388,7 +388,7 @@ final class MigrateGridTaskTest extends SapphireTest
             // The deliberate failure rolled back — no partial hierarchy persisted.
             self::assertCount(0, Section::get()->filter(['ParentID' => $pageId, 'Zone' => 'main']));
         } finally {
-            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+            DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         }
     }
 
@@ -679,7 +679,7 @@ final class MigrateGridTaskTest extends SapphireTest
     {
         // Both pages fail; with --stop-on-first-failure only the first should be attempted,
         // so the task reports 1 failure (not 2) and exits FAILURE.
-        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+        DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
 
         try {
             $pageId1 = $this->getPageId();
@@ -710,7 +710,7 @@ final class MigrateGridTaskTest extends SapphireTest
             // Only 1 page was attempted before the loop broke
             self::assertStringContainsString('1 page(s) failed to migrate', $result['output']);
         } finally {
-            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+            DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         }
     }
 
@@ -718,7 +718,7 @@ final class MigrateGridTaskTest extends SapphireTest
     {
         // Both pages fail; without --stop-on-first-failure both must be attempted,
         // so the task reports 2 failures and exits FAILURE.
-        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+        DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
 
         try {
             $pageId1 = $this->getPageId();
@@ -748,7 +748,7 @@ final class MigrateGridTaskTest extends SapphireTest
             self::assertSame(Command::FAILURE, $result['exitCode']);
             self::assertStringContainsString('2 page(s) failed to migrate', $result['output']);
         } finally {
-            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+            DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         }
     }
 }

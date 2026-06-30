@@ -11,6 +11,7 @@ use Page;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
@@ -1320,7 +1321,7 @@ final class GridMigrationServiceTest extends SapphireTest
         ]);
         $this->seeder->seedContentMedia(6100);
 
-        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+        DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
 
         try {
             $service = $this->createService();
@@ -1349,7 +1350,7 @@ final class GridMigrationServiceTest extends SapphireTest
             self::assertNotEmpty($errors);
             self::assertStringContainsString('Deliberate test failure', $errors[0]);
         } finally {
-            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+            DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         }
     }
 
@@ -1685,7 +1686,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
         TestClassNameMappingExtension::$targetClass = TestCustomElement::class;
         TestClassNameMappingExtension::$sourceClass = 'App\\Elements\\CustomBlock';
-        GridMigrationService::add_extension(TestClassNameMappingExtension::class);
+        DraftHierarchyWriter::add_extension(TestClassNameMappingExtension::class);
 
         try {
             $this->runMigration();
@@ -1706,7 +1707,7 @@ final class GridMigrationServiceTest extends SapphireTest
             self::assertInstanceOf(TestCustomElement::class, $customElement);
             self::assertSame(TestCustomElement::class, $customElement->ClassName);
         } finally {
-            GridMigrationService::remove_extension(TestClassNameMappingExtension::class);
+            DraftHierarchyWriter::remove_extension(TestClassNameMappingExtension::class);
             TestClassNameMappingExtension::$targetClass = '';
             TestClassNameMappingExtension::$sourceClass = null;
         }
@@ -1730,7 +1731,7 @@ final class GridMigrationServiceTest extends SapphireTest
         $service = $this->createService();
 
         // Use the Extensible trait to register a temporary extension callback
-        GridMigrationService::add_extension(TestMigrationExtension::class);
+        DraftHierarchyWriter::add_extension(TestMigrationExtension::class);
 
         try {
             $this->runMigration($service);
@@ -1740,7 +1741,7 @@ final class GridMigrationServiceTest extends SapphireTest
             // The extension sets Style = 'hook-applied'
             self::assertSame('hook-applied', $element->Style);
         } finally {
-            GridMigrationService::remove_extension(TestMigrationExtension::class);
+            DraftHierarchyWriter::remove_extension(TestMigrationExtension::class);
         }
     }
 
@@ -1759,7 +1760,7 @@ final class GridMigrationServiceTest extends SapphireTest
         // Override the default ContentElement mapping to TestCustomElement
         TestClassNameMappingExtension::$targetClass = TestCustomElement::class;
         TestClassNameMappingExtension::$sourceClass = null;
-        GridMigrationService::add_extension(TestClassNameMappingExtension::class);
+        DraftHierarchyWriter::add_extension(TestClassNameMappingExtension::class);
 
         try {
             $this->runMigration();
@@ -1771,7 +1772,7 @@ final class GridMigrationServiceTest extends SapphireTest
             self::assertInstanceOf(TestCustomElement::class, $element);
             self::assertSame(TestCustomElement::class, $element->ClassName);
         } finally {
-            GridMigrationService::remove_extension(TestClassNameMappingExtension::class);
+            DraftHierarchyWriter::remove_extension(TestClassNameMappingExtension::class);
             TestClassNameMappingExtension::$targetClass = '';
             TestClassNameMappingExtension::$sourceClass = null;
         }
@@ -2044,7 +2045,7 @@ final class GridMigrationServiceTest extends SapphireTest
         ]);
         $this->seeder->seedContentMedia(9100);
 
-        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+        DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
         try {
             $service = $this->createService();
             $failures = $service->run(
@@ -2061,7 +2062,7 @@ final class GridMigrationServiceTest extends SapphireTest
             self::assertStringContainsString((string) $pageId, $errors[0]);
             self::assertStringContainsString('Deliberate test failure', $errors[0]);
         } finally {
-            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+            DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         }
     }
 
@@ -2077,7 +2078,7 @@ final class GridMigrationServiceTest extends SapphireTest
         ]);
         $this->seeder->seedContentMedia(9400);
 
-        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+        DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
         try {
             $service = $this->createService();
             $service->run(
@@ -2100,7 +2101,7 @@ final class GridMigrationServiceTest extends SapphireTest
             self::assertArrayHasKey('exception', $entry['context'], 'context[exception] key must be present');
             self::assertInstanceOf(\Throwable::class, $entry['context']['exception'], 'context[exception] must hold the Throwable');
         } finally {
-            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+            DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         }
     }
 
@@ -2246,7 +2247,7 @@ final class GridMigrationServiceTest extends SapphireTest
         ]);
         $this->seeder->seedContentMedia(10201);
 
-        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+        DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
 
         try {
             $service = $this->createService();
@@ -2271,7 +2272,7 @@ final class GridMigrationServiceTest extends SapphireTest
             }
             self::assertTrue($summaryFound, 'A batch summary warning must be emitted when pages fail');
         } finally {
-            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+            DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         }
     }
 
@@ -2295,7 +2296,7 @@ final class GridMigrationServiceTest extends SapphireTest
         ]);
         $this->seeder->seedContentMedia(10401);
 
-        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+        DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
 
         try {
             $service = $this->createService();
@@ -2327,7 +2328,7 @@ final class GridMigrationServiceTest extends SapphireTest
             }
             self::assertTrue($summaryFound, 'A batch summary must be emitted after stop-on-first-failure halts');
         } finally {
-            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+            DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         }
     }
 
@@ -2351,7 +2352,7 @@ final class GridMigrationServiceTest extends SapphireTest
         ]);
         $this->seeder->seedContentMedia(10601);
 
-        GridMigrationService::add_extension(TestFailingMigrationExtension::class);
+        DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
 
         try {
             $service = $this->createService();
@@ -2383,7 +2384,7 @@ final class GridMigrationServiceTest extends SapphireTest
             }
             self::assertTrue($summaryFound, 'A batch summary warning must be emitted listing all failed page IDs');
         } finally {
-            GridMigrationService::remove_extension(TestFailingMigrationExtension::class);
+            DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         }
     }
 
