@@ -3,7 +3,7 @@
   "version": "6.0.0",
   "description": "Elemental grid module for SilverStripe",
   "engines": {
-    "node": ">=24"
+    "node": ">=26"
   },
   "scripts": {
     "build": "npm run i18n:collect && vite build",
