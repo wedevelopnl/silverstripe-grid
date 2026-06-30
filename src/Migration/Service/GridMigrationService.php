@@ -37,7 +37,7 @@ final class GridMigrationService
 
     public function __construct(
         private readonly LegacyElementSource $reader,
-        private readonly FieldMapper $mapper,
+        FieldMapper $mapper,
         private readonly RowMappingStrategy $strategy,
         private readonly LoggerInterface $logger,
     ) {
