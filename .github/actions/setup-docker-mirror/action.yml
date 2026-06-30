@@ -1,0 +1,33 @@
+name: Setup Docker with Docker Hub mirror
+description: >-
+  Point the Docker daemon and buildx/buildkit at mirror.gcr.io (Google's public
+  pull-through cache for docker.io) so image pulls don't hit Docker Hub's
+  anonymous rate limit. Building via the buildx docker-container driver pulls
+  base images (frankenphp, composer, moby/buildkit, mysql) independently of the
+  daemon's authenticated session; across the CI matrix that trips HTTP 429.
+  Routing docker.io through the mirror removes that pressure entirely — no
+  credentials, no GHCR, no rate limit.
+
+runs:
+  using: composite
+  steps:
+    # Daemon pulls (moby/buildkit image, the db service at `compose up`). Merge
+    # into any existing daemon.json rather than clobbering runner defaults.
+    - name: Point Docker daemon at mirror.gcr.io
+      shell: bash
+      run: |
+        sudo mkdir -p /etc/docker
+        if [ -s /etc/docker/daemon.json ]; then
+          jq '. + {"registry-mirrors": ["https://mirror.gcr.io"]}' /etc/docker/daemon.json | sudo tee /etc/docker/daemon.json.new >/dev/null
+          sudo mv /etc/docker/daemon.json.new /etc/docker/daemon.json
+        else
+          echo '{"registry-mirrors": ["https://mirror.gcr.io"]}' | sudo tee /etc/docker/daemon.json >/dev/null
+        fi
+        sudo systemctl restart docker
+    # Build-time FROM pulls (frankenphp, composer) happen inside buildkit, which
+    # ignores the daemon mirror and needs its own registry config.
+    - uses: docker/setup-buildx-action@v3
+      with:
+        buildkitd-config-inline: |
+          [registry."docker.io"]
+            mirrors = ["mirror.gcr.io"]
