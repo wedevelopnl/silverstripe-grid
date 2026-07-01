@@ -24,16 +24,21 @@ Every fixture run is fully idempotent: `load()` calls `reset()` first so re-runn
 
 ## HTTP contract
 
-### `POST /dev/grid-fixtures/load?fixture=<name>`
+### `POST /dev/grid-fixtures/load`
 
-Loads the named fixture. Returns:
+Loads the named fixture. The fixture name is read from the **POST body** field `fixture` (`$request->postVar('fixture')`) — a query-string `?fixture=` is ignored and the request fails with `400`. From the shell:
+
+```bash
+curl -X POST -d "fixture=<name>" http://localhost:<WEB_PORT>/dev/grid-fixtures/load
+```
+
+Returns:
 
 ```json
 {
   "success": true,
   "fixture": "element-tree",
   "data": {
-    "fixtureName": "element-tree",
     "pageId": 42,
     "pageUrl": "/e2e-grid-test/",
     "fixtureMap": {
@@ -187,7 +192,7 @@ Calls `$record->doUnpublish()` — useful for specs that need "modified after pu
     Title: 'Modified Text Block (draft)'
 ```
 
-Calls `$record->setField($key, $value)` then `$record->write()` for each field. Combined with a preceding `publish_recursive`, this produces a "modified after publish" state that shows up as a yellow status pill in the CMS. Non-versioned — runs without requiring the record to have `Versioned`.
+Calls `$record->setField($key, $value)` for each field, then `$record->write()` once after the loop. Combined with a preceding `publish_recursive`, this produces a "modified after publish" state that shows up as a yellow status pill in the CMS. Non-versioned — runs without requiring the record to have `Versioned`.
 
 ### `attach_image`
 
@@ -208,15 +213,14 @@ Post-actions run in the order they appear in YAML. A common pattern is `attach_i
 
 ## URL helpers in Playwright
 
-The `FixtureResult` returned from `POST /load` contains `pageId` and `fixtureMap`. The `tests/E2E/helpers/` directory has shared wrappers (`loadFixture`, `openGridEditor`, etc.) that hide the HTTP plumbing. Typical spec header:
+The `FixtureResult` returned from `POST /load` contains `pageId` and `fixtureMap`. The `tests/E2E/helpers/fixtures.ts` module exposes shared wrappers that hide the HTTP plumbing: `loadFixture(request, name)` (loads only), `loadAndNavigate(page, name)` (loads, opens the page editor, and waits for the grid editor to finish loading), and `resetFixtures(request)`. Typical spec header:
 
 ```ts
 import { test } from '@playwright/test';
-import { loadFixture, openGridEditor } from '../helpers/fixtures';
+import { loadAndNavigate } from '../helpers/fixtures';
 
 test.beforeEach(async ({ page }) => {
-  const fixture = await loadFixture('drag-and-drop');
-  await openGridEditor(page, fixture.pageId);
+  const fixture = await loadAndNavigate(page, 'drag-and-drop');
 });
 ```
 
@@ -245,8 +249,8 @@ Not currently supported in the shared fixture loader — the Fluent E2E suite ha
 - [ ] Every element has `Sort` and `Parent` set
 - [ ] Register the fixture in `_config/dev.yml` under `FixtureLoader.fixtures`
 - [ ] Add a `publish_recursive` post-action on the page if the spec needs live content
-- [ ] Verify locally: `curl -X POST "http://localhost:<WEB_PORT>/dev/grid-fixtures/load?fixture=<name>"`
-- [ ] Reference from the spec via the shared `loadFixture()` helper
+- [ ] Verify locally: `curl -X POST -d "fixture=<name>" "http://localhost:<WEB_PORT>/dev/grid-fixtures/load"`
+- [ ] Reference from the spec via the shared `loadAndNavigate()` / `loadFixture()` helper
 
 ## Troubleshooting
 

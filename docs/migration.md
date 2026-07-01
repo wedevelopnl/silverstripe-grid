@@ -140,7 +140,7 @@ Replace `--strategy=sections` with `--strategy=single-section` to use Strategy B
 
 Because the migration writes into live tables, a run without `--dry-run` asks for an interactive `[y/N]` confirmation before any data is written. Answering anything other than `y`/`yes` aborts the run with a successful exit code and no database changes.
 
-When stdin is not a TTY (CI pipelines, `sake` called from a script), there is nothing to prompt — the task refuses to run and exits with a failure code. Pass `--force` (short: `-f`) in those contexts to acknowledge that the run is intentional. `--dry-run` always bypasses the prompt.
+When stdin is not a TTY (CI pipelines, `sake` called from a script), there is nothing to prompt — the task refuses to run and exits with a failure code. Pass `--force` in those contexts to acknowledge that the run is intentional. `--force` has **no short form**: `sake` reserves `-f` for its global `--flush`, so passing `-f` does not set `--force` and the non-interactive run is still refused. `--dry-run` always bypasses the prompt.
 
 ### Options Reference
 
@@ -150,9 +150,10 @@ When stdin is not a TTY (CI pipelines, `sake` called from a script), there is no
 | `--zone` | yes | — | Zone name for the created Sections. Sort order is scoped per zone. |
 | `--strategy` | no | `sections` | Row mapping strategy: `sections` (one Section per legacy ElementRow) or `single-section` (all rows under one Section per page). Default `sections`. |
 | `--dry-run` | no | (flag) | Log planned writes and skip all database changes. Bypasses the confirmation prompt. Exit code is 0 on success even when nothing was written. |
-| `--force` / `-f` | no | (flag) | Skip the interactive confirmation prompt. Required for non-interactive runs (CI, piped invocations) when not using `--dry-run`. |
+| `--force` | no | (flag) | Skip the interactive confirmation prompt. Required for non-interactive runs (CI, piped invocations) when not using `--dry-run`. No short form (`-f` is reserved by `sake` for `--flush`). |
 | `--viewport-map` | no | — | Map legacy viewport keys to the active adapter's viewport keys. Derived automatically via case-insensitive matching when omitted — provide this explicitly when migrating across CSS frameworks with different viewport names. |
 | `--page-ids` | no | — | Comma-separated page IDs to migrate. If omitted, all eligible pages are migrated. |
+| `--stop-on-first-failure` | no | (flag) | Halt the batch on the first page that fails to migrate. By default the task continues past failures and logs the failing page IDs at the end. |
 
 If a run finishes with failures, the task exits with a non-zero status and the failing page IDs are logged as errors. Pages that failed remain un-migrated and can be re-run after the cause is fixed.
 
