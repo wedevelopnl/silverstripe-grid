@@ -796,6 +796,46 @@ describe('useDragAndDrop', () => {
       )
     })
 
+    it('pre-positions the dragged element via the pending tree on a same-container drop', () => {
+      // dnd-kit's DragOverlay drop animation measures the dragged node's resting
+      // rect in a layout effect that runs right after this (synchronous,
+      // unstable_batchedUpdates) drag-end commit — so the DOM must already reflect
+      // the post-drop order at that instant. The pending tree is plain React state,
+      // so setting it here batches into that same commit. The optimistic cache
+      // write in the reorder mutation cannot serve this role: TanStack defers query
+      // re-renders by a macrotask (setTimeout(0) notify scheduler), landing after
+      // the animation has captured — which is why a same-container drop otherwise
+      // animates to the pre-move slot and snaps into place afterwards.
+      //
+      // Same-container drag-over intentionally leaves the pending tree null (CSS
+      // transforms drive the live preview); the pre-position happens at drop.
+      // The onReorder mock never calls clearPendingTree, so the pre-positioned tree
+      // stays observable after drag end. Dragging element1(40) over element2(41) in
+      // column 30 resolves to order [41, 40].
+      const { tree, element1, element2 } = buildSingleColumnTree()
+      const { result } = renderDndHook({ tree })
+
+      const activeId = buildDraggableId('element', element1.self.id)
+      const overId = buildDraggableId('element', element2.self.id)
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+      act(() => {
+        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overId))
+      })
+      expect(result.current.pendingTree).toBeNull()
+
+      act(() => {
+        result.current.dndContextProps.onDragEnd(makeDragEndEvent(activeId, overId))
+      })
+
+      const section = result.current.pendingTree?.nodes[0] as ReturnType<typeof createSectionNode>
+      const row = section?.children?.[0] as ReturnType<typeof createRowNode>
+      const column = row?.children?.[0] as ReturnType<typeof createColumnNode>
+      expect(column?.children?.map((c) => c.self.id)).toEqual([41, 40])
+    })
+
     it('does not call onReorder when drop resolves to same position (no-op)', () => {
       const element = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })
       const column = createColumnNode({
