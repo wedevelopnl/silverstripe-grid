@@ -13,8 +13,7 @@ import {
 // `setItem`/`clear`. The hook itself wraps reads/writes in try/catch, so
 // exercising the default behavior still works without touching localStorage
 // at all — but tests that seed or inspect state need to replace the global
-// with a plain Map-backed mock. Same pattern the old useTreeEnrichment tests
-// used before this hook replaced them.
+// with a plain Map-backed mock.
 
 interface MockStorage extends Storage {
   _store: Map<string, string>
