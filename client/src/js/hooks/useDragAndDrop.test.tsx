@@ -570,6 +570,50 @@ describe('useDragAndDrop', () => {
 
       expect(targetColumnChildIds(result.current.pendingTree)).toEqual([50, 40, 41])
     })
+
+    it('holds the ghost steady when a repeated hover would anchor it to its own pending slot', () => {
+      // Regression (second-order): once the ghost sits immediately BEFORE the
+      // over-element in the pending list, computing `after` from the full
+      // sibling list would pick the slot before `over` — which is the ghost
+      // itself. Placing the active element after itself bounces it back to the
+      // container end, so a steady hover would oscillate bottom ⇄ between.
+      // Excluding the active element from the sibling list keeps it steady.
+      //
+      // col31 = [x(50), element2(41)]. Drag element1(40):
+      //   1. over the col31 CONTAINER → [50, 41, 40]
+      //   2. over element2(41) 'before' → [50, 40, 41]   (40 now sits before 41)
+      //   3. over element2(41) 'before' again → must STAY [50, 40, 41]
+      const x = createSimpleElement({ id: 50, parent: { type: 'column', id: 31 } })
+      const element2 = createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })
+      const { tree } = buildCrossContainerElementTree([x, element2])
+      const { result } = renderDndHook({ tree })
+
+      const activeId = buildDraggableId('element', 40)
+      const containerId = buildDraggableId('column', 31)
+      const overId = buildDraggableId('element', 41)
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+      act(() => {
+        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, containerId))
+      })
+      act(() => {
+        result.current.dndContextProps.onDragOver(
+          makePointerDragOverEvent(activeId, overId, 100, 5, OVER_RECT),
+        )
+      })
+      expect(targetColumnChildIds(result.current.pendingTree)).toEqual([50, 40, 41])
+
+      // A second identical hover must not bounce the ghost back to the end.
+      act(() => {
+        result.current.dndContextProps.onDragOver(
+          makePointerDragOverEvent(activeId, overId, 100, 5, OVER_RECT),
+        )
+      })
+
+      expect(targetColumnChildIds(result.current.pendingTree)).toEqual([50, 40, 41])
+    })
   })
 
   describe('getPointerPosition grab-point offset', () => {

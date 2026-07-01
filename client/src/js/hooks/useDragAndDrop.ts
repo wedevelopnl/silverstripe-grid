@@ -205,15 +205,22 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         // placing it relative to its own position and bouncing it back to the
         // container end. Excluding it keeps the preview consistent with the
         // direction-based placement resolveDropPlacement computes at drop time.
+        // Sibling list with the active element excluded. During a pending
+        // preview the active element already sits in this list, so anchoring
+        // `after` to the slot before `over` could reference the ghost itself —
+        // placing it relative to its own position and bouncing it back to the
+        // container end. Excluding it keeps the preview consistent with the
+        // direction-based placement resolveDropPlacement computes at drop time.
         const siblings = effectiveMaps.childrenByParentKey.get(overNode.parentKey) ?? []
-        const overIdx = effectiveMaps.indexByNodeKey.get(overParsed.key) ?? -1
+        const others = siblings.filter((sibling) => sibling.nodeKey !== activeParsed.key)
+        const overPos = others.findIndex((sibling) => sibling.nodeKey === overParsed.key)
 
         const pointer = getPointerPosition(event)
         if (
           pointer !== null &&
           resolveInsertDirection(pointer, over.rect, activeParsed.type) === 'before'
         ) {
-          after = overIdx > 0 ? siblings[overIdx - 1].self : null
+          after = overPos > 0 ? others[overPos - 1].self : null
         } else {
           after = overNode.self
         }
