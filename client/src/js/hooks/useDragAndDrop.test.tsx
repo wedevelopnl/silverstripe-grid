@@ -530,6 +530,46 @@ describe('useDragAndDrop', () => {
 
       expect(targetColumnChildIds(result.current.pendingTree)).toEqual([41, 40])
     })
+
+    it('repositions the ghost after a prior pending move into the same container (container-first, then between siblings)', () => {
+      // Regression: real drags enter a populated target container by hovering
+      // its parent Column first (collision falls back to the container), which
+      // places the ghost at the END. Subsequent hovers over a sibling must move
+      // the ghost — but the same-container guard previously read the active
+      // node's parent from the PENDING maps (already the target), so it treated
+      // the still-in-progress cross-container preview as a same-container move
+      // and froze the ghost at the bottom.
+      //
+      // col31 = [x(50), element2(41)]. Drag element1(40):
+      //   1. over the col31 CONTAINER → ghost appended → [50, 41, 40]
+      //   2. over element2(41) with pointer ABOVE its midpoint ('before')
+      //      → ghost must move between them → [50, 40, 41]
+      const x = createSimpleElement({ id: 50, parent: { type: 'column', id: 31 } })
+      const element2 = createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })
+      const { tree } = buildCrossContainerElementTree([x, element2])
+      const { result } = renderDndHook({ tree })
+
+      const activeId = buildDraggableId('element', 40)
+      const containerId = buildDraggableId('column', 31)
+      const overId = buildDraggableId('element', 41)
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+      act(() => {
+        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, containerId))
+      })
+      // Ghost initially appended at the container end.
+      expect(targetColumnChildIds(result.current.pendingTree)).toEqual([50, 41, 40])
+
+      act(() => {
+        result.current.dndContextProps.onDragOver(
+          makePointerDragOverEvent(activeId, overId, 100, 5, OVER_RECT),
+        )
+      })
+
+      expect(targetColumnChildIds(result.current.pendingTree)).toEqual([50, 40, 41])
+    })
   })
 
   describe('getPointerPosition grab-point offset', () => {
