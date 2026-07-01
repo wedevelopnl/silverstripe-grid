@@ -7,20 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0-beta.1] - 2026-07-01
+
 ### Added
 
 - **`migrate-grid-with-fluent` task** — migrates legacy Elemental content per locale on Fluent sites. The legacy localisation model is auto-detected from database table shape (`BaseElement_Localised` ⇒ field-localised; `BaseElement.LocaleID` ⇒ isolated; neither ⇒ single-locale). Layout (column grouping, Size/Offset/Visibility) is derived from base rows and is locale-invariant; only content (Title, HTML, media text) differs per locale. Untranslated elements fall back to their base content rather than being omitted, matching Fluent's render-time behaviour. See [`docs/fluent.md`](docs/fluent.md).
+- **`--stop-on-first-failure` option on the migration tasks** — abort the whole run on the first per-page failure instead of the default "continue and report a batch summary at the end" behaviour. The task now emits a per-page atomicity summary regardless.
 
 ### Changed
 
 - **BREAKING: `migrate-grid-rows-to-sections` and `migrate-grid-rows-to-single-section` removed** — replaced by a single `migrate-grid` task with a `--strategy=sections|single-section` option (default `sections`). Update any CI scripts or runbooks that reference the old task segments. The plain `migrate-grid` task refuses to run when localised legacy tables are detected; use `migrate-grid-with-fluent` on Fluent sites instead.
-- **Grid editor blocks split into chrome + editable/readonly variants** — each block (`ElementCard`, `ColumnBlock`, `RowBlock`, `SectionBlock`) is now a presentational `*Chrome` plus an `Editable*`/`Readonly*` variant; editor mode is decided once at the root instead of per-node. No public API or rendered output changes for integrators.
+- **BREAKING: database table names namespaced under a `WeDevelop_Grid_` prefix** — every DataObject table (`GridElement`, `Section`, `Row`, `Column`, `ContentElement`, and their `_Live`/`_Versions` variants) is renamed with a `WeDevelop_Grid_` vendor prefix to prevent collisions with other modules — the bare names are generic and `Column` is a SQL reserved word. No automated schema upgrade ships (alpha-stage): recreate the schema with `dev/build`. Any project-level raw SQL, custom reports, or fixtures referencing the old bare table names must be updated.
+- **BREAKING: `BlockMediaExtension` is now opt-in; `ContentElement` ships lean** — the module no longer force-applies `BlockMediaExtension` to the shared `ContentElement` base, so a plain content block no longer physically carries 15 media columns plus two image FKs. `ContentElement` now ships HTML-only; projects that want the media/text pairing apply the extension to `ContentElement` (or their own content subclass) explicitly. Projects migrating legacy media data must opt the extension in first (or remap `FieldMapper::classNameMap` to their own media class) — see [`docs/migration.md`](docs/migration.md).
+- **API `create`/`publish` endpoints consolidated** — `api/create` and `api/createContent` collapse into a single `POST api/create` that dispatches on whichever discriminator is present (`containerType` for a container, `className` for a content element); `api/publish` and `api/unpublish` collapse into `PATCH api/setPublished` (`published: true` publishes recursively, `published: false` unpublishes). Any custom API consumer must update its routes and payloads; the shipped frontend already uses the unified endpoints.
+- **Runtime API validation migrated from Zod to Valibot** — API-boundary response validation is reimplemented with Valibot, and the `zod` dependency (re-added in `6.0.0-alpha.6`) is dropped again. Validation behaviour and the API-boundary-only scope are unchanged.
+- **Media alignment / ratio / position stored as native DB enums** — `VerticalAlignment`, `MediaRatio`, and `MediaPosition` change from `Varchar` to native DB `Enum` columns, so the database itself — not just app-side validation — rejects out-of-range values. Recreate the schema with `dev/build`.
+- **Migration internals decomposed — extension hooks moved off `GridMigrationService`** — `updateClassNameMapping` and `updateElementFieldMapping` now fire from `DraftHierarchyWriter`, and `updateLegacyElements` from `LegacyDataReader` (the reader facade). Projects with extensions targeting these migration hooks must register them on the class that now fires the hook, not on `GridMigrationService`.
+- **`Result`-returning service APIs marked `#[NoDiscard]`** — enforced via a dedicated PHP 8.5 PHPStan pass (`task analyse-php85`). Ignoring a returned `Result` (or `Transactional::run()`) now surfaces as a static-analysis error rather than a silently-dropped outcome.
+- **Grid editor blocks split into chrome + editable/readonly variants** — each block (`ElementCard`, `ColumnBlock`, `RowBlock`, `SectionBlock`) is now a presentational `*Chrome` plus an `Editable*`/`Readonly*` variant; editor mode is decided once at the root instead of per-node. `ReadonlyContext` is retired. No public API or rendered output changes for integrators.
 - **i18n key renamed: the four `*.MODIFIED_LABEL` keys collapse into one `WeDevelopGrid.ModifiedIndicator.LABEL`** — `WeDevelopGrid.ColumnBlock.MODIFIED_LABEL`, `WeDevelopGrid.ElementCard.MODIFIED_LABEL`, `WeDevelopGrid.RowBlock.MODIFIED_LABEL`, and `WeDevelopGrid.SectionBlock.MODIFIED_LABEL` (shipped in `6.0.0-alpha.6`) are replaced by a single `WeDevelopGrid.ModifiedIndicator.LABEL`. The bundled `en`/`nl` text is unchanged, so default output is identical — but any project that overrode one of the four old JS i18n keys must move that override to the new key, or it will silently stop applying.
 - **Build tooling migrated from `make` to [Task](https://taskfile.dev)** — the `Makefile` is replaced by `Taskfile.yml`. Run `task <name>` (e.g. `task up`, `task qa`, `task test`); the target names are unchanged. Contributors must install Task (`brew install go-task/tap/go-task`); CI installs it via `arduino/setup-task`. The QA suite now runs its checks in parallel through Task's `deps` instead of `make -j8`.
 
 ### Fixed
 
 - **Migration tasks aborted under `sake`** — `--force` no longer claims the `-f` short flag. `sake` registers a global `--flush` with the `-f` shortcut, so the migration task's own `-f` made Symfony Console throw `An option with shortcut "f" already exists` and every `sake dev/tasks/migrate-grid-rows-to-sections` (and `…-single-section`) invocation aborted before running. Use the long `--force` flag for non-interactive runs.
+- **Migration robustness** — the Fluent task now preflight-fails when no default locale resolves or the Fluent config is ambiguous (before any destructive write); a live `Column` width is reconciled from the live element's `Size` instead of the draft value; non-numeric `ContentColumns` and legacy media columns absent from the schema now warn instead of silently resetting; per-page failures log the exception trace plus page/area context; and rollback is `Throwable`-safe with de-duplicated section creation.
+- Adapter `enabled_viewports` not resolved in breakpoint order.
+- Auto-scaffold guard reading a stale children collection instead of re-querying, which could skip scaffolding.
+- DnD: stale `overRectRef` not cleared when entering the pending path, mis-aiming some cross-container drops.
+- `acceptableContainers` query cache not invalidated after an element create.
+- `GridNode` leaf invariant and `ColumnClassResolver` viewport guard tightened against malformed input.
+
+### Security
+
+- **Malicious `editLink` URL schemes rejected** — `javascript:`, `data:`, and protocol-relative `editLink` values are now rejected at the API validation boundary.
+- **Create endpoints gated on `canCreate()`** — the element-create endpoints now check the target element's `canCreate()` permission before writing.
+- **CI token permissions tightened** — a restrictive top-level `permissions: contents: read` plus explicit per-job grants resolve code-scanning and Dependabot alerts on the workflow's default `GITHUB_TOKEN`.
+
+### Performance
+
+- Composite `(ParentClass, ParentID, Sort)` index replaces the low-value single-column `Sort` index — one read now serves both the polymorphic-parent `WHERE` and the `Sort` ordering used by every child fetch, sort assignment, default-title count, and scaffold guard.
+
+### Dependencies
+
+- `zod` removed; `valibot` ^1.4.2 added (API-boundary validation)
+- Node engine `>=24` → `>=26` (pinned to `26.4.0` in `.nvmrc`)
+- `@tanstack/react-query` 5.100.14 → 5.101.2
+- `@biomejs/biome` 2.5.0 → 2.5.1
+- `@playwright/test` 1.60.0 → 1.61.1
+- `@vitejs/plugin-react` 6.0.2 → 6.0.3
+- `@vitest/coverage-v8` 4.1.8 → 4.1.9
+- Vitest 4.1.8 → 4.1.9
+- Vite 8.0.16 → 8.1.0
+- `vite-plugin-dts` 5.0.2 → 5.0.3
+- `@types/node` 25.9.3 → 26.0.1
+- `js-yaml` 4.2.0 → 5.2.0 (adapted `check-i18n-parity` to named exports)
+- Stylelint 17.13.0 → 17.14.0
+- Added `tailwindcss` / `@tailwindcss/cli` ^4.3.2 (dev, testbed stylesheet generation)
+- `infection/infection` ^0.33 → ^0.34
+
+### Developer Experience
+
+- **Migration service decomposed** — `GridMigrationService` split into focused collaborators (`DraftHierarchyWriter`, `LivePublisher`, `PageGridFlagWriter`, `LegacyPageDiscovery`, `LegacyElementReader` behind the `LegacyDataReader` facade), a `MigrationIdMap` value object, and a `LegacyElementSource` interface; `migratePage` is split into draft/publish stages wrapped in `withTransaction`, with companion reads batched and `table_list`/`field_list` lookups memoised
+- **JS/TS source relocated under `client/src/js/`** — build and config repointed; the `@` alias now maps to `client/src/js`
+- **Testbed made adapter-aware** — Tailwind and Bulma testbed stylesheets are vendored (Tailwind generated via the pinned `@tailwindcss/cli`), the entrypoint symlinks `grid-framework.css` to the active adapter, and `.docker/env.sh` now seeds `SS_GRID_ADAPTER=tailwind` for first-run dev / non-matrix CI
+- **`AdapterConfig` array shape replaced with a value object** — the adapter configuration payload is a typed value object instead of a loose array
+- **New Task commands** — `task analyse-php85` (forward-compat PHPStan pass pinned to PHP 8.5) and `task coverage-check` (enforce the 90% PHP coverage floor)
+- **CI hardening** — Docker Hub authentication, buildx GHA layer caching, and `mirror.gcr.io`-routed pulls to dodge registry rate limits; PHP tests run in a non-Fluent env alongside the Fluent env; Playwright apt deps skipped on a browser-cache hit
+- **Test-suite hardening** — migration characterization/golden-master gates, `#[DataProvider]`-consolidated providers, Stryker (JS) mutant ignores centralised with thresholds aligned, and `testXxx()` naming applied across suites
 
 ## [6.0.0-alpha.6] - 2026-06-15
 
@@ -376,6 +430,7 @@ Ground-up rewrite for SilverStripe 6. This is a new package (`wedevelopnl/silver
 - Makefile with targets for testing, coverage, static analysis, and mutation testing
 - Pre-push QA gate hook
 
+[6.0.0-beta.1]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-beta.1
 [6.0.0-alpha.6]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.6
 [6.0.0-alpha.5]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.5
 [6.0.0-alpha.4]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.4
