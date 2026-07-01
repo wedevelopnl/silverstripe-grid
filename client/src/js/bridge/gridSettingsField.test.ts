@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * gridSettingsField.ts registers a single entwine rule against the
- * override-toggle checkbox inside a .grid-settings-field row. The rule's
+ * override-toggle checkbox inside a .ssgrid-grid-settings-field row. The rule's
  * onchange handler enables/disables the other inputs in that row and toggles
  * an `is-overridden` class. These tests stub window.jQuery so importing the
  * module registers the entwine rule against a stubbed `$`, then exercise the
@@ -135,7 +135,7 @@ describe('gridSettingsField onchange handler', () => {
     rule.onchange.call({})
 
     expect(rowMock?.find).toHaveBeenCalledWith('select, input')
-    expect(rowMock?.not).toHaveBeenCalledWith('.grid-settings-field__override-toggle')
+    expect(rowMock?.not).toHaveBeenCalledWith('.ssgrid-grid-settings-field__override-toggle')
     expect(rowMock?.prop).toHaveBeenCalledWith('disabled', false)
     expect(rowMock?.toggleClass).toHaveBeenCalledWith('is-overridden', true)
   })

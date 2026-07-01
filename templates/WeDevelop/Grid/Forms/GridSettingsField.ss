@@ -1,50 +1,7 @@
-<div id="$HolderID" class="field grid-settings-field $extraClass">
+<div id="$HolderID" class="field ssgrid-grid-settings-field $extraClass">
   <% if $Title %><label class="left">$Title</label><% end_if %>
   <div class="middleColumn">
-    <style>
-      .grid-settings-field__overrides {
-        width: 100%;
-        font-size: 13px;
-      }
-      .grid-settings-field__overrides th {
-        font-weight: 600;
-        padding: 6px 8px;
-        border-bottom: 2px solid #dee2e6;
-        white-space: nowrap;
-        text-transform: uppercase;
-        font-size: 11px;
-        letter-spacing: 0.5px;
-        color: #6c757d;
-      }
-      .grid-settings-field__overrides td {
-        padding: 6px 8px;
-        vertical-align: middle;
-        border-bottom: 1px solid #eee;
-      }
-      .grid-settings-field__overrides tr:not(.is-overridden):not(.is-default) td:nth-child(n+3) {
-        opacity: 0.5;
-      }
-      .grid-settings-field__overrides tr.is-default {
-        background: #f8f9fa;
-      }
-      .grid-settings-field__overrides .badge {
-        background: #0d6efd;
-        color: #fff;
-        font-size: 10px;
-        font-weight: 600;
-        padding: 2px 6px;
-        border-radius: 3px;
-        vertical-align: middle;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-      }
-      .grid-settings-field__overrides select {
-        width: 100%;
-        min-width: 60px;
-      }
-    </style>
-
-    <table class="table grid-settings-field__overrides">
+    <table class="table ssgrid-grid-settings-field__overrides">
       <thead>
         <tr>
           <th>Viewport</th>
@@ -58,7 +15,7 @@
         <% loop $ViewportData %>
           <% if $IsDefault %>
             <tr class="is-default is-overridden">
-              <td>$Label <span class="badge">default</span></td>
+              <td>$Label <span class="ssgrid-grid-settings-field__badge">default</span></td>
               <td></td>
               <td>
                 <select name="{$FieldName}[$Key][width]">
@@ -91,7 +48,7 @@
                   type="checkbox"
                   name="{$FieldName}[$Key][override]"
                   value="1"
-                  class="grid-settings-field__override-toggle"
+                  class="ssgrid-grid-settings-field__override-toggle"
                   <% if $Override %>checked="checked"<% end_if %>
                 />
               </td>
