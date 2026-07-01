@@ -182,8 +182,14 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
 
       const { tree: effectiveTree, maps: effectiveMaps } = pending.getEffective(tree, maps)
 
-      const activeNode = effectiveMaps.nodeMap.get(activeParsed.key)
-      if (!activeNode) return
+      // The element's ORIGINAL parent, read from the CANONICAL maps — not the
+      // effective (pending) maps. After the first cross-container pending move
+      // the effective maps already show the active element inside the target
+      // container, so reading its parent from there would misclassify the
+      // still-in-progress preview as a same-container move (see the guard
+      // below) and freeze the ghost at its first-placed position.
+      const sourceParent = maps.nodeMap.get(activeParsed.key)?.parent
+      if (sourceParent === undefined) return
 
       let targetParent: NodeRef
       let after: NodeRef | null
@@ -193,14 +199,20 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         if (!overNode) return
         targetParent = overNode.parent
 
+        // Sibling list with the active element excluded. During a pending
+        // preview the active element already sits in this list, so anchoring
+        // `after` to the slot before `over` could reference the ghost itself —
+        // placing it relative to its own position and bouncing it back to the
+        // container end. Excluding it keeps the preview consistent with the
+        // direction-based placement resolveDropPlacement computes at drop time.
+        const siblings = effectiveMaps.childrenByParentKey.get(overNode.parentKey) ?? []
+        const overIdx = effectiveMaps.indexByNodeKey.get(overParsed.key) ?? -1
+
         const pointer = getPointerPosition(event)
         if (
           pointer !== null &&
           resolveInsertDirection(pointer, over.rect, activeParsed.type) === 'before'
         ) {
-          const siblings = effectiveMaps.childrenByParentKey.get(overNode.parentKey) ?? []
-          // Stryker disable next-line UnaryOperator: Equivalent — overNode was confirmed present in nodeMap (above), and useElementMaps populates indexByNodeKey alongside nodeMap in one walk, so .get() is never undefined and the `?? -1` sentinel is unreachable
-          const overIdx = effectiveMaps.indexByNodeKey.get(overParsed.key) ?? -1
           after = overIdx > 0 ? siblings[overIdx - 1].self : null
         } else {
           after = overNode.self
@@ -213,8 +225,12 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         after = children.length > 0 ? children[children.length - 1].self : null
       }
 
-      // Same-container: SortableContext handles visual reordering via transforms
-      if (NodeIdentity.equals(activeNode.parent, targetParent)) return
+      // Genuine same-container move: the element STARTED in the target parent,
+      // so SortableContext handles the visual reordering via transforms and no
+      // pending tree is needed. A cross-container preview already placed the
+      // element into the target parent in the pending maps — that must keep
+      // updating, which is why this compares the canonical `sourceParent`.
+      if (NodeIdentity.equals(sourceParent, targetParent)) return
 
       const targetParentKey = NodeIdentity.toKey(targetParent.type, targetParent.id)
       pending.applyPendingMove(activeParsed, targetParentKey, after?.id ?? null, effectiveTree)
