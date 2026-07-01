@@ -210,6 +210,24 @@ tasks:
     cmds:
       - "{{.COMPOSE}} exec app vendor/bin/sake dev/build flush=1"
 
+  seed-fixture:
+    desc: Seed the dev database with an E2E fixture (override with FIXTURE=<name>; default complex-page)
+    # Hits the same dev-only endpoint the Playwright suite uses. Loading is
+    # idempotent: the loader archives previously-seeded e2e-* pages first, so a
+    # re-run (or switching FIXTURE) never stacks residue. Fixture names are
+    # registered in _config/dev.yml under FixtureLoader.fixtures. -k because the
+    # dev testbed serves a self-signed certificate.
+    deps: [ensure-up]
+    vars:
+      FIXTURE: '{{.FIXTURE | default "complex-page"}}'
+    cmds:
+      - 'echo "==> [seed] loading fixture: {{.FIXTURE}}"'
+      - >-
+        curl -sS -k --fail-with-body -X POST
+        -d "fixture={{.FIXTURE}}"
+        "https://localhost:$(grep WEB_PORT .docker/.env | cut -d= -f2)/dev/grid-fixtures/load"
+      - 'printf "\n\n==> [seed] done — open https://localhost:%s/admin/pages\n\n" "$(grep WEB_PORT .docker/.env | cut -d= -f2)"'
+
   # --- QA -------------------------------------------------------------------
 
   qa:
