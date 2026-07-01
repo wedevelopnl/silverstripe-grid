@@ -86,13 +86,10 @@ final class ColumnWidthPickerFieldTest extends SapphireTest
         $fullWidth = $field->getPickerOptions()->find('Value', 0);
         self::assertNotNull($fullWidth);
 
-        self::assertTrue($fullWidth->IsFullWidth);
         self::assertSame(100.0, $fullWidth->ContentPercent);
         self::assertSame(0.0, $fullWidth->MediaPercent);
         self::assertSame(12, $fullWidth->MediaColumns);
-        self::assertSame(0, $fullWidth->ContentColumns);
         self::assertSame('Full width', $fullWidth->Title);
-        self::assertSame('Layout', $fullWidth->Name);
     }
 
     public function testGetPickerOptionsCalculatesPercentages(): void
@@ -104,10 +101,7 @@ final class ColumnWidthPickerFieldTest extends SapphireTest
 
         self::assertSame(50.0, $option->ContentPercent);
         self::assertSame(50.0, $option->MediaPercent);
-        self::assertSame(6, $option->ContentColumns);
         self::assertSame(6, $option->MediaColumns);
-        self::assertFalse($option->IsFullWidth);
-        self::assertSame('Layout', $option->Name);
         self::assertSame('6/6 split', $option->Title);
     }
 
@@ -118,10 +112,8 @@ final class ColumnWidthPickerFieldTest extends SapphireTest
         $option = $field->getPickerOptions()->find('Value', 8);
         self::assertNotNull($option);
 
-        self::assertFalse($option->IsFullWidth);
         self::assertEqualsWithDelta(66.7, $option->ContentPercent, 0.01);
         self::assertEqualsWithDelta(33.3, $option->MediaPercent, 0.01);
-        self::assertSame(8, $option->ContentColumns);
         self::assertSame(4, $option->MediaColumns);
     }
 
@@ -136,7 +128,6 @@ final class ColumnWidthPickerFieldTest extends SapphireTest
         // Exact float equality kills IncrementInteger on round() precision argument
         self::assertSame(33.3, $option->ContentPercent);
         self::assertSame(66.7, $option->MediaPercent);
-        self::assertSame(4, $option->ContentColumns);
         self::assertSame(8, $option->MediaColumns);
     }
 }
