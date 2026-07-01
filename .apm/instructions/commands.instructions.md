@@ -51,9 +51,11 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task coverage-integration` | PHP integration test coverage only |
 | `task coverage-functional` | PHP functional test coverage only |
 | `task coverage-js` | JavaScript test coverage (Vitest) |
+| `task coverage-check` | Check PHP coverage meets the 90% minimum threshold |
 | `task mutate` | PHP mutation testing (Infection) |
 | `task mutate-js` | JS mutation testing (Stryker) |
 | `task analyse` | Run PHPStan static analysis |
+| `task analyse-php85` | PHPStan with the analysis target pinned to PHP 8.5 (forward-compat pass, in addition to the 8.3-range primary) |
 | `task rector` | Run Rector refactoring (applies changes) |
 | `task rector-dry` | Run Rector in dry-run mode (preview only) |
 | `task test-e2e` | Run Playwright E2E tests (requires Docker) |
