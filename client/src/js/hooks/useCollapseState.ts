@@ -49,9 +49,13 @@ function readCollapsedKeys(areaId: number): ReadonlySet<NodeKey> {
 function writeCollapsedKeys(areaId: number, keys: ReadonlySet<NodeKey>): void {
   try {
     localStorage.setItem(buildStorageKey(areaId), JSON.stringify([...keys]))
-  } catch {
-    // QuotaExceededError / SecurityError — silently ignore, matches the
-    // behaviour of the old useTreeEnrichment persistence layer.
+  } catch (error) {
+    // Collapse state is a non-critical UI preference. A failed write (storage
+    // full, or localStorage blocked in private/third-party contexts) must not
+    // break the toggle — this runs inside the setState updater, so the
+    // in-memory state still updates; only cross-reload persistence is lost.
+    // biome-ignore lint/suspicious/noConsole: intentional operator diagnostic — surfaces a collapse-state persistence failure (storage full or blocked).
+    console.warn('[GridEditor] Failed to persist collapse state.', error)
   }
 }
 
