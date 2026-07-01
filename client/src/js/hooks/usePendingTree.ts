@@ -23,7 +23,13 @@ export interface UsePendingTreeReturn {
   /** Refs exposed for collision detection (read-only from its perspective). */
   collisionRefs: CollisionRefs
 
-  /** Apply a cross-container move. Returns new tree/maps, or null if no-op. */
+  /**
+   * Reposition the active element into a target slot, producing a fresh pending
+   * tree. Used both for the cross-container live preview (during drag-over) and
+   * to pre-position the dragged node at drop time so dnd-kit's DragOverlay drop
+   * animation measures the destination, not the origin (see the drag-end handler
+   * in useDragAndDrop). Returns new tree/maps, or null if the move is a no-op.
+   */
   applyPendingMove(
     activeParsed: ParsedDraggableId,
     targetParentKey: NodeKey,

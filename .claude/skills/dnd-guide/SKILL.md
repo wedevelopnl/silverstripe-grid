@@ -13,7 +13,8 @@ The DnD system takes **completely different paths** for same-container and cross
 
 | Aspect | Same-container | Cross-container |
 |--------|---------------|-----------------|
-| Visual feedback | SortableContext CSS transforms | Pending tree (new DOM order) |
+| Drag-time visual feedback | SortableContext CSS transforms | Pending tree (new DOM order) |
+| Drop-time pre-positioning | **Pending tree** (set at drag-end) | **Pending tree** (already set from drag-over) |
 | Collision tier | Tier 1: `centerCrossing` | Tier 2: `closestCenterLive` |
 | Drop placement | **Index-based** (no direction detection) | **Direction-based** (pointer vs element center) |
 | Coordinate space risk | Low (no CSS transform divergence) | **High** (DOM vs dnd-kit vs viewport) |
@@ -22,6 +23,8 @@ The DnD system takes **completely different paths** for same-container and cross
 | Code path in resolveDropPlacement | Lines 58-67 (index branch) | Lines 69-85 (direction branch) |
 
 **This split is the first question to answer when investigating any DnD bug**: is it a same-container or cross-container move? The answer narrows the search space immediately.
+
+**The split is drag-time only — drop-time is unified.** The two paths differ in *live* feedback because dnd-kit natively animates intra-container sorting (CSS transforms) but has no native cross-container move (hence the pending tree). But at **drop** both paths converge: `handleDragEnd` populates the pending tree with the final reordered tree (cross-container already did this during drag-over; same-container does it at drag-end, since transforms — not the pending tree — drove its live preview). This is load-bearing, not cosmetic — see invariant #8 and the drop-animation snap symptom in the Diagnostic Map. If you ever "simplify" same-container to skip the pending tree at drop and rely on the optimistic cache write instead, the drop animation will snap.
 
 ## The Three Coordinate Spaces
 
@@ -66,6 +69,8 @@ These are the load-bearing constraints. Violating any of them causes a bug. Chec
 
 7. **Type filtering hierarchy**: Collision detection filters droppables to same-type (siblings) and parent-type (one level up via `PARENT_CONTAINER_TYPE`). This prevents most structurally invalid drops but does NOT enforce business rules (e.g., Section inside Column) — those are backend-only.
 
+8. **Drop-animation pre-positioning must use React state, never the query cache**: dnd-kit's `DragOverlay` drop animation measures the *real* dragged node's resting rect (`getBoundingClientRect()`) in a **layout effect** that fires immediately after the drag-end commit — and dnd-kit invokes `onDragEnd` inside the **same `unstable_batchedUpdates`** as its own `active→null` dispatch (`@dnd-kit/core` `AnimationManager` + `DndContext` drag-end handler). So whatever moves the dragged node to its final slot must be a React state update *in that commit*. The pending tree (`useState`) qualifies; `setQueryData` does **not** — TanStack's `notifyManager` defers query-observer re-renders via `systemSetTimeoutZero` (`setTimeout(cb, 0)`, a macrotask), so a cache write lands in a later commit, after the animation has already measured. This is why `handleDragEnd` pre-positions via `pending.applyPendingMove(...)` before firing the reorder mutation. **Corollary**: never assume `setQueryData` produces a same-commit re-render — it doesn't. Any drop-time visual correctness must ride the pending tree.
+
 ## Diagnostic Map
 
 When you see a symptom, start here.
@@ -75,6 +80,7 @@ When you see a symptom, start here.
 | **Element lands on wrong side of target** | Drop-time `overRect` doesn't match visual position. Two variants: (a) `overRectRef` captured but CSS transforms shifted the element (same-container edge), (b) `overRectRef` NOT captured so `over.rect` is pre-transform while SortableContext shifted the target visually (cross-container — see invariant #5 trade-off) | Which code path? For cross-container: check `over.rect` vs actual visual position in `useDragAndDrop.ts:245-261`. For same-container: check if `overRectRef` was captured with transforms active in `collisionDetection.ts:captureWinnerNode` | `useDragAndDrop.ts` (effectiveOverRect logic), `collisionDetection.ts` (lines 347-357: tier 2 overRectRef skip), `resolveInsertDirection.ts` |
 | **Ghost jump on drag start** | Collision detection fires immediately without threshold crossing | Is `centerCrossing` being used? Is the overlap gate working? Was it replaced with `closestCenter`? | `collisionDetection.ts` (centerCrossing) |
 | **1-frame snap-back on drop** | Pending tree cleared before optimistic cache update | Is `setQueryData` before `clearPendingTree`? Is there an `await` between them? | `useElementMutations.ts` (onMutate ordering) |
+| **Dropped item animates to its OLD slot, then snaps to the correct position after the animation** | The dragged node isn't at its final DOM position when dnd-kit's drop animation measures it. The final position is being driven by the optimistic cache write (`setQueryData`), which re-renders a macrotask too late (`setTimeout(0)` notify) — so the animation targets the pre-move slot. Almost always a **same-container** move that skipped pending-tree pre-positioning. | Does `handleDragEnd` call `pending.applyPendingMove(...)` before `onReorder` (invariant #8)? Is the pending tree populated at drop time for this path? | `useDragAndDrop.ts` (handleDragEnd pre-position), `usePendingTree.ts` |
 | **Drop silently fails (no reorder)** | `over` is null at drop time — collision detection lost track | Check `hadSiblingHit` fallback, source depletion handling, pointer-inside-source guard | `collisionDetection.ts` (factory closure state) |
 | **Element snaps to wrong container** | Parent-container fallback biased by `closestCenter` | Is containment-first check working? Is pointer inside a parent rect? | `collisionDetection.ts` (tier 3) |
 | **Cross-container drag doesn't show element in target** | Pending tree not applied | Is `handleDragOver` detecting the cross-container move? Is `applyPendingMove` called? | `useDragAndDrop.ts` (handleDragOver), `usePendingTree.ts` |
@@ -97,6 +103,9 @@ User drags element
   │
   └─ handleDragEnd
        ├─ resolveDropPlacement (same-container: index | cross-container: direction)
+       ├─ applyPendingMove (pre-position dragged node into final slot — both paths;
+       │                    React state, batches into dnd-kit's drag-end commit so the
+       │                    drop animation measures the destination — see invariant #8)
        └─ onReorder → TanStack Query mutation
             ├─ onMutate: snapshot → applyReorder → setQueryData → clearPendingTree
             ├─ PATCH /api/reorder → ReorderValidator → ReorderExecutor

@@ -287,6 +287,27 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
       })
 
       if (placement) {
+        // Pre-position the dragged element into its final slot via the pending
+        // tree before firing the reorder. dnd-kit's DragOverlay drop animation
+        // measures the dragged node's resting rect in a layout effect that runs
+        // immediately after this drag-end commit (dnd-kit invokes onDragEnd inside
+        // the same unstable_batchedUpdates as its own active→null dispatch), so the
+        // DOM must already reflect the post-drop order at that point. The pending
+        // tree is plain React state, so setting it here batches into that commit.
+        // The reorder mutation's optimistic cache write cannot do this: TanStack
+        // defers query re-renders by a macrotask (its notifyManager schedules via
+        // setTimeout(0)), landing after the animation has captured — which is why a
+        // same-container drop otherwise animates to the pre-move slot and snaps.
+        // Cross-container drags already populate the pending tree during drag-over;
+        // doing it here unconditionally unifies both paths and keeps the
+        // pre-positioned tree identical to the one onMutate commits (same
+        // applyReorder inputs against the canonical tree).
+        pending.applyPendingMove(
+          activeParsed,
+          NodeIdentity.toKey(placement.parent),
+          placement.after === null ? null : placement.after.id,
+          tree,
+        )
         onReorder(placement.element, placement.parent, placement.after, pending.clear)
       } else {
         pending.clear()
