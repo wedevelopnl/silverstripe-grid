@@ -1,0 +1,80 @@
+// Column-width radio picker rendered inside the CMS column edit form
+// (ColumnWidthPickerField). Each option is a <label> wrapping a visually
+// hidden native radio; the diagram and caption sit above it and the whole tile
+// is the clickable control. Selection is expressed with :has(:checked) so the
+// checked look needs no JavaScript.
+
+.ssgrid-column-width-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  // Hide the native radio but keep it in the DOM so :has(:checked) and the
+  // label association (keyboard/AT) still work.
+  input[type="radio"] {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+  }
+
+  &__option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+    padding: 8px 12px;
+    border: 2px solid var(--ssgrid-border-default);
+    border-radius: var(--ssgrid-radius-sm);
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
+
+    &:hover {
+      border-color: var(--ssgrid-border-focus);
+      background: var(--ssgrid-surface-hover);
+    }
+
+    &:has(:checked) {
+      border-color: var(--ssgrid-border-focus);
+      background: var(--ssgrid-surface-selected);
+    }
+
+    &--disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  &__image {
+    margin-bottom: 4px;
+  }
+
+  &__diagram {
+    display: flex;
+    width: 100%;
+    min-width: 60px;
+    height: 24px;
+    margin-bottom: 4px;
+    border-radius: var(--ssgrid-radius-sm);
+    overflow: hidden;
+  }
+
+  // The two halves of the split-bar diagram; widths come from inline styles set
+  // per option by the template.
+  &__bar--content {
+    height: 100%;
+    background: var(--ssgrid-surface-action);
+  }
+
+  &__bar--media {
+    height: 100%;
+    background: var(--ssgrid-surface-neutral);
+  }
+
+  &__label {
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--ssgrid-text-default);
+  }
+}
