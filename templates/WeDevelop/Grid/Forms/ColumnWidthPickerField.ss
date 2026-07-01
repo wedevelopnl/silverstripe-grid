@@ -63,14 +63,14 @@
 
 <div class="column-width-picker" id="$ID" $AttributesHTML>
   <% loop $PickerOptions %>
-    <label class="column-width-picker__option<% if $isDisabled %> column-width-picker__option--disabled<% end_if %>">
+    <label class="column-width-picker__option<% if $Up.isDisabled %> column-width-picker__option--disabled<% end_if %>">
       <input
         type="radio"
-        id="$ID"
-        name="$Name"
+        id="{$Up.ID}_{$Value}"
+        name="$Up.Name"
         value="$Value"
         <% if $isChecked %> checked<% end_if %>
-        <% if $isDisabled %> disabled<% end_if %>
+        <% if $Up.isDisabled %> disabled<% end_if %>
         <% if $Up.Required %> required<% end_if %>
       />
       <% if $ImageURL %>
@@ -81,10 +81,10 @@
           <div class="column-width-picker__bar--media" style="width: $MediaPercent%"></div>
         </div>
       <% end_if %>
-      <% if $IsFullWidth %>
+      <% if $Value == 0 %>
         <span class="column-width-picker__label">$Title</span>
       <% else %>
-        <span class="column-width-picker__label">$ContentColumns/$MediaColumns</span>
+        <span class="column-width-picker__label">$Value/$MediaColumns</span>
       <% end_if %>
     </label>
   <% end_loop %>

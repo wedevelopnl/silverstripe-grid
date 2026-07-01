@@ -55,17 +55,12 @@ final class ColumnWidthPickerField extends OptionsetField
             $contentPercent = $isFullWidth ? 100.0 : round((int) $optionValue / $this->totalColumns * 100, 1);
 
             $list->push(ArrayData::create([
-                'ID' => $this->ID() . '_' . $optionValue,
-                'Name' => $this->getName(),
                 'Value' => $optionValue,
                 'Title' => $optionTitle,
                 'isChecked' => (string) $optionValue === (string) $currentValue,
-                'isDisabled' => $this->isDisabled(),
-                'IsFullWidth' => $isFullWidth,
                 'ImageURL' => $imageUrl,
                 'ContentPercent' => $contentPercent,
                 'MediaPercent' => round(100 - $contentPercent, 1),
-                'ContentColumns' => $optionValue,
                 'MediaColumns' => $mediaColumns,
             ]));
         }
