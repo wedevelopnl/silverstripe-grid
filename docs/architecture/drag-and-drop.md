@@ -98,10 +98,11 @@ This contract is shared between the frontend optimistic update and the backend A
 
 ### Lookup Maps
 
-The tree is a nested structure optimized for rendering, not for lookups. Two maps provide O(1) access during drag operations (see `client/src/js/hooks/useElementMaps.ts`):
+The tree is a nested structure optimized for rendering, not for lookups. Three maps provide O(1) access during drag operations (see `client/src/js/hooks/useElementMaps.ts`):
 
-- **nodeMap** (`Map<NodeKey, ElementNode>`) — find any node by its composite key
-- **childrenByParentKey** (`Map<NodeKey, ElementNode[]>`) — find siblings of any node
+- **nodeMap** (`Map<NodeKey, ElementNode>`) — find any node by its composite key (pages are not stored)
+- **childrenByParentKey** (`Map<NodeKey, ElementNode[]>`) — find siblings of any node (the root entry is keyed by the page's `NodeKey`)
+- **indexByNodeKey** (`Map<NodeKey, number>`) — position of each node within its parent's children array; the canonical O(1) sibling-index lookup used by reorder, drop-placement, and collision code on every drag-over frame instead of an O(n) `findIndex` scan
 
 Maps are built once per tree change via `useMemo`. Every drag hover and drop resolution reads from these maps rather than walking the tree.
 
@@ -180,7 +181,7 @@ The no-op detection and reference preservation are deliberate: React skips re-re
 
 Raw tree nodes already arrive with every piece of data the UI needs — there is no separate "enrichment" pass:
 
-- **`nodeKey` / `parentKey`** — precomputed composite keys, used both for Map lookups and directly as dnd-kit draggable/droppable IDs. Populated by the API layer's `normaliseNode` at the fetch boundary.
+- **`nodeKey` / `parentKey`** — precomputed composite keys, used both for Map lookups and directly as dnd-kit draggable/droppable IDs. Populated at the fetch boundary by the API layer's `normaliseTreeResponse`, which maps each node through `attachDerivedFields`.
 - **`self` / `parent`** — structural `NodeRef`s for code that prefers the typed form.
 - **children / allowedTypes / gridSettings** — populated per container type.
 
@@ -211,13 +212,13 @@ Controller (HTTP concerns)
 
 ### Phase 1: Validation
 
-Validation always runs — there is no "skip for same-parent" shortcut on the server (the validator is a cheap in-memory hierarchy check and its result is identical for same-parent moves).
+`ReorderValidator::validate()` short-circuits to `Result::ok()` when the element's current parent (`ParentID` + `ParentClass`) already equals the target parent — a same-parent reorder cannot change the hierarchy, so no rule check runs.
 
-Cross-parent moves check two things:
-1. **can_be_root** — if the target parent is a page, the element must be allowed at root level
-2. **allowed_elements / disallowed_elements** — the target container must accept this element type
+Cross-parent moves delegate to the target parent's `ContainerType` and check two things:
+1. **`canBeRoot()`** — if the target parent is a page (`SiteTree`), the element's container type must be allowed at root level (only `Section` is)
+2. **`isChildAllowed($element::class)`** — the target container must accept this element type (Section→Row, Row→Column, Column→any non-container element)
 
-Same-parent moves pass these checks trivially. Validation returns `Result::fail()` with structured errors on violation. No database writes or in-memory mutations occur.
+Validation returns `Result::fail()` with structured errors on violation. No database writes or in-memory mutations occur.
 
 ### Phase 2: Sort Calculation
 

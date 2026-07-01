@@ -14,7 +14,7 @@ Page types with `GridPageExtension` expose `$UseGrid` and `$Sections`. The canon
 <% end_if %>
 ```
 
-`$UseGrid` always stays `true` unless the per-page editor toggle is enabled (see [Per-page editor toggle](#per-page-editor-toggle) below). If you don't use the toggle, the `<% else %>` branch never fires, and you can simplify to `<% loop $Sections %>$Me<% end_loop %>`.
+The frontend template renders the raw stored `$UseGrid` field unconditionally — there is no separate render-time gate. The stored value is seeded from `use_grid_by_default` when a page is created (see [Default editor on new pages](#default-editor-on-new-pages)), so with the default (`true`) the `<% else %>` branch never fires and you can simplify to `<% loop $Sections %>$Me<% end_loop %>`. The per-page editor toggle (see [below](#per-page-editor-toggle)) only governs which editor the CMS shows; it does not change how the template reads `$UseGrid`.
 
 Multi-zone pages declare a `GridEditorField` per zone with different `zone` values (`main`, `sidebar`, …). Each zone becomes an independent `Sections()` collection filtered by the `Zone` field. See `src/Dev/MultiZonePage.php` for a working example.
 
@@ -27,7 +27,7 @@ App\Pages\ArticlePage:
   enable_editor_toggle: true
 ```
 
-With the toggle enabled a **"Use grid on this page"** checkbox appears in the CMS form and the editor shown reflects the stored `UseGrid` value. `$UseGrid` in the template resolves to that stored value. With the toggle disabled the checkbox is hidden, `UseGrid` is ignored for rendering, and the grid is always active.
+With the toggle enabled a **"Use grid on this page"** checkbox appears in the CMS form and the editor shown reflects the stored `UseGrid` value, which CMS users can flip per page. With the toggle disabled the checkbox is hidden and the CMS always shows the grid editor — but the stored `UseGrid` value (seeded from `use_grid_by_default`) is unchanged, and the template still renders it. The toggle only affects the CMS editor-selection logic, never how the frontend reads `$UseGrid`.
 
 ## Default editor on new pages
 
@@ -38,10 +38,10 @@ App\Pages\ArticlePage:
   use_grid_by_default: true    # default — grid editor on new pages
 
 App\Pages\JobPage:
-  use_grid_by_default: false   # content editor on new pages (only effective when enable_editor_toggle: true)
+  use_grid_by_default: false   # content editor on new pages (template renders $Content)
 ```
 
-`use_grid_by_default` only matters in combination with `enable_editor_toggle: true` — without the toggle, the stored `UseGrid` value is never consulted for rendering.
+`use_grid_by_default` seeds the stored `UseGrid` field on every newly created page, regardless of the toggle. Because the frontend template renders the raw `$UseGrid` field, setting `use_grid_by_default: false` **without** the toggle stores `false` on new pages, so the template's `<% else %>` branch fires and `$Content` renders instead of the grid. Combine it with `enable_editor_toggle: true` when you also want CMS users to flip the value per page.
 
 ## The holder chain
 
@@ -100,7 +100,17 @@ Don't edit the module's files directly — your overrides will disappear on the 
 
 ## Customising container output
 
-Sections and rows call `updateContainerClasses` and `updateColumnClasses` extension hooks before rendering. Register an extension on the element class to inject framework-specific classes without forking the template:
+Each container exposes a distinct extension hook for the classes on its grid wrapper, fired just before rendering:
+
+| Element | Method | Hook |
+|---------|--------|------|
+| `Section` | `getContainerClasses()` | `updateContainerClasses` |
+| `Row` | `getRowClasses()` | `updateRowClasses` |
+| `Column` | `getColumnClasses()` | `updateColumnClasses` |
+
+In addition, **every** element fires `updateHolderClasses` from `GridElement::getHolderClasses()` — use that hook to touch the outer holder element's classes (see [Class contribution](#class-contribution)) on any element, container or content.
+
+Register an extension on the element class to inject framework-specific classes without forking the template:
 
 ```php
 // app/_config/grid.yml
@@ -149,6 +159,8 @@ The include handles image/video discrimination, aspect-ratio wrapping, captions,
 ## Frontend asset pipeline
 
 The module ships a compiled bundle at `client/dist/` (exposed via composer's `extra.expose`). CMS pages serve it automatically. Project-level CSS is outside the module's scope — import the shipped CSS variables and ship your own styles.
+
+The grid requires the `SS_GRID_ADAPTER` env var to be set (a preset name — `bootstrap`, `tailwind`, or `bulma` — or a custom adapter FQCN); it selects which CSS framework's width/offset/visibility classes the Row and Column holders emit. An unset or invalid value throws at container boot. See [Grid Adapter System](../architecture/grid-adapter.md).
 
 ## See also
 

@@ -48,7 +48,7 @@ npm run build            # Vite production build
 | `task test-unit` | PHP unit tests only (no database/framework) |
 | `task test-integration` | PHP integration tests (full SilverStripe env) |
 | `task test-functional` | PHP functional/HTTP controller tests |
-| `task test-fluent` | Run integration + fluent tests in the Fluent environment |
+| `task test-fluent` | Run integration + functional + fluent tests in the Fluent environment |
 | `npm run test` | JavaScript tests (Vitest) |
 | `npm run test:watch` | Vitest in watch mode |
 | `task test-e2e` | Playwright E2E tests (auto-starts Docker if needed) |
@@ -79,8 +79,8 @@ See [E2E fixture protocol](testing/e2e-fixtures.md) for the YAML fixture system 
 | `npm run lint` | Biome (JS/TS) + Stylelint (SCSS) |
 | `npm run format` | Biome format --write (JS/TS) |
 | `npm run typecheck` | TypeScript type checking |
-| `task qa` | Full QA suite — PHPStan + coverage + lint + typecheck + JS tests (parallel) |
-| `task qa-js` | JS-only QA — lint + typecheck + Vitest (parallel) |
+| `task qa` | Full QA suite (parallel) — PHPStan (+ PHP 8.5 pass), Rector dry-run (build-failing gate), PHP coverage, Biome lint, format check, typecheck, Vitest, and the Vite build |
+| `task qa-js` | JS-only QA (parallel) — Biome lint, format check, typecheck, Vitest, and the Vite build |
 
 ## Dev fixture endpoint
 
@@ -88,7 +88,7 @@ When running in the `dev` environment, the module exposes endpoints to load the 
 
 | Method | URL | Purpose |
 |--------|-----|---------|
-| `POST` | `/dev/grid-fixtures/load?fixture=<Name>` | Load a registered fixture |
+| `POST` | `/dev/grid-fixtures/load` | Load a registered fixture (name in the POST body field `fixture`, e.g. `-d fixture=<Name>`) |
 | `POST` | `/dev/grid-fixtures/reset?confirm=1` | Remove all fixture-created pages |
 
 The endpoints are gated by `Director::isDev()` and refuse to run outside the dev environment. The reset endpoint requires `?confirm=1` so an accidental curl or browser visit cannot wipe fixture-loaded pages. See [E2E fixture protocol](testing/e2e-fixtures.md) for the full protocol (YAML schema, post-actions, registering new fixtures).

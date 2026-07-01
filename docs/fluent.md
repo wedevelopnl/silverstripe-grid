@@ -58,7 +58,7 @@ Do **NOT** configure `apply_isolated_locales_to_admin: false` under `WeDevelop\G
 
 ## Migrating Elemental content under Fluent
 
-Use the dedicated `migrate-grid-with-fluent` task to migrate legacy `dnadesign/silverstripe-elemental` (or `wedevelopnl/silverstripe-elemental-grid`) content into the new grid on a Fluent site. The plain `migrate-grid` task **refuses to run** when localised legacy tables are detected and directs you here instead.
+Use the dedicated `migrate-grid-with-fluent` task to migrate legacy `dnadesign/silverstripe-elemental` (or `wedevelopnl/silverstripe-elemental-grid`) content into the new grid on a Fluent site. The plain `migrate-grid` task **refuses to run** on a Fluent site — either a locale-isolated target grid (`GridElement` has the Fluent isolated extension) or localised legacy tables — and directs you here instead. The isolation check catches even single-locale legacy content, which table-shape detection alone cannot see.
 
 ### How the task works
 

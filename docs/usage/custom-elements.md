@@ -40,8 +40,9 @@ class TeaserBlock extends ContentElement
 
     // font-icon-* classes come from SilverStripe's admin icon font — pick one
     // that matches the block's purpose. It shows up in the CMS type picker.
-    // If the class doesn't resolve, the grid editor falls back silently to
-    // font-icon-block-content.
+    // The fallback to font-icon-block-content only applies when $icon is
+    // empty/unset; a set-but-misspelled class is passed through verbatim and
+    // simply renders no glyph.
     private static string $icon = 'font-icon-block-promo';
 
     private static array $db = [
@@ -77,28 +78,21 @@ Key points:
 
 - `$singular_name` appears in the CMS block picker and on the editor card as the "type" label.
 - `$class_description` is shown under the name in the type picker.
-- `$icon` is a class from `silverstripe/admin`'s admin icon font. `font-icon-block-content` is the safe default (and what everything falls back to when an unknown class is set). Browse the admin scss/sprites for the full catalogue when you want a more specific glyph.
+- `$icon` is a class from `silverstripe/admin`'s admin icon font. `font-icon-block-content` is the default applied only when `$icon` is left empty/unset — a set-but-misspelled class is used as-is and renders no glyph, so double-check the spelling. Browse the admin scss/sprites for the full catalogue when you want a more specific glyph.
 - Inherited fields: `Title`, `TitleTag`, `ShowTitle`, `ExtraClass`, `Style`, `HTML` (from `ContentElement`). `getCMSFields()` on the base class already renders the title group and history tab — call `parent::getCMSFields()` to keep them.
 
 Run `dev/build` after adding the class so the new table is created.
 
-## 2. Register allowed-under rules (optional)
+## 2. Placement is automatic
 
-By default, any `ContentElement` subclass can be placed inside any `Column` — the `Column` container uses a blocklist (`disallowed_elements: [Section, Row, Column]`) not an allowlist.
+Your subclass is immediately placeable — no registration or allow/deny config is required. The Section → Row → Column hierarchy is fixed in code (the `ContainerType` enum), not driven by YAML:
 
-If you need to restrict *where* the block can live, add YAML:
+- `Section` accepts only `Row` children, `Row` accepts only `Column` children.
+- `Column` accepts **any** non-container `GridElement` — i.e. anything that is not a `Section`, `Row`, or `Column`. Every `ContentElement` subclass qualifies, so `TeaserBlock` can be dropped into any column out of the box.
 
-```yaml
-# app/_config/grid.yml
+This is enforced at write time (`HierarchyValidationExtension` → `HierarchyValidationService`) and at reorder/placement time (`ReorderValidator`), both delegating to `ContainerType::isChildAllowed()`.
 
-# Disallow TeaserBlock under the default Column — only allow it under a
-# custom column subclass you've also registered.
-WeDevelop\Grid\Model\Column:
-  disallowed_elements:
-    - App\Grid\Elements\TeaserBlock
-```
-
-Most sites don't need this. The default (everything allowed under Column) is the right starting point.
+> There is currently **no** supported YAML mechanism (`allowed_elements` / `disallowed_elements` / `can_be_root`) to allow or deny specific content-element classes per container — those keys are not read by any code. If you need to constrain which blocks appear where, that is not configurable today; open an issue describing the use case.
 
 ## 3. The editor-card summary
 

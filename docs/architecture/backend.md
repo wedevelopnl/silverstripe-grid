@@ -43,15 +43,17 @@ All three container types implement `ContainerInterface`:
 
 Container behavior (child count summary, simplified class name) lives in `ContainerElementTrait`, shared across Section, Row, and Column.
 
-### Hierarchy Rules (YAML)
+### Hierarchy Rules
 
-| Container | Constraint | Mechanism |
+The hierarchy is fixed in code — the `ContainerType` enum (`src/Value/ContainerType.php`), not YAML config. `allowedChildClass()`, `isChildAllowed()`, and `canBeRoot()` are `match` expressions with no configurable inputs:
+
+| Container | Constraint | Enum rule |
 |-----------|-----------|-----------|
-| Section | Only Rows as children | `allowed_elements: [Row]` |
-| Row | Only Columns as children, cannot be at page level | `allowed_elements: [Column]`, `can_be_root: false` |
-| Column | Any non-container content element | `disallowed_elements: [Section, Row, Column]` |
+| Section | Only Rows as children; the only type allowed at page level | `allowedChildClass()` → `Row`; `canBeRoot()` → `true` |
+| Row | Only Columns as children; cannot be at page level | `allowedChildClass()` → `Column`; `canBeRoot()` → `false` |
+| Column | Any non-container element; cannot be at page level | `allowedChildClass()` → `null` (allows any `GridElement` that is not a `Section`/`Row`/`Column`); `canBeRoot()` → `false` |
 
-The allowlist approach on Section and Row is strict: only the listed classes are accepted. The blocklist approach on Column is permissive: any `GridElement` subclass is accepted unless explicitly excluded.
+Section and Row are strict — only the single mapped child class (or a subclass) is accepted. Column is permissive — `isChildAllowed()` accepts any `GridElement` subclass that is not itself a container. There are no `allowed_elements` / `disallowed_elements` / `can_be_root` YAML statics; those keys are not read anywhere.
 
 ### Zone-Scoped Sections
 
@@ -202,13 +204,13 @@ The tree response is a flat `nodes` array of root children plus an explicit `roo
 
 The controller delegates body parsing to `RequestBodyParser`, which returns typed request DTOs wrapped in `Result`. Each `parseX()` method returns `Result::fail()` for invalid payloads:
 
-- `parseCreateBody()` — validates `containerType` (enum), `parent` (`NodeRef`), `insertAfterElementID`, `zone`
-- `parseCreateContentBody()` — validates `className` (must be `ContentElement` subclass), `parentId`, `insertAfterElementID`
+- `parseCreateBody()` — validates `containerType` (enum), `parent` (`NodeRef`), `insertAfterElementID`, `insertAtStart` (bool), and `zone`. Enforces that `insertAtStart` and `insertAfterElementID` are mutually exclusive
+- `parseCreateContentBody()` — validates `className` (must be `ContentElement` subclass), `parent` (`NodeRef`), `insertAfterElementID`
 - `parseReorderBody()` — validates `element` / `parent` / `after` (all `NodeRef`), with `after.type === element.type` and `element.type !== page`
-- `parseUpdateGridSettingsBody()` — validates viewport-scoped width/offset/visibility (viewport must match an adapter viewport)
-- `parseDuplicateToBody()` — validates source `id`, `targetPageId`, `targetZone`, and target `NodeRef`
+- `parseUpdateGridSettingsBody()` — validates `element` (`NodeRef`) plus viewport-scoped width/offset/visibility (viewport must match an adapter viewport)
+- `parseDuplicateToBody()` — validates source `element` (`NodeRef`), `targetPageId`, `targetZone`, and `targetParent` (`NodeRef`)
 - `parseResetGridSettingsOverridesBody()` — validates `pageId`, `zone`, and optional `viewport` filter (rejects the adapter default viewport — it has no overrides to reset)
-- `parseElementId()` — validates a single `id` field
+- `parseElementRef()` — validates a `NodeRef` `{type, id}` envelope under the `element` key (rejecting `NodeType::Page`); used by the single-target mutation endpoints (publish/unpublish, archive, duplicate)
 
 Invalid payloads produce HTTP 400. Validation failures from the service layer produce HTTP 422 with structured error JSON.
 
@@ -364,29 +366,30 @@ Hierarchy validation runs in two contexts with shared logic:
 Applied globally to `GridElement` via YAML. Hooks into `updateValidate()` in the SilverStripe write lifecycle:
 
 1. No parent (orphan) → pass
-2. Parent is `SiteTree` → check `can_be_root` on the element
-3. Parent is container → check `isElementAllowed()` against config
+2. Parent is `SiteTree` → check the element's `ContainerType::canBeRoot()`
+3. Parent is a container → check the parent's `ContainerType::isChildAllowed($element::class)`
 
 Violations throw `ValidationException`, preventing the database write.
 
 ### Reorder-Time: ReorderValidator
 
-Called by `ReorderService` before executing a cross-parent move. Applies the same hierarchy rules but returns `Result::fail()` instead of throwing, maintaining the Result pattern contract.
+Called by `ElementPlacementService` before executing a placement — on both the `reorder()` (move existing element) and `insertAfter()` (place just-written element) paths, so newly-created and duplicated elements run the same checks. Applies the same hierarchy rules as the write-time extension but returns `Result::fail()` instead of throwing, maintaining the Result pattern contract.
 
 Same-parent moves skip validation entirely — reordering within a container cannot violate hierarchy rules.
 
-### ElementAllowanceTrait
+### Shared authority: `ContainerType`
 
-Shared logic for checking whether an element class is permitted by a parent's `allowed_elements` / `disallowed_elements` config. Respects the `stop_element_inheritance` flag to prevent config inheritance up the class hierarchy. Used by both `HierarchyValidationService` and `ReorderValidator`.
+Both `HierarchyValidationService` (write-time) and `ReorderValidator` (reorder-time) delegate the actual allow/deny decision to the target parent's `ContainerType` enum — `canBeRoot()` for page-level placement and `isChildAllowed($element::class)` for container placement. There is a single source of truth for the rules and no separate allowance trait or config lookup.
 
 ## Repository Layer
 
-`GridElementRepositoryInterface` provides three query methods:
+`GridElementRepositoryInterface` provides four query methods:
 
 | Method | Purpose |
 |--------|---------|
-| `findById(int)` | Single element lookup |
-| `findByParentIds(list<int>)` | Elements by ParentID (simple filter) |
+| `findById(int)` | Single element lookup by ID |
+| `findByRef(NodeRef)` | Lookup by scoped `NodeRef` — the controller's primary lookup (resolves the `NodeType` to the right ORM class); returns `null` for non-element types (e.g. Page) |
+| `findByParentIds(list<int>, string $parentClass)` | Elements by ParentID + parent class |
 | `findByParents(array<class, list<int>>, ?zone)` | Composite key + optional zone filter |
 
 `OrmGridElementRepository` implements these against the SilverStripe ORM. All queries sort by `Sort ASC, ID ASC`. Zone filtering queries the `Section` table directly (the `Zone` column only exists there).
@@ -434,7 +437,7 @@ Grid adapters translate the abstract layout model (viewports, column widths, off
 
 ### Config-Driven Base Class
 
-`GridAdapter` is the single concrete base class implementing both `GridAdapterInterface` and `ContentLayoutAdapterInterface`. All CSS class generation is driven by Configurable static properties — format strings, class maps, and scalar values. Framework presets (BootstrapAdapter, TailwindAdapter, BulmaAdapter) are zero-method subclasses that only override static properties.
+`GridAdapter` is the single `abstract` base class implementing both `GridAdapterInterface` and `ContentLayoutAdapterInterface`. All CSS class generation is driven by Configurable static properties — format strings, class maps, and scalar values. Framework presets (BootstrapAdapter, TailwindAdapter, BulmaAdapter) are zero-method subclasses that only override static properties, and are the only concrete (instantiable) adapters.
 
 YAML-configurable properties (set on the concrete preset class):
 
@@ -470,13 +473,15 @@ WeDevelop\Grid\Service\GridSettingsResolver:
 | Tailwind | sm, md, lg, xl, 2xl | sm | `{vp}:col-span-{n}` |
 | Bulma | mobile, tablet, desktop, widescreen, fullhd | mobile (no suffix) | `is-{n}-{vp}` |
 
-The default adapter is Bootstrap, bound via YAML DI:
+There is no compile-time default. `GridAdapterInterface` is bound through a factory that selects the active adapter from the **required** `SS_GRID_ADAPTER` env var — a bundled preset name (`bootstrap`, `tailwind`, or `bulma`, case-insensitive) or the FQCN of a custom adapter implementing `GridAdapterInterface`. Unset, empty, or invalid values throw at container boot:
 
 ```yaml
 SilverStripe\Core\Injector\Injector:
   WeDevelop\Grid\Contract\GridAdapterInterface:
-    class: WeDevelop\Grid\Adapter\BootstrapAdapter
+    factory: WeDevelop\Grid\Factory\GridAdapterResolver
 ```
+
+See [Grid Adapter System](grid-adapter.md) for the full selection and configuration reference.
 
 ## Content Layout System
 

@@ -6,7 +6,7 @@ A grid-based content block system for SilverStripe 6 CMS — structured Section 
 
 - PHP ^8.3
 - silverstripe/framework ^6.0, silverstripe/cms ^6.0, silverstripe/admin ^3.0, silverstripe/versioned ^3.0, silverstripe/vendor-plugin ^3.0
-- unclecheese/display-logic ^4.0, wedevelopnl/silverstripe-media-field ^6.0
+- unclecheese/display-logic ^4.0, wedevelopnl/silverstripe-media-field ^6.0.0-rc3
 - Node >= 26 (only needed if you build the frontend yourself)
 
 Optional:
@@ -23,6 +23,8 @@ composer require wedevelopnl/silverstripe-grid
 ```
 
 Then run `dev/build?flush=1` to pick up the new database schema and configuration.
+
+Set the required `SS_GRID_ADAPTER` environment variable to select the active CSS framework adapter — a bundled preset name (`bootstrap`, `tailwind`, or `bulma`, case-insensitive) or the fully-qualified class name of a custom adapter. If it is unset, empty, or invalid the module throws when the container boots. See [Grid Adapter System](docs/architecture/grid-adapter.md) for the full reference.
 
 ## Usage
 

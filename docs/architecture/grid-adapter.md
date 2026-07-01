@@ -2,7 +2,7 @@
 
 Grid adapters translate the abstract grid model (viewports, column widths, offsets, visibility) into CSS framework-specific class names. All consumers depend on `GridAdapterInterface`, never on a concrete adapter.
 
-The adapter is entirely configuration-driven. `GridAdapter` is a single concrete base class that reads CSS format strings, class maps, and scalar values from SilverStripe `Configurable` statics. Framework presets (BootstrapAdapter, TailwindAdapter, BulmaAdapter) are zero-method subclasses that only declare `private static` property overrides.
+The adapter is entirely configuration-driven. `GridAdapter` is a single `abstract` base class that reads CSS format strings, class maps, and scalar values from SilverStripe `Configurable` statics. Framework presets (BootstrapAdapter, TailwindAdapter, BulmaAdapter) are zero-method subclasses that only declare `private static` property overrides.
 
 ## Key Files
 
@@ -17,7 +17,7 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single concrete
 - `src/Value/Viewport.php` — Value object (`final readonly class`, not an enum)
 - `src/Value/ContainerType.php` — Enum: `Section`, `Row`, `Column`
 - `_config/grid.yml` — DI binding (resolved via `GridAdapterResolver`; `SS_GRID_ADAPTER` is required)
-- `_config/content-layout.yml` — DI alias for `ContentLayoutAdapterInterface` (via `GridAdapterFactory`) + applies `BlockMediaExtension` to `ContentElement`
+- `_config/content-layout.yml` — DI binding for `ContentLayoutAdapterInterface` (via `GridAdapterFactory`). `BlockMediaExtension` is intentionally NOT applied here — image/video capability is opt-in per project
 
 ## Existing Presets
 
@@ -39,11 +39,11 @@ namespace WeDevelop\Grid\Adapter;
 final class YourAdapter extends GridAdapter
 {
     // ─── Grid topology ──────────────────────────────────────────
-    /** @var array<string, string> */
+    /** @var array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}> */
     private static array $viewport_definitions = [
-        'sm' => 'Small',
-        'md' => 'Medium',
-        'lg' => 'Large',
+        'sm' => ['label' => 'Small',  'min_width' => 640],
+        'md' => ['label' => 'Medium', 'min_width' => 768],
+        'lg' => ['label' => 'Large',  'min_width' => 1024],
     ];
 
     /** @var positive-int */
@@ -106,7 +106,7 @@ All properties are `private static` on `GridAdapter`. Preset subclasses override
 
 | Property | Type | Purpose |
 |----------|------|---------|
-| `viewport_definitions` | `array<string, string>` | key → label, ordered small→large |
+| `viewport_definitions` | `array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}>` | key → `{label, min_width}`, ordered small→large. `min_width` (px) feeds `Viewport->minWidth`. Malformed entries throw `InvalidGridValueException::forMalformedViewportDefinition` at boot |
 | `total_columns` | `positive-int` | Grid column count |
 | `container_max_width` | `positive-int` | Max container width in px |
 | `default_viewport` | `string` | Default viewport key for CMS editor |
