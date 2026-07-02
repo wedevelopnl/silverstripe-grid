@@ -551,7 +551,7 @@ describe('createTypedCollisionDetection', () => {
       expect(overRectRef.current!.nodeRef.current).toBeTruthy()
     })
 
-    it('does not capture overRectRef for pending-path sibling collisions', () => {
+    it('captures overRectRef for pending-path sibling collisions', () => {
       const sibling = createDroppableWithRect('row-2', {
         left: 50,
         top: 275,
@@ -578,8 +578,10 @@ describe('createTypedCollisionDetection', () => {
 
       detect(args as never)
 
-      // Pending path skips overRectRef capture intentionally
-      expect(overRectRef.current).toBeNull()
+      // The pending path captures the winner's node so handleDragMove can read
+      // a live getBoundingClientRect() for before/after direction (over.rect
+      // lags the pending-tree re-render).
+      expect(overRectRef.current?.id).toBe('row-2')
     })
 
     it('captures overRectRef for parent container fallback', () => {

@@ -2,7 +2,7 @@ import type {
   CollisionDetection,
   DragCancelEvent,
   DragEndEvent,
-  DragOverEvent,
+  DragMoveEvent,
   DragStartEvent,
   SensorDescriptor,
   SensorOptions,
@@ -42,7 +42,7 @@ export interface DndContextProps {
   sensors: SensorDescriptor<SensorOptions>[]
   collisionDetection: CollisionDetection
   onDragStart: (event: DragStartEvent) => void
-  onDragOver: (event: DragOverEvent) => void
+  onDragMove: (event: DragMoveEvent) => void
   onDragEnd: (event: DragEndEvent) => void
   onDragCancel: (event: DragCancelEvent) => void
 }
@@ -170,8 +170,15 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
     [maps, pending],
   )
 
-  const handleDragOver = useCallback(
-    (event: DragOverEvent) => {
+  // Driven by dnd-kit's onDragMove (every pointer move), NOT onDragOver.
+  // dnd-kit fires onDragOver only when `over` CHANGES; placing the ghost before
+  // vs after the SAME element is a direction flip with no over-change, so an
+  // onDragOver-driven preview freezes at whichever side it first entered.
+  // Collision detection runs on every move, so onDragMove is the right cadence,
+  // and applyPendingMove's no-op guard (same tree ref → no setState) keeps it
+  // cheap when the resolved placement is unchanged.
+  const handleDragMove = useCallback(
+    (event: DragMoveEvent) => {
       const { active, over } = event
       if (!over) return
       if (active.id === over.id) return
@@ -205,20 +212,29 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         // placing it relative to its own position and bouncing it back to the
         // container end. Excluding it keeps the preview consistent with the
         // direction-based placement resolveDropPlacement computes at drop time.
-        // Sibling list with the active element excluded. During a pending
-        // preview the active element already sits in this list, so anchoring
-        // `after` to the slot before `over` could reference the ghost itself —
-        // placing it relative to its own position and bouncing it back to the
-        // container end. Excluding it keeps the preview consistent with the
-        // direction-based placement resolveDropPlacement computes at drop time.
         const siblings = effectiveMaps.childrenByParentKey.get(overNode.parentKey) ?? []
         const others = siblings.filter((sibling) => sibling.nodeKey !== activeParsed.key)
         const overPos = others.findIndex((sibling) => sibling.nodeKey === overParsed.key)
 
+        // Resolve direction against the over element's LIVE DOM rect, not dnd-kit's
+        // over.rect. This handler's applyPendingMove re-renders the pending tree,
+        // and over.rect (droppableRects) is measured a cycle behind that re-render,
+        // so the pointer gets compared to the element's PREVIOUS position — near a
+        // boundary this inverts the before/after decision and the ghost can't cross.
+        // getBoundingClientRect reads the current DOM; with the pending container's
+        // SortableContext no-op'd there are no transforms, so it shares the pointer's
+        // viewport space. (overRectRef is captured by tier-2 collision detection.)
+        const overSnapshot = pending.collisionRefs.overRectRef.current
+        const overRectNode = overSnapshot?.nodeRef.current
+        const directionRect =
+          String(overSnapshot?.id) === String(over.id) && overRectNode
+            ? overRectNode.getBoundingClientRect()
+            : over.rect
+
         const pointer = getPointerPosition(event)
         if (
           pointer !== null &&
-          resolveInsertDirection(pointer, over.rect, activeParsed.type) === 'before'
+          resolveInsertDirection(pointer, directionRect, activeParsed.type) === 'before'
         ) {
           after = overPos > 0 ? others[overPos - 1].self : null
         } else {
@@ -283,12 +299,15 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
 
       const { maps: effectiveMaps } = pending.getEffective(tree, maps)
 
-      // Read the over element's live DOM rect at drop time. Both pointer and
-      // getBoundingClientRect() are in viewport space (including SortableContext
-      // CSS transforms), so comparing them gives the correct before/after
-      // direction. Using a cached rect from collision detection or over.rect
-      // (pre-transform from dnd-kit) can produce wrong directions when
-      // SortableContext transforms shift the element between capture and drop.
+      // Read the over element's LIVE DOM rect at drop time (getBoundingClientRect),
+      // matching the rect handleDragMove uses for the preview. dnd-kit's over.rect
+      // lags the pending-tree re-render (and, for same-container drops, misses
+      // SortableContext CSS transforms), so using it here would resolve a
+      // before/after direction that disagrees with the previewed ghost position —
+      // the drop would land on the opposite side of where the ghost was shown.
+      // The live rect keeps preview and drop consistent. Tier-2 collision detection
+      // captures overRectRef for the pending path; tier-1 captures it for same-
+      // container drops.
       const overSnapshot = pending.collisionRefs.overRectRef.current
       const overNode = overSnapshot?.nodeRef.current
       const effectiveOverRect =
@@ -349,11 +368,11 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
       sensors,
       collisionDetection,
       onDragStart: handleDragStart,
-      onDragOver: handleDragOver,
+      onDragMove: handleDragMove,
       onDragEnd: handleDragEnd,
       onDragCancel: handleDragCancel,
     }),
-    [sensors, collisionDetection, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel],
+    [sensors, collisionDetection, handleDragStart, handleDragMove, handleDragEnd, handleDragCancel],
   )
 
   return {

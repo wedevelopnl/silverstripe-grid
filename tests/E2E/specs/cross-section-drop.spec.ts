@@ -204,6 +204,18 @@ test.describe('Cross-section row drop — source depletion and cancel', () => {
       await activateDragByTitle(page, 'Row A1', { overlayTestId: 'drag-overlay-row' })
       await enterAtFirst(page, sectionBeta, 4)
       const pos = await rowPosition(sectionBeta, { between: ['Row B1', 'Row B2'] })
+      // The ghost preview tracks the pointer continuously, so it re-renders into
+      // the target slot as we move there. Settle the pointer and confirm the
+      // preview reached the target order BEFORE releasing — a blind drop at the
+      // pre-measured coordinate would fire mid-re-render (a real user releases
+      // once the ghost is where they want it).
+      await page.mouse.move(pos.x, pos.y, { steps: 15 })
+      await expect(sectionBeta.getByTestId('row-title')).toHaveText([
+        'Row B1',
+        'Row A1',
+        'Row B2',
+        'Row B3',
+      ])
       await dropAndSettle(page, pos.x, pos.y)
 
       await expect(sectionAlpha.getByTestId('row-block')).toHaveCount(0)
