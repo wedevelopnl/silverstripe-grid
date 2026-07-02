@@ -1,9 +1,24 @@
 import '@testing-library/jest-dom/vitest'
-import { afterEach, vi } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
+import failOnConsole from 'vitest-fail-on-console'
 import { resetActiveViewportStore } from './client/src/js/state/activeViewport'
+import {
+  isConsoleMessageAllowed,
+  resetConsoleAllowlist,
+} from './client/src/js/testing/consoleGuard'
 import { viewportKey } from './client/src/js/testing/factories'
+import { createMockLocalStorage } from './client/src/js/testing/mockLocalStorage'
 import type { AdapterConfig } from './client/src/js/types/adapter'
 import type { SilverStripeConfig, SilverStripeI18n } from './client/src/js/types/silverstripe'
+
+// Fail any test that logs an unexpected console.error/warn. Tests opt intentional
+// output in via allowConsole() (see consoleGuard.ts); render-throw tests use
+// renderExpectingError, which swallows React's diagnostics locally.
+failOnConsole({
+  shouldFailOnError: true,
+  shouldFailOnWarn: true,
+  silenceMessage: (message) => isConsoleMessageAllowed(message),
+})
 
 const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController'
 
@@ -57,7 +72,18 @@ const defaultI18n: SilverStripeI18n = {
 
 // Stub CMS globals before each test file — only applies in browser-like environments
 beforeEach(() => {
+  resetConsoleAllowlist()
+
   if (typeof window === 'undefined') return
+
+  // jsdom's localStorage is shadowed by Node's (unavailable) native one, so
+  // provide a fresh, isolated Map-backed store for every test.
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: createMockLocalStorage(),
+    writable: true,
+    configurable: true,
+  })
+
   window.ss = {
     config: structuredClone(defaultConfig),
     i18n: defaultI18n,

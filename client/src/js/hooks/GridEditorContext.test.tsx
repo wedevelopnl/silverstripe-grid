@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
+import { renderExpectingError } from '@/testing/renderExpectingError'
 import { GridEditorProvider, useGridEditorContext } from './GridEditorContext'
 
 describe('useGridEditorContext', () => {
@@ -20,14 +21,12 @@ describe('useGridEditorContext', () => {
   })
 
   it('throws a clear error when used outside a provider', () => {
-    const prevError = console.error
-    console.error = () => {}
-    try {
-      expect(() => renderHook(() => useGridEditorContext())).toThrow(
-        'useGridEditorContext must be used within a GridEditorProvider',
-      )
-    } finally {
-      console.error = prevError
+    function Probe() {
+      useGridEditorContext()
+      return null
     }
+
+    const error = renderExpectingError(<Probe />)
+    expect(error.message).toBe('useGridEditorContext must be used within a GridEditorProvider')
   })
 })

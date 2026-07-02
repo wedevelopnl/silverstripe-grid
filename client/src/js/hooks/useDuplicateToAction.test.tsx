@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { useDuplicateToAction } from '@/hooks/useDuplicateToAction'
+import { allowConsole } from '@/testing/consoleGuard'
 import { createSectionNode, createSimpleElement, resetIdCounter } from '@/testing/factories'
 import { getFetchCalls, mockFetchError, mockFetchSuccess } from '@/testing/mockFetch'
 import { createProviderWrapper } from '@/testing/renderWithProviders'
@@ -65,7 +66,8 @@ describe('useDuplicateToAction', () => {
     })
 
     it('should clear error on cancel', async () => {
-      // First trigger an error via failed confirm
+      // First trigger an error via failed confirm — surfaces an error toast.
+      allowConsole('[GridEditor] error:')
       mockFetchError(422, { message: 'Validation error' })
       const node = createSimpleElement({ id: 10 })
       const { result } = renderDuplicateToAction(node)
@@ -145,6 +147,8 @@ describe('useDuplicateToAction', () => {
     })
 
     it('should set error state on failure', async () => {
+      // The failed duplicate surfaces an error toast (console.warn) by design.
+      allowConsole('[GridEditor] error:')
       mockFetchError(500, { message: 'Server error' })
       const node = createSimpleElement({ id: 42 })
       const { result } = renderDuplicateToAction(node)

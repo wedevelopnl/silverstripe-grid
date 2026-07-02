@@ -22,12 +22,32 @@ function createHost(): HTMLElement {
 }
 
 describe('entwine bridge MutationObserver fallback', () => {
+  const RealMutationObserver = globalThis.MutationObserver
+  let observers: MutationObserver[] = []
+
   beforeEach(() => {
+    // Importing the bridge attaches a MutationObserver to document.body as a
+    // top-level side effect. Since each test re-imports the module (below),
+    // every import spawns a fresh observer — track them so afterEach can
+    // disconnect them. Without this, a leaked observer from a previous test
+    // keeps observing document.body and double-mounts the next test's host.
+    observers = []
+    globalThis.MutationObserver = class extends RealMutationObserver {
+      constructor(callback: MutationCallback) {
+        super(callback)
+        observers.push(this)
+      }
+    }
+
     document.body.innerHTML = '<div class="js-injector-boot"></div>'
     vi.resetModules()
   })
 
   afterEach(() => {
+    for (const observer of observers) {
+      observer.disconnect()
+    }
+    globalThis.MutationObserver = RealMutationObserver
     document.body.innerHTML = ''
   })
 

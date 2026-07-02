@@ -1,6 +1,7 @@
 import { act, render, renderHook, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { renderExpectingError } from '@/testing/renderExpectingError'
 import { NodeIdentity } from '@/types/identity'
 import {
   CollapseContext,
@@ -9,72 +10,21 @@ import {
   useCollapseState,
 } from './useCollapseState'
 
-// jsdom's localStorage under vitest is a Proxy that doesn't expose a usable
-// `setItem`/`clear`. The hook itself wraps reads/writes in try/catch, so
-// exercising the default behavior still works without touching localStorage
-// at all — but tests that seed or inspect state need to replace the global
-// with a plain Map-backed mock.
-
-interface MockStorage extends Storage {
-  _store: Map<string, string>
-}
-
-function createMockLocalStorage(): MockStorage {
-  const store = new Map<string, string>()
-  return {
-    _store: store,
-    get length() {
-      return store.size
-    },
-    clear: () => {
-      store.clear()
-    },
-    getItem: (key: string): string | null => store.get(key) ?? null,
-    setItem: (key: string, value: string): void => {
-      store.set(key, value)
-    },
-    removeItem: (key: string): void => {
-      store.delete(key)
-    },
-    key: (index: number): string | null => [...store.keys()][index] ?? null,
-  }
-}
-
-const realLocalStorage = globalThis.localStorage
-
-function installMockLocalStorage(): MockStorage {
-  const mock = createMockLocalStorage()
-  Object.defineProperty(globalThis, 'localStorage', {
-    value: mock,
-    writable: true,
-    configurable: true,
-  })
-  return mock
-}
-
+// localStorage is provided globally and cleared before each test (see
+// vitest.setup.ts), so tests read and write `localStorage` directly.
 let areaId: number
 
 beforeEach(() => {
   areaId = Math.floor(Math.random() * 1_000_000)
 })
 
-afterEach(() => {
-  Object.defineProperty(globalThis, 'localStorage', {
-    value: realLocalStorage,
-    writable: true,
-    configurable: true,
-  })
-})
-
 describe('useCollapseState', () => {
   it('starts with an empty collapse set', () => {
-    installMockLocalStorage()
     const { result } = renderHook(() => useCollapseState(areaId))
     expect(result.current.isCollapsed(NodeIdentity.toKey('section', 1))).toBe(false)
   })
 
   it('toggle(key) adds the key to the collapsed set', () => {
-    installMockLocalStorage()
     const { result } = renderHook(() => useCollapseState(areaId))
     const key = NodeIdentity.toKey('section', 5)
 
@@ -86,7 +36,6 @@ describe('useCollapseState', () => {
   })
 
   it('toggle(key) twice removes the key', () => {
-    installMockLocalStorage()
     const { result } = renderHook(() => useCollapseState(areaId))
     const key = NodeIdentity.toKey('row', 10)
 
@@ -102,7 +51,7 @@ describe('useCollapseState', () => {
   })
 
   it(`persists collapsed keys to localStorage under grid:collapsed:${areaId}`, () => {
-    const mock = installMockLocalStorage()
+    const mock = localStorage
     const { result } = renderHook(() => useCollapseState(areaId))
     const key = NodeIdentity.toKey('column', 7)
 
@@ -116,7 +65,7 @@ describe('useCollapseState', () => {
   })
 
   it('restores collapsed keys from localStorage on mount', () => {
-    const mock = installMockLocalStorage()
+    const mock = localStorage
     const key1 = NodeIdentity.toKey('section', 1)
     const key2 = NodeIdentity.toKey('row', 2)
     mock.setItem(`grid:collapsed:${areaId}`, JSON.stringify([key1, key2]))
@@ -133,7 +82,7 @@ describe('useCollapseState', () => {
     ['non-array JSON', '{"foo":"bar"}'],
     ['old numeric format', '[1, 5, 10]'],
   ])('drops malformed localStorage payload (%s) silently', (_label, raw) => {
-    const mock = installMockLocalStorage()
+    const mock = localStorage
     mock.setItem(`grid:collapsed:${areaId}`, raw)
 
     const { result } = renderHook(() => useCollapseState(areaId))
@@ -143,7 +92,7 @@ describe('useCollapseState', () => {
   })
 
   it('keeps only valid NodeKey entries from a mixed localStorage payload', () => {
-    const mock = installMockLocalStorage()
+    const mock = localStorage
     const valid = NodeIdentity.toKey('section', 1)
     mock.setItem(`grid:collapsed:${areaId}`, JSON.stringify([valid, 99, 'not-a-key', 'row-abc']))
 
@@ -161,7 +110,6 @@ describe('useCollapseState', () => {
   })
 
   it('keeps separate state for different areaIds', () => {
-    installMockLocalStorage()
     const areaA = areaId
     const areaB = areaId + 1
     const key = NodeIdentity.toKey('section', 1)
@@ -190,15 +138,8 @@ describe('useCollapse (context consumer)', () => {
   }
 
   it('throws a clear error when used outside a provider', () => {
-    const prevError = console.error
-    console.error = () => {}
-    try {
-      expect(() => render(<Probe />)).toThrow(
-        /useCollapse must be used within a <CollapseContext.Provider>/,
-      )
-    } finally {
-      console.error = prevError
-    }
+    const error = renderExpectingError(<Probe />)
+    expect(error.message).toMatch(/useCollapse must be used within a <CollapseContext.Provider>/)
   })
 
   it('returns the provider-supplied CollapseState', () => {
