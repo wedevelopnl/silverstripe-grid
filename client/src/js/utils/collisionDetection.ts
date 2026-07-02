@@ -372,16 +372,14 @@ export function createTypedCollisionDetection(
       })
 
       if (siblingCollisions.length > 0) {
-        // Skip overRectRef capture for pending-path siblings. At drop time,
-        // handleDragEnd falls back to over.rect (pre-transform, from dnd-kit's
-        // measuring system). This works because getPointerPosition and over.rect
-        // both use dnd-kit's coordinate system which accounts for auto-scroll
-        // consistently. Capturing a live DOM rect (getBoundingClientRect) here
-        // would introduce a coordinate space mismatch: the pointer position
-        // includes dnd-kit's scroll adjustments, but getBoundingClientRect
-        // reflects the viewport-relative position which shifts oppositely
-        // during auto-scroll.
-        return siblingCollisions
+        // Capture the winner's live DOM node so both handleDragMove (preview)
+        // and handleDragEnd (drop) read a fresh getBoundingClientRect() for the
+        // before/after DIRECTION. dnd-kit's over.rect (droppableRects) lags the
+        // pending-tree re-render by a cycle, so near a boundary it inverts the
+        // direction — the ghost can't cross a sibling, and a drop would land on
+        // the opposite side of the previewed ghost. Reading the same live rect
+        // in both places keeps the preview and the committed drop consistent.
+        return captureWinnerNode(siblingCollisions)
       }
     } else {
       // Pass 1: prefer sibling collisions — centerCrossing requires the

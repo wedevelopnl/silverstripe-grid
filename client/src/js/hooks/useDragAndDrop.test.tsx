@@ -217,7 +217,7 @@ describe('useDragAndDrop', () => {
     it('exposes dndContextProps with handler functions', () => {
       const { result } = renderDndHook()
       expect(typeof result.current.dndContextProps.onDragStart).toBe('function')
-      expect(typeof result.current.dndContextProps.onDragOver).toBe('function')
+      expect(typeof result.current.dndContextProps.onDragMove).toBe('function')
       expect(typeof result.current.dndContextProps.onDragEnd).toBe('function')
       expect(typeof result.current.dndContextProps.onDragCancel).toBe('function')
     })
@@ -320,7 +320,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overId))
       })
       expect(result.current.pendingTree).not.toBeNull()
 
@@ -333,7 +333,7 @@ describe('useDragAndDrop', () => {
     })
   })
 
-  describe('onDragOver', () => {
+  describe('onDragMove', () => {
     it('applies pending tree for cross-container move (element over different-type container)', () => {
       const { tree, element1, col2 } = buildTwoColumnTree()
       const { result } = renderDndHook({ tree })
@@ -345,7 +345,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overId))
       })
 
       expect(result.current.pendingTree).not.toBeNull()
@@ -362,7 +362,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overId))
       })
 
       expect(result.current.pendingTree).toBeNull()
@@ -377,7 +377,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, null))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, null))
       })
 
       expect(result.current.pendingTree).toBeNull()
@@ -392,7 +392,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, activeId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, activeId))
       })
 
       expect(result.current.pendingTree).toBeNull()
@@ -409,14 +409,14 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overId))
       })
 
       expect(result.current.pendingTree).not.toBeNull()
     })
   })
 
-  describe('onDragOver same-type cross-container direction', () => {
+  describe('onDragMove same-type cross-container direction', () => {
     // These exercise the same-type branch (element over element in a DIFFERENT
     // container) WITH a real pointer, which the synthetic-Event tests never
     // reach: getPointerPosition bails to null on a plain Event, short-circuiting
@@ -479,7 +479,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(
+        result.current.dndContextProps.onDragMove(
           makePointerDragOverEvent(activeId, overId, 100, 5, OVER_RECT),
         )
       })
@@ -501,7 +501,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(
+        result.current.dndContextProps.onDragMove(
           makePointerDragOverEvent(activeId, overId, 100, 5, OVER_RECT),
         )
       })
@@ -523,7 +523,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(
+        result.current.dndContextProps.onDragMove(
           makePointerDragOverEvent(activeId, overId, 100, 45, OVER_RECT),
         )
       })
@@ -557,13 +557,13 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, containerId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, containerId))
       })
       // Ghost initially appended at the container end.
       expect(targetColumnChildIds(result.current.pendingTree)).toEqual([50, 41, 40])
 
       act(() => {
-        result.current.dndContextProps.onDragOver(
+        result.current.dndContextProps.onDragMove(
           makePointerDragOverEvent(activeId, overId, 100, 5, OVER_RECT),
         )
       })
@@ -596,10 +596,10 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, containerId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, containerId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(
+        result.current.dndContextProps.onDragMove(
           makePointerDragOverEvent(activeId, overId, 100, 5, OVER_RECT),
         )
       })
@@ -607,12 +607,48 @@ describe('useDragAndDrop', () => {
 
       // A second identical hover must not bounce the ghost back to the end.
       act(() => {
-        result.current.dndContextProps.onDragOver(
+        result.current.dndContextProps.onDragMove(
           makePointerDragOverEvent(activeId, overId, 100, 5, OVER_RECT),
         )
       })
 
       expect(targetColumnChildIds(result.current.pendingTree)).toEqual([50, 40, 41])
+    })
+
+    it('flips the ghost from after to before the SAME over-element when the pointer crosses its center', () => {
+      // The core cross-container freeze: dnd-kit fires onDragOver only when
+      // `over` CHANGES, so a before⇄after flip on the SAME element (no over
+      // change) never reached the preview. The handler is now wired to
+      // onDragMove (fires every move), so two moves over the same element with
+      // the pointer on opposite sides of its center must reposition the ghost.
+      //
+      // col31 = [element2(41)]. Drag element1(40) over element2(41):
+      //   1. pointer BELOW 41's midpoint ('after')  → [41, 40]
+      //   2. pointer ABOVE 41's midpoint ('before') → [40, 41]   (same over)
+      const element2 = createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })
+      const { tree } = buildCrossContainerElementTree([element2])
+      const { result } = renderDndHook({ tree })
+
+      const activeId = buildDraggableId('element', 40)
+      const overId = buildDraggableId('element', 41)
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+      act(() => {
+        result.current.dndContextProps.onDragMove(
+          makePointerDragOverEvent(activeId, overId, 100, 45, OVER_RECT),
+        )
+      })
+      expect(targetColumnChildIds(result.current.pendingTree)).toEqual([41, 40])
+
+      // Same over-element (41), pointer now ABOVE its midpoint → flip to before.
+      act(() => {
+        result.current.dndContextProps.onDragMove(
+          makePointerDragOverEvent(activeId, overId, 100, 5, OVER_RECT),
+        )
+      })
+      expect(targetColumnChildIds(result.current.pendingTree)).toEqual([40, 41])
     })
   })
 
@@ -674,7 +710,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(
+        result.current.dndContextProps.onDragMove(
           makePointerDragOverEvent(
             activeId,
             overContainerId,
@@ -773,7 +809,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(
+        result.current.dndContextProps.onDragMove(
           makePointerDragOverEvent(activeId, overId, 110, 25, overRect, {
             initial: { top: 0, left: 100, width: 200, height: 50 },
             translated: { top: 0, left: 300, width: 200, height: 50 },
@@ -789,7 +825,7 @@ describe('useDragAndDrop', () => {
   })
 
   describe('pendingActive flag (DragContext)', () => {
-    it('drives pendingActive false → true on cross-container onDragOver and back to false on onDragCancel', () => {
+    it('drives pendingActive false → true on cross-container onDragMove and back to false on onDragCancel', () => {
       // GridEditor derives DragContext.pendingActive as `pendingTree !== null`
       // and provides it to block components. The hook itself owns the pendingTree
       // transition; pendingActive is that exact boolean. Observe it here.
@@ -807,7 +843,7 @@ describe('useDragAndDrop', () => {
       expect(pendingActive()).toBe(false)
 
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overId))
       })
       expect(pendingActive()).toBe(true)
 
@@ -906,7 +942,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overId))
       })
       expect(result.current.pendingTree).toBeNull()
 
@@ -985,7 +1021,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overContainerId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overContainerId))
       })
       expect(result.current.pendingTree).not.toBeNull()
 
@@ -1035,7 +1071,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overContainerId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overContainerId))
       })
 
       act(() => {
@@ -1097,7 +1133,7 @@ describe('useDragAndDrop', () => {
     })
   })
 
-  describe('onDragOver container target', () => {
+  describe('onDragMove container target', () => {
     it('sets after=null when dropping into an empty cross-type container', () => {
       // Empty target column: `children.length > 0` must be FALSE so `after` is null
       // rather than dereferencing children[-1].self (which would throw). Mutants that
@@ -1135,7 +1171,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overContainerId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overContainerId))
       })
       // Drop over the container itself — resolveDropPlacement's cross-type branch pushes
       // the active element onto `filtered`, producing an `after` determined by the pending
@@ -1190,7 +1226,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overContainerId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overContainerId))
       })
 
       // Verify the pending tree places active at the END of the target column.
@@ -1220,7 +1256,7 @@ describe('useDragAndDrop', () => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragOver(makeDragOverEvent(activeId, overContainerId))
+        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overContainerId))
       })
       expect(result.current.pendingTree).not.toBeNull()
 
