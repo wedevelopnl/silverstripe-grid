@@ -37,7 +37,7 @@
     "valibot": "^1.4.2"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.1",
+    "@biomejs/biome": "^2.5.2",
     "@playwright/test": "^1.61.1",
     "@stryker-mutator/core": "^9.5.0",
     "@stryker-mutator/typescript-checker": "^9.6.1",
