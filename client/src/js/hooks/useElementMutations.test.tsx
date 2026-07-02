@@ -2,6 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '@/hooks/queryKeys'
+import { allowConsole } from '@/testing/consoleGuard'
 import {
   useCreateContentElement,
   useDuplicateToElement,
@@ -395,6 +396,8 @@ describe('useElementMutations', () => {
     })
 
     it('should call clearPendingTree on error as safety net', async () => {
+      // The failed reorder surfaces an error toast (console.warn) by design.
+      allowConsole('[GridEditor] error:')
       const { queryClient, tree, treeApiResponse, column, elemB } = createReorderTree()
       mockFetchSequence([
         { status: 500, body: { message: 'fail' } },

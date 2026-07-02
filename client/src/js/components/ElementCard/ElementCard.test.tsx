@@ -224,9 +224,12 @@ describe('EditableElementCard', () => {
     it('allows navigation when the click target has no interactive ancestor inside the card', () => {
       mockFetchSuccess({})
 
+      // A same-document fragment href keeps jsdom from attempting a real
+      // cross-document navigation (which logs "Not implemented: navigation")
+      // while still exercising the un-prevented click path this test asserts.
       const element = createSimpleElement({
         title: 'Navigate me',
-        editLink: '/admin/pages/edit/show/5',
+        editLink: '#edit',
       })
       renderWithProviders(<EditableElementCard element={element} />)
 
