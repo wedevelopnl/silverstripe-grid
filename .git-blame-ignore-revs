@@ -3,10 +3,10 @@
 # GitHub honors this file automatically.
 
 # style: normalize client/src formatting with biome
-4820e69dc68f1ee5ce5c89bcb9e829579384cc96
+d33a65ced4555ce0fff4b6ef5503da898d17aec0
 
 # style: reformat with biome (semicolons asNeeded, double JSX quotes)
-eee1b76d1e5c998946fa640d13deed28ab388354
+56688eb9d567a55cdbab99e8b0c4b6c26ee77bf1
 
 # refactor: move JS/TS source under client/src/js/ (pure rename)
-91c6ba5ddb0f4d6fe8fd4a1e6c771e368f50dd0f
+bf2ad442ca2b6afe001f83ed6fcea9e118dc6188
