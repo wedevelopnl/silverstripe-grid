@@ -226,6 +226,92 @@ describe('usePendingTree', () => {
     })
   })
 
+  describe('getActivePlacement', () => {
+    it('returns null when no pending preview is active', () => {
+      const { result } = renderHook(() => usePendingTree())
+      expect(result.current.getActivePlacement(NodeIdentity.toKey('element', 5))).toBeNull()
+    })
+
+    it('reports the active element at the head of the target (after = null)', () => {
+      const { tree, element } = buildTwoColumnTree()
+      const { result } = renderHook(() => usePendingTree())
+
+      act(() => {
+        result.current.applyPendingMove(
+          createParsedDraggableId('element', element.self.id),
+          NodeIdentity.toKey('column', 20),
+          null,
+          tree,
+        )
+      })
+
+      const placement = result.current.getActivePlacement(
+        NodeIdentity.toKey('element', element.self.id),
+      )
+      expect(placement).not.toBeNull()
+      expect(placement?.parent).toEqual({ type: 'column', id: 20 })
+      expect(placement?.after).toBeNull()
+    })
+
+    it('reports the sibling the active element sits after when appended', () => {
+      // col 10 has [element 5]; col 20 has [element 6]. Move element 5 into col 20
+      // after element 6 → col 20 = [6, 5]. The placement anchor is element 6.
+      const existing = createSimpleElement({ id: 6, parent: { type: 'column', id: 20 } })
+      const col1 = createColumnNode({
+        id: 10,
+        parent: { type: 'row', id: 100 },
+        children: [createSimpleElement({ id: 5, parent: { type: 'column', id: 10 } })],
+      })
+      const col2 = createColumnNode({
+        id: 20,
+        parent: { type: 'row', id: 100 },
+        children: [existing],
+      })
+      const row = createRowNode({
+        id: 100,
+        parent: { type: 'section', id: 1000 },
+        children: [col1, col2],
+      })
+      const section = createSectionNode({
+        id: 1000,
+        parent: { type: 'page', id: 1 },
+        children: [row],
+      })
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+
+      const { result } = renderHook(() => usePendingTree())
+
+      act(() => {
+        result.current.applyPendingMove(
+          createParsedDraggableId('element', 5),
+          NodeIdentity.toKey('column', 20),
+          6,
+          tree,
+        )
+      })
+
+      const placement = result.current.getActivePlacement(NodeIdentity.toKey('element', 5))
+      expect(placement?.parent).toEqual({ type: 'column', id: 20 })
+      expect(placement?.after).toEqual({ type: 'element', id: 6 })
+    })
+
+    it('returns null for an active key absent from the pending tree', () => {
+      const { tree, element } = buildTwoColumnTree()
+      const { result } = renderHook(() => usePendingTree())
+
+      act(() => {
+        result.current.applyPendingMove(
+          createParsedDraggableId('element', element.self.id),
+          NodeIdentity.toKey('column', 20),
+          null,
+          tree,
+        )
+      })
+
+      expect(result.current.getActivePlacement(NodeIdentity.toKey('element', 999))).toBeNull()
+    })
+  })
+
   describe('clear', () => {
     it('resets pendingTree and collision refs', () => {
       const { tree, element } = buildTwoColumnTree()

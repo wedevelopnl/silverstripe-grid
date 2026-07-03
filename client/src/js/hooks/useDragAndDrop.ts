@@ -266,6 +266,41 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
       setDragState(null)
 
       const { active, over } = event
+
+      const activeParsed = parseDraggableId(String(active.id))
+      if (!activeParsed) {
+        pending.clear()
+        return
+      }
+
+      const activeNode = maps.nodeMap.get(activeParsed.key)
+      if (!activeNode) {
+        pending.clear()
+        return
+      }
+
+      // Cross-container drop: a pending preview is active. Commit exactly what the
+      // ghost shows by reading the active element's slot from the pending tree —
+      // do NOT re-resolve from this drag-end event's collision. dnd-kit runs a
+      // fresh collision for the drag-end event against the already-mutated pending
+      // DOM (the ghost is in its previewed slot), so `over` can resolve to a
+      // different element than every drag-move used, and its `over.rect` is a
+      // cycle stale — together they land the element on the wrong side of the
+      // target, away from the previewed position. The pending tree already holds
+      // the final order (so dnd-kit's DragOverlay drop animation measures the
+      // destination), and reading (parent, after) from it yields the same reorder
+      // params onMutate will replay against the canonical tree. See the dnd-guide
+      // diagnostic map: "Element lands on wrong side of target".
+      const pendingPlacement = pending.getActivePlacement(activeParsed.key)
+      if (pendingPlacement) {
+        onReorder(activeNode.self, pendingPlacement.parent, pendingPlacement.after, pending.clear)
+        return
+      }
+
+      // Same-container drop: no pending preview (SortableContext drove the visual
+      // shuffle via CSS transforms). Resolve placement by index. `over.rect` is
+      // unused on this path — resolveDropPlacement's same-container branch is
+      // index-based — so no live-rect reconciliation is needed here.
       if (!over) {
         pending.clear()
         return
@@ -275,15 +310,8 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         return
       }
 
-      const activeParsed = parseDraggableId(String(active.id))
       const overParsed = parseDraggableId(String(over.id))
-      if (!activeParsed || !overParsed) {
-        pending.clear()
-        return
-      }
-
-      const activeNode = maps.nodeMap.get(activeParsed.key)
-      if (!activeNode) {
+      if (!overParsed) {
         pending.clear()
         return
       }
@@ -297,35 +325,14 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
       // Stryker disable next-line UnaryOperator: Equivalent — activeNode was confirmed present in nodeMap (above), and useElementMaps populates indexByNodeKey alongside nodeMap in one walk, so .get() is never undefined and the `?? -1` sentinel is unreachable
       const sourceIndex = maps.indexByNodeKey.get(activeParsed.key) ?? -1
 
-      const { maps: effectiveMaps } = pending.getEffective(tree, maps)
-
-      // Read the over element's LIVE DOM rect at drop time (getBoundingClientRect),
-      // matching the rect handleDragMove uses for the preview. dnd-kit's over.rect
-      // lags the pending-tree re-render (and, for same-container drops, misses
-      // SortableContext CSS transforms), so using it here would resolve a
-      // before/after direction that disagrees with the previewed ghost position —
-      // the drop would land on the opposite side of where the ghost was shown.
-      // The live rect keeps preview and drop consistent. Tier-2 collision detection
-      // captures overRectRef for the pending path; tier-1 captures it for same-
-      // container drops.
-      const overSnapshot = pending.collisionRefs.overRectRef.current
-      const overNode = overSnapshot?.nodeRef.current
-      const effectiveOverRect =
-        // Stryker disable next-line all: Equivalent — overRectRef is populated only by real collision detection, which is not exercised in synthetic DragEvent tests (overSnapshot remains null, both branches resolve to over.rect)
-        String(overSnapshot?.id) === String(over.id) && overNode
-          ? overNode.getBoundingClientRect()
-          : over.rect
-
-      const pointer = getPointerPosition(event)
-
       const placement = resolveDropPlacement({
         activeParsed,
         overParsed,
-        pointer,
-        maps: effectiveMaps,
+        pointer: getPointerPosition(event),
+        maps,
         sourceParentKey,
         sourceIndex,
-        overRect: effectiveOverRect,
+        overRect: over.rect,
       })
 
       if (placement) {
@@ -340,10 +347,6 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         // defers query re-renders by a macrotask (its notifyManager schedules via
         // setTimeout(0)), landing after the animation has captured — which is why a
         // same-container drop otherwise animates to the pre-move slot and snaps.
-        // Cross-container drags already populate the pending tree during drag-over;
-        // doing it here unconditionally unifies both paths and keeps the
-        // pre-positioned tree identical to the one onMutate commits (same
-        // applyReorder inputs against the canonical tree).
         pending.applyPendingMove(
           activeParsed,
           NodeIdentity.toKey(placement.parent),

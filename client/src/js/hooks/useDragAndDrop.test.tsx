@@ -662,9 +662,9 @@ describe('useDragAndDrop', () => {
     // (every other test) hide this because the offsets cancel.
 
     it('resolves Y direction using translated + (clientY - initialTop) for an element drop', () => {
-      // The DROP-time pointer is the only input to onReorder's `after`, so the
-      // divergent active rects must be on the drag-END event — not just the
-      // drag-over (whose pending-tree order does not feed `after`).
+      // getPointerPosition's grab-point math now feeds the cross-container PREVIEW
+      // (onDragMove), and drag-end commits whatever slot the preview produced — so
+      // the divergent active rects ride the drag-MOVE event here.
       //
       // initialTop=100, translatedTop=300 (dragged 200px down), clientY=110
       // (grabbed 10px below the element top). True pointer.y = 300 + (110-100) = 310.
@@ -703,7 +703,6 @@ describe('useDragAndDrop', () => {
       const { result } = renderDndHook({ tree, onReorder })
 
       const activeId = buildDraggableId('element', 40)
-      const overContainerId = buildDraggableId('column', 31)
       const overElementId = buildDraggableId('element', 41)
 
       act(() => {
@@ -712,23 +711,6 @@ describe('useDragAndDrop', () => {
       act(() => {
         result.current.dndContextProps.onDragMove(
           makePointerDragOverEvent(
-            activeId,
-            overContainerId,
-            100,
-            110,
-            {
-              top: 300,
-              left: 0,
-              width: 200,
-              height: 220,
-            },
-            activeRects,
-          ),
-        )
-      })
-      act(() => {
-        result.current.dndContextProps.onDragEnd(
-          makePointerDragEndEvent(
             activeId,
             overElementId,
             100,
@@ -742,6 +724,9 @@ describe('useDragAndDrop', () => {
             activeRects,
           ),
         )
+      })
+      act(() => {
+        result.current.dndContextProps.onDragEnd(makeDragEndEvent(activeId, overElementId))
       })
 
       expect(onReorder).toHaveBeenCalledTimes(1)
@@ -1039,49 +1024,53 @@ describe('useDragAndDrop', () => {
 
     it.each([
       {
-        name: 'before (pointer above the over-element midpoint)',
-        clientY: 5,
+        name: 'before (preview pointer above the over-element midpoint)',
+        moveClientY: 5,
+        endClientY: 45,
         expectedAfter: null,
       },
       {
-        name: 'after (pointer below the over-element midpoint)',
-        clientY: 45,
+        name: 'after (preview pointer below the over-element midpoint)',
+        moveClientY: 45,
+        endClientY: 5,
         expectedAfter: { type: 'element', id: 41 },
       },
-    ])('resolves cross-container drop direction from a real PointerEvent: $name', ({
-      clientY,
+    ])('cross-container drop commits the PREVIEW direction, ignoring the drag-end pointer: $name', ({
+      moveClientY,
+      endClientY,
       expectedAfter,
     }) => {
-      // Only a real PointerEvent activatorEvent makes getPointerPosition return
-      // a pointer (every other test uses new Event('pointer'), which bails to
-      // null and exercises only the index-based path). With initial===translated
-      // active rects, getPointerPosition resolves pointer.y === clientY.
+      // Direction is resolved by the PREVIEW (onDragMove over the element): a real
+      // PointerEvent activatorEvent makes getPointerPosition return a pointer
+      // (with initial===translated rects, pointer.y === clientY). The drag-end
+      // event deliberately carries the OPPOSITE pointer to prove it is ignored —
+      // the drop commits the pending tree the preview built, never a drag-end
+      // re-resolution. This is the regression guard for the cross-container
+      // "lands on the wrong side of the target" bug.
       //
-      // Over element rect top=0,height=50 → midpoint Y=25. clientY=5 → 'before'
-      // (after=null, head of target); clientY=45 → 'after' (after=element 41).
-      const { tree, element1, element2, col2 } = buildTwoColumnTree()
+      // Over element rect top=0,height=50 → midpoint Y=25. moveClientY=5 →
+      // 'before' (after=null, head of target); moveClientY=45 → 'after'
+      // (after=element 41). The drag-end pointer is the other side each time.
+      const { tree, element1, element2 } = buildTwoColumnTree()
       const onReorder = vi.fn()
       const { result } = renderDndHook({ tree, onReorder })
 
       const activeId = buildDraggableId('element', element1.self.id)
-      const overContainerId = buildDraggableId('column', col2.self.id)
       const overElementId = buildDraggableId('element', element2.self.id)
+      const overRect = { top: 0, left: 0, width: 200, height: 50 }
 
       act(() => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
-        result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overContainerId))
+        result.current.dndContextProps.onDragMove(
+          makePointerDragOverEvent(activeId, overElementId, 100, moveClientY, overRect),
+        )
       })
 
       act(() => {
         result.current.dndContextProps.onDragEnd(
-          makePointerDragEndEvent(activeId, overElementId, 100, clientY, {
-            top: 0,
-            left: 0,
-            width: 200,
-            height: 50,
-          }),
+          makePointerDragEndEvent(activeId, overElementId, 100, endClientY, overRect),
         )
       })
 
@@ -1238,34 +1227,41 @@ describe('useDragAndDrop', () => {
     })
   })
 
-  describe('placement=null cleanup', () => {
-    it('clears the pending tree when resolveDropPlacement returns null after a cross-container drag-over', () => {
-      // Trigger pendingTree via cross-container drag-over, then drop over a parseable but
-      // non-existent element ID. resolveDropPlacement can't resolve overKey in the effective
-      // maps → returns null → the else branch must call pending.clear(). If that branch is
-      // removed, pendingTree leaks after drag end.
+  describe('cross-container drop commits the preview', () => {
+    it('commits the previewed placement even when the drag-end over-id is stale', () => {
+      // The drop reads the active element's slot from the pending tree (what the
+      // ghost shows), NOT the drag-end event's `over`. dnd-kit re-runs collision at
+      // drag-end against the already-mutated pending DOM and can report a different
+      // — here deliberately stale/garbage — `over`; the placement must still come
+      // from the pending tree so the element lands where the preview showed it.
+      // Regression guard for "cross-container drop jumps to a different slot on
+      // release".
       const { tree, element1, col2 } = buildTwoColumnTree()
       const onReorder = vi.fn()
       const { result } = renderDndHook({ tree, onReorder })
 
       const activeId = buildDraggableId('element', element1.self.id)
       const overContainerId = buildDraggableId('column', col2.self.id)
-      const missingOverId = buildDraggableId('element', 999)
+      const staleOverId = buildDraggableId('element', 999)
 
       act(() => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
       })
       act(() => {
+        // Preview appends element1 to the end of col2 (after its existing element 41).
         result.current.dndContextProps.onDragMove(makeDragOverEvent(activeId, overContainerId))
       })
       expect(result.current.pendingTree).not.toBeNull()
 
       act(() => {
-        result.current.dndContextProps.onDragEnd(makeDragEndEvent(activeId, missingOverId))
+        result.current.dndContextProps.onDragEnd(makeDragEndEvent(activeId, staleOverId))
       })
 
-      expect(onReorder).not.toHaveBeenCalled()
-      expect(result.current.pendingTree).toBeNull()
+      expect(onReorder).toHaveBeenCalledTimes(1)
+      const [element, parent, after] = onReorder.mock.calls[0]
+      expect(element).toEqual({ type: 'element', id: element1.self.id })
+      expect(parent).toEqual({ type: 'column', id: 31 })
+      expect(after).toEqual({ type: 'element', id: 41 })
     })
   })
 

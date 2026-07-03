@@ -56,6 +56,48 @@ function settleCollision(page: Page, ms = 150): Promise<void> {
 }
 
 /**
+ * Wait until the cross-container ghost PREVIEW has stopped re-rendering.
+ *
+ * The preview is driven by onDragMove: as the pointer settles at a drop target,
+ * the pending tree re-renders the moved element into its slot, which shifts the
+ * surrounding layout and can trigger one or two further re-renders before it
+ * converges. Releasing during that convergence commits an intermediate slot —
+ * a real user releases once the ghost is where they want it.
+ *
+ * Observes the grid editor's childList/subtree (structural reorders only; the
+ * DragOverlay's transform is a style change and is ignored) and resolves once no
+ * structural mutation has occurred for `quietMs`, or after `timeoutMs` as a
+ * backstop. This is a condition-based settle — robust across browser timings
+ * where a fixed pause is not (Firefox re-renders slower than Chromium).
+ */
+function waitForPreviewStable(page: Page, quietMs = 200, timeoutMs = 2000): Promise<void> {
+  return page.evaluate(
+    ({ quietDelay, hardDelay }) =>
+      new Promise<void>((resolve) => {
+        const roots = document.querySelectorAll('[data-testid="grid-editor"]')
+        const observed = roots.length > 0 ? Array.from(roots) : [document.body]
+        let quietTimer = 0
+        const finish = () => {
+          clearTimeout(quietTimer)
+          clearTimeout(hardTimer)
+          observer.disconnect()
+          resolve()
+        }
+        const observer = new MutationObserver(() => {
+          clearTimeout(quietTimer)
+          quietTimer = window.setTimeout(finish, quietDelay)
+        })
+        for (const root of observed) {
+          observer.observe(root, { childList: true, subtree: true })
+        }
+        const hardTimer = window.setTimeout(finish, hardDelay)
+        quietTimer = window.setTimeout(finish, quietDelay)
+      }),
+    { quietDelay: quietMs, hardDelay: timeoutMs },
+  )
+}
+
+/**
  * dnd-kit uses PointerSensor with an 8px activation threshold.
  * Playwright's built-in dragTo() fires HTML5 DragEvents which dnd-kit
  * ignores. Instead, we simulate raw pointer moves that exceed the
@@ -215,9 +257,13 @@ export function waitForMutationSettlement(page: Page) {
  */
 export async function dropAndSettle(page: Page, targetX: number, targetY: number) {
   await page.mouse.move(targetX, targetY, { steps: 15 })
-  // Let collision detection settle at the final position before releasing
-  // (no visible end-state to assert on).
-  await settleCollision(page)
+  // The cross-container ghost preview re-renders as the pointer settles into its
+  // target slot. Wait for that to quiesce before releasing: the drop commits the
+  // element to whatever slot the preview currently shows (the pending tree), so
+  // releasing mid-re-render would commit an intermediate position — a real user
+  // releases once the ghost is where they want it. This is a condition-based
+  // settle, robust across browser timings where a fixed pause is not.
+  await waitForPreviewStable(page)
 
   const settle = waitForMutationSettlement(page)
   await releaseDrag(page, targetX, targetY)
