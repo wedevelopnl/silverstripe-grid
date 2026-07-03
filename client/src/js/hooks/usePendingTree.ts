@@ -5,7 +5,7 @@ import { buildMaps } from '@/hooks/useElementMaps'
 import type { ParsedDraggableId } from '@/types/dnd'
 import { buildDraggableId } from '@/types/dnd'
 import type { TreeApiResponse } from '@/types/elements'
-import { NodeIdentity, type NodeKey } from '@/types/identity'
+import { NodeIdentity, type NodeKey, type NodeRef } from '@/types/identity'
 import { applyReorder } from '@/utils/applyReorder'
 import type { OverRectSnapshot } from '@/utils/collisionDetection'
 
@@ -45,6 +45,19 @@ export interface UsePendingTreeReturn {
     canonicalTree: TreeApiResponse,
     canonicalMaps: ElementMaps,
   ): { tree: TreeApiResponse; maps: ElementMaps }
+
+  /**
+   * Read the active element's placement from the current pending (cross-container
+   * preview) tree: its target parent and the sibling it sits after (null = first).
+   *
+   * This is what the ghost visibly shows. The drag-end handler commits THIS
+   * rather than re-resolving from dnd-kit's drag-end collision — that collision
+   * runs against the already-mutated pending DOM and can pick a different `over`
+   * (with a stale `over.rect`) than every drag-move used, landing the element
+   * away from the preview. Returns null when no pending preview is active (i.e.
+   * a same-container move, which resolves by index instead).
+   */
+  getActivePlacement(activeKey: NodeKey): { parent: NodeRef; after: NodeRef | null } | null
 
   /** Reset all pending state. */
   clear(): void
@@ -122,6 +135,25 @@ export function usePendingTree(): UsePendingTreeReturn {
     [],
   )
 
+  const getActivePlacement = useCallback(
+    (activeKey: NodeKey): { parent: NodeRef; after: NodeRef | null } | null => {
+      const maps = pendingMapsRef.current
+      if (maps === null) return null
+
+      const node = maps.nodeMap.get(activeKey)
+      if (!node) return null
+
+      const siblings = maps.childrenByParentKey.get(node.parentKey) ?? []
+      const index = siblings.findIndex((sibling) => sibling.nodeKey === activeKey)
+      // The sibling immediately before the active element is the `after` anchor;
+      // at the head of the container there is none, so the anchor is null.
+      const after = index > 0 ? siblings[index - 1].self : null
+
+      return { parent: node.parent, after }
+    },
+    [],
+  )
+
   const clear = useCallback(() => {
     pendingTreeRef.current = null
     pendingMapsRef.current = null
@@ -132,5 +164,13 @@ export function usePendingTree(): UsePendingTreeReturn {
     setPendingTree(null)
   }, [])
 
-  return { pendingTree, collisionRefs, applyPendingMove, setSourceSiblings, getEffective, clear }
+  return {
+    pendingTree,
+    collisionRefs,
+    applyPendingMove,
+    setSourceSiblings,
+    getEffective,
+    getActivePlacement,
+    clear,
+  }
 }
