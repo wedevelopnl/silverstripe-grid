@@ -1,29 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { performDrag } from '../helpers/drag'
+import { dragHandle, performDrag, waitForMutationSettlement } from '../helpers/drag'
 import { loadFixture, resetFixtures } from '../helpers/fixtures'
-
-/** Get a drag handle by its aria-label (e.g. "Move Main-Alpha"). */
-function dragHandle(page: import('@playwright/test').Page, name: string) {
-  return page.locator(`[data-testid="drag-handle"][aria-label="Move ${name}"]`)
-}
-
-/**
- * Register response listeners for the reorder mutation lifecycle.
- * Must be called BEFORE the action that triggers the mutation (drag release).
- */
-function waitForMutationSettlement(page: import('@playwright/test').Page) {
-  const reorderDone = page.waitForResponse(
-    (resp) => resp.url().includes('/api/reorder') && resp.ok(),
-  )
-  const refetchDone = page.waitForResponse(
-    (resp) => resp.url().includes('/api/readTree/') && resp.ok(),
-  )
-
-  return async () => {
-    await reorderDone
-    await refetchDone
-  }
-}
 
 test.describe('Multi-zone isolation', () => {
   // Two zones stacked vertically need a tall viewport
@@ -103,6 +80,28 @@ test.describe('Multi-zone isolation', () => {
       'Sidebar-Alpha',
     ])
 
+    // Phase 4's cross-zone drag may legally resolve to a same-zone fallback
+    // reorder (engine-dependent). Reload for the authoritative order before
+    // capturing what the frontend must render — this also settles any
+    // in-flight reorder before Publish.
+    await page.reload()
+    await expect(page.getByTestId('grid-editor-loading')).toHaveCount(0, { timeout: 15_000 })
+
+    const gridEditorsReloaded = page.getByTestId('grid-editor')
+    const mainZoneReloaded = gridEditorsReloaded.and(page.locator('[data-zone="main"]'))
+    const sidebarZoneReloaded = gridEditorsReloaded.and(page.locator('[data-zone="sidebar"]'))
+    const mainSectionsReloaded = mainZoneReloaded.getByTestId('section-block')
+    const sidebarSectionsReloaded = sidebarZoneReloaded.getByTestId('section-block')
+
+    await expect(mainSectionsReloaded).toHaveCount(2)
+    await expect(sidebarSectionsReloaded).toHaveCount(2)
+    await expect(sidebarSectionsReloaded.getByTestId('section-title')).toHaveText([
+      'Sidebar-Beta',
+      'Sidebar-Alpha',
+    ])
+
+    const mainOrder = await mainSectionsReloaded.getByTestId('section-title').allTextContents()
+
     // --- Phase 5: Publish and verify all sections render on frontend ---
     await page.getByRole('button', { name: /Publish/ }).click()
     await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 10_000 })
@@ -111,8 +110,8 @@ test.describe('Multi-zone isolation', () => {
     await page.goto(livePath)
 
     // All 4 section headings should be present on the frontend.
-    // Order depends on Sort + zone interleaving (not grouped by zone),
-    // so we just verify all titles appear.
+    // Zones interleave on the frontend, so full-array order is not stable —
+    // but relative order WITHIN a zone must match the CMS.
     const frontendHeadings = page.getByRole('heading', { level: 2 })
     await expect(frontendHeadings).toHaveCount(4)
     const headingTexts = await frontendHeadings.allTextContents()
@@ -120,5 +119,7 @@ test.describe('Multi-zone isolation', () => {
     expect(headingTexts).toContain('Main-Beta')
     expect(headingTexts).toContain('Sidebar-Alpha')
     expect(headingTexts).toContain('Sidebar-Beta')
+    expect(headingTexts.indexOf(mainOrder[0])).toBeLessThan(headingTexts.indexOf(mainOrder[1]))
+    expect(headingTexts.indexOf('Sidebar-Beta')).toBeLessThan(headingTexts.indexOf('Sidebar-Alpha'))
   })
 })

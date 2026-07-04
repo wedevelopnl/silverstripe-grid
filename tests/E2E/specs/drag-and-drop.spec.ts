@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { performDrag, startDrag, waitForMutationSettlement } from '../helpers/drag'
+import { dragHandle, performDrag, startDrag, waitForMutationSettlement } from '../helpers/drag'
 import { loadFixture, resetFixtures } from '../helpers/fixtures'
-
-/** Get a drag handle by its aria-label (e.g. "Move Block 1"). */
-function dragHandle(page: import('@playwright/test').Page, name: string) {
-  return page.locator(`[data-testid="drag-handle"][aria-label="Move ${name}"]`)
-}
 
 /**
  * Get a column block by the title it was given in the fixture.
