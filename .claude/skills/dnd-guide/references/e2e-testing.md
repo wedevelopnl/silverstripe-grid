@@ -13,14 +13,14 @@ The DnD E2E tests are among the most timing-sensitive tests in the project. Miss
 
 ## Timing Requirements
 
-These are not arbitrary — each wait corresponds to a real async operation:
+These are not arbitrary — each entry corresponds to a real async operation, either a bounded timeout or a condition assertion:
 
 | Wait | Duration | What it's waiting for |
 |------|----------|----------------------|
-| Activation | 150ms | dnd-kit processes pointer events → React renders DragOverlay |
-| Pointer steps to target | 20 steps | Smooth tracking for collision detection (too few = detection misses) |
-| Collision settlement | 150-200ms | Collision detection settles, pending tree applies if cross-container |
-| API settlement | 500ms after PATCH + GET | TanStack Query cache update → React re-render → dnd-kit re-registers droppable rects |
+| Activation | DragOverlay-visible assertion | dnd-kit processed pointer events and React rendered the overlay (condition, not duration) |
+| Pointer steps to target | 15-30 steps | Smooth tracking for collision detection (too few = detection misses) |
+| Collision settlement | 150-200ms | Collision detection settles, pending tree applies if cross-container (no user-visible end-state) |
+| API settlement | PATCH + GET + 500ms rect re-measurement | TanStack Query cache update → React re-render → dnd-kit re-registers droppable rects |
 
 **The 500ms API settlement is critical for journey tests**: Without it, the next drag starts with stale collision rects from the previous tree state. This manifests as intermittent test failures where the second drag in a sequence drops in the wrong position.
 
@@ -28,17 +28,19 @@ These are not arbitrary — each wait corresponds to a real async operation:
 
 All helpers live in `tests/E2E/helpers/drag.ts`.
 
-### `startDrag(page, source, target, options?)`
+### `startDrag(page, source, target)`
 
-Orchestrates mid-drag assertions. Returns a handle with `release()`.
+Orchestrates a drag from `source` to `target`, pausing mid-drag hovering over the target. Both args are locators (drag-handle locators, or any visible element whose center is the desired pointer position). Returns a handle with `release()`.
 
 **Sequence**:
-1. Scroll target first, then source (prevents source position shift from target scroll)
-2. Calculate 10px movement toward target to exceed PointerSensor's 8px activation threshold
-3. Move with 3 steps to activation point
-4. Wait 150ms for DragOverlay to render
-5. Move to target with 20 steps
-6. Wait 150ms for collision detection to settle
+1. Scroll target into view first, then source (prevents source position shift from target scroll)
+2. Move to source center, press mouse down
+3. Move 10px toward target (3 steps) to exceed PointerSensor's 8px activation threshold
+4. Assert the DragOverlay is visible — the condition that replaced the old activation sleep
+5. Move to target center with 20 steps
+6. Pause for collision detection to settle at the final position (bounded timeout, no visible end-state to assert)
+
+`release()` calls `releaseDrag` at the target center, then waits for the DragOverlay to be hidden (the signal `onDragEnd` completed).
 
 **Usage for mid-drag assertions**:
 ```typescript
@@ -49,22 +51,38 @@ await drag.release();
 
 ### `performDrag(page, source, target)`
 
-Wrapper: `startDrag` + immediate release. Use for simple drags without mid-drag assertions.
+Wrapper: `startDrag` + immediate `release()`. Use for simple drags without mid-drag assertions.
+
+### `releaseDrag(page, x, y)`
+
+Completes a drag by releasing at viewport coordinate `(x, y)`. Dispatches a genuine `pointerup` `PointerEvent` at that coordinate before calling `page.mouse.up()` — **never complete a drop with raw `page.mouse.up()`**. Playwright's Firefox driver does not deliver the `pointerup` from `page.mouse.up()` to the page after a synthetic drag (the page sees `pointerdown` and every `pointermove`, but never the release), and dnd-kit's `PointerSensor` listens for that `pointerup` on the document to end the drag. Without the dispatched event, `onDragEnd` never fires on Firefox: no reorder request, DragOverlay stays mounted. The dispatched event runs the sensor's real handler, resolving the drop from the `over` established by the preceding `pointermove`s — the same product code path a real release produces. `page.mouse.up()` still follows to reset Playwright's button state; on engines that already delivered the native release it's a harmless no-op.
 
 ### `waitForMutationSettlement(page)`
 
-Waits for the complete mutation lifecycle:
-1. Intercepts PATCH `/api/reorder` response (success)
-2. Intercepts GET `/api/readTree/` refetch (success)
-3. Pauses 500ms for cache → render → rect re-registration
+Registers response listeners for the reorder mutation lifecycle and returns an async settle function. **Must be called BEFORE the action that triggers the mutation** (the drag release) — it registers `page.waitForResponse` listeners that would miss the response if attached after the request already resolved. Calling the returned settle function:
+1. Awaits the PATCH `/api/reorder` response (success)
+2. Awaits the GET `/api/readTree/` refetch (success)
+3. Pauses 500ms for TanStack Query's cache update, React's reconciliation, and dnd-kit re-registering its droppable rects — an internal step with no DOM end-state to assert on
 
-### `dropAndSettle(page, source, target)`
+### `dropAndSettle(page, targetX, targetY)`
 
-Combines: move 15 steps to target → wait 200ms → release → `waitForMutationSettlement`. Use for cross-container drops in journey tests.
+Combines the final positioning move, mouse release, and API round-trip wait into one call for cross-container drop tests. Takes final viewport coordinates (not locators — call after a prior `activateDragByTitle`/`enterContainerCenter` has already established the mid-drag pointer position). Sequence: move 15 steps to `(targetX, targetY)` → let collision detection settle (bounded pause) → register `waitForMutationSettlement` → `releaseDrag(page, targetX, targetY)` → await the settle function.
 
 ### `activateDragByTitle(page, title, options?)`
 
-Locates element by drag handle `aria-label`, activates drag with optional axis selection. Returns element locator for further assertions.
+Locates the drag handle by its accessible label (`[data-testid="drag-handle"][aria-label="Move ${title}"]`), scrolls it into view, presses mouse down, and moves 10px (3 steps) on the specified axis to exceed the 8px activation threshold. `options`: `{ axis?: 'vertical' | 'horizontal' }` (default `'vertical'`) and `{ overlayTestId?: string }` — when given, asserts that specific overlay test ID is visible; otherwise asserts any drag overlay rendered. Returns `{ x, y }`, the handle's center coordinates, useful for computing subsequent mouse moves relative to the drag origin.
+
+### `dragHandle(page, name)`
+
+Locates a drag handle by its accessible label — `[data-testid="drag-handle"][aria-label="Move ${name}"]`. A plain locator lookup, not a drag action; pairs directly with `performDrag`/`startDrag` (see `multi-zone.spec.ts`, `drag-and-drop.spec.ts`, `ghost-jump.spec.ts`).
+
+### `enterContainerCenter(page, container, childTestId, expectedCount)`
+
+Enters a target container mid-drag by scrolling it into view and moving the pointer to its bounding-box center (30 steps), then waits for `container.getByTestId(childTestId)` to reach `expectedCount` — the signal the pending tree applied and the incoming ghost is reflected. Used by `cross-column-element-drop.spec.ts` and `cross-row-column-drop.spec.ts` for container entry.
+
+### `watchReorderRequests(page)`
+
+Returns `{ count(), stop() }`. Registers a `page.on('request', ...)` listener counting requests whose URL includes `/api/reorder`. Used by cancel-path tests to assert a cancelled drag fired **no** mutation — the visual revert alone can't distinguish "never sent" from "sent and rejected". Call `stop()` to remove the listener once the assertion is made.
 
 ## Positioning Strategies
 
@@ -86,17 +104,16 @@ Direction detection depends on where the pointer lands relative to the target el
 | After | Right 65% of **outer grid cell** | `'after'` |
 | Between two columns | Right 85% of left column's outer grid cell | Depends on collision resolution |
 
-**Outer vs inner**: The droppable rect for columns is the SortableContext wrapper div, not the `column-block` inner div. Position calculations must use the outer element's bounding box.
+**Outer vs inner**: The droppable rect for columns is the SortableContext wrapper div, not the `column-block` inner div. Position calculations must use the outer element's bounding box. That outer cell is directly locatable via `data-testid="column-block-outer"` — see `cross-row-column-drop.spec.ts`'s `getOuterBox` helper, which filters it by the column's expand/collapse `aria-label` rather than reaching through `column-block`.
 
 ### Container Entry
 
-For cross-container moves, enter the target container before positioning within it:
+For cross-container moves, enter the target container before positioning within it. Two strategies exist:
 
-- `enterColumn()` — Move to column CENTER (not a specific child). Ensures trajectory reliably triggers container entry regardless of prior pointer position.
-- `enterAtFirst()` — For downward entry (top of container)
-- `enterFromBelow()` — For upward entry; offset -40px past center to ensure `centerCrossing`'s threshold reliably crosses (avoids floating-point rounding at boundary)
+- `enterContainerCenter(page, container, childTestId, expectedCount)` (`helpers/drag.ts`) — move to the container's own bounding-box CENTER. A single center move keeps the trajectory reliable regardless of drag direction. Used by `cross-column-element-drop.spec.ts` and `cross-row-column-drop.spec.ts`.
+- `enterAtFirst(page, targetSection, expectedRowCount)` / `enterFromBelow(page, targetSection, expectedRowCount)` — spec-local to `cross-section-drop.spec.ts` (not in `helpers/drag.ts`). Child-anchored entry: move to the target section's FIRST row center for downward entry, or -40px past the LAST row's center for upward entry.
 
-**Bidirectional entry matters**: Moving UP into a container requires a different entry point than moving DOWN. The `-40px` offset past center for upward entry was added to fix intermittent failures from floating-point precision at the threshold boundary.
+**Bidirectional entry matters**: Moving UP into a container requires a different entry point than moving DOWN. The `-40px` offset past center for upward entry in `enterFromBelow` ensures the `centerCrossing` UP threshold is reliably crossed despite floating-point rounding at the boundary.
 
 ## Journey Test Patterns
 
@@ -117,12 +134,18 @@ Journey tests run multiple sequential drag operations in a single test. They are
 ```typescript
 test('moves elements across containers', async ({ page }) => {
   // Operation 1: Forward (A→B), before-first
-  await dropAndSettle(page, sourceHandle, targetHandle);
-  await expect(targetChildren).toHaveCount(expectedCount);
+  await activateDragByTitle(page, 'Element A1', { overlayTestId: 'drag-overlay-element' });
+  await enterContainerCenter(page, colB, 'element-card', 4);
+  const pos1 = await elPosition(colB, { before: 'Element B1' });
+  await dropAndSettle(page, pos1.x, pos1.y);
+  await expect(colB.getByTestId('element-card-title')).toHaveText([/* ... */]);
 
   // Operation 2: Reverse (B→A), between
-  await dropAndSettle(page, sourceHandle2, targetHandle2);
-  await expect(targetChildren2).toHaveCount(expectedCount2);
+  await activateDragByTitle(page, 'Element B3', { overlayTestId: 'drag-overlay-element' });
+  await enterContainerCenter(page, colA, 'element-card', 3);
+  const pos2 = await elPosition(colA, { between: ['Element A2', 'Element A3'] });
+  await dropAndSettle(page, pos2.x, pos2.y);
+  await expect(colA.getByTestId('element-card-title')).toHaveText([/* ... */]);
 
   // Final: Verify persistence
   await page.reload();
@@ -141,15 +164,17 @@ Moving the only item from a container leaves it empty. Test this explicitly:
 - The drop should land at the correct position (not just "somewhere in the container")
 - Verify persistence after reload
 
-**Bidirectional depletion**: Test moving the lone item both downward (from above) and upward (from below), as these exercise different collision detection paths.
+**Bidirectional depletion**: Test moving the lone item both downward (from above) and upward (from below), as these exercise different collision detection paths. This coverage now exists at all three hierarchy levels: rows (`cross-section-drop.spec.ts`), columns (`cross-row-column-drop.spec.ts`), and elements (`cross-column-element-drop.spec.ts`) — each has a forward "source depletion" step and a reverse "source depletion from below/reverse" step.
 
 ### Cancel Mid-Drag
 
 Press Escape during a cross-container drag to cancel:
 
 - Both source and target containers should revert to their initial state
-- No API call should fire
+- No API call should fire — assert this explicitly with `watchReorderRequests(page)` (registered before the drag starts, checked via `.count()` after Escape); the visual revert alone can't prove a request was never sent
 - The pending tree should clear
+
+**Overlap-gate ghost-departure regression**: `cross-section-drop.spec.ts`'s first journey step (`'Forward, before-first: A1 → Beta before B1'`) asserts the source section's row count drops to the expected value immediately after the pending move applies — before the drop completes. This is the regression coverage formerly owned by `cross-container-ghost.spec.ts` (since retired): without the overlap gate in `centerCrossing`, stale source-sibling collisions pin the ghost in the source container and this count never drops.
 
 ### Persistence Across Reload
 
