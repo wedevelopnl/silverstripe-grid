@@ -59,39 +59,6 @@ const closestCenterLive: CollisionDetection = (args) => {
 }
 
 /**
- * Filters droppable containers to only those valid for the given active item.
- *
- * A container is valid if:
- * - It has the same type as the active item (sibling reordering)
- * - It has the parent container type of the active item (dropping into parent)
- * - For sections (parent = 'root'), any container with an unparseable ID
- *   (e.g. the root SortableContext whose ID is 'root')
- */
-export function filterDroppablesByType(
-  activeId: string,
-  containers: DroppableContainer[],
-): DroppableContainer[] {
-  const activeType = getDraggableType(activeId)
-  if (activeType === null) return []
-
-  const parentType = PARENT_CONTAINER_TYPE[activeType]
-
-  return containers.filter((container) => {
-    const containerType = getDraggableType(String(container.id))
-
-    if (containerType === activeType) return true
-
-    if (containerType === parentType) return true
-
-    // Sections live under a page — the sortable context wrapping sections has
-    // an unparseable droppable id, so `containerType` is null. Accept it.
-    if (parentType === 'page' && containerType === null) return true
-
-    return false
-  })
-}
-
-/**
  * Returns only same-type sibling containers for the active draggable.
  */
 export function filterSiblings(
@@ -501,11 +468,3 @@ export function createTypedCollisionDetection(
     )
   }
 }
-
-/**
- * Static type-aware collision detection — convenience wrapper using
- * `hasPendingMove = false` (always uses centerCrossing for siblings).
- */
-export const typedCollisionDetection: CollisionDetection = createTypedCollisionDetection({
-  hasPendingMoveRef: { current: false },
-})
