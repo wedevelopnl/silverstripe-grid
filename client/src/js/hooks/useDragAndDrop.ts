@@ -23,7 +23,6 @@ import { resolveInsertDirection } from '@/utils/resolveInsertDirection'
 // --- Public types ---
 
 export interface DragState {
-  activeId: string
   activeType: DraggableType
   activeNode: ElementNode
 }
@@ -162,7 +161,6 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
       pending.setSourceSiblings(sourceSiblingIds)
 
       setDragState({
-        activeId,
         activeType: parsed.type,
         activeNode: node,
       })

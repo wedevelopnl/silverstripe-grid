@@ -60,14 +60,14 @@ describe('usePendingTree', () => {
   })
 
   describe('applyPendingMove', () => {
-    it('sets pending tree and returns new tree/maps for a cross-container move', () => {
+    it('sets pending tree for a cross-container move', () => {
       const { tree, element } = buildTwoColumnTree()
+      const canonicalMaps = buildMaps(tree)
 
       const { result } = renderHook(() => usePendingTree())
 
-      let moveResult: ReturnType<typeof result.current.applyPendingMove> = null
       act(() => {
-        moveResult = result.current.applyPendingMove(
+        result.current.applyPendingMove(
           createParsedDraggableId('element', element.self.id),
           NodeIdentity.toKey('column', 20),
           null,
@@ -75,10 +75,9 @@ describe('usePendingTree', () => {
         )
       })
 
-      expect(moveResult).not.toBeNull()
       expect(result.current.pendingTree).not.toBeNull()
 
-      const newMaps = moveResult!.maps
+      const { maps: newMaps } = result.current.getEffective(tree, canonicalMaps)
       const col2Children = newMaps.childrenByParentKey.get(NodeIdentity.toKey('column', 20))
       expect(col2Children).toHaveLength(1)
       expect(col2Children?.[0].self.id).toBe(element.self.id)
@@ -122,13 +121,12 @@ describe('usePendingTree', () => {
       expect(pendingItems?.has(`element-${element.self.id}`)).toBe(true)
     })
 
-    it('returns null for a no-op move (same position)', () => {
+    it('leaves pendingTree null for a no-op move (same position)', () => {
       const { tree } = buildTwoColumnTree()
       const { result } = renderHook(() => usePendingTree())
 
-      let moveResult: ReturnType<typeof result.current.applyPendingMove> = null
       act(() => {
-        moveResult = result.current.applyPendingMove(
+        result.current.applyPendingMove(
           createParsedDraggableId('element', 5),
           NodeIdentity.toKey('column', 10),
           null,
@@ -136,7 +134,6 @@ describe('usePendingTree', () => {
         )
       })
 
-      expect(moveResult).toBeNull()
       expect(result.current.pendingTree).toBeNull()
     })
 
