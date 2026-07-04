@@ -3,70 +3,9 @@ import { createDroppable, createDroppableWithRect, makeDomRect } from '@/testing
 import {
   centerCrossing,
   createTypedCollisionDetection,
-  filterDroppablesByType,
   filterParentContainers,
   filterSiblings,
-  typedCollisionDetection,
 } from './collisionDetection'
-
-describe('filterDroppablesByType', () => {
-  const containers = [
-    createDroppable('section-1'),
-    createDroppable('section-2'),
-    createDroppable('row-10'),
-    createDroppable('row-20'),
-    createDroppable('column-5'),
-    createDroppable('column-6'),
-    createDroppable('element-100'),
-    createDroppable('element-200'),
-    createDroppable('root'),
-  ]
-
-  it('returns siblings and parent containers for a row (rows + sections)', () => {
-    const result = filterDroppablesByType('row-17', containers)
-    const ids = result.map((c) => String(c.id))
-
-    expect(ids).toEqual(expect.arrayContaining(['row-10', 'row-20', 'section-1', 'section-2']))
-    expect(ids).not.toContain('column-5')
-    expect(ids).not.toContain('element-100')
-    expect(ids).not.toContain('root')
-  })
-
-  it('returns siblings and parent containers for a column (columns + rows)', () => {
-    const result = filterDroppablesByType('column-5', containers)
-    const ids = result.map((c) => String(c.id))
-
-    expect(ids).toEqual(expect.arrayContaining(['column-5', 'column-6', 'row-10', 'row-20']))
-    expect(ids).not.toContain('section-1')
-    expect(ids).not.toContain('element-100')
-  })
-
-  it('returns siblings and parent containers for an element (elements + columns)', () => {
-    const result = filterDroppablesByType('element-100', containers)
-    const ids = result.map((c) => String(c.id))
-
-    expect(ids).toEqual(
-      expect.arrayContaining(['element-100', 'element-200', 'column-5', 'column-6']),
-    )
-    expect(ids).not.toContain('row-10')
-    expect(ids).not.toContain('section-1')
-  })
-
-  it('returns sections and containers with unparseable IDs for a section (parent = root)', () => {
-    const result = filterDroppablesByType('section-1', containers)
-    const ids = result.map((c) => String(c.id))
-
-    expect(ids).toEqual(expect.arrayContaining(['section-1', 'section-2', 'root']))
-    expect(ids).not.toContain('row-10')
-    expect(ids).not.toContain('column-5')
-  })
-
-  it('returns empty array for unknown active type', () => {
-    expect(filterDroppablesByType('unknown-99', containers)).toEqual([])
-    expect(filterDroppablesByType('root', containers)).toEqual([])
-    expect(filterDroppablesByType('', containers)).toEqual([])
-  })
-})
 
 describe('filterSiblings', () => {
   const containers = [
@@ -2120,43 +2059,6 @@ describe('parent fallback ignores parents with no measured rect (line 477)', () 
   })
 })
 
-describe('typedCollisionDetection static instance uses hasPendingMove=false (line 511)', () => {
-  // Line 511: the static convenience instance hard-codes `hasPendingMoveRef: { current: false }`.
-  // A `false` → `true` mutant would route siblings through closestCenterLive (pure distance,
-  // always a hit) instead of centerCrossing (requires a threshold crossing). With a sibling the
-  // pointer has NOT crossed, the real (false) instance returns [] for siblings and falls to the
-  // parent; the mutant would return the sibling directly.
-  it('returns no sibling collision when the centerCrossing threshold is not crossed', () => {
-    const sibling = createDroppableWithRect('row-2', {
-      left: 50,
-      top: 275,
-      width: 200,
-      height: 100,
-    })
-    // Pointer inside the sibling rect but well short of the crossing threshold, and no parent
-    // present → centerCrossing yields [] and there is nothing to fall back to.
-    const collisionRect = makeDomRect(100, 265, 100, 50) // center (150, 290), threshold 300 not met
-    const initialRect = makeDomRect(100, 75, 100, 50)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [sibling],
-      droppableRects: new Map<string | number, ClientRect>([
-        ['row-2', makeDomRect(50, 275, 200, 100)],
-      ]),
-      pointerCoordinates: { x: 150, y: 290 },
-    }
-
-    // Real static instance (hasPendingMove=false → centerCrossing, not crossed): [].
-    // Mutant (true → closestCenterLive): would return row-2.
-    expect(typedCollisionDetection(args as never)).toEqual([])
-  })
-})
-
 describe('closestCenterLive containment forced-true conjuncts (line 45)', () => {
   // Line 45 `contains` is a four-conjunct `&&` chain. `ConditionalExpression => true`
   // mutants force one conjunct to `true`, so a pointer that is OUTSIDE on that single
@@ -2490,34 +2392,3 @@ function runWithCurrentYUp(currentY: number) {
   }
   return centerCrossing(args as never)
 }
-
-describe('typedCollisionDetection', () => {
-  it('is a function (static convenience instance)', () => {
-    expect(typeof typedCollisionDetection).toBe('function')
-  })
-
-  it('behaves like createTypedCollisionDetection with hasPendingMove=false', () => {
-    const parent = createDroppable('section-1')
-    const rects = new Map<string | number, ClientRect>([['section-1', makeDomRect(0, 0, 800, 600)]])
-
-    const collisionRect = makeDomRect(100, 285, 100, 50)
-    const initialRect = makeDomRect(100, 75, 100, 50)
-
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [parent],
-      droppableRects: rects,
-      pointerCoordinates: { x: 400, y: 300 },
-    }
-
-    const collisions = typedCollisionDetection(args as never)
-
-    expect(collisions.length).toBeGreaterThan(0)
-    expect(collisions[0].id).toBe('section-1')
-  })
-})
