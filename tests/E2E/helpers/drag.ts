@@ -332,7 +332,7 @@ export async function activateDragByTitle(
 ): Promise<{ x: number; y: number }> {
   const { axis = 'vertical', overlayTestId } = options
 
-  const handle = page.locator(`[data-testid="drag-handle"][aria-label="Move ${title}"]`)
+  const handle = dragHandle(page, title)
   await handle.scrollIntoViewIfNeeded()
   const box = await handle.boundingBox()
   if (box === null) {

@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test'
-import { dragHandle, performDrag, waitForMutationSettlement } from '../helpers/drag'
+import {
+  dragHandle,
+  performDrag,
+  waitForMutationSettlement,
+  watchReorderRequests,
+} from '../helpers/drag'
 import { loadFixture, resetFixtures } from '../helpers/fixtures'
 
 test.describe('Multi-zone isolation', () => {
@@ -69,6 +74,14 @@ test.describe('Multi-zone isolation', () => {
     // dnd-kit resolves to the nearest same-zone collision (not cross-zone),
     // so a reorder may fire within the main zone. The key invariant:
     // no section moves between zones — counts stay the same.
+    // Register the response listener up front (a late listener could miss
+    // an already-completed response) and await it only if a request actually
+    // fired, so the reload below reads settled state.
+    const phase4Watch = watchReorderRequests(page)
+    const phase4ReorderResponded = page
+      .waitForResponse((resp) => resp.url().includes('/api/reorder'))
+      .catch(() => null)
+
     await performDrag(page, dragHandle(page, 'Main-Beta'), dragHandle(page, 'Sidebar-Beta'))
 
     // Both zones still have exactly 2 sections each
@@ -80,10 +93,14 @@ test.describe('Multi-zone isolation', () => {
       'Sidebar-Alpha',
     ])
 
+    if (phase4Watch.count() > 0) {
+      await phase4ReorderResponded
+    }
+    phase4Watch.stop()
+
     // Phase 4's cross-zone drag may legally resolve to a same-zone fallback
-    // reorder (engine-dependent). Reload for the authoritative order before
-    // capturing what the frontend must render — this also settles any
-    // in-flight reorder before Publish.
+    // reorder (engine-dependent). Reload to fetch the authoritative
+    // post-phase-4 order for the frontend comparison below.
     await page.reload()
     await expect(page.getByTestId('grid-editor-loading')).toHaveCount(0, { timeout: 15_000 })
 
