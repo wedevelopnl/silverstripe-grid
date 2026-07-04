@@ -101,6 +101,14 @@ test.describe('Cross-section row drop — both directions', () => {
     await test.step('Forward, before-first: A1 → Beta before B1', async () => {
       await activateDragByTitle(page, 'Row A1', { overlayTestId: 'drag-overlay-row' })
       await enterAtFirst(page, sectionBeta, 4)
+
+      // Overlap-gate regression (formerly cross-container-ghost.spec.ts): once
+      // the pending move applies, the ghost must have LEFT the source — without
+      // the overlap gate in centerCrossing, stale source-sibling collisions pin
+      // the ghost in Alpha and this count never drops.
+      await expect(sectionAlpha.getByTestId('row-block')).toHaveCount(2)
+      await expect(sectionAlpha.getByTestId('row-title').first()).toHaveText('Row A2')
+
       const pos = await rowPosition(sectionBeta, { before: 'Row B1' })
       await dropAndSettle(page, pos.x, pos.y)
       await expect(sectionBeta.getByTestId('row-title')).toHaveText([

@@ -49,12 +49,6 @@ WeDevelop\Grid\Dev\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
-    cross-container-ghost:
-      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossContainerGhost.yml'
-      post_actions:
-        - action: publish_recursive
-          class: Page
-          identifier: e2e_page
     cross-section-drop:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossSectionDrop.yml'
       post_actions:
