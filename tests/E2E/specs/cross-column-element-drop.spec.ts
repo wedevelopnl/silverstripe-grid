@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
 import { resetFixtures, loadAndNavigate } from '../helpers/fixtures'
-import { activateDragByTitle, dropAndSettle, watchReorderRequests } from '../helpers/drag'
+import {
+  activateDragByTitle,
+  dropAndSettle,
+  enterContainerCenter,
+  watchReorderRequests,
+} from '../helpers/drag'
 
 /**
  * Cross-column element drop positions — journey tests.
@@ -18,21 +23,6 @@ function getColumn(page: Page, colTitle: string) {
   return page.getByTestId('column-block').filter({
     has: page.locator(`[aria-label="Move ${colTitle}"]`),
   })
-}
-
-/**
- * Enter the target column by moving the pointer to the column's center.
- * Uses the container center (not a specific child) so the entry trajectory
- * reliably triggers collision detection regardless of the pointer's starting
- * position — critical in journey tests where multiple prior operations leave
- * the pointer at unpredictable coordinates.
- */
-async function enterColumn(page: Page, targetCol: Locator, expectedElCount: number) {
-  await targetCol.scrollIntoViewIfNeeded()
-  const box = await targetCol.boundingBox()
-  expect(box).not.toBeNull()
-  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2, { steps: 30 })
-  await expect(targetCol.getByTestId('element-card')).toHaveCount(expectedElCount)
 }
 
 /**
@@ -102,7 +92,7 @@ test.describe('Cross-column element drop — both directions', () => {
     // Col B [B1, B2, B3]  →  Col B [*A1*, B1, B2, B3]
     await test.step('Forward, before-first: A1 → Col B before B1', async () => {
       await activateDragByTitle(page, 'Element A1', { overlayTestId: 'drag-overlay-element' })
-      await enterColumn(page, colB, 4)
+      await enterContainerCenter(page, colB, 'element-card', 4)
       const pos = await elPosition(colB, { before: 'Element B1' })
       await dropAndSettle(page, pos.x, pos.y)
       await expect(colB.getByTestId('element-card-title')).toHaveText([
@@ -117,7 +107,7 @@ test.describe('Cross-column element drop — both directions', () => {
     // Col A [A2, A3]           →  Col A [A2, *B3*, A3]
     await test.step('Reverse, between: B3 → Col A between A2,A3', async () => {
       await activateDragByTitle(page, 'Element B3', { overlayTestId: 'drag-overlay-element' })
-      await enterColumn(page, colA, 3)
+      await enterContainerCenter(page, colA, 'element-card', 3)
       const pos = await elPosition(colA, { between: ['Element A2', 'Element A3'] })
       await dropAndSettle(page, pos.x, pos.y)
       await expect(colA.getByTestId('element-card-title')).toHaveText([
@@ -131,7 +121,7 @@ test.describe('Cross-column element drop — both directions', () => {
     // Col A [A2, B3, A3]        →  Col A [A2, B3, A3, *B2*]
     await test.step('Reverse, after-last: B2 → Col A after A3', async () => {
       await activateDragByTitle(page, 'Element B2', { overlayTestId: 'drag-overlay-element' })
-      await enterColumn(page, colA, 4)
+      await enterContainerCenter(page, colA, 'element-card', 4)
       const pos = await elPosition(colA, { after: 'Element A3' })
       await dropAndSettle(page, pos.x, pos.y)
       await expect(colA.getByTestId('element-card-title')).toHaveText([
@@ -146,7 +136,7 @@ test.describe('Cross-column element drop — both directions', () => {
     // Col B [A1, B1]           →  Col B [A1, *B2*, B1]
     await test.step('Forward, between: B2 → Col B between A1,B1', async () => {
       await activateDragByTitle(page, 'Element B2', { overlayTestId: 'drag-overlay-element' })
-      await enterColumn(page, colB, 3)
+      await enterContainerCenter(page, colB, 'element-card', 3)
       const pos = await elPosition(colB, { between: ['Element A1', 'Element B1'] })
       await dropAndSettle(page, pos.x, pos.y)
       await expect(colB.getByTestId('element-card-title')).toHaveText([
@@ -160,7 +150,7 @@ test.describe('Cross-column element drop — both directions', () => {
     // Col B [A1, B2, B1]     →  Col B [A1, B2, B1, *A3*]
     await test.step('Forward, after-last: A3 → Col B after B1', async () => {
       await activateDragByTitle(page, 'Element A3', { overlayTestId: 'drag-overlay-element' })
-      await enterColumn(page, colB, 4)
+      await enterContainerCenter(page, colB, 'element-card', 4)
       const pos = await elPosition(colB, { after: 'Element B1' })
       await dropAndSettle(page, pos.x, pos.y)
       await expect(colB.getByTestId('element-card-title')).toHaveText([
@@ -215,7 +205,7 @@ test.describe('Cross-column element drop — source depletion and cancel', () =>
       await expect(colA.getByTestId('element-card')).toHaveCount(1)
 
       await activateDragByTitle(page, 'Element A1', { overlayTestId: 'drag-overlay-element' })
-      await enterColumn(page, colB, 4)
+      await enterContainerCenter(page, colB, 'element-card', 4)
       const pos = await elPosition(colB, { between: ['Element B1', 'Element B2'] })
       await dropAndSettle(page, pos.x, pos.y)
 
@@ -249,7 +239,7 @@ test.describe('Cross-column element drop — source depletion and cancel', () =>
       await expect(colB.getByTestId('element-card')).toHaveCount(1)
 
       await activateDragByTitle(page, 'Element B1', { overlayTestId: 'drag-overlay-element' })
-      await enterColumn(page, colA, 4)
+      await enterContainerCenter(page, colA, 'element-card', 4)
       const pos = await elPosition(colA, { after: 'Element A3' })
       await dropAndSettle(page, pos.x, pos.y)
 
@@ -281,7 +271,7 @@ test.describe('Cross-column element drop — source depletion and cancel', () =>
       const colB = getColumn(page, 'Col B')
 
       await activateDragByTitle(page, 'Element A1', { overlayTestId: 'drag-overlay-element' })
-      await enterColumn(page, colB, 4)
+      await enterContainerCenter(page, colB, 'element-card', 4)
 
       await page.keyboard.press('Escape')
 
