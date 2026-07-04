@@ -18,92 +18,43 @@ function getChildCount(node: ElementNode): number {
   return node.children?.length ?? 0
 }
 
-interface PreviewProps {
-  readonly node: ElementNode
-  readonly type: DraggableType
-}
-
-function SectionPreview({ node, type }: PreviewProps): React.JSX.Element {
-  return (
-    <>
-      <i
-        className={`ssgrid-drag-overlay__icon ${node.blockSchema.icon}`}
-        data-testid={`drag-overlay-${type}-icon`}
-      />
-      <span className="ssgrid-drag-overlay__title" data-testid={`drag-overlay-${type}-title`}>
-        {node.title}
-      </span>
-      <span className="ssgrid-drag-overlay__meta" data-testid={`drag-overlay-${type}-meta`}>
-        {pluralize(getChildCount(node), t('WeDevelopGrid.DragOverlayContent.ROW_SINGULAR', 'row'))}
-      </span>
-    </>
-  )
-}
-
-function RowPreview({ node, type }: PreviewProps): React.JSX.Element {
-  return (
-    <>
-      <i
-        className={`ssgrid-drag-overlay__icon ${node.blockSchema.icon}`}
-        data-testid={`drag-overlay-${type}-icon`}
-      />
-      <span className="ssgrid-drag-overlay__title" data-testid={`drag-overlay-${type}-title`}>
-        {node.title}
-      </span>
-      <span className="ssgrid-drag-overlay__meta" data-testid={`drag-overlay-${type}-meta`}>
-        {pluralize(
-          getChildCount(node),
-          t('WeDevelopGrid.DragOverlayContent.COLUMN_SINGULAR', 'column'),
-        )}
-      </span>
-    </>
-  )
-}
-
-function ColumnPreview({ node, type }: PreviewProps): React.JSX.Element {
-  return (
-    <>
-      <i
-        className={`ssgrid-drag-overlay__icon ${node.blockSchema.icon}`}
-        data-testid={`drag-overlay-${type}-icon`}
-      />
-      <span className="ssgrid-drag-overlay__title" data-testid={`drag-overlay-${type}-title`}>
-        {node.title}
-      </span>
-    </>
-  )
-}
-
-function ElementPreview({ node, type }: PreviewProps): React.JSX.Element {
-  return (
-    <>
-      <i
-        className={`ssgrid-drag-overlay__icon ${node.blockSchema.icon}`}
-        data-testid={`drag-overlay-${type}-icon`}
-      />
-      <span className="ssgrid-drag-overlay__title" data-testid={`drag-overlay-${type}-title`}>
-        {node.title}
-      </span>
-    </>
-  )
-}
-
-const PREVIEW_BY_TYPE: Record<DraggableType, React.ComponentType<PreviewProps>> = {
-  section: SectionPreview,
-  row: RowPreview,
-  column: ColumnPreview,
-  element: ElementPreview,
+/**
+ * Sections and rows show a child-count meta line; columns and leaf elements
+ * render icon + title only.
+ */
+function getMetaLabel(node: ElementNode, type: DraggableType): string | null {
+  if (type === 'section') {
+    return pluralize(getChildCount(node), t('WeDevelopGrid.DragOverlayContent.ROW_SINGULAR', 'row'))
+  }
+  if (type === 'row') {
+    return pluralize(
+      getChildCount(node),
+      t('WeDevelopGrid.DragOverlayContent.COLUMN_SINGULAR', 'column'),
+    )
+  }
+  return null
 }
 
 export default function DragOverlayContent({
   node,
   type,
 }: DragOverlayContentProps): React.JSX.Element {
-  const Preview = PREVIEW_BY_TYPE[type]
+  const meta = getMetaLabel(node, type)
 
   return (
     <div className="ssgrid-drag-overlay" data-testid={`drag-overlay-${type}`}>
-      <Preview node={node} type={type} />
+      <i
+        className={`ssgrid-drag-overlay__icon ${node.blockSchema.icon}`}
+        data-testid={`drag-overlay-${type}-icon`}
+      />
+      <span className="ssgrid-drag-overlay__title" data-testid={`drag-overlay-${type}-title`}>
+        {node.title}
+      </span>
+      {meta !== null && (
+        <span className="ssgrid-drag-overlay__meta" data-testid={`drag-overlay-${type}-meta`}>
+          {meta}
+        </span>
+      )}
     </div>
   )
 }
