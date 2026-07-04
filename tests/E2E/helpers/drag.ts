@@ -27,6 +27,11 @@ function dragOverlay(page: Page): Locator {
   return page.getByTestId(/^drag-overlay-(element|row|column|section)$/)
 }
 
+/** Locate a grid drag handle by its accessible label (e.g. "Move Row A1"). */
+export function dragHandle(page: Page, name: string): Locator {
+  return page.locator(`[data-testid="drag-handle"][aria-label="Move ${name}"]`)
+}
+
 /**
  * Wait until the drag overlay is mounted — the user-visible signal that
  * dnd-kit has activated the drag and React has rendered the DragOverlay.

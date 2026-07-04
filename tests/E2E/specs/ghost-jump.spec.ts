@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { resetFixtures, loadAndNavigate } from '../helpers/fixtures'
-import { releaseDrag, waitForMutationSettlement } from '../helpers/drag'
+import { dragHandle, releaseDrag, waitForMutationSettlement } from '../helpers/drag'
 
 /**
  * Regression test for ghost-jump bug: with exactly 2 sibling rows, starting
@@ -36,7 +36,7 @@ test.describe('Ghost jump regression', () => {
     // can scroll the CMS content panel when the handle is at the viewport edge,
     // so we measure Row 1's baseline position AFTER scrolling to avoid a false
     // positive from scroll-induced Y shift.
-    const row2Handle = page.locator('[data-testid="drag-handle"][aria-label="Move Row 2"]')
+    const row2Handle = dragHandle(page, 'Row 2')
     await row2Handle.scrollIntoViewIfNeeded()
     const handleBox = await row2Handle.boundingBox()
     expect(handleBox).not.toBeNull()
