@@ -85,6 +85,12 @@ WeDevelop\Grid\Dev\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
+    cross-row-column-drop-single-reverse:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossRowColumnDropSingleReverse.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
     cross-column-element-drop:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossColumnElementDrop.yml'
       post_actions:
@@ -93,6 +99,12 @@ WeDevelop\Grid\Dev\FixtureLoader:
           identifier: e2e_page
     cross-column-element-drop-single:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossColumnElementDropSingle.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
+    cross-column-element-drop-single-reverse:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossColumnElementDropSingleReverse.yml'
       post_actions:
         - action: publish_recursive
           class: Page

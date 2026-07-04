@@ -239,6 +239,40 @@ test.describe('Cross-column element drop — source depletion and cancel', () =>
       ])
     })
 
+    // Col A [A1, A2, A3]  →  Col A [A1, A2, A3, *B1*]
+    // Col B [B1]           →  Col B []
+    await test.step('Source depletion reverse: lone element B1 → Col A after A3', async () => {
+      await loadAndNavigate(page, 'cross-column-element-drop-single-reverse')
+      const colA = getColumn(page, 'Col A')
+      const colB = getColumn(page, 'Col B')
+      await expect(colA.getByTestId('element-card')).toHaveCount(3)
+      await expect(colB.getByTestId('element-card')).toHaveCount(1)
+
+      await activateDragByTitle(page, 'Element B1', { overlayTestId: 'drag-overlay-element' })
+      await enterColumn(page, colA, 4)
+      const pos = await elPosition(colA, { after: 'Element A3' })
+      await dropAndSettle(page, pos.x, pos.y)
+
+      await expect(colA.getByTestId('element-card-title')).toHaveText([
+        'Element A1',
+        'Element A2',
+        'Element A3',
+        'Element B1',
+      ])
+      await expect(colB.getByTestId('element-card')).toHaveCount(0)
+
+      // Verify persistence
+      await page.reload()
+      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
+      const colAReloaded = getColumn(page, 'Col A')
+      await expect(colAReloaded.getByTestId('element-card-title')).toHaveText([
+        'Element A1',
+        'Element A2',
+        'Element A3',
+        'Element B1',
+      ])
+    })
+
     // Drag A1 into Col B, press Escape → both columns revert to initial state
     await test.step('Cancel mid-drag reverts to original state', async () => {
       const reorderWatch = watchReorderRequests(page)

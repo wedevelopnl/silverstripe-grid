@@ -1,0 +1,64 @@
+# E2E fixture for cross-column element drop — source depletion from below.
+#
+# Structure:
+#   Page (E2E Cross Column Element Drop Single Reverse):
+#     Section (Sort: 1)
+#       Row (Sort: 1)
+#         Col A (Sort: 1, width: 6)
+#           Element A1 (Sort: 1)
+#           Element A2 (Sort: 2)
+#           Element A3 (Sort: 3)
+#         Col B (Sort: 2, width: 6)
+#           Element B1 (Sort: 1)
+#
+# Col B has 1 element. Moving it upward into Col A (after last) tests
+# source depletion + after-last placement from below.
+
+Page:
+  e2e_page:
+    Title: 'E2E Cross Column Element Drop Single Reverse'
+    URLSegment: 'e2e-cross-column-element-drop-single-reverse'
+
+WeDevelop\Grid\Model\Section:
+  section:
+    Title: 'Section'
+    ShowTitle: 1
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+
+WeDevelop\Grid\Model\Row:
+  row:
+    Title: 'Row'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.section
+
+WeDevelop\Grid\Model\Column:
+  col_a:
+    Title: 'Col A'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row
+    GridSettings: '{"default":{"width":6,"offset":0,"visible":true},"overrides":{}}'
+  col_b:
+    Title: 'Col B'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Row.row
+    GridSettings: '{"default":{"width":6,"offset":0,"visible":true},"overrides":{}}'
+
+WeDevelop\Grid\Model\ContentElement:
+  el_a1:
+    Title: 'Element A1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_a
+  el_a2:
+    Title: 'Element A2'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Column.col_a
+  el_a3:
+    Title: 'Element A3'
+    Sort: 3
+    Parent: =>WeDevelop\Grid\Model\Column.col_a
+  el_b1:
+    Title: 'Element B1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_b

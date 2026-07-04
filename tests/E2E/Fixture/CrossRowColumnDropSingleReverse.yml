@@ -1,0 +1,77 @@
+# E2E fixture for cross-row column drop — source depletion from below.
+#
+# Structure:
+#   Page (E2E Cross Row Column Drop Single Reverse):
+#     Section (Sort: 1)
+#       Row A (Sort: 1)
+#         Col A1 (Sort: 1, width: 3) — Block A1
+#         Col A2 (Sort: 2, width: 3) — Block A2
+#         Col A3 (Sort: 3, width: 3) — Block A3
+#       Row B (Sort: 2)
+#         Col B1 (Sort: 1, width: 3) — Block B1
+#
+# Row B has 1 column. Moving it upward into Row A (after last) tests
+# source depletion + after-last placement from below.
+
+Page:
+  e2e_page:
+    Title: 'E2E Cross Row Column Drop Single Reverse'
+    URLSegment: 'e2e-cross-row-column-drop-single-reverse'
+
+WeDevelop\Grid\Model\Section:
+  section:
+    Title: 'Section'
+    ShowTitle: 1
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+
+WeDevelop\Grid\Model\Row:
+  row_a:
+    Title: 'Row A'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.section
+  row_b:
+    Title: 'Row B'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Section.section
+
+WeDevelop\Grid\Model\Column:
+  col_a1:
+    Title: 'Col A1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_a
+    GridSettings: '{"default":{"width":3,"offset":0,"visible":true},"overrides":{}}'
+  col_a2:
+    Title: 'Col A2'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Row.row_a
+    GridSettings: '{"default":{"width":3,"offset":0,"visible":true},"overrides":{}}'
+  col_a3:
+    Title: 'Col A3'
+    Sort: 3
+    Parent: =>WeDevelop\Grid\Model\Row.row_a
+    GridSettings: '{"default":{"width":3,"offset":0,"visible":true},"overrides":{}}'
+  col_b1:
+    Title: 'Col B1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_b
+    GridSettings: '{"default":{"width":3,"offset":0,"visible":true},"overrides":{}}'
+
+WeDevelop\Grid\Model\ContentElement:
+  block_a1:
+    Title: 'Block A1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_a1
+  block_a2:
+    Title: 'Block A2'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_a2
+  block_a3:
+    Title: 'Block A3'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_a3
+  block_b1:
+    Title: 'Block B1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col_b1
