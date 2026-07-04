@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
 import { resetFixtures, loadAndNavigate } from '../helpers/fixtures'
-import { activateDragByTitle, dropAndSettle, watchReorderRequests } from '../helpers/drag'
+import {
+  activateDragByTitle,
+  dropAndSettle,
+  enterContainerCenter,
+  watchReorderRequests,
+} from '../helpers/drag'
 
 /**
  * Cross-row column drop positions — journey tests.
@@ -15,40 +20,6 @@ import { activateDragByTitle, dropAndSettle, watchReorderRequests } from '../hel
 
 function getRow(page: Page, rowTitle: string) {
   return page.getByTestId('row-block').filter({ hasText: rowTitle })
-}
-
-/** Extract column titles from collapse-toggle aria-labels within a row. */
-function getColumnTitles(rowLocator: Locator): Promise<string[]> {
-  return rowLocator
-    .getByTestId('column-block')
-    .getByTestId('collapse-toggle')
-    .evaluateAll((els) =>
-      els.map((el) => (el.getAttribute('aria-label') ?? '').replace(/^(Collapse |Expand )/, '')),
-    )
-}
-
-/**
- * Enter the target row by moving the pointer to the row's center.
- * Uses the container center (not a specific child) so the entry trajectory
- * reliably triggers collision detection regardless of the pointer's starting
- * position — critical in journey tests where multiple prior operations leave
- * the pointer at unpredictable coordinates.
- */
-async function enterRow(page: Page, targetRow: Locator, expectedColCount: number) {
-  await targetRow.scrollIntoViewIfNeeded()
-  const box = await targetRow.boundingBox()
-  expect(box).not.toBeNull()
-  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2, { steps: 30 })
-  await expect(targetRow.getByTestId('column-block')).toHaveCount(expectedColCount)
-}
-
-/**
- * Locate a column within a row by its title (via collapse-toggle aria-label).
- */
-function findColumn(page: Page, targetRow: Locator, colTitle: string) {
-  return targetRow.getByTestId('column-block').filter({
-    has: page.locator(`[aria-label="Collapse ${colTitle}"], [aria-label="Expand ${colTitle}"]`),
-  })
 }
 
 /**
@@ -71,12 +42,12 @@ async function colPosition(
   position: { before: string } | { after: string } | { between: [string, string] },
 ) {
   async function getOuterBox(colTitle: string) {
-    const col = findColumn(page, targetRow, colTitle)
     // The droppable rect is the dnd-kit SortableContext wrapper (the column-
-    // block's parent), which has no semantic role or test hook of its own —
-    // it exists purely to host the drop target. We need its box for X-axis
-    // drop positioning, so we reach it structurally via the parent selector.
-    const outer = col.locator('..')
+    // block's parent). We need its box for X-axis drop positioning, so we
+    // locate it directly via its own testid rather than the inner column-block.
+    const outer = targetRow.getByTestId('column-block-outer').filter({
+      has: page.locator(`[aria-label="Collapse ${colTitle}"], [aria-label="Expand ${colTitle}"]`),
+    })
     const box = await outer.boundingBox()
     expect(box).not.toBeNull()
     return box!
@@ -107,8 +78,8 @@ test.describe('Cross-row column drop — both directions', () => {
     const rowB = getRow(page, 'Row B')
 
     // Row A [A1, A2, A3]   Row B [B1, B2, B3]
-    await expect.poll(() => getColumnTitles(rowA)).toEqual(['Col A1', 'Col A2', 'Col A3'])
-    await expect.poll(() => getColumnTitles(rowB)).toEqual(['Col B1', 'Col B2', 'Col B3'])
+    await expect(rowA.getByTestId('column-title')).toHaveText(['Col A1', 'Col A2', 'Col A3'])
+    await expect(rowB.getByTestId('column-title')).toHaveText(['Col B1', 'Col B2', 'Col B3'])
 
     // Row A [A1, A2, A3]  →  Row A [A2, A3]
     // Row B [B1, B2, B3]  →  Row B [*A1*, B1, B2, B3]
@@ -117,12 +88,15 @@ test.describe('Cross-row column drop — both directions', () => {
         axis: 'horizontal',
         overlayTestId: 'drag-overlay-column',
       })
-      await enterRow(page, rowB, 4)
+      await enterContainerCenter(page, rowB, 'column-block', 4)
       const pos = await colPosition(page, rowB, { before: 'Col B1' })
       await dropAndSettle(page, pos.x, pos.y)
-      await expect
-        .poll(() => getColumnTitles(rowB))
-        .toEqual(['Col A1', 'Col B1', 'Col B2', 'Col B3'])
+      await expect(rowB.getByTestId('column-title')).toHaveText([
+        'Col A1',
+        'Col B1',
+        'Col B2',
+        'Col B3',
+      ])
     })
 
     // Row B [A1, B1, B2, B3]  →  Row B [A1, B1, B2]
@@ -132,10 +106,10 @@ test.describe('Cross-row column drop — both directions', () => {
         axis: 'horizontal',
         overlayTestId: 'drag-overlay-column',
       })
-      await enterRow(page, rowA, 3)
+      await enterContainerCenter(page, rowA, 'column-block', 3)
       const pos = await colPosition(page, rowA, { between: ['Col A2', 'Col A3'] })
       await dropAndSettle(page, pos.x, pos.y)
-      await expect.poll(() => getColumnTitles(rowA)).toEqual(['Col A2', 'Col B3', 'Col A3'])
+      await expect(rowA.getByTestId('column-title')).toHaveText(['Col A2', 'Col B3', 'Col A3'])
     })
 
     // Row B [A1, B1, B2]        →  Row B [A1, B1]
@@ -145,12 +119,15 @@ test.describe('Cross-row column drop — both directions', () => {
         axis: 'horizontal',
         overlayTestId: 'drag-overlay-column',
       })
-      await enterRow(page, rowA, 4)
+      await enterContainerCenter(page, rowA, 'column-block', 4)
       const pos = await colPosition(page, rowA, { after: 'Col A3' })
       await dropAndSettle(page, pos.x, pos.y)
-      await expect
-        .poll(() => getColumnTitles(rowA))
-        .toEqual(['Col A2', 'Col B3', 'Col A3', 'Col B2'])
+      await expect(rowA.getByTestId('column-title')).toHaveText([
+        'Col A2',
+        'Col B3',
+        'Col A3',
+        'Col B2',
+      ])
     })
 
     // Row A [A2, B3, A3, B2]  →  Row A [A2, B3, A3]
@@ -160,10 +137,10 @@ test.describe('Cross-row column drop — both directions', () => {
         axis: 'horizontal',
         overlayTestId: 'drag-overlay-column',
       })
-      await enterRow(page, rowB, 3)
+      await enterContainerCenter(page, rowB, 'column-block', 3)
       const pos = await colPosition(page, rowB, { between: ['Col A1', 'Col B1'] })
       await dropAndSettle(page, pos.x, pos.y)
-      await expect.poll(() => getColumnTitles(rowB)).toEqual(['Col A1', 'Col B2', 'Col B1'])
+      await expect(rowB.getByTestId('column-title')).toHaveText(['Col A1', 'Col B2', 'Col B1'])
     })
 
     // Row A [A2, B3, A3]     →  Row A [A2, B3]
@@ -173,12 +150,15 @@ test.describe('Cross-row column drop — both directions', () => {
         axis: 'horizontal',
         overlayTestId: 'drag-overlay-column',
       })
-      await enterRow(page, rowB, 4)
+      await enterContainerCenter(page, rowB, 'column-block', 4)
       const pos = await colPosition(page, rowB, { after: 'Col B1' })
       await dropAndSettle(page, pos.x, pos.y)
-      await expect
-        .poll(() => getColumnTitles(rowB))
-        .toEqual(['Col A1', 'Col B2', 'Col B1', 'Col A3'])
+      await expect(rowB.getByTestId('column-title')).toHaveText([
+        'Col A1',
+        'Col B2',
+        'Col B1',
+        'Col A3',
+      ])
     })
 
     // Row A [A2, B3]  →  Row A [*B3*, A2]
@@ -189,7 +169,7 @@ test.describe('Cross-row column drop — both directions', () => {
       })
       const pos = await colPosition(page, rowA, { before: 'Col A2' })
       await dropAndSettle(page, pos.x, pos.y)
-      await expect.poll(() => getColumnTitles(rowA)).toEqual(['Col B3', 'Col A2'])
+      await expect(rowA.getByTestId('column-title')).toHaveText(['Col B3', 'Col A2'])
     })
 
     // Verify persistence after reload
@@ -198,10 +178,13 @@ test.describe('Cross-row column drop — both directions', () => {
 
     const rowAReloaded = getRow(page, 'Row A')
     const rowBReloaded = getRow(page, 'Row B')
-    await expect.poll(() => getColumnTitles(rowAReloaded)).toEqual(['Col B3', 'Col A2'])
-    await expect
-      .poll(() => getColumnTitles(rowBReloaded))
-      .toEqual(['Col A1', 'Col B2', 'Col B1', 'Col A3'])
+    await expect(rowAReloaded.getByTestId('column-title')).toHaveText(['Col B3', 'Col A2'])
+    await expect(rowBReloaded.getByTestId('column-title')).toHaveText([
+      'Col A1',
+      'Col B2',
+      'Col B1',
+      'Col A3',
+    ])
   })
 })
 
@@ -225,22 +208,28 @@ test.describe('Cross-row column drop — source depletion and cancel', () => {
         axis: 'horizontal',
         overlayTestId: 'drag-overlay-column',
       })
-      await enterRow(page, rowB, 4)
+      await enterContainerCenter(page, rowB, 'column-block', 4)
       const pos = await colPosition(page, rowB, { between: ['Col B1', 'Col B2'] })
       await dropAndSettle(page, pos.x, pos.y)
 
       await expect(rowA.getByTestId('column-block')).toHaveCount(0)
-      await expect
-        .poll(() => getColumnTitles(rowB))
-        .toEqual(['Col B1', 'Col A1', 'Col B2', 'Col B3'])
+      await expect(rowB.getByTestId('column-title')).toHaveText([
+        'Col B1',
+        'Col A1',
+        'Col B2',
+        'Col B3',
+      ])
 
       // Verify persistence
       await page.reload()
       await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
       const rowBReloaded = getRow(page, 'Row B')
-      await expect
-        .poll(() => getColumnTitles(rowBReloaded))
-        .toEqual(['Col B1', 'Col A1', 'Col B2', 'Col B3'])
+      await expect(rowBReloaded.getByTestId('column-title')).toHaveText([
+        'Col B1',
+        'Col A1',
+        'Col B2',
+        'Col B3',
+      ])
     })
 
     // Row A [A1, A2, A3]  →  Row A [A1, A2, A3, *B1*]
@@ -256,22 +245,28 @@ test.describe('Cross-row column drop — source depletion and cancel', () => {
         axis: 'horizontal',
         overlayTestId: 'drag-overlay-column',
       })
-      await enterRow(page, rowA, 4)
+      await enterContainerCenter(page, rowA, 'column-block', 4)
       const pos = await colPosition(page, rowA, { after: 'Col A3' })
       await dropAndSettle(page, pos.x, pos.y)
 
-      await expect
-        .poll(() => getColumnTitles(rowA))
-        .toEqual(['Col A1', 'Col A2', 'Col A3', 'Col B1'])
+      await expect(rowA.getByTestId('column-title')).toHaveText([
+        'Col A1',
+        'Col A2',
+        'Col A3',
+        'Col B1',
+      ])
       await expect(rowB.getByTestId('column-block')).toHaveCount(0)
 
       // Verify persistence
       await page.reload()
       await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
       const rowAReloaded = getRow(page, 'Row A')
-      await expect
-        .poll(() => getColumnTitles(rowAReloaded))
-        .toEqual(['Col A1', 'Col A2', 'Col A3', 'Col B1'])
+      await expect(rowAReloaded.getByTestId('column-title')).toHaveText([
+        'Col A1',
+        'Col A2',
+        'Col A3',
+        'Col B1',
+      ])
     })
 
     // Drag A1 into Row B, press Escape → both rows revert to initial state
@@ -285,12 +280,12 @@ test.describe('Cross-row column drop — source depletion and cancel', () => {
         axis: 'horizontal',
         overlayTestId: 'drag-overlay-column',
       })
-      await enterRow(page, rowB, 4)
+      await enterContainerCenter(page, rowB, 'column-block', 4)
 
       await page.keyboard.press('Escape')
 
-      await expect.poll(() => getColumnTitles(rowA)).toEqual(['Col A1', 'Col A2', 'Col A3'])
-      await expect.poll(() => getColumnTitles(rowB)).toEqual(['Col B1', 'Col B2', 'Col B3'])
+      await expect(rowA.getByTestId('column-title')).toHaveText(['Col A1', 'Col A2', 'Col A3'])
+      await expect(rowB.getByTestId('column-title')).toHaveText(['Col B1', 'Col B2', 'Col B3'])
       expect(reorderWatch.count()).toBe(0)
       reorderWatch.stop()
     })

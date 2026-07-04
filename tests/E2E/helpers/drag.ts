@@ -224,6 +224,27 @@ export async function performDrag(page: Page, source: Locator, target: Locator):
 }
 
 /**
+ * Enter a target container mid-drag by moving the pointer to its center,
+ * then wait for the pending tree to apply (child count reflects the
+ * incoming ghost). Center entry keeps the trajectory reliable regardless
+ * of where prior journey operations left the pointer.
+ */
+export async function enterContainerCenter(
+  page: Page,
+  container: Locator,
+  childTestId: string,
+  expectedCount: number,
+): Promise<void> {
+  await container.scrollIntoViewIfNeeded()
+  const box = await container.boundingBox()
+  if (box === null) {
+    throw new Error('Container not visible — cannot enter for drag')
+  }
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 30 })
+  await expect(container.getByTestId(childTestId)).toHaveCount(expectedCount)
+}
+
+/**
  * Register response listeners for the reorder mutation lifecycle.
  * Must be called BEFORE the action that triggers the mutation (drag release).
  *
