@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import type { Locator, Page } from '@playwright/test'
+import type { Locator, Page, Request } from '@playwright/test'
 
 /**
  * Returns the viewport-relative center coordinates of a locator.
@@ -253,6 +253,20 @@ export function waitForMutationSettlement(page: Page) {
     // biome-ignore lint/nursery/noPlaywrightWaitForTimeout: intentional pause for dnd-kit droppable-rect re-measurement after refetch — no DOM end-state to assert on (see comment above).
     await page.waitForTimeout(500)
   }
+}
+
+/**
+ * Count reorder API requests from this point on. Used by cancel-path tests
+ * to assert a cancelled drag fired NO mutation — the visual revert alone
+ * cannot distinguish "never sent" from "sent and rejected".
+ */
+export function watchReorderRequests(page: Page): { count: () => number; stop: () => void } {
+  let seen = 0
+  const onRequest = (request: Request) => {
+    if (request.url().includes('/api/reorder')) seen++
+  }
+  page.on('request', onRequest)
+  return { count: () => seen, stop: () => page.off('request', onRequest) }
 }
 
 /**

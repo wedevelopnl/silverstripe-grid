@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
 import { resetFixtures, loadAndNavigate } from '../helpers/fixtures'
-import { activateDragByTitle, dropAndSettle } from '../helpers/drag'
+import { activateDragByTitle, dropAndSettle, watchReorderRequests } from '../helpers/drag'
 
 /**
  * Cross-section row drop positions — journey tests.
@@ -262,6 +262,7 @@ test.describe('Cross-section row drop — source depletion and cancel', () => {
 
     // Drag A1 into Beta, press Escape → both containers revert to initial state
     await test.step('Cancel mid-drag reverts to original state', async () => {
+      const reorderWatch = watchReorderRequests(page)
       await loadAndNavigate(page, 'cross-section-drop')
       const sectionAlpha = getSection(page, 'Section Alpha')
       const sectionBeta = getSection(page, 'Section Beta')
@@ -273,6 +274,8 @@ test.describe('Cross-section row drop — source depletion and cancel', () => {
 
       await expect(sectionAlpha.getByTestId('row-title')).toHaveText(['Row A1', 'Row A2', 'Row A3'])
       await expect(sectionBeta.getByTestId('row-title')).toHaveText(['Row B1', 'Row B2', 'Row B3'])
+      expect(reorderWatch.count()).toBe(0)
+      reorderWatch.stop()
     })
   })
 })

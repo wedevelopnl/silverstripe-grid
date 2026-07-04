@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
 import { resetFixtures, loadAndNavigate } from '../helpers/fixtures'
-import { activateDragByTitle, dropAndSettle } from '../helpers/drag'
+import { activateDragByTitle, dropAndSettle, watchReorderRequests } from '../helpers/drag'
 
 /**
  * Cross-row column drop positions — journey tests.
@@ -245,6 +245,7 @@ test.describe('Cross-row column drop — source depletion and cancel', () => {
 
     // Drag A1 into Row B, press Escape → both rows revert to initial state
     await test.step('Cancel mid-drag reverts to original state', async () => {
+      const reorderWatch = watchReorderRequests(page)
       await loadAndNavigate(page, 'cross-row-column-drop')
       const rowA = getRow(page, 'Row A')
       const rowB = getRow(page, 'Row B')
@@ -259,6 +260,8 @@ test.describe('Cross-row column drop — source depletion and cancel', () => {
 
       await expect.poll(() => getColumnTitles(rowA)).toEqual(['Col A1', 'Col A2', 'Col A3'])
       await expect.poll(() => getColumnTitles(rowB)).toEqual(['Col B1', 'Col B2', 'Col B3'])
+      expect(reorderWatch.count()).toBe(0)
+      reorderWatch.stop()
     })
   })
 })
