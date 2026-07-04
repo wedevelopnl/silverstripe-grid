@@ -28,14 +28,14 @@ export interface UsePendingTreeReturn {
    * tree. Used both for the cross-container live preview (during drag-over) and
    * to pre-position the dragged node at drop time so dnd-kit's DragOverlay drop
    * animation measures the destination, not the origin (see the drag-end handler
-   * in useDragAndDrop). Returns new tree/maps, or null if the move is a no-op.
+   * in useDragAndDrop).
    */
   applyPendingMove(
     activeParsed: ParsedDraggableId,
     targetParentKey: NodeKey,
     afterElementId: number | null,
     effectiveTree: TreeApiResponse,
-  ): { tree: TreeApiResponse; maps: ElementMaps } | null
+  ): void
 
   /** Set source container siblings (called on drag start). */
   setSourceSiblings(siblings: ReadonlySet<string | number>): void
@@ -92,7 +92,7 @@ export function usePendingTree(): UsePendingTreeReturn {
       targetParentKey: NodeKey,
       afterElementId: number | null,
       effectiveTree: TreeApiResponse,
-    ): { tree: TreeApiResponse; maps: ElementMaps } | null => {
+    ): void => {
       // Entering the pending (tier-2) path: a tier-1 snapshot must not survive — see dnd-guide invariant #5.
       overRectRef.current = null
       const activeKey = NodeIdentity.toKey(activeParsed.type, activeParsed.id)
@@ -100,7 +100,7 @@ export function usePendingTree(): UsePendingTreeReturn {
         afterElementId === null ? null : NodeIdentity.toKey(activeParsed.type, afterElementId)
 
       const newTree = applyReorder(effectiveTree, activeKey, targetParentKey, afterKey)
-      if (newTree === effectiveTree) return null
+      if (newTree === effectiveTree) return
 
       const newMaps = buildMaps(newTree)
       pendingTreeRef.current = newTree
@@ -113,7 +113,6 @@ export function usePendingTree(): UsePendingTreeReturn {
       )
 
       setPendingTree(newTree)
-      return { tree: newTree, maps: newMaps }
     },
     [],
   )

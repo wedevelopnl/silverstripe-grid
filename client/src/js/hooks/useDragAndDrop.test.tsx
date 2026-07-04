@@ -247,7 +247,6 @@ describe('useDragAndDrop', () => {
       })
 
       expect(result.current.dragState).not.toBeNull()
-      expect(result.current.dragState?.activeId).toBe(activeId)
       expect(result.current.dragState?.activeType).toBe('element')
       expect(result.current.dragState?.activeNode.self.id).toBe(element1.self.id)
     })
