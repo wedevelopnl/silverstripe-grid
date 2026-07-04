@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { resetFixtures, loadAndNavigate } from '../helpers/fixtures'
+import { releaseDrag, waitForMutationSettlement } from '../helpers/drag'
 
 /**
  * Regression test for ghost-jump bug: with exactly 2 sibling rows, starting
@@ -91,8 +92,13 @@ test.describe('Ghost jump regression', () => {
       })
       .toBeGreaterThan(initialY + NO_SWAP_TOLERANCE)
 
-    // Cleanup: release mouse and wait for the overlay teardown.
-    await page.mouse.up()
+    // The release commits the swap (Row 2 crossed Row 1's center above), so
+    // treat it as a real drop: releaseDrag for Firefox pointerup delivery,
+    // then settle the mutation and verify the swap actually landed.
+    const settle = waitForMutationSettlement(page)
+    await releaseDrag(page, fromX, aboveCenterY)
     await expect(page.getByTestId('drag-overlay-row')).toBeHidden()
+    await settle()
+    await expect(rows.getByTestId('row-title')).toHaveText(['Row 2', 'Row 1'])
   })
 })

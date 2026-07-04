@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { loadAndNavigate, loadFixture, resetFixtures } from '../helpers/fixtures'
-import { activateDragByTitle } from '../helpers/drag'
+import { activateDragByTitle, releaseDrag } from '../helpers/drag'
 import { readAdapterConfig } from '../helpers/adapter'
 
 /**
@@ -60,7 +60,9 @@ test.describe('Validation errors', () => {
       const alphaRow = sectionAlpha.getByTestId('row-block').first()
       const alphaBox = await alphaRow.boundingBox()
       expect(alphaBox).not.toBeNull()
-      await page.mouse.move(alphaBox!.x + alphaBox!.width / 2, alphaBox!.y + alphaBox!.height / 2, {
+      const dropX = alphaBox!.x + alphaBox!.width / 2
+      const dropY = alphaBox!.y + alphaBox!.height / 2
+      await page.mouse.move(dropX, dropY, {
         steps: 30,
       })
 
@@ -71,7 +73,7 @@ test.describe('Validation errors', () => {
 
       // Release — the mocked 400 response triggers the mutation's onError
       // handler: snapshot restore + showToast(error.message).
-      await page.mouse.up()
+      await releaseDrag(page, dropX, dropY)
 
       // Assert: user sees the error toast with the backend-provided message.
       // The toast is rendered by the SilverStripe admin's own Redux toast
