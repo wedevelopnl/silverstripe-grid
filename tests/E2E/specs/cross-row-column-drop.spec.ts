@@ -243,6 +243,37 @@ test.describe('Cross-row column drop — source depletion and cancel', () => {
         .toEqual(['Col B1', 'Col A1', 'Col B2', 'Col B3'])
     })
 
+    // Row A [A1, A2, A3]  →  Row A [A1, A2, A3, *B1*]
+    // Row B [B1]           →  Row B []
+    await test.step('Source depletion reverse: lone column B1 → Row A after A3', async () => {
+      await loadAndNavigate(page, 'cross-row-column-drop-single-reverse')
+      const rowA = getRow(page, 'Row A')
+      const rowB = getRow(page, 'Row B')
+      await expect(rowA.getByTestId('column-block')).toHaveCount(3)
+      await expect(rowB.getByTestId('column-block')).toHaveCount(1)
+
+      await activateDragByTitle(page, 'Col B1', {
+        axis: 'horizontal',
+        overlayTestId: 'drag-overlay-column',
+      })
+      await enterRow(page, rowA, 4)
+      const pos = await colPosition(page, rowA, { after: 'Col A3' })
+      await dropAndSettle(page, pos.x, pos.y)
+
+      await expect
+        .poll(() => getColumnTitles(rowA))
+        .toEqual(['Col A1', 'Col A2', 'Col A3', 'Col B1'])
+      await expect(rowB.getByTestId('column-block')).toHaveCount(0)
+
+      // Verify persistence
+      await page.reload()
+      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
+      const rowAReloaded = getRow(page, 'Row A')
+      await expect
+        .poll(() => getColumnTitles(rowAReloaded))
+        .toEqual(['Col A1', 'Col A2', 'Col A3', 'Col B1'])
+    })
+
     // Drag A1 into Row B, press Escape → both rows revert to initial state
     await test.step('Cancel mid-drag reverts to original state', async () => {
       const reorderWatch = watchReorderRequests(page)
