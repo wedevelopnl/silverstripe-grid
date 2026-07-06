@@ -187,7 +187,7 @@ The reorder pipeline (`ReorderValidator → ReorderExecutor → ElementPersisten
 ## Common Modification Patterns
 
 ### Adding a new drag constraint
-Read `references/collision-detection.md` first. Modify `filterDroppablesByType()` for type-level constraints, or add logic within `centerCrossing`/the factory closure for behavior constraints.
+Read `references/collision-detection.md` first. Modify `filterSiblings()`/`filterParentContainers()` for type-level constraints, or add logic within `centerCrossing`/the factory closure for behavior constraints.
 
 ### Changing drop placement logic
 Check which code path (same-container or cross-container) is affected — they branch at `resolveDropPlacement.ts` line 58. The axis (X vs Y) is in `resolveInsertDirection`. Always test both paths separately.
@@ -196,7 +196,7 @@ Check which code path (same-container or cross-container) is affected — they b
 1. Add type to `DraggableType` and `PARENT_CONTAINER_TYPE` in `dnd.ts`
 2. Add `SortableContext` in the parent component
 3. Register children via `useSortable()`
-4. Add `DragOverlay` preview in `PREVIEW_BY_TYPE`
+4. Extend `getMetaLabel` in `DragOverlayContent` if the new type needs a child-count meta line (icon + title render for every type by default)
 5. Add E2E tests: same-container reorder, cross-container move, source depletion, cancel
 
 ### Writing E2E tests for drag operations
