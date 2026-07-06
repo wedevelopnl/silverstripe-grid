@@ -79,11 +79,10 @@ The closure runs on every pointer move and decides which tier to use.
 
 ## Type Filtering
 
-Three filter functions enforce hierarchy-level constraints:
+Two filter functions enforce hierarchy-level constraints:
 
 | Function | Returns | Purpose |
 |----------|---------|---------|
-| `filterDroppablesByType()` | Siblings + parents | All valid targets |
 | `filterSiblings()` | Same-type only | Sibling reordering |
 | `filterParentContainers()` | Parent-type only | Cross-container targets |
 
