@@ -19,7 +19,8 @@ These are not arbitrary — each entry corresponds to a real async operation, ei
 |------|----------|----------------------|
 | Activation | DragOverlay-visible assertion | dnd-kit processed pointer events and React rendered the overlay (condition, not duration) |
 | Pointer steps to target | 15-30 steps | Smooth tracking for collision detection (too few = detection misses) |
-| Collision settlement | 150-200ms | Collision detection settles, pending tree applies if cross-container (no user-visible end-state) |
+| Collision settlement (`startDrag` mid-drag) | 150-200ms bounded | Collision detection settles at the hover position, no user-visible end-state (used only where a mid-drag assertion follows) |
+| Preview stability (`dropAndSettle`) | `MutationObserver` quiet 200ms / 2s backstop | Cross-container pending-tree preview stops re-rendering before release, so the drop commits the intended slot (condition-based, not a fixed pause) |
 | API settlement | PATCH + GET + 500ms rect re-measurement | TanStack Query cache update → React re-render → dnd-kit re-registers droppable rects |
 
 **The 500ms API settlement is critical for journey tests**: Without it, the next drag starts with stale collision rects from the previous tree state. This manifests as intermittent test failures where the second drag in a sequence drops in the wrong position.
@@ -66,7 +67,9 @@ Registers response listeners for the reorder mutation lifecycle and returns an a
 
 ### `dropAndSettle(page, targetX, targetY)`
 
-Combines the final positioning move, mouse release, and API round-trip wait into one call for cross-container drop tests. Takes final viewport coordinates (not locators — call after a prior `activateDragByTitle`/`enterContainerCenter` has already established the mid-drag pointer position). Sequence: move 15 steps to `(targetX, targetY)` → let collision detection settle (bounded pause) → register `waitForMutationSettlement` → `releaseDrag(page, targetX, targetY)` → await the settle function.
+Combines the final positioning move, mouse release, and API round-trip wait into one call for cross-container drop tests. Takes final viewport coordinates (not locators — call after a prior `activateDragByTitle`/`enterContainerCenter` has already established the mid-drag pointer position). Sequence: move 15 steps to `(targetX, targetY)` → wait for the ghost preview to stop re-rendering via `waitForPreviewStable` (module-private: a `MutationObserver` on the grid editor that resolves after 200ms of no structural mutation, 2s backstop) → register `waitForMutationSettlement` → `releaseDrag(page, targetX, targetY)` → await the settle function.
+
+The `waitForPreviewStable` step is load-bearing, not a cosmetic pause: the drop commits whatever slot the pending-tree preview currently shows, so releasing mid-re-render would commit an intermediate position. It is condition-based (observes structural DOM mutations, ignores the DragOverlay's transform), which is why it is robust across browser timings where Firefox re-renders slower than Chromium.
 
 ### `activateDragByTitle(page, title, options?)`
 
