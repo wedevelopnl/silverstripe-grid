@@ -89,9 +89,9 @@ Returns `{ count(), stop() }`. Registers a `page.on('request', ...)` listener co
 
 ## Positioning Strategies
 
-Direction detection depends on where the pointer lands relative to the target element's center. The strategies differ by axis.
+Direction detection depends on where the pointer lands relative to the target element's center. The axis is geometric (`resolveDropAxis`): full-width targets — sections, rows, elements, and any column spanning ≥ 95% of its row — use Y; narrower columns use X.
 
-### Vertical (Elements, Rows, Sections — Y-axis)
+### Vertical (Elements, Rows, Sections, full-width Columns — Y-axis)
 
 | Position | Pointer placement | Result |
 |----------|------------------|--------|
@@ -99,7 +99,7 @@ Direction detection depends on where the pointer lands relative to the target el
 | After | Bottom 65% of target | Returns `'after'` |
 | Between two items | Gap midpoint between them | Depends on which element collision detection resolves to |
 
-### Horizontal (Columns — X-axis)
+### Horizontal (narrow Columns — X-axis)
 
 | Position | Pointer placement | Result |
 |----------|------------------|--------|
