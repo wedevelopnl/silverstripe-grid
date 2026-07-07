@@ -10,6 +10,7 @@ export type { FixtureLoadResponse, FixtureMap } from '@wedevelop/e2e'
  */
 const client = createFixtureClient({
   editorReadySelector: '[data-testid="grid-editor-loading"]',
+  editorReadyTimeout: 15_000,
 })
 
 /**
@@ -37,5 +38,5 @@ export function resetFixtures(request: APIRequestContext): Promise<void> {
  * Waits for the grid editor to finish loading before returning.
  */
 export function loadAndNavigate(page: Page, fixtureName: string): Promise<FixtureLoadResponse> {
-  return client.loadAndNavigate(page, page.request, fixtureName)
+  return client.loadAndNavigate(page, fixtureName)
 }
