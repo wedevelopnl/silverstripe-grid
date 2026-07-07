@@ -1,0 +1,97 @@
+# E2E fixture for adaptive drop-axis tests (all axis/side combinations).
+#
+# Structure:
+#   Page (E2E Full Width Column Drop):
+#     Section (Sort: 1)
+#       Row One (Sort: 1)
+#         Narrow A (Sort: 1, width: 4) — Block A
+#         Narrow B (Sort: 2, width: 4) — Block B
+#       Row Two (Sort: 2)
+#         Full Col (Sort: 1, width: 12) — Block F
+#       Row Three (Sort: 3)
+#         Narrow C (Sort: 1, width: 4) — Block C
+#         Narrow D (Sort: 2, width: 4) — Block D
+#
+# Full Col spans its entire row, so the adaptive drop axis gives it
+# vertical (above/below) semantics; the 4/12 columns keep left/right.
+# Rows One and Three provide cross-container drag sources for each
+# direction test (direction resolution is cross-container-only).
+#
+# Top-down ordering: parents before children. Auto-scaffolding suppressed
+# by FixtureLoader.
+
+Page:
+  e2e_page:
+    Title: 'E2E Full Width Column Drop'
+    URLSegment: 'e2e-full-width-column-drop'
+
+WeDevelop\Grid\Model\Section:
+  section:
+    Title: 'Section'
+    ShowTitle: 1
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+
+WeDevelop\Grid\Model\Row:
+  row_one:
+    Title: 'Row One'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.section
+  row_two:
+    Title: 'Row Two'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Section.section
+  row_three:
+    Title: 'Row Three'
+    Sort: 3
+    Parent: =>WeDevelop\Grid\Model\Section.section
+
+WeDevelop\Grid\Model\Column:
+  narrow_a:
+    Title: 'Narrow A'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_one
+    GridSettings: '{"default":{"width":4,"offset":0,"visible":true},"overrides":{}}'
+  narrow_b:
+    Title: 'Narrow B'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Row.row_one
+    GridSettings: '{"default":{"width":4,"offset":0,"visible":true},"overrides":{}}'
+  full_col:
+    Title: 'Full Col'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_two
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
+  narrow_c:
+    Title: 'Narrow C'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row_three
+    GridSettings: '{"default":{"width":4,"offset":0,"visible":true},"overrides":{}}'
+  narrow_d:
+    Title: 'Narrow D'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Row.row_three
+    GridSettings: '{"default":{"width":4,"offset":0,"visible":true},"overrides":{}}'
+
+WeDevelop\Grid\Model\ContentElement:
+  block_a:
+    Title: 'Block A'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.narrow_a
+  block_b:
+    Title: 'Block B'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.narrow_b
+  block_f:
+    Title: 'Block F'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.full_col
+  block_c:
+    Title: 'Block C'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.narrow_c
+  block_d:
+    Title: 'Block D'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.narrow_d

@@ -85,6 +85,12 @@ WeDevelop\Grid\Dev\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
+    full-width-column-drop:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/FullWidthColumnDrop.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
     cross-column-element-drop:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/CrossColumnElementDrop.yml'
       post_actions:
