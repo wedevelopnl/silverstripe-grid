@@ -1,13 +1,7 @@
 import type { APIRequestContext, Page } from '@playwright/test'
-import {
-  createFixtureClient,
-  type FixtureLoadResponse,
-} from '../../../vendor/wedevelopnl/silverstripe-e2e/client/playwright'
+import { createFixtureClient, type FixtureLoadResponse } from '@wedevelop/e2e'
 
-export type {
-  FixtureLoadResponse,
-  FixtureMap,
-} from '../../../vendor/wedevelopnl/silverstripe-e2e/client/playwright'
+export type { FixtureLoadResponse, FixtureMap } from '@wedevelop/e2e'
 
 /**
  * Fixture client from the wedevelopnl/silverstripe-e2e module, configured for

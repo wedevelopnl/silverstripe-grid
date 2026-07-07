@@ -56,6 +56,8 @@ npm run build            # Vite production build
 
 See [E2E fixture protocol](testing/e2e-fixtures.md) for the YAML fixture system Playwright specs use.
 
+The Playwright suite (and `npm run typecheck`) imports the fixture client from `vendor/wedevelopnl/silverstripe-e2e`, so run `composer install` on the host once before running E2E tests — the Docker container's vendor volume is not visible to the host. When bumping the `wedevelopnl/silverstripe-e2e` version, update `composer.json` and the exact pins in `.docker/app/composer.json` + `.docker/app/composer.fluent.json` together, then rebuild the image (`task build`).
+
 ## Coverage & mutation testing
 
 | Command | Description |

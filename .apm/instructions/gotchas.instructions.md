@@ -45,3 +45,4 @@ applyTo: "**/*"
 ## Tooling
 
 - **CLAUDE.md and AGENTS.md are regenerated from `.apm/instructions/` on every `apm compile`** — direct edits to the generated files get overwritten silently. Edit the APM sources instead.
+- **`wedevelopnl/silverstripe-e2e` is versioned in three places — bump them together**: `composer.json` (`^0.1`, host vendor) and the exact pins in `.docker/app/composer.json` + `.docker/app/composer.fluent.json` (container vendor). The Playwright client (TS) is imported from the HOST `vendor/`, while the PHP fixture endpoint runs from the CONTAINER vendor — letting them drift skews the client/server contract. Host `composer install`/`update` is required before `npm run typecheck` or the Playwright suite will resolve `@wedevelop/e2e`.

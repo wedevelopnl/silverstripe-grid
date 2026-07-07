@@ -28,6 +28,14 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      # The E2E helpers typecheck against the Playwright client shipped inside
+      # vendor/wedevelopnl/silverstripe-e2e, so composer deps must exist on the
+      # runner (not just inside the Docker image).
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: intl
+      - uses: ramsey/composer-install@v3
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
@@ -183,6 +191,14 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      # Playwright runs on the runner and imports the fixture client from
+      # vendor/wedevelopnl/silverstripe-e2e, so composer deps must exist on the
+      # runner (the Docker image's vendor volume is not visible to the host).
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: intl
+      - uses: ramsey/composer-install@v3
       - run: npm ci
       - uses: actions/cache/restore@v4
         id: playwright-cache
