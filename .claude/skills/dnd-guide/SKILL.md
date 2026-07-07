@@ -49,7 +49,7 @@ Use this to determine which values to compare:
 
 **The auto-scroll trap**: During auto-scroll, dnd-kit adjusts sensor values (pointer, collisionRect) to account for scroll distance. But `getBoundingClientRect()` shifts in the **opposite direction** — the element moves within the viewport. Comparing dnd-kit sensor values against live DOM rects during auto-scroll gives wrong signs. This is why tier 2 does NOT capture `overRectRef` for drop-time direction detection.
 
-**Column exception**: Auto-scroll is typically vertical, so X-axis comparisons between spaces are safe. But the current code uses `over.rect` for all pending-path drops regardless of axis — simpler and avoids edge cases.
+**Column exception**: Narrow columns compare on the X-axis (see `resolveDropAxis` — full-width columns compare on Y). Auto-scroll is typically vertical, so those X-axis comparisons between spaces are safe. But the current code uses `over.rect` for all pending-path drops regardless of axis — simpler and avoids edge cases.
 
 ## System Invariants
 
@@ -63,7 +63,7 @@ These are the load-bearing constraints. Violating any of them causes a bug. Chec
 
 4. **Source depletion guard**: The pointer-inside-source-sibling guard must check `sourceItems.size > 0` before firing. On empty sources, it must fall through to allow cross-container detection.
 
-5. **`overRectRef` asymmetry**: Tier 1 captures (no CSS transforms in play). Tier 2 does NOT capture (CSS transforms create coordinate space mismatch with auto-scroll). Tier 3 captures (parent rects unaffected by child transforms). **Known trade-off**: The tier 2 skip prevents auto-scroll Y-axis mismatch, but means `over.rect` at drop time reflects the pre-transform DOM position — after SortableContext shifts the target via CSS transforms, `over.rect`'s center may not match the target's visual center. This can invert direction detection, especially for columns (X-axis) where horizontal transforms shift the center significantly. See `collisionDetection.ts` lines 347-357 and `useDragAndDrop.ts` lines 245-261.
+5. **`overRectRef` asymmetry**: Tier 1 captures (no CSS transforms in play). Tier 2 does NOT capture (CSS transforms create coordinate space mismatch with auto-scroll). Tier 3 captures (parent rects unaffected by child transforms). **Known trade-off**: The tier 2 skip prevents auto-scroll Y-axis mismatch, but means `over.rect` at drop time reflects the pre-transform DOM position — after SortableContext shifts the target via CSS transforms, `over.rect`'s center may not match the target's visual center. This can invert direction detection, especially for narrow columns (X-axis; full-width columns resolve to Y — see `resolveDropAxis`) where horizontal transforms shift the center significantly. See `collisionDetection.ts` lines 347-357 and `useDragAndDrop.ts` lines 245-261.
 
 6. **`effectiveData` fallback**: Components render `pendingTree ?? data`. If `pendingTree` becomes null while `data` is stale, the UI snaps back. This is why clearing order matters.
 
