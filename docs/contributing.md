@@ -84,12 +84,12 @@ See [E2E fixture protocol](testing/e2e-fixtures.md) for the YAML fixture system 
 
 ## Dev fixture endpoint
 
-When running in the `dev` environment, the module exposes endpoints to load the same YAML fixtures used by E2E tests into the CMS for manual exploration:
+When running in the `dev` environment, the `wedevelopnl/silverstripe-e2e` module (dev dependency) exposes endpoints to load the same YAML fixtures used by E2E tests into the CMS for manual exploration:
 
 | Method | URL | Purpose |
 |--------|-----|---------|
-| `POST` | `/dev/grid-fixtures/load` | Load a registered fixture (name in the POST body field `fixture`, e.g. `-d fixture=<Name>`) |
-| `POST` | `/dev/grid-fixtures/reset?confirm=1` | Remove all fixture-created pages |
+| `POST` | `/dev/e2e-fixtures/load` | Load a registered fixture (name in the POST body field `fixture`, e.g. `-d fixture=<Name>`) |
+| `POST` | `/dev/e2e-fixtures/reset?confirm=1` | Remove all fixture-created pages |
 
 The endpoints are gated by `Director::isDev()` and refuse to run outside the dev environment. The reset endpoint requires `?confirm=1` so an accidental curl or browser visit cannot wipe fixture-loaded pages. See [E2E fixture protocol](testing/e2e-fixtures.md) for the full protocol (YAML schema, post-actions, registering new fixtures).
 

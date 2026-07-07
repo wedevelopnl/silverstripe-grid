@@ -51,6 +51,7 @@
     "phpstan/phpstan-deprecation-rules": "^2.0",
     "phpunit/phpunit": "^11.3",
     "tomasvotruba/type-coverage": "^2.0",
+    "wedevelopnl/silverstripe-e2e": "^0.1",
     "wernerkrauss/silverstripe-rector": "^1.0"
   },
   "autoload": {

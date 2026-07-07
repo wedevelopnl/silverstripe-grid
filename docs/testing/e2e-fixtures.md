@@ -1,6 +1,6 @@
 # E2E Fixture Protocol
 
-Playwright specs load their test data through a dev-only HTTP endpoint that writes named YAML fixtures into the database. This guide covers the fixture YAML schema, the post-action system, the controller's HTTP contract, and the conventions every fixture must follow.
+Playwright specs load their test data through a dev-only HTTP endpoint that writes named YAML fixtures into the database. The endpoint, loader, post-action system, and Playwright client are provided by the [`wedevelopnl/silverstripe-e2e`](https://packagist.org/packages/wedevelopnl/silverstripe-e2e) module (a dev dependency); the grid supplies its fixtures, the page-class allowlist, and a scaffold-suppression extension via `_config/dev.yml`. This guide covers the fixture YAML schema, the post-action system, the controller's HTTP contract, and the conventions every fixture must follow.
 
 ## Architecture
 
@@ -9,12 +9,13 @@ Playwright spec
   │  await loadFixture('element-tree')
   │
   ▼
-POST /dev/grid-fixtures/load  (FixtureController, dev-only)
+POST /dev/e2e-fixtures/load  (WeDevelop\E2e\Fixtures\FixtureController, dev-only)
   ├── canInit() + init() guard on Director::isDev()
   ├── Looks up name in FixtureLoader::$fixtures config
   └── Delegates to FixtureLoader::load()
        ├── reset()                  — archives all e2e-* pages
-       ├── Register scaffold-suppressing FixtureBlueprints
+       ├── onBeforeLoad hook        — grid's FixtureScaffoldSuppressionExtension
+       │                              registers scaffold-suppressing FixtureBlueprints
        ├── YamlFixture::writeInto() — writes the YAML into the factory
        ├── applyPostActions()       — publish / modify / attach images
        └── Return FixtureResult     — { fixtureName, pageId, pageUrl, fixtureMap }
@@ -24,12 +25,12 @@ Every fixture run is fully idempotent: `load()` calls `reset()` first so re-runn
 
 ## HTTP contract
 
-### `POST /dev/grid-fixtures/load`
+### `POST /dev/e2e-fixtures/load`
 
 Loads the named fixture. The fixture name is read from the **POST body** field `fixture` (`$request->postVar('fixture')`) — a query-string `?fixture=` is ignored and the request fails with `400`. From the shell:
 
 ```bash
-curl -X POST -d "fixture=<name>" http://localhost:<WEB_PORT>/dev/grid-fixtures/load
+curl -X POST -d "fixture=<name>" http://localhost:<WEB_PORT>/dev/e2e-fixtures/load
 ```
 
 Returns:
@@ -54,9 +55,13 @@ The `fixtureMap` lets specs look up fixture identifiers (`section1`, `leaf3`, �
 
 Failure response: `400 { success: false, error: "..." }`.
 
-### `POST /dev/grid-fixtures/reset?confirm=1`
+### `POST /dev/e2e-fixtures/reset?confirm=1`
 
-Archives every page whose `URLSegment` starts with `e2e-` **and** whose `ClassName` is one of the fixture page types (`FixtureLoader::FIXTURE_PAGE_CLASSES`). Requiring both prevents collateral archiving of a hand-authored page that merely shares the `e2e-` prefix on a shared dev DB. The `confirm=1` query parameter is required so an accidental curl or browser visit cannot wipe the dev database.
+Archives every page whose `URLSegment` starts with `e2e-` **and** whose `ClassName` is one of the fixture page types (the `FixtureLoader.fixture_page_classes` config in `_config/dev.yml`). Requiring both prevents collateral archiving of a hand-authored page that merely shares the `e2e-` prefix on a shared dev DB. The `confirm=1` query parameter is required so an accidental curl or browser visit cannot wipe the dev database.
+
+### `POST /dev/e2e-fixtures/load-all`
+
+Resets once, then loads **every** configured fixture additively. Useful for seeding a full dev database in one request; the Playwright suite itself loads fixtures one at a time.
 
 ### Gate
 
@@ -64,12 +69,12 @@ Both routes run only when `Director::isDev()` is `true`. They are not available 
 
 ## Registering a fixture
 
-Fixtures are registered in `_config/dev.yml` under `WeDevelop\Grid\Dev\FixtureLoader.fixtures`.
+Fixtures are registered in `_config/dev.yml` under `WeDevelop\E2e\Fixtures\FixtureLoader.fixtures`.
 
 ### Simple fixture (path only)
 
 ```yaml
-WeDevelop\Grid\Dev\FixtureLoader:
+WeDevelop\E2e\Fixtures\FixtureLoader:
   fixtures:
     empty-page: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/EmptyPage.yml'
 ```
@@ -79,7 +84,7 @@ The path uses `vendor/package:relative/path.yml` (standard SilverStripe `ModuleR
 ### Fixture with post-actions
 
 ```yaml
-WeDevelop\Grid\Dev\FixtureLoader:
+WeDevelop\E2e\Fixtures\FixtureLoader:
   fixtures:
     drag-and-drop:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/DragAndDrop.yml'
@@ -134,7 +139,7 @@ WeDevelop\Grid\Model\ContentElement:
 
 ### Ordering: top-down
 
-Fixtures are written **top-down** (page → section → row → column → leaf). `FixtureLoader::registerScaffoldSuppression()` sets `auto_scaffold = false` on `Section` and `Row` via `FixtureBlueprint` `beforeCreate` callbacks, so writing parents first cannot produce duplicate auto-scaffolded children. This is the opposite of how production code behaves — in the live CMS, writing a Section triggers auto-scaffolding of a Row + Column. Fixtures opt out so the YAML stays explicit and readable.
+Fixtures are written **top-down** (page → section → row → column → leaf). The grid registers `WeDevelop\Grid\Dev\FixtureScaffoldSuppressionExtension` on the module's `FixtureLoader` (`onBeforeLoad` hook); it sets `auto_scaffold = false` on `Section` and `Row` via `FixtureBlueprint` `beforeCreate` callbacks, so writing parents first cannot produce duplicate auto-scaffolded children. This is the opposite of how production code behaves — in the live CMS, writing a Section triggers auto-scaffolding of a Row + Column. Fixtures opt out so the YAML stays explicit and readable.
 
 ### Required fields per element type
 
@@ -152,7 +157,7 @@ The `Parent` field resolves to the `ParentID` column. YamlFixture also sets `Par
 
 Every page created by a fixture **must** use a `URLSegment` that starts with `e2e-`. `FixtureLoader::reset()` and `POST /reset` archive matching pages via `doArchive()` (which cascades through `cascade_deletes` and removes from Draft + Live). Without the prefix your fixture pages will leak across test runs.
 
-Cleanup matches on `URLSegment:StartsWith => 'e2e-'` **and** `ClassName` ∈ `FixtureLoader::FIXTURE_PAGE_CLASSES`, and the `ClassName` filter is non-polymorphic (exact match). So if you add a fixture that creates a **new** `SiteTree`/`Page` subclass, you **must** also add that class to `FIXTURE_PAGE_CLASSES` — otherwise `reset()` silently leaves those pages behind. The `testFixturePageClassesCoversEveryFixturePageType` guard test fails loudly if you forget.
+Cleanup matches on `URLSegment:StartsWith => 'e2e-'` **and** `ClassName` ∈ the `FixtureLoader.fixture_page_classes` config, and the `ClassName` filter is non-polymorphic (exact match). So if you add a fixture that creates a **new** `SiteTree`/`Page` subclass, you **must** also add that class to `fixture_page_classes` in `_config/dev.yml` — otherwise `reset()` silently leaves those pages behind. The `testFixturePageClassesCoversEveryFixturePageType` guard test fails loudly if you forget.
 
 ### GridSettings inline
 
@@ -249,7 +254,7 @@ Not currently supported in the shared fixture loader — the Fluent E2E suite ha
 - [ ] Every element has `Sort` and `Parent` set
 - [ ] Register the fixture in `_config/dev.yml` under `FixtureLoader.fixtures`
 - [ ] Add a `publish_recursive` post-action on the page if the spec needs live content
-- [ ] Verify locally: `curl -X POST -d "fixture=<name>" "http://localhost:<WEB_PORT>/dev/grid-fixtures/load"`
+- [ ] Verify locally: `curl -X POST -d "fixture=<name>" "http://localhost:<WEB_PORT>/dev/e2e-fixtures/load"`
 - [ ] Reference from the spec via the shared `loadAndNavigate()` / `loadFixture()` helper
 
 ## Troubleshooting
@@ -265,6 +270,7 @@ Not currently supported in the shared fixture loader — the Fluent E2E suite ha
 ## See also
 
 - [Backend Architecture — CMS Integration](../architecture/backend.md#cms-integration) — `GridPageExtension` setup
-- `src/Dev/FixtureLoader.php` — the loader implementation
-- `src/Dev/FixturePostAction.php` — full post-action reference
+- `vendor/wedevelopnl/silverstripe-e2e/src/Fixtures/FixtureLoader.php` — the loader implementation
+- `vendor/wedevelopnl/silverstripe-e2e/src/Fixtures/FixturePostAction.php` — full post-action reference
+- `src/Dev/FixtureScaffoldSuppressionExtension.php` — the grid's scaffold-suppression hook
 - The `e2e-test-reference` skill (if available) — spec authoring helpers, test selectors
