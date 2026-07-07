@@ -88,6 +88,7 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
         <div
           className="ssgrid-row__columns"
           data-testid="row-block-columns"
+          data-dnd-container=""
           data-layout-mode={layoutMode}
           style={
             layoutMode === 'grid'

@@ -96,6 +96,7 @@ export default function GridEditorShell({
               <div
                 className="ssgrid-editor__canvas"
                 data-testid="grid-editor-canvas"
+                data-dnd-container=""
                 data-status={anyModified ? 'modified' : undefined}
               >
                 {children}
