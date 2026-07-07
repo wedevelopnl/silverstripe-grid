@@ -45,9 +45,7 @@ export function resolveDropAxis(overNode: HTMLElement | null, type: DraggableTyp
         (Number.parseFloat(style.paddingLeft) || 0) -
         (Number.parseFloat(style.paddingRight) || 0)
       if (contentWidth > 0) {
-        return overNode.getBoundingClientRect().width / contentWidth >= FULL_WIDTH_RATIO
-          ? 'y'
-          : 'x'
+        return overNode.getBoundingClientRect().width / contentWidth >= FULL_WIDTH_RATIO ? 'y' : 'x'
       }
     }
   }

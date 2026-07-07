@@ -60,10 +60,7 @@ export function resolveDropPlacement(ctx: DropContext): ReorderElementParams | n
         insertIndex = filtered.length
       } else {
         insertIndex = overIdx
-        if (
-          pointer !== null &&
-          resolveInsertDirection(pointer, overRect, axis) === 'after'
-        ) {
+        if (pointer !== null && resolveInsertDirection(pointer, overRect, axis) === 'after') {
           insertIndex += 1
         }
       }

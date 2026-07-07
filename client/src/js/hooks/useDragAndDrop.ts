@@ -235,10 +235,7 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         const axis = resolveDropAxis(liveOverNode, activeParsed.type)
 
         const pointer = getPointerPosition(event)
-        if (
-          pointer !== null &&
-          resolveInsertDirection(pointer, directionRect, axis) === 'before'
-        ) {
+        if (pointer !== null && resolveInsertDirection(pointer, directionRect, axis) === 'before') {
           after = overPos > 0 ? others[overPos - 1].self : null
         } else {
           after = overNode.self
