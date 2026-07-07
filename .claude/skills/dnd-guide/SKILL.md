@@ -148,7 +148,7 @@ When dragging the **only** item from a container, `sourceContainerItemsRef` beco
 ## Direction-Aware Drop Placement
 
 - `resolveInsertDirection()` compares pointer vs element center
-- **Columns use X-axis** (horizontal layout), **everything else uses Y-axis**
+- **The axis is geometric, not type-based** (`resolveDropAxis`): a target spanning ≥ 95% of its parent container's content width (nearest `[data-dnd-container]` ancestor) compares on **Y** (above/below); narrower targets compare on **X** (left/right). Sections, rows, and content elements always render full-width → Y; only columns vary — a 12/12 column gets Y, narrower columns get X. Measurement failure (no live node / no marked ancestor / zero-width wrapper) degrades to the legacy type rule: column → X, else Y.
 - **Same-container moves skip direction entirely** — index-based placement from SortableContext
 - Cross-container moves compute `afterElementID` via direction + `resolveReorderParams()`
 - The `afterElementID` API contract (null = first position) replaced an ambiguous index-based API
@@ -170,7 +170,8 @@ The reorder pipeline (`ReorderValidator → ReorderExecutor → ElementPersisten
 | `client/src/js/utils/collisionDetection.ts` | 3-tier collision detection, type filtering, `centerCrossing`, `closestCenterLive` |
 | `client/src/js/utils/applyReorder.ts` | Pure immutable tree mutation for optimistic updates |
 | `client/src/js/utils/resolveDropPlacement.ts` | Same-container: index (L58-67) / Cross-container: direction (L69-85) |
-| `client/src/js/utils/resolveInsertDirection.ts` | Pointer vs rect center → `'before' \| 'after'` (X for columns, Y for rest) |
+| `client/src/js/utils/resolveInsertDirection.ts` | Pointer vs rect center on a given `DropAxis` → `'before' \| 'after'` |
+| `client/src/js/utils/resolveDropAxis.ts` | Rendered-geometry axis decision (full-width → Y, narrower → X; legacy type rule as degraded fallback) |
 | `client/src/js/utils/resolveReorderParams.ts` | dnd-kit context → API payload (`afterElementID`) |
 | `client/src/js/hooks/useElementMaps.ts` | O(1) lookup maps: `nodeMap`, `childrenByParentId` |
 | `client/src/js/hooks/useElementMutations.ts` | TanStack Query mutation: optimistic update, rollback, toast |
@@ -190,7 +191,7 @@ The reorder pipeline (`ReorderValidator → ReorderExecutor → ElementPersisten
 Read `references/collision-detection.md` first. Modify `filterSiblings()`/`filterParentContainers()` for type-level constraints, or add logic within `centerCrossing`/the factory closure for behavior constraints.
 
 ### Changing drop placement logic
-Check which code path (same-container or cross-container) is affected — they branch at `resolveDropPlacement.ts` line 58. The axis (X vs Y) is in `resolveInsertDirection`. Always test both paths separately.
+Check which code path (same-container or cross-container) is affected — they branch at `resolveDropPlacement.ts` line 58. The axis (X vs Y) is decided by `resolveDropAxis` from rendered geometry and passed into `resolveInsertDirection`; both call sites (`handleDragMove` preview, `handleDragEnd` fallback) must derive it from the same live node. Always test both paths separately.
 
 ### Adding a new sortable level
 1. Add type to `DraggableType` and `PARENT_CONTAINER_TYPE` in `dnd.ts`
