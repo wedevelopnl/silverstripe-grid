@@ -65,13 +65,14 @@ describe('resolveDropAxis', () => {
       expect(resolveDropAxis(target, 'column')).toBe(expected)
     })
 
-    it.each(['section', 'row', 'element'] as const)(
-      'full-width %s resolves to y geometrically',
-      (type) => {
-        const target = buildTarget({ targetWidth: 1000, containerWidth: 1000 })
-        expect(resolveDropAxis(target, type)).toBe('y')
-      },
-    )
+    it.each([
+      'section',
+      'row',
+      'element',
+    ] as const)('full-width %s resolves to y geometrically', (type) => {
+      const target = buildTarget({ targetWidth: 1000, containerWidth: 1000 })
+      expect(resolveDropAxis(target, type)).toBe('y')
+    })
 
     it('measures against the container content box (padding excluded)', () => {
       // 1000px container minus 2×30px padding = 940px content; a 940px
