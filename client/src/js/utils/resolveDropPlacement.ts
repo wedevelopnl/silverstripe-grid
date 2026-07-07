@@ -3,6 +3,7 @@ import type { ElementMaps } from '@/hooks/useElementMaps'
 import type { ParsedDraggableId, ViewportRect } from '@/types/dnd'
 import { isContainerNode } from '@/types/elements'
 import { NodeIdentity, type NodeKey } from '@/types/identity'
+import type { DropAxis } from '@/utils/resolveDropAxis'
 import { resolveInsertDirection } from '@/utils/resolveInsertDirection'
 import { resolveReorderParams } from '@/utils/resolveReorderParams'
 
@@ -14,6 +15,8 @@ export interface DropContext {
   readonly sourceParentKey: NodeKey
   readonly sourceIndex: number
   readonly overRect: ViewportRect
+  /** Comparison axis for cross-container direction (from resolveDropAxis). */
+  readonly axis: DropAxis
 }
 
 /**
@@ -26,7 +29,8 @@ export interface DropContext {
  * Returns null for no-ops (same position) or invalid states (missing nodes).
  */
 export function resolveDropPlacement(ctx: DropContext): ReorderElementParams | null {
-  const { activeParsed, overParsed, pointer, maps, sourceParentKey, sourceIndex, overRect } = ctx
+  const { activeParsed, overParsed, pointer, maps, sourceParentKey, sourceIndex, overRect, axis } =
+    ctx
 
   const activeKey = NodeIdentity.toKey(activeParsed.type, activeParsed.id)
 
@@ -58,7 +62,7 @@ export function resolveDropPlacement(ctx: DropContext): ReorderElementParams | n
         insertIndex = overIdx
         if (
           pointer !== null &&
-          resolveInsertDirection(pointer, overRect, activeParsed.type) === 'after'
+          resolveInsertDirection(pointer, overRect, axis) === 'after'
         ) {
           insertIndex += 1
         }

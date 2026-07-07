@@ -17,6 +17,7 @@ import type { ElementNode, TreeApiResponse } from '@/types/elements'
 import { isContainerNode } from '@/types/elements'
 import { NodeIdentity, type NodeRef } from '@/types/identity'
 import { createTypedCollisionDetection } from '@/utils/collisionDetection'
+import { resolveDropAxis } from '@/utils/resolveDropAxis'
 import { resolveDropPlacement } from '@/utils/resolveDropPlacement'
 import { resolveInsertDirection } from '@/utils/resolveInsertDirection'
 
@@ -223,16 +224,20 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         // SortableContext no-op'd there are no transforms, so it shares the pointer's
         // viewport space. (overRectRef is captured by tier-2 collision detection.)
         const overSnapshot = pending.collisionRefs.overRectRef.current
-        const overRectNode = overSnapshot?.nodeRef.current
+        const snapshotNode = overSnapshot?.nodeRef.current
+        const liveOverNode =
+          String(overSnapshot?.id) === String(over.id) && snapshotNode ? snapshotNode : null
         const directionRect =
-          String(overSnapshot?.id) === String(over.id) && overRectNode
-            ? overRectNode.getBoundingClientRect()
-            : over.rect
+          liveOverNode !== null ? liveOverNode.getBoundingClientRect() : over.rect
+        // Axis and rect must come from the same node so the previewed side
+        // and the geometric axis can never disagree. With no live node,
+        // resolveDropAxis degrades to the legacy type rule.
+        const axis = resolveDropAxis(liveOverNode, activeParsed.type)
 
         const pointer = getPointerPosition(event)
         if (
           pointer !== null &&
-          resolveInsertDirection(pointer, directionRect, activeParsed.type) === 'before'
+          resolveInsertDirection(pointer, directionRect, axis) === 'before'
         ) {
           after = overPos > 0 ? others[overPos - 1].self : null
         } else {
@@ -323,6 +328,15 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
       // Stryker disable next-line UnaryOperator: Equivalent — activeNode was confirmed present in nodeMap (above), and useElementMaps populates indexByNodeKey alongside nodeMap in one walk, so .get() is never undefined and the `?? -1` sentinel is unreachable
       const sourceIndex = maps.indexByNodeKey.get(activeParsed.key) ?? -1
 
+      // Same live-node condition as handleDragMove; on this no-preview
+      // fallback path the snapshot is usually absent → legacy type axis.
+      // The same-container branch inside resolveDropPlacement is index-based
+      // and ignores the axis entirely.
+      const overSnapshot = pending.collisionRefs.overRectRef.current
+      const snapshotNode = overSnapshot?.nodeRef.current
+      const liveOverNode =
+        String(overSnapshot?.id) === String(over.id) && snapshotNode ? snapshotNode : null
+
       const placement = resolveDropPlacement({
         activeParsed,
         overParsed,
@@ -331,6 +345,7 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         sourceParentKey,
         sourceIndex,
         overRect: over.rect,
+        axis: resolveDropAxis(liveOverNode, activeParsed.type),
       })
 
       if (placement) {

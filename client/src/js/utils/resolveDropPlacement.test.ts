@@ -81,6 +81,7 @@ describe('resolveDropPlacement', () => {
         sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
+        axis: 'x',
       }
 
       const result = resolveDropPlacement(ctx)
@@ -108,6 +109,7 @@ describe('resolveDropPlacement', () => {
         sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
+        axis: 'x',
       }
 
       expect(resolveDropPlacement(ctx)).toEqual({
@@ -128,6 +130,7 @@ describe('resolveDropPlacement', () => {
         sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
+        axis: 'x',
       }
 
       expect(resolveDropPlacement(ctx)).toBeNull()
@@ -146,6 +149,7 @@ describe('resolveDropPlacement', () => {
         sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: { left: 0, top: 0, width: 200, height: 100 },
+        axis: 'x',
       }
 
       expect(resolveDropPlacement(ctx)).toEqual({
@@ -166,6 +170,31 @@ describe('resolveDropPlacement', () => {
         sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: { left: 0, top: 0, width: 200, height: 100 },
+        axis: 'x',
+      }
+
+      expect(resolveDropPlacement(ctx)).toEqual({
+        element: { type: 'column', id: 21 },
+        parent: { type: 'row', id: 11 },
+        after: { type: 'column', id: 31 },
+      })
+    })
+
+    it('applies Y-axis direction for full-width targets (pointer below center → after)', () => {
+      const maps = buildTwoRowTree()
+
+      // Pointer is LEFT of the rect's X-center (10 < 100) but BELOW its
+      // Y-center (80 > 50). The old X-axis rule would say 'before'; with
+      // axis 'y' the drop lands after the over element.
+      const ctx: DropContext = {
+        activeParsed: createParsedDraggableId('column', 21),
+        overParsed: createParsedDraggableId('column', 31),
+        pointer: { x: 10, y: 80 },
+        maps,
+        sourceParentKey: NodeIdentity.toKey('row', 10),
+        sourceIndex: 0,
+        overRect: { left: 0, top: 0, width: 200, height: 100 },
+        axis: 'y',
       }
 
       expect(resolveDropPlacement(ctx)).toEqual({
@@ -186,6 +215,7 @@ describe('resolveDropPlacement', () => {
         sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
+        axis: 'x',
       }
 
       expect(resolveDropPlacement(ctx)).toEqual({
@@ -211,6 +241,7 @@ describe('resolveDropPlacement', () => {
         sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: { left: 0, top: 0, width: 200, height: 100 },
+        axis: 'x',
       }
 
       expect(resolveDropPlacement(ctx)).toEqual({
@@ -231,6 +262,7 @@ describe('resolveDropPlacement', () => {
         sourceParentKey: NodeIdentity.toKey('row', 10),
         sourceIndex: 0,
         overRect: { left: 0, top: 0, width: 200, height: 100 },
+        axis: 'x',
       }
 
       const result = resolveDropPlacement(ctx)
@@ -275,6 +307,7 @@ describe('resolveDropPlacement', () => {
         sourceParentKey: NodeIdentity.toKey('column', 50),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
+        axis: 'x',
       }
 
       expect(resolveDropPlacement(ctx)).toEqual({
@@ -313,6 +346,7 @@ describe('resolveDropPlacement', () => {
         sourceParentKey: NodeIdentity.toKey('column', 50),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
+        axis: 'x',
       }
 
       expect(resolveDropPlacement(ctx)).toBeNull()
@@ -332,6 +366,7 @@ describe('resolveDropPlacement', () => {
         sourceParentKey: NodeIdentity.toKey('row', 1),
         sourceIndex: 0,
         overRect: DEFAULT_RECT,
+        axis: 'x',
       }
 
       expect(resolveDropPlacement(ctx)).toBeNull()
