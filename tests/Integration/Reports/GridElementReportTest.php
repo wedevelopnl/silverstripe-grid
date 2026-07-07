@@ -133,69 +133,47 @@ final class GridElementReportTest extends SapphireTest
         self::assertNotContains((int) $normalElement->ID, $ids);
     }
 
-    public function testSourceRecordsTrailRootsAtOwningPage(): void
+    public function testLocationColumnRendersTrailSegmentsAsLinkedCrumbs(): void
     {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-
-        $records = $this->report()->sourceRecords();
-
-        $found = false;
-        foreach ($records as $record) {
-            if ((int) $record->ID === (int) $section->ID) {
-                /** @var string $trail */
-                $trail = $record->LocationTrail;
-                // A Section sits directly under the page, so its trail is just the
-                // page: title present, linked to the page-edit screen.
-                self::assertStringContainsString((string) $page->Title, $trail);
-                self::assertStringContainsString('href=', $trail);
-                self::assertStringContainsString((string) $page->ID, $trail);
-                $found = true;
-                break;
-            }
-        }
-        self::assertTrue($found, 'Section should appear in sourceRecords');
-    }
-
-    public function testSourceRecordsTrailRendersFullAncestorChain(): void
-    {
+        // Wiring only — trail content, ordering and the collision guard are covered
+        // structurally in LocationTrailBuilderTest. Here we assert the report turns
+        // each builder segment into an anchor pointing at that segment's edit URL.
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page, 'main', 0, 'Hero Section');
         $row = GridTreeFactory::row($section, 0, 'Top Row');
         $column = GridTreeFactory::column($row);
         $content = GridTreeFactory::contentElement($column, 0, 'Intro Text');
 
-        $records = $this->report()->sourceRecords();
+        $locationFormatter = $this->report()->columns()['Location']['formatting'];
 
-        foreach ($records as $record) {
-            if ((int) $record->ID === (int) $content->ID) {
-                /** @var string $trail */
-                $trail = $record->LocationTrail;
-                // Page → Section → Row → Column, top-down, element's own level omitted.
-                self::assertStringContainsString((string) $page->Title, $trail);
-                self::assertStringContainsString('Hero Section', $trail);
-                self::assertStringContainsString('Top Row', $trail);
-                self::assertStringNotContainsString('Intro Text', $trail);
-
-                // Ordering: page precedes section precedes row.
-                $pagePos = strpos($trail, (string) $page->Title);
-                $sectionPos = strpos($trail, 'Hero Section');
-                $rowPos = strpos($trail, 'Top Row');
-                self::assertNotFalse($pagePos);
-                self::assertNotFalse($sectionPos);
-                self::assertNotFalse($rowPos);
-                self::assertLessThan($sectionPos, $pagePos);
-                self::assertLessThan($rowPos, $sectionPos);
-
-                // Each ancestor container links into the CMS grid editor.
-                self::assertStringContainsString((string) $row->getCMSEditLink(), $trail);
-                return;
+        foreach ($this->report()->sourceRecords() as $record) {
+            if ((int) $record->ID !== (int) $content->ID) {
+                continue;
             }
+
+            $html = $locationFormatter(null, $record);
+
+            self::assertStringContainsString(
+                sprintf('href="%s"', htmlspecialchars((string) $page->getCMSEditLink(), ENT_QUOTES)),
+                $html,
+            );
+            self::assertStringContainsString(
+                sprintf('href="%s"', htmlspecialchars((string) $section->getCMSEditLink(), ENT_QUOTES)),
+                $html,
+            );
+            self::assertStringContainsString(
+                sprintf('href="%s"', htmlspecialchars((string) $column->getCMSEditLink(), ENT_QUOTES)),
+                $html,
+            );
+            // The element's own level is not part of its trail.
+            self::assertStringNotContainsString('Intro Text', $html);
+            return;
         }
+
         self::fail('Content element should appear in sourceRecords');
     }
 
-    public function testSourceRecordsOrphanTrailShowsOrphanedLabel(): void
+    public function testLocationColumnRendersOrphanWithoutLink(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
@@ -211,14 +189,13 @@ final class GridElementReportTest extends SapphireTest
             $orphanId,
         ));
 
-        $records = $this->report()->sourceRecords();
+        $locationFormatter = $this->report()->columns()['Location']['formatting'];
 
-        foreach ($records as $record) {
+        foreach ($this->report()->sourceRecords() as $record) {
             if ((int) $record->ID === $orphanId) {
-                /** @var string $trail */
-                $trail = $record->LocationTrail;
-                self::assertStringContainsString('Orphaned', $trail);
-                self::assertStringNotContainsString('href=', $trail);
+                $html = $locationFormatter(null, $record);
+                self::assertStringContainsString('Orphaned', $html);
+                self::assertStringNotContainsString('href=', $html);
                 return;
             }
         }
