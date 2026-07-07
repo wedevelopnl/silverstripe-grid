@@ -132,8 +132,7 @@ en:
     db_Zone: Zone
     has_many_Rows: Rows
   WeDevelop\Grid\Reports\GridElementReport:
-    COLUMN_LAST_EDITED: 'Last Edited'
-    COLUMN_PAGE: Page
+    COLUMN_LOCATION: Location
     COLUMN_TITLE: Title
     COLUMN_TYPE: Type
     DESCRIPTION: 'Lists all grid elements with their owning page. Use the filters to narrow by page or element type, or to find orphaned elements.'
