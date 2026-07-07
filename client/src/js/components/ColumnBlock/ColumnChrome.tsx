@@ -85,7 +85,7 @@ export default function ColumnChrome({
             <div className="ssgrid-column__layout-settings">{layoutSettings}</div>
           )}
         </div>
-        <div className="ssgrid-column__body" data-testid="column-body">
+        <div className="ssgrid-column__body" data-testid="column-body" data-dnd-container="">
           {children}
           {footer}
         </div>
