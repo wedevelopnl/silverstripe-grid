@@ -4,18 +4,19 @@ Only:
   environment: dev
 ---
 
-# Playwright's setup project and chromium project use different user agents
-# (real browser vs devices['Desktop Chrome']), which triggers session invalidation.
-SilverStripe\Control\Session:
-  strict_user_agent_check: false
-
-SilverStripe\Dev\DevelopmentAdmin:
-  controllers:
-    grid-fixtures:
-      class: 'WeDevelop\Grid\Dev\FixtureController'
-      description: 'Load and reset E2E fixtures for grid'
-
-WeDevelop\Grid\Dev\FixtureLoader:
+# E2E fixtures are served by the wedevelopnl/silverstripe-e2e module (dev
+# dependency): it registers the /dev/e2e-fixtures endpoint and relaxes
+# Session.strict_user_agent_check for the Playwright browser contexts. This
+# block only supplies the grid's own fixtures and domain behavior.
+WeDevelop\E2e\Fixtures\FixtureLoader:
+  # reset() archives only pages whose ClassName is listed here AND whose
+  # URLSegment starts with "e2e-". Every SiteTree page type the fixtures
+  # create must be listed — FixtureEndpointTest guards this.
+  fixture_page_classes:
+    - Page
+    - WeDevelop\Grid\Dev\MultiZonePage
+  extensions:
+    - WeDevelop\Grid\Dev\FixtureScaffoldSuppressionExtension
   fixtures:
     element-tree:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/ElementTree.yml'

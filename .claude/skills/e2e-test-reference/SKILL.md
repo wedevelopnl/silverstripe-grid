@@ -252,7 +252,7 @@ WeDevelop\Grid\Model\ContentElement:
 Add to `_config/dev.yml`:
 
 ```yaml
-WeDevelop\Grid\Dev\FixtureLoader:
+WeDevelop\E2e\Fixtures\FixtureLoader:
   fixtures:
     feature-test:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/FeatureTest.yml'
@@ -278,8 +278,9 @@ With post-actions for versioned state setup:
         - action: attach_image
           class: 'WeDevelop\Grid\Model\ContentElement'
           identifier: media_leaf
-          relation: Image
-          path: 'tests/E2E/Fixture/images/sample.jpg'
+          fields:
+            relation: MediaImage
+            source: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/assets/test-image.png'
 ```
 
 ### Post-actions

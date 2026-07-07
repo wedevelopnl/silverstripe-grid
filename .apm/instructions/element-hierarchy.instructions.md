@@ -120,6 +120,6 @@ All container integration tests must call `Versioned::set_stage(Versioned::DRAFT
 
 ## E2E Fixture Ordering
 
-YAML fixtures are written **top-down** (page → section → row → column → leaf) so `=>ClassName.id` parent references resolve. `FixtureLoader::registerScaffoldSuppression()` sets `auto_scaffold = false` on `Section` and `Row` via `FixtureBlueprint` callbacks during fixture writes, so parent-first ordering cannot produce duplicate children.
+YAML fixtures are written **top-down** (page → section → row → column → leaf) so `=>ClassName.id` parent references resolve. Fixture loading is provided by the `wedevelopnl/silverstripe-e2e` module (dev dependency); the grid registers `WeDevelop\Grid\Dev\FixtureScaffoldSuppressionExtension` on its `FixtureLoader` (via the `onBeforeLoad` hook), which sets `auto_scaffold = false` on `Section` and `Row` via `FixtureBlueprint` callbacks during fixture writes, so parent-first ordering cannot produce duplicate children.
 
-See [docs/testing/e2e-fixtures.md](../../docs/testing/e2e-fixtures.md) for the full protocol (YAML schema, post-actions, URL segment conventions, the `FixtureController` HTTP endpoint).
+See [docs/testing/e2e-fixtures.md](../../docs/testing/e2e-fixtures.md) for the full protocol (YAML schema, post-actions, URL segment conventions, the `/dev/e2e-fixtures` HTTP endpoint).
