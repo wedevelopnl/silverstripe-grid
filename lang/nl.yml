@@ -132,8 +132,7 @@ nl:
     db_Zone: Zone
     has_many_Rows: Rijen
   WeDevelop\Grid\Reports\GridElementReport:
-    COLUMN_LAST_EDITED: 'Laatst bewerkt'
-    COLUMN_PAGE: Pagina
+    COLUMN_LOCATION: Locatie
     COLUMN_TITLE: Titel
     COLUMN_TYPE: Type
     DESCRIPTION: 'Toont alle grid-elementen met hun bovenliggende pagina. Gebruik de filters om op pagina of element-type te filteren, of om wees-elementen te vinden.'

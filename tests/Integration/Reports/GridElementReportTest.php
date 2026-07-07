@@ -133,7 +133,7 @@ final class GridElementReportTest extends SapphireTest
         self::assertNotContains((int) $normalElement->ID, $ids);
     }
 
-    public function testSourceRecordsEnrichesPageTitle(): void
+    public function testSourceRecordsTrailRootsAtOwningPage(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
@@ -143,8 +143,13 @@ final class GridElementReportTest extends SapphireTest
         $found = false;
         foreach ($records as $record) {
             if ((int) $record->ID === (int) $section->ID) {
-                self::assertSame($page->Title, $record->PageTitle);
-                self::assertNotNull($record->PageCMSLink);
+                /** @var string $trail */
+                $trail = $record->LocationTrail;
+                // A Section sits directly under the page, so its trail is just the
+                // page: title present, linked to the page-edit screen.
+                self::assertStringContainsString((string) $page->Title, $trail);
+                self::assertStringContainsString('href=', $trail);
+                self::assertStringContainsString((string) $page->ID, $trail);
                 $found = true;
                 break;
             }
@@ -152,7 +157,45 @@ final class GridElementReportTest extends SapphireTest
         self::assertTrue($found, 'Section should appear in sourceRecords');
     }
 
-    public function testSourceRecordsOrphanGetsOrphanedLabel(): void
+    public function testSourceRecordsTrailRendersFullAncestorChain(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, 'main', 0, 'Hero Section');
+        $row = GridTreeFactory::row($section, 0, 'Top Row');
+        $column = GridTreeFactory::column($row);
+        $content = GridTreeFactory::contentElement($column, 0, 'Intro Text');
+
+        $records = $this->report()->sourceRecords();
+
+        foreach ($records as $record) {
+            if ((int) $record->ID === (int) $content->ID) {
+                /** @var string $trail */
+                $trail = $record->LocationTrail;
+                // Page → Section → Row → Column, top-down, element's own level omitted.
+                self::assertStringContainsString((string) $page->Title, $trail);
+                self::assertStringContainsString('Hero Section', $trail);
+                self::assertStringContainsString('Top Row', $trail);
+                self::assertStringNotContainsString('Intro Text', $trail);
+
+                // Ordering: page precedes section precedes row.
+                $pagePos = strpos($trail, (string) $page->Title);
+                $sectionPos = strpos($trail, 'Hero Section');
+                $rowPos = strpos($trail, 'Top Row');
+                self::assertNotFalse($pagePos);
+                self::assertNotFalse($sectionPos);
+                self::assertNotFalse($rowPos);
+                self::assertLessThan($sectionPos, $pagePos);
+                self::assertLessThan($rowPos, $sectionPos);
+
+                // Each ancestor container links into the CMS grid editor.
+                self::assertStringContainsString((string) $row->getCMSEditLink(), $trail);
+                return;
+            }
+        }
+        self::fail('Content element should appear in sourceRecords');
+    }
+
+    public function testSourceRecordsOrphanTrailShowsOrphanedLabel(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
@@ -172,8 +215,10 @@ final class GridElementReportTest extends SapphireTest
 
         foreach ($records as $record) {
             if ((int) $record->ID === $orphanId) {
-                self::assertStringContainsString('Orphaned', $record->PageTitle);
-                self::assertNull($record->PageCMSLink);
+                /** @var string $trail */
+                $trail = $record->LocationTrail;
+                self::assertStringContainsString('Orphaned', $trail);
+                self::assertStringNotContainsString('href=', $trail);
                 return;
             }
         }
@@ -188,8 +233,11 @@ final class GridElementReportTest extends SapphireTest
 
         self::assertArrayHasKey('Title', $columns);
         self::assertArrayHasKey('Type', $columns);
-        self::assertArrayHasKey('PageTitle', $columns);
-        self::assertArrayHasKey('LastEdited', $columns);
+        self::assertArrayHasKey('Location', $columns);
+        // Page and Last Edited were folded away: the page now lives in the trail
+        // and recency is out of scope for a locator report.
+        self::assertArrayNotHasKey('PageTitle', $columns);
+        self::assertArrayNotHasKey('LastEdited', $columns);
 
         foreach ($columns as $column) {
             self::assertArrayHasKey('title', $column);
@@ -251,19 +299,24 @@ final class GridElementReportTest extends SapphireTest
 
         $columns = $this->report()->columns();
 
-        // Test PageTitle formatting with a linked element
         $records = $this->report()->sourceRecords();
         foreach ($records as $record) {
             if ((int) $record->ID === (int) $section->ID) {
-                // PageTitle formatter — linked case
-                $formatter = $columns['PageTitle']['formatting'];
-                $result = $formatter($record->PageTitle, $record);
-                self::assertStringContainsString($page->Title, $result);
+                // Title formatter — links the element to its own CMS edit URL.
+                $titleFormatter = $columns['Title']['formatting'];
+                $titleResult = $titleFormatter(null, $record);
+                self::assertStringContainsString('Formatted Section', $titleResult);
+                self::assertStringContainsString((string) $section->getCMSEditLink(), $titleResult);
 
                 // Type formatter
                 $typeFormatter = $columns['Type']['formatting'];
                 $typeResult = $typeFormatter(null, $record);
                 self::assertNotEmpty($typeResult);
+
+                // Location formatter — passes through the enriched trail.
+                $locationFormatter = $columns['Location']['formatting'];
+                $locationResult = $locationFormatter(null, $record);
+                self::assertStringContainsString((string) $page->Title, $locationResult);
 
                 break;
             }
