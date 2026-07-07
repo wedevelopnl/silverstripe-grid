@@ -9,7 +9,8 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "paths": {
-      "@/*": ["../../client/src/js/*"]
+      "@/*": ["../../client/src/js/*"],
+      "@wedevelop/e2e": ["../../vendor/wedevelopnl/silverstripe-e2e/client/playwright/index.ts"]
     }
   },
   "include": [

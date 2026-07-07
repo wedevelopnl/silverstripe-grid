@@ -1,6 +1,17 @@
 import type { Page } from '@playwright/test'
 
 /**
+ * Minimal chainable jQuery surface used inside page.evaluate() below. The
+ * callback executes in the browser, where the CMS provides the real jQuery —
+ * this ambient declaration only exists so the callback typechecks in Node.
+ */
+interface ChainableJQuery {
+  val(value: string): ChainableJQuery
+  trigger(event: string): ChainableJQuery
+}
+declare const jQuery: (selector: string) => ChainableJQuery
+
+/**
  * Sets the value of a SilverStripe Chosen.js-wrapped <select> field.
  *
  * Chosen.js hides the native <select> via `display:none` and replaces it

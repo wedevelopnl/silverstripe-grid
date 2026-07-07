@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Functional\Dev;
 
+use PHPUnit\Framework\Attributes\CoversNothing;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\FunctionalTest;
@@ -18,8 +19,11 @@ use WeDevelop\E2e\Fixtures\FixtureLoader;
  * mechanics (error handling, method restrictions, reset allowlisting). These
  * tests only verify what the GRID supplies: the fixture registrations, the
  * fixture_page_classes allowlist, and the extension registration reachable
- * through the real /dev/e2e-fixtures endpoint.
+ * through the real /dev/e2e-fixtures endpoint. CoversNothing because every
+ * class exercised here is vendor code — incidental execution of grid models
+ * must not count toward grid coverage.
  */
+#[CoversNothing]
 final class FixtureEndpointTest extends FunctionalTest
 {
     protected $usesDatabase = true;
@@ -55,7 +59,7 @@ final class FixtureEndpointTest extends FunctionalTest
     {
         $response = $this->post(self::BASE_URL . '/load', ['fixture' => 'element-tree']);
 
-        self::assertSame(200, $response->getStatusCode());
+        self::assertSame(200, $response->getStatusCode(), (string) $response->getBody());
 
         $json = json_decode($response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         self::assertTrue($json['success']);
@@ -70,6 +74,26 @@ final class FixtureEndpointTest extends FunctionalTest
         self::assertContains('element-tree', $names);
         self::assertContains('empty-page', $names);
         self::assertContains('multi-zone', $names);
+    }
+
+    public function testResetRemovesLoadedGridFixtures(): void
+    {
+        // End-to-end proof that the configured fixture_page_classes allowlist
+        // actually matches the pages the grid fixtures create: if it did not,
+        // reset() would leave residue behind and this count would stay > 0.
+        $this->post(self::BASE_URL . '/load', ['fixture' => 'element-tree']);
+
+        self::assertGreaterThan(
+            0,
+            SiteTree::get()->filter(['URLSegment:StartsWith' => 'e2e-'])->count(),
+        );
+
+        $this->post(self::BASE_URL . '/reset?confirm=1', []);
+
+        self::assertSame(
+            0,
+            SiteTree::get()->filter(['URLSegment:StartsWith' => 'e2e-'])->count(),
+        );
     }
 
     public function testResetDoesNotArchiveNonFixturePageSharingPrefix(): void

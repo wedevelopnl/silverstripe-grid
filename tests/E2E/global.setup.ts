@@ -1,5 +1,5 @@
 import { test as setup } from '@playwright/test'
-import { authenticateAdmin } from '../../vendor/wedevelopnl/silverstripe-e2e/client/playwright'
+import { authenticateAdmin } from '@wedevelop/e2e'
 
 const AUTH_FILE = 'tests/E2E/.auth/admin.json'
 
