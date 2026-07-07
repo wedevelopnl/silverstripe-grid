@@ -26,7 +26,7 @@ tasks:
     deps: [docker-env]
     cmds:
       - "{{.COMPOSE}} up -d --build"
-      - 'printf "\n  Testbed running at https://localhost:%s\n\n" "$(grep WEB_PORT .docker/.env | cut -d= -f2)"'
+      - 'port=$(grep WEB_PORT .docker/.env | cut -d= -f2); printf "\n  Testbed running at \033]8;;https://localhost:%s\ahttps://localhost:%s\033]8;;\a\n\n" "$port" "$port"'
 
   down:
     desc: Stop services
