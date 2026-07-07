@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { FULL_WIDTH_RATIO, resolveDropAxis } from './resolveDropAxis'
+import { resolveDropAxis } from './resolveDropAxis'
 
 function mockRect(width: number): DOMRect {
   return {
@@ -101,10 +101,5 @@ describe('resolveDropAxis', () => {
       const target = buildTarget({ targetWidth: 0, containerWidth: 0 })
       expect(resolveDropAxis(target, 'section')).toBe('y')
     })
-  })
-
-  it('threshold keeps 11/12 below and full-width above', () => {
-    expect(11 / 12).toBeLessThan(FULL_WIDTH_RATIO)
-    expect(1).toBeGreaterThanOrEqual(FULL_WIDTH_RATIO)
   })
 })

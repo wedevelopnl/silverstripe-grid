@@ -9,10 +9,10 @@ export type DropAxis = 'x' | 'y'
  * flips only genuinely full-width targets; gutters and wrapper padding only
  * push narrower targets further below the threshold.
  */
-export const FULL_WIDTH_RATIO = 0.95
+const FULL_WIDTH_RATIO = 0.95
 
 /** Matches the children-wrapper each container marks for axis measurement. */
-export const DND_CONTAINER_SELECTOR = '[data-dnd-container]'
+const DND_CONTAINER_SELECTOR = '[data-dnd-container]'
 
 /**
  * Decide the pointer-comparison axis for before/after drop placement from
