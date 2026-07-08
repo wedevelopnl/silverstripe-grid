@@ -20,6 +20,8 @@ final class SectionTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
+    protected static $extra_dataobjects = [TestSection::class];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -177,6 +179,60 @@ final class SectionTest extends SapphireTest
             1,
             (int) $pageBFirst->Sort,
             'Page B section Sort must start fresh; removing ParentID from filter would return 4',
+        );
+    }
+
+    public function testEnsureSortSetSpansSectionSubclasses(): void
+    {
+        // Pins the `Section::get()` (not `static::get()`) lookup in
+        // Section::ensureSortSet: sections in a zone form one Sort sequence
+        // across all Section subclasses, so a project subclass scoping the max
+        // to its own class would collide with base-Section siblings.
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        Config::modify()->set(Row::class, 'auto_scaffold', false);
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        $base = GridTreeFactory::section($page, zone: 'main');
+
+        $subclass = TestSection::create();
+        $subclass->Zone = 'main';
+        $subclass->ParentID = $page->ID;
+        $subclass->ParentClass = $page::class;
+        $subclass->write();
+
+        self::assertSame(1, $base->Sort);
+        self::assertSame(2, $subclass->Sort, 'A subclass must continue the shared sequence, not restart at 1');
+
+        // And the reverse: a base Section written after the subclass must see
+        // the subclass sibling.
+        $base2 = GridTreeFactory::section($page, zone: 'main');
+        self::assertSame(3, $base2->Sort, 'A base Section must count subclass siblings');
+    }
+
+    // ── Default title numbering ──────────────────────────────────
+
+    public function testDefaultTitleNumberingIsZoneScoped(): void
+    {
+        // Pins the Zone filter in Section::titleNumberingSiblings: sections in
+        // different zones number independently (matching the zone-scoped sort),
+        // so the first sidebar section on a page with two main sections is
+        // numbered 1, not 3.
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        Config::modify()->set(Row::class, 'auto_scaffold', false);
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        $main1 = GridTreeFactory::section($page, zone: 'main');
+        $main2 = GridTreeFactory::section($page, zone: 'main');
+        $sidebar1 = GridTreeFactory::section($page, zone: 'sidebar');
+
+        self::assertStringEndsWith(' 1', (string) $main1->Title);
+        self::assertStringEndsWith(' 2', (string) $main2->Title);
+        self::assertStringEndsWith(
+            ' 1',
+            (string) $sidebar1->Title,
+            'Sidebar numbering must not count main-zone siblings',
         );
     }
 
