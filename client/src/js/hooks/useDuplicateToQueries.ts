@@ -5,17 +5,17 @@ import { queryKeys } from './queryKeys'
 
 export function usePages(search: string, enabled = true) {
   return useQuery<PageEntry[]>({
-    queryKey: enabled ? queryKeys.pages.search(search) : (['pages', 'disabled'] as const),
+    queryKey: enabled ? queryKeys.pages.search(search) : queryKeys.pages.disabled(),
     queryFn: enabled ? () => fetchPages(search || undefined) : skipToken,
   })
 }
 
-// Disabled queries use a distinct sentinel key so they don't collide with a
-// real pageId of 0 (or empty zone/elementType strings) in the query cache.
-// Collisions would otherwise leak cached data across unrelated calls.
+// Disabled queries use a distinct sentinel key (see queryKeys.*.disabled) so they
+// don't collide with an active key in the cache. Collisions would otherwise leak
+// cached data across unrelated calls — e.g. searching pages for "disabled".
 export function useZones(pageId: number | null) {
   return useQuery<string[]>({
-    queryKey: pageId !== null ? queryKeys.zones.byPage(pageId) : (['zones', 'disabled'] as const),
+    queryKey: pageId !== null ? queryKeys.zones.byPage(pageId) : queryKeys.zones.disabled(),
     queryFn: pageId !== null ? () => fetchZones(pageId) : skipToken,
   })
 }
@@ -29,7 +29,7 @@ export function useAcceptableContainers(
   return useQuery<AcceptableContainer[]>({
     queryKey: allPresent
       ? queryKeys.acceptableContainers.byTarget(pageId, zone, elementType)
-      : (['acceptableContainers', 'disabled'] as const),
+      : queryKeys.acceptableContainers.disabled(),
     queryFn: allPresent ? () => fetchAcceptableContainers(pageId, zone, elementType) : skipToken,
   })
 }

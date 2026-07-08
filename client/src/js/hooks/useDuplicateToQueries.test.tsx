@@ -114,7 +114,7 @@ describe('disabled query key sentinels', () => {
     renderHook(() => useZones(null), { wrapper: Wrapper })
 
     expect(queryClient.getQueryCache().find({ queryKey: ['zones', 0] })).toBeUndefined()
-    expect(queryClient.getQueryCache().find({ queryKey: ['zones', 'disabled'] })).toBeDefined()
+    expect(queryClient.getQueryCache().find({ queryKey: ['zones', 'disabled', null] })).toBeDefined()
   })
 
   it('useAcceptableContainers uses a disabled sentinel key when any input is null', () => {
@@ -126,7 +126,7 @@ describe('disabled query key sentinels', () => {
       queryClient.getQueryCache().find({ queryKey: ['acceptableContainers', 0, '', ''] }),
     ).toBeUndefined()
     expect(
-      queryClient.getQueryCache().find({ queryKey: ['acceptableContainers', 'disabled'] }),
+      queryClient.getQueryCache().find({ queryKey: ['acceptableContainers', 'disabled', null] }),
     ).toBeDefined()
   })
 
@@ -136,6 +136,18 @@ describe('disabled query key sentinels', () => {
     renderHook(() => usePages('home', false), { wrapper: Wrapper })
 
     expect(queryClient.getQueryCache().find({ queryKey: ['pages', 'home'] })).toBeUndefined()
+    expect(queryClient.getQueryCache().find({ queryKey: ['pages', 'disabled', null] })).toBeDefined()
+  })
+
+  it('the disabled pages sentinel does not collide with a real search for "disabled"', () => {
+    const { Wrapper, queryClient } = createWrapperWithClient()
+
+    // A disabled instance and an active search for the literal "disabled" must
+    // occupy separate cache entries; the 3-segment sentinel guarantees that.
+    renderHook(() => usePages('disabled', true), { wrapper: Wrapper })
+    renderHook(() => usePages('disabled', false), { wrapper: Wrapper })
+
     expect(queryClient.getQueryCache().find({ queryKey: ['pages', 'disabled'] })).toBeDefined()
+    expect(queryClient.getQueryCache().find({ queryKey: ['pages', 'disabled', null] })).toBeDefined()
   })
 })

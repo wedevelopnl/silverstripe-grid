@@ -10,7 +10,7 @@ function treeQueryOptions(pageId: number | null, zone: string, version?: number)
     queryKey:
       pageId !== null
         ? queryKeys.elementTree.byPage(pageId, zone, version)
-        : (['elementTree', 'disabled'] as const),
+        : queryKeys.elementTree.disabled(),
     queryFn: () => {
       if (pageId === null) {
         // Stryker disable next-line StringLiteral: Equivalent — defensive invariant; queryFn only runs when `enabled` is true (pageId !== null), so this throw is unreachable and its message is never observable
