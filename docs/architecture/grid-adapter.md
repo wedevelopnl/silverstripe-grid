@@ -129,6 +129,7 @@ All properties are `private static` on `GridAdapter`. Preset subclasses override
 |----------|------|---------|
 | `base_hide_class` | `string` | Hide class for base viewport |
 | `responsive_hide_format` | `string` | Hide class for other viewports |
+| `hide_class_overrides` | `array<string, string>` | Per-viewport hide classes the format can't express (checked first; e.g. Bulma's endpoint ranges `is-hidden-mobile` / `is-hidden-fullhd`, which carry no `-only` suffix) |
 | `responsive_restore_format` | `string` | Restore class |
 
 **Container & structure:**

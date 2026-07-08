@@ -76,6 +76,17 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
     /** sprintf: %s = viewport key */
     private static string $responsive_hide_format = '';
 
+    /**
+     * Per-viewport hide classes that a single sprintf format cannot express,
+     * keyed by viewport key. Checked before base_hide_class and
+     * responsive_hide_format. Bulma needs this for its endpoint ranges:
+     * `is-hidden-mobile` and `is-hidden-fullhd` carry no `-only` suffix because
+     * those ranges are already bounded on one side.
+     *
+     * @var array<string, string>
+     */
+    private static array $hide_class_overrides = [];
+
     /** sprintf: %s = viewport key */
     private static string $responsive_restore_format = '';
 
@@ -221,6 +232,12 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
     {
         if (!isset($this->viewports[$viewport])) {
             throw InvalidGridValueException::forViewport($viewport);
+        }
+
+        /** @var array<string, string> $overrides */
+        $overrides = static::config()->get('hide_class_overrides');
+        if (isset($overrides[$viewport])) {
+            return $overrides[$viewport];
         }
 
         /** @var ?string $baseKey */

@@ -319,8 +319,11 @@ final class GridAdapterTest extends SapphireTest
         yield 'tailwind middle' => [TailwindAdapter::class, 'md', 'md:hidden'];
         yield 'tailwind last' => [TailwindAdapter::class, '2xl', '2xl:hidden'];
         yield 'bulma middle' => [BulmaAdapter::class, 'tablet', 'is-hidden-tablet-only'];
-        yield 'bulma last' => [BulmaAdapter::class, 'fullhd', 'is-hidden-fullhd-only'];
-        yield 'bulma base' => [BulmaAdapter::class, 'mobile', 'is-hidden-mobile-only'];
+        // Bulma's endpoint ranges have no `-only` variant: mobile is bounded above
+        // by tablet and fullhd is unbounded, so the plain classes are already
+        // viewport-scoped.
+        yield 'bulma last' => [BulmaAdapter::class, 'fullhd', 'is-hidden-fullhd'];
+        yield 'bulma base' => [BulmaAdapter::class, 'mobile', 'is-hidden-mobile'];
     }
 
     /**

@@ -29,15 +29,19 @@ final class BulmaAdapterVisibilityTest extends SapphireTest
         self::assertSame('is-hidden-tablet-only', $this->adapter->getHideClass('tablet'));
     }
 
-    public function testHideAtBaseViewportUsesIsHiddenOnly(): void
+    public function testHideAtBaseViewportUsesPlainHidden(): void
     {
-        // 'mobile' is Bulma's base viewport. Emitted class must still target only that viewport.
-        self::assertSame('is-hidden-mobile-only', $this->adapter->getHideClass('mobile'));
+        // Bulma defines no `is-hidden-mobile-only`: the mobile range is already
+        // bounded above by tablet, so the plain `is-hidden-mobile` class is
+        // viewport-scoped. The `-only` variants exist only for the middle ranges.
+        self::assertSame('is-hidden-mobile', $this->adapter->getHideClass('mobile'));
     }
 
     public function testHideAtLastViewportUsesPlainHidden(): void
     {
-        self::assertSame('is-hidden-fullhd-only', $this->adapter->getHideClass('fullhd'));
+        // Symmetrically, fullhd is unbounded above, so Bulma defines
+        // `is-hidden-fullhd` (no `-only` variant) — already viewport-scoped.
+        self::assertSame('is-hidden-fullhd', $this->adapter->getHideClass('fullhd'));
     }
 
     public function testHasNoRestoreUtility(): void
