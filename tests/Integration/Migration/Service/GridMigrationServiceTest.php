@@ -1265,6 +1265,44 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertStringContainsString('2 column(s)', $dryRunLog);
     }
 
+    public function testDryRunReportsLiveOnlyElements(): void
+    {
+        // A page whose draft area is empty but whose live area still holds
+        // published elements: the real run creates a live-only hierarchy on both
+        // stages, so the dry-run must report the live-only count instead of
+        // "no elements to migrate", which would understate the write.
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+        $this->seeder->seedElement(7300, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 6,
+            'Title' => 'Live Only',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(7300, [], stage: 'live');
+
+        $service = $this->createService();
+        $service->run(
+            self::DEFAULT_VIEWPORT,
+            self::ZONE,
+            self::VIEWPORT_KEY_MAP,
+            dryRun: true,
+            pageIds: [$pageId],
+        );
+
+        self::assertCount(0, Section::get()->filter(['ParentID' => $pageId, 'Zone' => self::ZONE]));
+
+        $dryRunLog = null;
+        foreach ($this->getLogMessages('info') as $msg) {
+            if (\str_contains($msg, '[DRY RUN]')) {
+                $dryRunLog = $msg;
+                break;
+            }
+        }
+        self::assertNotNull($dryRunLog, 'A dry-run info log must be emitted');
+        self::assertStringContainsString('1 live-only element(s)', $dryRunLog);
+        self::assertStringNotContainsString('no elements to migrate', $dryRunLog);
+    }
+
     public function testMigrationRestoresProjectLevelAutoScaffoldFalse(): void
     {
         // A project may set auto_scaffold: false on Section/Row. The migration
