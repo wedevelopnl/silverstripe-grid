@@ -2,20 +2,49 @@ import { getSecurityId } from './config'
 import { ApiError } from './errors'
 
 /**
+ * Extract the message from SilverStripe's AdminController error envelope:
+ * `{ "status": "error", "errors": [{ "type": "error", "code": 422, "value": "…" }] }`.
+ * This is the shape every GridController error path emits (via jsonError), so it
+ * is checked first; `message`/`errorMessage` remain as fallbacks for any endpoint
+ * that returns a flat body.
+ */
+function extractMessageFromBody(body: unknown): string | null {
+  if (typeof body !== 'object' || body === null) {
+    return null
+  }
+  const record = body as Record<string, unknown>
+
+  if (Array.isArray(record.errors)) {
+    for (const entry of record.errors) {
+      if (typeof entry === 'object' && entry !== null) {
+        const value = (entry as Record<string, unknown>).value
+        if (typeof value === 'string' && value !== '') {
+          return value
+        }
+      }
+    }
+  }
+
+  if (typeof record.message === 'string' && record.message !== '') {
+    return record.message
+  }
+  if (typeof record.errorMessage === 'string' && record.errorMessage !== '') {
+    return record.errorMessage
+  }
+
+  return null
+}
+
+/**
  * Try to extract a human-readable error message from a JSON response body.
- * Falls back to the HTTP status text if the body cannot be parsed.
+ * Falls back to the HTTP status text if the body cannot be parsed or carries no
+ * recognised message.
  */
 async function extractErrorMessage(response: Response): Promise<string> {
   try {
-    const body: unknown = await response.json()
-    if (typeof body === 'object' && body !== null) {
-      const record = body as Record<string, unknown>
-      if (typeof record.message === 'string' && record.message !== '') {
-        return record.message
-      }
-      if (typeof record.errorMessage === 'string' && record.errorMessage !== '') {
-        return record.errorMessage
-      }
+    const message = extractMessageFromBody(await response.json())
+    if (message !== null) {
+      return message
     }
   } catch {
     // Response has no JSON body — fall back to statusText

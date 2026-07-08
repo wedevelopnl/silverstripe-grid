@@ -35,7 +35,9 @@ export function mockFetchError(status: number, body?: object): void {
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(
     createResponse({
       status,
-      body: body ?? { message: `Error ${status}` },
+      // Default to SilverStripe's AdminController error envelope — the exact shape
+      // GridController emits via jsonError — so the mock contract matches the server.
+      body: body ?? { status: 'error', errors: [{ type: 'error', code: status, value: `Error ${status}` }] },
       statusText: `Error ${status}`,
     }),
   )
