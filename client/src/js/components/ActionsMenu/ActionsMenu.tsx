@@ -86,6 +86,10 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
     e.stopPropagation()
     onAction()
     close()
+    // Return focus to the trigger (W3C APG menu-button pattern) so a keyboard
+    // user is not dropped to <body> when the menu unmounts. An action that opens
+    // a dialog moves focus into the dialog afterwards, overriding this.
+    triggerRef.current?.focus()
   }
 
   function handleMenuKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
@@ -115,6 +119,8 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
         if (current) {
           current.onAction()
           close()
+          // Restore focus to the trigger; a dialog-opening action re-targets it.
+          triggerRef.current?.focus()
         }
         return
       }

@@ -116,6 +116,34 @@ describe('ActionsMenu', () => {
     expect(onAction).toHaveBeenCalledOnce()
   })
 
+  it('restores focus to the trigger after activating an item with Enter', async () => {
+    const user = userEvent.setup()
+    const actions = createActions([{ onAction: vi.fn() }])
+
+    render(<ActionsMenu actions={actions} />)
+
+    const trigger = screen.getByTestId('actions-menu-trigger')
+    await user.click(trigger)
+    screen.getByText('Edit').focus()
+    await user.keyboard('{Enter}')
+
+    // Focus must return to the trigger, not fall to <body> (W3C APG menu-button).
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('restores focus to the trigger after clicking an item', async () => {
+    const user = userEvent.setup()
+    const actions = createActions([{ onAction: vi.fn() }])
+
+    render(<ActionsMenu actions={actions} />)
+
+    const trigger = screen.getByTestId('actions-menu-trigger')
+    await user.click(trigger)
+    await user.click(screen.getByText('Edit'))
+
+    expect(document.activeElement).toBe(trigger)
+  })
+
   it('closes menu after action fires', async () => {
     const user = userEvent.setup()
 
