@@ -2,8 +2,10 @@ import { useCallback, useMemo } from 'react'
 import type { DragContextValue, UseDragAndDropReturn } from '@/hooks/useDragAndDrop'
 import { useDragAndDrop } from '@/hooks/useDragAndDrop'
 import { useReorderElement } from '@/hooks/useElementMutations'
+import { t } from '@/i18n'
 import type { SectionNode, TreeApiResponse } from '@/types/elements'
 import type { NodeKey, NodeRef } from '@/types/identity'
+import { showToast } from '@/utils/toast'
 import { selectSections } from './selectSections'
 
 export interface UseGridEditorDndReturn {
@@ -38,10 +40,20 @@ export function useGridEditorDnd(
       // flight is dropped rather than starting a second overlapping optimistic
       // update. Two concurrent reorders can otherwise roll back to a stale
       // snapshot (the second captures the first's optimistic move) and leave a
-      // wrong tree cached. Reorders complete in ~100ms, so the dropped drag is
-      // immediately retryable; clear the pending tree so the item snaps back.
+      // wrong tree cached. isPending spans the mutation plus the awaited
+      // invalidation refetch (two round-trips), so rapid sequential drags on a
+      // slow connection can hit this window — the snap-back needs an
+      // explanation, or it reads as a bug. The dropped drag is immediately
+      // retryable once the refetch lands.
       if (reorderMutation.isPending) {
         clearPendingTree()
+        showToast(
+          t(
+            'WeDevelopGrid.GridEditor.REORDER_IN_FLIGHT',
+            'Still saving the previous move — try again in a moment.',
+          ),
+          'warning',
+        )
         return
       }
       reorderMutation.mutate({ params: { element, parent, after }, tree: data, clearPendingTree })

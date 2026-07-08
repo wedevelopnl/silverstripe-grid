@@ -19,6 +19,11 @@ vi.mock('@/hooks/useElementMutations', () => ({
   useReorderElement: () => ({ mutate: reorderMutate, isPending: reorderState.isPending }),
 }))
 
+const showToast = vi.fn()
+vi.mock('@/utils/toast', () => ({
+  showToast: (...args: unknown[]) => showToast(...args),
+}))
+
 import { useGridEditorDnd } from './useGridEditorDnd'
 
 describe('useGridEditorDnd', () => {
@@ -26,6 +31,7 @@ describe('useGridEditorDnd', () => {
     capturedOnReorder.current = null
     reorderMutate.mockClear()
     reorderState.isPending = false
+    showToast.mockClear()
     resetIdCounter()
   })
 
@@ -83,6 +89,29 @@ describe('useGridEditorDnd', () => {
     })
     expect(reorderMutate).not.toHaveBeenCalled()
     expect(clear).toHaveBeenCalledTimes(1)
+    // The discard must not be silent: the item visually snaps back, which is
+    // indistinguishable from a bug (especially for keyboard/SR users) without
+    // an explanation.
+    expect(showToast).toHaveBeenCalledTimes(1)
+    expect(showToast).toHaveBeenCalledWith(expect.any(String), 'warning')
+  })
+
+  it('does not toast on a successfully fired reorder', () => {
+    const tree = createTreeApiResponse({
+      pageId: 1,
+      sections: [createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'A' })],
+    })
+    renderHook(() => useGridEditorDnd(tree, 1, 'main'))
+    act(() => {
+      capturedOnReorder.current?.(
+        { type: 'section', id: 10 } as never,
+        { type: 'page', id: 1 } as never,
+        null as never,
+        vi.fn() as never,
+      )
+    })
+    expect(reorderMutate).toHaveBeenCalledTimes(1)
+    expect(showToast).not.toHaveBeenCalled()
   })
 
   it('does not fire the mutation while the tree is undefined', () => {
