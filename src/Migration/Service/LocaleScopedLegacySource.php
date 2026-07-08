@@ -20,7 +20,7 @@ final readonly class LocaleScopedLegacySource implements LegacyElementSource
      * @param positive-int $localeId
      */
     public function __construct(
-        private LegacyDataReader $reader,
+        private LocaleAwareLegacyReader $reader,
         private LegacyLocalisationModel $model,
         private string $localeCode,
         private int $localeId,

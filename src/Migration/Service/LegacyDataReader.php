@@ -30,7 +30,7 @@ use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
  *
  * When UseElementalGrid is absent, all pages with ElementalAreaID > 0 are eligible.
  */
-final class LegacyDataReader implements LegacyElementSource
+final class LegacyDataReader implements LocaleAwareLegacyReader
 {
     use Extensible;
 
