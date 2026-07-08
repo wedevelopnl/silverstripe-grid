@@ -7,7 +7,6 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Page;
 use SilverStripe\Dev\SapphireTest;
-use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\MigrationColumn;
@@ -19,6 +18,7 @@ use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\CleansGridTables;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\MigrationIdMap;
 use WeDevelop\Grid\Value\ViewportConfig;
@@ -32,6 +32,8 @@ use WeDevelop\Grid\Value\ViewportConfig;
 #[CoversClass(DraftHierarchyWriter::class)]
 final class DraftHierarchyWriterTest extends SapphireTest
 {
+    use CleansGridTables;
+
     protected static $extra_dataobjects = [TestCustomElement::class, TestPage::class];
 
     // The writer is only ever invoked from GridMigrationService::run(), which
@@ -243,24 +245,4 @@ final class DraftHierarchyWriterTest extends SapphireTest
         });
     }
 
-    private function cleanGridTables(): void
-    {
-        $tables = [
-            'WeDevelop_Grid_Test_CustomElement', 'WeDevelop_Grid_Test_CustomElement_Live',
-            'WeDevelop_Grid_ContentElement', 'WeDevelop_Grid_ContentElement_Live',
-            'WeDevelop_Grid_Column', 'WeDevelop_Grid_Column_Live',
-            'WeDevelop_Grid_Row', 'WeDevelop_Grid_Row_Live',
-            'WeDevelop_Grid_Section', 'WeDevelop_Grid_Section_Live',
-            'WeDevelop_Grid_GridElement', 'WeDevelop_Grid_GridElement_Live',
-            'WeDevelop_Grid_Test_Page', 'WeDevelop_Grid_Test_Page_Live',
-        ];
-
-        $allTables = DB::table_list();
-
-        foreach ($tables as $table) {
-            if (\array_key_exists(\strtolower($table), $allTables)) {
-                DB::query("DELETE FROM \"{$table}\"");
-            }
-        }
-    }
 }
