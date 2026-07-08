@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import ElementCardChrome from './ElementCardChrome'
 
 describe('ElementCardChrome', () => {
-  it('renders an anchor with clickable state when href is provided', () => {
+  it('renders a stretched title link inside a clickable card when href is provided', () => {
     render(
       <ElementCardChrome
         status="published"
@@ -13,10 +13,19 @@ describe('ElementCardChrome', () => {
       />,
     )
 
+    // The card itself is a <div> with the clickable state; the anchor wraps only
+    // the title (its ::after stretches over the card via CSS), so interactive
+    // controls can be siblings rather than nested inside the anchor.
+    const card = screen.getByTestId('element-card')
+    expect(card.tagName).toBe('DIV')
+    expect(card).toHaveAttribute('data-state', 'clickable')
+
     const link = screen.getByRole('link')
     expect(link.tagName).toBe('A')
     expect(link).toHaveAttribute('href', '/admin/pages/edit/show/5')
-    expect(link).toHaveAttribute('data-state', 'clickable')
+    expect(link).toHaveAttribute('data-testid', 'element-card-link')
+    // The title lives inside the anchor.
+    expect(link).toContainElement(screen.getByTestId('element-card-title'))
   })
 
   it('renders a div with no link when href is omitted', () => {

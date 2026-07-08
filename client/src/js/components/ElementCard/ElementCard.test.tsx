@@ -180,10 +180,20 @@ describe('EditableElementCard', () => {
     })
   })
 
-  describe('anchor click handling', () => {
-    // Pins the handleAnchorClick guards (drag-in-progress short-circuit,
-    // interactive-descendant detection, plain-text click) moved verbatim from
-    // the old dispatcher. Each branch is asserted independently.
+  describe('edit-link click handling', () => {
+    it('does not nest the interactive controls inside the edit-link anchor', () => {
+      // Conformance: buttons/menus must not be descendants of an <a>. The drag
+      // handle and actions are siblings of the anchor, not inside it.
+      mockFetchSuccess({})
+
+      const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
+      renderWithProviders(<EditableElementCard element={element} />)
+
+      const link = screen.getByTestId('element-card-link')
+      expect(link.querySelector('button')).toBeNull()
+      // But the drag handle button still exists in the card, as a sibling.
+      expect(screen.getByTestId('element-card').querySelector('button')).not.toBeNull()
+    })
 
     it('prevents navigation while a drag is in progress', () => {
       vi.mocked(useSortable).mockReturnValue({
@@ -195,48 +205,30 @@ describe('EditableElementCard', () => {
       const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
       renderWithProviders(<EditableElementCard element={element} />)
 
-      const card = screen.getByTestId('element-card')
+      // The onClick guard is on the anchor now; dispatch there.
+      const link = screen.getByTestId('element-card-link')
       const event = new MouseEvent('click', { bubbles: true, cancelable: true })
-      const result = card.dispatchEvent(event)
+      const result = link.dispatchEvent(event)
 
       // dispatchEvent returns false when preventDefault was called
       expect(result).toBe(false)
       expect(event.defaultPrevented).toBe(true)
     })
 
-    it('prevents navigation when a click originates inside an interactive descendant', () => {
-      mockFetchSuccess({})
-
-      const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
-      renderWithProviders(<EditableElementCard element={element} />)
-
-      // The anchor contains a drag-handle <button> (rendered by DragHandle).
-      const dragHandle = screen.getByTestId('element-card').querySelector('button')
-      expect(dragHandle).not.toBeNull()
-
-      const event = new MouseEvent('click', { bubbles: true, cancelable: true })
-      const result = dragHandle!.dispatchEvent(event)
-
-      expect(result).toBe(false)
-      expect(event.defaultPrevented).toBe(true)
-    })
-
-    it('allows navigation when the click target has no interactive ancestor inside the card', () => {
+    it('allows navigation on a normal (non-drag) edit-link click', () => {
       mockFetchSuccess({})
 
       // A same-document fragment href keeps jsdom from attempting a real
-      // cross-document navigation (which logs "Not implemented: navigation")
-      // while still exercising the un-prevented click path this test asserts.
+      // cross-document navigation while exercising the un-prevented click path.
       const element = createSimpleElement({
         title: 'Navigate me',
         editLink: '#edit',
       })
       renderWithProviders(<EditableElementCard element={element} />)
 
-      // Title is a plain <h4> — no interactive ancestor inside the card.
-      const title = screen.getByTestId('element-card-title')
+      const link = screen.getByTestId('element-card-link')
       const event = new MouseEvent('click', { bubbles: true, cancelable: true })
-      const result = title.dispatchEvent(event)
+      const result = link.dispatchEvent(event)
 
       // Not prevented — anchor navigation would proceed.
       expect(result).toBe(true)

@@ -20,24 +20,12 @@ const EditableElementCard = memo(function EditableElementCardComponent({
   const editLink = element.editLink
   const style = buildSortableStyle(transform, transition, isDragging)
 
-  // Swallow clicks from interactive descendants (drag handle, actions menu,
-  // nested buttons/links/inputs) or while a drag is in progress — the anchor
-  // would otherwise navigate when the user interacts with those controls or
-  // releases a drag. A plain center-click on the card (or a click on the
-  // title text / content body) still navigates because those targets have
-  // no interactive ancestor inside the card other than the anchor itself.
+  // The edit-link no longer wraps the interactive controls (they are siblings of
+  // the anchor, above its stretched ::after), so the old closest()-based
+  // click-swallowing is unnecessary. The only remaining guard is to not navigate
+  // when a click surfaces at the tail of a drag.
   const handleAnchorClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (isDragging) {
-      event.preventDefault()
-      return
-    }
-    if (!(event.target instanceof Element)) {
-      return
-    }
-    const interactive = event.target.closest(
-      'button, input, select, textarea, [role="button"], [role="menuitem"], [role="listbox"], [role="dialog"]',
-    )
-    if (interactive !== null && event.currentTarget.contains(interactive)) {
       event.preventDefault()
     }
   }

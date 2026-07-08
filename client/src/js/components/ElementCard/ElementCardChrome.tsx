@@ -16,9 +16,13 @@ interface ElementCardChromeProps {
 }
 
 /**
- * Presentational shell for an element card. Renders an <a> when `href` is
- * given (the clickable edit-link card) or a <div> otherwise — chosen by data,
- * never by mode. `leading`/`trailing` are opaque slots (drag handle / actions).
+ * Presentational shell for an element card. The card is always a <div>; when
+ * `href` is given the icon+title become an <a> that a CSS "stretched link"
+ * (`.ssgrid-block__link::after`) expands over the whole card. This keeps the
+ * interactive controls (drag handle, actions, dialogs) as SIBLINGS of the
+ * anchor rather than descendants — nesting buttons/dialogs inside an <a> is
+ * non-conforming HTML and forced the click-swallowing shims the card used to
+ * carry. `leading`/`trailing` are opaque slots (drag handle / actions).
  */
 export default function ElementCardChrome({
   status,
@@ -32,18 +36,42 @@ export default function ElementCardChrome({
   leading,
   trailing,
 }: ElementCardChromeProps) {
-  const header = (
+  const titleContent = (
     <>
+      <i
+        className={`ssgrid-block__icon ${icon}`}
+        data-testid="element-card-icon"
+        aria-hidden="true"
+      />
+      <h4 className="ssgrid-block__title" data-testid="element-card-title">
+        {title}
+      </h4>
+    </>
+  )
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="ssgrid-block"
+      data-testid="element-card"
+      data-state={href !== undefined ? 'clickable' : undefined}
+      data-status={status}
+    >
       <div className="ssgrid-block__header">
         {leading}
-        <i
-          className={`ssgrid-block__icon ${icon}`}
-          data-testid="element-card-icon"
-          aria-hidden="true"
-        />
-        <h4 className="ssgrid-block__title" data-testid="element-card-title">
-          {title}
-        </h4>
+        {href !== undefined ? (
+          <a
+            href={href}
+            className="ssgrid-block__link"
+            data-testid="element-card-link"
+            onClick={onClick}
+          >
+            {titleContent}
+          </a>
+        ) : (
+          titleContent
+        )}
         {status === 'modified' && <ModifiedIndicator testId="element-card-modified-indicator" />}
         {trailing}
       </div>
@@ -52,35 +80,6 @@ export default function ElementCardChrome({
           {summary}
         </p>
       ) : null}
-    </>
-  )
-
-  if (href !== undefined) {
-    return (
-      <a
-        ref={setNodeRef}
-        href={href}
-        style={style}
-        className="ssgrid-block"
-        data-testid="element-card"
-        data-state="clickable"
-        data-status={status}
-        onClick={onClick}
-      >
-        {header}
-      </a>
-    )
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="ssgrid-block"
-      data-testid="element-card"
-      data-status={status}
-    >
-      {header}
     </div>
   )
 }

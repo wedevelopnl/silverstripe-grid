@@ -29,11 +29,45 @@
   }
 
   &[data-state='clickable'] {
+    // Anchor the stretched-link ::after (below) to the card bounds.
+    position: relative;
     cursor: pointer;
 
     &:hover {
       box-shadow: var(--ssgrid-shadow-1);
     }
+  }
+
+  // The edit-link wraps only the icon + title, but its ::after stretches the
+  // clickable area over the whole card. The interactive controls (drag handle,
+  // actions) are siblings lifted above the ::after via z-index below, so they
+  // stay clickable without being nested inside the anchor.
+  &__link {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+    }
+
+    &:hover,
+    &:focus {
+      text-decoration: none;
+    }
+  }
+
+  // Lift every non-link header child (drag handle, modified dot, actions) above
+  // the stretched-link ::after, regardless of DOM order, so they receive clicks.
+  &__header > *:not(.ssgrid-block__link) {
+    position: relative;
+    z-index: 1;
   }
 
   // Lift the dragged card above its siblings (dnd-kit sets an inline transform).
