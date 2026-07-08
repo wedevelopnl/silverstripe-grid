@@ -332,11 +332,22 @@ export default function DuplicateToDialog({
         {step === 'confirm' && (
           <div data-testid="duplicate-to-step-confirm">
             <p>
-              {t(
-                'WeDevelopGrid.DuplicateToDialog.CONFIRM_SUMMARY_PREFIX',
-                'Duplicate section to zone',
-              )}{' '}
-              <strong>{selectedZone}</strong>?
+              {/* One translatable sentence with a {zone} placeholder so word order
+                  is the translator's to decide; the zone is still emphasised by
+                  splitting the rendered template around the placeholder. */}
+              {(() => {
+                const [before, after = ''] = t(
+                  'WeDevelopGrid.DuplicateToDialog.CONFIRM_SUMMARY',
+                  'Duplicate section to zone {zone}?',
+                ).split('{zone}')
+                return (
+                  <>
+                    {before}
+                    <strong>{selectedZone}</strong>
+                    {after}
+                  </>
+                )
+              })()}
             </p>
           </div>
         )}

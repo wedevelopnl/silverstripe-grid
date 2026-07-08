@@ -1,4 +1,5 @@
 import { getAdapterConfig } from '@/api/config'
+import { t } from '@/i18n'
 import type { AdapterConfig, OffsetStrategy, ViewportConfig, ViewportKey } from '@/types/adapter'
 import type { GridSettings, ViewportSettings } from '@/types/elements'
 import type { GridSettingsOption } from '@/types/gridSettings'
@@ -55,7 +56,7 @@ export function getWidthOptions(): readonly GridSettingsOption[] {
       options.push({ value: n, label: `${n}/${columnCount}` })
     }
 
-    options.push({ value: 'hidden', label: 'hidden' })
+    options.push({ value: 'hidden', label: t('WeDevelopGrid.GridSettings.HIDDEN', 'hidden') })
     cachedWidthOptions = options
   }
 
@@ -68,7 +69,10 @@ export function getOffsetOptions(currentWidth?: number): readonly GridSettingsOp
   const options: GridSettingsOption[] = []
 
   for (let n = 0; n <= maxOffset; n++) {
-    options.push({ value: n, label: n === 0 ? 'none' : `+${n}` })
+    options.push({
+      value: n,
+      label: n === 0 ? t('WeDevelopGrid.GridSettings.OFFSET_NONE', 'none') : `+${n}`,
+    })
   }
 
   return options

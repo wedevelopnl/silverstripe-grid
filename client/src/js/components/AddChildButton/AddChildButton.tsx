@@ -13,7 +13,6 @@ interface AddChildButtonProps {
    */
   readonly parentId: number
   readonly childType: ContainerType
-  readonly childLabel: string
   /**
    * - `empty-state` — the only child slot, shown with a hint line above it.
    * - `append` — full-width button after the last child.
@@ -35,15 +34,45 @@ const PARENT_TYPE_FOR_CHILD: Record<ContainerType, NodeType> = {
   column: 'row',
 }
 
+/**
+ * Fully translated labels per child type. The nouns are baked into complete
+ * per-type keys rather than interpolated: an interpolated English noun ('Add
+ * {childLabel}', 'No {childLabel}s yet') left the label untranslated and appended
+ * an English plural 's' that no other locale can fix. Literal keys are also
+ * required by the i18n collector, so each type is spelled out.
+ */
+function labelsFor(childType: ContainerType): { add: string; adding: string; empty: string } {
+  switch (childType) {
+    case 'section':
+      return {
+        add: t('WeDevelopGrid.AddChildButton.ADD_SECTION', 'Add Section'),
+        adding: t('WeDevelopGrid.AddChildButton.ADDING_SECTION', 'Adding Section…'),
+        empty: t('WeDevelopGrid.AddChildButton.EMPTY_SECTION', 'No sections yet'),
+      }
+    case 'row':
+      return {
+        add: t('WeDevelopGrid.AddChildButton.ADD_ROW', 'Add Row'),
+        adding: t('WeDevelopGrid.AddChildButton.ADDING_ROW', 'Adding Row…'),
+        empty: t('WeDevelopGrid.AddChildButton.EMPTY_ROW', 'No rows yet'),
+      }
+    case 'column':
+      return {
+        add: t('WeDevelopGrid.AddChildButton.ADD_COLUMN', 'Add Column'),
+        adding: t('WeDevelopGrid.AddChildButton.ADDING_COLUMN', 'Adding Column…'),
+        empty: t('WeDevelopGrid.AddChildButton.EMPTY_COLUMN', 'No columns yet'),
+      }
+  }
+}
+
 const AddChildButton = memo(function AddChildButtonComponent({
   parentId,
   childType,
-  childLabel,
   variant,
   insertAfterId,
 }: AddChildButtonProps) {
   const { pageId, zone } = useGridEditorContext()
   const { mutate, isPending } = useCreateElement(pageId, zone)
+  const labels = labelsFor(childType)
 
   function handleClick() {
     const parent: NodeRef = {
@@ -68,24 +97,14 @@ const AddChildButton = memo(function AddChildButtonComponent({
       onClick={handleClick}
     >
       <i className="ssgrid-add-child__icon font-icon-plus" aria-hidden="true" />
-      <span>
-        {isPending
-          ? t('WeDevelopGrid.AddChildButton.ADDING_LABEL', 'Adding {childLabel}\u2026', {
-              childLabel,
-            })
-          : t('WeDevelopGrid.AddChildButton.ADD_LABEL', 'Add {childLabel}', { childLabel })}
-      </span>
+      <span>{isPending ? labels.adding : labels.add}</span>
     </button>
   )
 
   if (variant === 'empty-state') {
     return (
       <div className="ssgrid-add-child ssgrid-add-child--empty" data-testid="add-child-empty">
-        <p className="ssgrid-add-child__hint">
-          {t('WeDevelopGrid.AddChildButton.EMPTY_MESSAGE', 'No {childLabel}s yet', {
-            childLabel: childLabel.toLowerCase(),
-          })}
-        </p>
+        <p className="ssgrid-add-child__hint">{labels.empty}</p>
         {button}
       </div>
     )

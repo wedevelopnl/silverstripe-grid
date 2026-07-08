@@ -36,7 +36,6 @@ export default function EditableGridEditor({ pageId, zone }: EditableGridEditorP
               <AddChildButton
                 parentId={pageId}
                 childType="section"
-                childLabel="Section"
                 variant="between"
                 insertAfterId={sections[index - 1].self.id}
               />
@@ -47,7 +46,6 @@ export default function EditableGridEditor({ pageId, zone }: EditableGridEditorP
         <AddChildButton
           parentId={pageId}
           childType="section"
-          childLabel="Section"
           variant="append"
         />
       </>
@@ -55,7 +53,6 @@ export default function EditableGridEditor({ pageId, zone }: EditableGridEditorP
       <AddChildButton
         parentId={pageId}
         childType="section"
-        childLabel="Section"
         variant="empty-state"
       />
     )
