@@ -34,6 +34,36 @@ final class EmbedUrlGuardTest extends TestCase
         yield 'private 172.16/12' => ['http://172.16.0.1/', false];
         yield 'localhost hostname' => ['http://localhost/', false];
         yield 'subdomain of localhost' => ['http://api.localhost/', false];
+
+        // IPv6-mapped IPv4 and other v6 literals for internal targets.
+        yield 'IPv6-mapped loopback' => ['http://[::ffff:127.0.0.1]/', false];
+        yield 'IPv6-mapped metadata IP' => ['http://[::ffff:169.254.169.254]/', false];
+        yield 'IPv6 link-local' => ['http://[fe80::1]/', false];
+        yield 'IPv6 unique-local' => ['http://[fc00::1]/', false];
+
+        // Ranges PHP's NO_PRIV_RANGE|NO_RES_RANGE flags treat as public but that
+        // are not publicly routable destinations.
+        yield 'CGNAT 100.64.0.0/10 lower bound' => ['http://100.64.0.1/', false];
+        yield 'CGNAT 100.64.0.0/10 upper bound' => ['http://100.127.255.255/', false];
+        yield 'below CGNAT range is public' => ['http://100.63.255.255/', true];
+        yield 'above CGNAT range is public' => ['http://100.128.0.1/', true];
+        yield 'IETF protocol assignments 192.0.0.0/24' => ['http://192.0.0.170/', false];
+        yield 'above 192.0.0.0/24 is public' => ['http://192.0.1.1/', true];
+        yield 'benchmarking 198.18.0.0/15 lower' => ['http://198.18.0.1/', false];
+        yield 'benchmarking 198.18.0.0/15 upper' => ['http://198.19.255.255/', false];
+        yield 'below benchmarking range is public' => ['http://198.17.255.255/', true];
+        yield 'above benchmarking range is public' => ['http://198.20.0.1/', true];
+        yield 'NAT64 64:ff9b::/96 loopback' => ['http://[64:ff9b::7f00:1]/', false];
+        yield 'NAT64 64:ff9b::/96 arbitrary v4' => ['http://[64:ff9b::102:304]/', false];
+
+        // Alternative numeric IP spellings the system resolver would normalize to
+        // an address. No registrable hostname has an all-numeric/hex final label,
+        // so these are rejected outright — before any DNS lookup.
+        yield 'decimal IPv4 encoding' => ['http://2130706433/', false];
+        yield 'hex IPv4 encoding' => ['http://0x7f000001/', false];
+        yield 'octal IPv4 encoding' => ['http://017700000001/', false];
+        yield 'dotted-octal IPv4 encoding' => ['http://0177.0.0.1/', false];
+        yield 'dotted-hex IPv4 encoding' => ['http://0x7f.0x0.0x0.0x1/', false];
     }
 
     #[DataProvider('schemeAndLiteralProvider')]
@@ -76,5 +106,34 @@ final class EmbedUrlGuardTest extends TestCase
         $guard = new EmbedUrlGuard(static fn (string $host): array => []);
 
         self::assertFalse($guard->isSafe('https://does-not-resolve.invalid/'));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function numericHostProvider(): iterable
+    {
+        yield 'decimal' => ['http://2130706433/'];
+        yield 'hex' => ['http://0x7f000001/'];
+        yield 'octal' => ['http://017700000001/'];
+        yield 'dotted octal' => ['http://0177.0.0.1/'];
+        yield 'dotted hex' => ['http://0x7f.0x0.0x0.0x1/'];
+        yield 'five dotted groups' => ['http://1.2.3.4.5/'];
+    }
+
+    /**
+     * Numeric IP spellings are normalized to an address by the system resolver,
+     * which an injected test resolver cannot reproduce. They must therefore be
+     * rejected before DNS resolution — even a resolver claiming a public address
+     * must not make them safe.
+     */
+    #[DataProvider('numericHostProvider')]
+    public function testNumericHostSpellingsAreRejectedBeforeDns(string $url): void
+    {
+        $guard = new EmbedUrlGuard(static function (string $host): array {
+            self::fail("DNS resolution must not be attempted for numeric host spellings (got: {$host})");
+        });
+
+        self::assertFalse($guard->isSafe($url));
     }
 }

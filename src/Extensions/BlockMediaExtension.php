@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Extensions;
 
 use Embed\Embed;
+use Embed\Http\Crawler;
+use Embed\Http\CurlClient;
 use InvalidArgumentException;
 use LogicException;
 use Psr\Log\LoggerInterface;
@@ -22,6 +24,7 @@ use WeDevelop\Grid\Contract\ContentLayoutAdapterInterface;
 use WeDevelop\Grid\Forms\ColumnWidthPickerField;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Service\EmbedUrlGuard;
+use WeDevelop\Grid\Service\GuardedEmbedClient;
 use WeDevelop\Grid\Value\AspectRatio;
 use WeDevelop\Grid\Value\MediaPosition;
 use WeDevelop\Grid\Value\VerticalAlignment;
@@ -425,16 +428,25 @@ class BlockMediaExtension extends Extension
         // non-HTTP URL or one whose host resolves to a private/reserved address
         // (e.g. the cloud metadata endpoint). onBeforeWrite() catches this, logs
         // it, and lets the write proceed without embed metadata.
+        $guard = new EmbedUrlGuard();
         $videoUrl = $this->getVideoURL();
-        if (!(new EmbedUrlGuard())->isSafe($videoUrl)) {
+        if (!$guard->isSafe($videoUrl)) {
             throw new InvalidArgumentException(
                 'Refusing oEmbed fetch: video URL is not an HTTP(S) URL on a publicly routable host.',
             );
         }
 
+        // The crawler makes follow-up requests beyond the URL validated above
+        // (redirect hops, oEmbed endpoints discovered in the fetched HTML), so
+        // every request goes through the guarding client. Curl-level redirect
+        // following is disabled — GuardedEmbedClient follows redirects itself so
+        // each hop's target is validated before it is fetched.
+        $curlClient = new CurlClient();
+        $curlClient->setSettings(['follow_location' => false, 'max_redirs' => 0]);
+
         MediaField::saveEmbed(
             $owner,
-            new Embed(),
+            new Embed(new Crawler(new GuardedEmbedClient($curlClient, $guard))),
             videoFullURLField: 'VideoURL',
             videoEmbeddedURLField: 'VideoEmbedURL',
             videoProviderField: 'VideoProvider',
