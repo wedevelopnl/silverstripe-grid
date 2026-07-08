@@ -8,6 +8,12 @@ Only:
 # dependency): it registers the /dev/e2e-fixtures endpoint and relaxes
 # Session.strict_user_agent_check for the Playwright browser contexts. This
 # block only supplies the grid's own fixtures and domain behavior.
+#
+# SECURITY: the endpoint is intentionally unauthenticated (its /reset action is
+# a data-wipe primitive). The dev-only gating that makes this safe lives in the
+# module: WeDevelop\E2e\Fixtures\FixtureController gates on Director::isDev()
+# (canInit() + a defence-in-depth 404), and its _config registers the route
+# with `Only: environment: dev`. Read that class before exposing this anywhere.
 WeDevelop\E2e\Fixtures\FixtureLoader:
   # reset() archives only pages whose ClassName is listed here AND whose
   # URLSegment starts with "e2e-". Every SiteTree page type the fixtures
