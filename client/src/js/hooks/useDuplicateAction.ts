@@ -2,7 +2,6 @@ import { useCallback } from 'react'
 import type { ActionItem } from '@/components/ActionsMenu/ActionsMenu'
 import { t } from '@/i18n'
 import type { ElementNode } from '@/types/elements'
-import { showToast } from '@/utils/toast'
 import { useGridEditorContext } from './GridEditorContext'
 import { useDuplicateElement } from './useElementMutations'
 
@@ -15,11 +14,9 @@ export function useDuplicateAction(node: ElementNode): UseDuplicateActionResult 
   const duplicateElement = useDuplicateElement(pageId, zone)
 
   const handleDuplicate = useCallback(() => {
-    duplicateElement.mutate(node.self, {
-      onError: (error) => {
-        showToast(error.message)
-      },
-    })
+    // No mutate-level onError: useDuplicateElement already spreads the standard
+    // options whose onError toasts. Adding one here fired two identical toasts.
+    duplicateElement.mutate(node.self)
   }, [duplicateElement, node.self])
 
   if (!node.canCreate) {

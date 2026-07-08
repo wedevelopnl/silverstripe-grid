@@ -56,7 +56,7 @@ describe('useDuplicateAction', () => {
     expect(init?.method).toBe('POST')
   })
 
-  it('should show toast when mutation fails', async () => {
+  it('should show exactly one toast when mutation fails', async () => {
     mockFetchError(500, { message: 'Duplicate failed' })
     const dispatch = vi.fn()
     window.ss!.store = { dispatch }
@@ -76,5 +76,9 @@ describe('useDuplicateAction', () => {
         }),
       )
     })
+
+    // The standard mutation options already toast on error; a mutate-level
+    // onError toasting again presented the same failure twice.
+    expect(dispatch).toHaveBeenCalledTimes(1)
   })
 })
