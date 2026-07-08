@@ -36,6 +36,33 @@ final class ColumnClassResolverTest extends TestCase
         return new GridAdapterStub();
     }
 
+    private static function fourViewportStub(): GridAdapterStub
+    {
+        return new GridAdapterStub([
+            new Viewport('xs', 'Extra Small', 0),
+            new Viewport('sm', 'Small', 576),
+            new Viewport('md', 'Medium', 768),
+            new Viewport('lg', 'Large', 992),
+        ]);
+    }
+
+    /**
+     * Bulma-style adapter: hides are scoped to a single viewport, so there is no
+     * restore utility. Each hidden viewport must therefore emit its own hide class.
+     */
+    private static function nonCascadeFourViewportStub(): GridAdapterStub
+    {
+        return new GridAdapterStub(
+            [
+                new Viewport('xs', 'Extra Small', 0),
+                new Viewport('sm', 'Small', 576),
+                new Viewport('md', 'Medium', 768),
+                new Viewport('lg', 'Large', 992),
+            ],
+            cascadeVisibility: false,
+        );
+    }
+
     /**
      * @return iterable<string, array{array<string, ViewportConfig>, GridAdapterStub, string}>
      */
@@ -110,6 +137,48 @@ final class ColumnClassResolverTest extends TestCase
             ],
             self::twoViewportStub(),
             'hidden-xs visible-md col-md-6',
+        ];
+
+        // Regression: a column hidden at two consecutive viewports must stay hidden
+        // at both. On cascade frameworks the single sm hide cascades to md, and the
+        // restore is emitted at lg (where it turns visible again) — NOT at md. The
+        // previous implementation paired the restore with the positionally-next
+        // viewport, which re-showed the column at md.
+        yield 'cascade: consecutive hidden viewports stay hidden until restore' => [
+            [
+                'xs' => new ViewportConfig(6, 0, true),
+                'sm' => new ViewportConfig(6, 0, false),
+                'md' => new ViewportConfig(6, 0, false),
+                'lg' => new ViewportConfig(6, 0, true),
+            ],
+            self::fourViewportStub(),
+            'col-xs-6 hidden-sm visible-lg col-lg-6',
+        ];
+
+        // Regression: hidden through the final viewport needs no restore at all —
+        // the cascade keeps every later viewport hidden.
+        yield 'cascade: hidden through last viewport emits no restore' => [
+            [
+                'xs' => new ViewportConfig(6, 0, true),
+                'sm' => new ViewportConfig(6, 0, true),
+                'md' => new ViewportConfig(6, 0, false),
+                'lg' => new ViewportConfig(6, 0, false),
+            ],
+            self::fourViewportStub(),
+            'col-xs-6 hidden-md',
+        ];
+
+        // Regression: on a per-viewport (non-cascade) framework, each hidden
+        // viewport must emit its own hide class, or the run only hides its first one.
+        yield 'non-cascade: every hidden viewport emits its own hide class' => [
+            [
+                'xs' => new ViewportConfig(6, 0, true),
+                'sm' => new ViewportConfig(6, 0, false),
+                'md' => new ViewportConfig(6, 0, false),
+                'lg' => new ViewportConfig(6, 0, true),
+            ],
+            self::nonCascadeFourViewportStub(),
+            'col-xs-6 hidden-sm hidden-md col-lg-6',
         ];
 
         yield 'hidden at last viewport' => [

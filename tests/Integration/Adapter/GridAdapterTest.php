@@ -305,82 +305,76 @@ final class GridAdapterTest extends SapphireTest
     // -- Visibility classes --------------------------------------------------
 
     /**
-     * Visibility classes for a middle (non-first, non-last) viewport. Bulma has no
-     * symmetric restore utility (responsive_restore_format = ''), so it emits only
-     * the hide class.
+     * The hide class per viewport. Cascade frameworks (Bootstrap/Tailwind) use a
+     * viewport-infixed hide; Bulma uses a viewport-scoped `-only` hide. The no-infix
+     * base viewport (Bootstrap xs, Bulma mobile) uses base_hide_class.
      *
-     * @return iterable<string, array{class-string<GridAdapter>, string, list<string>}>
+     * @return iterable<string, array{class-string<GridAdapter>, string, string}>
      */
-    public static function middleViewportVisibilityProvider(): iterable
+    public static function hideClassProvider(): iterable
     {
-        yield 'bootstrap' => [BootstrapAdapter::class, 'md', ['d-md-none', 'd-lg-block']];
-        yield 'tailwind' => [TailwindAdapter::class, 'md', ['md:hidden', 'lg:block']];
-        yield 'bulma' => [BulmaAdapter::class, 'tablet', ['is-hidden-tablet-only']];
+        yield 'bootstrap middle' => [BootstrapAdapter::class, 'md', 'd-md-none'];
+        yield 'bootstrap last' => [BootstrapAdapter::class, 'xxl', 'd-xxl-none'];
+        yield 'bootstrap base' => [BootstrapAdapter::class, 'xs', 'd-none'];
+        yield 'tailwind middle' => [TailwindAdapter::class, 'md', 'md:hidden'];
+        yield 'tailwind last' => [TailwindAdapter::class, '2xl', '2xl:hidden'];
+        yield 'bulma middle' => [BulmaAdapter::class, 'tablet', 'is-hidden-tablet-only'];
+        yield 'bulma last' => [BulmaAdapter::class, 'fullhd', 'is-hidden-fullhd-only'];
+        yield 'bulma base' => [BulmaAdapter::class, 'mobile', 'is-hidden-mobile-only'];
     }
 
     /**
      * @param class-string<GridAdapter> $adapterClass
-     * @param list<string> $expected
      */
-    #[DataProvider('middleViewportVisibilityProvider')]
-    public function testGetVisibilityClassesForMiddleViewport(string $adapterClass, string $viewport, array $expected): void
+    #[DataProvider('hideClassProvider')]
+    public function testGetHideClass(string $adapterClass, string $viewport, string $expected): void
     {
-        self::assertSame($expected, (new $adapterClass())->getVisibilityClasses($viewport));
+        self::assertSame($expected, (new $adapterClass())->getHideClass($viewport));
     }
 
     /**
-     * Visibility classes for the last viewport: hide only, no restore.
+     * The restore class per viewport. Cascade frameworks return a viewport-infixed
+     * restore utility; Bulma has no restore utility (its hides are viewport-scoped)
+     * and returns null.
      *
-     * @return iterable<string, array{class-string<GridAdapter>, string, list<string>}>
+     * @return iterable<string, array{class-string<GridAdapter>, string, string|null}>
      */
-    public static function lastViewportVisibilityProvider(): iterable
+    public static function restoreClassProvider(): iterable
     {
-        yield 'bootstrap' => [BootstrapAdapter::class, 'xxl', ['d-xxl-none']];
-        yield 'tailwind' => [TailwindAdapter::class, '2xl', ['2xl:hidden']];
-        yield 'bulma' => [BulmaAdapter::class, 'fullhd', ['is-hidden-fullhd-only']];
+        yield 'bootstrap' => [BootstrapAdapter::class, 'md', 'd-md-block'];
+        yield 'tailwind' => [TailwindAdapter::class, 'md', 'md:block'];
+        yield 'bulma has no restore utility' => [BulmaAdapter::class, 'tablet', null];
     }
 
     /**
      * @param class-string<GridAdapter> $adapterClass
-     * @param list<string> $expected
      */
-    #[DataProvider('lastViewportVisibilityProvider')]
-    public function testGetVisibilityClassesForLastViewport(string $adapterClass, string $viewport, array $expected): void
+    #[DataProvider('restoreClassProvider')]
+    public function testGetRestoreClass(string $adapterClass, string $viewport, ?string $expected): void
     {
-        self::assertSame($expected, (new $adapterClass())->getVisibilityClasses($viewport));
-    }
-
-    /**
-     * Visibility classes for the no-infix base viewport: uses base_hide_class.
-     * Base-viewport presets only.
-     *
-     * @return iterable<string, array{class-string<GridAdapter>, string, list<string>}>
-     */
-    public static function baseViewportVisibilityProvider(): iterable
-    {
-        yield 'bootstrap' => [BootstrapAdapter::class, 'xs', ['d-none', 'd-sm-block']];
-        yield 'bulma' => [BulmaAdapter::class, 'mobile', ['is-hidden-mobile-only']];
-    }
-
-    /**
-     * @param class-string<GridAdapter> $adapterClass
-     * @param list<string> $expected
-     */
-    #[DataProvider('baseViewportVisibilityProvider')]
-    public function testGetVisibilityClassesForBaseViewport(string $adapterClass, string $baseViewport, array $expected): void
-    {
-        self::assertSame($expected, (new $adapterClass())->getVisibilityClasses($baseViewport));
+        self::assertSame($expected, (new $adapterClass())->getRestoreClass($viewport));
     }
 
     /**
      * @param class-string<GridAdapter> $adapterClass
      */
     #[DataProvider('allAdaptersProvider')]
-    public function testGetVisibilityClassesThrowsForInvalidViewport(string $adapterClass): void
+    public function testGetHideClassThrowsForInvalidViewport(string $adapterClass): void
     {
         $this->expectException(InvalidGridValueException::class);
 
-        (new $adapterClass())->getVisibilityClasses('nonexistent');
+        (new $adapterClass())->getHideClass('nonexistent');
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('allAdaptersProvider')]
+    public function testGetRestoreClassThrowsForInvalidViewport(string $adapterClass): void
+    {
+        $this->expectException(InvalidGridValueException::class);
+
+        (new $adapterClass())->getRestoreClass('nonexistent');
     }
 
     // -- Row, container, title -----------------------------------------------
@@ -767,11 +761,11 @@ final class GridAdapterTest extends SapphireTest
         );
         self::assertSame(['sm', 'md', 'lg'], $keys, 'viewports must be breakpoint-ordered, not config-list-ordered');
 
-        // The "next enabled viewport" used for the restore class must follow
-        // breakpoint order: sm restores at md (the next enabled key), not at the
-        // config-list neighbour.
-        $smVisibility = $adapter->getVisibilityClasses('sm');
-        self::assertSame(['sm:hidden', 'md:block'], $smVisibility);
+        // The hide/restore classes are viewport-scoped and independent of config
+        // order: sm hides at sm and restores at sm regardless of the enabled-list
+        // ordering. The resolver sequences them using this breakpoint-ordered map.
+        self::assertSame('sm:hidden', $adapter->getHideClass('sm'));
+        self::assertSame('sm:block', $adapter->getRestoreClass('sm'));
     }
 
     // -- Malformed viewport_definitions rejection ----------------------------

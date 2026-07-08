@@ -26,39 +26,41 @@ final class BulmaAdapterVisibilityTest extends SapphireTest
 
     public function testHideAtMiddleViewportUsesIsHiddenOnly(): void
     {
-        $classes = $this->adapter->getVisibilityClasses('tablet');
-
-        self::assertSame(['is-hidden-tablet-only'], $classes);
+        self::assertSame('is-hidden-tablet-only', $this->adapter->getHideClass('tablet'));
     }
 
     public function testHideAtBaseViewportUsesIsHiddenOnly(): void
     {
-        $classes = $this->adapter->getVisibilityClasses('mobile');
-
         // 'mobile' is Bulma's base viewport. Emitted class must still target only that viewport.
-        self::assertSame(['is-hidden-mobile-only'], $classes);
+        self::assertSame('is-hidden-mobile-only', $this->adapter->getHideClass('mobile'));
     }
 
     public function testHideAtLastViewportUsesPlainHidden(): void
     {
-        $classes = $this->adapter->getVisibilityClasses('fullhd');
-
-        self::assertSame(['is-hidden-fullhd-only'], $classes);
+        self::assertSame('is-hidden-fullhd-only', $this->adapter->getHideClass('fullhd'));
     }
 
-    public function testEmittedClassesDoNotContainNonexistentIsBlockUtilities(): void
+    public function testHasNoRestoreUtility(): void
+    {
+        // Bulma's -only hide classes are viewport-scoped, so there is no restore
+        // utility. Returning null signals the resolver to hide every viewport
+        // explicitly rather than relying on an upward cascade.
+        foreach (['mobile', 'tablet', 'desktop', 'widescreen', 'fullhd'] as $viewport) {
+            self::assertNull($this->adapter->getRestoreClass($viewport));
+        }
+    }
+
+    public function testHideClassesDoNotContainNonexistentIsBlockUtilities(): void
     {
         foreach (['mobile', 'tablet', 'desktop', 'widescreen', 'fullhd'] as $viewport) {
-            $classes = $this->adapter->getVisibilityClasses($viewport);
+            $class = $this->adapter->getHideClass($viewport);
 
-            foreach ($classes as $class) {
-                self::assertStringNotContainsString(
-                    'is-block-',
-                    $class,
-                    "Bulma has no is-block-{viewport} utility; got {$class} for viewport {$viewport}",
-                );
-                self::assertNotSame('', $class, 'Must not emit empty class strings');
-            }
+            self::assertStringNotContainsString(
+                'is-block-',
+                $class,
+                "Bulma has no is-block-{viewport} utility; got {$class} for viewport {$viewport}",
+            );
+            self::assertNotSame('', $class, 'Must not emit empty class strings');
         }
     }
 }
