@@ -87,6 +87,13 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
      */
     private static array $hide_class_overrides = [];
 
+    /**
+     * Restore class for the base viewport (literal string, no sprintf) — the
+     * base viewport has no infix, so the responsive format cannot express it
+     * (e.g. Bootstrap's d-block, not d-xs-block).
+     */
+    private static string $base_restore_class = '';
+
     /** sprintf: %s = viewport key */
     private static string $responsive_restore_format = '';
 
@@ -263,6 +270,12 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
         // empty string that would pollute the class list.
         if ($restoreFormat === '') {
             return null;
+        }
+
+        /** @var ?string $baseKey */
+        $baseKey = static::config()->get('base_viewport_key');
+        if ($viewport === $baseKey) {
+            return static::config()->get('base_restore_class');
         }
 
         return sprintf($restoreFormat, $viewport);

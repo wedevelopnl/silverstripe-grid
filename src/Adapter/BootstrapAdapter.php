@@ -59,6 +59,10 @@ final class BootstrapAdapter extends GridAdapter
 
     private static string $responsive_hide_format = 'd-%s-none';
 
+    // xs has no infix, so the responsive format would yield the nonexistent
+    // d-xs-block — the base restore class is the plain d-block.
+    private static string $base_restore_class = 'd-block';
+
     private static string $responsive_restore_format = 'd-%s-block';
 
     // ─── Container & structure ───────────────────────────────────────

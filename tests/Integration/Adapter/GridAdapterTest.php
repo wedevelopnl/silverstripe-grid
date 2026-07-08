@@ -345,8 +345,12 @@ final class GridAdapterTest extends SapphireTest
     public static function restoreClassProvider(): iterable
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'md', 'd-md-block'];
+        // Bootstrap's base viewport has no infix: the restore class is the plain
+        // d-block, not the nonexistent d-xs-block the responsive format would give.
+        yield 'bootstrap base viewport' => [BootstrapAdapter::class, 'xs', 'd-block'];
         yield 'tailwind' => [TailwindAdapter::class, 'md', 'md:block'];
         yield 'bulma has no restore utility' => [BulmaAdapter::class, 'tablet', null];
+        yield 'bulma base viewport has no restore utility' => [BulmaAdapter::class, 'mobile', null];
     }
 
     /**
