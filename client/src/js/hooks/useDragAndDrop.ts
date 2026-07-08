@@ -7,7 +7,8 @@ import type {
   SensorDescriptor,
   SensorOptions,
 } from '@dnd-kit/core'
-import { PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import { useElementMaps } from '@/hooks/useElementMaps'
 import { usePendingTree } from '@/hooks/usePendingTree'
@@ -139,6 +140,13 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
     // Stryker disable next-line all: Equivalent — sensor activation config is bypassed by synthetic DragEvent tests that invoke the handlers directly
     useSensor(PointerSensor, {
       activationConstraint: { distance: POINTER_DISTANCE_THRESHOLD },
+    }),
+    // Keyboard operability for the labelled drag handles (WCAG 2.1.1): the handles
+    // render as focusable <button>s, so without this sensor Enter/Space did nothing.
+    // sortableKeyboardCoordinates drives the same collision detection; same-container
+    // reordering is the primary supported keyboard path.
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
     }),
   )
 
