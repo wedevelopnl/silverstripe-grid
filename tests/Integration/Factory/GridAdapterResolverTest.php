@@ -14,6 +14,7 @@ use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Factory\GridAdapterResolver;
+use WeDevelop\Grid\Tests\Unit\Support\GridAdapterStub;
 
 #[CoversClass(GridAdapterResolver::class)]
 final class GridAdapterResolverTest extends SapphireTest
@@ -99,6 +100,19 @@ final class GridAdapterResolverTest extends SapphireTest
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Invalid SS_GRID_ADAPTER value "stdClass"');
+
+        (new GridAdapterResolver())->create(GridAdapterInterface::class);
+    }
+
+    public function testFqcnMissingContentLayoutInterfaceThrows(): void
+    {
+        // GridAdapterStub implements GridAdapterInterface but not
+        // ContentLayoutAdapterInterface, which is aliased to the same singleton.
+        // The resolver must reject it at boot rather than let it fail at render.
+        Environment::putEnv('SS_GRID_ADAPTER=' . GridAdapterStub::class);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Invalid SS_GRID_ADAPTER value');
 
         (new GridAdapterResolver())->create(GridAdapterInterface::class);
     }
