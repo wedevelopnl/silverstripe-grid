@@ -81,7 +81,7 @@ describe('useDuplicateToAction', () => {
       })
 
       await waitFor(() => {
-        expect(result.current.dialog?.error).toBe('API error 422: Validation error')
+        expect(result.current.dialog?.error).toBe('Validation error')
       })
 
       act(() => {
@@ -213,7 +213,7 @@ describe('useDuplicateToAction', () => {
       })
 
       await waitFor(() => {
-        expect(result.current.dialog?.error).toBe('API error 500: Server error')
+        expect(result.current.dialog?.error).toBe('Server error')
       })
     })
   })

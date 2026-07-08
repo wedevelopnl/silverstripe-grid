@@ -15,13 +15,19 @@ function extractMessageFromBody(body: unknown): string | null {
   const record = body as Record<string, unknown>
 
   if (Array.isArray(record.errors)) {
+    // A multi-error envelope surfaces every message, not just the first —
+    // dropping the rest would make the user fix one problem per round-trip.
+    const values: string[] = []
     for (const entry of record.errors) {
       if (typeof entry === 'object' && entry !== null) {
         const value = (entry as Record<string, unknown>).value
         if (typeof value === 'string' && value !== '') {
-          return value
+          values.push(value)
         }
       }
+    }
+    if (values.length > 0) {
+      return values.join('; ')
     }
   }
 
@@ -38,7 +44,8 @@ function extractMessageFromBody(body: unknown): string | null {
 /**
  * Try to extract a human-readable error message from a JSON response body.
  * Falls back to the HTTP status text if the body cannot be parsed or carries no
- * recognised message.
+ * recognised message — and to a generic message when even statusText is empty
+ * (common on HTTP/2 responses), so the surfaced error is never blank.
  */
 async function extractErrorMessage(response: Response): Promise<string> {
   try {
@@ -49,7 +56,9 @@ async function extractErrorMessage(response: Response): Promise<string> {
   } catch {
     // Response has no JSON body — fall back to statusText
   }
-  return response.statusText
+  return response.statusText !== ''
+    ? response.statusText
+    : `Request failed with status ${response.status}`
 }
 
 /**

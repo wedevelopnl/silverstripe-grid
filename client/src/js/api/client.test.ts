@@ -167,6 +167,44 @@ describe('error extraction', () => {
     await expect(apiGet('/api/test')).rejects.toThrow('from envelope')
   })
 
+  it('exposes the server message verbatim, without a technical prefix', async () => {
+    // ApiError.message feeds toasts and the duplicate-to dialog directly — a
+    // "API error 422:" prefix is developer noise in an editor-facing message.
+    // The status stays available as a property for programmatic use.
+    mockFetchError(422, {
+      status: 'error',
+      errors: [{ type: 'error', code: 422, value: 'Element is not allowed in this container' }],
+    })
+
+    const error = await apiGet('/api/test').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect((error as ApiError).message).toBe('Element is not allowed in this container')
+    expect((error as ApiError).status).toBe(422)
+  })
+
+  it('joins every non-empty envelope error value instead of dropping all but the first', async () => {
+    mockFetchError(422, {
+      status: 'error',
+      errors: [
+        { type: 'error', code: 422, value: 'First problem' },
+        { type: 'error', code: 422, value: '' },
+        { type: 'error', code: 422, value: 'Second problem' },
+      ],
+    })
+
+    const error = await apiGet('/api/test').catch((e: unknown) => e)
+    expect((error as ApiError).message).toBe('First problem; Second problem')
+  })
+
+  it('falls back to a generic message when even statusText is empty', async () => {
+    // fetch() responses over HTTP/2 often carry an empty statusText — the
+    // toast must never end up blank.
+    mockFetchWithBody(500, '', () => Promise.resolve(null))
+
+    const error = await apiGet('/api/test').catch((e: unknown) => e)
+    expect((error as ApiError).message).toBe('Request failed with status 500')
+  })
+
   /**
    * Builds a full fetch Response mock whose `json()` resolves the supplied body
    * (or rejects, for the JSON-parse-failure case). Only status/statusText/json

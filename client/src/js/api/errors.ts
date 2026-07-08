@@ -1,11 +1,16 @@
 /**
  * Thrown when an API request returns a non-OK HTTP status.
+ *
+ * `message` is the server's text verbatim: it feeds toasts and inline dialog
+ * errors directly, so a technical "API error 422:" prefix would be developer
+ * noise in an editor-facing message. The status is a property for
+ * programmatic use.
  */
 export class ApiError extends Error {
   readonly status: number
 
   constructor(status: number, message: string) {
-    super(`API error ${status}: ${message}`)
+    super(message)
     this.name = 'ApiError'
     this.status = status
   }
