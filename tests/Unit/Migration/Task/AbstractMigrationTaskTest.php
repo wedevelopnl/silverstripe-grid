@@ -63,13 +63,18 @@ final class AbstractMigrationTaskTest extends TestCase
         self::assertSame(['MD' => 'md', 'XL' => 'xl'], $map);
     }
 
-    public function testExplicitViewportMapArgumentSkipsPairsWithoutEquals(): void
+    public function testExplicitViewportMapPairWithoutEqualsIsRejected(): void
     {
+        // A pair without '=' is a typo'd separator (e.g. "MD-md"). Skipping it
+        // silently loses every override for that viewport on a destructive
+        // migration — the same failure class as an invalid old/new key, so it
+        // must fail just as loudly.
         $adapter = $this->adapterWithViewportKeys(['md', 'xl']);
 
-        $map = $this->invokeResolveViewportKeyMap('MD=md,BROKEN,XL=xl', $adapter);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('BROKEN');
 
-        self::assertSame(['MD' => 'md', 'XL' => 'xl'], $map);
+        $this->invokeResolveViewportKeyMap('MD=md,BROKEN,XL=xl', $adapter);
     }
 
     public function testExplicitViewportMapOldKeyNormalisedToUppercase(): void

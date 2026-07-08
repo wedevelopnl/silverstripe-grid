@@ -646,7 +646,7 @@ final class MigrateGridTaskTest extends SapphireTest
         self::assertSame(VerticalAlignment::Center->value, $content->VerticalAlignment);
     }
 
-    public function testViewportMapMalformedPairsAreSkipped(): void
+    public function testViewportMapMalformedPairIsRejectedBeforeAnyWrite(): void
     {
         $pageId = $this->getPageId();
         $areaId = 800;
@@ -658,21 +658,19 @@ final class MigrateGridTaskTest extends SapphireTest
         ]);
         $this->seeder->seedContentMedia(8000);
 
-        // "BROKEN" has no = sign → should be skipped, only MD=md and XL=xl used
-        $exitCode = $this->executeTask([
+        // "BROKEN" has no = sign — a typo'd separator. Skipping it would
+        // silently drop that viewport's overrides on a destructive migration,
+        // so the task must refuse to run instead.
+        $result = $this->executeTaskRaw([
             '--default-viewport' => 'MD',
             '--zone' => 'main',
             '--viewport-map' => 'MD=md,BROKEN,XL=xl',
+            '--force' => true,
         ]);
 
-        self::assertSame(Command::SUCCESS, $exitCode);
-
-        $column = Column::get()->filter(['ParentClass' => Row::class])->first();
-        self::assertInstanceOf(Column::class, $column);
-
-        $settings = $column->getGridSettings();
-        self::assertSame(8, $settings->default->width);
-        self::assertTrue($settings->hasOverride('xl'));
+        self::assertSame(Command::FAILURE, $result['exitCode']);
+        self::assertStringContainsString('BROKEN', $result['output']);
+        self::assertCount(0, Column::get(), 'A rejected viewport map must not produce any writes');
     }
 
     public function testStopOnFirstFailureFlagHaltsAfterFirstPage(): void

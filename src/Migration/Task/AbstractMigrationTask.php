@@ -100,6 +100,34 @@ abstract class AbstractMigrationTask extends BuildTask
             return Command::FAILURE;
         }
 
+        // Resolve and validate the viewport map before the destructive-write
+        // confirmation, for the same reason preflight runs first: operators must
+        // not confirm a run whose arguments are then rejected.
+        $adapter = Injector::inst()->get(GridAdapterInterface::class);
+
+        try {
+            $viewportKeyMap = $this->resolveViewportKeyMap(
+                \is_string($input->getOption('viewport-map')) ? $input->getOption('viewport-map') : null,
+                $adapter,
+            );
+        } catch (InvalidArgumentException $e) {
+            $output->writeln(\sprintf('<error>%s</error>', $e->getMessage()));
+            return Command::FAILURE;
+        }
+
+        // An empty map drops every responsive override silently. This happens when
+        // the active adapter shares no key names with the legacy set (e.g. Bulma:
+        // mobile/tablet/desktop) and no explicit --viewport-map was given.
+        if ($viewportKeyMap === []) {
+            $output->writeln(\sprintf(
+                '<error>Could not derive a viewport map: no legacy key (%s) matches an active adapter viewport (%s). '
+                . 'Pass --viewport-map with explicit old=new pairs.</error>',
+                \implode(', ', LegacyElementReader::VIEWPORT_KEYS),
+                \implode(', ', \array_map(static fn (Viewport $v): string => $v->key, $adapter->getViewports())),
+            ));
+            return Command::FAILURE;
+        }
+
         $dryRun = (bool) $input->getOption('dry-run');
         $force = (bool) $input->getOption('force');
         $stopOnFirstFailure = (bool) $input->getOption('stop-on-first-failure');
@@ -125,31 +153,6 @@ abstract class AbstractMigrationTask extends BuildTask
         $pageIds = \is_string($pageIdsArg) && $pageIdsArg !== ''
             ? \array_map(intval(...), \explode(',', $pageIdsArg))
             : null;
-
-        $adapter = Injector::inst()->get(GridAdapterInterface::class);
-
-        try {
-            $viewportKeyMap = $this->resolveViewportKeyMap(
-                \is_string($input->getOption('viewport-map')) ? $input->getOption('viewport-map') : null,
-                $adapter,
-            );
-        } catch (InvalidArgumentException $e) {
-            $output->writeln(\sprintf('<error>%s</error>', $e->getMessage()));
-            return Command::FAILURE;
-        }
-
-        // An empty map drops every responsive override silently. This happens when
-        // the active adapter shares no key names with the legacy set (e.g. Bulma:
-        // mobile/tablet/desktop) and no explicit --viewport-map was given.
-        if ($viewportKeyMap === []) {
-            $output->writeln(\sprintf(
-                '<error>Could not derive a viewport map: no legacy key (%s) matches an active adapter viewport (%s). '
-                . 'Pass --viewport-map with explicit old=new pairs.</error>',
-                \implode(', ', LegacyElementReader::VIEWPORT_KEYS),
-                \implode(', ', \array_map(static fn (Viewport $v): string => $v->key, $adapter->getViewports())),
-            ));
-            return Command::FAILURE;
-        }
 
         $logger = Injector::inst()->get(LoggerInterface::class);
         $reader = new LegacyDataReader();
@@ -287,8 +290,9 @@ abstract class AbstractMigrationTask extends BuildTask
      *
      * @return array<string, string> old key → new key
      *
-     * @throws InvalidArgumentException when an explicit pair names an unknown legacy
-     *     old key or an adapter viewport that is not enabled
+     * @throws InvalidArgumentException when an explicit pair is malformed (no '='),
+     *     names an unknown legacy old key, or names an adapter viewport that is
+     *     not enabled
      */
     protected function resolveViewportKeyMap(?string $viewportMapArg, GridAdapterInterface $adapter): array
     {
@@ -299,7 +303,13 @@ abstract class AbstractMigrationTask extends BuildTask
             foreach (\explode(',', $viewportMapArg) as $pair) {
                 $parts = \explode('=', $pair, 2);
                 if (\count($parts) !== 2) {
-                    continue;
+                    // A pair without '=' is a typo'd separator; skipping it would
+                    // silently drop that viewport's overrides on a destructive
+                    // migration, so it fails as loudly as an invalid key.
+                    throw new InvalidArgumentException(\sprintf(
+                        'Invalid --viewport-map pair "%s": expected the form OLD=new (e.g. MD=md).',
+                        \trim($pair),
+                    ));
                 }
 
                 $rawOld = \trim($parts[0]);
