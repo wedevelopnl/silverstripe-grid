@@ -1,6 +1,6 @@
 # E2E Fixture Protocol
 
-Playwright specs load their test data through a dev-only HTTP endpoint that writes named YAML fixtures into the database. The endpoint, loader, post-action system, and Playwright client are provided by the [`wedevelopnl/silverstripe-e2e`](https://packagist.org/packages/wedevelopnl/silverstripe-e2e) module (a dev dependency); the grid supplies its fixtures, the page-class allowlist, and a scaffold-suppression extension via `_config/dev.yml`. This guide covers the fixture YAML schema, the post-action system, the controller's HTTP contract, and the conventions every fixture must follow.
+Playwright specs load their test data through a dev-only HTTP endpoint that writes named YAML fixtures into the database. The endpoint, loader, post-action system, and Playwright client are provided by the [`wedevelopnl/silverstripe-e2e`](https://packagist.org/packages/wedevelopnl/silverstripe-e2e) module (a dev dependency); the grid supplies its fixtures, the page-class allowlist, and auto-scaffold `config_overrides` via `_config/dev.yml`. This guide covers the fixture YAML schema, the post-action system, the controller's HTTP contract, and the conventions every fixture must follow.
 
 ## Architecture
 
@@ -30,7 +30,7 @@ Every fixture run is fully idempotent: `load()` calls `reset()` first so re-runn
 Loads the named fixture. The fixture name is read from the **POST body** field `fixture` (`$request->postVar('fixture')`) — a query-string `?fixture=` is ignored and the request fails with `400`. From the shell:
 
 ```bash
-curl -X POST -d "fixture=<name>" http://localhost:<WEB_PORT>/dev/e2e-fixtures/load
+curl -k -X POST -d "fixture=<name>" https://localhost:<WEB_PORT>/dev/e2e-fixtures/load
 ```
 
 Returns:
@@ -254,7 +254,7 @@ Not currently supported in the shared fixture loader — the Fluent E2E suite ha
 - [ ] Every element has `Sort` and `Parent` set
 - [ ] Register the fixture in `_config/dev.yml` under `FixtureLoader.fixtures`
 - [ ] Add a `publish_recursive` post-action on the page if the spec needs live content
-- [ ] Verify locally: `curl -X POST -d "fixture=<name>" "http://localhost:<WEB_PORT>/dev/e2e-fixtures/load"`
+- [ ] Verify locally: `curl -k -X POST -d "fixture=<name>" "https://localhost:<WEB_PORT>/dev/e2e-fixtures/load"`
 - [ ] Reference from the spec via the shared `loadAndNavigate()` / `loadFixture()` helper
 
 ## Troubleshooting
