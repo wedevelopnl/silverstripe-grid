@@ -24,7 +24,7 @@
     "_comment_require_dev": "QA toolchain is pinned to exact versions so CI's lock-less `composer install` cannot silently float into a rule/behavior change that breaks the build. Runtime deps (recipe-cms, fluent) stay on ranges so the module keeps testing against the latest SS6.x. Bump these manually when adopting a new tool release.",
     "require-dev": {
         "cambis/silverstan": "2.1.9",
-        "infection/infection": "0.32.7",
+        "infection/infection": "0.34.0",
         "phpstan/extension-installer": "1.4.3",
         "phpstan/phpstan": "2.2.1",
         "phpstan/phpstan-deprecation-rules": "2.0.4",
