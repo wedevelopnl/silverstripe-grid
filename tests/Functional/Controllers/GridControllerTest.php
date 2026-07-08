@@ -1285,14 +1285,17 @@ final class GridControllerTest extends FunctionalTest
         // content-disclosure gap: the source was gated only by the page-independent
         // canCreate(), so an editor could copy restricted content into their own
         // page and read the clone. The source canEdit() guard must now reject it.
+        // Source on the restricted test_page; target on the editable page2. The
+        // source's canEdit() guard must reject before any target check.
         $restricted = $this->buildRestrictedTree();
-        $tree = $this->buildTree();
+        $editablePage = $this->page2();
+        $editable = $this->buildTree($editablePage);
 
         $response = $this->jsonPost(self::BASE_URL . '/duplicateTo', [
             'element' => $this->ref($restricted['row']),
-            'targetPageId' => (int) $tree['page']->ID,
+            'targetPageId' => (int) $editablePage->ID,
             'targetZone' => 'main',
-            'targetParent' => $this->ref($tree['section']),
+            'targetParent' => $this->ref($editable['section']),
         ]);
 
         self::assertSame(403, $response->getStatusCode());
