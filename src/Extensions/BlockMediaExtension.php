@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Extensions;
 
 use Embed\Embed;
+use InvalidArgumentException;
 use LogicException;
 use Psr\Log\LoggerInterface;
 use SilverStripe\AssetAdmin\Forms\UploadField;
@@ -20,6 +21,7 @@ use UncleCheese\DisplayLogic\Forms\Wrapper;
 use WeDevelop\Grid\Contract\ContentLayoutAdapterInterface;
 use WeDevelop\Grid\Forms\ColumnWidthPickerField;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Service\EmbedUrlGuard;
 use WeDevelop\Grid\Value\AspectRatio;
 use WeDevelop\Grid\Value\MediaPosition;
 use WeDevelop\Grid\Value\VerticalAlignment;
@@ -419,6 +421,17 @@ class BlockMediaExtension extends Extension
     /** Resolve oEmbed metadata for the current VideoURL via the MediaField package. */
     protected function resolveVideoEmbed(DataObject $owner): void
     {
+        // Guard the synchronous oEmbed HTTP fetch against SSRF: refuse to fetch a
+        // non-HTTP URL or one whose host resolves to a private/reserved address
+        // (e.g. the cloud metadata endpoint). onBeforeWrite() catches this, logs
+        // it, and lets the write proceed without embed metadata.
+        $videoUrl = $this->getVideoURL();
+        if (!(new EmbedUrlGuard())->isSafe($videoUrl)) {
+            throw new InvalidArgumentException(
+                'Refusing oEmbed fetch: video URL is not an HTTP(S) URL on a publicly routable host.',
+            );
+        }
+
         MediaField::saveEmbed(
             $owner,
             new Embed(),
