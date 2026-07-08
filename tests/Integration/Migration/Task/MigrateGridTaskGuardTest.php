@@ -39,6 +39,23 @@ final class MigrateGridTaskGuardTest extends SapphireTest
         parent::tearDown();
     }
 
+    public function testRejectsInvalidDefaultViewport(): void
+    {
+        // --default-viewport must be one of the legacy keys (XS/SM/MD/LG/XL). An
+        // unvalidated value misses the uppercase-keyed legacy sizeFields lookup and
+        // silently full-widths every migrated column, so it must fail loudly.
+        $task = new MigrateGridTask();
+        $definition = new InputDefinition($task->getOptions());
+        $input = new ArrayInput(['--default-viewport' => 'ZZ', '--zone' => 'main', '--dry-run' => true], $definition);
+        $buffered = new BufferedOutput();
+        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+
+        $result = $task->execute($input, $output);
+
+        self::assertSame(Command::FAILURE, $result);
+        self::assertStringContainsString('Invalid --default-viewport "ZZ"', $buffered->fetch());
+    }
+
     public function testRefusesWhenLocalisedLegacyTablesPresent(): void
     {
         $this->seeder->addFieldLocalisedTables();
