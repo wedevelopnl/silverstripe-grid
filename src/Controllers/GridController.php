@@ -428,9 +428,15 @@ class GridController extends AdminController
 
         $body = $parseResult->unwrap();
 
+        // The source element must be readable/editable on its OWN page, not merely
+        // creatable in the abstract: canCreate() is page-independent (a global
+        // CMS_ACCESS check), so gating on it alone would let an editor copy an
+        // element off a page they cannot access into one they can, then read the
+        // clone. canEdit() delegates to the source element's owning page, closing
+        // that cross-page disclosure — mirroring apiDuplicate's parent->canEdit() gate.
         $element = $this->requireElementWithPermission(
             $body->element,
-            static fn (GridElement $e): bool => $e->canCreate(),
+            static fn (GridElement $e): bool => $e->canCreate() && $e->canEdit(),
         );
 
         $elementType = NodeType::fromClass($element::class);

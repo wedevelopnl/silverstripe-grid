@@ -1278,6 +1278,26 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(403, $response->getStatusCode());
     }
 
+    public function testDuplicateToReturns403ForNonEditableSourcePage(): void
+    {
+        // Source element lives on a page the current user cannot edit; the target
+        // is the user's own editable page. Regression for the cross-page
+        // content-disclosure gap: the source was gated only by the page-independent
+        // canCreate(), so an editor could copy restricted content into their own
+        // page and read the clone. The source canEdit() guard must now reject it.
+        $restricted = $this->buildRestrictedTree();
+        $tree = $this->buildTree();
+
+        $response = $this->jsonPost(self::BASE_URL . '/duplicateTo', [
+            'element' => $this->ref($restricted['row']),
+            'targetPageId' => (int) $tree['page']->ID,
+            'targetZone' => 'main',
+            'targetParent' => $this->ref($tree['section']),
+        ]);
+
+        self::assertSame(403, $response->getStatusCode());
+    }
+
     public function testReorderReturns403ForNonEditableElement(): void
     {
         $restricted = $this->buildRestrictedTree();
