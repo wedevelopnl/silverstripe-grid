@@ -28,6 +28,15 @@ export function heightForWidth(width: number): number {
   return Math.min(cap, Math.max(floor, Math.round(width * 0.75)))
 }
 
+/**
+ * Escape a value for a single-quoted CSS string (the `content` property). Without
+ * this, a viewport label containing an apostrophe (e.g. the French "L'écran")
+ * terminates the string early and invalidates the generated rule.
+ */
+export function escapeCssString(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\A ')
+}
+
 function buildRules(): string {
   return getViewports()
     .map((vp) => {
@@ -44,7 +53,7 @@ function buildRules(): string {
         `  min-width: calc(${width}px + 4 * 8px);`,
         `}`,
         `${selectorBase} .preview__device::after {`,
-        `  content: '${vp.label} · ${width}px × ${height}px';`,
+        `  content: '${escapeCssString(vp.label)} · ${width}px × ${height}px';`,
         `}`,
       ].join('\n')
     })

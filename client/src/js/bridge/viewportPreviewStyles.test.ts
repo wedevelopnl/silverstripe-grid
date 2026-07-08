@@ -1,10 +1,26 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  escapeCssString,
   heightForWidth,
   installViewportStyles,
   removeViewportStyles,
   STYLE_TAG_ID,
 } from './viewportPreviewStyles'
+
+describe('escapeCssString', () => {
+  it('escapes single quotes so an apostrophe label cannot terminate the CSS string', () => {
+    expect(escapeCssString("L'écran")).toBe("L\\'écran")
+  })
+
+  it('escapes backslashes and newlines', () => {
+    expect(escapeCssString('a\\b')).toBe('a\\\\b')
+    expect(escapeCssString('a\nb')).toBe('a\\A b')
+  })
+
+  it('leaves an ordinary label untouched', () => {
+    expect(escapeCssString('Extra Small')).toBe('Extra Small')
+  })
+})
 
 vi.mock('@/utils/gridAdapter', () => ({
   getViewports: () => [
