@@ -732,7 +732,7 @@ final class MigrationAcceptanceTest extends SapphireTest
 
     // ─── Scenario 7: Adjacent empty rows and mixed content ────────
 
-    public function testAdjacentEmptyRowsAndMixedContent(): void
+    public function testAdjacentEmptyRowsAreDroppedButContentSurvives(): void
     {
         $pageId = $this->getPageId();
         $areaId = 400;
@@ -776,24 +776,11 @@ final class MigrationAcceptanceTest extends SapphireTest
         $this->runRowPerSection($pageId);
 
         $this->assertMigratedHierarchy($pageId, self::ZONE, Versioned::DRAFT, [
-            // Section 1: empty row 1
-            [
-                'rows' => [
-                    [
-                        'columns' => [],
-                    ],
-                ],
-            ],
-            // Section 2: empty row 2
-            [
-                'rows' => [
-                    [
-                        'columns' => [],
-                    ],
-                ],
-            ],
-            // Section 3: row with 2 media-rich elements sharing a column
-            // (both have SizeMD=6 and no overrides — grouping produces 1 column)
+            // The two leading empty row delimiters are dropped (an empty Row with no
+            // Column violates the complete-hierarchy invariant); only the content
+            // row survives as a single section.
+            // Row with 2 media-rich elements sharing a column (both SizeMD=6, no
+            // overrides — grouping produces 1 column).
             [
                 'rows' => [
                     [

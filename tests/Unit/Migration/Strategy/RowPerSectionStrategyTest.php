@@ -133,22 +133,22 @@ final class RowPerSectionStrategyTest extends TestCase
         ];
 
         self::$nextId = 0;
-        yield 'three rows: 3 same elements grouped, 1 element, empty' => [
+        yield 'three rows: 3 same elements grouped, 1 element, trailing empty row dropped' => [
             [self::r(), self::e(4), self::e(4), self::e(4), self::r(), self::e(12), self::r()],
             'main',
             [
                 ['rows' => [['columns' => [['w' => 4, 'n' => 3]]]]],
                 ['rows' => [['columns' => [['w' => 12]]]]],
-                ['rows' => [['columns' => []]]],
+                // The trailing empty row delimiter produces no columns and is dropped.
             ],
         ];
 
         self::$nextId = 0;
-        yield 'adjacent empty rows then elements' => [
+        yield 'leading empty rows dropped, then elements' => [
             [self::r(), self::r(), self::e(6), self::e(6)],
             'main',
             [
-                ['rows' => [['columns' => []]]],
+                // The two leading empty delimiters are dropped; only the content row remains.
                 ['rows' => [['columns' => [['w' => 6, 'n' => 2]]]]],
             ],
         ];
@@ -235,12 +235,19 @@ final class RowPerSectionStrategyTest extends TestCase
 
         self::$nextId = 0;
         yield 'zone is passed through to all sections' => [
-            [self::r(), self::r()],
+            [self::r(), self::e(6), self::r(), self::e(4)],
             'sidebar',
             [
-                ['rows' => [['columns' => []]]],
-                ['rows' => [['columns' => []]]],
+                ['rows' => [['columns' => [['w' => 6]]]]],
+                ['rows' => [['columns' => [['w' => 4]]]]],
             ],
+        ];
+
+        self::$nextId = 0;
+        yield 'a page of only empty row delimiters produces no sections' => [
+            [self::r(), self::r()],
+            'sidebar',
+            [],
         ];
 
         // ── Grouping cases ───────────────────────────────────────
