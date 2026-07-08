@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { useDuplicateToAction } from '@/hooks/useDuplicateToAction'
 import { allowConsole } from '@/testing/consoleGuard'
 import { createSectionNode, createSimpleElement, resetIdCounter } from '@/testing/factories'
@@ -88,6 +88,57 @@ describe('useDuplicateToAction', () => {
         result.current.dialog?.onCancel()
       })
 
+      expect(result.current.dialog?.error).toBeNull()
+    })
+
+    it('falls back to a toast when the failure lands after the dialog was cancelled', async () => {
+      // Cancel-mid-flight: the inline presenter is gone (the dialog is closed
+      // and resets its error on reopen) and the hook-level toast is suppressed
+      // in favour of it — without a fallback the failure is presented nowhere.
+      const dispatch = vi.fn()
+      window.ss!.store = { dispatch }
+
+      let settleFetch: (response: Response) => void = () => {}
+      const deferred = new Promise<Response>((resolve) => {
+        settleFetch = resolve
+      })
+      vi.spyOn(globalThis, 'fetch').mockReturnValue(deferred)
+
+      const node = createSimpleElement({ id: 42 })
+      const { result } = renderDuplicateToAction(node)
+
+      act(() => {
+        result.current.action?.onAction()
+      })
+      act(() => {
+        result.current.dialog?.onConfirm(5, 'main', { type: 'column', id: 99 })
+      })
+      act(() => {
+        result.current.dialog?.onCancel()
+      })
+
+      // The request fails only after the dialog is closed.
+      act(() => {
+        settleFetch({
+          ok: false,
+          status: 422,
+          statusText: 'Unprocessable Content',
+          json: () =>
+            Promise.resolve({
+              status: 'error',
+              errors: [{ type: 'error', code: 422, value: 'Element is not allowed here' }],
+            }),
+        } as unknown as Response)
+      })
+
+      await waitFor(() => {
+        expect(dispatch).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'DISPLAY_TOAST',
+            payload: expect.objectContaining({ type: 'error' }),
+          }),
+        )
+      })
       expect(result.current.dialog?.error).toBeNull()
     })
   })
