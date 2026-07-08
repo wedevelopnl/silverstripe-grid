@@ -70,6 +70,20 @@ final class InvalidGridValueException extends GridDomainException
         );
     }
 
+    public static function forIncompleteClassMap(string $adapterClass, string $configKey, string $missingKey): self
+    {
+        return new self(
+            userMessage: 'The configured grid class mapping is incomplete.',
+            detailedMessage: sprintf(
+                'Adapter %s is missing %s mapping for "%s".',
+                $adapterClass,
+                $configKey,
+                $missingKey,
+            ),
+            statusCode: self::STATUS_CODE,
+        );
+    }
+
     public static function forOverrideStrategy(string $value): self
     {
         return new self(
