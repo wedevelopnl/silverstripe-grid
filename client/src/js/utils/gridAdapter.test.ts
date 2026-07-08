@@ -96,10 +96,29 @@ describe('getWidthOptions', () => {
     expect(options[12]).toEqual({ value: 'hidden', label: 'hidden' })
   })
 
-  it('caches the result across calls', () => {
-    const first = getWidthOptions()
-    const second = getWidthOptions()
-    expect(first).toBe(second)
+  it('translates the hidden label at call time, not first-call time', () => {
+    // getWidthOptions used to bake t('…HIDDEN') into a module-level cache: a
+    // first call before ss.i18n had loaded its lang files pinned the English
+    // fallback for the whole session. getOffsetOptions already translated per
+    // call — this pins the consistent per-call behavior.
+    const originalSs = window.ss
+    getWidthOptions() // first call happens before the "lang files load"
+
+    window.ss = {
+      ...originalSs,
+      i18n: {
+        _t: (key: string, fallback: string) =>
+          key === 'WeDevelopGrid.GridSettings.HIDDEN' ? 'verborgen' : fallback,
+        inject: (str: string) => str,
+      },
+    } as typeof window.ss
+
+    try {
+      const options = getWidthOptions()
+      expect(options[12]).toEqual({ value: 'hidden', label: 'verborgen' })
+    } finally {
+      window.ss = originalSs
+    }
   })
 })
 

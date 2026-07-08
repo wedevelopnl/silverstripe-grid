@@ -5,11 +5,9 @@ import type { GridSettings, ViewportSettings } from '@/types/elements'
 import type { GridSettingsOption } from '@/types/gridSettings'
 
 let cachedConfig: AdapterConfig | null = null
-let cachedWidthOptions: readonly GridSettingsOption[] | null = null
 
 export function resetAdapterCache(): void {
   cachedConfig = null
-  cachedWidthOptions = null
 }
 
 function config(): AdapterConfig {
@@ -47,20 +45,21 @@ export function getOffsetClass(offset: number): string {
   return config().baseOffsetClasses[String(offset)] ?? ''
 }
 
+// Not cached: the hidden label must be translated at call time (a module-level
+// cache filled before ss.i18n loads its lang files would pin the English
+// fallback for the session), matching getOffsetOptions' per-call behavior.
+// Building ≤ columnCount + 1 items per call is trivial.
 export function getWidthOptions(): readonly GridSettingsOption[] {
-  if (cachedWidthOptions === null) {
-    const columnCount = config().columnCount
-    const options: GridSettingsOption[] = []
+  const columnCount = config().columnCount
+  const options: GridSettingsOption[] = []
 
-    for (let n = 1; n <= columnCount; n++) {
-      options.push({ value: n, label: `${n}/${columnCount}` })
-    }
-
-    options.push({ value: 'hidden', label: t('WeDevelopGrid.GridSettings.HIDDEN', 'hidden') })
-    cachedWidthOptions = options
+  for (let n = 1; n <= columnCount; n++) {
+    options.push({ value: n, label: `${n}/${columnCount}` })
   }
 
-  return cachedWidthOptions
+  options.push({ value: 'hidden', label: t('WeDevelopGrid.GridSettings.HIDDEN', 'hidden') })
+
+  return options
 }
 
 export function getOffsetOptions(currentWidth?: number): readonly GridSettingsOption[] {

@@ -83,6 +83,13 @@ describe('RowChrome', () => {
     expect(screen.getByTestId('row-column-count')).toHaveTextContent('3 columns')
   })
 
+  it('renders the singular form for a single column', () => {
+    render(<RowChrome {...baseProps} columnCount={1} />)
+
+    expect(screen.getByTestId('row-column-count')).toHaveTextContent('1 column')
+    expect(screen.getByTestId('row-column-count')).not.toHaveTextContent('1 columns')
+  })
+
   it('omits the column-count meta when columnCount is 0', () => {
     render(<RowChrome {...baseProps} columnCount={0} />)
 
