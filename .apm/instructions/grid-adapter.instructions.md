@@ -13,7 +13,7 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single concrete
 
 ## Key Files
 
-- `src/Contract/GridAdapterInterface.php` — 14 methods defining the grid adapter contract
+- `src/Contract/GridAdapterInterface.php` — 15 methods defining the grid adapter contract
 - `src/Contract/ContentLayoutAdapterInterface.php` — 8 methods for content layout CSS
 - `src/Adapter/GridAdapter.php` — Config-driven base class implementing both interfaces
 - `src/Adapter/BootstrapAdapter.php` / `TailwindAdapter.php` / `BulmaAdapter.php` — presets
@@ -33,7 +33,7 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single concrete
 ## Core Rules
 
 - A new adapter is a zero-method subclass of `GridAdapter` with `private static` property overrides only — no method overrides.
-- The active adapter is selected by the required `SS_GRID_ADAPTER` env var. Accepts a bundled preset name (`bootstrap`|`tailwind`|`bulma`, case-insensitive) or the FQCN of a custom adapter that implements `GridAdapterInterface`. Unset, empty, or invalid values throw at container boot.
+- The active adapter is selected by the required `SS_GRID_ADAPTER` env var. Accepts a bundled preset name (`bootstrap`|`tailwind`|`bulma`, case-insensitive) or the FQCN of a custom adapter that implements **both** `GridAdapterInterface` and `ContentLayoutAdapterInterface` (one singleton serves both contracts; subclassing `GridAdapter` provides both — the resolver fails fast at boot otherwise). Unset, empty, or invalid values throw at container boot.
 - `.docker/env.sh` seeds `SS_GRID_ADAPTER=tailwind` into `.docker/.env` so first-run dev works; edit or override via shell env to switch.
 - Any property can be overridden per-project via YAML without writing PHP.
 - `base_viewport_key` identifies the "no infix" viewport (Bootstrap's `xs`, Bulma's `mobile`); set to `null` for frameworks without one (Tailwind).

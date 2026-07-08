@@ -164,7 +164,7 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 ├──────────────────── Rendering ──────────────────────────────┤
 │                                                             │
 │  Grid Adapter System                                        │
-│    ├── GridAdapterInterface (14 methods)                    │
+│    ├── GridAdapterInterface (15 methods)                    │
 │    ├── ContentLayoutAdapterInterface (8 methods)            │
 │    ├── GridAdapter (config-driven base, implements both)    │
 │    ├── GridAdapterFactory (DI alias factory)                │
@@ -416,7 +416,7 @@ The controller maps `Result::ok()` to HTTP 204 and `Result::fail()` to HTTP 422 
 
 Grid adapters translate the abstract layout model (viewports, column widths, offsets, visibility) into CSS framework-specific class names. All consumers depend on `GridAdapterInterface`, never on a concrete adapter.
 
-### Interface Contract (14 methods)
+### Interface Contract (15 methods)
 
 | Method | Returns | Purpose |
 |--------|---------|---------|

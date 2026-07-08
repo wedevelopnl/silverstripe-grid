@@ -6,7 +6,7 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single `abstrac
 
 ## Key Files
 
-- `src/Contract/GridAdapterInterface.php` — 14 methods defining the grid adapter contract
+- `src/Contract/GridAdapterInterface.php` — 15 methods defining the grid adapter contract
 - `src/Contract/ContentLayoutAdapterInterface.php` — 8 methods for content layout CSS
 - `src/Adapter/GridAdapter.php` — Config-driven base class implementing both interfaces
 - `src/Adapter/BootstrapAdapter.php` — Bootstrap 5 preset (zero methods, only statics)
@@ -163,7 +163,7 @@ Frameworks without a base viewport (Tailwind) set `base_viewport_key` to `null` 
 
 ### 4. Register the Adapter
 
-`GridAdapterInterface` resolves through `GridAdapterResolver`, which reads the required `SS_GRID_ADAPTER` environment variable. The value is either a bundled preset name (`bootstrap`|`tailwind`|`bulma`, case-insensitive) or the FQCN of an adapter that implements `GridAdapterInterface`. Unset, empty, or invalid values throw at container boot.
+`GridAdapterInterface` resolves through `GridAdapterResolver`, which reads the required `SS_GRID_ADAPTER` environment variable. The value is either a bundled preset name (`bootstrap`|`tailwind`|`bulma`, case-insensitive) or the FQCN of an adapter that implements **both** `GridAdapterInterface` and `ContentLayoutAdapterInterface` — the same singleton serves both contracts (see `_config/content-layout.yml`), so the resolver fails fast at container boot rather than deferring the failure to the first content-layout render. Subclassing `GridAdapter` provides both automatically. Unset, empty, or invalid values throw at container boot.
 
 For a bundled preset:
 
