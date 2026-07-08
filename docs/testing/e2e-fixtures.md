@@ -14,8 +14,8 @@ POST /dev/e2e-fixtures/load  (WeDevelop\E2e\Fixtures\FixtureController, dev-only
   ├── Looks up name in FixtureLoader::$fixtures config
   └── Delegates to FixtureLoader::load()
        ├── reset()                  — archives all e2e-* pages
-       ├── onBeforeLoad hook        — grid's FixtureScaffoldSuppressionExtension
-       │                              registers scaffold-suppressing FixtureBlueprints
+       ├── applyConfigOverrides()   — grid's config_overrides force auto_scaffold
+       │                              off on Section/Row for the fixture write
        ├── YamlFixture::writeInto() — writes the YAML into the factory
        ├── applyPostActions()       — publish / modify / attach images
        └── Return FixtureResult     — { fixtureName, pageId, pageUrl, fixtureMap }
@@ -139,7 +139,7 @@ WeDevelop\Grid\Model\ContentElement:
 
 ### Ordering: top-down
 
-Fixtures are written **top-down** (page → section → row → column → leaf). The grid registers `WeDevelop\Grid\Dev\FixtureScaffoldSuppressionExtension` on the module's `FixtureLoader` (`onBeforeLoad` hook); it sets `auto_scaffold = false` on `Section` and `Row` via `FixtureBlueprint` `beforeCreate` callbacks, so writing parents first cannot produce duplicate auto-scaffolded children. This is the opposite of how production code behaves — in the live CMS, writing a Section triggers auto-scaffolding of a Row + Column. Fixtures opt out so the YAML stays explicit and readable.
+Fixtures are written **top-down** (page → section → row → column → leaf). The grid declares `config_overrides` on the module's `FixtureLoader` (in `_config/dev.yml`) forcing `auto_scaffold = false` on `Section` and `Row`; the module applies each static via `FixtureBlueprint` `beforeCreate` callbacks for the duration of the fixture write, so writing parents first cannot produce duplicate auto-scaffolded children. This is the opposite of how production code behaves — in the live CMS, writing a Section triggers auto-scaffolding of a Row + Column. Fixtures opt out so the YAML stays explicit and readable.
 
 ### Required fields per element type
 
@@ -272,5 +272,5 @@ Not currently supported in the shared fixture loader — the Fluent E2E suite ha
 - [Backend Architecture — CMS Integration](../architecture/backend.md#cms-integration) — `GridPageExtension` setup
 - `vendor/wedevelopnl/silverstripe-e2e/src/Fixtures/FixtureLoader.php` — the loader implementation
 - `vendor/wedevelopnl/silverstripe-e2e/src/Fixtures/FixturePostAction.php` — full post-action reference
-- `src/Dev/FixtureScaffoldSuppressionExtension.php` — the grid's scaffold-suppression hook
+- `_config/dev.yml` — the grid's `config_overrides` block that suppresses Section/Row auto-scaffolding during fixture writes
 - The `e2e-test-reference` skill (if available) — spec authoring helpers, test selectors

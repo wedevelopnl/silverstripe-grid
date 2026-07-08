@@ -4,21 +4,25 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Dev;
 
-use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\E2e\Fixtures\FixtureLoader;
-use WeDevelop\Grid\Dev\FixtureScaffoldSuppressionExtension;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 
 /**
- * Exercises the extension through the silverstripe-e2e FixtureLoader as wired
- * in _config/dev.yml, so a broken `extensions:` registration fails here too —
- * not just the extension class in isolation.
+ * Guards the grid's `_config/dev.yml` `config_overrides` wiring: loading a
+ * fixture through the silverstripe-e2e FixtureLoader must force
+ * `auto_scaffold = false` on Section and Row for the fixture write, so the
+ * parent-first YAML cannot produce duplicate auto-scaffolded children.
+ *
+ * The suppression logic lives in the module (FixtureLoader::applyConfigOverrides);
+ * this test asserts the grid has wired it correctly, so a broken or missing
+ * `config_overrides` block fails here — not just the module in isolation.
  */
-#[CoversClass(FixtureScaffoldSuppressionExtension::class)]
-final class FixtureScaffoldSuppressionExtensionTest extends SapphireTest
+#[CoversNothing]
+final class FixtureScaffoldSuppressionTest extends SapphireTest
 {
     protected $usesDatabase = true;
 
