@@ -5,9 +5,13 @@
 export const queryKeys = {
   elementTree: {
     all: () => ['elementTree'] as const,
+    // Version keys live on their own 'version' branch: invalidateQueries
+    // prefix-matches, so nesting them under the draft key would make every
+    // mutation's ['elementTree', pageId, zone] invalidation refetch immutable
+    // archived versions too.
     byPage: (pageId: number, zone: string, version?: number) =>
       version !== undefined
-        ? (['elementTree', pageId, zone, version] as const)
+        ? (['elementTree', 'version', pageId, zone, version] as const)
         : (['elementTree', pageId, zone] as const),
     disabled: () => ['elementTree', 'disabled', null] as const,
   },

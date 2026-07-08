@@ -20,8 +20,10 @@ function treeQueryOptions(pageId: number | null, zone: string, version?: number)
     },
     enabled: pageId !== null,
     // Archived versions are immutable server-side, so a version-specific tree
-    // never goes stale — mark it fresh forever to avoid wasted refetches when a
-    // mutation invalidates the draft-prefixed keyspace it nests under.
+    // never goes stale — mark it fresh forever to suppress mount/focus
+    // refetches. Mutation invalidations are handled structurally: version keys
+    // live on their own branch that the draft invalidation's prefix match
+    // cannot reach (see queryKeys.elementTree).
     ...(version !== undefined ? { staleTime: Number.POSITIVE_INFINITY } : {}),
   }
 }

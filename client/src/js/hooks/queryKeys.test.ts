@@ -11,8 +11,24 @@ describe('queryKeys', () => {
       expect(queryKeys.elementTree.byPage(1, 'main')).toEqual(['elementTree', 1, 'main'])
     })
 
-    it('should include version in tuple when version is provided', () => {
-      expect(queryKeys.elementTree.byPage(1, 'main', 5)).toEqual(['elementTree', 1, 'main', 5])
+    it('should place version keys on a separate branch when version is provided', () => {
+      expect(queryKeys.elementTree.byPage(1, 'main', 5)).toEqual([
+        'elementTree',
+        'version',
+        1,
+        'main',
+        5,
+      ])
+    })
+
+    it('should keep the draft key from prefix-matching version keys', () => {
+      // invalidateQueries prefix-matches. Nesting version keys under the draft
+      // key (['elementTree', 1, 'main', 5]) made every mutation's draft
+      // invalidation refetch immutable archived versions too.
+      const draft = queryKeys.elementTree.byPage(1, 'main')
+      const version = queryKeys.elementTree.byPage(1, 'main', 5)
+
+      expect(version.slice(0, draft.length)).not.toEqual([...draft])
     })
 
     it('should omit version from tuple when version is undefined', () => {
