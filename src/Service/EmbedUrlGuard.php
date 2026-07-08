@@ -20,10 +20,10 @@ use Closure;
  * needs a redirect-validating HTTP client. This guard closes the direct vector
  * (an internal URL typed straight into the field), which is the common case.
  */
-final class EmbedUrlGuard
+final readonly class EmbedUrlGuard
 {
     /** @var Closure(string): list<string> resolves a hostname to its IP addresses */
-    private readonly Closure $resolveIps;
+    private Closure $resolveIps;
 
     /**
      * @param (callable(string): list<string>)|null $resolveIps Injectable resolver

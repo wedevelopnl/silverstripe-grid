@@ -84,7 +84,6 @@ final readonly class ViewportConfig implements JsonSerializable
             );
         }
 
-        /** @var positive-int $width */
         $width = $data['width'];
         /** @var int<0, max> $offset */
         $offset = $data['offset'];

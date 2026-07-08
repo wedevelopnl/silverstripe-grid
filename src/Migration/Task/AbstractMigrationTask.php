@@ -66,7 +66,8 @@ abstract class AbstractMigrationTask extends BuildTask
         // unvalidated value (e.g. a lowercase "md" typo, the spelling used for the
         // NEW adapter keys) misses the lookup in FieldMapper::mapGridSettings and
         // silently makes every column full-width on a destructive migration.
-        $rawDefaultViewport = (string) $defaultViewport;
+        /** @var string $defaultViewport */
+        $rawDefaultViewport = $defaultViewport;
         $defaultViewport = \strtoupper($rawDefaultViewport);
         if (!\in_array($defaultViewport, LegacyElementReader::VIEWPORT_KEYS, true)) {
             $output->writeln(\sprintf(
