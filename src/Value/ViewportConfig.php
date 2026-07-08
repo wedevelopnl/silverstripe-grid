@@ -66,6 +66,24 @@ final readonly class ViewportConfig implements JsonSerializable
             );
         }
 
+        // Enforce the domain ranges so the positive-int / int<0, max> contract
+        // holds at every construction site. Without this a fixture or legacy JSON
+        // override of width:0 or offset:-2 would build an out-of-range config that
+        // reaches CSS generation ('col-md-0') and the write path, where the
+        // field validator deliberately checks upper bounds only.
+        if ($data['width'] < 1) {
+            throw InvalidGridValueException::forMalformedViewportPayload(
+                $context,
+                sprintf('width must be at least 1, got %d', $data['width']),
+            );
+        }
+        if ($data['offset'] < 0) {
+            throw InvalidGridValueException::forMalformedViewportPayload(
+                $context,
+                sprintf('offset must be at least 0, got %d', $data['offset']),
+            );
+        }
+
         /** @var positive-int $width */
         $width = $data['width'];
         /** @var int<0, max> $offset */
