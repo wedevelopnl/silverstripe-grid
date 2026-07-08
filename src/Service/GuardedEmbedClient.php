@@ -29,7 +29,7 @@ use WeDevelop\Grid\Exception\UnsafeEmbedUrlException;
  */
 final readonly class GuardedEmbedClient implements ClientInterface
 {
-    private const MAX_REDIRECTS = 5;
+    private const int MAX_REDIRECTS = 5;
 
     public function __construct(
         private ClientInterface $inner,
@@ -74,7 +74,7 @@ final readonly class GuardedEmbedClient implements ClientInterface
         // 303 means "fetch the result with GET" regardless of the original
         // method; legacy clients treat 301/302 on POST the same way.
         if ($status === 303 || ($status !== 307 && $status !== 308 && $next->getMethod() === 'POST')) {
-            $next = $next->withMethod('GET');
+            return $next->withMethod('GET');
         }
 
         return $next;
