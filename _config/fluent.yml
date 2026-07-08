@@ -2,8 +2,6 @@
 Name: grid-fluent
 Only:
   classexists: TractorCow\Fluent\Extension\FluentIsolatedExtension
-After:
-  - '#grid-page'
 ---
 SilverStripe\CMS\Model\SiteTree:
   extensions:
