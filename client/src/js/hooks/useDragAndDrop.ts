@@ -287,6 +287,19 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         return
       }
 
+      // A zero-delta drop means the item never moved. The pointer sensor's 8px
+      // activation constraint makes this unreachable for mouse drags, so it is
+      // a keyboard drag activated and dropped without any arrow press (Enter
+      // twice — a natural "changed my mind" gesture; Escape is the formal
+      // cancel). Without this guard, dnd-kit's activation collision has no
+      // pointer coordinates, the parent-container fallback resolves `over` to
+      // the element's OWN container, and the "over a container → drop at its
+      // end" branch silently reorders a non-last element to the end.
+      if (event.delta.x === 0 && event.delta.y === 0) {
+        pending.clear()
+        return
+      }
+
       // Cross-container drop: a pending preview is active. Commit exactly what the
       // ghost shows by reading the active element's slot from the pending tree —
       // do NOT re-resolve from this drag-end event's collision. dnd-kit runs a

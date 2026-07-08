@@ -45,13 +45,21 @@ function makeDragOverEvent(activeId: string, overId: string | null): DragOverEve
   } as unknown as DragOverEvent
 }
 
-function makeDragEndEvent(activeId: string, overId: string | null): DragEndEvent {
+// Default delta is non-zero: a real pointer drag always carries movement (the
+// sensor's 8px activation constraint), and a zero-delta drop is treated as a
+// no-op by handleDragEnd (keyboard activation dropped without any arrow press).
+// Pass an explicit zero delta to exercise that guard.
+function makeDragEndEvent(
+  activeId: string,
+  overId: string | null,
+  delta: { x: number; y: number } = { x: 0, y: 12 },
+): DragEndEvent {
   return {
     active: createActive(activeId),
     over: overId !== null ? createOver(overId) : null,
     activatorEvent: new Event('pointer'),
     collisions: [],
-    delta: { x: 0, y: 0 },
+    delta,
   } as unknown as DragEndEvent
 }
 
@@ -92,7 +100,7 @@ function makePointerDragEndEvent(
       over,
       activatorEvent: new PointerEvent('pointerdown', { clientX, clientY }),
       collisions: [],
-      delta: { x: 0, y: 0 },
+      delta: { x: 0, y: 12 },
     } as unknown as DragEndEvent
   }
   return {
@@ -100,7 +108,7 @@ function makePointerDragEndEvent(
     over,
     activatorEvent: new PointerEvent('pointerdown', { clientX, clientY }),
     collisions: [],
-    delta: { x: 0, y: 0 },
+    delta: { x: 0, y: 12 },
   } as unknown as DragEndEvent
 }
 
@@ -873,6 +881,35 @@ describe('useDragAndDrop', () => {
       })
 
       expect(result.current.dragState).toBeNull()
+      expect(onReorder).not.toHaveBeenCalled()
+    })
+
+    it('treats a zero-delta drop as a no-op even when over resolves to the own parent container', () => {
+      // Keyboard path: Enter activates the drag, Enter drops it without any
+      // arrow press. dnd-kit's activation collision has no pointer coordinates,
+      // so the parent-container fallback resolves `over` to the element's OWN
+      // column — and the "over a container → drop at its end" branch would
+      // silently reorder a non-last element to the end. Zero delta means the
+      // item never moved (the pointer sensor's 8px activation constraint makes
+      // zero-delta mouse drops impossible), so the drop must be a no-op.
+      const { tree, element1 } = buildSingleColumnTree()
+      const onReorder = vi.fn()
+      const { result } = renderDndHook({ tree, onReorder })
+
+      const activeId = buildDraggableId('element', element1.self.id)
+      const ownParentId = buildDraggableId('column', 30)
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+      act(() => {
+        result.current.dndContextProps.onDragEnd(
+          makeDragEndEvent(activeId, ownParentId, { x: 0, y: 0 }),
+        )
+      })
+
+      expect(result.current.dragState).toBeNull()
+      expect(result.current.pendingTree).toBeNull()
       expect(onReorder).not.toHaveBeenCalled()
     })
 
