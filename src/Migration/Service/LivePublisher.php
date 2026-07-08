@@ -135,13 +135,22 @@ final readonly class LivePublisher
         // difference leaves the wrong width on the published front-end.
         $this->reconcileColumnLiveGridSettings($liveElementsByColumn, $defaultViewport, $viewportKeyMap);
 
-        if ($liveOnlyElements !== []) {
+        // Report content elements only — row delimiters shape grouping but never
+        // become records, so counting them would overstate the write. Matches the
+        // dry-run's countLiveOnlyElements semantics. A collection holding only
+        // delimiters creates nothing (the strategy drops empty rows), so skip it.
+        $liveOnlyContentCount = \count(\array_filter(
+            $liveOnlyElements,
+            static fn (LegacyElement $element): bool => !$element->isRow,
+        ));
+
+        if ($liveOnlyContentCount > 0) {
             $this->logger->info(
                 'Page {pageId}: {liveOnlyCount} live-only legacy element(s) found; '
                 . 'adjacent same-settings elements may be grouped into shared columns — verify live layout.',
                 [
                     'pageId' => $pageId,
-                    'liveOnlyCount' => \count($liveOnlyElements),
+                    'liveOnlyCount' => $liveOnlyContentCount,
                 ],
             );
             $this->createLiveOnlyHierarchy(

@@ -208,9 +208,13 @@ final class GridMigrationService
             return;
         }
 
-        // No draft sections and no live elements means nothing to migrate
+        // No draft sections and no live *content* means nothing to migrate. Row
+        // delimiters are grouping boundaries that never become records, so a page
+        // holding only (empty) rows writes nothing — flagging it UseGrid and
+        // logging success would misreport the run, and with no Section written
+        // the idempotency check would re-process the page on every run.
         $liveElements = $this->reader->getElementsForArea($areaId, 'live');
-        if ($sections === [] && $liveElements === []) {
+        if ($sections === [] && !$this->containsContentElement($liveElements)) {
             $this->logger->info('Page {pageId} has no elements to migrate.', ['pageId' => $pageId]);
             return;
         }
@@ -373,9 +377,27 @@ final class GridMigrationService
     }
 
     /**
-     * Count legacy live elements with no draft counterpart. These are "live-only"
-     * and the real run creates them as their own hierarchy on both stages, so the
-     * dry-run must surface them (see the classification in publishLiveStage).
+     * True when the list holds at least one content (non-row-delimiter) element.
+     *
+     * @param list<LegacyElement> $elements
+     */
+    private function containsContentElement(array $elements): bool
+    {
+        foreach ($elements as $element) {
+            if (!$element->isRow) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Count legacy live content elements with no draft counterpart. These are
+     * "live-only" and the real run creates them as their own hierarchy on both
+     * stages, so the dry-run must surface them (see the classification in
+     * publishLiveStage). Row delimiters shape grouping but are never written as
+     * records — counting them would overstate what the real run creates.
      *
      * @param list<LegacyElement> $draftElements
      * @param list<LegacyElement> $liveElements
@@ -391,7 +413,7 @@ final class GridMigrationService
 
         $count = 0;
         foreach ($liveElements as $liveElement) {
-            if (!\array_key_exists($liveElement->id, $draftLegacyIds)) {
+            if (!$liveElement->isRow && !\array_key_exists($liveElement->id, $draftLegacyIds)) {
                 ++$count;
             }
         }

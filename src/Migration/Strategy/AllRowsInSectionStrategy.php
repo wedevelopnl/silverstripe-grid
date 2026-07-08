@@ -44,10 +44,23 @@ final readonly class AllRowsInSectionStrategy implements RowMappingStrategy
      */
     public function buildHierarchy(array $elements, int $pageId, string $zone): array
     {
-        $groups = $this->grouper->group($elements);
-        $rows = $this->buildRows($groups);
+        // Build columns once per group and drop groups that produce none (a
+        // delimiter with no following content): an empty Row with no Column
+        // violates the complete-hierarchy invariant, and a dropped row must not
+        // donate section-level fields like customSectionClass either.
+        $survivingGroups = [];
+        $columnsPerGroup = [];
+        foreach ($this->grouper->group($elements) as $group) {
+            $columns = $this->buildColumns($group['elements']);
+            if ($columns === []) {
+                continue;
+            }
 
-        if ($rows === []) {
+            $survivingGroups[] = $group;
+            $columnsPerGroup[] = $columns;
+        }
+
+        if ($survivingGroups === []) {
             return [];
         }
 
@@ -55,9 +68,9 @@ final readonly class AllRowsInSectionStrategy implements RowMappingStrategy
             new MigrationSection(
                 title: '',
                 zone: $zone,
-                extraClass: $this->resolveSectionExtraClass($groups),
+                extraClass: $this->resolveSectionExtraClass($survivingGroups),
                 sort: 1,
-                rows: $rows,
+                rows: $this->buildRows($survivingGroups, $columnsPerGroup),
             ),
         ];
     }
@@ -102,33 +115,24 @@ final readonly class AllRowsInSectionStrategy implements RowMappingStrategy
     }
 
     /**
-     * @param list<array{row: ?LegacyElement, rowData: ?LegacyRowData, elements: list<LegacyElement>}> $groups
-     * @return list<MigrationRow>
+     * @param non-empty-list<array{row: ?LegacyElement, rowData: ?LegacyRowData, elements: list<LegacyElement>}> $groups
+     *     Groups that survived the empty-row drop in buildHierarchy
+     * @param non-empty-list<non-empty-list<MigrationColumn>> $columnsPerGroup Pre-built columns, index-aligned with $groups
+     * @return non-empty-list<MigrationRow>
      */
-    private function buildRows(array $groups): array
+    private function buildRows(array $groups, array $columnsPerGroup): array
     {
         $rows = [];
-        $rowSort = 1;
 
-        foreach ($groups as $group) {
+        foreach ($groups as $index => $group) {
             $row = $group['row'];
-            $columns = $this->buildColumns($group['elements']);
-
-            // Skip empty row groups (a delimiter with no following content): an
-            // empty Row with no Column violates the complete-hierarchy invariant.
-            // If every group is empty, buildHierarchy drops the whole section.
-            if ($columns === []) {
-                continue;
-            }
 
             $rows[] = new MigrationRow(
                 title: $row !== null ? $row->title : '',
                 extraClass: $row !== null ? $row->extraClass : '',
-                sort: $rowSort,
-                columns: $columns,
+                sort: $index + 1,
+                columns: $columnsPerGroup[$index],
             );
-
-            $rowSort++;
         }
 
         return $rows;

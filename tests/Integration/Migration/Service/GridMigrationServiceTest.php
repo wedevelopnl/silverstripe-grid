@@ -1317,6 +1317,91 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertStringNotContainsString('no elements to migrate', $dryRunLog);
     }
 
+    public function testDryRunDoesNotCountLiveOnlyRowDelimiters(): void
+    {
+        // Row delimiters are grouping boundaries, never written records — and an
+        // empty live-only row is dropped by the strategy. Counting the delimiter
+        // would make the preview promise a write the real run does not perform:
+        // a live area holding only a delimiter migrates nothing.
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+        $this->seeder->seedElement(7400, $areaId, self::ROW_CLASS, 1, stage: 'live');
+        $this->seeder->seedRow(7400, stage: 'live');
+
+        $service = $this->createService();
+        $service->run(
+            self::DEFAULT_VIEWPORT,
+            self::ZONE,
+            self::VIEWPORT_KEY_MAP,
+            dryRun: true,
+            pageIds: [$pageId],
+        );
+
+        $infoMessages = $this->getLogMessages('info');
+        self::assertNotEmpty($infoMessages);
+        self::assertStringContainsString('no elements to migrate', $infoMessages[0]);
+    }
+
+    public function testDryRunCountsOnlyLiveOnlyContentElements(): void
+    {
+        // A live-only delimiter followed by a live-only content element: only the
+        // content element becomes a record, so the count must be 1, not 2.
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+        $this->seeder->seedElement(7500, $areaId, self::ROW_CLASS, 1, stage: 'live');
+        $this->seeder->seedRow(7500, stage: 'live');
+        $this->seeder->seedElement(7501, $areaId, self::CONTENT_CLASS, 2, [
+            'SizeMD' => 6,
+            'Title' => 'Live Only',
+        ], stage: 'live');
+        $this->seeder->seedContentMedia(7501, [], stage: 'live');
+
+        $service = $this->createService();
+        $service->run(
+            self::DEFAULT_VIEWPORT,
+            self::ZONE,
+            self::VIEWPORT_KEY_MAP,
+            dryRun: true,
+            pageIds: [$pageId],
+        );
+
+        $dryRunLog = null;
+        foreach ($this->getLogMessages('info') as $msg) {
+            if (\str_contains($msg, '[DRY RUN]')) {
+                $dryRunLog = $msg;
+                break;
+            }
+        }
+        self::assertNotNull($dryRunLog, 'A dry-run info log must be emitted');
+        self::assertStringContainsString('1 live-only element(s)', $dryRunLog);
+    }
+
+    public function testPageWithOnlyRowDelimitersIsReportedAsHavingNoElements(): void
+    {
+        // Draft and live both hold only row delimiters: every row is empty, the
+        // strategy drops them all, and nothing can be written. The page must be
+        // reported as having no elements — not logged as "Successfully migrated"
+        // with zero sections, which misreports the run and (since no Section
+        // exists) would re-process the page on every subsequent run.
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+        foreach (['draft', 'live'] as $stage) {
+            $this->seeder->seedElement(7600, $areaId, self::ROW_CLASS, 1, stage: $stage);
+            $this->seeder->seedRow(7600, stage: $stage);
+        }
+
+        $this->runMigration();
+
+        self::assertCount(0, Section::get()->filter(['ParentID' => $pageId, 'Zone' => self::ZONE]));
+
+        $allInfo = \implode("\n", $this->getLogMessages('info'));
+        self::assertStringContainsString('has no elements to migrate', $allInfo);
+        self::assertStringNotContainsString('Successfully migrated', $allInfo);
+    }
+
     public function testMigrationRestoresProjectLevelAutoScaffoldFalse(): void
     {
         // A project may set auto_scaffold: false on Section/Row. The migration

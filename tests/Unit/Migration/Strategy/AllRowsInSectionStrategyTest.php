@@ -82,6 +82,26 @@ final class AllRowsInSectionStrategyTest extends TestCase
         self::assertSame([], $this->strategy->buildHierarchy([], pageId: 1, zone: 'main'));
     }
 
+    public function testDroppedEmptyRowDoesNotDonateSectionExtraClass(): void
+    {
+        // A leading empty row delimiter (no content before the next delimiter) is
+        // dropped from the output. A row that produced nothing must not donate
+        // section-level fields either — the class comes from the first row that
+        // survives, and no conflict warning fires for the phantom donor.
+        $emptyRow = self::r('', '', 'hero');
+        $contentRow = self::r('', '', 'body');
+
+        $this->logger->expects(self::never())->method('warning');
+
+        $sections = $this->strategy->buildHierarchy(
+            [$emptyRow, $contentRow, self::e(6)],
+            pageId: 10,
+            zone: 'main',
+        );
+
+        self::assertSame('body', $sections[0]->extraClass);
+    }
+
     // ─── Factory helpers ─────────────────────────────────────────
 
     private static int $nextId = 0;
