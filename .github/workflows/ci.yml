@@ -43,9 +43,17 @@ jobs:
       - run: npm run i18n:check
       - run: npx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
       - name: Verify generated files are up to date
+        # `git diff` only sees tracked files, so brand-new build outputs (e.g.
+        # the compiled lang js for a newly added locale) need the untracked check.
         run: |
           npm run build
           git diff --exit-code -- client/dist client/lang
+          untracked="$(git status --porcelain --untracked-files=all -- client/dist client/lang | grep '^??' || true)"
+          if [ -n "$untracked" ]; then
+            echo "Untracked generated files — the build produced outputs that are not committed:"
+            echo "$untracked"
+            exit 1
+          fi
       - uses: dorny/test-reporter@v1
         if: always()
         with:

@@ -272,12 +272,21 @@ tasks:
   # anything — the same gate CI enforces. Uses `npm run build` (i18n:collect +
   # vite build) so both client/lang and client/dist are regenerated, then diffs
   # both. Replaces the plain qa-build in qa-checks so there is a single build.
+  # `git diff` only sees tracked files, so brand-new build outputs (e.g. the
+  # compiled lang js for a newly added locale) need the explicit untracked check.
   qa-generated-fresh:
     internal: true
     cmds:
       - 'echo "==> [generated] rebuilding dist + lang and checking freshness..."'
       - npm run build
       - git diff --exit-code -- client/dist client/lang
+      - |
+        untracked="$(git status --porcelain --untracked-files=all -- client/dist client/lang | grep '^??' || true)"
+        if [ -n "$untracked" ]; then
+          echo "Untracked generated files — the build produced outputs that are not committed:"
+          echo "$untracked"
+          exit 1
+        fi
       - 'echo "==> [generated] done"'
 
   qa-analyse:
