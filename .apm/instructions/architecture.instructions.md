@@ -12,7 +12,7 @@ src/                  # PHP source (PSR-4: WeDevelop\Grid\)
 src/Adapter/          # Grid framework adapters: GridAdapter base class + framework presets (Bootstrap, Tailwind, Bulma)
 src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderValidatorInterface)
 src/Controllers/      # API controllers (GridController)
-src/Dev/              # E2E dev helpers (MultiZonePage, FixtureScaffoldSuppressionExtension); fixture loading itself comes from wedevelopnl/silverstripe-e2e
+src/Dev/              # E2E dev helpers (MultiZonePage); fixture loading + scaffold suppression (via config_overrides) come from wedevelopnl/silverstripe-e2e
 src/Factory/          # Factories (GridAdapterFactory)
 src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement) + ContainerElementTrait
 src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaExtension, FluentGridPageExtension)
