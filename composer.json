@@ -20,11 +20,14 @@
   "prefer-stable": true,
   "require": {
     "php": "^8.3",
+    "embed/embed": "^4",
     "silverstripe/admin": "^3.0",
+    "silverstripe/asset-admin": "^3.0",
     "silverstripe/cms": "^6.0",
     "silverstripe/framework": "^6.0",
     "silverstripe/vendor-plugin": "^3.0",
     "silverstripe/versioned": "^3.0",
+    "silverstripe/versioned-admin": "^3.0",
     "unclecheese/display-logic": "^4.0",
     "wedevelopnl/silverstripe-media-field": "^6.0"
   },
