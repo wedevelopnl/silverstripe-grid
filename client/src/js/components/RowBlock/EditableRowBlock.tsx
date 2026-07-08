@@ -109,11 +109,7 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
                 />
               ))
             ) : (
-              <AddChildButton
-                parentId={row.self.id}
-                childType="column"
-                variant="empty-state"
-              />
+              <AddChildButton parentId={row.self.id} childType="column" variant="empty-state" />
             )}
           </SortableContext>
         </div>

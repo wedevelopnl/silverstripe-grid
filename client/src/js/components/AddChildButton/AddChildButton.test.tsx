@@ -11,9 +11,7 @@ describe('AddChildButton', () => {
   it('renders with correct label text', () => {
     mockFetchSuccess({})
 
-    renderWithProviders(
-      <AddChildButton parentId={10} childType="row" variant="append" />,
-    )
+    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="append" />)
 
     expect(screen.getByTestId('add-child-button')).toHaveTextContent('Add Row')
   })
@@ -22,9 +20,7 @@ describe('AddChildButton', () => {
     const user = userEvent.setup()
     mockFetchSuccess({})
 
-    renderWithProviders(
-      <AddChildButton parentId={10} childType="row" variant="append" />,
-    )
+    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="append" />)
 
     await user.click(screen.getByTestId('add-child-button'))
 
@@ -46,10 +42,9 @@ describe('AddChildButton', () => {
     const user = userEvent.setup()
     mockFetchSuccess({})
 
-    renderWithProviders(
-      <AddChildButton parentId={1} childType="section" variant="append" />,
-      { zone: 'main' },
-    )
+    renderWithProviders(<AddChildButton parentId={1} childType="section" variant="append" />, {
+      zone: 'main',
+    })
 
     await user.click(screen.getByTestId('add-child-button'))
 
@@ -73,9 +68,7 @@ describe('AddChildButton', () => {
     // Never-resolving fetch to keep the mutation pending
     vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
-    renderWithProviders(
-      <AddChildButton parentId={10} childType="row" variant="append" />,
-    )
+    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="append" />)
 
     await user.click(screen.getByTestId('add-child-button'))
 
@@ -88,9 +81,7 @@ describe('AddChildButton', () => {
     const user = userEvent.setup()
     vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
-    renderWithProviders(
-      <AddChildButton parentId={10} childType="row" variant="append" />,
-    )
+    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="append" />)
 
     await user.click(screen.getByTestId('add-child-button'))
 
@@ -102,9 +93,7 @@ describe('AddChildButton', () => {
   it('empty-state variant renders message', () => {
     mockFetchSuccess({})
 
-    renderWithProviders(
-      <AddChildButton parentId={10} childType="row" variant="empty-state" />,
-    )
+    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="empty-state" />)
 
     expect(screen.getByTestId('add-child-empty')).toBeInTheDocument()
     expect(screen.getByText('No rows yet')).toBeInTheDocument()
@@ -113,9 +102,7 @@ describe('AddChildButton', () => {
   it('append variant renders without message', () => {
     mockFetchSuccess({})
 
-    renderWithProviders(
-      <AddChildButton parentId={10} childType="row" variant="append" />,
-    )
+    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="append" />)
 
     expect(screen.getByTestId('add-child-append')).toBeInTheDocument()
     expect(screen.queryByText('No rows yet')).not.toBeInTheDocument()
@@ -124,9 +111,7 @@ describe('AddChildButton', () => {
   it('between variant renders the between wrapper', () => {
     mockFetchSuccess({})
 
-    renderWithProviders(
-      <AddChildButton parentId={10} childType="row" variant="between" />,
-    )
+    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="between" />)
 
     expect(screen.getByTestId('add-child-between')).toBeInTheDocument()
     expect(screen.queryByTestId('add-child-append')).not.toBeInTheDocument()
@@ -138,13 +123,7 @@ describe('AddChildButton', () => {
     mockFetchSuccess({})
 
     renderWithProviders(
-      <AddChildButton
-        parentId={10}
-        childType="row"
-
-        variant="between"
-        insertAfterId={7}
-      />,
+      <AddChildButton parentId={10} childType="row" variant="between" insertAfterId={7} />,
     )
 
     await user.click(screen.getByTestId('add-child-button'))
