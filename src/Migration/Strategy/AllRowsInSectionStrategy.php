@@ -60,7 +60,9 @@ final readonly class AllRowsInSectionStrategy implements RowMappingStrategy
             $columnsPerGroup[] = $columns;
         }
 
-        if ($survivingGroups === []) {
+        // The two arrays grow in lockstep; checking both lets PHPStan narrow
+        // each to non-empty-list for buildRows.
+        if ($survivingGroups === [] || $columnsPerGroup === []) {
             return [];
         }
 
