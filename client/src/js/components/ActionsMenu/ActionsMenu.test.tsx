@@ -73,6 +73,34 @@ describe('ActionsMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
+  it('closes on Tab so focus moves on (APG menu pattern)', async () => {
+    const user = userEvent.setup()
+
+    render(<ActionsMenu actions={createActions()} />)
+
+    await user.click(screen.getByTestId('actions-menu-trigger'))
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+
+    await user.keyboard('{Tab}')
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('keeps menu items out of the tab order (aria-activedescendant pattern)', async () => {
+    // The component drives keyboard interaction via aria-activedescendant on
+    // the focused menu container; a tabbable item would mix in the roving-
+    // tabindex pattern and let Tab land inside the open menu.
+    const user = userEvent.setup()
+
+    render(<ActionsMenu actions={createActions()} />)
+
+    await user.click(screen.getByTestId('actions-menu-trigger'))
+
+    for (const item of screen.getAllByRole('menuitem')) {
+      expect(item).not.toHaveAttribute('tabindex')
+    }
+  })
+
   it('fires action callback on menu item click', async () => {
     const user = userEvent.setup()
     const onAction = vi.fn()
@@ -310,17 +338,20 @@ describe('ActionsMenu', () => {
     expect(document.activeElement).toBe(outside)
   })
 
-  describe('roving tabindex and focus management', () => {
-    it('sets roving tabindex with exactly one menuitem tab-reachable on open', async () => {
+  describe('active-descendant focus management', () => {
+    it('keeps focus on the menu container with no tab-reachable menuitem', async () => {
+      // Pure aria-activedescendant pattern: the container holds DOM focus and
+      // announces the active item; items themselves are never tab stops.
       const user = userEvent.setup()
 
       render(<ActionsMenu actions={createActions()} />)
 
       await user.click(screen.getByTestId('actions-menu-trigger'))
 
+      expect(document.activeElement).toBe(screen.getByRole('menu'))
       const items = screen.getAllByRole('menuitem')
       const reachable = items.filter((i) => i.tabIndex === 0)
-      expect(reachable).toHaveLength(1)
+      expect(reachable).toHaveLength(0)
     })
 
     it('sets aria-activedescendant on the menu pointing to the active item', async () => {
@@ -348,8 +379,6 @@ describe('ActionsMenu', () => {
       await user.keyboard('{ArrowDown}')
 
       expect(menu.getAttribute('aria-activedescendant')).toBe(items[1].id)
-      expect(items[1].tabIndex).toBe(0)
-      expect(items[0].tabIndex).toBe(-1)
     })
 
     it('ArrowUp moves active item backward', async () => {

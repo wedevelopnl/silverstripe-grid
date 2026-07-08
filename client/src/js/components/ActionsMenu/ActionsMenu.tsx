@@ -70,19 +70,15 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, close])
 
-  // preventDefault is required because this button may be nested inside a
-  // clickable ancestor (ElementCard's <a href>). React synthetic
-  // stopPropagation only blocks other React handlers from firing; the
-  // browser's default anchor navigation is cancelled only by preventDefault
-  // on the underlying click event.
+  // stopPropagation keeps the toggle from reaching click handlers on card
+  // ancestors. (The card restructure moved interactive controls out of the
+  // old wrapping <a>, so there is no anchor navigation left to preventDefault.)
   function handleTriggerClick(e: React.MouseEvent) {
-    e.preventDefault()
     e.stopPropagation()
     setIsOpen((prev) => !prev)
   }
 
   function handleItemClick(e: React.MouseEvent, onAction: () => void) {
-    e.preventDefault()
     e.stopPropagation()
     onAction()
     close()
@@ -124,6 +120,12 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
         }
         return
       }
+      case 'Tab':
+        // APG menu pattern: Tab closes the menu and moves focus to the next
+        // element in the tab sequence (no preventDefault — the browser handles
+        // the focus move from the trigger, which regains its tab position).
+        close()
+        return
       default:
         return
     }
@@ -168,7 +170,6 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
               id={getItemId(index)}
               className="ssgrid-actions-menu__item"
               role="menuitem"
-              tabIndex={index === activeIndex ? 0 : -1}
               data-destructive={action.destructive ? 'true' : undefined}
               onClick={(e) => handleItemClick(e, action.onAction)}
             >

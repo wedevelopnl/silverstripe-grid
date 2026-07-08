@@ -47,14 +47,14 @@ function ToolbarButton({
   readonly destructive?: boolean
   readonly testId: string
 }) {
-  // The block toolbar can sit inside a clickable ElementCard <a>; cancel the
-  // anchor's navigation (preventDefault) and stop other React handlers
-  // (stopPropagation) before running the action.
+  // stopPropagation keeps toolbar clicks from reaching handlers on card
+  // ancestors. (The card restructure moved the toolbar out of the old wrapping
+  // <a> — it now sits above the stretched-link overlay — so there is no anchor
+  // navigation left to preventDefault.)
   const handleClick =
     onClick === undefined
       ? undefined
       : (event: MouseEvent) => {
-          event.preventDefault()
           event.stopPropagation()
           onClick()
         }

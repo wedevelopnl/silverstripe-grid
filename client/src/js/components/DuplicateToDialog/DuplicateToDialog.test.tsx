@@ -1429,17 +1429,34 @@ describe('DuplicateToDialog', () => {
   })
 
   describe('dialog click guard', () => {
-    it('prevents default and stops propagation on clicks inside the dialog', () => {
+    it('stops propagation without cancelling native defaults on clicks inside the dialog', () => {
+      // stopPropagation keeps clicks from reaching React handlers on card
+      // ancestors; preventDefault must NOT run — the card restructure removed
+      // the wrapping <a>, and a blanket preventDefault would cancel native
+      // activation defaults of controls inside the dialog.
       mockApiRoutes()
-      renderDialog()
+      const onAncestorClick = vi.fn()
+      const props: React.ComponentProps<typeof DuplicateToDialog> = {
+        isOpen: true,
+        elementType: 'row',
+        currentPageId: 1,
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+        error: null,
+      }
+      renderWithProviders(
+        // biome-ignore lint/a11y/useKeyWithClickEvents: test-only ancestor spy standing in for card-level handlers
+        <div onClick={onAncestorClick}>
+          <DuplicateToDialog {...props} />
+        </div>,
+      )
 
       const dialog = screen.getByTestId('duplicate-to-dialog')
       const clickEvent = createEvent.click(dialog)
       fireEvent(dialog, clickEvent)
 
-      // L177 onClick body: both preventDefault and stopPropagation must run so
-      // the click does not bubble to an ancestor ElementCard anchor.
-      expect(clickEvent.defaultPrevented).toBe(true)
+      expect(onAncestorClick).not.toHaveBeenCalled()
+      expect(clickEvent.defaultPrevented).toBe(false)
     })
   })
 

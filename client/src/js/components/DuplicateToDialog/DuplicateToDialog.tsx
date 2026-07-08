@@ -163,16 +163,14 @@ export default function DuplicateToDialog({
       className="ssgrid-dialog ssgrid-dialog--wide"
       data-testid="duplicate-to-dialog"
       onClose={handleClose}
-      // onClick guard prevents clicks inside the dialog from bubbling to
-      // ancestor ElementCard anchors. Both preventDefault and stopPropagation
-      // are required: stopPropagation blocks React handlers on the anchor,
-      // preventDefault cancels the browser's default anchor navigation. Rule
-      // disabled for this file via biome.json overrides (<dialog> is natively
-      // interactive; biome's a11y rules do not recognize it).
-      onClick={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-      }}
+      // stopPropagation keeps clicks inside the dialog from reaching React
+      // handlers on card ancestors. (The card restructure removed the wrapping
+      // <a>, so there is no anchor navigation left to preventDefault — and a
+      // blanket preventDefault here would cancel native activation defaults of
+      // controls inside the dialog.) Click rule disabled for this file via
+      // biome.json overrides (<dialog> is natively interactive; biome's a11y
+      // rules do not recognize it).
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="ssgrid-dialog__header">
         <h3>
