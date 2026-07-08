@@ -31,7 +31,7 @@
     "silverstripe/versioned": "^3.0",
     "silverstripe/versioned-admin": "^3.0",
     "unclecheese/display-logic": "^4.0",
-    "wedevelopnl/silverstripe-media-field": "^6.0"
+    "wedevelopnl/silverstripe-media-field": "^6.0.0-rc3"
   },
   "conflict": {
     "dnadesign/silverstripe-elemental": "*"
