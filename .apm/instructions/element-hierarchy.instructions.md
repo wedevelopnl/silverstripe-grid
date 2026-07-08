@@ -24,11 +24,13 @@ All three container elements implement `ContainerInterface`:
 
 Container behavior is shared via `ContainerElementTrait`.
 
-## Hierarchy Rules (YAML Config)
+## Hierarchy Rules
 
-- **Section**: `allowed_elements: [Row]` — only Rows as children
-- **Row**: `allowed_elements: [Column]`, `can_be_root: false` — only Columns as children, cannot be placed at page level
-- **Column**: `disallowed_elements: [Section, Row, Column]`, `can_be_root: false` — blocklist approach, allows any non-container content element
+Hierarchy rules are hardcoded in `ContainerType` (`canBeRoot()`, `allowedChildClass()`, `isChildAllowed()`) — there is **no** per-class YAML (`allowed_elements`/`disallowed_elements`/`can_be_root`) and no `ElementAllowanceTrait`. Changing what a container accepts means editing `ContainerType`, not config.
+
+- **Section**: allows only `Row` children; can be placed at page root; zone-scoped
+- **Row**: allows only `Column` children; cannot be placed at page level
+- **Column**: allows any non-container content element (rejects `Section`/`Row`/`Column` via a blocklist); cannot be placed at page level
 
 ## Parent Relationships
 
@@ -73,15 +75,15 @@ Titles for newly scaffolded children are blank by default. `GridElement::ensureD
 
 ## Hierarchy Validation
 
-Validation happens in two contexts with shared logic via `ElementAllowanceTrait`.
+Validation happens in two contexts, both delegating to the hardcoded `ContainerType` rules.
 
 ### At Write Time: `HierarchyValidationExtension`
 
-Applied globally to `GridElement` via YAML. Hooks into `updateValidate()`:
+Applied globally to `GridElement` via YAML. Hooks into `updateValidate()` and delegates to `HierarchyValidationService`:
 
 1. No parent → pass (orphan)
-2. Parent is a SiteTree page → check `can_be_root` on the element
-3. Parent is a container → check `isElementAllowed()` against `allowed_elements`/`disallowed_elements`
+2. Parent is a SiteTree page → check `getContainerType()->canBeRoot()` on the element
+3. Parent is a container → check `getContainerType()->isChildAllowed($element::class)` on the parent
 
 Violation throws `ValidationException`, preventing the database write.
 
