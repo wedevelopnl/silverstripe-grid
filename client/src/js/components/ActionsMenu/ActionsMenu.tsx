@@ -170,6 +170,10 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
               id={getItemId(index)}
               className="ssgrid-actions-menu__item"
               role="menuitem"
+              // -1 uniformly: script-focusable (satisfies the a11y tooling's
+              // focusability requirement) but never a tab stop — DOM focus
+              // stays on the menu container per the activedescendant pattern.
+              tabIndex={-1}
               data-destructive={action.destructive ? 'true' : undefined}
               onClick={(e) => handleItemClick(e, action.onAction)}
             >

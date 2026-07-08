@@ -88,8 +88,9 @@ describe('ActionsMenu', () => {
 
   it('keeps menu items out of the tab order (aria-activedescendant pattern)', async () => {
     // The component drives keyboard interaction via aria-activedescendant on
-    // the focused menu container; a tabbable item would mix in the roving-
-    // tabindex pattern and let Tab land inside the open menu.
+    // the focused menu container; a tab-reachable item (tabIndex 0) would mix
+    // in the roving-tabindex pattern and let Tab land inside the open menu.
+    // tabIndex -1 is fine: script-focusable, never a tab stop.
     const user = userEvent.setup()
 
     render(<ActionsMenu actions={createActions()} />)
@@ -97,7 +98,7 @@ describe('ActionsMenu', () => {
     await user.click(screen.getByTestId('actions-menu-trigger'))
 
     for (const item of screen.getAllByRole('menuitem')) {
-      expect(item).not.toHaveAttribute('tabindex')
+      expect(item).toHaveAttribute('tabindex', '-1')
     }
   })
 

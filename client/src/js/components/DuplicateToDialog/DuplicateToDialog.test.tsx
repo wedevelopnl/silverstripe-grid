@@ -1446,6 +1446,7 @@ describe('DuplicateToDialog', () => {
       }
       renderWithProviders(
         // biome-ignore lint/a11y/useKeyWithClickEvents: test-only ancestor spy standing in for card-level handlers
+        // biome-ignore lint/a11y/noStaticElementInteractions: same — the div only observes bubbling clicks in this test
         <div onClick={onAncestorClick}>
           <DuplicateToDialog {...props} />
         </div>,

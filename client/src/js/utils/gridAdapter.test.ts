@@ -106,12 +106,13 @@ describe('getWidthOptions', () => {
 
     window.ss = {
       ...originalSs,
+      // Partial ss.i18n double: t() only calls _t + inject.
       i18n: {
         _t: (key: string, fallback: string) =>
           key === 'WeDevelopGrid.GridSettings.HIDDEN' ? 'verborgen' : fallback,
         inject: (str: string) => str,
       },
-    } as typeof window.ss
+    } as unknown as typeof window.ss
 
     try {
       const options = getWidthOptions()
