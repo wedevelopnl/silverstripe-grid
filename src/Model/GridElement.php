@@ -461,7 +461,12 @@ class GridElement extends DataObject
             return;
         }
 
-        $max = static::get()
+        // Query the shared GridElement base list, NOT static::get(): late static
+        // binding would scope the max to this element's concrete subclass, but Sort
+        // is one sequence across ALL element classes under a parent (a Column holds
+        // mixed content types). Scoping per-class would assign a colliding Sort when
+        // the first element of a new type is added, dropping it mid-list.
+        $max = GridElement::get()
             ->filter([
                 'ParentID' => $this->ParentID,
                 'ParentClass' => $this->ParentClass,
