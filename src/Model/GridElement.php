@@ -15,6 +15,7 @@ use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldGroup;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\TextField;
+use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\ORM\FieldType\DBHTMLText;
@@ -479,8 +480,10 @@ class GridElement extends DataObject
     /**
      * Assigns a default "{Type} {N}" title when Title is empty.
      *
-     * N is the count of same-type siblings under the same parent + 1,
-     * producing a stable, DB-persisted title that survives reordering.
+     * N is one past the highest numeric suffix among same-type siblings, NOT the
+     * sibling count: counting produces duplicates after a deletion (delete
+     * "Text 1" from [Text 1, Text 2] and the next element counts 1 → a second
+     * "Text 2"). Using the max suffix keeps generated titles unique.
      */
     private function ensureDefaultTitle(): void
     {
@@ -488,18 +491,38 @@ class GridElement extends DataObject
             return;
         }
 
-        $siblingCount = static::get()
-            ->filter([
-                'ParentID' => $this->ParentID,
-                'ParentClass' => $this->ParentClass,
-            ])->exclude(['ID' => $this->ID])
-            ->count();
+        /** @var list<string|null> $titles */
+        $titles = $this->titleNumberingSiblings()->column('Title');
+
+        $maxSuffix = 0;
+        foreach ($titles as $title) {
+            if ($title !== null && preg_match('/(\d+)$/', $title, $matches) === 1) {
+                $maxSuffix = max($maxSuffix, (int) $matches[1]);
+            }
+        }
 
         $this->Title = _t(
             static::class . '.DEFAULT_TITLE',
             '{type} {count}',
-            ['type' => $this->getType(), 'count' => $siblingCount + 1],
+            ['type' => $this->getType(), 'count' => $maxSuffix + 1],
         );
+    }
+
+    /**
+     * Same-type siblings under the same parent (excluding self) whose titles seed
+     * the next default-title number. {@see Section} overrides this to also scope
+     * by Zone, so per-zone section numbering matches its zone-scoped sort.
+     *
+     * @return DataList<static>
+     */
+    protected function titleNumberingSiblings(): DataList
+    {
+        return static::get()
+            ->filter([
+                'ParentID' => $this->ParentID,
+                'ParentClass' => $this->ParentClass,
+            ])
+            ->exclude(['ID' => $this->ID]);
     }
 
     #[Override]

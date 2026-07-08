@@ -137,6 +137,28 @@ final class GridElementTest extends SapphireTest
         self::assertStringContainsString('2', $second->Title);
     }
 
+    public function testEnsureDefaultTitleAvoidsDuplicateAfterDeletion(): void
+    {
+        // Numbering must use the highest existing suffix, not the sibling count:
+        // deleting an earlier element must not make the next one reuse a title.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $first = GridTreeFactory::contentElement($column, title: '');
+        $second = GridTreeFactory::contentElement($column, title: '');
+        self::assertStringContainsString('1', $first->Title);
+        self::assertStringContainsString('2', $second->Title);
+
+        $first->delete();
+
+        // One sibling remains ("… 2"); the next element must be "… 3", not "… 2".
+        $third = GridTreeFactory::contentElement($column, title: '');
+        self::assertStringContainsString('3', $third->Title);
+        self::assertNotSame($second->Title, $third->Title);
+    }
+
     // ── Polymorphic parent-ID isolation ─────────────────────────────
     // Pin the `'ParentID' => $this->ParentID` filters in ensureSortSet and
     // ensureDefaultTitle. Without that key, sibling queries would return

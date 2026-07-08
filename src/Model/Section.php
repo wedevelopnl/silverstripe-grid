@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Model;
 
 use Override;
+use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
@@ -107,6 +108,15 @@ class Section extends GridElement implements ContainerInterface
         $this->extend('updateContainerClasses', $classes);
 
         return $classes;
+    }
+
+    #[Override]
+    protected function titleNumberingSiblings(): DataList
+    {
+        // Sections in different zones number independently, matching the
+        // zone-scoped ensureSortSet — otherwise the first sidebar section on a
+        // page with two main sections would be titled "Section 3".
+        return parent::titleNumberingSiblings()->filter(['Zone' => $this->Zone ?: '']);
     }
 
     #[Override]
