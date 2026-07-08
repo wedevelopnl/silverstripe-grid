@@ -258,7 +258,27 @@ tasks:
       - qa-format
       - qa-typecheck
       - qa-test-js
-      - qa-build
+      - qa-i18n
+      - qa-generated-fresh
+
+  qa-i18n:
+    internal: true
+    cmds:
+      - 'echo "==> [i18n] checking i18n collection + parity..."'
+      - npm run i18n:check
+      - 'echo "==> [i18n] done"'
+
+  # Rebuilds the generated artifacts and fails if committing them would change
+  # anything — the same gate CI enforces. Uses `npm run build` (i18n:collect +
+  # vite build) so both client/lang and client/dist are regenerated, then diffs
+  # both. Replaces the plain qa-build in qa-checks so there is a single build.
+  qa-generated-fresh:
+    internal: true
+    cmds:
+      - 'echo "==> [generated] rebuilding dist + lang and checking freshness..."'
+      - npm run build
+      - git diff --exit-code -- client/dist client/lang
+      - 'echo "==> [generated] done"'
 
   qa-analyse:
     internal: true
