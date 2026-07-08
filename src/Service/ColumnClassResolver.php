@@ -25,10 +25,15 @@ final class ColumnClassResolver
         $parts = [];
         $viewports = $adapter->getViewports();
 
-        // Sentinels: width=0 ensures first viewport always emits (valid widths are >0).
-        // Offset=0 suppresses emission of offset-0 at the first viewport (it's the default).
+        // Sentinel: width=0 ensures the first viewport always emits (valid widths are >0).
         $prevWidth = 0;
-        $prevOffset = 0;
+        // Offset classes cascade upward, so the emitted value — not the previous
+        // viewport's configured value — determines what is in effect. Tracking the
+        // configured value instead would drop the offset entirely after a leading
+        // hidden run (configured values compare equal while nothing was emitted) and
+        // leave a pre-hidden offset cascading stale past the run. Starts at 0, the
+        // browser default, which also suppresses offset-0 at the first viewport.
+        $emittedOffset = 0;
         $prevVisible = true;
 
         foreach ($viewports as $viewport) {
@@ -67,13 +72,13 @@ final class ColumnClassResolver
                     $parts[] = $adapter->getWidthClass($key, $width);
                 }
 
-                if ($offset !== $prevOffset) {
+                if ($offset !== $emittedOffset) {
                     $parts[] = $adapter->getOffsetClass($key, $offset);
+                    $emittedOffset = $offset;
                 }
             }
 
             $prevWidth = $width;
-            $prevOffset = $offset;
             $prevVisible = $visible;
         }
 
