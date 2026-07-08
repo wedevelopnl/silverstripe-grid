@@ -31,10 +31,18 @@ export function heightForWidth(width: number): number {
 /**
  * Escape a value for a single-quoted CSS string (the `content` property). Without
  * this, a viewport label containing an apostrophe (e.g. the French "L'écran")
- * terminates the string early and invalidates the generated rule.
+ * terminates the string early and invalidates the generated rule. All four
+ * characters forbidden in CSS strings are covered: backslash, the quote, and
+ * the unescaped newline family (LF \A, FF \C, CR \D — hex escapes with a
+ * terminating space).
  */
 export function escapeCssString(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\A ')
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, '\\A ')
+    .replace(/\f/g, '\\C ')
+    .replace(/\r/g, '\\D ')
 }
 
 function buildRules(): string {
@@ -42,7 +50,10 @@ function buildRules(): string {
     .map((vp) => {
       const width = vp.minWidth > 0 ? vp.minWidth : MOBILE_FIRST_PREVIEW_WIDTH
       const height = heightForWidth(width)
-      const selectorBase = `.cms-preview.grid-${vp.key}`
+      // CSS.escape: the key has the same config provenance as the label the
+      // content string escapes — a space or colon in it must not invalidate
+      // the whole rule block.
+      const selectorBase = `.cms-preview.grid-${CSS.escape(vp.key)}`
       return [
         `${selectorBase} .preview-device-outer {`,
         `  width: ${width}px;`,

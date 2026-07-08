@@ -17,6 +17,11 @@ describe('escapeCssString', () => {
     expect(escapeCssString('a\nb')).toBe('a\\A b')
   })
 
+  it('escapes carriage returns and form feeds — also forbidden in CSS strings', () => {
+    expect(escapeCssString('a\rb')).toBe('a\\D b')
+    expect(escapeCssString('a\fb')).toBe('a\\C b')
+  })
+
   it('leaves an ordinary label untouched', () => {
     expect(escapeCssString('Extra Small')).toBe('Extra Small')
   })
@@ -27,6 +32,9 @@ vi.mock('@/utils/gridAdapter', () => ({
     { key: 'xs', label: 'Extra Small', minWidth: 0 },
     { key: 'sm', label: 'Small', minWidth: 576 },
     { key: 'md', label: 'Medium', minWidth: 768 },
+    // A key needing selector escaping: config-provided, but a space or colon
+    // in it must not break the whole rule block.
+    { key: '2xl wide', label: 'Wide', minWidth: 1400 },
   ],
 }))
 
@@ -82,6 +90,19 @@ describe('installViewportStyles', () => {
     // Dimension readout on the ::after pseudo
     expect(content).toContain('375px × 500px')
     expect(content).toContain('768px × 576px')
+  })
+
+  it('escapes the viewport key in the selector', () => {
+    // The key comes from adapter config, same provenance as the label the
+    // content string escapes — a space or colon in it must invalidate at most
+    // nothing, not the whole rule block.
+    installViewportStyles()
+
+    const content =
+      (document.getElementById(STYLE_TAG_ID) as HTMLStyleElement | null)?.textContent ?? ''
+
+    expect(content).not.toContain('.cms-preview.grid-2xl wide')
+    expect(content).toContain(`.cms-preview.grid-${CSS.escape('2xl wide')}`)
   })
 
   it('is idempotent — second call replaces content, only one tag remains', () => {
