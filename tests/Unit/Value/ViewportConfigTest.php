@@ -71,6 +71,9 @@ final class ViewportConfigTest extends TestCase
         yield 'offset wrong type' => [['width' => 6, 'offset' => '0', 'visible' => true]];
         yield 'visible wrong type' => [['width' => 6, 'offset' => 0, 'visible' => 'yes']];
         yield 'visible as int' => [['width' => 6, 'offset' => 0, 'visible' => 1]];
+        yield 'width zero' => [['width' => 0, 'offset' => 0, 'visible' => true]];
+        yield 'width negative' => [['width' => -3, 'offset' => 0, 'visible' => true]];
+        yield 'offset negative' => [['width' => 6, 'offset' => -2, 'visible' => true]];
     }
 
     public function testFromArrayIncludesContextInErrorMessage(): void
