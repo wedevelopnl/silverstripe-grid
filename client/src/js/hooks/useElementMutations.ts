@@ -112,6 +112,10 @@ export function useDuplicateToElement(pageId: number, zone: string) {
         queryKey: queryKeys.elementTree.byPage(variables.targetPageId, variables.targetZone),
       })
     },
+    // Suppress the standard error toast: the DuplicateToDialog presents the error
+    // inline (via the mutate-level onError in useDuplicateToAction), so the toast
+    // would be a second, redundant presentation of the same failure.
+    onError: () => {},
   })
 }
 
