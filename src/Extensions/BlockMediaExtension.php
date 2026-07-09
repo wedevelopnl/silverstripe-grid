@@ -248,7 +248,6 @@ class BlockMediaExtension extends Extension
         return $resized->getURL();
     }
 
-    /** Parse the MediaPosition DB value to its enum. */
     public function getMediaPositionEnum(): MediaPosition
     {
         /** @var string $value */
@@ -256,7 +255,6 @@ class BlockMediaExtension extends Extension
         return MediaPosition::tryFrom($value) ?? MediaPosition::First;
     }
 
-    /** Parse the VerticalAlignment DB value to its enum. */
     public function getVerticalAlignmentEnum(): VerticalAlignment
     {
         /** @var string $value */
@@ -264,7 +262,6 @@ class BlockMediaExtension extends Extension
         return VerticalAlignment::tryFrom($value) ?? VerticalAlignment::Center;
     }
 
-    /** Parse the MediaRatio DB value to its enum. */
     public function getAspectRatioEnum(): AspectRatio
     {
         /** @var string $value */
@@ -556,7 +553,6 @@ class BlockMediaExtension extends Extension
         };
     }
 
-    /** Typed accessor for the ContentColumns DB field. */
     private function getContentColumnsValue(): int
     {
         /** @var int $value */
@@ -564,7 +560,6 @@ class BlockMediaExtension extends Extension
         return (int) $value;
     }
 
-    /** Typed accessor for the GapSize DB field. */
     private function getGapSizeValue(): int
     {
         /** @var int $value */
@@ -572,7 +567,6 @@ class BlockMediaExtension extends Extension
         return (int) $value;
     }
 
-    /** Typed accessor for the VideoURL DB field. */
     private function getVideoURL(): string
     {
         /** @var string $value */
@@ -580,7 +574,6 @@ class BlockMediaExtension extends Extension
         return (string) $value;
     }
 
-    /** Typed accessor for the MediaImage has_one relation. */
     private function getMediaImage(): Image
     {
         /** @var Image $image */

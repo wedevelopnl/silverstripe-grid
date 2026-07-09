@@ -9,8 +9,6 @@
 import type { ComponentType } from 'react'
 import type { AdapterConfig } from './adapter'
 
-// --- Injector (lib/Injector) ---
-
 export interface InjectorComponentRegistry {
   // Components are registered with their own prop types but retrieved
   // generically — the registry accepts any component signature.
@@ -29,8 +27,6 @@ interface InjectorGlobal {
   // biome-ignore lint/suspicious/noExplicitAny: generic component loader; callers cast to the specific component type.
   loadComponent(name: string, context?: Record<string, unknown>): ComponentType<any>
 }
-
-// --- CMS config (window.ss.config) ---
 
 export interface SilverStripeSectionConfig {
   name: string
@@ -53,8 +49,6 @@ export interface SilverStripeI18n {
   addDictionary(locale: string, entries: Record<string, string>): void
   currentLocale: string
 }
-
-// --- Window augmentation (jQuery, entwine, Injector, CMS config) ---
 
 declare global {
   interface EntwineRules {

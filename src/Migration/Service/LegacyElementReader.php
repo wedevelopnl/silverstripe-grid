@@ -225,8 +225,6 @@ final class LegacyElementReader
     }
 
     /**
-     * Fetch row-specific data (IsFluid, CustomSectionClass) from the ElementRow table.
-     *
      * Single-ID accessor retained for direct lookups; the batch hydration path
      * uses {@see prefetchRowData()} instead.
      */
@@ -509,7 +507,6 @@ final class LegacyElementReader
     private function applyLocalisedOverlay(array $row, array $localised): array
     {
         foreach ($localised as $column => $value) {
-            // Skip Fluent bookkeeping columns; overlay only populated localised values.
             if (\in_array($column, ['ID', 'RecordID', 'Locale'], true)) {
                 continue;
             }

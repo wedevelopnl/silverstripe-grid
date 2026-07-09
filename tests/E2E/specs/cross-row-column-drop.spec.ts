@@ -16,7 +16,6 @@ import {
  * Columns use horizontal layout (X-axis), so direction-aware placement
  * compares pointer X position against the 'over' element's center X.
  */
-// --- Hierarchy-specific helpers (shared across the journey describes) ---
 
 function getRow(page: Page, rowTitle: string) {
   return page.getByTestId('row-block').filter({ hasText: rowTitle })

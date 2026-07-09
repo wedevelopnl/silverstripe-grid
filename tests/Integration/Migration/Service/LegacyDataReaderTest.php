@@ -338,8 +338,6 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertFalse($element->isRow);
     }
 
-    // ─── Extension on subclass table (INNER JOIN branch) ─────────
-
     public function testGetEligiblePagesFromSubclassTable(): void
     {
         $table = DataObject::getSchema()->tableName(TestPage::class);
@@ -414,8 +412,6 @@ final class LegacyDataReaderTest extends SapphireTest
         }
     }
 
-    // ─── Invalid stage handling ──────────────────────────────────
-
     public function testGetEligiblePagesThrowsOnInvalidStage(): void
     {
         $this->expectException(\InvalidArgumentException::class);
@@ -439,8 +435,6 @@ final class LegacyDataReaderTest extends SapphireTest
         $this->expectException(\InvalidArgumentException::class);
         $this->reader->getContentMediaData(1, 'invalid');
     }
-
-    // ─── Additional coverage ─────────────────────────────────────
 
     public function testGetContentMediaDataWithPartialFields(): void
     {
@@ -483,8 +477,6 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertCount(1, $elements);
         self::assertSame('Live Element', $elements[0]->title);
     }
-
-    // ─── getPagesWithGridDisabled ─────────────────────────────────
 
     public function testGetPagesWithGridDisabledReturnsDisabledPages(): void
     {

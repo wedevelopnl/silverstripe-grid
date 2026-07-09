@@ -41,8 +41,6 @@ final class ReorderValidatorTest extends SapphireTest
         return Injector::inst()->get(ReorderValidatorInterface::class);
     }
 
-    // -- Same-parent moves ------------------------------------------------
-
     public function testSameParentAlwaysPasses(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -54,8 +52,6 @@ final class ReorderValidatorTest extends SapphireTest
 
         self::assertTrue($result->isOk());
     }
-
-    // -- Valid cross-parent moves -----------------------------------------
 
     /**
      * Each case builds a valid cross-parent relocation and returns the moved
@@ -125,8 +121,6 @@ final class ReorderValidatorTest extends SapphireTest
 
         self::assertTrue($result->isOk());
     }
-
-    // -- Invalid cross-parent moves ---------------------------------------
 
     /**
      * @return iterable<string, array{Closure(self): array{GridElement, DataObject}}>

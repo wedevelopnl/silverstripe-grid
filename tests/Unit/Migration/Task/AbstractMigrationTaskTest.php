@@ -28,8 +28,6 @@ use WeDevelop\Grid\Value\Viewport;
 #[CoversClass(AbstractMigrationTask::class)]
 final class AbstractMigrationTaskTest extends TestCase
 {
-    // ─── getOptions: no -f shortcut (sake reserves it for --flush) ───────────
-
     public function testNoOptionClaimsTheFShortcutReservedBySakeFlush(): void
     {
         // sake registers a global `--flush` with the `-f` shortcut. A task option
@@ -42,8 +40,6 @@ final class AbstractMigrationTaskTest extends TestCase
 
         self::assertNotContains('f', $shortcuts);
     }
-
-    // ─── resolveViewportKeyMap: explicit --viewport-map argument ─────────────
 
     public function testExplicitViewportMapArgumentParsedIntoKeyPairs(): void
     {
@@ -116,8 +112,6 @@ final class AbstractMigrationTaskTest extends TestCase
         $this->invokeResolveViewportKeyMap('MD=md,XL=xl', $adapter);
     }
 
-    // ─── resolveViewportKeyMap: auto-derive from adapter ────────────────────
-
     /**
      * Each case: [adapterViewportKeys, expectedKeyMap].
      *
@@ -179,8 +173,6 @@ final class AbstractMigrationTaskTest extends TestCase
 
         self::assertSame(['SM' => 'sm', 'MD' => 'md', 'LG' => 'lg', 'XL' => 'xl'], $map);
     }
-
-    // ─── Helpers ─────────────────────────────────────────────────────────────
 
     /**
      * Build a stubbed {@see GridAdapterInterface} that returns {@see Viewport}

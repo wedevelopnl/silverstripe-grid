@@ -53,8 +53,6 @@ final class GridAdapterTest extends SapphireTest
 {
     protected $usesDatabase = false;
 
-    // -- Grid topology -------------------------------------------------------
-
     /**
      * @return iterable<string, array{class-string<GridAdapter>, list<string>}>
      */
@@ -204,8 +202,6 @@ final class GridAdapterTest extends SapphireTest
         self::assertSame(83, $adapter->getColumnPixelWidth(1));
     }
 
-    // -- Width classes -------------------------------------------------------
-
     /**
      * Width class for a responsive (non-base) viewport, width 6.
      *
@@ -247,8 +243,6 @@ final class GridAdapterTest extends SapphireTest
     {
         self::assertSame($expected, (new $adapterClass())->getWidthClass($baseViewport, 6));
     }
-
-    // -- Offset classes ------------------------------------------------------
 
     /**
      * Offset class for a responsive viewport, offset 3. Tailwind's offset_adjustment
@@ -301,8 +295,6 @@ final class GridAdapterTest extends SapphireTest
 
         self::assertSame('md:col-start-3', $adapter->getOffsetClass('md', 2));
     }
-
-    // -- Visibility classes --------------------------------------------------
 
     /**
      * The hide class per viewport. Cascade frameworks (Bootstrap/Tailwind) use a
@@ -399,8 +391,6 @@ final class GridAdapterTest extends SapphireTest
         (new $adapterClass())->getRestoreClass('nonexistent');
     }
 
-    // -- Row, container, title -----------------------------------------------
-
     /**
      * @return iterable<string, array{class-string<GridAdapter>, string}>
      */
@@ -454,8 +444,6 @@ final class GridAdapterTest extends SapphireTest
         self::assertIsArray($options);
     }
 
-    // -- Base width/offset classes -------------------------------------------
-
     /**
      * @return iterable<string, array{class-string<GridAdapter>, string}>
      */
@@ -506,8 +494,6 @@ final class GridAdapterTest extends SapphireTest
         self::assertSame('col-start-3', $adapter->getBaseOffsetClass(2));
     }
 
-    // -- Offset strategy -----------------------------------------------------
-
     /**
      * @return iterable<string, array{class-string<GridAdapter>, OffsetStrategy}>
      */
@@ -526,8 +512,6 @@ final class GridAdapterTest extends SapphireTest
     {
         self::assertSame($expected, (new $adapterClass())->getOffsetStrategy());
     }
-
-    // -- Content layout: aspect ratio ----------------------------------------
 
     /**
      * @param class-string<GridAdapter> $adapterClass
@@ -576,8 +560,6 @@ final class GridAdapterTest extends SapphireTest
         $adapter->getAspectRatioClass(AspectRatio::Square);
     }
 
-    // -- Content layout: vertical alignment ----------------------------------
-
     /**
      * @return iterable<string, array{class-string<GridAdapter>, VerticalAlignment, string}>
      */
@@ -618,8 +600,6 @@ final class GridAdapterTest extends SapphireTest
         $adapter->getVerticalAlignmentClass(VerticalAlignment::Bottom);
     }
 
-    // -- Content layout: media/content order ---------------------------------
-
     /**
      * LastOnDesktop appends the responsive override at each preset's default viewport
      * (Bootstrap md, Tailwind sm, Bulma desktop).
@@ -657,8 +637,6 @@ final class GridAdapterTest extends SapphireTest
         self::assertSame($expectedContent, (new $adapterClass())->getContentOrderClasses($position));
     }
 
-    // -- Content layout: media/content width ---------------------------------
-
     /**
      * Media/content width classes for 6 content columns, emitted at each preset's
      * default viewport. Media gets the complement (12 - 6 = 6) columns.
@@ -689,8 +667,6 @@ final class GridAdapterTest extends SapphireTest
     {
         self::assertSame($expected, (new $adapterClass())->getContentWidthClass(6));
     }
-
-    // -- Content layout: padding ---------------------------------------------
 
     /**
      * Directional padding at size 3, emitted at each preset's default viewport.
@@ -731,8 +707,6 @@ final class GridAdapterTest extends SapphireTest
         $adapter->getPaddingClass('right', 3);
     }
 
-    // -- Content layout: base column class -----------------------------------
-
     /**
      * Bulma requires a `column` base class on every grid column; Bootstrap and
      * Tailwind need none (null).
@@ -755,8 +729,6 @@ final class GridAdapterTest extends SapphireTest
         self::assertSame($expected, (new $adapterClass())->getBaseColumnClass());
     }
 
-    // -- Constructor validation ----------------------------------------------
-    //
     // The constructor's validation lives entirely in the GridAdapter base class and
     // is not framework-specific output, so it is asserted once against the default
     // preset (Tailwind) rather than redundantly across every preset.
@@ -820,8 +792,6 @@ final class GridAdapterTest extends SapphireTest
         self::assertSame('sm:block', $adapter->getRestoreClass('sm'));
     }
 
-    // -- Malformed viewport_definitions rejection ----------------------------
-
     /**
      * Each case: [viewport_definitions, ?messagePattern]. When the pattern is
      * non-null the detailed message is asserted; otherwise only the exception
@@ -880,8 +850,6 @@ final class GridAdapterTest extends SapphireTest
 
         new TailwindAdapter();
     }
-
-    // -- Enabled viewports filtering -----------------------------------------
 
     public function testEnabledViewportsFiltersCorrectly(): void
     {

@@ -221,8 +221,6 @@ export const treeApiResponseWireSchema = v.object({
   nodes: v.array(elementNodeWireSchema),
 })
 
-// --- Response schemas for non-tree endpoints ---
-
 export const acceptableContainerSchema = v.object({
   id: v.pipe(v.number(), v.integer(), v.minValue(1)),
   title: v.string(),

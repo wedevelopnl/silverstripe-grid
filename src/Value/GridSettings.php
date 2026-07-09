@@ -8,8 +8,6 @@ use JsonSerializable;
 use Override;
 
 /**
- * Immutable value object for column grid settings.
- *
  * Stores a default viewport configuration and per-viewport overrides.
  * The default maps to the adapter's default viewport; overrides are
  * keyed by viewport key and represent explicit user customizations.
@@ -31,11 +29,7 @@ final readonly class GridSettings implements JsonSerializable
         public array $overrides = [],
     ) {}
 
-    // ─── Factories ─────────────────────────────────────────────
-
     /**
-     * Initial settings for a new column: full-width, no offset, visible, no overrides.
-     *
      * @param positive-int $columnCount
      */
     public static function initial(int $columnCount): self
@@ -44,8 +38,6 @@ final readonly class GridSettings implements JsonSerializable
     }
 
     /**
-     * Parse a full-shape JSON payload (`{default, overrides}`) into a GridSettings VO.
-     *
      * Returns null for empty/invalid JSON, a missing or non-array `default`,
      * or a non-positive `default.width` — the last is retained for backward
      * compatibility with legacy fixtures that encode "unset" as `width: 0`.
@@ -77,8 +69,6 @@ final readonly class GridSettings implements JsonSerializable
 
         return new self($default, $overrides);
     }
-
-    // ─── Queries ───────────────────────────────────────────────
 
     /** @param non-empty-string $viewport */
     public function hasOverride(string $viewport): bool
@@ -125,8 +115,6 @@ final readonly class GridSettings implements JsonSerializable
         return true;
     }
 
-    // ─── Immutable updates ─────────────────────────────────────
-
     public function withDefault(ViewportConfig $config): self
     {
         return new self($config, $this->overrides);
@@ -152,11 +140,7 @@ final readonly class GridSettings implements JsonSerializable
         return new self($this->default);
     }
 
-    // ─── Serialization ─────────────────────────────────────────
-
     /**
-     * Convert to array representation for API responses.
-     *
      * @return array{default: array{width: int, offset: int, visible: bool}, overrides: array<non-empty-string, array{width: int, offset: int, visible: bool}>}
      */
     public function toArray(): array

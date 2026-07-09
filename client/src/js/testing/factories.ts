@@ -13,7 +13,6 @@ import type {
 } from '@/types/elements'
 import { NodeIdentity, type NodeRef, type NodeType } from '@/types/identity'
 
-/** Test-only helper: construct a fully-typed {@link ParsedDraggableId} for unit tests. */
 export function createParsedDraggableId(type: DraggableType, nodeId: number): ParsedDraggableId {
   return { type, id: nodeId, key: buildDraggableId(type, nodeId) }
 }

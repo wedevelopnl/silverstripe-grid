@@ -26,8 +26,6 @@ final class SectionTest extends SapphireTest
         Versioned::set_stage(Versioned::DRAFT);
     }
 
-    // ── Auto-scaffolding ────────────────────────────────────────
-
     public function testAutoScaffoldCreatesRowAndColumn(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -109,8 +107,6 @@ final class SectionTest extends SapphireTest
         self::assertSame((int) $row->ID, (int) $section->Rows()->first()->ID);
     }
 
-    // ── Zone-scoped sort ────────────────────────────────────────
-
     public function testEnsureSortSetFiltersByZone(): void
     {
         Config::modify()->set(Section::class, 'auto_scaffold', false);
@@ -180,8 +176,6 @@ final class SectionTest extends SapphireTest
         );
     }
 
-    // ── Container behavior (ContainerElementTrait) ──────────────
-
     public function testGetChildrenReturnsRows(): void
     {
         Config::modify()->set(Section::class, 'auto_scaffold', false);
@@ -239,8 +233,6 @@ final class SectionTest extends SapphireTest
     {
         self::assertSame(ContainerType::Section, Section::singleton()->getContainerType());
     }
-
-    // ── Container classes ───────────────────────────────────────
 
     public function testGetContainerClasses(): void
     {

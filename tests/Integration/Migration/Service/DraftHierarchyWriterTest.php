@@ -189,8 +189,6 @@ final class DraftHierarchyWriterTest extends SapphireTest
         }
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────
-
     private function createPage(): int
     {
         $page = Page::create();

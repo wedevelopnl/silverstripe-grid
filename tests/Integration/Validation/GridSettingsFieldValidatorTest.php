@@ -95,8 +95,6 @@ final class GridSettingsFieldValidatorTest extends SapphireTest
         self::assertCount(3, $result->getMessages());
     }
 
-    // ── Boundary tests ─────────────────────────────────────────
-
     public function testWidthAtColumnCountPasses(): void
     {
         $settings = new GridSettings(new ViewportConfig(12, 0, true), []);

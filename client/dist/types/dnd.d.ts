@@ -28,15 +28,8 @@ export interface ParsedDraggableId {
 export declare function buildDraggableId(type: DraggableType, id: number): NodeKey;
 export declare function parseDraggableId(compositeId: string): ParsedDraggableId | null;
 export declare function getDraggableType(compositeId: string): DraggableType | null;
-/**
- * Derives the draggable type from a node's shape: container nodes use their
- * containerType, leaf nodes are always 'element'.
- */
 export declare function getDraggableTypeForNode(node: ElementNode): DraggableType;
-/**
- * Maps a draggable type to the parent type that holds its siblings.
- * Sections live under a page, rows in sections, columns in rows, elements in columns.
- */
+/** Maps a draggable type to the parent type that holds its siblings. */
 export declare const PARENT_CONTAINER_TYPE: {
     readonly section: "page";
     readonly row: "section";

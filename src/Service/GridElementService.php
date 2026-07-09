@@ -36,8 +36,6 @@ final readonly class GridElementService
     }
 
     /**
-     * Create a container element under the given parent.
-     *
      * @param non-empty-string $zone
      * @param positive-int|null $insertAfterElementID Place the new element directly after this sibling; null = append at the end
      * @param bool $insertAtStart Place the new element before all existing siblings (ignored when $insertAfterElementID is given)
@@ -63,8 +61,6 @@ final readonly class GridElementService
     }
 
     /**
-     * Create a content element under the given column.
-     *
      * @param class-string<ContentElement> $className
      * @param positive-int|null $insertAfterElementID
      * @return Result<GridElement>
@@ -158,13 +154,11 @@ final readonly class GridElementService
         // in one transaction, never at the original parent first.
         $clone = $element->duplicate(false);
 
-        // Re-parent to target
         /** @var positive-int $targetParentId */
         $targetParentId = $targetParent->ID;
         $clone->ParentID = $targetParentId;
         $clone->ParentClass = $targetParent::class;
 
-        // Set zone for sections
         if ($clone instanceof Section) {
             $clone->Zone = $targetZone;
         }

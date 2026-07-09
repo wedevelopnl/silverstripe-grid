@@ -79,8 +79,6 @@ export function getOffsetOptions(currentWidth?: number): readonly GridSettingsOp
 }
 
 /**
- * Resolve effective viewport settings for a given viewport.
- *
  * Returns the viewport's override if present, otherwise the default settings.
  * A `null` viewport (no selection yet / adapter unavailable) resolves to the
  * default — there is no per-viewport override to apply.

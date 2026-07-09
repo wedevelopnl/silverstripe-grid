@@ -22,8 +22,6 @@ namespace WeDevelop\Grid\Adapter;
  */
 final class BulmaAdapter extends GridAdapter
 {
-    // ─── Grid topology ──────────────────────────────────────────────
-
     /** @var array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}> */
     private static array $viewport_definitions = [
         'mobile'     => ['label' => 'Mobile',     'min_width' => 0],
@@ -41,8 +39,6 @@ final class BulmaAdapter extends GridAdapter
 
     private static string $default_viewport = 'desktop';
 
-    // ─── Width & offset formats ─────────────────────────────────────
-
     private static ?string $base_viewport_key = 'mobile';
 
     private static string $base_width_format = 'is-%d';
@@ -55,8 +51,6 @@ final class BulmaAdapter extends GridAdapter
 
     private static int $offset_adjustment = 0;
 
-    // ─── Visibility formats ─────────────────────────────────────────
-
     private static string $base_hide_class = 'is-hidden-mobile-only';
 
     private static string $responsive_hide_format = 'is-hidden-%s-only';
@@ -64,8 +58,6 @@ final class BulmaAdapter extends GridAdapter
     // Bulma has no symmetric `is-block-{viewport}` utility. Using `-only` hide classes
     // scopes each hide to its viewport, so no restore class is needed.
     private static string $responsive_restore_format = '';
-
-    // ─── Container & structure ───────────────────────────────────────
 
     private static string $row_class_format = 'columns is-multiline';
 
@@ -84,8 +76,6 @@ final class BulmaAdapter extends GridAdapter
     ];
 
     private static string $offset_strategy = 'margin';
-
-    // ─── Content layout ─────────────────────────────────────────────
 
     /** @var array<string, ?string> */
     private static array $aspect_ratio_classes = [

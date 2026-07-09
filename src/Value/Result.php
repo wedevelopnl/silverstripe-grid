@@ -8,8 +8,6 @@ use NoDiscard;
 use LogicException;
 
 /**
- * Generic success/failure container for validation flows.
- *
  * Use Result::ok($value) for success and Result::fail($errors...) for expected failures.
  * Exceptions remain for truly exceptional situations (bugs, infrastructure failures).
  *
@@ -65,8 +63,6 @@ final readonly class Result
     }
 
     /**
-     * Returns the success value.
-     *
      * @return T
      * @throws LogicException If called on a failed Result (programmer bug)
      */

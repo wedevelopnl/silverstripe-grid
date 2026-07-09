@@ -48,8 +48,6 @@ final class LocationTrailBuilderTest extends SapphireTest
         return array_map(static fn (GridElement $e): int => (int) $e->ID, $elements);
     }
 
-    // ── ancestors() ─────────────────────────────────────────────
-
     public function testAncestorsReturnsContainerChainOutermostFirst(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -110,8 +108,6 @@ final class LocationTrailBuilderTest extends SapphireTest
         // this return [content] and fail.
         self::assertSame([], $this->builder->ancestors($section, $index));
     }
-
-    // ── trail() ─────────────────────────────────────────────────
 
     public function testTrailRootsAtPageFollowedByAncestors(): void
     {

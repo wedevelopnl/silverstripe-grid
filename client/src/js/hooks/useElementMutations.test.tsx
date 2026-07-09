@@ -654,8 +654,6 @@ describe('useElementMutations', () => {
     })
   })
 
-  // ─── Shared onSuccess defaults (useStandardMutationOptions) ──────
-  //
   // Pins the onSuccess body at useElementMutations.ts:41 — without
   // invalidateQueries the cache stays stale after a write, breaking the
   // CMS read-after-write contract. All mutations spreading this factory

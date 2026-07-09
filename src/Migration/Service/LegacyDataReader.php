@@ -111,9 +111,6 @@ final class LegacyDataReader implements LegacyElementSource
         return $elements;
     }
 
-    /**
-     * Fetch row-specific data (IsFluid, CustomSectionClass) from the ElementRow table.
-     */
     public function getRowData(int $elementId, string $stage): ?LegacyRowData
     {
         return $this->elementReader->getRowData($elementId, $stage);

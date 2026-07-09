@@ -8,7 +8,6 @@ import { renderWithProviders } from '@/testing/renderWithProviders'
 
 import DuplicateToDialog from './DuplicateToDialog'
 
-/** Normalize a fetch `input` (string | URL | Request) to its URL string. */
 function resolveRequestUrl(input: string | URL | Request): string {
   if (typeof input === 'string') return input
   if (input instanceof URL) return input.toString()
@@ -24,8 +23,6 @@ beforeEach(() => {
     this.removeAttribute('open')
   })
 })
-
-// --- Fake API data ---
 
 const PAGES = [
   { id: 1, title: 'Home', parentId: 0, hasGridZones: true },
@@ -142,8 +139,6 @@ function renderToggleableDialog(
   return { ...result, rerender, props }
 }
 
-// --- Helpers to navigate through steps ---
-
 async function goToPageStep() {
   await waitFor(() => {
     expect(screen.getByTestId('duplicate-to-page-list')).toBeInTheDocument()
@@ -178,8 +173,6 @@ async function goToContainerStep(user: ReturnType<typeof userEvent.setup>) {
     expect(screen.getByTestId('duplicate-to-step-container')).toBeInTheDocument()
   })
 }
-
-// --- Tests ---
 
 describe('DuplicateToDialog', () => {
   describe('page step', () => {

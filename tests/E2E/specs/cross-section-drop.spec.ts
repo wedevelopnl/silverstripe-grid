@@ -11,7 +11,6 @@ import { activateDragByTitle, dropAndSettle, watchReorderRequests } from '../hel
  * Uses sequential drag operations within a single fixture load to cover
  * all drop positions and directions efficiently.
  */
-// --- Hierarchy-specific helpers (shared across the journey describes) ---
 
 function getSection(page: Page, sectionTitle: string) {
   return page.getByTestId('section-block').filter({ hasText: sectionTitle })

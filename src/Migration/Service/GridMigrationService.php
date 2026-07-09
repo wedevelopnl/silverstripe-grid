@@ -266,8 +266,6 @@ final class GridMigrationService
     }
 
     /**
-     * Write the draft Section/Row/Column hierarchy on the DRAFT stage.
-     *
      * @param class-string $pageClassName
      * @param list<MigrationSection> $sections
      */
@@ -353,8 +351,6 @@ final class GridMigrationService
     }
 
     /**
-     * Check whether Sections already exist for a page + zone on draft stage.
-     *
      * @param class-string $pageClassName
      */
     private function hasExistingSections(int $pageId, string $pageClassName, string $zone): bool
@@ -400,8 +396,6 @@ final class GridMigrationService
     }
 
     /**
-     * Log what a dry-run would create without writing any records.
-     *
      * @param list<MigrationSection> $sections
      * @param int<0, max> $liveOnlyCount Legacy live elements with no draft counterpart
      */

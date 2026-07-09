@@ -291,8 +291,6 @@ final class LivePublisherTest extends SapphireTest
         self::assertSame(6, $liveColumn->getGridSettings()->default->width, "First live element's width wins");
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────
-
     private function createPage(): int
     {
         $page = Page::create();

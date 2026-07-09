@@ -26,8 +26,6 @@ final class RowTest extends SapphireTest
         Versioned::set_stage(Versioned::DRAFT);
     }
 
-    // ── Auto-scaffolding ────────────────────────────────────────
-
     public function testAutoScaffoldCreatesColumn(): void
     {
         // Suppress Section scaffold so we control the tree, but leave Row scaffold on
@@ -87,8 +85,6 @@ final class RowTest extends SapphireTest
         self::assertCount(0, $row->Columns());
     }
 
-    // ── Container behavior ──────────────────────────────────────
-
     public function testGetChildrenReturnsColumns(): void
     {
         Config::modify()->set(Section::class, 'auto_scaffold', false);
@@ -108,8 +104,6 @@ final class RowTest extends SapphireTest
     {
         self::assertSame(ContainerType::Row, Row::singleton()->getContainerType());
     }
-
-    // ── Row classes ─────────────────────────────────────────────
 
     public function testGetRowClassesReturnsNonEmptyString(): void
     {

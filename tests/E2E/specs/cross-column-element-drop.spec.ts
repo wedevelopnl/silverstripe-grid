@@ -16,7 +16,6 @@ import {
  * directions. Elements use vertical layout (Y-axis) within columns, so
  * direction-aware placement compares pointer Y against center Y.
  */
-// --- Hierarchy-specific helpers (shared across the journey describes) ---
 
 /** Locate a column by its title (via drag handle aria-label). */
 function getColumn(page: Page, colTitle: string) {

@@ -11,8 +11,6 @@ use stdClass;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 
 /**
- * Frontend-facing snapshot of a grid adapter's layout configuration.
- *
  * The CMS grid editor needs the active adapter's viewports, column count, and
  * base CSS class maps as plain JSON. This value object is the single boundary
  * between {@see GridAdapterInterface} (PHP) and the editor's `AdapterConfig`
@@ -54,8 +52,6 @@ final readonly class AdapterConfig implements JsonSerializable
     ) {}
 
     /**
-     * Read a grid adapter into a frontend-ready config snapshot.
-     *
      * @throws InvalidArgumentException when the adapter declares no viewports —
      *         the editor cannot render a grid without at least one breakpoint.
      */

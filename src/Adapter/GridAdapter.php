@@ -32,8 +32,6 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 {
     use Configurable;
 
-    // ─── Grid topology ──────────────────────────────────────────────
-
     /** @var array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}> */
     private static array $viewport_definitions = [];
 
@@ -47,8 +45,6 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
     /** @var list<string>|null Restrict active viewports; null = all */
     private static ?array $enabled_viewports = null;
-
-    // ─── Width & offset formats ─────────────────────────────────────
 
     /** Viewport key that uses base (no-infix) format; null if all viewports use responsive format */
     private static ?string $base_viewport_key = null;
@@ -68,8 +64,6 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
     /** Added to offset before formatting (0 for margin-based, 1 for Tailwind col-start) */
     private static int $offset_adjustment = 0;
 
-    // ─── Visibility formats ─────────────────────────────────────────
-
     /** Hide class for the base viewport (literal string, no sprintf) */
     private static string $base_hide_class = '';
 
@@ -78,8 +72,6 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
     /** sprintf: %s = viewport key */
     private static string $responsive_restore_format = '';
-
-    // ─── Container & structure ───────────────────────────────────────
 
     /** sprintf: %d = column count (extra args ignored for static formats like 'row') */
     private static string $row_class_format = '';
@@ -93,8 +85,6 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
     /** OffsetStrategy enum value: 'margin' or 'grid-placement' */
     private static string $offset_strategy = 'margin';
-
-    // ─── Content layout ─────────────────────────────────────────────
 
     /** @var array<string, ?string> AspectRatio value → CSS class (null for Auto) */
     private static array $aspect_ratio_classes = [];
@@ -116,8 +106,6 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
     /** Framework base column class (e.g. Bulma's 'column'); null if not needed */
     private static ?string $base_column_class = null;
-
-    // ─── Resolved instance state (validated/transformed in constructor) ──
 
     /** @var array<string, Viewport> */
     private readonly array $viewports;
@@ -151,8 +139,6 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
         $this->defaultViewport = $this->resolveDefaultViewport();
     }
 
-    // ─── GridAdapterInterface: grid topology ────────────────────────
-
     /** @return list<Viewport> */
     public function getViewports(): array
     {
@@ -184,8 +170,6 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
         return $pixelWidth;
     }
-
-    // ─── GridAdapterInterface: CSS class generation ─────────────────
 
     public function getWidthClass(string $viewport, int $width): string
     {
@@ -289,8 +273,6 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
         return OffsetStrategy::from($value);
     }
-
-    // ─── ContentLayoutAdapterInterface ──────────────────────────────
 
     public function getAspectRatioClass(AspectRatio $ratio): ?string
     {
@@ -400,8 +382,6 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
     {
         return static::config()->get('base_column_class');
     }
-
-    // ─── Config validation helpers ──────────────────────────────────
 
     /**
      * @throws InvalidGridValueException

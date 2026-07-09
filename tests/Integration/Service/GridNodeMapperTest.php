@@ -363,8 +363,6 @@ final class GridNodeMapperTest extends SapphireTest
         );
     }
 
-    // ─── getElementTypeInfo: singular_name / icon / description fallbacks ──
-
     public function testElementTypeInfoLabelUsesConfiguredSingularName(): void
     {
         // Set a singular_name distinct from ClassInfo::shortName so the Ternary
