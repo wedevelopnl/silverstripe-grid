@@ -68,6 +68,26 @@ final class NodeTypeTest extends TestCase
     }
 
     /**
+     * @return array<string, array{NodeType, ?NodeType}>
+     */
+    public static function expectedParentTypeProvider(): array
+    {
+        return [
+            'Page has no parent' => [NodeType::Page, null],
+            'Section is parented to Page' => [NodeType::Section, NodeType::Page],
+            'Row is parented to Section' => [NodeType::Row, NodeType::Section],
+            'Column is parented to Row' => [NodeType::Column, NodeType::Row],
+            'Element is parented to Column' => [NodeType::Element, NodeType::Column],
+        ];
+    }
+
+    #[DataProvider('expectedParentTypeProvider')]
+    public function testExpectedParentType(NodeType $type, ?NodeType $expected): void
+    {
+        self::assertSame($expected, $type->expectedParentType());
+    }
+
+    /**
      * @return array<string, array{NodeType, bool}>
      */
     public static function isContainerProvider(): array

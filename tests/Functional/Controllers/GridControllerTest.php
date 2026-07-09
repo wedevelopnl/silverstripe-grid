@@ -2200,9 +2200,9 @@ final class GridControllerTest extends FunctionalTest
 
     public function testDuplicateToRowIntoSectionReturns204(): void
     {
-        // Row source → Section target. Pins the `Row => Section` match arm;
-        // if that arm is removed, expectedTargetType becomes null and the
-        // type check rejects with 400.
+        // Row source → Section target. Pins the `Row => Section` arm of
+        // NodeType::expectedParentType(); a wrong arm makes the type check
+        // reject a legitimate duplicate with 400.
         $tree = $this->buildTree();
         $page2 = $this->page2();
         $targetSection = GridTreeFactory::section($page2, 'main');

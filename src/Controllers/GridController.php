@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Controllers;
 
 use Override;
-use LogicException;
 use SilverStripe\Admin\AdminController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPRequest;
@@ -257,12 +256,12 @@ class GridController extends AdminController
 
         $body = $parseResult->unwrap();
 
-        $expectedParentType = match ($body->containerType) {
-            ContainerType::Section => NodeType::Page,
-            ContainerType::Row => NodeType::Section,
-            ContainerType::Column => NodeType::Row,
-        };
-        if ($body->parent->type !== $expectedParentType) {
+        $newElementClass = $body->containerType->toElementClass();
+
+        // The parent's NodeType is client-supplied and selects the ORM table in
+        // resolveNodeRef(), so it must be checked against the hierarchy before
+        // the lookup rather than left to the downstream write-time validator.
+        if ($body->parent->type !== NodeType::fromClass($newElementClass)->expectedParentType()) {
             $this->jsonError(400);
         }
 
@@ -275,7 +274,6 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        $newElementClass = $body->containerType->toElementClass();
         if (!singleton($newElementClass)->canCreate()) {
             $this->jsonError(403);
         }
@@ -447,17 +445,9 @@ class GridController extends AdminController
             static fn (GridElement $e): bool => $e->canCreate() && $e->canEdit(),
         );
 
-        $elementType = NodeType::fromClass($element::class);
-        $expectedTargetType = match ($elementType) {
-            NodeType::Section => NodeType::Page,
-            NodeType::Row => NodeType::Section,
-            NodeType::Column => NodeType::Row,
-            NodeType::Element => NodeType::Column,
-            NodeType::Page => throw new LogicException(
-                'apiDuplicateTo: element resolved to NodeType::Page, but the element repository '
-                . 'only returns GridElement subclasses. This indicates a broken invariant.',
-            ),
-        };
+        // Never null: the repository only returns GridElement subclasses, so the
+        // source can never resolve to NodeType::Page (the one rootless type).
+        $expectedTargetType = NodeType::fromClass($element::class)->expectedParentType();
         if ($body->targetParent->type !== $expectedTargetType) {
             $this->jsonError(400);
         }
