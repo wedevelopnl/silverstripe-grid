@@ -58,6 +58,32 @@ final class GridElementTest extends SapphireTest
         self::assertSame(2, $second->Sort);
     }
 
+    public function testEnsureSortSetSpansMixedElementClassesInAColumn(): void
+    {
+        // Sort is one sequence across ALL element classes under a parent. Regression
+        // for the late-static-binding bug: static::get() scoped the max to the
+        // element's own subclass, so the first element of a NEW type computed max
+        // over an empty set and collided at Sort 1 with an existing sibling.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $first = GridTreeFactory::contentElement($column);
+
+        $second = CustomSchemaContentElement::create();
+        $second->ParentID = (int) $column->ID;
+        $second->ParentClass = $column::class;
+        $second->write();
+
+        self::assertSame(1, $first->Sort);
+        self::assertSame(
+            2,
+            $second->Sort,
+            'A new element type must append after existing siblings, not collide at Sort 1',
+        );
+    }
+
     public function testEnsureSortSetPreservesExplicitSort(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
