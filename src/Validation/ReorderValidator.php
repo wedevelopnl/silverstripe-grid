@@ -37,7 +37,7 @@ class ReorderValidator implements ReorderValidatorInterface
     {
         // Page-level: target parent is a SiteTree — check canBeRoot via ContainerType
         if ($targetParent instanceof SiteTree) {
-            if (!($element instanceof ContainerInterface && $element->getContainerType()->canBeRoot())) {
+            if (!$element instanceof ContainerInterface || !$element->getContainerType()->canBeRoot()) {
                 return Result::fail(new ValidationError(
                     message: sprintf(
                         '%s cannot be placed at page level.',
