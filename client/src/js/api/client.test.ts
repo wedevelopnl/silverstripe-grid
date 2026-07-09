@@ -146,6 +146,27 @@ describe('error extraction', () => {
     await expect(apiGet('/api/test')).rejects.toThrow('Primary')
   })
 
+  it('extracts value from the SilverStripe AdminController errors envelope', async () => {
+    // The exact body shape GridController emits via jsonError. Regression: the
+    // client only read top-level message/errorMessage, so every server-composed
+    // validation message was dropped and toasts showed only "API error 4xx:".
+    mockFetchError(422, {
+      status: 'error',
+      errors: [{ type: 'error', code: 422, value: 'Element is not allowed in this container' }],
+    })
+
+    await expect(apiGet('/api/test')).rejects.toThrow('Element is not allowed in this container')
+  })
+
+  it('prefers the errors envelope value over a top-level message', async () => {
+    mockFetchError(422, {
+      message: 'flat',
+      errors: [{ value: 'from envelope' }],
+    })
+
+    await expect(apiGet('/api/test')).rejects.toThrow('from envelope')
+  })
+
   /**
    * Builds a full fetch Response mock whose `json()` resolves the supplied body
    * (or rejects, for the JSON-parse-failure case). Only status/statusText/json
@@ -202,6 +223,18 @@ describe('error extraction', () => {
       status: 400,
       statusText: 'Bad Request',
       json: () => Promise.resolve({ message: '', errorMessage: '' }),
+    },
+    {
+      name: 'errors envelope is empty',
+      status: 422,
+      statusText: 'Unprocessable Entity',
+      json: () => Promise.resolve({ status: 'error', errors: [] }),
+    },
+    {
+      name: 'errors envelope entries have empty values',
+      status: 422,
+      statusText: 'Unprocessable Entity',
+      json: () => Promise.resolve({ status: 'error', errors: [{ value: '' }] }),
     },
     {
       name: 'JSON parsing fails',
