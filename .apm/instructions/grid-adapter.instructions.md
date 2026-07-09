@@ -13,8 +13,8 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single concrete
 
 ## Key Files
 
-- `src/Contract/GridAdapterInterface.php` — 14 methods defining the grid adapter contract
-- `src/Contract/ContentLayoutAdapterInterface.php` — 8 methods for content layout CSS
+- `src/Contract/GridAdapterInterface.php` — the grid adapter contract
+- `src/Contract/ContentLayoutAdapterInterface.php` — the content layout CSS contract
 - `src/Adapter/GridAdapter.php` — Config-driven base class implementing both interfaces
 - `src/Adapter/BootstrapAdapter.php` / `TailwindAdapter.php` / `BulmaAdapter.php` — presets
 - `src/Factory/GridAdapterFactory.php` — Injector factory that aliases additional bindings to the `GridAdapterInterface` singleton

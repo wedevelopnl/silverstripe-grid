@@ -6,8 +6,8 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single `abstrac
 
 ## Key Files
 
-- `src/Contract/GridAdapterInterface.php` — 14 methods defining the grid adapter contract
-- `src/Contract/ContentLayoutAdapterInterface.php` — 8 methods for content layout CSS
+- `src/Contract/GridAdapterInterface.php` — the grid adapter contract
+- `src/Contract/ContentLayoutAdapterInterface.php` — the content layout CSS contract
 - `src/Adapter/GridAdapter.php` — Config-driven base class implementing both interfaces
 - `src/Adapter/BootstrapAdapter.php` — Bootstrap 5 preset (zero methods, only statics)
 - `src/Adapter/TailwindAdapter.php` — Tailwind CSS preset (zero methods, only statics)
@@ -206,7 +206,7 @@ WeDevelop\Grid\Service\GridSettingsResolver:
 
 Content layout (aspect ratios, media ordering, vertical alignment, directional padding) is handled by `ContentLayoutAdapterInterface`, implemented directly by `GridAdapter`. The same adapter instance serves both `GridAdapterInterface` and `ContentLayoutAdapterInterface`.
 
-### ContentLayoutAdapterInterface (8 methods)
+### ContentLayoutAdapterInterface
 
 | Method | Returns | Purpose |
 |--------|---------|---------|

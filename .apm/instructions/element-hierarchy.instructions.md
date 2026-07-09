@@ -11,9 +11,9 @@ The grid enforces a strict three-level hierarchy using polymorphic parent relati
 
 ```
 Page (SiteTree)
-  └── Section   [ContainerType::Section]    — can_be_root: true (default), zone-scoped
-        └── Row   [ContainerType::Row]       — can_be_root: false
-              └── Column  [ContainerType::Column]  — can_be_root: false, stores GridSettings (DBComposite)
+  └── Section   [ContainerType::Section]    — canBeRoot() true, zone-scoped
+        └── Row   [ContainerType::Row]       — canBeRoot() false
+              └── Column  [ContainerType::Column]  — canBeRoot() false, stores GridSettings (DBComposite)
                     └── (any non-container content element)
 ```
 
@@ -24,11 +24,13 @@ All three container elements implement `ContainerInterface`:
 
 Container behavior is shared via `ContainerElementTrait`.
 
-## Hierarchy Rules (YAML Config)
+## Hierarchy Rules
 
-- **Section**: `allowed_elements: [Row]` — only Rows as children
-- **Row**: `allowed_elements: [Column]`, `can_be_root: false` — only Columns as children, cannot be placed at page level
-- **Column**: `disallowed_elements: [Section, Row, Column]`, `can_be_root: false` — blocklist approach, allows any non-container content element
+Hierarchy rules are hardcoded in `ContainerType` (`canBeRoot()`, `allowedChildClass()`, `isChildAllowed()`) — there is **no** per-class YAML (`allowed_elements`/`disallowed_elements`/`can_be_root`) and no `ElementAllowanceTrait`. Changing what a container accepts means editing `ContainerType`, not config.
+
+- **Section**: allows only `Row` children; can be placed at page root; zone-scoped
+- **Row**: allows only `Column` children; cannot be placed at page level
+- **Column**: allows any non-container content element (rejects `Section`/`Row`/`Column` via a blocklist); cannot be placed at page level
 
 ## Parent Relationships
 
@@ -73,15 +75,15 @@ Titles for newly scaffolded children are blank by default. `GridElement::ensureD
 
 ## Hierarchy Validation
 
-Validation happens in two contexts with shared logic via `ElementAllowanceTrait`.
+Validation happens in two contexts, both delegating to the hardcoded `ContainerType` rules.
 
 ### At Write Time: `HierarchyValidationExtension`
 
-Applied globally to `GridElement` via YAML. Hooks into `updateValidate()`:
+Applied globally to `GridElement` via YAML. Hooks into `updateValidate()` and delegates to `HierarchyValidationService`:
 
 1. No parent → pass (orphan)
-2. Parent is a SiteTree page → check `can_be_root` on the element
-3. Parent is a container → check `isElementAllowed()` against `allowed_elements`/`disallowed_elements`
+2. Parent is a SiteTree page → check `getContainerType()->canBeRoot()` on the element
+3. Parent is a container → check `getContainerType()->isChildAllowed($element::class)` on the parent
 
 Violation throws `ValidationException`, preventing the database write.
 
@@ -89,7 +91,7 @@ Violation throws `ValidationException`, preventing the database write.
 
 Called by `ElementPlacementService` (used for both `reorder()` and `insertAfter()` paths, including placement of newly-written elements from `GridElementService`):
 
-1. Applies the `can_be_root` and `isChildAllowed()` (via `ContainerType::isChildAllowed`) checks against the target parent
+1. Applies the `canBeRoot()` and `isChildAllowed()` checks (both on `ContainerType`) against the target parent
 2. Returns `Result::fail()` for violations (uses Result pattern, not exceptions)
 3. Same-parent moves pass the checks trivially — hierarchy cannot have changed
 
