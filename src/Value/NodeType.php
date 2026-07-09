@@ -69,6 +69,25 @@ enum NodeType: string
         };
     }
 
+    /**
+     * The NodeType a node of this type must be parented to.
+     *
+     * The inverse of the containment rules in {@see ContainerType::canBeRoot()}
+     * and {@see ContainerType::allowedChildClass()}: those answer "what may this
+     * container hold?", this answers "what must hold this node?". Page is the
+     * tree root and has no parent, hence null.
+     */
+    public function expectedParentType(): ?self
+    {
+        return match ($this) {
+            self::Page => null,
+            self::Section => self::Page,
+            self::Row => self::Section,
+            self::Column => self::Row,
+            self::Element => self::Column,
+        };
+    }
+
     public function isContainer(): bool
     {
         return match ($this) {
