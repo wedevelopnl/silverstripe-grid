@@ -112,7 +112,6 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
               <AddChildButton
                 parentId={row.self.id}
                 childType="column"
-                childLabel="Column"
                 variant="empty-state"
               />
             )}

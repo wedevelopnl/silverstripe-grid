@@ -12,7 +12,7 @@ describe('AddChildButton', () => {
     mockFetchSuccess({})
 
     renderWithProviders(
-      <AddChildButton parentId={10} childType="row" childLabel="Row" variant="append" />,
+      <AddChildButton parentId={10} childType="row" variant="append" />,
     )
 
     expect(screen.getByTestId('add-child-button')).toHaveTextContent('Add Row')
@@ -23,7 +23,7 @@ describe('AddChildButton', () => {
     mockFetchSuccess({})
 
     renderWithProviders(
-      <AddChildButton parentId={10} childType="row" childLabel="Row" variant="append" />,
+      <AddChildButton parentId={10} childType="row" variant="append" />,
     )
 
     await user.click(screen.getByTestId('add-child-button'))
@@ -47,7 +47,7 @@ describe('AddChildButton', () => {
     mockFetchSuccess({})
 
     renderWithProviders(
-      <AddChildButton parentId={1} childType="section" childLabel="Section" variant="append" />,
+      <AddChildButton parentId={1} childType="section" variant="append" />,
       { zone: 'main' },
     )
 
@@ -74,7 +74,7 @@ describe('AddChildButton', () => {
     vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
     renderWithProviders(
-      <AddChildButton parentId={10} childType="row" childLabel="Row" variant="append" />,
+      <AddChildButton parentId={10} childType="row" variant="append" />,
     )
 
     await user.click(screen.getByTestId('add-child-button'))
@@ -89,7 +89,7 @@ describe('AddChildButton', () => {
     vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
     renderWithProviders(
-      <AddChildButton parentId={10} childType="row" childLabel="Row" variant="append" />,
+      <AddChildButton parentId={10} childType="row" variant="append" />,
     )
 
     await user.click(screen.getByTestId('add-child-button'))
@@ -103,7 +103,7 @@ describe('AddChildButton', () => {
     mockFetchSuccess({})
 
     renderWithProviders(
-      <AddChildButton parentId={10} childType="row" childLabel="Row" variant="empty-state" />,
+      <AddChildButton parentId={10} childType="row" variant="empty-state" />,
     )
 
     expect(screen.getByTestId('add-child-empty')).toBeInTheDocument()
@@ -114,7 +114,7 @@ describe('AddChildButton', () => {
     mockFetchSuccess({})
 
     renderWithProviders(
-      <AddChildButton parentId={10} childType="row" childLabel="Row" variant="append" />,
+      <AddChildButton parentId={10} childType="row" variant="append" />,
     )
 
     expect(screen.getByTestId('add-child-append')).toBeInTheDocument()
@@ -125,7 +125,7 @@ describe('AddChildButton', () => {
     mockFetchSuccess({})
 
     renderWithProviders(
-      <AddChildButton parentId={10} childType="row" childLabel="Row" variant="between" />,
+      <AddChildButton parentId={10} childType="row" variant="between" />,
     )
 
     expect(screen.getByTestId('add-child-between')).toBeInTheDocument()
@@ -141,7 +141,7 @@ describe('AddChildButton', () => {
       <AddChildButton
         parentId={10}
         childType="row"
-        childLabel="Row"
+
         variant="between"
         insertAfterId={7}
       />,
