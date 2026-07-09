@@ -189,6 +189,10 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
     public function getWidthClass(string $viewport, int $width): string
     {
+        if (!isset($this->viewports[$viewport])) {
+            throw InvalidGridValueException::forViewport($viewport);
+        }
+
         if ($viewport === static::config()->get('base_viewport_key')) {
             return sprintf(static::config()->get('base_width_format'), $width);
         }
@@ -198,6 +202,10 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
     public function getOffsetClass(string $viewport, int $offset): string
     {
+        if (!isset($this->viewports[$viewport])) {
+            throw InvalidGridValueException::forViewport($viewport);
+        }
+
         /** @var int $adjustment */
         $adjustment = static::config()->get('offset_adjustment');
         $adjusted = $offset + $adjustment;

@@ -376,6 +376,28 @@ final class GridAdapterTest extends SapphireTest
      * @param class-string<GridAdapter> $adapterClass
      */
     #[DataProvider('allAdaptersProvider')]
+    public function testGetWidthClassThrowsForInvalidViewport(string $adapterClass): void
+    {
+        $this->expectException(InvalidGridValueException::class);
+
+        (new $adapterClass())->getWidthClass('nonexistent', 6);
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('allAdaptersProvider')]
+    public function testGetOffsetClassThrowsForInvalidViewport(string $adapterClass): void
+    {
+        $this->expectException(InvalidGridValueException::class);
+
+        (new $adapterClass())->getOffsetClass('nonexistent', 2);
+    }
+
+    /**
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('allAdaptersProvider')]
     public function testGetVisibilityClassesThrowsForInvalidViewport(string $adapterClass): void
     {
         $this->expectException(InvalidGridValueException::class);
