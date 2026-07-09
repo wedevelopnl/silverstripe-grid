@@ -19,6 +19,12 @@ function treeQueryOptions(pageId: number | null, zone: string, version?: number)
       return fetchElementTree(pageId, zone, version)
     },
     enabled: pageId !== null,
+    // Archived versions are immutable server-side, so a version-specific tree never
+    // goes stale: mark it fresh forever so remounting (e.g. stepping through the
+    // history viewer) and window refocus reuse the cache instead of refetching.
+    // Note this does NOT suppress refetches from queryClient.invalidateQueries() —
+    // invalidation sets isInvalidated, which overrides staleTime.
+    ...(version !== undefined ? { staleTime: Number.POSITIVE_INFINITY } : {}),
   }
 }
 
