@@ -308,7 +308,21 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
     public function getVerticalAlignmentClass(VerticalAlignment $alignment): string
     {
-        return static::config()->get('vertical_alignment_classes')[$alignment->value];
+        /** @var array<string, string> $map */
+        $map = static::config()->get('vertical_alignment_classes');
+
+        // Guard the lookup like getAspectRatioClass: a project that overrides
+        // vertical_alignment_classes via YAML and omits an enum member would
+        // otherwise emit an undefined-array-key warning and a TypeError mid-render.
+        if (!array_key_exists($alignment->value, $map)) {
+            throw InvalidGridValueException::forIncompleteClassMap(
+                static::class,
+                'vertical_alignment_classes',
+                $alignment->value,
+            );
+        }
+
+        return $map[$alignment->value];
     }
 
     public function getMediaOrderClasses(MediaPosition $position): string
@@ -369,6 +383,15 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
     {
         /** @var array<string, string> $dirMap */
         $dirMap = static::config()->get('padding_direction_map');
+
+        if (!array_key_exists($direction, $dirMap)) {
+            throw InvalidGridValueException::forIncompleteClassMap(
+                static::class,
+                'padding_direction_map',
+                $direction,
+            );
+        }
+
         $prefix = $dirMap[$direction];
 
         return sprintf(static::config()->get('padding_format'), $prefix, $this->defaultViewport->key, $size);
