@@ -22,11 +22,15 @@ final class GridAdapterStub implements GridAdapterInterface
 
     /**
      * @param list<Viewport>|null $viewports
+     * @param bool $cascadeVisibility When true (default) the stub mimics
+     *     Bootstrap/Tailwind — hides cascade upward and expose a restore class.
+     *     When false it mimics Bulma — hides are viewport-scoped, restore is null.
      */
     public function __construct(
         ?array $viewports = null,
         private readonly int $columnCount = 12,
         ?Viewport $defaultViewport = null,
+        private readonly bool $cascadeVisibility = true,
     ) {
         $this->viewports = $viewports ?? [
             new Viewport('xs', 'Extra Small', 0),
@@ -61,19 +65,17 @@ final class GridAdapterStub implements GridAdapterInterface
         return sprintf('offset-%s-%d', $viewport, $offset);
     }
 
-    public function getVisibilityClasses(string $viewport): array
+    public function getHideClass(string $viewport): string
     {
-        $index = $this->viewportIndex($viewport);
-        $viewports = $this->viewports;
+        return sprintf('hidden-%s', $viewport);
+    }
 
-        if ($index === count($viewports) - 1) {
-            return [sprintf('hidden-%s', $viewport)];
-        }
-
-        return [
-            sprintf('hidden-%s', $viewport),
-            sprintf('visible-%s', $viewports[$index + 1]->key),
-        ];
+    public function getRestoreClass(string $viewport): ?string
+    {
+        // Cascade stub (Bootstrap/Tailwind): hides cascade upward and are undone with
+        // a restore class where visibility returns. Non-cascade stub (Bulma): hides
+        // are viewport-scoped, so there is no restore utility.
+        return $this->cascadeVisibility ? sprintf('visible-%s', $viewport) : null;
     }
 
     public function getRowClasses(): string
@@ -114,16 +116,5 @@ final class GridAdapterStub implements GridAdapterInterface
     public function getColumnPixelWidth(int $columnSpan): int
     {
         return (int) round($this->getContainerMaxWidth() * $columnSpan / $this->columnCount);
-    }
-
-    private function viewportIndex(string $key): int
-    {
-        foreach ($this->viewports as $i => $vp) {
-            if ($vp->key === $key) {
-                return $i;
-            }
-        }
-
-        return 0;
     }
 }

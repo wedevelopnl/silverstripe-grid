@@ -217,47 +217,38 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
         return sprintf(static::config()->get('responsive_offset_format'), $viewport, $adjusted);
     }
 
-    /** @return list<string> */
-    public function getVisibilityClasses(string $viewport): array
+    public function getHideClass(string $viewport): string
     {
         if (!isset($this->viewports[$viewport])) {
             throw InvalidGridValueException::forViewport($viewport);
         }
 
-        /** @var list<non-empty-string> $keys */
-        $keys = array_keys($this->viewports);
-
-        /** @var int<0, max> $index array_search cannot return false after the isset guard */
-        $index = array_search($viewport, $keys, true);
-        $isLast = $index === count($keys) - 1;
-
         /** @var ?string $baseKey */
         $baseKey = static::config()->get('base_viewport_key');
 
-        $hideClass = ($viewport === $baseKey)
+        return ($viewport === $baseKey)
             ? static::config()->get('base_hide_class')
             : sprintf(static::config()->get('responsive_hide_format'), $viewport);
+    }
 
-        if ($isLast) {
-            return [$hideClass];
+    public function getRestoreClass(string $viewport): ?string
+    {
+        if (!isset($this->viewports[$viewport])) {
+            throw InvalidGridValueException::forViewport($viewport);
         }
 
         /** @var string $restoreFormat */
         $restoreFormat = static::config()->get('responsive_restore_format');
 
         // Frameworks without a per-viewport restore utility (e.g. Bulma) set
-        // `responsive_restore_format` to ''. Emit only the hide class — sprintf on an
-        // empty format would yield an empty string and pollute the class list.
+        // `responsive_restore_format` to '' — their hides are viewport-scoped and
+        // need no restore. Signal that to the caller with null rather than an
+        // empty string that would pollute the class list.
         if ($restoreFormat === '') {
-            return [$hideClass];
+            return null;
         }
 
-        $nextKey = $keys[$index + 1];
-
-        return [
-            $hideClass,
-            sprintf($restoreFormat, $nextKey),
-        ];
+        return sprintf($restoreFormat, $viewport);
     }
 
     public function getRowClasses(): string
@@ -516,8 +507,8 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
         // Iterate $allViewports (definition / breakpoint order) so the resolved
         // map is always ascending, independent of the order keys appear in
-        // enabled_viewports. Downstream cascade dedupe (ColumnClassResolver) and
-        // getVisibilityClasses() derive the "next viewport" by array position.
+        // enabled_viewports. Downstream cascade dedupe (ColumnClassResolver)
+        // walks this map in ascending order to sequence hide/restore classes.
         return array_filter(
             $allViewports,
             static fn (string $key): bool => isset($enabledLookup[$key]),
