@@ -47,7 +47,7 @@ This project is a SilverStripe 6 ground-up rewrite of `wedevelopnl/silverstripe-
 - `isElementAllowed()` logic is duplicated in `HierarchyValidationService` and `ReorderValidator` (known tech debt).
 
 ### Grid Adapter System
-- `GridAdapterInterface` (12 methods) + `GridAdapterConfiguration` trait for YAML-configurable overrides.
+- `GridAdapterInterface` + `ContentLayoutAdapterInterface`, both implemented by the config-driven `GridAdapter` base class, whose `private static` Configurable properties are the YAML-overridable surface.
 - `Viewport` is a `final readonly class` (NOT an enum). Each adapter defines its own viewport set.
 - Three adapters: Bootstrap (default), Tailwind, Bulma — all follow identical constructor pattern.
 - DI binding in `_config/grid.yml`, consumers depend on interface only.

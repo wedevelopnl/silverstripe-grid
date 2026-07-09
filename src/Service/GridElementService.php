@@ -83,7 +83,10 @@ final readonly class GridElementService
     }
 
     /**
-     * Shallow-duplicate an element and insert after the original.
+     * Deep-duplicate an element (following cascade_duplicates) and insert after
+     * the original. `duplicate(false)` passes only $doWrite; $relations defaults
+     * to the class's cascade_duplicates config, so duplicating a container copies
+     * its entire Section→Row→Column subtree.
      *
      * @return Result<GridElement>
      */

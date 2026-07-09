@@ -63,7 +63,7 @@ The Docker environment provides Caddy, PHP, and MySQL 8. Default admin credentia
 ### TypeScript / React
 
 - 2-space indentation
-- Zod-first type definitions (schemas in `client/src/js/types/`, infer TS types)
+- Valibot-first type definitions (schemas in `client/src/js/types/`, infer TS types via `v.InferOutput`)
 - Use the `@` path alias for imports from `client/src/js/`
 - Follow existing component patterns in `client/src/js/components/`
 
@@ -84,10 +84,12 @@ Before submitting a PR, ensure the relevant checks pass:
 ### Full QA (recommended)
 
 ```bash
-# PHP: static analysis + unit + integration tests
+# PHP + JS: PHPStan (incl. a PHP 8.5 pass) + Rector + full PHP coverage suite +
+# the JS checks (lint, format:check, typecheck, tests, vite build), all in parallel.
+# CI additionally runs `npm run i18n:check` and verifies client/dist is up to date.
 task qa
 
-# JavaScript: lint + typecheck + unit tests
+# JavaScript only: lint + format:check + typecheck + tests + i18n:check + vite build
 npm run qa
 ```
 

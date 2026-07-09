@@ -232,7 +232,7 @@ A partial migration (draft written, live reconciliation failed) will not be retr
 
 ## Customising the Migration
 
-Four extension points are available via `SilverStripe\Core\Extensible`. Register a `DataExtension` on the service or task class listed in each section.
+Four extension points are available via `SilverStripe\Core\Extensible`. Register an `Extension` (`SilverStripe\Core\Extension`) on the service or task class listed in each section.
 
 ### 1. Custom element class mapping
 

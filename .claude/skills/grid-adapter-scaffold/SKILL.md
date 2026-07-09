@@ -80,5 +80,5 @@ Use the existing adapter tests as reference (BootstrapAdapterTest, TailwindAdapt
 ## Reference
 
 - `src/Adapter/GridAdapter.php` — Config-driven base class (see docblock for all 25+ config properties)
-- `src/Contract/GridAdapterInterface.php` — 13-method grid contract
-- `src/Contract/ContentLayoutAdapterInterface.php` — 8-method content layout contract
+- `src/Contract/GridAdapterInterface.php` — the grid contract
+- `src/Contract/ContentLayoutAdapterInterface.php` — the content layout contract

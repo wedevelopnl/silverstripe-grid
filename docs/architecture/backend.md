@@ -164,8 +164,8 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 ├──────────────────── Rendering ──────────────────────────────┤
 │                                                             │
 │  Grid Adapter System                                        │
-│    ├── GridAdapterInterface (14 methods)                    │
-│    ├── ContentLayoutAdapterInterface (8 methods)            │
+│    ├── GridAdapterInterface                                 │
+│    ├── ContentLayoutAdapterInterface                        │
 │    ├── GridAdapter (config-driven base, implements both)    │
 │    ├── GridAdapterFactory (DI alias factory)                │
 │    ├── Presets: Bootstrap, Tailwind, Bulma (zero-method)    │
@@ -416,7 +416,7 @@ The controller maps `Result::ok()` to HTTP 204 and `Result::fail()` to HTTP 422 
 
 Grid adapters translate the abstract layout model (viewports, column widths, offsets, visibility) into CSS framework-specific class names. All consumers depend on `GridAdapterInterface`, never on a concrete adapter.
 
-### Interface Contract (14 methods)
+### Interface Contract
 
 | Method | Returns | Purpose |
 |--------|---------|---------|
@@ -492,13 +492,13 @@ The content layout system adds media (image/video) capability with side-by-side 
 
 ```
 BlockMediaExtension (applied to ContentElement via YAML)
-  └── ContentLayoutAdapterInterface (8 methods)
+  └── ContentLayoutAdapterInterface
         └── GridAdapter (same instance as GridAdapterInterface)
 ```
 
 Content layout is implemented directly by `GridAdapter` — the same adapter instance serves both `GridAdapterInterface` and `ContentLayoutAdapterInterface`. Content layout CSS strings are Configurable statics on the adapter alongside grid CSS strings. No separate adapter or data bag needed.
 
-### ContentLayoutAdapterInterface (8 methods)
+### ContentLayoutAdapterInterface
 
 | Method | Returns | Purpose |
 |--------|---------|---------|
