@@ -79,10 +79,12 @@ final class GridEditorFieldTest extends SapphireTest
 
         $field = new GridEditorField('GridEditor', $page->ID);
 
-        // saveInto is intentionally empty, so calling it should not throw
+        // saveInto is intentionally empty: it must neither throw nor mutate the
+        // passed record. Assert the column is untouched rather than assertTrue(true),
+        // which an implementation that wrote to the record would still pass.
         $field->saveInto($column);
 
-        self::assertTrue(true, 'saveInto completed without exception');
+        self::assertFalse($column->isChanged(), 'saveInto must not mutate the record');
     }
 
     public function testPerformReadonlyTransformationReturnsReadonlyClone(): void
