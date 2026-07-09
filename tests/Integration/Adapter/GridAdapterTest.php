@@ -587,6 +587,21 @@ final class GridAdapterTest extends SapphireTest
         self::assertSame($expected, (new $adapterClass())->getVerticalAlignmentClass($alignment));
     }
 
+    public function testGetVerticalAlignmentClassThrowsOnMissingConfig(): void
+    {
+        // A YAML override that omits an enum member must fail loudly at the lookup,
+        // not emit an undefined-array-key warning and a TypeError mid-render.
+        Config::modify()->set(TailwindAdapter::class, 'vertical_alignment_classes', ['top' => 'items-start']);
+        $adapter = new TailwindAdapter();
+
+        $this->expectException(InvalidGridValueException::class);
+        $this->expectExceptionMessage(TailwindAdapter::class);
+        $this->expectExceptionMessage('vertical_alignment_classes');
+        $this->expectExceptionMessage('bottom');
+
+        $adapter->getVerticalAlignmentClass(VerticalAlignment::Bottom);
+    }
+
     // -- Content layout: media/content order ---------------------------------
 
     /**
@@ -683,6 +698,21 @@ final class GridAdapterTest extends SapphireTest
 
         self::assertSame($expectedLeft, $adapter->getPaddingClass('left', 3));
         self::assertSame($expectedRight, $adapter->getPaddingClass('right', 3));
+    }
+
+    public function testGetPaddingClassThrowsOnMissingDirection(): void
+    {
+        // A project overriding padding_direction_map and omitting a direction would
+        // otherwise hit an undefined-array-key warning and a TypeError mid-render.
+        Config::modify()->set(TailwindAdapter::class, 'padding_direction_map', ['left' => 'pl']);
+        $adapter = new TailwindAdapter();
+
+        $this->expectException(InvalidGridValueException::class);
+        $this->expectExceptionMessage(TailwindAdapter::class);
+        $this->expectExceptionMessage('padding_direction_map');
+        $this->expectExceptionMessage('right');
+
+        $adapter->getPaddingClass('right', 3);
     }
 
     // -- Content layout: base column class -----------------------------------
