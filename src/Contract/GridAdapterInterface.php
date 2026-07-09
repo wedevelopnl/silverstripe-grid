@@ -63,19 +63,39 @@ interface GridAdapterInterface
     public function getOffsetClass(string $viewport, int $offset): string;
 
     /**
-     * Visibility classes that hide an element at the given viewport.
+     * The CSS class that hides an element at the given viewport.
      *
-     * Returns a list because hiding typically requires paired classes: one to
-     * hide at the target viewport, one to restore visibility at the next
-     * breakpoint. For the last viewport only a single hide class is needed.
+     * Whether hiding cascades to larger breakpoints is framework-specific and is
+     * signalled by {@see self::getRestoreClass()}: frameworks that return a restore
+     * class (Bootstrap `d-md-none`, Tailwind `md:hidden`) cascade upward and are
+     * undone with the restore class, so callers emit the hide once at the point a
+     * column turns hidden; frameworks that return null (Bulma `is-hidden-md-only`)
+     * scope each hide to a single viewport, so callers emit a hide at every hidden
+     * viewport. The caller (ColumnClassResolver) owns that sequencing decision — it
+     * is the only place that knows the per-viewport visibility sequence.
      *
-     * @example Bootstrap xs: ['d-none', 'd-sm-block']
-     * @example Bootstrap xl: ['d-xl-none']
+     * @example Bootstrap md: 'd-md-none'
+     * @example Bootstrap xs: 'd-none'   (no-infix base viewport)
      *
      * @param non-empty-string $viewport
-     * @return list<string>
      */
-    public function getVisibilityClasses(string $viewport): array;
+    public function getHideClass(string $viewport): string;
+
+    /**
+     * The CSS class that restores visibility at the given viewport, or null when
+     * the framework has no such utility.
+     *
+     * A non-null restore class means the framework's hide utilities cascade to
+     * larger breakpoints and must be explicitly undone where a column turns visible
+     * again. null means hides are per-viewport-scoped and no restore is needed.
+     *
+     * @example Bootstrap md: 'd-md-block'
+     * @example Tailwind  md: 'md:block'
+     * @example Bulma     tablet: null
+     *
+     * @param non-empty-string $viewport
+     */
+    public function getRestoreClass(string $viewport): ?string;
 
     /**
      * CSS classes for a grid row container.

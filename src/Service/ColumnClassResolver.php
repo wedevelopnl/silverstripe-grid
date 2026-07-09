@@ -43,9 +43,26 @@ final class ColumnClassResolver
             $offset = $config->offset;
             $visible = $config->visible;
 
-            if (!$visible && $prevVisible) {
-                $parts = [...$parts, ...$adapter->getVisibilityClasses($key)];
-            } elseif ($visible) {
+            if (!$visible) {
+                // Emit a hide class when the column is hidden. Frameworks whose hide
+                // utilities cascade to larger breakpoints expose a restore class, so
+                // one hide at the visible→hidden transition suffices; frameworks with
+                // per-viewport-scoped hides (no restore class, e.g. Bulma) need a hide
+                // at every hidden viewport, or the run would only hide its first one.
+                if ($prevVisible || $adapter->getRestoreClass($key) === null) {
+                    $parts[] = $adapter->getHideClass($key);
+                }
+            } else {
+                if (!$prevVisible) {
+                    // The column becomes visible again after a hidden run. On cascade
+                    // frameworks the upward-cascading hide must be undone here with a
+                    // restore class (null on per-viewport frameworks, which need none).
+                    $restore = $adapter->getRestoreClass($key);
+                    if ($restore !== null) {
+                        $parts[] = $restore;
+                    }
+                }
+
                 if ($width !== $prevWidth || !$prevVisible) {
                     $parts[] = $adapter->getWidthClass($key, $width);
                 }

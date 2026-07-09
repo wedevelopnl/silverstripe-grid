@@ -427,7 +427,8 @@ Grid adapters translate the abstract layout model (viewports, column widths, off
 | `getOffsetClass(viewport, offset)` | `string` | Offset class for viewport |
 | `getBaseWidthClass(width)` | `string` | Width class for base viewport |
 | `getBaseOffsetClass(offset)` | `string` | Offset class for base viewport |
-| `getVisibilityClasses(viewport)` | `list<string>` | Hide/restore class pair |
+| `getHideClass(viewport)` | `string` | Hide class for viewport |
+| `getRestoreClass(viewport)` | `?string` | Restore-visibility class, or null when the framework's hides are viewport-scoped (e.g. Bulma) |
 | `getRowClasses()` | `string` | Row container classes |
 | `getContainerClass(fluid)` | `string` | Container wrapper classes |
 | `getTitleClassOptions()` | `array<string, string>` | CSS class to label mapping |
