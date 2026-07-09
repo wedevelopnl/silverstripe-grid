@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Unit\Migration\Task;
 
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -46,7 +47,7 @@ final class AbstractMigrationTaskTest extends TestCase
 
     public function testExplicitViewportMapArgumentParsedIntoKeyPairs(): void
     {
-        $adapter = $this->adapterWithViewportKeys(['md']);
+        $adapter = $this->adapterWithViewportKeys(['md', 'xl']);
 
         $map = $this->invokeResolveViewportKeyMap('MD=md,XL=xl', $adapter);
 
@@ -55,7 +56,7 @@ final class AbstractMigrationTaskTest extends TestCase
 
     public function testExplicitViewportMapArgumentTrimsWhitespace(): void
     {
-        $adapter = $this->adapterWithViewportKeys(['md']);
+        $adapter = $this->adapterWithViewportKeys(['md', 'xl']);
 
         $map = $this->invokeResolveViewportKeyMap(' MD = md , XL = xl ', $adapter);
 
@@ -64,34 +65,55 @@ final class AbstractMigrationTaskTest extends TestCase
 
     public function testExplicitViewportMapArgumentSkipsPairsWithoutEquals(): void
     {
-        $adapter = $this->adapterWithViewportKeys(['md']);
+        $adapter = $this->adapterWithViewportKeys(['md', 'xl']);
 
         $map = $this->invokeResolveViewportKeyMap('MD=md,BROKEN,XL=xl', $adapter);
 
         self::assertSame(['MD' => 'md', 'XL' => 'xl'], $map);
     }
 
-    public function testExplicitViewportMapArgumentPreservesEqualsInValue(): void
+    public function testExplicitViewportMapOldKeyNormalisedToUppercase(): void
     {
-        // A pair value that itself contains '=' must survive intact: the split is
-        // limited to two parts, so only the FIRST '=' separates key from value.
-        // Pins the explode limit of 2 — a limit of 3 would drop the 'b' segment
-        // entirely and yield ['X' => 'a'] instead of ['X' => 'a=b'].
-        $adapter = $this->adapterWithViewportKeys(['md']);
+        // Legacy sizeFields are keyed uppercase, so a lowercase old key must be
+        // normalised to match rather than silently produce a non-matching entry.
+        $adapter = $this->adapterWithViewportKeys(['lg']);
 
-        $map = $this->invokeResolveViewportKeyMap('X=a=b', $adapter);
+        $map = $this->invokeResolveViewportKeyMap('md=lg', $adapter);
 
-        self::assertSame(['X' => 'a=b'], $map);
+        self::assertSame(['MD' => 'lg'], $map);
     }
 
     public function testExplicitViewportMapArgumentWinsOverAdapterAutoDerive(): void
     {
-        // Adapter has no 'md' at all, but the explicit map still takes precedence
-        $adapter = $this->adapterWithViewportKeys(['sm', 'lg']);
+        // The explicit map overrides the name-matched auto-derive: here MD maps to
+        // lg instead of the identity md the auto-derive would produce.
+        $adapter = $this->adapterWithViewportKeys(['sm', 'md', 'lg']);
 
-        $map = $this->invokeResolveViewportKeyMap('MD=md', $adapter);
+        $map = $this->invokeResolveViewportKeyMap('MD=lg', $adapter);
 
-        self::assertSame(['MD' => 'md'], $map);
+        self::assertSame(['MD' => 'lg'], $map);
+    }
+
+    public function testExplicitViewportMapRejectsUnknownLegacyOldKey(): void
+    {
+        $adapter = $this->adapterWithViewportKeys(['md']);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid --viewport-map old key "ZZ"');
+
+        $this->invokeResolveViewportKeyMap('ZZ=md', $adapter);
+    }
+
+    public function testExplicitViewportMapRejectsNewKeyNotEnabledOnAdapter(): void
+    {
+        // Mapping a legacy key to a viewport the active adapter does not expose
+        // would target a nonexistent breakpoint and silently drop the override.
+        $adapter = $this->adapterWithViewportKeys(['md']);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid --viewport-map new key "xl"');
+
+        $this->invokeResolveViewportKeyMap('MD=md,XL=xl', $adapter);
     }
 
     // ─── resolveViewportKeyMap: auto-derive from adapter ────────────────────

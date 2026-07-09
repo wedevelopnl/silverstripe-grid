@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Migration\Task;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\PolyExecution\PolyOutput;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Output\BufferedOutput;
+use WeDevelop\Grid\Adapter\BulmaAdapter;
+use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 
@@ -37,6 +40,42 @@ final class MigrateGridTaskGuardTest extends SapphireTest
         $this->seeder->removeLocaleIdColumn();
         $this->seeder->dropTables();
         parent::tearDown();
+    }
+
+    public function testRejectsInvalidDefaultViewport(): void
+    {
+        // --default-viewport must be one of the legacy keys (XS/SM/MD/LG/XL). An
+        // unvalidated value misses the uppercase-keyed legacy sizeFields lookup and
+        // silently full-widths every migrated column, so it must fail loudly.
+        $task = new MigrateGridTask();
+        $definition = new InputDefinition($task->getOptions());
+        $input = new ArrayInput(['--default-viewport' => 'ZZ', '--zone' => 'main', '--dry-run' => true], $definition);
+        $buffered = new BufferedOutput();
+        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+
+        $result = $task->execute($input, $output);
+
+        self::assertSame(Command::FAILURE, $result);
+        self::assertStringContainsString('Invalid --default-viewport "ZZ"', $buffered->fetch());
+    }
+
+    public function testFailsWhenNoLegacyKeyMatchesAnAdapterViewport(): void
+    {
+        // Bulma's viewports (mobile/tablet/desktop/...) share no names with the
+        // legacy XS/SM/MD/LG/XL set, so the derived map is empty. Migrating with an
+        // empty map would silently drop every responsive override.
+        Injector::inst()->registerService(new BulmaAdapter(), GridAdapterInterface::class);
+
+        $task = new MigrateGridTask();
+        $definition = new InputDefinition($task->getOptions());
+        $input = new ArrayInput(['--default-viewport' => 'MD', '--zone' => 'main', '--dry-run' => true], $definition);
+        $buffered = new BufferedOutput();
+        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+
+        $result = $task->execute($input, $output);
+
+        self::assertSame(Command::FAILURE, $result);
+        self::assertStringContainsString('Could not derive a viewport map', $buffered->fetch());
     }
 
     public function testRefusesWhenLocalisedLegacyTablesPresent(): void

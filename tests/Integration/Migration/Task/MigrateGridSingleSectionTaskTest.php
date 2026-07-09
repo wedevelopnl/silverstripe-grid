@@ -14,6 +14,7 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Output\BufferedOutput;
 use WeDevelop\Grid\Migration\Task\MigrateGridTask;
+use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
@@ -121,6 +122,30 @@ final class MigrateGridSingleSectionTaskTest extends SapphireTest
 
         self::assertSame(Command::FAILURE, $exitCode);
         self::assertCount(0, Section::get());
+    }
+
+    public function testLowercaseDefaultViewportIsNormalisedAndPreservesColumnWidth(): void
+    {
+        // 'md' is the NEW adapter spelling; the legacy sizeFields are keyed 'MD'.
+        // Unnormalised, the lookup missed and every migrated column silently became
+        // full-width on a destructive run. Asserting only "the task did not error"
+        // would pass against the buggy code too, so assert the migrated width.
+        $pageId = $this->getPageId();
+        $areaId = 100;
+        $this->seeder->seedPage($pageId, $areaId);
+        $this->seeder->seedElement(7400, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 6,
+            'Title' => 'Half width',
+        ]);
+        $this->seeder->seedContentMedia(7400, []);
+
+        $exitCode = $this->executeTask(['--default-viewport' => 'md', '--zone' => 'main']);
+
+        self::assertSame(Command::SUCCESS, $exitCode);
+
+        $column = Column::get()->first();
+        self::assertInstanceOf(Column::class, $column);
+        self::assertSame(6, $column->getGridSettings()->default->width, 'lowercase md must map to legacy MD');
     }
 
     public function testExecuteUsesAllRowsInSectionStrategy(): void
