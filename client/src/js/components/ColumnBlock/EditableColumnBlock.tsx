@@ -101,7 +101,9 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
   const widthSelectedValue = settings.visible ? settings.width : ('hidden' as const)
 
   const offsetLabel =
-    settings.offset === 0 ? t('WeDevelopGrid.GridSettings.OFFSET_NONE', 'none') : `+${settings.offset}`
+    settings.offset === 0
+      ? t('WeDevelopGrid.GridSettings.OFFSET_NONE', 'none')
+      : `+${settings.offset}`
   const isOffsetDisabled = isPickerDisabled || settings.width === columnCount || !settings.visible
 
   const updateSettings = useCallback(
