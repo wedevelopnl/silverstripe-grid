@@ -14,8 +14,9 @@ vi.mock('@/hooks/useDragAndDrop', () => ({
 }))
 
 const reorderMutate = vi.fn()
+const reorderState = { isPending: false }
 vi.mock('@/hooks/useElementMutations', () => ({
-  useReorderElement: () => ({ mutate: reorderMutate }),
+  useReorderElement: () => ({ mutate: reorderMutate, isPending: reorderState.isPending }),
 }))
 
 import { useGridEditorDnd } from './useGridEditorDnd'
@@ -24,6 +25,7 @@ describe('useGridEditorDnd', () => {
   beforeEach(() => {
     capturedOnReorder.current = null
     reorderMutate.mockClear()
+    reorderState.isPending = false
     resetIdCounter()
   })
 
@@ -59,6 +61,28 @@ describe('useGridEditorDnd', () => {
     const call = reorderMutate.mock.calls[0][0]
     expect(call.tree).toBe(tree)
     expect(call.clearPendingTree).toBe(clear)
+  })
+
+  it('drops the reorder and clears the pending tree while one is already in flight', () => {
+    // Serializing reorders prevents two overlapping optimistic updates from
+    // racing the snapshot rollback and caching a wrong tree.
+    reorderState.isPending = true
+    const tree = createTreeApiResponse({
+      pageId: 1,
+      sections: [createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'A' })],
+    })
+    renderHook(() => useGridEditorDnd(tree, 1, 'main'))
+    const clear = vi.fn()
+    act(() => {
+      capturedOnReorder.current?.(
+        { type: 'section', id: 10 } as never,
+        { type: 'page', id: 1 } as never,
+        null as never,
+        clear as never,
+      )
+    })
+    expect(reorderMutate).not.toHaveBeenCalled()
+    expect(clear).toHaveBeenCalledTimes(1)
   })
 
   it('does not fire the mutation while the tree is undefined', () => {
