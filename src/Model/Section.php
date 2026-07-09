@@ -116,7 +116,10 @@ class Section extends GridElement implements ContainerInterface
             return;
         }
 
-        $max = static::get()
+        // Section::get(), not static::get(): sections in a zone form one Sort
+        // sequence across all Section subclasses, so a project subclass must not
+        // scope the max to its own class and collide with base-Section siblings.
+        $max = Section::get()
             ->filter([
                 'ParentID' => $this->ParentID,
                 'ParentClass' => $this->ParentClass,
