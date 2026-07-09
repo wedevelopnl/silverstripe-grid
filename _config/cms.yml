@@ -1,7 +1,5 @@
 ---
 Name: grid-cms
-After:
-  - '#grid-hierarchy'
 ---
 
 SilverStripe\Admin\LeftAndMain:

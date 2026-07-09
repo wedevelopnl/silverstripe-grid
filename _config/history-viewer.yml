@@ -1,7 +1,7 @@
 ---
 Name: grid-history-viewer
 After:
-  - '#versioned-admin'
+  - 'silverstripe/versioned-admin/*'
 ---
 
 SilverStripe\Core\Injector\Injector:
