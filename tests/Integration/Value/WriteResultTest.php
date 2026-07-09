@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Value;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use Psr\Log\AbstractLogger;
+use Psr\Log\LoggerInterface;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Core\Validation\ValidationResult;
 use SilverStripe\Dev\SapphireTest;
@@ -90,5 +93,32 @@ final class WriteResultTest extends SapphireTest
         WriteResult::from(static function (): never {
             throw new \RuntimeException('Not a validation error');
         });
+    }
+
+    public function testLogsRawValidationExceptionServerSide(): void
+    {
+        // The raw framework detail must reach the log even though only the composed,
+        // translated messages reach the client. Without this assertion the debug()
+        // call could be dropped silently while every other test stayed green.
+        $logger = new class extends AbstractLogger {
+            /** @var list<string> */
+            public array $records = [];
+
+            /**
+             * @param mixed $level
+             * @param array<string, mixed> $context
+             */
+            public function log($level, string|\Stringable $message, array $context = []): void
+            {
+                $this->records[] = (string) $level . ':' . (string) ($context['message'] ?? '');
+            }
+        };
+        Injector::inst()->registerService($logger, LoggerInterface::class);
+
+        WriteResult::from(static function (): never {
+            throw new ValidationException('Raw framework detail');
+        });
+
+        self::assertContains('debug:Raw framework detail', $logger->records);
     }
 }
