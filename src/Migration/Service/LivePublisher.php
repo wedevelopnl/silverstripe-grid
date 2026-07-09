@@ -22,8 +22,7 @@ use WeDevelop\Grid\Value\MigrationIdMap;
 /**
  * Publishes migrated draft records to the LIVE stage: shared elements (published
  * from their draft record), live-only elements (created as a fresh hierarchy on
- * both stages), and live grid-settings reconciliation. Extracted verbatim from
- * GridMigrationService.
+ * both stages), and live grid-settings reconciliation.
  *
  * Reuses {@see DraftHierarchyWriter} for the live-only hierarchy build (so the
  * `updateClassNameMapping` / `updateElementFieldMapping` extension hooks still
@@ -489,8 +488,6 @@ final readonly class LivePublisher
     }
 
     /**
-     * Get the next available Sort value for Sections under a page + zone.
-     *
      * @param class-string $pageClassName
      */
     private function getNextSectionSort(int $pageId, string $pageClassName, string $zone): int

@@ -22,7 +22,6 @@ function elementCards(container: import('@playwright/test').Locator) {
   return container.getByTestId('element-card')
 }
 
-/** Get all element card title locators within a container. */
 function elementTitleLocators(container: import('@playwright/test').Locator) {
   return container.getByTestId('element-card-title')
 }

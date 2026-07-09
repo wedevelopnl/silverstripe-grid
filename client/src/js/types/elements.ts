@@ -1,13 +1,9 @@
 import type { NodeKey, NodeRef } from './identity'
 import type { ElementStatus } from './status'
 
-// --- Container type constants ---
-
 export const CONTAINER_TYPES = ['section', 'row', 'column'] as const
 
 export type ContainerType = (typeof CONTAINER_TYPES)[number]
-
-// --- Shared types ---
 
 export interface BlockSchema {
   typeName: string
@@ -53,8 +49,6 @@ interface BaseFields {
   extensions?: Record<string, unknown>
 }
 
-// --- Leaf node type ---
-
 /**
  * Leaf (non-container) element. Carries an explicit `containerType?: never`
  * so the {@link ElementNode} discriminated union narrows correctly via the
@@ -65,8 +59,6 @@ interface BaseFields {
 export interface SimpleElementNode extends BaseFields {
   containerType?: never
 }
-
-// --- Grid settings (column-specific) ---
 
 export interface ViewportSettings {
   width: number
@@ -79,15 +71,11 @@ export interface GridSettings {
   overrides: Record<string, ViewportSettings>
 }
 
-// --- Allowed type info ---
-
 export interface AllowedTypeInfo {
   label: string
   icon: string
   description: string
 }
-
-// --- Container node types (column → row → section) ---
 
 export interface ColumnNode extends BaseFields {
   containerType: 'column'
@@ -108,19 +96,11 @@ export interface SectionNode extends BaseFields {
   children: RowNode[] | null
 }
 
-// --- Union types ---
-
 export type ElementNode = SectionNode | RowNode | ColumnNode | SimpleElementNode
 export type ContainerNode = SectionNode | RowNode | ColumnNode
 
-/**
- * Root sections for a single page/zone — flat list. The old `Record<string,
- * ElementNode[]>` shape has been retired in favour of the structured
- * `TreeApiResponse` that carries `rootParent` explicitly.
- */
+/** Root sections for a single page/zone — flat list. */
 export type ElementTreeResponse = ElementNode[]
-
-// --- API response wrapper ---
 
 export interface TreeApiResponse {
   /** Identity of the root container (always a page for the current API). */
@@ -128,8 +108,6 @@ export interface TreeApiResponse {
   /** Flat list of root-level nodes (sections). */
   nodes: ElementNode[]
 }
-
-// --- Type guards ---
 
 export function isContainerNode(node: ElementNode): node is ContainerNode {
   return 'containerType' in node

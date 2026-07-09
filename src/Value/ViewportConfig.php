@@ -8,9 +8,6 @@ use JsonSerializable;
 use Override;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
 
-/**
- * Immutable value object for a single viewport's grid configuration.
- */
 final readonly class ViewportConfig implements JsonSerializable
 {
     /**
@@ -24,8 +21,6 @@ final readonly class ViewportConfig implements JsonSerializable
     ) {}
 
     /**
-     * Default configuration: full-width, no offset, visible.
-     *
      * @param positive-int $columnCount
      */
     public static function default(int $columnCount): self
@@ -34,8 +29,6 @@ final readonly class ViewportConfig implements JsonSerializable
     }
 
     /**
-     * Validate and materialise a viewport payload.
-     *
      * Throws {@see InvalidGridValueException} when a required key is missing
      * or a scalar has the wrong type — a silent coerce masks bad writes behind
      * a downstream `TypeError`; the domain error surfaces them at the origin.
@@ -93,8 +86,6 @@ final readonly class ViewportConfig implements JsonSerializable
     }
 
     /**
-     * Batch-construct a keyed map of viewport configs.
-     *
      * Entries with empty/non-string keys or non-array values are silently
      * skipped — legacy data shapes encoded these as "not present." Array
      * values that are structurally malformed still throw via {@see fromArray}.

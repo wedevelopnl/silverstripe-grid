@@ -38,8 +38,6 @@ final class RequestBodyParserTest extends TestCase
         $this->parser = new RequestBodyParser(new GridAdapterStub());
     }
 
-    // ── parseCreateBody ─────────────────────────────────────────
-
     /**
      * @param array<string, mixed> $input
      */
@@ -172,8 +170,6 @@ final class RequestBodyParserTest extends TestCase
         ];
     }
 
-    // ── parseCreateContentBody ──────────────────────────────────
-
     public function testParseCreateContentBodyValid(): void
     {
         $result = $this->parser->parseCreateContentBody([
@@ -240,8 +236,6 @@ final class RequestBodyParserTest extends TestCase
             'insertAfterElementID must be a positive integer or null.',
         ];
     }
-
-    // ── parseReorderBody ────────────────────────────────────────
 
     public function testParseReorderBodyValidSameContainer(): void
     {
@@ -329,8 +323,6 @@ final class RequestBodyParserTest extends TestCase
             'after: ',
         ];
     }
-
-    // ── parseUpdateGridSettingsBody ─────────────────────────────
 
     public function testParseUpdateGridSettingsBodyValid(): void
     {
@@ -436,8 +428,6 @@ final class RequestBodyParserTest extends TestCase
         self::assertTrue($this->parser->parseUpdateGridSettingsBody($data)->isOk());
     }
 
-    // ── parseDuplicateToBody ────────────────────────────────────
-
     public function testParseDuplicateToBodyValid(): void
     {
         $result = $this->parser->parseDuplicateToBody([
@@ -518,8 +508,6 @@ final class RequestBodyParserTest extends TestCase
             'targetParent: ',
         ];
     }
-
-    // ── parseResetGridSettingsOverridesBody ──────────────────────
 
     /**
      * @param array<string, mixed> $input
@@ -615,8 +603,6 @@ final class RequestBodyParserTest extends TestCase
         ];
     }
 
-    // ── parseElementRef ─────────────────────────────────────────
-
     public function testParseElementRefValid(): void
     {
         $result = $this->parser->parseElementRef(['element' => ['type' => 'section', 'id' => 1]]);
@@ -652,8 +638,6 @@ final class RequestBodyParserTest extends TestCase
         ];
     }
 
-    // ── parseElementRefFromQuery ────────────────────────────────
-
     public function testParseElementRefFromQueryCoercesStringIdToNodeRef(): void
     {
         // Query values arrive as strings; the id must be coerced to an int.
@@ -678,8 +662,6 @@ final class RequestBodyParserTest extends TestCase
 
         self::assertTrue($result->isErr());
     }
-
-    // ── parseResetGridSettingsOverridesFromQuery ────────────────
 
     public function testParseResetOverridesFromQueryCoercesTypes(): void
     {

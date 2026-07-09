@@ -85,7 +85,6 @@ final readonly class GridSettingsResolver
     {
         $viewports = $this->adapter->getViewports();
 
-        // Walk largest-to-smallest
         $current = $settings->default;
         $result = [];
 

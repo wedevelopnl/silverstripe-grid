@@ -29,8 +29,6 @@ final readonly class GridSettingsService
     }
 
     /**
-     * Update grid settings for a column at a specific viewport.
-     *
      * When the viewport matches the adapter's default, the default config is replaced.
      * For other viewports: if the new values match the default, the override is removed
      * (redundant override cleanup); otherwise the override is set.
@@ -66,8 +64,6 @@ final readonly class GridSettingsService
     }
 
     /**
-     * Reset grid settings overrides for all columns on a page within a zone.
-     *
      * When a viewport is specified, only that viewport's override is removed.
      * When null, all overrides are removed from each column.
      * Columns without relevant overrides are skipped.

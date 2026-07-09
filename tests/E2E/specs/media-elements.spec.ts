@@ -14,7 +14,6 @@ test.describe('Media elements', () => {
     await page.goto(`/admin/pages/edit/show/${fixture.pageId}`)
     await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
 
-    // --- Step 1: Verify fixture loaded with image ---
     await test.step('Verify fixture loaded with image attached', async () => {
       const elementCards = page.getByTestId('element-card')
       await expect(elementCards).toHaveCount(2)
@@ -38,7 +37,6 @@ test.describe('Media elements', () => {
       await expect(uploadField).toBeVisible({ timeout: 10_000 })
     })
 
-    // --- Step 2: Verify MediaType toggles VideoCustomThumbnail visibility ---
     await test.step('Verify MediaType toggles VideoCustomThumbnail visibility', async () => {
       // We're already on the Media tab from Step 1
       const videoThumbnailHolder = page.locator('[id$="_VideoCustomThumbnail_Holder"]')
@@ -55,7 +53,6 @@ test.describe('Media elements', () => {
       await expect(videoThumbnailHolder).toBeHidden()
     })
 
-    // --- Step 3: Verify picker visual feedback and conditional field visibility ---
     await test.step('Verify column width picker UX behavior', async () => {
       await page.getByRole('tab', { name: 'Layout' }).click()
 
@@ -111,7 +108,6 @@ test.describe('Media elements', () => {
       await expect(gapSizeHolder).toBeHidden()
     })
 
-    // --- Step 4: Configure layout settings and save ---
     await test.step('Configure layout settings', async () => {
       // Select 8/4 split for the save+render test (click the visible label;
       // the underlying radio is opacity:0).
@@ -128,7 +124,6 @@ test.describe('Media elements', () => {
       await expect(page.getByText(/Saved/).first()).toBeVisible({ timeout: 15_000 })
     })
 
-    // --- Step 5: Configure media settings ---
     await test.step('Configure media settings', async () => {
       await page.getByRole('tab', { name: 'Media' }).click()
 
@@ -141,7 +136,6 @@ test.describe('Media elements', () => {
       await expect(page.getByText(/Saved/).first()).toBeVisible({ timeout: 15_000 })
     })
 
-    // --- Step 6: Navigate back and publish ---
     await test.step('Navigate back and publish page', async () => {
       await page.getByRole('link', { name: 'E2E Media Elements Page' }).click()
       await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
@@ -150,7 +144,6 @@ test.describe('Media elements', () => {
       await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 15_000 })
     })
 
-    // --- Step 7: Verify frontend rendering ---
     await test.step('Verify frontend rendering with media layout', async () => {
       const liveUrl = fixture.pageUrl.split('?')[0]
       await page.goto(liveUrl)

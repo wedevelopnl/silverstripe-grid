@@ -12,8 +12,6 @@ use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 
 /**
- * Scoped identity type for every node in the grid tree.
- *
  * Pages and grid elements live in separate DB tables with independent
  * auto-increment sequences, so a page and an element can share the same
  * numeric ID. Anywhere identity is stored as a bare int is a latent collision
@@ -28,8 +26,6 @@ enum NodeType: string
     case Element = 'element';
 
     /**
-     * Resolve the NodeType for a concrete class name.
-     *
      * Sections/Rows/Columns are matched by hierarchy. Any non-container
      * GridElement subclass is classified as Element. SiteTree subclasses
      * are classified as Page.

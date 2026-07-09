@@ -75,8 +75,6 @@ final class PageGridFlagWriterTest extends SapphireTest
         parent::tearDown();
     }
 
-    // ─── Arm 1: setUseGridOnPage — draft only (default) ──────────
-
     public function testSetUseGridOnPageSetsDraftOnlyByDefault(): void
     {
         $pageId = $this->getPageId();
@@ -87,8 +85,6 @@ final class PageGridFlagWriterTest extends SapphireTest
         self::assertNotNull($draftRow);
         self::assertSame(1, (int) $draftRow['UseGrid'], 'Draft UseGrid must be 1');
     }
-
-    // ─── Arm 2: setUseGridOnPage — draft AND live ─────────────────
 
     public function testSetUseGridOnPageSetsBothDraftAndLive(): void
     {
@@ -107,8 +103,6 @@ final class PageGridFlagWriterTest extends SapphireTest
         self::assertNotNull($liveRow);
         self::assertSame(1, (int) $liveRow['UseGrid'], 'Live UseGrid must be 1');
     }
-
-    // ─── Arm 3: setUseGridOnPage — live only (draft excluded) ────
 
     public function testSetUseGridOnPageSetsLiveOnlyWhenDraftExcluded(): void
     {
@@ -131,8 +125,6 @@ final class PageGridFlagWriterTest extends SapphireTest
         self::assertNotNull($liveRow);
         self::assertSame(0, (int) $liveRow['UseGrid'], 'Live UseGrid must be 0 (includeLive=true, enabled=false)');
     }
-
-    // ─── Arm 4: migrateDisabledGridPages ─────────────────────────
 
     public function testMigrateDisabledGridPagesSetsUseGridFalseAndLogsCount(): void
     {
@@ -171,8 +163,6 @@ final class PageGridFlagWriterTest extends SapphireTest
         self::assertStringContainsString('1 live', $logText);
     }
 
-    // ─── Arm 5: no-op when UseGrid column absent ──────────────────
-
     public function testSetUseGridOnPageIsNoOpWhenUseGridColumnAbsent(): void
     {
         // Simulate a project where no SiteTree subclass has UseGrid in its ORM
@@ -210,8 +200,6 @@ final class PageGridFlagWriterTest extends SapphireTest
             $schemaProp->setValue(null, $savedSchema);
         }
     }
-
-    // ─── Helpers ──────────────────────────────────────────────────
 
     private function createWriter(): PageGridFlagWriter
     {

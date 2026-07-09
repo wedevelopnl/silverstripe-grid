@@ -9,8 +9,6 @@ use JsonSerializable;
 use Override;
 
 /**
- * Scoped identity for a single node in the grid tree.
- *
  * Combines a NodeType with a positive integer record ID to form a
  * collision-free reference across SilverStripe's polymorphic parent
  * relationship. This is the canonical on-the-wire and in-memory shape
@@ -32,9 +30,6 @@ final readonly class NodeRef implements JsonSerializable
         }
     }
 
-    /**
-     * Parse a NodeRef from a decoded JSON payload.
-     */
     public static function fromArray(mixed $data): self
     {
         if (!is_array($data)) {

@@ -12,8 +12,7 @@ use SilverStripe\ORM\DB;
 
 /**
  * Writes the page-level UseGrid flag on the draft and/or live page table and
- * reconciles grid-disabled legacy pages. Extracted verbatim from
- * GridMigrationService.
+ * reconciles grid-disabled legacy pages.
  */
 final readonly class PageGridFlagWriter
 {
@@ -23,8 +22,6 @@ final readonly class PageGridFlagWriter
     ) {}
 
     /**
-     * Set the UseGrid flag on a page record.
-     *
      * Uses raw SQL for consistency with the migration's existing approach
      * to live-stage table updates. The table is resolved dynamically because
      * the UseGrid column lives on whichever page class has GridPageExtension

@@ -42,8 +42,6 @@ final class GridElementTest extends SapphireTest
         Config::modify()->set(Row::class, 'auto_scaffold', false);
     }
 
-    // ── Sort assignment ─────────────────────────────────────────
-
     public function testEnsureSortSetAssignsSequentialSort(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -96,8 +94,6 @@ final class GridElementTest extends SapphireTest
         self::assertSame(42, $element->Sort);
     }
 
-    // ── Default title ───────────────────────────────────────────
-
     public function testEnsureDefaultTitleWhenEmpty(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -137,7 +133,6 @@ final class GridElementTest extends SapphireTest
         self::assertStringContainsString('2', $second->Title);
     }
 
-    // ── Polymorphic parent-ID isolation ─────────────────────────────
     // Pin the `'ParentID' => $this->ParentID` filters in ensureSortSet and
     // ensureDefaultTitle. Without that key, sibling queries would return
     // elements from *every* parent of the same class — a correctness bug
@@ -212,8 +207,6 @@ final class GridElementTest extends SapphireTest
         self::assertStringNotContainsString('2', $e1->Title);
     }
 
-    // ── getPage() ───────────────────────────────────────────────
-
     public function testGetPageWalksParentChain(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -247,8 +240,6 @@ final class GridElementTest extends SapphireTest
 
         self::assertNull($element->getPage());
     }
-
-    // ── Permissions ─────────────────────────────────────────────
 
     public function testCanViewDelegatesToPage(): void
     {
@@ -325,16 +316,12 @@ final class GridElementTest extends SapphireTest
         self::assertFalse(ContentElement::singleton()->canCreate());
     }
 
-    // ── Simple class name ───────────────────────────────────────
-
     public function testGetSimpleClassNameReturnsShortName(): void
     {
         $section = Section::create();
 
         self::assertSame('Section', $section->getSimpleClassName());
     }
-
-    // ── CMS edit link ───────────────────────────────────────────
 
     public function testGetCMSEditLinkWithPage(): void
     {
@@ -373,8 +360,6 @@ final class GridElementTest extends SapphireTest
         self::assertNull($element->getCMSEditLink());
     }
 
-    // ── Anchor ──────────────────────────────────────────────────
-
     public function testGetAnchorContainsElementId(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -386,8 +371,6 @@ final class GridElementTest extends SapphireTest
         self::assertSame('grid-element-' . $element->ID, $element->getAnchor());
     }
 
-    // ── Type name ───────────────────────────────────────────────
-
     public function testGetTypeNameReplacesBackslashes(): void
     {
         $element = ContentElement::create();
@@ -396,8 +379,6 @@ final class GridElementTest extends SapphireTest
         self::assertStringNotContainsString('\\', $typeName);
         self::assertStringContainsString('ContentElement', $typeName);
     }
-
-    // ── Block schema ────────────────────────────────────────────
 
     public function testGetBlockSchemaReturnsExpectedKeys(): void
     {
@@ -442,8 +423,6 @@ final class GridElementTest extends SapphireTest
         self::assertArrayHasKey('type', $schema);
     }
 
-    // ── Title size class ────────────────────────────────────────
-
     public function testGetTitleSizeClassReturnsStoredValue(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -471,8 +450,6 @@ final class GridElementTest extends SapphireTest
 
         self::assertSame('', $element->getTitleSizeClass());
     }
-
-    // ── getCMSFields ────────────────────────────────────────────
 
     public function testGetCMSFieldsContainsTitleGroup(): void
     {
@@ -557,8 +534,6 @@ final class GridElementTest extends SapphireTest
         self::assertNull($fields->dataFieldByName('TitleClass'));
     }
 
-    // ── Orphan permission fallback ──────────────────────────────
-
     public function testCanViewFallsBackToPermissionCheckForOrphan(): void
     {
         $element = $this->createOrphanElement();
@@ -592,8 +567,6 @@ final class GridElementTest extends SapphireTest
         self::assertFalse($element->canDelete());
     }
 
-    // ── Sort guard boundary ────────────────────────────────────
-
     public function testEnsureSortSetGuardPreservesPositiveSort(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -608,8 +581,6 @@ final class GridElementTest extends SapphireTest
         self::assertSame(5, $reloaded->Sort);
     }
 
-    // ── getType ─────────────────────────────────────────────────
-
     public function testGetTypeReturnsConfiguredSingularName(): void
     {
         $section = Section::create();
@@ -618,8 +589,6 @@ final class GridElementTest extends SapphireTest
         $content = ContentElement::create();
         self::assertSame('Content element', $content->getType());
     }
-
-    // ── Helpers ──────────────────────────────────────────────────
 
     /**
      * Creates a persisted ContentElement then orphans it via raw SQL
@@ -646,8 +615,6 @@ final class GridElementTest extends SapphireTest
         return $reloaded;
     }
 
-    // ── forTemplate ─────────────────────────────────────────────
-
     public function testForTemplateReturnsString(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -661,7 +628,6 @@ final class GridElementTest extends SapphireTest
         self::assertIsString($result);
     }
 
-    // ── getHolderClasses ────────────────────────────────────────
     // ContentElement uses the base provideHolderClasses() ([]), so the holder
     // classes derive solely from Style + ExtraClass.
 
@@ -716,8 +682,6 @@ final class GridElementTest extends SapphireTest
 
         self::assertSame('shadow', $element->getHolderClasses());
     }
-
-    // ── Leaf write does not scaffold children ───────────────────
 
     public function testWritingContentElementDoesNotScaffoldChildren(): void
     {

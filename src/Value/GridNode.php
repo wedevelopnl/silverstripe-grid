@@ -9,8 +9,6 @@ use InvalidArgumentException;
 use Override;
 
 /**
- * Readonly DTO representing a single element in the tree.
- *
  * Identity is always scoped by {@see NodeRef} — a pair of {@see NodeType}
  * and positive integer record ID — to prevent collisions between SilverStripe's
  * polymorphic ParentClass namespaces (SiteTree page IDs share the numeric
@@ -65,8 +63,6 @@ final readonly class GridNode implements JsonSerializable
     }
 
     /**
-     * Numeric record ID of this node.
-     *
      * @return positive-int
      */
     public function getId(): int
@@ -75,8 +71,6 @@ final readonly class GridNode implements JsonSerializable
     }
 
     /**
-     * Numeric record ID of this node's parent.
-     *
      * @return positive-int
      */
     public function getParentId(): int

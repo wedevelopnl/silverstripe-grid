@@ -39,8 +39,6 @@ final class GridElementReportTest extends SapphireTest
         return GridElementReport::create();
     }
 
-    // ── Title / Description ─────────────────────────────────────
-
     public function testTitleReturnsNonEmptyString(): void
     {
         self::assertNotEmpty($this->report()->title());
@@ -50,8 +48,6 @@ final class GridElementReportTest extends SapphireTest
     {
         self::assertNotEmpty($this->report()->description());
     }
-
-    // ── sourceRecords ───────────────────────────────────────────
 
     public function testSourceRecordsReturnsAllElements(): void
     {
@@ -202,8 +198,6 @@ final class GridElementReportTest extends SapphireTest
         self::fail('Orphan element should appear in sourceRecords');
     }
 
-    // ── columns ─────────────────────────────────────────────────
-
     public function testColumnsReturnsExpectedKeys(): void
     {
         $columns = $this->report()->columns();
@@ -220,8 +214,6 @@ final class GridElementReportTest extends SapphireTest
             self::assertArrayHasKey('title', $column);
         }
     }
-
-    // ── parameterFields ─────────────────────────────────────────
 
     public function testParameterFieldsContainsPageAndTypeDropdowns(): void
     {

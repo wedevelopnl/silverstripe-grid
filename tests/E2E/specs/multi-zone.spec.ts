@@ -37,7 +37,6 @@ test.describe('Multi-zone isolation', () => {
     let mainOrder: string[] = []
 
     await test.step('both zones render independently', async () => {
-      // --- Phase 1: Verify both zones render independently ---
       await expect(mainSections).toHaveCount(2)
       await expect(sidebarSections).toHaveCount(2)
 
@@ -52,7 +51,6 @@ test.describe('Multi-zone isolation', () => {
     })
 
     await test.step('reorder within the main zone', async () => {
-      // --- Phase 2: Reorder within main zone ---
       const settle1 = waitForMutationSettlement(page)
       await performDrag(page, dragHandle(page, 'Main-Alpha'), dragHandle(page, 'Main-Beta'))
       await settle1()
@@ -70,7 +68,6 @@ test.describe('Multi-zone isolation', () => {
     })
 
     await test.step('reorder within the sidebar zone', async () => {
-      // --- Phase 3: Reorder within sidebar zone ---
       const settle2 = waitForMutationSettlement(page)
       await performDrag(page, dragHandle(page, 'Sidebar-Alpha'), dragHandle(page, 'Sidebar-Beta'))
       await settle2()
@@ -87,7 +84,6 @@ test.describe('Multi-zone isolation', () => {
     })
 
     await test.step('cross-zone drags cannot move sections between zones', async () => {
-      // --- Phase 4: Cross-zone drag cannot move sections between zones ---
       // dnd-kit resolves to the nearest same-zone collision (not cross-zone),
       // so a reorder may fire within the main zone. The key invariant:
       // no section moves between zones — counts stay the same.
@@ -138,7 +134,6 @@ test.describe('Multi-zone isolation', () => {
     })
 
     await test.step('publish and verify zone order on the frontend', async () => {
-      // --- Phase 5: Publish and verify all sections render on frontend ---
       await page.getByRole('button', { name: /Publish/ }).click()
       await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 10_000 })
 

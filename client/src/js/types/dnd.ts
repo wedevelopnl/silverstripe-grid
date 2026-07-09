@@ -52,19 +52,12 @@ export function getDraggableType(compositeId: string): DraggableType | null {
   return parseDraggableId(compositeId)?.type ?? null
 }
 
-/**
- * Derives the draggable type from a node's shape: container nodes use their
- * containerType, leaf nodes are always 'element'.
- */
 export function getDraggableTypeForNode(node: ElementNode): DraggableType {
   if (!isContainerNode(node)) return 'element'
   return node.containerType
 }
 
-/**
- * Maps a draggable type to the parent type that holds its siblings.
- * Sections live under a page, rows in sections, columns in rows, elements in columns.
- */
+/** Maps a draggable type to the parent type that holds its siblings. */
 export const PARENT_CONTAINER_TYPE = {
   section: 'page',
   row: 'section',

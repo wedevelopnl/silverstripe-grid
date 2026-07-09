@@ -145,8 +145,6 @@ final class GridMigrationServiceTest extends SapphireTest
         }
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────
-
     private function createStrategy(): RowPerSectionStrategy
     {
         return new RowPerSectionStrategy(
@@ -261,8 +259,6 @@ final class GridMigrationServiceTest extends SapphireTest
         ]);
         $this->seeder->seedContentMedia(1002, ['HTML' => '<p>World</p>']);
     }
-
-    // ─── Test Group 1: Basic draft migration (tests 1-5) ─────────
 
     public function testEndToEndDraftMigrationCreatesHierarchy(): void
     {
@@ -450,8 +446,6 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertSame('extra-one', $element->ExtraClass);
     }
 
-    // ─── Test Group 2: Table migration verification (tests 6-10) ─
-
     public function testContentElementDataInGridElementTables(): void
     {
         $pageId = $this->getPageId();
@@ -524,8 +518,6 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertSame(42, (int) $element->MediaImageID);
         self::assertSame(99, (int) $element->VideoCustomThumbnailID);
     }
-
-    // ─── Test Group 3: Stage handling (tests 11-18) ──────────────
 
     public function testDraftAndLiveSameNewId(): void
     {
@@ -1220,8 +1212,6 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertSame(4, $liveOverrides['lg']->width, 'Live lg override width is reconciled to 4');
     }
 
-    // ─── Test Group 4: Idempotency + dry-run (tests 19-21) ──────
-
     public function testRunTwiceSkipsSecondRunNoDuplicates(): void
     {
         $pageId = $this->getPageId();
@@ -1348,8 +1338,6 @@ final class GridMigrationServiceTest extends SapphireTest
         }
     }
 
-    // ─── Test Group 5: Transaction safety (test 22) ──────────────
-
     public function testFailureMidPageRollsBackThatPage(): void
     {
         $pageId1 = $this->getPageId();
@@ -1469,8 +1457,6 @@ final class GridMigrationServiceTest extends SapphireTest
             DraftHierarchyWriter::remove_extension(TestErrorThrowingMigrationExtension::class);
         }
     }
-
-    // ─── Test Group 6: Pseudo rows (tests 23-25) ─────────────────
 
     public function testElementsBeforeFirstRowCreateImplicitSection(): void
     {
@@ -1647,8 +1633,6 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertCount(1, $col3Elements);
         self::assertSame('E4', $col3Elements->first()->Title);
     }
-
-    // ─── Test Group 7: Strategy-specific + edge cases ────────────
 
     public function testRowPerSectionMapsFieldsCorrectly(): void
     {
@@ -1830,8 +1814,6 @@ final class GridMigrationServiceTest extends SapphireTest
         }
     }
 
-    // ─── Test Group 8: Extension hooks (tests 29-33) ─────────────
-
     public function testUpdateElementFieldMappingHookAddsCustomField(): void
     {
         $pageId = $this->getPageId();
@@ -1894,8 +1876,6 @@ final class GridMigrationServiceTest extends SapphireTest
             TestClassNameMappingExtension::$sourceClass = null;
         }
     }
-
-    // ─── Test Group 9: Realistic multi-row migration (test 34) ───
 
     public function testRealisticPageMigration(): void
     {
@@ -1994,8 +1974,6 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertSame('https://example.com/vid.mp4', $rightElement->VideoURL);
     }
 
-    // ─── Test Group 10: Filter hook (test 35) ────────────────────
-
     public function testUpdateLegacyElementsFilterPreventsElementFromMigrating(): void
     {
         $pageId = $this->getPageId();
@@ -2027,8 +2005,6 @@ final class GridMigrationServiceTest extends SapphireTest
             LegacyDataReader::remove_extension(TestFilterExtension::class);
         }
     }
-
-    // ─── Test Group 11: Concrete page class (test 36) ───────────
 
     public function testMigrationUsesConcretePageClassName(): void
     {
@@ -2072,8 +2048,6 @@ final class GridMigrationServiceTest extends SapphireTest
         ]);
         self::assertCount(0, $wrongSections, 'No sections should have ParentClass = Page');
     }
-
-    // ─── Test Group 12: Logging behaviour (tests 37-40) ─────────
 
     public function testSuccessfulMigrationLogsSuccess(): void
     {
@@ -2222,8 +2196,6 @@ final class GridMigrationServiceTest extends SapphireTest
         }
     }
 
-    // ─── UseGrid flag migration ──────────────────────────────────
-
     public function testMigrationSetsUseGridOnDraftPage(): void
     {
         $pageId = $this->getPageId();
@@ -2340,8 +2312,6 @@ final class GridMigrationServiceTest extends SapphireTest
         $liveRow = DB::prepared_query('SELECT "UseGrid" FROM "Page_Live" WHERE "ID" = ?', [$pageId])->record();
         self::assertSame(0, (int) $liveRow['UseGrid'], 'Live UseGrid should be 0 — grid was disabled on live');
     }
-
-    // ─── Test Group 13: Batch summary + stop-on-first-failure ───────
 
     public function testRunLogsBatchSummaryOfSucceededAndFailedPageIds(): void
     {
@@ -2504,8 +2474,6 @@ final class GridMigrationServiceTest extends SapphireTest
             DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         }
     }
-
-    // ─── Test Group 14: Batch-level scaffold suppression ────────────
 
     public function testScaffoldingSuppressedAcrossEntireBatch(): void
     {

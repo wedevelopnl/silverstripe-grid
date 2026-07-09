@@ -280,8 +280,6 @@ final class ElementPlacementServiceTest extends SapphireTest
     // environments without a connection; the transactional happy path is
     // exercised by every persisting test above.
 
-    // ── insertAfter ─────────────────────────────────────────────
-
     public function testInsertAfterBumpsSort(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');

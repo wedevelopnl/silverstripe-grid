@@ -46,8 +46,6 @@ final class GridControllerTest extends FunctionalTest
         $this->session()->set('loggedInAs', $memberId);
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────
-
     private function page(): SiteTree
     {
         return $this->objFromFixture(Page::class, 'test_page');
@@ -219,8 +217,6 @@ final class GridControllerTest extends FunctionalTest
         ];
     }
 
-    // ─── readTree ─────────────────────────────────────────────────
-
     public function testReadTreeReturnsTreeStructure(): void
     {
         $this->buildTree();
@@ -353,8 +349,6 @@ final class GridControllerTest extends FunctionalTest
         yield 'float' => ['1.5'];
     }
 
-    // ─── create ───────────────────────────────────────────────────
-
     public function testCreateSectionReturns204(): void
     {
         $page = $this->page();
@@ -432,8 +426,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(400, $response->getStatusCode());
     }
 
-    // ─── createContent ────────────────────────────────────────────
-
     public function testCreateContentReturns204(): void
     {
         $tree = $this->buildTree();
@@ -474,8 +466,6 @@ final class GridControllerTest extends FunctionalTest
 
         self::assertSame(400, $response->getStatusCode());
     }
-
-    // ─── publish ──────────────────────────────────────────────────
 
     public function testPublishReturns204(): void
     {
@@ -521,8 +511,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(400, $response->getStatusCode());
     }
 
-    // ─── unpublish ────────────────────────────────────────────────
-
     public function testUnpublishReturns204(): void
     {
         $tree = $this->buildTree();
@@ -556,8 +544,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(400, $response->getStatusCode());
     }
 
-    // ─── delete ───────────────────────────────────────────────────
-
     public function testDeleteReturns204(): void
     {
         $tree = $this->buildTree();
@@ -584,8 +570,6 @@ final class GridControllerTest extends FunctionalTest
 
         self::assertSame(400, $response->getStatusCode());
     }
-
-    // ─── duplicate ────────────────────────────────────────────────
 
     public function testDuplicateReturns204(): void
     {
@@ -641,8 +625,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(403, $response->getStatusCode());
     }
 
-    // ─── duplicateTo ──────────────────────────────────────────────
-
     public function testDuplicateToSectionToOtherPageReturns204(): void
     {
         $tree = $this->buildTree();
@@ -693,8 +675,6 @@ final class GridControllerTest extends FunctionalTest
 
         self::assertSame(400, $response->getStatusCode());
     }
-
-    // ─── reorder ──────────────────────────────────────────────────
 
     public function testReorderSameParentSectionsDoesNotTriggerCrossParentCheck(): void
     {
@@ -771,8 +751,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(400, $response->getStatusCode());
     }
 
-    // ─── updateGridSettings ───────────────────────────────────────
-
     public function testUpdateGridSettingsDefaultReturns204(): void
     {
         $tree = $this->buildTree();
@@ -830,8 +808,6 @@ final class GridControllerTest extends FunctionalTest
 
         self::assertSame(400, $response->getStatusCode());
     }
-
-    // ─── resetGridSettingsOverrides ───────────────────────────────
 
     public function testResetSpecificViewportReturns204(): void
     {
@@ -897,8 +873,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(404, $response->getStatusCode());
     }
 
-    // ─── acceptableContainers ─────────────────────────────────────
-
     public function testAcceptableContainersForColumnReturnsRows(): void
     {
         $tree = $this->buildTree();
@@ -936,8 +910,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(400, $response->getStatusCode());
     }
 
-    // ─── zones ────────────────────────────────────────────────────
-
     public function testZonesReturnsZoneList(): void
     {
         $pageId = (int) $this->page()->ID;
@@ -957,8 +929,6 @@ final class GridControllerTest extends FunctionalTest
 
         self::assertSame(404, $response->getStatusCode());
     }
-
-    // ─── pages ────────────────────────────────────────────────────
 
     public function testPagesReturnsPageList(): void
     {
@@ -999,8 +969,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame([], $data);
     }
 
-    // ─── Stage pinning on mutation endpoints ─────────────────────
-
     public function testReorderFindsDraftOnlyElementWhenAmbientStageIsLive(): void
     {
         // Build a DRAFT-only tree (never published), then flip the ambient
@@ -1033,8 +1001,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertNotNull($betaFresh);
         self::assertSame(1, (int) $betaFresh->Sort);
     }
-
-    // ─── CSRF protection ──────────────────────────────────────────
 
     /**
      * A mutating request that omits the SecurityID token must be rejected by
@@ -1125,8 +1091,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertGreaterThan($liveVersion, (int) $draftPage->Version);
     }
 
-    // ─── Permission guards (403) ────────────────────────────────
-    //
     // These tests use page-level CanEditType/CanViewType='OnlyTheseUsers'
     // with no editor groups. The CMS user can access admin (has CMS_ACCESS)
     // but the page's own canEdit()/canView() returns false, triggering the
@@ -1362,8 +1326,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(403, $response->getStatusCode());
     }
 
-    // ─── Validation guards (400/404) ─────────────────────────────
-
     public function testReorderReturns400ForNonExistentElement(): void
     {
         $tree = $this->buildTree();
@@ -1469,8 +1431,6 @@ final class GridControllerTest extends FunctionalTest
 
         self::assertSame(404, $response->getStatusCode());
     }
-
-    // ─── Business logic branches ─────────────────────────────────
 
     public function testCreateWithInsertAfterElementId(): void
     {
@@ -1672,8 +1632,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(204, $response->getStatusCode());
     }
 
-    // ─── Additional edge-case / error-path coverage ─────────────
-
     public function testAcceptableContainersReturns404ForNonExistentPage(): void
     {
         $response = $this->get(self::BASE_URL . '/acceptableContainers/999999/main/column');
@@ -1841,8 +1799,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(400, $response->getStatusCode());
     }
 
-    // ─── Zone assignment on container create ─────────────────────
-
     public function testCreateSectionSetsZone(): void
     {
         $page = $this->page();
@@ -1880,8 +1836,6 @@ final class GridControllerTest extends FunctionalTest
         }
     }
 
-    // ─── touchOwningPage on create ───────────────────────────────
-
     public function testCreateSectionTouchesOwningPage(): void
     {
         $page = $this->page();
@@ -1902,8 +1856,6 @@ final class GridControllerTest extends FunctionalTest
         $draftPage = SiteTree::get()->byID($page->ID);
         self::assertGreaterThan($liveVersion, (int) $draftPage->Version);
     }
-
-    // ─── Duplicate verifies sort and title ───────────────────────
 
     public function testDuplicateSetsCorrectSortAndTitle(): void
     {
@@ -1928,8 +1880,6 @@ final class GridControllerTest extends FunctionalTest
         ])->count();
         self::assertSame($countBefore + 1, $countAfter);
     }
-
-    // ─── DuplicateTo deep copy ───────────────────────────────────
 
     public function testDuplicateToCreatesDeepCopy(): void
     {
@@ -1981,8 +1931,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertNotNull($newSection, 'Duplicated section should have target zone "sidebar"');
     }
 
-    // ─── acceptableContainers response shape ─────────────────────
-
     public function testAcceptableContainersResponseHasIdTitleTypeKeys(): void
     {
         $this->buildTree();
@@ -2000,8 +1948,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertArrayHasKey('type', $first);
         self::assertSame('row', $first['type']);
     }
-
-    // ─── Reset overrides with multiple columns ───────────────────
 
     public function testResetOverridesAffectsMultipleColumns(): void
     {
@@ -2044,8 +1990,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertGreaterThan($liveVersion, (int) $draftPage->Version);
     }
 
-    // ─── Pages endpoint returns multiple results ─────────────────
-
     public function testPagesReturnsMultipleResults(): void
     {
         $response = $this->get(self::BASE_URL . '/pages');
@@ -2055,8 +1999,6 @@ final class GridControllerTest extends FunctionalTest
         // Fixture has 2 pages, both should be editable
         self::assertGreaterThanOrEqual(2, count($data));
     }
-
-    // ─── Zones deduplication ─────────────────────────────────────
 
     public function testZonesReturnsDeduplicated(): void
     {
@@ -2071,8 +2013,6 @@ final class GridControllerTest extends FunctionalTest
         // Should be a simple array (not object) with unique values
         self::assertSame(array_values(array_unique($data)), $data);
     }
-
-    // ─── touchOwningPage version bumps on all write endpoints ────
 
     /**
      * Publish the page, capture the LIVE version, run the write action, and
@@ -2169,8 +2109,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertGreaterThan($liveVersion, (int) SiteTree::get()->byID($pageId)->Version);
     }
 
-    // ─── No-op batch settings reset does not touch page ───────────
-
     public function testResetOverridesDoesNotTouchPageWhenZeroChanged(): void
     {
         // Column has no overrides — resetOverrides returns 0 affected.
@@ -2195,8 +2133,6 @@ final class GridControllerTest extends FunctionalTest
         // And still above LIVE from the publish, so we know the publish itself worked
         self::assertGreaterThanOrEqual($liveVersion, $draftVersionBefore);
     }
-
-    // ─── apiDuplicateTo type-mapping match arms ──────────────────
 
     public function testDuplicateToRowIntoSectionReturns204(): void
     {

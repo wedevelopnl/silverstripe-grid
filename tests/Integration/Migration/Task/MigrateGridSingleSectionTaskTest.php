@@ -58,8 +58,6 @@ final class MigrateGridSingleSectionTaskTest extends SapphireTest
         parent::tearDown();
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────
-
     /**
      * @param array<string, mixed> $options
      */
@@ -105,8 +103,6 @@ final class MigrateGridSingleSectionTaskTest extends SapphireTest
             }
         }
     }
-
-    // ─── Tests ────────────────────────────────────────────────────
 
     public function testMissingDefaultViewportReturnsFailure(): void
     {

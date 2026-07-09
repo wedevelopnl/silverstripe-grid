@@ -33,8 +33,6 @@ class GridNodeMapper
     private array $allowedTypesCache = [];
 
     /**
-     * Map a GridElement to a GridNode DTO.
-     *
      * @param array<class-string, array{label: string, icon: string, description: string}>|null $allowedTypes
      * @param list<GridNode>|null $children
      */
@@ -140,8 +138,6 @@ class GridNodeMapper
     }
 
     /**
-     * Get display metadata for an element class.
-     *
      * @param class-string<GridElement> $class
      * @return array{label: string, icon: string, description: string}
      */

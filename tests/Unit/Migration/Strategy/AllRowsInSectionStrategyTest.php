@@ -82,8 +82,6 @@ final class AllRowsInSectionStrategyTest extends TestCase
         self::assertSame([], $this->strategy->buildHierarchy([], pageId: 1, zone: 'main'));
     }
 
-    // ─── Factory helpers ─────────────────────────────────────────
-
     private static int $nextId = 0;
 
     /**
@@ -127,8 +125,6 @@ final class AllRowsInSectionStrategyTest extends TestCase
         );
     }
 
-    // ─── Data provider ───────────────────────────────────────────
-
     /**
      * Each case yields: [elements, zone, expected section spec].
      *
@@ -139,8 +135,6 @@ final class AllRowsInSectionStrategyTest extends TestCase
      */
     public static function hierarchyProvider(): iterable
     {
-        // ── Structural cases ─────────────────────────────────────
-
         self::$nextId = 0;
         yield 'single row, three elements with same width are grouped' => [
             [self::r(), self::e(4), self::e(4), self::e(4)],
@@ -177,8 +171,6 @@ final class AllRowsInSectionStrategyTest extends TestCase
             ['rows' => [['columns' => [['w' => 4, 'n' => 3]]], ['columns' => [['w' => 12]]]]],
         ];
 
-        // ── Offset cases ─────────────────────────────────────────
-
         self::$nextId = 0;
         yield 'elements with offsets' => [
             [self::r(), self::e(8, 2), self::e(4)],
@@ -198,8 +190,6 @@ final class AllRowsInSectionStrategyTest extends TestCase
             ],
         ];
 
-        // ── Grouping cases ───────────────────────────────────────
-
         self::$nextId = 0;
         yield 'consecutive same then different then same splits correctly' => [
             [self::r(), self::e(6), self::e(6), self::e(4), self::e(6), self::e(6)],
@@ -218,8 +208,6 @@ final class AllRowsInSectionStrategyTest extends TestCase
             'main',
             ['rows' => [['columns' => [['w' => 6], ['w' => 6], ['w' => 6]]]]],
         ];
-
-        // ── Field mapping cases ──────────────────────────────────
 
         self::$nextId = 0;
         yield 'first row customSectionClass applied to section' => [
@@ -247,16 +235,12 @@ final class AllRowsInSectionStrategyTest extends TestCase
             ['rows' => [['title' => '', 'extraClass' => '', 'columns' => [['w' => 12]]]]],
         ];
 
-        // ── Clamping case ────────────────────────────────────────
-
         self::$nextId = 0;
         yield 'invalid grid settings are clamped to valid range' => [
             [self::r(), self::e(15, 14)],
             'main',
             ['rows' => [['columns' => [['w' => 12, 'o' => 0]]]]],
         ];
-
-        // ── Zone case ────────────────────────────────────────────
 
         self::$nextId = 0;
         yield 'zone passed through to section' => [

@@ -26,8 +26,6 @@ beforeEach(() => {
   resetIdCounter()
 })
 
-// --- Synthetic event builders ---
-
 function makeDragStartEvent(activeId: string): DragStartEvent {
   return {
     active: createActive(activeId),
@@ -143,8 +141,6 @@ function makePointerDragOverEvent(
     delta: { x: 0, y: 0 },
   } as unknown as DragOverEvent
 }
-
-// --- Tree builders ---
 
 function buildSingleColumnTree(pageId = 1) {
   const element1 = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })

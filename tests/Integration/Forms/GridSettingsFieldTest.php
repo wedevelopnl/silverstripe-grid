@@ -47,8 +47,6 @@ final class GridSettingsFieldTest extends SapphireTest
         return new GridSettingsField($name, $this->adapter);
     }
 
-    // ── Constructor ─────────────────────────────────────────────
-
     public function testConstructorInitializesWithDefaultSettings(): void
     {
         $field = $this->createField();
@@ -75,8 +73,6 @@ final class GridSettingsFieldTest extends SapphireTest
         self::assertSame('Grid Settings', $field->Title());
     }
 
-    // ── setValue with GridSettings VO ────────────────────────────
-
     public function testSetValueWithGridSettingsVO(): void
     {
         $field = $this->createField();
@@ -88,8 +84,6 @@ final class GridSettingsFieldTest extends SapphireTest
         self::assertSame(6, $md->Width);
         self::assertSame(2, $md->Offset);
     }
-
-    // ── setValue with form array ─────────────────────────────────
 
     public function testSetValueWithFormArrayComplete(): void
     {
@@ -190,8 +184,6 @@ final class GridSettingsFieldTest extends SapphireTest
         self::assertSame(2, $lg->Offset);
     }
 
-    // ── getViewportData ─────────────────────────────────────────
-
     public function testGetViewportDataReturnsAllViewports(): void
     {
         $field = $this->createField();
@@ -247,8 +239,6 @@ final class GridSettingsFieldTest extends SapphireTest
         self::assertSame('11', $lastOffset->Label);
     }
 
-    // ── saveInto ────────────────────────────────────────────────
-
     public function testSaveIntoWritesGridSettingsToRecord(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -269,8 +259,6 @@ final class GridSettingsFieldTest extends SapphireTest
         self::assertSame(1, $settings->default->offset);
         self::assertTrue($settings->default->visible);
     }
-
-    // ── Readonly transformation ─────────────────────────────────
 
     public function testPerformReadonlyTransformationReturnsReadonlyField(): void
     {

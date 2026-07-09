@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Migration\DTO;
 
 /**
- * Mapped media field values ready to apply to a ContentElement.
- *
  * Properties use PascalCase to match BlockMediaExtension DB column names.
  */
 final readonly class MappedMediaFields
@@ -32,8 +30,6 @@ final readonly class MappedMediaFields
     ) {}
 
     /**
-     * Field name → value pairs keyed by DB column name.
-     *
      * @return array{
      *     ContentColumns: int,
      *     VerticalAlignment: string,

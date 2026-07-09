@@ -31,8 +31,6 @@ final class MigrationIdMap
     private array $publishedContainers = [];
 
     /**
-     * Record a freshly-written content element.
-     *
      * @param positive-int $newElementId
      * @param positive-int $columnId
      * @param positive-int $draftSort

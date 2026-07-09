@@ -21,8 +21,6 @@ enum ElementStatus: string
     case Removed = 'removed';
 
     /**
-     * Derive the element's status from SilverStripe's `getStatusFlags()` output.
-     *
      * Unknown flag keys are ignored — projects needing custom statuses must
      * extend this enum rather than relying on silent pass-through.
      *

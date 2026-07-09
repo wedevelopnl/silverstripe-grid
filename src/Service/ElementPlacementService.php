@@ -120,8 +120,6 @@ class ElementPlacementService
     }
 
     /**
-     * Persist dirty elements and return the reordered element.
-     *
      * Wrapped in a DB transaction so a mid-loop write failure cannot leave
      * siblings half-reindexed. If a write throws, withTransaction rolls the
      * whole batch back and re-raises. Only a ValidationException is then
@@ -157,8 +155,6 @@ class ElementPlacementService
     }
 
     /**
-     * Resolve where to insert the element in the siblings list.
-     *
      * @param list<GridElement> $siblings
      * @param positive-int|null $afterElementId
      * @return int<0, max>|null Index to splice at, or null if afterElementId not found
@@ -193,8 +189,6 @@ class ElementPlacementService
     }
 
     /**
-     * Remove a specific element from a siblings list.
-     *
      * @param list<GridElement> $siblings
      * @return list<GridElement>
      */

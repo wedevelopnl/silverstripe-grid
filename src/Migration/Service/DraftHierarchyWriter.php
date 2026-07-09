@@ -21,8 +21,7 @@ use WeDevelop\Grid\Value\MigrationIdMap;
  * Writes the Section → Row → Column → content hierarchy to the DRAFT stage and
  * records the legacy→new id/sort mapping in a {@see MigrationIdMap}.
  *
- * Extracted verbatim from GridMigrationService; carries the
- * `updateClassNameMapping` and `updateElementFieldMapping` extension hooks.
+ * Carries the `updateClassNameMapping` and `updateElementFieldMapping` extension hooks.
  */
 final class DraftHierarchyWriter
 {
@@ -31,8 +30,6 @@ final class DraftHierarchyWriter
     public function __construct(private readonly FieldMapper $mapper) {}
 
     /**
-     * Write the full Section → Row → Column → Element hierarchy to DRAFT.
-     *
      * @param class-string $pageClassName
      * @param list<MigrationSection> $sections
      */

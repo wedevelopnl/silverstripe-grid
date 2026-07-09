@@ -96,8 +96,6 @@ final class ViewportConfigTest extends TestCase
         );
     }
 
-    // ─── mapFromArray ───────────────────────────────────────────
-
     public function testMapFromArrayBuildsKeyedViewportConfigs(): void
     {
         $map = ViewportConfig::mapFromArray(

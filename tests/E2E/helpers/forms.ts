@@ -25,7 +25,6 @@ declare const jQuery: (selector: string) => ChainableJQuery
  * select's value and the Chosen widget's label both update deterministically,
  * independent of Chosen's init timing.
  *
- * @param page - Playwright Page instance
  * @param name - `name` attribute of the underlying <select>
  * @param value - option value (not label)
  */

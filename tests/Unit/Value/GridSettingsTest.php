@@ -239,8 +239,6 @@ final class GridSettingsTest extends TestCase
         self::assertTrue($original->equals($roundTripped));
     }
 
-    // ─── equals() ─────────────────────────────────────────────
-
     /**
      * @return iterable<string, array{GridSettings, GridSettings, bool}>
      */
@@ -332,8 +330,6 @@ final class GridSettingsTest extends TestCase
         // Equality must be symmetric.
         self::assertSame($expected, $b->equals($a));
     }
-
-    // ─── fromJson ───────────────────────────────────────────────
 
     #[DataProvider('fromJsonNullProvider')]
     public function testFromJsonReturnsNullForInvalidInput(string $json): void
@@ -467,8 +463,6 @@ final class GridSettingsTest extends TestCase
         yield 'override missing visible' => ['{' . $valid . ',"overrides":{"md":{"width":6,"offset":0}}}'];
         yield 'override wrong type' => ['{' . $valid . ',"overrides":{"md":{"width":6,"offset":0,"visible":1}}}'];
     }
-
-    // ─── Immutability ───────────────────────────────────────────
 
     public function testImmutabilityAllWithMethodsReturnNewInstances(): void
     {

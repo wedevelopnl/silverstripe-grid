@@ -39,8 +39,6 @@ final class ColumnTest extends SapphireTest
         Injector::inst()->registerService(new TailwindAdapter(), GridAdapterInterface::class);
     }
 
-    // ── GridSettings lifecycle ──────────────────────────────────
-
     public function testGridSettingsInitializedOnFirstWrite(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -141,8 +139,6 @@ final class ColumnTest extends SapphireTest
         self::assertSame(12, $settings->default->width);
     }
 
-    // ── Container behavior ──────────────────────────────────────
-
     public function testGetChildrenReturnsElements(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -172,8 +168,6 @@ final class ColumnTest extends SapphireTest
 
         self::assertSame('6/12', $column->getGridWidthSummary());
     }
-
-    // ── Column classes ──────────────────────────────────────────
 
     public function testGetColumnClassesReturnsNonEmptyString(): void
     {
@@ -246,8 +240,6 @@ final class ColumnTest extends SapphireTest
         self::assertStringNotContainsString('sm:col-span-12', $cascadeClasses);
     }
 
-    // ── getCMSFields ────────────────────────────────────────────
-
     public function testGetCMSFieldsIncludesGridTab(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -259,8 +251,6 @@ final class ColumnTest extends SapphireTest
 
         self::assertNotNull($fields->fieldByName('Root.Grid'));
     }
-
-    // ── GridSettings not re-initialized on subsequent write ────
 
     public function testGridSettingsNotReInitializedOnSubsequentWrite(): void
     {

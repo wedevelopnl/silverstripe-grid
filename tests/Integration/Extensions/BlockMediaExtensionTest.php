@@ -99,8 +99,6 @@ final class BlockMediaExtensionTest extends SapphireTest
         return GridTreeFactory::contentElement($column, title: 'Media Test');
     }
 
-    // ── Enum parsers ────────────────────────────────────────────
-
     public function testGetMediaPositionEnumReturnsStoredValue(): void
     {
         $element = $this->createContentElement();
@@ -148,8 +146,6 @@ final class BlockMediaExtensionTest extends SapphireTest
 
         self::assertSame(AspectRatio::Auto, $element->getAspectRatioEnum());
     }
-
-    // ── hasMedia ────────────────────────────────────────────────
 
     public function testHasMediaReturnsFalseWhenNoMediaType(): void
     {
@@ -213,8 +209,6 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertFalse($element->hasMedia());
     }
 
-    // ── isLayoutMode ────────────────────────────────────────────
-
     public function testIsLayoutModeRequiresBothColumnsAndMedia(): void
     {
         $element = $this->createContentElement();
@@ -239,8 +233,6 @@ final class BlockMediaExtensionTest extends SapphireTest
         $element->ContentColumns = 6;
         self::assertTrue($element->isLayoutMode());
     }
-
-    // ── CSS class methods ───────────────────────────────────────
 
     public function testGetLayoutRowClasses(): void
     {
@@ -321,8 +313,6 @@ final class BlockMediaExtensionTest extends SapphireTest
 
         self::assertSame('aspect-video', $element->getMediaRatioClass());
     }
-
-    // ── Image dimensions ────────────────────────────────────────
 
     public function testGetMediaImageWidthReturnsPixelValue(): void
     {
@@ -462,8 +452,6 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertSame(768, $element->getMediaImageHeight());
     }
 
-    // ── getMediaImageSourceURL ──────────────────────────────────
-
     public function testGetMediaImageSourceURLReturnsNullWithoutImage(): void
     {
         $element = $this->createContentElement();
@@ -510,8 +498,6 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertNotSame($width, $element->getMediaImageHeight());
     }
 
-    // ── onBeforeWrite ───────────────────────────────────────────
-
     public function testOnBeforeWriteTrimsVideoURL(): void
     {
         $element = $this->createContentElement();
@@ -530,8 +516,6 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertSame('', (string) $element->VideoEmbedName);
         self::assertSame('', (string) $element->VideoEmbedURL);
     }
-
-    // ── updateCMSFields ─────────────────────────────────────────
 
     public function testUpdateCMSFieldsCreatesMediaTab(): void
     {
@@ -559,8 +543,6 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertNull($fields->dataFieldByName('VideoHasOverlay'));
         self::assertNull($fields->dataFieldByName('VideoCustomThumbnailID'));
     }
-
-    // ── ContentColumns field options (loop bounds) ──────────────────────────
 
     /**
      * With the default adapter's column_count of 12, getContentColumnOptions
@@ -614,8 +596,6 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertSame([0, 4, 5, 6, 7], $keys);
     }
 
-    // ── getContentPaddingDirection: both Last and LastOnDesktop → right ─────
-
     public function testGetContentPaddingDirectionForLastOnDesktop(): void
     {
         // Pins the MatchArmRemoval: MediaPosition::LastOnDesktop must share the
@@ -626,8 +606,6 @@ final class BlockMediaExtensionTest extends SapphireTest
 
         self::assertSame('sm:pr-3', $element->getContentPaddingClasses());
     }
-
-    // ── updateCMSFields VideoEmbed tab visibility ───────────────────────────
 
     public function testUpdateCMSFieldsShowsVideoEmbedTabWhenEmbedNamePresent(): void
     {
@@ -652,8 +630,6 @@ final class BlockMediaExtensionTest extends SapphireTest
         // Mirror case — mutated `===` would still create the tab when name is empty
         self::assertNull($embedTab);
     }
-
-    // ── onBeforeWrite resolveVideoEmbed trigger conditions ──────────────────
 
     /**
      * Swap in a test-only subclass of BlockMediaExtension that replaces

@@ -30,14 +30,12 @@ test.describe('Content elements — add, edit, publish, render', () => {
     const addButtons = page.getByTestId('add-content-button')
     const picker = page.getByRole('dialog')
 
-    // --- Step 1: Verify populated column shows existing elements ---
     await test.step('Verify populated column shows existing elements', async () => {
       await expect(elementCards).toHaveCount(2)
       await expect(page.getByText('Existing Text Block')).toBeVisible()
       await expect(page.getByText('Existing Image Block')).toBeVisible()
     })
 
-    // --- Step 2: Add element to empty column ---
     await test.step('Add element to empty column', async () => {
       // Both columns should have an add button (one empty, one populated)
       await expect(addButtons).toHaveCount(2)
@@ -63,7 +61,6 @@ test.describe('Content elements — add, edit, publish, render', () => {
       await expect(elementCards).toHaveCount(3)
     })
 
-    // --- Step 3: Dismiss modal without creating ---
     await test.step('Dismiss modal without creating', async () => {
       await addButtons.first().click()
       await expect(picker).toBeVisible()
@@ -76,7 +73,6 @@ test.describe('Content elements — add, edit, publish, render', () => {
       await expect(elementCards).toHaveCount(3)
     })
 
-    // --- Step 4: Open the element's edit form via the block toolbar's edit action ---
     await test.step('Open the element edit form via the block toolbar', async () => {
       const firstCard = elementCards.first()
       await firstCard.getByTestId('element-action-edit').click()
@@ -87,7 +83,6 @@ test.describe('Content elements — add, edit, publish, render', () => {
       )
     })
 
-    // --- Step 5: Fill in the edit form including title settings ---
     await test.step('Fill in the edit form including title settings', async () => {
       // Wait for the form to be ready
       await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 })
@@ -126,19 +121,16 @@ test.describe('Content elements — add, edit, publish, render', () => {
       await expect(page.getByText(/Saved/).first()).toBeVisible({ timeout: 15_000 })
     })
 
-    // --- Step 6: Navigate back to page editor via breadcrumb ---
     await test.step('Navigate back to page editor via breadcrumb', async () => {
       await page.getByRole('link', { name: 'E2E Content Elements Page' }).click()
       await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
     })
 
-    // --- Step 7: Publish the page ---
     await test.step('Publish the page', async () => {
       await page.getByRole('button', { name: /Publish/ }).click()
       await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 15_000 })
     })
 
-    // --- Step 8: Verify frontend rendering ---
     await test.step('Verify frontend rendering', async () => {
       // Strip ?stage=Stage from the fixture URL to get the live URL
       const liveUrl = fixture.pageUrl.split('?')[0]
@@ -170,7 +162,6 @@ test.describe('Content elements — edit container titles via title links', () =
   }) => {
     await loadAndNavigate(page, 'content-elements')
 
-    // --- Step 1: Click section title to navigate to edit form ---
     await test.step('Edit section title via title link', async () => {
       await page.getByTestId('section-edit-link').click()
       await expect(page).toHaveURL(
@@ -189,7 +180,6 @@ test.describe('Content elements — edit container titles via title links', () =
       await expect(page.getByTestId('section-title')).toContainText('Updated Section Title')
     })
 
-    // --- Step 2: Click row title to navigate to edit form ---
     await test.step('Edit row title via title link', async () => {
       await page.getByTestId('row-edit-link').first().click()
       await expect(page).toHaveURL(
@@ -208,7 +198,6 @@ test.describe('Content elements — edit container titles via title links', () =
       await expect(page.getByTestId('row-title').first()).toContainText('Updated Row Title')
     })
 
-    // --- Step 3: Click column title to navigate to edit form ---
     await test.step('Edit column title via title link', async () => {
       await page.getByTestId('column-edit-link').first().click()
       await expect(page).toHaveURL(

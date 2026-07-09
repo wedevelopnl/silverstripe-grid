@@ -42,8 +42,6 @@ final class GridElementServiceTest extends SapphireTest
         $this->service = Injector::inst()->get(GridElementService::class);
     }
 
-    // ─── createElement ──────────────────────────────────────────
-
     public function testCreateSectionUnderPage(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -142,8 +140,6 @@ final class GridElementServiceTest extends SapphireTest
         self::assertLessThan($row2->Sort, $row1->Sort);
     }
 
-    // ─── createContentElement ───────────────────────────────────
-
     public function testCreateContentElementUnderColumn(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -184,8 +180,6 @@ final class GridElementServiceTest extends SapphireTest
         self::assertGreaterThan($newElement->Sort, $existing2->Sort);
     }
 
-    // ─── duplicateElement ───────────────────────────────────────
-
     public function testDuplicateElementCreatesShallowCopyWithCopyTitle(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -222,8 +216,6 @@ final class GridElementServiceTest extends SapphireTest
         self::assertGreaterThan($row1->Sort, $clone->Sort);
         self::assertGreaterThan($clone->Sort, $row2->Sort);
     }
-
-    // ─── duplicateElementTo ─────────────────────────────────────
 
     public function testDuplicateElementToAnotherPage(): void
     {
@@ -457,8 +449,6 @@ final class GridElementServiceTest extends SapphireTest
         self::assertArrayHasKey('parent', $error->params);
     }
 
-    // ─── Persistence after create / duplicateTo (pin write() calls) ───────
-
     public function testCreateElementPersistsToDatabaseWithoutInsertAfterSibling(): void
     {
         // Without insertAfterElementID, the outer write() is the only path that
@@ -504,8 +494,6 @@ final class GridElementServiceTest extends SapphireTest
         self::assertGreaterThan(0, (int) $clone->ID);
         self::assertInstanceOf(Section::class, Section::get()->byID((int) $clone->ID));
     }
-
-    // ─── Ancestor zone-walk in validateOwnership ──────────────────────────
 
     public function testDuplicateElementToColumnResolvesZoneThroughAncestorChain(): void
     {

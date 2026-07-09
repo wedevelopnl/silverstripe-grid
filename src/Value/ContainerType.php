@@ -57,8 +57,6 @@ enum ContainerType: string
     }
 
     /**
-     * Whether the given element class is allowed as a child of this container type.
-     *
      * Section/Row: only the specific child class (or subclasses) is allowed.
      * Column: any non-container GridElement is allowed.
      *

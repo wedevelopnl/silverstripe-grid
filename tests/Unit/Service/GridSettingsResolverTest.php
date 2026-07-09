@@ -16,14 +16,10 @@ use WeDevelop\Grid\Value\ViewportConfig;
 #[CoversClass(GridSettingsResolver::class)]
 final class GridSettingsResolverTest extends TestCase
 {
-    // ── Factory helper ──────────────────────────────────────────
-
     private static function vc(int $width, int $offset = 0, bool $visible = true): ViewportConfig
     {
         return new ViewportConfig($width, $offset, $visible);
     }
-
-    // ── Isolated strategy ───────────────────────────────────────
 
     /**
      * Each case yields: [settings, expected viewport → config map].
@@ -112,8 +108,6 @@ final class GridSettingsResolverTest extends TestCase
             );
         }
     }
-
-    // ── Cascade strategy ────────────────────────────────────────
 
     /**
      * Each case yields: [settings, expected viewport → config map].
@@ -210,16 +204,12 @@ final class GridSettingsResolverTest extends TestCase
         }
     }
 
-    // ── Strategy validation ─────────────────────────────────────
-
     public function testInvalidStrategyThrowsException(): void
     {
         $this->expectException(InvalidGridValueException::class);
 
         new GridSettingsResolver(new GridAdapterStub(), 'merge');
     }
-
-    // ── Key ordering ────────────────────────────────────────────
 
     /**
      * @return iterable<string, array{string}>

@@ -85,8 +85,6 @@ final class MigrationAcceptanceTest extends SapphireTest
         parent::tearDown();
     }
 
-    // ─── Scenario 1: Simple text page ─────────────────────────────
-
     public function testSimpleTextPage(): void
     {
         $pageId = $this->getPageId();
@@ -163,8 +161,6 @@ final class MigrationAcceptanceTest extends SapphireTest
             ],
         ]);
     }
-
-    // ─── Scenario 2: Marketing landing page ───────────────────────
 
     public function testMarketingLandingPage(): void
     {
@@ -312,8 +308,6 @@ final class MigrationAcceptanceTest extends SapphireTest
         ]);
     }
 
-    // ─── Scenario 3: Orphan elements between rows ─────────────────
-
     public function testPageWithOrphanElements(): void
     {
         $pageId = $this->getPageId();
@@ -429,8 +423,6 @@ final class MigrationAcceptanceTest extends SapphireTest
         ]);
     }
 
-    // ─── Scenario 4: Draft/Live divergence ────────────────────────
-
     public function testDraftLiveDivergence(): void
     {
         $pageId = $this->getPageId();
@@ -545,8 +537,6 @@ final class MigrationAcceptanceTest extends SapphireTest
         self::assertSame((int) $draftSection->ID, (int) $liveSection->ID, 'Draft and live Section 1 share the same ID');
     }
 
-    // ─── Scenario 5: All defaults page ────────────────────────────
-
     public function testAllDefaultsPage(): void
     {
         $pageId = $this->getPageId();
@@ -589,8 +579,6 @@ final class MigrationAcceptanceTest extends SapphireTest
             ],
         ]);
     }
-
-    // ─── Scenario 6: All rows in single section ──────────────────
 
     public function testMarketingPageAllRowsInSingleSection(): void
     {
@@ -730,8 +718,6 @@ final class MigrationAcceptanceTest extends SapphireTest
         ]);
     }
 
-    // ─── Scenario 7: Adjacent empty rows and mixed content ────────
-
     public function testAdjacentEmptyRowsAreDroppedButContentSurvives(): void
     {
         $pageId = $this->getPageId();
@@ -820,8 +806,6 @@ final class MigrationAcceptanceTest extends SapphireTest
             ],
         ]);
     }
-
-    // ─── Scenario 8: Cross-framework migration (Bootstrap → Tailwind) ──
 
     /**
      * Verifies migration when changing CSS framework during the SS5→SS6 upgrade.
@@ -913,13 +897,11 @@ final class MigrationAcceptanceTest extends SapphireTest
         ]);
     }
 
-    // ─── Scenario 9: Custom element with project-specific fields ──
-
     /**
      * Verifies the full custom element migration path:
      * 1. LegacyDataReader hook reads custom fields from a legacy subclass table
-     * 2. GridMigrationService hook maps old ClassName → new ClassName
-     * 3. GridMigrationService hook sets custom fields from extraData
+     * 2. DraftHierarchyWriter hook maps old ClassName → new ClassName
+     * 3. DraftHierarchyWriter hook sets custom fields from extraData
      *
      * This is the pattern every project with custom element types must implement.
      */
@@ -1008,8 +990,6 @@ final class MigrationAcceptanceTest extends SapphireTest
         }
     }
 
-    // ─── Scenario 10: Page subclass ────────────────────────────────
-
     public function testSubclassPageMigrationUsesConcreteParentClass(): void
     {
         $page = TestPage::create();
@@ -1061,8 +1041,6 @@ final class MigrationAcceptanceTest extends SapphireTest
             ],
         ], TestPage::class);
     }
-
-    // ─── Scenario 11: Plain elemental — flat blocks (RowPerSection) ──
 
     /**
      * Migrates a plain dnadesign/silverstripe-elemental page (no WeDevelop grid
@@ -1126,8 +1104,6 @@ final class MigrationAcceptanceTest extends SapphireTest
         }
     }
 
-    // ─── Scenario 12: Plain elemental — flat blocks (AllRowsInSection) ──
-
     public function testPlainElementalFlatBlocksAllRowsInSection(): void
     {
         $this->switchToPlainElementalSchema();
@@ -1189,8 +1165,6 @@ final class MigrationAcceptanceTest extends SapphireTest
             $this->restoreWeDevelopGridSchema();
         }
     }
-
-    // ─── Scenario 13: Plain elemental — draft/live divergence ────
 
     public function testPlainElementalDraftLiveDivergence(): void
     {
@@ -1293,11 +1267,7 @@ final class MigrationAcceptanceTest extends SapphireTest
         }
     }
 
-    // ─── Assertion helper ─────────────────────────────────────────
-
     /**
-     * Assert the complete migrated hierarchy matches expected structure.
-     *
      * @param list<array{
      *     extraClass?: string,
      *     rows: list<array{
@@ -1479,8 +1449,6 @@ final class MigrationAcceptanceTest extends SapphireTest
     }
 
     /**
-     * Assert a single content element's fields.
-     *
      * @param array<string, mixed> $expectedEl
      */
     private function assertContentElement(GridElement $element, array $expectedEl, string $elPath): void
@@ -1548,8 +1516,6 @@ final class MigrationAcceptanceTest extends SapphireTest
             }
         }
     }
-
-    // ─── Migration runner helpers ─────────────────────────────────
 
     /**
      * @param array<string, string>|null $viewportKeyMap Override viewport key map (default: Bootstrap identity map)

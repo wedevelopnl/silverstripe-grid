@@ -28,8 +28,6 @@ final class FieldMapperTest extends TestCase
         $this->mapper = new FieldMapper();
     }
 
-    // ─── Grid settings: viewport overrides ────────────────────────────────────
-
     public function testDefaultViewportExtractedCorrectly(): void
     {
         $element = LegacyElementFactory::content(overrides: [
@@ -181,8 +179,6 @@ final class FieldMapperTest extends TestCase
         self::assertFalse($xsOverride->visible);
     }
 
-    // ─── Media field mapping: data providers ──────────────────────────────────
-
     /**
      * @return iterable<string, array{string, string}>
      */
@@ -288,8 +284,6 @@ final class FieldMapperTest extends TestCase
         self::assertSame($expected, $this->mapper->mapMediaFields($media)->GapSize);
     }
 
-    // ─── Media field mapping: standalone tests ────────────────────────────────
-
     public function testFieldRenamesAreApplied(): void
     {
         $media = new LegacyMediaData([
@@ -341,8 +335,6 @@ final class FieldMapperTest extends TestCase
         self::assertSame('auto', $resultEmpty->MediaRatio);
         self::assertSame(0, $resultEmpty->ContentColumns);
     }
-
-    // ─── Grid settings: clamping data provider ───────────────────────────────
 
     /**
      * Each case: [columnCount, sizeInput, offsetInput, expectedWidth, expectedOffset].
@@ -446,8 +438,6 @@ final class FieldMapperTest extends TestCase
         $mapper->mapGridSettings($element, 'MD', ['MD' => 'md']);
     }
 
-    // ─── ClassName resolution ─────────────────────────────────────────────────
-
     /**
      * @return iterable<string, array{string, string}>
      */
@@ -482,8 +472,6 @@ final class FieldMapperTest extends TestCase
             $mapper->resolveClassName('DNADesign\\Elemental\\Models\\ElementContent'),
         );
     }
-
-    // ─── Viewport override compound condition edge cases ─────────────────────
 
     public function testZeroSizeFieldsDefaultToFullWidth(): void
     {
@@ -600,8 +588,6 @@ final class FieldMapperTest extends TestCase
         self::assertFalse($xsOverride->visible);
     }
 
-    // ─── Constructor override maps ────────────────────────────────────────────
-
     public function testCustomVerticalAlignMapReplacesDefaults(): void
     {
         // When a map is injected, it replaces the constant entirely — the default
@@ -657,8 +643,6 @@ final class FieldMapperTest extends TestCase
 
         self::assertSame(99, $mapper->mapMediaFields(new LegacyMediaData([]))->GapSize);
     }
-
-    // ─── Default viewport fallbacks ───────────────────────────────────────────
 
     public function testDefaultViewportVisibilityHiddenProducesFalseDefault(): void
     {
@@ -716,8 +700,6 @@ final class FieldMapperTest extends TestCase
         self::assertTrue($settings->hasOverride('xs'));
         self::assertSame(0, $settings->getOverride('xs')?->offset);
     }
-
-    // ─── Visibility literal mapping ───────────────────────────────────────────
 
     /**
      * Each case: [rawVisibility, expectedDefaultVisible, expectsWarning].
@@ -855,8 +837,6 @@ final class FieldMapperTest extends TestCase
         self::assertNotEmpty($xsWarnings, 'Expected a warning tagged with the xs viewport');
     }
 
-    // ─── Clamp-warning log context ────────────────────────────────────────────
-
     public function testClampLogContextContainsOldAndNewWidthAndOffset(): void
     {
         // Pins the log context array keys: removing 'oldWidth'/'oldOffset' (or replacing
@@ -889,8 +869,6 @@ final class FieldMapperTest extends TestCase
         self::assertSame(14, $context['oldOffset']);
         self::assertSame(0, $context['newOffset']);
     }
-
-    // ─── Media field integer / boolean defaults ───────────────────────────────
 
     public function testMediaImageIDDefaultsToZeroWhenAbsent(): void
     {
@@ -934,8 +912,6 @@ final class FieldMapperTest extends TestCase
         self::assertSame('image', $result->MediaType);
         self::assertSame('Hero shot', $result->MediaCaption);
     }
-
-    // ─── Media field mapping: schema-missing warnings ─────────────────────────
 
     public function testMissingMediaColumnLogsWarning(): void
     {
@@ -990,8 +966,6 @@ final class FieldMapperTest extends TestCase
             'MediaVideoEmbeddedCreated'  => '',
         ]));
     }
-
-    // ─── ContentColumns: non-numeric warning ──────────────────────────────────
 
     public function testNonNumericContentColumnsLogsWarningAndResetsToZero(): void
     {
@@ -1050,8 +1024,6 @@ final class FieldMapperTest extends TestCase
         ));
         self::assertSame(0, $resultNull->ContentColumns);
     }
-
-    // ─── Media key set parity: EXPECTED_MEDIA_KEYS ↔ MEDIA_FIELDS ───────────
 
     public function testExpectedMediaKeysMatchesMediaFieldsMinusHtml(): void
     {

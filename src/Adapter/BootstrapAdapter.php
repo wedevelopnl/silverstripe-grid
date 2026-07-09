@@ -19,8 +19,6 @@ namespace WeDevelop\Grid\Adapter;
  */
 final class BootstrapAdapter extends GridAdapter
 {
-    // ─── Grid topology ──────────────────────────────────────────────
-
     /** @var array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}> */
     private static array $viewport_definitions = [
         'xs'  => ['label' => 'Extra Small',       'min_width' => 0],
@@ -39,8 +37,6 @@ final class BootstrapAdapter extends GridAdapter
 
     private static string $default_viewport = 'md';
 
-    // ─── Width & offset formats ─────────────────────────────────────
-
     private static ?string $base_viewport_key = 'xs';
 
     private static string $base_width_format = 'col-%d';
@@ -53,15 +49,11 @@ final class BootstrapAdapter extends GridAdapter
 
     private static int $offset_adjustment = 0;
 
-    // ─── Visibility formats ─────────────────────────────────────────
-
     private static string $base_hide_class = 'd-none';
 
     private static string $responsive_hide_format = 'd-%s-none';
 
     private static string $responsive_restore_format = 'd-%s-block';
-
-    // ─── Container & structure ───────────────────────────────────────
 
     private static string $row_class_format = 'row';
 
@@ -86,8 +78,6 @@ final class BootstrapAdapter extends GridAdapter
     ];
 
     private static string $offset_strategy = 'margin';
-
-    // ─── Content layout ─────────────────────────────────────────────
 
     /** @var array<string, ?string> */
     private static array $aspect_ratio_classes = [

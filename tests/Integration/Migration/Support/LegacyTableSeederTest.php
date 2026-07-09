@@ -48,8 +48,6 @@ final class LegacyTableSeederTest extends SapphireTest
         parent::tearDown();
     }
 
-    // ─── Group 1: createTables ──────────────────────────────────
-
     public function testCreateTablesCreatesAllEightTables(): void
     {
         $this->seeder->createTables();
@@ -133,8 +131,6 @@ final class LegacyTableSeederTest extends SapphireTest
         }
     }
 
-    // ─── Group 2: dropTables ────────────────────────────────────
-
     public function testDropTablesRemovesAllTables(): void
     {
         $this->seeder->createTables();
@@ -159,8 +155,6 @@ final class LegacyTableSeederTest extends SapphireTest
             self::assertArrayNotHasKey(\strtolower($table), $tables);
         }
     }
-
-    // ─── Group 3: Extension Columns ─────────────────────────────
 
     public function testAddExtensionColumnsAddsBothColumns(): void
     {
@@ -205,8 +199,6 @@ final class LegacyTableSeederTest extends SapphireTest
         self::assertArrayNotHasKey('UseElementalGrid', $columns);
         self::assertArrayNotHasKey('ElementalAreaID', $columns);
     }
-
-    // ─── Group 4: seedPage / seedPageOnTable ────────────────────
 
     public function testSeedPageSetsExtensionColumnsAndCreatesArea(): void
     {
@@ -274,8 +266,6 @@ final class LegacyTableSeederTest extends SapphireTest
         }
     }
 
-    // ─── Group 5: seedElement ───────────────────────────────────
-
     public function testSeedElementInsertsDraftRow(): void
     {
         $this->seeder->createTables();
@@ -328,8 +318,6 @@ final class LegacyTableSeederTest extends SapphireTest
         self::assertNull($row['VisibilityMD']);
     }
 
-    // ─── Group 6: seedRow ───────────────────────────────────────
-
     public function testSeedRowInsertsDraftRow(): void
     {
         $this->seeder->createTables();
@@ -367,8 +355,6 @@ final class LegacyTableSeederTest extends SapphireTest
         self::assertSame(0, (int) $row['IsFluid']);
         self::assertSame('', $row['CustomSectionClass']);
     }
-
-    // ─── Group 7: seedContentMedia ──────────────────────────────
 
     public function testSeedContentMediaInsertsDraftRow(): void
     {
@@ -418,8 +404,6 @@ final class LegacyTableSeederTest extends SapphireTest
         self::assertSame(0, (int) $row['ExtraColumnGap']);
         self::assertSame('', $row['MediaVideoProvider']);
     }
-
-    // ─── Group 8: truncateTables ────────────────────────────────
 
     public function testTruncateTablesClearsAllLegacyTables(): void
     {
@@ -475,8 +459,6 @@ final class LegacyTableSeederTest extends SapphireTest
             self::assertArrayHasKey(\strtolower($table), $tables, "Table {$table} should still exist after truncate");
         }
     }
-
-    // ─── Group 9: Plain Elemental (ElementalAreaID only) ───────
 
     public function testAddElementalAreaColumnAddsOnlyAreaId(): void
     {
@@ -576,8 +558,6 @@ final class LegacyTableSeederTest extends SapphireTest
 
         $this->seeder->removeElementalAreaColumn('SiteTree');
     }
-
-    // ─── Helpers ────────────────────────────────────────────────
 
     private function setUpTablesAndExtensions(): void
     {

@@ -37,8 +37,6 @@ final class RowPerSectionStrategyTest extends TestCase
         );
     }
 
-    // ─── Factory helpers ─────────────────────────────────────────
-
     private static int $nextId = 0;
 
     /**
@@ -84,8 +82,6 @@ final class RowPerSectionStrategyTest extends TestCase
         );
     }
 
-    // ─── Data provider ───────────────────────────────────────────
-
     /**
      * Each case yields: [elements, zone, expected sections].
      *
@@ -99,8 +95,6 @@ final class RowPerSectionStrategyTest extends TestCase
      */
     public static function hierarchyProvider(): iterable
     {
-        // ── Structural cases ─────────────────────────────────────
-
         self::$nextId = 0;
         yield 'single row, single element' => [
             [self::r(), self::e(12)],
@@ -163,8 +157,6 @@ final class RowPerSectionStrategyTest extends TestCase
             ],
         ];
 
-        // ── Offset cases ─────────────────────────────────────────
-
         self::$nextId = 0;
         yield 'elements with offsets' => [
             [self::r(), self::e(8, 2), self::e(4)],
@@ -191,8 +183,6 @@ final class RowPerSectionStrategyTest extends TestCase
                 ['rows' => [['columns' => [['w' => 12]]]]],
             ],
         ];
-
-        // ── Field mapping cases ──────────────────────────────────
 
         self::$nextId = 0;
         yield 'row fields map to section and row' => [
@@ -222,16 +212,12 @@ final class RowPerSectionStrategyTest extends TestCase
             ],
         ];
 
-        // ── Clamping case ────────────────────────────────────────
-
         self::$nextId = 0;
         yield 'invalid grid settings are clamped to valid range' => [
             [self::r(), self::e(15, 14)],
             'main',
             [['rows' => [['columns' => [['w' => 12, 'o' => 0]]]]]],
         ];
-
-        // ── Zone case ────────────────────────────────────────────
 
         self::$nextId = 0;
         yield 'zone is passed through to all sections' => [
@@ -249,8 +235,6 @@ final class RowPerSectionStrategyTest extends TestCase
             'sidebar',
             [],
         ];
-
-        // ── Grouping cases ───────────────────────────────────────
 
         self::$nextId = 0;
         yield 'alternating widths prevent grouping' => [

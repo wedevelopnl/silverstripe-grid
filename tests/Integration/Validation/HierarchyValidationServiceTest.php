@@ -42,8 +42,6 @@ final class HierarchyValidationServiceTest extends SapphireTest
         return Injector::inst()->get(HierarchyValidatorInterface::class);
     }
 
-    // -- Valid placements --------------------------------------------------
-
     public function testSectionAtPageLevelPasses(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -103,8 +101,6 @@ final class HierarchyValidationServiceTest extends SapphireTest
 
         self::assertTrue($result->isOk());
     }
-
-    // -- Invalid placements ------------------------------------------------
 
     /**
      * Each case builds an element and mutates it onto a disallowed parent,

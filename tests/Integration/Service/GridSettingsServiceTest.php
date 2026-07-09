@@ -47,8 +47,6 @@ final class GridSettingsServiceTest extends SapphireTest
         $this->service = Injector::inst()->get(GridSettingsService::class);
     }
 
-    // ─── updateSettings ───────────────────────────────────────────
-
     public function testUpdateSettingsDefaultViewportUpdatesDefaultConfig(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -131,8 +129,6 @@ final class GridSettingsServiceTest extends SapphireTest
         self::assertSame(1, $settings->default->offset);
         self::assertTrue($settings->default->visible);
     }
-
-    // ─── resetOverrides ───────────────────────────────────────────
 
     public function testResetOverridesRemovesSpecificViewportOverride(): void
     {

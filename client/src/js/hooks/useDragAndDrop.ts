@@ -21,8 +21,6 @@ import { resolveDropAxis } from '@/utils/resolveDropAxis'
 import { resolveDropPlacement } from '@/utils/resolveDropPlacement'
 import { resolveInsertDirection } from '@/utils/resolveInsertDirection'
 
-// --- Public types ---
-
 export interface DragState {
   activeType: DraggableType
   activeNode: ElementNode
@@ -56,8 +54,6 @@ export interface UseDragAndDropReturn {
   pendingTree: TreeApiResponse | null
 }
 
-// --- Drag context ---
-
 export interface DragContextValue {
   activeType: DraggableType | null
   /**
@@ -80,8 +76,6 @@ export const DragContext = createContext<DragContextValue>({
 export function useDragContext(): DragContextValue {
   return useContext(DragContext)
 }
-
-// --- Helpers ---
 
 /**
  * Compute the current pointer viewport position from a dnd-kit drag event.
@@ -121,8 +115,6 @@ function getPointerPosition(event: {
     y: translated.top + (pe.clientY - initialRect.top),
   }
 }
-
-// --- Hook ---
 
 const POINTER_DISTANCE_THRESHOLD = 8
 

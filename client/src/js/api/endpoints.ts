@@ -199,8 +199,6 @@ export async function updateGridSettings(params: UpdateGridSettingsParams): Prom
   await apiPatch(`${base}/api/updateGridSettings`, params)
 }
 
-// --- Reset Grid Settings Overrides ---
-
 export interface ResetGridSettingsOverridesParams {
   pageId: number
   zone: string
@@ -218,8 +216,6 @@ export async function resetGridSettingsOverrides(
   })
 }
 
-// --- Duplicate To ---
-
 export interface DuplicateToParams {
   element: NodeRef
   targetPageId: number
@@ -231,8 +227,6 @@ export async function duplicateToElement(params: DuplicateToParams): Promise<voi
   const base = getControllerLink()
   await apiPost(`${base}/api/duplicateTo`, params)
 }
-
-// --- Acceptable Containers ---
 
 export type { AcceptableContainer } from '@/types/duplicateTo'
 
@@ -248,15 +242,11 @@ export async function fetchAcceptableContainers(
   return v.parse(acceptableContainerListSchema, raw)
 }
 
-// --- Zones ---
-
 export async function fetchZones(pageId: number): Promise<string[]> {
   const base = getControllerLink()
   const raw = await apiGet<unknown>(`${base}/api/zones/${pageId}`)
   return v.parse(zoneListSchema, raw)
 }
-
-// --- Pages ---
 
 export type { PageEntry } from '@/types/duplicateTo'
 

@@ -23,8 +23,6 @@ namespace WeDevelop\Grid\Adapter;
  */
 final class TailwindAdapter extends GridAdapter
 {
-    // ─── Grid topology ──────────────────────────────────────────────
-
     /** @var array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}> */
     private static array $viewport_definitions = [
         'sm'  => ['label' => 'Small',       'min_width' => 640],
@@ -42,8 +40,6 @@ final class TailwindAdapter extends GridAdapter
 
     private static string $default_viewport = 'sm';
 
-    // ─── Width & offset formats ─────────────────────────────────────
-
     private static string $base_width_format = 'col-span-%d';
 
     private static string $responsive_width_format = '%1$s:col-span-%2$d';
@@ -54,13 +50,9 @@ final class TailwindAdapter extends GridAdapter
 
     private static int $offset_adjustment = 1;
 
-    // ─── Visibility formats ─────────────────────────────────────────
-
     private static string $responsive_hide_format = '%s:hidden';
 
     private static string $responsive_restore_format = '%s:block';
-
-    // ─── Container & structure ───────────────────────────────────────
 
     private static string $row_class_format = 'grid grid-cols-%d';
 
@@ -79,8 +71,6 @@ final class TailwindAdapter extends GridAdapter
     ];
 
     private static string $offset_strategy = 'grid-placement';
-
-    // ─── Content layout ─────────────────────────────────────────────
 
     /** @var array<string, ?string> */
     private static array $aspect_ratio_classes = [
