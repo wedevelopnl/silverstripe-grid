@@ -34,6 +34,16 @@ export function useGridEditorDnd(
   const onReorder = useCallback(
     (element: NodeRef, parent: NodeRef, after: NodeRef | null, clearPendingTree: () => void) => {
       if (data === undefined) return
+      // Serialize reorders: a drag that ends while a previous reorder is still in
+      // flight is dropped rather than starting a second overlapping optimistic
+      // update. Two concurrent reorders can otherwise roll back to a stale
+      // snapshot (the second captures the first's optimistic move) and leave a
+      // wrong tree cached. Reorders complete in ~100ms, so the dropped drag is
+      // immediately retryable; clear the pending tree so the item snaps back.
+      if (reorderMutation.isPending) {
+        clearPendingTree()
+        return
+      }
       reorderMutation.mutate({ params: { element, parent, after }, tree: data, clearPendingTree })
     },
     [data, reorderMutation],
