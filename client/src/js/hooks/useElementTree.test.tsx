@@ -56,6 +56,54 @@ describe('useElementTree', () => {
     expect(url).toContain('/api/readTree/1/main')
   })
 
+  it('should not refetch a version-specific tree when it remounts', async () => {
+    // Archived versions are immutable, so staleTime: Infinity must let a remount
+    // reuse the cache. Needs a cache that survives unmount (the shared test client
+    // uses gcTime: 0) and a stale-on-arrival default to prove staleTime is what
+    // suppresses the second fetch.
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 5 * 60 * 1000, staleTime: 0 } },
+    })
+    mockFetchSuccess(createTreeApiResponse())
+    const { wrapper } = createProviderWrapper({ pageId: 1, zone: 'main', queryClient })
+
+    const first = renderHook(() => useElementTree(1, 'main', 7), { wrapper })
+    await waitFor(() => {
+      expect(first.result.current.isSuccess).toBe(true)
+    })
+    first.unmount()
+
+    const second = renderHook(() => useElementTree(1, 'main', 7), { wrapper })
+    await waitFor(() => {
+      expect(second.result.current.isSuccess).toBe(true)
+    })
+
+    expect(getFetchCalls()).toHaveLength(1)
+  })
+
+  it('should refetch a draft tree when it remounts', async () => {
+    // Contrast with the version-specific case: the draft tree carries no staleTime
+    // override, so a stale-on-arrival cache entry refetches on remount.
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 5 * 60 * 1000, staleTime: 0 } },
+    })
+    mockFetchSuccess(createTreeApiResponse())
+    const { wrapper } = createProviderWrapper({ pageId: 1, zone: 'main', queryClient })
+
+    const first = renderHook(() => useElementTree(1, 'main'), { wrapper })
+    await waitFor(() => {
+      expect(first.result.current.isSuccess).toBe(true)
+    })
+    first.unmount()
+
+    const second = renderHook(() => useElementTree(1, 'main'), { wrapper })
+    await waitFor(() => {
+      expect(second.result.current.isSuccess).toBe(true)
+    })
+
+    expect(getFetchCalls()).toHaveLength(2)
+  })
+
   it('should not fetch when pageId is null', () => {
     mockFetchSuccess({})
     const { wrapper } = createProviderWrapper()
