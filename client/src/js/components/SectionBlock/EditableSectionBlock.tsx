@@ -81,18 +81,10 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
                 <EditableRowBlock row={row} />
               </Fragment>
             ))}
-            <AddChildButton
-              parentId={section.self.id}
-              childType="row"
-              variant="append"
-            />
+            <AddChildButton parentId={section.self.id} childType="row" variant="append" />
           </>
         ) : (
-          <AddChildButton
-            parentId={section.self.id}
-            childType="row"
-            variant="empty-state"
-          />
+          <AddChildButton parentId={section.self.id} childType="row" variant="empty-state" />
         )}
       </SortableContext>
     </SectionChrome>
