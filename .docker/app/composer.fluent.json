@@ -21,15 +21,15 @@
             "src/"
         ]
     },
-    "_comment_require_dev": "QA toolchain is pinned to exact versions so CI's lock-less `composer install` cannot silently float into a rule/behavior change that breaks the build. Runtime deps (recipe-cms, fluent) stay on ranges so the module keeps testing against the latest SS6.x. Bump these manually when adopting a new tool release.",
+    "_comment_require_dev": "QA toolchain is pinned to exact versions so CI's lock-less `composer install` cannot silently float into a rule/behavior change that breaks the build. Runtime deps (recipe-cms, fluent) stay on ranges so the module keeps testing against the latest SS6.x. Bump these manually when adopting a new tool release. Pins must resolve on php 8.3 (the module's floor): tomasvotruba/type-coverage is held at 2.2.1 because 2.2.2 requires php ^8.4, and phpunit/phpcov is held on the 10.x line that matches phpunit 11.",
     "require-dev": {
-        "cambis/silverstan": "2.1.9",
-        "infection/infection": "0.32.7",
+        "cambis/silverstan": "2.2.0",
+        "infection/infection": "0.34.0",
         "phpstan/extension-installer": "1.4.3",
-        "phpstan/phpstan": "2.2.1",
+        "phpstan/phpstan": "2.2.5",
         "phpstan/phpstan-deprecation-rules": "2.0.4",
         "phpunit/phpcov": "10.0.1",
-        "phpunit/phpunit": "11.5.55",
+        "phpunit/phpunit": "11.5.56",
         "rregeer/phpunit-coverage-check": "0.3.1",
         "tomasvotruba/type-coverage": "2.2.1",
         "wedevelopnl/silverstripe-e2e": "0.1.2",

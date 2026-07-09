@@ -22,6 +22,21 @@ updates:
       - dependency-name: "@types/react-dom"
         update-types: ["version-update:semver-major"]
 
+      # TypeScript 7 is released but this module does not support it yet.
+      # Hold on the 6.x line until the toolchain (Biome, vite-plugin-dts,
+      # @stryker-mutator/typescript-checker) and our own type-level code are
+      # verified against it. Drop this ignore as part of the TS 7 migration.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+
+      # Biome 2.5.3 panics ("index out of bounds") while linting our .tsx and
+      # E2E spec files. The fault is in its shared type-inference machinery, not
+      # a single rule: a11y/correctness/performance/security lint clean, while
+      # complexity/suspicious/nursery/style all panic on the same files. Held at
+      # 2.5.2 until a fixed release lands; drop this entry when one does.
+      - dependency-name: "@biomejs/biome"
+        versions: ["2.5.3"]
+
   - package-ecosystem: composer
     directory: /
     schedule:
