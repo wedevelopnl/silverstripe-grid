@@ -8,10 +8,6 @@ interface DragOverlayContentProps {
   readonly type: DraggableType
 }
 
-function pluralize(count: number, singular: string): string {
-  return count === 1 ? `${count} ${singular}` : `${count} ${singular}s`
-}
-
 function getChildCount(node: ElementNode): number {
   if (!isContainerNode(node)) return 0
   // biome-ignore lint/suspicious/noUnnecessaryConditions: container children are `… | null`; the ?? 0 fallback is required — dropping it fails typecheck.
@@ -21,16 +17,24 @@ function getChildCount(node: ElementNode): number {
 /**
  * Sections and rows show a child-count meta line; columns and leaf elements
  * render icon + title only.
+ *
+ * Each count uses a full singular/plural message pair with a {count}
+ * placeholder, selected in code. English pluralisation cannot be produced by
+ * appending 's' to a translated noun (Dutch "rij" → "rijen", not "rijs"), and
+ * the i18n collector requires literal key arguments, so the keys are inlined.
  */
 function getMetaLabel(node: ElementNode, type: DraggableType): string | null {
+  const count = getChildCount(node)
+
   if (type === 'section') {
-    return pluralize(getChildCount(node), t('WeDevelopGrid.DragOverlayContent.ROW_SINGULAR', 'row'))
+    return count === 1
+      ? t('WeDevelopGrid.DragOverlayContent.ROW_COUNT_ONE', '{count} row', { count })
+      : t('WeDevelopGrid.DragOverlayContent.ROW_COUNT_MANY', '{count} rows', { count })
   }
   if (type === 'row') {
-    return pluralize(
-      getChildCount(node),
-      t('WeDevelopGrid.DragOverlayContent.COLUMN_SINGULAR', 'column'),
-    )
+    return count === 1
+      ? t('WeDevelopGrid.DragOverlayContent.COLUMN_COUNT_ONE', '{count} column', { count })
+      : t('WeDevelopGrid.DragOverlayContent.COLUMN_COUNT_MANY', '{count} columns', { count })
   }
   return null
 }
