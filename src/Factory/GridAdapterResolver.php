@@ -9,6 +9,7 @@ use SilverStripe\Core\Injector\Injector;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
 use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
+use WeDevelop\Grid\Contract\ContentLayoutAdapterInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 
 /**
@@ -16,9 +17,11 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
  * environment variable.
  *
  * Accepts either a bundled preset name (bootstrap|tailwind|bulma, case-insensitive)
- * or the fully-qualified class name of a custom adapter that implements
- * {@see GridAdapterInterface}. The variable is required — unset, empty, or
- * invalid values throw.
+ * or the fully-qualified class name of a custom adapter that implements BOTH
+ * {@see GridAdapterInterface} and {@see ContentLayoutAdapterInterface} — the same
+ * singleton is aliased to ContentLayoutAdapterInterface in content-layout.yml, so
+ * an adapter missing that interface would only fail later at render time. The
+ * variable is required — unset, empty, or invalid values throw at boot.
  */
 final class GridAdapterResolver implements Factory
 {
@@ -47,13 +50,17 @@ final class GridAdapterResolver implements Factory
 
         $class = self::PRESETS[strtolower($raw)] ?? $raw;
 
-        if (!is_subclass_of($class, GridAdapterInterface::class)) {
+        if (
+            !is_subclass_of($class, GridAdapterInterface::class)
+            || !is_subclass_of($class, ContentLayoutAdapterInterface::class)
+        ) {
             throw new RuntimeException(sprintf(
-                'Invalid %s value "%s". Expected a preset (%s) or an FQCN implementing %s.',
+                'Invalid %s value "%s". Expected a preset (%s) or an FQCN implementing both %s and %s.',
                 self::ENV_VAR,
                 $raw,
                 implode('|', array_keys(self::PRESETS)),
                 GridAdapterInterface::class,
+                ContentLayoutAdapterInterface::class,
             ));
         }
 
