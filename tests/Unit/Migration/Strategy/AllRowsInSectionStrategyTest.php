@@ -56,7 +56,13 @@ final class AllRowsInSectionStrategyTest extends TestCase
             ->method('warning')
             ->with(self::stringContains('customSectionClass'));
 
-        $sections = $this->strategy->buildHierarchy([$row1, $row2], pageId: 10, zone: 'main');
+        // Each row needs a content element, or the empty row groups are dropped
+        // and no section is produced.
+        $sections = $this->strategy->buildHierarchy(
+            [$row1, self::e(6), $row2, self::e(4)],
+            pageId: 10,
+            zone: 'main',
+        );
 
         self::assertSame('first-class', $sections[0]->extraClass);
     }
@@ -68,7 +74,7 @@ final class AllRowsInSectionStrategyTest extends TestCase
 
         $this->logger->expects(self::never())->method('warning');
 
-        $this->strategy->buildHierarchy([$row1, $row2], pageId: 10, zone: 'main');
+        $this->strategy->buildHierarchy([$row1, self::e(6), $row2, self::e(4)], pageId: 10, zone: 'main');
     }
 
     public function testEmptyElementsReturnsNoSections(): void
@@ -164,10 +170,11 @@ final class AllRowsInSectionStrategyTest extends TestCase
         ];
 
         self::$nextId = 0;
-        yield 'three rows: 3 same elements grouped, 1 element, empty' => [
+        yield 'three rows: 3 same elements grouped, 1 element, trailing empty row dropped' => [
             [self::r(), self::e(4), self::e(4), self::e(4), self::r(), self::e(12), self::r()],
             'main',
-            ['rows' => [['columns' => [['w' => 4, 'n' => 3]]], ['columns' => [['w' => 12]]], ['columns' => []]]],
+            // The trailing empty row delimiter produces no columns and is dropped.
+            ['rows' => [['columns' => [['w' => 4, 'n' => 3]]], ['columns' => [['w' => 12]]]]],
         ];
 
         // ── Offset cases ─────────────────────────────────────────
@@ -253,9 +260,9 @@ final class AllRowsInSectionStrategyTest extends TestCase
 
         self::$nextId = 0;
         yield 'zone passed through to section' => [
-            [self::r()],
+            [self::r(), self::e(6)],
             'sidebar',
-            ['rows' => [['columns' => []]]],
+            ['rows' => [['columns' => [['w' => 6]]]]],
         ];
     }
 

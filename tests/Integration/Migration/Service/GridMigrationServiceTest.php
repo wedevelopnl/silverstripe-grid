@@ -1675,13 +1675,14 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertCount(2, $rows);
     }
 
-    public function testAdjacentRowsCreateEmptyRow(): void
+    public function testAdjacentEmptyRowIsDropped(): void
     {
         $pageId = $this->getPageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
-        // Two adjacent rows (no content elements between them)
+        // Two adjacent row delimiters: the first has no content elements between it
+        // and the next, so it is an empty row.
         $this->seeder->seedElement(8200, $areaId, self::ROW_CLASS, 1);
         $this->seeder->seedRow(8200);
         $this->seeder->seedElement(8210, $areaId, self::ROW_CLASS, 2);
@@ -1691,18 +1692,18 @@ final class GridMigrationServiceTest extends SapphireTest
 
         $this->runMigration();
 
-        // Should create 2 sections
+        // The empty leading row would produce a Section→Row with no Column, breaking
+        // the complete-hierarchy invariant, so it is dropped: only the content row's
+        // section is created, and its row has exactly one column.
         $sections = Section::get()->filter([
             'ParentID' => $pageId,
             'Zone' => self::ZONE,
         ])->sort('Sort', 'ASC');
-        self::assertCount(2, $sections);
+        self::assertCount(1, $sections);
 
-        // First section's row should have no columns (empty row)
-        $firstRow = Row::get()->filter(['ParentID' => $sections->first()->ID])->first();
-        self::assertInstanceOf(Row::class, $firstRow);
-        $firstRowColumns = Column::get()->filter(['ParentID' => $firstRow->ID]);
-        self::assertCount(0, $firstRowColumns);
+        $row = Row::get()->filter(['ParentID' => $sections->first()->ID])->first();
+        self::assertInstanceOf(Row::class, $row);
+        self::assertCount(1, Column::get()->filter(['ParentID' => $row->ID]));
     }
 
     public function testUseElementalGridFalseSkipsPage(): void
