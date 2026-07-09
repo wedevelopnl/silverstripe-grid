@@ -112,12 +112,20 @@ final readonly class AllRowsInSectionStrategy implements RowMappingStrategy
 
         foreach ($groups as $group) {
             $row = $group['row'];
+            $columns = $this->buildColumns($group['elements']);
+
+            // Skip empty row groups (a delimiter with no following content): an
+            // empty Row with no Column violates the complete-hierarchy invariant.
+            // If every group is empty, buildHierarchy drops the whole section.
+            if ($columns === []) {
+                continue;
+            }
 
             $rows[] = new MigrationRow(
                 title: $row !== null ? $row->title : '',
                 extraClass: $row !== null ? $row->extraClass : '',
                 sort: $rowSort,
-                columns: $this->buildColumns($group['elements']),
+                columns: $columns,
             );
 
             $rowSort++;

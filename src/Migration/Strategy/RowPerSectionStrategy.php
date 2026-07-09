@@ -53,6 +53,15 @@ final readonly class RowPerSectionStrategy implements RowMappingStrategy
 
             $columns = $this->buildColumns($group['elements']);
 
+            // A legacy row delimiter with no following content (consecutive
+            // delimiters, or a trailing empty row — common on legacy sites) yields
+            // no columns. Writing it produces an empty Section→Row with no Column,
+            // violating the complete-hierarchy invariant every other write path
+            // guarantees. Skip it; sectionSort stays contiguous.
+            if ($columns === []) {
+                continue;
+            }
+
             $migrationRow = new MigrationRow(
                 title: $rowTitle,
                 extraClass: $rowExtraClass,
