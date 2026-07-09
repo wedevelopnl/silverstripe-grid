@@ -62,5 +62,6 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task test-e2e-ui` | Playwright E2E with interactive UI |
 | `task flush` | Clear SilverStripe cache |
 | `task dev-build` | Run dev/build to rebuild database and manifest |
+| `task seed-fixture` | Seed the dev DB with an E2E fixture (`FIXTURE=<name>`, default `complex-page`; idempotent) |
 | `task qa` | Full QA suite (PHPStan + Rector + PHP coverage + JS QA, parallel) |
 | `task qa-js` | JavaScript QA (Biome + Stylelint + typecheck + Vitest + vite build) |

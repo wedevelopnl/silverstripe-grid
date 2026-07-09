@@ -27,6 +27,7 @@ src/ORM/FieldType/    # Custom DB field types (DBGridSettings composite field)
 src/Repository/       # Repository interfaces + ORM implementations (GridElementRepositoryInterface, OrmGridElementRepository)
 tests/Unit/           # PHPUnit unit tests (no DB/framework)
 tests/Integration/    # PHPUnit integration tests (full SS env)
+tests/Functional/     # PHPUnit functional tests (HTTP/controller)
 tests/E2E/            # Playwright E2E tests
 tests/E2E/Fixture/    # YAML fixtures for E2E test data
 tests/E2E/specs/      # E2E test specs
@@ -39,6 +40,7 @@ client/src/js/bridge/ # SilverStripe CMS integration (entwine, Injector)
 client/src/js/bundles/ # Entry points
 client/src/js/components/ # React components
 client/src/js/hooks/  # React hooks, query keys, TanStack Query, mutations
+client/src/js/state/  # Cross-component state modules (activeViewport)
 client/src/js/types/  # Valibot schemas, TypeScript types
 client/src/js/utils/  # Frontend utility functions
 client/src/js/testing/ # Test infrastructure (factories, helpers, mocks)
@@ -48,7 +50,7 @@ client/dist/          # Vite build output (exposed, created by build)
 scripts/              # Build scripts (i18n collection, parity checks)
 phpstan/stubs/        # PHPStan stubs (e.g. AdminController.stub)
 .docker/              # Docker dev env: Caddy + PHP + MySQL 8
-docs/architecture/    # Architecture documents (backend, drag-and-drop)
+docs/architecture/    # Architecture documents (backend, drag-and-drop, grid-adapter)
 ```
 
 - PSR-4 namespace: `WeDevelop\Grid\` → `src/`
@@ -69,13 +71,14 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop)
 - `.docker/env.sh` — Generates `.docker/.env` with deterministic ports
 - `.docker/app/infection.json5` — Infection mutation testing config
 - `.docker/app/phpstan.neon.dist` — PHPStan config (level max + Silverstan + 100% type coverage)
+- `.docker/app/phpstan-php85.neon.dist` — PHPStan config with the analysis target pinned to PHP 8.5
 - `.docker/app/rector.php` — Rector config (curated rule set, see "Rector" section below)
 
 ## PHP Testing
 
 - PHPUnit 11 — runs inside Docker via `task test`
 - PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, and `fluent` testsuites, selected via `--testsuite` flag)
-- Test namespace: `WeDevelop\Grid\Tests\` → `tests/` (Unit/ + Integration/)
+- Test namespace: `WeDevelop\Grid\Tests\` → `tests/` (mirrors the subdirectory: `Tests\Functional\Controllers` → `tests/Functional/Controllers/`)
 
 ## Static Analysis
 
