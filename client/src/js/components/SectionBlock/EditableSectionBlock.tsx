@@ -74,7 +74,6 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
                   <AddChildButton
                     parentId={section.self.id}
                     childType="row"
-                    childLabel="Row"
                     variant="between"
                     insertAfterId={rows[index - 1].self.id}
                   />
@@ -85,7 +84,6 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
             <AddChildButton
               parentId={section.self.id}
               childType="row"
-              childLabel="Row"
               variant="append"
             />
           </>
@@ -93,7 +91,6 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
           <AddChildButton
             parentId={section.self.id}
             childType="row"
-            childLabel="Row"
             variant="empty-state"
           />
         )}
