@@ -379,7 +379,15 @@ class GridController extends AdminController
 
     public function apiDelete(HTTPRequest $request): HTTPResponse
     {
-        $ref = $this->requireElementRefFromQuery($request);
+        $refResult = $this->requestBodyParser->parseElementRefFromQuery(
+            $request->getVar('type'),
+            $request->getVar('id'),
+        );
+        if ($refResult->isErr()) {
+            $this->jsonError(400);
+        }
+        $ref = $refResult->unwrap();
+
         $element = $this->requireElementWithPermission(
             $ref,
             static fn (GridElement $e): bool => $e->canDelete(),
@@ -571,8 +579,11 @@ class GridController extends AdminController
 
     public function apiResetGridSettingsOverrides(HTTPRequest $request): HTTPResponse
     {
-        $data = $this->parseResetGridSettingsOverridesQuery($request);
-        $parseResult = $this->requestBodyParser->parseResetGridSettingsOverridesBody($data);
+        $parseResult = $this->requestBodyParser->parseResetGridSettingsOverridesFromQuery(
+            $request->getVar('pageId'),
+            $request->getVar('zone'),
+            $request->getVar('viewport'),
+        );
         if ($parseResult->isErr()) {
             return $this->resultToResponse($parseResult, 400);
         }
@@ -798,55 +809,6 @@ class GridController extends AdminController
         }
 
         return $parseResult->unwrap();
-    }
-
-    /**
-     * Parse a NodeRef from the query string (DELETE requests).
-     *
-     * DELETE bodies are not universally supported, so the element identity
-     * arrives as `?type=section&id=42`. Both segments are coerced and handed
-     * to the shared NodeRef validator.
-     */
-    private function requireElementRefFromQuery(HTTPRequest $request): NodeRef
-    {
-        $rawType = $request->getVar('type');
-        $rawId = $request->getVar('id');
-        $id = filter_var($rawId, FILTER_VALIDATE_INT);
-
-        $parseResult = $this->requestBodyParser->parseElementRef([
-            'element' => [
-                'type' => is_string($rawType) ? $rawType : null,
-                'id' => $id === false ? null : $id,
-            ],
-        ]);
-        if ($parseResult->isErr()) {
-            $this->jsonError(400);
-        }
-
-        return $parseResult->unwrap();
-    }
-
-    /**
-     * Build a parser-compatible associative array from the reset-overrides
-     * query string. Query values are always strings; coerce pageId to int so
-     * `RequestBodyParser::parseResetGridSettingsOverridesBody` sees the same
-     * shape it got when parameters were sent in a JSON body.
-     *
-     * @return array<string, mixed>
-     */
-    private function parseResetGridSettingsOverridesQuery(HTTPRequest $request): array
-    {
-        $rawPageId = $request->getVar('pageId');
-        $pageId = filter_var($rawPageId, FILTER_VALIDATE_INT);
-
-        $zone = $request->getVar('zone');
-        $viewport = $request->getVar('viewport');
-
-        return [
-            'pageId' => $pageId === false ? null : $pageId,
-            'zone' => is_string($zone) ? $zone : null,
-            'viewport' => is_string($viewport) && $viewport !== '' ? $viewport : null,
-        ];
     }
 
     /**

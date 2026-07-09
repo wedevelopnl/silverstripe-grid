@@ -307,6 +307,47 @@ final readonly class RequestBodyParser
     }
 
     /**
+     * Parse a NodeRef from raw DELETE query-string values (`?type=…&id=…`).
+     *
+     * DELETE bodies are not universally supported, so single-target deletes send
+     * the element identity on the query string. Coerce the raw values into the
+     * `{element:{type,id}}` envelope {@see parseElementRef} expects.
+     *
+     * @return Result<NodeRef>
+     */
+    #[NoDiscard('The Result carries the parsed element ref or validation errors; discarding it silently drops malformed-input failures.')]
+    public function parseElementRefFromQuery(mixed $rawType, mixed $rawId): Result
+    {
+        $id = filter_var($rawId, FILTER_VALIDATE_INT);
+
+        return $this->parseElementRef([
+            'element' => [
+                'type' => is_string($rawType) ? $rawType : null,
+                'id' => $id === false ? null : $id,
+            ],
+        ]);
+    }
+
+    /**
+     * Parse a reset-overrides request from raw query-string values, coercing them
+     * to the same shape {@see parseResetGridSettingsOverridesBody} sees from a
+     * JSON body (query values are always strings).
+     *
+     * @return Result<ResetGridSettingsOverridesRequest>
+     */
+    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
+    public function parseResetGridSettingsOverridesFromQuery(mixed $rawPageId, mixed $rawZone, mixed $rawViewport): Result
+    {
+        $pageId = filter_var($rawPageId, FILTER_VALIDATE_INT);
+
+        return $this->parseResetGridSettingsOverridesBody([
+            'pageId' => $pageId === false ? null : $pageId,
+            'zone' => is_string($rawZone) ? $rawZone : null,
+            'viewport' => is_string($rawViewport) && $rawViewport !== '' ? $rawViewport : null,
+        ]);
+    }
+
+    /**
      * Viewport keys the active adapter recognises.
      *
      * @return list<non-empty-string>

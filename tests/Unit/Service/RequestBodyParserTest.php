@@ -651,4 +651,61 @@ final class RequestBodyParserTest extends TestCase
             'element type cannot be "page"',
         ];
     }
+
+    // ── parseElementRefFromQuery ────────────────────────────────
+
+    public function testParseElementRefFromQueryCoercesStringIdToNodeRef(): void
+    {
+        // Query values arrive as strings; the id must be coerced to an int.
+        $result = $this->parser->parseElementRefFromQuery('section', '42');
+
+        self::assertTrue($result->isOk());
+        $ref = $result->unwrap();
+        self::assertSame(NodeType::Section, $ref->type);
+        self::assertSame(42, $ref->id);
+    }
+
+    public function testParseElementRefFromQueryRejectsNonNumericId(): void
+    {
+        $result = $this->parser->parseElementRefFromQuery('section', 'abc');
+
+        self::assertTrue($result->isErr());
+    }
+
+    public function testParseElementRefFromQueryRejectsNonStringType(): void
+    {
+        $result = $this->parser->parseElementRefFromQuery(['not' => 'a string'], '42');
+
+        self::assertTrue($result->isErr());
+    }
+
+    // ── parseResetGridSettingsOverridesFromQuery ────────────────
+
+    public function testParseResetOverridesFromQueryCoercesTypes(): void
+    {
+        // GridAdapterStub's default viewport is 'xs'; 'md' is a valid non-default.
+        $result = $this->parser->parseResetGridSettingsOverridesFromQuery('7', 'main', 'md');
+
+        self::assertTrue($result->isOk());
+        $request = $result->unwrap();
+        self::assertSame(7, $request->pageId);
+        self::assertSame('main', $request->zone);
+        self::assertSame('md', $request->viewport);
+    }
+
+    public function testParseResetOverridesFromQueryTreatsEmptyViewportAsNull(): void
+    {
+        // An absent viewport query var ('') means "reset all", not a viewport key.
+        $result = $this->parser->parseResetGridSettingsOverridesFromQuery('7', 'main', '');
+
+        self::assertTrue($result->isOk());
+        self::assertNull($result->unwrap()->viewport);
+    }
+
+    public function testParseResetOverridesFromQueryRejectsNonNumericPageId(): void
+    {
+        $result = $this->parser->parseResetGridSettingsOverridesFromQuery('abc', 'main', null);
+
+        self::assertTrue($result->isErr());
+    }
 }
