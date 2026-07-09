@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0-beta.2] - 2026-07-09
+
+### Added
+
+- **Grid Elements report shows a clickable Location trail** — the report's separate `Page` and `Last Edited` columns are replaced by a single Location breadcrumb (`page > section > row > …`), and the Title now links to the element itself. Ancestors resolve through an in-memory map built once per run, and the walk guards on `ParentClass` as well as `ParentID` so the shared page/element ID space cannot produce a false ancestor. Orphaned elements render a non-linked "Orphaned" trail.
+- **Drag-and-drop resolves drop direction on the geometry-derived axis** — the before/after decision is made against the axis the container actually lays its children out on (measured from the rendered rects) instead of a hardcoded vertical axis, so dropping into a horizontal run of columns aims at the pointer's horizontal position.
+- **`task seed-fixture`** — loads an E2E fixture into the dev database (`FIXTURE=<name>`, default `complex-page`; idempotent).
+
+### Changed
+
+- **BREAKING: `GridAdapterInterface::getVisibilityClasses()` split into `getHideClass()` / `getRestoreClass()`** — the old method returned a hide class bundled with a restore class for the positionally-next viewport, which forced the adapter to guess at sequencing it cannot see. Custom adapters implementing `GridAdapterInterface` directly must implement the two new methods; adapters that subclass `GridAdapter` need no change. The sequencing decision now lives in `ColumnClassResolver`, the only place that knows the per-viewport visibility run.
+- **BREAKING: E2E fixture infrastructure moved to `wedevelopnl/silverstripe-e2e`** — `FixtureController`, `FixtureLoader`, `FixturePostAction`, and `FixtureResult` are removed from `src/Dev/`; fixture loading and the `/dev/e2e-fixtures` endpoint now come from the `wedevelopnl/silverstripe-e2e` dev dependency, and scaffold suppression is declared via `config_overrides` in `_config/dev.yml` rather than a bespoke extension. Projects referencing the removed classes must switch to the module's equivalents. Note the package is pinned in three places (`composer.json`, `.docker/app/composer.json`, `.docker/app/composer.fluent.json`) — bump them together.
+- **Custom `SS_GRID_ADAPTER` FQCNs are validated against both adapter interfaces at boot** — `GridAdapterResolver` previously checked only `GridAdapterInterface`, so an adapter missing `ContentLayoutAdapterInterface` booted cleanly and failed later at render. Both are now required up front, with a precise error message.
+
+### Fixed
+
+- **Column visibility wrong across consecutive hidden viewports** — a column hidden at two consecutive viewports was re-shown at the second on cascade frameworks (Bootstrap, Tailwind), while Bulma's viewport-scoped hides under-hid the second viewport entirely. The hide class is now emitted once at the transition on cascade frameworks (and on every hidden viewport on per-viewport frameworks), with the restore emitted where visibility returns.
+- **Sort collisions when appending to a mixed-class container** — `ensureSortSet()` late-static-bound its max-`Sort` query to the element's concrete subclass, so adding the first element of a new type to a column already holding others computed the max over an empty set and assigned a colliding `Sort`, dropping the element mid-list. The query now runs against the shared `GridElement` base list (and `Section::get()` for the zone-scoped override).
+- **Server error messages swallowed by the CMS toast** — every `GridController` error path emits SilverStripe's `jsonError` envelope, but the frontend only read top-level `message`/`errorMessage` keys, so translated hierarchy and ownership validation messages were dropped and every failed mutation toasted a bare `API error 4xx:`.
+- **Concurrent reorders could leave a stale tree cached** — nothing gated a new drag while a reorder mutation was in flight; two overlapping reorders could race such that a rollback re-applied a failed move. A drag that ends while another reorder is pending is now dropped (the item snaps back) and is immediately retryable.
+- **Cross-container drop preview** — the preview now tracks the pointer, can reach every slot in the target container, no longer oscillates when anchored to its own slot, and is committed as shown instead of being re-resolved on drop. Same-container drops pre-position the dragged node in the pending tree.
+- **Mutation errors presented twice** in the grid editor.
+- **Hardcoded UI labels not translatable** — remaining hardcoded strings are routed through the translation layer, and drag-overlay counts use singular/plural message pairs.
+- **Migration `--default-viewport` / `--viewport-map` accepted invalid input** — legacy `sizeFields` are keyed uppercase (`XS`…`XL`), so a lowercase `md` typo silently full-widthed every migrated column on a destructive run that the idempotency guard then blocked from re-running. Values are now normalised and rejected when outside the legacy set, both sides of an explicit `--viewport-map` pair are validated, and an empty derived map (e.g. Bulma's keys, which share no names with the legacy set) fails loudly.
+- **Migration dry-run undercounted** — live-only elements are included in the preview, and empty legacy rows are dropped instead of migrating to column-less rows.
+- Adapter `getWidthClass()` / `getOffsetClass()` accepting unknown viewport keys; vertical-alignment and padding class-map lookups unguarded.
+- `ViewportConfig::fromArray()` accepting out-of-range widths and offsets.
+- Dangling `After:` ordering references in the YAML config.
+- Collapse-state persistence failures silently swallowed instead of logged.
+
+### Security
+
+- **`apiDuplicateTo` source gated on the owning page's `canEdit()`** — the endpoint authorized the source element via `canCreate()` only, which is page-independent. An editor could pass the id of an element on a page they cannot access, duplicate its subtree into their own page, and read the clone back via `apiReadTree`, disclosing restricted draft content.
+- **Raw `ValidationException` detail no longer reaches the client** — framework exception detail is logged server-side; the client keeps the translated messages the domain validators compose.
+
+### Performance
+
+- Version-specific history trees are immutable server-side and are now marked never-stale, so stepping back through the history viewer reuses the cache instead of refetching. (Note: `staleTime` does not suppress a mutation's `invalidateQueries()` refetch — invalidation overrides it.)
+
+### Dependencies
+
+- Added `wedevelopnl/silverstripe-e2e` 0.1.2 (dev, E2E fixture infrastructure)
+- Added `vitest-fail-on-console` ^0.10.1 (dev)
+- Vite 8.1.0 → 8.1.3
+- Vitest / `@vitest/coverage-v8` 4.1.9 → 4.1.10
+- `@biomejs/biome` 2.5.1 → 2.5.2
+- `@types/node` 26.0.1 → 26.1.0
+- `js-yaml` 5.2.0 → 5.2.1
+
+### Developer Experience
+
+- **Vitest fails on unexpected console output** — expected noise is silenced explicitly, so a new warning or error surfaces as a test failure.
+- **`npm run typecheck` covers the E2E tree** — `tests/E2E` is type-checked alongside the client source. Requires a host `composer install` first, since the Playwright client is imported from the host `vendor/`.
+- E2E specs wrap their journey stages in `test.step` blocks, and drag helpers wait on preview stability rather than fixed timeouts.
+
 ## [6.0.0-beta.1] - 2026-07-01
 
 ### Added
@@ -430,6 +485,7 @@ Ground-up rewrite for SilverStripe 6. This is a new package (`wedevelopnl/silver
 - Makefile with targets for testing, coverage, static analysis, and mutation testing
 - Pre-push QA gate hook
 
+[6.0.0-beta.2]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-beta.2
 [6.0.0-beta.1]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-beta.1
 [6.0.0-alpha.6]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.6
 [6.0.0-alpha.5]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-alpha.5
