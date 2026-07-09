@@ -30,7 +30,14 @@ final class LegacyElementReader
 {
     private const string ROW_CLASS_NAME = 'WeDevelop\\ElementalGrid\\Models\\ElementRow';
 
-    private const array VIEWPORT_KEYS = ['XS', 'SM', 'MD', 'LG', 'XL'];
+    /**
+     * The legacy module's viewport keys. Public so migration tasks can validate
+     * operator-supplied --default-viewport / --viewport-map values against the
+     * exact set used to key legacy sizeFields, instead of duplicating the list.
+     *
+     * @var list<non-empty-string>
+     */
+    public const array VIEWPORT_KEYS = ['XS', 'SM', 'MD', 'LG', 'XL'];
 
     private const array MEDIA_FIELDS = [
         'HTML',

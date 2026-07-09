@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Migration\Task;
 
+use InvalidArgumentException;
 use Override;
 use Psr\Log\LoggerInterface;
 use SilverStripe\Core\Injector\Injector;
@@ -18,9 +19,11 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
+use WeDevelop\Grid\Migration\Service\LegacyElementReader;
 use WeDevelop\Grid\Migration\Strategy\AllRowsInSectionStrategy;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
+use WeDevelop\Grid\Value\Viewport;
 
 abstract class AbstractMigrationTask extends BuildTask
 {
@@ -56,8 +59,25 @@ abstract class AbstractMigrationTask extends BuildTask
             return Command::FAILURE;
         }
 
-        /** @var non-empty-string $defaultViewport */
         /** @var non-empty-string $zone */
+
+        // Validate --default-viewport against the legacy key set and normalise to
+        // uppercase. Legacy sizeFields are keyed by uppercase XS/SM/MD/LG/XL, so an
+        // unvalidated value (e.g. a lowercase "md" typo, the spelling used for the
+        // NEW adapter keys) misses the lookup in FieldMapper::mapGridSettings and
+        // silently makes every column full-width on a destructive migration.
+        $rawDefaultViewport = \is_string($defaultViewport) ? $defaultViewport : '';
+        $defaultViewport = \strtoupper($rawDefaultViewport);
+        if (!\in_array($defaultViewport, LegacyElementReader::VIEWPORT_KEYS, true)) {
+            $output->writeln(\sprintf(
+                '<error>Invalid --default-viewport "%s". Use one of: %s.</error>',
+                $rawDefaultViewport,
+                \implode(', ', LegacyElementReader::VIEWPORT_KEYS),
+            ));
+            return Command::FAILURE;
+        }
+
+        /** @var non-empty-string $defaultViewport */
 
         // Validate --strategy explicitly: an unknown value must fail loudly rather
         // than silently fall through to the default and write a different hierarchy
@@ -107,10 +127,28 @@ abstract class AbstractMigrationTask extends BuildTask
 
         $adapter = Injector::inst()->get(GridAdapterInterface::class);
 
-        $viewportKeyMap = $this->resolveViewportKeyMap(
-            \is_string($input->getOption('viewport-map')) ? $input->getOption('viewport-map') : null,
-            $adapter,
-        );
+        try {
+            $viewportKeyMap = $this->resolveViewportKeyMap(
+                \is_string($input->getOption('viewport-map')) ? $input->getOption('viewport-map') : null,
+                $adapter,
+            );
+        } catch (InvalidArgumentException $e) {
+            $output->writeln(\sprintf('<error>%s</error>', $e->getMessage()));
+            return Command::FAILURE;
+        }
+
+        // An empty map drops every responsive override silently. This happens when
+        // the active adapter shares no key names with the legacy set (e.g. Bulma:
+        // mobile/tablet/desktop) and no explicit --viewport-map was given.
+        if ($viewportKeyMap === []) {
+            $output->writeln(\sprintf(
+                '<error>Could not derive a viewport map: no legacy key (%s) matches an active adapter viewport (%s). '
+                . 'Pass --viewport-map with explicit old=new pairs.</error>',
+                \implode(', ', LegacyElementReader::VIEWPORT_KEYS),
+                \implode(', ', \array_map(static fn (Viewport $v): string => $v->key, $adapter->getViewports())),
+            ));
+            return Command::FAILURE;
+        }
 
         $logger = Injector::inst()->get(LoggerInterface::class);
         $reader = new LegacyDataReader();
@@ -243,30 +281,56 @@ abstract class AbstractMigrationTask extends BuildTask
     }
 
     /**
-     * Parse viewport-map arg or derive from adapter.
+     * Parse the --viewport-map arg (validating both sides) or derive the map from
+     * the adapter by name-matching legacy keys to adapter viewports.
      *
      * @return array<string, string> old key → new key
+     *
+     * @throws InvalidArgumentException when an explicit pair names an unknown legacy
+     *     old key or an adapter viewport that is not enabled
      */
     protected function resolveViewportKeyMap(?string $viewportMapArg, GridAdapterInterface $adapter): array
     {
+        $adapterKeys = \array_map(static fn (Viewport $v): string => $v->key, $adapter->getViewports());
+
         if ($viewportMapArg !== null && $viewportMapArg !== '') {
             $map = [];
             foreach (\explode(',', $viewportMapArg) as $pair) {
                 $parts = \explode('=', $pair, 2);
-                if (\count($parts) === 2) {
-                    $map[\trim($parts[0])] = \trim($parts[1]);
+                if (\count($parts) !== 2) {
+                    continue;
                 }
+
+                $rawOld = \trim($parts[0]);
+                $old = \strtoupper($rawOld);
+                $new = \trim($parts[1]);
+
+                if (!\in_array($old, LegacyElementReader::VIEWPORT_KEYS, true)) {
+                    throw new InvalidArgumentException(\sprintf(
+                        'Invalid --viewport-map old key "%s". Use one of: %s.',
+                        $rawOld,
+                        \implode(', ', LegacyElementReader::VIEWPORT_KEYS),
+                    ));
+                }
+
+                if (!\in_array($new, $adapterKeys, true)) {
+                    throw new InvalidArgumentException(\sprintf(
+                        'Invalid --viewport-map new key "%s". Use one of the active adapter viewports: %s.',
+                        $new,
+                        \implode(', ', $adapterKeys),
+                    ));
+                }
+
+                $map[$old] = $new;
             }
             return $map;
         }
 
-        $viewports = $adapter->getViewports();
-        $oldKeys = ['XS', 'SM', 'MD', 'LG', 'XL'];
         $map = [];
-        foreach ($oldKeys as $oldKey) {
-            foreach ($viewports as $viewport) {
-                if (\strtolower($oldKey) === \strtolower($viewport->key)) {
-                    $map[$oldKey] = $viewport->key;
+        foreach (LegacyElementReader::VIEWPORT_KEYS as $oldKey) {
+            foreach ($adapterKeys as $adapterKey) {
+                if (\strtolower($oldKey) === \strtolower($adapterKey)) {
+                    $map[$oldKey] = $adapterKey;
                     break;
                 }
             }
