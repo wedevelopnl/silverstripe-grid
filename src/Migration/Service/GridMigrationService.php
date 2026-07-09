@@ -196,7 +196,15 @@ final class GridMigrationService
 
         // Step 5: Dry-run — log and return
         if ($dryRun) {
-            $this->logDryRun($pageId, $sections);
+            // Read the live area too: a page with an empty draft but a populated
+            // live area has live-only elements that the real run creates as their
+            // own hierarchy on both stages. Without this the preview reports
+            // "no elements to migrate" and understates what the real run writes.
+            $liveOnlyCount = $this->countLiveOnlyElements(
+                $draftElements,
+                $this->reader->getElementsForArea($areaId, 'live'),
+            );
+            $this->logDryRun($pageId, $sections, $liveOnlyCount);
             return;
         }
 
@@ -365,13 +373,41 @@ final class GridMigrationService
     }
 
     /**
+     * Count legacy live elements with no draft counterpart. These are "live-only"
+     * and the real run creates them as their own hierarchy on both stages, so the
+     * dry-run must surface them (see the classification in publishLiveStage).
+     *
+     * @param list<LegacyElement> $draftElements
+     * @param list<LegacyElement> $liveElements
+     * @return int<0, max>
+     */
+    private function countLiveOnlyElements(array $draftElements, array $liveElements): int
+    {
+        /** @var array<int, true> $draftLegacyIds */
+        $draftLegacyIds = [];
+        foreach ($draftElements as $draftElement) {
+            $draftLegacyIds[$draftElement->id] = true;
+        }
+
+        $count = 0;
+        foreach ($liveElements as $liveElement) {
+            if (!\array_key_exists($liveElement->id, $draftLegacyIds)) {
+                ++$count;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
      * Log what a dry-run would create without writing any records.
      *
      * @param list<MigrationSection> $sections
+     * @param int<0, max> $liveOnlyCount Legacy live elements with no draft counterpart
      */
-    private function logDryRun(int $pageId, array $sections): void
+    private function logDryRun(int $pageId, array $sections, int $liveOnlyCount = 0): void
     {
-        if ($sections === []) {
+        if ($sections === [] && $liveOnlyCount === 0) {
             $this->logger->info('[DRY RUN] Page {pageId}: no elements to migrate.', ['pageId' => $pageId]);
             return;
         }
@@ -388,12 +424,14 @@ final class GridMigrationService
         }
 
         $this->logger->info(
-            '[DRY RUN] Page {pageId}: would create {sections} section(s), {rows} row(s), {columns} column(s).',
+            '[DRY RUN] Page {pageId}: would create {sections} section(s), {rows} row(s), '
+            . '{columns} column(s) from draft, plus {liveOnly} live-only element(s).',
             [
                 'pageId' => $pageId,
                 'sections' => $sectionCount,
                 'rows' => $rowCount,
                 'columns' => $columnCount,
+                'liveOnly' => $liveOnlyCount,
             ],
         );
     }
