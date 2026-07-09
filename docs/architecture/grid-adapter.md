@@ -161,7 +161,7 @@ Frameworks without a base viewport (Tailwind) set `base_viewport_key` to `null` 
 
 ### 4. Register the Adapter
 
-`GridAdapterInterface` resolves through `GridAdapterResolver`, which reads the required `SS_GRID_ADAPTER` environment variable. The value is either a bundled preset name (`bootstrap`|`tailwind`|`bulma`, case-insensitive) or the FQCN of an adapter that implements `GridAdapterInterface`. Unset, empty, or invalid values throw at container boot.
+`GridAdapterInterface` resolves through `GridAdapterResolver`, which reads the required `SS_GRID_ADAPTER` environment variable. The value is either a bundled preset name (`bootstrap`|`tailwind`|`bulma`, case-insensitive) or the FQCN of an adapter that implements **both** `GridAdapterInterface` and `ContentLayoutAdapterInterface`. Both interfaces are aliased to the same singleton (see `_config/content-layout.yml`), so an adapter implementing only the former would boot cleanly and fail later at render — the resolver rejects it up front instead. Subclassing `GridAdapter` satisfies both. Unset, empty, or invalid values throw at container boot.
 
 For a bundled preset:
 
