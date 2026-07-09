@@ -42,16 +42,20 @@ jobs:
       - run: npm run typecheck
       - run: npm run i18n:check
       - run: npx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
-      # `npm run build` regenerates client/dist and (via i18n:collect) client/lang;
-      # both are committed artifacts. A plain `git diff` only sees tracked paths, so
-      # a newly emitted chunk or .d.ts would slip through as untracked. `git add -N`
-      # registers those, but it also *stages* deletions — which a worktree-vs-index
-      # diff would then miss — so the comparison has to be against HEAD.
-      - name: Verify dist is up to date
+      - name: Verify generated files are up to date
+        # `npm run build` regenerates client/dist and (via i18n:collect) client/lang;
+        # both are committed artifacts. `git diff` only sees tracked paths, so a
+        # brand-new build output (a new chunk, .d.ts, or the compiled lang js for a
+        # newly added locale) needs the explicit untracked check below.
         run: |
           npm run build
-          git add --intent-to-add -- client/dist client/lang
-          git diff --exit-code --stat HEAD -- client/dist client/lang
+          git diff --exit-code -- client/dist client/lang
+          untracked="$(git status --porcelain --untracked-files=all -- client/dist client/lang | grep '^??' || true)"
+          if [ -n "$untracked" ]; then
+            echo "Untracked generated files — the build produced outputs that are not committed:"
+            echo "$untracked"
+            exit 1
+          fi
       - uses: dorny/test-reporter@v1
         if: always()
         with:
