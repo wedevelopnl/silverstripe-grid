@@ -40,55 +40,60 @@ test.describe('Validation errors', () => {
       await expect(sectionAlpha.getByTestId('row-title')).toHaveText(['Row Alpha-1'])
       await expect(sectionBeta.getByTestId('row-title')).toHaveText(['Row Beta-1'])
 
-      // Intercept the reorder mutation and simulate a hierarchy violation.
       // The client extracts `message` from the JSON body and passes it to
-      // showToast via ApiError.
+      // showToast via ApiError. Declared here so both steps share it.
       const violationMessage = 'Row cannot be placed at page level.'
-      await page.route('**/admin/grid/api/reorder', async (route) => {
-        await route.fulfill({
-          status: 400,
-          contentType: 'application/json',
-          body: JSON.stringify({ message: violationMessage }),
+
+      await test.step('drag Row Beta-1 into Section Alpha while the server rejects the reorder', async () => {
+        // Intercept the reorder mutation and simulate a hierarchy violation.
+        await page.route('**/admin/grid/api/reorder', async (route) => {
+          await route.fulfill({
+            status: 400,
+            contentType: 'application/json',
+            body: JSON.stringify({ message: violationMessage }),
+          })
         })
+
+        // Perform a realistic cross-section drag: move Row Beta-1 into
+        // Section Alpha. Under normal circumstances this is allowed; the
+        // mocked response forces the error path.
+        await activateDragByTitle(page, 'Row Beta-1', { overlayTestId: 'drag-overlay-row' })
+
+        const alphaRow = sectionAlpha.getByTestId('row-block').first()
+        const alphaBox = await alphaRow.boundingBox()
+        expect(alphaBox).not.toBeNull()
+        const dropX = alphaBox!.x + alphaBox!.width / 2
+        const dropY = alphaBox!.y + alphaBox!.height / 2
+        await page.mouse.move(dropX, dropY, {
+          steps: 30,
+        })
+
+        // The cross-container pending move has applied once Section Alpha shows
+        // both rows (its own + the dragged Beta row). Asserting on that visible
+        // state replaces a fixed hover-settle sleep.
+        await expect(sectionAlpha.getByTestId('row-block')).toHaveCount(2)
+
+        // Release — the mocked 400 response triggers the mutation's onError
+        // handler: snapshot restore + showToast(error.message).
+        await releaseDrag(page, dropX, dropY)
       })
 
-      // Perform a realistic cross-section drag: move Row Beta-1 into
-      // Section Alpha. Under normal circumstances this is allowed; the
-      // mocked response forces the error path.
-      await activateDragByTitle(page, 'Row Beta-1', { overlayTestId: 'drag-overlay-row' })
+      await test.step('the rejection surfaces an error toast and rolls back the tree', async () => {
+        // Assert: user sees the error toast with the backend-provided message.
+        // The toast is rendered by the SilverStripe admin's own Redux toast
+        // component (third-party markup), so we target the message text it
+        // displays rather than a class-based selector we do not own.
+        await expect(page.getByText(violationMessage)).toBeVisible({
+          timeout: 10_000,
+        })
 
-      const alphaRow = sectionAlpha.getByTestId('row-block').first()
-      const alphaBox = await alphaRow.boundingBox()
-      expect(alphaBox).not.toBeNull()
-      const dropX = alphaBox!.x + alphaBox!.width / 2
-      const dropY = alphaBox!.y + alphaBox!.height / 2
-      await page.mouse.move(dropX, dropY, {
-        steps: 30,
+        // Assert: the tree rolled back — both sections contain exactly
+        // their original rows.
+        await expect(sectionAlpha.getByTestId('row-title')).toHaveText(['Row Alpha-1'])
+        await expect(sectionBeta.getByTestId('row-title')).toHaveText(['Row Beta-1'])
+
+        await page.unroute('**/admin/grid/api/reorder')
       })
-
-      // The cross-container pending move has applied once Section Alpha shows
-      // both rows (its own + the dragged Beta row). Asserting on that visible
-      // state replaces a fixed hover-settle sleep.
-      await expect(sectionAlpha.getByTestId('row-block')).toHaveCount(2)
-
-      // Release — the mocked 400 response triggers the mutation's onError
-      // handler: snapshot restore + showToast(error.message).
-      await releaseDrag(page, dropX, dropY)
-
-      // Assert: user sees the error toast with the backend-provided message.
-      // The toast is rendered by the SilverStripe admin's own Redux toast
-      // component (third-party markup), so we target the message text it
-      // displays rather than a class-based selector we do not own.
-      await expect(page.getByText(violationMessage)).toBeVisible({
-        timeout: 10_000,
-      })
-
-      // Assert: the tree rolled back — both sections contain exactly
-      // their original rows.
-      await expect(sectionAlpha.getByTestId('row-title')).toHaveText(['Row Alpha-1'])
-      await expect(sectionBeta.getByTestId('row-title')).toHaveText(['Row Beta-1'])
-
-      await page.unroute('**/admin/grid/api/reorder')
     })
   })
 
@@ -106,34 +111,43 @@ test.describe('Validation errors', () => {
       // running adapter rather than being hardcoded to a specific preset.
       const adapter = await readAdapterConfig(page)
       const defaultKey = adapter.defaultViewport
+      // Hoisted: chosen in the first step, named in the error message in the second.
+      let invalidWidth = 0
+      let invalidOffset = 0
 
-      await page.getByRole('tab', { name: 'Grid' }).click()
+      await test.step('open the column edit form and enter an over-budget width and offset', async () => {
+        await page.getByRole('tab', { name: 'Grid' }).click()
 
-      // The default-viewport width/offset controls are form <select>s located
-      // by their submit `name` (a stable semantic hook, not a styling class).
-      const defaultWidthSelect = page.locator(`select[name="GridSettings[${defaultKey}][width]"]`)
-      const defaultOffsetSelect = page.locator(`select[name="GridSettings[${defaultKey}][offset]"]`)
+        // The default-viewport width/offset controls are form <select>s located
+        // by their submit `name` (a stable semantic hook, not a styling class).
+        const defaultWidthSelect = page.locator(`select[name="GridSettings[${defaultKey}][width]"]`)
+        const defaultOffsetSelect = page.locator(
+          `select[name="GridSettings[${defaultKey}][offset]"]`,
+        )
 
-      // The Grid tab has rendered once its width control is on screen.
-      await expect(defaultWidthSelect).toBeVisible()
+        // The Grid tab has rendered once its width control is on screen.
+        await expect(defaultWidthSelect).toBeVisible()
 
-      // Pick a width + offset combination that provably exceeds the grid
-      // regardless of column count: half + 2/3 columns > total. The default
-      // viewport row has no override toggle, so its controls are always
-      // enabled and selectOption works directly.
-      const invalidWidth = Math.floor(adapter.columnCount / 2)
-      const invalidOffset = Math.ceil((adapter.columnCount * 2) / 3)
-      await defaultWidthSelect.selectOption(String(invalidWidth))
-      await defaultOffsetSelect.selectOption(String(invalidOffset))
+        // Pick a width + offset combination that provably exceeds the grid
+        // regardless of column count: half + 2/3 columns > total. The default
+        // viewport row has no override toggle, so its controls are always
+        // enabled and selectOption works directly.
+        invalidWidth = Math.floor(adapter.columnCount / 2)
+        invalidOffset = Math.ceil((adapter.columnCount * 2) / 3)
+        await defaultWidthSelect.selectOption(String(invalidWidth))
+        await defaultOffsetSelect.selectOption(String(invalidOffset))
+      })
 
-      // Save — the backend field validator rejects the write and SilverStripe
-      // surfaces the user-visible error message.
-      await page.getByRole('button', { name: /Save/ }).first().click()
+      await test.step('saving surfaces the column-count validation error', async () => {
+        // Save — the backend field validator rejects the write and SilverStripe
+        // surfaces the user-visible error message.
+        await page.getByRole('button', { name: /Save/ }).first().click()
 
-      const errorText = new RegExp(
-        `Width ${invalidWidth} plus offset ${invalidOffset} .* exceeds ${adapter.columnCount} columns`,
-      )
-      await expect(page.getByText(errorText)).toBeVisible({ timeout: 10_000 })
+        const errorText = new RegExp(
+          `Width ${invalidWidth} plus offset ${invalidOffset} .* exceeds ${adapter.columnCount} columns`,
+        )
+        await expect(page.getByText(errorText)).toBeVisible({ timeout: 10_000 })
+      })
     })
   })
 })
