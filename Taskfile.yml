@@ -163,7 +163,7 @@ tasks:
     desc: Run PHP mutation testing (Infection) — uses Fluent container so all tests run
     deps: [ensure-up-fluent]
     cmds:
-      - "{{.COMPOSE_FLUENT}} exec app-fluent php -d memory_limit=256M vendor/bin/infection --threads=4"
+      - "{{.COMPOSE_FLUENT}} exec app-fluent php -d memory_limit=1G vendor/bin/infection --threads=4"
 
   mutate-js:
     desc: Run JavaScript mutation testing (Stryker)
