@@ -52,9 +52,14 @@ final class AllRowsInSectionStrategyTest extends TestCase
         $row1 = self::r('', '', 'first-class');
         $row2 = self::r('', '', 'second-class');
 
-        $this->logger->expects(self::atLeastOnce())
+        // Message and context asserted verbatim: the context names the discarded row,
+        // which is the only way an operator can find it in the legacy data.
+        $this->logger->expects(self::once())
             ->method('warning')
-            ->with(self::stringContains('customSectionClass'));
+            ->with(
+                'AllRowsInSectionStrategy: row customSectionClass conflicts with section value; discarding row value.',
+                ['rowId' => $row2->id, 'rowClass' => 'second-class', 'sectionClass' => 'first-class'],
+            );
 
         // Each row needs a content element, or the empty row groups are dropped
         // and no section is produced.
@@ -65,6 +70,38 @@ final class AllRowsInSectionStrategyTest extends TestCase
         );
 
         self::assertSame('first-class', $sections[0]->extraClass);
+    }
+
+    public function testSectionClassIsTakenFromTheFirstRowThatCarriesRowData(): void
+    {
+        // The leading content element forms a group with no row (and no rowData). That
+        // group must be skipped, not end the search for a section class.
+        $row = self::r('', '', 'late-class');
+
+        $sections = $this->strategy->buildHierarchy(
+            [self::e(6), $row, self::e(4)],
+            pageId: 10,
+            zone: 'main',
+        );
+
+        self::assertSame('late-class', $sections[0]->extraClass);
+    }
+
+    public function testEmptyRowGroupIsSkippedWithoutDroppingLaterRows(): void
+    {
+        // The first delimiter has no content behind it, so its group yields no columns.
+        // It must be skipped, leaving the second row intact.
+        $empty = self::r('empty-row');
+        $filled = self::r('filled-row');
+
+        $sections = $this->strategy->buildHierarchy(
+            [$empty, $filled, self::e(6)],
+            pageId: 10,
+            zone: 'main',
+        );
+
+        self::assertCount(1, $sections[0]->rows);
+        self::assertSame('filled-row', $sections[0]->rows[0]->title);
     }
 
     public function testNoWarningWhenAllRowsHaveSameCustomSectionClass(): void

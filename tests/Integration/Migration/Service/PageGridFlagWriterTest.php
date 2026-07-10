@@ -78,12 +78,31 @@ final class PageGridFlagWriterTest extends SapphireTest
     public function testSetUseGridOnPageSetsDraftOnlyByDefault(): void
     {
         $pageId = $this->getPageId();
+        // Publish so a live row exists and the default includeLive=false is observable.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $page->publishSingle();
+        DB::prepared_query('UPDATE "Page_Live" SET "UseGrid" = 0 WHERE "ID" = ?', [$pageId]);
 
         $this->createWriter()->setUseGridOnPage($pageId, true);
 
         $draftRow = DB::prepared_query('SELECT "UseGrid" FROM "Page" WHERE "ID" = ?', [$pageId])->record();
         self::assertNotNull($draftRow);
         self::assertSame(1, (int) $draftRow['UseGrid'], 'Draft UseGrid must be 1');
+
+        $liveRow = DB::prepared_query('SELECT "UseGrid" FROM "Page_Live" WHERE "ID" = ?', [$pageId])->record();
+        self::assertNotNull($liveRow);
+        self::assertSame(0, (int) $liveRow['UseGrid'], 'Live UseGrid must be untouched by default');
+    }
+
+    public function testMigrateDisabledGridPagesLogsNothingWhenNoPageIsDisabled(): void
+    {
+        // Both pages opted in, and nothing is published, so neither stage yields a
+        // disabled page. The summary line must be suppressed entirely.
+        DB::query('UPDATE "Page" SET "UseElementalGrid" = 1');
+
+        $this->createWriter()->migrateDisabledGridPages();
+
+        self::assertSame([], $this->getLogMessages('info'), 'no disabled pages means no summary log');
     }
 
     public function testSetUseGridOnPageSetsBothDraftAndLive(): void
@@ -142,6 +161,8 @@ final class PageGridFlagWriterTest extends SapphireTest
         // Pre-set UseGrid=1 so the change is detectable
         DB::prepared_query('UPDATE "Page" SET "UseGrid" = 1 WHERE "ID" = ?', [$pageId]);
         DB::prepared_query('UPDATE "Page_Live" SET "UseGrid" = 1 WHERE "ID" = ?', [$pageId2]);
+        // page2 is disabled on LIVE only: its draft flag must survive the sweep.
+        DB::prepared_query('UPDATE "Page" SET "UseGrid" = 1 WHERE "ID" = ?', [$pageId2]);
 
         $this->createWriter()->migrateDisabledGridPages();
 
@@ -154,6 +175,11 @@ final class PageGridFlagWriterTest extends SapphireTest
         $liveRow = DB::prepared_query('SELECT "UseGrid" FROM "Page_Live" WHERE "ID" = ?', [$pageId2])->record();
         self::assertNotNull($liveRow);
         self::assertSame(0, (int) $liveRow['UseGrid'], 'Live UseGrid must be 0 for live-disabled page');
+
+        // …and the live-only reconciliation must not reach into the draft table.
+        $draftRow2 = DB::prepared_query('SELECT "UseGrid" FROM "Page" WHERE "ID" = ?', [$pageId2])->record();
+        self::assertNotNull($draftRow2);
+        self::assertSame(1, (int) $draftRow2['UseGrid'], 'Draft UseGrid must be untouched for a live-only disabled page');
 
         // Verify the count summary was logged
         $infoMessages = $this->getLogMessages('info');

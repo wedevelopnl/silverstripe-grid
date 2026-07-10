@@ -57,6 +57,18 @@ final class LegacyDataReaderLocaleTest extends SapphireTest
         self::assertSame('<p>NL</p>', $elements[0]->mediaData->fields['HTML'], 'localised HTML overlays base');
     }
 
+    public function testFacadeReturnsEveryElementNotJustTheFirst(): void
+    {
+        $this->seeder->seedElement(7010, 100, self::CONTENT_CLASS, 1, ['Title' => 'First']);
+        $this->seeder->seedElement(7011, 100, self::CONTENT_CLASS, 2, ['Title' => 'Second']);
+        $this->seeder->addFieldLocalisedTables();
+
+        $elements = $this->reader->getElementsForAreaInLocale(100, 'draft', LegacyLocalisationModel::FieldLocalised, 'nl_NL', 2);
+
+        self::assertCount(2, $elements);
+        self::assertSame(['First', 'Second'], array_map(static fn ($e): string => $e->title, $elements));
+    }
+
     public function testFieldLocalisedFallsBackToBaseWhenUntranslated(): void
     {
         $this->seeder->seedElement(7001, 100, self::CONTENT_CLASS, 1, ['Title' => 'EN Only']);

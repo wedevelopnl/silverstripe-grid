@@ -188,6 +188,90 @@ final class LegacyElementReaderTest extends SapphireTest
         self::assertSame('<p>NL</p>', $elements[0]->mediaData->fields['HTML'], 'localised HTML overlays base');
     }
 
+    public function testLocaleAwareHydrationClassifiesRowsAndKeepsEveryElement(): void
+    {
+        // The locale-aware path has its own hydration loop. Give it a row delimiter
+        // followed by two content elements so classification, row-data lookup and the
+        // completeness of the returned list are all observable.
+        $this->seeder->seedElement(7100, 100, self::ROW_CLASS, 1, ['Title' => 'Row A']);
+        $this->seeder->seedRow(7100, isFluid: true, customSectionClass: 'section-a');
+        $this->seeder->seedElement(7101, 100, self::CONTENT_CLASS, 2, ['Title' => 'Content 1']);
+        $this->seeder->seedContentMedia(7101, ['HTML' => '<p>One</p>']);
+        $this->seeder->seedElement(7102, 100, self::CONTENT_CLASS, 3, ['Title' => 'Content 2']);
+        $this->seeder->seedContentMedia(7102, ['HTML' => '<p>Two</p>']);
+        $this->seeder->addFieldLocalisedTables();
+        // Both content elements are translated: the localised prefetch map must hold both,
+        // not just the first record it encounters.
+        $this->seeder->seedLocalisedElement(7101, 'nl_NL', ['Title' => 'NL Content 1']);
+        $this->seeder->seedLocalisedElement(7102, 'nl_NL', ['Title' => 'NL Content 2']);
+
+        $elements = $this->reader->getElementsForAreaInLocale(100, 'draft', LegacyLocalisationModel::FieldLocalised, 'nl_NL', 2);
+
+        self::assertCount(3, $elements);
+        self::assertSame([true, false, false], array_map(static fn (LegacyElement $e): bool => $e->isRow, $elements));
+        self::assertSame(self::ROW_CLASS, $elements[0]->className);
+        self::assertSame(self::CONTENT_CLASS, $elements[1]->className);
+        self::assertSame('NL Content 1', $elements[1]->title);
+        self::assertSame('NL Content 2', $elements[2]->title);
+
+        // Row data is fetched for the delimiter only.
+        self::assertNotNull($elements[0]->rowData);
+        self::assertSame('section-a', $elements[0]->rowData->customSectionClass);
+        self::assertNull($elements[1]->rowData);
+
+        // Every content element keeps its own media row (the prefetch map is not truncated).
+        self::assertNotNull($elements[1]->mediaData);
+        self::assertSame('<p>One</p>', $elements[1]->mediaData->fields['HTML']);
+        self::assertNotNull($elements[2]->mediaData);
+        self::assertSame('<p>Two</p>', $elements[2]->mediaData->fields['HTML']);
+    }
+
+    public function testGetElementsForAreaInLocaleDelegatesToTheUnlocalisedReaderForModelNone(): void
+    {
+        $this->seeder->seedElement(7200, 100, self::ROW_CLASS, 1, ['Title' => 'Row A']);
+        $this->seeder->seedRow(7200, isFluid: false, customSectionClass: 'plain');
+        $this->seeder->seedElement(7201, 100, self::CONTENT_CLASS, 2, ['Title' => 'Content']);
+
+        $delegated = $this->reader->getElementsForAreaInLocale(100, 'draft', LegacyLocalisationModel::None, 'nl_NL', 2);
+
+        self::assertEquals($this->reader->getElementsForArea(100, 'draft'), $delegated);
+    }
+
+    public function testGetRowDataReturnsNullForAnUnknownElement(): void
+    {
+        self::assertNull($this->reader->getRowData(999999, 'draft'));
+    }
+
+    public function testGetElementsForAreaReadsTheLiveTablesForTheLiveStage(): void
+    {
+        // Same area id on both stages, different content: only the _Live rows may surface.
+        $this->seeder->seedElement(7300, 100, self::CONTENT_CLASS, 1, ['Title' => 'Draft Title']);
+        $this->seeder->seedElement(7300, 100, self::CONTENT_CLASS, 1, ['Title' => 'Live Title'], stage: 'live');
+
+        $live = $this->reader->getElementsForArea(100, 'live');
+        self::assertCount(1, $live);
+        self::assertSame('Live Title', $live[0]->title);
+
+        $draft = $this->reader->getElementsForArea(100, 'draft');
+        self::assertCount(1, $draft);
+        self::assertSame('Draft Title', $draft[0]->title);
+    }
+
+    public function testGetElementsForAreaStageNameIsCaseInsensitive(): void
+    {
+        $this->seeder->seedElement(7400, 100, self::CONTENT_CLASS, 1, ['Title' => 'Draft Title']);
+
+        self::assertCount(1, $this->reader->getElementsForArea(100, 'DRAFT'));
+    }
+
+    public function testGetElementsForAreaThrowsOnInvalidStage(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid stage "staging", expected "draft" or "live"');
+
+        $this->reader->getElementsForArea(100, 'staging');
+    }
+
     public function testFieldLocalisedFallsBackToBaseWhenUntranslated(): void
     {
         $this->seeder->seedElement(7001, 100, self::CONTENT_CLASS, 1, ['Title' => 'EN Only']);

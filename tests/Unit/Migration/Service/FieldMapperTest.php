@@ -249,6 +249,11 @@ final class FieldMapperTest extends TestCase
         yield 'empty string → 0' => ['', 0];
         yield 'null → 0' => [null, 0];
         yield '0 string → 0' => ['0', 0];
+        // Leading-numeric but non-numeric: must normalise to 0, not to (int) '3abc' === 3.
+        // Also drives the "unrecognised value" warning through the mapper's null logger,
+        // which must stay optional.
+        yield 'leading-numeric garbage → 0' => ['3abc', 0];
+        yield 'non-numeric → 0' => ['abc', 0];
     }
 
     #[DataProvider('contentColumnsProvider')]
