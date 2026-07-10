@@ -20,6 +20,8 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 #[CoversClass(MigrateGridTask::class)]
 final class MigrateGridTaskGuardTest extends SapphireTest
 {
+    protected $usesDatabase = true;
+
     // Disable SapphireTest's per-test transaction wrapping: the LegacyTableSeeder's
     // DDL (CREATE TABLE) auto-commits in MySQL, which breaks savepoint nesting.
     protected $usesTransactions = false;

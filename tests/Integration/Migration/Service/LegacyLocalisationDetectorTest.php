@@ -14,6 +14,8 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 #[CoversClass(LegacyLocalisationDetector::class)]
 final class LegacyLocalisationDetectorTest extends SapphireTest
 {
+    protected $usesDatabase = true;
+
     protected $usesTransactions = false;
 
     private LegacyTableSeeder $seeder;

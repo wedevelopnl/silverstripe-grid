@@ -40,6 +40,9 @@ use WeDevelop\Grid\Value\ViewportConfig;
 #[CoversClass(LivePublisher::class)]
 final class LivePublisherTest extends SapphireTest
 {
+    /** $extra_dataobjects alone does not provision the temp DB — this test writes records. */
+    protected $usesDatabase = true;
+
     protected static $extra_dataobjects = [TestCustomElement::class, TestPage::class];
 
     // The publisher is only ever invoked from GridMigrationService::run(), which
