@@ -442,6 +442,9 @@ final class GridSettingsTest extends TestCase
         // Boundary: the tolerant `width <= 0` null-return only fires for ints.
         // A float width falls through to ViewportConfig::fromArray which throws.
         yield 'width as float' => ['{"default":{"width":6.5,"offset":0,"visible":true}}'];
+        // A non-int width that is numerically <= 0 must still throw, not null-return:
+        // the is_int() guard is what routes it to fromArray's type check.
+        yield 'width as non-positive string' => ['{"default":{"width":"0","offset":0,"visible":true}}'];
     }
 
     #[DataProvider('fromJsonMalformedOverrideProvider')]

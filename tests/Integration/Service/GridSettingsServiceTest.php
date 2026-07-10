@@ -242,9 +242,11 @@ final class GridSettingsServiceTest extends SapphireTest
             ['lg' => new ViewportConfig(6, 0, true)],
         );
 
-        GridTreeFactory::column($row, gridSettings: $withOverrides);
-        GridTreeFactory::column($row, gridSettings: $withOverrides);
+        // The override-less column comes FIRST: it must be skipped, not terminate
+        // the sweep, so the two later columns are still reset.
         GridTreeFactory::column($row);
+        GridTreeFactory::column($row, gridSettings: $withOverrides);
+        GridTreeFactory::column($row, gridSettings: $withOverrides);
 
         $result = $this->service->resetOverrides($page, 'main', null);
 

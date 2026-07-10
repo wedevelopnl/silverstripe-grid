@@ -269,7 +269,9 @@ final class GridNodeMapperTest extends SapphireTest
 
         $allowed = $this->mapper->getAllowedTypes($column);
 
+        // Every non-container subclass must be offered, not just the first one found.
         self::assertArrayHasKey(ContentElement::class, $allowed);
+        self::assertArrayHasKey(SummarizedContentElement::class, $allowed);
         self::assertArrayNotHasKey(Section::class, $allowed);
         self::assertArrayNotHasKey(Row::class, $allowed);
         self::assertArrayNotHasKey(Column::class, $allowed);
