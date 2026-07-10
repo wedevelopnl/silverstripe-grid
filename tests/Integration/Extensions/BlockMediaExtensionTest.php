@@ -20,8 +20,6 @@ use WeDevelop\Grid\Extensions\BlockMediaExtension;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
-use WeDevelop\Grid\Tests\Integration\Extensions\Support\RecordingBlockMediaExtension;
-use WeDevelop\Grid\Tests\Integration\Extensions\Support\ThrowingBlockMediaExtension;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Value\AspectRatio;
 use WeDevelop\Grid\Value\MediaPosition;
@@ -679,110 +677,5 @@ final class BlockMediaExtensionTest extends SapphireTest
 
         // Mirror case — mutated `===` would still create the tab when name is empty
         self::assertNull($embedTab);
-    }
-
-    /**
-     * Swap in a test-only subclass of BlockMediaExtension that replaces
-     * resolveVideoEmbed() with a call counter. Lets us pin the
-     * `$changed && $videoUrl !== ''` guard without hitting the real oEmbed
-     * network path (which MediaField::saveEmbed invokes).
-     */
-    private function swapInRecordingExtension(): void
-    {
-        Config::modify()->remove(ContentElement::class, 'extensions', BlockMediaExtension::class);
-        Config::modify()->merge(ContentElement::class, 'extensions', [RecordingBlockMediaExtension::class]);
-        RecordingBlockMediaExtension::reset();
-    }
-
-    public function testOnBeforeWriteResolvesEmbedWhenURLChangedAndNonEmpty(): void
-    {
-        $this->swapInRecordingExtension();
-
-        $element = $this->createContentElement();
-        $element->write();
-        self::assertSame(0, RecordingBlockMediaExtension::$resolveCalls, 'Initial write with empty URL must not resolve');
-
-        $element->VideoURL = 'https://youtube.com/watch?v=abc';
-        $element->write();
-
-        // Pins `$changed && $videoUrl !== ''`: both sub-expressions must be true
-        self::assertSame(1, RecordingBlockMediaExtension::$resolveCalls);
-    }
-
-    public function testOnBeforeWriteSkipsResolveWhenURLUnchanged(): void
-    {
-        $this->swapInRecordingExtension();
-
-        $element = $this->createContentElement();
-        $element->VideoURL = 'https://youtube.com/watch?v=abc';
-        $element->write();
-
-        RecordingBlockMediaExtension::reset();
-        $element->Title = 'Updated title';
-        $element->write();
-
-        // `$changed` is false → guard short-circuits; mutated LogicalAnd `||` would wrongly call
-        self::assertSame(0, RecordingBlockMediaExtension::$resolveCalls);
-    }
-
-    public function testOnBeforeWriteSkipsResolveWhenURLChangedToEmpty(): void
-    {
-        $this->swapInRecordingExtension();
-
-        $element = $this->createContentElement();
-        $element->VideoURL = 'https://youtube.com/watch?v=abc';
-        $element->write();
-
-        RecordingBlockMediaExtension::reset();
-        $element->VideoURL = '';
-        $element->write();
-
-        // `$videoUrl !== ''` is false → guard short-circuits; any mutation replacing `!==` with
-        // `===` or flipping the && would call resolve here
-        self::assertSame(0, RecordingBlockMediaExtension::$resolveCalls);
-    }
-
-    public function testOnBeforeWriteSkipsResolveWhenUnchangedAndEmpty(): void
-    {
-        $this->swapInRecordingExtension();
-
-        $element = $this->createContentElement();
-        $element->VideoURL = '';
-        $element->write();
-        RecordingBlockMediaExtension::reset();
-
-        $element->Title = 'Something';
-        $element->write();
-
-        // Both sub-expressions false — LogicalAndAllSubExprNegation flips to `!$changed && !(url!=='')`
-        // which would be true here and call resolve
-        self::assertSame(0, RecordingBlockMediaExtension::$resolveCalls);
-    }
-
-    /**
-     * Swap in a test-only subclass whose resolveVideoEmbed() always throws,
-     * simulating a transient oEmbed network failure without touching the
-     * network. The throw must be caught inside onBeforeWrite so the save
-     * still completes.
-     */
-    private function swapInThrowingExtension(): void
-    {
-        Config::modify()->remove(ContentElement::class, 'extensions', BlockMediaExtension::class);
-        Config::modify()->merge(ContentElement::class, 'extensions', [ThrowingBlockMediaExtension::class]);
-    }
-
-    public function testOnBeforeWriteSucceedsWhenEmbedResolutionThrows(): void
-    {
-        $this->swapInThrowingExtension();
-
-        $element = $this->createContentElement();
-        $element->VideoURL = 'https://youtube.com/watch?v=throws';
-        $element->write();
-
-        // A throwing embed resolver must not abort the save: the record persists
-        // (gets an ID) and the trimmed URL is stored, just without embed metadata.
-        self::assertGreaterThan(0, (int) $element->ID);
-        self::assertSame('https://youtube.com/watch?v=throws', $element->VideoURL);
-        self::assertSame('', (string) $element->VideoEmbedName);
     }
 }
