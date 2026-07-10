@@ -16,6 +16,7 @@ use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\ElementPlacementService;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Tests\Integration\Support\RejectOnReindexExtension;
 use WeDevelop\Grid\Validation\ReorderValidator;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
@@ -24,6 +25,16 @@ use WeDevelop\Grid\Value\ViewportConfig;
 final class ElementPlacementServiceTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
+
+    /**
+     * Abstains for every element except the specific title/sort pair the rollback
+     * test sets up, so the rest of this class is unaffected.
+     *
+     * @var array<class-string, list<class-string>>
+     */
+    protected static $required_extensions = [
+        GridElement::class => [RejectOnReindexExtension::class],
+    ];
 
     private ElementPlacementService $service;
 
@@ -37,6 +48,44 @@ final class ElementPlacementServiceTest extends SapphireTest
         Versioned::set_stage(Versioned::DRAFT);
 
         $this->service = Injector::inst()->get(ElementPlacementService::class);
+    }
+
+    public function testCrossParentMoveReindexesEveryTargetSiblingNotJustTheMovedElement(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $sourceSection = GridTreeFactory::section($page);
+        $targetSection = GridTreeFactory::section($page);
+
+        $moved = GridTreeFactory::row($sourceSection, sort: 1);
+        $existingFirst = GridTreeFactory::row($targetSection, sort: 1);
+        $existingSecond = GridTreeFactory::row($targetSection, sort: 2);
+
+        // Insert at the front of the target: every existing target sibling shifts down
+        // and must be persisted, not only the moved element.
+        $result = $this->service->reorder($moved, $targetSection, null);
+
+        self::assertTrue($result->isOk());
+        self::assertSame(1, (int) Row::get()->byID((int) $moved->ID)->Sort);
+        self::assertSame(2, (int) Row::get()->byID((int) $existingFirst->ID)->Sort);
+        self::assertSame(3, (int) Row::get()->byID((int) $existingSecond->ID)->Sort);
+    }
+
+    public function testReorderRollsBackTheWholeBatchWhenALaterSiblingWriteFails(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        $first = GridTreeFactory::section($page, sort: 1, title: 'first');
+        GridTreeFactory::section($page, sort: 2, title: RejectOnReindexExtension::REJECTED_TITLE);
+        $last = GridTreeFactory::section($page, sort: 3, title: 'last');
+
+        // Moving $last to the front reindexes to [last=1, first=2, rejected=3]. The
+        // rejected element is written last, after two successful writes — so without a
+        // transaction those two writes would survive the failure.
+        $result = $this->service->reorder($last, $page, null);
+
+        self::assertTrue($result->isErr());
+        self::assertSame(3, (int) Section::get()->byID((int) $last->ID)->Sort, 'the failed batch must roll back');
+        self::assertSame(1, (int) Section::get()->byID((int) $first->ID)->Sort);
     }
 
     public function testSameParentMoveToFront(): void

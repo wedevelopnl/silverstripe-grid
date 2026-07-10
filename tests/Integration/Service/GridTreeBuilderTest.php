@@ -11,10 +11,12 @@ use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\GridTreeBuilder;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Tests\Integration\Support\VetoViewByTitleExtension;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridSettings;
 
@@ -22,6 +24,16 @@ use WeDevelop\Grid\Value\GridSettings;
 final class GridTreeBuilderTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
+
+    /**
+     * Abstains for every element except those titled HIDDEN_TITLE, so a sibling
+     * list can mix viewable and non-viewable elements.
+     *
+     * @var array<class-string, list<class-string>>
+     */
+    protected static $required_extensions = [
+        GridElement::class => [VetoViewByTitleExtension::class],
+    ];
 
     private GridTreeBuilder $builder;
 
@@ -110,6 +122,32 @@ final class GridTreeBuilderTest extends SapphireTest
         $tree = $this->builder->buildForPage($page, 'main');
 
         self::assertSame([], $tree[$page->ID]);
+    }
+
+    public function testPermissionFilteringSkipsNonViewableWithoutDroppingLaterSiblings(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        GridTreeFactory::section($page, sort: 1, title: VetoViewByTitleExtension::HIDDEN_TITLE);
+        $visible = GridTreeFactory::section($page, sort: 2, title: 'Visible');
+
+        $tree = $this->builder->buildForPage($page, 'main');
+
+        $nodes = $tree[$page->ID];
+        self::assertCount(1, $nodes);
+        self::assertSame((int) $visible->ID, $nodes[0]->self->id);
+    }
+
+    public function testFindContainersOfTypeSkipsNonViewableWithoutDroppingLaterSiblings(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        GridTreeFactory::row($section, sort: 1, title: VetoViewByTitleExtension::HIDDEN_TITLE);
+        $visible = GridTreeFactory::row($section, sort: 2, title: 'Visible Row');
+
+        $containers = $this->builder->findContainersOfType($page, 'main', ContainerType::Row);
+
+        self::assertCount(1, $containers);
+        self::assertSame((int) $visible->ID, $containers[0]['id']);
     }
 
     public function testMultipleSectionsWithMultipleRows(): void

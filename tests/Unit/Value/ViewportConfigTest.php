@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Unit\Value;
 
+use Closure;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -33,25 +34,31 @@ final class ViewportConfigTest extends TestCase
         yield '1 column' => [1];
     }
 
-    public function testToArrayReturnsExpectedShape(): void
-    {
-        $config = new ViewportConfig(width: 8, offset: 3, visible: true);
+    // ─── fromArray ──────────────────────────────────────────────
 
-        self::assertSame(
-            ['width' => 8, 'offset' => 3, 'visible' => true],
-            $config->toArray(),
-        );
+    /**
+     * @param array{width: int, offset: int, visible: bool} $data
+     */
+    #[DataProvider('wellFormedPayloadProvider')]
+    public function testFromArrayAcceptsWellFormedPayloadAndRoundTrips(array $data): void
+    {
+        self::assertSame($data, ViewportConfig::fromArray($data)->toArray());
     }
 
-    public function testRoundTripFromArrayToArray(): void
+    /**
+     * @return iterable<string, array{array{width: int, offset: int, visible: bool}}>
+     */
+    public static function wellFormedPayloadProvider(): iterable
     {
-        $data = ['width' => 5, 'offset' => 2, 'visible' => false];
-
-        $config = ViewportConfig::fromArray($data);
-
-        self::assertSame($data, $config->toArray());
+        yield 'typical' => [['width' => 5, 'offset' => 2, 'visible' => false]];
+        // Boundary: width 1 and offset 0 sit exactly on the accepted side of the range guards.
+        yield 'smallest legal width and offset' => [['width' => 1, 'offset' => 0, 'visible' => true]];
+        yield 'full width' => [['width' => 12, 'offset' => 0, 'visible' => true]];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     #[DataProvider('malformedPayloadProvider')]
     public function testFromArrayThrowsOnMalformedPayload(array $data): void
     {
@@ -76,26 +83,76 @@ final class ViewportConfigTest extends TestCase
         yield 'offset negative' => [['width' => 6, 'offset' => -2, 'visible' => true]];
     }
 
-    public function testFromArrayIncludesContextInErrorMessage(): void
+    /**
+     * Both entry points must name the offending path so a bad override is traceable.
+     */
+    #[DataProvider('contextPropagationProvider')]
+    public function testErrorMessageIncludesTheContextPath(Closure $invoke): void
     {
         try {
-            ViewportConfig::fromArray(['width' => 6, 'offset' => 0], 'overrides["md"]');
+            $invoke();
             self::fail('Expected InvalidGridValueException');
         } catch (InvalidGridValueException $e) {
             self::assertStringContainsString('overrides["md"]', $e->getMessage());
         }
     }
 
-    public function testJsonEncodeProducesSerializationShape(): void
+    /**
+     * @return iterable<string, array{Closure}>
+     */
+    public static function contextPropagationProvider(): iterable
     {
-        $config = new ViewportConfig(width: 4, offset: 1, visible: false);
+        yield 'fromArray' => [
+            static fn (): ViewportConfig => ViewportConfig::fromArray(
+                ['width' => 6, 'offset' => 0],
+                'overrides["md"]',
+            ),
+        ];
+        yield 'mapFromArray' => [
+            static fn (): array => ViewportConfig::mapFromArray(
+                ['md' => ['width' => 6, 'visible' => true]],
+                'overrides',
+            ),
+        ];
+    }
 
+    // ─── serialization ──────────────────────────────────────────
+
+    /**
+     * @param array{width: int, offset: int, visible: bool} $expected
+     */
+    #[DataProvider('wireShapeProvider')]
+    public function testToArrayReturnsWireShape(ViewportConfig $config, array $expected): void
+    {
+        self::assertSame($expected, $config->toArray());
+    }
+
+    /**
+     * @param array{width: int, offset: int, visible: bool} $expected
+     */
+    #[DataProvider('wireShapeProvider')]
+    public function testJsonEncodeMatchesWireShape(ViewportConfig $config, array $expected): void
+    {
         self::assertSame(
-            '{"width":4,"offset":1,"visible":false}',
+            json_encode($expected, JSON_THROW_ON_ERROR),
             json_encode($config, JSON_THROW_ON_ERROR),
         );
     }
 
+    /**
+     * @return iterable<string, array{ViewportConfig, array{width: int, offset: int, visible: bool}}>
+     */
+    public static function wireShapeProvider(): iterable
+    {
+        yield 'visible' => [
+            new ViewportConfig(width: 8, offset: 3, visible: true),
+            ['width' => 8, 'offset' => 3, 'visible' => true],
+        ];
+        yield 'hidden' => [
+            new ViewportConfig(width: 4, offset: 1, visible: false),
+            ['width' => 4, 'offset' => 1, 'visible' => false],
+        ];
+    }
     public function testMapFromArrayBuildsKeyedViewportConfigs(): void
     {
         $map = ViewportConfig::mapFromArray(
@@ -111,65 +168,37 @@ final class ViewportConfigTest extends TestCase
         self::assertTrue($map['lg']->equals(new ViewportConfig(4, 2, false)));
     }
 
-    public function testMapFromArraySkipsEmptyKeyAndNonArrayValue(): void
+    /**
+     * Unusable entries are skipped inline rather than aborting the map.
+     *
+     * @param array<string, mixed> $input
+     * @param list<string> $expectedKeys
+     */
+    #[DataProvider('mapSkipProvider')]
+    public function testMapFromArraySkipsUnusableEntries(array $input, array $expectedKeys): void
     {
-        $map = ViewportConfig::mapFromArray(
-            [
-                'md' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                '' => ['width' => 4, 'offset' => 0, 'visible' => true],
-                'lg' => 'not-an-array',
-            ],
-            'overrides',
-        );
-
-        self::assertSame(['md'], array_keys($map));
+        self::assertSame($expectedKeys, array_keys(ViewportConfig::mapFromArray($input, 'overrides')));
     }
 
-    public function testMapFromArraySkipsNonArrayValueAndKeepsLaterValidEntry(): void
+    /**
+     * @return iterable<string, array{array<string, mixed>, list<string>}>
+     */
+    public static function mapSkipProvider(): iterable
     {
-        // Pins the `!is_array($data)` arm of the skip guard. A valid key with a
-        // non-array value must be silently skipped, not routed to fromArray
-        // (which would throw and abort the whole map). Ordering the non-array
-        // first proves the skip happens inline rather than aborting the loop.
-        $map = ViewportConfig::mapFromArray(
-            [
-                'md' => 'not-an-array',
-                'lg' => ['width' => 4, 'offset' => 2, 'visible' => false],
-            ],
-            'overrides',
-        );
+        $valid = ['width' => 6, 'offset' => 0, 'visible' => true];
 
-        self::assertSame(['lg'], array_keys($map));
-        self::assertTrue($map['lg']->equals(new ViewportConfig(4, 2, false)));
+        yield 'empty input' => [[], []];
+        yield 'empty key' => [['md' => $valid, '' => $valid], ['md']];
+        yield 'non-array value' => [['md' => $valid, 'lg' => 'not-an-array'], ['md']];
+        // Ordering the non-array first proves the skip happens inline rather than
+        // aborting the loop before the later valid entry is reached.
+        yield 'non-array first, later valid entry kept' => [
+            ['md' => 'not-an-array', 'lg' => $valid],
+            ['lg'],
+        ];
     }
 
-    public function testMapFromArrayThrowsOnStructurallyMalformedEntry(): void
-    {
-        $this->expectException(InvalidGridValueException::class);
-
-        ViewportConfig::mapFromArray(
-            ['md' => ['width' => 6, 'visible' => true]],
-            'overrides',
-        );
-    }
-
-    public function testMapFromArrayErrorMessageIncludesKeyPath(): void
-    {
-        try {
-            ViewportConfig::mapFromArray(
-                ['md' => ['width' => 6, 'visible' => true]],
-                'overrides',
-            );
-            self::fail('Expected InvalidGridValueException');
-        } catch (InvalidGridValueException $e) {
-            self::assertStringContainsString('overrides["md"]', $e->getMessage());
-        }
-    }
-
-    public function testMapFromArrayReturnsEmptyForEmptyInput(): void
-    {
-        self::assertSame([], ViewportConfig::mapFromArray([], 'overrides'));
-    }
+    // ─── constructor contract ───────────────────────────────────
 
     #[DataProvider('degenerateBoundsProvider')]
     public function testConstructorDoesNotThrowOnDegenerateBounds(int $width, int $offset): void
@@ -193,31 +222,27 @@ final class ViewportConfigTest extends TestCase
         yield 'negative offset' => [6, -1];
     }
 
-    public function testEqualsReturnsTrueForIdenticalValues(): void
-    {
-        $first = new ViewportConfig(width: 6, offset: 1, visible: true);
-        $second = new ViewportConfig(width: 6, offset: 1, visible: true);
+    // ─── equals ─────────────────────────────────────────────────
 
-        self::assertTrue($first->equals($second));
-    }
-
-    #[DataProvider('unequalConfigProvider')]
-    public function testEqualsReturnsFalseWhenAnyFieldDiffers(
+    #[DataProvider('equalityProvider')]
+    public function testEqualsComparesEveryField(
         ViewportConfig $first,
         ViewportConfig $second,
+        bool $expected,
     ): void {
-        self::assertFalse($first->equals($second));
+        self::assertSame($expected, $first->equals($second));
     }
 
     /**
-     * @return iterable<string, array{ViewportConfig, ViewportConfig}>
+     * @return iterable<string, array{ViewportConfig, ViewportConfig, bool}>
      */
-    public static function unequalConfigProvider(): iterable
+    public static function equalityProvider(): iterable
     {
         $base = new ViewportConfig(width: 6, offset: 1, visible: true);
 
-        yield 'different width' => [$base, new ViewportConfig(width: 4, offset: 1, visible: true)];
-        yield 'different offset' => [$base, new ViewportConfig(width: 6, offset: 0, visible: true)];
-        yield 'different visible' => [$base, new ViewportConfig(width: 6, offset: 1, visible: false)];
+        yield 'identical values' => [$base, new ViewportConfig(width: 6, offset: 1, visible: true), true];
+        yield 'different width' => [$base, new ViewportConfig(width: 4, offset: 1, visible: true), false];
+        yield 'different offset' => [$base, new ViewportConfig(width: 6, offset: 0, visible: true), false];
+        yield 'different visible' => [$base, new ViewportConfig(width: 6, offset: 1, visible: false), false];
     }
 }

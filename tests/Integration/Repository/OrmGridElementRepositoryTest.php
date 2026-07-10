@@ -171,6 +171,25 @@ final class OrmGridElementRepositoryTest extends SapphireTest
         self::assertSame((int) $row->ID, (int) $results[0]->ID);
     }
 
+    public function testFindByParentsSortsMergedResultsBySortThenId(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        // Queried first (Page class), but must sort last on Sort.
+        $section = GridTreeFactory::section($page, sort: 2);
+        // Queried second (Section class), but must sort first. Equal Sorts tie-break on ID.
+        $rowA = GridTreeFactory::row($section, sort: 1);
+        $rowB = GridTreeFactory::row($section, sort: 1);
+
+        $results = $this->repository->findByParents([
+            Page::class => [(int) $page->ID],
+            Section::class => [(int) $section->ID],
+        ]);
+
+        $ids = array_map(static fn (GridElement $element): int => (int) $element->ID, $results);
+        self::assertSame([(int) $rowA->ID, (int) $rowB->ID, (int) $section->ID], $ids);
+    }
+
     public function testFindByParentsMultipleClasses(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
