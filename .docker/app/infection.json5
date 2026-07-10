@@ -10,18 +10,28 @@
     },
     mutators: {
         "@default": true,
-        // KNOWN EQUIVALENT SURVIVORS — considered, deliberately NOT suppressed (no safe
-        // narrow regex or proof too weak to scope without risking a killable mutant):
-        //   - BlockMediaExtension L113 ReturnRemoval (`return false;` text recurs across the class)
-        //   - ReorderValidator L27 ReturnRemoval (`return Result::ok($element);` collides with killable L51)
-        //   - GridElementService L289 FalseValue (same source text as the killable L264 case)
-        //   - HierarchyValidationExtension L28 ReturnRemoval (bare `return;` text recurs)
-        //   - DBGridSettings L156 ReturnRemoval / L170 InstanceOf_ / L171 MethodCallRemoval
-        //     (`parent::setValue(null, ...)` text collides between L156 and L171 — no safe scope)
-        //   - GridElementReport L116 ReturnRemoval (`return sprintf('<em>...')` — left as survivor;
-        //     the killable L115 `$link === null` branch is what we assert, not the markup)
-        //   - ElementPlacementService L140 Identical (`$conn === null` appears in 4 unrelated guards
-        //     — GridElement L518, Transactional L44, GridMigrationService L140 — no line-unique scope)
+        // KNOWN EQUIVALENT SURVIVORS are suppressed per-mutator below, each with the proof
+        // inline. Prefer, in order: (1) delete the dead code so no mutant is generated,
+        // (2) assert the behaviour and kill the mutant, (3) suppress with the narrowest
+        // scope. `ignoreSourceCodeByRegex` patterns do NOT match across newlines, so a
+        // multi-line mutated node needs `ignore` (Class, Class::method, Class::method::line).
+        //
+        // DELIBERATE SURVIVORS (escaped, NOT suppressed — suppressing them would also
+        // silence a killable twin sharing the same source line and mutator):
+        //   - LivePublisher `$liveSettings->default->visible ? 1 : 0` and
+        //     `$liveElement->showTitle ? 1 : 0`, and PageGridFlagWriter `$enabled ? 1 : 0` —
+        //     the DecrementInteger variant `? 1 : -1` is equivalent because every target column
+        //     is `tinyint unsigned`, which clamps -1 to 0. The `? 0 : 0` variant on the same
+        //     line IS killed by tests, and neither ignoreSourceCodeByRegex nor ignore-by-line
+        //     can separate the two — suppressing would hide a live check.
+        //     These three are the ONLY escaped mutants in the suite; everything else is
+        //     either killed or suppressed with a proof at its mutator entry below.
+        //
+        // Previously listed here as unkillable, now actually killed by tests — do not re-add:
+        //   - ReorderValidator same-parent shortcut (Identical), GridElementReport L116
+        //     ReturnRemoval, ElementPlacementService Identical ($conn === null) — killed by a
+        //     mid-batch write-failure rollback test, GridElementService insertAtStart default
+        //     (the dead default was deleted instead).
         //   - GridEditorField filter_var min_range / FieldMapper sizeFields[$oldKey] Increment:
         //     these specific Increments ARE killed by tests; only their Decrement twins are ignored
         // PublicVisibility/ProtectedVisibility are disabled because the framework
@@ -84,6 +94,14 @@
             ],
         },
         "TrueValue": {
+            ignore: [
+                // PageGridFlagWriter::resolveUseGridTable — equivalent: classForField() walks a
+                // class's ancestors, so whether or not SiteTree itself is included in the scan the
+                // loop resolves UseGrid to the same declaring class (and hence the same table).
+                // (LegacyPageDiscovery's identical-looking subclassesFor(…, true) is NOT equivalent
+                // and is killed by a test — it inspects the table's own columns, not ancestors.)
+                "WeDevelop\\Grid\\Migration\\Service\\PageGridFlagWriter::resolveUseGridTable",
+            ],
             ignoreSourceCodeByRegex: [
                 // Auto-scaffold config restoration in migration finally blocks —
                 // process-global state invisible within a single test run
@@ -94,6 +112,9 @@
                 // LegacyDataReader L383: $checked is probed only via isset(); the assigned value
                 // is irrelevant (same rationale as the $seen rule above)
                 ".*\\$checked\\[[^\\]]+\\]\\s*=\\s*true\\b.*",
+                // MigrationIdMap::markContainerPublished: publishedContainers is probed solely via
+                // array_key_exists() in isContainerPublished(), so the stored value is never read
+                ".*\\$this->publishedContainers\\[\\$containerId\\]\\s*=\\s*true\\b.*",
                 // DBGridSettings L77: DefaultVisible is Boolean NOT NULL DEFAULT 0, read only after a
                 // DefaultWidth !== null guard — so the `?? true` fallback is unreachable
                 ".*getField\\('DefaultVisible'\\)\\s*\\?\\?\\s*true.*",
@@ -158,6 +179,16 @@
             ],
         },
         "MethodCallRemoval": {
+            ignore: [
+                // LivePublisher::createLiveOnlyHierarchy `$newElement->write();` — equivalent:
+                // Versioned::writeToStage(LIVE) on a brand-new record inserts the base (draft)
+                // table row regardless, so the explicit draft write adds no observable state.
+                // Line-scoped, NOT by source regex: DraftHierarchyWriter has the identical
+                // `$newElement->write();` statement, and there it IS killable (nothing else
+                // writes the record). The writeToStage()/markContainerPublished() calls in this
+                // same method are also killable, so a method-wide ignore would mask them.
+                "WeDevelop\\Grid\\Migration\\Service\\LivePublisher::createLiveOnlyHierarchy::465",
+            ],
             ignoreSourceCodeByRegex: [
                 // SilverStripe extension-hook dispatch (->extend('hook', …)); third-party contract, inert without active extensions in the test env. Two forms: single-line and the multi-line opener (AbstractMigrationTask::extend).
                 ".*->extend\\('[a-zA-Z]+',.*",
@@ -208,6 +239,19 @@
                 // FixtureLoader L85: idempotency reset; the test DB starts empty so the pre-load reset
                 // removes nothing
                 ".*\\$this->reset\\(\\);.*",
+                // DBGridSettings::applyGridSettings — equivalent: the field is already bound to its
+                // record by the time applyGridSettings() runs (dbObject()/setCastedField bind it), so
+                // this defensive re-bind has no observable effect. Persistence round-trips prove it:
+                // they pass with the call removed. The `return`-prefixed twin on the line above is a
+                // return statement, which MethodCallRemoval does not target.
+                ".*parent::setValue\\(null, \\$record, \\$markChanged\\);.*",
+            ],
+        },
+        "InstanceOf_": {
+            ignoreSourceCodeByRegex: [
+                // DBGridSettings::applyGridSettings — equivalent for the same reason as the
+                // MethodCallRemoval above: the guarded re-bind is redundant either way.
+                ".*if \\(\\$record instanceof ModelData\\).*",
             ],
         },
         // Private methods returning pure option arrays (aspect ratio labels, media position
@@ -265,6 +309,11 @@
                 ".*\\$size === 0 && \\$offset === 0 && \\$visible === null.*",
                 // FieldMapper L223: width is always >= 1 by construction, so max(1,..) == max(0,..)
                 ".*\\\\max\\(1, \\\\min\\(\\$config->width.*",
+                // FieldMapper clampViewportConfig offset line: both decrements are equivalent.
+                // max(0,..) → max(-1,..) can never fire (every caller pre-clamps the offset with
+                // max(0, ...)), and `columnCount - 1` → `- 0` only raises the min() ceiling, which
+                // the `width + offset > columnCount` reclamp on the next lines immediately undoes.
+                ".*\\\\max\\(0, \\\\min\\(\\$config->offset.*",
                 // BlockMediaExtension L495: columnCount is positive-int, so max(1,n) == max(0,n)
                 ".*return max\\(1, \\$columnCount\\);.*",
                 // BlockMediaExtension L554/L562: ContentColumns/GapSize are Int NOT NULL DEFAULT 0; ?? 0 is dead
@@ -286,6 +335,11 @@
                 // message; the pass/fail decision is independent (the existing same-line sprintf rule
                 // does not cover this argument-on-its-own-line form)
                 ".*\\$this->columnCount - 1,.*",
+                // LivePublisher::getNextSectionSort: the `: 0` fallback only fires when the page has
+                // no sections. Decrementing it to -1 makes the sort offset -1, driving the computed
+                // section Sort to 0 — which GridElement::ensureSortSet() reassigns to the same value
+                // on write. (The Increment twin IS killed: it shifts the sort to 2.)
+                ".*\\\\is_numeric\\(\\$max\\) \\? \\(int\\) \\$max : 0.*",
             ],
         },
         "IncrementInteger": {
@@ -380,11 +434,21 @@
             ],
         },
         "ArrayOneItem": {
+            ignore: [
+                // FluentMigrationOrchestrator::localePlan line 117 — equivalent: on the None model
+                // the plan holds at most the default locale (one entry, or none), so keep-first is
+                // the identity. Line-scoped: the method's OTHER `return $plan;` (the multi-locale
+                // one) IS killed by FluentMigrationOrchestratorTest, and a source regex matching
+                // `return $plan;` would silence both.
+                "WeDevelop\\Grid\\Migration\\Service\\FluentMigrationOrchestrator::localePlan::117",
+            ],
             ignoreSourceCodeByRegex: [
                 // LegacyDataReader L300: single-element literal; keep-first is identity
                 ".*\\$pages\\[\\] = \\['pageId' => \\$pageId\\].*",
-                // GridNodeMapper L125: the only array literal in range is the empty init; nothing to reduce
-                ".*\\$types = \\[\\];.*",
+                // GridTreeBuilder::buildForPage: $tree is built with exactly one key ($pageId),
+                // so keep-first is the identity. The single-key shape is itself asserted by
+                // GridTreeBuilderTest (assertArrayHasKey($page->ID, $tree)).
+                ".*return \\$tree;.*",
             ],
         },
         "NullSafePropertyCall": {
@@ -408,10 +472,17 @@
             ],
         },
         "UnwrapArrayValues": {
-            ignoreSourceCodeByRegex: [
-                // ElementPlacementService L185: every caller re-sequences via excludeElement's array_values
-                // before any key-sensitive consumer
-                ".*static fn \\(GridElement \\$s\\): bool => \\$s instanceof Section.*",
+            // FieldMapper::mapMediaFields — equivalent: $absentColumns is only tested with
+            // `!== []` and rendered with implode(), both of which ignore array keys.
+            // ElementPlacementService::filterByZone — equivalent: both call sites immediately
+            // wrap the result in excludeElement(), whose own array_values() re-sequences the
+            // keys before resolveInsertionIndex()/reindex() ever read them. Scoped by method
+            // (the sole array_values in it) rather than by source regex: the mutated node
+            // spans several lines, and ignoreSourceCodeByRegex patterns do not match across
+            // newlines, so the previous regex here never applied.
+            ignore: [
+                "WeDevelop\\Grid\\Service\\ElementPlacementService::filterByZone",
+                "WeDevelop\\Grid\\Migration\\Service\\FieldMapper::mapMediaFields",
             ],
         },
         "UnwrapArrayCombine": {
@@ -421,11 +492,69 @@
                 ".*\\['h1', 'h2', 'h3', 'h4', 'h5', 'h6'\\].*",
             ],
         },
+        // LivePublisher equivalents. The Sort ones share a single cause: GridElement's
+        // ensureSortSet() reassigns the next free Sort on write whenever Sort <= 0, so a
+        // mutation that drives the computed sort non-positive produces the identical
+        // stored value. Verified against the schema, not assumed.
+        "Break_": {
+            // AbstractMigrationTask::resolveViewportKeyMap — equivalent: the inner loop matches
+            // adapter keys case-insensitively, and no adapter can declare two viewport keys that
+            // are equal after strtolower(), so at most one key ever matches. break and continue
+            // therefore assign the same value.
+            ignore: ["WeDevelop\\Grid\\Migration\\Task\\AbstractMigrationTask::resolveViewportKeyMap"],
+        },
+        "LessThanOrEqualTo": {
+            // BlockMediaExtension::getColSize — equivalent: ContentColumns is `Int NOT NULL
+            // DEFAULT 0`, so the only value the `<= 0` vs `< 0` boundary can differ on is 0,
+            // and there max(1, $columnCount) === max(1, $columnCount - 0).
+            ignore: ["WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getColSize"],
+        },
+        "Plus": {
+            // createLiveOnlyHierarchy: `$migrationSection->sort + $sortOffset`. With one
+            // live-only section the minus variant yields <= 0, which ensureSortSet()
+            // normalises back to the same appended Sort.
+            ignore: ["WeDevelop\\Grid\\Migration\\Service\\LivePublisher::createLiveOnlyHierarchy"],
+        },
+        "Increment": {
+            // createLiveOnlyHierarchy: `$elementSort++`. Decrementing drives every element
+            // after the first to Sort <= 0, and ensureSortSet() then hands out the same
+            // sequential values on write.
+            ignore: ["WeDevelop\\Grid\\Migration\\Service\\LivePublisher::createLiveOnlyHierarchy"],
+        },
         "ReturnRemoval": {
+            ignore: [
+                // LivePublisher::publishContainerChain — equivalent: without the
+                // already-published short circuit the chain is simply re-published, and
+                // writeToStage(LIVE) from the same draft records is idempotent.
+                "WeDevelop\\Grid\\Migration\\Service\\LivePublisher::publishContainerChain",
+                // HierarchyValidationExtension::updateValidate — equivalent: falling through the
+                // isOk() early return iterates errors(), which is empty for an ok Result.
+                // Method-scoped because the bare `return;` text recurs across the codebase.
+                "WeDevelop\\Grid\\Validation\\HierarchyValidationExtension::updateValidate",
+                // BlockMediaExtension::getMediaImageSourceURL line 233 — equivalent: the
+                // `!$image->exists()` early return is a fast path. Falling through, Fill()/
+                // ScaleWidth() on a non-existent image both return null, which the
+                // `$resized === null` guard below turns into the same null result.
+                // Line-scoped so that guard's own `return null;` stays exposed.
+                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getMediaImageSourceURL::233",
+                // ReorderValidator::validate line 29 — equivalent: a same-parent move satisfies
+                // checkHierarchyRules() trivially, so the shortcut and the fallthrough both return
+                // an ok Result. Line-scoped: the method's other return IS killable, and the
+                // `return Result::ok($element);` text also appears at a killable site further down.
+                "WeDevelop\\Grid\\Validation\\ReorderValidator::validate::29",
+            ],
             ignoreSourceCodeByRegex: [
                 // FixtureLoader L200: Page is the sole page class; the fallback return captures the
                 // identical [Page::class, id], so removing this early return falls through to the same value
                 ".*return \\[\\$class, \\$firstId\\];.*",
+                // LegacyElementReader::getElementsForAreaInLocale — equivalent: for model None the
+                // fallthrough takes the non-Isolated query (identical SQL, no LocaleID filter) and
+                // sets overlayLocale = null, producing exactly what getElementsForArea() returns.
+                ".*return \\$this->getElementsForArea\\(\\$areaId, \\$stage\\);.*",
+                // DBGridSettings::setValue — equivalent: falling through re-invokes the parent with the
+                // raw unparseable string instead of null, and DBComposite::setValue only reads
+                // isset($value[$field]) with non-numeric offsets, which is false for any string.
+                ".*return parent::setValue\\(null, \\$record, \\$markChanged\\);.*",
             ],
         },
     },
