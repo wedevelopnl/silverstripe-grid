@@ -13,6 +13,8 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 #[CoversClass(LegacyDataReader::class)]
 final class LegacyDataReaderLocaleTest extends SapphireTest
 {
+    protected $usesDatabase = true;
+
     protected $usesTransactions = false;
 
     private const string CONTENT_CLASS = 'DNADesign\\Elemental\\Models\\ElementContent';

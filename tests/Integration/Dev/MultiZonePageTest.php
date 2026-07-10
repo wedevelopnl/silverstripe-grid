@@ -13,6 +13,9 @@ use WeDevelop\Grid\Forms\GridEditorField;
 #[CoversClass(MultiZonePage::class)]
 final class MultiZonePageTest extends SapphireTest
 {
+    /** Every test writes a MultiZonePage, so SapphireTest must provision the temp DB. */
+    protected $usesDatabase = true;
+
     protected function setUp(): void
     {
         parent::setUp();

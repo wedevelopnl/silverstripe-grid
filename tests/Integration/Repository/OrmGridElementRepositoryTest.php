@@ -77,34 +77,39 @@ final class OrmGridElementRepositoryTest extends SapphireTest
         self::assertSame([], $results);
     }
 
-    public function testFindByParentIdsFiltersParentClass(): void
+    public function testFindByParentIdsMatchesParentIdAndParentClassAsAPair(): void
     {
-        $page = $this->objFromFixture(Page::class, 'test_page');
+        // Page IDs and element IDs share no namespace, so the same numeric ParentID
+        // can legitimately refer to a page or to an element. Manufacture that
+        // collision on a synthetic ID rather than hoping two auto-increments align:
+        // both records below hang off ParentID 987654, differing only in ParentClass.
+        $parentId = 987654;
 
-        // Section under page (ParentClass = Page)
-        $section = GridTreeFactory::section($page);
-        // Row under section (ParentClass = Section)
-        $row = GridTreeFactory::row($section);
+        $sectionOfPage = Section::create();
+        $sectionOfPage->ParentID = $parentId;
+        $sectionOfPage->ParentClass = Page::class;
+        $sectionOfPage->write();
 
-        // Query with page's ID but Section::class as parentClass
-        // The row has ParentID = section->ID, not page->ID, so nothing matches
-        // unless IDs happen to collide. Instead, query with section's ID.
-        $results = $this->repository->findByParentIds(
-            [(int) $section->ID],
-            Section::class,
-        );
+        $rowOfSection = Row::create();
+        $rowOfSection->ParentID = $parentId;
+        $rowOfSection->ParentClass = Section::class;
+        $rowOfSection->write();
 
-        // Only the row should be returned (parented to section with Section::class)
-        self::assertCount(1, $results);
-        self::assertSame((int) $row->ID, (int) $results[0]->ID);
+        // A second page-parented section under a different ParentID: without it, a query
+        // that dropped the ParentID filter would still return exactly one record.
+        $sectionOfOtherPage = Section::create();
+        $sectionOfOtherPage->ParentID = $parentId + 1;
+        $sectionOfOtherPage->ParentClass = Page::class;
+        $sectionOfOtherPage->write();
 
-        // Same ID but wrong parent class returns nothing
-        $results = $this->repository->findByParentIds(
-            [(int) $section->ID],
-            Page::class,
-        );
+        // Each query must match the (ParentID, ParentClass) pair, never one alone.
+        $pageChildren = $this->repository->findByParentIds([$parentId], Page::class);
+        self::assertCount(1, $pageChildren);
+        self::assertSame((int) $sectionOfPage->ID, (int) $pageChildren[0]->ID);
 
-        self::assertSame([], $results);
+        $sectionChildren = $this->repository->findByParentIds([$parentId], Section::class);
+        self::assertCount(1, $sectionChildren);
+        self::assertSame((int) $rowOfSection->ID, (int) $sectionChildren[0]->ID);
     }
 
     public function testFindByParentsWithZoneFilter(): void

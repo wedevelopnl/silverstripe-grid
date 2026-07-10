@@ -32,6 +32,9 @@ use WeDevelop\Grid\Value\ViewportConfig;
 #[CoversClass(DraftHierarchyWriter::class)]
 final class DraftHierarchyWriterTest extends SapphireTest
 {
+    /** $extra_dataobjects alone does not provision the temp DB — this test writes records. */
+    protected $usesDatabase = true;
+
     protected static $extra_dataobjects = [TestCustomElement::class, TestPage::class];
 
     // The writer is only ever invoked from GridMigrationService::run(), which

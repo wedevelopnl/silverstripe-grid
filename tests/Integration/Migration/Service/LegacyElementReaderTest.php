@@ -21,6 +21,8 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 #[CoversClass(LegacyElementReader::class)]
 final class LegacyElementReaderTest extends SapphireTest
 {
+    protected $usesDatabase = true;
+
     protected $usesTransactions = false;
 
     private const string CONTENT_CLASS = 'DNADesign\\Elemental\\Models\\ElementContent';
