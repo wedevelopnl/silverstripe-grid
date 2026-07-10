@@ -24,8 +24,6 @@
         //     is `tinyint unsigned`, which clamps -1 to 0. The `? 0 : 0` variant on the same
         //     line IS killed by tests, and neither ignoreSourceCodeByRegex nor ignore-by-line
         //     can separate the two — suppressing would hide a live check.
-        //     These three are the ONLY escaped mutants in the suite; everything else is
-        //     either killed or suppressed with a proof at its mutator entry below.
         //
         // Previously listed here as unkillable, now actually killed by tests — do not re-add:
         //   - ReorderValidator same-parent shortcut (Identical), GridElementReport L116
@@ -558,6 +556,15 @@
             ],
         },
     },
-    minMsi: 90,
-    minCoveredMsi: 90,
+    // Deliberately a whole number below the achieved score, not the achieved score
+    // itself: the only mutants that survive here are equivalent ones (see the header),
+    // and pinning the threshold to the exact figure would red-line the run the first
+    // time someone writes another. The slack is for equivalent mutants, not for
+    // untested code.
+    //
+    // minMsi is kept equal to minCoveredMsi on purpose. They coincide while mutation
+    // code coverage is 100%, but minMsi also drags on *uncovered* mutants, so it is the
+    // one that catches new code arriving with no tests at all.
+    minMsi: 99,
+    minCoveredMsi: 99,
 }
