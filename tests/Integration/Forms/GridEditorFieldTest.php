@@ -135,6 +135,78 @@ final class GridEditorFieldTest extends SapphireTest
         self::assertArrayNotHasKey('grid-version', $schema);
     }
 
+    public function testReadonlyFieldSchemaOmitsVersionWhenTheFormHasNoRecord(): void
+    {
+        // A form without a record: getForm() is non-null but getRecord() is null, so the
+        // SECOND nullsafe operator is what protects the Version read. The no-form test
+        // above short-circuits on the first operator and never exercises this.
+        $field = new GridEditorField('GridEditor', 42);
+        $form = Form::create(
+            Controller::create(),
+            'TestForm',
+            FieldList::create($field),
+            FieldList::create(),
+        );
+        $form->setFormAction('/test');
+        self::assertNull($form->getRecord());
+
+        $readonly = $field->performReadonlyTransformation();
+        $this->attachToForm($readonly);
+
+        $schema = $readonly->getSchemaDataDefaults();
+
+        self::assertTrue($schema['grid-readonly']);
+        self::assertArrayNotHasKey('grid-version', $schema);
+    }
+
+    public function testReadonlyFieldSchemaOmitsVersionForANonPositiveVersion(): void
+    {
+        // Pins the `min_range => 1` option itself: dropping it would let filter_var
+        // accept 0 and publish a meaningless grid-version of 0.
+        $page = new Page();
+        $page->Title = 'Unsaved';
+        $page->Version = 0;
+
+        $field = new GridEditorField('GridEditor', 42);
+        $form = Form::create(
+            Controller::create(),
+            'TestForm',
+            FieldList::create($field),
+            FieldList::create(),
+        );
+        $form->setFormAction('/test');
+        $form->loadDataFrom($page);
+        self::assertSame(0, (int) $form->getRecord()->Version);
+
+        $readonly = $field->performReadonlyTransformation();
+        $this->attachToForm($readonly);
+
+        $schema = $readonly->getSchemaDataDefaults();
+
+        self::assertArrayNotHasKey('grid-version', $schema);
+    }
+
+    public function testFieldHolderAppliesSuppliedCustomisationProperties(): void
+    {
+        $field = new GridEditorField('GridEditor', 42);
+        $this->attachToForm($field);
+
+        $html = (string) $field->FieldHolder(['HolderID' => 'customised-holder']);
+
+        self::assertStringContainsString('id="customised-holder"', $html);
+    }
+
+    public function testFieldHolderWithoutPropertiesUsesTheFieldsOwnHolderId(): void
+    {
+        // Separate field: customise() leaves the customised data attached to the instance.
+        $field = new GridEditorField('GridEditor', 42);
+        $this->attachToForm($field);
+
+        $html = (string) $field->FieldHolder();
+
+        self::assertStringContainsString('id="' . $field->HolderID() . '"', $html);
+    }
+
     public function testReadonlyFieldIncludesVersionForVersionOneRecord(): void
     {
         // A record whose Version is exactly 1 must still surface 'grid-version'.

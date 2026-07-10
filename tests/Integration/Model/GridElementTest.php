@@ -683,6 +683,41 @@ final class GridElementTest extends SapphireTest
         self::assertSame('shadow', $element->getHolderClasses());
     }
 
+    public function testGetPageReturnsNullWhenTheParentRecordNoLongerExists(): void
+    {
+        // Parent() hands back an empty Page object (non-null) for a dangling ParentID,
+        // so the exists() guard — not a null check — is what keeps getPage() honest.
+        $section = Section::create();
+        $section->ParentID = 987654;
+        $section->ParentClass = Page::class;
+        $section->write();
+
+        self::assertNull($section->getPage());
+    }
+
+    public function testAutoScaffoldCreatesAChildForEveryContainerNotJustTheFirst(): void
+    {
+        // The idempotency guard must count children of THIS container. Counting every
+        // Row with ParentClass=Section would let the first section's row suppress
+        // scaffolding for the second.
+        Config::modify()->set(Section::class, 'auto_scaffold', true);
+        Config::modify()->set(Row::class, 'auto_scaffold', false);
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        $first = Section::create();
+        $first->ParentID = $page->ID;
+        $first->ParentClass = $page::class;
+        $first->write();
+
+        $second = Section::create();
+        $second->ParentID = $page->ID;
+        $second->ParentClass = $page::class;
+        $second->write();
+
+        self::assertCount(1, $first->getChildren());
+        self::assertCount(1, $second->getChildren());
+    }
     public function testWritingContentElementDoesNotScaffoldChildren(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');

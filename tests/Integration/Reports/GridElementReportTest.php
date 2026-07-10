@@ -261,6 +261,69 @@ final class GridElementReportTest extends SapphireTest
         self::assertNotContains((int) $section2->ID, $ids);
     }
 
+    public function testSourceRecordsSkipsMismatchesWithoutEndingTheSweep(): void
+    {
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
+        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
+
+        // page1's section is created (and therefore iterated) first. Filtering to page2
+        // means the very first element mismatches: it must be skipped, not stop the loop.
+        $section1 = GridTreeFactory::section($page1, 'main', 0, 'Page1 Section');
+        $section2 = GridTreeFactory::section($page2, 'main', 0, 'Page2 Section');
+
+        $records = $this->report()->sourceRecords(['PageID' => (string) $page2->ID]);
+        $ids = array_map('intval', $records->column('ID'));
+
+        self::assertContains((int) $section2->ID, $ids);
+        self::assertNotContains((int) $section1->ID, $ids);
+    }
+
+    public function testSourceRecordsAcceptsAnIntegerPageIdParam(): void
+    {
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
+        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
+
+        $section1 = GridTreeFactory::section($page1, 'main', 0, 'Page1 Section');
+        $section2 = GridTreeFactory::section($page2, 'main', 0, 'Page2 Section');
+
+        // An int PageID must be coerced and honoured, not discarded as "not a string".
+        $records = $this->report()->sourceRecords(['PageID' => (int) $page1->ID]);
+        $ids = array_map('intval', $records->column('ID'));
+
+        self::assertContains((int) $section1->ID, $ids);
+        self::assertNotContains((int) $section2->ID, $ids);
+    }
+
+    public function testSourceRecordsIgnoresANonScalarPageIdParam(): void
+    {
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
+        $section1 = GridTreeFactory::section($page1, 'main', 0, 'Page1 Section');
+
+        // Neither string nor int: the param degrades to "no filter" rather than
+        // being stringified into a filter value that matches nothing.
+        $records = $this->report()->sourceRecords(['PageID' => ['not', 'scalar']]);
+        $ids = array_map('intval', $records->column('ID'));
+
+        self::assertContains((int) $section1->ID, $ids);
+    }
+
+    public function testTitleColumnRendersAPlainLabelWhenTheElementHasNoEditLink(): void
+    {
+        // An element whose parent record no longer exists has no CMS edit link, so the
+        // Title cell must be the bare label — not an anchor with an empty href.
+        $orphan = Section::create();
+        $orphan->Title = 'Orphan Section';
+        $orphan->ParentID = 987654;
+        $orphan->ParentClass = Page::class;
+        $orphan->write();
+
+        self::assertNull($orphan->getCMSEditLink());
+
+        $titleFormatter = $this->report()->columns()['Title']['formatting'];
+
+        self::assertSame('Orphan Section', $titleFormatter(null, $orphan));
+    }
+
     public function testColumnsFormattingCallbacksReturnStrings(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Extensions;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Page;
 use SilverStripe\Assets\Dev\TestAssetStore;
 use SilverStripe\Assets\Image;
@@ -441,6 +442,23 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertSame(313, $element->getMediaImageHeight());
     }
 
+    public function testGetMediaImageHeightFourByThreeRoundsDownBelowHalf(): void
+    {
+        // Counterpart to the test above, on the other side of .5: together they pin
+        // round() against both floor() and ceil() for the 4:3 branch.
+        Config::modify()->set(TailwindAdapter::class, 'container_max_width', 1006);
+        $this->rebuildGridAdapter();
+
+        $element = $this->createContentElement();
+        $element->ContentColumns = 7;
+        $element->MediaRatio = AspectRatio::FourByThree->value;
+
+        // mediaColumns=5, width=round(1006*5/12)=419
+        // round(419 * 3/4) = round(314.25) = 314 (ceil would give 315)
+        self::assertSame(419, $element->getMediaImageWidth());
+        self::assertSame(314, $element->getMediaImageHeight());
+    }
+
     public function testGetMediaImageHeightAutoWithoutImage(): void
     {
         $element = $this->createContentElement();
@@ -498,6 +516,38 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertNotSame($width, $element->getMediaImageHeight());
     }
 
+    /**
+     * The source image is 200x150, so the derived height is width * 0.75. Both cases below
+     * land on a fraction, and they straddle .5 in opposite directions — together they pin
+     * round() against both floor() and ceil().
+     *
+     * @return iterable<string, array{int, int, int}>
+     */
+    public static function autoHeightRoundingProvider(): iterable
+    {
+        // 417 * 0.75 = 312.75 → 313 (floor would give 312)
+        yield 'fraction above .5 rounds up' => [1000, 417, 313];
+        // 419 * 0.75 = 314.25 → 314 (ceil would give 315)
+        yield 'fraction below .5 rounds down' => [1006, 419, 314];
+    }
+
+    #[DataProvider('autoHeightRoundingProvider')]
+    public function testGetMediaImageHeightAutoRoundsTheSourceRatioToNearest(
+        int $containerWidth,
+        int $expectedWidth,
+        int $expectedHeight,
+    ): void {
+        Config::modify()->set(TailwindAdapter::class, 'container_max_width', $containerWidth);
+        $this->rebuildGridAdapter();
+
+        $element = $this->createContentElement();
+        $element->ContentColumns = 7;
+        $element->MediaRatio = AspectRatio::Auto->value;
+        $this->attachRealImage($element);
+
+        self::assertSame($expectedWidth, $element->getMediaImageWidth());
+        self::assertSame($expectedHeight, $element->getMediaImageHeight());
+    }
     public function testOnBeforeWriteTrimsVideoURL(): void
     {
         $element = $this->createContentElement();
