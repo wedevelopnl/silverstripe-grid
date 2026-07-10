@@ -6,7 +6,6 @@ import { useDragContext } from '@/hooks/useDragAndDrop'
 import { createColumnNode, createSimpleElement } from '@/testing/factories'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
 import { createCollapseStateStub, renderWithProviders } from '@/testing/renderWithProviders'
-import { resetAdapterCache } from '@/utils/gridAdapter'
 
 import EditableColumnBlock from './EditableColumnBlock'
 import ReadonlyColumnBlock from './ReadonlyColumnBlock'
@@ -511,7 +510,6 @@ describe('EditableColumnBlock', () => {
   describe('column style (grid-placement strategy)', () => {
     it('sets --col-span and --col-start CSS variables', () => {
       // Override the adapter config to use grid-placement
-      resetAdapterCache()
       window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
 
       mockFetchSuccess({})
@@ -734,7 +732,6 @@ describe('EditableColumnBlock', () => {
 
   describe('between-column insert handle', () => {
     it('passes an offset-aware gutter shift to the handle when the column has a margin offset', () => {
-      resetAdapterCache()
       mockFetchSuccess({})
 
       const column = createColumnNode({
@@ -752,7 +749,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('omits the gutter shift when the column has no offset', () => {
-      resetAdapterCache()
       mockFetchSuccess({})
 
       const column = createColumnNode({
@@ -772,7 +768,6 @@ describe('EditableColumnBlock', () => {
       // Gutter shift is a margin-strategy concern only. Under grid-placement
       // the offset is expressed via grid-column-start, so no handle nudge is
       // applied regardless of the column's offset.
-      resetAdapterCache()
       window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
       mockFetchSuccess({})
 
@@ -924,7 +919,6 @@ describe('ReadonlyColumnBlock', () => {
   })
 
   it('applies the --col-width CSS variable via buildColumnStyle (margin strategy)', () => {
-    resetAdapterCache()
     mockFetchSuccess({})
 
     const column = createColumnNode({
@@ -939,7 +933,6 @@ describe('ReadonlyColumnBlock', () => {
   })
 
   it('applies the --col-span CSS variable via buildColumnStyle (grid-placement strategy)', () => {
-    resetAdapterCache()
     window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
     mockFetchSuccess({})
 

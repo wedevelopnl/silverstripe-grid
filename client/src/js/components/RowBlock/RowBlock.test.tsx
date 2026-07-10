@@ -6,7 +6,6 @@ import { useDragContext } from '@/hooks/useDragAndDrop'
 import { createRowNode } from '@/testing/factories'
 import { mockFetchSuccess } from '@/testing/mockFetch'
 import { createCollapseStateStub, renderWithProviders } from '@/testing/renderWithProviders'
-import { resetAdapterCache } from '@/utils/gridAdapter'
 
 import EditableRowBlock from './EditableRowBlock'
 import ReadonlyRowBlock from './ReadonlyRowBlock'
@@ -209,7 +208,6 @@ describe('EditableRowBlock', () => {
 
   describe('layout mode', () => {
     it('uses flex layout when offset strategy is margin', () => {
-      resetAdapterCache()
       mockFetchSuccess({})
 
       const row = createRowNode({ columnCount: 1 })
@@ -222,7 +220,6 @@ describe('EditableRowBlock', () => {
 
     it('uses grid layout when offset strategy is grid-placement', () => {
       // Override adapter config for this test
-      resetAdapterCache()
       window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
 
       mockFetchSuccess({})
@@ -236,7 +233,6 @@ describe('EditableRowBlock', () => {
     })
 
     it('sets --grid-columns CSS variable in grid mode', () => {
-      resetAdapterCache()
       window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
 
       mockFetchSuccess({})
@@ -250,7 +246,6 @@ describe('EditableRowBlock', () => {
     })
 
     it('does not set --grid-columns CSS variable in flex mode', () => {
-      resetAdapterCache()
       mockFetchSuccess({})
 
       const row = createRowNode({ columnCount: 1 })
@@ -481,7 +476,6 @@ describe('ReadonlyRowBlock', () => {
     // the `layoutMode === 'grid'` guard on the readonly path.
 
     it('uses flex layout and omits --grid-columns when offset strategy is margin', () => {
-      resetAdapterCache()
       mockFetchSuccess({})
 
       const row = createRowNode({ columnCount: 1 })
@@ -494,7 +488,6 @@ describe('ReadonlyRowBlock', () => {
     })
 
     it('uses grid layout and sets --grid-columns when offset strategy is grid-placement', () => {
-      resetAdapterCache()
       window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
       mockFetchSuccess({})
 

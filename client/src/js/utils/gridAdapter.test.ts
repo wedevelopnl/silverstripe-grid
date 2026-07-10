@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { viewportKey } from '@/testing/factories'
 import type { AdapterConfig } from '@/types/adapter'
 import type { GridSettings } from '@/types/elements'
@@ -12,13 +12,8 @@ import {
   getViewports,
   getWidthClass,
   getWidthOptions,
-  resetAdapterCache,
   resolveViewportSettings,
 } from './gridAdapter'
-
-beforeEach(() => {
-  resetAdapterCache()
-})
 
 describe('getViewports', () => {
   it('returns viewport configs from adapter config', () => {
@@ -40,18 +35,13 @@ describe('getColumnCount', () => {
     expect(getColumnCount()).toBe(12)
   })
 
-  it('caches the adapter config: a later config replacement is not re-fetched', () => {
-    // First read resolves and caches the adapter config object (columnCount 12).
+  it('reads the live CMS config, so a later config replacement is observed', () => {
     expect(getColumnCount()).toBe(12)
 
-    // Swap in a brand-new adapter config object on the live CMS config. Because
-    // config() only fetches when its cache is empty, the cached reference is
-    // kept and the replacement is NOT observed.
     const current = window.ss!.config.sections[0].gridAdapter as AdapterConfig
-    const replacement: AdapterConfig = { ...current, columnCount: 6 }
-    window.ss!.config.sections[0].gridAdapter = replacement
+    window.ss!.config.sections[0].gridAdapter = { ...current, columnCount: 6 }
 
-    expect(getColumnCount()).toBe(12)
+    expect(getColumnCount()).toBe(6)
   })
 })
 
@@ -94,12 +84,6 @@ describe('getWidthOptions', () => {
     expect(options[0]).toEqual({ value: 1, label: '1/12' })
     expect(options[11]).toEqual({ value: 12, label: '12/12' })
     expect(options[12]).toEqual({ value: 'hidden', label: 'hidden' })
-  })
-
-  it('caches the result across calls', () => {
-    const first = getWidthOptions()
-    const second = getWidthOptions()
-    expect(first).toBe(second)
   })
 })
 
