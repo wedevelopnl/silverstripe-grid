@@ -62,6 +62,15 @@ final class GridSettingsFieldTest extends SapphireTest
         self::assertTrue($md->Visible);
     }
 
+    public function testConstructorHonoursAnExplicitTitle(): void
+    {
+        // Pins the operand order of `$title ?? _t(...)`: _t() never returns null, so
+        // flipping the coalesce would silently discard the caller's title.
+        $field = new GridSettingsField('Layout', $this->adapter, 'Column layout');
+
+        self::assertSame('Column layout', $field->Title());
+    }
+
     public function testConstructorFallsBackToTranslatedDefaultTitle(): void
     {
         // Field name 'Layout' does NOT name_to_label to 'Grid Settings', so a
