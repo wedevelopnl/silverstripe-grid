@@ -286,7 +286,7 @@ final readonly class GridElementService
         GridElement $element,
         DataObject $parent,
         ?int $afterElementId,
-        bool $insertAtStart = false,
+        bool $insertAtStart,
     ): Result {
         $writeResult = WriteResult::from(static function () use ($element): GridElement {
             $element->write();

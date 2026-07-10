@@ -73,10 +73,6 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
 
     public function findByParents(array $idsByClass, ?string $zone = null): array
     {
-        if ($idsByClass === []) {
-            return [];
-        }
-
         // Query once per class so (ParentClass, ParentID) stays pair-matched.
         // A flat IN-list would produce the cartesian product across classes, matching
         // unrelated records whenever IDs collide across tables (polymorphic namespace).
