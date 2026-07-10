@@ -109,6 +109,11 @@ final class MigrateGridWithFluentTaskTest extends SapphireTest
         $exitCode = $task->execute($input, $output);
 
         self::assertSame(Command::FAILURE, $exitCode);
-        self::assertStringContainsString('default locale', $buffered->fetch());
+        self::assertStringContainsString(
+            'No Fluent default locale resolves; configure at least one locale '
+            . '(and a global default) before migrating per locale, or use '
+            . '"migrate-grid" for a single-locale site.',
+            $buffered->fetch(),
+        );
     }
 }

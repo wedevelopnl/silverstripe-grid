@@ -64,7 +64,10 @@ final class LegacyLocalisationDetectorTest extends SapphireTest
         $this->seeder->addFieldLocalisedTables();
         $this->seeder->addLocaleIdColumn();
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessageMatches('/mixed/i');
+        $this->expectExceptionMessage(
+            'Ambiguous legacy localisation: both BaseElement_Localised and '
+            . 'BaseElement.LocaleID exist. This mixed Fluent configuration is unsupported.',
+        );
         $this->detector->detect();
     }
 }
