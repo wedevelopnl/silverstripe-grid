@@ -762,10 +762,10 @@ final class GridAdapterTest extends SapphireTest
         Config::modify()->set(TailwindAdapter::class, 'enabled_viewports', []);
 
         $this->expectException(InvalidGridValueException::class);
-        // Substring unique to forEmptyViewports(): the downstream forViewport() throw
-        // (also InvalidGridValueException) carries "is not a valid breakpoint" instead,
-        // so asserting only the class lets the throw-removal mutant survive.
-        $this->expectExceptionMessageMatches('/cannot be an empty array/');
+        // Asserted verbatim: the downstream forViewport() throw is also an
+        // InvalidGridValueException, so asserting only the class lets the
+        // throw-removal mutant survive.
+        $this->expectExceptionMessage('The enabled_viewports configuration cannot be an empty array.');
 
         new TailwindAdapter();
     }
@@ -793,44 +793,51 @@ final class GridAdapterTest extends SapphireTest
     }
 
     /**
-     * Each case: [viewport_definitions, ?messagePattern]. When the pattern is
-     * non-null the detailed message is asserted; otherwise only the exception
-     * type is checked.
+     * Each case: [viewport_definitions, exact detailed message]. GridDomainException
+     * passes detailedMessage to Exception::getMessage(), so the full text is knowable
+     * and asserted verbatim — a loose pattern would also match the unrelated
+     * forViewport() throw raised while resolving default_viewport.
      *
-     * @return iterable<string, array{array<string, mixed>, string|null}>
+     * @return iterable<string, array{array<string, mixed>, string}>
      */
     public static function malformedViewportDefinitionsProvider(): iterable
     {
         yield 'non-array value (legacy shape)' => [
             ['md' => 'Medium'],
-            '/viewport_definitions/i',
+            'viewport_definitions entry "md" is malformed: expected array, got string.',
         ];
         yield 'missing label' => [
             ['md' => ['min_width' => 768]],
-            '/label/',
+            'viewport_definitions entry "md" is malformed: missing required "label" key.',
         ];
         yield 'missing min_width' => [
             ['md' => ['label' => 'Medium']],
-            '/min_width/',
+            'viewport_definitions entry "md" is malformed: missing required "min_width" key.',
         ];
         yield 'negative min_width' => [
             ['md' => ['label' => 'Medium', 'min_width' => -1]],
-            '/min_width|negative/',
+            'viewport_definitions entry "md" is malformed: min_width must be >= 0, got -1.',
         ];
         yield 'non-int min_width' => [
             ['md' => ['label' => 'Medium', 'min_width' => '768']],
-            null,
+            'viewport_definitions entry "md" is malformed: min_width must be int, got string.',
         ];
         yield 'empty label' => [
             ['md' => ['label' => '', 'min_width' => 768]],
-            null,
+            'viewport_definitions entry "md" is malformed: label must be a non-empty string, got string.',
+        ];
+        yield 'non-string label' => [
+            ['md' => ['label' => 123, 'min_width' => 768]],
+            'viewport_definitions entry "md" is malformed: label must be a non-empty string, got int.',
         ];
         // Viewport keys flow into `.grid-<key>` CSS class names in the
         // frontend, so keys with whitespace or special characters would
-        // produce invalid selectors. The adapter must reject them.
+        // produce invalid selectors. The adapter must reject them. The key is
+        // dirty in the middle so that dropping either the `^` or the `$` anchor
+        // from the guard regex would wrongly accept it.
         yield 'invalid key characters' => [
             ['md dirty' => ['label' => 'Medium', 'min_width' => 768]],
-            '/viewport key/i',
+            'viewport_definitions entry "md dirty" is malformed: viewport key must match /^[a-zA-Z0-9_-]+$/.',
         ];
     }
 
@@ -838,15 +845,29 @@ final class GridAdapterTest extends SapphireTest
      * @param array<string, mixed> $definitions
      */
     #[DataProvider('malformedViewportDefinitionsProvider')]
-    public function testConstructorRejectsMalformedViewportDefinitions(array $definitions, ?string $messagePattern): void
+    public function testConstructorRejectsMalformedViewportDefinitions(array $definitions, string $expectedMessage): void
     {
         Config::modify()->set(TailwindAdapter::class, 'viewport_definitions', $definitions);
+        // Point default_viewport at the (sole) defined key so resolveDefaultViewport()
+        // cannot throw: a bypassed guard must surface as "no exception at all", not as an
+        // unrelated InvalidGridValueException from the default-viewport lookup.
+        Config::modify()->set(TailwindAdapter::class, 'default_viewport', array_key_first($definitions));
 
         $this->expectException(InvalidGridValueException::class);
+        $this->expectExceptionMessage($expectedMessage);
 
-        if ($messagePattern !== null) {
-            $this->expectExceptionMessageMatches($messagePattern);
-        }
+        new TailwindAdapter();
+    }
+
+    public function testConstructorRejectsEnabledViewportKeyThatIsNotDefined(): void
+    {
+        // A typo in enabled_viewports must surface at boot. Without the validation
+        // loop the unknown key is silently filtered away and the adapter builds fine.
+        Config::modify()->set(TailwindAdapter::class, 'enabled_viewports', ['sm', 'nope']);
+        Config::modify()->set(TailwindAdapter::class, 'default_viewport', 'sm');
+
+        $this->expectException(InvalidGridValueException::class);
+        $this->expectExceptionMessage('Viewport key "nope" is not a valid breakpoint.');
 
         new TailwindAdapter();
     }

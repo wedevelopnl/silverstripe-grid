@@ -90,22 +90,22 @@ final class NodeRefTest extends TestCase
     public static function fromArrayRejectsProvider(): array
     {
         return [
-            'non-array payload' => ['not-an-array', 'must be an object'],
-            'missing type' => [['id' => 1], 'missing "type"'],
-            'missing id' => [['type' => 'section'], 'missing "id"'],
-            'non-string type' => [['type' => 1, 'id' => 1], '"type" must be a string'],
-            'unknown type' => [['type' => 'unknown', 'id' => 1], 'Unknown NodeType'],
-            'non-int id' => [['type' => 'section', 'id' => '1'], '"id" must be a positive integer'],
-            'zero id' => [['type' => 'section', 'id' => 0], '"id" must be a positive integer'],
-            'negative id' => [['type' => 'section', 'id' => -1], '"id" must be a positive integer'],
+            'non-array payload' => ['not-an-array', 'NodeRef payload must be an object'],
+            'missing type' => [['id' => 1], 'NodeRef payload missing "type"'],
+            'missing id' => [['type' => 'section'], 'NodeRef payload missing "id"'],
+            'non-string type' => [['type' => 1, 'id' => 1], 'NodeRef "type" must be a string'],
+            'unknown type' => [['type' => 'unknown', 'id' => 1], 'Unknown NodeType "unknown"'],
+            'non-int id' => [['type' => 'section', 'id' => '1'], 'NodeRef "id" must be a positive integer'],
+            'zero id' => [['type' => 'section', 'id' => 0], 'NodeRef "id" must be a positive integer'],
+            'negative id' => [['type' => 'section', 'id' => -1], 'NodeRef "id" must be a positive integer'],
         ];
     }
 
     #[DataProvider('fromArrayRejectsProvider')]
-    public function testFromArrayRejectsInvalidPayload(mixed $payload, string $expectedMessageFragment): void
+    public function testFromArrayRejectsInvalidPayload(mixed $payload, string $expectedMessage): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches('/' . preg_quote($expectedMessageFragment, '/') . '/');
+        $this->expectExceptionMessage($expectedMessage);
 
         NodeRef::fromArray($payload);
     }

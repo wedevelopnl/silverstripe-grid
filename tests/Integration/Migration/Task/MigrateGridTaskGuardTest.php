@@ -76,8 +76,13 @@ final class MigrateGridTaskGuardTest extends SapphireTest
 
         $result = $task->execute($input, $output);
 
+        $rendered = $buffered->fetch();
+
         self::assertSame(Command::FAILURE, $result);
-        self::assertStringContainsString('Could not derive a viewport map', $buffered->fetch());
+        self::assertStringContainsString('Could not derive a viewport map', $rendered);
+        // The remediation half of the message must survive in order: asserting only the
+        // opening clause lets a reordered or truncated message pass.
+        self::assertStringContainsString('. Pass --viewport-map with explicit old=new pairs.', $rendered);
     }
 
     public function testRefusesWhenLocalisedLegacyTablesPresent(): void
@@ -87,11 +92,18 @@ final class MigrateGridTaskGuardTest extends SapphireTest
         $task = new MigrateGridTask();
         $definition = new InputDefinition($task->getOptions());
         $input = new ArrayInput(['--default-viewport' => 'MD', '--zone' => 'main', '--dry-run' => true], $definition);
-        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: new BufferedOutput());
+        $buffered = new BufferedOutput();
+        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
 
         $result = $task->execute($input, $output);
 
         self::assertSame(Command::FAILURE, $result, 'must refuse on localised legacy data');
+        self::assertStringContainsString(
+            'Fluent site detected (locale-isolated grid or localised legacy tables). '
+            . 'Run "migrate-grid-with-fluent" instead — this task migrates content without '
+            . 'locale context and would write records invisible in every locale.',
+            $buffered->fetch(),
+        );
     }
 
     public function testRefusesCleanlyOnAmbiguousLegacyConfiguration(): void
