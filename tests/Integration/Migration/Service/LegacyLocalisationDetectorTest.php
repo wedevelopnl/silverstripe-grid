@@ -45,6 +45,20 @@ final class LegacyLocalisationDetectorTest extends SapphireTest
         self::assertFalse($this->detector->hasLocalisedContent());
     }
 
+    public function testNoneWhenTheLegacyElementTableIsAbsentEntirely(): void
+    {
+        // With no BaseElement table the LocaleID probe never runs, so the detector
+        // must fall back to "no locale column" rather than assuming one exists.
+        $this->seeder->dropTables();
+
+        try {
+            self::assertSame(LegacyLocalisationModel::None, $this->detector->detect());
+        } finally {
+            // tearDown's removeLocaleIdColumn() calls DB::field_list(), which needs the table.
+            $this->seeder->createTables();
+        }
+    }
+
     public function testFieldLocalisedWhenLocalisedTablePresent(): void
     {
         $this->seeder->addFieldLocalisedTables();

@@ -339,6 +339,23 @@ final class MigrateGridTaskTest extends SapphireTest
         self::assertCount(1, Section::get()->filter(['ParentID' => $pageId, 'Zone' => 'main']));
     }
 
+    public function testInteractiveConfirmationDefaultsToNoOnAnEmptyAnswer(): void
+    {
+        $pageId = $this->getPageId();
+        $this->seedStandardPage($pageId);
+
+        // Just pressing Enter must take the safe default. The prompt reads [y/N], so a
+        // destructive migration may never proceed on an empty answer.
+        $result = $this->executeTaskInteractive([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+        ], "\n");
+
+        self::assertSame(Command::SUCCESS, $result['exitCode']);
+        self::assertStringContainsString('Migration aborted.', $result['output']);
+        self::assertCount(0, Section::get());
+    }
+
     public function testInteractiveConfirmationDeclinedAbortsMigration(): void
     {
         $pageId = $this->getPageId();
@@ -548,6 +565,22 @@ final class MigrateGridTaskTest extends SapphireTest
         self::assertSame(8, $settings->default->width);
         self::assertTrue($settings->hasOverride('xl'));
         self::assertSame(6, $settings->getOverride('xl')?->width);
+    }
+
+    public function testViewportMapSplitsEachPairOnTheFirstEqualsSignOnly(): void
+    {
+        // A pair containing a second "=" must still parse into exactly two parts, so the
+        // bogus new key reaches validation and is reported. Splitting into three parts
+        // would silently drop the pair and leave an empty map instead.
+        $result = $this->executeTaskRaw([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--dry-run' => true,
+            '--viewport-map' => 'MD=md=x',
+        ]);
+
+        self::assertSame(Command::FAILURE, $result['exitCode']);
+        self::assertStringContainsString('Invalid --viewport-map new key "md=x"', $result['output']);
     }
 
     public function testViewportMapSinglePairParsedCorrectly(): void

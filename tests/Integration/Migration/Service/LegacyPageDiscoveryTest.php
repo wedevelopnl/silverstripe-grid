@@ -87,9 +87,110 @@ final class LegacyPageDiscoveryTest extends SapphireTest
         self::assertSame([], $result);
     }
 
+    public function testGetEligiblePagesReturnsEveryEligiblePageNotOnlyTheFirst(): void
+    {
+        $first = $this->objFromFixture(Page::class, 'test_page');
+        $second = $this->objFromFixture(Page::class, 'test_page_2');
+
+        $this->seeder->seedPage((int) $first->ID, 100);
+        $this->seeder->seedPage((int) $second->ID, 101);
+
+        $result = $this->discovery->getEligiblePages('draft');
+
+        self::assertCount(2, $result);
+    }
+
+    public function testGetPagesWithGridDisabledReturnsEveryDisabledPageNotOnlyTheFirst(): void
+    {
+        $first = $this->objFromFixture(Page::class, 'test_page');
+        $second = $this->objFromFixture(Page::class, 'test_page_2');
+
+        $this->seeder->seedPage((int) $first->ID, 100, useGrid: false);
+        $this->seeder->seedPage((int) $second->ID, 101, useGrid: false);
+
+        $result = $this->discovery->getPagesWithGridDisabled('draft');
+        $pageIds = \array_column($result, 'pageId');
+
+        self::assertContains((int) $first->ID, $pageIds);
+        self::assertContains((int) $second->ID, $pageIds);
+    }
+
+    public function testGetEligiblePagesReadsTheLiveTablesForTheLiveStage(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $page->publishSingle();
+
+        // Only the _Live row is made eligible. A reader that queried the base table
+        // (or a mangled "_LivePage") could not produce this result.
+        $this->seeder->seedPageOnTable('Page_Live', (int) $page->ID, 200);
+
+        $live = $this->discovery->getEligiblePages('live');
+        self::assertCount(1, $live);
+        self::assertSame((int) $page->ID, $live[0]['pageId']);
+        self::assertSame(200, $live[0]['areaId']);
+
+        self::assertSame([], $this->discovery->getEligiblePages('draft'), 'the draft row was never made eligible');
+    }
+
+    public function testStageNameIsCaseInsensitive(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $this->seeder->seedPage((int) $page->ID, 100);
+
+        $result = $this->discovery->getEligiblePages('DRAFT');
+
+        self::assertCount(1, $result);
+    }
+
+    public function testGetEligiblePagesScansEveryPageTableIncludingSiteTreeItself(): void
+    {
+        $viaSiteTree = $this->objFromFixture(Page::class, 'test_page');
+        $viaPage = $this->objFromFixture(Page::class, 'test_page_2');
+
+        // The legacy extension could be applied at any level of the SiteTree hierarchy,
+        // including SiteTree itself. Both carrying tables must be scanned: dropping the
+        // base class, or keeping only the first table found, loses one of these pages.
+        $this->seeder->addExtensionColumns('SiteTree');
+
+        try {
+            $this->seeder->seedPageOnTable('SiteTree', (int) $viaSiteTree->ID, 100);
+            $this->seeder->seedPage((int) $viaPage->ID, 101);
+
+            $result = $this->discovery->getEligiblePages('draft');
+            $pageIds = \array_column($result, 'pageId');
+
+            self::assertCount(2, $result);
+            self::assertContains((int) $viaSiteTree->ID, $pageIds);
+            self::assertContains((int) $viaPage->ID, $pageIds);
+        } finally {
+            $this->seeder->removeExtensionColumns('SiteTree');
+        }
+    }
+
+    public function testGetEligiblePagesHonoursUseElementalGridOnTheSiteTreeTable(): void
+    {
+        $enabled = $this->objFromFixture(Page::class, 'test_page');
+        $disabled = $this->objFromFixture(Page::class, 'test_page_2');
+
+        $this->seeder->addExtensionColumns('SiteTree');
+
+        try {
+            $this->seeder->seedPageOnTable('SiteTree', (int) $enabled->ID, 100, useGrid: true);
+            $this->seeder->seedPageOnTable('SiteTree', (int) $disabled->ID, 101, useGrid: false);
+
+            $pageIds = \array_column($this->discovery->getEligiblePages('draft'), 'pageId');
+
+            self::assertContains((int) $enabled->ID, $pageIds);
+            self::assertNotContains((int) $disabled->ID, $pageIds, 'the opt-out flag must filter the SiteTree query too');
+        } finally {
+            $this->seeder->removeExtensionColumns('SiteTree');
+        }
+    }
+
     public function testGetEligiblePagesThrowsOnInvalidStage(): void
     {
         $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid stage "staging", expected "draft" or "live"');
         $this->discovery->getEligiblePages('staging');
     }
 

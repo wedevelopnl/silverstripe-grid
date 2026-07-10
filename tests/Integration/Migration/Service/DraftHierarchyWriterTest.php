@@ -10,6 +10,7 @@ use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
+use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\DTO\MigrationColumn;
 use WeDevelop\Grid\Migration\DTO\MigrationRow;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
@@ -142,6 +143,96 @@ final class DraftHierarchyWriterTest extends SapphireTest
         self::assertSame((int) $element->ID, $idMap->newElementId(self::LEGACY_ID));
         self::assertSame((int) $column->ID, $idMap->newColumnId(self::LEGACY_ID));
         self::assertSame(1, $idMap->draftSort(self::LEGACY_ID));
+    }
+
+    public function testElementSortAdvancesAcrossEveryElementInAColumn(): void
+    {
+        $pageId = $this->createPage();
+        $idMap = new MigrationIdMap();
+
+        $first = $this->legacyContent(5001, 'First');
+        $second = $this->legacyContent(5002, 'Second');
+        $column = new MigrationColumn($this->gridSettings(), 1, [$first, $second]);
+        $section = new MigrationSection('', self::ZONE, '', 1, [new MigrationRow('', '', 1, [$column])]);
+
+        $this->write($pageId, [$section], $idMap);
+
+        // The recorded draft Sort is what the live pass replays; a non-advancing counter
+        // would record 0 for the second element even though ensureSortSet() repairs the row.
+        self::assertSame(1, $idMap->draftSort(5001));
+        self::assertSame(2, $idMap->draftSort(5002));
+
+        $sorts = ContentElement::get()->sort('Sort')->column('Sort');
+        self::assertSame([1, 2], array_map('intval', $sorts));
+    }
+
+    public function testCreateSectionUsesTheExplicitSortOverrideWhenGiven(): void
+    {
+        $pageId = $this->createPage();
+        $migration = new MigrationSection('', self::ZONE, '', 1, []);
+
+        $withOverride = Versioned::withVersionedMode(function () use ($migration, $pageId): Section {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            return $this->writer->createSection($migration, $pageId, Page::class, self::ZONE, 7);
+        });
+
+        // The DTO's own sort is 1; the explicit override must win (the live-only path
+        // relies on it to append past the sections the draft pass already wrote).
+        self::assertSame(7, (int) $withOverride->Sort);
+    }
+
+    public function testCreateSectionFallsBackToTheDtoSortWhenNoOverrideIsGiven(): void
+    {
+        $pageId = $this->createPage();
+        $migration = new MigrationSection('', self::ZONE, '', 3, []);
+
+        $section = Versioned::withVersionedMode(function () use ($migration, $pageId): Section {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            return $this->writer->createSection($migration, $pageId, Page::class, self::ZONE);
+        });
+
+        self::assertSame(3, (int) $section->Sort);
+    }
+
+    public function testContentElementReceivesHtmlAndMappedMediaFields(): void
+    {
+        $pageId = $this->createPage();
+
+        $element = $this->legacyContent(
+            5003,
+            'With media',
+            new LegacyMediaData(['HTML' => '<p>Body</p>', 'ContentColumns' => '3']),
+        );
+        $column = new MigrationColumn($this->gridSettings(), 1, [$element]);
+        $section = new MigrationSection('', self::ZONE, '', 1, [new MigrationRow('', '', 1, [$column])]);
+
+        $this->write($pageId, [$section], new MigrationIdMap());
+
+        $written = ContentElement::get()->first();
+        self::assertInstanceOf(ContentElement::class, $written);
+        self::assertSame('<p>Body</p>', (string) $written->HTML);
+        self::assertSame(3, (int) $written->ContentColumns);
+    }
+
+    private function legacyContent(int $id, string $title, ?LegacyMediaData $media = null): LegacyElement
+    {
+        return new LegacyElement(
+            id: $id,
+            className: 'DNADesign\\Elemental\\Models\\ElementContent',
+            title: $title,
+            showTitle: true,
+            titleTag: 'h3',
+            titleClass: '',
+            sort: $id,
+            extraClass: '',
+            isRow: false,
+            sizeFields: [],
+            offsetFields: [],
+            visibilityFields: [],
+            mediaData: $media,
+        );
     }
 
     public function testColumnReceivesProvidedGridSettings(): void
