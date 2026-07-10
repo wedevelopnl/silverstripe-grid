@@ -63,7 +63,8 @@ final readonly class LivePublisher
     ): void {
         // Live elements grouped by their target (new) Column ID, so the Column's
         // live GridSettings can be reconciled from the live Size after publish.
-        /** @var array<int, list<LegacyElement>> $liveElementsByColumn */
+        // Every value is appended to on creation, so no bucket is ever empty.
+        /** @var array<int, non-empty-list<LegacyElement>> $liveElementsByColumn */
         $liveElementsByColumn = [];
 
         // Live-only elements are collected and processed as a single grouped
@@ -171,7 +172,7 @@ final readonly class LivePublisher
      * which would corrupt the draft Column width. A targeted `_Live` UPDATE keeps
      * the draft untouched.
      *
-     * @param array<int, list<LegacyElement>> $liveElementsByColumn New Column ID → live elements published into it
+     * @param array<int, non-empty-list<LegacyElement>> $liveElementsByColumn New Column ID → live elements published into it
      * @param array<string, string> $viewportKeyMap Old viewport key → new key
      */
     private function reconcileColumnLiveGridSettings(
@@ -179,17 +180,9 @@ final readonly class LivePublisher
         string $defaultViewport,
         array $viewportKeyMap,
     ): void {
-        if ($liveElementsByColumn === []) {
-            return;
-        }
-
         $columnLiveTable = DataObject::getSchema()->tableName(Column::class) . '_Live';
 
         foreach ($liveElementsByColumn as $columnId => $liveElements) {
-            if ($liveElements === []) {
-                continue;
-            }
-
             $column = Column::get()->byID($columnId);
             if (!$column instanceof Column) {
                 continue;

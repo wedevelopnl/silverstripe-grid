@@ -118,10 +118,7 @@ class GridTreeBuilder
         $containers = [];
         foreach ($elementsByParent as $elements) {
             foreach ($elements as $element) {
-                if (!$element instanceof $targetClass) {
-                    continue;
-                }
-                if (!$element->canView()) {
+                if (!$element instanceof $targetClass || !$element->canView()) {
                     continue;
                 }
                 /** @var positive-int $elementId */
