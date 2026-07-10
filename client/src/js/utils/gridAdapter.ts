@@ -1,70 +1,52 @@
 import { getAdapterConfig } from '@/api/config'
 import { t } from '@/i18n'
-import type { AdapterConfig, OffsetStrategy, ViewportConfig, ViewportKey } from '@/types/adapter'
+import type { OffsetStrategy, ViewportConfig, ViewportKey } from '@/types/adapter'
 import type { GridSettings, ViewportSettings } from '@/types/elements'
 import type { GridSettingsOption } from '@/types/gridSettings'
 
-let cachedConfig: AdapterConfig | null = null
-let cachedWidthOptions: readonly GridSettingsOption[] | null = null
-
-export function resetAdapterCache(): void {
-  cachedConfig = null
-  cachedWidthOptions = null
-}
-
-function config(): AdapterConfig {
-  if (cachedConfig === null) {
-    cachedConfig = getAdapterConfig()
-  }
-  return cachedConfig
-}
-
 export function getViewports(): readonly ViewportConfig[] {
-  return config().viewports
+  return getAdapterConfig().viewports
 }
 
 export function getDefaultViewport(): ViewportKey {
-  return config().defaultViewport
+  return getAdapterConfig().defaultViewport
 }
 
 export function getColumnCount(): number {
-  return config().columnCount
+  return getAdapterConfig().columnCount
 }
 
 export function getRowClasses(): string {
-  return config().rowClasses
+  return getAdapterConfig().rowClasses
 }
 
 export function getOffsetStrategy(): OffsetStrategy {
-  return config().offsetStrategy
+  return getAdapterConfig().offsetStrategy
 }
 
 export function getWidthClass(width: number): string {
-  return config().baseWidthClasses[String(width)] ?? ''
+  return getAdapterConfig().baseWidthClasses[String(width)] ?? ''
 }
 
 export function getOffsetClass(offset: number): string {
-  return config().baseOffsetClasses[String(offset)] ?? ''
+  return getAdapterConfig().baseOffsetClasses[String(offset)] ?? ''
 }
 
 export function getWidthOptions(): readonly GridSettingsOption[] {
-  if (cachedWidthOptions === null) {
-    const columnCount = config().columnCount
-    const options: GridSettingsOption[] = []
+  const columnCount = getAdapterConfig().columnCount
+  const options: GridSettingsOption[] = []
 
-    for (let n = 1; n <= columnCount; n++) {
-      options.push({ value: n, label: `${n}/${columnCount}` })
-    }
-
-    options.push({ value: 'hidden', label: t('WeDevelopGrid.GridSettings.HIDDEN', 'hidden') })
-    cachedWidthOptions = options
+  for (let n = 1; n <= columnCount; n++) {
+    options.push({ value: n, label: `${n}/${columnCount}` })
   }
 
-  return cachedWidthOptions
+  options.push({ value: 'hidden', label: t('WeDevelopGrid.GridSettings.HIDDEN', 'hidden') })
+
+  return options
 }
 
 export function getOffsetOptions(currentWidth?: number): readonly GridSettingsOption[] {
-  const columnCount = config().columnCount
+  const columnCount = getAdapterConfig().columnCount
   const maxOffset = currentWidth !== undefined ? columnCount - currentWidth : columnCount - 1
   const options: GridSettingsOption[] = []
 
