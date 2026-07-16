@@ -10,53 +10,40 @@ use PHPUnit\Framework\TestCase;
 use stdClass;
 use WeDevelop\Grid\Tests\Unit\Support\GridAdapterStub;
 use WeDevelop\Grid\Value\AdapterConfig;
-use WeDevelop\Grid\Value\OffsetStrategy;
 use WeDevelop\Grid\Value\Viewport;
 
 #[CoversClass(AdapterConfig::class)]
 final class AdapterConfigTest extends TestCase
 {
-    public function testFromAdapterCapturesScalarConfiguration(): void
-    {
-        $config = AdapterConfig::fromAdapter(new GridAdapterStub());
+    private AdapterConfig $config;
 
-        self::assertSame(12, $config->columnCount);
-        self::assertSame('xs', $config->defaultViewport->key);
-        self::assertSame('row', $config->rowClasses);
-        self::assertSame(OffsetStrategy::Margin, $config->offsetStrategy);
-        self::assertCount(3, $config->viewports);
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->config = AdapterConfig::fromAdapter(new GridAdapterStub());
     }
 
-    public function testFromAdapterCapturesViewportObjects(): void
+    public function testFromAdapterKeysWidthClassMapFromOneToColumnCount(): void
     {
-        $config = AdapterConfig::fromAdapter(new GridAdapterStub());
+        // Width map is keyed by column span (1..columnCount) so the frontend can
+        // index by span. Asserting the key set — not the stub's sprintf output —
+        // pins AdapterConfig's own logic; a non-default column count proves the
+        // loop honours the adapter's count and is not hardcoded to 12 (projects
+        // override total_columns, e.g. to 16). Real class values are covered
+        // against a live preset in the integration-tier AdapterConfigTest.
+        $config = AdapterConfig::fromAdapter(new GridAdapterStub(columnCount: 4));
 
-        self::assertContainsOnlyInstancesOf(Viewport::class, $config->viewports);
-        self::assertSame('xs', $config->viewports[0]->key);
-        self::assertSame('Extra Small', $config->viewports[0]->label);
-        self::assertSame(0, $config->viewports[0]->minWidth);
-        self::assertSame('lg', $config->viewports[2]->key);
-        self::assertSame(992, $config->viewports[2]->minWidth);
+        self::assertSame([1, 2, 3, 4], array_keys($config->baseWidthClasses));
     }
 
-    public function testFromAdapterBuildsWidthClassMapKeyedOneToColumnCount(): void
+    public function testFromAdapterKeysOffsetClassMapFromZeroToColumnCountMinusOne(): void
     {
-        $config = AdapterConfig::fromAdapter(new GridAdapterStub());
+        // Offsets are 0-based and stop one short of the column count (a full-width
+        // offset is meaningless), so the map is keyed 0..columnCount-1.
+        $config = AdapterConfig::fromAdapter(new GridAdapterStub(columnCount: 4));
 
-        self::assertCount(12, $config->baseWidthClasses);
-        self::assertArrayNotHasKey(0, $config->baseWidthClasses);
-        self::assertSame('col-1', $config->baseWidthClasses[1]);
-        self::assertSame('col-12', $config->baseWidthClasses[12]);
-    }
-
-    public function testFromAdapterBuildsOffsetClassMapKeyedZeroToColumnCountMinusOne(): void
-    {
-        $config = AdapterConfig::fromAdapter(new GridAdapterStub());
-
-        self::assertCount(12, $config->baseOffsetClasses);
-        self::assertSame('offset-0', $config->baseOffsetClasses[0]);
-        self::assertSame('offset-11', $config->baseOffsetClasses[11]);
-        self::assertArrayNotHasKey(12, $config->baseOffsetClasses);
+        self::assertSame([0, 1, 2, 3], array_keys($config->baseOffsetClasses));
     }
 
     public function testFromAdapterThrowsWhenAdapterHasNoViewports(): void
@@ -78,7 +65,7 @@ final class AdapterConfigTest extends TestCase
 
     public function testJsonSerializeProducesFrontendWireShape(): void
     {
-        $serialized = AdapterConfig::fromAdapter(new GridAdapterStub())->jsonSerialize();
+        $serialized = $this->config->jsonSerialize();
 
         self::assertSame(
             [
@@ -102,7 +89,7 @@ final class AdapterConfigTest extends TestCase
         // plain PHP array would json_encode to a JSON *array*. The frontend
         // contract (AdapterConfig.baseOffsetClasses: Record<string, string>)
         // requires a JSON object, so the value must serialize as one.
-        $json = json_encode(AdapterConfig::fromAdapter(new GridAdapterStub()));
+        $json = json_encode($this->config);
 
         self::assertIsString($json);
         self::assertStringContainsString('"baseOffsetClasses":{"0":"offset-0"', $json);
