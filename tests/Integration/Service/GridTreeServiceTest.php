@@ -244,15 +244,22 @@ final class GridTreeServiceTest extends SapphireTest
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
-        GridTreeFactory::column(GridTreeFactory::row($section));
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        // A sibling subtree with its own Row, so a loader bug that leaks
+        // across subtrees (e.g. returning a sibling section's children)
+        // would fail this test instead of passing it.
+        $siblingSection = GridTreeFactory::section($page);
+        $siblingRow = GridTreeFactory::row($siblingSection);
 
         $descendants = $this->builder->findDescendants($section);
 
-        self::assertCount(2, $descendants); // Row + Column, not the Section itself
-        self::assertNotContains((int) $section->ID, array_map(
-            static fn (GridElement $e): int => (int) $e->ID,
-            $descendants,
-        ));
+        $ids = array_map(static fn (GridElement $e): int => (int) $e->ID, $descendants);
+        self::assertSame([(int) $row->ID, (int) $column->ID], $ids); // Row + Column, not the Section itself
+        self::assertNotContains((int) $section->ID, $ids);
+        self::assertNotContains((int) $siblingSection->ID, $ids);
+        self::assertNotContains((int) $siblingRow->ID, $ids);
     }
 
     public function testFindDescendantsReturnsEmptyListForLeafElement(): void
