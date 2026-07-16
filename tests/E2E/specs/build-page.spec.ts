@@ -14,22 +14,24 @@ test.describe('Build page from scratch', () => {
     await test.step('create and save a new page', async () => {
       // Step 1: Navigate to Pages admin and wait for the site tree to load
       await page.goto('/admin/pages')
-      await expect(page.getByRole('link', { name: 'Add new Page' })).toBeVisible({
+      await expect(page.getByRole('link', { name: 'Add new Page', exact: true })).toBeVisible({
         timeout: 15_000,
       })
-      await page.getByRole('link', { name: 'Add new Page' }).click()
+      await page.getByRole('link', { name: 'Add new Page', exact: true }).click()
 
       // The wizard appears: Step 1 (location) defaults to "Top level",
       // Step 2 (type) defaults to "Page". Click "Create" to proceed.
-      await expect(page.getByRole('button', { name: 'Create' })).toBeVisible({ timeout: 10_000 })
-      await page.getByRole('button', { name: 'Create' }).click()
+      await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeVisible({
+        timeout: 10_000,
+      })
+      await page.getByRole('button', { name: 'Create', exact: true }).click()
 
       // Wait for the page editor to load, then enter a title
       await expect(page).toHaveURL(/\/admin\/pages\/edit\/show\/\d+/, { timeout: 10_000 })
-      await expect(page.getByRole('textbox', { name: 'Page name' })).toBeVisible({
+      await expect(page.getByRole('textbox', { name: 'Page name', exact: true })).toBeVisible({
         timeout: 10_000,
       })
-      await page.getByRole('textbox', { name: 'Page name' }).fill('E2E Build Test')
+      await page.getByRole('textbox', { name: 'Page name', exact: true }).fill('E2E Build Test')
 
       // Save the page to persist the title
       await page.getByRole('button', { name: /Save/ }).first().click()
@@ -83,11 +85,15 @@ test.describe('Build page from scratch', () => {
     await test.step('publish and verify on the frontend', async () => {
       // Step 7: Publish the page
       await page.getByRole('button', { name: /Publish/ }).click()
-      await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 10_000 })
+      await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({
+        timeout: 10_000,
+      })
 
       // Step 8: Verify the published page renders on the frontend
       await page.goto('/e2e-build-test')
-      await expect(page.getByRole('heading', { level: 1, name: /E2E Build Test/ })).toBeVisible()
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'E2E Build Test', exact: true }),
+      ).toBeVisible()
     })
   })
 })

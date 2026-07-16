@@ -27,7 +27,7 @@ test.describe('Archive element actions', () => {
       await expect(dialog).toBeVisible()
       await expect(dialog).toContainText('Archive "Content Element X"?')
 
-      await dialog.getByRole('button', { name: 'Archive' }).click()
+      await dialog.getByRole('button', { name: 'Archive', exact: true }).click()
 
       // Verify element is gone (Playwright auto-retries until assertion passes)
       await expect(
@@ -44,12 +44,12 @@ test.describe('Archive element actions', () => {
       // Find Column A1b's actions menu in the column header
       const columnA1bHeader = rowA1.getByTestId('column-header').filter({ hasText: 'Column A1b' })
       await columnA1bHeader.getByTestId('actions-menu-trigger').click()
-      await page.getByRole('menuitem', { name: 'Archive' }).click()
+      await page.getByRole('menuitem', { name: 'Archive', exact: true }).click()
 
       const dialog = page.locator('dialog[open][data-testid="confirm-dialog"]')
       await expect(dialog).toBeVisible()
 
-      await dialog.getByRole('button', { name: 'Archive' }).click()
+      await dialog.getByRole('button', { name: 'Archive', exact: true }).click()
 
       // Verify Column A1b is gone from Row A1
       await expect(rowA1.getByTestId('column-block').filter({ hasText: 'Column A1b' })).toHaveCount(
@@ -68,7 +68,7 @@ test.describe('Archive element actions', () => {
       // Section A should mention child elements in the confirmation
       await expect(dialog).toContainText('child element')
 
-      await dialog.getByRole('button', { name: 'Archive' }).click()
+      await dialog.getByRole('button', { name: 'Archive', exact: true }).click()
 
       // Verify Section A is gone
       await expect(page.getByTestId('section-block').filter({ hasText: 'Section A' })).toHaveCount(

@@ -105,7 +105,7 @@ test.describe('Validation errors', () => {
       await page.goto(
         `/admin/pages/edit/EditForm/${fixture.pageId}/field/GridEditor/item/${columnId}/edit`,
       )
-      await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 })
+      await page.getByRole('textbox', { name: 'Title', exact: true }).waitFor({ timeout: 15_000 })
 
       // Read adapter config so field names and column count come from the
       // running adapter rather than being hardcoded to a specific preset.
@@ -116,7 +116,7 @@ test.describe('Validation errors', () => {
       let invalidOffset = 0
 
       await test.step('open the column edit form and enter an over-budget width and offset', async () => {
-        await page.getByRole('tab', { name: 'Grid' }).click()
+        await page.getByRole('tab', { name: 'Grid', exact: true }).click()
 
         // The default-viewport width/offset controls are form <select>s located
         // by their submit `name` (a stable semantic hook, not a styling class).

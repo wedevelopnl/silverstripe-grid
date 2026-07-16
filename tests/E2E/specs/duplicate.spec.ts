@@ -62,7 +62,7 @@ test.describe('Duplicate section to another page and zone', () => {
     await test.step('Open "Duplicate to…" dialog from Source Section', async () => {
       const section = page.getByTestId('section-block').filter({ hasText: 'Source Section' })
       await section.getByTestId('section-header').getByTestId('actions-menu-trigger').click()
-      await page.getByRole('menuitem', { name: 'Duplicate to\u2026' }).click()
+      await page.getByRole('menuitem', { name: 'Duplicate to\u2026', exact: true }).click()
 
       const dialog = page.getByTestId('duplicate-to-dialog')
       await expect(dialog).toBeVisible()
@@ -151,7 +151,7 @@ test.describe('Duplicate content element to another column', () => {
       const elementAlpha = colA.getByTestId('element-card').filter({ hasText: 'Element Alpha' })
 
       await elementAlpha.getByTestId('actions-menu-trigger').click()
-      await page.getByRole('menuitem', { name: 'Duplicate to\u2026' }).click()
+      await page.getByRole('menuitem', { name: 'Duplicate to\u2026', exact: true }).click()
 
       const dialog = page.getByTestId('duplicate-to-dialog')
       await expect(dialog).toBeVisible()
