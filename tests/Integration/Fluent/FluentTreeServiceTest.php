@@ -25,7 +25,7 @@ use WeDevelop\Grid\Value\ContainerType;
  * and assembles recursive trees when Fluent locale filtering is active.
  */
 #[CoversClass(GridTreeService::class)]
-final class FluentTreeBuilderTest extends SapphireTest
+final class FluentTreeServiceTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';
 
@@ -34,7 +34,7 @@ final class FluentTreeBuilderTest extends SapphireTest
         GridElement::class => [FluentIsolatedExtension::class],
     ];
 
-    private GridTreeService $builder;
+    private GridTreeService $service;
 
     protected function setUp(): void
     {
@@ -53,7 +53,7 @@ final class FluentTreeBuilderTest extends SapphireTest
         $locale = $this->objFromFixture(Locale::class, 'en');
         FluentState::singleton()->setLocale($locale->Locale);
 
-        $this->builder = Injector::inst()->get(GridTreeService::class);
+        $this->service = Injector::inst()->get(GridTreeService::class);
     }
 
     private function createPage(string $title = 'Test Page'): SiteTree
@@ -67,7 +67,7 @@ final class FluentTreeBuilderTest extends SapphireTest
     }
 
     /**
-     * Build full-depth hierarchies in two locales and verify the tree builder
+     * Build full-depth hierarchies in two locales and verify the tree service
      * returns the correct multi-level tree for each. Asserts at every level:
      * section titles, row count, column count, content element titles.
      */
@@ -91,7 +91,7 @@ final class FluentTreeBuilderTest extends SapphireTest
         GridTreeFactory::column($nlRow);
 
         // Verify Dutch tree — full depth
-        $nlTree = $this->builder->buildViewableTree($page, 'main');
+        $nlTree = $this->service->buildViewableTree($page, 'main');
 
         $nlSections = $nlTree->nodes;
         self::assertCount(1, $nlSections);
@@ -112,7 +112,7 @@ final class FluentTreeBuilderTest extends SapphireTest
         $english = $this->objFromFixture(Locale::class, 'en');
         FluentState::singleton()->setLocale($english->Locale);
 
-        $enTree = $this->builder->buildViewableTree($page, 'main');
+        $enTree = $this->service->buildViewableTree($page, 'main');
         $enSections = $enTree->nodes;
         self::assertCount(1, $enSections);
         self::assertSame('EN Section', $enSections[0]->title);
@@ -149,12 +149,12 @@ final class FluentTreeBuilderTest extends SapphireTest
         GridTreeFactory::column($sidebarRow);
 
         // English main zone
-        $mainTree = $this->builder->buildViewableTree($page, 'main');
+        $mainTree = $this->service->buildViewableTree($page, 'main');
         self::assertCount(1, $mainTree->nodes);
         self::assertSame('EN Main', $mainTree->nodes[0]->title);
 
         // English sidebar zone
-        $sidebarTree = $this->builder->buildViewableTree($page, 'sidebar');
+        $sidebarTree = $this->service->buildViewableTree($page, 'sidebar');
         self::assertCount(1, $sidebarTree->nodes);
         self::assertSame('EN Sidebar', $sidebarTree->nodes[0]->title);
 
@@ -162,10 +162,10 @@ final class FluentTreeBuilderTest extends SapphireTest
         $dutch = $this->objFromFixture(Locale::class, 'nl');
         FluentState::singleton()->setLocale($dutch->Locale);
 
-        $nlMain = $this->builder->buildViewableTree($page, 'main');
+        $nlMain = $this->service->buildViewableTree($page, 'main');
         self::assertSame([], $nlMain->nodes, 'Dutch main zone should have no sections');
 
-        $nlSidebar = $this->builder->buildViewableTree($page, 'sidebar');
+        $nlSidebar = $this->service->buildViewableTree($page, 'sidebar');
         self::assertSame([], $nlSidebar->nodes, 'Dutch sidebar zone should have no sections');
     }
 }
