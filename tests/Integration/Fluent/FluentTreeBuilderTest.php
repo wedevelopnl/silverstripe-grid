@@ -16,15 +16,15 @@ use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
-use WeDevelop\Grid\Service\GridTreeBuilder;
+use WeDevelop\Grid\Service\GridTreeService;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Value\ContainerType;
 
 /**
- * Verifies that GridTreeBuilder correctly batch-loads, maps parent keys,
+ * Verifies that GridTreeService correctly batch-loads, maps parent keys,
  * and assembles recursive trees when Fluent locale filtering is active.
  */
-#[CoversClass(GridTreeBuilder::class)]
+#[CoversClass(GridTreeService::class)]
 final class FluentTreeBuilderTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';
@@ -34,7 +34,7 @@ final class FluentTreeBuilderTest extends SapphireTest
         GridElement::class => [FluentIsolatedExtension::class],
     ];
 
-    private GridTreeBuilder $builder;
+    private GridTreeService $builder;
 
     protected function setUp(): void
     {
@@ -53,7 +53,7 @@ final class FluentTreeBuilderTest extends SapphireTest
         $locale = $this->objFromFixture(Locale::class, 'en');
         FluentState::singleton()->setLocale($locale->Locale);
 
-        $this->builder = Injector::inst()->get(GridTreeBuilder::class);
+        $this->builder = Injector::inst()->get(GridTreeService::class);
     }
 
     private function createPage(string $title = 'Test Page'): SiteTree

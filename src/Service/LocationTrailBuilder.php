@@ -14,7 +14,7 @@ use WeDevelop\Grid\Value\TrailSegment;
  *
  * Ancestors are resolved from an in-memory index keyed by the composite
  * "ParentClass:ParentID" string — the same collision-safe keying used by
- * {@see GridTreeBuilder}. Page IDs and element IDs share a numeric space, so
+ * {@see GridTreeService}. Page IDs and element IDs share a numeric space, so
  * embedding the class in the key prevents a page-parented element from
  * resolving a same-numbered element as a false ancestor.
  */
