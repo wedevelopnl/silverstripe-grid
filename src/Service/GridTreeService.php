@@ -13,6 +13,7 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridNode;
+use WeDevelop\Grid\Value\GridTree;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
 
@@ -34,15 +35,16 @@ class GridTreeService
     }
 
     /**
-     * Build the full element tree for a page, keyed by page ID for backwards
-     * compatibility with callers that still expect a top-level map (the wire
-     * format emitted by {@see GridController::apiReadTree()} reshapes this
-     * into a structured `{rootParent, nodes}` response).
+     * Assemble the viewable element tree for a page + zone as the CMS React
+     * API's wire model. Renamed from buildForPage: the old name implied
+     * page/template rendering — this never touches .ss templates.
+     *
+     * Applies canView() filtering per node ({@see assembleSubTree()}); the
+     * mechanism-layer methods never filter.
      *
      * @param non-empty-string $zone
-     * @return array<int, list<GridNode>>
      */
-    public function buildForPage(SiteTree $page, string $zone = 'main'): array
+    public function buildViewableTree(SiteTree $page, string $zone): GridTree
     {
         /** @var positive-int $pageId */
         $pageId = $page->ID;
@@ -52,17 +54,16 @@ class GridTreeService
         $rootKey = $page::class . ':' . $pageId;
         $rootParent = new NodeRef(NodeType::fromClass($page::class), $pageId);
 
-        /** @var array<int, list<GridNode>> $tree */
-        $tree = [];
-        $tree[$pageId] = $this->assembleSubTree($elementsByParent, $rootKey, $rootParent, $page);
-
-        return $tree;
+        return new GridTree(
+            $rootParent,
+            $this->assembleSubTree($elementsByParent, $rootKey, $rootParent, $page),
+        );
     }
 
     /**
      * Find all Column elements for a page + zone using batch loading.
      *
-     * Reuses the same breadth-first loading strategy as {@see buildForPage()}
+     * Reuses the same breadth-first loading strategy as {@see buildViewableTree()}
      * but returns only the Column model instances, needed for bulk grid
      * settings operations like viewport override resets.
      *
@@ -92,7 +93,7 @@ class GridTreeService
     /**
      * Find containers of a given type on a page + zone as plain tuples.
      *
-     * Much cheaper than {@see buildForPage()} when the caller only needs a
+     * Much cheaper than {@see buildViewableTree()} when the caller only needs a
      * flat list of containers (e.g. "which Rows could I duplicate into?"):
      * skips permission probing on non-target nodes, grid settings, block
      * schemas, and DTO assembly.

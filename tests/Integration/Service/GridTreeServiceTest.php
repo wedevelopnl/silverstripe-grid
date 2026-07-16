@@ -19,6 +19,7 @@ use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Tests\Integration\Support\VetoViewByTitleExtension;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Value\NodeType;
 
 #[CoversClass(GridTreeService::class)]
 final class GridTreeServiceTest extends SapphireTest
@@ -59,11 +60,9 @@ final class GridTreeServiceTest extends SapphireTest
         $column = GridTreeFactory::column($row);
         $content = GridTreeFactory::contentElement($column, title: 'Test Content');
 
-        $tree = $this->builder->buildForPage($page, 'main');
+        $tree = $this->builder->buildViewableTree($page, 'main');
 
-        self::assertArrayHasKey($page->ID, $tree);
-
-        $sectionNodes = $tree[$page->ID];
+        $sectionNodes = $tree->nodes;
         self::assertCount(1, $sectionNodes);
         self::assertSame((int) $section->ID, $sectionNodes[0]->getId());
         self::assertSame((int) $page->ID, $sectionNodes[0]->getParentId());
@@ -94,9 +93,9 @@ final class GridTreeServiceTest extends SapphireTest
         GridTreeFactory::section($page, zone: 'main');
         GridTreeFactory::section($page, zone: 'sidebar');
 
-        $tree = $this->builder->buildForPage($page, 'main');
+        $tree = $this->builder->buildViewableTree($page, 'main');
 
-        $sectionNodes = $tree[$page->ID];
+        $sectionNodes = $tree->nodes;
         self::assertCount(1, $sectionNodes);
         self::assertSame(ContainerType::Section, $sectionNodes[0]->containerType);
     }
@@ -105,10 +104,19 @@ final class GridTreeServiceTest extends SapphireTest
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
 
-        $tree = $this->builder->buildForPage($page, 'main');
+        $tree = $this->builder->buildViewableTree($page, 'main');
 
-        self::assertArrayHasKey($page->ID, $tree);
-        self::assertSame([], $tree[$page->ID]);
+        self::assertSame([], $tree->nodes);
+    }
+
+    public function testBuildViewableTreeReturnsRootParentRefForThePage(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        $tree = $this->builder->buildViewableTree($page, 'main');
+
+        self::assertSame(NodeType::fromClass($page::class), $tree->rootParent->type);
+        self::assertSame((int) $page->ID, $tree->rootParent->id);
     }
 
     public function testPermissionFilteringExcludesNonViewable(): void
@@ -119,9 +127,9 @@ final class GridTreeServiceTest extends SapphireTest
         // Log out so canView returns false (requires CMS_ACCESS)
         $this->logOut();
 
-        $tree = $this->builder->buildForPage($page, 'main');
+        $tree = $this->builder->buildViewableTree($page, 'main');
 
-        self::assertSame([], $tree[$page->ID]);
+        self::assertSame([], $tree->nodes);
     }
 
     public function testPermissionFilteringSkipsNonViewableWithoutDroppingLaterSiblings(): void
@@ -130,9 +138,9 @@ final class GridTreeServiceTest extends SapphireTest
         GridTreeFactory::section($page, sort: 1, title: VetoViewByTitleExtension::HIDDEN_TITLE);
         $visible = GridTreeFactory::section($page, sort: 2, title: 'Visible');
 
-        $tree = $this->builder->buildForPage($page, 'main');
+        $tree = $this->builder->buildViewableTree($page, 'main');
 
-        $nodes = $tree[$page->ID];
+        $nodes = $tree->nodes;
         self::assertCount(1, $nodes);
         self::assertSame((int) $visible->ID, $nodes[0]->self->id);
     }
@@ -160,9 +168,9 @@ final class GridTreeServiceTest extends SapphireTest
         GridTreeFactory::row($section2);
         GridTreeFactory::row($section2);
 
-        $tree = $this->builder->buildForPage($page, 'main');
+        $tree = $this->builder->buildViewableTree($page, 'main');
 
-        $sectionNodes = $tree[$page->ID];
+        $sectionNodes = $tree->nodes;
         self::assertCount(2, $sectionNodes);
         self::assertCount(2, $sectionNodes[0]->children);
         self::assertCount(2, $sectionNodes[1]->children);
@@ -177,9 +185,9 @@ final class GridTreeServiceTest extends SapphireTest
         $settings = GridSettings::initial(12);
         GridTreeFactory::column($row, gridSettings: $settings);
 
-        $tree = $this->builder->buildForPage($page, 'main');
+        $tree = $this->builder->buildViewableTree($page, 'main');
 
-        $columnNode = $tree[$page->ID][0]->children[0]->children[0];
+        $columnNode = $tree->nodes[0]->children[0]->children[0];
         self::assertInstanceOf(GridSettings::class, $columnNode->gridSettings);
         self::assertSame(12, $columnNode->gridSettings->default->width);
     }

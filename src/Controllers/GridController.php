@@ -18,6 +18,7 @@ use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\AdapterConfig;
 use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\GridTree;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
 use WeDevelop\Grid\Value\Result;
@@ -138,17 +139,9 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        $tree = $this->treeService->buildForPage($page, $zone);
+        $tree = $this->treeService->buildViewableTree($page, $zone);
 
-        /** @var positive-int $pageId */
-        $pageId = (int) $page->ID;
-        /** @var positive-int $pageId — $page was loaded by ID above; byID returns null for non-positive IDs, and the null check jumps to jsonError. */
-        $rootNodes = $tree[$pageId] ?? [];
-
-        return $this->jsonSuccess(200, [
-            'rootParent' => (new NodeRef(NodeType::Page, $pageId))->jsonSerialize(),
-            'nodes' => $rootNodes,
-        ]);
+        return $this->jsonSuccess(200, $tree->jsonSerialize());
     }
 
     /**
@@ -206,20 +199,13 @@ class GridController extends AdminController
         // Versioned::reading_archived_date() is required because the tree service
         // uses GridElement::get()->filter(...), NOT relation traversals from the
         // page record — updateInheritableQueryParams() does not apply.
-        $tree = Versioned::withVersionedMode(static function () use ($treeService, $page, $zone): array {
+        $tree = Versioned::withVersionedMode(static function () use ($treeService, $page, $zone): GridTree {
             Versioned::reading_archived_date($page->LastEdited);
 
-            return $treeService->buildForPage($page, $zone);
+            return $treeService->buildViewableTree($page, $zone);
         });
 
-        /** @var positive-int $pageId */
-        $pageId = (int) $page->ID;
-        $rootNodes = $tree[$pageId] ?? [];
-
-        return $this->jsonSuccess(200, [
-            'rootParent' => (new NodeRef(NodeType::Page, $pageId))->jsonSerialize(),
-            'nodes' => $rootNodes,
-        ]);
+        return $this->jsonSuccess(200, $tree->jsonSerialize());
     }
 
     public function apiCreate(HTTPRequest $request): HTTPResponse
