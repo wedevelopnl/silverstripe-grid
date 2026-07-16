@@ -14,14 +14,14 @@ use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
-use WeDevelop\Grid\Service\GridTreeBuilder;
+use WeDevelop\Grid\Service\GridTreeService;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Tests\Integration\Support\VetoViewByTitleExtension;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridSettings;
 
-#[CoversClass(GridTreeBuilder::class)]
-final class GridTreeBuilderTest extends SapphireTest
+#[CoversClass(GridTreeService::class)]
+final class GridTreeServiceTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
@@ -35,7 +35,7 @@ final class GridTreeBuilderTest extends SapphireTest
         GridElement::class => [VetoViewByTitleExtension::class],
     ];
 
-    private GridTreeBuilder $builder;
+    private GridTreeService $builder;
 
     protected function setUp(): void
     {
@@ -48,7 +48,7 @@ final class GridTreeBuilderTest extends SapphireTest
 
         $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
 
-        $this->builder = Injector::inst()->get(GridTreeBuilder::class);
+        $this->builder = Injector::inst()->get(GridTreeService::class);
     }
 
     public function testBuildsFullTreeFromPage(): void

@@ -23,7 +23,7 @@ use WeDevelop\Grid\Value\NodeType;
  * Collects all elements at each level in a single query, then assembles the tree
  * in-memory from the pre-loaded data.
  */
-class GridTreeBuilder
+class GridTreeService
 {
     use Injectable;
 

@@ -28,12 +28,12 @@ use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Service\ElementPlacementService;
 use WeDevelop\Grid\Service\GridElementService;
 use WeDevelop\Grid\Service\GridSettingsService;
-use WeDevelop\Grid\Service\GridTreeBuilder;
+use WeDevelop\Grid\Service\GridTreeService;
 use WeDevelop\Grid\Service\RequestBodyParser;
 
 /**
  * @property GridElementRepositoryInterface $elementRepository
- * @property GridTreeBuilder $treeBuilder
+ * @property GridTreeService $treeService
  * @property ElementPlacementService $placementService
  * @property GridAdapterInterface $gridAdapter
  * @property RequestBodyParser $requestBodyParser
@@ -49,7 +49,7 @@ class GridController extends AdminController
     /** @var array<string, string> */
     private static array $dependencies = [
         'elementRepository' => '%$' . GridElementRepositoryInterface::class,
-        'treeBuilder' => '%$' . GridTreeBuilder::class,
+        'treeService' => '%$' . GridTreeService::class,
         'placementService' => '%$' . ElementPlacementService::class,
         'gridAdapter' => '%$' . GridAdapterInterface::class,
         'requestBodyParser' => '%$' . RequestBodyParser::class,
@@ -59,7 +59,7 @@ class GridController extends AdminController
 
     public GridElementRepositoryInterface $elementRepository;
 
-    public GridTreeBuilder $treeBuilder;
+    public GridTreeService $treeService;
 
     public ElementPlacementService $placementService;
 
@@ -138,7 +138,7 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        $tree = $this->treeBuilder->buildForPage($page, $zone);
+        $tree = $this->treeService->buildForPage($page, $zone);
 
         /** @var positive-int $pageId */
         $pageId = (int) $page->ID;
@@ -199,17 +199,17 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        $treeBuilder = $this->treeBuilder;
+        $treeService = $this->treeService;
 
         // Wrap tree building in archived reading mode so standalone ORM queries
         // (in OrmGridElementRepository) resolve against the historical snapshot.
-        // Versioned::reading_archived_date() is required because the tree builder
+        // Versioned::reading_archived_date() is required because the tree service
         // uses GridElement::get()->filter(...), NOT relation traversals from the
         // page record — updateInheritableQueryParams() does not apply.
-        $tree = Versioned::withVersionedMode(static function () use ($treeBuilder, $page, $zone): array {
+        $tree = Versioned::withVersionedMode(static function () use ($treeService, $page, $zone): array {
             Versioned::reading_archived_date($page->LastEdited);
 
-            return $treeBuilder->buildForPage($page, $zone);
+            return $treeService->buildForPage($page, $zone);
         });
 
         /** @var positive-int $pageId */
@@ -657,7 +657,7 @@ class GridController extends AdminController
         $zone = (string) $request->param('Zone');
 
         assert($targetContainerType instanceof ContainerType);
-        $containers = $this->treeBuilder->findContainersOfType($page, $zone, $targetContainerType);
+        $containers = $this->treeService->findContainersOfType($page, $zone, $targetContainerType);
 
         return $this->jsonSuccess(200, $containers);
     }

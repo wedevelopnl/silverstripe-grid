@@ -18,7 +18,7 @@ SilverStripe\Core\Injector\Injector:
   WeDevelop\Grid\Repository\GridElementRepositoryInterface:
     class: WeDevelop\Grid\Repository\OrmGridElementRepository
   WeDevelop\Grid\Service\GridNodeMapper: ~
-  WeDevelop\Grid\Service\GridTreeBuilder:
+  WeDevelop\Grid\Service\GridTreeService:
     constructor:
       elementRepository: '%$WeDevelop\Grid\Repository\GridElementRepositoryInterface'
       nodeMapper: '%$WeDevelop\Grid\Service\GridNodeMapper'
@@ -38,4 +38,4 @@ SilverStripe\Core\Injector\Injector:
   WeDevelop\Grid\Service\GridSettingsService:
     constructor:
       gridAdapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
-      treeBuilder: '%$WeDevelop\Grid\Service\GridTreeBuilder'
+      treeService: '%$WeDevelop\Grid\Service\GridTreeService'
