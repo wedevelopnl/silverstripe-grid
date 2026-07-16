@@ -643,9 +643,20 @@ class GridController extends AdminController
         $zone = (string) $request->param('Zone');
 
         assert($targetContainerType instanceof ContainerType);
-        $containers = $this->treeService->findContainersOfType($page, $zone, $targetContainerType);
+        $containers = $this->treeService->findViewableContainersOfType($page, $zone, $targetContainerType);
 
-        return $this->jsonSuccess(200, $containers);
+        $payload = [];
+        foreach ($containers as $container) {
+            /** @var positive-int $containerId */
+            $containerId = (int) $container->ID;
+            $payload[] = [
+                'id' => $containerId,
+                'title' => $container->getDisplayTitle(),
+                'type' => $targetContainerType->value,
+            ];
+        }
+
+        return $this->jsonSuccess(200, $payload);
     }
 
     public function apiZones(HTTPRequest $request): HTTPResponse
