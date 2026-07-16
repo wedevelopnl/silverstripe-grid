@@ -115,7 +115,7 @@ final class GridTreeServiceTest extends SapphireTest
 
         $tree = $this->builder->buildViewableTree($page, 'main');
 
-        self::assertSame(NodeType::fromClass($page::class), $tree->rootParent->type);
+        self::assertSame(NodeType::Page, $tree->rootParent->type);
         self::assertSame((int) $page->ID, $tree->rootParent->id);
     }
 
