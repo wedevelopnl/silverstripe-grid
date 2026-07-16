@@ -130,7 +130,7 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 │  Service Layer                                              │
 │    ├── RequestBodyParser (JSON → typed request DTOs)        │
 │    │                                                        │
-│    ├── GridTreeBuilder (read path — BFS batch load)         │
+│    ├── GridTreeService (read path — BFS batch load)         │
 │    │     ├── GridElementRepositoryInterface                 │
 │    │     └── GridNodeMapper (element → GridNode DTO)        │
 │    │                                                        │
@@ -141,7 +141,7 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 │    │                                                        │
 │    ├── GridSettingsService (column grid settings writes)    │
 │    │     ├── GridAdapterInterface                           │
-│    │     └── GridTreeBuilder                                │
+│    │     └── GridTreeService                                │
 │    │                                                        │
 │    ├── ElementPlacementService (reorder + insert-after)     │
 │    │     ├── ReorderValidatorInterface                      │
@@ -265,14 +265,14 @@ Cross-page duplication (`duplicateElementTo`) additionally validates ownership (
 
 ### GridSettingsService
 
-Domain service for column `GridSettings` mutations. `updateSettings()` applies viewport-scoped width/offset/visibility changes — writes to the default config when the targeted viewport matches the adapter default, otherwise to an override, and automatically drops overrides that collapse back to the default (redundant-override cleanup). `resetOverrides()` clears every column's viewport overrides across a page/zone (optionally scoped to a single viewport) in a single pass. Depends on `GridAdapterInterface` (to identify the default viewport) and `GridTreeBuilder` (to walk the page's columns for bulk reset).
+Domain service for column `GridSettings` mutations. `updateSettings()` applies viewport-scoped width/offset/visibility changes — writes to the default config when the targeted viewport matches the adapter default, otherwise to an override, and automatically drops overrides that collapse back to the default (redundant-override cleanup). `resetOverrides()` clears every column's viewport overrides across a page/zone (optionally scoped to a single viewport) in a single pass. Depends on `GridAdapterInterface` (to identify the default viewport) and `GridTreeService` (to list the page's elements for bulk reset; `resetOverrides()` filters the flat list down to Columns itself).
 
-### GridTreeBuilder
+### GridTreeService
 
 Builds the full element tree for a page using breadth-first batch loading — one query per hierarchy depth level.
 
 ```
-buildForPage(page, zone)
+buildViewableTree(page, zone)
   │
   ├─ loadAllElements()
   │    ├─ Level 0: query Sections by page (zone-filtered)
@@ -286,12 +286,15 @@ buildForPage(page, zone)
 
 Elements are keyed by the composite `"ParentClass:ParentID"` string in the lookup map. This prevents false matches when a page ID coincides with an element ID.
 
-`GridTreeBuilder` owns loading and tree assembly; the `GridNodeMapper` it holds owns element → `GridNode` conversion. Split so the mapper can be reused (e.g. the `updateElementData` hook fires once per node regardless of which loading strategy is used) and so the builder's own concerns stay free of view-layer details like icon fallbacks and block schemas.
+`GridTreeService` owns loading and tree assembly; the `GridNodeMapper` it holds owns element → `GridNode` conversion. The seam is deliberately tight: the service supplies only structure (the element, its parent ref, its assembled children) via `mapToNode(element, parent, children)`, and the mapper derives everything else — `containerType`, `allowedTypes`, `gridSettings` — from the element itself. Split so the mapper can be reused (e.g. the `updateElementData` hook fires once per node regardless of which loading strategy is used) and so the service's own concerns stay free of view-layer details like icon fallbacks and block schemas.
 
-Two additional entry points sit on the builder alongside `buildForPage()`:
+The public API is layered by permission handling: mechanism-layer methods never filter, policy-layer methods (the `Viewable` names) apply `canView()`:
 
-- `findColumnsForPage(page, zone)` — returns just the Column model instances, used by `GridSettingsService::resetOverrides()` for bulk writes.
-- `findContainersOfType(page, zone, ContainerType)` — returns a flat `list<{id, title, type}>` of matching containers (backs `apiAcceptableContainers`). Much cheaper than building the full tree when the caller only needs a flat list; still runs through the same loader so polymorphic parent keying and zone scoping match.
+- `buildViewableTree(page, zone)` — the CMS React API's wire model (`GridTree`: root parent ref + nodes), filtered per node by `canView()` (policy).
+- `findDescendantsForPage(page, zone)` — flat list of every element on the page/zone in BFS level order; callers filter (e.g. `GridSettingsService::resetOverrides()` keeps only Columns) (mechanism).
+- `findDescendants(element)` — flat subtree below any element, root excluded, no zone filter (mechanism).
+- `findViewableContainersOfType(page, zone, ContainerType)` — viewable container elements of one type; backs `apiAcceptableContainers`, where the controller builds the `{id, title, type}` tuples via `GridElement::getDisplayTitle()` (policy).
+- `indexByKey(elements)` / `ancestors(element, index)` — O(1) `"Class:ID"` index plus ancestor walk (outermost first), used by `GridElementReport` for location trails (mechanism).
 
 ### GridNodeMapper
 
@@ -646,7 +649,7 @@ See `docs/fluent.md` for full setup.
 |------|----------|---------|
 | `updateContainerClasses` | Section | Modify container CSS classes |
 | `updateColumnClasses` | Column | Modify column CSS classes |
-| `updateElementData` | GridTreeBuilder | Inject extra data into tree nodes |
+| `updateElementData` | GridNodeMapper | Inject extra data into tree nodes |
 | `extendedCan` | GridElement | Override permission checks |
 | `updateValidate` | HierarchyValidationExtension | Intercept validation lifecycle |
 | `updateCMSFields` | BlockMediaExtension | Inject media/layout fields into CMS form |
