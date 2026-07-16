@@ -44,11 +44,7 @@ class GridNodeMapper
         ?array $children,
         ?GridSettings $gridSettings,
     ): GridNode {
-        /** @var non-empty-string $title Fallback '(untitled)' guarantees non-empty */
-        $title = $element->Title ?: _t(
-            GridElement::class . '.UNTITLED',
-            '(untitled)',
-        );
+        $title = $element->getDisplayTitle();
 
         /** @var array{typeName: string, type: string, title: string, label: string} $blockSchema */
         $blockSchema = $element->getBlockSchema();
