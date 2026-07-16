@@ -502,6 +502,27 @@ class GridElement extends DataObject
         );
     }
 
+    /**
+     * The element's CMS-facing display label: the stored Title, or a
+     * translatable "(untitled)" fallback when empty.
+     *
+     * Read-time counterpart of {@see ensureDefaultTitle()}, which assigns a
+     * persistent default at write time — this covers unwritten elements and
+     * rows predating the write-time default.
+     *
+     * @return non-empty-string
+     */
+    public function getDisplayTitle(): string
+    {
+        /** @var non-empty-string $title '(untitled)' fallback guarantees non-empty */
+        $title = $this->Title ?: _t(
+            self::class . '.UNTITLED',
+            '(untitled)',
+        );
+
+        return $title;
+    }
+
     #[Override]
     protected function onBeforeWrite(): void
     {

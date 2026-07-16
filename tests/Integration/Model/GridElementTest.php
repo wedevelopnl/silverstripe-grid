@@ -207,6 +207,22 @@ final class GridElementTest extends SapphireTest
         self::assertStringNotContainsString('2', $e1->Title);
     }
 
+    public function testGetDisplayTitleReturnsStoredTitle(): void
+    {
+        $element = Section::create();
+        $element->Title = 'Hero section';
+
+        self::assertSame('Hero section', $element->getDisplayTitle());
+    }
+
+    public function testGetDisplayTitleFallsBackToUntitledWhenTitleEmpty(): void
+    {
+        // An UNWRITTEN instance: writing would fill Title via ensureDefaultTitle.
+        $element = Section::create();
+
+        self::assertSame('(untitled)', $element->getDisplayTitle());
+    }
+
     public function testGetPageWalksParentChain(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
