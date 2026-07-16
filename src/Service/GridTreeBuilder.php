@@ -225,16 +225,14 @@ class GridTreeBuilder
     }
 
     /**
-     * Build a single element node with base fields and optional container fields.
+     * Build a single element node: assemble children for containers, then
+     * delegate all node content to the mapper.
      *
      * @param array<string, list<GridElement>> $elementsByParent
      */
     private function buildElementNode(GridElement $element, array $elementsByParent, NodeRef $parent): GridNode
     {
-        $containerType = null;
-        $allowedTypes = null;
         $children = null;
-        $gridSettings = null;
 
         if ($element instanceof ContainerInterface) {
             /** @var positive-int $elementId */
@@ -242,15 +240,9 @@ class GridTreeBuilder
             $childKey = $element::class . ':' . $elementId;
             $selfRef = new NodeRef(NodeType::fromClass($element::class), $elementId);
 
-            $containerType = $element->getContainerType();
-            $allowedTypes = $this->nodeMapper->getAllowedTypes($element);
             $children = $this->assembleSubTree($elementsByParent, $childKey, $selfRef, $element);
         }
 
-        if ($element instanceof Column) {
-            $gridSettings = $element->getGridSettings();
-        }
-
-        return $this->nodeMapper->mapToNode($element, $parent, $containerType, $allowedTypes, $children, $gridSettings);
+        return $this->nodeMapper->mapToNode($element, $parent, $children);
     }
 }

@@ -51,16 +51,8 @@ final class GridNodeMapperTest extends SapphireTest
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page, title: 'My Section');
 
-        $allowedTypes = $this->mapper->getAllowedTypes($section);
         $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
-        $node = $this->mapper->mapToNode(
-            $section,
-            $parentRef,
-            ContainerType::Section,
-            $allowedTypes,
-            [],
-            null,
-        );
+        $node = $this->mapper->mapToNode($section, $parentRef, []);
 
         self::assertSame((int) $section->ID, $node->getId());
         self::assertSame((int) $page->ID, $node->getParentId());
@@ -110,14 +102,7 @@ final class GridNodeMapperTest extends SapphireTest
         $element->write();
 
         $parentRef = new NodeRef(NodeType::Column, (int) $column->ID);
-        $node = $this->mapper->mapToNode(
-            $element,
-            $parentRef,
-            null,
-            null,
-            null,
-            null,
-        );
+        $node = $this->mapper->mapToNode($element, $parentRef, null);
 
         self::assertSame('Hello admin', $node->summary);
 
@@ -132,14 +117,7 @@ final class GridNodeMapperTest extends SapphireTest
         $section = GridTreeFactory::section($page, title: 'My Section');
 
         $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
-        $node = $this->mapper->mapToNode(
-            $section,
-            $parentRef,
-            ContainerType::Section,
-            null,
-            [],
-            null,
-        );
+        $node = $this->mapper->mapToNode($section, $parentRef, []);
 
         self::assertNull($node->summary);
         self::assertArrayNotHasKey('summary', $node->jsonSerialize());
@@ -159,14 +137,7 @@ final class GridNodeMapperTest extends SapphireTest
         $element->write();
 
         $parentRef = new NodeRef(NodeType::Column, (int) $column->ID);
-        $node = $this->mapper->mapToNode(
-            $element,
-            $parentRef,
-            null,
-            null,
-            null,
-            null,
-        );
+        $node = $this->mapper->mapToNode($element, $parentRef, null);
 
         self::assertSame('', $node->summary);
         self::assertArrayNotHasKey('summary', $node->jsonSerialize());
@@ -179,14 +150,7 @@ final class GridNodeMapperTest extends SapphireTest
         $section->publishSingle();
 
         $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
-        $node = $this->mapper->mapToNode(
-            $section,
-            $parentRef,
-            ContainerType::Section,
-            null,
-            [],
-            null,
-        );
+        $node = $this->mapper->mapToNode($section, $parentRef, []);
 
         self::assertSame(ElementStatus::Published, $node->status);
     }
@@ -202,14 +166,7 @@ final class GridNodeMapperTest extends SapphireTest
         $section->write();
 
         $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
-        $node = $this->mapper->mapToNode(
-            $section,
-            $parentRef,
-            ContainerType::Section,
-            null,
-            [],
-            null,
-        );
+        $node = $this->mapper->mapToNode($section, $parentRef, []);
 
         self::assertSame(ElementStatus::Modified, $node->status);
     }
@@ -226,48 +183,90 @@ final class GridNodeMapperTest extends SapphireTest
         $section->Title = '';
 
         $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
-        $node = $this->mapper->mapToNode(
-            $section,
-            $parentRef,
-            ContainerType::Section,
-            null,
-            [],
-            null,
-        );
+        $node = $this->mapper->mapToNode($section, $parentRef, []);
 
         // The mapper falls back to '(untitled)' or its i18n equivalent
         self::assertStringContainsString('untitled', strtolower($node->title));
     }
 
-    public function testGetAllowedTypesForSection(): void
+    public function testMapToNodeDerivesContainerFieldsForContainerElement(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
-        $allowed = $this->mapper->getAllowedTypes($section);
+        $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
+        $node = $this->mapper->mapToNode($section, $parentRef, []);
 
-        self::assertArrayHasKey(Row::class, $allowed);
+        self::assertSame(ContainerType::Section, $node->containerType);
+        self::assertNotNull($node->allowedTypes);
+        self::assertArrayHasKey(Row::class, $node->allowedTypes);
+        self::assertNull($node->gridSettings);
     }
 
-    public function testGetAllowedTypesForRow(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-
-        $allowed = $this->mapper->getAllowedTypes($row);
-
-        self::assertArrayHasKey(Column::class, $allowed);
-    }
-
-    public function testGetAllowedTypesForColumn(): void
+    public function testMapToNodeLeavesContainerFieldsNullForLeafElement(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        $allowed = $this->mapper->getAllowedTypes($column);
+        $element = ContentElement::create();
+        $element->ParentID = $column->ID;
+        $element->ParentClass = $column::class;
+        $element->write();
+
+        $parentRef = new NodeRef(NodeType::Column, (int) $column->ID);
+        $node = $this->mapper->mapToNode($element, $parentRef, null);
+
+        self::assertNull($node->containerType);
+        self::assertNull($node->allowedTypes);
+        self::assertNull($node->children);
+        self::assertNull($node->gridSettings);
+    }
+
+    public function testMapToNodeDerivesGridSettingsForColumn(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $parentRef = new NodeRef(NodeType::Row, (int) $row->ID);
+        $node = $this->mapper->mapToNode($column, $parentRef, []);
+
+        self::assertSame(ContainerType::Column, $node->containerType);
+        self::assertNotNull($node->gridSettings);
+    }
+
+    public function testAllowedTypesForSection(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+
+        $allowed = $this->allowedTypesFor($section);
+
+        self::assertArrayHasKey(Row::class, $allowed);
+    }
+
+    public function testAllowedTypesForRow(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        $allowed = $this->allowedTypesFor($row);
+
+        self::assertArrayHasKey(Column::class, $allowed);
+    }
+
+    public function testAllowedTypesForColumn(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+
+        $allowed = $this->allowedTypesFor($column);
 
         // Every non-container subclass must be offered, not just the first one found.
         self::assertArrayHasKey(ContentElement::class, $allowed);
@@ -277,23 +276,23 @@ final class GridNodeMapperTest extends SapphireTest
         self::assertArrayNotHasKey(Column::class, $allowed);
     }
 
-    public function testGetAllowedTypesConsistentAcrossCalls(): void
+    public function testAllowedTypesConsistentAcrossCalls(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
-        $first = $this->mapper->getAllowedTypes($section);
-        $second = $this->mapper->getAllowedTypes($section);
+        $first = $this->allowedTypesFor($section);
+        $second = $this->allowedTypesFor($section);
 
         self::assertEquals($first, $second);
     }
 
-    public function testGetAllowedTypesIncludesMetadata(): void
+    public function testAllowedTypesIncludesMetadata(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
-        $allowed = $this->mapper->getAllowedTypes($section);
+        $allowed = $this->allowedTypesFor($section);
 
         // Generic structure check for all entries
         foreach ($allowed as $typeInfo) {
@@ -313,14 +312,14 @@ final class GridNodeMapperTest extends SapphireTest
         self::assertSame('Horizontal container that holds columns within a section', $rowMeta['description']);
     }
 
-    public function testGetAllowedTypesForColumnExcludesBaseClass(): void
+    public function testAllowedTypesForColumnExcludesBaseClass(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        $allowed = $this->mapper->getAllowedTypes($column);
+        $allowed = $this->allowedTypesFor($column);
 
         // Base GridElement class should never appear in allowed types
         self::assertArrayNotHasKey(GridElement::class, $allowed);
@@ -328,34 +327,34 @@ final class GridNodeMapperTest extends SapphireTest
         self::assertNotEmpty($allowed);
     }
 
-    public function testGetAllowedTypesCacheReturnsIdenticalResult(): void
+    public function testAllowedTypesCacheReturnsIdenticalResult(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
-        $first = $this->mapper->getAllowedTypes($section);
-        $second = $this->mapper->getAllowedTypes($section);
+        $first = $this->allowedTypesFor($section);
+        $second = $this->allowedTypesFor($section);
 
-        // Cache hit should return identical object (same reference)
+        // Cache hit must yield an identical array (same entries, same order)
         self::assertSame($first, $second);
     }
 
     /**
-     * Pins the cache-hit early-return (ReturnRemoval mutation on line 114):
-     * with the `return` removed, the second call re-computes types from config
-     * and would see the second singular_name; the original returns the cached
-     * first value.
+     * Pins the cache-hit early-return in getAllowedTypes() (ReturnRemoval
+     * mutation): with the `return` removed, the second call re-computes types
+     * from config and would see the second singular_name; the original
+     * returns the cached first value.
      */
-    public function testGetAllowedTypesCacheShieldsFromSubsequentConfigChanges(): void
+    public function testAllowedTypesCacheShieldsFromSubsequentConfigChanges(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
         Config::modify()->set(Row::class, 'singular_name', 'FirstLabel');
-        $first = $this->mapper->getAllowedTypes($section);
+        $first = $this->allowedTypesFor($section);
 
         Config::modify()->set(Row::class, 'singular_name', 'SecondLabel');
-        $second = $this->mapper->getAllowedTypes($section);
+        $second = $this->allowedTypesFor($section);
 
         self::assertSame('FirstLabel', $first[Row::class]['label']);
         self::assertSame(
@@ -376,7 +375,7 @@ final class GridNodeMapperTest extends SapphireTest
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        $allowed = $this->mapper->getAllowedTypes($column);
+        $allowed = $this->allowedTypesFor($column);
 
         self::assertSame('DistinctSingularLabel', $allowed[ContentElement::class]['label']);
     }
@@ -390,7 +389,7 @@ final class GridNodeMapperTest extends SapphireTest
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        $allowed = $this->mapper->getAllowedTypes($column);
+        $allowed = $this->allowedTypesFor($column);
 
         self::assertSame(
             ClassInfo::shortName(ContentElement::class),
@@ -407,7 +406,7 @@ final class GridNodeMapperTest extends SapphireTest
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        $allowed = $this->mapper->getAllowedTypes($column);
+        $allowed = $this->allowedTypesFor($column);
 
         self::assertSame('custom-icon-value', $allowed[ContentElement::class]['icon']);
     }
@@ -421,7 +420,7 @@ final class GridNodeMapperTest extends SapphireTest
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        $allowed = $this->mapper->getAllowedTypes($column);
+        $allowed = $this->allowedTypesFor($column);
 
         self::assertSame('font-icon-block-content', $allowed[ContentElement::class]['icon']);
     }
@@ -435,7 +434,7 @@ final class GridNodeMapperTest extends SapphireTest
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        $allowed = $this->mapper->getAllowedTypes($column);
+        $allowed = $this->allowedTypesFor($column);
 
         self::assertSame('My custom description', $allowed[ContentElement::class]['description']);
     }
@@ -449,7 +448,7 @@ final class GridNodeMapperTest extends SapphireTest
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        $allowed = $this->mapper->getAllowedTypes($column);
+        $allowed = $this->allowedTypesFor($column);
 
         self::assertSame('', $allowed[ContentElement::class]['description']);
     }
@@ -468,13 +467,13 @@ final class GridNodeMapperTest extends SapphireTest
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        $allowed = $this->mapper->getAllowedTypes($column);
+        $allowed = $this->allowedTypesFor($column);
 
         self::assertSame('', $allowed[ContentElement::class]['description']);
     }
 
     /**
-     * mapToNode icon fallback at line 62 mirrors getElementTypeInfo's icon guard.
+     * mapToNode's icon fallback mirrors getElementTypeInfo's icon guard.
      * Configuring an empty icon pins the LogicalAnd / is_string guard.
      */
     public function testMapToNodeIconFallsBackWhenConfigEmpty(): void
@@ -485,15 +484,27 @@ final class GridNodeMapperTest extends SapphireTest
         $section = GridTreeFactory::section($page, title: 'My Section');
 
         $parentRef = new NodeRef(NodeType::Page, (int) $page->ID);
-        $node = $this->mapper->mapToNode(
-            $section,
-            $parentRef,
-            ContainerType::Section,
-            null,
-            [],
-            null,
-        );
+        $node = $this->mapper->mapToNode($section, $parentRef, []);
 
         self::assertSame('font-icon-block-content', $node->blockSchema['icon']);
+    }
+
+    /**
+     * Resolve a container's allowed child types through the public mapToNode
+     * seam — getAllowedTypes() is a private implementation detail.
+     *
+     * @return array<class-string, array{label: string, icon: string, description: string}>
+     */
+    private function allowedTypesFor(GridElement $container): array
+    {
+        /** @var class-string $parentClass */
+        $parentClass = $container->ParentClass;
+        $parentRef = new NodeRef(NodeType::fromClass($parentClass), (int) $container->ParentID);
+
+        $node = $this->mapper->mapToNode($container, $parentRef, []);
+
+        self::assertNotNull($node->allowedTypes);
+
+        return $node->allowedTypes;
     }
 }

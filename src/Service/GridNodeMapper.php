@@ -9,20 +9,20 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Extensible;
 use SilverStripe\Core\Injector\Injectable;
 use WeDevelop\Grid\Contract\ContainerInterface;
+use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\ElementStatus;
 use WeDevelop\Grid\Value\GridNode;
-use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
 
 /**
  * Maps GridElement models to GridNode DTOs.
  *
- * Handles title fallback, blockSchema assembly, icon resolution,
- * permission checks, allowed child type enumeration, and the
- * updateElementData extension hook.
+ * Derives all node content from the element itself: containerType,
+ * allowed child type enumeration, gridSettings, blockSchema assembly,
+ * icon resolution, permission checks, and the updateElementData
+ * extension hook. The title comes from GridElement::getDisplayTitle().
  */
 class GridNodeMapper
 {
@@ -33,17 +33,28 @@ class GridNodeMapper
     private array $allowedTypesCache = [];
 
     /**
-     * @param array<class-string, array{label: string, icon: string, description: string}>|null $allowedTypes
-     * @param list<GridNode>|null $children
+     * @param list<GridNode>|null $children Assembled child nodes — null for leaf elements.
+     *   The only structural fact the traversal must supply besides $parent; all
+     *   node content (containerType, allowedTypes, gridSettings) is derived here.
      */
     public function mapToNode(
         GridElement $element,
         NodeRef $parent,
-        ?ContainerType $containerType,
-        ?array $allowedTypes,
         ?array $children,
-        ?GridSettings $gridSettings,
     ): GridNode {
+        $containerType = null;
+        $allowedTypes = null;
+        $gridSettings = null;
+
+        if ($element instanceof ContainerInterface) {
+            $containerType = $element->getContainerType();
+            $allowedTypes = $this->getAllowedTypes($element);
+        }
+
+        if ($element instanceof Column) {
+            $gridSettings = $element->getGridSettings();
+        }
+
         $title = $element->getDisplayTitle();
 
         /** @var array{typeName: string, type: string, title: string, label: string} $blockSchema */
@@ -105,7 +116,7 @@ class GridNodeMapper
      * @param ContainerInterface<GridElement> $container
      * @return array<class-string, array{label: string, icon: string, description: string}>
      */
-    public function getAllowedTypes(ContainerInterface $container): array
+    private function getAllowedTypes(ContainerInterface $container): array
     {
         $className = $container::class;
 
