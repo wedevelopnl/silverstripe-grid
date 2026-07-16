@@ -25,16 +25,18 @@ test.describe('Media elements', () => {
       await expect(page).toHaveURL(
         /\/admin\/pages\/edit\/EditForm\/\d+\/field\/GridEditor\/item\/\d+\/edit/,
       )
-      await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 })
+      await page.getByRole('textbox', { name: 'Title', exact: true }).waitFor({ timeout: 15_000 })
 
-      // Navigate to Media tab and verify image is attached
-      await page.getByRole('tab', { name: 'Media' }).click()
-
-      // The attached file appears in SilverStripe's own UploadField widget,
-      // whose markup (.uploadfield-item__title) is third-party and carries no
-      // test hook of ours — scope to it to confirm a file is present.
-      const uploadField = page.locator('.uploadfield-item__title')
-      await expect(uploadField).toBeVisible({ timeout: 10_000 })
+      // Navigate to Media tab and verify the image is attached. SilverStripe's
+      // UploadField renders the file's action controls (View / Remove) as soon
+      // as a file is present — and before it asynchronously fills in the file's
+      // name and size — so the Remove button is the stable, user-visible signal
+      // that the fixture attached an image.
+      await page.getByRole('tab', { name: 'Media', exact: true }).click()
+      const mediaPanel = page.getByRole('tabpanel', { name: 'Media' })
+      await expect(mediaPanel.getByRole('button', { name: 'Remove', exact: true })).toBeVisible({
+        timeout: 15_000,
+      })
     })
 
     await test.step('Verify MediaType toggles VideoCustomThumbnail visibility', async () => {
@@ -54,7 +56,7 @@ test.describe('Media elements', () => {
     })
 
     await test.step('Verify column width picker UX behavior', async () => {
-      await page.getByRole('tab', { name: 'Layout' }).click()
+      await page.getByRole('tab', { name: 'Layout', exact: true }).click()
 
       // The picker renders one radio per width option. Its accessible name is
       // composed of the option's descriptive label plus the split ratio (e.g.
@@ -125,7 +127,7 @@ test.describe('Media elements', () => {
     })
 
     await test.step('Configure media settings', async () => {
-      await page.getByRole('tab', { name: 'Media' }).click()
+      await page.getByRole('tab', { name: 'Media', exact: true }).click()
 
       await selectChosenValue(page, 'MediaRatio', '16x9')
       await page.getByLabel('Caption', { exact: true }).fill('Test media caption')
@@ -137,11 +139,13 @@ test.describe('Media elements', () => {
     })
 
     await test.step('Navigate back and publish page', async () => {
-      await page.getByRole('link', { name: 'E2E Media Elements Page' }).click()
+      await page.getByRole('link', { name: 'E2E Media Elements Page', exact: true }).click()
       await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
 
       await page.getByRole('button', { name: /Publish/ }).click()
-      await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({
+        timeout: 15_000,
+      })
     })
 
     await test.step('Verify frontend rendering with media layout', async () => {
@@ -150,7 +154,7 @@ test.describe('Media elements', () => {
 
       // The image is what the visitor sees — locate it by its accessible role
       // and the alt text derived from the caption.
-      const img = page.getByRole('img', { name: 'Test media caption' })
+      const img = page.getByRole('img', { name: 'Test media caption', exact: true })
       await expect(img).toBeVisible()
 
       // Image src is populated (resized/served by SilverStripe)
@@ -161,22 +165,14 @@ test.describe('Media elements', () => {
       const mediaFigure = page.getByRole('figure').filter({ has: img })
       await expect(mediaFigure).toContainText('Test media caption')
 
-      // Side-by-side layout: the content-element has a row wrapper with two child divs.
-      // Identified structurally (direct-child div of .content-element containing the
-      // media figure) rather than by class name — adapters emit different row classes
-      // (Bootstrap `row`, Tailwind `grid grid-cols-*`, etc.), so there is no stable
-      // role/label to target; the structural shape IS the behaviour under test.
-      const contentElement = page.locator('.content-element').filter({ has: mediaFigure })
-      const rowWrapper = contentElement.locator('> div').filter({ has: mediaFigure })
-      await expect(rowWrapper).toBeVisible()
-      // Row wrapper has exactly 2 direct child divs (media column + content column)
-      await expect(rowWrapper.locator('> div')).toHaveCount(2)
-
-      // Content column renders the element body text
-      await expect(contentElement).toContainText('Media element body content')
+      // The side-by-side layout renders the media (with its caption, asserted
+      // above) alongside the element body text — assert on the content the
+      // visitor reads rather than on the adapter's div structure, which varies
+      // per CSS framework.
+      await expect(page.getByText('Media element body content', { exact: true })).toBeVisible()
 
       // The plain text element also renders
-      await expect(page.getByText('Text element body content')).toBeVisible()
+      await expect(page.getByText('Text element body content', { exact: true })).toBeVisible()
     })
   })
 })

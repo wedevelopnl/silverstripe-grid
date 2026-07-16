@@ -22,25 +22,28 @@ test.describe('Element history — version timeline on element detail form', () 
       await page.goto(
         `/admin/pages/edit/EditForm/${fixture.pageId}/field/GridEditor/item/${leafId}/edit`,
       )
-      await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 })
+      await page.getByRole('textbox', { name: 'Title', exact: true }).waitFor({ timeout: 15_000 })
     })
 
     await test.step('Open the History tab', async () => {
-      await page.getByRole('tab', { name: 'History' }).click()
-      // The history viewer is rendered by SilverStripe's silverstripe/versioned-admin
-      // module (third-party markup with no test hook we can add), so we scope to
-      // its container class to confirm the timeline rendered.
-      await expect(page.locator('.history-viewer__container')).toBeVisible({ timeout: 15_000 })
+      await page.getByRole('tab', { name: 'History', exact: true }).click()
+      // SilverStripe's versioned-admin renders the timeline as an ARIA table
+      // (role=table > role=row > role=cell), so we locate it by role rather
+      // than by its internal class names.
+      await expect(page.getByRole('table')).toBeVisible({ timeout: 15_000 })
     })
 
     await test.step('Verify version rows exist', async () => {
-      // Third-party versioned-admin markup — see the note above.
-      const versionRows = page.locator('.history-viewer__row')
+      // Version rows are the table's data rows (every row except the header,
+      // which is the one carrying column headers).
+      const versionRows = page
+        .getByRole('table')
+        .getByRole('row')
+        .filter({ hasNot: page.getByRole('columnheader') })
       await expect(versionRows.first()).toBeVisible({ timeout: 15_000 })
 
       // modified_leaf was published (v1) then modified (v2) — at least 2 versions.
-      const count = await versionRows.count()
-      expect(count).toBeGreaterThanOrEqual(2)
+      expect(await versionRows.count()).toBeGreaterThanOrEqual(2)
     })
   })
 })

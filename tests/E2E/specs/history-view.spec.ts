@@ -58,6 +58,11 @@ test.describe('History view readonly grid', () => {
       await expect(editGridEditor.getByTestId('add-child-append').first()).toBeVisible()
 
       // --- User action #1: publish the baseline (creates the first live version) ---
+      // The CMS publish action's label toggles between "Publish" and "Published"
+      // depending on the page's live/draft state, and a grid-only edit (written
+      // through the grid's own API) does not flip it back — so across this
+      // publish → edit → re-publish cycle the exact label is not knowable at
+      // author time. Match it loosely by design.
       await page.getByRole('button', { name: /Publish/ }).click()
       await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({
         timeout: 10_000,
@@ -73,6 +78,7 @@ test.describe('History view readonly grid', () => {
       })
 
       // --- User action #3: publish the updated draft (creates the second live version) ---
+      // Loose match — see the note on action #1 above.
       await page.getByRole('button', { name: /Publish/ }).click()
       await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({
         timeout: 10_000,
@@ -83,15 +89,17 @@ test.describe('History view readonly grid', () => {
       // --- Open the History tab ---
       await page.goto(`/admin/pages/history/show/${fixture.pageId}`)
 
-      // The version timeline rows are rendered by SilverStripe's
-      // silverstripe/versioned-admin module (third-party markup with no test hook
-      // of ours), so we scope to its row class to drive and assert on the list.
-      const versionRows = page.locator('.history-viewer__row')
+      // SilverStripe's versioned-admin renders the timeline as an ARIA table
+      // (role=table > role=row > role=cell). The version rows are its data rows
+      // (every row except the header carrying the column headers).
+      const versionRows = page
+        .getByRole('table')
+        .getByRole('row')
+        .filter({ hasNot: page.getByRole('columnheader') })
       await expect(versionRows.first()).toBeVisible({ timeout: 15_000 })
 
       // At least two versions must exist — one per publish above.
-      const totalRows = await versionRows.count()
-      expect(totalRows).toBeGreaterThanOrEqual(2)
+      expect(await versionRows.count()).toBeGreaterThanOrEqual(2)
 
       // --- Click the newest row: it reflects the post-edit state the
       //     test just published (two sections) ---
