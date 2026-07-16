@@ -76,6 +76,22 @@ class GridTreeService
     }
 
     /**
+     * Flat subtree below any element via the same repository BFS, in level
+     * order. The root itself is NOT included. No zone filter — zone scopes
+     * page→section only, and an element root is already inside a zone.
+     * Mechanism layer: never filters by permissions.
+     *
+     * @return list<GridElement>
+     */
+    public function findDescendants(GridElement $root): array
+    {
+        /** @var positive-int $rootId */
+        $rootId = (int) $root->ID;
+
+        return $this->flatten($this->loadAllElements($rootId, $root::class, null));
+    }
+
+    /**
      * Containers of the given type on a page + zone that the current user may
      * view. Policy layer: callers use the output as a UI list and must not see
      * containers the user can't view.
@@ -130,10 +146,10 @@ class GridTreeService
      *
      * @param positive-int $rootParentId
      * @param class-string $rootParentClass
-     * @param non-empty-string $zone
+     * @param non-empty-string|null $zone null = no zone filter (element-rooted loads)
      * @return array<string, list<GridElement>> Map of "ParentClass:ParentID" → elements
      */
-    private function loadAllElements(int $rootParentId, string $rootParentClass, string $zone): array
+    private function loadAllElements(int $rootParentId, string $rootParentClass, ?string $zone): array
     {
         /** @var array<string, list<GridElement>> $elementsByParent */
         $elementsByParent = [];

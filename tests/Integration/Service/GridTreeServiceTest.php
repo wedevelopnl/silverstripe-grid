@@ -238,6 +238,31 @@ final class GridTreeServiceTest extends SapphireTest
         self::assertSame([], $elements);
     }
 
+    public function testFindDescendantsReturnsFlatSubtreeExcludingRoot(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        GridTreeFactory::column(GridTreeFactory::row($section));
+
+        $descendants = $this->builder->findDescendants($section);
+
+        self::assertCount(2, $descendants); // Row + Column, not the Section itself
+        self::assertNotContains((int) $section->ID, array_map(
+            static fn (GridElement $e): int => (int) $e->ID,
+            $descendants,
+        ));
+    }
+
+    public function testFindDescendantsReturnsEmptyListForLeafElement(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $column = GridTreeFactory::column(GridTreeFactory::row($section));
+        $content = GridTreeFactory::contentElement($column);
+
+        self::assertSame([], $this->builder->findDescendants($content));
+    }
+
     public function testFindViewableContainersOfTypeReturnsOnlyRequestedType(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');

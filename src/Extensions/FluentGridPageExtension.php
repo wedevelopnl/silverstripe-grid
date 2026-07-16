@@ -7,13 +7,14 @@ namespace WeDevelop\Grid\Extensions;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Extension;
+use SilverStripe\Core\Injector\Injector;
 use TractorCow\Fluent\Extension\FluentIsolatedExtension;
 use TractorCow\Fluent\Model\Locale;
 use TractorCow\Fluent\State\FluentState;
-use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Service\GridTreeService;
 
 /**
  * Copies the grid element tree when Fluent localises a page to a new locale.
@@ -107,14 +108,18 @@ class FluentGridPageExtension extends Extension
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
         try {
-            FluentState::singleton()->withState(function (FluentState $state) use ($sourceLocale, $page, $targetLocaleId): void {
+            $treeService = Injector::inst()->get(GridTreeService::class);
+
+            FluentState::singleton()->withState(function (FluentState $state) use ($sourceLocale, $page, $targetLocaleId, $treeService): void {
                 $state->setLocale($sourceLocale);
 
                 foreach ($page->Sections() as $section) {
                     $clone = $section->duplicate(true);
 
-                    // Collect all cloned elements while in source locale (where they're visible)
-                    $allCloned = $this->collectTree($clone);
+                    // Reload the freshly-written subtree from the DB while still in
+                    // the source locale (where the clones are visible). The clone
+                    // itself is prepended — findDescendants excludes the root.
+                    $allCloned = [$clone, ...$treeService->findDescendants($clone)];
 
                     // Reassign all LocaleIDs to the target locale.
                     // FluentIsolatedExtension::onBeforeWrite only auto-assigns when empty,
@@ -129,26 +134,6 @@ class FluentGridPageExtension extends Extension
             Config::modify()->set(Section::class, 'auto_scaffold', $priorSectionScaffold);
             Config::modify()->set(Row::class, 'auto_scaffold', $priorRowScaffold);
         }
-    }
-
-    /**
-     * Recursively collects all elements in the tree starting from root.
-     * Must be called in the locale context where the elements are visible.
-     *
-     * @return list<GridElement>
-     */
-    private function collectTree(GridElement $root): array
-    {
-        $elements = [$root];
-
-        if ($root instanceof ContainerInterface && $root->hasChildren()) {
-            /** @var GridElement $child */
-            foreach ($root->getChildren() as $child) {
-                $elements = array_merge($elements, $this->collectTree($child));
-            }
-        }
-
-        return $elements;
     }
 
     /**
