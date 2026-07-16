@@ -7,13 +7,14 @@ namespace WeDevelop\Grid\Reports;
 use Override;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\ClassInfo;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Model\List\ArrayList;
 use SilverStripe\Model\List\SS_List;
 use SilverStripe\Reports\Report;
 use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Service\LocationTrailBuilder;
+use WeDevelop\Grid\Service\GridTreeService;
 use WeDevelop\Grid\Value\TrailSegment;
 
 /**
@@ -61,11 +62,11 @@ class GridElementReport extends Report
 
         $pageFilter = $this->extractStringParam($params, 'PageID');
 
-        $trailBuilder = LocationTrailBuilder::create();
+        $treeService = Injector::inst()->get(GridTreeService::class);
         // Index every element once (unfiltered on purpose): the ancestors of a
         // class-filtered row — e.g. the Section/Row above a Column — are excluded
         // from $elements yet still needed to resolve its trail.
-        $index = $trailBuilder->index(GridElement::get());
+        $index = $treeService->indexByKey(GridElement::get());
 
         $result = ArrayList::create();
 
@@ -87,7 +88,7 @@ class GridElementReport extends Report
             }
 
             $segments = $sitePage instanceof SiteTree
-                ? $trailBuilder->trail($element, $sitePage, $index)
+                ? $this->trailSegments($sitePage, $treeService->ancestors($element, $index))
                 : [new TrailSegment(_t(self::class . '.ORPHANED', 'Orphaned'), null)];
 
             $element->LocationTrail = $this->renderTrail($segments);
@@ -166,10 +167,37 @@ class GridElementReport extends Report
     }
 
     /**
+     * The full location trail as structured segments: the owning page followed by
+     * each ancestor container, top-down. Every segment links to its subject's CMS
+     * edit screen; the element's own level is omitted.
+     *
+     * @param list<GridElement> $ancestors outermost first (see {@see GridTreeService::ancestors()})
+     * @return list<TrailSegment>
+     */
+    private function trailSegments(SiteTree $page, array $ancestors): array
+    {
+        $segments = [new TrailSegment((string) $page->Title, $page->getCMSEditLink())];
+
+        foreach ($ancestors as $ancestor) {
+            $segments[] = new TrailSegment($this->trailLabel($ancestor), $ancestor->getCMSEditLink());
+        }
+
+        return $segments;
+    }
+
+    /** Display label for a segment: the stored title, or the element type as fallback. */
+    private function trailLabel(GridElement $element): string
+    {
+        $title = (string) $element->Title;
+
+        return $title !== '' ? $title : $element->getType();
+    }
+
+    /**
      * Render location segments as a breadcrumb: each linked when it carries a CMS
      * edit URL, plain text otherwise. Labels and links are escaped at this HTML
-     * boundary; the segment structure itself is produced (and tested) upstream by
-     * {@see LocationTrailBuilder}.
+     * boundary; the segment structure itself is produced by {@see trailSegments()}
+     * above.
      *
      * @param list<TrailSegment> $segments
      */
