@@ -32,8 +32,8 @@ test.describe('Content elements — add, edit, publish, render', () => {
 
     await test.step('Verify populated column shows existing elements', async () => {
       await expect(elementCards).toHaveCount(2)
-      await expect(page.getByText('Existing Text Block')).toBeVisible()
-      await expect(page.getByText('Existing Image Block')).toBeVisible()
+      await expect(page.getByText('Existing Text Block', { exact: true })).toBeVisible()
+      await expect(page.getByText('Existing Image Block', { exact: true })).toBeVisible()
     })
 
     await test.step('Add element to empty column', async () => {
@@ -85,8 +85,8 @@ test.describe('Content elements — add, edit, publish, render', () => {
 
     await test.step('Fill in the edit form including title settings', async () => {
       // Wait for the form to be ready
-      await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 })
-      await page.getByRole('textbox', { name: 'Title' }).fill('My Edited Element')
+      await page.getByRole('textbox', { name: 'Title', exact: true }).waitFor({ timeout: 15_000 })
+      await page.getByRole('textbox', { name: 'Title', exact: true }).fill('My Edited Element')
 
       // Configure title display: set heading level to h4 and enable visibility
       await selectChosenValue(page, 'TitleTag', 'h4')
@@ -122,13 +122,15 @@ test.describe('Content elements — add, edit, publish, render', () => {
     })
 
     await test.step('Navigate back to page editor via breadcrumb', async () => {
-      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click()
+      await page.getByRole('link', { name: 'E2E Content Elements Page', exact: true }).click()
       await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
     })
 
     await test.step('Publish the page', async () => {
       await page.getByRole('button', { name: /Publish/ }).click()
-      await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({
+        timeout: 15_000,
+      })
     })
 
     await test.step('Verify frontend rendering', async () => {
@@ -137,17 +139,21 @@ test.describe('Content elements — add, edit, publish, render', () => {
       await page.goto(liveUrl)
 
       // Verify the edited element renders its content
-      await expect(page.getByText('Hello from the grid')).toBeVisible()
+      await expect(page.getByText('Hello from the grid', { exact: true })).toBeVisible()
 
       // Verify pre-populated elements render their body content
-      await expect(page.getByText('Text block body content')).toBeVisible()
-      await expect(page.getByText('Image block body content')).toBeVisible()
+      await expect(page.getByText('Text block body content', { exact: true })).toBeVisible()
+      await expect(page.getByText('Image block body content', { exact: true })).toBeVisible()
 
       // Verify title configuration: section title renders as h3 (set in fixture)
-      await expect(page.getByRole('heading', { level: 3, name: 'Content Section' })).toBeVisible()
+      await expect(
+        page.getByRole('heading', { level: 3, name: 'Content Section', exact: true }),
+      ).toBeVisible()
 
       // Verify title configuration: edited element title renders as h4 (set in CMS form)
-      await expect(page.getByRole('heading', { level: 4, name: 'My Edited Element' })).toBeVisible()
+      await expect(
+        page.getByRole('heading', { level: 4, name: 'My Edited Element', exact: true }),
+      ).toBeVisible()
     })
   })
 })
@@ -168,14 +174,14 @@ test.describe('Content elements — edit container titles via title links', () =
         /\/admin\/pages\/edit\/EditForm\/\d+\/field\/GridEditor\/item\/\d+\/edit/,
       )
 
-      await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 })
-      await page.getByRole('textbox', { name: 'Title' }).fill('Updated Section Title')
+      await page.getByRole('textbox', { name: 'Title', exact: true }).waitFor({ timeout: 15_000 })
+      await page.getByRole('textbox', { name: 'Title', exact: true }).fill('Updated Section Title')
       await page.getByRole('button', { name: /Save/ }).first().click()
       await expect(
-        page.getByText('Saved Section "Updated Section Title" successfully.'),
+        page.getByText('Saved Section "Updated Section Title" successfully.', { exact: true }),
       ).toBeVisible({ timeout: 15_000 })
 
-      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click()
+      await page.getByRole('link', { name: 'E2E Content Elements Page', exact: true }).click()
       await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
       await expect(page.getByTestId('section-title')).toContainText('Updated Section Title')
     })
@@ -186,14 +192,16 @@ test.describe('Content elements — edit container titles via title links', () =
         /\/admin\/pages\/edit\/EditForm\/\d+\/field\/GridEditor\/item\/\d+\/edit/,
       )
 
-      await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 })
-      await page.getByRole('textbox', { name: 'Title' }).fill('Updated Row Title')
+      await page.getByRole('textbox', { name: 'Title', exact: true }).waitFor({ timeout: 15_000 })
+      await page.getByRole('textbox', { name: 'Title', exact: true }).fill('Updated Row Title')
       await page.getByRole('button', { name: /Save/ }).first().click()
-      await expect(page.getByText('Saved Row "Updated Row Title" successfully.')).toBeVisible({
+      await expect(
+        page.getByText('Saved Row "Updated Row Title" successfully.', { exact: true }),
+      ).toBeVisible({
         timeout: 15_000,
       })
 
-      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click()
+      await page.getByRole('link', { name: 'E2E Content Elements Page', exact: true }).click()
       await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
       await expect(page.getByTestId('row-title').first()).toContainText('Updated Row Title')
     })
@@ -204,14 +212,14 @@ test.describe('Content elements — edit container titles via title links', () =
         /\/admin\/pages\/edit\/EditForm\/\d+\/field\/GridEditor\/item\/\d+\/edit/,
       )
 
-      await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 })
-      await page.getByRole('textbox', { name: 'Title' }).fill('Updated Column Title')
+      await page.getByRole('textbox', { name: 'Title', exact: true }).waitFor({ timeout: 15_000 })
+      await page.getByRole('textbox', { name: 'Title', exact: true }).fill('Updated Column Title')
       await page.getByRole('button', { name: /Save/ }).first().click()
-      await expect(page.getByText('Saved Column "Updated Column Title" successfully.')).toBeVisible(
-        { timeout: 15_000 },
-      )
+      await expect(
+        page.getByText('Saved Column "Updated Column Title" successfully.', { exact: true }),
+      ).toBeVisible({ timeout: 15_000 })
 
-      await page.getByRole('link', { name: 'E2E Content Elements Page' }).click()
+      await page.getByRole('link', { name: 'E2E Content Elements Page', exact: true }).click()
       await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
       await expect(page.getByTestId('column-title').first()).toContainText('Updated Column Title')
     })

@@ -13,7 +13,7 @@ test.describe('Page lifecycle', () => {
 
     await test.step('open the page and see the grid editor', async () => {
       await page.goto(`/admin/pages/edit/show/${fixture.pageId}`)
-      await expect(page.getByRole('textbox', { name: 'Page name' })).toHaveValue(
+      await expect(page.getByRole('textbox', { name: 'Page name', exact: true })).toHaveValue(
         'E2E Grid Test Page',
       )
       await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
@@ -25,7 +25,9 @@ test.describe('Page lifecycle', () => {
 
     await test.step('publish the page', async () => {
       await page.getByRole('button', { name: /Publish/ }).click()
-      await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 10_000 })
+      await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({
+        timeout: 10_000,
+      })
     })
 
     await test.step('verify the published page on the frontend', async () => {
@@ -33,7 +35,7 @@ test.describe('Page lifecycle', () => {
       await page.goto(livePath)
 
       await expect(
-        page.getByRole('heading', { level: 1, name: /E2E Grid Test Page/ }),
+        page.getByRole('heading', { level: 1, name: 'E2E Grid Test Page', exact: true }),
       ).toBeVisible()
       await expect(page.getByRole('heading', { level: 2 })).toHaveText('Main Section')
     })

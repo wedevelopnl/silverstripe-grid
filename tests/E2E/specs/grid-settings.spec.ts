@@ -16,7 +16,7 @@ test.describe('Grid settings tab', () => {
     await page.goto(
       `/admin/pages/edit/EditForm/${fixture.pageId}/field/GridEditor/item/${columnId}/edit`,
     )
-    await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 })
+    await page.getByRole('textbox', { name: 'Title', exact: true }).waitFor({ timeout: 15_000 })
 
     const adapter = await readAdapterConfig(page)
     const overrideKey = firstNonDefaultViewport(adapter)
@@ -40,7 +40,7 @@ test.describe('Grid settings tab', () => {
     const overrideVisible = page.locator(`input[name="GridSettings[${overrideKey}][visible]"]`)
 
     await test.step('Grid tab renders one row per adapter viewport with correct baseline state', async () => {
-      await page.getByRole('tab', { name: 'Grid' }).click()
+      await page.getByRole('tab', { name: 'Grid', exact: true }).click()
 
       await expect(settingsTable).toBeVisible()
       // One data row per adapter viewport.
@@ -84,7 +84,7 @@ test.describe('Grid settings tab', () => {
     })
 
     await test.step('editor badge reflects override after returning to the page editor', async () => {
-      await page.getByRole('link', { name: 'E2E Grid Test Page' }).click()
+      await page.getByRole('link', { name: 'E2E Grid Test Page', exact: true }).click()
       await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
 
       const leftColumn = page.getByTestId('column-block').first()
@@ -100,8 +100,8 @@ test.describe('Grid settings tab', () => {
 
     await test.step('override persists across a reload of the column edit form', async () => {
       await page.goto(editFormUrl)
-      await page.getByRole('textbox', { name: 'Title' }).waitFor({ timeout: 15_000 })
-      await page.getByRole('tab', { name: 'Grid' }).click()
+      await page.getByRole('textbox', { name: 'Title', exact: true }).waitFor({ timeout: 15_000 })
+      await page.getByRole('tab', { name: 'Grid', exact: true }).click()
 
       await expect(overrideToggle).toBeChecked()
       await expect(overrideWidthSelect).toHaveValue(String(overrideWidth))

@@ -69,7 +69,7 @@ test.describe('Viewport switcher — create and reset overrides', () => {
     await test.step('"Reset all" clears every override and hides the reset button', async () => {
       await resetButton.click()
       await expect(confirmDialog).toBeVisible()
-      await confirmDialog.getByRole('button', { name: 'Reset' }).click()
+      await confirmDialog.getByRole('button', { name: 'Reset', exact: true }).click()
 
       await expect(resetButton).toBeHidden()
 
@@ -165,7 +165,7 @@ test.describe('Viewport switcher — independent overrides and publish', () => {
       const livePath = fixture.pageUrl.split('?')[0]
       await page.goto(livePath)
       await expect(
-        page.getByRole('heading', { level: 1, name: /E2E Grid Test Page/ }),
+        page.getByRole('heading', { level: 1, name: 'E2E Grid Test Page', exact: true }),
       ).toBeVisible()
     })
   })

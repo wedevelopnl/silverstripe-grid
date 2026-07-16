@@ -36,51 +36,51 @@ test.describe('Collapsible containers', () => {
     await test.step('collapse and expand containers independently', async () => {
       // --- Everything starts expanded ---
       await expect(sectionAToggle).toHaveAttribute('aria-expanded', 'true')
-      await expect(sectionA.getByRole('heading', { name: 'Row A1' })).toBeVisible()
-      await expect(sectionA.getByRole('heading', { name: 'Row A2' })).toBeVisible()
-      await expect(sectionB.getByText('Block B1')).toBeVisible()
-      await expect(colA1L.getByText('Block A1-Left')).toBeVisible()
-      await expect(colA1R.getByText('Block A1-Right')).toBeVisible()
+      await expect(sectionA.getByRole('heading', { name: 'Row A1', exact: true })).toBeVisible()
+      await expect(sectionA.getByRole('heading', { name: 'Row A2', exact: true })).toBeVisible()
+      await expect(sectionB.getByText('Block B1', { exact: true })).toBeVisible()
+      await expect(colA1L.getByText('Block A1-Left', { exact: true })).toBeVisible()
+      await expect(colA1R.getByText('Block A1-Right', { exact: true })).toBeVisible()
 
       // --- Collapse Section A — Section B stays expanded ---
       const urlBefore = page.url()
       await sectionAToggle.click()
 
       await expect(sectionAToggle).toHaveAttribute('aria-expanded', 'false')
-      await expect(sectionA.getByRole('heading', { name: 'Row A1' })).toBeHidden()
-      await expect(sectionA.getByRole('heading', { name: 'Row A2' })).toBeHidden()
-      await expect(sectionB.getByText('Block B1')).toBeVisible()
+      await expect(sectionA.getByRole('heading', { name: 'Row A1', exact: true })).toBeHidden()
+      await expect(sectionA.getByRole('heading', { name: 'Row A2', exact: true })).toBeHidden()
+      await expect(sectionB.getByText('Block B1', { exact: true })).toBeVisible()
       // Toggle click did not navigate away
       expect(page.url()).toBe(urlBefore)
 
       // --- Expand Section A back ---
       await sectionAToggle.click()
       await expect(sectionAToggle).toHaveAttribute('aria-expanded', 'true')
-      await expect(sectionA.getByRole('heading', { name: 'Row A1' })).toBeVisible()
+      await expect(sectionA.getByRole('heading', { name: 'Row A1', exact: true })).toBeVisible()
 
       // --- Collapse Row A1 — sibling Row A2 stays expanded ---
       await rowA1Toggle.click()
       await expect(rowA1Toggle).toHaveAttribute('aria-expanded', 'false')
-      await expect(colA1L.getByText('Block A1-Left')).toBeHidden()
+      await expect(colA1L.getByText('Block A1-Left', { exact: true })).toBeHidden()
       await expect(rowA2Toggle).toHaveAttribute('aria-expanded', 'true')
-      await expect(rowA2.getByText('Block A2')).toBeVisible()
+      await expect(rowA2.getByText('Block A2', { exact: true })).toBeVisible()
 
       // --- Expand Row A1 to access columns ---
       await rowA1Toggle.click()
       await expect(rowA1Toggle).toHaveAttribute('aria-expanded', 'true')
-      await expect(colA1L.getByText('Block A1-Left')).toBeVisible()
+      await expect(colA1L.getByText('Block A1-Left', { exact: true })).toBeVisible()
 
       // --- Collapse Column A1-Left — sibling Column A1-Right stays expanded ---
       await colA1LToggle.click()
       await expect(colA1LToggle).toHaveAttribute('aria-expanded', 'false')
-      await expect(colA1L.getByText('Block A1-Left')).toBeHidden()
-      await expect(colA1R.getByText('Block A1-Right')).toBeVisible()
+      await expect(colA1L.getByText('Block A1-Left', { exact: true })).toBeHidden()
+      await expect(colA1R.getByText('Block A1-Right', { exact: true })).toBeVisible()
 
       // --- Build up nested collapsed state for persistence test ---
       // Collapse Row A2 (Row A1 stays expanded with collapsed column inside)
       await rowA2Toggle.click()
       await expect(rowA2Toggle).toHaveAttribute('aria-expanded', 'false')
-      await expect(rowA2.getByText('Block A2')).toBeHidden()
+      await expect(rowA2.getByText('Block A2', { exact: true })).toBeHidden()
       await expect(rowA1Toggle).toHaveAttribute('aria-expanded', 'true')
 
       // Collapse parent Section A to test child state independence
@@ -93,17 +93,20 @@ test.describe('Collapsible containers', () => {
       await expect(rowA1Toggle).toHaveAttribute('aria-expanded', 'true')
       await expect(rowA2Toggle).toHaveAttribute('aria-expanded', 'false')
       await expect(colA1LToggle).toHaveAttribute('aria-expanded', 'false')
-      await expect(colA1L.getByText('Block A1-Left')).toBeHidden()
-      await expect(colA1R.getByText('Block A1-Right')).toBeVisible()
+      await expect(colA1L.getByText('Block A1-Left', { exact: true })).toBeHidden()
+      await expect(colA1R.getByText('Block A1-Right', { exact: true })).toBeVisible()
     })
 
     await test.step('collapsed state survives CMS navigation', async () => {
       // --- Navigate to a different page via CMS (SPA transition) ---
       // This unmounts the React grid editor without a full browser reload.
       await page.goto(`/admin/pages/edit/show/${otherPageId}`)
-      await expect(page.getByRole('textbox', { name: 'Page name' })).toHaveValue('E2E Other Page', {
-        timeout: 15_000,
-      })
+      await expect(page.getByRole('textbox', { name: 'Page name', exact: true })).toHaveValue(
+        'E2E Other Page',
+        {
+          timeout: 15_000,
+        },
+      )
 
       // --- Navigate back to the original page ---
       await page.goto(`/admin/pages/edit/show/${fixture.pageId}`)
@@ -134,7 +137,7 @@ test.describe('Collapsible containers', () => {
         'aria-expanded',
         'false',
       )
-      await expect(rowA2Nav.getByText('Block A2')).toBeHidden()
+      await expect(rowA2Nav.getByText('Block A2', { exact: true })).toBeHidden()
 
       const colA1LNav = rowA1Nav.getByTestId('column-block').filter({ hasText: 'Block A1-Left' })
       const colA1RNav = rowA1Nav.getByTestId('column-block').filter({ hasText: 'Block A1-Right' })
@@ -143,8 +146,8 @@ test.describe('Collapsible containers', () => {
         'aria-expanded',
         'false',
       )
-      await expect(colA1LNav.getByText('Block A1-Left')).toBeHidden()
-      await expect(colA1RNav.getByText('Block A1-Right')).toBeVisible()
+      await expect(colA1LNav.getByText('Block A1-Left', { exact: true })).toBeHidden()
+      await expect(colA1RNav.getByText('Block A1-Right', { exact: true })).toBeVisible()
 
       // --- Collapse Section A for the hard reload test ---
       await sectionANav.getByTestId('collapse-toggle').first().click()
@@ -194,14 +197,14 @@ test.describe('Collapsible containers', () => {
         'aria-expanded',
         'false',
       )
-      await expect(colA1LReload.getByText('Block A1-Left')).toBeHidden()
-      await expect(colA1RReload.getByText('Block A1-Right')).toBeVisible()
+      await expect(colA1LReload.getByText('Block A1-Left', { exact: true })).toBeHidden()
+      await expect(colA1RReload.getByText('Block A1-Right', { exact: true })).toBeVisible()
 
       // --- Round-trip: expand everything back to starting state ---
       await colA1LReload.getByTestId('collapse-toggle').click()
       await rowA2Reload.getByTestId('collapse-toggle').first().click()
-      await expect(colA1LReload.getByText('Block A1-Left')).toBeVisible()
-      await expect(rowA2Reload.getByText('Block A2')).toBeVisible()
+      await expect(colA1LReload.getByText('Block A1-Left', { exact: true })).toBeVisible()
+      await expect(rowA2Reload.getByText('Block A2', { exact: true })).toBeVisible()
     })
   })
 })
