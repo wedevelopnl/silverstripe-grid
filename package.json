@@ -45,7 +45,7 @@
     "@stryker-mutator/core": "^9.5.0",
     "@stryker-mutator/typescript-checker": "^9.6.1",
     "@stryker-mutator/vitest-runner": "^9.6.1",
-    "@tailwindcss/cli": "^4.3.2",
+    "@tailwindcss/cli": "^4.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.6.1",
