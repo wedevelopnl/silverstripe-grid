@@ -37,7 +37,7 @@ final class GridTreeServiceTest extends SapphireTest
         GridElement::class => [VetoViewByTitleExtension::class],
     ];
 
-    private GridTreeService $builder;
+    private GridTreeService $service;
 
     protected function setUp(): void
     {
@@ -50,7 +50,7 @@ final class GridTreeServiceTest extends SapphireTest
 
         $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
 
-        $this->builder = Injector::inst()->get(GridTreeService::class);
+        $this->service = Injector::inst()->get(GridTreeService::class);
     }
 
     public function testBuildsFullTreeFromPage(): void
@@ -61,7 +61,7 @@ final class GridTreeServiceTest extends SapphireTest
         $column = GridTreeFactory::column($row);
         $content = GridTreeFactory::contentElement($column, title: 'Test Content');
 
-        $tree = $this->builder->buildViewableTree($page, 'main');
+        $tree = $this->service->buildViewableTree($page, 'main');
 
         $sectionNodes = $tree->nodes;
         self::assertCount(1, $sectionNodes);
@@ -94,7 +94,7 @@ final class GridTreeServiceTest extends SapphireTest
         GridTreeFactory::section($page, zone: 'main');
         GridTreeFactory::section($page, zone: 'sidebar');
 
-        $tree = $this->builder->buildViewableTree($page, 'main');
+        $tree = $this->service->buildViewableTree($page, 'main');
 
         $sectionNodes = $tree->nodes;
         self::assertCount(1, $sectionNodes);
@@ -105,7 +105,7 @@ final class GridTreeServiceTest extends SapphireTest
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
 
-        $tree = $this->builder->buildViewableTree($page, 'main');
+        $tree = $this->service->buildViewableTree($page, 'main');
 
         self::assertSame([], $tree->nodes);
     }
@@ -114,7 +114,7 @@ final class GridTreeServiceTest extends SapphireTest
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
 
-        $tree = $this->builder->buildViewableTree($page, 'main');
+        $tree = $this->service->buildViewableTree($page, 'main');
 
         self::assertSame(NodeType::Page, $tree->rootParent->type);
         self::assertSame((int) $page->ID, $tree->rootParent->id);
@@ -128,7 +128,7 @@ final class GridTreeServiceTest extends SapphireTest
         // Log out so canView returns false (requires CMS_ACCESS)
         $this->logOut();
 
-        $tree = $this->builder->buildViewableTree($page, 'main');
+        $tree = $this->service->buildViewableTree($page, 'main');
 
         self::assertSame([], $tree->nodes);
     }
@@ -139,7 +139,7 @@ final class GridTreeServiceTest extends SapphireTest
         GridTreeFactory::section($page, sort: 1, title: VetoViewByTitleExtension::HIDDEN_TITLE);
         $visible = GridTreeFactory::section($page, sort: 2, title: 'Visible');
 
-        $tree = $this->builder->buildViewableTree($page, 'main');
+        $tree = $this->service->buildViewableTree($page, 'main');
 
         $nodes = $tree->nodes;
         self::assertCount(1, $nodes);
@@ -153,7 +153,7 @@ final class GridTreeServiceTest extends SapphireTest
         GridTreeFactory::row($section, sort: 1, title: VetoViewByTitleExtension::HIDDEN_TITLE);
         $visible = GridTreeFactory::row($section, sort: 2, title: 'Visible Row');
 
-        $containers = $this->builder->findViewableContainersOfType($page, 'main', ContainerType::Row);
+        $containers = $this->service->findViewableContainersOfType($page, 'main', ContainerType::Row);
 
         self::assertCount(1, $containers);
         self::assertSame((int) $visible->ID, (int) $containers[0]->ID);
@@ -169,7 +169,7 @@ final class GridTreeServiceTest extends SapphireTest
         GridTreeFactory::row($section2);
         GridTreeFactory::row($section2);
 
-        $tree = $this->builder->buildViewableTree($page, 'main');
+        $tree = $this->service->buildViewableTree($page, 'main');
 
         $sectionNodes = $tree->nodes;
         self::assertCount(2, $sectionNodes);
@@ -186,7 +186,7 @@ final class GridTreeServiceTest extends SapphireTest
         $settings = GridSettings::initial(12);
         GridTreeFactory::column($row, gridSettings: $settings);
 
-        $tree = $this->builder->buildViewableTree($page, 'main');
+        $tree = $this->service->buildViewableTree($page, 'main');
 
         $columnNode = $tree->nodes[0]->children[0]->children[0];
         self::assertInstanceOf(GridSettings::class, $columnNode->gridSettings);
@@ -200,7 +200,7 @@ final class GridTreeServiceTest extends SapphireTest
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        $elements = $this->builder->findDescendantsForPage($page, 'main');
+        $elements = $this->service->findDescendantsForPage($page, 'main');
 
         $ids = array_map(static fn (GridElement $e): int => (int) $e->ID, $elements);
         self::assertSame([(int) $section->ID, (int) $row->ID, (int) $column->ID], $ids);
@@ -212,7 +212,7 @@ final class GridTreeServiceTest extends SapphireTest
         $section = GridTreeFactory::section($page);
         $hidden = GridTreeFactory::row($section, title: VetoViewByTitleExtension::HIDDEN_TITLE);
 
-        $elements = $this->builder->findDescendantsForPage($page, 'main');
+        $elements = $this->service->findDescendantsForPage($page, 'main');
 
         $ids = array_map(static fn (GridElement $e): int => (int) $e->ID, $elements);
         self::assertContains((int) $hidden->ID, $ids);
@@ -225,7 +225,7 @@ final class GridTreeServiceTest extends SapphireTest
         $sidebarSection = GridTreeFactory::section($page, zone: 'sidebar');
         GridTreeFactory::row($sidebarSection);
 
-        $elements = $this->builder->findDescendantsForPage($page, 'main');
+        $elements = $this->service->findDescendantsForPage($page, 'main');
 
         $ids = array_map(static fn (GridElement $e): int => (int) $e->ID, $elements);
         self::assertSame([(int) $mainSection->ID], $ids);
@@ -235,7 +235,7 @@ final class GridTreeServiceTest extends SapphireTest
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
 
-        $elements = $this->builder->findDescendantsForPage($page, 'main');
+        $elements = $this->service->findDescendantsForPage($page, 'main');
 
         self::assertSame([], $elements);
     }
@@ -253,7 +253,7 @@ final class GridTreeServiceTest extends SapphireTest
         $siblingSection = GridTreeFactory::section($page);
         $siblingRow = GridTreeFactory::row($siblingSection);
 
-        $descendants = $this->builder->findDescendants($section);
+        $descendants = $this->service->findDescendants($section);
 
         $ids = array_map(static fn (GridElement $e): int => (int) $e->ID, $descendants);
         self::assertSame([(int) $row->ID, (int) $column->ID], $ids); // Row + Column, not the Section itself
@@ -269,7 +269,7 @@ final class GridTreeServiceTest extends SapphireTest
         $column = GridTreeFactory::column(GridTreeFactory::row($section));
         $content = GridTreeFactory::contentElement($column);
 
-        self::assertSame([], $this->builder->findDescendants($content));
+        self::assertSame([], $this->service->findDescendants($content));
     }
 
     public function testFindViewableContainersOfTypeReturnsOnlyRequestedType(): void
@@ -281,7 +281,7 @@ final class GridTreeServiceTest extends SapphireTest
         GridTreeFactory::column($row1);
         GridTreeFactory::column($row2);
 
-        $rows = $this->builder->findViewableContainersOfType($page, 'main', ContainerType::Row);
+        $rows = $this->service->findViewableContainersOfType($page, 'main', ContainerType::Row);
 
         self::assertCount(2, $rows);
         $ids = array_map(static fn (GridElement $e): int => (int) $e->ID, $rows);
@@ -296,7 +296,7 @@ final class GridTreeServiceTest extends SapphireTest
         $mainSection = GridTreeFactory::section($page, zone: 'main', title: 'Main section');
         GridTreeFactory::section($page, zone: 'sidebar', title: 'Sidebar section');
 
-        $mainSections = $this->builder->findViewableContainersOfType($page, 'main', ContainerType::Section);
+        $mainSections = $this->service->findViewableContainersOfType($page, 'main', ContainerType::Section);
 
         self::assertCount(1, $mainSections);
         self::assertSame((int) $mainSection->ID, (int) $mainSections[0]->ID);
@@ -310,7 +310,7 @@ final class GridTreeServiceTest extends SapphireTest
         // Log out so canView returns false (requires CMS_ACCESS)
         $this->logOut();
 
-        $sections = $this->builder->findViewableContainersOfType($page, 'main', ContainerType::Section);
+        $sections = $this->service->findViewableContainersOfType($page, 'main', ContainerType::Section);
 
         self::assertSame([], $sections);
     }
@@ -319,7 +319,7 @@ final class GridTreeServiceTest extends SapphireTest
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
 
-        $rows = $this->builder->findViewableContainersOfType($page, 'main', ContainerType::Row);
+        $rows = $this->service->findViewableContainersOfType($page, 'main', ContainerType::Row);
 
         self::assertSame([], $rows);
     }
@@ -332,14 +332,14 @@ final class GridTreeServiceTest extends SapphireTest
         $column = GridTreeFactory::column($row);
         $content = GridTreeFactory::contentElement($column);
 
-        $index = $this->builder->indexByKey(GridElement::get());
+        $index = $this->service->indexByKey(GridElement::get());
 
         // Outermost first: Section → Row → Column. The element's own level is excluded.
         self::assertSame(
             [(int) $section->ID, (int) $row->ID, (int) $column->ID],
             array_map(
                 static fn (GridElement $e): int => (int) $e->ID,
-                $this->builder->ancestors($content, $index),
+                $this->service->ancestors($content, $index),
             ),
         );
     }
@@ -349,10 +349,10 @@ final class GridTreeServiceTest extends SapphireTest
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
-        $index = $this->builder->indexByKey(GridElement::get());
+        $index = $this->service->indexByKey(GridElement::get());
 
         // A Section sits directly under the page, so it has no element ancestors.
-        self::assertSame([], $this->builder->ancestors($section, $index));
+        self::assertSame([], $this->service->ancestors($section, $index));
     }
 
     public function testAncestorsIgnoreParentIdCollisionAcrossClasses(): void
@@ -379,12 +379,12 @@ final class GridTreeServiceTest extends SapphireTest
         $section = GridElement::get()->byID((int) $section->ID);
         self::assertInstanceOf(Section::class, $section);
 
-        $index = $this->builder->indexByKey(GridElement::get());
+        $index = $this->service->indexByKey(GridElement::get());
 
         // The section's parent key is "<PageClass>:<collidingId>", which is not a
         // GridElement key — so the same-numbered content element is NOT a false
         // ancestor. Keying the index by bare ID instead of "Class:ID" would make
         // this return [content] and fail.
-        self::assertSame([], $this->builder->ancestors($section, $index));
+        self::assertSame([], $this->service->ancestors($section, $index));
     }
 }
