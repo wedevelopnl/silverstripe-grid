@@ -81,6 +81,9 @@ class GridTreeService
      * page→section only, and an element root is already inside a zone.
      * Mechanism layer: never filters by permissions.
      *
+     * $root must be a persisted element — an unwritten root (ID 0) has no
+     * children to find.
+     *
      * @return list<GridElement>
      */
     public function findDescendants(GridElement $root): array
