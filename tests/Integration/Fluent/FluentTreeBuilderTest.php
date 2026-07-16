@@ -91,10 +91,9 @@ final class FluentTreeBuilderTest extends SapphireTest
         GridTreeFactory::column($nlRow);
 
         // Verify Dutch tree — full depth
-        $nlTree = $this->builder->buildForPage($page, 'main');
-        self::assertArrayHasKey($page->ID, $nlTree);
+        $nlTree = $this->builder->buildViewableTree($page, 'main');
 
-        $nlSections = $nlTree[$page->ID];
+        $nlSections = $nlTree->nodes;
         self::assertCount(1, $nlSections);
         self::assertSame('NL Section', $nlSections[0]->title);
         self::assertSame(ContainerType::Section, $nlSections[0]->containerType);
@@ -113,8 +112,8 @@ final class FluentTreeBuilderTest extends SapphireTest
         $english = $this->objFromFixture(Locale::class, 'en');
         FluentState::singleton()->setLocale($english->Locale);
 
-        $enTree = $this->builder->buildForPage($page, 'main');
-        $enSections = $enTree[$page->ID];
+        $enTree = $this->builder->buildViewableTree($page, 'main');
+        $enSections = $enTree->nodes;
         self::assertCount(1, $enSections);
         self::assertSame('EN Section', $enSections[0]->title);
 
@@ -150,27 +149,23 @@ final class FluentTreeBuilderTest extends SapphireTest
         GridTreeFactory::column($sidebarRow);
 
         // English main zone
-        $mainTree = $this->builder->buildForPage($page, 'main');
-        self::assertArrayHasKey($page->ID, $mainTree);
-        self::assertCount(1, $mainTree[$page->ID]);
-        self::assertSame('EN Main', $mainTree[$page->ID][0]->title);
+        $mainTree = $this->builder->buildViewableTree($page, 'main');
+        self::assertCount(1, $mainTree->nodes);
+        self::assertSame('EN Main', $mainTree->nodes[0]->title);
 
         // English sidebar zone
-        $sidebarTree = $this->builder->buildForPage($page, 'sidebar');
-        self::assertArrayHasKey($page->ID, $sidebarTree);
-        self::assertCount(1, $sidebarTree[$page->ID]);
-        self::assertSame('EN Sidebar', $sidebarTree[$page->ID][0]->title);
+        $sidebarTree = $this->builder->buildViewableTree($page, 'sidebar');
+        self::assertCount(1, $sidebarTree->nodes);
+        self::assertSame('EN Sidebar', $sidebarTree->nodes[0]->title);
 
         // Dutch: both zones should be empty
         $dutch = $this->objFromFixture(Locale::class, 'nl');
         FluentState::singleton()->setLocale($dutch->Locale);
 
-        $nlMain = $this->builder->buildForPage($page, 'main');
-        $hasSections = isset($nlMain[$page->ID]) && count($nlMain[$page->ID]) > 0;
-        self::assertFalse($hasSections, 'Dutch main zone should have no sections');
+        $nlMain = $this->builder->buildViewableTree($page, 'main');
+        self::assertSame([], $nlMain->nodes, 'Dutch main zone should have no sections');
 
-        $nlSidebar = $this->builder->buildForPage($page, 'sidebar');
-        $hasSections = isset($nlSidebar[$page->ID]) && count($nlSidebar[$page->ID]) > 0;
-        self::assertFalse($hasSections, 'Dutch sidebar zone should have no sections');
+        $nlSidebar = $this->builder->buildViewableTree($page, 'sidebar');
+        self::assertSame([], $nlSidebar->nodes, 'Dutch sidebar zone should have no sections');
     }
 }
