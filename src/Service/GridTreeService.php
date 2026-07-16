@@ -8,7 +8,6 @@ use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Contract\ContainerInterface;
-use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Value\ContainerType;
@@ -61,83 +60,59 @@ class GridTreeService
     }
 
     /**
-     * Find all Column elements for a page + zone using batch loading.
-     *
-     * Reuses the same breadth-first loading strategy as {@see buildViewableTree()}
-     * but returns only the Column model instances, needed for bulk grid
-     * settings operations like viewport override resets.
+     * Flat list of every element on a page + zone (Sections included), in
+     * breadth-first level order with siblings in Sort order. Mechanism layer:
+     * never filters by permissions.
      *
      * @param non-empty-string $zone
-     * @return list<Column>
+     * @return list<GridElement>
      */
-    public function findColumnsForPage(SiteTree $page, string $zone): array
+    public function findDescendantsForPage(SiteTree $page, string $zone): array
     {
         /** @var positive-int $pageId */
         $pageId = $page->ID;
 
-        $elementsByParent = $this->loadAllElements($pageId, $page::class, $zone);
-
-        /** @var list<Column> $columns */
-        $columns = [];
-        foreach ($elementsByParent as $elements) {
-            foreach ($elements as $element) {
-                if ($element instanceof Column) {
-                    $columns[] = $element;
-                }
-            }
-        }
-
-        return $columns;
+        return $this->flatten($this->loadAllElements($pageId, $page::class, $zone));
     }
 
     /**
-     * Find containers of a given type on a page + zone as plain tuples.
-     *
-     * Much cheaper than {@see buildViewableTree()} when the caller only needs a
-     * flat list of containers (e.g. "which Rows could I duplicate into?"):
-     * skips permission probing on non-target nodes, grid settings, block
-     * schemas, and DTO assembly.
-     *
-     * Still runs through the same breadth-first loader so polymorphic parent
-     * keying and zone scoping at the Section level match the full tree
-     * build. Only viewable elements are included — callers use the output
-     * as a UI list and must not see containers the user can't view.
+     * Containers of the given type on a page + zone that the current user may
+     * view. Policy layer: callers use the output as a UI list and must not see
+     * containers the user can't view.
      *
      * @param non-empty-string $zone
-     * @return list<array{id: positive-int, title: string, type: string}>
+     * @return list<GridElement>
      */
-    public function findContainersOfType(SiteTree $page, string $zone, ContainerType $type): array
+    public function findViewableContainersOfType(SiteTree $page, string $zone, ContainerType $type): array
     {
-        /** @var positive-int $pageId */
-        $pageId = $page->ID;
-
-        $elementsByParent = $this->loadAllElements($pageId, $page::class, $zone);
         $targetClass = $type->toElementClass();
-        $typeValue = $type->value;
 
-        /** @var list<array{id: positive-int, title: string, type: string}> $containers */
+        /** @var list<GridElement> $containers */
         $containers = [];
-        foreach ($elementsByParent as $elements) {
-            foreach ($elements as $element) {
-                if (!$element instanceof $targetClass || !$element->canView()) {
-                    continue;
-                }
-                /** @var positive-int $elementId */
-                $elementId = (int) $element->ID;
-                /** @var non-empty-string $title '(untitled)' fallback guarantees non-empty */
-                $title = $element->Title ?: _t(
-                    GridElement::class . '.UNTITLED',
-                    '(untitled)',
-                );
-                $containers[] = [
-                    'id' => $elementId,
-                    'title' => $title,
-                    'type' => $typeValue,
-                ];
+        foreach ($this->findDescendantsForPage($page, $zone) as $element) {
+            if ($element instanceof $targetClass && $element->canView()) {
+                $containers[] = $element;
             }
         }
 
         return $containers;
+    }
+
+    /**
+     * @param array<string, list<GridElement>> $elementsByParent
+     * @return list<GridElement>
+     */
+    private function flatten(array $elementsByParent): array
+    {
+        /** @var list<GridElement> $flat */
+        $flat = [];
+        foreach ($elementsByParent as $elements) {
+            foreach ($elements as $element) {
+                $flat[] = $element;
+            }
+        }
+
+        return $flat;
     }
 
     /**

@@ -1599,7 +1599,7 @@ final class GridControllerTest extends FunctionalTest
     {
         $page = $this->page2();
 
-        // Page 2 has no sections — exercises findColumnsForPage early return
+        // Page 2 has no sections — the descendants scan yields no columns
         $response = $this->jsonDelete(self::BASE_URL . '/resetGridSettingsOverrides', [
             'pageId' => (int) $page->ID,
             'zone' => 'main',
@@ -1714,7 +1714,7 @@ final class GridControllerTest extends FunctionalTest
     public function testResetGridSettingsOverridesWithNoRows(): void
     {
         // Section exists but has no rows (auto_scaffold is disabled in setUp),
-        // so findColumnsForPage hits the rows=[] early return
+        // so the descendants scan yields no columns
         $page = $this->page();
         GridTreeFactory::section($page, 'main');
 

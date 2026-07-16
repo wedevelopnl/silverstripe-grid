@@ -10,7 +10,6 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
-use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
@@ -145,17 +144,17 @@ final class GridTreeServiceTest extends SapphireTest
         self::assertSame((int) $visible->ID, $nodes[0]->self->id);
     }
 
-    public function testFindContainersOfTypeSkipsNonViewableWithoutDroppingLaterSiblings(): void
+    public function testFindViewableContainersOfTypeSkipsNonViewableWithoutDroppingLaterSiblings(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         GridTreeFactory::row($section, sort: 1, title: VetoViewByTitleExtension::HIDDEN_TITLE);
         $visible = GridTreeFactory::row($section, sort: 2, title: 'Visible Row');
 
-        $containers = $this->builder->findContainersOfType($page, 'main', ContainerType::Row);
+        $containers = $this->builder->findViewableContainersOfType($page, 'main', ContainerType::Row);
 
         self::assertCount(1, $containers);
-        self::assertSame((int) $visible->ID, $containers[0]['id']);
+        self::assertSame((int) $visible->ID, (int) $containers[0]->ID);
     }
 
     public function testMultipleSectionsWithMultipleRows(): void
@@ -192,50 +191,54 @@ final class GridTreeServiceTest extends SapphireTest
         self::assertSame(12, $columnNode->gridSettings->default->width);
     }
 
-    public function testFindColumnsForPageReturnsAllColumns(): void
+    public function testFindDescendantsForPageReturnsAllElementsInZoneUnfilteredInLevelOrder(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
-        $row1 = GridTreeFactory::row($section);
-        $row2 = GridTreeFactory::row($section);
-        $col1 = GridTreeFactory::column($row1);
-        $col2 = GridTreeFactory::column($row1);
-        $col3 = GridTreeFactory::column($row2);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
 
-        $columns = $this->builder->findColumnsForPage($page, 'main');
+        $elements = $this->builder->findDescendantsForPage($page, 'main');
 
-        self::assertCount(3, $columns);
-        $ids = array_map(static fn (Column $c): int => (int) $c->ID, $columns);
-        self::assertContains((int) $col1->ID, $ids);
-        self::assertContains((int) $col2->ID, $ids);
-        self::assertContains((int) $col3->ID, $ids);
+        $ids = array_map(static fn (GridElement $e): int => (int) $e->ID, $elements);
+        self::assertSame([(int) $section->ID, (int) $row->ID, (int) $column->ID], $ids);
     }
 
-    public function testFindColumnsForPageRespectsZone(): void
+    public function testFindDescendantsForPageIncludesNonViewableElements(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $hidden = GridTreeFactory::row($section, title: VetoViewByTitleExtension::HIDDEN_TITLE);
+
+        $elements = $this->builder->findDescendantsForPage($page, 'main');
+
+        $ids = array_map(static fn (GridElement $e): int => (int) $e->ID, $elements);
+        self::assertContains((int) $hidden->ID, $ids);
+    }
+
+    public function testFindDescendantsForPageScopesByZoneAtSectionLevel(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $mainSection = GridTreeFactory::section($page, zone: 'main');
         $sidebarSection = GridTreeFactory::section($page, zone: 'sidebar');
-        $mainRow = GridTreeFactory::row($mainSection);
-        $sidebarRow = GridTreeFactory::row($sidebarSection);
-        GridTreeFactory::column($mainRow);
-        GridTreeFactory::column($sidebarRow);
+        GridTreeFactory::row($sidebarSection);
 
-        $columns = $this->builder->findColumnsForPage($page, 'main');
+        $elements = $this->builder->findDescendantsForPage($page, 'main');
 
-        self::assertCount(1, $columns);
+        $ids = array_map(static fn (GridElement $e): int => (int) $e->ID, $elements);
+        self::assertSame([(int) $mainSection->ID], $ids);
     }
 
-    public function testFindColumnsForPageReturnsEmptyForEmptyPage(): void
+    public function testFindDescendantsForPageReturnsEmptyForEmptyPage(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
 
-        $columns = $this->builder->findColumnsForPage($page, 'main');
+        $elements = $this->builder->findDescendantsForPage($page, 'main');
 
-        self::assertSame([], $columns);
+        self::assertSame([], $elements);
     }
 
-    public function testFindContainersOfTypeReturnsOnlyRequestedType(): void
+    public function testFindViewableContainersOfTypeReturnsOnlyRequestedType(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page, title: 'Top');
@@ -244,44 +247,28 @@ final class GridTreeServiceTest extends SapphireTest
         GridTreeFactory::column($row1);
         GridTreeFactory::column($row2);
 
-        $rows = $this->builder->findContainersOfType($page, 'main', ContainerType::Row);
+        $rows = $this->builder->findViewableContainersOfType($page, 'main', ContainerType::Row);
 
         self::assertCount(2, $rows);
-        $titles = array_column($rows, 'title');
-        self::assertContains('Upper row', $titles);
-        self::assertContains('Lower row', $titles);
-
-        foreach ($rows as $row) {
-            self::assertSame('row', $row['type']);
-            self::assertIsInt($row['id']);
-            self::assertGreaterThan(0, $row['id']);
-        }
+        $ids = array_map(static fn (GridElement $e): int => (int) $e->ID, $rows);
+        self::assertContains((int) $row1->ID, $ids);
+        self::assertContains((int) $row2->ID, $ids);
+        self::assertContainsOnlyInstancesOf(Row::class, $rows);
     }
 
-    public function testFindContainersOfTypeRespectsZone(): void
+    public function testFindViewableContainersOfTypeRespectsZone(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        GridTreeFactory::section($page, zone: 'main', title: 'Main section');
+        $mainSection = GridTreeFactory::section($page, zone: 'main', title: 'Main section');
         GridTreeFactory::section($page, zone: 'sidebar', title: 'Sidebar section');
 
-        $mainSections = $this->builder->findContainersOfType($page, 'main', ContainerType::Section);
+        $mainSections = $this->builder->findViewableContainersOfType($page, 'main', ContainerType::Section);
 
         self::assertCount(1, $mainSections);
-        self::assertSame('Main section', $mainSections[0]['title']);
+        self::assertSame((int) $mainSection->ID, (int) $mainSections[0]->ID);
     }
 
-    public function testFindContainersOfTypeSubstitutesUntitledForEmptyTitle(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        GridTreeFactory::section($page, title: '');
-
-        $sections = $this->builder->findContainersOfType($page, 'main', ContainerType::Section);
-
-        self::assertCount(1, $sections);
-        self::assertNotSame('', $sections[0]['title'], 'Empty titles must fall back to a placeholder');
-    }
-
-    public function testFindContainersOfTypeFiltersOutNonViewable(): void
+    public function testFindViewableContainersOfTypeFiltersOutNonViewable(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         GridTreeFactory::section($page);
@@ -289,16 +276,16 @@ final class GridTreeServiceTest extends SapphireTest
         // Log out so canView returns false (requires CMS_ACCESS)
         $this->logOut();
 
-        $sections = $this->builder->findContainersOfType($page, 'main', ContainerType::Section);
+        $sections = $this->builder->findViewableContainersOfType($page, 'main', ContainerType::Section);
 
         self::assertSame([], $sections);
     }
 
-    public function testFindContainersOfTypeReturnsEmptyForEmptyPage(): void
+    public function testFindViewableContainersOfTypeReturnsEmptyForEmptyPage(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
 
-        $rows = $this->builder->findContainersOfType($page, 'main', ContainerType::Row);
+        $rows = $this->builder->findViewableContainersOfType($page, 'main', ContainerType::Row);
 
         self::assertSame([], $rows);
     }

@@ -75,7 +75,13 @@ final readonly class GridSettingsService
     #[NoDiscard('The Result reports write/validation failures and the modified-column count; discarding it silently swallows them.')]
     public function resetOverrides(SiteTree $page, string $zone, ?string $viewport): Result
     {
-        $columns = $this->treeService->findColumnsForPage($page, $zone);
+        /** @var list<Column> $columns */
+        $columns = [];
+        foreach ($this->treeService->findDescendantsForPage($page, $zone) as $element) {
+            if ($element instanceof Column) {
+                $columns[] = $element;
+            }
+        }
 
         // Wrap the whole loop in a single transaction: a mid-loop write failure
         // rolls back every preceding column reset so a page can never be left
