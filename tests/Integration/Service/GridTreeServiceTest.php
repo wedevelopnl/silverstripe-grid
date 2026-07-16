@@ -9,6 +9,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
@@ -313,5 +315,69 @@ final class GridTreeServiceTest extends SapphireTest
         $rows = $this->builder->findViewableContainersOfType($page, 'main', ContainerType::Row);
 
         self::assertSame([], $rows);
+    }
+
+    public function testAncestorsReturnsContainerChainOutermostFirst(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $content = GridTreeFactory::contentElement($column);
+
+        $index = $this->builder->indexByKey(GridElement::get());
+
+        // Outermost first: Section → Row → Column. The element's own level is excluded.
+        self::assertSame(
+            [(int) $section->ID, (int) $row->ID, (int) $column->ID],
+            array_map(
+                static fn (GridElement $e): int => (int) $e->ID,
+                $this->builder->ancestors($content, $index),
+            ),
+        );
+    }
+
+    public function testAncestorsOfSectionIsEmpty(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+
+        $index = $this->builder->indexByKey(GridElement::get());
+
+        // A Section sits directly under the page, so it has no element ancestors.
+        self::assertSame([], $this->builder->ancestors($section, $index));
+    }
+
+    public function testAncestorsIgnoreParentIdCollisionAcrossClasses(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        // A content element whose ID we will collide against.
+        $host = GridTreeFactory::section($page);
+        $hostRow = GridTreeFactory::row($host);
+        $hostColumn = GridTreeFactory::column($hostRow);
+        $content = GridTreeFactory::contentElement($hostColumn);
+        $collidingId = (int) $content->ID;
+
+        // A page-parented Section whose ParentID is forced to collide with the
+        // content element's ID (ParentClass stays the page class).
+        $section = GridTreeFactory::section($page);
+        $table = DataObject::getSchema()->tableName(GridElement::class);
+        DB::query(sprintf(
+            'UPDATE "%s" SET "ParentID" = %d WHERE "ID" = %d',
+            $table,
+            $collidingId,
+            (int) $section->ID,
+        ));
+        $section = GridElement::get()->byID((int) $section->ID);
+        self::assertInstanceOf(Section::class, $section);
+
+        $index = $this->builder->indexByKey(GridElement::get());
+
+        // The section's parent key is "<PageClass>:<collidingId>", which is not a
+        // GridElement key — so the same-numbered content element is NOT a false
+        // ancestor. Keying the index by bare ID instead of "Class:ID" would make
+        // this return [content] and fail.
+        self::assertSame([], $this->builder->ancestors($section, $index));
     }
 }

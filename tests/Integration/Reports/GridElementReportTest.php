@@ -129,11 +129,39 @@ final class GridElementReportTest extends SapphireTest
         self::assertNotContains((int) $normalElement->ID, $ids);
     }
 
+    /**
+     * Extract the trail label sequence from a rendered Location cell. Crumbs render
+     * as `<a class="grid-report__crumb" href="...">Label</a>` (or a `<span>` when
+     * unlinked), so the capture is the escaped label text in document order.
+     *
+     * @return list<string>
+     */
+    private static function trailLabels(string $html): array
+    {
+        preg_match_all('/class="grid-report__crumb"[^>]*>([^<]*)</', $html, $matches);
+
+        return $matches[1];
+    }
+
+    private function locationHtmlFor(GridElement $element): string
+    {
+        $locationFormatter = $this->report()->columns()['Location']['formatting'];
+
+        foreach ($this->report()->sourceRecords() as $record) {
+            if ((int) $record->ID === (int) $element->ID) {
+                return $locationFormatter(null, $record);
+            }
+        }
+
+        self::fail('Element should appear in sourceRecords');
+    }
+
     public function testLocationColumnRendersTrailSegmentsAsLinkedCrumbs(): void
     {
-        // Wiring only — trail content, ordering and the collision guard are covered
-        // structurally in LocationTrailBuilderTest. Here we assert the report turns
-        // each builder segment into an anchor pointing at that segment's edit URL.
+        // Wiring plus segment shape — the ancestor walk itself (ordering source,
+        // collision guard) is covered structurally in GridTreeServiceTest. Here we
+        // assert the report turns each segment into an anchor pointing at that
+        // segment's edit URL.
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page, 'main', 0, 'Hero Section');
         $row = GridTreeFactory::row($section, 0, 'Top Row');
@@ -167,6 +195,48 @@ final class GridElementReportTest extends SapphireTest
         }
 
         self::fail('Content element should appear in sourceRecords');
+    }
+
+    public function testLocationTrailRootsAtPageFollowedByAncestors(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, 'main', 0, 'Hero Section');
+        $row = GridTreeFactory::row($section, 0, 'Top Row');
+        $column = GridTreeFactory::column($row);
+        $content = GridTreeFactory::contentElement($column, 0, 'Intro Text');
+
+        $labels = self::trailLabels($this->locationHtmlFor($content));
+
+        // Page root, then each ancestor outermost-first; the element itself omitted.
+        self::assertSame(
+            array_map(
+                static fn (string $label): string => htmlspecialchars($label, ENT_QUOTES),
+                [(string) $page->Title, 'Hero Section', 'Top Row', (string) $column->Title],
+            ),
+            $labels,
+        );
+    }
+
+    public function testLocationTrailLabelFallsBackToTypeWhenTitleBlank(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, 'main', 0, 'Hero Section');
+        $row = GridTreeFactory::row($section, 0, 'Top Row');
+        $column = GridTreeFactory::column($row);
+        $content = GridTreeFactory::contentElement($column, 0, 'Intro Text');
+
+        // Blank the Row's stored title directly (bypassing the write-time default).
+        $table = DataObject::getSchema()->tableName(GridElement::class);
+        DB::query(sprintf(
+            'UPDATE "%s" SET "Title" = \'\' WHERE "ID" = %d',
+            $table,
+            (int) $row->ID,
+        ));
+
+        $labels = self::trailLabels($this->locationHtmlFor($content));
+
+        // Row segment (index 2) falls back to the element type instead of an empty label.
+        self::assertSame($row->getType(), $labels[2]);
     }
 
     public function testLocationColumnRendersOrphanWithoutLink(): void

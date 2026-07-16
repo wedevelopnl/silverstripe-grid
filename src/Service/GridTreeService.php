@@ -115,6 +115,48 @@ class GridTreeService
     }
 
     /**
+     * Index elements by their own "Class:ID" key for O(1) ancestor lookup.
+     *
+     * Pass every element the caller cares about (typically the full result set):
+     * an ancestor missing from the index simply terminates the walk early.
+     *
+     * @param iterable<GridElement> $elements
+     * @return array<string, GridElement>
+     */
+    public function indexByKey(iterable $elements): array
+    {
+        $index = [];
+        foreach ($elements as $element) {
+            $index[$element::class . ':' . $element->ID] = $element;
+        }
+
+        return $index;
+    }
+
+    /**
+     * The element's ancestor containers, outermost first (Section → Row → Column).
+     *
+     * The element's own level and the owning page are excluded — the page is not
+     * a GridElement. Mechanism layer: never filters by permissions.
+     *
+     * @param array<string, GridElement> $index keyed by "Class:ID" (see {@see indexByKey()})
+     * @return list<GridElement>
+     */
+    public function ancestors(GridElement $element, array $index): array
+    {
+        $ancestors = [];
+        $parentKey = $element->ParentClass . ':' . $element->ParentID;
+
+        while (isset($index[$parentKey])) {
+            $parent = $index[$parentKey];
+            $ancestors[] = $parent;
+            $parentKey = $parent->ParentClass . ':' . $parent->ParentID;
+        }
+
+        return array_reverse($ancestors);
+    }
+
+    /**
      * @param array<string, list<GridElement>> $elementsByParent
      * @return list<GridElement>
      */
