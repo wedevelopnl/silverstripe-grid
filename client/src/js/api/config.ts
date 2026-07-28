@@ -31,12 +31,28 @@ export function getSecurityId(): string {
 }
 
 /**
+ * The CMS bootstraps `config.sections` once per admin page load, but the
+ * getters below run per column per render. Cache the found section keyed on
+ * the sections array identity: the scan runs once per bootstrap, and a
+ * replaced array (fresh page load, tests reinstalling window.ss.config)
+ * invalidates naturally.
+ */
+let sectionCache: {
+  sections: SilverStripeConfig['sections']
+  section: SilverStripeConfig['sections'][number]
+} | null = null
+
+/**
  * Returns the GridController section from CMS config.
  *
  * @throws ConfigError if the controller section is missing
  */
 function getControllerSection() {
   const config = getConfig()
+  if (sectionCache !== null && sectionCache.sections === config.sections) {
+    return sectionCache.section
+  }
+
   const section = config.sections.find((s) => s.name === CONTROLLER_FQCN)
 
   if (section === undefined) {
@@ -46,6 +62,7 @@ function getControllerSection() {
     )
   }
 
+  sectionCache = { sections: config.sections, section }
   return section
 }
 
