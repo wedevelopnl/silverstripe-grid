@@ -15,10 +15,19 @@ final class GridTreeTest extends TestCase
 {
     public function testJsonSerializeEmitsWireShapeWithSerializedRootParentAndNodesPassthrough(): void
     {
-        $tree = new GridTree(new NodeRef(NodeType::Page, 7), []);
+        $allowedTypes = [
+            'section' => ['Some\\RowClass' => ['label' => 'Row', 'icon' => 'i', 'description' => 'd']],
+            'row' => [],
+            'column' => [],
+        ];
+        $tree = new GridTree(new NodeRef(NodeType::Page, 7), [], $allowedTypes);
 
         self::assertSame(
-            ['rootParent' => ['type' => 'page', 'id' => 7], 'nodes' => []],
+            [
+                'rootParent' => ['type' => 'page', 'id' => 7],
+                'allowedTypes' => $allowedTypes,
+                'nodes' => [],
+            ],
             $tree->jsonSerialize(),
         );
     }

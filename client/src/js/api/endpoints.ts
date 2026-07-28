@@ -48,19 +48,30 @@ export async function fetchElementTree(
  * derived `nodeKey`/`parentKey`/`id` fields that downstream code expects on
  * every node. The wire schema rejects invalid shapes with a structured error;
  * the post-parse step is purely additive.
+ *
+ * The wire carries allowed child types ONCE per container type at the root
+ * (they are per-TYPE data — per-node maps were identical copies). This step
+ * re-attaches the shared map to every container node BY REFERENCE, so the
+ * internal `ElementNode` model and every component consuming
+ * `node.allowedTypes` are unchanged, at no per-node memory cost.
  */
 export function normaliseTreeResponse(raw: unknown): TreeApiResponse {
   const parsed = v.parse(treeApiResponseWireSchema, raw)
 
   return {
     rootParent: parsed.rootParent,
-    nodes: parsed.nodes.map((node) => attachDerivedFields(node)),
+    nodes: parsed.nodes.map((node) => attachDerivedFields(node, parsed.allowedTypes)),
   }
 }
 
-type NodeWire = v.InferOutput<typeof treeApiResponseWireSchema>['nodes'][number]
+type ParsedTreeWire = v.InferOutput<typeof treeApiResponseWireSchema>
+type NodeWire = ParsedTreeWire['nodes'][number]
+type AllowedTypesByContainerType = ParsedTreeWire['allowedTypes']
 
-function attachDerivedFields(node: NodeWire): ElementNode {
+function attachDerivedFields(
+  node: NodeWire,
+  allowedTypes: AllowedTypesByContainerType,
+): ElementNode {
   const nodeKey = NodeIdentity.toKey(node.self.type, node.self.id)
   const parentKey = NodeIdentity.toKey(node.parent.type, node.parent.id)
 
@@ -72,13 +83,15 @@ function attachDerivedFields(node: NodeWire): ElementNode {
     // narrower RowNode[] invariant without a cast because attachDerivedFields
     // returns the wide ElementNode union.
     const children =
-      node.children !== null ? (node.children.map(attachDerivedFields) as RowNode[]) : null
+      node.children !== null
+        ? (node.children.map((child) => attachDerivedFields(child, allowedTypes)) as RowNode[])
+        : null
     return {
       ...node,
       nodeKey,
       parentKey,
       containerType: 'section',
-      allowedTypes: node.allowedTypes,
+      allowedTypes: allowedTypes.section,
       children,
     } satisfies SectionNode
   }
@@ -87,13 +100,15 @@ function attachDerivedFields(node: NodeWire): ElementNode {
     // Same cast rationale as section: the server's hierarchy invariant (not valibot)
     // guarantees a row's children are columns.
     const children =
-      node.children !== null ? (node.children.map(attachDerivedFields) as ColumnNode[]) : null
+      node.children !== null
+        ? (node.children.map((child) => attachDerivedFields(child, allowedTypes)) as ColumnNode[])
+        : null
     return {
       ...node,
       nodeKey,
       parentKey,
       containerType: 'row',
-      allowedTypes: node.allowedTypes,
+      allowedTypes: allowedTypes.row,
       children,
     } satisfies RowNode
   }
@@ -103,14 +118,16 @@ function attachDerivedFields(node: NodeWire): ElementNode {
     // guarantees a column's children are simple (leaf) elements.
     const children =
       node.children !== null
-        ? (node.children.map(attachDerivedFields) as SimpleElementNode[])
+        ? (node.children.map((child) =>
+            attachDerivedFields(child, allowedTypes),
+          ) as SimpleElementNode[])
         : null
     return {
       ...node,
       nodeKey,
       parentKey,
       containerType: 'column',
-      allowedTypes: node.allowedTypes,
+      allowedTypes: allowedTypes.column,
       children,
       gridSettings: node.gridSettings,
     } satisfies ColumnNode

@@ -11,6 +11,7 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
@@ -198,8 +199,6 @@ final class GridNodeMapperTest extends SapphireTest
         $node = $this->mapper->mapToNode($section, $parentRef, []);
 
         self::assertSame(ContainerType::Section, $node->containerType);
-        self::assertNotNull($node->allowedTypes);
-        self::assertArrayHasKey(Row::class, $node->allowedTypes);
         self::assertNull($node->gridSettings);
     }
 
@@ -219,7 +218,6 @@ final class GridNodeMapperTest extends SapphireTest
         $node = $this->mapper->mapToNode($element, $parentRef, null);
 
         self::assertNull($node->containerType);
-        self::assertNull($node->allowedTypes);
         self::assertNull($node->children);
         self::assertNull($node->gridSettings);
     }
@@ -490,21 +488,22 @@ final class GridNodeMapperTest extends SapphireTest
     }
 
     /**
-     * Resolve a container's allowed child types through the public mapToNode
-     * seam — getAllowedTypes() is a private implementation detail.
+     * Resolve a container's allowed child types through the public
+     * allowedTypesByContainerType() seam — getAllowedTypes() is a private
+     * implementation detail, and per-node maps no longer exist (the tree
+     * root serializes one map per container type).
      *
      * @return array<class-string, array{label: string, icon: string, description: string}>
      */
     private function allowedTypesFor(GridElement $container): array
     {
-        /** @var class-string $parentClass */
-        $parentClass = $container->ParentClass;
-        $parentRef = new NodeRef(NodeType::fromClass($parentClass), (int) $container->ParentID);
+        self::assertInstanceOf(ContainerInterface::class, $container);
 
-        $node = $this->mapper->mapToNode($container, $parentRef, []);
+        $byType = $this->mapper->allowedTypesByContainerType();
+        $typeKey = $container->getContainerType()->value;
 
-        self::assertNotNull($node->allowedTypes);
+        self::assertArrayHasKey($typeKey, $byType);
 
-        return $node->allowedTypes;
+        return $byType[$typeKey];
     }
 }

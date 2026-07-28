@@ -59,6 +59,7 @@ class GridTreeService
         return new GridTree(
             $rootParent,
             $this->assembleSubTree($elementsByParent, $rootKey, $rootParent, $page),
+            $this->nodeMapper->allowedTypesByContainerType(),
         );
     }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTreeApiResponse, resetIdCounter } from '@/testing/factories'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
-import { isColumnNode } from '@/types/elements'
+import { isColumnNode, isSectionNode } from '@/types/elements'
 import {
   archiveElement,
   createContentElement,
@@ -20,6 +20,9 @@ import {
   updateGridSettings,
 } from './endpoints'
 
+/** Wire root map with no allowed child types — the minimal valid shape. */
+const EMPTY_ALLOWED = { section: {}, row: {}, column: {} }
+
 beforeEach(() => {
   resetIdCounter()
   mockFetchSuccess({})
@@ -29,6 +32,7 @@ describe('fetchElementTree', () => {
   it('constructs correct URL with encoded zone and normalises the response', async () => {
     mockFetchSuccess({
       rootParent: { type: 'page', id: 42 },
+      allowedTypes: EMPTY_ALLOWED,
       nodes: [],
     })
     const result = await fetchElementTree(42, 'main area')
@@ -38,14 +42,22 @@ describe('fetchElementTree', () => {
   })
 
   it('appends /version/N path segment when version is provided', async () => {
-    mockFetchSuccess({ rootParent: { type: 'page', id: 42 }, nodes: [] })
+    mockFetchSuccess({
+      rootParent: { type: 'page', id: 42 },
+      allowedTypes: EMPTY_ALLOWED,
+      nodes: [],
+    })
     await fetchElementTree(42, 'main', 5)
     const [url] = getFetchCalls()[0]
     expect(url).toBe('/admin/grid/api/readTree/42/main/version/5')
   })
 
   it('omits /version path segment when version is undefined', async () => {
-    mockFetchSuccess({ rootParent: { type: 'page', id: 42 }, nodes: [] })
+    mockFetchSuccess({
+      rootParent: { type: 'page', id: 42 },
+      allowedTypes: EMPTY_ALLOWED,
+      nodes: [],
+    })
     await fetchElementTree(42, 'main')
     const [url] = getFetchCalls()[0]
     expect(url).toBe('/admin/grid/api/readTree/42/main')
@@ -56,6 +68,7 @@ describe('normaliseTreeResponse', () => {
   it('attaches derived nodeKey and parentKey to every node', () => {
     const raw = {
       rootParent: { type: 'page', id: 1 },
+      allowedTypes: EMPTY_ALLOWED,
       nodes: [
         {
           self: { type: 'section', id: 10 },
@@ -78,7 +91,6 @@ describe('normaliseTreeResponse', () => {
           editLink: null,
           status: 'published',
           containerType: 'section',
-          allowedTypes: null,
           children: [],
         },
       ],
@@ -88,6 +100,39 @@ describe('normaliseTreeResponse', () => {
     expect(normalised.rootParent).toEqual({ type: 'page', id: 1 })
     expect(normalised.nodes[0].nodeKey).toBe('section-10')
     expect(normalised.nodes[0].parentKey).toBe('page-1')
+  })
+
+  it('attaches the root allowedTypes map to container nodes by reference', () => {
+    const sectionTypes = { Foo: { label: 'Foo', icon: 'i', description: 'd' } }
+    const node = (id: number) => ({
+      self: { type: 'section', id },
+      parent: { type: 'page', id: 1 },
+      title: `S${String(id)}`,
+      blockSchema: { typeName: 'S', label: 'S', icon: 'i', type: 's', title: 'S' },
+      obsoleteClassName: null,
+      version: 1,
+      canDelete: true,
+      canPublish: true,
+      canUnpublish: false,
+      canCreate: true,
+      editLink: null,
+      status: 'published',
+      containerType: 'section',
+      children: [],
+    })
+    const raw = {
+      rootParent: { type: 'page', id: 1 },
+      allowedTypes: { ...EMPTY_ALLOWED, section: sectionTypes },
+      nodes: [node(10), node(11)],
+    }
+
+    const normalised = normaliseTreeResponse(raw)
+    const [first, second] = normalised.nodes
+    expect(isSectionNode(first) && first.allowedTypes).toEqual(sectionTypes)
+    // One shared map, not a per-node copy — the whole point of the root field.
+    expect(
+      isSectionNode(first) && isSectionNode(second) && first.allowedTypes === second.allowedTypes,
+    ).toBe(true)
   })
 
   it('throws on malformed payload', () => {
@@ -104,6 +149,7 @@ describe('normaliseTreeResponse', () => {
     // valid containerType) must throw rather than produce a malformed node.
     const raw = {
       rootParent: { type: 'page', id: 1 },
+      allowedTypes: EMPTY_ALLOWED,
       nodes: [
         {
           self: { type: 'section', id: 10 },
@@ -120,7 +166,6 @@ describe('normaliseTreeResponse', () => {
           status: 'published',
           // container-only fields present, but containerType is a bogus value:
           containerType: 'nonsense',
-          allowedTypes: null,
           children: [],
         },
       ],
@@ -131,6 +176,7 @@ describe('normaliseTreeResponse', () => {
   it('attaches derived fields to a column node without losing gridSettings', () => {
     const raw = {
       rootParent: { type: 'page', id: 1 },
+      allowedTypes: EMPTY_ALLOWED,
       nodes: [
         {
           self: { type: 'column', id: 30 },
@@ -152,7 +198,6 @@ describe('normaliseTreeResponse', () => {
           editLink: null,
           status: 'draft',
           containerType: 'column',
-          allowedTypes: null,
           children: [],
           gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
         },

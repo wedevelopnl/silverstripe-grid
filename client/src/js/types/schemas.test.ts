@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as v from 'valibot'
-import { elementNodeWireSchema, viewportSettingsSchema } from './schemas'
+import { elementNodeWireSchema, treeApiResponseWireSchema, viewportSettingsSchema } from './schemas'
 
 /**
  * Minimal valid wire payload for a leaf (non-container) element, matching
@@ -90,7 +90,7 @@ describe('elementNodeWireSchema summary', () => {
 describe('elementNodeWireSchema leaf discriminant', () => {
   it('rejects a leaf-shaped node carrying a container type without container fields', () => {
     // A node with containerType set must satisfy a container variant (which
-    // requires allowedTypes + children). With only base fields it must NOT
+    // requires children). With only base fields it must NOT
     // fall through to the leaf (undefined-containerType) variant.
     expect(
       v.safeParse(elementNodeWireSchema, { ...baseLeaf, containerType: 'section' }).success,
@@ -135,40 +135,80 @@ describe('editLink scheme validation', () => {
   })
 })
 
-describe('section allowedTypes (allowedTypeInfoSchema + emptyArrayToObject)', () => {
-  const sectionWith = (allowedTypes: unknown) => ({
-    ...baseLeaf,
-    containerType: 'section',
+describe('tree-root allowedTypes (allowedTypeInfoSchema + emptyArrayToObject)', () => {
+  // Allowed child types live once per container type at the TREE ROOT — the
+  // per-node field no longer exists on the wire.
+  const treeWith = (allowedTypes: unknown) => ({
+    rootParent: { type: 'page', id: 1 },
     allowedTypes,
-    children: null,
+    nodes: [],
   })
 
-  it('parses a populated allowedTypes record and preserves entries', () => {
-    const result = v.safeParse(elementNodeWireSchema, sectionWith({ Foo: allowedTypeInfo }))
-    expect(result.success).toBe(true)
-    expect(result.success && 'allowedTypes' in result.output && result.output.allowedTypes).toEqual(
-      {
-        Foo: allowedTypeInfo,
-      },
+  it('parses a populated per-type map and preserves entries', () => {
+    const result = v.safeParse(
+      treeApiResponseWireSchema,
+      treeWith({ section: { Foo: allowedTypeInfo }, row: {}, column: {} }),
     )
+    expect(result.success).toBe(true)
+    expect(result.success && result.output.allowedTypes.section).toEqual({
+      Foo: allowedTypeInfo,
+    })
   })
 
-  it('coerces an empty array to an empty object', () => {
-    const result = v.safeParse(elementNodeWireSchema, sectionWith([]))
-    expect(result.success).toBe(true)
-    expect(result.success && 'allowedTypes' in result.output && result.output.allowedTypes).toEqual(
-      {},
+  it('coerces a PHP empty-array sentinel to an empty object per type', () => {
+    const result = v.safeParse(
+      treeApiResponseWireSchema,
+      treeWith({ section: [], row: [], column: [] }),
     )
+    expect(result.success).toBe(true)
+    expect(result.success && result.output.allowedTypes.column).toEqual({})
   })
 
   it('rejects a non-empty array of allowed types (stays an array, not a record)', () => {
-    expect(v.safeParse(elementNodeWireSchema, sectionWith([allowedTypeInfo])).success).toBe(false)
+    expect(
+      v.safeParse(
+        treeApiResponseWireSchema,
+        treeWith({ section: [allowedTypeInfo], row: {}, column: {} }),
+      ).success,
+    ).toBe(false)
   })
 
   it('requires label, icon and description on each allowed-type entry', () => {
-    expect(v.safeParse(elementNodeWireSchema, sectionWith({ Foo: { label: 'L' } })).success).toBe(
+    expect(
+      v.safeParse(
+        treeApiResponseWireSchema,
+        treeWith({ section: { Foo: { label: 'L' } }, row: {}, column: {} }),
+      ).success,
+    ).toBe(false)
+  })
+
+  it('rejects a tree response missing the root allowedTypes map', () => {
+    expect(
+      v.safeParse(treeApiResponseWireSchema, { rootParent: { type: 'page', id: 1 }, nodes: [] })
+        .success,
+    ).toBe(false)
+  })
+
+  it('requires all three container-type keys', () => {
+    expect(v.safeParse(treeApiResponseWireSchema, treeWith({ section: {}, row: {} })).success).toBe(
       false,
     )
+  })
+
+  it('rejects a container node still carrying the removed per-node allowedTypes as a leaf mismatch', () => {
+    // The per-node field was removed from the wire: valibot's v.object strips
+    // unknown keys, so a legacy payload still parses — but the map must come
+    // from the root, never the node. This pins that the node-level key has no
+    // effect on the output.
+    const legacyNode = {
+      ...baseLeaf,
+      containerType: 'section',
+      allowedTypes: { Foo: allowedTypeInfo },
+      children: null,
+    }
+    const result = v.safeParse(elementNodeWireSchema, legacyNode)
+    expect(result.success).toBe(true)
+    expect(result.success && 'allowedTypes' in result.output).toBe(false)
   })
 })
 

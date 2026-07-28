@@ -11,6 +11,7 @@ use SilverStripe\Core\Injector\Injectable;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\ElementStatus;
 use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Value\NodeRef;
@@ -20,16 +21,18 @@ use WeDevelop\Grid\Value\NodeType;
  * Maps GridElement models to GridNode DTOs.
  *
  * Derives all node content from the element itself: containerType,
- * allowed child type enumeration, gridSettings, blockSchema assembly,
- * icon resolution, permission checks, and the updateElementData
- * extension hook. The title comes from GridElement::getDisplayTitle().
+ * gridSettings, blockSchema assembly, icon resolution, permission checks,
+ * and the updateElementData extension hook. The title comes from
+ * GridElement::getDisplayTitle(). Allowed child types are NOT per-node data —
+ * they depend only on the container type and are exposed once per type via
+ * {@see allowedTypesByContainerType()} for the tree root.
  */
 class GridNodeMapper
 {
     use Extensible;
     use Injectable;
 
-    /** @var array<class-string, array<class-string, array{label: string, icon: string, description: string}>> */
+    /** @var array<value-of<ContainerType>, array<class-string<GridElement>, array{label: string, icon: string, description: string}>> */
     private array $allowedTypesCache = [];
 
     /**
@@ -43,12 +46,10 @@ class GridNodeMapper
         ?array $children,
     ): GridNode {
         $containerType = null;
-        $allowedTypes = null;
         $gridSettings = null;
 
         if ($element instanceof ContainerInterface) {
             $containerType = $element->getContainerType();
-            $allowedTypes = $this->getAllowedTypes($element);
         }
 
         if ($element instanceof Column) {
@@ -103,7 +104,6 @@ class GridNodeMapper
             status: $status,
             summary: $summary,
             containerType: $containerType,
-            allowedTypes: $allowedTypes,
             children: $children,
             gridSettings: $gridSettings,
             extensions: $extensions,
@@ -111,20 +111,33 @@ class GridNodeMapper
     }
 
     /**
-     * Get allowed child element types for a container, cached by class name.
+     * Allowed child element types for every container type, keyed by the
+     * ContainerType enum value. Serialized once at the tree root — the rules
+     * are hardcoded per container TYPE, so per-node maps would be identical
+     * copies for every container of the same type.
      *
-     * @param ContainerInterface<GridElement> $container
-     * @return array<class-string, array{label: string, icon: string, description: string}>
+     * @return array<value-of<ContainerType>, array<class-string<GridElement>, array{label: string, icon: string, description: string}>>
      */
-    private function getAllowedTypes(ContainerInterface $container): array
+    public function allowedTypesByContainerType(): array
     {
-        $className = $container::class;
-
-        if (isset($this->allowedTypesCache[$className])) {
-            return $this->allowedTypesCache[$className];
+        $result = [];
+        foreach (ContainerType::cases() as $containerType) {
+            $result[$containerType->value] = $this->getAllowedTypes($containerType);
         }
 
-        $containerType = $container->getContainerType();
+        return $result;
+    }
+
+    /**
+     * Get allowed child element types for a container type, cached per type.
+     *
+     * @return array<class-string<GridElement>, array{label: string, icon: string, description: string}>
+     */
+    private function getAllowedTypes(ContainerType $containerType): array
+    {
+        if (isset($this->allowedTypesCache[$containerType->value])) {
+            return $this->allowedTypesCache[$containerType->value];
+        }
 
         $types = [];
 
@@ -139,7 +152,7 @@ class GridNodeMapper
             }
         }
 
-        $this->allowedTypesCache[$className] = $types;
+        $this->allowedTypesCache[$containerType->value] = $types;
 
         return $types;
     }
