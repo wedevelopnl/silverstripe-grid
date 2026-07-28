@@ -22,9 +22,15 @@ function treeQueryOptions(pageId: number | null, zone: string, version?: number)
     // Archived versions are immutable server-side, so a version-specific tree never
     // goes stale: mark it fresh forever so remounting (e.g. stepping through the
     // history viewer) and window refocus reuse the cache instead of refetching.
-    // Note this does NOT suppress refetches from queryClient.invalidateQueries() —
-    // invalidation sets isInvalidated, which overrides staleTime.
-    ...(version !== undefined ? { staleTime: Number.POSITIVE_INFINITY } : {}),
+    //
+    // The live (draft) tree gets a modest staleTime instead of the default 0:
+    // every mutation invalidates the query explicitly (which overrides staleTime
+    // — invalidation sets isInvalidated), so the only refetches this suppresses
+    // are the redundant ones from window refocus / remount when nothing changed.
+    // CMS editors tab in and out constantly; each of those refetches rebuilds
+    // the full tree server-side. 30s keeps cross-editor drift short while
+    // eliminating the churn.
+    staleTime: version !== undefined ? Number.POSITIVE_INFINITY : 30_000,
   }
 }
 

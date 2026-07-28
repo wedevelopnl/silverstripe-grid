@@ -81,9 +81,12 @@ describe('useElementTree', () => {
     expect(getFetchCalls()).toHaveLength(1)
   })
 
-  it('should refetch a draft tree when it remounts', async () => {
-    // Contrast with the version-specific case: the draft tree carries no staleTime
-    // override, so a stale-on-arrival cache entry refetches on remount.
+  it('should not refetch a fresh draft tree when it remounts within staleTime', async () => {
+    // The draft tree carries a 30s staleTime: mutations invalidate the query
+    // explicitly, so a remount (or window refocus) shortly after a fetch must
+    // reuse the cache instead of rebuilding the tree server-side. The default
+    // here is stale-on-arrival to prove the option — not the default — is what
+    // suppresses the second fetch.
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: 5 * 60 * 1000, staleTime: 0 } },
     })
@@ -101,7 +104,29 @@ describe('useElementTree', () => {
       expect(second.result.current.isSuccess).toBe(true)
     })
 
-    expect(getFetchCalls()).toHaveLength(2)
+    expect(getFetchCalls()).toHaveLength(1)
+  })
+
+  it('should refetch a draft tree after invalidation despite staleTime', async () => {
+    // The staleTime above is only safe because invalidation overrides it —
+    // every mutation invalidates the tree query, and that MUST refetch even
+    // inside the freshness window. This pins that override.
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 5 * 60 * 1000, staleTime: 0 } },
+    })
+    mockFetchSuccess(createTreeApiResponse())
+    const { wrapper } = createProviderWrapper({ pageId: 1, zone: 'main', queryClient })
+
+    const { result } = renderHook(() => useElementTree(1, 'main'), { wrapper })
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+
+    await queryClient.invalidateQueries({ queryKey: queryKeys.elementTree.byPage(1, 'main') })
+
+    await waitFor(() => {
+      expect(getFetchCalls()).toHaveLength(2)
+    })
   })
 
   it('should not fetch when pageId is null', () => {
