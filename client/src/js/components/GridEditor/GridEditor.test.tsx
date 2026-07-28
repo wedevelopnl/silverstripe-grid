@@ -30,7 +30,6 @@ vi.mock('@dnd-kit/core', async (importOriginal) => {
     ...actual,
     DndContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     DragOverlay: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    MeasuringStrategy: { Always: 'always' },
   }
 })
 

@@ -1,4 +1,4 @@
-import { DndContext, DragOverlay, MeasuringStrategy } from '@dnd-kit/core'
+import { DndContext, DragOverlay } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Fragment } from 'react'
 import AddChildButton from '@/components/AddChildButton/AddChildButton'
@@ -58,10 +58,12 @@ export default function EditableGridEditor({ pageId, zone }: EditableGridEditorP
       error={error}
       sections={sections}
     >
-      <DndContext
-        {...dndContextProps}
-        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-      >
+      {/* Droppable measuring stays on the default WhileDragging strategy:
+          during a drag it re-measures on every registry change exactly like
+          MeasuringStrategy.Always (dnd-kit only checks the strategy when NOT
+          dragging), so Always would only add idle-time re-measures of every
+          droppable on each tree change. */}
+      <DndContext {...dndContextProps}>
         <DragContext.Provider value={dragContextValue}>
           <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
             {editableSectionList}
