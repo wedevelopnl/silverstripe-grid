@@ -49,7 +49,7 @@ const defaultConfig: SilverStripeConfig = {
     {
       name: CONTROLLER_FQCN,
       url: '/admin/grid',
-      controllerLink: '/admin/grid/',
+      controllerLink: '/admin/grid',
       gridAdapter: defaultAdapterConfig,
     },
   ],

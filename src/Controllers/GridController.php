@@ -748,7 +748,10 @@ class GridController extends AdminController
     {
         /** @var array<string, mixed> $clientConfig */
         $clientConfig = parent::getClientConfig();
-        $clientConfig['controllerLink'] = $this->Link();
+        // Wire contract: a base URL without trailing slash — the client
+        // concatenates "/api/..." onto it. Link() carries a trailing slash on
+        // projects that enable Controller.add_trailing_slash.
+        $clientConfig['controllerLink'] = rtrim((string) $this->Link(), '/');
         $clientConfig['gridAdapter'] = AdapterConfig::fromAdapter($this->gridAdapter);
 
         return $clientConfig;

@@ -50,13 +50,13 @@ function getControllerSection() {
 }
 
 /**
- * Returns the base URL for the GridController API.
- * Strips trailing slash for consistent URL construction.
+ * Returns the base URL for the GridController API, without trailing slash —
+ * normalised at the source by GridController::getClientConfig().
  *
  * @throws ConfigError if config is not available or the controller section is missing
  */
 export function getControllerLink(): string {
-  return getControllerSection().controllerLink.replace(/\/+$/, '')
+  return getControllerSection().controllerLink
 }
 
 /**
