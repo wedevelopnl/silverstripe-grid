@@ -17,6 +17,15 @@ import { getViewports } from '@/utils/gridAdapter'
 const VENDOR_SELECT_ID = 'preview-size-dropdown-select'
 const VENDOR_WRAPPER_ID = 'preview-size-dropdown'
 const VENDOR_ROOT_SELECTOR = '.cms-preview'
+
+/**
+ * Selector the bridge layer may use to detect that vendor preview DOM has
+ * ARRIVED in a mutation batch (presence signal only — all vendor I/O stays in
+ * this file). Matches the dropdown wrapper `openVendorPreview` requires; the
+ * select lives inside it, so any added subtree that can satisfy a mount
+ * contains a match.
+ */
+export const VENDOR_PRESENCE_SELECTOR = `#${VENDOR_WRAPPER_ID}`
 /**
  * The vendor applies device-frame styling (border, centering, rotate
  * affordance, dimension readout) only when `.cms-preview` carries one
