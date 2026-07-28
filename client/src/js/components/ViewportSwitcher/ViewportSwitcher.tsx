@@ -3,7 +3,7 @@ import { useResetOverridesAction } from '@/hooks/useResetOverridesAction'
 import { useViewportContext } from '@/hooks/ViewportContext'
 import { t } from '@/i18n'
 import { getViewports } from '@/utils/gridAdapter'
-import { getViewportIcon, getViewportRangeLabel } from './viewportPresentation'
+import { getViewportIcon } from './viewportIcon'
 
 interface ViewportSwitcherProps {
   readonly readonly?: boolean
@@ -22,9 +22,12 @@ export default function ViewportSwitcher({ readonly = false }: ViewportSwitcherP
         aria-label={t('WeDevelopGrid.ViewportSwitcher.GROUP_LABEL', 'Viewport size')}
         data-testid="viewport-switcher"
       >
-        {viewports.map((viewport) => {
+        {viewports.map((viewport, index) => {
           const isActive = viewport.key === activeViewport
-          const range = getViewportRangeLabel(viewport, viewports)
+          // The Figma toolbar labels each viewport with its *upper* boundary
+          // ("<768") — i.e. the next viewport's min-width. The largest viewport
+          // has no upper bound and is left blank.
+          const next = viewports[index + 1]
 
           return (
             <button
@@ -45,7 +48,9 @@ export default function ViewportSwitcher({ readonly = false }: ViewportSwitcherP
                 aria-hidden="true"
               />
               <span className="ssgrid-viewport-switcher__label">{viewport.label}</span>
-              {range !== null && <span className="ssgrid-viewport-switcher__range">{range}</span>}
+              {next !== undefined && (
+                <span className="ssgrid-viewport-switcher__range">{`<${next.minWidth}`}</span>
+              )}
             </button>
           )
         })}
