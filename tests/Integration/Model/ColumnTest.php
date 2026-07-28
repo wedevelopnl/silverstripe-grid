@@ -196,11 +196,12 @@ final class ColumnTest extends SapphireTest
     }
 
     /**
-     * getColumnClasses() must resolve the GridSettingsResolver through Injector
-     * so the DI-configured override strategy applies. With `cascade` configured,
-     * an override at a larger viewport cascades down to smaller viewports —
-     * producing different classes than the default `isolated` strategy, where
-     * the override applies to its own viewport only.
+     * getColumnClasses() must resolve grid classes through the DI-configured
+     * GridSettingsResolver, which the Column receives via $dependencies injection
+     * at construction. With `cascade` configured, an override at a larger viewport
+     * cascades down to smaller viewports — producing different classes than the
+     * default `isolated` strategy, where the override applies to its own viewport
+     * only.
      */
     public function testGetColumnClassesHonoursConfiguredCascadeStrategy(): void
     {
@@ -215,24 +216,25 @@ final class ColumnTest extends SapphireTest
         // the default width becomes 6 (sm:col-span-6) and the standalone 12 class
         // disappears.
         $settings = GridSettings::initial(12)->withOverride('lg', new ViewportConfig(6, 0, true));
-        $column = GridTreeFactory::column($row, gridSettings: $settings);
 
-        // Baseline: default (isolated) resolver.
-        $isolatedClasses = $column->getColumnClasses();
+        // Baseline: column built under the default (isolated) resolver.
+        $isolatedColumn = GridTreeFactory::column($row, gridSettings: $settings);
+        $isolatedClasses = $isolatedColumn->getColumnClasses();
         self::assertStringContainsString('sm:col-span-12', $isolatedClasses);
         self::assertStringContainsString('lg:col-span-6', $isolatedClasses);
 
-        // Register a cascade-configured resolver as the active GridSettingsResolver.
+        // Register a cascade-configured resolver, then build a column so it receives
+        // that strategy via $dependencies injection at construction.
         $adapter = Injector::inst()->get(GridAdapterInterface::class);
-        $cascadeResolver = new GridSettingsResolver($adapter, 'cascade');
-        Injector::inst()->registerService($cascadeResolver, GridSettingsResolver::class);
+        Injector::inst()->registerService(new GridSettingsResolver($adapter, 'cascade'), GridSettingsResolver::class);
 
-        $cascadeClasses = $column->getColumnClasses();
+        $cascadeColumn = GridTreeFactory::column($row, gridSettings: $settings);
+        $cascadeClasses = $cascadeColumn->getColumnClasses();
 
         self::assertNotSame(
             $isolatedClasses,
             $cascadeClasses,
-            'getColumnClasses() must reflect the Injector-configured cascade strategy, not a hard-coded isolated resolver',
+            'getColumnClasses() must reflect the DI-configured cascade strategy, not a hard-coded isolated resolver',
         );
 
         // Cascade pushes the width-6 override down to the smallest viewport.

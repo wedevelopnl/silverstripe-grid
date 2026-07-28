@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Model;
 
 use Override;
-use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Contract\ContainerInterface;
@@ -42,9 +41,12 @@ class Column extends GridElement implements ContainerInterface
     /** @var array<string, string> */
     private static array $dependencies = [
         'gridAdapter' => '%$' . GridAdapterInterface::class,
+        'gridSettingsResolver' => '%$' . GridSettingsResolver::class,
     ];
 
     public GridAdapterInterface $gridAdapter;
+
+    public GridSettingsResolver $gridSettingsResolver;
 
     /** @var array<string, string> */
     private static array $summary_fields = [
@@ -140,8 +142,7 @@ class Column extends GridElement implements ContainerInterface
     /** CSS classes for the grid column wrapper. */
     public function getColumnClasses(): string
     {
-        $resolver = Injector::inst()->get(GridSettingsResolver::class);
-        $effective = $resolver->resolveEffective($this->getGridSettings());
+        $effective = $this->gridSettingsResolver->resolveEffective($this->getGridSettings());
         $classes = ColumnClassResolver::resolve($effective, $this->gridAdapter);
 
         $this->extend('updateColumnClasses', $classes);
