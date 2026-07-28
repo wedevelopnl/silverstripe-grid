@@ -81,7 +81,7 @@ When you see a symptom, start here.
 | **Ghost jump on drag start** | Collision detection fires immediately without threshold crossing | Is `centerCrossing` being used? Is the overlap gate working? Was it replaced with `closestCenter`? | `collisionDetection.ts` (centerCrossing) |
 | **1-frame snap-back on drop** | Pending tree cleared before optimistic cache update | Is `setQueryData` before `clearPendingTree`? Is there an `await` between them? | `useElementMutations.ts` (onMutate ordering) |
 | **Dropped item animates to its OLD slot, then snaps to the correct position after the animation** | The dragged node isn't at its final DOM position when dnd-kit's drop animation measures it. The final position is being driven by the optimistic cache write (`setQueryData`), which re-renders a macrotask too late (`setTimeout(0)` notify) — so the animation targets the pre-move slot. Almost always a **same-container** move that skipped pending-tree pre-positioning. | Does `handleDragEnd` call `pending.applyPendingMove(...)` before `onReorder` (invariant #8)? Is the pending tree populated at drop time for this path? | `useDragAndDrop.ts` (handleDragEnd pre-position), `usePendingTree.ts` |
-| **Drop silently fails (no reorder)** | `over` is null at drop time — collision detection lost track | Check `hadSiblingHit` fallback, source depletion handling, pointer-inside-source guard | `collisionDetection.ts` (factory closure state) |
+| **Drop silently fails (no reorder)** | Either `over` is null at drop time, or `over` degraded to the active element's OWN parent container — `resolveDropPlacement`'s container branch then appends at the end, which for an element already last is a no-op | Check `hadSiblingHit` fallback, source depletion handling, pointer-inside-source guard. If `over` is a container, check tier 3's lost-lock recovery: auto-scroll can shift `droppableRects` past `MARGIN_Y` and drop the sibling lock | `collisionDetection.ts` (factory closure state, tier 3), `resolveDropPlacement.ts` (container branch) |
 | **Element snaps to wrong container** | Parent-container fallback biased by `closestCenter` | Is containment-first check working? Is pointer inside a parent rect? | `collisionDetection.ts` (tier 3) |
 | **Cross-container drag doesn't show element in target** | Pending tree not applied | Is `handleDragOver` detecting the cross-container move? Is `applyPendingMove` called? | `useDragAndDrop.ts` (handleDragOver), `usePendingTree.ts` |
 | **Backend rejects a valid move** | Hierarchy validation too strict | Check `ContainerType::isChildAllowed()` and `ReorderValidator::checkHierarchyRules()` | `ContainerType.php`, `ReorderValidator.php` |
@@ -121,7 +121,15 @@ Read `references/collision-detection.md` for full algorithm details including th
 |------|-----------|------|---------------|
 | 1 | `centerCrossing` | Siblings, no pending move | Prevents ghost jumps via threshold crossing + overlap gate |
 | 2 | `closestCenterLive` | Siblings, pending move active | CSS transforms make `droppableRects` stale — reads live DOM rects |
-| 3 | Parent container fallback | No sibling collision | **Containment-first**, then `closestCenter`. Fixes bias toward smaller containers |
+| 3 | Parent container fallback | No sibling collision | **Containment-first**, then lost-lock recovery, then `closestCenter`. Fixes bias toward smaller containers |
+
+Tier 3 runs in three steps, in order:
+
+1. **Containment** — the parent whose rect contains the pointer wins. This is what enters a new container, so it always outranks recovery.
+2. **Lost-lock recovery** — if `centerCrossing` held a sibling lock earlier in this drag (`hadSiblingHit`) and the pointer is now inside *no* parent rect, re-resolve that sibling via `closestCenterLive`. Auto-scroll shifts `droppableRects` out from under a stationary pointer by more than `MARGIN_Y`, which drops the lock while SortableContext is still previewing the item in that sibling's slot. Skipped when a pending move is active or on source depletion.
+3. **`closestCenter` distance guess** — entering empty containers at distance (e.g. pointer in the gap between sections).
+
+Without step 2, step 3 returns the element's **own** parent, and `resolveDropPlacement`'s container branch appends at its end — a silent no-op that contradicts the visible preview.
 
 ### Performance Contract
 

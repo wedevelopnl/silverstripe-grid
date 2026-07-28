@@ -2390,3 +2390,113 @@ function runWithCurrentYUp(currentY: number) {
   }
   return centerCrossing(args as never)
 }
+
+describe('lost-lock recovery after auto-scroll drift (no-pending path)', () => {
+  // Regression (cross-section-drop.spec.ts:172, "Intra-container: B3 before A2"):
+  // dragging a row toward the top of its own section auto-scrolls the CMS panel,
+  // which shifts droppableRects DOWN out from under a stationary pointer. Once
+  // that drift exceeds centerCrossing's 150px MARGIN_Y the sibling stops matching,
+  // the pointer sits inside no parent rect, and the at-distance parent guess
+  // returns the row's OWN section — which resolveDropPlacement turns into an
+  // append-at-end no-op, firing no reorder and contradicting the sort preview
+  // still on screen. Measured drift in the failing run: ~190px.
+  //
+  // Geometry: active initialCY = 750 (dragging UP), pointer parked at y = 320.
+  // Locked: sibling rect top 300 → thresholdY = min(300+100-25, 350) = 350,
+  //         currentCY 320 <= 350 crosses, overlapY 320 > 300-150 holds.
+  // Drifted: sibling rect top 600 → overlapY needs 320 > 600-150 = 450. It fails.
+
+  function build(opts: { siblingTop: number; parentTop: number; parentHeight: number }) {
+    const collisionRect = makeDomRect(100, 295, 100, 50)
+    return {
+      active: {
+        id: 'row-1',
+        rect: {
+          current: { initial: makeDomRect(100, 700, 100, 100), translated: collisionRect },
+        },
+        data: { current: undefined },
+      },
+      collisionRect,
+      droppableContainers: [
+        createDroppableWithRect('row-2', {
+          left: 50,
+          top: opts.siblingTop,
+          width: 200,
+          height: 100,
+        }),
+        createDroppable('section-1'),
+      ],
+      droppableRects: new Map<string | number, ClientRect>([
+        ['row-2', makeDomRect(50, opts.siblingTop, 200, 100)],
+        ['section-1', makeDomRect(0, opts.parentTop, 800, opts.parentHeight)],
+      ]),
+      pointerCoordinates: { x: 150, y: 320 },
+    }
+  }
+
+  const locked = () => build({ siblingTop: 300, parentTop: 200, parentHeight: 400 })
+  const drifted = (parentTop: number, parentHeight: number) =>
+    build({ siblingTop: 600, parentTop, parentHeight })
+
+  it('re-resolves the drifted sibling instead of guessing the parent at distance', () => {
+    const detect = createTypedCollisionDetection({
+      hasPendingMoveRef: { current: false },
+      sourceContainerItemsRef: { current: new Set<string | number>(['row-2']) },
+    })
+
+    expect(detect(locked() as never)[0].id).toBe('row-2')
+
+    // Parent [700, 900] does not contain the pointer, so the old code reached
+    // the closestCenter guess and returned 'section-1'.
+    const collisions = detect(drifted(700, 200) as never)
+
+    expect(collisions).toHaveLength(1)
+    expect(collisions[0].id).toBe('row-2')
+  })
+
+  it('still enters a container the pointer is inside — containment outranks recovery', () => {
+    const detect = createTypedCollisionDetection({
+      hasPendingMoveRef: { current: false },
+      sourceContainerItemsRef: { current: new Set<string | number>(['row-2']) },
+    })
+
+    expect(detect(locked() as never)[0].id).toBe('row-2')
+
+    // Parent [200, 600] contains the pointer at y=320 — cross-container entry
+    // must keep winning, otherwise a held lock would trap the drag in its source.
+    const collisions = detect(drifted(200, 400) as never)
+
+    expect(collisions[0].id).toBe('section-1')
+  })
+
+  it('does not recover while a pending cross-container move is active', () => {
+    const hasPendingMoveRef = { current: false }
+    const detect = createTypedCollisionDetection({
+      hasPendingMoveRef,
+      sourceContainerItemsRef: { current: new Set<string | number>(['row-2']) },
+      pendingContainerItemsRef: { current: new Set<string | number>() },
+    })
+
+    expect(detect(locked() as never)[0].id).toBe('row-2')
+
+    // The item has visually left its source container, so its source siblings
+    // are the wrong candidates to re-resolve against.
+    hasPendingMoveRef.current = true
+    const collisions = detect(drifted(700, 200) as never)
+
+    expect(collisions[0].id).toBe('section-1')
+  })
+
+  it('does not recover on source depletion — no source siblings to re-resolve', () => {
+    const detect = createTypedCollisionDetection({
+      hasPendingMoveRef: { current: false },
+      sourceContainerItemsRef: { current: new Set<string | number>() },
+    })
+
+    expect(detect(locked() as never)[0].id).toBe('row-2')
+
+    const collisions = detect(drifted(700, 200) as never)
+
+    expect(collisions[0].id).toBe('section-1')
+  })
+})

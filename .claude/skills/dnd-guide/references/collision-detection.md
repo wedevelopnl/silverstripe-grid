@@ -49,6 +49,13 @@ The closure runs on every pointer move and decides which tier to use.
    - X: 50px — prevents matching elements in adjacent columns (gaps typically 100px+)
    - Uses pointer coordinates (viewport-relative), NOT collision rect center
 
+   **The Y margin is not a reliable backstop.** Sustained auto-scroll drifts far
+   past 150px — ~190px measured on a single upward row drag, still climbing
+   ~5px/frame while the pointer sat still. Treat the margin as covering a brief
+   scroll blip only; tier 3's lost-lock recovery is what handles real drift.
+   Never rely on the margin to keep a lock alive, and never widen it to "fix" a
+   lost lock — the drift is unbounded while auto-scroll runs.
+
 **Return contract**: at most ONE collision — the crossing target closest (squared distance) to the collision-rect center, selected in a single pass without sorting. dnd-kit derives `over` from `collisions[0]` and nothing consumes the rest (see Performance Contract in the main skill).
 
 **Why no proximity gate instead?** Two coordinate-space reasons:
