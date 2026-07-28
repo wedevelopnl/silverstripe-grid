@@ -5,6 +5,15 @@ import { createSimpleElement, resetIdCounter } from '@/testing/factories'
 import { getFetchCalls, mockFetchError, mockFetchSuccess } from '@/testing/mockFetch'
 import { createProviderWrapper } from '@/testing/renderWithProviders'
 import type { ElementNode } from '@/types/elements'
+import { showToast } from '@/utils/toast'
+
+// Spy on the toast helper so the error path can be asserted directly. The shared
+// mutation-level onError (useStandardMutationOptions) is the ONLY toast source —
+// the hook itself passes no per-call onError, so a single failure must fire
+// exactly one toast.
+vi.mock('@/utils/toast', () => ({
+  showToast: vi.fn(),
+}))
 
 function renderDuplicateAction(node: ElementNode) {
   const { wrapper } = createProviderWrapper()
@@ -14,6 +23,7 @@ function renderDuplicateAction(node: ElementNode) {
 describe('useDuplicateAction', () => {
   beforeEach(() => {
     resetIdCounter()
+    vi.mocked(showToast).mockClear()
   })
 
   it('should return null action when canCreate is false', () => {
@@ -56,11 +66,11 @@ describe('useDuplicateAction', () => {
     expect(init?.method).toBe('POST')
   })
 
-  it('should show toast when mutation fails', async () => {
-    mockFetchError(500, { message: 'Duplicate failed' })
-    const dispatch = vi.fn()
-    window.ss!.store = { dispatch }
-
+  it('fires exactly one error toast when duplication fails', async () => {
+    // Real fetch-backed failure drives the shared mutation onError. Asserting a
+    // SINGLE toast guards against a per-call onError being reintroduced — that
+    // would double the toast (the original bug this test locks down).
+    mockFetchError(500)
     const node = createSimpleElement({ id: 42 })
     const { result } = renderDuplicateAction(node)
 
@@ -69,12 +79,8 @@ describe('useDuplicateAction', () => {
     })
 
     await waitFor(() => {
-      expect(dispatch).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'DISPLAY_TOAST',
-          payload: expect.objectContaining({ type: 'error' }),
-        }),
-      )
+      expect(showToast).toHaveBeenCalledWith('API error 500: Error 500')
     })
+    expect(showToast).toHaveBeenCalledTimes(1)
   })
 })
