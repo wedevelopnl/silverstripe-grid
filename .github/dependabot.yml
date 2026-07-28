@@ -29,6 +29,19 @@ updates:
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
 
+      # Biome 2.5.6 regresses the type inference 2.5.5 fixed. nursery/
+      # useAwaitThenable (an error here, biome.json) flags all ten
+      # `await act(async () => …)` calls in useElementMutations.test.tsx as
+      # awaiting a non-Promise — but React's `act` returns a custom Thenable,
+      # exactly the case Biome's own diagnostic warns not to "fix" by dropping
+      # the await. suspicious/noUnnecessaryConditions (warn, non-blocking) also
+      # flips back to calling the `?? []` / `?? 0` fallbacks unreachable,
+      # undoing the suppression cleanup done for 2.5.5. Both would need
+      # suppressions that a corrected patch release turns straight back into
+      # dead code. Held at 2.5.5; drop this entry once a release lints clean.
+      - dependency-name: "@biomejs/biome"
+        versions: ["2.5.6"]
+
   - package-ecosystem: composer
     directory: /
     schedule:
