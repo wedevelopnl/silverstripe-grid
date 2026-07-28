@@ -150,6 +150,7 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
           glyph="font-icon-back-in-time"
           label={t('WeDevelopGrid.ElementActions.ACTION_HISTORY', 'View history')}
           onClick={
+            // Stryker disable next-line ConditionalExpression: Equivalent — differs only when editLink === null, and the button is then disabled so onClick never fires
             editLink !== null
               ? () => {
                   // The element's CMS edit form carries a `Root.History` tab

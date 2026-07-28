@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '@/hooks/queryKeys'
+import * as activeViewportStore from '@/state/activeViewport'
 import {
   createColumnNode,
   createRowNode,
@@ -85,13 +86,29 @@ describe('ViewportSwitcher', () => {
     const user = userEvent.setup()
     mockFetchSuccess({})
 
+    // Spy on the shared store setter the component invokes via useViewportContext.
+    // The store itself no-ops on an unchanged key, so aria-pressed alone can't
+    // distinguish "setter skipped" (guard present) from "setter called with the
+    // same key" (guard removed) — we must assert on the call directly.
+    const setSpy = vi.spyOn(activeViewportStore, 'setActiveViewport')
+
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' })
+    // renderWithProviders seeds the active viewport through the same setter.
+    setSpy.mockClear()
 
     const mdButton = screen.getByTestId('viewport-button-md')
-
     await user.click(mdButton)
 
+    // Clicking the already-active button must NOT call the setter (the `!isActive`
+    // guard). A mutant that always calls it would invoke setActiveViewport('md').
+    expect(setSpy).not.toHaveBeenCalled()
     expect(mdButton).toHaveAttribute('aria-pressed', 'true')
+
+    // Sanity: an inactive button DOES call the setter.
+    await user.click(screen.getByTestId('viewport-button-lg'))
+    expect(setSpy).toHaveBeenCalledWith('lg')
+
+    setSpy.mockRestore()
   })
 
   it('reset button not shown when no overrides', () => {
@@ -246,6 +263,9 @@ describe('ViewportSwitcher', () => {
     const xxlButton = screen.getByTestId('viewport-button-xxl')
     expect(xxlButton).not.toHaveTextContent('<')
     expect(xxlButton).toHaveTextContent('Extra extra large')
+    // The `range !== null` guard must omit the span element entirely — not
+    // render an empty one — for the final viewport.
+    expect(xxlButton.querySelector('.ssgrid-viewport-switcher__range')).toBeNull()
   })
 
   it('does not render the confirm dialog until reset is clicked', () => {

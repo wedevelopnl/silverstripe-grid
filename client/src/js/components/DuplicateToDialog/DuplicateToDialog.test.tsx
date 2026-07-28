@@ -1570,4 +1570,53 @@ describe('DuplicateToDialog', () => {
       expect(screen.queryByTestId('duplicate-to-step-page')).not.toBeInTheDocument()
     })
   })
+
+  describe('zone list rendering boundary', () => {
+    it('does not render the zone list when the page has no zones', async () => {
+      const user = userEvent.setup()
+      mockApiRoutes({ zones: [] })
+      renderDialog({ elementType: 'row' })
+
+      await goToZoneStep(user)
+
+      // An empty zone set never trips the auto-advance guard (length === 1), so
+      // we linger on the zone step. Wait for the zones query to resolve so the
+      // list guard is evaluated against real (empty) data, not `undefined`.
+      await waitFor(() => {
+        expect(screen.queryByTestId('duplicate-to-loading')).not.toBeInTheDocument()
+      })
+
+      // L253 list guard `zones.data.length > 1`: mutating the length check to
+      // `true` (dropping it) would render an empty zone-list container here.
+      // With zero zones the list and its items must stay absent.
+      expect(screen.getByTestId('duplicate-to-step-zone')).toBeInTheDocument()
+      expect(screen.queryByTestId('duplicate-to-zone-list')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('duplicate-to-zone-item')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('confirm summary spacing', () => {
+    it('separates the summary prefix from the zone name with a space', async () => {
+      const user = userEvent.setup()
+      mockApiRoutes()
+      renderDialog({ elementType: 'section' })
+
+      await goToZoneStep(user)
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
+      })
+      await user.click(screen.getByText('main'))
+      await user.click(screen.getByTestId('duplicate-to-next'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-step-confirm')).toBeInTheDocument()
+      })
+
+      // L338 `{' '}` separates the prefix from the <strong>zone</strong>.
+      // Mutating it to `{""}` collapses "zone main?" into "zonemain?".
+      expect(screen.getByTestId('duplicate-to-step-confirm')).toHaveTextContent(
+        'Duplicate section to zone main?',
+      )
+    })
+  })
 })

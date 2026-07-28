@@ -21,10 +21,10 @@ function ensureInitialised(): void {
   try {
     current = getDefaultViewport()
   } catch {
-    // Adapter config is unavailable (e.g. during early boot in tests
-    // with no CMS config global). Keep null; readers that actually
-    // need a value will re-try on subsequent calls.
-    current = null
+    // Adapter config is unavailable (e.g. during early boot in tests with no CMS
+    // config global). `current` is already null here — the `current !== null`
+    // early return above guarantees it — so there is nothing to reset; readers
+    // re-try on subsequent calls.
   }
 }
 
@@ -50,6 +50,10 @@ export function setActiveViewport(key: string): void {
   try {
     match = getViewports().find((vp) => vp.key === key)
   } catch {
+    // Equivalent-mutant site (Stryker cannot inline-suppress a catch body):
+    // removing this `return` would fall through to the `if (match === undefined)
+    // return` guard below (match stays undefined when getViewports throws), so the
+    // result is identical — the explicit return is kept for clarity.
     return
   }
   if (match === undefined) {

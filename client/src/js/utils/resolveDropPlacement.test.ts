@@ -251,6 +251,66 @@ describe('resolveDropPlacement', () => {
       })
     })
 
+    it('inserts AFTER the last sibling (index+1) when dropping after the final target element', () => {
+      // Target row 11 = [31, 32]. Move column 21 over column 32 (overIdx=1, the
+      // LAST slot) with the pointer right of centre → 'after'. insertIndex must
+      // become 1 + 1 = 2 → [31, 32, 21] → after = 32.
+      // Mutant `insertIndex -= 1` sets insertIndex = 0 → [21, 31, 32] → after = null.
+      // Placing over an interior element hides this because splice(±1) coincide;
+      // the LAST element is where +1 and −1 diverge into distinct orderings.
+      const maps = buildTwoRowTree()
+
+      const ctx: DropContext = {
+        activeParsed: createParsedDraggableId('column', 21),
+        overParsed: createParsedDraggableId('column', 32),
+        pointer: { x: 150, y: 50 },
+        maps,
+        sourceParentKey: NodeIdentity.toKey('row', 10),
+        sourceIndex: 0,
+        overRect: { left: 0, top: 0, width: 200, height: 100 },
+        axis: 'x',
+      }
+
+      expect(resolveDropPlacement(ctx)).toEqual({
+        element: { type: 'column', id: 21 },
+        parent: { type: 'row', id: 11 },
+        after: { type: 'column', id: 32 },
+      })
+    })
+
+    it('appends when the over element is absent from the filtered target siblings', () => {
+      // Cross-container defensive branch (resolveDropPlacement L59): when the over
+      // element cannot be located among the filtered target siblings, insertion
+      // falls back to the container end. This is reachable when over === active
+      // (so the exclusion removes it from `filtered`) while a mismatched
+      // sourceParentKey routes execution down the cross-container arm.
+      //
+      // Row 10 = [21, 22, 23]. active === over === column 21; filtered excludes 21
+      // → [22, 23]; overIdx = indexOf(21) = -1 → append at length 2 → [22, 23, 21]
+      // → after = 23. Mutant `if (false)` skips the append and reuses overIdx = -1
+      // → splice(-1) → [22, 21, 23] → after = 22, a different anchor.
+      const maps = buildThreeColumnRow()
+
+      const ctx: DropContext = {
+        activeParsed: createParsedDraggableId('column', 21),
+        overParsed: createParsedDraggableId('column', 21),
+        pointer: null,
+        maps,
+        // Deliberately NOT row 10 (column 21's real parent) so the same-parent
+        // branch is bypassed and the cross-container arm runs.
+        sourceParentKey: NodeIdentity.toKey('row', 999),
+        sourceIndex: 0,
+        overRect: DEFAULT_RECT,
+        axis: 'x',
+      }
+
+      expect(resolveDropPlacement(ctx)).toEqual({
+        element: { type: 'column', id: 21 },
+        parent: { type: 'row', id: 10 },
+        after: { type: 'column', id: 23 },
+      })
+    })
+
     it('returns correct targetParent from the over element parent', () => {
       const maps = buildTwoRowTree()
 

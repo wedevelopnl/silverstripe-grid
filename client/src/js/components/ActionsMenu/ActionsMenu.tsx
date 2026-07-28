@@ -30,6 +30,7 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
   // Reset to first item and move focus to the menu container each time it opens
   // so Arrow keys drive the aria-activedescendant roving pattern.
   useEffect(() => {
+    // Stryker disable next-line ConditionalExpression: Equivalent — on close the {isOpen && …} menu unmounts (menuRef null → focus no-op) and setActiveIndex(0) is re-applied on the next open, so a close-time run is unobservable
     if (!isOpen) return
     setActiveIndex(0)
     menuRef.current?.focus()
@@ -43,6 +44,7 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
   }, [actions.length])
 
   useEffect(() => {
+    // Stryker disable next-line ConditionalExpression: Equivalent — the outside-mousedown listener's only side effect is the idempotent close(), so registering it while closed is inert
     if (!isOpen) return
 
     function handleMouseDown(e: MouseEvent) {
@@ -112,12 +114,14 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
         e.preventDefault()
         e.stopPropagation()
         const current = actions[activeIndex]
+        // Stryker disable next-line ConditionalExpression: Equivalent — actions is non-empty (the component returns null otherwise) and a clamp effect keeps activeIndex in range, so current is always defined
         if (current) {
           current.onAction()
           close()
         }
         return
       }
+      // Stryker disable next-line ConditionalExpression: Equivalent — default is the final switch clause; dropping its `return` is a no-op (no code follows the switch)
       default:
         return
     }

@@ -253,6 +253,22 @@ describe('error extraction', () => {
 
     await expect(apiGet('/api/test')).rejects.toThrow('Fallback')
   })
+
+  it('ignores a message carried on a non-object body and falls back to statusText', async () => {
+    // extractErrorMessage only trusts genuine object bodies: the guard is
+    // `typeof body === 'object' && body !== null`. A function is typeof
+    // 'function', so even though it carries a non-empty `message` property that
+    // string MUST NOT be surfaced — the extractor falls back to statusText.
+    // This pins the `typeof === 'object'` half of the guard: dropping it (so the
+    // check becomes `body !== null`, `typeof || body!==null`, or `true`) would
+    // wrongly read `.message` off the function and throw that string instead.
+    const functionBody = Object.assign(() => undefined, { message: 'leaked function message' })
+    mockFetchWithBody(400, 'Bad Request', () => Promise.resolve(functionBody))
+
+    const error = await apiGet('/api/test').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect((error as ApiError).message).toBe('API error 400: Bad Request')
+  })
 })
 
 describe('mutation request headers', () => {

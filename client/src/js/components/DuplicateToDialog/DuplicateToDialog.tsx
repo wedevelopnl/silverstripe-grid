@@ -100,6 +100,7 @@ export default function DuplicateToDialog({
 
   // Auto-select zone and advance when there is exactly one zone
   useEffect(() => {
+    // Stryker disable next-line ConditionalExpression: Equivalent — the single-zone auto-advance routes to exactly the step it lands on; on non-zone steps useZones is disabled so zones.data is undefined and the body is gated out anyway
     if (step === 'zone' && zones.data !== undefined && zones.data.length === 1) {
       setSelectedZone(zones.data[0])
       if (elementType === 'section') {
@@ -116,6 +117,7 @@ export default function DuplicateToDialog({
   }, [])
 
   const advanceFromZone = useCallback(() => {
+    // Stryker disable next-line ConditionalExpression: Equivalent — advanceFromZone is wired only to the zone-step Next button, which is disabled while selectedZone === null, so the guard is unreachable
     if (selectedZone === null) return
 
     if (elementType === 'section') {
@@ -148,6 +150,10 @@ export default function DuplicateToDialog({
     } else if (step === 'container') {
       setStep('zone')
       setSelectedContainerId(null)
+      // Equivalent-mutant site (Stryker cannot inline-suppress an `else if` test —
+      // its directives attach only to leading comments of normal statements): this
+      // arm is reached only when step ∉ {zone, container}, and the Back button is
+      // hidden on the page step, so `step === 'confirm'` is always true here.
     } else if (step === 'confirm') {
       setSelectedZone(null)
       // When there's only one zone, the zone step auto-advances — going back
@@ -156,6 +162,9 @@ export default function DuplicateToDialog({
       setStep(zones.data !== undefined && zones.data.length === 1 ? 'page' : 'zone')
     }
   }, [step, zones.data])
+
+  // Stryker disable next-line EqualityOperator: Equivalent — `> 1` only differs at exactly 1 zone, which auto-advances off the zone step before this list ever renders
+  const hasMultipleZones = zones.data !== undefined && zones.data.length > 1
 
   return (
     <dialog
@@ -252,7 +261,7 @@ export default function DuplicateToDialog({
                 {t('WeDevelopGrid.DuplicateToDialog.LOADING_ZONES', 'Loading zones\u2026')}
               </p>
             )}
-            {zones.data !== undefined && zones.data.length > 1 && (
+            {hasMultipleZones && (
               <div
                 className="ssgrid-dialog__list"
                 data-testid="duplicate-to-zone-list"

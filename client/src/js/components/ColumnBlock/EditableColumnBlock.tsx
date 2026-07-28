@@ -84,6 +84,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
   // gutter's centre so it doesn't hug the column edge. Grid-placement offsets
   // are left alone — see _column-insert.scss.
   const gutterShiftPct =
+    // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — `offset > 0` only differs at offset === 0, where the true branch (0/width)*50 equals the else 0; ColumnInsertButton omits the shift var for a falsy 0 either way
     getOffsetStrategy() === 'margin' && settings.offset > 0
       ? (settings.offset / settings.width) * 50
       : 0

@@ -433,6 +433,7 @@ export function createTypedCollisionDetection(
               droppableContainers: sameContainerSiblings,
             })
 
+            // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — when liveCollisions is empty both branches return an empty array (captureWinnerNode([]) has no side effect and equals the else `return []`)
             if (liveCollisions.length > 0) {
               return captureWinnerNode(liveCollisions)
             }

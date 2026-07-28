@@ -133,6 +133,17 @@ describe('editLink scheme validation', () => {
   ])('rejects a %s', (_label, editLink) => {
     expect(v.safeParse(elementNodeWireSchema, { ...baseLeaf, editLink }).success).toBe(false)
   })
+
+  it('reports the exact validation message for an unsafe editLink', () => {
+    const result = v.safeParse(elementNodeWireSchema, {
+      ...baseLeaf,
+      editLink: 'javascript:alert(1)',
+    })
+    expect(result.success).toBe(false)
+    expect(result.success === false && v.flatten(result.issues).nested?.editLink).toEqual([
+      'editLink must be a relative path or an http(s) URL',
+    ])
+  })
 })
 
 describe('tree-root allowedTypes (allowedTypeInfoSchema + emptyArrayToObject)', () => {

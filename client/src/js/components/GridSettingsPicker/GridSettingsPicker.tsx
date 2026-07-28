@@ -42,8 +42,10 @@ export default function GridSettingsPicker({
   // Seed activeIndex to the currently-selected option each time the listbox opens
   // so keyboard navigation starts from the user's current choice.
   useEffect(() => {
+    // Stryker disable next-line ConditionalExpression: Equivalent — on close the {isOpen && …} listbox unmounts (listboxRef null → focus no-op) and the seed index is re-applied on the next open, so a close-time run is unobservable
     if (!isOpen) return
     const selectedIdx = options.findIndex((o) => o.value === selectedValue)
+    // Stryker disable next-line EqualityOperator: Equivalent — `>= 0` vs `> 0` both yield 0 when selectedIdx is 0 (the ternary's else fallback is also 0)
     setActiveIndex(selectedIdx >= 0 ? selectedIdx : 0)
     // Move focus to the listbox so Arrow keys target it (aria-activedescendant pattern).
     listboxRef.current?.focus()
@@ -51,6 +53,7 @@ export default function GridSettingsPicker({
 
   // Close on outside click
   useEffect(() => {
+    // Stryker disable next-line ConditionalExpression: Equivalent — the outside-mousedown listener's only side effect is the idempotent close(), so registering it while closed is inert
     if (!isOpen) return
 
     function handleMouseDown(e: MouseEvent) {
@@ -81,6 +84,7 @@ export default function GridSettingsPicker({
 
   function handleTriggerClick(e: React.MouseEvent) {
     e.stopPropagation()
+    // Stryker disable next-line ConditionalExpression: Equivalent — the trigger button carries disabled={disabled}, so React suppresses the click and this guard is unreachable dead-defense
     if (!disabled) {
       setIsOpen((prev) => !prev)
     }
@@ -119,6 +123,7 @@ export default function GridSettingsPicker({
         }
         return
       }
+      // Stryker disable next-line ConditionalExpression: Equivalent — default is the final switch clause; dropping its `return` is a no-op (no code follows the switch)
       default:
         return
     }

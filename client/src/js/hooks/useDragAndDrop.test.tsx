@@ -647,6 +647,190 @@ describe('useDragAndDrop', () => {
     })
   })
 
+  describe('onDragMove live-rect snapshot id guard', () => {
+    // The same-type cross-container preview reads the tier-2 collision snapshot's
+    // LIVE getBoundingClientRect() for the before/after direction — but ONLY when
+    // that snapshot was captured for the CURRENT over element. When the snapshot
+    // is stale (captured for a DIFFERENT element in an earlier cycle), the
+    // `String(overSnapshot.id) === String(over.id)` guard must reject it and fall
+    // back to the event's own over.rect. Otherwise the ghost is positioned against
+    // the wrong element's geometry.
+    it('ignores a stale snapshot whose id differs from the current over element', () => {
+      const { tree } = buildTwoColumnTree() // col30=[el40], col31=[el41]
+      const { result } = renderDndHook({ tree })
+
+      const activeId = buildDraggableId('element', 40)
+      const overId = buildDraggableId('element', 41)
+
+      // Real DOM node so resolveDropAxis's .closest() resolves (no marked
+      // ancestor → axis stays 'y'). Its rect sits far BELOW the event's over.rect
+      // so, if wrongly used, it inverts the before/after decision.
+      const staleNode = document.createElement('div')
+      vi.spyOn(staleNode, 'getBoundingClientRect').mockReturnValue(
+        makeDomRect(0, 1000, 200, 50) as unknown as DOMRect,
+      )
+      const staleDroppable = {
+        id: 'element-50',
+        key: 'element-50',
+        data: { current: undefined },
+        disabled: false,
+        node: { current: staleNode },
+        rect: { current: null },
+      }
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+
+      // Drive the hook's own collision detection so it captures element-50 into
+      // overRectRef (the snapshot). el40's source column has no other siblings →
+      // source depletion → ALL element siblings are scanned by centerCrossing,
+      // and the crossing element-50 wins → snapshot id becomes 'element-50'.
+      act(() => {
+        result.current.dndContextProps.collisionDetection({
+          active: {
+            id: activeId,
+            rect: {
+              current: {
+                initial: makeDomRect(100, 75, 100, 50),
+                translated: makeDomRect(100, 285, 100, 50),
+              },
+            },
+            data: { current: undefined },
+          },
+          collisionRect: makeDomRect(100, 285, 100, 50), // center Y 310, past threshold 300
+          droppableContainers: [staleDroppable],
+          droppableRects: new Map([['element-50', makeDomRect(50, 275, 200, 100)]]),
+          pointerCoordinates: { x: 150, y: 310 },
+        } as never)
+      })
+
+      // Over element-41: the EVENT's over.rect top=0 height=50 → Y-center 25.
+      // Pointer clientY=60 is BELOW it → 'after' → [41, 40]. Were the stale
+      // element-50 snapshot (Y-center 1025) used instead, 60 < 1025 → 'before'
+      // → [40, 41]. The asserted [41, 40] fails on both snapshot-reuse mutants.
+      const OVER_RECT = { top: 0, left: 0, width: 200, height: 50 }
+      act(() => {
+        result.current.dndContextProps.onDragMove(
+          makePointerDragOverEvent(activeId, overId, 100, 60, OVER_RECT),
+        )
+      })
+
+      const section = result.current.pendingTree?.nodes[0] as ReturnType<typeof createSectionNode>
+      const row = section.children?.[0] as ReturnType<typeof createRowNode>
+      const col31 = row.children?.[1] as ReturnType<typeof createColumnNode>
+      expect(col31.children?.map((c) => c.self.id)).toEqual([41, 40])
+    })
+  })
+
+  describe('onDragEnd live-rect snapshot id guard', () => {
+    // The drag-end fallback (no pending preview) derives the drop axis from the
+    // tier-2 collision snapshot's live node — but only when that snapshot matches
+    // the current over element. A stale snapshot (captured for a DIFFERENT
+    // element) must be rejected by the `String(overSnapshot.id) === String(over.id)`
+    // guard, so the axis degrades to the column type rule ('x'). If the guard is
+    // bypassed and the stale full-width node is used, the axis becomes 'y',
+    // flipping the before/after decision for the same pointer and over.rect.
+    it('ignores a stale snapshot whose id differs from the current over element', () => {
+      // Two rows so col30 → col31 is a genuine cross-container column drop.
+      const col30 = createColumnNode({
+        id: 30,
+        parent: { type: 'row', id: 20 },
+        children: [createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })],
+      })
+      const col31 = createColumnNode({
+        id: 31,
+        parent: { type: 'row', id: 21 },
+        children: [createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })],
+      })
+      const row20 = createRowNode({
+        id: 20,
+        parent: { type: 'section', id: 10 },
+        children: [col30],
+      })
+      const row21 = createRowNode({
+        id: 21,
+        parent: { type: 'section', id: 10 },
+        children: [col31],
+      })
+      const section = createSectionNode({
+        id: 10,
+        parent: { type: 'page', id: 1 },
+        children: [row20, row21],
+      })
+      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+
+      const onReorder = vi.fn()
+      const { result } = renderDndHook({ tree, onReorder })
+
+      const activeId = buildDraggableId('column', 30)
+      const overId = buildDraggableId('column', 31)
+
+      // Stale snapshot node: full-width inside a marked [data-dnd-container]
+      // ancestor, so resolveDropAxis reads geometry 'y' — DIFFERENT from the
+      // column type rule 'x' that the guard-rejected fallback produces.
+      const marked = document.createElement('div')
+      marked.setAttribute('data-dnd-container', '')
+      const staleNode = document.createElement('div')
+      marked.appendChild(staleNode)
+      document.body.appendChild(marked)
+      const fullWidth = makeDomRect(0, 0, 1000, 50) as unknown as DOMRect
+      vi.spyOn(marked, 'getBoundingClientRect').mockReturnValue(fullWidth)
+      vi.spyOn(staleNode, 'getBoundingClientRect').mockReturnValue(fullWidth)
+      const staleDroppable = {
+        id: 'column-99',
+        key: 'column-99',
+        data: { current: undefined },
+        disabled: false,
+        node: { current: staleNode },
+        rect: { current: null },
+      }
+
+      act(() => {
+        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+      })
+
+      // Seed overRectRef with the stale column-99 snapshot (source depletion:
+      // row20 holds only col30 → ALL column siblings scanned by centerCrossing).
+      act(() => {
+        result.current.dndContextProps.collisionDetection({
+          active: {
+            id: activeId,
+            rect: {
+              current: {
+                initial: makeDomRect(100, 75, 100, 50),
+                translated: makeDomRect(100, 285, 100, 50),
+              },
+            },
+            data: { current: undefined },
+          },
+          collisionRect: makeDomRect(100, 285, 100, 50),
+          droppableContainers: [staleDroppable],
+          droppableRects: new Map([['column-99', makeDomRect(50, 275, 200, 100)]]),
+          pointerCoordinates: { x: 150, y: 310 },
+        } as never)
+      })
+
+      // No onDragMove → no pending tree → drag-end takes the resolveDropPlacement
+      // fallback. over.rect (200×200 at origin) has X-center 100 and Y-center 100.
+      // Pointer (150, 50) is RIGHT of X-center → 'after' on the correct 'x' axis
+      // → after = column 31. If the stale 'y' snapshot axis were used, (50 < 100)
+      // → 'before' → after = null. Asserting after = column 31 kills both mutants.
+      const overRect = { top: 0, left: 0, width: 200, height: 200 }
+      act(() => {
+        result.current.dndContextProps.onDragEnd(
+          makePointerDragEndEvent(activeId, overId, 150, 50, overRect),
+        )
+      })
+
+      expect(onReorder).toHaveBeenCalledTimes(1)
+      const [element, parent, after] = onReorder.mock.calls[0]
+      expect(element).toEqual({ type: 'column', id: 30 })
+      expect(parent).toEqual({ type: 'row', id: 21 })
+      expect(after).toEqual({ type: 'column', id: 31 })
+    })
+  })
+
   describe('getPointerPosition grab-point offset', () => {
     // getPointerPosition computes the true pointer viewport position by offsetting
     // the scroll-adjusted `translated` rect by the grab distance within the

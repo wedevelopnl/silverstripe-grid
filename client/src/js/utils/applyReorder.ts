@@ -27,6 +27,7 @@ export function applyReorder(
 
   const sourceParentKey = element.parentKey
   const sourceChildren = maps.childrenByParentKey.get(sourceParentKey)
+  // Stryker disable next-line ConditionalExpression: Equivalent — an in-tree element (checked above) always has a childrenByParentKey entry for its parent, so this guard is unreachable (same invariant as the sourceIndex guard below)
   if (!sourceChildren) return tree
 
   const sourceIndex = maps.indexByNodeKey.get(elementKey)
@@ -106,6 +107,7 @@ function resolveAfterIndexInTarget(
   // Stryker disable next-line ConditionalExpression: Equivalent — afterKey is in nodeMap, so it must also be in indexByNodeKey (both populated by the same walk)
   if (afterIndex === undefined) return null
 
+  // Stryker disable next-line EqualityOperator: Equivalent — `afterIndex > sourceIndexBeforeSplice` only differs at afterIndex === sourceIndexBeforeSplice, which requires afterKey to be the moved element itself; resolveDropPlacement never passes the active node as its own afterKey
   if (sourceParentKey === targetParentKey && afterIndex > sourceIndexBeforeSplice) {
     return afterIndex - 1
   }

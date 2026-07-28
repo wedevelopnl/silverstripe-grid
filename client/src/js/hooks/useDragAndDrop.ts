@@ -172,6 +172,7 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
     (event: DragMoveEvent) => {
       const { active, over } = event
       if (!over) return
+      // Stryker disable next-line ConditionalExpression: Equivalent — a self-over in onDragMove resolves to the same-container return / re-applies the identical pending order, so there is no observable pending-tree change
       if (active.id === over.id) return
 
       const activeParsed = parseDraggableId(String(active.id))
@@ -303,6 +304,7 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         pending.clear()
         return
       }
+      // Stryker disable next-line ConditionalExpression,BlockStatement: Equivalent — reaching here requires no pending tree, and a self-drop resolves to a null placement (same parent+index) so pending.clear() runs and onReorder is not called regardless of this guard
       if (active.id === over.id) {
         pending.clear()
         return
@@ -316,6 +318,7 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
 
       const sourceParentKey = activeNode.parentKey
       const sourceChildren = maps.childrenByParentKey.get(sourceParentKey)
+      // Stryker disable next-line ConditionalExpression,BlockStatement: Equivalent — an in-tree element's parent always has a childrenByParentKey entry, so !sourceChildren is unreachable
       if (!sourceChildren) {
         pending.clear()
         return
@@ -364,6 +367,10 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
         )
         onReorder(placement.element, placement.parent, placement.after, pending.clear)
       } else {
+        // Equivalent-mutant site (Stryker cannot inline-suppress an else body):
+        // this branch runs only when placement is null with no pending tree, so
+        // pending.clear() clears already-null state (setPendingTree(null) bails on
+        // Object.is).
         pending.clear()
       }
     },

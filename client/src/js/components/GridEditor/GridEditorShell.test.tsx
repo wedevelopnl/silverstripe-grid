@@ -68,6 +68,61 @@ describe('GridEditorShell', () => {
     expect(screen.getByTestId('grid-editor-canvas')).toHaveAttribute('data-status', 'modified')
   })
 
+  it('renders the error notice with the interpolated message when status is error', () => {
+    renderWithProviders(
+      <GridEditorShell
+        pageId={1}
+        zone="main"
+        readonly={false}
+        status="error"
+        error={new ApiError(500, 'boom')}
+        sections={[]}
+      >
+        <div />
+      </GridEditorShell>,
+    )
+    const notice = screen.getByTestId('grid-editor-error')
+    expect(notice).toBeInTheDocument()
+    expect(notice).toHaveTextContent('boom')
+  })
+
+  it('does not render the error notice when status is ready even if an error is present', () => {
+    // Separates the `status === 'error' && error !== null` conjunction from a
+    // `||` mutant and from a `true && error !== null` mutant: with a non-error
+    // status but a set error, the banner must stay hidden.
+    renderWithProviders(
+      <GridEditorShell
+        pageId={1}
+        zone="main"
+        readonly={false}
+        status="ready"
+        error={new ApiError(500, 'boom')}
+        sections={[]}
+      >
+        <div />
+      </GridEditorShell>,
+    )
+    expect(screen.queryByTestId('grid-editor-error')).not.toBeInTheDocument()
+  })
+
+  it('does not render the error notice in loading status with no error', () => {
+    // Kills the `|| error` mutant whose right operand (the JSX element) is always
+    // truthy: with status 'loading' and no error the banner must stay hidden.
+    renderWithProviders(
+      <GridEditorShell
+        pageId={1}
+        zone="main"
+        readonly={false}
+        status="loading"
+        error={null}
+        sections={[]}
+      >
+        <div />
+      </GridEditorShell>,
+    )
+    expect(screen.queryByTestId('grid-editor-error')).not.toBeInTheDocument()
+  })
+
   it('sets data-page-id, data-zone and data-readonly on the root', () => {
     renderWithProviders(
       <GridEditorShell
