@@ -33,11 +33,6 @@ declare const gridSettingsSchema: v.ObjectSchema<{
         readonly visible: v.BooleanSchema<undefined>;
     }, undefined>, undefined>]>;
 }, undefined>;
-declare const allowedTypeInfoSchema: v.ObjectSchema<{
-    readonly label: v.StringSchema<undefined>;
-    readonly icon: v.StringSchema<undefined>;
-    readonly description: v.StringSchema<undefined>;
-}, undefined>;
 declare const baseFieldsWireSchema: v.ObjectSchema<{
     readonly self: v.ObjectSchema<{
         readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element"], undefined>;
@@ -79,11 +74,9 @@ type ElementNodeWire = v.InferOutput<typeof baseFieldsWireSchema> & ({
     containerType?: undefined;
 } | {
     containerType: 'section' | 'row';
-    allowedTypes: Record<string, v.InferOutput<typeof allowedTypeInfoSchema>> | null;
     children: ElementNodeWire[] | null;
 } | {
     containerType: 'column';
-    allowedTypes: Record<string, v.InferOutput<typeof allowedTypeInfoSchema>> | null;
     children: ElementNodeWire[] | null;
     gridSettings: v.InferOutput<typeof gridSettingsSchema>;
 });
@@ -100,6 +93,23 @@ export declare const treeApiResponseWireSchema: v.ObjectSchema<{
     readonly rootParent: v.ObjectSchema<{
         readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element"], undefined>;
         readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+    }, undefined>;
+    readonly allowedTypes: v.ObjectSchema<{
+        readonly section: v.SchemaWithPipe<readonly [v.CustomSchema<unknown, undefined>, v.TransformAction<unknown, unknown>, v.RecordSchema<v.StringSchema<undefined>, v.ObjectSchema<{
+            readonly label: v.StringSchema<undefined>;
+            readonly icon: v.StringSchema<undefined>;
+            readonly description: v.StringSchema<undefined>;
+        }, undefined>, undefined>]>;
+        readonly row: v.SchemaWithPipe<readonly [v.CustomSchema<unknown, undefined>, v.TransformAction<unknown, unknown>, v.RecordSchema<v.StringSchema<undefined>, v.ObjectSchema<{
+            readonly label: v.StringSchema<undefined>;
+            readonly icon: v.StringSchema<undefined>;
+            readonly description: v.StringSchema<undefined>;
+        }, undefined>, undefined>]>;
+        readonly column: v.SchemaWithPipe<readonly [v.CustomSchema<unknown, undefined>, v.TransformAction<unknown, unknown>, v.RecordSchema<v.StringSchema<undefined>, v.ObjectSchema<{
+            readonly label: v.StringSchema<undefined>;
+            readonly icon: v.StringSchema<undefined>;
+            readonly description: v.StringSchema<undefined>;
+        }, undefined>, undefined>]>;
     }, undefined>;
     readonly nodes: v.ArraySchema<v.GenericSchema<ElementNodeWire>, undefined>;
 }, undefined>;
