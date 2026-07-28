@@ -38,6 +38,12 @@ export function useElementTree(pageId: number | null, zone: string, version?: nu
   })
 }
 
+// Module-scope so the select identity is stable: TanStack re-runs `select`
+// whenever data OR the select function changes, and an inline arrow would
+// re-walk the tree on every consumer render instead of only on new data.
+const selectOverrideCounts = (response: TreeApiResponse): Record<string, number> =>
+  countOverrides(response.nodes)
+
 /**
  * Derives per-viewport grid-settings override counts from the cached tree.
  * Shares the same query cache as {@link useElementTree} — no extra fetch.
@@ -50,7 +56,7 @@ export function useViewportOverrideCounts(
 ): Record<string, number> {
   const { data } = useQuery<TreeApiResponse, ApiError, Record<string, number>>({
     ...treeQueryOptions(pageId, zone, version),
-    select: (response) => countOverrides(response.nodes),
+    select: selectOverrideCounts,
   })
 
   return data ?? {}
