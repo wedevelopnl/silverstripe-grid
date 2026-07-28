@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Controllers;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use SilverStripe\Control\Controller;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Controllers\GridController;
@@ -36,5 +38,20 @@ final class GridControllerAdapterConfigTest extends SapphireTest
         self::assertNotEmpty($config['controllerLink']);
         self::assertInstanceOf(AdapterConfig::class, $config['gridAdapter']);
         self::assertGreaterThan(0, $config['gridAdapter']->columnCount);
+    }
+
+    public function testControllerLinkDropsTheTrailingSlashProjectConfigAdds(): void
+    {
+        Config::modify()->set(Controller::class, 'add_trailing_slash', true);
+
+        /** @var GridController $controller */
+        $controller = Injector::inst()->get(GridController::class);
+
+        self::assertStringEndsWith(
+            '/',
+            $controller->Link(),
+            'precondition: the framework appends a trailing slash under this config',
+        );
+        self::assertStringEndsWith('/grid', $controller->getClientConfig()['controllerLink']);
     }
 }

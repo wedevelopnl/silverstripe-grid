@@ -24,7 +24,7 @@ describe('getSecurityId', () => {
 })
 
 describe('getControllerLink', () => {
-  it('returns the controller base URL with trailing slash stripped', () => {
+  it('returns the controller base URL', () => {
     expect(getControllerLink()).toBe('/admin/grid')
   })
 
@@ -34,12 +34,6 @@ describe('getControllerLink', () => {
     expect(() => getControllerLink()).toThrow(
       'Controller section "WeDevelop\\Grid\\Controllers\\GridController" not found in CMS config. Ensure the grid module is installed.',
     )
-  })
-
-  it('strips multiple trailing slashes from controller link', () => {
-    window.ss!.config.sections[0].controllerLink = '/admin/grid///'
-
-    expect(getControllerLink()).toBe('/admin/grid')
   })
 
   it('throws ConfigError when only a differently-named section is present', () => {
