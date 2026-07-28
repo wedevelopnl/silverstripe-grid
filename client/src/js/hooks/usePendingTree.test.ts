@@ -72,6 +72,7 @@ describe('usePendingTree', () => {
           NodeIdentity.toKey('column', 20),
           null,
           tree,
+          buildMaps(tree),
         )
       })
 
@@ -96,6 +97,7 @@ describe('usePendingTree', () => {
           NodeIdentity.toKey('column', 20),
           null,
           tree,
+          buildMaps(tree),
         )
       })
 
@@ -112,6 +114,7 @@ describe('usePendingTree', () => {
           NodeIdentity.toKey('column', 20),
           null,
           tree,
+          buildMaps(tree),
         )
       })
 
@@ -131,6 +134,7 @@ describe('usePendingTree', () => {
           NodeIdentity.toKey('column', 10),
           null,
           tree,
+          buildMaps(tree),
         )
       })
 
@@ -156,6 +160,7 @@ describe('usePendingTree', () => {
           NodeIdentity.toKey('column', 20),
           null,
           tree,
+          buildMaps(tree),
         )
       })
 
@@ -179,6 +184,7 @@ describe('usePendingTree', () => {
           NodeIdentity.toKey('column', 10),
           null,
           tree,
+          buildMaps(tree),
         )
       })
 
@@ -214,6 +220,7 @@ describe('usePendingTree', () => {
           NodeIdentity.toKey('column', 20),
           null,
           tree,
+          buildMaps(tree),
         )
       })
 
@@ -239,6 +246,7 @@ describe('usePendingTree', () => {
           NodeIdentity.toKey('column', 20),
           null,
           tree,
+          buildMaps(tree),
         )
       })
 
@@ -284,6 +292,7 @@ describe('usePendingTree', () => {
           NodeIdentity.toKey('column', 20),
           6,
           tree,
+          buildMaps(tree),
         )
       })
 
@@ -302,6 +311,7 @@ describe('usePendingTree', () => {
           NodeIdentity.toKey('column', 20),
           null,
           tree,
+          buildMaps(tree),
         )
       })
 
@@ -321,6 +331,7 @@ describe('usePendingTree', () => {
           NodeIdentity.toKey('column', 20),
           null,
           tree,
+          buildMaps(tree),
         )
       })
       expect(result.current.pendingTree).not.toBeNull()

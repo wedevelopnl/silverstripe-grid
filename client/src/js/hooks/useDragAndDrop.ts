@@ -248,7 +248,13 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
       if (NodeIdentity.equals(sourceParent, targetParent)) return
 
       const targetParentKey = NodeIdentity.toKey(targetParent.type, targetParent.id)
-      pending.applyPendingMove(activeParsed, targetParentKey, after?.id ?? null, effectiveTree)
+      pending.applyPendingMove(
+        activeParsed,
+        targetParentKey,
+        after?.id ?? null,
+        effectiveTree,
+        effectiveMaps,
+      )
     },
     [tree, maps, pending],
   )
@@ -354,6 +360,7 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
           NodeIdentity.toKey(placement.parent),
           placement.after === null ? null : placement.after.id,
           tree,
+          maps,
         )
         onReorder(placement.element, placement.parent, placement.after, pending.clear)
       } else {
