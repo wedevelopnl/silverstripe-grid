@@ -49,6 +49,8 @@ The closure runs on every pointer move and decides which tier to use.
    - X: 50px — prevents matching elements in adjacent columns (gaps typically 100px+)
    - Uses pointer coordinates (viewport-relative), NOT collision rect center
 
+**Return contract**: at most ONE collision — the crossing target closest (squared distance) to the collision-rect center, selected in a single pass without sorting. dnd-kit derives `over` from `collisions[0]` and nothing consumes the rest (see Performance Contract in the main skill).
+
 **Why no proximity gate instead?** Two coordinate-space reasons:
 - `droppableRects` strip CSS transforms; pointer coordinates include them → mismatch
 - Live DOM rects include SortableContext visual swap transforms → oscillation between detected/not-detected
@@ -65,7 +67,9 @@ The closure runs on every pointer move and decides which tier to use.
 
 **Filtering**: Only pending container siblings (via `pendingContainerItemsRef`). Prevents wrong-container bouncing.
 
-**overRectRef**: NOT captured. At drop time, `handleDragEnd` falls back to `over.rect` (dnd-kit measuring space). This works because `getPointerPosition()` and `over.rect` are both in dnd-kit space. Capturing a live DOM rect here would cause a coordinate space mismatch during auto-scroll (see Coordinate Spaces section).
+**Return contract**: at most ONE collision — a containing candidate (live rect surrounds the reference point) outranks any non-containing one; within the same band, smallest squared center distance wins. Selected in a single pass without sorting.
+
+**overRectRef**: captured (like every other tier). `handleDragMove` dereferences the node and reads a fresh `getBoundingClientRect()` for the preview's before/after direction — `over.rect` (droppableRects) lags the pending-tree re-render by a cycle, so near a boundary it inverts the direction. `handleDragEnd`'s no-preview fallback uses the live node only for axis resolution and pairs `getPointerPosition()` with `over.rect` for direction (both dnd-kit space — a live rect there would flip signs during auto-scroll, see Coordinate Spaces section).
 
 ## Tier 3: Parent Container Fallback
 
@@ -88,18 +92,18 @@ Two filter functions enforce hierarchy-level constraints:
 
 **Root-level special case**: Sections have `parentType === 'root'`. The root SortableContext's droppable ID (`'root'`) doesn't parse as a valid `DraggableType`. `filterParentContainers` matches containers with unparseable IDs when parent type is `'root'`.
 
+**ID parsing is cached**: both filters resolve types through a module-level `Map` cache (`cachedDraggableType`) because composite IDs are immutable per element and the filters run on every pointer move. The cache is bounded by the number of distinct elements seen in the session.
+
 ## overRectRef Capture
 
-`captureWinnerNode` stores the winning collision's DOM **node reference** (not a rect snapshot). The consumer calls `getBoundingClientRect()` at drop time for a fresh rect.
+`captureWinnerNode` stores the winning collision's DOM **node reference** (not a rect snapshot). The consumer calls `getBoundingClientRect()` at comparison time for a fresh rect. The container is read from `collisions[0].data.droppableContainer` — every collision produced by our detectors AND by dnd-kit's `closestCenter` carries it, so there is no id→container lookup (don't add one).
 
-**Capture rules** (these are deliberate, not accidents):
+**Capture rules**: every return path captures — tier 1 hits, the tier 1 stale-rect recovery, tier 2 (pending path), and both tier 3 arms (containment and distance fallback). What varies is **consumption**, not capture:
 
-| Path | Captured? | Why |
-|------|-----------|-----|
-| Tier 1 hit (centerCrossing) | Yes | No CSS transforms in same-container path — live rect matches pointer space |
-| Tier 1 stale-rect recovery | Yes | Same reason — `closestCenterLive` fallback within source container |
-| Tier 2 hit (pending path) | **No** | CSS transforms active — live rect is in viewport space, but pointer (from `getPointerPosition`) is in dnd-kit space. Mixing them inverts direction during auto-scroll. |
-| Tier 3 (parent containers) | Yes | Parent rects aren't affected by SortableContext child transforms |
+| Consumer | Uses the live node for | Falls back to |
+|----------|------------------------|---------------|
+| `handleDragMove` (preview) | Direction rect AND axis — but only when the snapshot id matches `over.id` | `over.rect` for direction, legacy type rule for axis |
+| `handleDragEnd` (no-preview fallback) | Axis resolution only; direction pairs `getPointerPosition()` with `over.rect` (both dnd-kit space — auto-scroll-safe) | Legacy type rule for axis |
 
 ## Source Sibling Depletion
 
@@ -152,4 +156,4 @@ Drag starts → hadSiblingHit = false
 
 **The auto-scroll trap**: During auto-scroll, dnd-kit adjusts `collisionRect` and `pointerCoordinates` to account for scroll distance. But `getBoundingClientRect()` shifts in the opposite direction (the element moves within the viewport). Comparing the two gives the wrong sign.
 
-**Column direction detection is a partial exception**: Auto-scroll is typically vertical, so X-axis comparisons between viewport and dnd-kit space are safe. This is why the `overRectRef` skip in tier 2 could theoretically be relaxed for columns — but the current approach (using `over.rect` for all pending-path drops) is simpler and avoids edge cases.
+**Column direction detection is a partial exception**: Auto-scroll is typically vertical, so X-axis comparisons between viewport and dnd-kit space are safe. This is why the preview path can use the captured live node's rect for direction — while the drop-end fallback keeps `getPointerPosition()` + `over.rect` (both dnd-kit space) to stay auto-scroll-safe on the Y axis.
