@@ -8,15 +8,20 @@ import { NodeIdentity, type NodeKey } from '@/types/identity'
  *
  * Returns the SAME reference for no-ops (element already at target), missing
  * element/parent, or any error state — keeping React memoisation stable.
+ *
+ * `maps` MUST be the lookup maps built from `tree` (callers on the drag path
+ * already hold the matching pair). Taking them as a parameter keeps the
+ * frequent no-op exit — hit on every pointer move while a cross-container
+ * preview hovers an unchanged slot — free of a full tree walk; only a real
+ * move pays for cloning and re-mapping.
  */
 export function applyReorder(
   tree: TreeApiResponse,
+  maps: ElementMaps,
   elementKey: NodeKey,
   parentKey: NodeKey,
   afterKey: NodeKey | null,
 ): TreeApiResponse {
-  const maps = buildMaps(tree)
-
   const element = maps.nodeMap.get(elementKey)
   if (!element) return tree
 

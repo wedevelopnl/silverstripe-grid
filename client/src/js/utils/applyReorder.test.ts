@@ -9,6 +9,7 @@ import {
 } from '@/testing/factories'
 import type { ColumnNode, RowNode, SectionNode, SimpleElementNode } from '@/types/elements'
 import { NodeIdentity } from '@/types/identity'
+import { buildMaps } from '@/hooks/useElementMaps'
 import { applyReorder } from './applyReorder'
 
 // Walks the fixture's single section → row → column spine. A wrong fixture fails
@@ -37,6 +38,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 10),
         NodeIdentity.toKey('column', 30),
         NodeIdentity.toKey('element', 12),
@@ -63,6 +65,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 11),
         NodeIdentity.toKey('column', 30),
         null,
@@ -88,6 +91,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 10),
         NodeIdentity.toKey('column', 30),
         null,
@@ -113,6 +117,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 10),
         NodeIdentity.toKey('column', 31),
         null,
@@ -150,6 +155,7 @@ describe('applyReorder', () => {
       // Move section 1 after section 2 (page id and section id=1 share `1`).
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('section', 1),
         NodeIdentity.toKey('page', 1),
         NodeIdentity.toKey('section', 2),
@@ -183,6 +189,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('row', 10),
         NodeIdentity.toKey('section', 2),
         null,
@@ -201,6 +208,7 @@ describe('applyReorder', () => {
       const tree = createTreeApiResponse({ pageId: 1 })
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 9999),
         NodeIdentity.toKey('column', 30),
         null,
@@ -213,6 +221,7 @@ describe('applyReorder', () => {
       const firstSection = tree.nodes[0] as SectionNode
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         firstSection.nodeKey,
         NodeIdentity.toKey('page', 9999),
         null,
@@ -238,6 +247,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 10),
         NodeIdentity.toKey('column', 31),
         NodeIdentity.toKey('element', 9999),
@@ -272,6 +282,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 12),
         NodeIdentity.toKey('column', 30),
         NodeIdentity.toKey('element', 11),
@@ -300,6 +311,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 10),
         NodeIdentity.toKey('column', 30),
         NodeIdentity.toKey('element', 9999),
@@ -341,6 +353,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 10),
         NodeIdentity.toKey('column', 30),
         NodeIdentity.toKey('element', 12),
@@ -374,6 +387,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 10),
         NodeIdentity.toKey('column', 31),
         NodeIdentity.toKey('element', 21),
@@ -413,6 +427,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 10),
         NodeIdentity.toKey('column', 31),
         NodeIdentity.toKey('element', 99),
@@ -453,6 +468,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 11),
         NodeIdentity.toKey('column', 30),
         NodeIdentity.toKey('element', 50),
@@ -488,6 +504,7 @@ describe('applyReorder', () => {
 
       const result = applyReorder(
         tree,
+        buildMaps(tree),
         NodeIdentity.toKey('element', 10),
         NodeIdentity.toKey('column', 31),
         NodeIdentity.toKey('element', 20),

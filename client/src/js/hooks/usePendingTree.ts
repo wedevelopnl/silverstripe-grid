@@ -35,6 +35,7 @@ export interface UsePendingTreeReturn {
     targetParentKey: NodeKey,
     afterElementId: number | null,
     effectiveTree: TreeApiResponse,
+    effectiveMaps: ElementMaps,
   ): void
 
   /** Set source container siblings (called on drag start). */
@@ -92,6 +93,7 @@ export function usePendingTree(): UsePendingTreeReturn {
       targetParentKey: NodeKey,
       afterElementId: number | null,
       effectiveTree: TreeApiResponse,
+      effectiveMaps: ElementMaps,
     ): void => {
       // Entering the pending (tier-2) path: a tier-1 snapshot must not survive — see dnd-guide invariant #5.
       overRectRef.current = null
@@ -99,7 +101,13 @@ export function usePendingTree(): UsePendingTreeReturn {
       const afterKey =
         afterElementId === null ? null : NodeIdentity.toKey(activeParsed.type, afterElementId)
 
-      const newTree = applyReorder(effectiveTree, activeKey, targetParentKey, afterKey)
+      const newTree = applyReorder(
+        effectiveTree,
+        effectiveMaps,
+        activeKey,
+        targetParentKey,
+        afterKey,
+      )
       if (newTree === effectiveTree) return
 
       const newMaps = buildMaps(newTree)
