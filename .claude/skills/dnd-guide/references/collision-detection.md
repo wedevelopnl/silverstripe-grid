@@ -92,7 +92,7 @@ Two filter functions enforce hierarchy-level constraints:
 
 **Root-level special case**: Sections have `parentType === 'root'`. The root SortableContext's droppable ID (`'root'`) doesn't parse as a valid `DraggableType`. `filterParentContainers` matches containers with unparseable IDs when parent type is `'root'`.
 
-**ID parsing is cached**: both filters resolve types through a module-level `Map` cache (`cachedDraggableType`) because composite IDs are immutable per element and the filters run on every pointer move. The cache is bounded by the number of distinct elements seen in the session.
+**ID parsing is cached**: `parseDraggableId` in `types/dnd.ts` memoizes per unique ID (composite IDs are immutable per element), so `getDraggableType` — which both filters call on every pointer move — is a cache hit after the first parse. The cache is bounded by the number of distinct IDs seen in the session.
 
 ## overRectRef Capture
 
