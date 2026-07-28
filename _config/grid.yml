@@ -5,9 +5,9 @@ Name: grid-adapter
 SilverStripe\Core\Injector\Injector:
   WeDevelop\Grid\Contract\GridAdapterInterface:
     factory: WeDevelop\Grid\Factory\GridAdapterResolver
-  # Resolved through Injector (e.g. on the render path in Column::getColumnClasses)
-  # so the configured override strategy applies. Injector does not auto-wire the
-  # adapter constructor argument, so it is referenced explicitly here.
+  # Injected into Column via $dependencies so the configured override strategy
+  # applies. Injector does not auto-wire the adapter constructor argument, so it
+  # is referenced explicitly here.
   WeDevelop\Grid\Service\GridSettingsResolver:
     constructor:
       adapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
