@@ -32,8 +32,26 @@ export function getOffsetClass(offset: number): string {
   return getAdapterConfig().baseOffsetClasses[String(offset)] ?? ''
 }
 
+/**
+ * Option arrays are requested per column per render but depend only on the
+ * adapter config (and, for offsets, the column's width). Cache them keyed on
+ * the config object identity — the CMS bootstraps it once per admin page
+ * load, and tests reinstalling window.ss.config invalidate it naturally.
+ * i18n labels resolve once per config lifetime; dictionaries load with the
+ * admin bundle before anything renders.
+ */
+type AdapterConfig = ReturnType<typeof getAdapterConfig>
+
+let widthOptionsCache: { config: AdapterConfig; options: readonly GridSettingsOption[] } | null =
+  null
+
 export function getWidthOptions(): readonly GridSettingsOption[] {
-  const columnCount = getAdapterConfig().columnCount
+  const config = getAdapterConfig()
+  if (widthOptionsCache !== null && widthOptionsCache.config === config) {
+    return widthOptionsCache.options
+  }
+
+  const columnCount = config.columnCount
   const options: GridSettingsOption[] = []
 
   for (let n = 1; n <= columnCount; n++) {
@@ -42,12 +60,26 @@ export function getWidthOptions(): readonly GridSettingsOption[] {
 
   options.push({ value: 'hidden', label: t('WeDevelopGrid.GridSettings.HIDDEN', 'hidden') })
 
+  widthOptionsCache = { config, options }
   return options
 }
 
+let offsetOptionsCache: {
+  config: AdapterConfig
+  byMaxOffset: Map<number, readonly GridSettingsOption[]>
+} | null = null
+
 export function getOffsetOptions(currentWidth?: number): readonly GridSettingsOption[] {
-  const columnCount = getAdapterConfig().columnCount
+  const config = getAdapterConfig()
+  const columnCount = config.columnCount
   const maxOffset = currentWidth !== undefined ? columnCount - currentWidth : columnCount - 1
+
+  if (offsetOptionsCache === null || offsetOptionsCache.config !== config) {
+    offsetOptionsCache = { config, byMaxOffset: new Map() }
+  }
+  const cached = offsetOptionsCache.byMaxOffset.get(maxOffset)
+  if (cached !== undefined) return cached
+
   const options: GridSettingsOption[] = []
 
   for (let n = 0; n <= maxOffset; n++) {
@@ -57,6 +89,7 @@ export function getOffsetOptions(currentWidth?: number): readonly GridSettingsOp
     })
   }
 
+  offsetOptionsCache.byMaxOffset.set(maxOffset, options)
   return options
 }
 
