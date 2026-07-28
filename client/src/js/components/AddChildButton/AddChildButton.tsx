@@ -5,7 +5,7 @@ import { t } from '@/i18n'
 import type { ContainerType } from '@/types/elements'
 import type { NodeRef, NodeType } from '@/types/identity'
 
-interface AddChildButtonProps {
+interface AddChildButtonBaseProps {
   /**
    * Numeric ID of the parent the new child will attach to — the correct
    * NodeType is inferred from `childType` (a section parent is always a page,
@@ -13,20 +13,30 @@ interface AddChildButtonProps {
    */
   readonly parentId: number
   readonly childType: ContainerType
-  /**
-   * - `empty-state` — the only child slot, shown with a hint line above it.
-   * - `append` — full-width button after the last child.
-   * - `between` — full-width button sitting in the gap between two children;
-   *   pair it with {@link insertAfterId} so the new child lands in that gap.
-   */
-  readonly variant: 'empty-state' | 'append' | 'between'
-  /**
-   * DB id of the sibling the new child should be inserted *after*. Omit to
-   * append at the end of the parent's child list (the backend has no "insert
-   * before the first child" path, so a leading slot is intentionally absent).
-   */
-  readonly insertAfterId?: number
 }
+
+/**
+ * Placement of the button, and with it the placement of the child it creates:
+ *
+ * - `empty-state` — the only child slot, shown with a hint line above it.
+ * - `append` — full-width button after the last child.
+ * - `before-first` — full-width button above the first child; sends
+ *   `insertAtStart` so the new child lands before every existing sibling.
+ * - `between` — full-width button sitting in the gap between two children;
+ *   {@link insertAfterId} is the child to its left, so the new one lands in
+ *   that gap.
+ *
+ * `before-first` and `between` are mutually exclusive at the API level too —
+ * the backend rejects `insertAtStart` combined with `insertAfterElementID` —
+ * so the union keeps that combination unrepresentable here.
+ */
+type AddChildButtonProps = AddChildButtonBaseProps &
+  (
+    | { readonly variant: 'empty-state' }
+    | { readonly variant: 'append' }
+    | { readonly variant: 'before-first' }
+    | { readonly variant: 'between'; readonly insertAfterId: number }
+  )
 
 const PARENT_TYPE_FOR_CHILD: Record<ContainerType, NodeType> = {
   section: 'page',
@@ -64,12 +74,8 @@ function labelsFor(childType: ContainerType): { add: string; adding: string; emp
   }
 }
 
-const AddChildButton = memo(function AddChildButtonComponent({
-  parentId,
-  childType,
-  variant,
-  insertAfterId,
-}: AddChildButtonProps) {
+const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButtonProps) {
+  const { parentId, childType, variant } = props
   const { pageId, zone } = useGridEditorContext()
   const { mutate, isPending } = useCreateElement(pageId, zone)
   const labels = labelsFor(childType)
@@ -80,10 +86,20 @@ const AddChildButton = memo(function AddChildButtonComponent({
       id: parentId,
     }
 
+    const placementParams = ((): { insertAfterElementID?: number; insertAtStart?: boolean } => {
+      if (props.variant === 'between') {
+        return { insertAfterElementID: props.insertAfterId }
+      }
+      if (props.variant === 'before-first') {
+        return { insertAtStart: true }
+      }
+      return {}
+    })()
+
     mutate({
       containerType: childType,
       parent,
-      ...(insertAfterId !== undefined ? { insertAfterElementID: insertAfterId } : {}),
+      ...placementParams,
       ...(childType === 'section' ? { zone } : {}),
     })
   }
@@ -110,9 +126,14 @@ const AddChildButton = memo(function AddChildButtonComponent({
     )
   }
 
-  if (variant === 'between') {
+  // Both gap placements share the --between look and the parent list's gap;
+  // only the test id distinguishes the leading slot from an interior one.
+  if (variant === 'between' || variant === 'before-first') {
     return (
-      <div className="ssgrid-add-child ssgrid-add-child--between" data-testid="add-child-between">
+      <div
+        className="ssgrid-add-child ssgrid-add-child--between"
+        data-testid={variant === 'before-first' ? 'add-child-before-first' : 'add-child-between'}
+      >
         {button}
       </div>
     )

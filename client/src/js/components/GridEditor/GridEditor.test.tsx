@@ -9,6 +9,17 @@ import { NodeIdentity } from '@/types/identity'
 
 import GridEditor from './GridEditor'
 
+/**
+ * The leading insert slots, narrowed to the page-level one. Every rendered
+ * section also carries a row-level `before-first` slot, so a bare testid query
+ * would count those too — the label is what separates the two levels.
+ */
+function leadingSectionSlots(): HTMLElement[] {
+  return screen
+    .queryAllByTestId('add-child-before-first')
+    .filter((slot) => slot.textContent?.includes('Add Section'))
+}
+
 vi.mock('@dnd-kit/sortable', () => ({
   useSortable: () => ({
     attributes: {},
@@ -155,8 +166,9 @@ describe('GridEditor', () => {
     // When tree is empty, the empty-state AddChildButton is shown
     expect(screen.getByTestId('add-child-empty')).toBeInTheDocument()
     expect(screen.getByText('No sections yet')).toBeInTheDocument()
-    // Append should not be shown
+    // Neither of the with-children slots should be shown
     expect(screen.queryByTestId('add-child-append')).not.toBeInTheDocument()
+    expect(leadingSectionSlots()).toHaveLength(0)
   })
 
   it('shows error state when fetch fails', async () => {
@@ -415,8 +427,10 @@ describe('GridEditor', () => {
       })
 
       // Three sections produce two inter-section gaps (index > 0): one before
-      // the second and one before the third section. None precedes the first.
+      // the second and one before the third section. The slot above the first
+      // is the separate before-first button.
       expect(screen.getAllByTestId('add-child-between')).toHaveLength(2)
+      expect(leadingSectionSlots()).toHaveLength(1)
     })
 
     it('renders no between button when there is only one section', async () => {
@@ -436,6 +450,9 @@ describe('GridEditor', () => {
       })
 
       expect(screen.queryByTestId('add-child-between')).not.toBeInTheDocument()
+      // A lone section still gets a leading slot — that is the whole point of
+      // before-first: prepending must not require an existing gap.
+      expect(leadingSectionSlots()).toHaveLength(1)
     })
   })
 

@@ -111,11 +111,53 @@ describe('AddChildButton', () => {
   it('between variant renders the between wrapper', () => {
     mockFetchSuccess({})
 
-    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="between" />)
+    renderWithProviders(
+      <AddChildButton parentId={10} childType="row" variant="between" insertAfterId={7} />,
+    )
 
     expect(screen.getByTestId('add-child-between')).toBeInTheDocument()
     expect(screen.queryByTestId('add-child-append')).not.toBeInTheDocument()
     expect(screen.queryByTestId('add-child-empty')).not.toBeInTheDocument()
+  })
+
+  it('before-first variant renders its own wrapper, distinct from the between one', () => {
+    mockFetchSuccess({})
+
+    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="before-first" />)
+
+    expect(screen.getByTestId('add-child-before-first')).toBeInTheDocument()
+    expect(screen.queryByTestId('add-child-between')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('add-child-append')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('add-child-empty')).not.toBeInTheDocument()
+  })
+
+  it('before-first variant sends insertAtStart instead of insertAfterElementID', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+
+    renderWithProviders(
+      <AddChildButton parentId={1} childType="section" variant="before-first" />,
+      {
+        zone: 'main',
+      },
+    )
+
+    await user.click(screen.getByTestId('add-child-button'))
+
+    await waitFor(() => {
+      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
+    })
+
+    const [, init] = getFetchCalls()[0]
+    const body = JSON.parse(init!.body as string)
+
+    expect(body).toMatchObject({
+      containerType: 'section',
+      parent: { type: 'page', id: 1 },
+      zone: 'main',
+      insertAtStart: true,
+    })
+    expect(body.insertAfterElementID).toBeUndefined()
   })
 
   it('includes insertAfterElementID in the mutation payload when insertAfterId is given', async () => {
