@@ -18,7 +18,7 @@ The DnD system takes **completely different paths** for same-container and cross
 | Collision tier | Tier 1: `centerCrossing` | Tier 2: `closestCenterLive` |
 | Drop placement | **Index-based** (no direction detection) | **Direction-based** (pointer vs element center) |
 | Coordinate space risk | Low (no CSS transform divergence) | **High** (DOM vs dnd-kit vs viewport) |
-| `overRectRef` captured? | Yes (safe — no transforms) | **No** — falls back to `over.rect` (pre-transform, may be stale after pending tree shifts target) |
+| `overRectRef` captured? | Yes | Yes — `handleDragMove` reads the live node for the preview direction; the drop-end fallback still pairs `getPointerPosition()` with `over.rect` (pre-transform, may lag the pending-tree re-render) |
 | API payload | Same parentId, new sort position | New parentId + afterElementID |
 | Code path in resolveDropPlacement | Lines 58-67 (index branch) | Lines 69-85 (direction branch) |
 
@@ -47,7 +47,7 @@ Use this to determine which values to compare:
 | Tier 2 collision detection | `collisionRect` center | `getBoundingClientRect()` | Both include CSS transforms — live rects needed because `droppableRects` are stale |
 | Tier 3 parent containment | `pointerCoordinates` | `droppableRects` | Parent rects unaffected by child transforms |
 
-**The auto-scroll trap**: During auto-scroll, dnd-kit adjusts sensor values (pointer, collisionRect) to account for scroll distance. But `getBoundingClientRect()` shifts in the **opposite direction** — the element moves within the viewport. Comparing dnd-kit sensor values against live DOM rects during auto-scroll gives wrong signs. This is why tier 2 does NOT capture `overRectRef` for drop-time direction detection.
+**The auto-scroll trap**: During auto-scroll, dnd-kit adjusts sensor values (pointer, collisionRect) to account for scroll distance. But `getBoundingClientRect()` shifts in the **opposite direction** — the element moves within the viewport. Comparing dnd-kit sensor values against live DOM rects during auto-scroll gives wrong signs. This is why the drop-end fallback pairs `getPointerPosition()` with `over.rect` (both dnd-kit space) for direction, using the captured live node only for axis resolution.
 
 **Column exception**: Narrow columns compare on the X-axis (see `resolveDropAxis` — full-width columns compare on Y). Auto-scroll is typically vertical, so those X-axis comparisons between spaces are safe. But the current code uses `over.rect` for all pending-path drops regardless of axis — simpler and avoids edge cases.
 
@@ -63,7 +63,7 @@ These are the load-bearing constraints. Violating any of them causes a bug. Chec
 
 4. **Source depletion guard**: The pointer-inside-source-sibling guard must check `sourceItems.size > 0` before firing. On empty sources, it must fall through to allow cross-container detection.
 
-5. **`overRectRef` asymmetry**: Tier 1 captures (no CSS transforms in play). Tier 2 does NOT capture (CSS transforms create coordinate space mismatch with auto-scroll). Tier 3 captures (parent rects unaffected by child transforms). **Known trade-off**: The tier 2 skip prevents auto-scroll Y-axis mismatch, but means `over.rect` at drop time reflects the pre-transform DOM position — after SortableContext shifts the target via CSS transforms, `over.rect`'s center may not match the target's visual center. This can invert direction detection, especially for narrow columns (X-axis; full-width columns resolve to Y — see `resolveDropAxis`) where horizontal transforms shift the center significantly. See `collisionDetection.ts` lines 347-357 and `useDragAndDrop.ts` lines 245-261.
+5. **`overRectRef` capture and consumption**: Every tier's winning collision is captured via `captureWinnerNode` — the container comes straight from the collision's `data.droppableContainer` (all collisions produced here, and by dnd-kit's `closestCenter`, carry it). What's stored is the winner's DOM **node reference**, never a rect snapshot; consumers dereference it and call `getBoundingClientRect()` at comparison time, and only when the snapshot's id matches `over.id`. `handleDragMove` uses the live rect for the preview direction (over.rect lags the pending-tree re-render by a cycle and would invert the direction near a boundary); `handleDragEnd`'s no-preview fallback uses the live node for **axis resolution only** and pairs `getPointerPosition()` with `over.rect` for direction (both dnd-kit space — a live rect there would break under auto-scroll). See `captureWinnerNode` in `collisionDetection.ts` and the `liveOverNode` logic in `useDragAndDrop.ts`.
 
 6. **`effectiveData` fallback**: Components render `pendingTree ?? data`. If `pendingTree` becomes null while `data` is stale, the UI snaps back. This is why clearing order matters.
 
@@ -77,7 +77,7 @@ When you see a symptom, start here.
 
 | Symptom | Most likely cause | Check first | Files |
 |---------|------------------|-------------|-------|
-| **Element lands on wrong side of target** | Drop-time `overRect` doesn't match visual position. Two variants: (a) `overRectRef` captured but CSS transforms shifted the element (same-container edge), (b) `overRectRef` NOT captured so `over.rect` is pre-transform while SortableContext shifted the target visually (cross-container — see invariant #5 trade-off) | Which code path? For cross-container: check `over.rect` vs actual visual position in `useDragAndDrop.ts:245-261`. For same-container: check if `overRectRef` was captured with transforms active in `collisionDetection.ts:captureWinnerNode` | `useDragAndDrop.ts` (effectiveOverRect logic), `collisionDetection.ts` (lines 347-357: tier 2 overRectRef skip), `resolveInsertDirection.ts` |
+| **Element lands on wrong side of target** | Drop-time `overRect` doesn't match visual position. Two variants: (a) the `overRectRef` snapshot's id doesn't match `over.id` (or the node unmounted) so the code fell back to `over.rect`, which is pre-transform and lags the pending-tree re-render, (b) `overRectRef` was read while CSS transforms shifted the element (same-container edge) | Which code path? For cross-container: check the `liveOverNode` condition (`overSnapshot.id === over.id`) in `useDragAndDrop.ts`. For same-container: check if `overRectRef` was captured with transforms active in `collisionDetection.ts:captureWinnerNode` | `useDragAndDrop.ts` (liveOverNode logic), `collisionDetection.ts` (captureWinnerNode), `resolveInsertDirection.ts` |
 | **Ghost jump on drag start** | Collision detection fires immediately without threshold crossing | Is `centerCrossing` being used? Is the overlap gate working? Was it replaced with `closestCenter`? | `collisionDetection.ts` (centerCrossing) |
 | **1-frame snap-back on drop** | Pending tree cleared before optimistic cache update | Is `setQueryData` before `clearPendingTree`? Is there an `await` between them? | `useElementMutations.ts` (onMutate ordering) |
 | **Dropped item animates to its OLD slot, then snaps to the correct position after the animation** | The dragged node isn't at its final DOM position when dnd-kit's drop animation measures it. The final position is being driven by the optimistic cache write (`setQueryData`), which re-renders a macrotask too late (`setTimeout(0)` notify) — so the animation targets the pre-move slot. Almost always a **same-container** move that skipped pending-tree pre-positioning. | Does `handleDragEnd` call `pending.applyPendingMove(...)` before `onReorder` (invariant #8)? Is the pending tree populated at drop time for this path? | `useDragAndDrop.ts` (handleDragEnd pre-position), `usePendingTree.ts` |
@@ -122,6 +122,16 @@ Read `references/collision-detection.md` for full algorithm details including th
 | 1 | `centerCrossing` | Siblings, no pending move | Prevents ghost jumps via threshold crossing + overlap gate |
 | 2 | `closestCenterLive` | Siblings, pending move active | CSS transforms make `droppableRects` stale — reads live DOM rects |
 | 3 | Parent container fallback | No sibling collision | **Containment-first**, then `closestCenter`. Fixes bias toward smaller containers |
+
+### Performance Contract
+
+Collision detection runs on every pointer move (60Hz+), so the hot path avoids per-cycle work that doesn't change the outcome. These decisions are deliberate — don't "restore" the naive versions:
+
+- **Winner-only returns**: `centerCrossing` and `closestCenterLive` return at most ONE collision, selected in a single pass (containment first, then squared center distance) — no sorting. Safe because dnd-kit derives `over` from `collisions[0]` (`getFirstCollision`) and nothing else consumes the array: only `PointerSensor` is wired (no `KeyboardSensor`/`sortableKeyboardCoordinates`, which runs its own `closestCorners` anyway), and no handler reads `event.collisions`. **Revisit if either of those changes.**
+- **Cached composite-ID parsing**: `filterSiblings`/`filterParentContainers` resolve `getDraggableType` through a module-level `Map` cache — IDs are immutable per element, so each unique ID is parsed once per session instead of twice per pointer move.
+- **No id→container index**: `captureWinnerNode` reads the winner's container from `collisions[0].data.droppableContainer` (present on every collision, including dnd-kit's `closestCenter` output). Don't add a per-cycle lookup Map for this.
+- **Droppable measuring uses the default `WhileDragging` strategy**: per dnd-kit source, the strategy is only consulted when NOT dragging — during a drag, registry changes trigger full re-measures identically under every strategy. `MeasuringStrategy.Always` (used historically) only added idle-time re-measures of every droppable on each tree change, so it was removed.
+- **Rejected: pre-filtering droppables via per-droppable `disabled` by active drag type.** It would shrink what dnd-kit hands the detector, but flipping `disabled` at drag start re-renders every registered block at the moment responsiveness matters most, churns the droppable registry (triggering a full re-measure mid-drag), and can't replace the per-tier filtering anyway (tiers 1/2 need same-type, tier 3 needs parent-type — both sets must stay enabled). Per-cycle filtering after ID-parse caching is cheap; don't re-litigate this without profiling data.
 
 ### Source Depletion
 
