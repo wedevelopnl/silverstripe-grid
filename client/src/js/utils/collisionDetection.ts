@@ -5,24 +5,7 @@ import {
   type DroppableContainer,
 } from '@dnd-kit/core'
 
-import { type DraggableType, getDraggableType, PARENT_CONTAINER_TYPE } from '@/types/dnd'
-
-/**
- * Composite droppable IDs are immutable for an element's lifetime, but the
- * detectors below parse every registered ID on every pointer-move cycle
- * (60Hz+). Cache the parse per unique ID — the cache is bounded by the number
- * of distinct elements seen in the session.
- */
-const draggableTypeCache = new Map<string, DraggableType | null>()
-
-function cachedDraggableType(compositeId: string): DraggableType | null {
-  let type = draggableTypeCache.get(compositeId)
-  if (type === undefined) {
-    type = getDraggableType(compositeId)
-    draggableTypeCache.set(compositeId, type)
-  }
-  return type
-}
+import { getDraggableType, PARENT_CONTAINER_TYPE } from '@/types/dnd'
 
 /**
  * Like closestCenter, but reads live DOM rects via getBoundingClientRect()
@@ -89,10 +72,10 @@ export function filterSiblings(
   activeId: string,
   containers: DroppableContainer[],
 ): DroppableContainer[] {
-  const activeType = cachedDraggableType(activeId)
+  const activeType = getDraggableType(activeId)
   if (activeType === null) return []
 
-  return containers.filter((container) => cachedDraggableType(String(container.id)) === activeType)
+  return containers.filter((container) => getDraggableType(String(container.id)) === activeType)
 }
 
 /**
@@ -103,13 +86,13 @@ export function filterParentContainers(
   activeId: string,
   containers: DroppableContainer[],
 ): DroppableContainer[] {
-  const activeType = cachedDraggableType(activeId)
+  const activeType = getDraggableType(activeId)
   if (activeType === null) return []
 
   const parentType = PARENT_CONTAINER_TYPE[activeType]
 
   return containers.filter((container) => {
-    const containerType = cachedDraggableType(String(container.id))
+    const containerType = getDraggableType(String(container.id))
 
     if (parentType === 'page') return containerType === null
 
