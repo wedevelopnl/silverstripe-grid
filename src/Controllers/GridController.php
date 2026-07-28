@@ -120,10 +120,9 @@ class GridController extends AdminController
 
     public function apiReadTree(HTTPRequest $request): HTTPResponse
     {
-        $pageId = (int) $request->param('PageID');
+        $pageId = $this->requirePageId($request);
 
-        /** @var non-empty-string $zone Route pattern guarantees non-empty zone segment */
-        $zone = (string) $request->param('Zone');
+        $zone = $this->requireZone($request);
 
         $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
             Versioned::set_stage(Versioned::DRAFT);
@@ -165,10 +164,9 @@ class GridController extends AdminController
      */
     public function apiReadTreeAtVersion(HTTPRequest $request): HTTPResponse
     {
-        $pageId = (int) $request->param('PageID');
+        $pageId = $this->requirePageId($request);
 
-        /** @var non-empty-string $zone Route pattern guarantees non-empty zone segment */
-        $zone = (string) $request->param('Zone');
+        $zone = $this->requireZone($request);
 
         $version = filter_var(
             $request->param('Version'),
@@ -604,7 +602,9 @@ class GridController extends AdminController
 
     public function apiAcceptableContainers(HTTPRequest $request): HTTPResponse
     {
-        $pageId = (int) $request->param('PageID');
+        // Deliberately left as plain `string`: `$ElementType!` is a presence
+        // check, so an empty segment is reachable (`acceptableContainers/5/main/.json`).
+        // The match below maps '' to null and 400s, so no separate guard is needed.
         $elementType = (string) $request->param('ElementType');
 
         // Map element type to the container type that holds it
@@ -625,6 +625,8 @@ class GridController extends AdminController
             return $this->jsonSuccess(200, []);
         }
 
+        $pageId = $this->requirePageId($request);
+
         $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
             Versioned::set_stage(Versioned::DRAFT);
 
@@ -639,8 +641,7 @@ class GridController extends AdminController
             $this->jsonError(403);
         }
 
-        /** @var non-empty-string $zone Route pattern guarantees non-empty zone segment */
-        $zone = (string) $request->param('Zone');
+        $zone = $this->requireZone($request);
 
         assert($targetContainerType instanceof ContainerType);
         $containers = $this->treeService->findViewableContainersOfType($page, $zone, $targetContainerType);
@@ -661,7 +662,7 @@ class GridController extends AdminController
 
     public function apiZones(HTTPRequest $request): HTTPResponse
     {
-        $pageId = (int) $request->param('PageID');
+        $pageId = $this->requirePageId($request);
 
         $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
             Versioned::set_stage(Versioned::DRAFT);
@@ -788,6 +789,51 @@ class GridController extends AdminController
 
         /** @var array<string, mixed> $data JSON object keys are always strings */
         return $data;
+    }
+
+    /**
+     * Read the required `PageID` route param as a page ID, or 404.
+     *
+     * `$PageID!` only makes the URL segment mandatory — the router matches any
+     * non-empty string, so the value is validated rather than cast: a plain
+     * `(int)` cast would silently turn `abc` into 0 and `12abc` into page 12.
+     *
+     * @return positive-int
+     */
+    private function requirePageId(HTTPRequest $request): int
+    {
+        $pageId = filter_var(
+            $request->param('PageID'),
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1]],
+        );
+        if ($pageId === false) {
+            $this->jsonError(404);
+        }
+
+        /** @var positive-int $pageId filter_var guarantees min_range=1 */
+
+        return $pageId;
+    }
+
+    /**
+     * Read the required `Zone` route param as a zone name, or 404.
+     *
+     * `$Zone!` is a presence check and `isset('')` is true, so "required" does
+     * not imply non-empty: {@see HTTPRequest::setUrl()} strips a trailing slash
+     * before the extension regex puts one back, so `readTree/5/.json` splits to
+     * a trailing '' segment and reaches the action with an empty zone.
+     *
+     * @return non-empty-string
+     */
+    private function requireZone(HTTPRequest $request): string
+    {
+        $zone = (string) $request->param('Zone');
+        if ($zone === '') {
+            $this->jsonError(404);
+        }
+
+        return $zone;
     }
 
     /**
