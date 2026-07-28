@@ -41,7 +41,10 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm run i18n:check
-      - run: npx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
+      # --coverage enforces the thresholds in vite.config.ts (statements 90,
+      # branches 85, functions 90, lines 90) — without it the JS gate only
+      # exists locally while PHP QA carries a CI-enforced 90% gate.
+      - run: npx vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
       - name: Verify generated files are up to date
         # `npm run build` regenerates client/dist and (via i18n:collect) client/lang;
         # both are committed artifacts. `git diff` only sees tracked paths, so a
