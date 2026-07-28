@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Service;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
@@ -49,6 +50,8 @@ class GridTreeService
         $pageId = $page->ID;
 
         $elementsByParent = $this->loadAllElements($pageId, $page::class, $zone);
+
+        $this->prepopulateVersionNumberCache($elementsByParent);
 
         $rootKey = $page::class . ':' . $pageId;
         $rootParent = new NodeRef(NodeType::fromClass($page::class), $pageId);
@@ -227,6 +230,38 @@ class GridTreeService
         }
 
         return $elementsByParent;
+    }
+
+    /**
+     * Batch-fill Versioned's version-number cache for every loaded element.
+     *
+     * The node mapper's per-node status and permission checks (getStatusFlags,
+     * canUnpublish → isPublished/isOnDraft/stagesDiffer) each resolve through
+     * Versioned::get_versionnumber_by_stage(), which issues one
+     * `SELECT Version … WHERE ID = ?` per element per stage on a cache miss —
+     * an N+1 hidden behind the batch loading above. All GridElement subclasses
+     * share one base table, so two queries fill the cache for the whole tree.
+     * get_versionnumber_by_stage always reads the stage tables regardless of
+     * reading mode, so this is equally valid under archived-version reads.
+     *
+     * @param array<string, list<GridElement>> $elementsByParent
+     */
+    private function prepopulateVersionNumberCache(array $elementsByParent): void
+    {
+        $ids = [];
+        foreach ($elementsByParent as $elements) {
+            foreach ($elements as $element) {
+                $ids[] = (int) $element->ID;
+            }
+        }
+
+        // An empty ID list means "cache the entire table" to the vendor API —
+        // never intended here, so bail instead.
+        if ($ids === []) {
+            return;
+        }
+
+        Versioned::prepopulateVersionNumberCache(GridElement::class, $ids);
     }
 
     /**
