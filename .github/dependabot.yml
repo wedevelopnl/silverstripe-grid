@@ -29,15 +29,6 @@ updates:
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
 
-      # Biome 2.5.3 and 2.5.4 panic ("index out of bounds") while linting our
-      # .tsx and E2E spec files. The fault is in its shared type-inference
-      # machinery, not a single rule: a11y/correctness/performance/security lint
-      # clean, while complexity/suspicious/nursery/style all panic on the same
-      # files. Held at 2.5.2 until a fixed release lands; drop these entries when
-      # one does.
-      - dependency-name: "@biomejs/biome"
-        versions: ["2.5.3", "2.5.4"]
-
   - package-ecosystem: composer
     directory: /
     schedule:
