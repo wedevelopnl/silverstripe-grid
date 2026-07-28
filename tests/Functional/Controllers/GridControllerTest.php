@@ -349,6 +349,90 @@ final class GridControllerTest extends FunctionalTest
         yield 'float' => ['1.5'];
     }
 
+    #[DataProvider('malformedPageIdUrlProvider')]
+    public function testMalformedPageIdSegmentReturns404(string $path): void
+    {
+        $this->buildTree();
+
+        $response = $this->get(self::BASE_URL . '/' . $path);
+
+        // `$PageID!` only makes the segment mandatory — the router matches any
+        // non-empty string. Every route reading it must validate rather than
+        // cast, so a malformed id can never resolve to a page.
+        self::assertSame(404, $response->getStatusCode());
+    }
+
+    /**
+     * Every route carrying a `$PageID!` segment, crossed with ids the router
+     * happily matches but that are not page IDs.
+     *
+     * @return iterable<string, array{string}>
+     */
+    public static function malformedPageIdUrlProvider(): iterable
+    {
+        $routes = [
+            'readTree' => 'readTree/%s/main',
+            'readTreeAtVersion' => 'readTree/%s/main/version/1',
+            'acceptableContainers' => 'acceptableContainers/%s/main/column',
+            'zones' => 'zones/%s',
+        ];
+
+        $malformedIds = [
+            'non-numeric' => 'abc',
+            'zero' => '0',
+            'negative' => '-1',
+            'float' => '1.5',
+            'digit-prefixed' => '1abc',
+        ];
+
+        foreach ($routes as $route => $template) {
+            foreach ($malformedIds as $label => $id) {
+                yield "{$route} / {$label}" => [sprintf($template, $id)];
+            }
+        }
+    }
+
+    public function testEmptyZoneSegmentReturns404(): void
+    {
+        $this->buildTree();
+        $pageId = (int) $this->page()->ID;
+
+        // HTTPRequest::setUrl() strips the trailing slash BEFORE the extension
+        // regex, which then puts one back: `readTree/5/.json` normalises to
+        // `readTree/5/` and splits to a trailing '' segment. `isset('')` is
+        // true, so `$Zone!` accepts it and the action would otherwise see an
+        // empty zone — falsifying the non-empty-string contract. Only reachable
+        // where Zone is the LAST route segment, i.e. this one route.
+        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}/.json");
+
+        self::assertSame(404, $response->getStatusCode());
+    }
+
+    public function testEmptyElementTypeSegmentReturns400(): void
+    {
+        $pageId = (int) $this->page()->ID;
+
+        // Same empty-final-segment trick as the zone case. ElementType has no
+        // guard of its own — '' falls through the match to the 400 below, which
+        // is why it is intentionally NOT typed as non-empty-string.
+        $response = $this->get(self::BASE_URL . "/acceptableContainers/{$pageId}/main/.json");
+
+        self::assertSame(400, $response->getStatusCode());
+    }
+
+    public function testDigitPrefixedPageIdDoesNotResolveToThatPage(): void
+    {
+        $this->buildTree();
+        $pageId = (int) $this->page()->ID;
+
+        // The sharpest edge of casting vs validating: `(int) "12abc"` is 12, so
+        // a plain cast would serve page 12's tree under a bogus URL. Asserted
+        // against the real fixture id so the leak cannot pass unnoticed.
+        $response = $this->get(self::BASE_URL . "/readTree/{$pageId}abc/main");
+
+        self::assertSame(404, $response->getStatusCode());
+    }
+
     public function testCreateSectionReturns204(): void
     {
         $page = $this->page();

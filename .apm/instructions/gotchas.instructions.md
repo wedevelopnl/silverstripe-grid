@@ -26,6 +26,11 @@ applyTo: "**/*"
   ```
 - **CMS form holder IDs are form-prefixed**: SilverStripe prefixes holder div IDs with the form name (e.g. `Form_ItemEditForm_FieldName_Holder`). Use suffix selectors like `[id$="_FieldName_Holder"]` to match regardless of prefix
 - **Docker volume mounts for vendor module resources**: When adding new `client/` subdirectories that need to be served by the CMS (e.g. `client/images/`), add a corresponding volume mount in `.docker/compose.yml` — the entrypoint creates symlinks via `ln -sfn`
+- **`$Param!` in `url_handlers` is a PRESENCE check, not validation**: `HTTPRequest::match()` only tests `isset($this->dirParts[$i])`, so `!` guarantees a segment exists — NOT that it is numeric, positive, or non-empty. Never type a route param from the route pattern alone. Validate in the action, then annotate:
+  - IDs → `filter_var($request->param('X'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])` → `positive-int`. A plain `(int)` cast turns `abc` into 0 and `12abc` into 12, silently serving page 12 under a bogus URL.
+  - Strings → explicit `=== ''` guard → `non-empty-string`.
+  - See `GridController::requirePageId()` / `requireZone()`.
+- **A trailing `.ext` yields an EMPTY final route segment**: `HTTPRequest::setUrl()` strips the trailing slash BEFORE the extension regex, which then puts one back — `readTree/5/.json` normalises to `readTree/5/` and splits to a trailing `''`. Since `isset('')` is true, `$Zone!` accepts it. Any param that is the LAST segment of its route can therefore arrive as `''`, even with `!`.
 
 ## Frontend / Bridge
 
