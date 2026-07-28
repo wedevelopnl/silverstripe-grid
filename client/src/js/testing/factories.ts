@@ -257,6 +257,7 @@ export function createTree(sections?: SectionNode[], pageId = 1): SectionNode[] 
 export function createTreeApiResponse(
   overrides?: Partial<TreeApiResponse> & { pageId?: number; sections?: SectionNode[] },
 ): TreeApiResponse {
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: biome 2.5.5 wrongly infers the optional-chain LHS as non-nullish. createTreeApiResponse() is called with no args (useElementMaps.test.ts:144), so the ?? 1 fallback is reached.
   const pageId = overrides?.pageId ?? overrides?.rootParent?.id ?? 1
   const sections = overrides?.sections ?? overrides?.nodes ?? createTree(undefined, pageId)
   return {

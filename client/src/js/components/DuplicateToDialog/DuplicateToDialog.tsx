@@ -200,6 +200,7 @@ export default function DuplicateToDialog({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            {/* biome-ignore lint/suspicious/noUnnecessaryConditions: biome 2.5.5 mis-narrows TanStack's UseQueryResult union to isLoading: false. The branch does render while the query is pending — asserted in DuplicateToDialog.test.tsx (`loading states`). */}
             {pages.isLoading && (
               <p data-testid="duplicate-to-loading">
                 {t('WeDevelopGrid.DuplicateToDialog.LOADING_PAGES', 'Loading pages\u2026')}
@@ -245,6 +246,7 @@ export default function DuplicateToDialog({
 
         {step === 'zone' && (
           <div data-testid="duplicate-to-step-zone">
+            {/* biome-ignore lint/suspicious/noUnnecessaryConditions: biome 2.5.5 mis-narrows TanStack's UseQueryResult union to isLoading: false. The branch does render while the query is pending — asserted in DuplicateToDialog.test.tsx (`loading states`). */}
             {zones.isLoading && (
               <p data-testid="duplicate-to-loading">
                 {t('WeDevelopGrid.DuplicateToDialog.LOADING_ZONES', 'Loading zones\u2026')}
@@ -282,6 +284,7 @@ export default function DuplicateToDialog({
 
         {step === 'container' && (
           <div data-testid="duplicate-to-step-container">
+            {/* biome-ignore lint/suspicious/noUnnecessaryConditions: biome 2.5.5 mis-narrows TanStack's UseQueryResult union to isLoading: false. The branch does render while the query is pending — asserted in DuplicateToDialog.test.tsx (`loading states`). */}
             {containers.isLoading && (
               <p data-testid="duplicate-to-loading">
                 {t(

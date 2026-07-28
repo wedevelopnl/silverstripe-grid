@@ -747,61 +747,63 @@ describe('useDragAndDrop', () => {
         overRect: { top: 0, left: 310, width: 200, height: 50 },
         expectedOrder: [30, 31],
       },
-    ])('resolves column X direction using the grab offset — $name', ({
-      overRect,
-      expectedOrder,
-    }) => {
-      // Two rows so col30 → row21 is a genuine cross-container column move.
-      // row21 = [col31] only; dropping col30 before/after col31 reorders row21.
-      const col30 = createColumnNode({
-        id: 30,
-        parent: { type: 'row', id: 20 },
-        children: [createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })],
-      })
-      const col31 = createColumnNode({
-        id: 31,
-        parent: { type: 'row', id: 21 },
-        children: [createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })],
-      })
-      const row20 = createRowNode({
-        id: 20,
-        parent: { type: 'section', id: 10 },
-        children: [col30],
-      })
-      const row21 = createRowNode({
-        id: 21,
-        parent: { type: 'section', id: 10 },
-        children: [col31],
-      })
-      const section = createSectionNode({
-        id: 10,
-        parent: { type: 'page', id: 1 },
-        children: [row20, row21],
-      })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+    ])(
+      'resolves column X direction using the grab offset — $name',
+      ({ overRect, expectedOrder }) => {
+        // Two rows so col30 → row21 is a genuine cross-container column move.
+        // row21 = [col31] only; dropping col30 before/after col31 reorders row21.
+        const col30 = createColumnNode({
+          id: 30,
+          parent: { type: 'row', id: 20 },
+          children: [createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })],
+        })
+        const col31 = createColumnNode({
+          id: 31,
+          parent: { type: 'row', id: 21 },
+          children: [createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })],
+        })
+        const row20 = createRowNode({
+          id: 20,
+          parent: { type: 'section', id: 10 },
+          children: [col30],
+        })
+        const row21 = createRowNode({
+          id: 21,
+          parent: { type: 'section', id: 10 },
+          children: [col31],
+        })
+        const section = createSectionNode({
+          id: 10,
+          parent: { type: 'page', id: 1 },
+          children: [row20, row21],
+        })
+        const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
-      const { result } = renderDndHook({ tree })
+        const { result } = renderDndHook({ tree })
 
-      const activeId = buildDraggableId('column', 30)
-      const overId = buildDraggableId('column', 31)
+        const activeId = buildDraggableId('column', 30)
+        const overId = buildDraggableId('column', 31)
 
-      act(() => {
-        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
-      })
-      act(() => {
-        result.current.dndContextProps.onDragMove(
-          makePointerDragOverEvent(activeId, overId, 110, 25, overRect, {
-            initial: { top: 0, left: 100, width: 200, height: 50 },
-            translated: { top: 0, left: 300, width: 200, height: 50 },
-          }),
-        )
-      })
+        act(() => {
+          result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+        })
+        act(() => {
+          result.current.dndContextProps.onDragMove(
+            makePointerDragOverEvent(activeId, overId, 110, 25, overRect, {
+              initial: { top: 0, left: 100, width: 200, height: 50 },
+              translated: { top: 0, left: 300, width: 200, height: 50 },
+            }),
+          )
+        })
 
-      // row21 (second row) now holds both columns in the resolved order.
-      const section0 = result.current.pendingTree?.nodes[0] as ReturnType<typeof createSectionNode>
-      const targetRow = section0.children?.[1] as ReturnType<typeof createRowNode>
-      expect(targetRow.children?.map((c) => c.self.id)).toEqual(expectedOrder)
-    })
+        // row21 (second row) now holds both columns in the resolved order.
+        const section0 = result.current.pendingTree?.nodes[0] as ReturnType<
+          typeof createSectionNode
+        >
+        const targetRow = section0.children?.[1] as ReturnType<typeof createRowNode>
+        expect(targetRow.children?.map((c) => c.self.id)).toEqual(expectedOrder)
+      },
+    )
   })
 
   describe('pendingActive flag (DragContext)', () => {
@@ -1030,51 +1032,50 @@ describe('useDragAndDrop', () => {
         endClientY: 5,
         expectedAfter: { type: 'element', id: 41 },
       },
-    ])('cross-container drop commits the PREVIEW direction, ignoring the drag-end pointer: $name', ({
-      moveClientY,
-      endClientY,
-      expectedAfter,
-    }) => {
-      // Direction is resolved by the PREVIEW (onDragMove over the element): a real
-      // PointerEvent activatorEvent makes getPointerPosition return a pointer
-      // (with initial===translated rects, pointer.y === clientY). The drag-end
-      // event deliberately carries the OPPOSITE pointer to prove it is ignored —
-      // the drop commits the pending tree the preview built, never a drag-end
-      // re-resolution. This is the regression guard for the cross-container
-      // "lands on the wrong side of the target" bug.
-      //
-      // Over element rect top=0,height=50 → midpoint Y=25. moveClientY=5 →
-      // 'before' (after=null, head of target); moveClientY=45 → 'after'
-      // (after=element 41). The drag-end pointer is the other side each time.
-      const { tree, element1, element2 } = buildTwoColumnTree()
-      const onReorder = vi.fn()
-      const { result } = renderDndHook({ tree, onReorder })
+    ])(
+      'cross-container drop commits the PREVIEW direction, ignoring the drag-end pointer: $name',
+      ({ moveClientY, endClientY, expectedAfter }) => {
+        // Direction is resolved by the PREVIEW (onDragMove over the element): a real
+        // PointerEvent activatorEvent makes getPointerPosition return a pointer
+        // (with initial===translated rects, pointer.y === clientY). The drag-end
+        // event deliberately carries the OPPOSITE pointer to prove it is ignored —
+        // the drop commits the pending tree the preview built, never a drag-end
+        // re-resolution. This is the regression guard for the cross-container
+        // "lands on the wrong side of the target" bug.
+        //
+        // Over element rect top=0,height=50 → midpoint Y=25. moveClientY=5 →
+        // 'before' (after=null, head of target); moveClientY=45 → 'after'
+        // (after=element 41). The drag-end pointer is the other side each time.
+        const { tree, element1, element2 } = buildTwoColumnTree()
+        const onReorder = vi.fn()
+        const { result } = renderDndHook({ tree, onReorder })
 
-      const activeId = buildDraggableId('element', element1.self.id)
-      const overElementId = buildDraggableId('element', element2.self.id)
-      const overRect = { top: 0, left: 0, width: 200, height: 50 }
+        const activeId = buildDraggableId('element', element1.self.id)
+        const overElementId = buildDraggableId('element', element2.self.id)
+        const overRect = { top: 0, left: 0, width: 200, height: 50 }
 
-      act(() => {
-        result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
-      })
-      act(() => {
-        result.current.dndContextProps.onDragMove(
-          makePointerDragOverEvent(activeId, overElementId, 100, moveClientY, overRect),
-        )
-      })
+        act(() => {
+          result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
+        })
+        act(() => {
+          result.current.dndContextProps.onDragMove(
+            makePointerDragOverEvent(activeId, overElementId, 100, moveClientY, overRect),
+          )
+        })
 
-      act(() => {
-        result.current.dndContextProps.onDragEnd(
-          makePointerDragEndEvent(activeId, overElementId, 100, endClientY, overRect),
-        )
-      })
+        act(() => {
+          result.current.dndContextProps.onDragEnd(
+            makePointerDragEndEvent(activeId, overElementId, 100, endClientY, overRect),
+          )
+        })
 
-      expect(onReorder).toHaveBeenCalledTimes(1)
-      const [element, parent, after] = onReorder.mock.calls[0]
-      expect(element).toEqual({ type: 'element', id: element1.self.id })
-      expect(parent).toEqual({ type: 'column', id: 31 })
-      expect(after).toEqual(expectedAfter)
-    })
+        expect(onReorder).toHaveBeenCalledTimes(1)
+        const [element, parent, after] = onReorder.mock.calls[0]
+        expect(element).toEqual({ type: 'element', id: element1.self.id })
+        expect(parent).toEqual({ type: 'column', id: 31 })
+        expect(after).toEqual(expectedAfter)
+      },
+    )
 
     it('clears pending tree when active ID is unparseable', () => {
       const { tree } = buildSingleColumnTree()
@@ -1216,8 +1217,9 @@ describe('useDragAndDrop', () => {
       // Verify the pending tree places active at the END of the target column.
       const pending = result.current.pendingTree
       expect(pending).not.toBeNull()
-      const targetCol = ((pending?.nodes[0] as typeof section).children?.[0] as typeof row)
-        .children?.[1]
+      const pendingSection = pending?.nodes[0] as typeof section
+      const pendingRow = pendingSection.children?.[0] as typeof row
+      const targetCol = pendingRow.children?.[1]
       expect((targetCol as typeof col2).children?.map((c) => c.self.id)).toEqual([50, 51, 52, 40])
     })
   })

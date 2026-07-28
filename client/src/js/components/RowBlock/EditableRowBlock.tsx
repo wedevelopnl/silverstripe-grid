@@ -38,7 +38,6 @@ function useInsertBeforeByColumnKey(
 }
 
 function useChildColumnKeys(row: RowNode): NodeKey[] {
-  // biome-ignore lint/suspicious/noUnnecessaryConditions: row.children is `ColumnNode[] | null`; the ?? [] fallback is required — dropping it fails typecheck.
   return useMemo(() => row.children?.map((c) => c.nodeKey) ?? [], [row.children])
 }
 
@@ -67,7 +66,6 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
       titleHref={row.editLink ?? undefined}
       isCollapsed={isCollapsed}
       onToggle={onToggle}
-      // biome-ignore lint/suspicious/noUnnecessaryConditions: row.children is `ColumnNode[] | null`; the ?? 0 fallback is required — dropping it fails typecheck.
       columnCount={row.children?.length ?? 0}
       dropTarget={showDropTarget}
       setNodeRef={setNodeRef}

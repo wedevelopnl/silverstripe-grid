@@ -10,7 +10,6 @@ interface DragOverlayContentProps {
 
 function getChildCount(node: ElementNode): number {
   if (!isContainerNode(node)) return 0
-  // biome-ignore lint/suspicious/noUnnecessaryConditions: container children are `… | null`; the ?? 0 fallback is required — dropping it fails typecheck.
   return node.children?.length ?? 0
 }
 
