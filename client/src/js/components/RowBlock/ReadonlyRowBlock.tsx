@@ -20,7 +20,6 @@ const ReadonlyRowBlock = memo(function ReadonlyRowBlockComponent({ row }: Readon
       title={row.title}
       isCollapsed={isCollapsed}
       onToggle={onToggle}
-      // biome-ignore lint/suspicious/noUnnecessaryConditions: row.children is `ColumnNode[] | null`; the ?? 0 fallback is required — dropping it fails typecheck.
       columnCount={row.children?.length ?? 0}
     >
       <div

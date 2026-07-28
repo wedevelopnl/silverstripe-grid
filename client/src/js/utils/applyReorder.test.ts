@@ -11,6 +11,14 @@ import type { ColumnNode, RowNode, SectionNode, SimpleElementNode } from '@/type
 import { NodeIdentity } from '@/types/identity'
 import { applyReorder } from './applyReorder'
 
+// Walks the fixture's single section → row → column spine. A wrong fixture fails
+// the cast loudly, which is the signal a guard would give anyway.
+function firstColumnOf(result: { nodes: unknown[] }): ColumnNode {
+  const section = result.nodes[0] as SectionNode
+  const row = section.children?.[0] as RowNode
+  return row.children?.[0] as ColumnNode
+}
+
 describe('applyReorder', () => {
   describe('same-container reorder', () => {
     it('moves an element to a later position within the same parent', () => {
@@ -34,8 +42,7 @@ describe('applyReorder', () => {
         NodeIdentity.toKey('element', 12),
       )
 
-      const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
-        .children?.[0] as ColumnNode
+      const movedColumn = firstColumnOf(result)
       expect(movedColumn.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
         11, 12, 10,
       ])
@@ -61,8 +68,7 @@ describe('applyReorder', () => {
         null,
       )
 
-      const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
-        .children?.[0] as ColumnNode
+      const movedColumn = firstColumnOf(result)
       expect(movedColumn.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
         11, 10,
       ])
@@ -300,8 +306,7 @@ describe('applyReorder', () => {
       )
 
       expect(result).not.toBe(tree)
-      const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
-        .children?.[0] as ColumnNode
+      const movedColumn = firstColumnOf(result)
       expect(movedColumn.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
         11, 12, 10,
       ])
@@ -341,8 +346,7 @@ describe('applyReorder', () => {
         NodeIdentity.toKey('element', 12),
       )
 
-      const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
-        .children?.[0] as ColumnNode
+      const movedColumn = firstColumnOf(result)
       expect(movedColumn.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
         11, 12, 10, 13,
       ])
@@ -455,8 +459,7 @@ describe('applyReorder', () => {
       )
 
       expect(result).not.toBe(tree)
-      const movedColumn = ((result.nodes[0] as SectionNode).children?.[0] as RowNode)
-        .children?.[0] as ColumnNode
+      const movedColumn = firstColumnOf(result)
       expect(movedColumn.children?.map((child: SimpleElementNode) => child.self.id)).toEqual([
         10, 12, 11,
       ])
