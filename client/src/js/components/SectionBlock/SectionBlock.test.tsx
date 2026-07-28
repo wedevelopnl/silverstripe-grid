@@ -90,8 +90,8 @@ describe('EditableSectionBlock', () => {
     // Section's own append button + child row/column append buttons
     const appendButtons = screen.getAllByTestId('add-child-append')
     expect(appendButtons.length).toBeGreaterThan(0)
-    // The section's button says "Add Row"
-    expect(screen.getByText('Add Row')).toBeInTheDocument()
+    // The section's row slots — one above the first row, one after the last.
+    expect(screen.getAllByText('Add Row')).toHaveLength(2)
     expect(screen.queryByTestId('add-child-empty')).not.toBeInTheDocument()
   })
 
@@ -102,8 +102,10 @@ describe('EditableSectionBlock', () => {
 
     renderWithProviders(<EditableSectionBlock section={section} />)
 
-    // Two rows produce exactly one gap → one "between" insert button.
+    // Two rows produce exactly one gap → one "between" insert button. The slot
+    // above the first row is the separate before-first button.
     expect(screen.getAllByTestId('add-child-between')).toHaveLength(1)
+    expect(screen.getAllByTestId('add-child-before-first')).toHaveLength(1)
   })
 
   it('renders no between button with a single row', () => {
@@ -114,6 +116,8 @@ describe('EditableSectionBlock', () => {
     renderWithProviders(<EditableSectionBlock section={section} />)
 
     expect(screen.queryByTestId('add-child-between')).not.toBeInTheDocument()
+    // A lone row still gets a leading slot — prepending must not require a gap.
+    expect(screen.getAllByTestId('add-child-before-first')).toHaveLength(1)
   })
 
   it('edit link rendered when editLink exists', () => {
@@ -350,6 +354,7 @@ describe('ReadonlySectionBlock', () => {
 
     expect(screen.queryByTestId('drag-handle')).not.toBeInTheDocument()
     expect(screen.queryByTestId('add-child-append')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('add-child-before-first')).not.toBeInTheDocument()
   })
 
   it('renders title as plain text even when editLink is set', () => {

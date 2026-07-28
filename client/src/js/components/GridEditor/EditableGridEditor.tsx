@@ -24,12 +24,14 @@ export default function EditableGridEditor({ pageId, zone }: EditableGridEditorP
 
   const status = resolveGridEditorStatus(data, error)
 
-  // The sections, with "+ Add section" in every gap and after the last one;
-  // when there are no sections, a single empty-state add button. Always
-  // rendered inside DndContext/SortableContext (sectionIds is [] when empty).
+  // The sections, with "+ Add section" above the first one, in every gap and
+  // after the last one; when there are no sections, a single empty-state add
+  // button. Always rendered inside DndContext/SortableContext (sectionIds is
+  // [] when empty).
   const editableSectionList =
     sections.length > 0 ? (
       <>
+        <AddChildButton parentId={pageId} childType="section" variant="before-first" />
         {sections.map((section, index) => (
           <Fragment key={section.nodeKey}>
             {index > 0 && (

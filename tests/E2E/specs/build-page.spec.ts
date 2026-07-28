@@ -80,16 +80,26 @@ test.describe('Build page from scratch', () => {
       const firstRow = firstSection.getByTestId('row-block').first()
       await firstRow.getByTestId('column-insert-end').click()
       await expect(firstRow.getByTestId('column-block')).toHaveCount(2, { timeout: 10_000 })
+
+      // Step 7: Prepend a section via the leading slot — the previously-first
+      // section must shift down to index 1, which is what distinguishes this
+      // from the append button.
+      const previouslyFirstTitle = await firstSection.getByTestId('section-title').innerText()
+      await page.getByTestId('add-child-before-first').filter({ hasText: 'Add Section' }).click()
+      await expect(page.getByTestId('section-block')).toHaveCount(3, { timeout: 10_000 })
+      await expect(
+        page.getByTestId('section-block').nth(1).getByTestId('section-title'),
+      ).toHaveText(previouslyFirstTitle)
     })
 
     await test.step('publish and verify on the frontend', async () => {
-      // Step 7: Publish the page
+      // Step 8: Publish the page
       await page.getByRole('button', { name: /Publish/ }).click()
       await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({
         timeout: 10_000,
       })
 
-      // Step 8: Verify the published page renders on the frontend
+      // Step 9: Verify the published page renders on the frontend
       await page.goto('/e2e-build-test')
       await expect(
         page.getByRole('heading', { level: 1, name: 'E2E Build Test', exact: true }),

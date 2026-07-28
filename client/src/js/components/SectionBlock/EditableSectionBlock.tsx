@@ -67,6 +67,7 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
       >
         {hasRows ? (
           <>
+            <AddChildButton parentId={section.self.id} childType="row" variant="before-first" />
             {rows.map((row, index) => (
               <Fragment key={row.nodeKey}>
                 {index > 0 && (
