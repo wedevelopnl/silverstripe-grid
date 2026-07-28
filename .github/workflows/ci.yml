@@ -182,6 +182,13 @@ jobs:
       matrix:
         browser: [chromium, firefox]
         adapter: [bootstrap, tailwind]
+        # Bulma is the behaviorally distinct preset (per-viewport hides, no
+        # restore class, mobile-first 'desktop' default) and was previously
+        # untested in E2E. One chromium job suffices: adapter class generation
+        # is browser-independent, and the cross product above already covers
+        # browser behavior.
+        include:
+          - { browser: chromium, adapter: bulma }
     env:
       SS_GRID_ADAPTER: ${{ matrix.adapter }}
       COMPOSE: docker compose -f .docker/compose.yml -f .docker/compose.ci.yml
