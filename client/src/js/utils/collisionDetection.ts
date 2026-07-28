@@ -5,7 +5,24 @@ import {
   type DroppableContainer,
 } from '@dnd-kit/core'
 
-import { getDraggableType, PARENT_CONTAINER_TYPE } from '@/types/dnd'
+import { type DraggableType, getDraggableType, PARENT_CONTAINER_TYPE } from '@/types/dnd'
+
+/**
+ * Composite droppable IDs are immutable for an element's lifetime, but the
+ * detectors below parse every registered ID on every pointer-move cycle
+ * (60Hz+). Cache the parse per unique ID — the cache is bounded by the number
+ * of distinct elements seen in the session.
+ */
+const draggableTypeCache = new Map<string, DraggableType | null>()
+
+function cachedDraggableType(compositeId: string): DraggableType | null {
+  let type = draggableTypeCache.get(compositeId)
+  if (type === undefined) {
+    type = getDraggableType(compositeId)
+    draggableTypeCache.set(compositeId, type)
+  }
+  return type
+}
 
 /**
  * Like closestCenter, but reads live DOM rects via getBoundingClientRect()
@@ -25,37 +42,44 @@ import { getDraggableType, PARENT_CONTAINER_TYPE } from '@/types/dnd'
  *    push a neighbour's center close enough to the cursor that pure
  *    center-distance picks the wrong sibling — which, via the parent-container
  *    fallback, lands the drop at the container's end instead of where aimed.
+ *
+ * Returns only the winning collision: dnd-kit derives `over` from the first
+ * collision and nothing consumes the rest, so ranking is done as a single-pass
+ * selection (containment first, then squared center distance) instead of
+ * building and sorting the full candidate list on every pointer move.
  */
 const closestCenterLive: CollisionDetection = (args) => {
   const { collisionRect, droppableContainers, pointerCoordinates } = args
   const refX = pointerCoordinates?.x ?? collisionRect.left + collisionRect.width / 2
   const refY = pointerCoordinates?.y ?? collisionRect.top + collisionRect.height / 2
-  const collisions: Collision[] = []
+
+  let winner: Collision | null = null
+  let winnerContains = false
+  let winnerValue = Number.POSITIVE_INFINITY
 
   for (const container of droppableContainers) {
     const domNode = container.node.current
     if (!domNode) continue
 
     const rect = domNode.getBoundingClientRect()
-    const targetCX = rect.left + rect.width / 2
-    const targetCY = rect.top + rect.height / 2
-    const dx = refX - targetCX
-    const dy = refY - targetCY
+    const dx = refX - (rect.left + rect.width / 2)
+    const dy = refY - (rect.top + rect.height / 2)
+    const value = dx * dx + dy * dy
     const contains =
       refX >= rect.left && refX <= rect.right && refY >= rect.top && refY <= rect.bottom
 
-    collisions.push({
-      id: container.id,
-      data: { droppableContainer: container, value: dx * dx + dy * dy, contains },
-    })
+    // Containment outranks distance; within the same band, closer center wins.
+    // Strict `<` keeps the first-registered candidate on exact ties, matching
+    // the stable sort this replaced.
+    const better = contains !== winnerContains ? contains : value < winnerValue
+    if (better) {
+      winner = { id: container.id, data: { droppableContainer: container, value } }
+      winnerContains = contains
+      winnerValue = value
+    }
   }
 
-  return collisions.sort((a, b) => {
-    const aContains = (a.data as { contains: boolean }).contains
-    const bContains = (b.data as { contains: boolean }).contains
-    if (aContains !== bContains) return aContains ? -1 : 1
-    return (a.data?.value as number) - (b.data?.value as number)
-  })
+  return winner === null ? [] : [winner]
 }
 
 /**
@@ -65,10 +89,10 @@ export function filterSiblings(
   activeId: string,
   containers: DroppableContainer[],
 ): DroppableContainer[] {
-  const activeType = getDraggableType(activeId)
+  const activeType = cachedDraggableType(activeId)
   if (activeType === null) return []
 
-  return containers.filter((container) => getDraggableType(String(container.id)) === activeType)
+  return containers.filter((container) => cachedDraggableType(String(container.id)) === activeType)
 }
 
 /**
@@ -79,13 +103,13 @@ export function filterParentContainers(
   activeId: string,
   containers: DroppableContainer[],
 ): DroppableContainer[] {
-  const activeType = getDraggableType(activeId)
+  const activeType = cachedDraggableType(activeId)
   if (activeType === null) return []
 
   const parentType = PARENT_CONTAINER_TYPE[activeType]
 
   return containers.filter((container) => {
-    const containerType = getDraggableType(String(container.id))
+    const containerType = cachedDraggableType(String(container.id))
 
     if (parentType === 'page') return containerType === null
 
@@ -117,6 +141,11 @@ export function filterParentContainers(
  * 150px vertically (auto-scroll drift) and 50px horizontally. Uses
  * pointer coordinates (viewport-relative) to avoid auto-scroll drift
  * between collisionRect (sensor-delta-based) and droppableRects.
+ *
+ * Returns only the crossing target closest to the collision-rect center:
+ * dnd-kit derives `over` from the first collision and nothing consumes the
+ * rest, so the closest candidate is selected in a single pass instead of
+ * sorting all crossing targets on every pointer move.
  */
 export const centerCrossing: CollisionDetection = (args) => {
   const { active, collisionRect, droppableContainers, droppableRects, pointerCoordinates } = args
@@ -138,7 +167,8 @@ export const centerCrossing: CollisionDetection = (args) => {
   const ptrX = pointerCoordinates?.x ?? crCX
   const ptrY = pointerCoordinates?.y ?? crCY
 
-  const collisions: Collision[] = []
+  let winner: Collision | null = null
+  let winnerValue = Number.POSITIVE_INFINITY
 
   for (const container of droppableContainers) {
     const rect = droppableRects.get(container.id)
@@ -217,16 +247,18 @@ export const centerCrossing: CollisionDetection = (args) => {
     if ((crossedY || crossedX) && overlapX && overlapY) {
       const dx = crCX - targetCX
       const dy = crCY - targetCY
+      const value = dx * dx + dy * dy
 
-      collisions.push({
-        id: container.id,
-        data: { droppableContainer: container, value: dx * dx + dy * dy },
-      })
+      // Strict `<` keeps the first-registered candidate on exact ties,
+      // matching the stable sort this replaced.
+      if (value < winnerValue) {
+        winner = { id: container.id, data: { droppableContainer: container, value } }
+        winnerValue = value
+      }
     }
   }
 
-  // Sort by distance to center (closest first)
-  return collisions.sort((a, b) => (a.data?.value as number) - (b.data?.value as number))
+  return winner === null ? [] : [winner]
 }
 
 export interface OverRectSnapshot {
@@ -267,7 +299,7 @@ export function createTypedCollisionDetection(
   // Track whether centerCrossing has detected a sibling during this drag.
   // Used to distinguish "threshold not yet crossed" (ghost-jump prevention)
   // from "centerCrossing missed due to stale droppableRects" (maintain over).
-  // Stryker disable next-line BooleanLiteral: Equivalent — hadSiblingHit is only read at L444 inside the L430 guard (sourceItems non-empty Set); whenever that holds, the first invocation's reset at L313 (lastSourceItems starts undefined) always assigns false before any read, so the initializer value is never observable
+  // Stryker disable next-line BooleanLiteral: Equivalent — hadSiblingHit is only read inside the pointer-inside-source-sibling guard (sourceItems non-empty Set); whenever that holds, the first invocation's reset (lastSourceItems starts undefined) always assigns false before any read, so the initializer value is never observable
   let hadSiblingHit = false
   let lastSourceItems: ReadonlySet<string | number> | null | undefined
 
@@ -285,14 +317,9 @@ export function createTypedCollisionDetection(
     // dnd-kit v6 does not exclude the active item from droppableContainers.
     // Its original-position rect remains registered as a droppable, so
     // closestCenter can return it as the closest target — causing a no-op drop.
-    // Build a single id→container index here and reuse it for the winner lookup
-    // below (O(1) instead of an O(n) find on every collision cycle).
-    const nonActiveContainers: DroppableContainer[] = []
-    const containerById = new Map<string | number, DroppableContainer>()
-    for (const container of args.droppableContainers) {
-      if (container.id !== args.active.id) nonActiveContainers.push(container)
-      containerById.set(container.id, container)
-    }
+    const nonActiveContainers = args.droppableContainers.filter(
+      (container) => container.id !== args.active.id,
+    )
 
     /**
      * Store the winning collision's DOM node for direction comparison at drop time.
@@ -301,14 +328,17 @@ export function createTypedCollisionDetection(
      * reads getBoundingClientRect() at the moment of comparison (drop time),
      * guaranteeing the rect and pointer are always in the same viewport
      * coordinate space — including any SortableContext CSS transforms.
+     *
+     * Every collision produced here (and by dnd-kit's closestCenter) carries its
+     * DroppableContainer in `data`, so the winner's node needs no id lookup.
      */
     const captureWinnerNode = (collisions: Collision[]) => {
       if (options.overRectRef && collisions.length > 0) {
-        const winnerId = collisions[0].id
-        const container = containerById.get(winnerId)
+        const winner = collisions[0]
+        const container = winner.data?.droppableContainer as DroppableContainer | undefined
         if (container?.node.current) {
           options.overRectRef.current = {
-            id: winnerId,
+            id: winner.id,
             nodeRef: container.node as { readonly current: HTMLElement | null },
           }
         }

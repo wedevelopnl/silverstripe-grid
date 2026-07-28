@@ -234,7 +234,7 @@ describe('centerCrossing', () => {
     expect(collisions).toHaveLength(0)
   })
 
-  it('sorts collisions by distance (closest first)', () => {
+  it('returns the crossing target closest to the current center', () => {
     const near = createDroppable('row-2')
     const far = createDroppable('row-3')
     const nearRect = makeDomRect(50, 275, 200, 100)
@@ -247,13 +247,13 @@ describe('centerCrossing', () => {
 
     const collisions = centerCrossing(args as never)
 
-    // Both should be detected; the farRect's threshold = 400+25=425 (crossed at 450)
-    // The near target center is at 325, far center at 450.
-    // Current center at 450, closer to far target.
-    expect(collisions).toHaveLength(2)
-    expect(collisions[0].data?.value as number).toBeLessThanOrEqual(
-      collisions[1].data?.value as number,
-    )
+    // Both targets have crossed (row-2 threshold 300, row-3 threshold 425;
+    // current center 450 passes both), but only the winner is returned.
+    // Centers: row-2 (150, 325) → value 15625; row-3 (150, 450) → value 0.
+    // A comparison mutant that prefers the farther candidate returns row-2.
+    expect(collisions).toHaveLength(1)
+    expect(collisions[0].id).toBe('row-3')
+    expect(collisions[0].data?.value).toBe(0)
   })
 })
 
@@ -646,11 +646,12 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       expect(collisions[0].data?.value).toBe(20000)
     })
 
-    it('sorts collisions ascending by squared distance', () => {
-      // collisionRect center (125, 125).
+    it('selects the candidate with the smallest squared distance', () => {
+      // Pointer (125, 125).
       // close: (150,150,50,50) center (175,175) → dx=-50, dy=-50 → value=5000.
       // far:   (400,400,50,50) center (425,425) → dx=-300, dy=-300 → value=180000.
-      // Containers registered in [far, close] order; default sort must return [close, far].
+      // Containers registered in [far, close] order; the winner must be `close` —
+      // a flipped comparison (or first-wins) mutant would return `far` instead.
       const close = createDroppableWithRect('row-2', {
         left: 150,
         top: 150,
@@ -676,12 +677,11 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       )
       const collisions = detect(args as never)
 
-      expect(collisions.map((c) => c.id)).toEqual(['row-2', 'row-3'])
+      expect(collisions.map((c) => c.id)).toEqual(['row-2'])
       expect(collisions[0].data?.value).toBe(5000)
-      expect(collisions[1].data?.value).toBe(180000)
     })
 
-    it('ranks a containing candidate before a closer non-containing one', () => {
+    it('prefers a containing candidate over a closer non-containing one', () => {
       // Pointer at (500, 500). closestCenterLive references pointerCoordinates.
       //
       // containing (row-2): rect (400, 400, 1000, 1000) → right=1400, bottom=1400.
@@ -691,9 +691,9 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       //   Pointer (500,500) is outside (500 < 510) → contains=false.
       //   center (520, 520) → dx=-20, dy=-20 → value=800 (much CLOSER by distance).
       //
-      // The containment discriminant must win: row-2 (contains) ranks first even
+      // The containment discriminant must win: row-2 (contains) wins even
       // though row-3 has a far smaller squared distance. Registered [closer, containing]
-      // so a comparator that ignored `contains` would return [row-3, row-2].
+      // so a selection that ignored `contains` would return row-3.
       const containing = createDroppableWithRect('row-2', {
         left: 400,
         top: 400,
@@ -722,11 +722,10 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       }
       const collisions = detect(args as never)
 
-      expect(collisions.map((c) => c.id)).toEqual(['row-2', 'row-3'])
+      expect(collisions.map((c) => c.id)).toEqual(['row-2'])
       // Confirm the winner is the FARTHER-by-distance one, proving containment
-      // — not proximity — decided the order.
+      // — not proximity — decided the selection.
       expect(collisions[0].data?.value).toBe(320000)
-      expect(collisions[1].data?.value).toBe(800)
     })
   })
 
@@ -765,7 +764,7 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       expect(collisions[0].data?.value).toBe(625)
     })
 
-    it('sorts crossing collisions ascending by squared distance', () => {
+    it('selects the crossing target with the smallest squared distance', () => {
       // Two targets both crossed vertically (currentY past both thresholds).
       // close target (50, 400, 200, 100): center (150, 450), threshold = 400+25 = 425.
       // far   target (50, 500, 200, 100): center (150, 550), threshold = 500+25 = 525.
@@ -795,10 +794,10 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
 
       const collisions = centerCrossing(args as never)
 
-      // At currentY=530, the far target is nearer (1025) than the close target (7025).
-      expect(collisions.map((c) => c.id)).toEqual(['row-3', 'row-2'])
+      // At currentY=530, the far target is nearer (1025) than the close target
+      // (7025) — the winner must be row-3, killing flipped-comparison mutants.
+      expect(collisions.map((c) => c.id)).toEqual(['row-3'])
       expect(collisions[0].data?.value).toBe(1025)
-      expect(collisions[1].data?.value).toBe(7025)
     })
   })
 
@@ -1057,13 +1056,13 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       return centerCrossing(args as never)
     }
 
-    it('counts as crossed when dragging RIGHT with currentCX exactly at the threshold (line 209 >=)', () => {
+    it('counts as crossed when dragging RIGHT with currentCX exactly at the threshold (toward-crossing >=)', () => {
       // Right-drag: initialCX(100) < thresholdX(300). Crossing requires currentCX >= 300.
       // At currentCX=300 exactly, `>= 300` is true, `> 300` is false.
       expect(runHorizontalAtCurrent(300, 100)).toHaveLength(1)
     })
 
-    it('counts as crossed when dragging LEFT with currentCX exactly at the threshold (line 208 <=)', () => {
+    it('counts as crossed when dragging LEFT with currentCX exactly at the threshold (away-crossing <=)', () => {
       // Left-drag: initialCX(700) > thresholdX(300). Crossing requires currentCX <= 300.
       expect(runHorizontalAtCurrent(300, 700)).toHaveLength(1)
     })
@@ -1259,7 +1258,7 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
   })
 
   describe('parent containment pointer boundaries', () => {
-    // Pass-2 containment check at lines 447–458 uses strict `>=` / `<=` comparisons for
+    // The Pass-2 containment check uses strict `>=` / `<=` comparisons for
     // all four edges. Boundary tests (pointer exactly ON each edge) pin these operators.
     const parent = createDroppable('section-1')
     const parentRect = makeDomRect(100, 200, 300, 400) // right=400, bottom=600
@@ -1361,7 +1360,7 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
   })
 
   describe('overRectRef only captures when collisions exist', () => {
-    it('leaves overRectRef null when there are no collisions (line 312 length > 0 guard)', () => {
+    it('leaves overRectRef null when there are no collisions (collisions.length > 0 guard)', () => {
       // No droppable rect matches the pointer → empty collisions → guard prevents capture.
       const unrelated = createDroppableWithRect('row-2', {
         left: 1000,
@@ -1441,8 +1440,8 @@ describe('closestCenterLive pointer fallback (no pointerCoordinates)', () => {
   // When the sensor provides no pointerCoordinates, closestCenterLive falls back
   // to the collision-rect center: refX = collisionRect.left + collisionRect.width/2,
   // refY = collisionRect.top + collisionRect.height/2. Exercised only via the pending
-  // path with pointerCoordinates omitted. Pins lines 31-32 (the `??` fallback arms and
-  // their arithmetic).
+  // path with pointerCoordinates omitted. Pins the `??` fallback arms and
+  // their arithmetic.
   function buildPendingArgsNoPointer(containers: DroppableContainer[], collisionRect: ClientRect) {
     return {
       active: {
@@ -1461,7 +1460,7 @@ describe('closestCenterLive pointer fallback (no pointerCoordinates)', () => {
     // collisionRect (100,100,50,50) → fallback center (125, 125).
     // close target center (125,125): dx=0, dy=0 → value 0.
     // far   target center (425,425): dx=-300, dy=-300 → value 180000.
-    // A null pointer must resolve via the collision-rect center, ranking `close` first.
+    // A null pointer must resolve via the collision-rect center, selecting `close`.
     const close = createDroppableWithRect('row-2', { left: 100, top: 100, width: 50, height: 50 })
     const far = createDroppableWithRect('row-3', { left: 400, top: 400, width: 50, height: 50 })
     const pendingItems = new Set<string | number>(['row-2', 'row-3'])
@@ -1473,23 +1472,22 @@ describe('closestCenterLive pointer fallback (no pointerCoordinates)', () => {
     const args = buildPendingArgsNoPointer([far, close], makeDomRect(100, 100, 50, 50))
     const collisions = detect(args as never)
 
-    expect(collisions.map((c) => c.id)).toEqual(['row-2', 'row-3'])
-    // refX fallback = 100 + 50/2 = 125, refY = 100 + 50/2 = 125 → exact zero distance.
+    expect(collisions.map((c) => c.id)).toEqual(['row-2'])
+    // refX fallback = 100 + 50/2 = 125, refY = 100 + 50/2 = 125 → exact zero
+    // distance. Pins the fallback arithmetic precisely: a `+`→`-` (75) or
+    // `/`→`*` (200) mutant on either fallback arm shifts the reference center,
+    // making the winner's value nonzero and breaking this exact expectation.
     expect(collisions[0].data?.value).toBe(0)
-    // far: dx = 125 - 425 = -300, dy = -300 → 180000. Pins the fallback arithmetic precisely:
-    // a `+`→`-` (75) or `/`→`*` (200) mutant on line 31/32 shifts the fallback center and
-    // breaks this exact value.
-    expect(collisions[1].data?.value).toBe(180000)
   })
 })
 
-describe('closestCenterLive containment edges (line 45 boundary comparisons)', () => {
+describe('closestCenterLive containment edges (contains boundary comparisons)', () => {
   // The `contains` discriminant uses `>=` / `<=` on all four edges. A mutant tightening any
   // edge to `>` / `<` only differs when the pointer sits EXACTLY on that edge. Each test puts
   // the pointer on one edge of a large "containing" candidate so that, with `>=`/`<=`, it is
-  // contained and ranks first; with the strict mutant it loses containment and a closer-by-
-  // distance non-containing candidate wins. Asserting the containing candidate is first kills
-  // the per-edge mutant. Runs through the pending path (which delegates to closestCenterLive).
+  // contained and wins; with the strict mutant it loses containment and a closer-by-
+  // distance non-containing candidate wins instead. Asserting the containing candidate is the
+  // winner kills the per-edge mutant. Runs through the pending path (delegates to closestCenterLive).
   const containingRect = { left: 400, top: 400, width: 1000, height: 1000 } // edges 400/1400
 
   function runEdge(pointerX: number, pointerY: number) {
@@ -1527,36 +1525,36 @@ describe('closestCenterLive containment edges (line 45 boundary comparisons)', (
 
   it('contains when pointer is exactly on the LEFT edge (refX >= rect.left)', () => {
     // Pointer (400, 700): refX === rect.left (400). With `>=` contained → row-2 first.
-    expect(runEdge(400, 700).map((c) => c.id)).toEqual(['row-2', 'row-3'])
+    expect(runEdge(400, 700).map((c) => c.id)).toEqual(['row-2'])
   })
 
   it('contains when pointer is exactly on the RIGHT edge (refX <= rect.right)', () => {
     // Pointer (1400, 700): refX === rect.right (1400). With `<=` contained → row-2 first.
-    expect(runEdge(1400, 700).map((c) => c.id)).toEqual(['row-2', 'row-3'])
+    expect(runEdge(1400, 700).map((c) => c.id)).toEqual(['row-2'])
   })
 
   it('contains when pointer is exactly on the TOP edge (refY >= rect.top)', () => {
     // Pointer (700, 400): refY === rect.top (400). With `>=` contained → row-2 first.
-    expect(runEdge(700, 400).map((c) => c.id)).toEqual(['row-2', 'row-3'])
+    expect(runEdge(700, 400).map((c) => c.id)).toEqual(['row-2'])
   })
 
   it('contains when pointer is exactly on the BOTTOM edge (refY <= rect.bottom)', () => {
     // Pointer (700, 1400): refY === rect.bottom (1400). With `<=` contained → row-2 first.
-    expect(runEdge(700, 1400).map((c) => c.id)).toEqual(['row-2', 'row-3'])
+    expect(runEdge(700, 1400).map((c) => c.id)).toEqual(['row-2'])
   })
 
   it('does NOT contain when pointer is just outside the LEFT edge', () => {
     // Pointer (399, 700): refX < rect.left → not contained → closer-by-distance row-3 wins.
-    expect(runEdge(399, 700).map((c) => c.id)).toEqual(['row-3', 'row-2'])
+    expect(runEdge(399, 700).map((c) => c.id)).toEqual(['row-3'])
   })
 })
 
 describe('pointer-inside-source-sibling guard (no-pending path)', () => {
-  // Reaches lines 430-461. With a non-empty sourceContainerItemsRef and a pointer that
+  // Reaches the pointer-inside-source-sibling guard. With a non-empty sourceContainerItemsRef and a pointer that
   // sits inside a source sibling but has NOT crossed the centerCrossing threshold, the
   // guard short-circuits to `[]` (ghost-jump prevention) instead of falling through to
   // the parent-container fallback. When a prior cycle DID register a sibling hit
-  // (hadSiblingHit), it instead recovers via closestCenterLive (lines 443-458).
+  // (hadSiblingHit), it instead recovers via closestCenterLive.
   const siblingRect = makeDomRect(50, 275, 200, 100) // top=275, bottom=375, center=325
   const parentRect = makeDomRect(0, 0, 800, 600)
 
@@ -1605,7 +1603,7 @@ describe('pointer-inside-source-sibling guard (no-pending path)', () => {
     expect(collisions).toEqual([])
   })
 
-  it('does not run the pointer-inside guard when the source container is empty (line 430 size > 0)', () => {
+  it('does not run the pointer-inside guard when the source container is empty (sourceItems.size > 0 gate)', () => {
     // Empty source set → source depletion: sameContainerSiblings becomes ALL siblings and the
     // pointer-inside guard must be SKIPPED (`sourceItems.size > 0` is false). The drag here does
     // NOT cross row-2's threshold but the pointer sits inside row-2; with the guard correctly
@@ -1649,7 +1647,7 @@ describe('pointer-inside-source-sibling guard (no-pending path)', () => {
     // Pointer X=400 is outside the sibling rect (right=250) and Y=290 does not cross the
     // threshold → centerCrossing returns empty AND the guard's `.some` is false (pointer not
     // inside any source sibling) → falls through to the parent-container fallback. Discriminates
-    // the guard's pointer-containment comparisons (lines 436-439) and the `.some` short-circuit.
+    // the guard's pointer-containment comparisons and the `.some` short-circuit.
     const sibling = createDroppableWithRect('row-2', {
       left: 50,
       top: 275,
@@ -1686,10 +1684,10 @@ describe('pointer-inside-source-sibling guard (no-pending path)', () => {
 })
 
 describe('centerCrossing same-X/Y direction boundary (initialC === targetC)', () => {
-  // Lines 208/213 use strict `<` to pick the direction branch. The `<` → `<=` mutant only
+  // The thresholdY/thresholdX ternaries use strict `<` to pick the direction branch. The `<` → `<=` mutant only
   // differs when initialC === targetC. Construct that exact equality and assert the
   // strict-`<` (else/away) branch is taken, which a `<=` mutant would flip to the toward branch.
-  it('does NOT cross in Y when initialCY equals targetCY and currentCY reaches the toward-threshold (line 208 strict <)', () => {
+  it('does NOT cross in Y when initialCY equals targetCY and currentCY reaches the toward-threshold (strict < on the Y direction branch)', () => {
     // target (50, 275, 200, 100) → targetCY = 325, top = 275, bottom = 375.
     // initialRect center = 325 (top 300, height 50) → initialCY === targetCY.
     // Default `<` (325 < 325 false → AWAY branch): thresholdY = Math.min(375 - 25, 325) = 325.
@@ -1719,7 +1717,7 @@ describe('centerCrossing same-X/Y direction boundary (initialC === targetC)', ()
     expect(centerCrossing(args as never)).toEqual([])
   })
 
-  it('does NOT cross in X when initialCX equals targetCX and currentCX reaches the toward-threshold (line 213 strict <)', () => {
+  it('does NOT cross in X when initialCX equals targetCX and currentCX reaches the toward-threshold (strict < on the X direction branch)', () => {
     // Use a NARROW collision rect (width 20) so the toward and away X thresholds diverge.
     // target (250, 275, 100, 100) → targetCX = 300, left = 250, right = 350.
     // Default `<` (300 < 300 false → AWAY branch): thresholdX = Math.min(350 - 10, 300) = 300 ===
@@ -1749,8 +1747,8 @@ describe('centerCrossing same-X/Y direction boundary (initialC === targetC)', ()
   })
 })
 
-describe('centerCrossing LEFT-drag thresholdX uses the formula branch (line 215 minus)', () => {
-  // Line 215: thresholdX = Math.min(rect.left + rect.width - collisionRect.width/2, targetCX).
+describe('centerCrossing LEFT-drag thresholdX uses the formula branch (edge-formula minus)', () => {
+  // Away branch: thresholdX = Math.min(rect.left + rect.width - collisionRect.width/2, targetCX).
   // The existing wide-target test only exercises the clamped (targetCX) outcome, leaving the
   // `rect.left + rect.width - collisionRect.width/2` formula and its `-` operator unpinned.
   // Here the formula value is the SMALLER of the two, so Math.min returns it; a `-`→`+` mutant
@@ -1796,8 +1794,8 @@ describe('centerCrossing LEFT-drag thresholdX uses the formula branch (line 215 
   })
 })
 
-describe('centerCrossing UP-direction currentCY uses Math.min (line 222 else branch)', () => {
-  // Line 222: currentCY = initialCY < targetCY ? Math.max(crCY, ptrY) : Math.min(crCY, ptrY).
+describe('centerCrossing UP-direction currentCY uses Math.min (away/else branch)', () => {
+  // currentCY = initialCY < targetCY ? Math.max(crCY, ptrY) : Math.min(crCY, ptrY).
   // The else (UP / away) branch Math.min(crCY, ptrY) picks the furthest-advanced (smallest)
   // value when dragging up. A MethodExpression mutant swapping Math.min→Math.max would use the
   // larger (less-advanced) value and miss a crossing the real code detects.
@@ -1848,9 +1846,9 @@ describe('centerCrossing UP-direction currentCY uses Math.min (line 222 else bra
   })
 })
 
-describe('createTypedCollisionDetection reset guard (lines 303-315)', () => {
-  // Line 312: `if (currentSourceItems !== lastSourceItems)` resets hadSiblingHit per drag.
-  // Lines 303/313: hadSiblingHit / the reset assignment booleans. A test must show that the
+describe('createTypedCollisionDetection reset guard (hadSiblingHit reset)', () => {
+  // `if (currentSourceItems !== lastSourceItems)` resets hadSiblingHit per drag.
+  // hadSiblingHit / the reset assignment are booleans. A test must show that the
   // hadSiblingHit recovery path is gated by the reset: when sourceContainerItemsRef changes
   // (new drag), a stale hadSiblingHit must NOT carry over.
   const siblingRect = makeDomRect(50, 275, 200, 100)
@@ -1911,8 +1909,8 @@ describe('createTypedCollisionDetection reset guard (lines 303-315)', () => {
   })
 })
 
-describe('pending path falls through to parent when no sibling collision (line 373)', () => {
-  // Line 373: `if (siblingCollisions.length > 0) return siblingCollisions`. A `> 0` → `>= 0`
+describe('pending path falls through to parent when no sibling collision (length > 0 gate)', () => {
+  // The pending path gate: `if (siblingCollisions.length > 0) return …`. A `> 0` → `>= 0`
   // mutant returns the (empty) sibling array immediately, suppressing the Pass-2 parent
   // fallback. Construct a pending move with NO sibling collision but a containing parent: the
   // default returns the parent; the mutant returns []. Asserting the parent is found kills it.
@@ -1958,8 +1956,8 @@ describe('pending path falls through to parent when no sibling collision (line 3
   })
 })
 
-describe('source-container sibling filter (line 402)', () => {
-  // Line 402: when sourceItems is non-empty, siblings are filtered to ONLY source-container
+describe('source-container sibling filter (sameContainerSiblings)', () => {
+  // When sourceItems is non-empty, siblings are filtered to ONLY source-container
   // members. A mutant replacing the filter with all siblings (`siblings`) or `() => undefined`
   // would let a sibling that is NOT in the source container drive a same-container collision.
   // Here a non-source sibling sits exactly where a crossing would register; because it must be
@@ -2012,15 +2010,15 @@ describe('source-container sibling filter (line 402)', () => {
   })
 })
 
-describe('parent fallback ignores parents with no measured rect (line 477)', () => {
-  // Line 477: inside `parents.find`, `if (rect === undefined) return false`. A mutant returning
+describe('parent fallback ignores parents with no measured rect (containment rect guard)', () => {
+  // Inside `parents.find`, `if (rect === undefined) return false`. A mutant returning
   // `true` would treat an unmeasured parent as containing the pointer. With one parent that has
   // NO droppableRects entry and a pointer in open space, the default skips it (containment find
   // fails) and falls to the distance fallback; the mutant would claim containment (value 0).
   it('does not treat an unmeasured parent as containing the pointer', () => {
     // Two parents: an UNMEASURED one (section-2, no droppableRects entry) listed FIRST, and a
     // MEASURED one (section-1) the pointer is outside of. Default: `find` returns false for the
-    // unmeasured parent (line 477) and false for section-1 (pointer outside) → no containing
+    // unmeasured parent (rect guard) and false for section-1 (pointer outside) → no containing
     // parent → distance fallback picks the measured section-1 with a nonzero value. Mutant
     // `return true`: the unmeasured section-2 (first) is claimed as containing → winner becomes
     // section-2 with the synthetic value 0. Asserting the winner is section-1 kills the mutant.
@@ -2045,7 +2043,7 @@ describe('parent fallback ignores parents with no measured rect (line 477)', () 
       },
       collisionRect,
       droppableContainers: [unmeasured, measured],
-      // section-2 deliberately absent → its containment check hits line 477.
+      // section-2 deliberately absent → its containment check hits the rect guard.
       droppableRects: new Map<string | number, ClientRect>([
         ['section-1', makeDomRect(0, 0, 800, 600)],
       ]),
@@ -2059,14 +2057,14 @@ describe('parent fallback ignores parents with no measured rect (line 477)', () 
   })
 })
 
-describe('closestCenterLive containment forced-true conjuncts (line 45)', () => {
-  // Line 45 `contains` is a four-conjunct `&&` chain. `ConditionalExpression => true`
+describe('closestCenterLive containment forced-true conjuncts', () => {
+  // `contains` is a four-conjunct `&&` chain. `ConditionalExpression => true`
   // mutants force one conjunct to `true`, so a pointer that is OUTSIDE on that single
   // axis is wrongly treated as contained. Each test puts the pointer 1px outside one of
   // the RIGHT / TOP / BOTTOM edges (the LEFT-edge "just outside" case is already covered
-  // at line 1607). Default: not contained → the closer-by-distance non-containing
-  // candidate (row-3) ranks first. Mutant forcing that conjunct true: the far-but-
-  // "contained" row-2 ranks first. Asserting [row-3, row-2] kills the forced-true mutant.
+  // in the containment-edges suite above). Default: not contained → the closer-by-distance non-containing
+  // candidate (row-3) wins. Mutant forcing that conjunct true: the far-but-
+  // "contained" row-2 wins. Asserting row-3 is the winner kills the forced-true mutant.
   const containingRect = { left: 400, top: 400, width: 1000, height: 1000 } // edges 400 / 1400
 
   function runEdge(pointerX: number, pointerY: number) {
@@ -2102,28 +2100,28 @@ describe('closestCenterLive containment forced-true conjuncts (line 45)', () => 
   it('does NOT contain a pointer 1px outside the RIGHT edge (refX <= rect.right conjunct)', () => {
     // Pointer (1401, 700): refX > rect.right → conjunct false → not contained.
     // Forcing the conjunct true would (wrongly) rank the containing row-2 first.
-    expect(runEdge(1401, 700).map((c) => c.id)).toEqual(['row-3', 'row-2'])
+    expect(runEdge(1401, 700).map((c) => c.id)).toEqual(['row-3'])
   })
 
   it('does NOT contain a pointer 1px outside the TOP edge (refY >= rect.top conjunct)', () => {
     // Pointer (700, 399): refY < rect.top → conjunct false → not contained.
-    expect(runEdge(700, 399).map((c) => c.id)).toEqual(['row-3', 'row-2'])
+    expect(runEdge(700, 399).map((c) => c.id)).toEqual(['row-3'])
   })
 
   it('does NOT contain a pointer 1px outside the BOTTOM edge (refY <= rect.bottom conjunct)', () => {
     // Pointer (700, 1401): refY > rect.bottom → conjunct false → not contained.
-    expect(runEdge(700, 1401).map((c) => c.id)).toEqual(['row-3', 'row-2'])
+    expect(runEdge(700, 1401).map((c) => c.id)).toEqual(['row-3'])
   })
 })
 
-describe('centerCrossing currentC direction selection (lines 221-222)', () => {
-  // Lines 221/222 select Math.max (toward) vs Math.min (away) for the effective current
+describe('centerCrossing currentC direction selection (Math.max/Math.min)', () => {
+  // The currentCX/currentCY ternaries select Math.max (toward) vs Math.min (away) for the effective current
   // center via `initialC < targetC`. The `EqualityOperator => <=` mutants only differ when
   // `initialC === targetC`. Build that equality with an UNCLAMPED (formula-wins) threshold
   // so the axis can still register a crossing, and straddle the threshold with crC/ptr so
   // Math.min crosses while Math.max does not.
 
-  it('uses Math.min(crCX, ptrX) on the X away-tie so the threshold is reached (line 221)', () => {
+  it('uses Math.min(crCX, ptrX) on the X away-tie so the threshold is reached', () => {
     // target (400, 275, 100, 100): targetCX = 450, right = 500. collisionRect width 300 (wider
     // than target) → away thresholdX = Math.min(500 - 150, 450) = 350 (formula, < targetCX).
     // initialCX = 450 === targetCX → away branch (default `<` false). initialCX(450) > 350 →
@@ -2152,7 +2150,7 @@ describe('centerCrossing currentC direction selection (lines 221-222)', () => {
     expect(centerCrossing(args as never)).toHaveLength(1)
   })
 
-  it('uses Math.min(crCY, ptrY) on the Y away-tie so the threshold is reached (line 222)', () => {
+  it('uses Math.min(crCY, ptrY) on the Y away-tie so the threshold is reached', () => {
     // target (50, 400, 100, 100): targetCY = 450, bottom = 500. collisionRect height 300 (taller
     // than target) → away thresholdY = Math.min(500 - 150, 450) = 350 (formula, < targetCY).
     // initialCY = 450 === targetCY → away branch. initialCY(450) > 350 → crossing needs
@@ -2181,7 +2179,7 @@ describe('centerCrossing currentC direction selection (lines 221-222)', () => {
   })
 })
 
-describe('pointer-inside-source-sibling guard predicate (lines 431-439)', () => {
+describe('pointer-inside-source-sibling guard predicate (.some containment)', () => {
   // The no-pending guard tests the `.some(sibling => pointerInside(sibling))` predicate over
   // the SOURCE-container siblings. Reaching it requires: hasPendingMove=false, a non-empty
   // sourceContainerItemsRef, centerCrossing returning [] this cycle, and hadSiblingHit=false
@@ -2229,45 +2227,45 @@ describe('pointer-inside-source-sibling guard predicate (lines 431-439)', () => 
   // On-edge pointers pin the `>=` / `<=` EqualityOperator mutants: exactly on an edge is
   // contained (→ guard → []) for the real `>=`/`<=`, but NOT contained (→ parent) for the
   // strict `>` / `<` mutant.
-  it('treats a pointer exactly on the LEFT edge as inside (line 436 refX >= rect.left)', () => {
+  it('treats a pointer exactly on the LEFT edge as inside (refX >= rect.left)', () => {
     expect(runGuard(200, 250)).toEqual([])
   })
 
-  it('treats a pointer exactly on the RIGHT edge as inside (line 437 refX <= rect.left + width)', () => {
+  it('treats a pointer exactly on the RIGHT edge as inside (refX <= rect.left + width)', () => {
     expect(runGuard(300, 250)).toEqual([])
   })
 
-  it('treats a pointer exactly on the TOP edge as inside (line 438 refY >= rect.top)', () => {
+  it('treats a pointer exactly on the TOP edge as inside (refY >= rect.top)', () => {
     expect(runGuard(250, 200)).toEqual([])
   })
 
-  it('treats a pointer exactly on the BOTTOM edge as inside (line 439 refY <= rect.top + height)', () => {
+  it('treats a pointer exactly on the BOTTOM edge as inside (refY <= rect.top + height)', () => {
     expect(runGuard(250, 300)).toEqual([])
   })
 
   // Outside-on-one-axis pointers pin the `ConditionalExpression => true` mutants: forcing the
   // named conjunct true would (wrongly) include this clearly-outside pointer → guard → [].
   // The real code leaves it outside → falls through to the parent.
-  it('does NOT treat a pointer left of the LEFT edge as inside (line 436 forced-true)', () => {
+  it('does NOT treat a pointer left of the LEFT edge as inside (left conjunct forced-true)', () => {
     const result = runGuard(150, 250) // refX < left → conjunct false in real code
     expect(result).toHaveLength(1)
     expect(result[0].id).toBe('section-1')
   })
 
-  it('does NOT treat a pointer above the TOP edge as inside (line 438 forced-true)', () => {
+  it('does NOT treat a pointer above the TOP edge as inside (top conjunct forced-true)', () => {
     const result = runGuard(250, 150) // refY < top → conjunct false in real code
     expect(result).toHaveLength(1)
     expect(result[0].id).toBe('section-1')
   })
 
-  it('does NOT treat a pointer below the BOTTOM edge as inside (line 439 forced-true)', () => {
+  it('does NOT treat a pointer below the BOTTOM edge as inside (bottom conjunct forced-true)', () => {
     const result = runGuard(250, 350) // refY > bottom → conjunct false in real code
     expect(result).toHaveLength(1)
     expect(result[0].id).toBe('section-1')
   })
 })
 
-describe('pointer-inside guard uses .some, not .every (line 431)', () => {
+describe('pointer-inside guard uses .some, not .every', () => {
   // With multiple SOURCE siblings, `.some` (pointer inside ANY) and `.every` (inside ALL)
   // diverge. A `.some => .every` MethodExpression mutant only differs when the pointer is
   // inside one source sibling but not another. Here row-2 contains the pointer and row-3 does
@@ -2319,12 +2317,12 @@ describe('pointer-inside guard uses .some, not .every (line 431)', () => {
   })
 })
 
-describe('pointer-inside guard skips unmeasured source siblings (line 433)', () => {
-  // Line 433 `if (rect === undefined) return false` makes an unmeasured source sibling count as
+describe('pointer-inside guard skips unmeasured source siblings (rect guard)', () => {
+  // The guard's `if (rect === undefined) return false` makes an unmeasured source sibling count as
   // NOT containing the pointer. A `return false => return true` mutant would treat it as
   // containing → `.some` true → guard short-circuits to []. Here row-2 is measured (pointer
   // outside it) and row-3 is a source sibling with NO droppableRects entry. Default: row-2
-  // false (outside) + row-3 false (line 433) → `.some` false → parent fallback returns
+  // false (outside) + row-3 false (rect guard) → `.some` false → parent fallback returns
   // section-1. Mutant: row-3 → true → `.some` true → guard returns []. Asserting the parent
   // is returned kills the mutant.
   it('returns the parent (not []) when the only matching source sibling is unmeasured', () => {
@@ -2349,7 +2347,7 @@ describe('pointer-inside guard skips unmeasured source siblings (line 433)', () 
     // Pointer (250, 205): outside row-2 vertically below its top? It is inside row-2's rect
     // (200-300 / 200-300) — so to make row-2 NOT contain, move the pointer outside it. Use
     // (400, 205): outside both row-2 (x 400 > 300) and would be inside row-3's rect, but row-3
-    // is UNMEASURED so line 433 is the only thing that can include it.
+    // is UNMEASURED so the rect guard is the only thing that can include it.
     const initialRect = makeDomRect(350, 75, 100, 50) // center (400, 100)
     const collisionRect = makeDomRect(350, 180, 100, 50) // center (400, 205)
     const args = {
@@ -2361,7 +2359,7 @@ describe('pointer-inside guard skips unmeasured source siblings (line 433)', () 
       collisionRect,
       droppableContainers: [measured, unmeasured, parent],
       droppableRects: new Map<string | number, ClientRect>([
-        // row-3 deliberately absent → callback hits line 433 for it.
+        // row-3 deliberately absent → callback hits the rect guard for it.
         ['row-2', makeDomRect(200, 200, 100, 100)],
         ['section-1', makeDomRect(0, 0, 800, 600)],
       ]),
