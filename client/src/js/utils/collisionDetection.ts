@@ -331,6 +331,14 @@ export function createTypedCollisionDetection(
 
     const siblings = filterSiblings(activeId, nonActiveContainers)
 
+    // Source-container siblings. Hoisted out of the no-pending branch below
+    // because pass 2's lost-lock recovery needs the same set.
+    const sourceItems = options.sourceContainerItemsRef?.current ?? null
+    const sameContainerSiblings =
+      sourceItems !== null && sourceItems.size > 0
+        ? siblings.filter((s) => sourceItems.has(s.id))
+        : siblings
+
     if (options.hasPendingMoveRef.current) {
       // After a pending cross-container move, SortableContext CSS transforms
       // shift items visually, but droppableRects reflect pre-transform DOM
@@ -375,12 +383,6 @@ export function createTypedCollisionDetection(
       // siblings directly. Without this, the parent container fallback
       // would always fire, placing the item at the container's end instead
       // of at the pointer's position relative to target siblings.
-      const sourceItems = options.sourceContainerItemsRef?.current
-      const sameContainerSiblings =
-        sourceItems && sourceItems.size > 0
-          ? siblings.filter((s) => sourceItems.has(s.id))
-          : siblings
-
       const siblingCollisions = centerCrossing({
         ...args,
         droppableContainers: sameContainerSiblings,
@@ -469,6 +471,37 @@ export function createTypedCollisionDetection(
           },
         ])
       }
+    }
+
+    // Lost-lock recovery: centerCrossing locked onto a sibling earlier in this
+    // drag, but the pointer now sits inside no parent rect at all. Auto-scroll
+    // is the cause — it shifts droppableRects out from under a stationary
+    // pointer (observed: ~190px, well past centerCrossing's 150px MARGIN_Y),
+    // so the sibling stops matching even though SortableContext is still
+    // previewing the item in that sibling's slot.
+    //
+    // Guessing a parent by center distance from here returns the element's OWN
+    // container, and resolveDropPlacement's container branch appends at its
+    // end — a silent no-op that contradicts the preview on screen. A sibling
+    // lock we already hold beats a distance guess, so re-resolve it against
+    // live DOM rects (which include the preview transform) instead.
+    //
+    // Containment above still wins, so hovering inside another container
+    // enters it exactly as before; only the at-distance guess is preempted.
+    // Skipped while a pending cross-container move is active (the item has
+    // visually left its source, so source siblings are the wrong candidates)
+    // and on source depletion (no source siblings to recover).
+    if (
+      !options.hasPendingMoveRef.current &&
+      hadSiblingHit &&
+      sourceItems !== null &&
+      sourceItems.size > 0
+    ) {
+      const recovered = closestCenterLive({
+        ...args,
+        droppableContainers: sameContainerSiblings,
+      })
+      if (recovered.length > 0) return captureWinnerNode(recovered)
     }
 
     // Distance fallback: entering empty containers at distance when pointer
