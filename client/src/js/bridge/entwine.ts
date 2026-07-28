@@ -22,6 +22,11 @@ const MOUNTED_ATTR = 'data-grid-editor-mounted'
 // single source of truth for lifecycle.
 const mountedRoots = new WeakMap<HTMLElement, Root>()
 
+// Companion to mountedRoots: WeakMaps aren't iterable, and the Pjax observer
+// needs "is this mutation inside an already-mounted editor?" against every
+// mounted host. Kept in sync by mountGridEditor/unmountGridEditor.
+const mountedHosts = new Set<HTMLElement>()
+
 function parseBridgeData(data: unknown): BridgeSchema {
   const record = (typeof data === 'object' && data !== null ? data : {}) as Record<string, unknown>
   const rawPageId = record['grid-page-id']
@@ -71,6 +76,7 @@ export function mountGridEditor(element: HTMLElement, schemaData: unknown): void
 
     const root = createRoot(element)
     mountedRoots.set(element, root)
+    mountedHosts.add(element)
     element.setAttribute(MOUNTED_ATTR, 'true')
 
     // StrictMode documents the intent to run under React's strict checks, but
@@ -110,6 +116,7 @@ export function unmountGridEditor(element: HTMLElement): void {
   }
 
   mountedRoots.delete(element)
+  mountedHosts.delete(element)
   element.removeAttribute(MOUNTED_ATTR)
 
   // React's synchronous unmount walks the rendered subtree and calls
@@ -187,8 +194,21 @@ function observeForPjax(): void {
     }
   }
 
+  const isInsideMountedHost = (node: Node): boolean => {
+    for (const host of mountedHosts) {
+      if (host.contains(node)) return true
+    }
+    return false
+  }
+
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
+      // React-driven churn inside a mounted editor (drag previews, optimistic
+      // updates — every commit, ~per pointer move during drags) can never add
+      // or remove a mount host, so skip those records instead of subtree-
+      // scanning every touched block. Removal of a host itself is still seen:
+      // that record's target is the host's PARENT, which is outside the host.
+      if (isInsideMountedHost(mutation.target)) continue
       mutation.addedNodes.forEach(handleAdded)
       mutation.removedNodes.forEach(handleRemoved)
     }
