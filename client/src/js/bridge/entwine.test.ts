@@ -66,6 +66,25 @@ describe('entwine bridge MutationObserver fallback', () => {
     expect(host.querySelector('[data-grid-editor-stub="true"]')).not.toBeNull()
   })
 
+  it('ignores mutations inside an already-mounted editor host', async () => {
+    await import('./entwine')
+
+    const bootRoot = document.querySelector('.js-injector-boot')
+    const host = createHost()
+    bootRoot?.appendChild(host)
+    await flushMicrotasks()
+    expect(host.getAttribute('data-grid-editor-mounted')).toBe('true')
+
+    // Content churn inside a mounted editor is React-managed and can never
+    // contain a real mount host — a marker element appearing there must NOT
+    // be picked up by the Pjax observer.
+    const nested = createHost()
+    host.appendChild(nested)
+    await flushMicrotasks()
+
+    expect(nested.getAttribute('data-grid-editor-mounted')).toBeNull()
+  })
+
   it('unmounts when the host element is removed from the DOM', async () => {
     await import('./entwine')
 
