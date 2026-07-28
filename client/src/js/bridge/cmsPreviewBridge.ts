@@ -2,7 +2,7 @@ import { createElement, StrictMode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import CmsPreviewViewportSelector from '@/components/CmsPreviewViewportSelector/CmsPreviewViewportSelector'
 import { getActiveViewport, subscribeActiveViewport } from '@/state/activeViewport'
-import { openVendorPreview, type VendorPreview } from './vendorPreview'
+import { openVendorPreview, VENDOR_PRESENCE_SELECTOR, type VendorPreview } from './vendorPreview'
 import { installViewportStyles, removeViewportStyles } from './viewportPreviewStyles'
 
 /**
@@ -21,19 +21,43 @@ import { installViewportStyles, removeViewportStyles } from './viewportPreviewSt
 const GRID_EDITOR_SELECTOR = '[data-react-mount="grid-editor"]'
 const MOUNT_CLASS = 'cms-preview-viewport-mount preview-selector'
 
+/**
+ * The observer below fires on EVERY DOM mutation batch in the admin, so both
+ * steady states must stay off the document-scan path: while mounted, the
+ * tracked editor's `isConnected` answers "still on a grid page?" without a
+ * scan; while unmounted, a scan is warranted only when a batch ADDS a node
+ * that could satisfy the mount conditions (grid editor or vendor bar — they
+ * can arrive in separate batches, so both selectors must re-trigger).
+ */
+const RESCAN_SELECTOR = `${GRID_EDITOR_SELECTOR}, ${VENDOR_PRESENCE_SELECTOR}`
+
 let observer: MutationObserver | null = null
 let mountedRoot: Root | null = null
 let mountedHost: HTMLElement | null = null
+let trackedEditor: Element | null = null
 let vendor: VendorPreview | null = null
 let unsubscribe: (() => void) | null = null
 
-function editorPresent(): boolean {
-  return document.querySelector(GRID_EDITOR_SELECTOR) !== null
+function findEditor(): Element | null {
+  return document.querySelector(GRID_EDITOR_SELECTOR)
+}
+
+function mutationsAddRescanTargets(mutations: MutationRecord[]): boolean {
+  for (const mutation of mutations) {
+    for (const node of mutation.addedNodes) {
+      if (!(node instanceof HTMLElement)) continue
+      if (node.matches(RESCAN_SELECTOR) || node.querySelector(RESCAN_SELECTOR) !== null) {
+        return true
+      }
+    }
+  }
+  return false
 }
 
 function attemptMount(): void {
   if (mountedRoot !== null) return
-  if (!editorPresent()) return
+  const editor = findEditor()
+  if (editor === null) return
 
   const handle = openVendorPreview()
   if (handle === null) return
@@ -55,6 +79,8 @@ function attemptMount(): void {
     teardownMount({ restoreVendor: false })
     return
   }
+
+  trackedEditor = editor
 
   installViewportStyles()
   const applyActiveViewport = (): void => {
@@ -95,6 +121,7 @@ function teardownMount({ restoreVendor }: { restoreVendor: boolean }): void {
   }
 
   mountedHost = null
+  trackedEditor = null
 
   if (vendor !== null) {
     if (restoreVendor) {
@@ -119,12 +146,22 @@ function attemptUnmount(): void {
     return
   }
 
+  // Steady state: the editor we mounted against is still in the DOM —
+  // answered by isConnected, no document scan.
+  if (trackedEditor?.isConnected) return
+
+  // The tracked editor left but the vendor bar survived; a replacement
+  // editor may exist (grid page → grid page swap). Only now scan.
+  const editor = findEditor()
+  if (editor !== null) {
+    trackedEditor = editor
+    return
+  }
+
   // User navigated away from a grid page while the bundle is still
   // alive. Restore the vendor bar so unrelated admin pages don't see
   // the lingering carrier class or our stylesheet.
-  if (!editorPresent()) {
-    teardownMount({ restoreVendor: true })
-  }
+  teardownMount({ restoreVendor: true })
 }
 
 export function registerCmsPreviewBridge(): void {
@@ -133,8 +170,12 @@ export function registerCmsPreviewBridge(): void {
 
   // Order matters: unmount-if-stale BEFORE mount. Running mount first
   // would short-circuit on a stale `mountedRoot` and miss the fresh DOM.
-  observer = new MutationObserver(() => {
+  observer = new MutationObserver((mutations) => {
     attemptUnmount()
+    // Unmounted (incl. just torn down): only rescan when this batch added
+    // DOM that can satisfy the mount conditions. A Pjax swap removes and
+    // adds in one batch, so a teardown above still remounts here.
+    if (mountedRoot === null && !mutationsAddRescanTargets(mutations)) return
     attemptMount()
   })
 
