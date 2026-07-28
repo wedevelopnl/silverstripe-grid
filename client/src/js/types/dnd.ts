@@ -39,13 +39,27 @@ export function buildDraggableId(type: DraggableType, id: number): NodeKey {
   return NodeIdentity.toKey(type, id)
 }
 
+/**
+ * Composite IDs are immutable for an element's lifetime, but drag handlers and
+ * collision filters parse them on every pointer-move cycle (60Hz+). Cache the
+ * parse per unique ID — all fields are readonly, so sharing one instance is
+ * safe, and the cache is bounded by the distinct IDs seen in the session.
+ */
+const parseCache = new Map<string, ParsedDraggableId | null>()
+
 export function parseDraggableId(compositeId: string): ParsedDraggableId | null {
+  const cached = parseCache.get(compositeId)
+  if (cached !== undefined) return cached
+
   const ref = NodeIdentity.fromKey(compositeId)
-  if (ref === null) return null
-  if (!isDraggableType(ref.type)) return null
-  // Safe: NodeIdentity.fromKey validated the template-literal shape, so
-  // compositeId is structurally a NodeKey.
-  return { type: ref.type, id: ref.id, key: compositeId as NodeKey }
+  const parsed =
+    ref === null || !isDraggableType(ref.type)
+      ? null
+      : // Safe: NodeIdentity.fromKey validated the template-literal shape, so
+        // compositeId is structurally a NodeKey.
+        { type: ref.type, id: ref.id, key: compositeId as NodeKey }
+  parseCache.set(compositeId, parsed)
+  return parsed
 }
 
 export function getDraggableType(compositeId: string): DraggableType | null {
