@@ -1,6 +1,7 @@
 import type { ViewportKey } from '@/types/adapter'
 import { buildDraggableId, type DraggableType, type ParsedDraggableId } from '@/types/dnd'
 import type {
+  AllowedTypeInfo,
   BlockSchema,
   ColumnNode,
   ElementNode,
@@ -254,14 +255,30 @@ export function createTree(sections?: SectionNode[], pageId = 1): SectionNode[] 
   return sections ?? [createSectionNode({ parent: { type: 'page', id: pageId } })]
 }
 
+/** Wire-shape root map: allowed child types per container type. */
+export interface AllowedTypesByContainerType {
+  readonly section: Record<string, AllowedTypeInfo>
+  readonly row: Record<string, AllowedTypeInfo>
+  readonly column: Record<string, AllowedTypeInfo>
+}
+
 export function createTreeApiResponse(
-  overrides?: Partial<TreeApiResponse> & { pageId?: number; sections?: SectionNode[] },
-): TreeApiResponse {
+  overrides?: Partial<TreeApiResponse> & {
+    pageId?: number
+    sections?: SectionNode[]
+    allowedTypes?: AllowedTypesByContainerType
+  },
+  // The wire shape carries `allowedTypes` at the root (required by the wire
+  // schema); the internal TreeApiResponse does not. The intersection return
+  // type lets one factory serve both consumers: internal-model tests ignore
+  // the extra key, fetch-mock tests parse it through normaliseTreeResponse.
+): TreeApiResponse & { allowedTypes: AllowedTypesByContainerType } {
   // biome-ignore lint/suspicious/noUnnecessaryConditions: biome 2.5.5 wrongly infers the optional-chain LHS as non-nullish. createTreeApiResponse() is called with no args (useElementMaps.test.ts:144), so the ?? 1 fallback is reached.
   const pageId = overrides?.pageId ?? overrides?.rootParent?.id ?? 1
   const sections = overrides?.sections ?? overrides?.nodes ?? createTree(undefined, pageId)
   return {
     rootParent: overrides?.rootParent ?? { type: 'page', id: pageId },
+    allowedTypes: overrides?.allowedTypes ?? { section: {}, row: {}, column: {} },
     nodes: sections as ElementNode[],
   }
 }

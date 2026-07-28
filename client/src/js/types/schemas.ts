@@ -156,12 +156,10 @@ type ElementNodeWire = v.InferOutput<typeof baseFieldsWireSchema> &
     | { containerType?: undefined }
     | {
         containerType: 'section' | 'row'
-        allowedTypes: Record<string, v.InferOutput<typeof allowedTypeInfoSchema>> | null
         children: ElementNodeWire[] | null
       }
     | {
         containerType: 'column'
-        allowedTypes: Record<string, v.InferOutput<typeof allowedTypeInfoSchema>> | null
         children: ElementNodeWire[] | null
         gridSettings: v.InferOutput<typeof gridSettingsSchema>
       }
@@ -172,26 +170,21 @@ const childrenSchema: v.GenericSchema<ElementNodeWire[] | null> = v.lazy(() =>
   v.nullable(v.array(elementNodeWireSchema)),
 )
 
-const allowedTypesSchema = v.nullable(phpMapSchema(allowedTypeInfoSchema))
-
 const sectionWireSchema = v.object({
   ...baseFieldsWireSchema.entries,
   containerType: v.literal('section'),
-  allowedTypes: allowedTypesSchema,
   children: childrenSchema,
 })
 
 const rowWireSchema = v.object({
   ...baseFieldsWireSchema.entries,
   containerType: v.literal('row'),
-  allowedTypes: allowedTypesSchema,
   children: childrenSchema,
 })
 
 const columnWireSchema = v.object({
   ...baseFieldsWireSchema.entries,
   containerType: v.literal('column'),
-  allowedTypes: allowedTypesSchema,
   children: childrenSchema,
   gridSettings: gridSettingsSchema,
 })
@@ -216,8 +209,26 @@ export const elementNodeWireSchema = v.union([
   simpleElementWireSchema,
 ]) as v.GenericSchema<ElementNodeWire>
 
+/**
+ * Allowed child types are serialized ONCE per container type at the tree root
+ * (the hierarchy rules are per-type, so per-node maps were identical copies —
+ * a page with 20 columns shipped 20 of them). The normalisation step in
+ * `endpoints.ts` re-attaches the shared map to every container node, so the
+ * internal `ElementNode` model is unchanged.
+ *
+ * Each inner map is a PHP assoc array and can be the empty-array sentinel
+ * (e.g. a column map on an install with no content elements), hence
+ * `phpMapSchema`; the outer object always carries all three keys.
+ */
+const allowedTypesByContainerTypeSchema = v.object({
+  section: phpMapSchema(allowedTypeInfoSchema),
+  row: phpMapSchema(allowedTypeInfoSchema),
+  column: phpMapSchema(allowedTypeInfoSchema),
+})
+
 export const treeApiResponseWireSchema = v.object({
   rootParent: nodeRefSchema,
+  allowedTypes: allowedTypesByContainerTypeSchema,
   nodes: v.array(elementNodeWireSchema),
 })
 

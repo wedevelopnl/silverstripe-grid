@@ -14,18 +14,20 @@ use Override;
  * polymorphic ParentClass namespaces (SiteTree page IDs share the numeric
  * space with GridElement IDs but live in separate tables).
  *
- * Leaf nodes omit container-only fields (containerType, allowedTypes, children)
- * from the serialized output; container nodes include all three.
+ * Leaf nodes omit container-only fields (containerType, children) from the
+ * serialized output; container nodes include both. Allowed child types are NOT
+ * carried per node: they depend only on the container TYPE, so
+ * {@see GridTree} serializes one map per container type at the tree root
+ * instead of repeating identical maps on every container node.
  *
  * @phpstan-import-type SerializedNodeRef from NodeRef
- * @phpstan-type SerializedNode array{self: SerializedNodeRef, parent: SerializedNodeRef, title: non-empty-string, blockSchema: array{typeName: string, type: string, title: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, status: value-of<ElementStatus>, summary?: non-empty-string, containerType?: string, allowedTypes?: array<class-string, array{label: string, icon: string, description: string}>|null, children?: list<mixed>|null, gridSettings?: array{default: array{width: int, offset: int, visible: bool}, overrides: array<non-empty-string, array{width: int, offset: int, visible: bool}>}, extensions?: array<string, mixed>}
+ * @phpstan-type SerializedNode array{self: SerializedNodeRef, parent: SerializedNodeRef, title: non-empty-string, blockSchema: array{typeName: string, type: string, title: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, status: value-of<ElementStatus>, summary?: non-empty-string, containerType?: string, children?: list<mixed>|null, gridSettings?: array{default: array{width: int, offset: int, visible: bool}, overrides: array<non-empty-string, array{width: int, offset: int, visible: bool}>}, extensions?: array<string, mixed>}
  */
 final readonly class GridNode implements JsonSerializable
 {
     /**
      * @param non-empty-string $title
      * @param array{typeName: string, type: string, title: string, label: string, icon: string} $blockSchema
-     * @param array<class-string, array{label: string, icon: string, description: string}>|null $allowedTypes
      * @param list<self>|null $children
      * @param array<string, mixed> $extensions
      */
@@ -44,7 +46,6 @@ final readonly class GridNode implements JsonSerializable
         public ElementStatus $status,
         public ?string $summary = null,
         public ?ContainerType $containerType = null,
-        public ?array $allowedTypes = null,
         public ?array $children = null,
         public ?GridSettings $gridSettings = null,
         public array $extensions = [],
@@ -55,9 +56,9 @@ final readonly class GridNode implements JsonSerializable
             );
         }
 
-        if ($containerType === null && ($children !== null || $allowedTypes !== null)) {
+        if ($containerType === null && $children !== null) {
             throw new InvalidArgumentException(
-                'children and allowedTypes require a container type',
+                'children require a container type',
             );
         }
     }
@@ -103,7 +104,6 @@ final readonly class GridNode implements JsonSerializable
 
         if ($this->containerType instanceof ContainerType) {
             $data['containerType'] = $this->containerType->value;
-            $data['allowedTypes'] = $this->allowedTypes;
             /** @var list<mixed>|null $children */
             $children = $this->children;
             $data['children'] = $children;

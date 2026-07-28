@@ -48,7 +48,6 @@ final class GridNodeTest extends TestCase
             'status' => ElementStatus::Published,
             'summary' => null,
             'containerType' => null,
-            'allowedTypes' => null,
             'children' => null,
             'gridSettings' => null,
             'extensions' => [],
@@ -71,7 +70,6 @@ final class GridNodeTest extends TestCase
             status: $args['status'],
             summary: $args['summary'],
             containerType: $args['containerType'],
-            allowedTypes: $args['allowedTypes'],
             children: $args['children'],
             gridSettings: $args['gridSettings'],
             extensions: $args['extensions'],
@@ -103,23 +101,12 @@ final class GridNodeTest extends TestCase
     public function testConstructorThrowsWhenLeafCarriesChildren(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('children and allowedTypes require a container type');
+        $this->expectExceptionMessage('children require a container type');
 
         // containerType null (leaf) but children provided — inconsistent.
         $this->makeNode([
             'containerType' => null,
             'children' => [],
-        ]);
-    }
-
-    public function testConstructorThrowsWhenLeafCarriesAllowedTypes(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('children and allowedTypes require a container type');
-
-        $this->makeNode([
-            'containerType' => null,
-            'allowedTypes' => ['SomeClass' => ['label' => 'X', 'icon' => 'i', 'description' => 'd']],
         ]);
     }
 
@@ -152,18 +139,15 @@ final class GridNodeTest extends TestCase
 
     public function testJsonSerializeContainerIncludesContainerFields(): void
     {
-        $allowedTypes = ['SomeClass' => ['label' => 'Row', 'icon' => 'icon', 'description' => 'desc']];
-
         $node = $this->makeNode([
             'containerType' => ContainerType::Section,
-            'allowedTypes' => $allowedTypes,
             'children' => [],
         ]);
 
         $data = $node->jsonSerialize();
 
         self::assertSame('section', $data['containerType']);
-        self::assertSame($allowedTypes, $data['allowedTypes']);
+        self::assertArrayNotHasKey('allowedTypes', $data);
         self::assertSame([], $data['children']);
     }
 
