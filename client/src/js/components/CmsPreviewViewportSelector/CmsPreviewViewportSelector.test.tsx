@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import * as activeViewportStore from '@/state/activeViewport'
 import { resetActiveViewportStore, setActiveViewport } from '@/state/activeViewport'
 import CmsPreviewViewportSelector from './CmsPreviewViewportSelector'
 
@@ -38,5 +39,24 @@ describe('CmsPreviewViewportSelector', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Large' }))
 
     expect(screen.getByRole('button', { name: 'Large' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('does not call the setter when the already-active button is clicked', () => {
+    setActiveViewport('md')
+    // Spy AFTER seeding so the initial store write isn't counted. The store
+    // no-ops on an unchanged key, so only spying on the setter distinguishes
+    // the `!isActive` guard from a mutant that always calls it.
+    const setSpy = vi.spyOn(activeViewportStore, 'setActiveViewport')
+
+    render(<CmsPreviewViewportSelector />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Medium' }))
+    expect(setSpy).not.toHaveBeenCalled()
+
+    // Sanity: an inactive button still calls the setter.
+    fireEvent.click(screen.getByRole('button', { name: 'Large' }))
+    expect(setSpy).toHaveBeenCalledWith('lg')
+
+    setSpy.mockRestore()
   })
 })

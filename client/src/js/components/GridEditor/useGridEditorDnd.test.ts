@@ -1,15 +1,20 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSectionNode, createTreeApiResponse, resetIdCounter } from '@/testing/factories'
+import type { TreeApiResponse } from '@/types/elements'
 
 // Capture the onReorder callback handed to the (mocked) useDragAndDrop so the
 // test can invoke it directly without a real drag.
 const capturedOnReorder: { current: null | ((...args: never[]) => void) } = { current: null }
 
+// The mocked useDragAndDrop returns this pendingTree, letting tests drive the
+// `pendingActive: pendingTree !== null` derivation on both sides of null.
+const mockPendingTree: { current: TreeApiResponse | null } = { current: null }
+
 vi.mock('@/hooks/useDragAndDrop', () => ({
   useDragAndDrop: (opts: { onReorder: (...args: never[]) => void }) => {
     capturedOnReorder.current = opts.onReorder
-    return { dndContextProps: {}, dragState: null, pendingTree: null }
+    return { dndContextProps: {}, dragState: null, pendingTree: mockPendingTree.current }
   },
 }))
 
@@ -24,6 +29,7 @@ import { useGridEditorDnd } from './useGridEditorDnd'
 describe('useGridEditorDnd', () => {
   beforeEach(() => {
     capturedOnReorder.current = null
+    mockPendingTree.current = null
     reorderMutate.mockClear()
     reorderState.isPending = false
     resetIdCounter()
@@ -83,6 +89,34 @@ describe('useGridEditorDnd', () => {
     })
     expect(reorderMutate).not.toHaveBeenCalled()
     expect(clear).toHaveBeenCalledTimes(1)
+  })
+
+  it('derives dragContextValue.pendingActive as false when no pending tree is active', () => {
+    // pendingActive is `pendingTree !== null`, consumed by block components via
+    // DragContext to toggle their SortableContext sorting strategy. With no
+    // pending tree it must be false so normal (transform-driven) reorder
+    // previews keep working. Mutants forcing `true` or `pendingTree === null`
+    // would flip this to true.
+    mockPendingTree.current = null
+    const tree = createTreeApiResponse({
+      pageId: 1,
+      sections: [createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'A' })],
+    })
+    const { result } = renderHook(() => useGridEditorDnd(tree, 1, 'main'))
+    expect(result.current.dragContextValue.pendingActive).toBe(false)
+  })
+
+  it('derives dragContextValue.pendingActive as true when a pending tree is active', () => {
+    // A non-null pending tree (a cross-container preview in flight) must make
+    // pendingActive true. Mutants forcing `false` or `pendingTree === null`
+    // would flip this to false.
+    const tree = createTreeApiResponse({
+      pageId: 1,
+      sections: [createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'A' })],
+    })
+    mockPendingTree.current = tree
+    const { result } = renderHook(() => useGridEditorDnd(tree, 1, 'main'))
+    expect(result.current.dragContextValue.pendingActive).toBe(true)
   })
 
   it('does not fire the mutation while the tree is undefined', () => {

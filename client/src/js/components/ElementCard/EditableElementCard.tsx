@@ -37,6 +37,7 @@ const EditableElementCard = memo(function EditableElementCardComponent({
     const interactive = event.target.closest(
       'button, input, select, textarea, [role="button"], [role="menuitem"], [role="listbox"], [role="dialog"]',
     )
+    // Stryker disable next-line ConditionalExpression: Equivalent — when interactive is null, currentTarget.contains(null) is already false, so the `!== null` guard is redundant
     if (interactive !== null && event.currentTarget.contains(interactive)) {
       event.preventDefault()
     }
@@ -49,7 +50,10 @@ const EditableElementCard = memo(function EditableElementCardComponent({
       title={element.title}
       summary={element.summary}
       href={editLink ?? undefined}
-      onClick={editLink !== null ? handleAnchorClick : undefined}
+      onClick={
+        // Stryker disable next-line ConditionalExpression: Equivalent — differs only when editLink === null, where href is undefined and ElementCardChrome renders a div with no onClick, so the handler is unused
+        editLink !== null ? handleAnchorClick : undefined
+      }
       setNodeRef={setNodeRef}
       style={style}
       leading={

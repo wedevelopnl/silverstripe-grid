@@ -2,6 +2,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
+import * as endpoints from '@/api/endpoints'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
 import { renderWithProviders } from '@/testing/renderWithProviders'
 
@@ -182,5 +183,30 @@ describe('AddChildButton', () => {
       parent: { type: 'section', id: 10 },
       insertAfterElementID: 7,
     })
+  })
+
+  it('omits the insertAfterElementID key entirely from the create params when insertAfterId is undefined', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+
+    // JSON.stringify drops an `insertAfterElementID: undefined` field, so the
+    // serialized fetch body cannot distinguish "key absent" from "key present
+    // but undefined". Inspect the raw params object the endpoint receives, where
+    // the conditional-spread guard's effect is observable via own-key presence.
+    const createSpy = vi.spyOn(endpoints, 'createElement')
+
+    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="append" />)
+
+    await user.click(screen.getByTestId('add-child-button'))
+
+    await waitFor(() => {
+      expect(createSpy).toHaveBeenCalled()
+    })
+
+    // A mutant that always spreads `{ insertAfterElementID }` adds the key with
+    // value undefined; the guard must leave it off entirely.
+    expect(createSpy.mock.calls[0][0]).not.toHaveProperty('insertAfterElementID')
+
+    createSpy.mockRestore()
   })
 })

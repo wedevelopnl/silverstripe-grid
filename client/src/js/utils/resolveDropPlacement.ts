@@ -50,6 +50,7 @@ export function resolveDropPlacement(ctx: DropContext): ReorderElementParams | n
       // O(1) via the precomputed index map.
       // Stryker disable next-line UnaryOperator: Equivalent — a same-container over node is always present in indexByNodeKey (built alongside nodeMap in one walk), so .get() never returns undefined and the `?? -1` sentinel is unreachable
       const overOriginalIdx = maps.indexByNodeKey.get(overKey) ?? -1
+      // Stryker disable next-line ConditionalExpression: Equivalent — overOriginalIdx is never -1 (the `?? -1` sentinel is unreachable per the line above), so the `=== -1` true branch is dead and the else always runs
       insertIndex = overOriginalIdx === -1 ? filtered.length : overOriginalIdx
       filtered.splice(insertIndex, 0, activeKey)
     } else {

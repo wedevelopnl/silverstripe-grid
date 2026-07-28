@@ -1,6 +1,6 @@
 import { act, render, renderHook, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderExpectingError } from '@/testing/renderExpectingError'
 import { NodeIdentity } from '@/types/identity'
 import {
@@ -107,6 +107,34 @@ describe('useCollapseState', () => {
     expect(result.current.isCollapsed('not-a-key' as never)).toBe(false)
     expect(result.current.isCollapsed('row-abc' as never)).toBe(false)
     expect(result.current.isCollapsed(99 as never)).toBe(false)
+  })
+
+  it('warns but still toggles in-memory when localStorage persistence fails', () => {
+    // Persistence failure (storage full, or blocked in private/third-party
+    // contexts) must NOT break the toggle: the setState updater still returns
+    // the new set, and the failure is surfaced via a diagnostic warning.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const setItemSpy = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError')
+    })
+
+    const { result } = renderHook(() => useCollapseState(areaId))
+    const key = NodeIdentity.toKey('section', 3)
+
+    act(() => {
+      result.current.toggle(key)
+    })
+
+    // The in-memory toggle survives the throw...
+    expect(result.current.isCollapsed(key)).toBe(true)
+    // ...and the persistence failure is reported with the diagnostic message.
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[GridEditor] Failed to persist collapse state.'),
+      expect.anything(),
+    )
+
+    setItemSpy.mockRestore()
+    warnSpy.mockRestore()
   })
 
   it('keeps separate state for different areaIds', () => {

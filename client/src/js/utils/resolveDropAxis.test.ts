@@ -79,6 +79,17 @@ describe('resolveDropAxis', () => {
       const target = buildTarget({ targetWidth: 940, containerWidth: 1000, paddingX: 30 })
       expect(resolveDropAxis(target, 'column')).toBe('y')
     })
+
+    it('subtracts BOTH left and right padding from the content box', () => {
+      // 1000px container, 100px padding per side, 800px target.
+      //   Correct content box = 1000 − 100 − 100 = 800 → 800/800 = 1.0 ≥ 0.95 → 'y'.
+      // Dropping EITHER side's subtraction (the `|| 0` → `&& 0` mutant makes a
+      // real numeric padding evaluate to 0) leaves content = 1000 − 0 − 100 = 900
+      // → 800/900 = 0.889 < 0.95 → 'x'. The single-sided asymmetry is what the
+      // existing 30px-symmetric case cannot expose (970 content still clears 0.95).
+      const target = buildTarget({ targetWidth: 800, containerWidth: 1000, paddingX: 100 })
+      expect(resolveDropAxis(target, 'column')).toBe('y')
+    })
   })
 
   describe('degraded mode (legacy type rule)', () => {

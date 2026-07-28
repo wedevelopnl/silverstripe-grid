@@ -291,6 +291,39 @@ describe('GridSettingsPicker', () => {
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
 
+  it('Escape while the picker is closed does not steal focus to the trigger', async () => {
+    // Pins the `if (!isOpen) return` guard at GridSettingsPicker.tsx:68 — the
+    // document keydown handler must NOT be registered while the listbox is
+    // closed. Without the guard, a global Escape would run close() +
+    // triggerRef.focus(), grabbing focus onto a trigger the user never opened.
+    const user = userEvent.setup()
+
+    render(
+      <>
+        <button type="button" data-testid="outside-button">
+          Outside
+        </button>
+        <GridSettingsPicker
+          label="Width"
+          options={OPTIONS}
+          selectedValue={6}
+          disabled={false}
+          testId="width-picker"
+          onSelect={vi.fn()}
+        />
+      </>,
+    )
+
+    const outside = screen.getByTestId('outside-button')
+    outside.focus()
+    expect(document.activeElement).toBe(outside)
+
+    await user.keyboard('{Escape}')
+
+    // Focus must remain on the outside button, not jump to the picker trigger.
+    expect(document.activeElement).toBe(outside)
+  })
+
   describe('roving tabindex and focus management', () => {
     it('sets roving tabindex with exactly one option tab-reachable on open', async () => {
       const user = userEvent.setup()
@@ -470,6 +503,52 @@ describe('GridSettingsPicker', () => {
       expect(screen.getByRole('listbox')).toBeInTheDocument()
       // Active option is unchanged by an unhandled key.
       expect(listbox.getAttribute('aria-activedescendant')).toBe(options[0].id)
+    })
+
+    it('Enter with no resolvable active option is an inert no-op', async () => {
+      // Pins the `if (current)` guard at GridSettingsPicker.tsx:117. When the
+      // listbox is open but `options` is empty, activeIndex (re-seeded to 0)
+      // points at no option, so options[activeIndex] is undefined. Enter must
+      // hit the falsy guard and do nothing. The `if (true)` mutant would call
+      // handleOptionClick(undefined.value) and throw a TypeError.
+      const user = userEvent.setup()
+      const onSelect = vi.fn()
+
+      const { rerender } = render(
+        <GridSettingsPicker
+          label="Width"
+          options={OPTIONS}
+          selectedValue={6}
+          disabled={false}
+          testId="width-picker"
+          onSelect={onSelect}
+        />,
+      )
+
+      await user.click(screen.getByTestId('width-picker'))
+      expect(screen.getByRole('listbox')).toBeInTheDocument()
+
+      // Drop all options while open — the active index no longer resolves to any
+      // option element.
+      rerender(
+        <GridSettingsPicker
+          label="Width"
+          options={[]}
+          selectedValue={6}
+          disabled={false}
+          testId="width-picker"
+          onSelect={onSelect}
+        />,
+      )
+
+      expect(screen.queryAllByRole('option')).toHaveLength(0)
+
+      await user.keyboard('{Enter}')
+
+      // No option resolved at the active index, so nothing is selected and the
+      // listbox stays open (handleOptionClick → onSelect + close() never ran).
+      expect(onSelect).not.toHaveBeenCalled()
+      expect(screen.getByRole('listbox')).toBeInTheDocument()
     })
   })
 })

@@ -48,6 +48,7 @@ export const viewportSettingsSchema = v.object({
  * before validating.
  */
 function emptyArrayToObject(value: unknown): unknown {
+  // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — unobservable through the exported surface: phpMapSchema's v.custom rejects non-empty arrays before this transform, and v.record normalizes [] → {} regardless
   return Array.isArray(value) && value.length === 0 ? {} : value
 }
 

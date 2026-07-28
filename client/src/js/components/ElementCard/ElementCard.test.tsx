@@ -242,6 +242,36 @@ describe('EditableElementCard', () => {
       expect(result).toBe(true)
       expect(event.defaultPrevented).toBe(false)
     })
+
+    it('allows navigation when the only interactive ancestor lies outside the card', () => {
+      mockFetchSuccess({})
+
+      const element = createSimpleElement({
+        title: 'Navigate me',
+        editLink: '#edit',
+      })
+
+      // Wrap the card in an interactive ancestor. `closest()` climbs past the
+      // card's own <a> (not in the selector) and matches this outer element, so
+      // `interactive` is non-null — but `currentTarget` (the card anchor) does
+      // NOT contain it. The guard `interactive !== null && currentTarget.contains(...)`
+      // needs BOTH the non-null match AND containment, so navigation is allowed.
+      // Mutating `&&` to `||` would prevent navigation on the non-null match
+      // alone; the existing "no interactive ancestor" test (interactive === null)
+      // cannot distinguish this because `null || contains(null)` is also false.
+      renderWithProviders(
+        <div role="dialog" aria-label="outer">
+          <EditableElementCard element={element} />
+        </div>,
+      )
+
+      const title = screen.getByTestId('element-card-title')
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true })
+      const result = title.dispatchEvent(event)
+
+      expect(result).toBe(true)
+      expect(event.defaultPrevented).toBe(false)
+    })
   })
 })
 
