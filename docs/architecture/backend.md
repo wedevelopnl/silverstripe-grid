@@ -63,7 +63,7 @@ Sections carry a `Zone` field (`Varchar(50)`, e.g., `"main"`, `"sidebar"`) that 
 
 **CMS field exposure.** Zone is an internal system field, never exposed in the CMS edit form. `GridElement::getCMSFields()` explicitly removes it from the scaffolded field list. The zone value is set programmatically when a Section is created via the API — the `GridEditorField` passes its configured zone to the controller, which applies it to new Sections.
 
-**Multi-zone pages.** A page supports multiple zones by adding multiple `GridEditorField` instances, each configured with a different zone string. Each editor mounts as an independent React application with its own API calls, query cache, and tree state. See `MultiZonePage` for the dev environment example.
+**Multi-zone pages.** A page supports multiple zones by adding multiple `GridEditorField` instances, each configured with a different zone string. Each editor mounts as an independent React application with its own API calls, query cache, and tree state. The module ships no page type of its own; `.docker/app/src/MultiZonePage.php` is the test harness's two-zone example.
 
 ### Grid Settings
 

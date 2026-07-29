@@ -18,9 +18,11 @@ WeDevelop\E2e\Fixtures\FixtureLoader:
   # reset() archives only pages whose ClassName is listed here AND whose
   # URLSegment starts with "e2e-". Every SiteTree page type the fixtures
   # create must be listed — FixtureEndpointTest guards this.
+  # Both entries are harness-app page types (see .docker/app/src/), not module
+  # classes — the grid ships no page type of its own.
   fixture_page_classes:
     - Page
-    - WeDevelop\Grid\Dev\MultiZonePage
+    - App\MultiZonePage
   # Grid fixtures are authored top-down (page → section → row → column → leaf),
   # so every container's children are declared in the YAML. The module forces
   # these statics off only for the duration of each fixture write, so
@@ -50,7 +52,7 @@ WeDevelop\E2e\Fixtures\FixtureLoader:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/MultiZone.yml'
       post_actions:
         - action: publish_recursive
-          class: 'WeDevelop\Grid\Dev\MultiZonePage'
+          class: 'App\MultiZonePage'
           identifier: e2e_multi_zone_page
     content-elements:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/ContentElements.yml'
@@ -149,7 +151,7 @@ WeDevelop\E2e\Fixtures\FixtureLoader:
           class: Page
           identifier: e2e_source_page
         - action: publish_recursive
-          class: 'WeDevelop\Grid\Dev\MultiZonePage'
+          class: 'App\MultiZonePage'
           identifier: e2e_target_page
     complex-page:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/ComplexPage.yml'

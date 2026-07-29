@@ -1,11 +1,4 @@
 nl:
-  WeDevelop\Grid\Dev\MultiZonePage:
-    CLASS_DESCRIPTION: 'Dev-only pagina met main- en sidebar-grid-zones'
-    PLURALNAME: 'Multi-zone-paginas'
-    PLURALS:
-      one: 'Een Multi-zone-pagina'
-      other: '{count} Multi-zone-paginas'
-    SINGULARNAME: 'Multi-zone-pagina'
   WeDevelop\Grid\Extensions\BlockMediaExtension:
     ALIGN_BOTTOM: Onder
     ALIGN_CENTER: Midden

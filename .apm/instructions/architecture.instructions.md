@@ -12,7 +12,6 @@ src/                  # PHP source (PSR-4: WeDevelop\Grid\)
 src/Adapter/          # Grid framework adapters: GridAdapter base class + framework presets (Bootstrap, Tailwind, Bulma)
 src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderValidatorInterface)
 src/Controllers/      # API controllers (GridController)
-src/Dev/              # E2E dev helpers (MultiZonePage); fixture loading + scaffold suppression (via config_overrides) come from wedevelopnl/silverstripe-e2e
 src/Factory/          # Factories (GridAdapterFactory)
 src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement) + ContainerElementTrait
 src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaExtension, FluentGridPageExtension)
@@ -50,6 +49,7 @@ client/dist/          # Vite build output (exposed, created by build)
 scripts/              # Build scripts (i18n collection, parity checks)
 phpstan/stubs/        # PHPStan stubs (e.g. AdminController.stub)
 .docker/              # Docker dev env: Caddy + PHP + MySQL 8
+.docker/app/src/      # Harness-owned page types (App\MultiZonePage — the E2E multi-zone page); COPYed to /app/src at image build
 docs/architecture/    # Architecture documents (backend, drag-and-drop, grid-adapter)
 ```
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`WeDevelop\Grid\Dev\MultiZonePage` moved out of the module into the Docker test harness** as `App\MultiZonePage` (`.docker/app/src/MultiZonePage.php`). It is a consumer-side page type, so the module no longer ships one at all: a `--prefer-source` install no longer gains a page type and a `WeDevelop_Grid_MultiZonePage` table it never asked for, and the published source no longer depends on the project-level `Page` class (which `silverstripe/cms` does not provide — it comes from the recipe). Dist installs were already unaffected, since `src/Dev` was `export-ignore`d. E2E fixtures and `_config/dev.yml` reference the new FQCN.
+
 ## [6.0.0-beta.2] - 2026-07-09
 
 ### Added

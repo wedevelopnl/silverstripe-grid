@@ -231,10 +231,10 @@ test.beforeEach(async ({ page }) => {
 
 ## Multi-zone fixtures
 
-Pages with multiple zones use `WeDevelop\Grid\Dev\MultiZonePage` instead of `Page`. This class adds two `GridEditorField` instances (`main` + `sidebar`) in its CMS fields. Fixtures reference it directly:
+Pages with multiple zones use `App\MultiZonePage` instead of `Page`. Like `Page`, this is a page type of the Docker test harness (`.docker/app/src/MultiZonePage.php`), not of the module — it adds two `GridEditorField` instances (`main` + `sidebar`) in its CMS fields. Fixtures reference it directly:
 
 ```yaml
-WeDevelop\Grid\Dev\MultiZonePage:
+App\MultiZonePage:
   e2e_multi_zone_page:
     Title: 'Multi Zone Page'
     URLSegment: 'e2e-multi-zone'
