@@ -164,6 +164,60 @@ class GridTreeService
     }
 
     /**
+     * Seed every indexed element's polymorphic Parent component in-memory so
+     * later getPage()/getCMSEditLink() walks resolve without a database fetch
+     * each — the same technique {@see assembleSubTree()} applies during tree
+     * assembly, where the parent is the recursion cursor. Here the index is
+     * flat and page-less, so element parents resolve through the index and
+     * owning pages are batch-loaded in a single query.
+     *
+     * Mechanism layer: never filters by permissions.
+     *
+     * @param array<string, GridElement> $index keyed by "Class:ID" (see {@see indexByKey()})
+     */
+    public function seedParents(array $index): void
+    {
+        /** @var list<int> $pageIds */
+        $pageIds = [];
+        foreach ($index as $element) {
+            if (isset($index[$element->ParentClass . ':' . $element->ParentID])) {
+                continue;
+            }
+
+            $parentClass = (string) $element->ParentClass;
+            if ((int) $element->ParentID > 0 && is_a($parentClass, SiteTree::class, true)) {
+                $pageIds[] = (int) $element->ParentID;
+            }
+        }
+
+        /** @var array<int, SiteTree> $pagesById */
+        $pagesById = [];
+        if ($pageIds !== []) {
+            foreach (SiteTree::get()->byIDs($pageIds) as $sitePage) {
+                $pagesById[(int) $sitePage->ID] = $sitePage;
+            }
+        }
+
+        foreach ($index as $element) {
+            $parentKey = $element->ParentClass . ':' . $element->ParentID;
+            if (isset($index[$parentKey])) {
+                $element->setComponent('Parent', $index[$parentKey]);
+                continue;
+            }
+
+            $page = $pagesById[(int) $element->ParentID] ?? null;
+            // Match the polymorphic component fetch this replaces: a
+            // class-scoped lookup only returns records of ParentClass or a
+            // subclass. Anything else (orphan, non-SiteTree owner, class
+            // mismatch) is left unseeded — getPage() falls back to the
+            // per-element fetch for those rare rows, preserving behavior.
+            if ($page !== null && is_a($page, (string) $element->ParentClass)) {
+                $element->setComponent('Parent', $page);
+            }
+        }
+    }
+
+    /**
      * @param array<string, list<GridElement>> $elementsByParent
      * @return list<GridElement>
      */

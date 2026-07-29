@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Tests\Integration\Service;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
+use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
@@ -386,5 +387,74 @@ final class GridTreeServiceTest extends SapphireTest
         // ancestor. Keying the index by bare ID instead of "Class:ID" would make
         // this return [content] and fail.
         self::assertSame([], $this->service->ancestors($section, $index));
+    }
+
+    public function testSeedParentsResolvesElementParentsToTheIndexedInstances(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $content = GridTreeFactory::contentElement($column);
+
+        $index = $this->service->indexByKey(GridElement::get());
+        $this->service->seedParents($index);
+
+        // Identity, not equality: a lazily fetched Parent component would be a
+        // fresh instance — the seed must hand back the very object in the index.
+        $indexedContent = $index[$content::class . ':' . (int) $content->ID];
+        self::assertSame(
+            $index[$column::class . ':' . (int) $column->ID],
+            $indexedContent->getComponent('Parent'),
+        );
+    }
+
+    public function testSeedParentsResolvesOwningPagesInMemory(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $originalTitle = (string) $page->Title;
+        $section = GridTreeFactory::section($page);
+
+        $index = $this->service->indexByKey(GridElement::get());
+        $this->service->seedParents($index);
+
+        // Retitle the page behind the ORM's back: a getPage() that still hits
+        // the database would see the new title, the seeded component keeps the
+        // batch-loaded (now stale) one — proving no per-element fetch remains.
+        $table = DataObject::getSchema()->tableName(SiteTree::class);
+        DB::query(sprintf(
+            'UPDATE "%s" SET "Title" = \'Renamed behind ORM\' WHERE "ID" = %d',
+            $table,
+            (int) $page->ID,
+        ));
+
+        $indexedSection = $index[$section::class . ':' . (int) $section->ID];
+        $resolvedPage = $indexedSection->getPage();
+        self::assertInstanceOf(SiteTree::class, $resolvedPage);
+        self::assertSame($originalTitle, (string) $resolvedPage->Title);
+    }
+
+    public function testSeedParentsLeavesOrphansUnseeded(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $orphan = GridTreeFactory::contentElement($column);
+
+        $table = DataObject::getSchema()->tableName(GridElement::class);
+        DB::query(sprintf(
+            "UPDATE \"%s\" SET \"ParentID\" = 0, \"ParentClass\" = '' WHERE \"ID\" = %d",
+            $table,
+            (int) $orphan->ID,
+        ));
+
+        $index = $this->service->indexByKey(GridElement::get());
+        $this->service->seedParents($index);
+
+        // No parent to seed: the orphan must fall through to getPage()'s own
+        // null path, not end up seeded with an unrelated record.
+        $indexedOrphan = $index[$orphan::class . ':' . (int) $orphan->ID];
+        self::assertNull($indexedOrphan->getPage());
     }
 }
