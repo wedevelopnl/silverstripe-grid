@@ -23,7 +23,7 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -75,7 +75,7 @@ jobs:
       CACHE_SCOPE: app-php8.3
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Authenticate to Docker Hub to lift the anonymous pull rate limit
       # (~100 pulls/6h per shared runner IP) that can fail image pulls. Guarded
       # on the secret so fork/Dependabot PRs without secrets fall back to
@@ -130,7 +130,7 @@ jobs:
       CACHE_SCOPE: ${{ matrix.service }}-php${{ matrix.php }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Log in to Docker Hub
         if: env.DOCKERHUB_USERNAME != ''
         uses: docker/login-action@v3
@@ -196,7 +196,7 @@ jobs:
       CACHE_SCOPE: app-php8.3
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Log in to Docker Hub
         if: env.DOCKERHUB_USERNAME != ''
         uses: docker/login-action@v3
