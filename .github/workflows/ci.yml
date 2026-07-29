@@ -59,7 +59,7 @@ jobs:
             echo "$untracked"
             exit 1
           fi
-      - uses: dorny/test-reporter@v1
+      - uses: dorny/test-reporter@v3
         if: always()
         with:
           name: Vitest Results
@@ -164,7 +164,7 @@ jobs:
       - if: matrix.variant == 'fluent'
         name: Check coverage threshold (90%)
         run: $COMPOSE exec ${{ matrix.service }} vendor/bin/coverage-check coverage/clover.xml 90
-      - uses: dorny/test-reporter@v1
+      - uses: dorny/test-reporter@v3
         if: always()
         with:
           name: PHPUnit Results (${{ matrix.variant }} / PHP ${{ matrix.php }})
@@ -249,7 +249,7 @@ jobs:
         run: npx playwright test --project=${{ matrix.browser }} --reporter=html,junit
         env:
           PLAYWRIGHT_JUNIT_OUTPUT_NAME: reports/playwright-junit.xml
-      - uses: dorny/test-reporter@v1
+      - uses: dorny/test-reporter@v3
         if: always()
         with:
           name: E2E Results (${{ matrix.browser }} / ${{ matrix.adapter }})
