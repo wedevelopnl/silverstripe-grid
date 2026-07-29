@@ -63,7 +63,10 @@ class GridElementReport extends Report
         // doubles as the row source (the class filter applies in-memory below)
         // so the element table is loaded exactly once.
         $index = $treeService->indexByKey(GridElement::get());
-        $this->seedParents($index);
+        // Seed Parent components up-front: the getPage()/getCMSEditLink()
+        // walks below (one per row, another per Title link, one per trail
+        // segment) would otherwise each fetch from the database.
+        $treeService->seedParents($index);
 
         $result = ArrayList::create();
 
@@ -98,57 +101,6 @@ class GridElementReport extends Report
         }
 
         return $result;
-    }
-
-    /**
-     * Seed every element's polymorphic Parent component in-memory so the
-     * getPage()/getCMSEditLink() walks (one per row, another per Title link,
-     * one per trail segment) resolve without a database fetch each — mirrors
-     * the seeding GridTreeService::assembleSubTree() does during tree
-     * assembly. Owning pages are batch-loaded in a single query.
-     *
-     * @param array<string, GridElement> $index keyed by "Class:ID" (see {@see GridTreeService::indexByKey()})
-     */
-    private function seedParents(array $index): void
-    {
-        /** @var list<int> $pageIds */
-        $pageIds = [];
-        foreach ($index as $element) {
-            if (isset($index[$element->ParentClass . ':' . $element->ParentID])) {
-                continue;
-            }
-
-            $parentClass = (string) $element->ParentClass;
-            if ((int) $element->ParentID > 0 && is_a($parentClass, SiteTree::class, true)) {
-                $pageIds[] = (int) $element->ParentID;
-            }
-        }
-
-        /** @var array<int, SiteTree> $pagesById */
-        $pagesById = [];
-        if ($pageIds !== []) {
-            foreach (SiteTree::get()->byIDs($pageIds) as $sitePage) {
-                $pagesById[(int) $sitePage->ID] = $sitePage;
-            }
-        }
-
-        foreach ($index as $element) {
-            $parentKey = $element->ParentClass . ':' . $element->ParentID;
-            if (isset($index[$parentKey])) {
-                $element->setComponent('Parent', $index[$parentKey]);
-                continue;
-            }
-
-            $page = $pagesById[(int) $element->ParentID] ?? null;
-            // Match the polymorphic component fetch this replaces: a
-            // class-scoped lookup only returns records of ParentClass or a
-            // subclass. Anything else (orphan, non-SiteTree owner, class
-            // mismatch) is left unseeded — getPage() falls back to the
-            // per-element fetch for those rare rows, preserving behavior.
-            if ($page !== null && is_a($page, (string) $element->ParentClass)) {
-                $element->setComponent('Parent', $page);
-            }
-        }
     }
 
     /**
