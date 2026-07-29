@@ -34,7 +34,7 @@ Page:
     Title: 'E2E Duplicate Source Page'
     URLSegment: 'e2e-duplicate-source'
 
-WeDevelop\Grid\Dev\MultiZonePage:
+App\MultiZonePage:
   e2e_target_page:
     Title: 'E2E Duplicate Target Page'
     URLSegment: 'e2e-duplicate-target'
@@ -52,13 +52,13 @@ WeDevelop\Grid\Model\Section:
     ShowTitle: 1
     Sort: 1
     Zone: main
-    Parent: =>WeDevelop\Grid\Dev\MultiZonePage.e2e_target_page
+    Parent: =>App\MultiZonePage.e2e_target_page
   target_sidebar_section:
     Title: 'Target Sidebar Section'
     ShowTitle: 1
     Sort: 1
     Zone: sidebar
-    Parent: =>WeDevelop\Grid\Dev\MultiZonePage.e2e_target_page
+    Parent: =>App\MultiZonePage.e2e_target_page
 
 # --- Rows ---
 WeDevelop\Grid\Model\Row:

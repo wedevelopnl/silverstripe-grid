@@ -16,7 +16,27 @@ Page types with `GridPageExtension` expose `$UseGrid` and `$Sections`. The canon
 
 The frontend template renders the raw stored `$UseGrid` field unconditionally — there is no separate render-time gate. The stored value is seeded from `use_grid_by_default` when a page is created (see [Default editor on new pages](#default-editor-on-new-pages)), so with the default (`true`) the `<% else %>` branch never fires and you can simplify to `<% loop $Sections %>$Me<% end_loop %>`. The per-page editor toggle (see [below](#per-page-editor-toggle)) only governs which editor the CMS shows; it does not change how the template reads `$UseGrid`.
 
-Multi-zone pages declare a `GridEditorField` per zone with different `zone` values (`main`, `sidebar`, …). Each zone becomes an independent `Sections()` collection filtered by the `Zone` field. See `src/Dev/MultiZonePage.php` for a working example.
+## Multi-zone pages
+
+A page gets multiple zones by declaring one `GridEditorField` per zone, each with a different zone string:
+
+```php
+$fields->addFieldToTab('Root.Main', GridEditorField::create('GridEditorMain', (int) $this->ID, 'main'));
+$fields->addFieldToTab('Root.Main', GridEditorField::create('GridEditorSidebar', (int) $this->ID, 'sidebar'));
+```
+
+`Sections()` returns every section on the page regardless of zone, so the template picks a zone by filtering on the `Zone` field:
+
+```silverstripe
+<div class="main">
+    <% loop $Sections.Filter('Zone', 'main') %>$Me<% end_loop %>
+</div>
+<aside>
+    <% loop $Sections.Filter('Zone', 'sidebar') %>$Me<% end_loop %>
+</aside>
+```
+
+Sort values are independent per zone, so reordering one zone never renumbers another. `.docker/app/src/MultiZonePage.php` in this repository is a working two-zone page type used by the E2E suite.
 
 ## Per-page editor toggle
 

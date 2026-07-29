@@ -19,7 +19,7 @@
 #
 # Elements parent directly to their container via polymorphic has_one (Parent).
 
-WeDevelop\Grid\Dev\MultiZonePage:
+App\MultiZonePage:
   e2e_multi_zone_page:
     Title: 'E2E Multi-Zone Page'
     URLSegment: 'e2e-multi-zone'
@@ -31,25 +31,25 @@ WeDevelop\Grid\Model\Section:
     ShowTitle: 1
     Sort: 1
     Zone: main
-    Parent: =>WeDevelop\Grid\Dev\MultiZonePage.e2e_multi_zone_page
+    Parent: =>App\MultiZonePage.e2e_multi_zone_page
   main_beta:
     Title: 'Main-Beta'
     ShowTitle: 1
     Sort: 2
     Zone: main
-    Parent: =>WeDevelop\Grid\Dev\MultiZonePage.e2e_multi_zone_page
+    Parent: =>App\MultiZonePage.e2e_multi_zone_page
   sidebar_alpha:
     Title: 'Sidebar-Alpha'
     ShowTitle: 1
     Sort: 1
     Zone: sidebar
-    Parent: =>WeDevelop\Grid\Dev\MultiZonePage.e2e_multi_zone_page
+    Parent: =>App\MultiZonePage.e2e_multi_zone_page
   sidebar_beta:
     Title: 'Sidebar-Beta'
     ShowTitle: 1
     Sort: 2
     Zone: sidebar
-    Parent: =>WeDevelop\Grid\Dev\MultiZonePage.e2e_multi_zone_page
+    Parent: =>App\MultiZonePage.e2e_multi_zone_page
 
 # --- Rows ---
 WeDevelop\Grid\Model\Row:

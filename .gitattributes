@@ -23,7 +23,6 @@
 /docs                    export-ignore
 /phpstan                 export-ignore
 /scripts                 export-ignore
-/src/Dev                 export-ignore
 /tests                   export-ignore
 
 # Community / contributor docs

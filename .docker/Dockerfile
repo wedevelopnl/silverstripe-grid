@@ -30,6 +30,10 @@ RUN mkdir -p /app/src /app/_config \
     && printf '<?php\n\nuse SilverStripe\\CMS\\Model\\SiteTree;\n\nclass Page extends SiteTree\n{\n}\n' > /app/src/Page.php \
     && printf '<?php\n\nuse SilverStripe\\CMS\\Controllers\\ContentController;\n\nclass PageController extends ContentController\n{\n}\n' > /app/src/PageController.php
 
+# Harness-owned page types (MultiZonePage). Merges into the /app/src created
+# above, so the generated Page/PageController stay in place.
+COPY app/src/ /app/src/
+
 COPY app/_config/ /app/_config/
 COPY app/templates/ /app/templates/
 COPY app/infection.json5 /app/infection.json5
