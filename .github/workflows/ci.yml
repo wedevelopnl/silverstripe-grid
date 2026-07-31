@@ -35,7 +35,7 @@ jobs:
         with:
           php-version: '8.3'
           extensions: intl
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@v4
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
@@ -218,7 +218,7 @@ jobs:
         with:
           php-version: '8.3'
           extensions: intl
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@v4
       - run: npm ci
       - uses: actions/cache/restore@v6
         id: playwright-cache
