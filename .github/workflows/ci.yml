@@ -220,7 +220,7 @@ jobs:
           extensions: intl
       - uses: ramsey/composer-install@v3
       - run: npm ci
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
@@ -234,7 +234,7 @@ jobs:
         run: npx playwright install ${{ matrix.browser }}
       - if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps ${{ matrix.browser }}
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         with:
           path: ~/.cache/ms-playwright
