@@ -82,7 +82,7 @@ jobs:
       # anonymous pulls rather than erroring on empty credentials.
       - name: Log in to Docker Hub
         if: env.DOCKERHUB_USERNAME != ''
-        uses: docker/login-action@v4.5.2
+        uses: docker/login-action@v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -133,7 +133,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: Log in to Docker Hub
         if: env.DOCKERHUB_USERNAME != ''
-        uses: docker/login-action@v4.5.2
+        uses: docker/login-action@v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -199,7 +199,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: Log in to Docker Hub
         if: env.DOCKERHUB_USERNAME != ''
-        uses: docker/login-action@v4.5.2
+        uses: docker/login-action@v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
