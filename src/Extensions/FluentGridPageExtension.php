@@ -15,6 +15,8 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\GridTreeService;
+use WeDevelop\Grid\Service\Transactional;
+use WeDevelop\Grid\Value\Result;
 
 /**
  * Copies the grid element tree when Fluent localises a page to a new locale.
@@ -110,26 +112,36 @@ class FluentGridPageExtension extends Extension
         try {
             $treeService = Injector::inst()->get(GridTreeService::class);
 
-            FluentState::singleton()->withState(function (FluentState $state) use ($sourceLocale, $page, $targetLocaleId, $treeService): void {
-                $state->setLocale($sourceLocale);
+            // Atomic: each section is cloned and then has every node in its
+            // subtree rewritten to the target locale. A failure part-way leaves
+            // clones carrying the SOURCE LocaleID — visible in the wrong locale
+            // and invisible in the target one — which no later save repairs,
+            // because the target-locale emptiness check above then sees the
+            // half-copied sections and declines to run again.
+            Transactional::run(static function () use ($sourceLocale, $page, $targetLocaleId, $treeService): Result {
+                FluentState::singleton()->withState(function (FluentState $state) use ($sourceLocale, $page, $targetLocaleId, $treeService): void {
+                    $state->setLocale($sourceLocale);
 
-                foreach ($page->Sections() as $section) {
-                    $clone = $section->duplicate(true);
+                    foreach ($page->Sections() as $section) {
+                        $clone = $section->duplicate(true);
 
-                    // Reload the freshly-written subtree from the DB while still in
-                    // the source locale (where the clones are visible). The clone
-                    // itself is prepended — findDescendants excludes the root.
-                    $allCloned = [$clone, ...$treeService->findDescendants($clone)];
+                        // Reload the freshly-written subtree from the DB while still in
+                        // the source locale (where the clones are visible). The clone
+                        // itself is prepended — findDescendants excludes the root.
+                        $allCloned = [$clone, ...$treeService->findDescendants($clone)];
 
-                    // Reassign all LocaleIDs to the target locale.
-                    // FluentIsolatedExtension::onBeforeWrite only auto-assigns when empty,
-                    // so we must set it explicitly since duplicate() copies the source LocaleID.
-                    foreach ($allCloned as $element) {
-                        $element->LocaleID = $targetLocaleId;
-                        $element->write();
+                        // Reassign all LocaleIDs to the target locale.
+                        // FluentIsolatedExtension::onBeforeWrite only auto-assigns when empty,
+                        // so we must set it explicitly since duplicate() copies the source LocaleID.
+                        foreach ($allCloned as $element) {
+                            $element->LocaleID = $targetLocaleId;
+                            $element->write();
+                        }
                     }
-                }
-            });
+                });
+
+                return Result::ok(null);
+            })->unwrap();
         } finally {
             Config::modify()->set(Section::class, 'auto_scaffold', $priorSectionScaffold);
             Config::modify()->set(Row::class, 'auto_scaffold', $priorRowScaffold);
