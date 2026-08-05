@@ -657,8 +657,21 @@ See `docs/fluent.md` for full setup.
 | Hook | Location | Purpose |
 |------|----------|---------|
 | `updateContainerClasses` | Section | Modify container CSS classes |
+| `updateRowClasses` | Row | Modify row CSS classes |
 | `updateColumnClasses` | Column | Modify column CSS classes |
+| `updateHolderClasses` | GridElement | Modify the element holder's CSS classes |
+| `updateTitleSizeClass` | GridElement | Modify the resolved title size class |
+| `updateTitleClassOptions` | GridElement | Modify the title class options offered in the CMS |
 | `updateElementData` | GridNodeMapper | Inject extra data into tree nodes |
 | `extendedCan` | GridElement | Override permission checks |
 | `updateValidate` | HierarchyValidationExtension | Intercept validation lifecycle |
 | `updateCMSFields` | BlockMediaExtension | Inject media/layout fields into CMS form |
+
+Migration hooks fire from the extracted collaborators, not from
+`GridMigrationService` — register extensions on the class named here:
+
+| Hook | Location | Purpose |
+|------|----------|---------|
+| `updateClassNameMapping` | DraftHierarchyWriter | Remap a legacy class to its replacement |
+| `updateElementFieldMapping` | DraftHierarchyWriter | Map custom fields onto the new element |
+| `updateLegacyElements` | LegacyDataReader | Adjust the legacy elements read for an area |
