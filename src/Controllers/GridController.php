@@ -106,16 +106,45 @@ class GridController extends AdminController
         'apiPages',
     ];
 
-    #[Override]
-    protected function init(): void
-    {
-        parent::init();
+    /**
+     * Lowercased names of the actions that only read data, and therefore need no
+     * security token.
+     *
+     * @var list<string>
+     */
+    private const array READ_ONLY_ACTIONS = [
+        'apireadtree',
+        'apireadtreeatversion',
+        'apiacceptablecontainers',
+        'apizones',
+        'apipages',
+    ];
 
-        if ($this->getRequest()->httpMethod() !== 'GET'
-            && !SecurityToken::inst()->checkRequest($this->getRequest())
+    /**
+     * Require a security token for every action outside READ_ONLY_ACTIONS.
+     *
+     * The check cannot be keyed on the HTTP verb: the verb-bound $url_handlers
+     * above are not the only route to these methods. RequestHandler::findAction()
+     * walks up the class hierarchy and falls back to Controller's verb-agnostic
+     * '$Action//$ID/$OtherID' rule, which resolves any $allowed_actions entry
+     * from the first URL segment — so a plain GET reaches apiDelete() and every
+     * other mutation. Actions are matched case-insensitively because that
+     * fallback passes the segment through as typed, and hasMethod() accepts any
+     * casing.
+     *
+     * @param HTTPRequest $request
+     * @param string $action
+     */
+    #[Override]
+    protected function handleAction(mixed $request, mixed $action): mixed
+    {
+        if (!in_array(strtolower($action), self::READ_ONLY_ACTIONS, true)
+            && !SecurityToken::inst()->checkRequest($request)
         ) {
             $this->jsonError(400);
         }
+
+        return parent::handleAction($request, $action);
     }
 
     public function apiReadTree(HTTPRequest $request): HTTPResponse
