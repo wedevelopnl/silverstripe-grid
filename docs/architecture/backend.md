@@ -494,7 +494,7 @@ The content layout system adds media (image/video) capability with side-by-side 
 ### Architecture
 
 ```
-BlockMediaExtension (applied to ContentElement via YAML)
+BlockMediaExtension (opt-in — applied to ContentElement by the project)
   └── ContentLayoutAdapterInterface
         └── GridAdapter (same instance as GridAdapterInterface)
 ```
@@ -518,7 +518,9 @@ Width classes delegate to `getWidthClass()` on the same adapter — `getMediaWid
 
 ### BlockMediaExtension
 
-Applied to `ContentElement` by default via YAML (`_config/content-layout.yml`). Adds media attachment and layout controls to any `GridElement`.
+**Opt-in.** The module deliberately does *not* apply this extension — `ContentElement` ships lean (HTML only), and `_config/content-layout.yml` carries the opt-in snippet as a comment. Apply it from your own project config to add media attachment and layout controls to `ContentElement` (or to your own content subclass).
+
+Note for migrations: the SS5→SS6 default class map targets `ContentElement`, so a project migrating media data must opt the extension in first, or remap `FieldMapper::classNameMap` to its own media class. See [migration.md](../migration.md).
 
 **Database fields** (15 fields via `$db`):
 
@@ -537,15 +539,22 @@ Applied to `ContentElement` by default via YAML (`_config/content-layout.yml`). 
 
 ### DI Configuration
 
+What the module ships:
+
 ```yaml
 # _config/content-layout.yml
 SilverStripe\Core\Injector\Injector:
   WeDevelop\Grid\Contract\ContentLayoutAdapterInterface:
     factory: WeDevelop\Grid\Factory\GridAdapterFactory
+```
 
+What a project adds to opt into the media block:
+
+```yaml
+# app/_config/grid.yml
 WeDevelop\Grid\Model\ContentElement:
   extensions:
-    BlockMedia: WeDevelop\Grid\Extensions\BlockMediaExtension
+    - WeDevelop\Grid\Extensions\BlockMediaExtension
 ```
 
 `GridAdapterFactory` resolves `GridAdapterInterface` from the Injector and returns the same singleton, so both interfaces share one adapter instance. The factory pattern is used instead of a `%$` alias because it guarantees the singleton is fully constructed before being returned.
