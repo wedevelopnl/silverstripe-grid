@@ -27,6 +27,16 @@ use WeDevelop\Grid\Value\Viewport;
 
 abstract class AbstractMigrationTask extends BuildTask
 {
+    /**
+     * CLI only. The migration writes and publishes the whole hierarchy across
+     * every eligible page and cannot be undone, and /dev/tasks carries no CSRF
+     * token: over HTTP, options come straight from request vars, so --force
+     * would defeat the confirmation prompt below on a request the operator
+     * never made. Note that dev mode bypasses this by framework design
+     * (PolyCommand::canRunInBrowser()).
+     */
+    private static bool $can_run_in_browser = false;
+
     /** @return list<InputOption> */
     #[Override]
     public function getOptions(): array

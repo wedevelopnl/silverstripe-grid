@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
+use ReflectionProperty;
 use Symfony\Component\Console\Input\InputOption;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\Task\AbstractMigrationTask;
@@ -28,6 +29,17 @@ use WeDevelop\Grid\Value\Viewport;
 #[CoversClass(AbstractMigrationTask::class)]
 final class AbstractMigrationTaskTest extends TestCase
 {
+    public function testMigrationTasksAreNotRunnableFromTheBrowser(): void
+    {
+        // /dev/tasks has no CSRF token and populates options from request vars,
+        // so over HTTP `--force` would skip the confirmation prompt on a request
+        // the operator never made — on an irreversible mass write. Asserts the
+        // declared default via reflection: this tier has no Config bootstrap.
+        $canRunInBrowser = new ReflectionProperty(AbstractMigrationTask::class, 'can_run_in_browser');
+
+        self::assertFalse($canRunInBrowser->getValue());
+    }
+
     public function testNoOptionClaimsTheFShortcutReservedBySakeFlush(): void
     {
         // sake registers a global `--flush` with the `-f` shortcut. A task option
