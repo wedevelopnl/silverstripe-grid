@@ -86,7 +86,10 @@ services:
   db:
     image: mysql:8
     ports:
-      - "${DB_PORT}:3306"
+      # Loopback only — the credentials below are fixed dev defaults, so this
+      # port must never be reachable from off-host. The app reaches the database
+      # over the compose network, not through this published port.
+      - "127.0.0.1:${DB_PORT}:3306"
     volumes:
       - db-data:/var/lib/mysql
       - ./db-init:/docker-entrypoint-initdb.d:ro
