@@ -126,4 +126,4 @@ All container integration tests must call `Versioned::set_stage(Versioned::DRAFT
 
 YAML fixtures are written **top-down** (page → section → row → column → leaf) so `=>ClassName.id` parent references resolve. Fixture loading is provided by the `wedevelopnl/silverstripe-e2e` module (dev dependency); the grid declares `config_overrides` on its `FixtureLoader` (in `_config/dev.yml`) forcing `auto_scaffold = false` on `Section` and `Row`, which the module applies via `FixtureBlueprint` callbacks during fixture writes, so parent-first ordering cannot produce duplicate children.
 
-See [docs/testing/e2e-fixtures.md](../../docs/testing/e2e-fixtures.md) for the full protocol (YAML schema, post-actions, URL segment conventions, the `/dev/e2e-fixtures` HTTP endpoint).
+See [docs/testing/e2e-fixtures.md](docs/testing/e2e-fixtures.md) for the full protocol (YAML schema, post-actions, URL segment conventions, the `/dev/e2e-fixtures` HTTP endpoint).
