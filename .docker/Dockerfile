@@ -13,7 +13,9 @@ RUN install-php-extensions \
 
 RUN echo 'pcov.directory=/module/src' > /usr/local/etc/php/conf.d/99-pcov.ini
 
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Major-pinned: :latest would silently adopt a future Composer major release
+# mid-build, and the binary it copies runs against this module's composer.json.
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
