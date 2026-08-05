@@ -9,7 +9,7 @@ Grid adapters translate the abstract grid model (viewports, column widths, offse
 
 The adapter is entirely configuration-driven. `GridAdapter` is a single **abstract** base class that reads CSS format strings, class maps, and scalar values from SilverStripe `Configurable` statics — it is never bound directly, only through a preset subclass. Framework presets (BootstrapAdapter, TailwindAdapter, BulmaAdapter) are zero-method subclasses that only declare `private static` property overrides.
 
-**Full reference (implementation walkthrough, config property tables, content layout):** [`docs/architecture/grid-adapter.md`](../../docs/architecture/grid-adapter.md)
+**Full reference (implementation walkthrough, config property tables, content layout):** [`docs/architecture/grid-adapter.md`](docs/architecture/grid-adapter.md)
 
 ## Key Files
 
