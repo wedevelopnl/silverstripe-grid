@@ -1088,9 +1088,9 @@ final class GridControllerTest extends FunctionalTest
 
     /**
      * A mutating request that omits the SecurityID token must be rejected by
-     * the CSRF guard in GridController::init() with a 400, before any action
-     * runs. Uses a raw Director::test POST (no token appended) rather than the
-     * jsonPost helper, which always appends a valid token.
+     * the CSRF guard in GridController::handleAction() with a 400, before any
+     * action runs. Uses a raw Director::test POST (no token appended) rather
+     * than the jsonPost helper, which always appends a valid token.
      */
     public function testMutationWithoutSecurityIdReturns400(): void
     {
@@ -1122,6 +1122,39 @@ final class GridControllerTest extends FunctionalTest
         }
 
         self::assertSame(400, $response->getStatusCode());
+    }
+
+    /**
+     * The verb-bound $url_handlers are not the only route to a mutating action:
+     * RequestHandler inherits Controller's verb-agnostic '$Action//$ID/$OtherID'
+     * rule, which resolves any $allowed_actions entry from the first URL segment.
+     * Since apiDelete() reads its input from query vars, a GET to this URL would
+     * archive the element with no CSRF check at all if the guard were keyed on
+     * the HTTP verb.
+     */
+    public function testMutationIsNotReachableOverGetWithoutSecurityId(): void
+    {
+        $tree = $this->buildTree();
+        $contentId = (int) $tree['content']->ID;
+
+        $tokenWasEnabled = SecurityToken::is_enabled();
+        SecurityToken::enable();
+
+        try {
+            $response = Director::test(
+                '/admin/grid/apiDelete?type=element&id=' . $contentId,
+                null,
+                $this->session(),
+                'GET',
+            );
+        } finally {
+            if (!$tokenWasEnabled) {
+                SecurityToken::disable();
+            }
+        }
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertNotNull(ContentElement::get()->byID($contentId));
     }
 
     public function testCreateContentRejectsUnknownClassNameWith400(): void
