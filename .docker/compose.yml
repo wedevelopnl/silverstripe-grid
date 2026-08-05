@@ -6,7 +6,11 @@ services:
       args:
         PHP_VERSION: ${PHP_VERSION:-8.3}
     ports:
-      - "${WEB_PORT}:443"
+      # Loopback only: SS_ENVIRONMENT_TYPE is dev, so the whole unauthenticated
+      # /dev/* surface is live. Docker publishes on 0.0.0.0 by default and its
+      # iptables rules bypass most host firewalls, which would expose that
+      # surface to any shared network the developer is on.
+      - "127.0.0.1:${WEB_PORT}:443"
     volumes:
       - ../composer.json:/module/composer.json:ro
       - ../src:/module/src
