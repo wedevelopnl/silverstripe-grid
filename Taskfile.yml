@@ -257,6 +257,7 @@ tasks:
       - qa-lint
       - qa-format
       - qa-typecheck
+      - qa-i18n
       - qa-test-js
       - qa-build
 
@@ -298,6 +299,13 @@ tasks:
       - 'echo "==> [lint] running Biome + Stylelint..."'
       - npm run lint
       - 'echo "==> [lint] done"'
+
+  qa-i18n:
+    internal: true
+    cmds:
+      - 'echo "==> [i18n] checking collected strings + locale parity..."'
+      - npm run i18n:check
+      - 'echo "==> [i18n] done"'
 
   qa-format:
     internal: true
