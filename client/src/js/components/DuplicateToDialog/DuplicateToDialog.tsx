@@ -18,6 +18,37 @@ const PARENT_TYPE_FOR_ELEMENT = {
   element: 'column',
 } as const satisfies Record<ElementTypeKey, NodeType>
 
+/**
+ * Failure notice for one of the wizard's three list queries. The query client
+ * runs with `retry: false`, so without an explicit retry affordance a single
+ * failed request leaves the step permanently blank.
+ */
+function ListLoadError({
+  error,
+  onRetry,
+}: {
+  readonly error: Error
+  readonly onRetry: () => void
+}) {
+  return (
+    <div data-testid="duplicate-to-load-error" role="alert">
+      <p className="ssgrid-dialog__error">
+        {t('WeDevelopGrid.DuplicateToDialog.LOAD_FAILED', 'Could not load this list: {message}', {
+          message: error.message,
+        })}
+      </p>
+      <button
+        type="button"
+        className="ssgrid-button ssgrid-button--ghost"
+        data-testid="duplicate-to-retry"
+        onClick={onRetry}
+      >
+        {t('WeDevelopGrid.DuplicateToDialog.RETRY_BUTTON', 'Retry')}
+      </button>
+    </div>
+  )
+}
+
 interface DuplicateToDialogProps {
   readonly isOpen: boolean
   readonly elementType: ElementTypeKey
@@ -215,6 +246,7 @@ export default function DuplicateToDialog({
                 {t('WeDevelopGrid.DuplicateToDialog.LOADING_PAGES', 'Loading pages\u2026')}
               </p>
             )}
+            {pages.isError && <ListLoadError error={pages.error} onRetry={pages.refetch} />}
             {pages.data !== undefined && (
               <div
                 className="ssgrid-dialog__list"
@@ -261,6 +293,7 @@ export default function DuplicateToDialog({
                 {t('WeDevelopGrid.DuplicateToDialog.LOADING_ZONES', 'Loading zones\u2026')}
               </p>
             )}
+            {zones.isError && <ListLoadError error={zones.error} onRetry={zones.refetch} />}
             {hasMultipleZones && (
               <div
                 className="ssgrid-dialog__list"
@@ -301,6 +334,9 @@ export default function DuplicateToDialog({
                   'Loading containers\u2026',
                 )}
               </p>
+            )}
+            {containers.isError && (
+              <ListLoadError error={containers.error} onRetry={containers.refetch} />
             )}
             {containers.data !== undefined && containers.data.length === 0 && (
               <p data-testid="duplicate-to-no-containers">
