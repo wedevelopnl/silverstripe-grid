@@ -277,7 +277,45 @@ public function updateElementFieldMapping(
 }
 ```
 
-### 3. Filtering or augmenting the legacy element list
+> **`updateElementFieldMapping` runs on the DRAFT build only.** For an element that
+> exists on both stages, the migration publishes the draft record with
+> `writeToStage(LIVE)` and then corrects the live row's *stock* fields from the live
+> legacy element. Fields you set in `updateElementFieldMapping` were read from the
+> draft legacy element, so wherever the two stages diverge, the draft value would go
+> live. Use `updateLiveElementFieldMapping` (below) to reconcile them.
+
+### 3. Reconciling custom fields on the live stage
+
+`LivePublisher` calls `updateLiveElementFieldMapping($element, $liveElement)` for
+every element shared between draft and live, right after the stock live fields have
+been corrected. `$liveElement` is the **live** `LegacyElement`.
+
+Write to the LIVE stage only — `$element` is the draft record, so a plain `write()`
+would push live values back onto draft:
+
+```php
+public function updateLiveElementFieldMapping(
+    \WeDevelop\Grid\Model\GridElement $element,
+    \WeDevelop\Grid\Migration\DTO\LegacyElement $liveElement,
+): void {
+    if (!$element instanceof \App\Grid\TeaserElement || $liveElement->mediaData === null) {
+        return;
+    }
+
+    \SilverStripe\ORM\DB::prepared_query(
+        'UPDATE "App_Grid_TeaserElement_Live" SET "TeaserLinkURL" = ? WHERE "ID" = ?',
+        [(string) ($liveElement->mediaData->fields['TeaserLinkURL'] ?? ''), $element->ID],
+    );
+}
+```
+
+Register the extension on `WeDevelop\Grid\Migration\Service\LivePublisher`.
+
+Live-**only** elements need no equivalent: they are built from the live legacy data
+by `DraftHierarchyWriter`, so `updateElementFieldMapping` already sees live values
+for them.
+
+### 4. Filtering or augmenting the legacy element list
 
 `LegacyDataReader` calls `updateLegacyElements($elements, $areaId, $stage)` after reading a page's elements. Use this to drop unsupported elements or inject additional data.
 
@@ -296,7 +334,7 @@ public function updateLegacyElements(array &$elements, int $areaId, string $stag
 
 Register the extension on `WeDevelop\Grid\Migration\Service\LegacyDataReader` using the same YAML pattern as above.
 
-### 4. Overriding the FieldMapper lookup tables
+### 5. Overriding the FieldMapper lookup tables
 
 `AbstractMigrationTask` calls `updateFieldMapperConfig($classNameMap, $verticalAlignMap, $mediaPositionMap, $gapSizeMap)` immediately before constructing the `FieldMapper`. Each argument is a nullable array passed by reference; populating one replaces the corresponding built-in Bootstrap default, leaving the untouched ones on the defaults. Use this when your legacy `ElementContentExtension` was customised to store non-standard CSS class values (the default `silverstripe-elemental-grid` install stores Bootstrap strings regardless of the rendering framework, so most sites need no override).
 
@@ -364,7 +402,7 @@ Carry the block link FK fields across during the grid pass with the `updateEleme
 
 **"Resolved class … does not extend GridElement."** — A legacy element class has no mapping to a new class that extends `WeDevelop\Grid\Model\ContentElement` / `GridElement`. Register an `updateClassNameMapping` extension (option 1) or update the PHP class hierarchy.
 
-**Media blocks show the wrong alignment or order.** — The default CSS-class lookups expect Bootstrap values (`align-items-center`, `order-1 order-md-2`, …). Register an `updateFieldMapperConfig` extension (option 4 above) to supply your own lookup tables, or use `updateElementFieldMapping` (option 2) for per-element fixes after the default mapping has run.
+**Media blocks show the wrong alignment or order.** — The default CSS-class lookups expect Bootstrap values (`align-items-center`, `order-1 order-md-2`, …). Register an `updateFieldMapperConfig` extension (option 5 above) to supply your own lookup tables, or use `updateElementFieldMapping` (option 2) for per-element fixes after the default mapping has run.
 
 **Viewport overrides are missing after migration.** — The automatic viewport-key mapping is case-insensitive but requires at least a case-insensitive match between legacy keys (`XS`, `SM`, `MD`, `LG`, `XL`) and the active adapter's viewport keys. Migrating to an adapter with different names (for example Bulma's `mobile`, `tablet`, `desktop`) requires an explicit `--viewport-map` argument.
 
