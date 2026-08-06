@@ -71,11 +71,24 @@ final class AbstractMigrationTaskTest extends TestCase
         self::assertSame(['MD' => 'md', 'XL' => 'xl'], $map);
     }
 
-    public function testExplicitViewportMapArgumentSkipsPairsWithoutEquals(): void
+    public function testExplicitViewportMapRejectsPairWithoutEquals(): void
+    {
+        // Skipping the malformed pair would leave the map non-empty, so the
+        // empty-map guard never fires and the MD overrides vanish from the
+        // migrated content without a word.
+        $adapter = $this->adapterWithViewportKeys(['md', 'xl']);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid --viewport-map pair "BROKEN"');
+
+        $this->invokeResolveViewportKeyMap('MD=md,BROKEN,XL=xl', $adapter);
+    }
+
+    public function testExplicitViewportMapToleratesEmptyPairsFromStrayCommas(): void
     {
         $adapter = $this->adapterWithViewportKeys(['md', 'xl']);
 
-        $map = $this->invokeResolveViewportKeyMap('MD=md,BROKEN,XL=xl', $adapter);
+        $map = $this->invokeResolveViewportKeyMap('MD=md,,XL=xl,', $adapter);
 
         self::assertSame(['MD' => 'md', 'XL' => 'xl'], $map);
     }

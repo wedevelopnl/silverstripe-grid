@@ -296,8 +296,8 @@ abstract class AbstractMigrationTask extends BuildTask
      *
      * @return array<string, string> old key → new key
      *
-     * @throws InvalidArgumentException when an explicit pair names an unknown legacy
-     *     old key or an adapter viewport that is not enabled
+     * @throws InvalidArgumentException when an explicit pair is malformed, names an
+     *     unknown legacy old key, or names an adapter viewport that is not enabled
      */
     protected function resolveViewportKeyMap(?string $viewportMapArg, GridAdapterInterface $adapter): array
     {
@@ -306,9 +306,21 @@ abstract class AbstractMigrationTask extends BuildTask
         if ($viewportMapArg !== null && $viewportMapArg !== '') {
             $map = [];
             foreach (\explode(',', $viewportMapArg) as $pair) {
+                // Tolerate a trailing/doubled comma, but never a pair the operator
+                // meant as a mapping: silently skipping it would drop every
+                // responsive override for that viewport during a destructive
+                // migration, the same way an unknown key would.
+                $pair = \trim($pair);
+                if ($pair === '') {
+                    continue;
+                }
+
                 $parts = \explode('=', $pair, 2);
                 if (\count($parts) !== 2) {
-                    continue;
+                    throw new InvalidArgumentException(\sprintf(
+                        'Invalid --viewport-map pair "%s". Use comma-separated OLD=new pairs, e.g. "MD=md,LG=lg".',
+                        $pair,
+                    ));
                 }
 
                 $rawOld = \trim($parts[0]);
