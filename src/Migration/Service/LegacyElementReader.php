@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Migration\Service;
 
 use InvalidArgumentException;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
@@ -23,8 +24,8 @@ use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
  * are batched: each area read issues a single `IN (…)` query per companion
  * table instead of one query per element, then hydrates from the prefetched
  * maps. The single-ID accessors ({@see getRowData()}, {@see getContentMediaData()},
- * {@see getContentMediaDataInLocale()}) remain available for direct lookups but
- * are not used on the batch hydration path.
+ * {@see getContentMediaDataInLocale()}) predate that batching and are deprecated:
+ * nothing on the hydration path calls them.
  */
 final class LegacyElementReader
 {
@@ -225,11 +226,14 @@ final class LegacyElementReader
     }
 
     /**
-     * Single-ID accessor retained for direct lookups; the batch hydration path
-     * uses {@see prefetchRowData()} instead.
+     * @deprecated 6.0.0 The hydration path batches these reads via
+     *     {@see prefetchRowData()}; this per-element query has no caller.
+     *     Will be removed in 7.0.0.
      */
     public function getRowData(int $elementId, string $stage): ?LegacyRowData
     {
+        Deprecation::notice('6.0.0', 'Use the batched prefetchRowData()/readElements() path instead.');
+
         $table = $this->stageTable('ElementRow', $stage);
 
         $result = DB::prepared_query(
@@ -252,11 +256,14 @@ final class LegacyElementReader
     /**
      * Fetch content media extension fields from the ElementContent table.
      *
-     * Single-ID accessor retained for direct lookups; the batch hydration path
-     * uses {@see prefetchContentRows()} instead.
+     * @deprecated 6.0.0 The hydration path batches these reads via
+     *     {@see prefetchContentRows()}; this per-element query has no caller.
+     *     Will be removed in 7.0.0.
      */
     public function getContentMediaData(int $elementId, string $stage): ?LegacyMediaData
     {
+        Deprecation::notice('6.0.0', 'Use the batched prefetchContentRows()/readElements() path instead.');
+
         $table = $this->stageTable('ElementContent', $stage);
 
         $result = DB::prepared_query(
@@ -278,13 +285,17 @@ final class LegacyElementReader
      * Locale-aware variant of {@see getContentMediaData()}: overlays
      * ElementContent_Localised values for the locale onto the base media row.
      *
-     * Single-ID accessor retained for direct lookups; the batch hydration path
-     * overlays from {@see prefetchLocalised()} instead.
-     *
      * @param non-empty-string $localeCode
+     *
+     * @deprecated 6.0.0 Never called, in production or in tests. The locale
+     *     overlay on the hydration path is applied from
+     *     {@see prefetchLocalised()} instead, so this is the unreachable second
+     *     implementation of that concern. Will be removed in 7.0.0.
      */
     public function getContentMediaDataInLocale(int $elementId, string $stage, string $localeCode): ?LegacyMediaData
     {
+        Deprecation::notice('6.0.0', 'Use the batched prefetchLocalised()/readElements() path instead.');
+
         $table = $this->stageTable('ElementContent', $stage);
 
         $result = DB::prepared_query(
