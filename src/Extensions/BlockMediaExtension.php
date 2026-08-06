@@ -204,13 +204,13 @@ class BlockMediaExtension extends Extension
     /** Calculated pixel width for the media image based on column proportion. */
     public function getMediaImageWidth(): int
     {
-        return $this->getCalculatedMediaImageWidth();
+        return $this->getOwner()->gridAdapter->getColumnPixelWidth($this->getColSize());
     }
 
     /** Calculated pixel height from aspect ratio or source dimensions. */
     public function getMediaImageHeight(): int
     {
-        $width = $this->getCalculatedMediaImageWidth();
+        $width = $this->getMediaImageWidth();
         $ratio = $this->getAspectRatioEnum();
 
         return match ($ratio) {
@@ -476,11 +476,6 @@ class BlockMediaExtension extends Extension
         }
 
         return $options;
-    }
-
-    private function getCalculatedMediaImageWidth(): int
-    {
-        return $this->getOwner()->gridAdapter->getColumnPixelWidth($this->getColSize());
     }
 
     /**
