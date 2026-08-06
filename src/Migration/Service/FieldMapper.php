@@ -210,14 +210,16 @@ final class FieldMapper
         /** @var string $position */
         $position = $fields['MediaPosition'] ?? '';
 
-        // ContentColumns Varchar → int
-        /** @var string|null $cols */
+        // ContentColumns Varchar → int. `??` already collapses a NULL column to
+        // '', so '' is the only shape "not set" arrives in.
+        /** @var string|int $cols */
         $cols = $fields['ContentColumns'] ?? '';
+        $colsIsNumeric = is_numeric($cols);
 
         // Warn on non-empty, non-numeric values (e.g. corrupt legacy data) so the
-        // migration log surfaces them. Empty/null are the documented "not set" case
-        // and are silently normalised to 0.
-        if ($cols !== '' && $cols !== null && !is_numeric($cols)) {
+        // migration log surfaces them. Empty is the documented "not set" case and
+        // is silently normalised to 0.
+        if ($cols !== '' && !$colsIsNumeric) {
             $this->logger?->warning(
                 'Unrecognised ContentColumns value "{value}"; falling back to 0.',
                 ['value' => $cols],
@@ -231,7 +233,7 @@ final class FieldMapper
         /** @var array<string, string|int|bool|null> $fields */
 
         return new MappedMediaFields(
-            ContentColumns: ($cols === '' || $cols === null || !is_numeric($cols)) ? 0 : (int) $cols,
+            ContentColumns: $colsIsNumeric ? (int) $cols : 0,
             VerticalAlignment: $this->verticalAlignMap[$align] ?? 'top',
             GapSize: $this->gapSizeMap[$gap] ?? 0,
             MediaType: (string) ($fields['MediaType'] ?? ''),
