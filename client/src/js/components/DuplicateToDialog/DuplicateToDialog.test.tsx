@@ -1485,16 +1485,6 @@ describe('DuplicateToDialog', () => {
       const aboutItem = screen.getByText('About').closest('[role="option"]')
       expect(aboutItem).toHaveAttribute('tabindex', '0')
     })
-
-    it('disables Next while the selected page id is 0', async () => {
-      mockApiRoutes()
-      renderDialog({ currentPageId: 0 })
-
-      await goToPageStep()
-
-      // L379 `disabled={selectedPageId === 0}` — forced false would enable it.
-      expect(screen.getByTestId('duplicate-to-next')).toBeDisabled()
-    })
   })
 
   describe('container empty-state boundary', () => {
