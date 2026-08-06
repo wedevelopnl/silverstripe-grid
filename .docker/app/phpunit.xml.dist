@@ -6,7 +6,9 @@
          colors="true"
          executionOrder="random"
          resolveDependencies="true"
-         beStrictAboutTestsThatDoNotTestAnything="true">
+         beStrictAboutTestsThatDoNotTestAnything="true"
+         failOnRisky="true"
+         failOnWarning="true">
     <testsuites>
         <testsuite name="unit">
             <directory>vendor/wedevelopnl/silverstripe-grid/tests/Unit</directory>
