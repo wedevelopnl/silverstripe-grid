@@ -39,6 +39,5 @@ export declare const NodeIdentity: {
     readonly toKey: typeof toKey;
     readonly fromKey: typeof fromKey;
     readonly equals: typeof equals;
-    readonly assert: Chai.Assert;
 };
 export {};
