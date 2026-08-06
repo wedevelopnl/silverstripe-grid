@@ -71,7 +71,7 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML (b
 
 ### Default Titles
 
-`GridElement::ensureDefaultTitle()` runs in `onBeforeWrite()` and **persists** a translatable `"{type} {count}"` title (key `<class>.DEFAULT_TITLE`) whenever `Title` is empty — `count` is the number of same-parent siblings + 1. Scaffolded children are written with an empty `Title` and get their own default from their own write hook, so `"Row 1"` / `"Column 1"` are real column values, not render-time decoration.
+`GridElement::ensureDefaultTitle()` runs in `onBeforeWrite()` and **persists** a translatable `"{type} {count}"` title (key `<class>.DEFAULT_TITLE`) whenever `Title` is empty — `count` is the number of same-parent **and same-class** siblings + 1 (the query is `static::get()`, so late static binding scopes it to the element's own class). Scaffolded children are written with an empty `Title` and get their own default from their own write hook, so `"Row 1"` / `"Column 1"` are real column values, not render-time decoration.
 
 `getDisplayTitle()` is the read-time counterpart and a separate mechanism: it falls back to a translatable `(untitled)` for elements that were never written, and for rows predating the write-time default.
 
