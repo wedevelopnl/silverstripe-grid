@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Forms;
 
 use SilverStripe\Core\Manifest\ModuleResource;
 use SilverStripe\Core\Manifest\ModuleResourceLoader;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\Forms\OptionsetField;
 use SilverStripe\Model\ArrayData;
 use SilverStripe\Model\List\ArrayList;
@@ -29,9 +30,16 @@ final class ColumnWidthPickerField extends OptionsetField
         parent::__construct($name, $title, $source);
     }
 
-    /** @return int<1, max> */
+    /**
+     * @return int<1, max>
+     *
+     * @deprecated 6.0.0 No caller: the constructor value is only ever consumed
+     *     internally by {@see getPickerOptions()}. Will be removed in 7.0.0.
+     */
     public function getTotalColumns(): int
     {
+        Deprecation::notice('6.0.0', 'Will be removed without equivalent functionality — no caller reads it.');
+
         return $this->totalColumns;
     }
 
