@@ -1,12 +1,15 @@
-# E2E fixture: a published page with one known section, used to verify
-# the history viewer renders the readonly grid for a specific version.
+# E2E fixture: a draft page with one known section, used to verify the history
+# viewer renders the readonly grid for a specific version.
 #
-# Post-actions in _config/dev.yml publish recursively so v1 exists on
-# LIVE. The test then mutates the section title (creating v2) and
-# asserts that each history version renders its own frozen state.
+# Registered with NO post_actions (see _config/dev.yml): the spec creates every
+# version through real user actions — publish, edit the section title, publish
+# again — so each entry in the resulting history is the validated result of an
+# interaction rather than a fixture side-effect. It then asserts each version
+# renders its own frozen state.
 #
-# Bottom-up ordering (leaf → column → row → section → page) to prevent
-# auto-scaffolding from creating duplicate children.
+# Top-down ordering (page → section → row → column → leaf) so the
+# `=>ClassName.id` parent references resolve; the FixtureLoader forces
+# auto_scaffold = false, so this cannot produce duplicate children.
 
 Page:
   e2e_history_page:
