@@ -6,7 +6,6 @@ namespace WeDevelop\Grid\Service;
 
 use NoDiscard;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
@@ -121,37 +120,25 @@ class ElementPlacementService
 
     /**
      * Wrapped in a DB transaction so a mid-loop write failure cannot leave
-     * siblings half-reindexed. If a write throws, withTransaction rolls the
-     * whole batch back and re-raises. Only a ValidationException is then
-     * translated into a failure Result by WriteResult::from; any other
-     * exception propagates uncaught and surfaces as a 500.
+     * siblings half-reindexed. Only a ValidationException is translated into a
+     * failure Result by WriteResult::from; any other exception propagates
+     * uncaught and surfaces as a 500 (after the rollback).
      *
      * @param list<GridElement> $dirtyElements
      * @return Result<GridElement>
      */
     private function persistAndReturn(array $dirtyElements, GridElement $element): Result
     {
-        $conn = DB::get_conn();
-        $persistResult = WriteResult::from(static function () use ($dirtyElements, $conn): null {
-            $writer = static function () use ($dirtyElements): void {
+        /** @var Result<GridElement> */
+        return Transactional::run(static fn (): Result => WriteResult::from(
+            static function () use ($dirtyElements, $element): GridElement {
                 foreach ($dirtyElements as $dirtyElement) {
                     $dirtyElement->write();
                 }
-            };
 
-            if ($conn === null) {
-                $writer();
-            } else {
-                $conn->withTransaction($writer);
-            }
-            return null;
-        });
-
-        if ($persistResult->isErr()) {
-            return Result::fail(...$persistResult->errors());
-        }
-
-        return Result::ok($element);
+                return $element;
+            },
+        ));
     }
 
     /**
