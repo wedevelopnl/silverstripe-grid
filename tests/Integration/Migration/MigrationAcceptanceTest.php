@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Migration;
 
-use PHPUnit\Framework\Attributes\CoversNothing;
 use Page;
+use PHPUnit\Framework\Attributes\CoversNothing;
+use Psr\Log\NullLogger;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
-use Psr\Log\NullLogger;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
@@ -28,6 +28,7 @@ use WeDevelop\Grid\Tests\Integration\Migration\Service\TestPage;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestCustomElementMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestCustomElementReaderExtension;
+use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
 
 /**
  * End-to-end acceptance tests for the SS5 → SS6 grid migration pipeline.
@@ -39,6 +40,8 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\TestCustomElementReaderEx
 #[CoversNothing]
 final class MigrationAcceptanceTest extends SapphireTest
 {
+    use CleansGridTables;
+
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
     /** @var list<class-string> */
@@ -1577,29 +1580,5 @@ final class MigrationAcceptanceTest extends SapphireTest
     {
         $this->seeder->removeElementalAreaColumn('Page');
         $this->seeder->addExtensionColumns('Page');
-    }
-
-    /**
-     * Remove all records from GridElement and related tables to prevent leaking between tests.
-     */
-    private function cleanGridTables(): void
-    {
-        $tables = [
-            'WeDevelop_Grid_Test_CustomElement', 'WeDevelop_Grid_Test_CustomElement_Live',
-            'WeDevelop_Grid_ContentElement', 'WeDevelop_Grid_ContentElement_Live',
-            'WeDevelop_Grid_Column', 'WeDevelop_Grid_Column_Live',
-            'WeDevelop_Grid_Row', 'WeDevelop_Grid_Row_Live',
-            'WeDevelop_Grid_Section', 'WeDevelop_Grid_Section_Live',
-            'WeDevelop_Grid_GridElement', 'WeDevelop_Grid_GridElement_Live',
-            'WeDevelop_Grid_Test_Page', 'WeDevelop_Grid_Test_Page_Live',
-        ];
-
-        $allTables = DB::table_list();
-
-        foreach ($tables as $table) {
-            if (\array_key_exists(\strtolower($table), $allTables)) {
-                DB::query("DELETE FROM \"{$table}\"");
-            }
-        }
     }
 }

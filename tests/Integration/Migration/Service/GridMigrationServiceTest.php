@@ -20,8 +20,6 @@ use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Migration\Strategy\AllRowsInSectionStrategy;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
-use SilverStripe\Core\ClassInfo;
-use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
@@ -29,11 +27,14 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
 
 #[CoversClass(GridMigrationService::class)]
 #[CoversClass(MappedMediaFields::class)]
 final class GridMigrationServiceTest extends SapphireTest
 {
+    use CleansGridTables;
+
     protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
 
     protected static $extra_dataobjects = [TestCustomElement::class, TestPage::class];
@@ -107,42 +108,6 @@ final class GridMigrationServiceTest extends SapphireTest
         $this->seeder->dropTables();
 
         parent::tearDown();
-    }
-
-    /**
-     * Remove all records from GridElement and related tables to prevent leaking
-     * between tests (this class runs without SapphireTest's transaction rollback
-     * because the seeder's DDL auto-commits).
-     *
-     * The table list is derived from the class manifest — every GridElement
-     * subclass plus the test-only extra_dataobjects, each with its base and
-     * _Live table — so adding a new element table or test DataObject can never
-     * silently leak rows across tests here.
-     */
-    private function cleanGridTables(): void
-    {
-        $schema = DataObject::getSchema();
-
-        /** @var list<class-string<DataObject>> $classes */
-        $classes = \array_values(\array_unique([
-            ...\array_values(ClassInfo::subclassesFor(GridElement::class)),
-            ...static::$extra_dataobjects,
-        ]));
-
-        $allTables = DB::table_list();
-
-        foreach ($classes as $class) {
-            $table = $schema->tableName($class);
-            if ($table === '') {
-                continue;
-            }
-
-            foreach ([$table, $table . '_Live'] as $candidate) {
-                if (\array_key_exists(\strtolower($candidate), $allTables)) {
-                    DB::query("DELETE FROM \"{$candidate}\"");
-                }
-            }
-        }
     }
 
     private function createStrategy(): RowPerSectionStrategy
