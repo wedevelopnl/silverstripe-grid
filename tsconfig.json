@@ -12,10 +12,19 @@
     "isolatedModules": true,
     "erasableSyntaxOnly": true,
     "noEmit": true,
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    // Deliberately empty: `types` applies to every file in `include`, so
+    // listing vitest/chai here would make their globals (`assert`, `expect`,
+    // `vi`, …) type-resolve as free identifiers in shipped code. Test globals
+    // belong to tsconfig.test.json only.
+    "types": [],
     "paths": {
       "@/*": ["./client/src/js/*"]
     }
   },
-  "include": ["client/src/js/**/*", "vite.config.ts", "vitest.setup.ts", "playwright.config.ts"]
+  "include": ["client/src/js/**/*"],
+  "exclude": [
+    "client/src/js/**/*.test.ts",
+    "client/src/js/**/*.test.tsx",
+    "client/src/js/testing/**"
+  ]
 }
