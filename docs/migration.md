@@ -151,7 +151,7 @@ When stdin is not a TTY (CI pipelines, `sake` called from a script), there is no
 | `--strategy` | no | `sections` | Row mapping strategy: `sections` (one Section per legacy ElementRow) or `single-section` (all rows under one Section per page). Default `sections`. |
 | `--dry-run` | no | (flag) | Log planned writes and skip all database changes. Bypasses the confirmation prompt. Exit code is 0 on success even when nothing was written. |
 | `--force` | no | (flag) | Skip the interactive confirmation prompt. Required for non-interactive runs (CI, piped invocations) when not using `--dry-run`. No short form (`-f` is reserved by `sake` for `--flush`). |
-| `--viewport-map` | no | — | Map legacy viewport keys to the active adapter's viewport keys. Derived automatically via case-insensitive matching when omitted — provide this explicitly when migrating across CSS frameworks with different viewport names. |
+| `--viewport-map` | no | — | Map legacy viewport keys to the active adapter's viewport keys, as comma-separated `OLD=new` pairs (e.g. `MD=desktop,LG=widescreen`). Derived automatically via case-insensitive matching when omitted — provide this explicitly when migrating across CSS frameworks with different viewport names. A pair that is malformed, names an unknown legacy key, or names a viewport the active adapter does not expose aborts the run. |
 | `--page-ids` | no | — | Comma-separated page IDs to migrate. If omitted, all eligible pages are migrated. |
 | `--stop-on-first-failure` | no | (flag) | Halt the batch on the first page that fails to migrate. By default the task continues past failures and logs the failing page IDs at the end. |
 

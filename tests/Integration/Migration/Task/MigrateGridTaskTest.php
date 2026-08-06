@@ -675,7 +675,34 @@ final class MigrateGridTaskTest extends SapphireTest
         self::assertSame(VerticalAlignment::Center->value, $content->VerticalAlignment);
     }
 
-    public function testViewportMapMalformedPairsAreSkipped(): void
+    public function testViewportMapMalformedPairReturnsFailure(): void
+    {
+        // A pair without "=" must fail loudly, like a --strategy typo: skipping it
+        // leaves the map non-empty, so the empty-map guard never fires and every
+        // responsive override for that viewport is lost on a destructive run.
+        $pageId = $this->getPageId();
+        $areaId = 800;
+        $this->seeder->seedPage($pageId, $areaId);
+
+        $this->seeder->seedElement(8000, $areaId, self::CONTENT_CLASS, 1, [
+            'SizeMD' => 8,
+            'SizeXL' => 6,
+        ]);
+        $this->seeder->seedContentMedia(8000);
+
+        $result = $this->executeTaskRaw([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--viewport-map' => 'MD=md,BROKEN,XL=xl',
+            '--force' => true,
+        ]);
+
+        self::assertSame(Command::FAILURE, $result['exitCode']);
+        self::assertStringContainsString('Invalid --viewport-map pair "BROKEN"', $result['output']);
+        self::assertCount(0, Section::get());
+    }
+
+    public function testViewportMapToleratesStrayCommas(): void
     {
         $pageId = $this->getPageId();
         $areaId = 800;
@@ -687,11 +714,10 @@ final class MigrateGridTaskTest extends SapphireTest
         ]);
         $this->seeder->seedContentMedia(8000);
 
-        // "BROKEN" has no = sign → should be skipped, only MD=md and XL=xl used
         $exitCode = $this->executeTask([
             '--default-viewport' => 'MD',
             '--zone' => 'main',
-            '--viewport-map' => 'MD=md,BROKEN,XL=xl',
+            '--viewport-map' => 'MD=md,,XL=xl,',
         ]);
 
         self::assertSame(Command::SUCCESS, $exitCode);
