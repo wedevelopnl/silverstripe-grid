@@ -36,12 +36,6 @@ final readonly class AllRowsInSectionStrategy extends AbstractRowMappingStrategy
         parent::__construct($grouper, $mapper, $defaultViewport, $viewportKeyMap);
     }
 
-    /**
-     * @param list<LegacyElement> $elements Flat sorted element list
-     * @param int $pageId Target page ID for parent relationships
-     * @param string $zone Target zone
-     * @return list<MigrationSection>
-     */
     public function buildHierarchy(array $elements, int $pageId, string $zone): array
     {
         $groups = $this->grouper->group($elements);
