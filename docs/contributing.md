@@ -110,7 +110,7 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 When contributing code:
 
 - Run `task qa` locally before pushing — CI runs the same suite.
-- **Frontend changes must ship their rebuilt bundles.** Run `npm run build` and commit the resulting `client/dist` and `client/lang` output with your source changes: CI rebuilds and then runs `git diff --exit-code -- client/dist client/lang`, failing on both modified and untracked files there. This catches brand-new build output (a new chunk, a `.d.ts`, a compiled lang file) as well as changes to existing bundles.
+- **Frontend changes must ship their rebuilt bundles.** Run `npm run build` and commit the resulting `client/dist` and `client/lang` output with your source changes. CI rebuilds and then checks both paths twice: `git diff --exit-code -- client/dist client/lang` fails on modified tracked files, and a follow-up `git status --porcelain --untracked-files=all` check fails on untracked ones. `git diff` never sees untracked paths, so brand-new build output (a new chunk, a `.d.ts`, the compiled lang js for a newly added locale) is caught only by that second check — verify with `git status` locally, not `git diff` alone.
 - PHPStan runs at level max with 100% type coverage. Prefer precise PHPDoc types (see `.apm/instructions/php-conventions.instructions.md`).
 - E2E changes should come with a Playwright spec covering the new behavior. See the [E2E fixture protocol](testing/e2e-fixtures.md).
 - Keep the public API and the architecture docs (`docs/architecture/`) in sync. `CLAUDE.md` and `AGENTS.md` are generated from `.apm/instructions/` via `apm compile` — edit the sources, never the generated files.
