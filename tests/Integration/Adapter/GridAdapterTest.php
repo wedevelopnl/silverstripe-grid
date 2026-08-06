@@ -311,8 +311,8 @@ final class GridAdapterTest extends SapphireTest
         yield 'tailwind middle' => [TailwindAdapter::class, 'md', 'md:hidden'];
         yield 'tailwind last' => [TailwindAdapter::class, '2xl', '2xl:hidden'];
         yield 'bulma middle' => [BulmaAdapter::class, 'tablet', 'is-hidden-tablet-only'];
-        yield 'bulma last' => [BulmaAdapter::class, 'fullhd', 'is-hidden-fullhd-only'];
-        yield 'bulma base' => [BulmaAdapter::class, 'mobile', 'is-hidden-mobile-only'];
+        yield 'bulma last' => [BulmaAdapter::class, 'fullhd', 'is-hidden-fullhd'];
+        yield 'bulma base' => [BulmaAdapter::class, 'mobile', 'is-hidden-mobile'];
     }
 
     /**
@@ -571,9 +571,9 @@ final class GridAdapterTest extends SapphireTest
         yield 'tailwind top' => [TailwindAdapter::class, VerticalAlignment::Top, 'items-start'];
         yield 'tailwind center' => [TailwindAdapter::class, VerticalAlignment::Center, 'items-center'];
         yield 'tailwind bottom' => [TailwindAdapter::class, VerticalAlignment::Bottom, 'items-end'];
-        yield 'bulma top' => [BulmaAdapter::class, VerticalAlignment::Top, 'is-flex-start'];
-        yield 'bulma center' => [BulmaAdapter::class, VerticalAlignment::Center, 'is-vcentered'];
-        yield 'bulma bottom' => [BulmaAdapter::class, VerticalAlignment::Bottom, 'is-flex-end'];
+        yield 'bulma top' => [BulmaAdapter::class, VerticalAlignment::Top, 'is-align-items-flex-start'];
+        yield 'bulma center' => [BulmaAdapter::class, VerticalAlignment::Center, 'is-align-items-center'];
+        yield 'bulma bottom' => [BulmaAdapter::class, VerticalAlignment::Bottom, 'is-align-items-flex-end'];
     }
 
     /**

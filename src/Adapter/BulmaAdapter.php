@@ -51,12 +51,22 @@ final class BulmaAdapter extends GridAdapter
 
     private static int $offset_adjustment = 0;
 
-    private static string $base_hide_class = 'is-hidden-mobile-only';
+    // Bulma ships `-only` hide helpers for its middle breakpoints, but the two
+    // outermost ones have no `-only` variant: `is-hidden-mobile` already means
+    // "up to 768px" and `is-hidden-fullhd` already means "from 1408px", which is
+    // the whole of the largest breakpoint. Both are viewport-scoped as-is.
+    // https://bulma.io/documentation/helpers/visibility-helpers/
+    private static string $base_hide_class = 'is-hidden-mobile';
 
     private static string $responsive_hide_format = 'is-hidden-%s-only';
 
-    // Bulma has no symmetric `is-block-{viewport}` utility. Using `-only` hide classes
-    // scopes each hide to its viewport, so no restore class is needed.
+    /** @var array<string, string> */
+    private static array $hide_class_overrides = [
+        'fullhd' => 'is-hidden-fullhd',
+    ];
+
+    // Bulma has no symmetric `is-block-{viewport}` utility. Every hide class above
+    // is scoped to its own viewport, so no restore class is needed.
     private static string $responsive_restore_format = '';
 
     private static string $row_class_format = 'columns is-multiline';
@@ -85,13 +95,21 @@ final class BulmaAdapter extends GridAdapter
         '16x9' => 'is-16by9',
     ];
 
+    // `.columns` is a flex container, so Bulma's generic align-items helpers apply.
+    // `is-vcentered` is the columns-specific alias for the center case only —
+    // Bulma ships no `.columns` modifier for top or bottom, so the whole map uses
+    // one family. https://bulma.io/documentation/helpers/flexbox-helpers/
     /** @var array<string, string> */
     private static array $vertical_alignment_classes = [
-        'top' => 'is-flex-start',
-        'center' => 'is-vcentered',
-        'bottom' => 'is-flex-end',
+        'top' => 'is-align-items-flex-start',
+        'center' => 'is-align-items-center',
+        'bottom' => 'is-align-items-flex-end',
     ];
 
+    // Bulma ships no order utilities at all. These classes are a module
+    // convention: a Bulma project using the side-by-side media layout must supply
+    // the `has-order-*` CSS itself (see docs/architecture/grid-adapter.md), or
+    // override both formats with its own utility names.
     private static string $order_class_format = 'has-order-%d';
 
     private static string $responsive_order_format = 'has-order-%2$d-%1$s';
