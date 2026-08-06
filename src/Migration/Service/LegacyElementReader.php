@@ -228,11 +228,11 @@ final class LegacyElementReader
     /**
      * @deprecated 6.0.0 The hydration path batches these reads via
      *     {@see prefetchRowData()}; this per-element query has no caller.
-     *     Will be removed in 7.0.0.
+     *     Use {@see getElementsForArea()} instead. Will be removed in 7.0.0.
      */
     public function getRowData(int $elementId, string $stage): ?LegacyRowData
     {
-        Deprecation::notice('6.0.0', 'Use the batched prefetchRowData()/readElements() path instead.');
+        Deprecation::notice('6.0.0', 'Use getElementsForArea(), which batches this read for the whole area.');
 
         $table = $this->stageTable('ElementRow', $stage);
 
@@ -258,11 +258,11 @@ final class LegacyElementReader
      *
      * @deprecated 6.0.0 The hydration path batches these reads via
      *     {@see prefetchContentRows()}; this per-element query has no caller.
-     *     Will be removed in 7.0.0.
+     *     Use {@see getElementsForArea()} instead. Will be removed in 7.0.0.
      */
     public function getContentMediaData(int $elementId, string $stage): ?LegacyMediaData
     {
-        Deprecation::notice('6.0.0', 'Use the batched prefetchContentRows()/readElements() path instead.');
+        Deprecation::notice('6.0.0', 'Use getElementsForArea(), which batches this read for the whole area.');
 
         $table = $this->stageTable('ElementContent', $stage);
 
@@ -290,11 +290,12 @@ final class LegacyElementReader
      * @deprecated 6.0.0 Never called, in production or in tests. The locale
      *     overlay on the hydration path is applied from
      *     {@see prefetchLocalised()} instead, so this is the unreachable second
-     *     implementation of that concern. Will be removed in 7.0.0.
+     *     implementation of that concern. Use {@see getElementsForAreaInLocale()}
+     *     instead. Will be removed in 7.0.0.
      */
     public function getContentMediaDataInLocale(int $elementId, string $stage, string $localeCode): ?LegacyMediaData
     {
-        Deprecation::notice('6.0.0', 'Use the batched prefetchLocalised()/readElements() path instead.');
+        Deprecation::notice('6.0.0', 'Use getElementsForAreaInLocale(), which batches this read for the whole area.');
 
         $table = $this->stageTable('ElementContent', $stage);
 
