@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchElementTree } from '@/api/endpoints'
 import type { ApiError } from '@/api/errors'
 import type { TreeApiResponse } from '@/types/elements'
-import { countOverrides } from '@/utils/countOverrides'
+import { countOverrides, type OverrideCounts } from '@/utils/countOverrides'
 import { queryKeys } from './queryKeys'
 
 function treeQueryOptions(pageId: number | null, zone: string, version?: number) {
@@ -47,7 +47,7 @@ export function useElementTree(pageId: number | null, zone: string, version?: nu
 // Module-scope so the select identity is stable: TanStack re-runs `select`
 // whenever data OR the select function changes, and an inline arrow would
 // re-walk the tree on every consumer render instead of only on new data.
-const selectOverrideCounts = (response: TreeApiResponse): Record<string, number> =>
+const selectOverrideCounts = (response: TreeApiResponse): OverrideCounts =>
   countOverrides(response.nodes)
 
 /**
@@ -59,11 +59,11 @@ export function useViewportOverrideCounts(
   pageId: number | null,
   zone: string,
   version?: number,
-): Record<string, number> {
-  const { data } = useQuery<TreeApiResponse, ApiError, Record<string, number>>({
+): OverrideCounts {
+  const { data } = useQuery<TreeApiResponse, ApiError, OverrideCounts>({
     ...treeQueryOptions(pageId, zone, version),
     select: selectOverrideCounts,
   })
 
-  return data ?? {}
+  return data ?? { total: 0, byViewport: {} }
 }

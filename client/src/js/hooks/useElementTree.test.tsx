@@ -161,7 +161,7 @@ describe('useViewportOverrideCounts', () => {
   })
 
   it('should derive counts from cached tree nodes', async () => {
-    // 3 md-override columns, 1 lg-override column → _total=4, md=3, lg=1
+    // 3 md-override columns, 1 lg-override column → total=4, md=3, lg=1
     const apiResponse = treeWithOverrides({ md: 3, lg: 1 })
 
     const queryClient = new QueryClient({
@@ -173,16 +173,16 @@ describe('useViewportOverrideCounts', () => {
     const { result } = renderHook(() => useViewportOverrideCounts(1, 'main'), { wrapper })
 
     await waitFor(() => {
-      expect(result.current).toEqual({ _total: 4, md: 3, lg: 1 })
+      expect(result.current).toEqual({ total: 4, byViewport: { md: 3, lg: 1 } })
     })
   })
 
-  it('should return empty object when no data is cached', () => {
+  it('should return zero counts when no data is cached', () => {
     mockFetchSuccess({})
     const { wrapper } = createProviderWrapper()
     const { result } = renderHook(() => useViewportOverrideCounts(null, 'main'), { wrapper })
 
-    expect(result.current).toEqual({})
+    expect(result.current).toEqual({ total: 0, byViewport: {} })
   })
 
   it('should use version-keyed cache entry when version is provided', async () => {
@@ -197,7 +197,7 @@ describe('useViewportOverrideCounts', () => {
     const { result } = renderHook(() => useViewportOverrideCounts(1, 'main', 5), { wrapper })
 
     await waitFor(() => {
-      expect(result.current).toEqual({ _total: 2, md: 2 })
+      expect(result.current).toEqual({ total: 2, byViewport: { md: 2 } })
     })
   })
 })
