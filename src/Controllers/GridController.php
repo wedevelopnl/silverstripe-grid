@@ -910,19 +910,22 @@ class GridController extends AdminController
     /**
      * Resolve a {@see NodeRef} to the concrete DataObject it refers to.
      *
-     * Uses the NodeRef's type to pick the correct ORM table, avoiding the
-     * polymorphic ID collision between SiteTree page IDs and GridElement IDs.
+     * Element refs go through the repository, so stage pinning and the
+     * polymorphic-collision guard (a Row ref whose numeric ID also exists as
+     * another GridElement subclass) live in one place. The Page type is the one
+     * case {@see GridElementRepositoryInterface::findByRef()} deliberately
+     * excludes, because it is not a grid element — resolved here.
      */
     private function resolveNodeRef(NodeRef $ref): ?DataObject
     {
-        return Versioned::withVersionedMode(static function () use ($ref): ?DataObject {
-            Versioned::set_stage(Versioned::DRAFT);
+        if ($ref->type === NodeType::Page) {
+            /** @var positive-int $pageId NodeRef rejects non-positive ids */
+            $pageId = $ref->id;
 
-            /** @var class-string<DataObject> $class */
-            $class = $ref->type->toClass();
+            return $this->findDraftPage($pageId);
+        }
 
-            return DataObject::get($class)->byID($ref->id);
-        });
+        return $this->elementRepository->findByRef($ref);
     }
 
     /**
