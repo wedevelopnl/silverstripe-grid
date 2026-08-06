@@ -166,8 +166,9 @@ type ElementNodeWire = v.InferOutput<typeof baseFieldsWireSchema> &
       }
   )
 
+// v.lazy defers evaluation, so the forward reference to elementNodeWireSchema
+// below is resolved at validation time, not at module init.
 const childrenSchema: v.GenericSchema<ElementNodeWire[] | null> = v.lazy(() =>
-  // eslint-disable-next-line @typescript-eslint/no-use-before-define
   v.nullable(v.array(elementNodeWireSchema)),
 )
 
