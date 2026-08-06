@@ -75,7 +75,6 @@ export default defineConfig({
         'client/src/js/bridge/**',
         'client/src/js/boot/**',
         'client/src/js/testing/**',
-        'client/src/js/**/index.ts',
         'client/src/js/types/silverstripe.d.ts',
         'client/src/js/types/adapter.ts',
         'client/src/js/types/duplicateTo.ts',
