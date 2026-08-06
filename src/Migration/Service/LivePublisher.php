@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Migration\Service;
 
 use RuntimeException;
 use Psr\Log\LoggerInterface;
+use SilverStripe\Core\Extensible;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
@@ -28,14 +29,19 @@ use WeDevelop\Grid\Value\MigrationIdMap;
  * `updateClassNameMapping` / `updateElementFieldMapping` extension hooks still
  * fire) and the {@see RowMappingStrategy} to group live-only elements the same
  * way the draft path does.
+ *
+ * Carries the `updateLiveElementFieldMapping` extension hook (shared-element
+ * path only — see {@see overwriteLiveContent()}).
  */
-final readonly class LivePublisher
+final class LivePublisher
 {
+    use Extensible;
+
     public function __construct(
-        private FieldMapper $mapper,
-        private DraftHierarchyWriter $draftWriter,
-        private LoggerInterface $logger,
-        private RowMappingStrategy $strategy,
+        private readonly FieldMapper $mapper,
+        private readonly DraftHierarchyWriter $draftWriter,
+        private readonly LoggerInterface $logger,
+        private readonly RowMappingStrategy $strategy,
     ) {}
 
     /**
@@ -126,6 +132,11 @@ final readonly class LivePublisher
                 // the column-local value assigned on draft (not the legacy
                 // area-wide value) so both stages order the column identically.
                 $this->overwriteLiveContent($newElementId, $liveElement, $idMap->draftSort($oldId));
+
+                // Reconciliation point for project fields mapped via
+                // updateElementFieldMapping, which overwriteLiveContent does not
+                // know about and writeToStage() copied from draft.
+                $this->extend('updateLiveElementFieldMapping', $element, $liveElement);
             }
         }
 
@@ -315,6 +326,21 @@ final readonly class LivePublisher
      * on draft, NOT the legacy area-wide {@see LegacyElement::$sort}. Using the
      * draft Sort keeps both stages ordering the column's children identically;
      * writing the raw legacy Sort would diverge the two stages.
+     *
+     * Only the stock GridElement and ContentElement fields are corrected here.
+     * Fields a project maps through `updateElementFieldMapping` were set from the
+     * DRAFT legacy element, and writeToStage(LIVE) copied those draft values to
+     * live — so where the two stages diverge, draft content would go live. The
+     * `updateLiveElementFieldMapping` hook fired by the caller right after this
+     * method is the reconciliation point for those fields; it receives the
+     * published record and the live {@see LegacyElement}, and an
+     * implementation must write to the LIVE stage only (raw `_Live` UPDATE, or
+     * `Versioned::withVersionedMode()` pinned to LIVE) — writing the passed draft
+     * record would push live values back onto draft.
+     *
+     * The live-only path needs no equivalent: those elements are built from the
+     * live legacy data by {@see DraftHierarchyWriter}, which already fires
+     * `updateElementFieldMapping` with live values.
      *
      * @param int $draftSort Column-local Sort assigned to this element on draft
      */

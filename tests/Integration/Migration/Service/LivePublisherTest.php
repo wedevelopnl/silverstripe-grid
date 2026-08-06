@@ -356,6 +356,55 @@ final class LivePublisherTest extends SapphireTest
         self::assertSame(3, (int) $liveContent->ContentColumns, 'mapped media fields must be written to live');
     }
 
+    public function testUpdateLiveElementFieldMappingHookFiresAfterTheStockLiveOverwrite(): void
+    {
+        // Fields a project maps via updateElementFieldMapping are set from the
+        // DRAFT legacy element and copied to live by writeToStage(); this hook is
+        // the only place those can be reconciled with live values.
+        LivePublisher::add_extension(TestLiveFieldMappingExtension::class);
+
+        try {
+            // Fresh publisher so the extension is wired onto this instance.
+            $this->publisher = new LivePublisher(
+                $this->mapper,
+                $this->draftWriter,
+                $this->logger,
+                new RowPerSectionStrategy(
+                    new ElementGrouper(),
+                    $this->mapper,
+                    self::DEFAULT_VIEWPORT,
+                    self::VIEWPORT_KEY_MAP,
+                ),
+            );
+
+            $pageId = $this->createPage();
+            $idMap = new MigrationIdMap();
+
+            $this->writeDraft(
+                $pageId,
+                [$this->section([$this->legacyElement(5000, 'Draft')], $this->gridSettings(8))],
+                $idMap,
+            );
+            $this->publish($pageId, Page::class, [$this->legacyElement(5000, 'Live')], [5000 => true], $idMap);
+
+            $newId = $idMap->newElementId(5000);
+
+            $live = $this->liveById(ContentElement::class, $newId);
+            self::assertInstanceOf(ContentElement::class, $live);
+            self::assertSame(
+                TestLiveFieldMappingExtension::MARKER,
+                (string) $live->ExtraClass,
+                'hook must run after overwriteLiveContent, not before it',
+            );
+
+            $draft = ContentElement::get()->byID($newId);
+            self::assertInstanceOf(ContentElement::class, $draft);
+            self::assertSame('', (string) $draft->ExtraClass, 'the hook must not write back onto draft');
+        } finally {
+            LivePublisher::remove_extension(TestLiveFieldMappingExtension::class);
+        }
+    }
+
     public function testPublishRecordsEveryContainerAsPublishedInTheIdMap(): void
     {
         $pageId = $this->createPage();
