@@ -111,6 +111,11 @@ final class LegacyDataReader implements LegacyElementSource
         return $elements;
     }
 
+    /**
+     * @deprecated 6.0.0 Delegates to the deprecated
+     *     {@see LegacyElementReader::getRowData()}; the hydration path batches
+     *     these reads. Will be removed in 7.0.0.
+     */
     public function getRowData(int $elementId, string $stage): ?LegacyRowData
     {
         return $this->elementReader->getRowData($elementId, $stage);
@@ -118,6 +123,10 @@ final class LegacyDataReader implements LegacyElementSource
 
     /**
      * Fetch content media extension fields from the ElementContent table.
+     *
+     * @deprecated 6.0.0 Delegates to the deprecated
+     *     {@see LegacyElementReader::getContentMediaData()}; the hydration path
+     *     batches these reads. Will be removed in 7.0.0.
      */
     public function getContentMediaData(int $elementId, string $stage): ?LegacyMediaData
     {
