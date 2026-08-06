@@ -31,10 +31,10 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
         $id = $ref->id;
 
         // Pin the DRAFT stage so mutation-endpoint lookups resolve the editable
-        // record regardless of the ambient reading stage, mirroring
-        // GridController::resolveNodeRef and the GET read endpoints. Without
-        // this, a request whose ambient stage is LIVE would fail to find a
-        // DRAFT-only element and the controller would respond 404/400.
+        // record regardless of the ambient reading stage, matching the GET read
+        // endpoints. Without this, a request whose ambient stage is LIVE would
+        // fail to find a DRAFT-only element and the controller would respond
+        // 404/400.
         $record = Versioned::withVersionedMode(static function () use ($class, $id): ?GridElement {
             Versioned::set_stage(Versioned::DRAFT);
 
