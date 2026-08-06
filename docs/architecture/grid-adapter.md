@@ -27,6 +27,13 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single `abstrac
 | `TailwindAdapter` | 12 | `sm` | sm, md, lg, xl, 2xl |
 | `BulmaAdapter` | 12 | `desktop` | mobile, tablet, desktop, widescreen, fullhd |
 
+> **Bulma and media order classes.** Bulma ships no flex-order utilities, so
+> `BulmaAdapter`'s `order_class_format` / `responsive_order_format` emit a module
+> convention (`has-order-1`, `has-order-2-desktop`, …) that no framework CSS backs.
+> A Bulma project using the side-by-side media layout of `BlockMediaExtension` must
+> either supply that CSS itself or override both formats with its own utility names.
+> Every other class the Bulma preset emits is a real Bulma helper.
+
 ## Implementing a New Adapter
 
 ### 1. Create a Preset Subclass
@@ -129,6 +136,7 @@ All properties are `private static` on `GridAdapter`. Preset subclasses override
 |----------|------|---------|
 | `base_hide_class` | `string` | Hide class for base viewport |
 | `responsive_hide_format` | `string` | Hide class for other viewports |
+| `hide_class_overrides` | `array<string, string>` | Literal hide class per viewport key, for viewports the format cannot express. Takes precedence over both properties above. Bulma uses it for `fullhd`, which has no `-only` variant. |
 | `responsive_restore_format` | `string` | Restore class |
 
 **Container & structure:**
