@@ -153,15 +153,7 @@ class GridController extends AdminController
 
         $zone = $this->requireZone($request);
 
-        $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
-            Versioned::set_stage(Versioned::DRAFT);
-
-            return SiteTree::get()->byID($pageId);
-        });
-
-        if ($page === null) {
-            $this->jsonError(404);
-        }
+        $page = $this->requireDraftPage($pageId);
 
         if (!$page->canView()) {
             $this->jsonError(403);
@@ -599,15 +591,7 @@ class GridController extends AdminController
 
         $body = $parseResult->unwrap();
 
-        $page = Versioned::withVersionedMode(static function () use ($body): ?SiteTree {
-            Versioned::set_stage(Versioned::DRAFT);
-
-            return SiteTree::get()->byID($body->pageId);
-        });
-
-        if ($page === null) {
-            $this->jsonError(404);
-        }
+        $page = $this->requireDraftPage($body->pageId);
 
         if (!$page->canEdit()) {
             $this->jsonError(403);
@@ -656,15 +640,7 @@ class GridController extends AdminController
 
         $pageId = $this->requirePageId($request);
 
-        $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
-            Versioned::set_stage(Versioned::DRAFT);
-
-            return SiteTree::get()->byID($pageId);
-        });
-
-        if ($page === null) {
-            $this->jsonError(404);
-        }
+        $page = $this->requireDraftPage($pageId);
 
         if (!$page->canView()) {
             $this->jsonError(403);
@@ -693,15 +669,7 @@ class GridController extends AdminController
     {
         $pageId = $this->requirePageId($request);
 
-        $page = Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
-            Versioned::set_stage(Versioned::DRAFT);
-
-            return SiteTree::get()->byID($pageId);
-        });
-
-        if ($page === null) {
-            $this->jsonError(404);
-        }
+        $page = $this->requireDraftPage($pageId);
 
         if (!$page->canView()) {
             $this->jsonError(403);
@@ -903,6 +871,40 @@ class GridController extends AdminController
         }
 
         return $element;
+    }
+
+    /**
+     * Fetch a page on the DRAFT stage, regardless of the ambient reading stage.
+     *
+     * Every grid endpoint edits or previews draft content, so the stage is pinned
+     * here rather than at each call site — a request whose ambient stage is LIVE
+     * would otherwise miss a draft-only page.
+     *
+     * @param positive-int $pageId
+     */
+    private function findDraftPage(int $pageId): ?SiteTree
+    {
+        return Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            return SiteTree::get()->byID($pageId);
+        });
+    }
+
+    /**
+     * Fetch a page on the DRAFT stage, or 404. The permission check stays at the
+     * call site — read endpoints require canView(), writes canEdit().
+     *
+     * @param positive-int $pageId
+     */
+    private function requireDraftPage(int $pageId): SiteTree
+    {
+        $page = $this->findDraftPage($pageId);
+        if ($page === null) {
+            $this->jsonError(404);
+        }
+
+        return $page;
     }
 
     /**
