@@ -76,5 +76,4 @@ export const NodeIdentity = {
   toKey,
   fromKey,
   equals,
-  assert,
 } as const
