@@ -2,10 +2,10 @@
 # viewer renders the readonly grid for a specific version.
 #
 # Registered with NO post_actions (see _config/dev.yml): the spec creates every
-# version through real user actions — publish, edit the section title, publish
+# version through real user actions — publish, add a second section, publish
 # again — so each entry in the resulting history is the validated result of an
-# interaction rather than a fixture side-effect. It then asserts each version
-# renders its own frozen state.
+# interaction rather than a fixture side-effect. It then opens the newest
+# version and asserts it renders the post-edit tree (two sections) readonly.
 #
 # Top-down ordering (page → section → row → column → leaf) so the
 # `=>ClassName.id` parent references resolve; the FixtureLoader forces
