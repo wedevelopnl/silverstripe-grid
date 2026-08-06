@@ -50,11 +50,11 @@ final readonly class RequestBodyParser
             return Result::fail(new ValidationError('Invalid or missing containerType.'));
         }
 
-        try {
-            $parent = NodeRef::fromArray($parentData);
-        } catch (InvalidArgumentException $e) {
-            return Result::fail(new ValidationError('parent: ' . $e->getMessage()));
+        $parentResult = $this->parseNodeRef($parentData, 'parent');
+        if ($parentResult->isErr()) {
+            return Result::fail(...$parentResult->errors());
         }
+        $parent = $parentResult->unwrap();
 
         if ($afterElementID !== null && (!is_int($afterElementID) || $afterElementID < 1)) {
             return Result::fail(new ValidationError('insertAfterElementID must be a positive integer or null.'));
@@ -98,11 +98,11 @@ final readonly class RequestBodyParser
             return Result::fail(new ValidationError('className must be a ContentElement subclass.'));
         }
 
-        try {
-            $parent = NodeRef::fromArray($data['parent'] ?? null);
-        } catch (InvalidArgumentException $e) {
-            return Result::fail(new ValidationError('parent: ' . $e->getMessage()));
+        $parentResult = $this->parseNodeRef($data['parent'] ?? null, 'parent');
+        if ($parentResult->isErr()) {
+            return Result::fail(...$parentResult->errors());
         }
+        $parent = $parentResult->unwrap();
 
         if ($afterElementID !== null && (!is_int($afterElementID) || $afterElementID < 1)) {
             return Result::fail(new ValidationError('insertAfterElementID must be a positive integer or null.'));
@@ -119,30 +119,26 @@ final readonly class RequestBodyParser
     #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
     public function parseReorderBody(array $data): Result
     {
-        try {
-            $element = NodeRef::fromArray($data['element'] ?? null);
-        } catch (InvalidArgumentException $e) {
-            return Result::fail(new ValidationError('element: ' . $e->getMessage()));
+        $elementResult = $this->parseElementRef($data);
+        if ($elementResult->isErr()) {
+            return Result::fail(...$elementResult->errors());
         }
+        $element = $elementResult->unwrap();
 
-        if ($element->type === NodeType::Page) {
-            return Result::fail(new ValidationError('element type cannot be "page".'));
+        $parentResult = $this->parseNodeRef($data['parent'] ?? null, 'parent');
+        if ($parentResult->isErr()) {
+            return Result::fail(...$parentResult->errors());
         }
-
-        try {
-            $parent = NodeRef::fromArray($data['parent'] ?? null);
-        } catch (InvalidArgumentException $e) {
-            return Result::fail(new ValidationError('parent: ' . $e->getMessage()));
-        }
+        $parent = $parentResult->unwrap();
 
         $afterData = $data['after'] ?? null;
         $after = null;
         if ($afterData !== null) {
-            try {
-                $after = NodeRef::fromArray($afterData);
-            } catch (InvalidArgumentException $e) {
-                return Result::fail(new ValidationError('after: ' . $e->getMessage()));
+            $afterResult = $this->parseNodeRef($afterData, 'after');
+            if ($afterResult->isErr()) {
+                return Result::fail(...$afterResult->errors());
             }
+            $after = $afterResult->unwrap();
 
             if ($after->type !== $element->type) {
                 return Result::fail(new ValidationError('after.type must match element.type.'));
@@ -164,11 +160,11 @@ final readonly class RequestBodyParser
         $offset = $data['offset'] ?? null;
         $visible = $data['visible'] ?? null;
 
-        try {
-            $element = NodeRef::fromArray($data['element'] ?? null);
-        } catch (InvalidArgumentException $e) {
-            return Result::fail(new ValidationError('element: ' . $e->getMessage()));
+        $elementResult = $this->parseNodeRef($data['element'] ?? null, 'element');
+        if ($elementResult->isErr()) {
+            return Result::fail(...$elementResult->errors());
         }
+        $element = $elementResult->unwrap();
 
         if (!is_string($viewport)) {
             return Result::fail(new ValidationError('viewport must be a string.'));
@@ -216,15 +212,11 @@ final readonly class RequestBodyParser
         $targetPageId = $data['targetPageId'] ?? null;
         $targetZone = $data['targetZone'] ?? null;
 
-        try {
-            $element = NodeRef::fromArray($data['element'] ?? null);
-        } catch (InvalidArgumentException $e) {
-            return Result::fail(new ValidationError('element: ' . $e->getMessage()));
+        $elementResult = $this->parseElementRef($data);
+        if ($elementResult->isErr()) {
+            return Result::fail(...$elementResult->errors());
         }
-
-        if ($element->type === NodeType::Page) {
-            return Result::fail(new ValidationError('element type cannot be "page".'));
-        }
+        $element = $elementResult->unwrap();
 
         if (!is_int($targetPageId) || $targetPageId < 1) {
             return Result::fail(new ValidationError('targetPageId must be a positive integer.'));
@@ -234,11 +226,11 @@ final readonly class RequestBodyParser
             return Result::fail(new ValidationError('targetZone must be a non-empty string.'));
         }
 
-        try {
-            $targetParent = NodeRef::fromArray($data['targetParent'] ?? null);
-        } catch (InvalidArgumentException $e) {
-            return Result::fail(new ValidationError('targetParent: ' . $e->getMessage()));
+        $targetParentResult = $this->parseNodeRef($data['targetParent'] ?? null, 'targetParent');
+        if ($targetParentResult->isErr()) {
+            return Result::fail(...$targetParentResult->errors());
         }
+        $targetParent = $targetParentResult->unwrap();
 
         /** @var non-empty-string $targetZone Narrowed by === '' guard */
         return Result::ok(new DuplicateToRequest($element, $targetPageId, $targetZone, $targetParent));
@@ -293,11 +285,11 @@ final readonly class RequestBodyParser
     #[NoDiscard('The Result carries the parsed element ref or validation errors; discarding it silently drops malformed-input failures.')]
     public function parseElementRef(array $data): Result
     {
-        try {
-            $element = NodeRef::fromArray($data['element'] ?? null);
-        } catch (InvalidArgumentException $e) {
-            return Result::fail(new ValidationError('element: ' . $e->getMessage()));
+        $elementResult = $this->parseNodeRef($data['element'] ?? null, 'element');
+        if ($elementResult->isErr()) {
+            return Result::fail(...$elementResult->errors());
         }
+        $element = $elementResult->unwrap();
 
         if ($element->type === NodeType::Page) {
             return Result::fail(new ValidationError('element type cannot be "page".'));
@@ -345,6 +337,25 @@ final readonly class RequestBodyParser
             'zone' => is_string($rawZone) ? $rawZone : null,
             'viewport' => is_string($rawViewport) && $rawViewport !== '' ? $rawViewport : null,
         ]);
+    }
+
+    /**
+     * Bridge {@see NodeRef}'s constructor exception into the Result pattern.
+     *
+     * NodeRef throws on invalid input, but a malformed request field is an
+     * expected failure, not an exceptional one — every endpoint needs the same
+     * translation, prefixed with the field it came from.
+     *
+     * @return Result<NodeRef>
+     */
+    #[NoDiscard('The Result carries the parsed ref or the validation error; discarding it silently accepts a malformed ref.')]
+    private function parseNodeRef(mixed $data, string $field): Result
+    {
+        try {
+            return Result::ok(NodeRef::fromArray($data));
+        } catch (InvalidArgumentException $e) {
+            return Result::fail(new ValidationError($field . ': ' . $e->getMessage()));
+        }
     }
 
     /**
