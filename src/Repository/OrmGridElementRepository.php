@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Repository;
 
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\GridElement;
@@ -14,8 +15,11 @@ use WeDevelop\Grid\Value\NodeType;
 
 final class OrmGridElementRepository implements GridElementRepositoryInterface
 {
+    /** @deprecated 6.0.0 Use {@see findByRef()}. Will be removed in 7.0.0. */
     public function findById(int $id): ?GridElement
     {
+        Deprecation::notice('6.0.0', 'Use findByRef() instead — it pins the DRAFT stage and is NodeType-scoped.');
+
         /** @var GridElement|null */
         return GridElement::get()->byID($id);
     }

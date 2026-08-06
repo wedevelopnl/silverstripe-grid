@@ -9,7 +9,14 @@ use WeDevelop\Grid\Value\NodeRef;
 
 interface GridElementRepositoryInterface
 {
-    /** @param positive-int $id */
+    /**
+     * @param positive-int $id
+     *
+     * @deprecated 6.0.0 Use {@see findByRef()}. Unlike this method it pins the
+     *     DRAFT stage and is scoped by NodeType, so it cannot resolve the wrong
+     *     record when a page ID and an element ID collide numerically. Will be
+     *     removed in 7.0.0.
+     */
     public function findById(int $id): ?GridElement;
 
     /**
