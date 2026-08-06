@@ -430,7 +430,6 @@ export default function DuplicateToDialog({
               type="button"
               className="ssgrid-button ssgrid-button--primary"
               data-testid="duplicate-to-next"
-              disabled={selectedPageId === 0}
               onClick={advanceFromPage}
             >
               {t('WeDevelopGrid.DuplicateToDialog.NEXT_BUTTON', 'Next')}
