@@ -7,7 +7,6 @@ namespace WeDevelop\Grid\Model;
 use Override;
 use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Contract\ContainerInterface;
-use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Value\ContainerType;
 
 /**
@@ -49,13 +48,6 @@ class Section extends GridElement implements ContainerInterface
     private static string $class_description = 'Top-level layout container that holds rows';
 
     private static bool $fluid_container = false;
-
-    /** @var array<string, string> */
-    private static array $dependencies = [
-        'gridAdapter' => '%$' . GridAdapterInterface::class,
-    ];
-
-    public GridAdapterInterface $gridAdapter;
 
     /** @var array<string, string> */
     private static array $summary_fields = [
