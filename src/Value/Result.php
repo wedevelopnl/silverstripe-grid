@@ -87,6 +87,9 @@ final readonly class Result
      * @template U
      * @param callable(T): U $fn
      * @return self<U>
+     *
+     * @deprecated 6.0.0 No caller: every consumer inspects the Result with
+     *     isOk()/isErr() and unwrap(). Will be removed in 7.0.0.
      */
     #[NoDiscard('map() returns a new Result; discarding it loses the transformation and any errors.')]
     public function map(callable $fn): self

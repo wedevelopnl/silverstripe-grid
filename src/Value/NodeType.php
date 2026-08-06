@@ -92,6 +92,10 @@ enum NodeType: string
         };
     }
 
+    /**
+     * @deprecated 6.0.0 No caller: whether a node can be dragged is decided in
+     *     the frontend from the node's own type. Will be removed in 7.0.0.
+     */
     public function isDraggable(): bool
     {
         return $this !== self::Page;
