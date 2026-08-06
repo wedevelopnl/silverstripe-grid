@@ -60,22 +60,6 @@ function equals(a: NodeRef, b: NodeRef): boolean {
   return a.type === b.type && a.id === b.id
 }
 
-function assert(value: unknown, context: string): NodeRef {
-  if (typeof value !== 'object' || value === null) {
-    throw new TypeError(`${context}: expected NodeRef object, got ${typeof value}`)
-  }
-  const candidate = value as Record<string, unknown>
-  const type = candidate.type
-  const id = candidate.id
-  if (typeof type !== 'string' || !isNodeType(type)) {
-    throw new TypeError(`${context}: invalid NodeRef.type ${JSON.stringify(type)}`)
-  }
-  if (typeof id !== 'number' || !Number.isInteger(id) || id <= 0) {
-    throw new TypeError(`${context}: invalid NodeRef.id ${JSON.stringify(id)}`)
-  }
-  return { type, id }
-}
-
 /**
  * All operations on {@link NodeRef} / {@link NodeKey} live here so the API
  * surface stays small and discoverable. Types remain top-level exports
@@ -87,7 +71,6 @@ function assert(value: unknown, context: string): NodeRef {
  * const same = NodeIdentity.toKey(node.self);          // overload for refs
  * const ref = NodeIdentity.fromKey(untrustedString);   // NodeRef | null
  * const eq = NodeIdentity.equals(a.self, b.self);
- * const validated = NodeIdentity.assert(json, 'rootParent');
  */
 export const NodeIdentity = {
   toKey,

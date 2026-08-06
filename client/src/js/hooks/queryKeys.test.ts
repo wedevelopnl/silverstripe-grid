@@ -3,10 +3,6 @@ import { queryKeys } from './queryKeys'
 
 describe('queryKeys', () => {
   describe('elementTree', () => {
-    it('should return base key for all()', () => {
-      expect(queryKeys.elementTree.all()).toEqual(['elementTree'])
-    })
-
     it('should return page and zone tuple for byPage()', () => {
       expect(queryKeys.elementTree.byPage(1, 'main')).toEqual(['elementTree', 1, 'main'])
     })
@@ -21,10 +17,6 @@ describe('queryKeys', () => {
   })
 
   describe('pages', () => {
-    it('should return base key for all()', () => {
-      expect(queryKeys.pages.all()).toEqual(['pages'])
-    })
-
     it('should return search term tuple for search()', () => {
       expect(queryKeys.pages.search('test')).toEqual(['pages', 'test'])
     })

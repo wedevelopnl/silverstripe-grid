@@ -99,9 +99,6 @@ export interface SectionNode extends BaseFields {
 export type ElementNode = SectionNode | RowNode | ColumnNode | SimpleElementNode
 export type ContainerNode = SectionNode | RowNode | ColumnNode
 
-/** Root sections for a single page/zone — flat list. */
-export type ElementTreeResponse = ElementNode[]
-
 export interface TreeApiResponse {
   /** Identity of the root container (always a page for the current API). */
   rootParent: NodeRef

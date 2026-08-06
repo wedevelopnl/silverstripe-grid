@@ -184,6 +184,11 @@ export function registerCmsPreviewBridge(): void {
   attemptMount()
 }
 
+/**
+ * Disconnect the observer and unmount — test-only utility. The CMS never tears
+ * the bridge down (it lives for the admin page's lifetime); tests need it so a
+ * leaked MutationObserver cannot fire against the next test's DOM.
+ */
 export function teardownCmsPreviewBridge(): void {
   if (observer !== null) {
     observer.disconnect()

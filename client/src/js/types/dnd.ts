@@ -1,5 +1,3 @@
-import type { ElementNode } from './elements'
-import { isContainerNode } from './elements'
 import { NodeIdentity, type NodeKey, type NodeType } from './identity'
 
 export const DRAGGABLE_TYPES = ['section', 'row', 'column', 'element'] as const
@@ -64,11 +62,6 @@ export function parseDraggableId(compositeId: string): ParsedDraggableId | null 
 
 export function getDraggableType(compositeId: string): DraggableType | null {
   return parseDraggableId(compositeId)?.type ?? null
-}
-
-export function getDraggableTypeForNode(node: ElementNode): DraggableType {
-  if (!isContainerNode(node)) return 'element'
-  return node.containerType
 }
 
 /** Maps a draggable type to the parent type that holds its siblings. */

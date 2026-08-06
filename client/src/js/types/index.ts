@@ -14,7 +14,6 @@ export type {
   ContainerNode,
   ContainerType,
   ElementNode,
-  ElementTreeResponse,
   GridSettings,
   RowNode,
   SectionNode,

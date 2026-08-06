@@ -1,13 +1,11 @@
 export const queryKeys = {
   elementTree: {
-    all: () => ['elementTree'] as const,
     byPage: (pageId: number, zone: string, version?: number) =>
       version !== undefined
         ? (['elementTree', pageId, zone, version] as const)
         : (['elementTree', pageId, zone] as const),
   },
   pages: {
-    all: () => ['pages'] as const,
     search: (search: string) => ['pages', search] as const,
   },
   zones: {

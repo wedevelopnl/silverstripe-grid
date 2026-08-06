@@ -1,4 +1,3 @@
-import { ElementNode } from './elements';
 import { NodeKey } from './identity';
 export declare const DRAGGABLE_TYPES: readonly ["section", "row", "column", "element"];
 export type DraggableType = (typeof DRAGGABLE_TYPES)[number];
@@ -28,7 +27,6 @@ export interface ParsedDraggableId {
 export declare function buildDraggableId(type: DraggableType, id: number): NodeKey;
 export declare function parseDraggableId(compositeId: string): ParsedDraggableId | null;
 export declare function getDraggableType(compositeId: string): DraggableType | null;
-export declare function getDraggableTypeForNode(node: ElementNode): DraggableType;
 /** Maps a draggable type to the parent type that holds its siblings. */
 export declare const PARENT_CONTAINER_TYPE: {
     readonly section: "page";

@@ -23,7 +23,6 @@ declare function toKey(type: NodeType, id: number): NodeKey;
 declare function toKey(ref: NodeRef): NodeKey;
 declare function fromKey(key: string): NodeRef | null;
 declare function equals(a: NodeRef, b: NodeRef): boolean;
-declare function assert(value: unknown, context: string): NodeRef;
 /**
  * All operations on {@link NodeRef} / {@link NodeKey} live here so the API
  * surface stays small and discoverable. Types remain top-level exports
@@ -35,12 +34,11 @@ declare function assert(value: unknown, context: string): NodeRef;
  * const same = NodeIdentity.toKey(node.self);          // overload for refs
  * const ref = NodeIdentity.fromKey(untrustedString);   // NodeRef | null
  * const eq = NodeIdentity.equals(a.self, b.self);
- * const validated = NodeIdentity.assert(json, 'rootParent');
  */
 export declare const NodeIdentity: {
     readonly toKey: typeof toKey;
     readonly fromKey: typeof fromKey;
     readonly equals: typeof equals;
-    readonly assert: typeof assert;
+    readonly assert: Chai.Assert;
 };
 export {};

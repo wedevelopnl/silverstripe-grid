@@ -1,21 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  createColumnNode,
-  createRowNode,
-  createSectionNode,
-  createSimpleElement,
-  resetIdCounter,
-} from '@/testing/factories'
-import {
-  buildDraggableId,
-  getDraggableType,
-  getDraggableTypeForNode,
-  parseDraggableId,
-} from './dnd'
-
-beforeEach(() => {
-  resetIdCounter()
-})
+import { buildDraggableId, getDraggableType, parseDraggableId } from './dnd'
 
 describe('buildDraggableId', () => {
   it('produces a composite type-id string', () => {
@@ -80,17 +64,5 @@ describe('getDraggableType', () => {
 
   it('returns null for invalid id', () => {
     expect(getDraggableType('root')).toBeNull()
-  })
-})
-
-describe('getDraggableTypeForNode', () => {
-  it('returns containerType for container nodes', () => {
-    expect(getDraggableTypeForNode(createSectionNode())).toBe('section')
-    expect(getDraggableTypeForNode(createRowNode())).toBe('row')
-    expect(getDraggableTypeForNode(createColumnNode())).toBe('column')
-  })
-
-  it('returns "element" for simple element nodes', () => {
-    expect(getDraggableTypeForNode(createSimpleElement())).toBe('element')
   })
 })

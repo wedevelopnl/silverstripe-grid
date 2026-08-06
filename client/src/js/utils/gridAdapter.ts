@@ -16,20 +16,8 @@ export function getColumnCount(): number {
   return getAdapterConfig().columnCount
 }
 
-export function getRowClasses(): string {
-  return getAdapterConfig().rowClasses
-}
-
 export function getOffsetStrategy(): OffsetStrategy {
   return getAdapterConfig().offsetStrategy
-}
-
-export function getWidthClass(width: number): string {
-  return getAdapterConfig().baseWidthClasses[String(width)] ?? ''
-}
-
-export function getOffsetClass(offset: number): string {
-  return getAdapterConfig().baseOffsetClasses[String(offset)] ?? ''
 }
 
 /**

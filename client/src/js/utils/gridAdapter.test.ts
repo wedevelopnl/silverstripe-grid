@@ -5,12 +5,9 @@ import type { GridSettings } from '@/types/elements'
 import {
   getColumnCount,
   getDefaultViewport,
-  getOffsetClass,
   getOffsetOptions,
   getOffsetStrategy,
-  getRowClasses,
   getViewports,
-  getWidthClass,
   getWidthOptions,
   resolveViewportSettings,
 } from './gridAdapter'
@@ -45,35 +42,9 @@ describe('getColumnCount', () => {
   })
 })
 
-describe('getRowClasses', () => {
-  it('returns the row CSS classes', () => {
-    expect(getRowClasses()).toBe('row')
-  })
-})
-
 describe('getOffsetStrategy', () => {
   it('returns the offset strategy', () => {
     expect(getOffsetStrategy()).toBe('margin')
-  })
-})
-
-describe('getWidthClass', () => {
-  it('returns CSS class for a valid width', () => {
-    expect(getWidthClass(6)).toBe('col-6')
-  })
-
-  it('returns empty string for unmapped width', () => {
-    expect(getWidthClass(99)).toBe('')
-  })
-})
-
-describe('getOffsetClass', () => {
-  it('returns CSS class for a valid offset', () => {
-    expect(getOffsetClass(3)).toBe('offset-3')
-  })
-
-  it('returns empty string for unmapped offset', () => {
-    expect(getOffsetClass(99)).toBe('')
   })
 })
 
