@@ -17,11 +17,14 @@ use WeDevelop\Grid\Value\ViewportConfig;
  * The result is a flat map of viewport key → effective ViewportConfig, ready for
  * CSS class generation by ColumnClassResolver.
  *
- * The override strategy is configured via DI constructor injection:
+ * The override strategy is configured via DI constructor injection. The spec
+ * merges with the module's own definition in `_config/grid.yml`, which already
+ * supplies the adapter argument, so only the strategy needs overriding:
  * ```yaml
- * WeDevelop\Grid\Service\GridSettingsResolver:
- *   constructor:
- *     overrideStrategy: cascade
+ * SilverStripe\Core\Injector\Injector:
+ *   WeDevelop\Grid\Service\GridSettingsResolver:
+ *     constructor:
+ *       overrideStrategy: cascade
  * ```
  */
 final readonly class GridSettingsResolver

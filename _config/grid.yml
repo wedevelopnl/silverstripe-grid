@@ -6,8 +6,9 @@ SilverStripe\Core\Injector\Injector:
   WeDevelop\Grid\Contract\GridAdapterInterface:
     factory: WeDevelop\Grid\Factory\GridAdapterResolver
   # Injected into Column via $dependencies so the configured override strategy
-  # applies. Injector does not auto-wire the adapter constructor argument, so it
-  # is referenced explicitly here.
+  # applies. Injector does not auto-wire constructor arguments from type hints,
+  # so this base definition names the adapter explicitly; project overrides then
+  # only need the argument they are changing.
   WeDevelop\Grid\Service\GridSettingsResolver:
     constructor:
       adapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
@@ -30,11 +31,11 @@ SilverStripe\Core\Injector\Injector:
 #   default_viewport: lg
 #   container_max_width: 1400
 #
-# To change the override strategy to cascade, re-declare the constructor
-# (including the adapter reference, since Injector does not auto-wire it):
+# To change the override strategy to cascade, override just that argument.
+# Constructor specs merge with the definition above, so the adapter reference
+# does not need repeating:
 #
 # SilverStripe\Core\Injector\Injector:
 #   WeDevelop\Grid\Service\GridSettingsResolver:
 #     constructor:
-#       adapter: '%$WeDevelop\Grid\Contract\GridAdapterInterface'
 #       overrideStrategy: cascade
