@@ -9,7 +9,6 @@ export default {
     '!client/src/js/**/*.d.ts',
     '!client/src/js/**/tests/**',
     '!client/src/js/testing/**',
-    '!client/src/js/**/index.ts',
     '!client/src/js/bundles/**',
     '!client/src/js/bridge/**',
     '!client/src/js/boot/**',
