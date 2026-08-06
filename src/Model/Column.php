@@ -8,7 +8,6 @@ use Override;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Contract\ContainerInterface;
-use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Forms\GridSettingsField;
 use WeDevelop\Grid\Service\ColumnClassResolver;
 use WeDevelop\Grid\Service\GridSettingsResolver;
@@ -38,13 +37,12 @@ class Column extends GridElement implements ContainerInterface
 
     private static string $class_description = 'Responsive grid column that holds content blocks';
 
+    // gridAdapter is declared on GridElement; SilverStripe merges $dependencies
+    // down the hierarchy, so only the addition is listed here.
     /** @var array<string, string> */
     private static array $dependencies = [
-        'gridAdapter' => '%$' . GridAdapterInterface::class,
         'gridSettingsResolver' => '%$' . GridSettingsResolver::class,
     ];
-
-    public GridAdapterInterface $gridAdapter;
 
     public GridSettingsResolver $gridSettingsResolver;
 

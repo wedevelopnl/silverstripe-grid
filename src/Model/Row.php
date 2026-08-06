@@ -7,7 +7,6 @@ namespace WeDevelop\Grid\Model;
 use Override;
 use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Contract\ContainerInterface;
-use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Value\ContainerType;
 
 /**
@@ -32,13 +31,6 @@ class Row extends GridElement implements ContainerInterface
     private static string $icon = 'font-icon-columns';
 
     private static string $class_description = 'Horizontal container that holds columns within a section';
-
-    /** @var array<string, string> */
-    private static array $dependencies = [
-        'gridAdapter' => '%$' . GridAdapterInterface::class,
-    ];
-
-    public GridAdapterInterface $gridAdapter;
 
     /** @var array<string, string> */
     private static array $summary_fields = [
