@@ -7,7 +7,6 @@ namespace WeDevelop\Grid\Tests\Integration\Fluent;
 use Psr\Log\NullLogger;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
-use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use TractorCow\Fluent\Extension\FluentIsolatedExtension;
 use TractorCow\Fluent\Model\Locale;
@@ -24,6 +23,7 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
 
 /**
  * Shared lifecycle and read helpers for the per-mode Fluent migration tests.
@@ -39,6 +39,8 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
  */
 abstract class FluentMigrationTestCase extends SapphireTest
 {
+    use CleansGridTables;
+
     protected static $fixture_file = __DIR__ . '/Fixture/migration-locales.yml';
 
     /** @var array<class-string, list<class-string>> */
@@ -131,30 +133,5 @@ abstract class FluentMigrationTestCase extends SapphireTest
 
             return $reloaded !== null && (bool) $reloaded->UseGrid;
         });
-    }
-
-    /**
-     * Delete grid ORM rows (draft + live) so DDL-committed rows from prior tests
-     * do not leak. Grid ORM tables are namespaced (WeDevelop_Grid_*); each DELETE
-     * is guarded by an existence check because the present table set depends on
-     * which extra_dataobjects a run registers.
-     */
-    protected function cleanGridTables(): void
-    {
-        $tables = [
-            'WeDevelop_Grid_ContentElement', 'WeDevelop_Grid_ContentElement_Live',
-            'WeDevelop_Grid_Column', 'WeDevelop_Grid_Column_Live',
-            'WeDevelop_Grid_Row', 'WeDevelop_Grid_Row_Live',
-            'WeDevelop_Grid_Section', 'WeDevelop_Grid_Section_Live',
-            'WeDevelop_Grid_GridElement', 'WeDevelop_Grid_GridElement_Live',
-        ];
-
-        $allTables = DB::table_list();
-
-        foreach ($tables as $table) {
-            if (\array_key_exists(\strtolower($table), $allTables)) {
-                DB::query("DELETE FROM \"{$table}\"");
-            }
-        }
     }
 }
