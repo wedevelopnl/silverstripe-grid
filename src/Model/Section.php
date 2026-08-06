@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Model;
 
 use Override;
+use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Value\ContainerType;
@@ -81,6 +82,22 @@ class Section extends GridElement implements ContainerInterface
     public function getChildren(): HasManyList
     {
         return $this->Rows();
+    }
+
+    /**
+     * Zone is set by the editor from the grid field it was created in, never by
+     * hand, so its scaffolded field is hidden. Declared here rather than in
+     * GridElement::getCMSFields(): Zone is a Section column, and the base class
+     * has no business knowing about a subclass's schema.
+     */
+    #[Override]
+    public function getCMSFields(): FieldList
+    {
+        $this->beforeUpdateCMSFields(static function (FieldList $fields): void {
+            $fields->removeByName('Zone');
+        });
+
+        return parent::getCMSFields();
     }
 
     #[Override]

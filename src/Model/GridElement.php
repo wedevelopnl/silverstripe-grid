@@ -276,7 +276,6 @@ class GridElement extends DataObject
                 'Title', 'TitleTag', 'TitleClass', 'ShowTitle',
                 'Sort', 'ExtraClass', 'Style',
                 'ParentID', 'ParentClass',
-                'Zone',
             ]);
 
             $titleGroup = FieldGroup::create(
