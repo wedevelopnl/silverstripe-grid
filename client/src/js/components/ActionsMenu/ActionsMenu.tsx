@@ -1,5 +1,5 @@
-// biome-ignore-all lint/suspicious/noUnnecessaryConditions: biome's type inference treats the switch(e.key) cases as unreachable, but they handle real KeyboardEvent.key values (arrow/Home/End/Enter) at runtime.
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+// biome-ignore-all lint/suspicious/noUnnecessaryConditions: biome's type inference treats the Enter/' ' comparisons as unreachable, but they handle real KeyboardEvent.key values at runtime.
+import { useRovingPopup } from '@/hooks/useRovingPopup'
 import { t } from '@/i18n'
 
 export interface ActionItem {
@@ -15,62 +15,7 @@ interface ActionsMenuProps {
 }
 
 export default function ActionsMenu({ actions, testId = 'actions-menu' }: ActionsMenuProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(0)
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  // Stable DOM id prefix so aria-activedescendant references a real element id.
-  const itemIdPrefix = useId()
-
-  const getItemId = useCallback((index: number) => `${itemIdPrefix}item-${index}`, [itemIdPrefix])
-
-  const close = useCallback(() => setIsOpen(false), [])
-
-  // Reset to first item and move focus to the menu container each time it opens
-  // so Arrow keys drive the aria-activedescendant roving pattern.
-  useEffect(() => {
-    // Stryker disable next-line ConditionalExpression: Equivalent — on close the {isOpen && …} menu unmounts (menuRef null → focus no-op) and setActiveIndex(0) is re-applied on the next open, so a close-time run is unobservable
-    if (!isOpen) return
-    setActiveIndex(0)
-    menuRef.current?.focus()
-  }, [isOpen])
-
-  // If the actions list shrinks while the menu is open, activeIndex can point
-  // past the last item — aria-activedescendant would then reference a dead id
-  // and Enter/Space would resolve to undefined. Clamp it back into range.
-  useEffect(() => {
-    setActiveIndex((i) => Math.min(i, Math.max(0, actions.length - 1)))
-  }, [actions.length])
-
-  useEffect(() => {
-    // Stryker disable next-line ConditionalExpression: Equivalent — the outside-mousedown listener's only side effect is the idempotent close(), so registering it while closed is inert
-    if (!isOpen) return
-
-    function handleMouseDown(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        close()
-      }
-    }
-
-    document.addEventListener('mousedown', handleMouseDown)
-    return () => document.removeEventListener('mousedown', handleMouseDown)
-  }, [isOpen, close])
-
-  useEffect(() => {
-    if (!isOpen) return
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        close()
-        triggerRef.current?.focus()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, close])
+  const popup = useRovingPopup({ itemCount: actions.length })
 
   // preventDefault is required because this button may be nested inside a
   // clickable ancestor (ElementCard's <a href>). React synthetic
@@ -80,50 +25,28 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
   function handleTriggerClick(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    setIsOpen((prev) => !prev)
+    popup.toggle()
   }
 
   function handleItemClick(e: React.MouseEvent, onAction: () => void) {
     e.preventDefault()
     e.stopPropagation()
     onAction()
-    close()
+    popup.close()
   }
 
   function handleMenuKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-    const last = actions.length - 1
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault()
-        setActiveIndex((i) => (i >= last ? last : i + 1))
-        return
-      case 'ArrowUp':
-        e.preventDefault()
-        setActiveIndex((i) => (i <= 0 ? 0 : i - 1))
-        return
-      case 'Home':
-        e.preventDefault()
-        setActiveIndex(0)
-        return
-      case 'End':
-        e.preventDefault()
-        setActiveIndex(last)
-        return
-      case 'Enter':
-      case ' ': {
-        e.preventDefault()
-        e.stopPropagation()
-        const current = actions[activeIndex]
-        // Stryker disable next-line ConditionalExpression: Equivalent — actions is non-empty (the component returns null otherwise) and a clamp effect keeps activeIndex in range, so current is always defined
-        if (current) {
-          current.onAction()
-          close()
-        }
-        return
+    if (popup.handleNavigationKeyDown(e)) return
+
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      e.stopPropagation()
+      const current = actions[popup.activeIndex]
+      // Stryker disable next-line ConditionalExpression: Equivalent — actions is non-empty (the component returns null otherwise) and the hook clamps activeIndex into range, so current is always defined
+      if (current) {
+        current.onAction()
+        popup.close()
       }
-      // Stryker disable next-line ConditionalExpression: Equivalent — default is the final switch clause; dropping its `return` is a no-op (no code follows the switch)
-      default:
-        return
     }
   }
 
@@ -134,28 +57,28 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
   const menuId = `${testId}-menu`
 
   return (
-    <div ref={wrapperRef} className="ssgrid-actions-menu">
+    <div ref={popup.wrapperRef} className="ssgrid-actions-menu">
       <button
-        ref={triggerRef}
+        ref={popup.triggerRef}
         type="button"
         className="ssgrid-icon-button"
         data-testid="actions-menu-trigger"
         aria-haspopup="menu"
-        aria-expanded={isOpen}
-        aria-controls={isOpen ? menuId : undefined}
+        aria-expanded={popup.isOpen}
+        aria-controls={popup.isOpen ? menuId : undefined}
         aria-label={t('WeDevelopGrid.ActionsMenu.TRIGGER_LABEL', 'Actions')}
         onClick={handleTriggerClick}
       >
         <span className="ssgrid-icon-button__glyph font-icon-dot-3-h" aria-hidden="true" />
       </button>
-      {isOpen && (
+      {popup.isOpen && (
         <div
           id={menuId}
-          ref={menuRef}
+          ref={popup.popupRef}
           className="ssgrid-actions-menu__menu"
           role="menu"
           tabIndex={-1}
-          aria-activedescendant={getItemId(activeIndex)}
+          aria-activedescendant={popup.getItemId(popup.activeIndex)}
           data-testid={`${testId}-dropdown`}
           onKeyDown={handleMenuKeyDown}
         >
@@ -163,10 +86,10 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
             // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard handling lives on the menu (aria-activedescendant pattern per W3C APG); menuitems are not focusable themselves
             <div
               key={action.key}
-              id={getItemId(index)}
+              id={popup.getItemId(index)}
               className="ssgrid-actions-menu__item"
               role="menuitem"
-              tabIndex={index === activeIndex ? 0 : -1}
+              tabIndex={index === popup.activeIndex ? 0 : -1}
               data-destructive={action.destructive ? 'true' : undefined}
               onClick={(e) => handleItemClick(e, action.onAction)}
             >
