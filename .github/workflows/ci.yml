@@ -31,11 +31,11 @@ jobs:
       # The E2E helpers typecheck against the Playwright client shipped inside
       # vendor/wedevelopnl/silverstripe-e2e, so composer deps must exist on the
       # runner (not just inside the Docker image).
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: '8.3'
           extensions: intl
-      - uses: ramsey/composer-install@v4
+      - uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
@@ -59,7 +59,7 @@ jobs:
             echo "$untracked"
             exit 1
           fi
-      - uses: dorny/test-reporter@v3
+      - uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: always()
         with:
           name: Vitest Results
@@ -82,11 +82,11 @@ jobs:
       # anonymous pulls rather than erroring on empty credentials.
       - name: Log in to Docker Hub
         if: env.DOCKERHUB_USERNAME != ''
-        uses: docker/login-action@v4.6.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: arduino/setup-task@v3
+      - uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -133,11 +133,11 @@ jobs:
       - uses: actions/checkout@v7
       - name: Log in to Docker Hub
         if: env.DOCKERHUB_USERNAME != ''
-        uses: docker/login-action@v4.6.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: arduino/setup-task@v3
+      - uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -164,7 +164,7 @@ jobs:
       - if: matrix.variant == 'fluent'
         name: Check coverage threshold (90%)
         run: $COMPOSE exec ${{ matrix.service }} vendor/bin/coverage-check coverage/clover.xml 90
-      - uses: dorny/test-reporter@v3
+      - uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: always()
         with:
           name: PHPUnit Results (${{ matrix.variant }} / PHP ${{ matrix.php }})
@@ -199,11 +199,11 @@ jobs:
       - uses: actions/checkout@v7
       - name: Log in to Docker Hub
         if: env.DOCKERHUB_USERNAME != ''
-        uses: docker/login-action@v4.6.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: arduino/setup-task@v3
+      - uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -214,11 +214,11 @@ jobs:
       # Playwright runs on the runner and imports the fixture client from
       # vendor/wedevelopnl/silverstripe-e2e, so composer deps must exist on the
       # runner (the Docker image's vendor volume is not visible to the host).
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: '8.3'
           extensions: intl
-      - uses: ramsey/composer-install@v4
+      - uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
       - run: npm ci
       - uses: actions/cache/restore@v6
         id: playwright-cache
@@ -249,7 +249,7 @@ jobs:
         run: npx playwright test --project=${{ matrix.browser }} --reporter=html,junit
         env:
           PLAYWRIGHT_JUNIT_OUTPUT_NAME: reports/playwright-junit.xml
-      - uses: dorny/test-reporter@v3
+      - uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: always()
         with:
           name: E2E Results (${{ matrix.browser }} / ${{ matrix.adapter }})
