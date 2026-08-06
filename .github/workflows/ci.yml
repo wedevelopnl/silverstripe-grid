@@ -106,6 +106,10 @@ jobs:
   php-qa:
     name: PHP QA (${{ matrix.variant }} / PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
+    # A healthy run takes ~9 min (base) / ~11 min (fluent with coverage); a
+    # degraded hosted runner has been seen stretching that to 32 min. Fail fast
+    # instead of burning 3x the minutes — a re-run lands on a fresh runner.
+    timeout-minutes: 20
     permissions:
       contents: read
       checks: write
