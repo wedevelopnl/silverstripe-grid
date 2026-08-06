@@ -151,6 +151,53 @@ async function selectPageAndAdvance(user: ReturnType<typeof userEvent.setup>, pa
   await user.click(screen.getByTestId('duplicate-to-next'))
 }
 
+/**
+ * Route the wizard's three list endpoints, failing exactly one of them with a
+ * 500 carrying SilverStripe's error envelope. Every other route succeeds, so a
+ * test can reach the failing step normally.
+ */
+function mockApiRoutesFailing(failing: 'pages' | 'zones' | 'containers') {
+  const bodies = { pages: PAGES, zones: ZONES, containers: CONTAINERS }
+  const paths = {
+    pages: '/api/pages',
+    zones: '/api/zones/',
+    containers: '/api/acceptableContainers/',
+  } as const
+
+  return vi.spyOn(globalThis, 'fetch').mockImplementation((input: string | URL | Request) => {
+    const url = resolveRequestUrl(input)
+    const route = (Object.keys(paths) as (keyof typeof paths)[]).find((key) =>
+      url.includes(paths[key]),
+    )
+
+    const failed = route === failing
+    const body = failed
+      ? { status: 'error', errors: [{ type: 'error', code: 500, value: 'Database is on fire' }] }
+      : (bodies[route ?? 'pages'] as unknown)
+
+    return Promise.resolve({
+      ok: !failed,
+      status: failed ? 500 : 200,
+      statusText: failed ? 'Internal Server Error' : 'OK',
+      json: () => Promise.resolve(body),
+      headers: new Headers(),
+      redirected: false,
+      type: 'basic' as ResponseType,
+      url: '',
+      clone() {
+        return this
+      },
+      body: null,
+      bodyUsed: false,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+      blob: () => Promise.resolve(new Blob()),
+      bytes: () => Promise.resolve(new Uint8Array()),
+      formData: () => Promise.resolve(new FormData()),
+      text: () => Promise.resolve(JSON.stringify(body)),
+    } as Response)
+  })
+}
+
 async function goToZoneStep(user: ReturnType<typeof userEvent.setup>) {
   await selectPageAndAdvance(user)
   await waitFor(() => {
@@ -861,6 +908,66 @@ describe('DuplicateToDialog', () => {
 
       expect(screen.getByTestId('duplicate-to-loading')).toBeInTheDocument()
       expect(screen.getByTestId('duplicate-to-loading')).toHaveTextContent(/Loading containers/)
+    })
+  })
+
+  describe('load failures', () => {
+    // The query client runs with retry: false, so a single failed request is
+    // terminal. Without these notices the step body just goes blank.
+    it('shows the failure and the server message when the page list fails', async () => {
+      mockApiRoutesFailing('pages')
+      renderDialog()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-load-error')).toBeInTheDocument()
+      })
+      expect(screen.getByTestId('duplicate-to-load-error')).toHaveTextContent(/Database is on fire/)
+      expect(screen.queryByTestId('duplicate-to-page-list')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('duplicate-to-loading')).not.toBeInTheDocument()
+    })
+
+    it('shows the failure when the zone list fails', async () => {
+      const user = userEvent.setup()
+      mockApiRoutesFailing('zones')
+      renderDialog()
+
+      await goToZoneStep(user)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-load-error')).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('duplicate-to-zone-list')).not.toBeInTheDocument()
+    })
+
+    it('shows the failure when the container list fails', async () => {
+      const user = userEvent.setup()
+      mockApiRoutesFailing('containers')
+      renderDialog({ elementType: 'row' })
+
+      await goToContainerStep(user)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-load-error')).toBeInTheDocument()
+      })
+      // The empty-list notice must not stand in for a failed request.
+      expect(screen.queryByTestId('duplicate-to-no-containers')).not.toBeInTheDocument()
+    })
+
+    it('refetches and recovers when Retry is clicked', async () => {
+      const user = userEvent.setup()
+      const fetchMock = mockApiRoutesFailing('pages')
+      renderDialog()
+
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-load-error')).toBeInTheDocument()
+      })
+
+      fetchMock.mockRestore()
+      mockApiRoutes()
+      await user.click(screen.getByTestId('duplicate-to-retry'))
+
+      await goToPageStep()
+      expect(screen.queryByTestId('duplicate-to-load-error')).not.toBeInTheDocument()
     })
   })
 
