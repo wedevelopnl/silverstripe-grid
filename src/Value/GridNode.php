@@ -65,6 +65,9 @@ final readonly class GridNode implements JsonSerializable
 
     /**
      * @return positive-int
+     *
+     * @deprecated 6.0.0 No caller — read `$self->id` directly. Will be removed
+     *     in 7.0.0.
      */
     public function getId(): int
     {
@@ -73,6 +76,9 @@ final readonly class GridNode implements JsonSerializable
 
     /**
      * @return positive-int
+     *
+     * @deprecated 6.0.0 No caller — read `$parent->id` directly. Will be removed
+     *     in 7.0.0.
      */
     public function getParentId(): int
     {

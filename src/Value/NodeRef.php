@@ -70,6 +70,11 @@ final readonly class NodeRef implements JsonSerializable
 
     /**
      * String form matching the frontend's NodeKey: "${type}-${id}".
+     *
+     * @deprecated 6.0.0 No caller: NodeKey values are built and parsed entirely
+     *     in the frontend (client/src/js/types/identity.ts), and the wire format
+     *     is the {type, id} object from jsonSerialize(). Will be removed in
+     *     7.0.0.
      */
     public function toKey(): string
     {
