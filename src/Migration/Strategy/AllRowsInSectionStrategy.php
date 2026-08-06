@@ -7,12 +7,10 @@ namespace WeDevelop\Grid\Migration\Strategy;
 use Psr\Log\LoggerInterface;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyRowData;
-use WeDevelop\Grid\Migration\DTO\MigrationColumn;
 use WeDevelop\Grid\Migration\DTO\MigrationRow;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
-use WeDevelop\Grid\Value\GridSettings;
 
 /**
  * Maps all row groups to Rows under a single Section.
@@ -22,19 +20,21 @@ use WeDevelop\Grid\Value\GridSettings;
  * are taken from the first explicit row; later rows with conflicting
  * values trigger a warning and are discarded.
  */
-final readonly class AllRowsInSectionStrategy implements RowMappingStrategy
+final readonly class AllRowsInSectionStrategy extends AbstractRowMappingStrategy
 {
     /**
      * @param non-empty-string      $defaultViewport
      * @param array<string, string> $viewportKeyMap  Old viewport key → new key (e.g. 'MD' → 'md')
      */
     public function __construct(
-        private ElementGrouper $grouper,
-        private FieldMapper $mapper,
-        private string $defaultViewport,
-        private array $viewportKeyMap,
+        ElementGrouper $grouper,
+        FieldMapper $mapper,
+        string $defaultViewport,
+        array $viewportKeyMap,
         private LoggerInterface $logger,
-    ) {}
+    ) {
+        parent::__construct($grouper, $mapper, $defaultViewport, $viewportKeyMap);
+    }
 
     /**
      * @param list<LegacyElement> $elements Flat sorted element list
@@ -132,42 +132,5 @@ final readonly class AllRowsInSectionStrategy implements RowMappingStrategy
         }
 
         return $rows;
-    }
-
-    /**
-     * Group consecutive elements with identical GridSettings into shared columns.
-     *
-     * @param list<LegacyElement> $elements
-     * @return list<MigrationColumn>
-     */
-    private function buildColumns(array $elements): array
-    {
-        /** @var list<GridSettings> $groupSettings */
-        $groupSettings = [];
-        /** @var list<list<LegacyElement>> $groupElements */
-        $groupElements = [];
-
-        foreach ($elements as $element) {
-            $gridSettings = $this->mapper->mapGridSettings($element, $this->defaultViewport, $this->viewportKeyMap);
-            $lastIndex = \count($groupSettings) - 1;
-
-            if ($lastIndex >= 0 && $gridSettings->equals($groupSettings[$lastIndex])) {
-                $groupElements[$lastIndex][] = $element;
-            } else {
-                $groupSettings[] = $gridSettings;
-                $groupElements[] = [$element];
-            }
-        }
-
-        $columns = [];
-        foreach ($groupSettings as $index => $settings) {
-            $columns[] = new MigrationColumn(
-                gridSettings: $settings,
-                sort: $index + 1,
-                elements: $groupElements[$index],
-            );
-        }
-
-        return $columns;
     }
 }
