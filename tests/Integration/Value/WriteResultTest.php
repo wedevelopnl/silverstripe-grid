@@ -90,7 +90,11 @@ final class WriteResultTest extends SapphireTest
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Not a validation error');
 
-        WriteResult::from(static function (): never {
+        // Bound, never read: from() is #[\NoDiscard] and PHP 8.5 warns on a
+        // discarded call even when it throws, which failOnWarning turns red.
+        // The (void) cast the warning suggests is 8.5-only syntax and would
+        // break the 8.3 floor, so bind instead.
+        $neverReturned = WriteResult::from(static function (): never {
             throw new \RuntimeException('Not a validation error');
         });
     }
@@ -115,10 +119,11 @@ final class WriteResultTest extends SapphireTest
         };
         Injector::inst()->registerService($logger, LoggerInterface::class);
 
-        WriteResult::from(static function (): never {
+        $result = WriteResult::from(static function (): never {
             throw new ValidationException('Raw framework detail');
         });
 
+        self::assertTrue($result->isErr());
         self::assertContains('debug:Raw framework detail', $logger->records);
     }
 }

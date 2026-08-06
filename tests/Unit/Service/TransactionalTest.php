@@ -26,7 +26,11 @@ final class TransactionalTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('boom');
 
-        Transactional::run(static function (): Result {
+        // Bound, never read: run() is #[\NoDiscard] and PHP 8.5 warns on a
+        // discarded call even when it throws, which failOnWarning turns red.
+        // The (void) cast the warning suggests is 8.5-only syntax and would
+        // break the 8.3 floor, so bind instead.
+        $neverReturned = Transactional::run(static function (): Result {
             throw new RuntimeException('boom');
         });
     }

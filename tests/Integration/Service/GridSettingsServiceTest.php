@@ -119,7 +119,7 @@ final class GridSettingsServiceTest extends SapphireTest
         $row = GridTreeFactory::row($section);
         $column = GridTreeFactory::column($row);
 
-        $this->service->updateSettings($column, 'sm', 8, 1, true);
+        self::assertTrue($this->service->updateSettings($column, 'sm', 8, 1, true)->isOk());
 
         /** @var Column $reloaded */
         $reloaded = GridElement::get()->byID($column->ID);
