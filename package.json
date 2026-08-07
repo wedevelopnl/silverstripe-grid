@@ -41,7 +41,7 @@
     "qs": "^6.15.2"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.5",
+    "@biomejs/biome": "^2.5.7",
     "@playwright/test": "^1.62.1",
     "@stryker-mutator/core": "^9.5.0",
     "@stryker-mutator/typescript-checker": "^9.6.1",
