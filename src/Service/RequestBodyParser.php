@@ -6,7 +6,6 @@ namespace WeDevelop\Grid\Service;
 
 use NoDiscard;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
-use WeDevelop\Grid\Model\ContentElement;
 use InvalidArgumentException;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\CreateContentRequest;
@@ -94,8 +93,8 @@ final readonly class RequestBodyParser
             return Result::fail(new ValidationError('className does not refer to an existing class.'));
         }
 
-        if ($className !== ContentElement::class && !is_subclass_of($className, ContentElement::class)) {
-            return Result::fail(new ValidationError('className must be a ContentElement subclass.'));
+        if (!ContainerType::Column->isChildCreatable($className)) {
+            return Result::fail(new ValidationError('className is not an element type a column can hold.'));
         }
 
         $parentResult = $this->parseNodeRef($data['parent'] ?? null, 'parent');
@@ -108,7 +107,6 @@ final readonly class RequestBodyParser
             return Result::fail(new ValidationError('insertAfterElementID must be a positive integer or null.'));
         }
 
-        /** @var class-string<ContentElement> $className */
         return Result::ok(new CreateContentRequest($className, $parent, $afterElementID));
     }
 

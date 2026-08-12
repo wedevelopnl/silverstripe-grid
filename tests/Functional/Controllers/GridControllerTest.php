@@ -24,6 +24,7 @@ use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Support\DenyCreateExtension;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Tests\Unit\Support\DirectGridElementStub;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
 
@@ -31,6 +32,9 @@ use WeDevelop\Grid\Value\ViewportConfig;
 final class GridControllerTest extends FunctionalTest
 {
     protected static $fixture_file = __DIR__ . '/../../Integration/Fixture/page.yml';
+
+    /** @var array<class-string> */
+    protected static $extra_dataobjects = [DirectGridElementStub::class];
 
     private const BASE_URL = '/admin/grid/api';
 
@@ -520,6 +524,25 @@ final class GridControllerTest extends FunctionalTest
         ]);
 
         self::assertSame(204, $response->getStatusCode());
+    }
+
+    /**
+     * `docs/usage/custom-elements.md` sanctions extending GridElement directly for
+     * blocks with no HTML body, and getAllowedTypes() offers such a class in the
+     * column's type picker — so the create endpoint must accept what the picker
+     * advertised rather than 400 on it.
+     */
+    public function testCreateContentReturns204ForDirectGridElementSubclass(): void
+    {
+        $tree = $this->buildTree();
+
+        $response = $this->jsonPost(self::BASE_URL . '/create', [
+            'className' => DirectGridElementStub::class,
+            'parent' => $this->ref($tree['column']),
+        ]);
+
+        self::assertSame(204, $response->getStatusCode());
+        self::assertCount(1, DirectGridElementStub::get());
     }
 
     public function testCreateContentReturns400ForNonColumnParent(): void

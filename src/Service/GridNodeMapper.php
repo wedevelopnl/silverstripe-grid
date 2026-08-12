@@ -141,13 +141,14 @@ class GridNodeMapper
 
         $types = [];
 
-        // ContainerType::isChildAllowed() encodes the full hierarchy rule for
-        // every container type (Section/Row: the allowed child class + subclasses;
+        // ContainerType::isChildCreatable() encodes the full rule for every
+        // container type (Section/Row: the allowed child class + subclasses;
         // Column: any non-container GridElement), so a single filtered pass over
-        // all GridElement subclasses covers all cases.
+        // all GridElement subclasses covers all cases. Offering a type here is a
+        // promise the create endpoint will accept it, so both sides must ask the
+        // same question — it also narrows $class for the array key below.
         foreach (ClassInfo::subclassesFor(GridElement::class, false) as $class) {
-            /** @var class-string<GridElement> $class */
-            if ($containerType->isChildAllowed($class)) {
+            if ($containerType->isChildCreatable($class)) {
                 $types[$class] = $this->getElementTypeInfo($class);
             }
         }

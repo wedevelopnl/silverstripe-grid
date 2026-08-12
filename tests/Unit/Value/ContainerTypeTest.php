@@ -7,11 +7,13 @@ namespace WeDevelop\Grid\Tests\Unit\Value;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Unit\Support\DirectGridElementStub;
 use WeDevelop\Grid\Value\ContainerType;
 
 #[CoversClass(ContainerType::class)]
@@ -115,5 +117,37 @@ final class ContainerTypeTest extends TestCase
     public function testIsChildAllowed(ContainerType $type, string $elementClass, bool $expected): void
     {
         self::assertSame($expected, $type->isChildAllowed($elementClass));
+    }
+
+    /**
+     * @return array<string, array{ContainerType, string, bool}>
+     */
+    public static function isChildCreatableProvider(): array
+    {
+        return [
+            // Containment: same answers as isChildAllowed() for concrete subclasses.
+            'Section allows Row' => [ContainerType::Section, Row::class, true],
+            'Section rejects Column' => [ContainerType::Section, Column::class, false],
+            'Section rejects ContentElement' => [ContainerType::Section, ContentElement::class, false],
+            'Row allows Column' => [ContainerType::Row, Column::class, true],
+            'Row rejects ContentElement' => [ContainerType::Row, ContentElement::class, false],
+            'Column allows ContentElement' => [ContainerType::Column, ContentElement::class, true],
+            'Column rejects Section' => [ContainerType::Column, Section::class, false],
+            'Column rejects Row' => [ContainerType::Column, Row::class, false],
+            'Column rejects Column' => [ContainerType::Column, Column::class, false],
+
+            // Shape: the facts a bare class name needs on top of containment.
+            'Column allows a direct GridElement subclass' => [ContainerType::Column, DirectGridElementStub::class, true],
+            'Column rejects the GridElement base itself' => [ContainerType::Column, GridElement::class, false],
+            'Column rejects a non-GridElement class' => [ContainerType::Column, stdClass::class, false],
+            'Column rejects a class that does not exist' => [ContainerType::Column, 'WeDevelop\\Grid\\Nope', false],
+            'Column rejects an empty class name' => [ContainerType::Column, '', false],
+        ];
+    }
+
+    #[DataProvider('isChildCreatableProvider')]
+    public function testIsChildCreatable(ContainerType $type, string $elementClass, bool $expected): void
+    {
+        self::assertSame($expected, $type->isChildCreatable($elementClass));
     }
 }
