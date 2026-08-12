@@ -1,3 +1,5 @@
+// biome-ignore-all lint/nursery/useAwaitThenable: Biome 2.5.6+ resolves React's inapplicable `act(() => VoidOrUndefinedOnly): void` overload for async callbacks and reports the awaits below as non-Promise. TypeScript picks the `act<T>(() => T | Promise<T>): Promise<T>` overload, so `tsc` is clean. Remove once Biome fixes overload applicability in this rule.
+
 import { QueryClient } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
