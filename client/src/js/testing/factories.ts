@@ -273,7 +273,6 @@ export function createTreeApiResponse(
   // type lets one factory serve both consumers: internal-model tests ignore
   // the extra key, fetch-mock tests parse it through normaliseTreeResponse.
 ): TreeApiResponse & { allowedTypes: AllowedTypesByContainerType } {
-  // biome-ignore lint/suspicious/noUnnecessaryConditions: biome 2.5.5 wrongly infers the optional-chain LHS as non-nullish. createTreeApiResponse() is called with no args (useElementMaps.test.ts:144), so the ?? 1 fallback is reached.
   const pageId = overrides?.pageId ?? overrides?.rootParent?.id ?? 1
   const sections = overrides?.sections ?? overrides?.nodes ?? createTree(undefined, pageId)
   return {
