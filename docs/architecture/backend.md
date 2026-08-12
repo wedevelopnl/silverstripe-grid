@@ -205,7 +205,7 @@ The tree response is a flat `nodes` array of root children plus an explicit `roo
 The controller delegates body parsing to `RequestBodyParser`, which returns typed request DTOs wrapped in `Result`. Each `parseX()` method returns `Result::fail()` for invalid payloads:
 
 - `parseCreateBody()` — validates `containerType` (enum), `parent` (`NodeRef`), `insertAfterElementID`, `insertAtStart` (bool), and `zone`. Enforces that `insertAtStart` and `insertAfterElementID` are mutually exclusive
-- `parseCreateContentBody()` — validates `className` (must be `ContentElement` subclass), `parent` (`NodeRef`), `insertAfterElementID`
+- `parseCreateContentBody()` — validates `className` (via `ContainerType::Column->isChildCreatable()` — any non-container `GridElement` subclass, so `ContentElement` subclasses and direct `GridElement` subclasses alike), `parent` (`NodeRef`), `insertAfterElementID`
 - `parseReorderBody()` — validates `element` / `parent` / `after` (all `NodeRef`), with `after.type === element.type` and `element.type !== page`
 - `parseUpdateGridSettingsBody()` — validates `element` (`NodeRef`) plus viewport-scoped width/offset/visibility (viewport must match an adapter viewport)
 - `parseDuplicateToBody()` — validates source `element` (`NodeRef`), `targetPageId`, `targetZone`, and `targetParent` (`NodeRef`)

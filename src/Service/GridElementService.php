@@ -10,7 +10,6 @@ use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\Column;
-use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Value\ContainerType;
@@ -61,7 +60,7 @@ final readonly class GridElementService
     }
 
     /**
-     * @param class-string<ContentElement> $className
+     * @param class-string<GridElement> $className
      * @param positive-int|null $insertAfterElementID
      * @return Result<GridElement>
      */

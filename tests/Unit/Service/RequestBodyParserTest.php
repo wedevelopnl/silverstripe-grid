@@ -9,7 +9,10 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\RequestBodyParser;
+use WeDevelop\Grid\Tests\Unit\Support\DirectGridElementStub;
 use WeDevelop\Grid\Tests\Unit\Support\GridAdapterStub;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\CreateContentRequest;
@@ -188,6 +191,22 @@ final class RequestBodyParserTest extends TestCase
     }
 
     /**
+     * A column accepts any concrete non-container element, so a custom block that
+     * extends GridElement directly — the documented route for blocks that need no
+     * HTML body — must parse just like a ContentElement subclass.
+     */
+    public function testParseCreateContentBodyAcceptsDirectGridElementSubclass(): void
+    {
+        $result = $this->parser->parseCreateContentBody([
+            'className' => DirectGridElementStub::class,
+            'parent' => ['type' => 'column', 'id' => 1],
+        ]);
+
+        self::assertTrue($result->isOk());
+        self::assertSame(DirectGridElementStub::class, $result->unwrap()->className);
+    }
+
+    /**
      * @param array<string, mixed> $input
      */
     #[DataProvider('createContentBodyErrorProvider')]
@@ -216,9 +235,19 @@ final class RequestBodyParserTest extends TestCase
             'className does not refer to an existing class.',
         ];
 
-        yield 'not a ContentElement subclass' => [
+        yield 'not a GridElement at all' => [
             ['className' => stdClass::class, 'parent' => $validParent],
-            'className must be a ContentElement subclass.',
+            'className is not an element type a column can hold.',
+        ];
+
+        yield 'a container class' => [
+            ['className' => Section::class, 'parent' => $validParent],
+            'className is not an element type a column can hold.',
+        ];
+
+        yield 'the GridElement base itself' => [
+            ['className' => GridElement::class, 'parent' => $validParent],
+            'className is not an element type a column can hold.',
         ];
 
         yield 'missing parent' => [

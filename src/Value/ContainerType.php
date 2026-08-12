@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Value;
 
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Column;
@@ -74,5 +75,28 @@ enum ContainerType: string
         return !is_a($elementClass, Section::class, true)
             && !is_a($elementClass, Row::class, true)
             && !is_a($elementClass, Column::class, true);
+    }
+
+    /**
+     * Whether $class names an element type an author may create inside this
+     * container.
+     *
+     * {@see isChildAllowed()} answers containment for an element that already
+     * exists, so its callers hold an instance and the class is a GridElement by
+     * construction. This answers it for a bare class name off a request body,
+     * which must first be shown to name an element at all — the API hands it
+     * straight to `Injector::create()`. A subclass, never the `GridElement` base
+     * itself: that is the scaffold every element inherits, not an authorable type,
+     * and the type picker never offers it.
+     *
+     * Type rules only; whether the current member may create one stays a
+     * separate `canCreate()` check at the controller.
+     *
+     * @phpstan-assert-if-true class-string<GridElement> $class
+     */
+    public function isChildCreatable(string $class): bool
+    {
+        return is_subclass_of($class, GridElement::class)
+            && $this->isChildAllowed($class);
     }
 }
