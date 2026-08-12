@@ -286,11 +286,13 @@ buildViewableTree(page, zone)
 
 Elements are keyed by the composite `"ParentClass:ParentID"` string in the lookup map. This prevents false matches when a page ID coincides with an element ID.
 
-`GridTreeService` owns loading and tree assembly; the `GridNodeMapper` it holds owns element → `GridNode` conversion. The seam is deliberately tight: the service supplies only structure (the element, its parent ref, its assembled children) via `mapToNode(element, parent, children)`, and the mapper derives everything else — `containerType`, `allowedTypes`, `gridSettings` — from the element itself. Split so the mapper can be reused (e.g. the `updateElementData` hook fires once per node regardless of which loading strategy is used) and so the service's own concerns stay free of view-layer details like icon fallbacks and block schemas.
+`GridTreeService` owns loading and tree assembly; the `GridNodeMapper` it holds owns element → `GridNode` conversion. The seam is deliberately tight: the service supplies only structure (the element, its parent ref, its assembled children) via `mapToNode(element, parent, children)`, and the mapper derives everything else — `containerType`, `gridSettings` — from the element itself. Split so the mapper can be reused (e.g. the `updateElementData` hook fires once per node regardless of which loading strategy is used) and so the service's own concerns stay free of view-layer details like icon fallbacks and block schemas.
+
+Allowed child types are **not** per node. They depend only on the container type (the hierarchy rules are hardcoded on `ContainerType`), so the mapper computes one map per container type via `allowedTypesByContainerType()` and `GridTree` carries it once at the tree root.
 
 The public API is layered by permission handling: mechanism-layer methods never filter, policy-layer methods (the `Viewable` names) apply `canView()`:
 
-- `buildViewableTree(page, zone)` — the CMS React API's wire model (`GridTree`: root parent ref + nodes), filtered per node by `canView()` (policy).
+- `buildViewableTree(page, zone)` — the CMS React API's wire model (`GridTree`: root parent ref + allowed-types map + nodes), filtered per node by `canView()` (policy).
 - `findDescendantsForPage(page, zone)` — flat list of every element on the page/zone in BFS level order; callers filter (e.g. `GridSettingsService::resetOverrides()` keeps only Columns) (mechanism).
 - `findDescendants(element)` — flat subtree below any element, root excluded, no zone filter (mechanism).
 - `findViewableContainersOfType(page, zone, ContainerType)` — viewable container elements of one type; backs `apiAcceptableContainers`, where the controller builds the `{id, title, type}` tuples via `GridElement::getDisplayTitle()` (policy).
@@ -390,7 +392,7 @@ Both `HierarchyValidationService` (write-time) and `ReorderValidator` (reorder-t
 
 | Method | Purpose |
 |--------|---------|
-| `findById(int)` | Single element lookup by ID |
+| `findById(int)` | **Deprecated** (removal in 7.0.0) — single element lookup by ID. Neither DRAFT-pinned nor `NodeType`-scoped; use `findByRef()` |
 | `findByRef(NodeRef)` | Lookup by scoped `NodeRef` — the controller's primary lookup (resolves the `NodeType` to the right ORM class); returns `null` for non-element types (e.g. Page) |
 | `findByParentIds(list<int>, string $parentClass)` | Elements by ParentID + parent class |
 | `findByParents(array<class, list<int>>, ?zone)` | Composite key + optional zone filter |
@@ -568,22 +570,23 @@ Pages (`SiteTree`) and grid elements live in separate DB tables with independent
 | `NodeType` | Enum: `page`, `section`, `row`, `column`, `element` | Discriminator. `fromClass()` resolves a FQCN to the right case; `toClass()` returns the canonical ORM class for lookup (with `element` → `GridElement`). |
 | `NodeRef` | `final readonly { type: NodeType, id: positive-int }` | Scoped identity used on every API boundary — tree responses (`rootParent`), reorder payload (`element`, `parent`, `after`), duplicate-to targets, create parents. Serializes to `{ type, id }` via `JsonSerializable`. |
 
-Server and client use the same shape: the frontend `NodeKey` (`"${NodeType}-${id}"`) string form is produced by `NodeRef::toKey()`. The controller uses `resolveNodeRef()` to pick the right ORM class before loading, avoiding the polymorphic ID collision.
+Server and client use the same shape: the frontend `NodeKey` (`"${NodeType}-${id}"`) string form is produced client-side by `NodeIdentity.toKey()`. (The PHP `NodeRef::toKey()` counterpart has no caller and is deprecated for removal in 7.0.0.) The controller's `resolveNodeRef()` keeps only the Page branch and delegates every element ref to `GridElementRepositoryInterface::findByRef()` (which deliberately excludes Page), so the class-resolution that avoids the polymorphic ID collision lives in one place.
 
 ## Value Objects
 
 | Class | Purpose |
 |-------|---------|
-| `ContainerType` | Enum: Section, Row, Column — with `toElementClass()`, `allowedChildClass()`, `isChildAllowed()` |
+| `ContainerType` | Enum: Section, Row, Column — with `toElementClass()`, `allowedChildClass()`, `isChildAllowed()` (instance) and `isChildCreatable()` (untrusted `class-string`, also proves it is a `GridElement` subclass) |
 | `NodeType` | Enum: Page, Section, Row, Column, Element — scoped identity discriminator (see [Node Identity](#node-identity)) |
 | `NodeRef` | `final readonly { type, id }` — canonical on-the-wire element reference |
 | `Viewport` | `final readonly class` with `key` and `label` |
-| `GridNode` | Readonly DTO for serialized tree nodes (includes `self: NodeRef`, `parent: NodeRef`, `status: ElementStatus`, `summary`, and optional `containerType`/`allowedTypes`/`children`/`gridSettings`) |
+| `GridNode` | Readonly DTO for serialized tree nodes (includes `self: NodeRef`, `parent: NodeRef`, `status: ElementStatus`, `summary`, and optional `containerType`/`children`/`gridSettings`) |
+| `GridTree` | Readonly DTO for the tree endpoints' wire shape: `{rootParent: NodeRef, allowedTypes: <by container type>, nodes: GridNode[]}` |
 | `ElementStatus` | Enum: Draft, Published, Modified, Removed — derived from `getStatusFlags()` |
 | `Result<T>` | Generic success/failure container |
 | `ValidationError` | Structured error with message, field, severity, code, and optional i18n key + params |
-| `ValidationErrorCode` | Enum: Generic, OwnershipDenied, HierarchyViolation, InvalidGridSettings |
-| `ValidationSeverity` | Enum: Error, Warning |
+| `ValidationErrorCode` | Enum: Generic, OwnershipDenied, HierarchyViolation, InvalidGridSettings (deprecated, never constructed — grid-settings failures reach the client as `Generic`; removal in 7.0.0) |
+| `ValidationSeverity` | Enum: Error, Warning — deprecated, never passed non-default and never read by any response path; removal in 7.0.0 |
 | `AspectRatio` | Enum: Auto, Square (1x1), FourByThree (4x3), SixteenByNine (16x9) |
 | `MediaPosition` | Enum: First, Last, LastOnDesktop |
 | `VerticalAlignment` | Enum: Top, Center, Bottom |

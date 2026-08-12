@@ -51,7 +51,7 @@ The drag-and-drop system enables visual reordering of elements within the grid e
 
 Every node carries a scoped identity shaped as `NodeRef = { type: NodeType, id: number }` where `NodeType` is one of `page | section | row | column | element`. A page's ID and an element's ID can collide — they come from independent auto-increment sequences — so every map, every dnd-kit draggable, every API payload pairs the numeric id with its type.
 
-The flat-string form is `NodeKey = '${type}-${id}'` (e.g. `row-42`, `column-17`). Helpers live in `client/src/js/types/identity.ts` under the `NodeIdentity` namespace: `toKey`, `fromKey`, `equals`, `assert`. Every composite ID dnd-kit sees is a `NodeKey`.
+The flat-string form is `NodeKey = '${type}-${id}'` (e.g. `row-42`, `column-17`). Helpers live in `client/src/js/types/identity.ts` under the `NodeIdentity` namespace: `toKey`, `fromKey`, `equals`. Every composite ID dnd-kit sees is a `NodeKey`.
 
 ### Element Tree
 
@@ -183,7 +183,8 @@ Raw tree nodes already arrive with every piece of data the UI needs — there is
 
 - **`nodeKey` / `parentKey`** — precomputed composite keys, used both for Map lookups and directly as dnd-kit draggable/droppable IDs. Populated at the fetch boundary by the API layer's `normaliseTreeResponse`, which maps each node through `attachDerivedFields`.
 - **`self` / `parent`** — structural `NodeRef`s for code that prefers the typed form.
-- **children / allowedTypes / gridSettings** — populated per container type.
+- **children / gridSettings** — populated per container type.
+- **allowedTypes** — not on the wire per node. The response carries one map per container type at the tree root, and `attachDerivedFields` re-attaches it to each container node **by reference**, so every section shares one array object (likewise rows and columns). Treat it as immutable: mutating it mutates every node's.
 
 Per-node collapse state (`isCollapsed`, toggle) lives in a separate `CollapseContext` (`client/src/js/hooks/useCollapseState.ts`), consumed via the `useCollapse()` hook. It is persisted to `localStorage` and is decoupled from the tree shape so toggling a collapse state does not invalidate tree memos.
 
