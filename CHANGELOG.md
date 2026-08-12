@@ -57,7 +57,12 @@ All of the below are annotated for removal in **7.0.0**.
 - **Dev Docker stack binds to loopback** — the web port was published on all interfaces while the container runs with `SS_ENVIRONMENT_TYPE=dev`, exposing the whole unauthenticated `/dev/*` surface (including the browser-runnable build tasks and the E2E fixture endpoint, which wipes and reseeds data) to any network the developer's machine was attached to; Docker's iptables rules bypass most host firewalls. The MySQL port was likewise published everywhere with fixed dev credentials, and the `silverstripe` user held `ALL PRIVILEGES ON *.*` from any host. Both ports now publish on `127.0.0.1` only, and the grant is scoped to `ss_tmpdb_*` and `silverstripe*` instead of `*.*` (which also carried global `FILE`/`PROCESS`/`SHUTDOWN`/`CREATE USER`).
 - **Third-party GitHub Actions pinned to commit SHAs** — all seven were tag-pinned while three jobs hand them secrets (`DOCKERHUB_TOKEN` with org access, and a `GITHUB_TOKEN` with `checks: write`). A tag is mutable, so a compromised action repository can repoint it at code running with the job's environment. Dependabot's `github-actions` ecosystem keeps the SHA pins current; first-party `actions/*` stay on tags.
 - **`Bash(docker compose:*)` narrowed in the committed Claude Code permission list** — it auto-approved *any* compose invocation, including one pointing at an attacker-authored compose file that bind-mounts the host root, from an allowlist every clone inherits. Scoped to the `docker compose -f .docker/compose.yml` prefix the project's own tooling uses. The stale `Bash(make *)` entry (the repo has no Makefile) is removed.
-- **`qs` forced to >= 6.15.2** — `typed-rest-client` pins `qs` to 6.15.1 exactly, pulling in a remotely triggerable DoS in `qs.stringify` ([GHSA-q8mj-m7cp-5q26](https://github.com/advisories/GHSA-q8mj-m7cp-5q26), CVE-2026-8723). Dev-only (Stryker toolchain, never in the published bundle); `npm audit` now reports 0 vulnerabilities.
+- **Three dev-only DoS advisories cleared** — all in the mutation-testing and linting toolchains, none of which reach the published bundle. `npm audit` reports 0 vulnerabilities.
+  - `qs` forced to >= 6.15.2 via an npm `override`: `typed-rest-client` pins it to 6.15.1 exactly, pulling in a remotely triggerable DoS in `qs.stringify` ([GHSA-q8mj-m7cp-5q26](https://github.com/advisories/GHSA-q8mj-m7cp-5q26), CVE-2026-8723).
+  - `js-yaml` 4.3.0 → 4.3.1 (quadratic CPU consumption in `!!omap` resolution, [GHSA-5p4m-2wfm-xmqj](https://github.com/advisories/GHSA-5p4m-2wfm-xmqj)), reached through `stylelint` → `cosmiconfig`. The module's own direct dependency is already on the 5.x line and was never affected.
+  - `brace-expansion` 5.0.7 → 5.0.9 (unbounded expansion length and unbounded intermediate arrays, [GHSA-mh99-v99m-4gvg](https://github.com/advisories/GHSA-mh99-v99m-4gvg) / [GHSA-rgw5-rvv9-x895](https://github.com/advisories/GHSA-rgw5-rvv9-x895)), reached through `@stryker-mutator/core` → `minimatch`.
+
+  The latter two needed only a lock refresh — both patched versions already satisfy the ranges their dependents declare — so no `overrides` entry carries them.
 
 ### Performance
 
@@ -71,7 +76,7 @@ All of the below are annotated for removal in **7.0.0**.
 
 ### Dependencies
 
-- npm `overrides`: `qs` ^6.15.2 (see Security)
+- npm `overrides`: `qs` ^6.15.2; transitive `js-yaml` 4.3.0 → 4.3.1 and `brace-expansion` 5.0.7 → 5.0.9 refreshed in the lock (see Security)
 - `@tanstack/react-query` 5.101.2 → 5.101.4
 - `@biomejs/biome` 2.5.2 → 2.5.8 (2.5.3, 2.5.4 and 2.5.6 held; see Developer Experience)
 - `@playwright/test` 1.61.1 → 1.62.1
