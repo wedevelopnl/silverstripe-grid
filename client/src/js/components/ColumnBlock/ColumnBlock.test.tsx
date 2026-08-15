@@ -242,7 +242,7 @@ describe('EditableColumnBlock', () => {
 
       renderWithProviders(<EditableColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-badge')).toHaveTextContent('6/12')
+      expect(screen.getByTestId('column-badge')).toHaveTextContent('6 columns')
     })
 
     it('shows "hidden" label when column is not visible', () => {
@@ -271,7 +271,7 @@ describe('EditableColumnBlock', () => {
       await user.click(screen.getByTestId('column-badge'))
 
       const options = screen.getAllByRole('option')
-      const option = options.find((opt) => opt.textContent === '8/12')
+      const option = options.find((opt) => opt.textContent === '8 columns')
       expect(option).toBeDefined()
       await user.click(option!)
 
@@ -339,7 +339,7 @@ describe('EditableColumnBlock', () => {
 
       // Select width 10 — max offset is 12-10=2, but current offset is 7
       const options = screen.getAllByRole('option')
-      const option = options.find((opt) => opt.textContent === '10/12')
+      const option = options.find((opt) => opt.textContent === '10 columns')
       expect(option).toBeDefined()
       await user.click(option!)
 
@@ -382,10 +382,10 @@ describe('EditableColumnBlock', () => {
 
       renderWithProviders(<EditableColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('none')
+      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('0 offset')
     })
 
-    it('shows "+N" label when offset is non-zero', () => {
+    it('labels a non-zero offset with its value', () => {
       mockFetchSuccess({})
 
       const column = createColumnNode({
@@ -394,7 +394,7 @@ describe('EditableColumnBlock', () => {
 
       renderWithProviders(<EditableColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('+3')
+      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('3 offset')
     })
 
     it('disabled when width equals column count', () => {
@@ -447,7 +447,7 @@ describe('EditableColumnBlock', () => {
       await user.click(screen.getByTestId('column-offset-badge'))
 
       const options = screen.getAllByRole('option')
-      const option = options.find((opt) => opt.textContent === '+3')
+      const option = options.find((opt) => opt.textContent === '3 offset')
       expect(option).toBeDefined()
       await user.click(option!)
 

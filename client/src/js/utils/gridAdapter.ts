@@ -30,6 +30,31 @@ export function getOffsetStrategy(): OffsetStrategy {
  */
 type AdapterConfig = ReturnType<typeof getAdapterConfig>
 
+/**
+ * Human label for a column width, e.g. "4 columns".
+ *
+ * The design labels widths by span rather than as the "4/12" fraction the
+ * editor used to show. Exported so the picker's trigger and its options are
+ * formatted by the same function — they sat in separate code paths and could
+ * drift into showing the value two different ways.
+ */
+export function formatWidthLabel(width: number): string {
+  return width === 1
+    ? t('WeDevelopGrid.GridSettings.WIDTH_ONE', '{count} column', { count: width })
+    : t('WeDevelopGrid.GridSettings.WIDTH_MANY', '{count} columns', { count: width })
+}
+
+/**
+ * Human label for a column offset, e.g. "0 offset".
+ *
+ * Not pluralised: the design labels the zero case "0 offset", treating offset
+ * as an attribute rather than a count of things, so every value reads the same
+ * way.
+ */
+export function formatOffsetLabel(offset: number): string {
+  return t('WeDevelopGrid.GridSettings.OFFSET_VALUE', '{count} offset', { count: offset })
+}
+
 let widthOptionsCache: { config: AdapterConfig; options: readonly GridSettingsOption[] } | null =
   null
 
@@ -43,7 +68,7 @@ export function getWidthOptions(): readonly GridSettingsOption[] {
   const options: GridSettingsOption[] = []
 
   for (let n = 1; n <= columnCount; n++) {
-    options.push({ value: n, label: `${n}/${columnCount}` })
+    options.push({ value: n, label: formatWidthLabel(n) })
   }
 
   options.push({ value: 'hidden', label: t('WeDevelopGrid.GridSettings.HIDDEN', 'hidden') })
@@ -71,10 +96,7 @@ export function getOffsetOptions(currentWidth?: number): readonly GridSettingsOp
   const options: GridSettingsOption[] = []
 
   for (let n = 0; n <= maxOffset; n++) {
-    options.push({
-      value: n,
-      label: n === 0 ? t('WeDevelopGrid.GridSettings.OFFSET_NONE', 'none') : `+${n}`,
-    })
+    options.push({ value: n, label: formatOffsetLabel(n) })
   }
 
   offsetOptionsCache.byMaxOffset.set(maxOffset, options)
