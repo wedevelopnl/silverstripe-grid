@@ -16,11 +16,15 @@
   white-space: nowrap;
 }
 
-// Container titles double as links to the element's edit form. Strip the CMS
-// admin stylesheet's link chrome so the header reads as a header, and put the
-// underline back only on hover to signal it is clickable after all.
+// Container titles double as links to the element's edit form. The Figma paints
+// them plain black; jQuery UI's admin theme paints every link inside a widget
+// `#0071c4` via `.ui-widget.ui-widget-content a`, which at (0,2,1) outranks a
+// bare `.ssgrid-*__title a` (0,1,1) — so titles rendered blue. Qualifying with
+// the editor root and `:any-link` reaches (0,3,1) and wins outright, which is
+// why this is not simply `a { color: inherit }`. The underline returns on hover
+// so the title still reads as clickable.
 @mixin block-title-link {
-  a {
+  .ssgrid-editor & a:any-link {
     color: inherit;
     text-decoration: none;
 
