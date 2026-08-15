@@ -2,11 +2,13 @@
 // muted surface with a status-aware border. The header is a single flat flex
 // row; the title flexes to fill so the actions kebab lands at the right edge.
 
+@use './typography';
+
 .ssgrid-section {
   background: var(--ssgrid-surface-muted);
   border: 1px solid var(--ssgrid-border-default);
   border-radius: var(--ssgrid-radius-md);
-  padding: 16px;
+  padding: var(--ssgrid-space-4);
 
   // Skip layout/paint for off-screen sections on long pages — the browser
   // still reserves a 400px box per section so scrollbars and dnd-kit
@@ -26,29 +28,15 @@
   &__header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--ssgrid-space-2);
   }
 
   &__title {
+    @include typography.block-title;
+    @include typography.block-title-link;
+
     flex: 1 1 auto;
-    min-width: 0;
     margin: 0;
-    overflow: hidden;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 18px;
-    color: var(--ssgrid-text-default);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    a {
-      color: inherit;
-      text-decoration: none;
-
-      &:hover {
-        text-decoration: underline;
-      }
-    }
   }
 
   // Holds the rows, the "+ Add row" gap buttons, and the trailing "+ Add row".
@@ -57,7 +45,7 @@
   &__body {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-top: 16px;
+    gap: var(--ssgrid-space-3);
+    margin-top: var(--ssgrid-space-4);
   }
 }

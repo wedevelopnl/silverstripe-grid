@@ -30,7 +30,7 @@
 
   &__icon {
     color: var(--ssgrid-text-on-action);
-    font-size: 16px;
+    font-size: var(--ssgrid-size-icon);
     line-height: 1;
   }
 
@@ -42,8 +42,8 @@
   // --- Edge squares (placement=start | end) ---------------------------------
   &[data-placement='start'],
   &[data-placement='end'] {
-    width: 24px;
-    height: 24px;
+    width: var(--ssgrid-size-chip);
+    height: var(--ssgrid-size-chip);
     border-radius: var(--ssgrid-radius-sm);
     background: var(--ssgrid-surface-action);
 
@@ -63,8 +63,8 @@
     inset-block-start: 50%;
     inset-inline-start: calc(-1 * var(--ssgrid-insert-shift, 0%));
     z-index: 2;
-    width: 24px; // generous hit area straddling the gutter
-    height: 24px;
+    width: var(--ssgrid-size-chip); // generous hit area straddling the gutter
+    height: var(--ssgrid-size-chip);
     transform: translate(-50%, -50%);
     border-radius: var(--ssgrid-radius-sm);
     transition:
@@ -73,8 +73,8 @@
 
     .ssgrid-column-insert__dot {
       display: block;
-      width: 8px;
-      height: 8px;
+      width: var(--ssgrid-size-dot);
+      height: var(--ssgrid-size-dot);
       border: 2px solid var(--ssgrid-border-focus);
       border-radius: 50%;
       background: transparent;

@@ -8,7 +8,7 @@
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 12px;
+  gap: var(--ssgrid-space-3);
 
   // The archive icon reads red on hover.
   .ssgrid-icon-button[data-destructive='true']:not(:disabled):hover

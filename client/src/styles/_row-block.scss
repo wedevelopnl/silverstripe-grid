@@ -4,11 +4,13 @@
 // swaps to modified-orange and the drop-target highlight switches the
 // hairline to brand purple — same pattern as the section/column cards.
 
+@use './typography';
+
 .ssgrid-row {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
+  gap: var(--ssgrid-space-4);
+  padding: var(--ssgrid-space-4);
   background: var(--ssgrid-surface-muted);
   border: 1px solid var(--ssgrid-border-default);
   border-radius: var(--ssgrid-radius-md);
@@ -28,38 +30,26 @@
   &__header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--ssgrid-space-2);
   }
 
   &__title {
+    @include typography.block-title;
+    @include typography.block-title-link;
+
     flex: 1 1 auto;
-    min-width: 0;
     margin: 0;
-    overflow: hidden;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 18px;
-    color: var(--ssgrid-text-default);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    a {
-      color: inherit;
-      text-decoration: none;
-
-      &:hover {
-        text-decoration: underline;
-      }
-    }
   }
 
-  // Subtle column-count hint next to the title (the "3 columns" label).
+  // Column-count hint next to the title (the "3 columns" label). The Figma
+  // sets it at the same size and colour as the title and separates the two by
+  // weight alone (400 against the title's 500) — so no dimming here.
   &__meta {
     flex: 0 0 auto;
     color: var(--ssgrid-text-default);
-    font-size: 12px;
-    line-height: 1;
-    opacity: 0.6;
+    font-size: var(--ssgrid-font-size-body);
+    font-weight: var(--ssgrid-font-weight-regular);
+    line-height: var(--ssgrid-line-height-tight);
   }
 
   // The Figma row "Body": the columns track flanked by the two "+" insert
@@ -68,7 +58,7 @@
   &__columns-area {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: var(--ssgrid-space-4);
 
     > .ssgrid-row__columns {
       flex: 1 1 auto;
@@ -97,27 +87,27 @@
       display: flex;
       flex-wrap: wrap;
       align-items: stretch;
-      row-gap: 16px;
-      margin: 0 -8px;
+      row-gap: var(--ssgrid-space-4);
+      margin: 0 calc(-1 * var(--ssgrid-space-2));
 
       > .ssgrid-column {
         flex: 0 0 var(--col-width);
         max-width: var(--col-width);
         margin-left: var(--col-offset, 0);
-        padding: 0 8px;
+        padding: 0 var(--ssgrid-space-2);
       }
 
       > .ssgrid-add-child--append,
       > .ssgrid-add-child--empty {
         flex: 0 0 100%;
-        padding: 0 8px;
+        padding: 0 var(--ssgrid-space-2);
       }
     }
 
     &[data-layout-mode='grid'] {
       display: grid;
       grid-template-columns: repeat(var(--grid-columns, 12), 1fr);
-      gap: 16px;
+      gap: var(--ssgrid-space-4);
 
       > .ssgrid-column {
         grid-column: var(--col-start, auto) / span var(--col-span);

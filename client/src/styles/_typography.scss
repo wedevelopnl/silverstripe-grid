@@ -1,0 +1,31 @@
+// Shared text treatments. The Figma gives every container header the same
+// title: 14px Poppins Medium on a 125% line, truncating with an ellipsis when
+// the name outgrows its header. Four components render that exact treatment
+// (section, row, column, element card), so it lives here once.
+
+// The truncating block title. Callers supply their own `flex`/`margin`, since
+// a section <h3> and a column <span> sit in different layouts.
+@mixin block-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ssgrid-text-default);
+  font-size: var(--ssgrid-font-size-body);
+  font-weight: var(--ssgrid-font-weight-medium);
+  line-height: var(--ssgrid-line-height-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Container titles double as links to the element's edit form. Strip the CMS
+// admin stylesheet's link chrome so the header reads as a header, and put the
+// underline back only on hover to signal it is clickable after all.
+@mixin block-title-link {
+  a {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

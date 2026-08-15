@@ -4,19 +4,21 @@
 // actions kebab) and, when the element exposes a summary, a 16px-padded Body
 // below it, separated by a 1px top hairline.
 
+@use './typography';
+
 .ssgrid-block {
   display: flex;
   flex-direction: column;
   background: var(--ssgrid-surface-default);
   border: 1px solid var(--ssgrid-border-default);
   border-radius: var(--ssgrid-radius-md);
+  color: var(--ssgrid-text-default);
 
   // The clickable variant renders as an <a>; strip the inherited link chrome
   // so the card reads as a card, not a hyperlink. The CMS admin stylesheet
   // re-adds `text-decoration: underline` on `a:hover`/`a:focus`, which a block
   // propagates to every in-flow descendant (title, icon chip, action buttons) —
   // so the override has to repeat on those states too.
-  color: var(--ssgrid-text-default);
   text-decoration: none;
 
   &:hover,
@@ -44,8 +46,8 @@
   &__header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 16px;
+    gap: var(--ssgrid-space-2);
+    padding: var(--ssgrid-space-4);
   }
 
   // Type icon — brand-tinted rounded chip (Figma: 24px square, 10% brand fill,
@@ -55,37 +57,33 @@
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: var(--ssgrid-size-chip);
+    height: var(--ssgrid-size-chip);
     border-radius: var(--ssgrid-radius-sm);
     background: var(--ssgrid-surface-hover);
     color: var(--ssgrid-text-brand);
-    font-size: 16px;
+    font-size: var(--ssgrid-size-icon);
     line-height: 1;
   }
 
+  // No link reset here: the whole card is the anchor, so the title never
+  // nests one of its own.
   &__title {
+    @include typography.block-title;
+
     flex: 1 1 auto;
-    min-width: 0;
     margin: 0;
-    overflow: hidden;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 18px;
-    color: var(--ssgrid-text-default);
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   // Body — the summary text. Only rendered when the element has a summary; the
   // 1px top border is what visually separates it from the header.
   &__body {
     margin: 0;
-    padding: 16px;
+    padding: var(--ssgrid-space-4);
     border-top: 1px solid var(--ssgrid-border-default);
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 1.625;
+    font-size: var(--ssgrid-font-size-body);
+    font-weight: var(--ssgrid-font-weight-regular);
+    line-height: var(--ssgrid-line-height-relaxed);
     color: var(--ssgrid-text-default);
     overflow-wrap: anywhere;
   }

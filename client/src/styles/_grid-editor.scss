@@ -24,7 +24,15 @@
 .ssgrid-editor {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--ssgrid-space-4);
+
+  // Poppins for the whole editor subtree. Dialogs are plain descendants
+  // (`<dialog>` + showModal promotes to the top layer but keeps DOM
+  // inheritance), so they pick this up without their own declaration; the CMS
+  // form fields we contribute do not, and re-declare it themselves.
+  font-family: var(--ssgrid-font-family);
+  font-size: var(--ssgrid-font-size-body);
+  line-height: var(--ssgrid-line-height-tight);
   color: var(--ssgrid-text-default);
 
   // --- "Grid area" header row -------------------------------------------------
@@ -32,22 +40,22 @@
   &__header {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: var(--ssgrid-space-4);
   }
 
   &__title {
     flex: 1 1 auto;
     margin: 0;
-    font-size: 16px;
-    font-weight: 700;
-    line-height: 1.25;
+    font-size: var(--ssgrid-font-size-heading);
+    font-weight: var(--ssgrid-font-weight-semibold);
+    line-height: var(--ssgrid-line-height-tight);
   }
 
   &__header-actions {
     display: flex;
     flex: 0 0 auto;
     align-items: center;
-    gap: 12px;
+    gap: var(--ssgrid-space-3);
   }
 
   // --- Outer canvas -----------------------------------------------------------
@@ -55,8 +63,8 @@
   &__canvas {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding: 16px;
+    gap: var(--ssgrid-space-4);
+    padding: var(--ssgrid-space-4);
     background: var(--ssgrid-surface-muted);
     border: 1px solid var(--ssgrid-border-default);
     border-radius: var(--ssgrid-radius-md);
@@ -72,7 +80,7 @@
 
   &__notice {
     margin: 0;
-    padding: 16px;
+    padding: var(--ssgrid-space-4);
     background: var(--ssgrid-surface-muted);
     border: 1px solid var(--ssgrid-border-default);
     border-radius: var(--ssgrid-radius-md);
@@ -90,13 +98,14 @@
 // for the page-level "no sections" sentinel).
 .ssgrid-empty-state {
   margin: 0;
-  padding: 12px;
+  padding: var(--ssgrid-space-3);
   color: var(--ssgrid-text-default);
   opacity: 0.55;
-  font-size: 14px;
+  font-size: var(--ssgrid-font-size-body);
+  line-height: var(--ssgrid-line-height-tight);
   text-align: center;
 
   &[data-state='centered'] {
-    padding: 32px 16px;
+    padding: calc(var(--ssgrid-space-4) * 2) var(--ssgrid-space-4);
   }
 }

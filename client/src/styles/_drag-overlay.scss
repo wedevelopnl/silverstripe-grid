@@ -5,16 +5,16 @@
 .ssgrid-drag-overlay {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ssgrid-space-2);
   max-width: 320px;
-  padding: 8px 12px;
+  padding: var(--ssgrid-space-2) var(--ssgrid-space-3);
   background: var(--ssgrid-surface-default);
   border: 1px solid var(--ssgrid-border-focus);
   border-radius: var(--ssgrid-radius-md);
   box-shadow: var(--ssgrid-shadow-3);
   color: var(--ssgrid-text-default);
-  font-size: 14px;
-  line-height: 1.25;
+  font-size: var(--ssgrid-font-size-body);
+  line-height: var(--ssgrid-line-height-tight);
   cursor: grabbing;
 
   &__icon {
@@ -22,18 +22,18 @@
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: var(--ssgrid-size-chip);
+    height: var(--ssgrid-size-chip);
     border-radius: var(--ssgrid-radius-sm);
     background: var(--ssgrid-surface-hover);
     color: var(--ssgrid-text-brand);
-    font-size: 16px;
+    font-size: var(--ssgrid-size-icon);
     line-height: 1;
   }
 
   &__title {
     overflow: hidden;
-    font-weight: 500;
+    font-weight: var(--ssgrid-font-weight-medium);
     text-overflow: ellipsis;
     white-space: nowrap;
   }

@@ -5,8 +5,8 @@
 
 .ssgrid-viewport-switcher {
   display: flex;
-  gap: 4px;
-  padding: 4px;
+  gap: var(--ssgrid-space-1);
+  padding: var(--ssgrid-space-1);
   background: var(--ssgrid-surface-page);
   border: 1px solid var(--ssgrid-border-subtle);
   border-radius: var(--ssgrid-radius-sm);
@@ -16,16 +16,16 @@
     flex: 1 1 0;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    min-height: 40px;
-    padding: 11px 16px;
+    gap: var(--ssgrid-space-2);
+    min-height: var(--ssgrid-size-field);
+    padding: 11px var(--ssgrid-space-4);
     background: transparent;
     border: 0;
     border-radius: var(--ssgrid-radius-sm);
     color: var(--ssgrid-text-default);
     font: inherit;
-    font-size: 14px;
-    line-height: 1;
+    font-size: var(--ssgrid-font-size-body);
+    line-height: var(--ssgrid-line-height-tight);
     cursor: pointer;
 
     &[aria-pressed='true'] {
@@ -46,26 +46,30 @@
 
   &__icon {
     color: var(--ssgrid-icon-brand);
+    font-size: var(--ssgrid-font-size-body);
   }
 
   &__label {
-    font-weight: 500;
+    font-weight: var(--ssgrid-font-weight-medium);
   }
 
+  // The upper-bound hint ("<768"). Half-opacity black in the Figma, so it
+  // reads as a footnote to the label rather than a second label.
   &__range {
-    font-weight: 400;
+    font-weight: var(--ssgrid-font-weight-regular);
+    opacity: 0.5;
   }
 
   &__reset {
-    margin-top: 8px;
-    padding: 6px 12px;
+    margin-top: var(--ssgrid-space-2);
+    padding: 6px var(--ssgrid-space-3);
     background: transparent;
     border: 1px solid var(--ssgrid-border-default);
     border-radius: var(--ssgrid-radius-sm);
     color: var(--ssgrid-text-default);
     font: inherit;
-    font-size: 14px;
-    line-height: 1;
+    font-size: var(--ssgrid-font-size-body);
+    line-height: var(--ssgrid-line-height-tight);
     cursor: pointer;
 
     &:hover {

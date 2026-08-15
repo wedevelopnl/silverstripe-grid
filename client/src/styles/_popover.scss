@@ -18,21 +18,21 @@
   min-width: 100%;
   max-height: 280px;
   margin: 0;
-  padding: 4px;
+  padding: var(--ssgrid-space-1);
   overflow-y: auto;
   background: var(--ssgrid-surface-default);
   border: 1px solid var(--ssgrid-border-default);
   border-radius: var(--ssgrid-radius-sm);
   box-shadow: var(--ssgrid-shadow-1);
-  font-size: 14px;
-  line-height: 1.25;
+  font-size: var(--ssgrid-font-size-body);
+  line-height: var(--ssgrid-line-height-tight);
 }
 
 %ssgrid-popover-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 8px;
+  gap: var(--ssgrid-space-2);
+  padding: 7px var(--ssgrid-space-2);
   border-radius: var(--ssgrid-radius-sm);
   color: var(--ssgrid-text-default);
   white-space: nowrap;
@@ -64,7 +64,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--ssgrid-space-2);
     width: 100%;
   }
 
@@ -76,7 +76,7 @@
 
   &__caret {
     flex: 0 0 auto;
-    font-size: 14px;
+    font-size: var(--ssgrid-font-size-body);
     line-height: 1;
   }
 
@@ -91,12 +91,12 @@
 
     &[aria-selected='true'] {
       color: var(--ssgrid-text-brand);
-      font-weight: 500;
+      font-weight: var(--ssgrid-font-weight-medium);
     }
 
     // The "Hidden" choice sits below a hairline divider.
     &[data-separator='true'] {
-      margin-top: 4px;
+      margin-top: var(--ssgrid-space-1);
       padding-top: 11px;
       border-top: 1px solid var(--ssgrid-border-default);
     }
