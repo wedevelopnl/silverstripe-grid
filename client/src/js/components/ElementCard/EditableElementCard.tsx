@@ -2,6 +2,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { type MouseEvent, memo } from 'react'
 import DragHandle from '@/components/DragHandle/DragHandle'
 import ElementActions from '@/components/ElementActions/ElementActions'
+import { useIsNarrowerThan } from '@/hooks/useIsNarrowerThan'
 import { t } from '@/i18n'
 import type { SimpleElementNode } from '@/types/elements'
 import { buildSortableStyle } from '@/utils/sortableStyles'
@@ -11,6 +12,18 @@ interface EditableElementCardProps {
   readonly element: SimpleElementNode
 }
 
+/**
+ * Content width below which the header's six-icon action row is folded into the
+ * overflow menu.
+ *
+ * The row needs 156px (6 x 16px icons + 5 x 12px gaps), and it shares the
+ * header with the 16px drag handle, the 24px type-icon chip and three 8px gaps
+ * — 220px before the title gets a single pixel. 300 leaves the title ~80px,
+ * enough for a recognisable word plus an ellipsis; below that the title was
+ * being crushed to zero width and the icons spilled past the card edge.
+ */
+const NARROW_HEADER_WIDTH = 300
+
 const EditableElementCard = memo(function EditableElementCardComponent({
   element,
 }: EditableElementCardProps) {
@@ -19,6 +32,7 @@ const EditableElementCard = memo(function EditableElementCardComponent({
   })
   const editLink = element.editLink
   const style = buildSortableStyle(transform, transition, isDragging)
+  const [headerRef, isNarrow] = useIsNarrowerThan(NARROW_HEADER_WIDTH)
 
   // Swallow clicks from interactive descendants (drag handle, actions menu,
   // nested buttons/links/inputs) or while a drag is in progress — the anchor
@@ -65,7 +79,8 @@ const EditableElementCard = memo(function EditableElementCardComponent({
           })}
         />
       }
-      trailing={<ElementActions node={element} />}
+      headerRef={headerRef}
+      trailing={<ElementActions node={element} kebabOnly={isNarrow} />}
     />
   )
 })

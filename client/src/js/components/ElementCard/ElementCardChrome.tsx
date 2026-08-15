@@ -13,6 +13,8 @@ interface ElementCardChromeProps {
   readonly style?: React.CSSProperties
   readonly leading?: ReactNode
   readonly trailing?: ReactNode
+  /** Measured to decide whether the actions still fit as an icon row. */
+  readonly headerRef?: (node: HTMLElement | null) => void
 }
 
 /**
@@ -31,10 +33,11 @@ export default function ElementCardChrome({
   style,
   leading,
   trailing,
+  headerRef,
 }: ElementCardChromeProps) {
   const header = (
     <>
-      <div className="ssgrid-block__header">
+      <div className="ssgrid-block__header" ref={headerRef}>
         {leading}
         <i
           className={`ssgrid-block__icon ${icon}`}

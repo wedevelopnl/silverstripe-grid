@@ -26,10 +26,30 @@ interface ElementActionsProps {
    */
   readonly collapse?: CollapseControl
   /**
-   * Column headers in the Figma carry only an overflow ellipsis, not the full
-   * toolbar — pass `kebabOnly` there to render just the actions menu.
+   * Render every action inside the overflow menu instead of as an icon row.
+   *
+   * Always on for column headers, which the Figma gives only an ellipsis. Also
+   * switched on by element cards once their column is too narrow to fit the
+   * icon row without crushing the title — see `useIsNarrowerThan`.
    */
   readonly kebabOnly?: boolean
+}
+
+/**
+ * One action, rendered either as a toolbar icon or as an overflow menu item.
+ *
+ * `onAction: undefined` means unavailable — the icon row shows it disabled (so
+ * the toolbar keeps a stable shape), while the menu omits it outright, since a
+ * dead row in a popup is just noise.
+ */
+interface ElementAction {
+  readonly key: string
+  readonly label: string
+  readonly glyph: string
+  readonly onAction?: () => void
+  readonly destructive?: boolean
+  /** Has no icon in the design, so it only ever appears in the overflow menu. */
+  readonly overflowOnly?: boolean
 }
 
 function ToolbarButton({
@@ -81,11 +101,97 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
   const { action: duplicateAction } = useDuplicateAction(node)
   const { action: duplicateToAction, dialog: duplicateToDialog } = useDuplicateToAction(node)
 
-  const kebabActions = [
-    ...(duplicateAction !== null ? [duplicateAction] : []),
-    ...(duplicateToAction !== null ? [duplicateToAction] : []),
-    ...(archiveAction !== null ? [archiveAction] : []),
+  const editLink = node.editLink
+
+  const collapseLabel = ((): string => {
+    if (collapse === undefined) {
+      return t('WeDevelopGrid.ElementActions.ACTION_COLLAPSE', 'Collapse')
+    }
+    if (collapse.isCollapsed) {
+      return t('WeDevelopGrid.ElementActions.EXPAND_LABEL', 'Expand {title}', {
+        title: collapse.label,
+      })
+    }
+    return t('WeDevelopGrid.ElementActions.COLLAPSE_LABEL', 'Collapse {title}', {
+      title: collapse.label,
+    })
+  })()
+
+  // Single source of truth for the action set, in the Figma's toolbar order.
+  // Both presentations below read from this, so a narrow card can never end up
+  // offering a different set of actions than a wide one.
+  const actions: readonly ElementAction[] = [
+    {
+      key: 'history',
+      label: t('WeDevelopGrid.ElementActions.ACTION_HISTORY', 'View history'),
+      glyph: 'font-icon-back-in-time',
+      onAction:
+        // Stryker disable next-line ConditionalExpression: Equivalent — differs only when editLink === null, and the action is then unavailable so it never fires
+        editLink !== null
+          ? () => {
+              // The element's CMS edit form carries a `Root.History` tab
+              // (HistoryViewerField), and SilverStripe renders its tab
+              // anchor as `#Root_History` — append it to land on history.
+              window.location.assign(`${editLink}#Root_History`)
+            }
+          : undefined,
+    },
+    {
+      key: 'collapse',
+      label: collapseLabel,
+      glyph:
+        // Stryker disable next-line all: Equivalent — the glyph value renders only as a font-icon CSS class (visual-only, not a behavioral contract); every mutation here changes which icon class is emitted, observable only via a forbidden className assertion
+        collapse?.isCollapsed === true ? 'font-icon-down-open-big' : 'font-icon-up-open-big',
+      onAction: collapse?.onToggle,
+    },
+    {
+      key: 'duplicate',
+      label: t('WeDevelopGrid.ElementActions.ACTION_DUPLICATE', 'Duplicate'),
+      glyph: 'font-icon-clone',
+      onAction: duplicateAction?.onAction,
+    },
+    {
+      key: 'open',
+      label: t('WeDevelopGrid.ElementActions.ACTION_OPEN_NEW', 'Open in a new tab'),
+      glyph: 'font-icon-external-link',
+      onAction:
+        editLink !== null
+          ? () => {
+              window.open(editLink, '_blank', 'noopener,noreferrer')
+            }
+          : undefined,
+    },
+    {
+      key: 'edit',
+      label: t('WeDevelopGrid.ElementActions.ACTION_EDIT', 'Edit'),
+      glyph: 'font-icon-pencil',
+      onAction:
+        editLink !== null
+          ? () => {
+              window.location.assign(editLink)
+            }
+          : undefined,
+    },
+    {
+      key: 'archive',
+      label: t('WeDevelopGrid.ElementActions.ACTION_ARCHIVE', 'Archive'),
+      glyph: 'font-icon-trash-bin',
+      destructive: true,
+      onAction: archiveAction?.onAction,
+    },
+    {
+      key: 'duplicate-to',
+      label: duplicateToAction?.label ?? '',
+      glyph: '',
+      overflowOnly: true,
+      onAction: duplicateToAction?.onAction,
+    },
   ]
+
+  const toMenuItems = (items: readonly ElementAction[]) =>
+    items
+      .filter((a): a is ElementAction & { onAction: () => void } => a.onAction !== undefined)
+      .map(({ key, label, destructive, onAction }) => ({ key, label, destructive, onAction }))
 
   const dialogs = (
     <>
@@ -116,27 +222,14 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
   if (kebabOnly) {
     return (
       <>
-        <ActionsMenu actions={kebabActions} />
+        <ActionsMenu actions={toMenuItems(actions)} />
         {dialogs}
       </>
     )
   }
 
-  const editLink = node.editLink
-
-  const collapseLabel = ((): string => {
-    if (collapse === undefined) {
-      return t('WeDevelopGrid.ElementActions.ACTION_COLLAPSE', 'Collapse')
-    }
-    if (collapse.isCollapsed) {
-      return t('WeDevelopGrid.ElementActions.EXPAND_LABEL', 'Expand {title}', {
-        title: collapse.label,
-      })
-    }
-    return t('WeDevelopGrid.ElementActions.COLLAPSE_LABEL', 'Collapse {title}', {
-      title: collapse.label,
-    })
-  })()
+  const iconActions = actions.filter((a) => a.overflowOnly !== true)
+  const overflowActions = actions.filter((a) => a.overflowOnly === true)
 
   return (
     <>
@@ -146,75 +239,18 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
         role="toolbar"
         aria-label={t('WeDevelopGrid.ElementActions.TOOLBAR_LABEL', 'Element actions')}
       >
-        <ToolbarButton
-          glyph="font-icon-back-in-time"
-          label={t('WeDevelopGrid.ElementActions.ACTION_HISTORY', 'View history')}
-          onClick={
-            // Stryker disable next-line ConditionalExpression: Equivalent — differs only when editLink === null, and the button is then disabled so onClick never fires
-            editLink !== null
-              ? () => {
-                  // The element's CMS edit form carries a `Root.History` tab
-                  // (HistoryViewerField), and SilverStripe renders its tab
-                  // anchor as `#Root_History` — append it to land on history.
-                  window.location.assign(`${editLink}#Root_History`)
-                }
-              : undefined
-          }
-          disabled={editLink === null}
-          testId="element-action-history"
-        />
-        <ToolbarButton
-          glyph={
-            // Stryker disable next-line all: Equivalent — the glyph value renders only as a font-icon CSS class (visual-only, not a behavioral contract); every mutation here changes which icon class is emitted, observable only via a forbidden className assertion
-            collapse?.isCollapsed === true ? 'font-icon-down-open-big' : 'font-icon-up-open-big'
-          }
-          label={collapseLabel}
-          onClick={collapse?.onToggle}
-          disabled={collapse === undefined}
-          testId="element-action-collapse"
-        />
-        <ToolbarButton
-          glyph="font-icon-clone"
-          label={t('WeDevelopGrid.ElementActions.ACTION_DUPLICATE', 'Duplicate')}
-          onClick={duplicateAction?.onAction}
-          disabled={duplicateAction === null}
-          testId="element-action-duplicate"
-        />
-        <ToolbarButton
-          glyph="font-icon-external-link"
-          label={t('WeDevelopGrid.ElementActions.ACTION_OPEN_NEW', 'Open in a new tab')}
-          onClick={
-            editLink !== null
-              ? () => {
-                  window.open(editLink, '_blank', 'noopener,noreferrer')
-                }
-              : undefined
-          }
-          disabled={editLink === null}
-          testId="element-action-open"
-        />
-        <ToolbarButton
-          glyph="font-icon-pencil"
-          label={t('WeDevelopGrid.ElementActions.ACTION_EDIT', 'Edit')}
-          onClick={
-            editLink !== null
-              ? () => {
-                  window.location.assign(editLink)
-                }
-              : undefined
-          }
-          disabled={editLink === null}
-          testId="element-action-edit"
-        />
-        <ToolbarButton
-          glyph="font-icon-trash-bin"
-          label={t('WeDevelopGrid.ElementActions.ACTION_ARCHIVE', 'Archive')}
-          onClick={archiveAction?.onAction}
-          disabled={archiveAction === null}
-          destructive
-          testId="element-action-archive"
-        />
-        {duplicateToAction !== null && <ActionsMenu actions={[duplicateToAction]} />}
+        {iconActions.map((action) => (
+          <ToolbarButton
+            key={action.key}
+            glyph={action.glyph}
+            label={action.label}
+            onClick={action.onAction}
+            disabled={action.onAction === undefined}
+            destructive={action.destructive}
+            testId={`element-action-${action.key}`}
+          />
+        ))}
+        <ActionsMenu actions={toMenuItems(overflowActions)} />
       </div>
       {dialogs}
     </>
