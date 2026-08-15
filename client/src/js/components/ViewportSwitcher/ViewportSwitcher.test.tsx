@@ -235,6 +235,92 @@ describe('ViewportSwitcher', () => {
     expect(resetButton).toHaveTextContent('Reset viewport')
   })
 
+  it('marks a viewport carrying overrides with a dot, whether or not it is active', () => {
+    mockFetchSuccess({})
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    })
+
+    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg'))
+
+    // Active viewport is md; the override lives on lg. The dot tracks where
+    // overrides exist, not which tab is selected — that is what separates it
+    // from the pressed state.
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'md', queryClient })
+
+    const lgButton = screen.getByTestId('viewport-button-lg')
+    expect(lgButton.querySelector('.ssgrid-viewport-switcher__override-dot')).not.toBeNull()
+    expect(lgButton).toHaveTextContent('1 column overrides this viewport')
+
+    const mdButton = screen.getByTestId('viewport-button-md')
+    expect(mdButton).toHaveAttribute('aria-pressed', 'true')
+    expect(mdButton.querySelector('.ssgrid-viewport-switcher__override-dot')).toBeNull()
+  })
+
+  it('pluralises the override count in the dot label', () => {
+    mockFetchSuccess({})
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    })
+
+    const override: ViewportSettings = { width: 6, offset: 0, visible: true }
+    const settings = {
+      default: { width: 12, offset: 0, visible: true },
+      overrides: { lg: override },
+    }
+    const row = createRowNode({
+      children: [
+        createColumnNode({ gridSettings: settings, children: [] }),
+        createColumnNode({ gridSettings: settings, children: [] }),
+      ],
+    })
+    const section = createSectionNode({ parent: { type: 'page', id: 1 }, children: [row] })
+
+    queryClient.setQueryData(
+      queryKeys.elementTree.byPage(1, 'main'),
+      createTreeApiResponse({ pageId: 1, sections: [section] }),
+    )
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'md', queryClient })
+
+    expect(screen.getByTestId('viewport-button-lg')).toHaveTextContent(
+      '2 columns override this viewport',
+    )
+  })
+
+  it('renders no override dots when nothing overrides', () => {
+    mockFetchSuccess({})
+
+    renderWithProviders(<ViewportSwitcher />)
+
+    for (const button of viewportButtons()) {
+      expect(button.querySelector('.ssgrid-viewport-switcher__override-dot')).toBeNull()
+    }
+  })
+
+  it('marks overridden viewports in readonly mode too', () => {
+    mockFetchSuccess({})
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    })
+
+    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg'))
+
+    // The history viewer hides the reset control but still benefits from
+    // seeing which viewports the archived version deviated at.
+    renderWithProviders(<ViewportSwitcher readonly />, { viewport: 'md', queryClient })
+
+    expect(
+      screen
+        .getByTestId('viewport-button-lg')
+        .querySelector('.ssgrid-viewport-switcher__override-dot'),
+    ).not.toBeNull()
+    expect(screen.queryByTestId('reset-overrides-button')).not.toBeInTheDocument()
+  })
+
   it('exposes an accessible toolbar name', () => {
     mockFetchSuccess({})
 

@@ -87,5 +87,7 @@
   "WeDevelopGrid.useResetOverridesAction.RESET_ALL_LABEL": "Reset all",
   "WeDevelopGrid.useResetOverridesAction.RESET_VIEWPORT_LABEL": "Reset viewport",
   "WeDevelopGrid.ViewportSwitcher.GROUP_LABEL": "Viewport size",
+  "WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_MANY": "{count} columns override this viewport",
+  "WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_ONE": "{count} column overrides this viewport",
   "WeDevelopGrid.ViewportSwitcher.RESET_CONFIRM_LABEL": "Reset"
 }

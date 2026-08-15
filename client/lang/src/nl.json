@@ -87,5 +87,7 @@
   "WeDevelopGrid.useResetOverridesAction.RESET_ALL_LABEL": "Alle resetten",
   "WeDevelopGrid.useResetOverridesAction.RESET_VIEWPORT_LABEL": "Viewport resetten",
   "WeDevelopGrid.ViewportSwitcher.GROUP_LABEL": "Viewport-formaat",
+  "WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_MANY": "{count} kolommen overschrijven deze viewport",
+  "WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_ONE": "{count} kolom overschrijft deze viewport",
   "WeDevelopGrid.ViewportSwitcher.RESET_CONFIRM_LABEL": "Resetten"
 }

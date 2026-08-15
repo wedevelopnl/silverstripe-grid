@@ -1,4 +1,6 @@
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog'
+import { useGridEditorContext } from '@/hooks/GridEditorContext'
+import { useViewportOverrideCounts } from '@/hooks/useElementTree'
 import { useResetOverridesAction } from '@/hooks/useResetOverridesAction'
 import { useViewportContext } from '@/hooks/ViewportContext'
 import { t } from '@/i18n'
@@ -12,6 +14,10 @@ interface ViewportSwitcherProps {
 export default function ViewportSwitcher({ readonly = false }: ViewportSwitcherProps) {
   const viewports = getViewports()
   const { activeViewport, setActiveViewport } = useViewportContext()
+  const { pageId, zone } = useGridEditorContext()
+  // Reads the tree query's existing cache entry — no extra fetch. Drives the
+  // per-tab dot marking which viewports columns actually deviate at.
+  const { byViewport } = useViewportOverrideCounts(pageId, zone)
   const reset = useResetOverridesAction()
 
   return (
@@ -28,6 +34,7 @@ export default function ViewportSwitcher({ readonly = false }: ViewportSwitcherP
           // ("<768") — i.e. the next viewport's min-width. The largest viewport
           // has no upper bound and is left blank.
           const next = viewports[index + 1]
+          const overrideCount = byViewport[viewport.key] ?? 0
 
           return (
             <button
@@ -50,6 +57,24 @@ export default function ViewportSwitcher({ readonly = false }: ViewportSwitcherP
               <span className="ssgrid-viewport-switcher__label">{viewport.label}</span>
               {next !== undefined && (
                 <span className="ssgrid-viewport-switcher__range">{`<${next.minWidth}`}</span>
+              )}
+              {overrideCount > 0 && (
+                <>
+                  <span className="ssgrid-viewport-switcher__override-dot" aria-hidden="true" />
+                  <span className="ssgrid-viewport-switcher__override-label">
+                    {overrideCount === 1
+                      ? t(
+                          'WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_ONE',
+                          '{count} column overrides this viewport',
+                          { count: overrideCount },
+                        )
+                      : t(
+                          'WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_MANY',
+                          '{count} columns override this viewport',
+                          { count: overrideCount },
+                        )}
+                  </span>
+                </>
               )}
             </button>
           )

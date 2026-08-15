@@ -60,6 +60,29 @@
     opacity: 0.5;
   }
 
+  // Brand disc marking a viewport that at least one column overrides. Purely
+  // decorative — `&__override-label` carries the same fact to assistive tech.
+  &__override-dot {
+    flex: 0 0 auto;
+    width: var(--ssgrid-size-dot);
+    height: var(--ssgrid-size-dot);
+    border-radius: 50%;
+    background: var(--ssgrid-surface-action);
+  }
+
+  // Clipped, not `display: none` — a hidden element is dropped from the
+  // accessible name, which is the whole point of this span.
+  &__override-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   &__reset {
     margin-top: var(--ssgrid-space-2);
     padding: 6px var(--ssgrid-space-3);
