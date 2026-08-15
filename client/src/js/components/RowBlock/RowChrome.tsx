@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react'
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle'
-import ModifiedBadge from '@/components/ModifiedBadge/ModifiedBadge'
-import ModifiedIndicator from '@/components/ModifiedIndicator/ModifiedIndicator'
+import StatusBadge from '@/components/StatusBadge/StatusBadge'
+import UnpublishedIndicator from '@/components/UnpublishedIndicator/UnpublishedIndicator'
 import { t } from '@/i18n'
 import type { RowNode } from '@/types/elements'
 
 interface RowChromeProps {
   readonly status: RowNode['status']
-  /** Derived, not from the wire: whether anything below this row changed. */
-  readonly hasModifiedDescendant: boolean
+  /** Derived, not from the wire: whether anything below this row is unpublished. */
+  readonly hasUnpublishedDescendant: boolean
   readonly title: string
   readonly titleHref?: string
   readonly isCollapsed: boolean
@@ -30,7 +30,7 @@ interface RowChromeProps {
  */
 export default function RowChrome({
   status,
-  hasModifiedDescendant,
+  hasUnpublishedDescendant,
   title,
   titleHref,
   isCollapsed,
@@ -50,7 +50,7 @@ export default function RowChrome({
       className="ssgrid-row"
       data-testid="row-block"
       data-status={status}
-      data-descendant-status={hasModifiedDescendant ? 'modified' : undefined}
+      data-descendant-unpublished={hasUnpublishedDescendant ? '' : undefined}
       data-collapsed={isCollapsed ? '' : undefined}
       data-drop-target={dropTarget ? '' : undefined}
     >
@@ -66,8 +66,8 @@ export default function RowChrome({
             title
           )}
         </h3>
-        {status === 'modified' && <ModifiedBadge testId="row-modified-badge" />}
-        {hasModifiedDescendant && <ModifiedIndicator testId="row-modified-indicator" />}
+        <StatusBadge status={status} testId="row-status-badge" />
+        {hasUnpublishedDescendant && <UnpublishedIndicator testId="row-unpublished-indicator" />}
         {columnCount > 0 && (
           <span className="ssgrid-row__meta" data-testid="row-column-count">
             {t('WeDevelopGrid.RowBlock.COLUMN_COUNT', '{count} columns', { count: columnCount })}

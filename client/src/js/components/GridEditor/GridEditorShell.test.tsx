@@ -42,10 +42,12 @@ describe('GridEditorShell', () => {
       screen.getByTestId('canvas-child'),
     )
     expect(screen.getByTestId('viewport-switcher')).toBeInTheDocument()
-    expect(screen.getByTestId('grid-editor-canvas')).not.toHaveAttribute('data-descendant-status')
+    expect(screen.getByTestId('grid-editor-canvas')).not.toHaveAttribute(
+      'data-descendant-unpublished',
+    )
   })
 
-  it('flags the canvas modified when any section is modified', () => {
+  it('flags the canvas when any section is unpublished', () => {
     resetIdCounter()
     const section = createSectionNode({
       id: 10,
@@ -65,10 +67,7 @@ describe('GridEditorShell', () => {
         <div />
       </GridEditorShell>,
     )
-    expect(screen.getByTestId('grid-editor-canvas')).toHaveAttribute(
-      'data-descendant-status',
-      'modified',
-    )
+    expect(screen.getByTestId('grid-editor-canvas')).toHaveAttribute('data-descendant-unpublished')
   })
 
   it('renders the error notice with the interpolated message when status is error', () => {

@@ -1,0 +1,59 @@
+// Unpublished-work marks. Orange is the whole vocabulary: one ring meaning
+// "something at or below this element has not reached the live stage", and one
+// of two markers saying whose work it is.
+
+//   this element is unpublished    → orange ring + "Draft"/"Modified" pill
+//   something inside it is         → orange ring + orange dot
+
+// Draft and modified share the ring and the dot because they call for the same
+// action (publish) — and because the CMS page tree already files them under one
+// hue (#c23a00 ring, #ffede0 wash for both `status-addedtodraft` and
+// `status-modified`). Only the pill's label separates them.
+
+// The dot is what makes a collapsed container admit it is hiding something
+// unpublished. An element can be both, and then draws ring, pill and dot.
+
+// Deliberately NOT brand purple, even though the Figma paints the modified row
+// that way: purple is this editor's interaction colour (focus rings, drop
+// targets, the drag overlay), so a purple modified ring is indistinguishable
+// from a column lit up as a drag target. The design only ever mocks the
+// modified card in isolation, so it never had to resolve that clash.
+
+// Applies to containers and leaves alike — a leaf simply never carries
+// `data-descendant-unpublished`, so that arm of the selector never matches.
+@mixin status-rings {
+  &[data-status='draft'],
+  &[data-status='modified'],
+  &[data-descendant-unpublished] {
+    border-color: var(--ssgrid-border-unpublished);
+  }
+}
+
+// Pill reading "Draft" or "Modified" (Figma geometry: 24px tall, 10% tint,
+// 1px border, 12px/500 text — recoloured from brand to the unpublished family).
+.ssgrid-status-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: var(--ssgrid-size-chip);
+  padding: 0 var(--ssgrid-space-2);
+  background: var(--ssgrid-surface-unpublished-tint);
+  border: 1px solid var(--ssgrid-border-unpublished);
+  border-radius: var(--ssgrid-radius-sm);
+
+  // -700, not the -500 the ring and dot use: -500 is 1.98:1 on this tint.
+  color: var(--ssgrid-text-unpublished);
+  font-size: var(--ssgrid-font-size-label);
+  font-weight: var(--ssgrid-font-weight-medium);
+  line-height: var(--ssgrid-line-height-tight);
+  white-space: nowrap;
+}
+
+// Orange disc shown when a container holds unpublished work further down.
+.ssgrid-unpublished-dot {
+  flex: 0 0 auto;
+  width: var(--ssgrid-size-dot);
+  height: var(--ssgrid-size-dot);
+  border-radius: 50%;
+  background: var(--ssgrid-surface-unpublished);
+}

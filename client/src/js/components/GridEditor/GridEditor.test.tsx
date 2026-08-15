@@ -355,7 +355,7 @@ describe('GridEditor', () => {
   })
 
   describe('canvas modified status', () => {
-    it('flags the canvas as modified when any section is modified', async () => {
+    it('flags the canvas when any section is unpublished', async () => {
       resetIdCounter()
 
       mockFetchSuccess(
@@ -380,8 +380,7 @@ describe('GridEditor', () => {
       })
 
       expect(screen.getByTestId('grid-editor-canvas')).toHaveAttribute(
-        'data-descendant-status',
-        'modified',
+        'data-descendant-unpublished',
       )
     })
 
@@ -404,7 +403,9 @@ describe('GridEditor', () => {
         expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
       })
 
-      expect(screen.getByTestId('grid-editor-canvas')).not.toHaveAttribute('data-descendant-status')
+      expect(screen.getByTestId('grid-editor-canvas')).not.toHaveAttribute(
+        'data-descendant-unpublished',
+      )
     })
   })
 

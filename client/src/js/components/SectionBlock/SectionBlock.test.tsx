@@ -225,7 +225,7 @@ describe('EditableSectionBlock', () => {
     })
   })
 
-  describe('modified marks', () => {
+  describe('publish-status marks', () => {
     it('badges the section when the section itself is modified', () => {
       mockFetchSuccess({})
 
@@ -233,7 +233,7 @@ describe('EditableSectionBlock', () => {
 
       renderWithProviders(<EditableSectionBlock section={section} />)
 
-      expect(screen.getByTestId('section-modified-badge')).toHaveTextContent('Modified')
+      expect(screen.getByTestId('section-status-badge')).toHaveTextContent('Modified')
       expect(
         within(screen.getByTestId('section-header')).queryByRole('img', {
           name: 'Contains unpublished changes',
@@ -264,21 +264,43 @@ describe('EditableSectionBlock', () => {
           name: 'Contains unpublished changes',
         }),
       ).toBeInTheDocument()
-      expect(screen.queryByTestId('section-modified-badge')).not.toBeInTheDocument()
-      expect(screen.getByTestId('section-block')).toHaveAttribute(
-        'data-descendant-status',
-        'modified',
-      )
+      expect(screen.queryByTestId('section-status-badge')).not.toBeInTheDocument()
+      expect(screen.getByTestId('section-block')).toHaveAttribute('data-descendant-unpublished')
     })
 
-    it('omits both marks when nothing in the section is modified', () => {
+    // Draft rolls up on the same footing as modified: a block that has never
+    // been published is exactly as hidden inside a collapsed section, and
+    // publishing is the same remedy for both.
+    it('dots the section when only a nested block is draft', () => {
+      mockFetchSuccess({})
+
+      const section = createSectionNode({
+        status: 'published',
+        children: [
+          createRowNode({
+            children: [createColumnNode({ children: [createSimpleElement({ status: 'draft' })] })],
+          }),
+        ],
+      })
+
+      renderWithProviders(<EditableSectionBlock section={section} />)
+
+      expect(
+        within(screen.getByTestId('section-header')).getByRole('img', {
+          name: 'Contains unpublished changes',
+        }),
+      ).toBeInTheDocument()
+      expect(screen.queryByTestId('section-status-badge')).not.toBeInTheDocument()
+    })
+
+    it('omits both marks when nothing in the section is unpublished', () => {
       mockFetchSuccess({})
 
       const section = createSectionNode({ status: 'published' })
 
       renderWithProviders(<EditableSectionBlock section={section} />)
 
-      expect(screen.queryByTestId('section-modified-badge')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('section-status-badge')).not.toBeInTheDocument()
       expect(
         within(screen.getByTestId('section-header')).queryByRole('img', {
           name: 'Contains unpublished changes',
@@ -377,7 +399,7 @@ describe('ReadonlySectionBlock', () => {
 
     renderWithProviders(<ReadonlySectionBlock section={section} />)
 
-    expect(screen.getByTestId('section-modified-badge')).toHaveTextContent('Modified')
+    expect(screen.getByTestId('section-status-badge')).toHaveTextContent('Modified')
   })
 
   it('dots a readonly section when only a nested block is modified', () => {

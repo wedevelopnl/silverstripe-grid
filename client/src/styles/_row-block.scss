@@ -1,10 +1,11 @@
 // Row block — rendered inside a Section. Figma "Row" card chrome: muted
 // surface inside the section's muted surface (stacks to a slightly darker
-// shade), 15% black hairline, 8px radius, 16px padding. The status border
-// swaps to modified-orange and the drop-target highlight switches the
-// hairline to brand purple — same pattern as the section/column cards.
+// shade), 15% black hairline, 8px radius, 16px padding. The drop-target
+// highlight switches the
+// hairline to brand purple — same pattern as the section/column cards. The
+// status ring is orange and lives in `_publish-status.scss`.
 
-@use './modified';
+@use './publish-status';
 @use './typography';
 
 .ssgrid-row {
@@ -16,7 +17,7 @@
   border: 1px solid var(--ssgrid-border-default);
   border-radius: var(--ssgrid-radius-md);
 
-  @include modified.status-rings;
+  @include publish-status.status-rings;
 
   &[data-drop-target] {
     border-color: var(--ssgrid-border-focus);

@@ -4,7 +4,7 @@ import SectionChrome from './SectionChrome'
 
 const baseProps = {
   status: 'published' as const,
-  hasModifiedDescendant: false,
+  hasUnpublishedDescendant: false,
   title: 'Hero Section',
   isCollapsed: false,
   onToggle: vi.fn(),
@@ -68,40 +68,43 @@ describe('SectionChrome', () => {
   it('renders the badge, not the dot, when the element itself is modified', () => {
     render(<SectionChrome {...baseProps} status="modified" />)
 
-    expect(screen.getByTestId('section-modified-badge')).toBeInTheDocument()
-    expect(screen.queryByTestId('section-modified-indicator')).not.toBeInTheDocument()
+    expect(screen.getByTestId('section-status-badge')).toBeInTheDocument()
+    expect(screen.queryByTestId('section-unpublished-indicator')).not.toBeInTheDocument()
   })
 
   it('renders the dot, not the badge, when only a descendant is modified', () => {
-    render(<SectionChrome {...baseProps} status="published" hasModifiedDescendant={true} />)
+    render(<SectionChrome {...baseProps} status="published" hasUnpublishedDescendant={true} />)
 
-    expect(screen.getByTestId('section-modified-indicator')).toBeInTheDocument()
-    expect(screen.queryByTestId('section-modified-badge')).not.toBeInTheDocument()
+    expect(screen.getByTestId('section-unpublished-indicator')).toBeInTheDocument()
+    expect(screen.queryByTestId('section-status-badge')).not.toBeInTheDocument()
   })
 
   it('renders both marks when the element and a descendant are modified', () => {
-    render(<SectionChrome {...baseProps} status="modified" hasModifiedDescendant={true} />)
+    render(<SectionChrome {...baseProps} status="modified" hasUnpublishedDescendant={true} />)
 
-    expect(screen.getByTestId('section-modified-badge')).toBeInTheDocument()
-    expect(screen.getByTestId('section-modified-indicator')).toBeInTheDocument()
+    expect(screen.getByTestId('section-status-badge')).toBeInTheDocument()
+    expect(screen.getByTestId('section-unpublished-indicator')).toBeInTheDocument()
   })
 
-  it('sets data-descendant-status only when a descendant is modified', () => {
+  it('sets data-descendant-unpublished only when a descendant is unpublished', () => {
     const { rerender } = render(<SectionChrome {...baseProps} />)
-    expect(screen.getByTestId('section-block')).not.toHaveAttribute('data-descendant-status')
+    expect(screen.getByTestId('section-block')).not.toHaveAttribute('data-descendant-unpublished')
 
-    rerender(<SectionChrome {...baseProps} hasModifiedDescendant={true} />)
-    expect(screen.getByTestId('section-block')).toHaveAttribute(
-      'data-descendant-status',
-      'modified',
-    )
+    rerender(<SectionChrome {...baseProps} hasUnpublishedDescendant={true} />)
+    expect(screen.getByTestId('section-block')).toHaveAttribute('data-descendant-unpublished')
   })
 
-  it('renders neither mark when nothing is modified', () => {
+  it('badges a never-published element as draft', () => {
+    render(<SectionChrome {...baseProps} status="draft" />)
+
+    expect(screen.getByTestId('section-status-badge')).toHaveTextContent('Draft')
+  })
+
+  it('renders neither mark when nothing is unpublished', () => {
     render(<SectionChrome {...baseProps} status="published" />)
 
-    expect(screen.queryByTestId('section-modified-badge')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('section-modified-indicator')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('section-status-badge')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('section-unpublished-indicator')).not.toBeInTheDocument()
   })
 
   it('renders the leading and trailing slots when provided', () => {

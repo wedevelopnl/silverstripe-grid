@@ -6,7 +6,7 @@ import { GridEditorProvider } from '@/hooks/GridEditorContext'
 import { CollapseContext, useCollapseState } from '@/hooks/useCollapseState'
 import { t } from '@/i18n'
 import type { SectionNode, TreeApiResponse } from '@/types/elements'
-import { hasModifiedDescendant } from '@/utils/modifiedStatus'
+import { hasUnpublishedDescendant, isUnpublished } from '@/utils/publishStatus'
 import GridAreaHeader from './GridAreaHeader'
 
 export type GridEditorStatus = 'loading' | 'error' | 'ready'
@@ -64,12 +64,14 @@ export default function GridEditorShell({
 }: GridEditorShellProps) {
   const collapseState = useCollapseState(pageId)
   const gridEditorContextValue = useMemo(() => ({ pageId, zone }), [pageId, zone])
-  // Deep, not shallow: a modified block several levels down is the case the
+  // Deep, not shallow: an unpublished block several levels down is the case the
   // canvas ring exists to surface, and the old `sections.some(...)` check
   // never saw it.
-  const anyModified = useMemo(
+  const anyUnpublished = useMemo(
     () =>
-      sections.some((section) => section.status === 'modified' || hasModifiedDescendant(section)),
+      sections.some(
+        (section) => isUnpublished(section.status) || hasUnpublishedDescendant(section),
+      ),
     [sections],
   )
 
@@ -102,7 +104,7 @@ export default function GridEditorShell({
                 className="ssgrid-editor__canvas"
                 data-testid="grid-editor-canvas"
                 data-dnd-container=""
-                data-descendant-status={anyModified ? 'modified' : undefined}
+                data-descendant-unpublished={anyUnpublished ? '' : undefined}
               >
                 {children}
               </div>

@@ -10,7 +10,7 @@ import { t } from '@/i18n'
 import type { SectionNode } from '@/types/elements'
 import type { NodeKey } from '@/types/identity'
 import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
-import { hasModifiedDescendant } from '@/utils/modifiedStatus'
+import { hasUnpublishedDescendant, isUnpublished } from '@/utils/publishStatus'
 import SectionChrome from './SectionChrome'
 
 interface EditableSectionBlockProps {
@@ -42,7 +42,7 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
   return (
     <SectionChrome
       status={status}
-      hasModifiedDescendant={hasModifiedDescendant(section)}
+      hasUnpublishedDescendant={hasUnpublishedDescendant(section)}
       title={section.title}
       titleHref={section.editLink ?? undefined}
       isCollapsed={isCollapsed}

@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react'
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle'
-import ModifiedBadge from '@/components/ModifiedBadge/ModifiedBadge'
-import ModifiedIndicator from '@/components/ModifiedIndicator/ModifiedIndicator'
+import StatusBadge from '@/components/StatusBadge/StatusBadge'
+import UnpublishedIndicator from '@/components/UnpublishedIndicator/UnpublishedIndicator'
 import type { ColumnNode } from '@/types/elements'
 
 interface ColumnChromeProps {
   readonly status: ColumnNode['status']
-  /** Derived, not from the wire: whether anything below this column changed. */
-  readonly hasModifiedDescendant: boolean
+  /** Derived, not from the wire: whether anything below this column is unpublished. */
+  readonly hasUnpublishedDescendant: boolean
   readonly title: string
   readonly titleHref?: string
   readonly icon: string
@@ -34,7 +34,7 @@ interface ColumnChromeProps {
  */
 export default function ColumnChrome({
   status,
-  hasModifiedDescendant,
+  hasUnpublishedDescendant,
   title,
   titleHref,
   icon,
@@ -64,7 +64,7 @@ export default function ColumnChrome({
         className="ssgrid-column__card"
         data-testid="column-block"
         data-status={status}
-        data-descendant-status={hasModifiedDescendant ? 'modified' : undefined}
+        data-descendant-unpublished={hasUnpublishedDescendant ? '' : undefined}
         data-collapsed={isCollapsed ? '' : undefined}
         data-drop-target={dropTarget ? '' : undefined}
         data-hidden={hidden ? '' : undefined}
@@ -83,8 +83,10 @@ export default function ColumnChrome({
                 title
               )}
             </span>
-            {status === 'modified' && <ModifiedBadge testId="column-modified-badge" />}
-            {hasModifiedDescendant && <ModifiedIndicator testId="column-modified-indicator" />}
+            <StatusBadge status={status} testId="column-status-badge" />
+            {hasUnpublishedDescendant && (
+              <UnpublishedIndicator testId="column-unpublished-indicator" />
+            )}
             {trailing}
           </div>
           {layoutSettings !== undefined && (

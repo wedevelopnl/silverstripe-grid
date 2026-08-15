@@ -1,7 +1,7 @@
 // Shared editor chrome: the 16px icon-only buttons used in every block toolbar
 // (drag handle, collapse toggle, actions kebab). State lives on data-attributes
-// (set by React); structure/look lives here. The modified-status marks live in
-// `_modified.scss`.
+// (set by React); structure/look lives here. The publish-status marks live in
+// `_publish-status.scss`.
 
 .ssgrid-icon-button {
   display: inline-flex;

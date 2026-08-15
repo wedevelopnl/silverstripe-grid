@@ -4,7 +4,7 @@ import ColumnChrome from './ColumnChrome'
 
 const baseProps = {
   status: 'published' as const,
-  hasModifiedDescendant: false,
+  hasUnpublishedDescendant: false,
   title: 'Sidebar',
   icon: 'font-icon-block-content',
   isCollapsed: false,
@@ -83,37 +83,43 @@ describe('ColumnChrome', () => {
   it('renders the badge, not the dot, when the element itself is modified', () => {
     render(<ColumnChrome {...baseProps} status="modified" />)
 
-    expect(screen.getByTestId('column-modified-badge')).toBeInTheDocument()
-    expect(screen.queryByTestId('column-modified-indicator')).not.toBeInTheDocument()
+    expect(screen.getByTestId('column-status-badge')).toBeInTheDocument()
+    expect(screen.queryByTestId('column-unpublished-indicator')).not.toBeInTheDocument()
   })
 
   it('renders the dot, not the badge, when only a descendant is modified', () => {
-    render(<ColumnChrome {...baseProps} status="published" hasModifiedDescendant={true} />)
+    render(<ColumnChrome {...baseProps} status="published" hasUnpublishedDescendant={true} />)
 
-    expect(screen.getByTestId('column-modified-indicator')).toBeInTheDocument()
-    expect(screen.queryByTestId('column-modified-badge')).not.toBeInTheDocument()
+    expect(screen.getByTestId('column-unpublished-indicator')).toBeInTheDocument()
+    expect(screen.queryByTestId('column-status-badge')).not.toBeInTheDocument()
   })
 
   it('renders both marks when the element and a descendant are modified', () => {
-    render(<ColumnChrome {...baseProps} status="modified" hasModifiedDescendant={true} />)
+    render(<ColumnChrome {...baseProps} status="modified" hasUnpublishedDescendant={true} />)
 
-    expect(screen.getByTestId('column-modified-badge')).toBeInTheDocument()
-    expect(screen.getByTestId('column-modified-indicator')).toBeInTheDocument()
+    expect(screen.getByTestId('column-status-badge')).toBeInTheDocument()
+    expect(screen.getByTestId('column-unpublished-indicator')).toBeInTheDocument()
   })
 
-  it('sets data-descendant-status only when a descendant is modified', () => {
+  it('sets data-descendant-unpublished only when a descendant is unpublished', () => {
     const { rerender } = render(<ColumnChrome {...baseProps} />)
-    expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-descendant-status')
+    expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-descendant-unpublished')
 
-    rerender(<ColumnChrome {...baseProps} hasModifiedDescendant={true} />)
-    expect(screen.getByTestId('column-block')).toHaveAttribute('data-descendant-status', 'modified')
+    rerender(<ColumnChrome {...baseProps} hasUnpublishedDescendant={true} />)
+    expect(screen.getByTestId('column-block')).toHaveAttribute('data-descendant-unpublished')
   })
 
-  it('renders neither mark when nothing is modified', () => {
+  it('badges a never-published element as draft', () => {
+    render(<ColumnChrome {...baseProps} status="draft" />)
+
+    expect(screen.getByTestId('column-status-badge')).toHaveTextContent('Draft')
+  })
+
+  it('renders neither mark when nothing is unpublished', () => {
     render(<ColumnChrome {...baseProps} status="published" />)
 
-    expect(screen.queryByTestId('column-modified-badge')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('column-modified-indicator')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('column-status-badge')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('column-unpublished-indicator')).not.toBeInTheDocument()
   })
 
   it('renders each optional slot when provided', () => {

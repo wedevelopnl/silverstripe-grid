@@ -314,7 +314,7 @@ describe('EditableRowBlock', () => {
     })
   })
 
-  describe('modified indicator', () => {
+  describe('status marks', () => {
     it('renders the indicator with its label when status is modified', () => {
       mockFetchSuccess({})
 
@@ -322,17 +322,27 @@ describe('EditableRowBlock', () => {
 
       renderWithProviders(<EditableRowBlock row={row} />)
 
-      expect(screen.getByTestId('row-modified-badge')).toHaveTextContent('Modified')
+      expect(screen.getByTestId('row-status-badge')).toHaveTextContent('Modified')
     })
 
-    it('does not render the indicator when status is not modified', () => {
+    it('badges a never-published row as draft', () => {
       mockFetchSuccess({})
 
       const row = createRowNode({ status: 'draft' })
 
       renderWithProviders(<EditableRowBlock row={row} />)
 
-      expect(screen.queryByTestId('row-modified-badge')).not.toBeInTheDocument()
+      expect(screen.getByTestId('row-status-badge')).toHaveTextContent('Draft')
+    })
+
+    it('does not render the badge when the row is published', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({ status: 'published' })
+
+      renderWithProviders(<EditableRowBlock row={row} />)
+
+      expect(screen.queryByTestId('row-status-badge')).not.toBeInTheDocument()
     })
   })
 
@@ -411,17 +421,27 @@ describe('ReadonlyRowBlock', () => {
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
 
-    expect(screen.getByTestId('row-modified-badge')).toHaveTextContent('Modified')
+    expect(screen.getByTestId('row-status-badge')).toHaveTextContent('Modified')
   })
 
-  it('does not render the modified indicator when status is not modified', () => {
+  it('badges a never-published readonly row as draft', () => {
     mockFetchSuccess({})
 
     const row = createRowNode({ status: 'draft' })
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
 
-    expect(screen.queryByTestId('row-modified-badge')).not.toBeInTheDocument()
+    expect(screen.getByTestId('row-status-badge')).toHaveTextContent('Draft')
+  })
+
+  it('does not render the badge when the readonly row is published', () => {
+    mockFetchSuccess({})
+
+    const row = createRowNode({ status: 'published' })
+
+    renderWithProviders(<ReadonlyRowBlock row={row} />)
+
+    expect(screen.queryByTestId('row-status-badge')).not.toBeInTheDocument()
   })
 
   it('renders the column count text when the row has columns', () => {

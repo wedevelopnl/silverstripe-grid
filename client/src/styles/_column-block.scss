@@ -1,10 +1,10 @@
 // Column block — outlined card inside a Row. Figma "Column" component: 3%
 // black surface, 15% black border, 8px radius, 16px padding, 16px internal
 // gap. The header has two stacked rows — a toolbar (drag/collapse/icon/title/
-// modified-dot/actions) and a layout-settings row (width + offset pickers,
+// status-marks/actions) and a layout-settings row (width + offset pickers,
 // side-by-side, equal width). The body renders content blocks vertically.
 
-@use './modified';
+@use './publish-status';
 @use './typography';
 
 .ssgrid-column {
@@ -28,7 +28,7 @@
     border: 1px solid var(--ssgrid-border-default);
     border-radius: var(--ssgrid-radius-md);
 
-    @include modified.status-rings;
+    @include publish-status.status-rings;
 
     &[data-drop-target] {
       background: var(--ssgrid-surface-selected);

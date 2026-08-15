@@ -230,7 +230,7 @@ describe('EditableElementCard', () => {
 
       renderWithProviders(<EditableElementCard element={element} />)
 
-      expect(screen.getByTestId('element-card-modified-badge')).toHaveTextContent('Modified')
+      expect(screen.getByTestId('element-card-status-badge')).toHaveTextContent('Modified')
     })
 
     it('does not render the modified badge when status is not modified', () => {
@@ -240,7 +240,7 @@ describe('EditableElementCard', () => {
 
       renderWithProviders(<EditableElementCard element={element} />)
 
-      expect(screen.queryByTestId('element-card-modified-badge')).toBeNull()
+      expect(screen.queryByTestId('element-card-status-badge')).toBeNull()
     })
   })
 
@@ -386,7 +386,7 @@ describe('ReadonlyElementCard', () => {
 
     renderWithProviders(<ReadonlyElementCard element={element} />)
 
-    expect(screen.getByTestId('element-card-modified-badge')).toHaveTextContent('Modified')
+    expect(screen.getByTestId('element-card-status-badge')).toHaveTextContent('Modified')
   })
 
   it('does not render the modified badge when status is not modified', () => {
@@ -394,7 +394,7 @@ describe('ReadonlyElementCard', () => {
 
     renderWithProviders(<ReadonlyElementCard element={element} />)
 
-    expect(screen.queryByTestId('element-card-modified-badge')).toBeNull()
+    expect(screen.queryByTestId('element-card-status-badge')).toBeNull()
   })
 
   it('renders the summary line when a non-empty value is provided', () => {

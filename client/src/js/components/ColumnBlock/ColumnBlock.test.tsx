@@ -698,7 +698,7 @@ describe('EditableColumnBlock', () => {
 
       renderWithProviders(<EditableColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-modified-badge')).toHaveTextContent('Modified')
+      expect(screen.getByTestId('column-status-badge')).toHaveTextContent('Modified')
     })
 
     it('does not render the indicator when status is not modified', () => {
@@ -708,7 +708,7 @@ describe('EditableColumnBlock', () => {
 
       renderWithProviders(<EditableColumnBlock column={column} />)
 
-      expect(screen.queryByTestId('column-modified-badge')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('column-status-badge')).not.toBeInTheDocument()
     })
   })
 
@@ -873,7 +873,7 @@ describe('ReadonlyColumnBlock', () => {
 
     renderWithProviders(<ReadonlyColumnBlock column={column} />)
 
-    expect(screen.getByTestId('column-modified-badge')).toHaveTextContent('Modified')
+    expect(screen.getByTestId('column-status-badge')).toHaveTextContent('Modified')
   })
 
   it('does not render the modified indicator when status is not modified', () => {
@@ -883,7 +883,7 @@ describe('ReadonlyColumnBlock', () => {
 
     renderWithProviders(<ReadonlyColumnBlock column={column} />)
 
-    expect(screen.queryByTestId('column-modified-badge')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('column-status-badge')).not.toBeInTheDocument()
   })
 
   it('renders no drag handle, badges or add-content button', () => {
