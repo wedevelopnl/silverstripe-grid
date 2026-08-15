@@ -4,6 +4,7 @@
 // actions kebab) and, when the element exposes a summary, a 16px-padded Body
 // below it, separated by a 1px top hairline.
 
+@use './a11y';
 @use './publish-status';
 @use './typography';
 
@@ -50,6 +51,8 @@
   }
 
   &__header {
+    // Queried by the status-pill rule at the foot of this file.
+    container: ssgrid-block-header / inline-size;
     display: flex;
 
     // A column can be narrower than the header's own furniture: at a 4/12 span
@@ -103,5 +106,15 @@
     line-height: var(--ssgrid-line-height-relaxed);
     color: var(--ssgrid-text-default);
     overflow-wrap: anywhere;
+  }
+}
+
+// The status pill is an enhancement, not the signal — the ring already says
+// "unpublished". Measured: this header wraps at 414px of content box with the
+// pill present and survives to 358px without it, so drop the pill just above
+// the former rather than let it push the action row onto a second line.
+@container ssgrid-block-header (width < 420px) {
+  .ssgrid-status-badge {
+    @include a11y.visually-hidden;
   }
 }

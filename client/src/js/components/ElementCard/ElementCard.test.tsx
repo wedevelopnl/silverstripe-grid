@@ -31,9 +31,10 @@ afterEach(() => {
 
 describe('EditableElementCard', () => {
   describe('when the column is too narrow for the icon row', () => {
-    // The header sits in a column the author sizes freely. Below ~300px the
-    // six-icon row crushed the title to zero width and spilled past the card
-    // edge, so the actions fold into the overflow menu instead.
+    // The header sits in a column the author sizes freely. Below 360px of
+    // content box the icon row can no longer share the line with the title at
+    // its floor, and the header wraps onto two lines — so the actions fold into
+    // the overflow menu at exactly that point instead.
     function renderAtWidth(width: number) {
       mockFetchSuccess({})
       const observer = mockResizeObserver()
@@ -57,6 +58,22 @@ describe('EditableElementCard', () => {
       expect(screen.queryByTestId('element-toolbar')).not.toBeInTheDocument()
       expect(screen.queryByTestId('element-action-archive')).not.toBeInTheDocument()
       expect(screen.getByTestId('actions-menu-trigger')).toBeInTheDocument()
+      restore()
+    })
+
+    // Pins the measured boundary: one pixel either side of it must differ, or
+    // the fold has drifted away from the width where wrapping actually starts.
+    it('still shows the icon row at the threshold itself', () => {
+      const { restore } = renderAtWidth(360)
+
+      expect(screen.getByTestId('element-toolbar')).toBeInTheDocument()
+      restore()
+    })
+
+    it('folds one pixel below the threshold', () => {
+      const { restore } = renderAtWidth(359)
+
+      expect(screen.queryByTestId('element-toolbar')).not.toBeInTheDocument()
       restore()
     })
 

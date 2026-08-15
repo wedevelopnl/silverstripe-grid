@@ -13,16 +13,19 @@ interface EditableElementCardProps {
 }
 
 /**
- * Content width below which the header's six-icon action row is folded into the
+ * Content width below which the header's icon action row is folded into the
  * overflow menu.
  *
- * The row needs 156px (6 x 16px icons + 5 x 12px gaps), and it shares the
- * header with the 16px drag handle, the 24px type-icon chip and three 8px gaps
- * — 220px before the title gets a single pixel. 300 leaves the title ~80px,
- * enough for a recognisable word plus an ellipsis; below that the title was
- * being crushed to zero width and the icons spilled past the card edge.
+ * Measured rather than derived: with the title at its 4rem floor, this header
+ * wraps onto a second line at 358px of content box. Folding at anything below
+ * that leaves a band where the icons neither fit nor collapse, and the row
+ * wraps instead — which is the ugly outcome the fold exists to avoid. 360
+ * clears it by a hair.
+ *
+ * The status pill has its own, higher threshold in `_element-card.scss`: it is
+ * an enhancement and goes first, so it never costs the icon row a line.
  */
-const NARROW_HEADER_WIDTH = 300
+const NARROW_HEADER_WIDTH = 360
 
 const EditableElementCard = memo(function EditableElementCardComponent({
   element,

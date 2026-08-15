@@ -4,6 +4,7 @@
 // status-marks/actions) and a layout-settings row (width + offset pickers,
 // side-by-side, equal width). The body renders content blocks vertically.
 
+@use './a11y';
 @use './publish-status';
 @use './typography';
 
@@ -51,6 +52,8 @@
   }
 
   &__toolbar {
+    // Queried by the status-pill rule at the foot of this file.
+    container: ssgrid-column-toolbar / inline-size;
     display: flex;
 
     // Wraps rather than spills once the column is narrower than its own
@@ -176,5 +179,13 @@
       outline: 2px solid var(--ssgrid-border-focus);
       outline-offset: 2px;
     }
+  }
+}
+
+// Same trade as the element card, at this toolbar's own numbers: it wraps at
+// 196px of content box bare, and the pill costs a further 56px.
+@container ssgrid-column-toolbar (width < 260px) {
+  .ssgrid-status-badge {
+    @include a11y.visually-hidden;
   }
 }
