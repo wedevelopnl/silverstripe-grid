@@ -4,6 +4,8 @@
 // modified-dot/actions) and a layout-settings row (width + offset pickers,
 // side-by-side, equal width). The body renders content blocks vertically.
 
+@use './typography';
+
 .ssgrid-column {
   // Outer wrapper — carries the responsive width/offset CSS vars (set inline by
   // ColumnBlock, consumed by .ssgrid-row__columns). border-box keeps the gutter
@@ -19,8 +21,8 @@
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    gap: 16px;
-    padding: 16px;
+    gap: var(--ssgrid-space-4);
+    padding: var(--ssgrid-space-4);
     background: var(--ssgrid-surface-sunken);
     border: 1px solid var(--ssgrid-border-default);
     border-radius: var(--ssgrid-radius-md);
@@ -46,47 +48,33 @@
   &__header {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--ssgrid-space-4);
   }
 
   &__toolbar {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--ssgrid-space-2);
   }
 
   &__icon {
     flex: 0 0 auto;
     color: var(--ssgrid-text-default);
-    font-size: 16px;
+    font-size: var(--ssgrid-size-icon);
     line-height: 1;
   }
 
   &__title {
+    @include typography.block-title;
+    @include typography.block-title-link;
+
     flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 18px;
-    color: var(--ssgrid-text-default);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    a {
-      color: inherit;
-      text-decoration: none;
-
-      &:hover {
-        text-decoration: underline;
-      }
-    }
   }
 
   &__layout-settings {
     display: flex;
     align-items: stretch;
-    gap: 16px;
+    gap: var(--ssgrid-space-4);
 
     // Each picker wrapper takes an equal share of the row.
     > * {
@@ -102,18 +90,18 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--ssgrid-space-2);
     width: 100%;
-    height: 40px;
-    padding: 4px 8px;
+    height: var(--ssgrid-size-field);
+    padding: var(--ssgrid-space-1) var(--ssgrid-space-2);
     background: var(--ssgrid-surface-muted);
     border: 1px solid var(--ssgrid-border-default);
     border-radius: var(--ssgrid-radius-sm);
     color: var(--ssgrid-text-default);
     font: inherit;
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 1;
+    font-size: var(--ssgrid-font-size-body);
+    font-weight: var(--ssgrid-font-weight-regular);
+    line-height: var(--ssgrid-line-height-tight);
     cursor: pointer;
 
     &:hover:not(:disabled) {
@@ -140,7 +128,7 @@
   &__body {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--ssgrid-space-4);
   }
 
   // Inline "+ Add content" trigger (opens the element type picker) — same
@@ -149,19 +137,19 @@
   &__add-content {
     display: inline-flex;
     width: 100%;
-    height: 32px;
+    height: var(--ssgrid-size-control);
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    padding: 0 8px;
+    gap: var(--ssgrid-space-1);
+    padding: 0 var(--ssgrid-space-2);
     background: var(--ssgrid-surface-selected);
     border: 1px dashed var(--ssgrid-border-focus);
     border-radius: var(--ssgrid-radius-sm);
     color: var(--ssgrid-text-brand);
     font: inherit;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1;
+    font-size: var(--ssgrid-font-size-body);
+    font-weight: var(--ssgrid-font-weight-medium);
+    line-height: var(--ssgrid-line-height-tight);
     cursor: pointer;
 
     &:hover {

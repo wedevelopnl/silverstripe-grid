@@ -7,8 +7,8 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: var(--ssgrid-size-icon);
+  height: var(--ssgrid-size-icon);
   padding: 0;
   background: transparent;
   border: 0;
@@ -17,7 +17,7 @@
   cursor: pointer;
 
   &__glyph {
-    font-size: 16px;
+    font-size: var(--ssgrid-size-icon);
     line-height: 1;
   }
 
@@ -54,8 +54,8 @@
 // Orange disc shown in a block header when the element has unpublished changes.
 .ssgrid-modified-dot {
   flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
+  width: var(--ssgrid-size-dot);
+  height: var(--ssgrid-size-dot);
   border-radius: 50%;
   background: var(--ssgrid-color-modified-500);
 }

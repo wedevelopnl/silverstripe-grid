@@ -6,15 +6,19 @@
 // contract with this stylesheet, so keep them in sync.
 
 .ssgrid-grid-settings-field {
+  // Rendered in a CMS edit form, outside `.ssgrid-editor` — so it has to opt
+  // into the editor's typeface itself rather than inheriting it.
+  font-family: var(--ssgrid-font-family);
+
   &__overrides {
     width: 100%;
     font-size: 13px;
 
     th {
-      padding: 6px 8px;
+      padding: 6px var(--ssgrid-space-2);
       border-bottom: 2px solid var(--ssgrid-border-default);
-      font-size: 11px;
-      font-weight: 600;
+      font-size: var(--ssgrid-font-size-caption);
+      font-weight: var(--ssgrid-font-weight-semibold);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       white-space: nowrap;
@@ -22,7 +26,7 @@
     }
 
     td {
-      padding: 6px 8px;
+      padding: 6px var(--ssgrid-space-2);
       border-bottom: 1px solid var(--ssgrid-border-subtle);
       vertical-align: middle;
     }
@@ -50,7 +54,7 @@
     border-radius: var(--ssgrid-radius-sm);
     background: var(--ssgrid-surface-action);
     font-size: 10px;
-    font-weight: 600;
+    font-weight: var(--ssgrid-font-weight-semibold);
     letter-spacing: 0.3px;
     text-transform: uppercase;
     vertical-align: middle;
