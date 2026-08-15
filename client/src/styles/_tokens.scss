@@ -55,8 +55,11 @@
   --ssgrid-font-size-heading: 16px;
   --ssgrid-font-size-body: 14px;
 
+  // The design's one step below body: the "Modified" pill.
+  --ssgrid-font-size-label: 12px;
+
   // Not in the Figma. The CMS form fields the editor contributes (override
-  // table, width picker) need a step below body for table chrome.
+  // table, width picker) need a step below the label for table chrome.
   --ssgrid-font-size-caption: 11px;
   --ssgrid-font-weight-regular: 400;
   --ssgrid-font-weight-medium: 500;
@@ -135,7 +138,14 @@
   --ssgrid-border-default: var(--ssgrid-color-overlay-black-15);
   --ssgrid-border-subtle: var(--ssgrid-color-overlay-black-10);
   --ssgrid-border-focus: var(--ssgrid-color-brand-500);
-  --ssgrid-border-modified: var(--ssgrid-color-modified-500);
+
+  // Two distinct facts, two distinct rings. Brand marks the element that
+  // itself changed; orange marks an ancestor that merely contains the change.
+  // An element that is both draws the orange ring — the badge already states
+  // the self-change, so the ring is free to carry what would otherwise be
+  // invisible inside a collapsed container.
+  --ssgrid-border-modified-self: var(--ssgrid-color-brand-500);
+  --ssgrid-border-modified-nested: var(--ssgrid-color-modified-500);
 
   // ---------------------------------------------------------------------------
   // Semantics — text and icons

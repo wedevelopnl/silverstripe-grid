@@ -4,6 +4,7 @@
 // actions kebab) and, when the element exposes a summary, a 16px-padded Body
 // below it, separated by a 1px top hairline.
 
+@use './modified';
 @use './typography';
 
 .ssgrid-block {
@@ -33,9 +34,7 @@
     color: var(--ssgrid-text-default);
   }
 
-  &[data-status='modified'] {
-    border-color: var(--ssgrid-border-modified);
-  }
+  @include modified.status-ring-self;
 
   &[data-state='clickable'] {
     cursor: pointer;
@@ -86,7 +85,10 @@
   &__title {
     @include typography.block-title;
 
-    flex: 1 1 auto;
+    // Shrinks to truncate, but never grows: the status marks that follow
+    // must sit beside the title, not be pushed to the far edge. The action
+    // toolbar claims the leftover space via its own `margin-left: auto`.
+    flex: 0 1 auto;
     margin: 0;
   }
 

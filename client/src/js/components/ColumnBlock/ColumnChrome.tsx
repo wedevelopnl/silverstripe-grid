@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react'
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle'
+import ModifiedBadge from '@/components/ModifiedBadge/ModifiedBadge'
 import ModifiedIndicator from '@/components/ModifiedIndicator/ModifiedIndicator'
 import type { ColumnNode } from '@/types/elements'
 
 interface ColumnChromeProps {
   readonly status: ColumnNode['status']
+  /** Derived, not from the wire: whether anything below this column changed. */
+  readonly hasModifiedDescendant: boolean
   readonly title: string
   readonly titleHref?: string
   readonly icon: string
@@ -31,6 +34,7 @@ interface ColumnChromeProps {
  */
 export default function ColumnChrome({
   status,
+  hasModifiedDescendant,
   title,
   titleHref,
   icon,
@@ -60,6 +64,7 @@ export default function ColumnChrome({
         className="ssgrid-column__card"
         data-testid="column-block"
         data-status={status}
+        data-descendant-status={hasModifiedDescendant ? 'modified' : undefined}
         data-collapsed={isCollapsed ? '' : undefined}
         data-drop-target={dropTarget ? '' : undefined}
         data-hidden={hidden ? '' : undefined}
@@ -78,7 +83,8 @@ export default function ColumnChrome({
                 title
               )}
             </span>
-            {status === 'modified' && <ModifiedIndicator testId="column-modified-indicator" />}
+            {status === 'modified' && <ModifiedBadge testId="column-modified-badge" />}
+            {hasModifiedDescendant && <ModifiedIndicator testId="column-modified-indicator" />}
             {trailing}
           </div>
           {layoutSettings !== undefined && (

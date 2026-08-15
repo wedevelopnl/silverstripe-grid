@@ -4,6 +4,7 @@ import RowChrome from './RowChrome'
 
 const baseProps = {
   status: 'published' as const,
+  hasModifiedDescendant: false,
   title: 'Main Row',
   isCollapsed: false,
   onToggle: vi.fn(),
@@ -65,15 +66,39 @@ describe('RowChrome', () => {
     expect(screen.getByTestId('row-title')).toHaveTextContent('Main Row')
   })
 
-  it('renders the modified indicator when status is modified', () => {
+  it('renders the badge, not the dot, when the element itself is modified', () => {
     render(<RowChrome {...baseProps} status="modified" />)
 
+    expect(screen.getByTestId('row-modified-badge')).toBeInTheDocument()
+    expect(screen.queryByTestId('row-modified-indicator')).not.toBeInTheDocument()
+  })
+
+  it('renders the dot, not the badge, when only a descendant is modified', () => {
+    render(<RowChrome {...baseProps} status="published" hasModifiedDescendant={true} />)
+
+    expect(screen.getByTestId('row-modified-indicator')).toBeInTheDocument()
+    expect(screen.queryByTestId('row-modified-badge')).not.toBeInTheDocument()
+  })
+
+  it('renders both marks when the element and a descendant are modified', () => {
+    render(<RowChrome {...baseProps} status="modified" hasModifiedDescendant={true} />)
+
+    expect(screen.getByTestId('row-modified-badge')).toBeInTheDocument()
     expect(screen.getByTestId('row-modified-indicator')).toBeInTheDocument()
   })
 
-  it('does not render the modified indicator when status is published', () => {
+  it('sets data-descendant-status only when a descendant is modified', () => {
+    const { rerender } = render(<RowChrome {...baseProps} />)
+    expect(screen.getByTestId('row-block')).not.toHaveAttribute('data-descendant-status')
+
+    rerender(<RowChrome {...baseProps} hasModifiedDescendant={true} />)
+    expect(screen.getByTestId('row-block')).toHaveAttribute('data-descendant-status', 'modified')
+  })
+
+  it('renders neither mark when nothing is modified', () => {
     render(<RowChrome {...baseProps} status="published" />)
 
+    expect(screen.queryByTestId('row-modified-badge')).not.toBeInTheDocument()
     expect(screen.queryByTestId('row-modified-indicator')).not.toBeInTheDocument()
   })
 

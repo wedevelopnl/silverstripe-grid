@@ -1,5 +1,5 @@
 import type { MouseEvent, ReactNode } from 'react'
-import ModifiedIndicator from '@/components/ModifiedIndicator/ModifiedIndicator'
+import ModifiedBadge from '@/components/ModifiedBadge/ModifiedBadge'
 import type { SimpleElementNode } from '@/types/elements'
 
 interface ElementCardChromeProps {
@@ -47,7 +47,7 @@ export default function ElementCardChrome({
         <h4 className="ssgrid-block__title" data-testid="element-card-title">
           {title}
         </h4>
-        {status === 'modified' && <ModifiedIndicator testId="element-card-modified-indicator" />}
+        {status === 'modified' && <ModifiedBadge testId="element-card-modified-badge" />}
         {trailing}
       </div>
       {summary ? (

@@ -4,6 +4,7 @@
 // swaps to modified-orange and the drop-target highlight switches the
 // hairline to brand purple — same pattern as the section/column cards.
 
+@use './modified';
 @use './typography';
 
 .ssgrid-row {
@@ -15,9 +16,7 @@
   border: 1px solid var(--ssgrid-border-default);
   border-radius: var(--ssgrid-radius-md);
 
-  &[data-status='modified'] {
-    border-color: var(--ssgrid-border-modified);
-  }
+  @include modified.status-rings;
 
   &[data-drop-target] {
     border-color: var(--ssgrid-border-focus);
@@ -37,7 +36,10 @@
     @include typography.block-title;
     @include typography.block-title-link;
 
-    flex: 1 1 auto;
+    // Shrinks to truncate, but never grows: the status marks that follow
+    // must sit beside the title, not be pushed to the far edge. The action
+    // toolbar claims the leftover space via its own `margin-left: auto`.
+    flex: 0 1 auto;
     margin: 0;
   }
 

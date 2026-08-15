@@ -2,13 +2,15 @@
 // a 12px-spaced row of 16px icon buttons (reset, fold, duplicate, open-in-tab,
 // edit, archive) plus an overflow ellipsis menu for actions the icon set has no
 // glyph for ("duplicate to page"). Sits at the right edge of a block header
-// because the title flexes to fill the space before it.
+// because it claims all the leftover space itself — the title and the status
+// marks before it are sized to their content so they stay grouped on the left.
 
 .ssgrid-element-toolbar {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
   gap: var(--ssgrid-space-3);
+  margin-left: auto;
 
   // The archive icon reads red on hover.
   .ssgrid-icon-button[data-destructive='true']:not(:disabled):hover

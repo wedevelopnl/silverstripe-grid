@@ -5,16 +5,18 @@ interface ModifiedIndicatorProps {
 }
 
 /**
- * The "has unpublished changes" dot shown in every block header/card. Render it
- * only when the element's status is 'modified' — the component does NOT gate on
- * status (callers do); it just draws the dot with the caller's testid.
+ * The orange dot marking a container that *holds* unpublished changes further
+ * down the tree. The element's own change is marked by ModifiedBadge instead —
+ * the two are separate facts and a container can show both at once.
+ *
+ * Callers gate on the derived descendant status; this only draws the dot.
  */
 export default function ModifiedIndicator({ testId }: ModifiedIndicatorProps) {
   return (
     <span
       className="ssgrid-modified-dot"
       data-testid={testId}
-      aria-label={t('WeDevelopGrid.ModifiedIndicator.LABEL', 'Has unpublished changes')}
+      aria-label={t('WeDevelopGrid.ModifiedIndicator.CONTAINS', 'Contains unpublished changes')}
       role="img"
     />
   )

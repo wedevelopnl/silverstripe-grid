@@ -322,8 +322,7 @@ describe('EditableRowBlock', () => {
 
       renderWithProviders(<EditableRowBlock row={row} />)
 
-      const indicator = screen.getByTestId('row-modified-indicator')
-      expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
+      expect(screen.getByTestId('row-modified-badge')).toHaveTextContent('Modified')
     })
 
     it('does not render the indicator when status is not modified', () => {
@@ -333,7 +332,7 @@ describe('EditableRowBlock', () => {
 
       renderWithProviders(<EditableRowBlock row={row} />)
 
-      expect(screen.queryByTestId('row-modified-indicator')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('row-modified-badge')).not.toBeInTheDocument()
     })
   })
 
@@ -412,10 +411,7 @@ describe('ReadonlyRowBlock', () => {
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
 
-    expect(screen.getByTestId('row-modified-indicator')).toHaveAttribute(
-      'aria-label',
-      'Has unpublished changes',
-    )
+    expect(screen.getByTestId('row-modified-badge')).toHaveTextContent('Modified')
   })
 
   it('does not render the modified indicator when status is not modified', () => {
@@ -425,7 +421,7 @@ describe('ReadonlyRowBlock', () => {
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
 
-    expect(screen.queryByTestId('row-modified-indicator')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('row-modified-badge')).not.toBeInTheDocument()
   })
 
   it('renders the column count text when the row has columns', () => {

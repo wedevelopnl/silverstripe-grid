@@ -4,6 +4,7 @@
 // modified-dot/actions) and a layout-settings row (width + offset pickers,
 // side-by-side, equal width). The body renders content blocks vertically.
 
+@use './modified';
 @use './typography';
 
 .ssgrid-column {
@@ -27,9 +28,7 @@
     border: 1px solid var(--ssgrid-border-default);
     border-radius: var(--ssgrid-radius-md);
 
-    &[data-status='modified'] {
-      border-color: var(--ssgrid-border-modified);
-    }
+    @include modified.status-rings;
 
     &[data-drop-target] {
       background: var(--ssgrid-surface-selected);
@@ -73,7 +72,10 @@
     @include typography.block-title;
     @include typography.block-title-link;
 
-    flex: 1 1 auto;
+    // Shrinks to truncate, but never grows: the status marks that follow
+    // must sit beside the title, not be pushed to the far edge. The action
+    // toolbar claims the leftover space via its own `margin-left: auto`.
+    flex: 0 1 auto;
   }
 
   &__layout-settings {

@@ -69,10 +69,11 @@
     border: 1px solid var(--ssgrid-border-default);
     border-radius: var(--ssgrid-radius-md);
 
-    // Mirrors the per-element pattern: orange ring when something inside is
-    // modified. Driven by `data-status="modified"` on the canvas element.
-    &[data-status='modified'] {
-      border-color: var(--ssgrid-border-modified);
+    // The canvas is only ever an ancestor — it has no status of its own, so it
+    // carries the nested ring alone. Driven by `data-descendant-status` on the
+    // canvas element.
+    &[data-descendant-status='modified'] {
+      border-color: var(--ssgrid-border-modified-nested);
     }
   }
 
