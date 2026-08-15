@@ -1,0 +1,14 @@
+// Removes content from view while leaving it in the accessibility tree.
+// `display: none` would drop it from that tree too — for a status label that
+// means screen-reader users lose the fact itself, not just its visual form,
+// and unlike sighted users they have no coloured ring to fall back on.
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
