@@ -73,7 +73,7 @@
     // carries the nested ring alone. Driven by `data-descendant-status` on the
     // canvas element.
     &[data-descendant-status='modified'] {
-      border-color: var(--ssgrid-border-modified-nested);
+      border-color: var(--ssgrid-border-modified);
     }
   }
 

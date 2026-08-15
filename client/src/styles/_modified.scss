@@ -1,45 +1,42 @@
-// Unpublished-change marks. The editor distinguishes two facts that a single
-// indicator used to conflate:
+// Unpublished-change marks. Orange is the whole vocabulary: one ring meaning
+// "there are unpublished changes at or below this element", and one of two
+// markers saying whose they are.
 
-//   this element changed        → brand ring + "Modified" pill
+//   this element changed        → orange ring + "Modified" pill
 //   something inside it changed → orange ring + orange dot
 
-// The second is what makes a collapsed container admit it is hiding something
-// unpublished. An element can be both, in which case it draws the orange ring
-// (the pill already states the self-change) plus both markers.
+// The dot is what makes a collapsed container admit it is hiding something
+// unpublished. An element can be both, and then draws ring, pill and dot.
 
-// Ring rules for a container. `:not()` rather than source order, so the
-// precedence survives a reordered @use — this bundle has been bitten by
-// same-specificity source-order wins before.
+// Deliberately NOT brand purple, even though the Figma paints the modified row
+// that way: purple is this editor's interaction colour (focus rings, drop
+// targets, the drag overlay), so a purple modified ring is indistinguishable
+// from a column lit up as a drag target. The design only ever mocks the
+// modified card in isolation, so it never had to resolve that clash.
+
+// Applies to containers and leaves alike — a leaf simply never carries
+// `data-descendant-status`, so that half of the selector never matches.
 @mixin status-rings {
-  &[data-status='modified']:not([data-descendant-status='modified']) {
-    border-color: var(--ssgrid-border-modified-self);
-  }
-
+  &[data-status='modified'],
   &[data-descendant-status='modified'] {
-    border-color: var(--ssgrid-border-modified-nested);
+    border-color: var(--ssgrid-border-modified);
   }
 }
 
-// Leaf elements have no descendants, so they only ever carry the self ring.
-@mixin status-ring-self {
-  &[data-status='modified'] {
-    border-color: var(--ssgrid-border-modified-self);
-  }
-}
-
-// Brand pill reading "Modified" (Figma: 24px tall, 10% brand fill, 1px brand
-// border, 12px/500 brand text).
+// Pill reading "Modified" (Figma geometry: 24px tall, 10% tint, 1px border,
+// 12px/500 text — recoloured from brand to the modified family).
 .ssgrid-modified-badge {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   height: var(--ssgrid-size-chip);
   padding: 0 var(--ssgrid-space-2);
-  background: var(--ssgrid-surface-hover);
-  border: 1px solid var(--ssgrid-border-focus);
+  background: var(--ssgrid-surface-modified-tint);
+  border: 1px solid var(--ssgrid-border-modified);
   border-radius: var(--ssgrid-radius-sm);
-  color: var(--ssgrid-text-brand);
+
+  // -700, not the -500 the ring and dot use: -500 is 1.98:1 on this tint.
+  color: var(--ssgrid-text-modified);
   font-size: var(--ssgrid-font-size-label);
   font-weight: var(--ssgrid-font-weight-medium);
   line-height: var(--ssgrid-line-height-tight);
