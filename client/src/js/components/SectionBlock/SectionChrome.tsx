@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react'
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle'
-import ModifiedBadge from '@/components/ModifiedBadge/ModifiedBadge'
-import ModifiedIndicator from '@/components/ModifiedIndicator/ModifiedIndicator'
+import StatusBadge from '@/components/StatusBadge/StatusBadge'
+import UnpublishedIndicator from '@/components/UnpublishedIndicator/UnpublishedIndicator'
 import type { SectionNode } from '@/types/elements'
 
 interface SectionChromeProps {
   readonly status: SectionNode['status']
-  /** Derived, not from the wire: whether anything below this section changed. */
-  readonly hasModifiedDescendant: boolean
+  /** Derived, not from the wire: whether anything below this section is unpublished. */
+  readonly hasUnpublishedDescendant: boolean
   readonly title: string
   readonly titleHref?: string
   readonly isCollapsed: boolean
@@ -27,7 +27,7 @@ interface SectionChromeProps {
  */
 export default function SectionChrome({
   status,
-  hasModifiedDescendant,
+  hasUnpublishedDescendant,
   title,
   titleHref,
   isCollapsed,
@@ -46,7 +46,7 @@ export default function SectionChrome({
       className="ssgrid-section"
       data-testid="section-block"
       data-status={status}
-      data-descendant-status={hasModifiedDescendant ? 'modified' : undefined}
+      data-descendant-unpublished={hasUnpublishedDescendant ? '' : undefined}
       data-collapsed={isCollapsed ? '' : undefined}
       data-drop-target={dropTarget ? '' : undefined}
     >
@@ -62,8 +62,10 @@ export default function SectionChrome({
             title
           )}
         </h2>
-        {status === 'modified' && <ModifiedBadge testId="section-modified-badge" />}
-        {hasModifiedDescendant && <ModifiedIndicator testId="section-modified-indicator" />}
+        <StatusBadge status={status} testId="section-status-badge" />
+        {hasUnpublishedDescendant && (
+          <UnpublishedIndicator testId="section-unpublished-indicator" />
+        )}
         {trailing}
       </div>
       <div className="ssgrid-section__body" data-testid="section-body" data-dnd-container="">

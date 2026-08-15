@@ -12,7 +12,7 @@ import type { RowNode } from '@/types/elements'
 import type { NodeKey } from '@/types/identity'
 import { getColumnCount, getOffsetStrategy } from '@/utils/gridAdapter'
 import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
-import { hasModifiedDescendant } from '@/utils/modifiedStatus'
+import { hasUnpublishedDescendant, isUnpublished } from '@/utils/publishStatus'
 import RowChrome from './RowChrome'
 
 interface EditableRowBlockProps {
@@ -63,7 +63,7 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
   return (
     <RowChrome
       status={status}
-      hasModifiedDescendant={hasModifiedDescendant(row)}
+      hasUnpublishedDescendant={hasUnpublishedDescendant(row)}
       title={row.title}
       titleHref={row.editLink ?? undefined}
       isCollapsed={isCollapsed}

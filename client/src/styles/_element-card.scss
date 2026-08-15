@@ -1,10 +1,10 @@
 // Element card — the content "Block" inside a Column. Figma "Block" component:
 // white surface, 15% black border, 8px radius, no padding of its own. A 16px-
-// padded Header (drag handle, brand-tinted type-icon chip, title, modified dot,
+// padded Header (drag handle, brand-tinted type-icon chip, title, status pill,
 // actions kebab) and, when the element exposes a summary, a 16px-padded Body
 // below it, separated by a 1px top hairline.
 
-@use './modified';
+@use './publish-status';
 @use './typography';
 
 .ssgrid-block {
@@ -34,7 +34,7 @@
     color: var(--ssgrid-text-default);
   }
 
-  @include modified.status-rings;
+  @include publish-status.status-rings;
 
   &[data-state='clickable'] {
     cursor: pointer;

@@ -31,13 +31,13 @@ describe('ElementCardChrome', () => {
   it('renders the modified badge when status is modified', () => {
     render(<ElementCardChrome status="modified" icon="font-icon-block-content" title="Block" />)
 
-    expect(screen.getByTestId('element-card-modified-badge')).toBeInTheDocument()
+    expect(screen.getByTestId('element-card-status-badge')).toBeInTheDocument()
   })
 
   it('does not render the modified badge when status is published', () => {
     render(<ElementCardChrome status="published" icon="font-icon-block-content" title="Block" />)
 
-    expect(screen.queryByTestId('element-card-modified-badge')).toBeNull()
+    expect(screen.queryByTestId('element-card-status-badge')).toBeNull()
   })
 
   it('renders the leading and trailing slots when provided', () => {

@@ -26,7 +26,7 @@ import {
   resolveViewportSettings,
 } from '@/utils/gridAdapter'
 import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
-import { hasModifiedDescendant } from '@/utils/modifiedStatus'
+import { hasUnpublishedDescendant, isUnpublished } from '@/utils/publishStatus'
 import { buildColumnStyle } from './buildColumnStyle'
 import ColumnChrome from './ColumnChrome'
 
@@ -165,7 +165,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
   return (
     <ColumnChrome
       status={status}
-      hasModifiedDescendant={hasModifiedDescendant(column)}
+      hasUnpublishedDescendant={hasUnpublishedDescendant(column)}
       title={column.title}
       titleHref={column.editLink ?? undefined}
       icon={column.blockSchema.icon}

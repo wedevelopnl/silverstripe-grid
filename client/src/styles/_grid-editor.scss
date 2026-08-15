@@ -1,6 +1,6 @@
 // Editor shell — Figma "Frame 1": the viewport tabs, the "Grid area" header
 // row, then the outer canvas that holds the section list. The canvas border is
-// stateful: it turns the modified-orange the moment any section inside has
+// stateful: it turns unpublished-orange the moment anything inside has
 // unpublished changes (the design's "this area is being edited" cue), and is
 // otherwise the neutral 15%-black hairline.
 
@@ -70,10 +70,10 @@
     border-radius: var(--ssgrid-radius-md);
 
     // The canvas is only ever an ancestor — it has no status of its own, so it
-    // carries the nested ring alone. Driven by `data-descendant-status` on the
-    // canvas element.
-    &[data-descendant-status='modified'] {
-      border-color: var(--ssgrid-border-modified);
+    // carries the nested ring alone. Driven by `data-descendant-unpublished`
+    // on the canvas element.
+    &[data-descendant-unpublished] {
+      border-color: var(--ssgrid-border-unpublished);
     }
   }
 
