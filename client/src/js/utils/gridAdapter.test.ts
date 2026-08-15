@@ -8,6 +8,7 @@ import {
   getColumnCount,
   getDefaultViewport,
   getOffsetOptions,
+  getOffsetStartLine,
   getOffsetStrategy,
   getViewports,
   getWidthOptions,
@@ -64,14 +65,14 @@ describe('getOffsetOptions', () => {
   it('generates options from 0 to columnCount - 1 when no width given', () => {
     const options = getOffsetOptions()
     expect(options).toHaveLength(12) // 0 to 11
-    expect(options[0]).toEqual({ value: 0, label: '0 offset' })
-    expect(options[1]).toEqual({ value: 1, label: '1 offset' })
+    expect(options[0]).toEqual({ value: 0, label: 'Offset 0' })
+    expect(options[1]).toEqual({ value: 1, label: 'Offset 1' })
   })
 
   it('limits max offset based on current width', () => {
     const options = getOffsetOptions(10)
     expect(options).toHaveLength(3) // 0, 1, 2
-    expect(options[2]).toEqual({ value: 2, label: '2 offset' })
+    expect(options[2]).toEqual({ value: 2, label: 'Offset 2' })
   })
 })
 
@@ -112,14 +113,35 @@ describe('formatWidthLabel()', () => {
 })
 
 describe('formatOffsetLabel()', () => {
-  it('labels a zero offset rather than calling it "none"', () => {
-    // The design reads "0 offset", so the empty case stays in the same shape as
-    // every other value instead of becoming a special word.
-    expect(formatOffsetLabel(0)).toBe('0 offset')
+  function useStrategy(strategy: 'margin' | 'grid-placement') {
+    // biome-ignore lint/style/noNonNullAssertion: the suite stubs window.ss
+    window.ss!.config.sections[0].gridAdapter!.offsetStrategy = strategy
+  }
+
+  it('labels a margin-strategy offset as an offset', () => {
+    useStrategy('margin')
+    expect(formatOffsetLabel(0)).toBe('Offset 0')
+    expect(formatOffsetLabel(2)).toBe('Offset 2')
   })
 
-  it('does not pluralise, since offset is an attribute and not a count', () => {
-    expect(formatOffsetLabel(1)).toBe('1 offset')
-    expect(formatOffsetLabel(5)).toBe('5 offset')
+  it('labels a grid-placement offset by the line the column starts on', () => {
+    // Tailwind emits `col-start-N`, so offset 2 starts at line 3. Calling that
+    // "Offset 2" would contradict the class the adapter generates.
+    useStrategy('grid-placement')
+    expect(formatOffsetLabel(0)).toBe('Start 1')
+    expect(formatOffsetLabel(2)).toBe('Start 3')
+  })
+
+  it('does not pluralise either form, so zero keeps the same shape', () => {
+    useStrategy('margin')
+    expect(formatOffsetLabel(1)).toBe('Offset 1')
+    expect(formatOffsetLabel(5)).toBe('Offset 5')
+  })
+})
+
+describe('getOffsetStartLine()', () => {
+  it('is 1-based, matching the col-start-N the grid adapter emits', () => {
+    expect(getOffsetStartLine(0)).toBe(1)
+    expect(getOffsetStartLine(2)).toBe(3)
   })
 })

@@ -1,5 +1,5 @@
 import type { ViewportSettings } from '@/types/elements'
-import { getColumnCount, getOffsetStrategy } from '@/utils/gridAdapter'
+import { getColumnCount, getOffsetStartLine, getOffsetStrategy } from '@/utils/gridAdapter'
 
 /**
  * Layer the resolved column width/offset onto a (possibly empty) sortable
@@ -27,6 +27,6 @@ export function buildColumnStyle(
   return {
     ...sortableStyle,
     '--col-span': String(settings.width),
-    ...(settings.offset > 0 ? { '--col-start': String(settings.offset + 1) } : {}),
+    ...(settings.offset > 0 ? { '--col-start': String(getOffsetStartLine(settings.offset)) } : {}),
   } as React.CSSProperties
 }

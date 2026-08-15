@@ -382,7 +382,7 @@ describe('EditableColumnBlock', () => {
 
       renderWithProviders(<EditableColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('0 offset')
+      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('Offset 0')
     })
 
     it('labels a non-zero offset with its value', () => {
@@ -394,7 +394,7 @@ describe('EditableColumnBlock', () => {
 
       renderWithProviders(<EditableColumnBlock column={column} />)
 
-      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('3 offset')
+      expect(screen.getByTestId('column-offset-badge')).toHaveTextContent('Offset 3')
     })
 
     it('disabled when width equals column count', () => {
@@ -447,7 +447,7 @@ describe('EditableColumnBlock', () => {
       await user.click(screen.getByTestId('column-offset-badge'))
 
       const options = screen.getAllByRole('option')
-      const option = options.find((opt) => opt.textContent === '3 offset')
+      const option = options.find((opt) => opt.textContent === 'Offset 3')
       expect(option).toBeDefined()
       await user.click(option!)
 
