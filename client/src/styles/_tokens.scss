@@ -11,9 +11,18 @@
   // Brand — the only chromatic accent used for solid action colors.
   --ssgrid-color-brand-500: #4f39f6;
 
-  // Modified status — the only secondary chromatic color in the design,
-  // used exclusively for the "Modified=true" element card variant.
+  // Modified status. The design's orange, and the whole vocabulary for
+  // unpublished changes — rings, dots and the "Modified" pill. Brand purple is
+  // NOT available for this: it already means "interaction" everywhere else
+  // (focus rings, drop targets, the drag overlay), so a purple modified ring
+  // is indistinguishable from a column lit up as a drop target.
   --ssgrid-color-modified-500: #fe9a00;
+
+  // -700 exists only because -500 is unreadable as text: 1.98:1 on its own
+  // 10% tint, against the 4.5:1 WCAG AA needs at the pill's 12px. This shade
+  // clears it at 5.08:1. Never use it for a ring or a dot — those must stay
+  // -500 so every modified mark reads as one family.
+  --ssgrid-color-modified-700: #965c00;
 
   // Danger — not in the Figma (which has no destructive surfaces), but the
   // editor exposes archive/delete affordances the design never mocked. Borrow
@@ -38,6 +47,7 @@
   --ssgrid-color-overlay-black-15: rgb(0 0 0 / 15%);
   --ssgrid-color-overlay-brand-5: rgb(79 57 246 / 5%);
   --ssgrid-color-overlay-brand-10: rgb(79 57 246 / 10%);
+  --ssgrid-color-overlay-modified-10: rgb(254 154 0 / 10%);
 
   // ---------------------------------------------------------------------------
   // Primitives — typography
@@ -125,6 +135,7 @@
   --ssgrid-surface-hover: var(--ssgrid-color-overlay-brand-10);
   --ssgrid-surface-action: var(--ssgrid-color-brand-500);
   --ssgrid-surface-modified: var(--ssgrid-color-modified-500);
+  --ssgrid-surface-modified-tint: var(--ssgrid-color-overlay-modified-10);
 
   // Solid mid-gray fill for passive diagram marks (the "media" half of the
   // column-width picker's split bar). Unlike the translucent surface tints
@@ -139,13 +150,10 @@
   --ssgrid-border-subtle: var(--ssgrid-color-overlay-black-10);
   --ssgrid-border-focus: var(--ssgrid-color-brand-500);
 
-  // Two distinct facts, two distinct rings. Brand marks the element that
-  // itself changed; orange marks an ancestor that merely contains the change.
-  // An element that is both draws the orange ring — the badge already states
-  // the self-change, so the ring is free to carry what would otherwise be
-  // invisible inside a collapsed container.
-  --ssgrid-border-modified-self: var(--ssgrid-color-brand-500);
-  --ssgrid-border-modified-nested: var(--ssgrid-color-modified-500);
+  // One ring for "there are unpublished changes at or below this element".
+  // Whether they are the element's own is said by the pill-vs-dot marker, not
+  // by the ring colour — see the brand-purple note on --ssgrid-color-modified-500.
+  --ssgrid-border-modified: var(--ssgrid-color-modified-500);
 
   // ---------------------------------------------------------------------------
   // Semantics — text and icons
@@ -154,6 +162,7 @@
   --ssgrid-text-default: var(--ssgrid-color-neutral-1000);
   --ssgrid-text-muted: var(--ssgrid-color-neutral-500);
   --ssgrid-text-brand: var(--ssgrid-color-brand-500);
+  --ssgrid-text-modified: var(--ssgrid-color-modified-700);
   --ssgrid-text-danger: var(--ssgrid-color-danger-500);
   --ssgrid-text-on-action: var(--ssgrid-color-neutral-0);
   --ssgrid-icon-default: var(--ssgrid-color-neutral-1000);

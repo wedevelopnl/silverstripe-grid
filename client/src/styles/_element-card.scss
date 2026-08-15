@@ -34,7 +34,7 @@
     color: var(--ssgrid-text-default);
   }
 
-  @include modified.status-ring-self;
+  @include modified.status-rings;
 
   &[data-state='clickable'] {
     cursor: pointer;
