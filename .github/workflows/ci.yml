@@ -41,6 +41,8 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm run i18n:check
+      # Reads vendor/silverstripe/admin, installed by the composer step above.
+      - run: npm run check:icons
       # --coverage enforces the thresholds in vite.config.ts (statements 90,
       # branches 85, functions 90, lines 90) — without it the JS gate only
       # exists locally while PHP QA carries a CI-enforced 90% gate.
