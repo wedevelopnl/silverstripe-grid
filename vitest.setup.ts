@@ -61,10 +61,13 @@ const defaultConfig: SilverStripeConfig = {
 // wrapper bugs cannot slip past tests.
 const defaultI18n: SilverStripeI18n = {
   _t: (_key: string, fallback: string) => fallback,
+  // Deliberately reproduces the vendor replacer, falsy-value bug and all
+  // (`map[key] ? map[key] : match`), so a wrapper that delegates substitution
+  // to it fails here the same way it fails in the CMS. Our `t()` does not
+  // route through this — see the note in client/src/js/i18n/index.ts.
   inject: (str: string, params: Record<string, string | number>) =>
-    Object.entries(params).reduce(
-      (s, [key, value]) => s.replaceAll(`{${key}}`, String(value)),
-      str,
+    str.replace(/\{([A-Za-z0-9_]*)\}/g, (match, key: string) =>
+      params[key] ? String(params[key]) : match,
     ),
   addDictionary: () => {},
   currentLocale: 'en',

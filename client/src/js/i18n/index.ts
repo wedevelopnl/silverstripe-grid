@@ -1,9 +1,14 @@
 type Params = Record<string, string | number>
 
 /**
- * Local {placeholder} substitution — matches the regex used by
- * `window.ss.i18n.inject` (see vendor/silverstripe/admin/client/dist/js/i18n.js).
- * Used only in the fallback path when `ss.i18n` is not yet loaded.
+ * {placeholder} substitution, using the same regex as `window.ss.i18n.inject`
+ * (see vendor/silverstripe/admin/client/dist/js/i18n.js).
+ *
+ * We always substitute here rather than delegating to the vendor helper,
+ * because its replacer is `map[key] ? map[key] : match` — a falsy value leaves
+ * the placeholder in the output verbatim. `{count: 0}` therefore rendered a
+ * literal "{count} offset" in the column offset picker. Coercing through
+ * String() also keeps a numeric 0 intact.
  */
 const injectParams = (str: string, params: Params): string =>
   Object.entries(params).reduce((s, [k, v]) => s.replaceAll(`{${k}}`, String(v)), str)
@@ -21,5 +26,5 @@ export const t = (key: string, fallback: string, params?: Params): string => {
     return params ? injectParams(fallback, params) : fallback
   }
   const translated = window.ss.i18n._t(key, fallback)
-  return params ? window.ss.i18n.inject(translated, params) : translated
+  return params ? injectParams(translated, params) : translated
 }
