@@ -26,6 +26,13 @@
     text-decoration: none;
   }
 
+  // …and jQuery UI's `.ui-widget.ui-widget-content a` (0,2,1) outranks the
+  // `color` above (0,1,0), so the anchor variant needs its own qualified rule
+  // to stay black — same cause as the container titles, see `_typography.scss`.
+  .ssgrid-editor &:any-link {
+    color: var(--ssgrid-text-default);
+  }
+
   &[data-status='modified'] {
     border-color: var(--ssgrid-border-modified);
   }
