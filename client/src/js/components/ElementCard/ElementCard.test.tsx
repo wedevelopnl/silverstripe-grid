@@ -1,7 +1,9 @@
 import { useSortable } from '@dnd-kit/sortable'
-import { screen } from '@testing-library/react'
+import { act, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSimpleElement } from '@/testing/factories'
+import { mockResizeObserver } from '@/testing/mockResizeObserver'
 import { mockFetchSuccess } from '@/testing/mockFetch'
 import { renderWithProviders } from '@/testing/renderWithProviders'
 
@@ -28,6 +30,70 @@ afterEach(() => {
 })
 
 describe('EditableElementCard', () => {
+  describe('when the column is too narrow for the icon row', () => {
+    // The header sits in a column the author sizes freely. Below ~300px the
+    // six-icon row crushed the title to zero width and spilled past the card
+    // edge, so the actions fold into the overflow menu instead.
+    function renderAtWidth(width: number) {
+      mockFetchSuccess({})
+      const observer = mockResizeObserver()
+      const element = createSimpleElement({ title: 'My Content Block' })
+      const view = renderWithProviders(<EditableElementCard element={element} />)
+      act(() => observer.resize(width))
+      return { ...view, restore: observer.restore }
+    }
+
+    it('shows the icon row while the header has room', () => {
+      const { restore } = renderAtWidth(600)
+
+      expect(screen.getByTestId('element-toolbar')).toBeInTheDocument()
+      expect(screen.getByTestId('element-action-archive')).toBeInTheDocument()
+      restore()
+    })
+
+    it('folds the icon row away once the header is cramped', () => {
+      const { restore } = renderAtWidth(200)
+
+      expect(screen.queryByTestId('element-toolbar')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('element-action-archive')).not.toBeInTheDocument()
+      expect(screen.getByTestId('actions-menu-trigger')).toBeInTheDocument()
+      restore()
+    })
+
+    it('keeps every action reachable from the menu when folded', async () => {
+      const user = userEvent.setup()
+      const { restore } = renderAtWidth(200)
+
+      await user.click(screen.getByTestId('actions-menu-trigger'))
+
+      // Nothing is dropped on the way into the menu — same set, new presentation.
+      const items = screen.getAllByRole('menuitem').map((item) => item.textContent)
+      expect(items).toEqual([
+        'View history',
+        'Duplicate',
+        'Open in a new tab',
+        'Edit',
+        'Archive',
+        'Duplicate to…',
+      ])
+      restore()
+    })
+
+    it('restores the icon row when the column is widened again', () => {
+      mockFetchSuccess({})
+      const observer = mockResizeObserver()
+      const element = createSimpleElement({ title: 'My Content Block' })
+      renderWithProviders(<EditableElementCard element={element} />)
+
+      act(() => observer.resize(200))
+      expect(screen.queryByTestId('element-toolbar')).not.toBeInTheDocument()
+
+      act(() => observer.resize(600))
+      expect(screen.getByTestId('element-toolbar')).toBeInTheDocument()
+      observer.restore()
+    })
+  })
+
   it('renders element title', () => {
     mockFetchSuccess({})
 

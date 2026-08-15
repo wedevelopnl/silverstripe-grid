@@ -136,7 +136,7 @@ describe('ElementActions', () => {
     expect(screen.getByTestId('actions-menu-trigger')).toBeInTheDocument()
   })
 
-  it('surfaces duplicate, duplicate-to and archive in the kebab-only overflow menu', async () => {
+  it('surfaces the whole permitted action set in the kebab-only overflow menu', async () => {
     const user = userEvent.setup()
     mockFetchSuccess({})
 
@@ -146,13 +146,20 @@ describe('ElementActions', () => {
 
     await user.click(screen.getByTestId('actions-menu-trigger'))
 
-    // All three permitted actions appear in the overflow menu. Dropping any of
-    // the spread guards in `kebabActions` would silently omit one.
+    // `kebabOnly` is a change of presentation, not of capability: the menu
+    // offers exactly what the icon row would, in the same order. This used to
+    // carry only duplicate/duplicate-to/archive, which was survivable for
+    // columns (their title links to the edit form) but would have silently
+    // dropped history, open and edit from any element card folded by width.
     const menu = screen.getByRole('menu')
-    expect(screen.getByText('Duplicate', { selector: '[role="menuitem"]' })).toBeInTheDocument()
-    expect(screen.getByText(/duplicate to/i)).toBeInTheDocument()
-    expect(screen.getByText('Archive', { selector: '[role="menuitem"]' })).toBeInTheDocument()
-    expect(menu.querySelectorAll('[role="menuitem"]')).toHaveLength(3)
+    expect([...menu.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual([
+      'View history',
+      'Duplicate',
+      'Open in a new tab',
+      'Edit',
+      'Archive',
+      'Duplicate to…',
+    ])
   })
 
   it('omits archive from the kebab-only menu when the element cannot be deleted', async () => {
