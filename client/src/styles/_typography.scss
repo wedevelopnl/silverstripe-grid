@@ -6,7 +6,12 @@
 // The truncating block title. Callers supply their own `flex`/`margin`, since
 // a section <h3> and a column <span> sit in different layouts.
 @mixin block-title {
-  min-width: 0;
+  // A flex item with `min-width: 0` shrinks all the way to nothing, which is
+  // how header titles were disappearing entirely in cramped columns instead of
+  // truncating. Floor it so the title always keeps enough room to show a few
+  // characters and an ellipsis — losing the tail of a name is recoverable,
+  // losing the whole name is not.
+  min-width: 4rem;
   overflow: hidden;
   color: var(--ssgrid-text-default);
   font-size: var(--ssgrid-font-size-body);

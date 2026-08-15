@@ -52,6 +52,14 @@
 
   &__header {
     display: flex;
+
+    // A column can be narrower than the header's own furniture: at a 4/12 span
+    // in a slim CMS panel there is under 70px of content box, less than the
+    // drag handle, type chip and kebab need between them. Folding the action
+    // row into the menu cannot rescue that, and a title floor makes it worse —
+    // so let the row wrap and the card grow taller rather than spill its
+    // contents past the card edge.
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--ssgrid-space-2);
     padding: var(--ssgrid-space-4);
