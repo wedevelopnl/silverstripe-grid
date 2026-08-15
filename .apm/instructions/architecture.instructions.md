@@ -44,7 +44,8 @@ client/src/js/types/  # Valibot schemas, TypeScript types
 client/src/js/utils/  # Frontend utility functions
 client/src/js/testing/ # Test infrastructure (factories, helpers, mocks)
 client/src/js/i18n/   # Internationalization utilities
-client/src/styles/    # SCSS styles
+client/src/styles/    # SCSS styles (_tokens + _fonts + _typography are the shared layer)
+client/fonts/         # Self-hosted Poppins woff2 subsets + OFL licence; copied to client/dist/fonts/ at build
 client/dist/          # Vite build output (exposed, created by build)
 scripts/              # Build scripts (i18n collection, parity checks)
 phpstan/stubs/        # PHPStan stubs (e.g. AdminController.stub)
