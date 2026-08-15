@@ -40,6 +40,56 @@
   --ssgrid-color-overlay-brand-10: rgb(79 57 246 / 10%);
 
   // ---------------------------------------------------------------------------
+  // Primitives — typography
+  // ---------------------------------------------------------------------------
+
+  // Poppins is loaded by _fonts.scss. The fallbacks are the SilverStripe admin
+  // stack, so the editor degrades into the surrounding CMS chrome rather than
+  // into Times if the woff2 fails to load.
+  --ssgrid-font-family:
+    'Poppins', -apple-system, blinkmacsystemfont, 'Segoe UI', roboto, 'Helvetica Neue', arial,
+    sans-serif;
+
+  // The design uses exactly two sizes: 16px for the one page-level heading
+  // ("Grid area") and 14px for literally everything else.
+  --ssgrid-font-size-heading: 16px;
+  --ssgrid-font-size-body: 14px;
+
+  // Not in the Figma. The CMS form fields the editor contributes (override
+  // table, width picker) need a step below body for table chrome.
+  --ssgrid-font-size-caption: 11px;
+  --ssgrid-font-weight-regular: 400;
+  --ssgrid-font-weight-medium: 500;
+  --ssgrid-font-weight-semibold: 600;
+
+  // 125% — every label, title and control in the design. 162.5% — the one
+  // relaxed measure, used only for the element card's summary paragraph.
+  --ssgrid-line-height-tight: 1.25;
+  --ssgrid-line-height-relaxed: 1.625;
+
+  // ---------------------------------------------------------------------------
+  // Primitives — space
+  // ---------------------------------------------------------------------------
+
+  // A strict 4px scale; the design uses no value off it. `-3` is reserved for
+  // the icon-toolbar rhythm (the Figma spaces action icons 12px apart while
+  // every other cluster uses 8px), so don't collapse it into `-2`/`-4`.
+  --ssgrid-space-1: 4px;
+  --ssgrid-space-2: 8px;
+  --ssgrid-space-3: 12px;
+  --ssgrid-space-4: 16px;
+
+  // ---------------------------------------------------------------------------
+  // Primitives — control sizes
+  // ---------------------------------------------------------------------------
+
+  --ssgrid-size-icon: 16px; // bare toolbar glyph / icon button hit box
+  --ssgrid-size-chip: 24px; // type-icon chip, column "+" insert square
+  --ssgrid-size-control: 32px; // dashed "Add row / section / block" buttons
+  --ssgrid-size-field: 40px; // width & offset dropdowns, viewport tabs
+  --ssgrid-size-dot: 8px; // modified dot, viewport-override dot, gutter ring
+
+  // ---------------------------------------------------------------------------
   // Primitives — radius
   // ---------------------------------------------------------------------------
 

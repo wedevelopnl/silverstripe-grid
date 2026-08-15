@@ -1,16 +1,42 @@
 /// <reference types="vitest/config" />
 
+import { cpSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
-import { defineConfig, esmExternalRequirePlugin } from 'vite'
+import { defineConfig, esmExternalRequirePlugin, type Plugin } from 'vite'
 import dts from 'vite-plugin-dts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+/**
+ * Copy the self-hosted Poppins subsets into the built bundle.
+ *
+ * They deliberately bypass Vite's asset pipeline: `build.lib` inlines every
+ * `url()` it can resolve as a base64 data URI (and ignores `assetsInlineLimit`
+ * while doing it), which tripled the stylesheet and defeated `unicode-range`
+ * — an inlined @font-face is fetched whether or not the page uses a character
+ * from its subset. So `_fonts.scss` points at `../fonts/…`, a path that does
+ * not exist relative to the SCSS source; Vite logs that it "didn't resolve at
+ * build time" and emits the URL verbatim, which is what we want. This plugin
+ * then puts real files where that URL lands, next to `dist/styles/`.
+ */
+function copyFonts(): Plugin {
+  return {
+    name: 'ssgrid-copy-fonts',
+    apply: 'build',
+    closeBundle() {
+      cpSync(resolve(__dirname, 'client/fonts'), resolve(__dirname, 'client/dist/fonts'), {
+        recursive: true,
+      })
+    },
+  }
+}
+
 export default defineConfig({
   plugins: [
     react(),
+    copyFonts(),
     dts({
       include: ['client/src/js/types/**/*.ts'],
       exclude: ['client/src/js/types/silverstripe.d.ts'],
