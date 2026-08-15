@@ -222,27 +222,25 @@ describe('EditableElementCard', () => {
     })
   })
 
-  describe('modified indicator', () => {
-    it('renders the modified indicator with its label when status is modified', () => {
+  describe('modified badge', () => {
+    it('renders the modified badge when status is modified', () => {
       mockFetchSuccess({})
 
       const element = createSimpleElement({ status: 'modified' })
 
       renderWithProviders(<EditableElementCard element={element} />)
 
-      const indicator = screen.getByTestId('element-card-modified-indicator')
-      expect(indicator).toBeInTheDocument()
-      expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
+      expect(screen.getByTestId('element-card-modified-badge')).toHaveTextContent('Modified')
     })
 
-    it('does not render the modified indicator when status is not modified', () => {
+    it('does not render the modified badge when status is not modified', () => {
       mockFetchSuccess({})
 
       const element = createSimpleElement({ status: 'published' })
 
       renderWithProviders(<EditableElementCard element={element} />)
 
-      expect(screen.queryByTestId('element-card-modified-indicator')).toBeNull()
+      expect(screen.queryByTestId('element-card-modified-badge')).toBeNull()
     })
   })
 
@@ -383,22 +381,20 @@ describe('ReadonlyElementCard', () => {
     expect(screen.getByTestId('element-card').tagName).toBe('DIV')
   })
 
-  it('renders the modified indicator with its label when status is modified', () => {
+  it('renders the modified badge when status is modified', () => {
     const element = createSimpleElement({ status: 'modified' })
 
     renderWithProviders(<ReadonlyElementCard element={element} />)
 
-    const indicator = screen.getByTestId('element-card-modified-indicator')
-    expect(indicator).toBeInTheDocument()
-    expect(indicator).toHaveAttribute('aria-label', 'Has unpublished changes')
+    expect(screen.getByTestId('element-card-modified-badge')).toHaveTextContent('Modified')
   })
 
-  it('does not render the modified indicator when status is not modified', () => {
+  it('does not render the modified badge when status is not modified', () => {
     const element = createSimpleElement({ status: 'published' })
 
     renderWithProviders(<ReadonlyElementCard element={element} />)
 
-    expect(screen.queryByTestId('element-card-modified-indicator')).toBeNull()
+    expect(screen.queryByTestId('element-card-modified-badge')).toBeNull()
   })
 
   it('renders the summary line when a non-empty value is provided', () => {

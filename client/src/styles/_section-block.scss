@@ -2,6 +2,7 @@
 // muted surface with a status-aware border. The header is a single flat flex
 // row; the title flexes to fill so the actions kebab lands at the right edge.
 
+@use './modified';
 @use './typography';
 
 .ssgrid-section {
@@ -17,9 +18,7 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 400px;
 
-  &[data-status='modified'] {
-    border-color: var(--ssgrid-border-modified);
-  }
+  @include modified.status-rings;
 
   &[data-collapsed] > :not(.ssgrid-section__header) {
     display: none;
@@ -35,7 +34,10 @@
     @include typography.block-title;
     @include typography.block-title-link;
 
-    flex: 1 1 auto;
+    // Shrinks to truncate, but never grows: the status marks that follow
+    // must sit beside the title, not be pushed to the far edge. The action
+    // toolbar claims the leftover space via its own `margin-left: auto`.
+    flex: 0 1 auto;
     margin: 0;
   }
 

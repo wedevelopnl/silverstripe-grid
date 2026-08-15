@@ -4,6 +4,7 @@ import ColumnChrome from './ColumnChrome'
 
 const baseProps = {
   status: 'published' as const,
+  hasModifiedDescendant: false,
   title: 'Sidebar',
   icon: 'font-icon-block-content',
   isCollapsed: false,
@@ -79,15 +80,39 @@ describe('ColumnChrome', () => {
     expect(screen.getByTestId('column-title')).toHaveTextContent('Sidebar')
   })
 
-  it('renders the modified indicator when status is modified', () => {
+  it('renders the badge, not the dot, when the element itself is modified', () => {
     render(<ColumnChrome {...baseProps} status="modified" />)
 
+    expect(screen.getByTestId('column-modified-badge')).toBeInTheDocument()
+    expect(screen.queryByTestId('column-modified-indicator')).not.toBeInTheDocument()
+  })
+
+  it('renders the dot, not the badge, when only a descendant is modified', () => {
+    render(<ColumnChrome {...baseProps} status="published" hasModifiedDescendant={true} />)
+
+    expect(screen.getByTestId('column-modified-indicator')).toBeInTheDocument()
+    expect(screen.queryByTestId('column-modified-badge')).not.toBeInTheDocument()
+  })
+
+  it('renders both marks when the element and a descendant are modified', () => {
+    render(<ColumnChrome {...baseProps} status="modified" hasModifiedDescendant={true} />)
+
+    expect(screen.getByTestId('column-modified-badge')).toBeInTheDocument()
     expect(screen.getByTestId('column-modified-indicator')).toBeInTheDocument()
   })
 
-  it('does not render the modified indicator when status is published', () => {
+  it('sets data-descendant-status only when a descendant is modified', () => {
+    const { rerender } = render(<ColumnChrome {...baseProps} />)
+    expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-descendant-status')
+
+    rerender(<ColumnChrome {...baseProps} hasModifiedDescendant={true} />)
+    expect(screen.getByTestId('column-block')).toHaveAttribute('data-descendant-status', 'modified')
+  })
+
+  it('renders neither mark when nothing is modified', () => {
     render(<ColumnChrome {...baseProps} status="published" />)
 
+    expect(screen.queryByTestId('column-modified-badge')).not.toBeInTheDocument()
     expect(screen.queryByTestId('column-modified-indicator')).not.toBeInTheDocument()
   })
 

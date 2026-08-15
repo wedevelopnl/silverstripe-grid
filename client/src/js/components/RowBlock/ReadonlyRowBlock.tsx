@@ -3,6 +3,7 @@ import ReadonlyColumnBlock from '@/components/ColumnBlock/ReadonlyColumnBlock'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import type { RowNode } from '@/types/elements'
 import { getColumnCount, getOffsetStrategy } from '@/utils/gridAdapter'
+import { hasModifiedDescendant } from '@/utils/modifiedStatus'
 import RowChrome from './RowChrome'
 
 interface ReadonlyRowBlockProps {
@@ -17,6 +18,7 @@ const ReadonlyRowBlock = memo(function ReadonlyRowBlockComponent({ row }: Readon
   return (
     <RowChrome
       status={status}
+      hasModifiedDescendant={hasModifiedDescendant(row)}
       title={row.title}
       isCollapsed={isCollapsed}
       onToggle={onToggle}

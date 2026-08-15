@@ -5,6 +5,7 @@ import { useElementCollapse } from '@/hooks/useElementCollapse'
 import { useViewportContext } from '@/hooks/ViewportContext'
 import { t } from '@/i18n'
 import type { ColumnNode } from '@/types/elements'
+import { hasModifiedDescendant } from '@/utils/modifiedStatus'
 import { resolveViewportSettings } from '@/utils/gridAdapter'
 import { buildColumnStyle } from './buildColumnStyle'
 import ColumnChrome from './ColumnChrome'
@@ -27,6 +28,7 @@ const ReadonlyColumnBlock = memo(function ReadonlyColumnBlockComponent({
   return (
     <ColumnChrome
       status={column.status}
+      hasModifiedDescendant={hasModifiedDescendant(column)}
       title={column.title}
       icon={column.blockSchema.icon}
       isCollapsed={isCollapsed}

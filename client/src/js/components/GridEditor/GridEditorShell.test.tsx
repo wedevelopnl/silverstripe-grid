@@ -42,7 +42,7 @@ describe('GridEditorShell', () => {
       screen.getByTestId('canvas-child'),
     )
     expect(screen.getByTestId('viewport-switcher')).toBeInTheDocument()
-    expect(screen.getByTestId('grid-editor-canvas')).not.toHaveAttribute('data-status')
+    expect(screen.getByTestId('grid-editor-canvas')).not.toHaveAttribute('data-descendant-status')
   })
 
   it('flags the canvas modified when any section is modified', () => {
@@ -65,7 +65,10 @@ describe('GridEditorShell', () => {
         <div />
       </GridEditorShell>,
     )
-    expect(screen.getByTestId('grid-editor-canvas')).toHaveAttribute('data-status', 'modified')
+    expect(screen.getByTestId('grid-editor-canvas')).toHaveAttribute(
+      'data-descendant-status',
+      'modified',
+    )
   })
 
   it('renders the error notice with the interpolated message when status is error', () => {

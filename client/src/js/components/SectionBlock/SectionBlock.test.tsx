@@ -1,9 +1,14 @@
 import { useSortable } from '@dnd-kit/sortable'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useDragContext } from '@/hooks/useDragAndDrop'
-import { createSectionNode } from '@/testing/factories'
+import {
+  createColumnNode,
+  createRowNode,
+  createSectionNode,
+  createSimpleElement,
+} from '@/testing/factories'
 import { mockFetchSuccess } from '@/testing/mockFetch'
 import { createCollapseStateStub, renderWithProviders } from '@/testing/renderWithProviders'
 
@@ -220,25 +225,65 @@ describe('EditableSectionBlock', () => {
     })
   })
 
-  describe('modified indicator', () => {
-    it('renders an accessible modified indicator when the section is modified', () => {
+  describe('modified marks', () => {
+    it('badges the section when the section itself is modified', () => {
       mockFetchSuccess({})
 
       const section = createSectionNode({ status: 'modified' })
 
       renderWithProviders(<EditableSectionBlock section={section} />)
 
-      expect(screen.getByRole('img', { name: 'Has unpublished changes' })).toBeInTheDocument()
+      expect(screen.getByTestId('section-modified-badge')).toHaveTextContent('Modified')
+      expect(
+        within(screen.getByTestId('section-header')).queryByRole('img', {
+          name: 'Contains unpublished changes',
+        }),
+      ).not.toBeInTheDocument()
     })
 
-    it('omits the modified indicator when the section is not modified', () => {
+    // The case the roll-up exists for: nothing about the section itself
+    // changed, but a block three levels down did.
+    it('dots the section when only a nested block is modified', () => {
+      mockFetchSuccess({})
+
+      const section = createSectionNode({
+        status: 'published',
+        children: [
+          createRowNode({
+            children: [
+              createColumnNode({ children: [createSimpleElement({ status: 'modified' })] }),
+            ],
+          }),
+        ],
+      })
+
+      renderWithProviders(<EditableSectionBlock section={section} />)
+
+      expect(
+        within(screen.getByTestId('section-header')).getByRole('img', {
+          name: 'Contains unpublished changes',
+        }),
+      ).toBeInTheDocument()
+      expect(screen.queryByTestId('section-modified-badge')).not.toBeInTheDocument()
+      expect(screen.getByTestId('section-block')).toHaveAttribute(
+        'data-descendant-status',
+        'modified',
+      )
+    })
+
+    it('omits both marks when nothing in the section is modified', () => {
       mockFetchSuccess({})
 
       const section = createSectionNode({ status: 'published' })
 
       renderWithProviders(<EditableSectionBlock section={section} />)
 
-      expect(screen.queryByRole('img', { name: 'Has unpublished changes' })).not.toBeInTheDocument()
+      expect(screen.queryByTestId('section-modified-badge')).not.toBeInTheDocument()
+      expect(
+        within(screen.getByTestId('section-header')).queryByRole('img', {
+          name: 'Contains unpublished changes',
+        }),
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -325,14 +370,35 @@ describe('ReadonlySectionBlock', () => {
     expect(screen.getByTestId('section-block')).toHaveAttribute('data-collapsed', '')
   })
 
-  it('renders an accessible modified indicator when a readonly section is modified', () => {
+  it('badges a readonly section that is itself modified', () => {
     mockFetchSuccess({})
 
     const section = createSectionNode({ status: 'modified' })
 
     renderWithProviders(<ReadonlySectionBlock section={section} />)
 
-    expect(screen.getByRole('img', { name: 'Has unpublished changes' })).toBeInTheDocument()
+    expect(screen.getByTestId('section-modified-badge')).toHaveTextContent('Modified')
+  })
+
+  it('dots a readonly section when only a nested block is modified', () => {
+    mockFetchSuccess({})
+
+    const section = createSectionNode({
+      status: 'published',
+      children: [
+        createRowNode({
+          children: [createColumnNode({ children: [createSimpleElement({ status: 'modified' })] })],
+        }),
+      ],
+    })
+
+    renderWithProviders(<ReadonlySectionBlock section={section} />)
+
+    expect(
+      within(screen.getByTestId('section-header')).getByRole('img', {
+        name: 'Contains unpublished changes',
+      }),
+    ).toBeInTheDocument()
   })
 
   it('omits the modified indicator when a readonly section is not modified', () => {
@@ -342,7 +408,9 @@ describe('ReadonlySectionBlock', () => {
 
     renderWithProviders(<ReadonlySectionBlock section={section} />)
 
-    expect(screen.queryByRole('img', { name: 'Has unpublished changes' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('img', { name: 'Contains unpublished changes' }),
+    ).not.toBeInTheDocument()
   })
 
   it('renders no drag handle or add-child buttons', () => {

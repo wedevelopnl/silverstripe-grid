@@ -4,6 +4,7 @@ import SectionChrome from './SectionChrome'
 
 const baseProps = {
   status: 'published' as const,
+  hasModifiedDescendant: false,
   title: 'Hero Section',
   isCollapsed: false,
   onToggle: vi.fn(),
@@ -64,15 +65,42 @@ describe('SectionChrome', () => {
     expect(screen.getByTestId('section-title')).toHaveTextContent('Hero Section')
   })
 
-  it('renders the modified indicator when status is modified', () => {
+  it('renders the badge, not the dot, when the element itself is modified', () => {
     render(<SectionChrome {...baseProps} status="modified" />)
 
+    expect(screen.getByTestId('section-modified-badge')).toBeInTheDocument()
+    expect(screen.queryByTestId('section-modified-indicator')).not.toBeInTheDocument()
+  })
+
+  it('renders the dot, not the badge, when only a descendant is modified', () => {
+    render(<SectionChrome {...baseProps} status="published" hasModifiedDescendant={true} />)
+
+    expect(screen.getByTestId('section-modified-indicator')).toBeInTheDocument()
+    expect(screen.queryByTestId('section-modified-badge')).not.toBeInTheDocument()
+  })
+
+  it('renders both marks when the element and a descendant are modified', () => {
+    render(<SectionChrome {...baseProps} status="modified" hasModifiedDescendant={true} />)
+
+    expect(screen.getByTestId('section-modified-badge')).toBeInTheDocument()
     expect(screen.getByTestId('section-modified-indicator')).toBeInTheDocument()
   })
 
-  it('does not render the modified indicator when status is published', () => {
+  it('sets data-descendant-status only when a descendant is modified', () => {
+    const { rerender } = render(<SectionChrome {...baseProps} />)
+    expect(screen.getByTestId('section-block')).not.toHaveAttribute('data-descendant-status')
+
+    rerender(<SectionChrome {...baseProps} hasModifiedDescendant={true} />)
+    expect(screen.getByTestId('section-block')).toHaveAttribute(
+      'data-descendant-status',
+      'modified',
+    )
+  })
+
+  it('renders neither mark when nothing is modified', () => {
     render(<SectionChrome {...baseProps} status="published" />)
 
+    expect(screen.queryByTestId('section-modified-badge')).not.toBeInTheDocument()
     expect(screen.queryByTestId('section-modified-indicator')).not.toBeInTheDocument()
   })
 

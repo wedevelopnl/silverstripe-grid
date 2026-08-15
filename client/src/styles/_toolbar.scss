@@ -1,6 +1,7 @@
 // Shared editor chrome: the 16px icon-only buttons used in every block toolbar
-// (drag handle, collapse toggle, actions kebab) and the modified-status dot.
-// State lives on data-attributes (set by React); structure/look lives here.
+// (drag handle, collapse toggle, actions kebab). State lives on data-attributes
+// (set by React); structure/look lives here. The modified-status marks live in
+// `_modified.scss`.
 
 .ssgrid-icon-button {
   display: inline-flex;
@@ -49,13 +50,4 @@
   &--drag:hover:not(:disabled) > .ssgrid-icon-button__glyph {
     opacity: 1;
   }
-}
-
-// Orange disc shown in a block header when the element has unpublished changes.
-.ssgrid-modified-dot {
-  flex: 0 0 auto;
-  width: var(--ssgrid-size-dot);
-  height: var(--ssgrid-size-dot);
-  border-radius: 50%;
-  background: var(--ssgrid-color-modified-500);
 }

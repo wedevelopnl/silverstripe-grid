@@ -379,7 +379,10 @@ describe('GridEditor', () => {
         expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
       })
 
-      expect(screen.getByTestId('grid-editor-canvas')).toHaveAttribute('data-status', 'modified')
+      expect(screen.getByTestId('grid-editor-canvas')).toHaveAttribute(
+        'data-descendant-status',
+        'modified',
+      )
     })
 
     it('leaves the canvas status unset when every section is published', async () => {
@@ -401,7 +404,7 @@ describe('GridEditor', () => {
         expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
       })
 
-      expect(screen.getByTestId('grid-editor-canvas')).not.toHaveAttribute('data-status')
+      expect(screen.getByTestId('grid-editor-canvas')).not.toHaveAttribute('data-descendant-status')
     })
   })
 

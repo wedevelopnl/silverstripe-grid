@@ -26,16 +26,18 @@ describe('ElementCardChrome', () => {
     expect(screen.getByTestId('element-card').tagName).toBe('DIV')
   })
 
-  it('renders the modified indicator when status is modified', () => {
+  // A block is a leaf, so it only ever carries the self mark — the "contains a
+  // change" dot belongs to containers.
+  it('renders the modified badge when status is modified', () => {
     render(<ElementCardChrome status="modified" icon="font-icon-block-content" title="Block" />)
 
-    expect(screen.getByTestId('element-card-modified-indicator')).toBeInTheDocument()
+    expect(screen.getByTestId('element-card-modified-badge')).toBeInTheDocument()
   })
 
-  it('does not render the modified indicator when status is published', () => {
+  it('does not render the modified badge when status is published', () => {
     render(<ElementCardChrome status="published" icon="font-icon-block-content" title="Block" />)
 
-    expect(screen.queryByTestId('element-card-modified-indicator')).toBeNull()
+    expect(screen.queryByTestId('element-card-modified-badge')).toBeNull()
   })
 
   it('renders the leading and trailing slots when provided', () => {
