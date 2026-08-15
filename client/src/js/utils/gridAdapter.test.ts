@@ -3,6 +3,8 @@ import { viewportKey } from '@/testing/factories'
 import type { AdapterConfig } from '@/types/adapter'
 import type { GridSettings } from '@/types/elements'
 import {
+  formatOffsetLabel,
+  formatWidthLabel,
   getColumnCount,
   getDefaultViewport,
   getOffsetOptions,
@@ -52,8 +54,8 @@ describe('getWidthOptions', () => {
   it('generates options from 1 to columnCount plus hidden', () => {
     const options = getWidthOptions()
     expect(options).toHaveLength(13) // 12 widths + hidden
-    expect(options[0]).toEqual({ value: 1, label: '1/12' })
-    expect(options[11]).toEqual({ value: 12, label: '12/12' })
+    expect(options[0]).toEqual({ value: 1, label: '1 column' })
+    expect(options[11]).toEqual({ value: 12, label: '12 columns' })
     expect(options[12]).toEqual({ value: 'hidden', label: 'hidden' })
   })
 })
@@ -62,14 +64,14 @@ describe('getOffsetOptions', () => {
   it('generates options from 0 to columnCount - 1 when no width given', () => {
     const options = getOffsetOptions()
     expect(options).toHaveLength(12) // 0 to 11
-    expect(options[0]).toEqual({ value: 0, label: 'none' })
-    expect(options[1]).toEqual({ value: 1, label: '+1' })
+    expect(options[0]).toEqual({ value: 0, label: '0 offset' })
+    expect(options[1]).toEqual({ value: 1, label: '1 offset' })
   })
 
   it('limits max offset based on current width', () => {
     const options = getOffsetOptions(10)
     expect(options).toHaveLength(3) // 0, 1, 2
-    expect(options[2]).toEqual({ value: 2, label: '+2' })
+    expect(options[2]).toEqual({ value: 2, label: '2 offset' })
   })
 })
 
@@ -95,5 +97,29 @@ describe('resolveViewportSettings', () => {
       offset: 0,
       visible: true,
     })
+  })
+})
+
+describe('formatWidthLabel()', () => {
+  it('uses the singular for a one-column span', () => {
+    expect(formatWidthLabel(1)).toBe('1 column')
+  })
+
+  it('uses the plural for every wider span', () => {
+    expect(formatWidthLabel(2)).toBe('2 columns')
+    expect(formatWidthLabel(12)).toBe('12 columns')
+  })
+})
+
+describe('formatOffsetLabel()', () => {
+  it('labels a zero offset rather than calling it "none"', () => {
+    // The design reads "0 offset", so the empty case stays in the same shape as
+    // every other value instead of becoming a special word.
+    expect(formatOffsetLabel(0)).toBe('0 offset')
+  })
+
+  it('does not pluralise, since offset is an attribute and not a count', () => {
+    expect(formatOffsetLabel(1)).toBe('1 offset')
+    expect(formatOffsetLabel(5)).toBe('5 offset')
   })
 })

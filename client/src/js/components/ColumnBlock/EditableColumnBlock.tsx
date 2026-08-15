@@ -16,6 +16,8 @@ import { t } from '@/i18n'
 import type { ColumnNode, ViewportSettings } from '@/types/elements'
 import type { NodeKey } from '@/types/identity'
 import {
+  formatOffsetLabel,
+  formatWidthLabel,
   getColumnCount,
   getDefaultViewport,
   getOffsetOptions,
@@ -93,17 +95,14 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
   const offsetOptions = getOffsetOptions(settings.width)
 
   const widthLabel = settings.visible
-    ? `${settings.width}/${columnCount}`
+    ? formatWidthLabel(settings.width)
     : t('WeDevelopGrid.GridSettings.HIDDEN', 'hidden')
 
   // 'hidden' here is the option sentinel value (matched in the change handlers),
   // NOT a display label, so it must stay the literal string.
   const widthSelectedValue = settings.visible ? settings.width : ('hidden' as const)
 
-  const offsetLabel =
-    settings.offset === 0
-      ? t('WeDevelopGrid.GridSettings.OFFSET_NONE', 'none')
-      : `+${settings.offset}`
+  const offsetLabel = formatOffsetLabel(settings.offset)
   const isOffsetDisabled = isPickerDisabled || settings.width === columnCount || !settings.visible
 
   const updateSettings = useCallback(
