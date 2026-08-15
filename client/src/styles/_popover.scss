@@ -69,6 +69,10 @@
   }
 
   &__label {
+    // Without this the label is a flex item at `min-width: auto`, so it refuses
+    // to shrink below its text and pushes the trigger wider than its column —
+    // the ellipsis above only engages once the box is allowed to get smaller.
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
