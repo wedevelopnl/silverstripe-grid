@@ -70,7 +70,13 @@ export default function RowChrome({
         {hasUnpublishedDescendant && <UnpublishedIndicator testId="row-unpublished-indicator" />}
         {columnCount > 0 && (
           <span className="ssgrid-row__meta" data-testid="row-column-count">
-            {t('WeDevelopGrid.RowBlock.COLUMN_COUNT', '{count} columns', { count: columnCount })}
+            {columnCount === 1
+              ? t('WeDevelopGrid.RowBlock.COLUMN_COUNT_ONE', '{count} column', {
+                  count: columnCount,
+                })
+              : t('WeDevelopGrid.RowBlock.COLUMN_COUNT_MANY', '{count} columns', {
+                  count: columnCount,
+                })}
           </span>
         )}
         {trailing}

@@ -114,6 +114,14 @@ describe('RowChrome', () => {
     expect(screen.getByTestId('row-column-count')).toHaveTextContent('3 columns')
   })
 
+  // Anchored: `toHaveTextContent` matches substrings, so a bare '1 column'
+  // would still pass against the '1 columns' this test exists to catch.
+  it('says "1 column", not "1 columns", for a single-column row', () => {
+    render(<RowChrome {...baseProps} columnCount={1} />)
+
+    expect(screen.getByTestId('row-column-count')).toHaveTextContent(/^1 column$/)
+  })
+
   it('omits the column-count meta when columnCount is 0', () => {
     render(<RowChrome {...baseProps} columnCount={0} />)
 
