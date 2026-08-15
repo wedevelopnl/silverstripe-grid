@@ -35,13 +35,33 @@ describe('t()', () => {
     expect(result).toBe('Opslaan')
   })
 
-  it('passes the _t result through ss.i18n.inject when params are provided', () => {
+  it('looks the key up via _t, then substitutes params itself', () => {
     mockT.mockReturnValue('Hallo {name}')
-    mockInject.mockReturnValue('Hallo Erik')
     const result = t('WeDevelopGrid.Test.GREETING', 'Hello {name}', { name: 'Erik' })
     expect(mockT).toHaveBeenCalledWith('WeDevelopGrid.Test.GREETING', 'Hello {name}')
-    expect(mockInject).toHaveBeenCalledWith('Hallo {name}', { name: 'Erik' })
     expect(result).toBe('Hallo Erik')
+  })
+
+  it('does not delegate substitution to ss.i18n.inject', () => {
+    // Vendor's replacer is `map[key] ? map[key] : match`, so any falsy value
+    // leaves the placeholder in the output. We keep the dictionary lookup but
+    // do the substitution ourselves — see the note in index.ts.
+    mockT.mockReturnValue('Hallo {name}')
+    t('WeDevelopGrid.Test.GREETING', 'Hello {name}', { name: 'Erik' })
+    expect(mockInject).not.toHaveBeenCalled()
+  })
+
+  it('substitutes a zero-valued param instead of leaving the placeholder', () => {
+    // The regression this guards: the column offset picker rendered a literal
+    // "{count} offset" for offset 0, because 0 is falsy to the vendor helper.
+    mockT.mockReturnValue('{count} offset')
+    expect(t('WeDevelopGrid.Test.OFFSET', '{count} offset', { count: 0 })).toBe('0 offset')
+  })
+
+  it('substitutes a zero-valued param on the no-CMS fallback path too', () => {
+    // biome-ignore lint/suspicious/noExplicitAny: test cleanup
+    delete (window as any).ss
+    expect(t('WeDevelopGrid.Test.OFFSET', '{count} offset', { count: 0 })).toBe('0 offset')
   })
 
   it('returns fallback verbatim when ss.i18n is unavailable and no params provided', () => {
