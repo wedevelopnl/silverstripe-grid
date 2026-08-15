@@ -78,12 +78,21 @@
 
   &__layout-settings {
     display: flex;
+    flex-wrap: wrap;
     align-items: stretch;
     gap: var(--ssgrid-space-4);
 
-    // Each picker wrapper takes an equal share of the row.
-    > * {
-      flex: 1 1 0;
+    // Each picker asks for 7rem and shares the surplus equally, so the two sit
+    // side by side whenever both fit. Below that the row wraps and each takes a
+    // full line; `min-width: 0` then lets a single picker shrink under its own
+    // basis rather than overflow a column narrower than 7rem.
+    // Named rather than `> *` on purpose: `.ssgrid-settings-picker` extends
+    // `%ssgrid-popover-anchor`, which sets `flex: 0 0 auto` at the same (0,1,0)
+    // specificity from a partial `bundle.scss` loads later — so source order
+    // handed the win to `0 0 auto` and the pickers could neither grow nor
+    // shrink. Qualifying with the parent reaches (0,2,0) and settles it.
+    > .ssgrid-settings-picker {
+      flex: 1 1 7rem;
       min-width: 0;
     }
   }
