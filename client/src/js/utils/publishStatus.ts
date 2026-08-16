@@ -18,14 +18,14 @@ export function isUnpublished(status: ElementStatus): boolean {
 /**
  * Whether anything *below* `node` is unpublished.
  *
- * The editor draws two marks: an element with its own unpublished work gets a
- * "Draft"/"Modified" pill, while an element that merely contains such work gets
- * the dot. Without this walk the second mark is impossible — an unpublished
- * block inside a collapsed section would be invisible until the editor expanded
- * it, which is exactly the state that gets missed before a publish.
+ * Drives the unpublished ring on containers, which fires for "at or below".
+ * Without this walk an unpublished block inside a collapsed section would be
+ * invisible until the editor expanded it, which is exactly the state that gets
+ * missed before a publish.
  *
  * The node's own status is deliberately ignored: callers already have it, and
- * conflating the two is what makes a single indicator ambiguous.
+ * they need the two facts apart to decide between the ring alone and the ring
+ * plus a "Draft"/"Modified" pill.
  */
 export function hasUnpublishedDescendant(node: ElementNode): boolean {
   if (!isContainerNode(node)) {

@@ -80,21 +80,21 @@ describe('ColumnChrome', () => {
     expect(screen.getByTestId('column-title')).toHaveTextContent('Sidebar')
   })
 
-  it('renders the badge, not the dot, when the element itself is modified', () => {
+  it('badges the element and adds no descendant note when only the element is modified', () => {
     render(<ColumnChrome {...baseProps} status="modified" />)
 
     expect(screen.getByTestId('column-status-badge')).toBeInTheDocument()
     expect(screen.queryByTestId('column-unpublished-indicator')).not.toBeInTheDocument()
   })
 
-  it('renders the dot, not the badge, when only a descendant is modified', () => {
+  it('announces the descendant, with no badge, when only a descendant is modified', () => {
     render(<ColumnChrome {...baseProps} status="published" hasUnpublishedDescendant={true} />)
 
     expect(screen.getByTestId('column-unpublished-indicator')).toBeInTheDocument()
     expect(screen.queryByTestId('column-status-badge')).not.toBeInTheDocument()
   })
 
-  it('renders both marks when the element and a descendant are modified', () => {
+  it('badges the element and announces the descendant when both are modified', () => {
     render(<ColumnChrome {...baseProps} status="modified" hasUnpublishedDescendant={true} />)
 
     expect(screen.getByTestId('column-status-badge')).toBeInTheDocument()

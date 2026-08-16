@@ -7,9 +7,10 @@ interface StatusBadgeProps {
 }
 
 /**
- * The pill marking an element that itself has unpublished work — as opposed to
- * {@link UnpublishedIndicator}'s dot, which says the work is somewhere *inside*
- * the element.
+ * The pill marking an element that itself has unpublished work. It is the only
+ * visible thing separating that from "the work is somewhere *inside* this
+ * element", since the unpublished ring fires for both: ring plus pill means
+ * this element, ring alone means below it.
  *
  * Draft and modified share one look because they call for the same action
  * (publish) and, in the CMS page tree, the same colour family; the label is what
