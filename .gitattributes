@@ -19,6 +19,7 @@
 /.vscode                 export-ignore
 
 # Dev and test directories
+/client/fonts            export-ignore
 /client/src              export-ignore
 /docs                    export-ignore
 /phpstan                 export-ignore

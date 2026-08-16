@@ -189,17 +189,14 @@
     opacity: 0.5;
   }
 
-  // Pushed to the trailing edge so the caret marks the button's full width as
-  // the hit target, rather than trailing the label at whatever width it lands.
   &__caret {
     flex: 0 0 auto;
-    margin-left: auto;
     opacity: 0.5;
   }
 
-  // Sized to its rows, not to the trigger: the trigger spans the panel like the
-  // CMS's other form fields, and a menu that wide would strand each row's count
-  // far from its label.
+  // Sized to its own rows and bounded at both ends: the trigger is shrink-to-fit
+  // and narrower than the menu needs, while an adapter free to declare labels of
+  // any length would otherwise stretch the menu arbitrarily wide.
   &__menu {
     @extend %ssgrid-popover-surface;
 

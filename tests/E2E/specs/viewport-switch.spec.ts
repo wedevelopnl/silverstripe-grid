@@ -9,6 +9,7 @@ import {
   widthLabel,
 } from '../helpers/adapter'
 import { loadFixture, resetFixtures } from '../helpers/fixtures'
+import { forceSplitViewMode } from '../helpers/preview'
 
 test.describe('Viewport picker — create and reset overrides', () => {
   test.afterAll(async ({ request }) => {
@@ -204,23 +205,44 @@ test.describe('Viewport picker — independent overrides and publish', () => {
 })
 
 test.describe('Viewport picker — narrow panels', () => {
+  // forceSplitViewMode needs a viewport wide enough for the CMS to offer split
+  // mode at all; the panel it produces is narrow regardless.
+  test.use({ viewport: { width: 1600, height: 900 } })
+
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
   })
 
-  // Split mode is the CMS's default and leaves the editor around 600px, the
-  // width the control has to survive without spilling the edit form sideways.
-  test('the control fits a split-mode panel without overflowing it', async ({ page }) => {
+  // The regression this guards: the old tab strip needed ~797px for Bootstrap's
+  // six viewports, overflowed the ~600px split-mode panel, and scrolled the
+  // whole edit form sideways. forceSplitViewMode is called rather than trusted
+  // to happen: whether the CMS opens in split mode depends on window width and
+  // on a persisted preference, and it asserts `.cms-container--split-mode`
+  // itself, so the panel this measures is the narrow one by construction.
+  test('the control fits a split-mode panel without scrolling the edit form', async ({ page }) => {
     const fixture = await loadFixture(page.request, 'element-tree')
 
-    await page.setViewportSize({ width: 1000, height: 900 })
     await page.goto(`/admin/pages/edit/show/${fixture.pageId}`)
     await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
 
-    const adapter = await readAdapterConfig(page)
-    const control = page.getByTestId('viewport-switcher')
+    await forceSplitViewMode(page)
 
-    const overflow = await control.evaluate((el) => el.scrollWidth - el.clientWidth)
+    const adapter = await readAdapterConfig(page)
+
+    // The premise itself is asserted: the control has to survive a panel around
+    // the ~600px the CMS gives it here, so if a future CMS ever hands the editor
+    // a full-width panel this must fail rather than quietly measure nothing.
+    const editorWidth = await page
+      .locator('.ssgrid-editor')
+      .evaluate((el) => el.getBoundingClientRect().width)
+    expect(editorWidth).toBeLessThan(700)
+
+    // The edit form's own scroll container — the element that scrolled sideways
+    // when the strip overflowed. The control itself is shrink-to-fit and would
+    // report zero overflow however wide its contents grew.
+    const scroller = page.locator('.cms-content-fields.panel--scrollable')
+    await expect(scroller).toHaveCount(1)
+    const overflow = await scroller.evaluate((el) => el.scrollWidth - el.clientWidth)
     expect(overflow).toBeLessThanOrEqual(0)
 
     await viewportTrigger(page).click()
