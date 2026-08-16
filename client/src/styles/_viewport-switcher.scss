@@ -3,6 +3,8 @@
 // The "reset overrides" button is a sibling of the strip (not nested), shown
 // only when at least one column carries a per-viewport override.
 
+@use './a11y';
+
 .ssgrid-viewport-switcher {
   display: flex;
   gap: var(--ssgrid-space-1);
@@ -73,14 +75,7 @@
   // Clipped, not `display: none` — a hidden element is dropped from the
   // accessible name, which is the whole point of this span.
   &__override-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+    @include a11y.visually-hidden;
   }
 
   &__reset {

@@ -18,3 +18,14 @@
     color: var(--ssgrid-text-danger);
   }
 }
+
+// A header that folds to the kebab alone (column headers always, element cards
+// under `NARROW_HEADER_WIDTH`) renders no toolbar to carry the auto margin —
+// `ElementActions` returns the bare menu — so the same claim has to be made by
+// the menu when it is the trailing item itself. Direct children only: the
+// overflow trigger inside a toolbar is a grandchild and must stay beside its
+// icon row, not be pushed off it.
+.ssgrid-column__toolbar > .ssgrid-actions-menu,
+.ssgrid-block__header > .ssgrid-actions-menu {
+  margin-left: auto;
+}

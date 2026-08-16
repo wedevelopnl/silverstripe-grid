@@ -9,9 +9,16 @@ type Params = Record<string, string | number>
  * the placeholder in the output verbatim. `{count: 0}` therefore rendered a
  * literal "{count} offset" in the column offset picker. Coercing through
  * String() also keeps a numeric 0 intact.
+ *
+ * The replacement is a function, not a string: values are author-supplied
+ * (element titles, server error messages) and `$$`, `$&`, `` $` `` and `$'` in
+ * a string replacement are substitution patterns, not literal text — a block
+ * titled "Q4 $$ report" would otherwise announce "Move Q4 $ report". A function
+ * replacer is exempt from that expansion, as the vendor's own regex+function
+ * form was.
  */
 const injectParams = (str: string, params: Params): string =>
-  Object.entries(params).reduce((s, [k, v]) => s.replaceAll(`{${k}}`, String(v)), str)
+  Object.entries(params).reduce((s, [k, v]) => s.replaceAll(`{${k}}`, () => String(v)), str)
 
 /**
  * Translate a key via SilverStripe's `window.ss.i18n`.

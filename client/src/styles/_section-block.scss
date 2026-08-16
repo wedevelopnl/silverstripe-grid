@@ -26,6 +26,10 @@
 
   &__header {
     display: flex;
+
+    // Wraps rather than spills once the title floor plus the status marks and
+    // the toolbar outgrow the header — see the note in `_row-block.scss`.
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--ssgrid-space-2);
   }

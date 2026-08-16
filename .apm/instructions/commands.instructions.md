@@ -25,10 +25,11 @@ applyTo: "**/*"
 | `npm run mutate` | JS mutation testing (Stryker) |
 | `npm run i18n:collect` | Collect JS i18n strings |
 | `npm run i18n:check` | Dry-run collect + parity check |
+| `npm run check:icons` | Fail on any `font-icon-*` class the admin font does not define |
 | `npm run test:e2e` | Run Playwright E2E tests |
 | `npm run test:e2e:ui` | Playwright with interactive UI |
 | `npm run test:e2e:debug` | Playwright in debug mode |
-| `npm run qa` | Full QA: lint + format:check + typecheck + test + i18n:check + vite build |
+| `npm run qa` | Full QA: lint + format:check + typecheck + test + i18n:check + check:icons + vite build |
 
 ## PHP (via Task — requires Docker)
 

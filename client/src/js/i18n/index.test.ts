@@ -64,6 +64,24 @@ describe('t()', () => {
     expect(t('WeDevelopGrid.Test.OFFSET', '{count} offset', { count: 0 })).toBe('0 offset')
   })
 
+  it.each([
+    ['$$', 'Move Q4 $$ report'],
+    ['$&', 'Move Q4 $& report'],
+    ["$'", "Move Q4 $' report"],
+    ['$`', 'Move Q4 $` report'],
+  ])(
+    'treats %s in a param value as literal text, not a substitution pattern',
+    (marker, expected) => {
+      // Element titles are author-supplied and reach t() as params. `$`-prefixed
+      // sequences are replacement patterns to String.replaceAll's string form,
+      // which would corrupt the label — "$&" alone re-emits "{title}".
+      mockT.mockReturnValue('Move {title}')
+      expect(t('WeDevelopGrid.Test.MOVE', 'Move {title}', { title: `Q4 ${marker} report` })).toBe(
+        expected,
+      )
+    },
+  )
+
   it('returns fallback verbatim when ss.i18n is unavailable and no params provided', () => {
     // biome-ignore lint/suspicious/noExplicitAny: test cleanup
     delete (window as any).ss

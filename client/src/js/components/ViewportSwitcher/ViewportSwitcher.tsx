@@ -9,15 +9,22 @@ import { getViewportIcon } from './viewportIcon'
 
 interface ViewportSwitcherProps {
   readonly readonly?: boolean
+  /**
+   * Archived version being viewed, when the host is the history viewer. The
+   * dots must describe the tree on screen, and the versioned tree lives under
+   * its own query key — omitting this would read the draft instead (and fetch
+   * it, since that entry need not be cached).
+   */
+  readonly version?: number
 }
 
-export default function ViewportSwitcher({ readonly = false }: ViewportSwitcherProps) {
+export default function ViewportSwitcher({ readonly = false, version }: ViewportSwitcherProps) {
   const viewports = getViewports()
   const { activeViewport, setActiveViewport } = useViewportContext()
   const { pageId, zone } = useGridEditorContext()
   // Reads the tree query's existing cache entry — no extra fetch. Drives the
   // per-tab dot marking which viewports columns actually deviate at.
-  const { byViewport } = useViewportOverrideCounts(pageId, zone)
+  const { byViewport } = useViewportOverrideCounts(pageId, zone, version)
   const reset = useResetOverridesAction()
 
   return (

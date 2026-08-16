@@ -3,7 +3,7 @@ import ReadonlyColumnBlock from '@/components/ColumnBlock/ReadonlyColumnBlock'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import type { RowNode } from '@/types/elements'
 import { getColumnCount, getOffsetStrategy } from '@/utils/gridAdapter'
-import { hasUnpublishedDescendant, isUnpublished } from '@/utils/publishStatus'
+import { hasUnpublishedDescendant } from '@/utils/publishStatus'
 import RowChrome from './RowChrome'
 
 interface ReadonlyRowBlockProps {

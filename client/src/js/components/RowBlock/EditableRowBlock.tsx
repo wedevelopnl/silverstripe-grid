@@ -12,7 +12,7 @@ import type { RowNode } from '@/types/elements'
 import type { NodeKey } from '@/types/identity'
 import { getColumnCount, getOffsetStrategy } from '@/utils/gridAdapter'
 import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
-import { hasUnpublishedDescendant, isUnpublished } from '@/utils/publishStatus'
+import { hasUnpublishedDescendant } from '@/utils/publishStatus'
 import RowChrome from './RowChrome'
 
 interface EditableRowBlockProps {

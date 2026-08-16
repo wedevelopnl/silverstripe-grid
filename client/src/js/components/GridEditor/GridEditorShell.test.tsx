@@ -1,7 +1,12 @@
 import { screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '@/api/errors'
-import { createSectionNode, createTreeApiResponse, resetIdCounter } from '@/testing/factories'
+import {
+  createRowNode,
+  createSectionNode,
+  createTreeApiResponse,
+  resetIdCounter,
+} from '@/testing/factories'
 import { renderWithProviders } from '@/testing/renderWithProviders'
 import type { TreeApiResponse } from '@/types/elements'
 import GridEditorShell, { type GridEditorStatus, resolveGridEditorStatus } from './GridEditorShell'
@@ -68,6 +73,60 @@ describe('GridEditorShell', () => {
       </GridEditorShell>,
     )
     expect(screen.getByTestId('grid-editor-canvas')).toHaveAttribute('data-descendant-unpublished')
+  })
+
+  it('flags the canvas when a published section holds unpublished work below it', () => {
+    // The reason the roll-up went deep: unpublished work inside a collapsed
+    // section is invisible until expanded, so the canvas has to carry the ring
+    // even though the section's own status is clean. Without this the shallow
+    // `sections.some((s) => isUnpublished(s.status))` check still passes every
+    // other test in this file.
+    resetIdCounter()
+    const section = createSectionNode({
+      id: 10,
+      parent: { type: 'page', id: 1 },
+      title: 'Hero',
+      status: 'published',
+      children: [createRowNode({ parent: { type: 'section', id: 10 }, status: 'draft' })],
+    })
+    renderWithProviders(
+      <GridEditorShell
+        pageId={1}
+        zone="main"
+        readonly={false}
+        status="ready"
+        error={null}
+        sections={[section]}
+      >
+        <div />
+      </GridEditorShell>,
+    )
+    expect(screen.getByTestId('grid-editor-canvas')).toHaveAttribute('data-descendant-unpublished')
+  })
+
+  it('leaves the canvas unflagged when the section and everything under it is published', () => {
+    resetIdCounter()
+    const section = createSectionNode({
+      id: 10,
+      parent: { type: 'page', id: 1 },
+      title: 'Hero',
+      status: 'published',
+    })
+    renderWithProviders(
+      <GridEditorShell
+        pageId={1}
+        zone="main"
+        readonly={false}
+        status="ready"
+        error={null}
+        sections={[section]}
+      >
+        <div />
+      </GridEditorShell>,
+    )
+    expect(screen.getByTestId('grid-editor-canvas')).not.toHaveAttribute(
+      'data-descendant-unpublished',
+    )
   })
 
   it('renders the error notice with the interpolated message when status is error', () => {

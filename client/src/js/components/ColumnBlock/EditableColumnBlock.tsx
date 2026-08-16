@@ -26,7 +26,7 @@ import {
   resolveViewportSettings,
 } from '@/utils/gridAdapter'
 import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
-import { hasUnpublishedDescendant, isUnpublished } from '@/utils/publishStatus'
+import { hasUnpublishedDescendant } from '@/utils/publishStatus'
 import { buildColumnStyle } from './buildColumnStyle'
 import ColumnChrome from './ColumnChrome'
 

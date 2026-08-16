@@ -10,7 +10,7 @@ import { t } from '@/i18n'
 import type { SectionNode } from '@/types/elements'
 import type { NodeKey } from '@/types/identity'
 import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
-import { hasUnpublishedDescendant, isUnpublished } from '@/utils/publishStatus'
+import { hasUnpublishedDescendant } from '@/utils/publishStatus'
 import SectionChrome from './SectionChrome'
 
 interface EditableSectionBlockProps {

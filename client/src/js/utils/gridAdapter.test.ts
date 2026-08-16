@@ -114,7 +114,6 @@ describe('formatWidthLabel()', () => {
 
 describe('formatOffsetLabel()', () => {
   function useStrategy(strategy: 'margin' | 'grid-placement') {
-    // biome-ignore lint/style/noNonNullAssertion: the suite stubs window.ss
     window.ss!.config.sections[0].gridAdapter!.offsetStrategy = strategy
   }
 

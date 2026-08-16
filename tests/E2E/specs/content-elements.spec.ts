@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { triggerElementAction } from '../helpers/actions'
 import { loadFixture, loadAndNavigate, resetFixtures } from '../helpers/fixtures'
 import { selectChosenValue } from '../helpers/forms'
 
@@ -75,7 +76,7 @@ test.describe('Content elements — add, edit, publish, render', () => {
 
     await test.step('Open the element edit form via the block toolbar', async () => {
       const firstCard = elementCards.first()
-      await firstCard.getByTestId('element-action-edit').click()
+      await triggerElementAction(firstCard, 'edit', 'Edit')
 
       // Should navigate to the element edit page via the page editor
       await expect(page).toHaveURL(
