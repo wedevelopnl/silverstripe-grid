@@ -46,7 +46,9 @@
       },
       "correctness": {
         "useExhaustiveDependencies": "warn",
-        "noUnusedVariables": "warn",
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error",
+        "noUnusedFunctionParameters": "error",
         "noNestedComponentDefinitions": "error"
       },
       "performance": {
