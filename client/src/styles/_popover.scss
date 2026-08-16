@@ -132,3 +132,70 @@
     }
   }
 }
+
+// --- Reset-overrides menu (trails the viewport tabs) --------------------------
+
+.ssgrid-viewport-reset {
+  @extend %ssgrid-popover-anchor;
+
+  align-items: center;
+
+  // Matches the tab height so the strip's own padding stays the only vertical
+  // rhythm; the tabs flex-grow around it, so it must not take a share.
+  &__trigger {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: var(--ssgrid-size-field);
+    height: var(--ssgrid-size-field);
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: var(--ssgrid-radius-sm);
+    color: var(--ssgrid-text-default);
+    font-size: var(--ssgrid-size-icon);
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover,
+    &[aria-expanded='true'] {
+      background: var(--ssgrid-surface-hover);
+      color: var(--ssgrid-text-brand);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--ssgrid-border-focus);
+      outline-offset: -2px;
+    }
+  }
+
+  &__menu {
+    @extend %ssgrid-popover-surface;
+
+    right: 0; // the trigger sits at the strip's trailing edge
+    min-width: 220px;
+  }
+
+  &__item {
+    @extend %ssgrid-popover-item;
+
+    // The label takes the slack so the counts sit flush right; without it they
+    // ragged-align under viewport names of differing length.
+    justify-content: space-between;
+  }
+
+  // Separates the aggregate from the per-viewport entries it subsumes.
+  &__item[data-scope='all'] {
+    margin-top: var(--ssgrid-space-1);
+    padding-top: var(--ssgrid-space-2);
+    border-top: 1px solid var(--ssgrid-border-default);
+    border-radius: 0;
+  }
+
+  &__item-count {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.5;
+  }
+}

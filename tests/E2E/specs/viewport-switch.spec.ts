@@ -5,6 +5,7 @@ import {
   readAdapterConfig,
   twoNonDefaultViewports,
   viewportButton,
+  viewportLabel,
   widthLabel,
 } from '../helpers/adapter'
 
@@ -26,8 +27,18 @@ test.describe('Viewport switcher — create and reset overrides', () => {
 
     const leftColumn = page.getByTestId('column-block').first()
     const leftBadge = leftColumn.getByTestId('column-badge')
-    const resetButton = page.getByTestId('reset-overrides-button')
+    const resetTrigger = page.getByTestId('viewport-reset-trigger')
+    const resetMenu = page.getByTestId('viewport-reset-dropdown')
     const confirmDialog = page.getByTestId('confirm-dialog')
+
+    /** Menu-item labels, in order, as the reset menu currently offers them. */
+    const openResetScopes = async (): Promise<string[]> => {
+      await resetTrigger.click()
+      await expect(resetMenu).toBeVisible()
+      return await resetMenu
+        .getByRole('menuitem')
+        .evaluateAll((items) => items.map((item) => item.textContent ?? ''))
+    }
 
     // Change a column's width via the badge listbox at a given viewport.
     const setBadgeWidth = async (label: string) => {
@@ -39,42 +50,64 @@ test.describe('Viewport switcher — create and reset overrides', () => {
       await expect(leftBadge).toHaveText(label)
     }
 
-    await test.step('no overrides — reset button is hidden', async () => {
-      await expect(resetButton).toBeHidden()
+    await test.step('no overrides — the reset menu is not offered at all', async () => {
+      await expect(resetTrigger).toBeHidden()
     })
 
     const halfWidth = widthLabel(Math.floor(adapter.columnCount / 2))
     const thirdWidth = widthLabel(Math.floor(adapter.columnCount / 3))
+    const labelA = viewportLabel(adapter, viewportA)
+    const labelB = viewportLabel(adapter, viewportB)
 
-    await test.step('creating an override at a non-default viewport shows "Reset viewport"', async () => {
+    await test.step('one overridden viewport is offered alone, with its column count', async () => {
       await activateViewport(page, viewportA)
       await setBadgeWidth(halfWidth)
 
-      await expect(resetButton).toBeVisible()
-      await expect(resetButton).toHaveText('Reset viewport')
+      await expect(resetTrigger).toBeVisible()
+      // No "all viewports" entry — it would clear exactly the same column.
+      expect(await openResetScopes()).toEqual([`${labelA}1`])
+      await page.keyboard.press('Escape')
     })
 
-    await test.step('switching to the default viewport flips the label to "Reset all"', async () => {
-      await activateViewport(page, adapter.defaultViewport)
-      await expect(resetButton).toHaveText('Reset all')
-    })
-
-    await test.step('adding a second override at another non-default viewport keeps "Reset all" from default', async () => {
+    await test.step('a second overridden viewport adds its own scope and the aggregate', async () => {
       await activateViewport(page, viewportB)
       await setBadgeWidth(thirdWidth)
 
-      await activateViewport(page, adapter.defaultViewport)
-      await expect(resetButton).toHaveText('Reset all')
+      expect(await openResetScopes()).toEqual([`${labelA}1`, `${labelB}1`, 'All viewports1'])
+      await page.keyboard.press('Escape')
     })
 
-    await test.step('"Reset all" clears every override and hides the reset button', async () => {
-      await resetButton.click()
+    await test.step('every scope stays reachable from the adapter default viewport', async () => {
+      // The control this replaced put "reset everything" behind this one tab
+      // and offered only the single-viewport reset from any other.
+      await activateViewport(page, adapter.defaultViewport)
+
+      expect(await openResetScopes()).toEqual([`${labelA}1`, `${labelB}1`, 'All viewports1'])
+      await page.keyboard.press('Escape')
+    })
+
+    await test.step('resetting one viewport leaves the other override standing', async () => {
+      await openResetScopes()
+      await resetMenu.getByRole('menuitem').filter({ hasText: labelA }).click()
       await expect(confirmDialog).toBeVisible()
       await confirmDialog.getByRole('button', { name: 'Reset', exact: true }).click()
 
-      await expect(resetButton).toBeHidden()
+      const fullWidth = widthLabel(adapter.columnCount)
+      await activateViewport(page, viewportA)
+      await expect(leftBadge).toHaveText(fullWidth)
+      await activateViewport(page, viewportB)
+      await expect(leftBadge).toHaveText(thirdWidth)
+    })
 
-      // Each previously-overridden viewport now shows the column default again.
+    await test.step('the last scope clears the rest and retires the menu', async () => {
+      // One viewport left overridden, so the menu is back to a single entry.
+      expect(await openResetScopes()).toEqual([`${labelB}1`])
+      await resetMenu.getByRole('menuitem').filter({ hasText: labelB }).click()
+      await expect(confirmDialog).toBeVisible()
+      await confirmDialog.getByRole('button', { name: 'Reset', exact: true }).click()
+
+      await expect(resetTrigger).toBeHidden()
+
       const fullWidth = widthLabel(adapter.columnCount)
       for (const key of [viewportA, viewportB]) {
         await activateViewport(page, key)

@@ -84,16 +84,19 @@
   "WeDevelopGrid.useArchiveAction.DIALOG_TITLE": "Confirm archive",
   "WeDevelopGrid.useDuplicateAction.ACTION_LABEL": "Duplicate",
   "WeDevelopGrid.useDuplicateToAction.ACTION_LABEL": "Duplicate to…",
+  "WeDevelopGrid.useResetOverridesAction.ALL_VIEWPORTS": "All viewports",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_MANY": "Reset all viewport overrides across {count} columns?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_ONE": "Reset all viewport overrides across {count} column?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_MANY": "Reset overrides for {count} columns on {viewport}?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_ONE": "Reset overrides for {count} column on {viewport}?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_TITLE_ALL": "Reset all overrides",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_TITLE_VIEWPORT": "Reset {viewport} overrides",
-  "WeDevelopGrid.useResetOverridesAction.RESET_ALL_LABEL": "Reset all",
-  "WeDevelopGrid.useResetOverridesAction.RESET_VIEWPORT_LABEL": "Reset viewport",
+  "WeDevelopGrid.ViewportResetMenu.ITEM_LABEL_MANY": "Reset {label}, {count} columns",
+  "WeDevelopGrid.ViewportResetMenu.ITEM_LABEL_ONE": "Reset {label}, {count} column",
+  "WeDevelopGrid.ViewportResetMenu.MENU_LABEL": "Reset overrides by viewport",
+  "WeDevelopGrid.ViewportResetMenu.RESET_CONFIRM_LABEL": "Reset",
+  "WeDevelopGrid.ViewportResetMenu.TRIGGER_LABEL": "Reset viewport overrides",
   "WeDevelopGrid.ViewportSwitcher.GROUP_LABEL": "Viewport size",
   "WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_MANY": "{count} columns override this viewport",
-  "WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_ONE": "{count} column overrides this viewport",
-  "WeDevelopGrid.ViewportSwitcher.RESET_CONFIRM_LABEL": "Reset"
+  "WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_ONE": "{count} column overrides this viewport"
 }

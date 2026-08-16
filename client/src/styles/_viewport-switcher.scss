@@ -1,7 +1,7 @@
 // Viewport switcher toolbar — Figma "Tabs" frame: a rounded page-washed strip
 // of aria-pressed toggle buttons, the active one lifted onto a white surface.
-// The "reset overrides" button is a sibling of the strip (not nested), shown
-// only when at least one column carries a per-viewport override.
+// The reset-overrides menu trails the tabs inside the same strip; its look
+// lives in `_popover.scss` beside the other two flyouts.
 
 @use './a11y';
 
@@ -78,26 +78,4 @@
     @include a11y.visually-hidden;
   }
 
-  &__reset {
-    margin-top: var(--ssgrid-space-2);
-    padding: 6px var(--ssgrid-space-3);
-    background: transparent;
-    border: 1px solid var(--ssgrid-border-default);
-    border-radius: var(--ssgrid-radius-sm);
-    color: var(--ssgrid-text-default);
-    font: inherit;
-    font-size: var(--ssgrid-font-size-body);
-    line-height: var(--ssgrid-line-height-tight);
-    cursor: pointer;
-
-    &:hover {
-      border-color: var(--ssgrid-border-focus);
-      color: var(--ssgrid-text-brand);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--ssgrid-border-focus);
-      outline-offset: 2px;
-    }
-  }
 }

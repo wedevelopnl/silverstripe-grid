@@ -133,7 +133,7 @@ test.describe('History view readonly grid', () => {
       await expect(historyGridEditor.getByTestId('add-child-append')).toHaveCount(0)
       await expect(historyGridEditor.getByTestId('add-child-empty')).toHaveCount(0)
       await expect(historyGridEditor.getByTestId('add-content-button')).toHaveCount(0)
-      await expect(historyGridEditor.getByTestId('reset-overrides-button')).toHaveCount(0)
+      await expect(historyGridEditor.getByTestId('viewport-reset-trigger')).toHaveCount(0)
       await expect(historyGridEditor.getByTestId('section-edit-link')).toHaveCount(0)
       await expect(historyGridEditor.getByTestId('row-edit-link')).toHaveCount(0)
       await expect(historyGridEditor.getByTestId('column-edit-link')).toHaveCount(0)
