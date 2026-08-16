@@ -25,6 +25,7 @@ function renderPicker(overrides: Partial<React.ComponentProps<typeof ViewportPic
   const props = {
     viewports: VIEWPORTS,
     activeViewport: 'md',
+    defaultViewport: 'md',
     onSelectViewport: vi.fn(),
     overrideCounts: { xs: 2 },
     resetOptions: RESET_OPTIONS,
@@ -63,6 +64,43 @@ describe('ViewportPicker', () => {
       screen
         .getByTestId('viewport-picker-trigger')
         .querySelector('.ssgrid-viewport-picker__override-dot'),
+    ).toBeNull()
+  })
+
+  it('marks which viewport is the adapter default', async () => {
+    // Editing at the default changes the layout everywhere; editing anywhere
+    // else records an override against it, so the two are not interchangeable.
+    const user = userEvent.setup()
+    renderPicker({ activeViewport: 'lg', defaultViewport: 'md' })
+
+    await user.click(screen.getByTestId('viewport-picker-trigger'))
+
+    const marked = within(dropdown())
+      .getAllByRole('menuitemradio')
+      .filter((row) => row.querySelector('.ssgrid-viewport-picker__default') !== null)
+    expect(marked).toHaveLength(1)
+    expect(marked[0]).toHaveAttribute('data-testid', 'viewport-picker-option-md')
+  })
+
+  it('marks the trigger when the default viewport is the one selected', () => {
+    renderPicker({ activeViewport: 'md', defaultViewport: 'md' })
+
+    expect(
+      screen
+        .getByTestId('viewport-picker-trigger')
+        .querySelector('.ssgrid-viewport-picker__default'),
+    ).not.toBeNull()
+  })
+
+  it('leaves the trigger unmarked while a non-default viewport is selected', () => {
+    // The marker says "you are editing the base layout" — it must not linger
+    // once the author has moved to a viewport where edits become overrides.
+    renderPicker({ activeViewport: 'lg', defaultViewport: 'md' })
+
+    expect(
+      screen
+        .getByTestId('viewport-picker-trigger')
+        .querySelector('.ssgrid-viewport-picker__default'),
     ).toBeNull()
   })
 

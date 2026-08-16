@@ -8,6 +8,12 @@ import { getViewportIcon } from './viewportIcon'
 interface ViewportPickerProps {
   readonly viewports: readonly ViewportConfig[]
   readonly activeViewport: string
+  /**
+   * The adapter's base viewport. Editing here changes the layout everywhere;
+   * editing anywhere else records an override against this one, so which
+   * viewport it is decides what a width change actually means.
+   */
+  readonly defaultViewport: string
   readonly onSelectViewport: (key: string) => void
   /** Columns overriding each viewport, keyed by viewport key. */
   readonly overrideCounts: Readonly<Record<string, number>>
@@ -36,6 +42,7 @@ type Entry =
 export default function ViewportPicker({
   viewports,
   activeViewport,
+  defaultViewport,
   onSelectViewport,
   overrideCounts,
   resetOptions,
@@ -116,6 +123,11 @@ export default function ViewportPicker({
         {nextUp !== undefined && (
           <span className="ssgrid-viewport-picker__range">{`<${nextUp.minWidth}`}</span>
         )}
+        {current.key === defaultViewport && (
+          <span className="ssgrid-viewport-picker__default">
+            {t('WeDevelopGrid.ViewportPicker.DEFAULT', 'Default')}
+          </span>
+        )}
         {anyOverrides && (
           <span className="ssgrid-viewport-picker__override-dot" aria-hidden="true" />
         )}
@@ -155,6 +167,11 @@ export default function ViewportPicker({
                     aria-hidden="true"
                   />
                   <span className="ssgrid-viewport-picker__item-label">{entry.viewport.label}</span>
+                  {entry.viewport.key === defaultViewport && (
+                    <span className="ssgrid-viewport-picker__default">
+                      {t('WeDevelopGrid.ViewportPicker.DEFAULT', 'Default')}
+                    </span>
+                  )}
                   {entry.overrides > 0 && (
                     <>
                       <span className="ssgrid-viewport-picker__override-dot" aria-hidden="true" />

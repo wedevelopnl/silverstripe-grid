@@ -93,6 +93,7 @@
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_ONE": "Overrides voor {count} kolom op {viewport} resetten?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_TITLE_ALL": "Alle overrides resetten",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_TITLE_VIEWPORT": "{viewport}-overrides resetten",
+  "WeDevelopGrid.ViewportPicker.DEFAULT": "Standaard",
   "WeDevelopGrid.ViewportPicker.GROUP_RESET": "Overrides resetten",
   "WeDevelopGrid.ViewportPicker.GROUP_VIEWPORT": "Viewport-formaat",
   "WeDevelopGrid.ViewportPicker.HAS_OVERRIDES_MANY": "{count} kolommen overschrijven deze viewport",

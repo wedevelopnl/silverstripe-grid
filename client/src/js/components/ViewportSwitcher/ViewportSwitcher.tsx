@@ -42,6 +42,7 @@ export default function ViewportSwitcher({ readonly = false, version }: Viewport
         viewports={viewports}
         // No explicit selection resolves to the adapter default.
         activeViewport={activeViewport ?? getDefaultViewport()}
+        defaultViewport={getDefaultViewport()}
         onSelectViewport={setActiveViewport}
         overrideCounts={byViewport}
         resetOptions={readonly ? [] : reset.options}
