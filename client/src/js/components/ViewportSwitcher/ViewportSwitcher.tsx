@@ -1,89 +1,63 @@
-import ViewportResetMenu from '@/components/ViewportResetMenu/ViewportResetMenu'
+import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog'
 import { useGridEditorContext } from '@/hooks/GridEditorContext'
 import { useViewportOverrideCounts } from '@/hooks/useElementTree'
+import { useResetOverridesAction } from '@/hooks/useResetOverridesAction'
 import { useViewportContext } from '@/hooks/ViewportContext'
 import { t } from '@/i18n'
-import { getViewports } from '@/utils/gridAdapter'
-import { getViewportIcon } from './viewportIcon'
+import { getDefaultViewport, getViewports } from '@/utils/gridAdapter'
+import ViewportPicker from './ViewportPicker'
 
 interface ViewportSwitcherProps {
   readonly readonly?: boolean
   /**
    * Archived version being viewed, when the host is the history viewer. The
-   * dots must describe the tree on screen, and the versioned tree lives under
-   * its own query key — omitting this would read the draft instead (and fetch
-   * it, since that entry need not be cached).
+   * override marks must describe the tree on screen, and the versioned tree
+   * lives under its own query key — omitting this would read the draft instead
+   * (and fetch it, since that entry need not be cached).
    */
   readonly version?: number
 }
 
+/**
+ * Viewport switching and override-resetting for the grid editor.
+ *
+ * Owns the data — which viewport is active, what each one overrides, which
+ * scopes can be reset — and the confirmation; {@link ViewportPicker} is the
+ * presentation. Kept as a wrapper rather than folded into the picker so the
+ * dialog has a host that outlives the popup, and so the editor has one place to
+ * mount viewport chrome.
+ */
 export default function ViewportSwitcher({ readonly = false, version }: ViewportSwitcherProps) {
   const viewports = getViewports()
   const { activeViewport, setActiveViewport } = useViewportContext()
   const { pageId, zone } = useGridEditorContext()
   // Reads the tree query's existing cache entry — no extra fetch. Drives the
-  // per-tab dot marking which viewports columns actually deviate at.
+  // dot marking which viewports columns actually deviate at.
   const { byViewport } = useViewportOverrideCounts(pageId, zone, version)
+  const reset = useResetOverridesAction()
 
   return (
-    <div
-      className="ssgrid-viewport-switcher"
-      role="toolbar"
-      aria-label={t('WeDevelopGrid.ViewportSwitcher.GROUP_LABEL', 'Viewport size')}
-      data-testid="viewport-switcher"
-    >
-      {viewports.map((viewport, index) => {
-        const isActive = viewport.key === activeViewport
-        // The Figma toolbar labels each viewport with its *upper* boundary
-        // ("<768") — i.e. the next viewport's min-width. The largest viewport
-        // has no upper bound and is left blank.
-        const next = viewports[index + 1]
-        const overrideCount = byViewport[viewport.key] ?? 0
-
-        return (
-          <button
-            key={viewport.key}
-            type="button"
-            className="ssgrid-viewport-switcher__button"
-            data-testid={`viewport-button-${viewport.key}`}
-            aria-pressed={isActive}
-            aria-disabled={isActive || undefined}
-            onClick={() => {
-              if (!isActive) {
-                setActiveViewport(viewport.key)
-              }
-            }}
-          >
-            <i
-              className={`ssgrid-viewport-switcher__icon ${getViewportIcon(viewport.minWidth)}`}
-              aria-hidden="true"
-            />
-            <span className="ssgrid-viewport-switcher__label">{viewport.label}</span>
-            {next !== undefined && (
-              <span className="ssgrid-viewport-switcher__range">{`<${next.minWidth}`}</span>
-            )}
-            {overrideCount > 0 && (
-              <>
-                <span className="ssgrid-viewport-switcher__override-dot" aria-hidden="true" />
-                <span className="ssgrid-viewport-switcher__override-label">
-                  {overrideCount === 1
-                    ? t(
-                        'WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_ONE',
-                        '{count} column overrides this viewport',
-                        { count: overrideCount },
-                      )
-                    : t(
-                        'WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_MANY',
-                        '{count} columns override this viewport',
-                        { count: overrideCount },
-                      )}
-                </span>
-              </>
-            )}
-          </button>
-        )
-      })}
-      {!readonly && <ViewportResetMenu />}
+    <div className="ssgrid-viewport-control" data-testid="viewport-switcher">
+      <ViewportPicker
+        viewports={viewports}
+        // No explicit selection resolves to the adapter default.
+        activeViewport={activeViewport ?? getDefaultViewport()}
+        onSelectViewport={setActiveViewport}
+        overrideCounts={byViewport}
+        resetOptions={readonly ? [] : reset.options}
+        onSelectReset={reset.requestReset}
+      />
+      {reset.dialog !== null && (
+        <ConfirmDialog
+          isOpen
+          title={reset.dialog.title}
+          message={reset.dialog.message}
+          confirmLabel={t('WeDevelopGrid.ViewportSwitcher.RESET_CONFIRM_LABEL', 'Reset')}
+          onConfirm={reset.onConfirm}
+          onCancel={reset.onCancel}
+          destructive
+        />
+      )}
     </div>
   )
 }

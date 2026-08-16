@@ -96,10 +96,24 @@ describe('useResetOverridesAction', () => {
 
       const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
 
-      expect(result.current.options).toEqual([
+      expect(result.current.options).toMatchObject([
         { viewport: 'xs', label: 'Extra small', count: 2 },
         { viewport: 'lg', label: 'Large', count: 1 },
         { viewport: null, label: 'All viewports', count: 3 },
+      ])
+    })
+
+    it('phrases each scope as a sentence for the menu row that shows only a number', () => {
+      // Both menus that render these read `actionLabel` for the accessible
+      // name; the visible row is "Large" and a bare "1" in two columns.
+      const { wrapper } = setupWithOverrides({ xs: 2, lg: 1 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+
+      expect(result.current.options.map((o) => o.actionLabel)).toEqual([
+        'Reset Extra small, 2 columns',
+        'Reset Large, 1 column',
+        'Reset All viewports, 3 columns',
       ])
     })
 
@@ -119,7 +133,7 @@ describe('useResetOverridesAction', () => {
 
       const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
 
-      expect(result.current.options).toEqual([{ viewport: 'lg', label: 'Large', count: 3 }])
+      expect(result.current.options).toMatchObject([{ viewport: 'lg', label: 'Large', count: 3 }])
     })
 
     it('counts a column once in the total however many viewports it overrides', () => {
@@ -138,16 +152,15 @@ describe('useResetOverridesAction', () => {
 
       const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
 
-      expect(result.current.options).toEqual([
+      expect(result.current.options).toMatchObject([
         { viewport: 'xs', label: 'Extra small', count: 1 },
         { viewport: 'lg', label: 'Large', count: 1 },
         { viewport: null, label: 'All viewports', count: 1 },
       ])
     })
 
-    // The defect this hook was reshaped for: scope used to be inferred from the
-    // selected tab, which put "reset everything" behind whichever viewport the
-    // adapter happened to call default and made it unreachable from any other.
+    // Scope must not track the selected viewport — "reset everything" has to
+    // stay reachable whichever layout the author is editing.
     it.each(['xs', 'md', 'xxl'])(
       'offers the same scopes regardless of the active viewport (%s)',
       (activeViewport) => {
@@ -155,7 +168,7 @@ describe('useResetOverridesAction', () => {
 
         const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
 
-        expect(result.current.options).toEqual([
+        expect(result.current.options).toMatchObject([
           { viewport: 'xs', label: 'Extra small', count: 2 },
           { viewport: 'lg', label: 'Large', count: 1 },
           { viewport: null, label: 'All viewports', count: 3 },
@@ -219,7 +232,12 @@ describe('useResetOverridesAction', () => {
       act(() => {
         // Only one viewport is overridden, so "all viewports" is not offered —
         // request the scope directly to reach the aggregate wording.
-        result.current.requestReset({ viewport: null, label: 'All viewports', count: 1 })
+        result.current.requestReset({
+          viewport: null,
+          label: 'All viewports',
+          count: 1,
+          actionLabel: 'Reset All viewports, 1 column',
+        })
       })
 
       expect(result.current.dialog?.message).toBe('Reset all viewport overrides across 1 column?')
@@ -285,7 +303,7 @@ describe('useResetOverridesAction', () => {
       expect(String(call[0])).not.toContain('viewport=')
     })
 
-    // The active tab used to decide the scope; it must now be inert.
+    // The selected viewport must not leak into the scope.
     it('sends the requested viewport even while another tab is active', async () => {
       mockFetchSuccess({})
       const { wrapper } = setupWithOverrides({ xs: 1, lg: 3 }, 'xs')

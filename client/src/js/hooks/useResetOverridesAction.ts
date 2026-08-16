@@ -12,6 +12,13 @@ export interface ResetScopeOption {
   readonly label: string
   /** Columns this reset would clear. */
   readonly count: number
+  /**
+   * The scope as a sentence ("Reset Large, 1 column"), for the accessible name
+   * of a menu item whose visible form is a name and a bare number in two
+   * columns — which would otherwise announce as "Large 1". Lives here so the
+   * standalone menu and the collapsed picker cannot word it differently.
+   */
+  readonly actionLabel: string
 }
 
 interface ResetDialog {
@@ -35,12 +42,9 @@ interface ResetOverridesState {
 /**
  * The reset-overrides actions, one per scope the page actually has work in.
  *
- * Scope is chosen explicitly by the caller rather than inferred from the
- * selected viewport. The previous shape had one button whose meaning flipped
- * between "this viewport" and "every viewport" depending on whether the active
- * tab happened to be the adapter's default — which put "reset everything"
- * behind a different tab on every adapter (`md` on Bootstrap, `sm` on Tailwind,
- * `desktop` on Bulma) and left no way to reach it from anywhere else.
+ * Scope is chosen explicitly by the caller, never inferred from the selected
+ * viewport: the active viewport says which layout is being edited, not which
+ * overrides the author means to clear.
  */
 export function useResetOverridesAction(): ResetOverridesState {
   const { pageId, zone } = useGridEditorContext()
@@ -59,7 +63,7 @@ export function useResetOverridesAction(): ResetOverridesState {
   // "All viewports" is offered only when it differs from the single entry above
   // it — with one overridden viewport the two would clear exactly the same
   // columns, and a menu that lists the same action twice reads as a mistake.
-  const options: readonly ResetScopeOption[] =
+  const scopes =
     perViewport.length > 1
       ? [
           ...perViewport,
@@ -70,6 +74,22 @@ export function useResetOverridesAction(): ResetOverridesState {
           },
         ]
       : perViewport
+
+  const options: readonly ResetScopeOption[] = scopes.map((scope) => ({
+    ...scope,
+    actionLabel:
+      scope.count === 1
+        ? t(
+            'WeDevelopGrid.useResetOverridesAction.ACTION_LABEL_ONE',
+            'Reset {label}, {count} column',
+            { label: scope.label, count: scope.count },
+          )
+        : t(
+            'WeDevelopGrid.useResetOverridesAction.ACTION_LABEL_MANY',
+            'Reset {label}, {count} columns',
+            { label: scope.label, count: scope.count },
+          ),
+  }))
 
   const dialog: ResetDialog | null =
     pending === null
