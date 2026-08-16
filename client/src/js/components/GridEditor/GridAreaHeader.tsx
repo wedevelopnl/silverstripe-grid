@@ -1,21 +1,31 @@
 import { useCallback } from 'react'
+import ViewportSwitcher from '@/components/ViewportSwitcher/ViewportSwitcher'
 import { useCollapse } from '@/hooks/useCollapseState'
 import { t } from '@/i18n'
 import type { SectionNode } from '@/types/elements'
 
 /**
- * The "Grid area" header strip from the Figma — a title plus a small toolbar of
- * area-level actions. The collapse/expand-all toggle is fully wired; `reset /
- * open / clear` are placeholders for actions the design mocked but the editor
- * doesn't expose yet (they render disabled rather than absent so the strip
- * matches the design and the wiring has an obvious home later).
+ * The header strip above the canvas: the viewport control on the left, a small
+ * toolbar of area-level actions on the right.
+ *
+ * Its "Grid area" title is present for assistive tech but not drawn — it names
+ * the region for anyone navigating this long CMS form by heading, while adding
+ * nothing a sighted author cannot already see.
+ *
+ * The collapse/expand-all toggle is fully wired; `reset / open / clear` are
+ * placeholders for actions the design mocked but the editor doesn't expose yet
+ * (they render disabled rather than absent so the strip matches the design and
+ * the wiring has an obvious home later).
  */
 export default function GridAreaHeader({
   sections,
   readonly,
+  version,
 }: {
   readonly sections: SectionNode[]
   readonly readonly: boolean
+  /** Archived version being viewed, forwarded to the viewport control. */
+  readonly version?: number
 }) {
   const { isCollapsed, toggle } = useCollapse()
 
@@ -43,6 +53,7 @@ export default function GridAreaHeader({
       <h1 className="ssgrid-editor__title">
         {t('WeDevelopGrid.GridEditor.AREA_TITLE', 'Grid area')}
       </h1>
+      <ViewportSwitcher readonly={readonly} version={version} />
       <div className="ssgrid-editor__header-actions">
         <button
           type="button"

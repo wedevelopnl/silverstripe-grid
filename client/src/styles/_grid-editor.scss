@@ -1,8 +1,10 @@
-// Editor shell — Figma "Frame 1": the viewport tabs, the "Grid area" header
-// row, then the outer canvas that holds the section list. The canvas border is
-// stateful: it turns unpublished-orange the moment anything inside has
-// unpublished changes (the design's "this area is being edited" cue), and is
-// otherwise the neutral 15%-black hairline.
+@use './a11y';
+
+// Editor shell — Figma "Frame 1": a header row carrying the viewport control
+// and the area-level actions, then the outer canvas that holds the section
+// list. The canvas border is stateful: it turns unpublished-orange the moment
+// anything inside has unpublished changes (the design's "this area is being
+// edited" cue), and is otherwise the neutral 15%-black hairline.
 
 // The CMS edit form wraps every field in a Bootstrap `.row` (`.form-group`)
 // whose negative `-.5 * --bs-gutter-x` inline margin is meant to be cancelled
@@ -35,7 +37,7 @@
   line-height: var(--ssgrid-line-height-tight);
   color: var(--ssgrid-text-default);
 
-  // --- "Grid area" header row -------------------------------------------------
+  // --- Header row: viewport control, then area-level actions -------------------
 
   &__header {
     display: flex;
@@ -43,19 +45,21 @@
     gap: var(--ssgrid-space-4);
   }
 
+  // Named for assistive tech only: it labels the region for heading navigation
+  // through a long CMS form, but tells a sighted author nothing the surrounding
+  // chrome does not.
   &__title {
-    flex: 1 1 auto;
-    margin: 0;
-    font-size: var(--ssgrid-font-size-heading);
-    font-weight: var(--ssgrid-font-weight-semibold);
-    line-height: var(--ssgrid-line-height-tight);
+    @include a11y.visually-hidden;
   }
 
+  // `auto` rather than a flex share: the actions are pushed to the far edge by
+  // their own margin, so nothing needs to stretch across the gap between them.
   &__header-actions {
     display: flex;
     flex: 0 0 auto;
     align-items: center;
     gap: var(--ssgrid-space-3);
+    margin-left: auto;
   }
 
   // --- Outer canvas -----------------------------------------------------------

@@ -143,12 +143,11 @@
 .ssgrid-viewport-picker {
   @extend %ssgrid-popover-anchor;
 
-  display: flex;
-  width: 100%;
-
+  // Sized to the current viewport's name, not to the header row: it shares that
+  // row with the area-level actions, which claim the far edge.
   &__trigger {
     display: inline-flex;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     align-items: center;
     gap: var(--ssgrid-space-2);
     min-height: var(--ssgrid-size-field);
@@ -207,7 +206,7 @@
     left: 0;
     width: max-content;
     min-width: 260px;
-    max-width: 100%;
+    max-width: 320px;
   }
 
   &__item {
