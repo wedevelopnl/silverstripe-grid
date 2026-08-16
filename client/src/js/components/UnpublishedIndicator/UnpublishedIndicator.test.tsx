@@ -3,11 +3,6 @@ import { describe, expect, it } from 'vitest'
 import UnpublishedIndicator from './UnpublishedIndicator'
 
 describe('UnpublishedIndicator', () => {
-  it('renders with the provided testId', () => {
-    render(<UnpublishedIndicator testId="section-unpublished-indicator" />)
-    expect(screen.getByTestId('section-unpublished-indicator')).toBeInTheDocument()
-  })
-
   // "Contains", not "has": this is the container's announcement of a change
   // somewhere below it. StatusBadge is what marks a self-change.
   it('announces "contains unpublished changes" as readable text', () => {

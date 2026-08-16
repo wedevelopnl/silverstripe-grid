@@ -159,17 +159,25 @@ await settle();
 | Selector | Element |
 |----------|---------|
 | `getByTestId('viewport-switcher')` | Viewport switching UI |
-| `getByTestId('viewport-button')` | Viewport button (has `aria-pressed`) |
+| `getByTestId('viewport-picker-trigger')` | The button naming the current viewport (has `data-viewport`) |
+| `getByTestId('viewport-picker-dropdown')` | The open menu (viewports + reset scopes) |
+| `getByTestId('viewport-picker-option-<key>')` | One viewport row, e.g. `viewport-picker-option-lg` |
 | `getByTestId('confirm-dialog')` | Archive/delete confirmation (has `[open]`) |
+
+Prefer the `activateViewport(page, key)` helper in `tests/E2E/helpers/adapter.ts` over
+driving the trigger and rows yourself — it no-ops when the viewport is already active.
 
 ### ARIA-based locators
 
 ```typescript
-// Viewport switcher group
+// Viewport group inside the open menu
 page.getByRole('group', { name: 'Viewport size' });
 
-// Specific viewport button
-page.getByRole('button', { name: 'Medium', exact: true });
+// A viewport row — role is menuitemradio, not button; reset scopes are menuitem
+page.getByRole('menuitemradio', { name: 'Medium', exact: true });
+
+// The trigger's accessible name carries the current viewport
+page.getByRole('button', { name: 'Viewport: Medium', exact: true });
 
 // Drag handle by element title
 page.locator('[data-testid="drag-handle"][aria-label="Move Row A1"]');

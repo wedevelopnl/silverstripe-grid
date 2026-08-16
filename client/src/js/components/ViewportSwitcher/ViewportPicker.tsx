@@ -68,8 +68,7 @@ export default function ViewportPicker({
   const popup = useRovingPopup({ itemCount: entries.length, seedIndex: activeIndex })
 
   const current = viewports[activeIndex]
-  const currentIndex = viewports.indexOf(current)
-  const nextUp = viewports[currentIndex + 1]
+  const nextUp = viewports[activeIndex + 1]
   const anyOverrides = Object.values(overrideCounts).some((count) => count > 0)
 
   function activate(entry: Entry) {

@@ -47,6 +47,26 @@ describe('ViewportPicker', () => {
     expect(trigger).toHaveAccessibleName('Viewport: Medium')
   })
 
+  it('names the upper bound of a viewport that has one', () => {
+    // 'md' runs up to where 'lg' starts, so the trigger states that ceiling.
+    renderPicker({ activeViewport: 'md' })
+
+    expect(
+      screen.getByTestId('viewport-picker-trigger').querySelector('.ssgrid-viewport-picker__range')
+        ?.textContent,
+    ).toBe('<992')
+  })
+
+  it('omits the range entirely on the widest viewport', () => {
+    // The last viewport has no next one; the chip must be absent rather than
+    // empty or reading '<undefined'.
+    renderPicker({ activeViewport: 'lg' })
+
+    expect(
+      screen.getByTestId('viewport-picker-trigger').querySelector('.ssgrid-viewport-picker__range'),
+    ).toBeNull()
+  })
+
   it('marks the trigger when anything on the page is overridden', () => {
     renderPicker()
 
@@ -127,6 +147,18 @@ describe('ViewportPicker', () => {
     const rows = within(dropdown()).getAllByRole('menuitemradio')
     expect(rows[0]).toHaveTextContent('2 columns override this viewport')
     expect(rows[1]).not.toHaveTextContent('override this viewport')
+  })
+
+  it('announces a lone overriding column in the singular', async () => {
+    const user = userEvent.setup()
+    renderPicker({ overrideCounts: { xs: 1 } })
+
+    await user.click(screen.getByTestId('viewport-picker-trigger'))
+
+    const rows = within(dropdown()).getAllByRole('menuitemradio')
+    expect(rows[0].querySelector('.ssgrid-viewport-picker__override-label')?.textContent).toBe(
+      '1 column overrides this viewport',
+    )
   })
 
   it('carries the reset scopes in the same menu, as plain items not radios', async () => {

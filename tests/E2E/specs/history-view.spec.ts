@@ -1,4 +1,10 @@
 import { expect, test } from '@playwright/test'
+import {
+  activateViewport,
+  firstNonDefaultViewport,
+  readAdapterConfig,
+  widthLabel,
+} from '../helpers/adapter'
 import { loadFixture, resetFixtures } from '../helpers/fixtures'
 
 /**
@@ -77,7 +83,30 @@ test.describe('History view readonly grid', () => {
         timeout: 10_000,
       })
 
-      // --- User action #3: publish the updated draft (creates the second live version) ---
+      // --- User action #3: override a column width on a non-default viewport ---
+      // Without a real override the readonly assertion further down is vacuous:
+      // the picker would offer no reset scope to withhold in the first place.
+      const adapter = await readAdapterConfig(page)
+      await activateViewport(page, firstNonDefaultViewport(adapter))
+
+      const badge = editGridEditor.getByTestId('column-badge').first()
+      const halfWidth = widthLabel(Math.floor(adapter.columnCount / 2))
+      await badge.click()
+      await editGridEditor
+        .getByTestId('column-badge-listbox')
+        .getByRole('option', { name: halfWidth, exact: true })
+        .click()
+      await expect(badge).toHaveText(halfWidth)
+
+      // Positive control: in the editable view the override DOES surface a reset
+      // scope. That is the thing readonly mode has to withhold.
+      await editGridEditor.getByTestId('viewport-picker-trigger').click()
+      await expect(
+        editGridEditor.getByTestId('viewport-picker-dropdown').getByRole('menuitem').first(),
+      ).toBeVisible()
+      await page.keyboard.press('Escape')
+
+      // --- User action #4: publish the updated draft (creates the second live version) ---
       // Loose match — see the note on action #1 above.
       await page.getByRole('button', { name: /Publish/ }).click()
       await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({
@@ -122,7 +151,9 @@ test.describe('History view readonly grid', () => {
 
       // The viewport picker is mounted in readonly mode so admins can inspect
       // the grid at each responsive breakpoint while browsing history — but it
-      // offers only viewports, never a reset scope.
+      // offers only viewports, never a reset scope. The version on screen does
+      // carry an override (created above), so a scope exists to be withheld:
+      // drop the readonly gate and these menuitems appear.
       await expect(historyGridEditor.getByTestId('viewport-switcher')).toBeVisible()
       await historyGridEditor.getByTestId('viewport-picker-trigger').click()
       const historyPicker = historyGridEditor.getByTestId('viewport-picker-dropdown')
