@@ -5,6 +5,7 @@ import {
   readAdapterConfig,
   twoNonDefaultViewports,
   viewportButton,
+  widthLabel,
 } from '../helpers/adapter'
 
 test.describe('Viewport switcher — create and reset overrides', () => {
@@ -29,21 +30,21 @@ test.describe('Viewport switcher — create and reset overrides', () => {
     const confirmDialog = page.getByTestId('confirm-dialog')
 
     // Change a column's width via the badge listbox at a given viewport.
-    const setBadgeWidth = async (widthOverTotal: string) => {
+    const setBadgeWidth = async (label: string) => {
       await leftBadge.click()
       await leftColumn
         .getByTestId('column-badge-listbox')
-        .getByRole('option', { name: widthOverTotal })
+        .getByRole('option', { name: label, exact: true })
         .click()
-      await expect(leftBadge).toHaveText(widthOverTotal)
+      await expect(leftBadge).toHaveText(label)
     }
 
     await test.step('no overrides — reset button is hidden', async () => {
       await expect(resetButton).toBeHidden()
     })
 
-    const halfWidth = `${Math.floor(adapter.columnCount / 2)}/${adapter.columnCount}`
-    const thirdWidth = `${Math.floor(adapter.columnCount / 3)}/${adapter.columnCount}`
+    const halfWidth = widthLabel(Math.floor(adapter.columnCount / 2))
+    const thirdWidth = widthLabel(Math.floor(adapter.columnCount / 3))
 
     await test.step('creating an override at a non-default viewport shows "Reset viewport"', async () => {
       await activateViewport(page, viewportA)
@@ -74,7 +75,7 @@ test.describe('Viewport switcher — create and reset overrides', () => {
       await expect(resetButton).toBeHidden()
 
       // Each previously-overridden viewport now shows the column default again.
-      const fullWidth = `${adapter.columnCount}/${adapter.columnCount}`
+      const fullWidth = widthLabel(adapter.columnCount)
       for (const key of [viewportA, viewportB]) {
         await activateViewport(page, key)
         await expect(leftBadge).toHaveText(fullWidth)
@@ -103,9 +104,9 @@ test.describe('Viewport switcher — independent overrides and publish', () => {
     const leftColumn = page.getByTestId('column-block').first()
     const leftBadge = leftColumn.getByTestId('column-badge')
 
-    const fullWidth = `${adapter.columnCount}/${adapter.columnCount}`
-    const halfWidth = `${Math.floor(adapter.columnCount / 2)}/${adapter.columnCount}`
-    const thirdWidth = `${Math.floor(adapter.columnCount / 3)}/${adapter.columnCount}`
+    const fullWidth = widthLabel(adapter.columnCount)
+    const halfWidth = widthLabel(Math.floor(adapter.columnCount / 2))
+    const thirdWidth = widthLabel(Math.floor(adapter.columnCount / 3))
 
     await test.step('switcher renders one button per adapter viewport with the default viewport active', async () => {
       await expect(viewportButtons).toHaveCount(adapter.viewports.length)
@@ -131,7 +132,7 @@ test.describe('Viewport switcher — independent overrides and publish', () => {
       await leftBadge.click()
       await leftColumn
         .getByTestId('column-badge-listbox')
-        .getByRole('option', { name: halfWidth })
+        .getByRole('option', { name: halfWidth, exact: true })
         .click()
       await expect(leftBadge).toHaveText(halfWidth)
 
@@ -147,7 +148,7 @@ test.describe('Viewport switcher — independent overrides and publish', () => {
       await leftBadge.click()
       await leftColumn
         .getByTestId('column-badge-listbox')
-        .getByRole('option', { name: thirdWidth })
+        .getByRole('option', { name: thirdWidth, exact: true })
         .click()
       await expect(leftBadge).toHaveText(thirdWidth)
 

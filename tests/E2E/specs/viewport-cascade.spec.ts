@@ -4,6 +4,7 @@ import {
   readAdapterConfig,
   twoNonDefaultViewports,
   viewportButton,
+  widthLabel,
 } from '../helpers/adapter'
 import { loadFixture, resetFixtures } from '../helpers/fixtures'
 
@@ -39,8 +40,8 @@ test.describe('Viewport override resolution (isolated strategy)', () => {
     const column = page.getByTestId('column-block').filter({ hasText: 'Cascade Column' })
     const badge = column.getByTestId('column-badge')
 
-    const fullWidth = `${adapter.columnCount}/${adapter.columnCount}`
-    const overrideWidth = `${Math.floor(adapter.columnCount / 2)}/${adapter.columnCount}`
+    const fullWidth = widthLabel(adapter.columnCount)
+    const overrideWidth = widthLabel(Math.floor(adapter.columnCount / 2))
 
     await test.step('default viewport is active on first load, badge shows the stored default', async () => {
       await expect(viewportButton(page, adapter.defaultViewport)).toHaveAttribute(
@@ -55,7 +56,7 @@ test.describe('Viewport override resolution (isolated strategy)', () => {
       await badge.click()
       await column
         .getByTestId('column-badge-listbox')
-        .getByRole('option', { name: overrideWidth })
+        .getByRole('option', { name: overrideWidth, exact: true })
         .click()
       await expect(badge).toHaveText(overrideWidth)
     })

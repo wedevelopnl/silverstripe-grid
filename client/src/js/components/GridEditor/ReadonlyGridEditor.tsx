@@ -25,6 +25,7 @@ export default function ReadonlyGridEditor({ pageId, zone, version }: ReadonlyGr
       status={status}
       error={error}
       sections={sections}
+      version={version}
     >
       {sections.length > 0 ? (
         sections.map((section) => <ReadonlySectionBlock key={section.nodeKey} section={section} />)

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { triggerElementAction } from '../helpers/actions'
 import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
 import { enablePreviewMode, waitForPreviewRefresh } from '../helpers/preview'
 
@@ -19,8 +20,9 @@ test.describe('Archive element actions', () => {
         .getByTestId('element-card')
         .filter({ hasText: 'Content Element X' })
 
-      // Archive via the block toolbar's archive button
-      await elementX.getByTestId('element-action-archive').click()
+      // Archive via the block toolbar's archive button — or the overflow menu,
+      // if this card's column is narrow enough to have folded the icon row.
+      await triggerElementAction(elementX, 'archive', 'Archive')
 
       // Confirm the archive dialog — scope to the one that's open
       const dialog = page.locator('dialog[open][data-testid="confirm-dialog"]')

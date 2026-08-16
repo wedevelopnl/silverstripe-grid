@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test'
 import { loadFixture, resetFixtures } from '../helpers/fixtures'
-import { activateViewport, firstNonDefaultViewport, readAdapterConfig } from '../helpers/adapter'
+import {
+  activateViewport,
+  firstNonDefaultViewport,
+  readAdapterConfig,
+  widthLabel,
+} from '../helpers/adapter'
 
 test.describe('Grid settings tab', () => {
   test.afterAll(async ({ request }) => {
@@ -91,7 +96,7 @@ test.describe('Grid settings tab', () => {
       const badge = leftColumn.getByTestId('column-badge')
 
       // Default viewport is active on first load — badge shows default width.
-      await expect(badge).toHaveText(`${adapter.columnCount}/${adapter.columnCount}`)
+      await expect(badge).toHaveText(widthLabel(adapter.columnCount))
 
       // Switch to the override viewport — badge shows hidden state.
       await activateViewport(page, overrideKey)

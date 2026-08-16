@@ -29,6 +29,13 @@
 
   &__header {
     display: flex;
+
+    // The title floor (4rem) plus the status pill, the column-count meta and a
+    // six-icon toolbar exceed a row header narrower than ~480px, and a row has
+    // neither the element card's action fold nor anything else left to shed —
+    // so wrap and grow taller rather than spill past the card edge. Same
+    // trade-off, same last resort as `_element-card.scss`.
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--ssgrid-space-2);
   }

@@ -43,6 +43,8 @@ interface GridEditorShellProps {
   readonly status: GridEditorStatus
   readonly error: ApiError | null
   readonly sections: SectionNode[]
+  /** Set by the history viewer; identifies which tree the chrome describes. */
+  readonly version?: number
   readonly children: ReactNode
 }
 
@@ -60,6 +62,7 @@ export default function GridEditorShell({
   status,
   error,
   sections,
+  version,
   children,
 }: GridEditorShellProps) {
   const collapseState = useCollapseState(pageId)
@@ -98,7 +101,7 @@ export default function GridEditorShell({
         <GridEditorProvider value={gridEditorContextValue}>
           <CollapseContext.Provider value={collapseState}>
             <div className="ssgrid-editor">
-              <ViewportSwitcher readonly={readonly} />
+              <ViewportSwitcher readonly={readonly} version={version} />
               <GridAreaHeader sections={sections} readonly={readonly} />
               <div
                 className="ssgrid-editor__canvas"

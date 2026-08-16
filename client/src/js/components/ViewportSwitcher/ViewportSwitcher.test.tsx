@@ -321,6 +321,36 @@ describe('ViewportSwitcher', () => {
     expect(screen.queryByTestId('reset-overrides-button')).not.toBeInTheDocument()
   })
 
+  it('reads the versioned tree, not the draft, when a version is given', () => {
+    mockFetchSuccess({})
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    })
+
+    // The history viewer renders an archived version while the draft may have
+    // moved on. Seed the two keys with overrides at different viewports: the
+    // dots must follow the version on screen, not whatever the draft holds.
+    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg'))
+    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main', 7), treeWithOverride('xl'))
+
+    renderWithProviders(<ViewportSwitcher readonly version={7} />, {
+      viewport: 'md',
+      queryClient,
+    })
+
+    expect(
+      screen
+        .getByTestId('viewport-button-xl')
+        .querySelector('.ssgrid-viewport-switcher__override-dot'),
+    ).not.toBeNull()
+    expect(
+      screen
+        .getByTestId('viewport-button-lg')
+        .querySelector('.ssgrid-viewport-switcher__override-dot'),
+    ).toBeNull()
+  })
+
   it('exposes an accessible toolbar name', () => {
     mockFetchSuccess({})
 

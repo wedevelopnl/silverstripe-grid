@@ -44,6 +44,18 @@ export function readAdapterConfig(page: Page): Promise<AdapterConfig> {
 }
 
 /**
+ * The editor's label for a column width.
+ *
+ * Mirrors `formatWidthLabel` in `client/src/js/utils/gridAdapter.ts`: the badge
+ * and its listbox options label a width by its span ("6 columns"), not as the
+ * "6/12" fraction the editor used to show. Kept adapter-agnostic — callers pass
+ * a span derived from `columnCount`.
+ */
+export function widthLabel(span: number): string {
+  return span === 1 ? `${span} column` : `${span} columns`
+}
+
+/**
  * Locator for the viewport switcher button corresponding to `key`.
  *
  * Relies on the composed testid `viewport-button-<key>` emitted by
