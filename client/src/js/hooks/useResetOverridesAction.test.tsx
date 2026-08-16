@@ -83,12 +83,16 @@ async function findResetCall() {
 
 describe('useResetOverridesAction', () => {
   describe('scope options', () => {
-    it('offers no scopes when nothing is overridden', () => {
+    it('still offers the aggregate scope, inert, when nothing is overridden', () => {
+      // Permanent so the destructive scope keeps one position rather than
+      // appearing and vanishing with the page's contents.
       const { wrapper } = setupWithOverrides({})
 
       const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
 
-      expect(result.current.options).toEqual([])
+      expect(result.current.options).toMatchObject([
+        { viewport: null, label: 'All viewports', count: 0, disabled: true },
+      ])
     })
 
     it('lists only the viewports something actually overrides, with their counts', () => {
@@ -100,6 +104,21 @@ describe('useResetOverridesAction', () => {
         { viewport: 'xs', label: 'Extra small', count: 2 },
         { viewport: 'lg', label: 'Large', count: 1 },
         { viewport: null, label: 'All viewports', count: 3 },
+      ])
+    })
+
+    it('carries the unit on each count rather than a bare number', () => {
+      // The scopes overlap — a column overridden at both viewports is counted
+      // by each row and once by the aggregate — so naked numerals would read
+      // as a sum that does not add up.
+      const { wrapper } = setupWithOverrides({ xs: 2, lg: 1 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+
+      expect(result.current.options.map((o) => o.countLabel)).toEqual([
+        '2 columns',
+        '1 column',
+        '3 columns',
       ])
     })
 
@@ -126,14 +145,29 @@ describe('useResetOverridesAction', () => {
       expect(result.current.options.map((o) => o.viewport)).toEqual(['xs', 'sm', 'lg', null])
     })
 
-    it('omits "all viewports" when a single viewport is overridden', () => {
-      // It would clear exactly the same columns as the entry above it, and a
-      // menu listing one action twice reads as a mistake.
+    it('keeps "all viewports" alongside a single overridden viewport', () => {
       const { wrapper } = setupWithOverrides({ lg: 3 })
 
       const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
 
-      expect(result.current.options).toMatchObject([{ viewport: 'lg', label: 'Large', count: 3 }])
+      expect(result.current.options).toMatchObject([
+        { viewport: 'lg', label: 'Large', count: 3, disabled: false },
+        { viewport: null, label: 'All viewports', count: 3, disabled: false },
+      ])
+    })
+
+    it('reaches overrides stored against viewports the adapter no longer declares', () => {
+      // Switching adapter orphans the keys the previous one wrote: no
+      // per-viewport row can name them, because that list is built from the
+      // adapter's own viewports. The aggregate is the only scope that clears
+      // them, and the API clears by absence of a viewport, not by key.
+      const { wrapper } = setupWithOverrides({ 'legacy-xs': 2 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+
+      expect(result.current.options).toMatchObject([
+        { viewport: null, label: 'All viewports', count: 2, disabled: false },
+      ])
     })
 
     it('counts a column once in the total however many viewports it overrides', () => {
@@ -230,14 +264,7 @@ describe('useResetOverridesAction', () => {
 
       const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
       act(() => {
-        // Only one viewport is overridden, so "all viewports" is not offered —
-        // request the scope directly to reach the aggregate wording.
-        result.current.requestReset({
-          viewport: null,
-          label: 'All viewports',
-          count: 1,
-          actionLabel: 'Reset All viewports, 1 column',
-        })
+        result.current.requestReset(scopeNamed(result.current.options, 'All viewports'))
       })
 
       expect(result.current.dialog?.message).toBe('Reset all viewport overrides across 1 column?')

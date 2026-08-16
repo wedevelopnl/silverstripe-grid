@@ -87,6 +87,8 @@
   "WeDevelopGrid.useResetOverridesAction.ACTION_LABEL_MANY": "Reset {label}, {count} columns",
   "WeDevelopGrid.useResetOverridesAction.ACTION_LABEL_ONE": "Reset {label}, {count} column",
   "WeDevelopGrid.useResetOverridesAction.ALL_VIEWPORTS": "All viewports",
+  "WeDevelopGrid.useResetOverridesAction.COUNT_MANY": "{count} columns",
+  "WeDevelopGrid.useResetOverridesAction.COUNT_ONE": "{count} column",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_MANY": "Reset all viewport overrides across {count} columns?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_ONE": "Reset all viewport overrides across {count} column?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_MANY": "Reset overrides for {count} columns on {viewport}?",

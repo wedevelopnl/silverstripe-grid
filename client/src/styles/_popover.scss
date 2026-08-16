@@ -194,9 +194,16 @@
     opacity: 0.5;
   }
 
-  // Sized to its own rows and bounded at both ends: the trigger is shrink-to-fit
-  // and narrower than the menu needs, while an adapter free to declare labels of
-  // any length would otherwise stretch the menu arbitrarily wide.
+  // Sized to its own rows and bounded on width only: the trigger is
+  // shrink-to-fit and narrower than the menu needs, while an adapter free to
+  // declare labels of any length would otherwise stretch the menu arbitrarily
+  // wide.
+  // Height is deliberately uncapped, unlike the shared surface. This menu's
+  // content is inherently bounded — one row per viewport the adapter declares,
+  // plus at most one reset scope each — so it can always show every row, and a
+  // scrolling menu would put the reset scopes below the fold on a six-viewport
+  // adapter. Roving moves aria-activedescendant rather than real focus, so
+  // nothing would scroll a row back into view.
   &__menu {
     @extend %ssgrid-popover-surface;
 
@@ -204,6 +211,7 @@
     width: max-content;
     min-width: 260px;
     max-width: 320px;
+    max-height: none;
   }
 
   &__item {
@@ -212,6 +220,31 @@
     &[aria-checked='true'] {
       font-weight: var(--ssgrid-font-weight-medium);
       background: var(--ssgrid-surface-selected);
+    }
+
+    // The aggregate outranks the scopes above it — it is their superset, and
+    // the only one that reaches viewports the adapter no longer declares. Said
+    // with weight alone, the way a totals row carries a column: a rule or a gap
+    // would read as a section boundary, which is what `&__group` already uses
+    // its hairline to mean, and the row would then look like a third group
+    // rather than the last member of this one. Colour is unavailable for the
+    // same reason it is elsewhere here — orange reports publish status and
+    // purple is the interaction hue of focus rings and drop targets.
+    &--reset[data-scope='all'] {
+      font-weight: var(--ssgrid-font-weight-medium);
+    }
+
+    // A scope with nothing to clear. Dimmed rather than removed so the row
+    // holds its place; the keyboard ring still lands here, so only the hover
+    // affordance is withdrawn — a pointer target that does nothing must not
+    // light up as though it would.
+    &[aria-disabled='true'] {
+      opacity: 0.4;
+      cursor: default;
+
+      &:hover {
+        background: none;
+      }
     }
   }
 
