@@ -136,14 +136,17 @@ describe('ViewportSwitcher', () => {
     ).toBeNull()
   })
 
-  it('offers no reset scopes when nothing is overridden', async () => {
+  it('offers the aggregate scope inert when nothing is overridden', async () => {
     const user = userEvent.setup()
     mockFetchSuccess({})
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' })
     await user.click(trigger())
 
-    expect(within(dropdown()).queryAllByRole('menuitem')).toHaveLength(0)
+    const rows = within(dropdown()).getAllByRole('menuitem')
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toHaveAttribute('data-scope', 'all')
+    expect(rows[0]).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('offers a reset scope for an overridden viewport', async () => {

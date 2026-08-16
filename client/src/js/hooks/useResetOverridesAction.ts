@@ -12,6 +12,16 @@ export interface ResetScopeOption {
   readonly label: string
   /** Columns this reset would clear. */
   readonly count: number
+  /** Offered but inert, because the scope has nothing to clear. */
+  readonly disabled: boolean
+  /**
+   * The count with its unit ("2 columns"), for the row's own count column.
+   * Carries the noun rather than showing a bare number, because the scopes are
+   * overlapping sets of columns rather than addends — one column overridden at
+   * three viewports counts once here and once in each of those viewport rows,
+   * so a column of naked numerals reads as a sum that does not add up.
+   */
+  readonly countLabel: string
   /**
    * The scope as a sentence ("Reset Large, 1 column"), for the accessible name
    * of a menu item whose visible form is a name and a bare number in two
@@ -60,23 +70,32 @@ export function useResetOverridesAction(): ResetOverridesState {
     }))
     .filter((option) => option.count > 0)
 
-  // "All viewports" is offered only when it differs from the single entry above
-  // it — with one overridden viewport the two would clear exactly the same
-  // columns, and a menu that lists the same action twice reads as a mistake.
-  const scopes =
-    perViewport.length > 1
-      ? [
-          ...perViewport,
-          {
-            viewport: null,
-            label: t('WeDevelopGrid.useResetOverridesAction.ALL_VIEWPORTS', 'All viewports'),
-            count: total,
-          },
-        ]
-      : perViewport
+  // "All viewports" is always offered, and inert only when the page carries no
+  // overrides at all. It holds a fixed position so the destructive scope never
+  // moves under the pointer, and it is the only scope that can reach overrides
+  // stored against viewports the current adapter no longer declares — switching
+  // adapter orphans them, and no per-viewport row can name them because the row
+  // list is built from the adapter's own viewports.
+  const scopes = [
+    ...perViewport,
+    {
+      viewport: null,
+      label: t('WeDevelopGrid.useResetOverridesAction.ALL_VIEWPORTS', 'All viewports'),
+      count: total,
+    },
+  ]
 
   const options: readonly ResetScopeOption[] = scopes.map((scope) => ({
     ...scope,
+    disabled: scope.count === 0,
+    countLabel:
+      scope.count === 1
+        ? t('WeDevelopGrid.useResetOverridesAction.COUNT_ONE', '{count} column', {
+            count: scope.count,
+          })
+        : t('WeDevelopGrid.useResetOverridesAction.COUNT_MANY', '{count} columns', {
+            count: scope.count,
+          }),
     actionLabel:
       scope.count === 1
         ? t(

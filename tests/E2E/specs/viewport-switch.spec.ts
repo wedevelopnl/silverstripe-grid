@@ -64,18 +64,18 @@ test.describe('Viewport picker — create and reset overrides', () => {
       await expect(
         page.getByTestId(`viewport-picker-option-${adapter.defaultViewport}`),
       ).toHaveAttribute('aria-checked', 'true')
-      // Nothing is overridden yet, so no reset scopes are offered.
-      await expect(menu.getByRole('menuitem')).toHaveCount(0)
+      // Nothing is overridden yet, so the aggregate scope stands alone and inert.
+      await expect(menu.getByRole('menuitem')).toHaveCount(1)
+      await expect(menu.getByRole('menuitem')).toHaveAttribute('aria-disabled', 'true')
       await page.keyboard.press('Escape')
       await expect(menu).toBeHidden()
     })
 
-    await test.step('one overridden viewport is offered alone, with its column count', async () => {
+    await test.step('one overridden viewport is offered beside the aggregate', async () => {
       await activateViewport(page, viewportA)
       await setBadgeWidth(halfWidth)
 
-      // No "all viewports" entry — it would clear exactly the same column.
-      expect(await openResetScopes()).toEqual([`${labelA}1`])
+      expect(await openResetScopes()).toEqual([`${labelA}1 column`, 'All viewports1 column'])
       await page.keyboard.press('Escape')
       await expect(menu).toBeHidden()
     })
@@ -84,14 +84,22 @@ test.describe('Viewport picker — create and reset overrides', () => {
       await activateViewport(page, viewportB)
       await setBadgeWidth(thirdWidth)
 
-      expect(await openResetScopes()).toEqual([`${labelA}1`, `${labelB}1`, 'All viewports1'])
+      expect(await openResetScopes()).toEqual([
+        `${labelA}1 column`,
+        `${labelB}1 column`,
+        'All viewports1 column',
+      ])
       await page.keyboard.press('Escape')
     })
 
     await test.step('every scope stays reachable from the adapter default viewport', async () => {
       await activateViewport(page, adapter.defaultViewport)
 
-      expect(await openResetScopes()).toEqual([`${labelA}1`, `${labelB}1`, 'All viewports1'])
+      expect(await openResetScopes()).toEqual([
+        `${labelA}1 column`,
+        `${labelB}1 column`,
+        'All viewports1 column',
+      ])
       await page.keyboard.press('Escape')
     })
 
@@ -107,8 +115,8 @@ test.describe('Viewport picker — create and reset overrides', () => {
       await expect(leftBadge).toHaveText(thirdWidth)
     })
 
-    await test.step('the aggregate withdraws once a single viewport is left', async () => {
-      expect(await openResetScopes()).toEqual([`${labelB}1`])
+    await test.step('the aggregate stays once a single viewport is left', async () => {
+      expect(await openResetScopes()).toEqual([`${labelB}1 column`, 'All viewports1 column'])
       await page.keyboard.press('Escape')
       await expect(menu).toBeHidden()
     })
@@ -118,7 +126,11 @@ test.describe('Viewport picker — create and reset overrides', () => {
       // viewport parameter), so it needs its own journey.
       await activateViewport(page, viewportA)
       await setBadgeWidth(halfWidth)
-      expect(await openResetScopes()).toEqual([`${labelA}1`, `${labelB}1`, 'All viewports1'])
+      expect(await openResetScopes()).toEqual([
+        `${labelA}1 column`,
+        `${labelB}1 column`,
+        'All viewports1 column',
+      ])
 
       await menu.getByRole('menuitem').filter({ hasText: 'All viewports' }).click()
       await expect(confirmDialog).toBeVisible()
@@ -128,7 +140,9 @@ test.describe('Viewport picker — create and reset overrides', () => {
         await activateViewport(page, key)
         await expect(leftBadge).toHaveText(fullWidth)
       }
-      expect(await openResetScopes()).toEqual([])
+      // The aggregate holds its place, now inert with nothing left to clear.
+      expect(await openResetScopes()).toEqual(['All viewports0 columns'])
+      await expect(menu.getByRole('menuitem')).toHaveAttribute('aria-disabled', 'true')
     })
   })
 })

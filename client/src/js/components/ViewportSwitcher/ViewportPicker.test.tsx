@@ -12,12 +12,33 @@ const VIEWPORTS = [
 ] as unknown as ViewportConfig[]
 
 const RESET_OPTIONS: ResetScopeOption[] = [
-  { viewport: 'xs', label: 'Extra small', count: 2, actionLabel: 'Reset Extra small, 2 columns' },
+  {
+    viewport: 'xs',
+    label: 'Extra small',
+    count: 2,
+    disabled: false,
+    countLabel: '2 columns',
+    actionLabel: 'Reset Extra small, 2 columns',
+  },
   {
     viewport: null,
     label: 'All viewports',
     count: 2,
+    disabled: false,
+    countLabel: '2 columns',
     actionLabel: 'Reset All viewports, 2 columns',
+  },
+]
+
+/** The permanent aggregate row as it stands on a page with no overrides. */
+const IDLE_RESET_OPTIONS: ResetScopeOption[] = [
+  {
+    viewport: null,
+    label: 'All viewports',
+    count: 0,
+    disabled: true,
+    countLabel: '0 columns',
+    actionLabel: 'Reset All viewports, 0 columns',
   },
 ]
 
@@ -173,6 +194,63 @@ describe('ViewportPicker', () => {
         .getAllByRole('menuitem')
         .map((i) => i.getAttribute('aria-label')),
     ).toEqual(['Reset Extra small, 2 columns', 'Reset All viewports, 2 columns'])
+  })
+
+  it('names the unit on each count, so overlapping scopes do not read as a sum', async () => {
+    // The scopes are overlapping sets of columns, not addends: one column
+    // overridden at two viewports counts once in each row and once in the
+    // aggregate. Bare numerals would invite an addition that cannot hold.
+    const user = userEvent.setup()
+    renderPicker()
+
+    await user.click(screen.getByTestId('viewport-picker-trigger'))
+
+    expect(
+      within(dropdown())
+        .getAllByRole('menuitem')
+        .map((i) => i.querySelector('.ssgrid-viewport-picker__item-count')?.textContent),
+    ).toEqual(['2 columns', '2 columns'])
+  })
+
+  it('keeps the aggregate scope in place when there is nothing to clear', async () => {
+    // Permanent by design: the scope holds one position rather than appearing
+    // and vanishing with the page's contents.
+    const user = userEvent.setup()
+    renderPicker({ overrideCounts: {}, resetOptions: IDLE_RESET_OPTIONS })
+
+    await user.click(screen.getByTestId('viewport-picker-trigger'))
+
+    const row = within(dropdown()).getByRole('menuitem')
+    expect(row).toHaveAttribute('aria-disabled', 'true')
+    expect(row).toHaveAccessibleName('Reset All viewports, 0 columns')
+  })
+
+  it('ignores a click on the aggregate scope while it has nothing to clear', async () => {
+    const user = userEvent.setup()
+    const props = renderPicker({ overrideCounts: {}, resetOptions: IDLE_RESET_OPTIONS })
+
+    await user.click(screen.getByTestId('viewport-picker-trigger'))
+    await user.click(within(dropdown()).getByRole('menuitem'))
+
+    expect(props.onSelectReset).not.toHaveBeenCalled()
+    // Still open: a dead row must not behave like a completed action.
+    expect(screen.getByTestId('viewport-picker-dropdown')).toBeInTheDocument()
+  })
+
+  it('ignores Enter on the aggregate scope while it has nothing to clear', async () => {
+    const user = userEvent.setup()
+    const props = renderPicker({
+      activeViewport: 'lg',
+      overrideCounts: {},
+      resetOptions: IDLE_RESET_OPTIONS,
+    })
+
+    await user.click(screen.getByTestId('viewport-picker-trigger'))
+    // Seeded on 'lg' (index 2); one down reaches the lone reset row.
+    await user.keyboard('{ArrowDown}{Enter}')
+
+    expect(props.onSelectReset).not.toHaveBeenCalled()
+    expect(screen.getByTestId('viewport-picker-dropdown')).toBeInTheDocument()
   })
 
   it('omits the reset group entirely in readonly mode', async () => {

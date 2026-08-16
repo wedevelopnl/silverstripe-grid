@@ -87,6 +87,8 @@
   "WeDevelopGrid.useResetOverridesAction.ACTION_LABEL_MANY": "{label} resetten, {count} kolommen",
   "WeDevelopGrid.useResetOverridesAction.ACTION_LABEL_ONE": "{label} resetten, {count} kolom",
   "WeDevelopGrid.useResetOverridesAction.ALL_VIEWPORTS": "Alle viewports",
+  "WeDevelopGrid.useResetOverridesAction.COUNT_MANY": "{count} kolommen",
+  "WeDevelopGrid.useResetOverridesAction.COUNT_ONE": "{count} kolom",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_MANY": "Alle viewport-overrides over {count} kolommen resetten?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_ONE": "Alle viewport-overrides over {count} kolom resetten?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_MANY": "Overrides voor {count} kolommen op {viewport} resetten?",

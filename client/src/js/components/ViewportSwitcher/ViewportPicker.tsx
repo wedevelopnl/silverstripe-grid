@@ -72,6 +72,12 @@ export default function ViewportPicker({
   const anyOverrides = Object.values(overrideCounts).some((count) => count > 0)
 
   function activate(entry: Entry) {
+    // Inert rather than absent: an "All viewports" row with nothing to clear
+    // stays in place so the scope keeps one position, and neither closes the
+    // menu nor opens the confirmation.
+    if (entry.kind === 'reset' && entry.option.disabled) {
+      return
+    }
     popup.close()
     if (entry.kind === 'viewport') {
       if (entry.viewport.key !== activeViewport) {
@@ -215,6 +221,10 @@ export default function ViewportPicker({
                     id={popup.getItemId(index)}
                     className="ssgrid-viewport-picker__item ssgrid-viewport-picker__item--reset"
                     role="menuitem"
+                    // Kept focusable while disabled: a scope the author cannot
+                    // find is not a scope, and discoverability is the whole
+                    // reason the row is permanent.
+                    aria-disabled={entry.option.disabled || undefined}
                     tabIndex={index === popup.activeIndex ? 0 : -1}
                     aria-label={entry.option.actionLabel}
                     data-scope={entry.option.viewport ?? 'all'}
@@ -222,7 +232,9 @@ export default function ViewportPicker({
                   >
                     <i className="font-icon-sync" aria-hidden="true" />
                     <span className="ssgrid-viewport-picker__item-label">{entry.option.label}</span>
-                    <span className="ssgrid-viewport-picker__item-count">{entry.option.count}</span>
+                    <span className="ssgrid-viewport-picker__item-count">
+                      {entry.option.countLabel}
+                    </span>
                   </div>
                 ),
               )}
