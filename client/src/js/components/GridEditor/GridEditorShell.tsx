@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { useMemo } from 'react'
-import ViewportSwitcher from '@/components/ViewportSwitcher/ViewportSwitcher'
 import type { ApiError } from '@/api/errors'
 import { GridEditorProvider } from '@/hooks/GridEditorContext'
 import { CollapseContext, useCollapseState } from '@/hooks/useCollapseState'
@@ -51,7 +50,7 @@ interface GridEditorShellProps {
 /**
  * Shared chrome for both editor modes: the outer host element and its
  * `data-*` attributes, the loading/error notices, the provider stack, the
- * ViewportSwitcher, the GridAreaHeader, and the canvas wrapper. `children` is
+ * GridAreaHeader, and the canvas wrapper. `children` is
  * the mode-specific canvas content (a bare section list in readonly, a
  * DndContext-wrapped list in editable).
  */
@@ -101,8 +100,7 @@ export default function GridEditorShell({
         <GridEditorProvider value={gridEditorContextValue}>
           <CollapseContext.Provider value={collapseState}>
             <div className="ssgrid-editor">
-              <ViewportSwitcher readonly={readonly} version={version} />
-              <GridAreaHeader sections={sections} readonly={readonly} />
+              <GridAreaHeader sections={sections} readonly={readonly} version={version} />
               <div
                 className="ssgrid-editor__canvas"
                 data-testid="grid-editor-canvas"
