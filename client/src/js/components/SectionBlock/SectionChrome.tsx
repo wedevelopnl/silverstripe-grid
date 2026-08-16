@@ -22,10 +22,11 @@ interface SectionChromeProps {
 
 /**
  * Presentational shell for a section. Owns the <section> frame and header
- * (leading slot, collapse toggle, title, status pill, descendant dot, trailing
- * slot); body is an opaque `children` slot. The pill states this section's own
- * status, the dot that something below it is unpublished — a section can draw
- * both. Never branches on mode, only on data.
+ * (leading slot, collapse toggle, title, status pill, trailing slot); body is
+ * an opaque `children` slot. The pill states this section's own status; that
+ * something below it is unpublished is carried by the ring plus a
+ * screen-reader-only note, not by a second visible mark. Never branches on
+ * mode, only on data.
  */
 export default function SectionChrome({
   status,

@@ -24,11 +24,12 @@ interface RowChromeProps {
 
 /**
  * Presentational shell for a row. Owns the frame + the (reconciled, flat)
- * header — leading slot, collapse toggle, title, status pill, descendant dot,
- * column-count meta, trailing slot. The pill states this row's own status; the
- * dot says something below it is unpublished, so a row can draw both. The
- * columns body differs structurally between modes, so it is an opaque
- * `children` slot. Never branches on mode, only on data.
+ * header — leading slot, collapse toggle, title, status pill, column-count
+ * meta, trailing slot. The pill states this row's own status; that something
+ * below it is unpublished is carried by the ring plus a screen-reader-only
+ * note, not by a second visible mark. The columns body differs structurally
+ * between modes, so it is an opaque `children` slot. Never branches on mode,
+ * only on data.
  */
 export default function RowChrome({
   status,

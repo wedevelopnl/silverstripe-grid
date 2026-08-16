@@ -101,7 +101,7 @@
   --ssgrid-size-chip: 24px; // type-icon chip, column "+" insert square
   --ssgrid-size-control: 32px; // dashed "Add row / section / block" buttons
   --ssgrid-size-field: 40px; // width & offset dropdowns, viewport tabs
-  --ssgrid-size-dot: 8px; // unpublished dot, viewport-override dot, gutter ring
+  --ssgrid-size-dot: 8px; // viewport-override dot, gutter ring
 
   // ---------------------------------------------------------------------------
   // Primitives — radius
@@ -135,7 +135,6 @@
   --ssgrid-surface-selected: var(--ssgrid-color-overlay-brand-5);
   --ssgrid-surface-hover: var(--ssgrid-color-overlay-brand-10);
   --ssgrid-surface-action: var(--ssgrid-color-brand-500);
-  --ssgrid-surface-unpublished: var(--ssgrid-color-unpublished-500);
   --ssgrid-surface-unpublished-tint: var(--ssgrid-color-overlay-unpublished-10);
 
   // Solid mid-gray fill for passive diagram marks (the "media" half of the

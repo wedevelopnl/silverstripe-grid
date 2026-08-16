@@ -235,15 +235,13 @@ describe('EditableSectionBlock', () => {
 
       expect(screen.getByTestId('section-status-badge')).toHaveTextContent('Modified')
       expect(
-        within(screen.getByTestId('section-header')).queryByRole('img', {
-          name: 'Contains unpublished changes',
-        }),
+        within(screen.getByTestId('section-header')).queryByText('Contains unpublished changes'),
       ).not.toBeInTheDocument()
     })
 
     // The case the roll-up exists for: nothing about the section itself
     // changed, but a block three levels down did.
-    it('dots the section when only a nested block is modified', () => {
+    it('announces the section descendant when only a nested block is modified', () => {
       mockFetchSuccess({})
 
       const section = createSectionNode({
@@ -260,9 +258,7 @@ describe('EditableSectionBlock', () => {
       renderWithProviders(<EditableSectionBlock section={section} />)
 
       expect(
-        within(screen.getByTestId('section-header')).getByRole('img', {
-          name: 'Contains unpublished changes',
-        }),
+        within(screen.getByTestId('section-header')).getByText('Contains unpublished changes'),
       ).toBeInTheDocument()
       expect(screen.queryByTestId('section-status-badge')).not.toBeInTheDocument()
       expect(screen.getByTestId('section-block')).toHaveAttribute('data-descendant-unpublished')
@@ -271,7 +267,7 @@ describe('EditableSectionBlock', () => {
     // Draft rolls up on the same footing as modified: a block that has never
     // been published is exactly as hidden inside a collapsed section, and
     // publishing is the same remedy for both.
-    it('dots the section when only a nested block is draft', () => {
+    it('announces the section descendant when only a nested block is draft', () => {
       mockFetchSuccess({})
 
       const section = createSectionNode({
@@ -286,9 +282,7 @@ describe('EditableSectionBlock', () => {
       renderWithProviders(<EditableSectionBlock section={section} />)
 
       expect(
-        within(screen.getByTestId('section-header')).getByRole('img', {
-          name: 'Contains unpublished changes',
-        }),
+        within(screen.getByTestId('section-header')).getByText('Contains unpublished changes'),
       ).toBeInTheDocument()
       expect(screen.queryByTestId('section-status-badge')).not.toBeInTheDocument()
     })
@@ -302,9 +296,7 @@ describe('EditableSectionBlock', () => {
 
       expect(screen.queryByTestId('section-status-badge')).not.toBeInTheDocument()
       expect(
-        within(screen.getByTestId('section-header')).queryByRole('img', {
-          name: 'Contains unpublished changes',
-        }),
+        within(screen.getByTestId('section-header')).queryByText('Contains unpublished changes'),
       ).not.toBeInTheDocument()
     })
   })
@@ -402,7 +394,7 @@ describe('ReadonlySectionBlock', () => {
     expect(screen.getByTestId('section-status-badge')).toHaveTextContent('Modified')
   })
 
-  it('dots a readonly section when only a nested block is modified', () => {
+  it('announces the descendant on a readonly section when a nested block is modified', () => {
     mockFetchSuccess({})
 
     const section = createSectionNode({
@@ -417,9 +409,7 @@ describe('ReadonlySectionBlock', () => {
     renderWithProviders(<ReadonlySectionBlock section={section} />)
 
     expect(
-      within(screen.getByTestId('section-header')).getByRole('img', {
-        name: 'Contains unpublished changes',
-      }),
+      within(screen.getByTestId('section-header')).getByText('Contains unpublished changes'),
     ).toBeInTheDocument()
   })
 
@@ -430,9 +420,7 @@ describe('ReadonlySectionBlock', () => {
 
     renderWithProviders(<ReadonlySectionBlock section={section} />)
 
-    expect(
-      screen.queryByRole('img', { name: 'Contains unpublished changes' }),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByText('Contains unpublished changes')).not.toBeInTheDocument()
   })
 
   it('renders no drag handle or add-child buttons', () => {

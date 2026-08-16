@@ -66,21 +66,21 @@ describe('RowChrome', () => {
     expect(screen.getByTestId('row-title')).toHaveTextContent('Main Row')
   })
 
-  it('renders the badge, not the dot, when the element itself is modified', () => {
+  it('badges the element and adds no descendant note when only the element is modified', () => {
     render(<RowChrome {...baseProps} status="modified" />)
 
     expect(screen.getByTestId('row-status-badge')).toBeInTheDocument()
     expect(screen.queryByTestId('row-unpublished-indicator')).not.toBeInTheDocument()
   })
 
-  it('renders the dot, not the badge, when only a descendant is modified', () => {
+  it('announces the descendant, with no badge, when only a descendant is modified', () => {
     render(<RowChrome {...baseProps} status="published" hasUnpublishedDescendant={true} />)
 
     expect(screen.getByTestId('row-unpublished-indicator')).toBeInTheDocument()
     expect(screen.queryByTestId('row-status-badge')).not.toBeInTheDocument()
   })
 
-  it('renders both marks when the element and a descendant are modified', () => {
+  it('badges the element and announces the descendant when both are modified', () => {
     render(<RowChrome {...baseProps} status="modified" hasUnpublishedDescendant={true} />)
 
     expect(screen.getByTestId('row-status-badge')).toBeInTheDocument()

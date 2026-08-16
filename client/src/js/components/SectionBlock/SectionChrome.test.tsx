@@ -65,21 +65,21 @@ describe('SectionChrome', () => {
     expect(screen.getByTestId('section-title')).toHaveTextContent('Hero Section')
   })
 
-  it('renders the badge, not the dot, when the element itself is modified', () => {
+  it('badges the element and adds no descendant note when only the element is modified', () => {
     render(<SectionChrome {...baseProps} status="modified" />)
 
     expect(screen.getByTestId('section-status-badge')).toBeInTheDocument()
     expect(screen.queryByTestId('section-unpublished-indicator')).not.toBeInTheDocument()
   })
 
-  it('renders the dot, not the badge, when only a descendant is modified', () => {
+  it('announces the descendant, with no badge, when only a descendant is modified', () => {
     render(<SectionChrome {...baseProps} status="published" hasUnpublishedDescendant={true} />)
 
     expect(screen.getByTestId('section-unpublished-indicator')).toBeInTheDocument()
     expect(screen.queryByTestId('section-status-badge')).not.toBeInTheDocument()
   })
 
-  it('renders both marks when the element and a descendant are modified', () => {
+  it('badges the element and announces the descendant when both are modified', () => {
     render(<SectionChrome {...baseProps} status="modified" hasUnpublishedDescendant={true} />)
 
     expect(screen.getByTestId('section-status-badge')).toBeInTheDocument()
