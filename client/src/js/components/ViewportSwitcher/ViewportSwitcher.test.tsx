@@ -116,7 +116,7 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />)
 
-    expect(screen.queryByTestId('reset-overrides-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('viewport-reset-trigger')).not.toBeInTheDocument()
   })
 
   it('active button has aria-disabled attribute', () => {
@@ -185,9 +185,7 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md', queryClient })
 
-    const resetButton = screen.getByTestId('reset-overrides-button')
-    expect(resetButton).toBeInTheDocument()
-    expect(resetButton).toHaveTextContent('Reset all')
+    expect(screen.getByTestId('viewport-reset-trigger')).toBeInTheDocument()
   })
 
   it('shows the reset button by default (readonly omitted) when overrides exist', () => {
@@ -201,7 +199,7 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher readonly={false} />, { viewport: 'md', queryClient })
 
-    expect(screen.getByTestId('reset-overrides-button')).toBeInTheDocument()
+    expect(screen.getByTestId('viewport-reset-trigger')).toBeInTheDocument()
   })
 
   it('hides the reset button and dialog when readonly even with overrides present', () => {
@@ -215,11 +213,13 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher readonly />, { viewport: 'md', queryClient })
 
-    expect(screen.queryByTestId('reset-overrides-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('viewport-reset-trigger')).not.toBeInTheDocument()
     expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
   })
 
-  it('shows "Reset viewport" label for non-default viewport with overrides', () => {
+  it('offers the reset menu from a non-default viewport too', () => {
+    // The trigger used to be a button whose scope came from the active tab, so
+    // it is worth pinning that it is now the same control from any of them.
     mockFetchSuccess({})
 
     const queryClient = new QueryClient({
@@ -230,9 +230,7 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'lg', queryClient })
 
-    const resetButton = screen.getByTestId('reset-overrides-button')
-    expect(resetButton).toBeInTheDocument()
-    expect(resetButton).toHaveTextContent('Reset viewport')
+    expect(screen.getByTestId('viewport-reset-trigger')).toBeInTheDocument()
   })
 
   it('marks a viewport carrying overrides with a dot, whether or not it is active', () => {
@@ -318,7 +316,7 @@ describe('ViewportSwitcher', () => {
         .getByTestId('viewport-button-lg')
         .querySelector('.ssgrid-viewport-switcher__override-dot'),
     ).not.toBeNull()
-    expect(screen.queryByTestId('reset-overrides-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('viewport-reset-trigger')).not.toBeInTheDocument()
   })
 
   it('reads the versioned tree, not the draft, when a version is given', () => {
@@ -399,7 +397,9 @@ describe('ViewportSwitcher', () => {
     expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
   })
 
-  it('opens the confirm dialog with title, message and confirm label on reset click', async () => {
+  it('opens the reset menu, not a dialog, from the trigger', async () => {
+    // The dialog now comes one step later, once a scope has been picked; the
+    // menu's own contents are covered in ViewportResetMenu.test.tsx.
     const user = userEvent.setup()
     mockFetchSuccess({})
 
@@ -411,11 +411,9 @@ describe('ViewportSwitcher', () => {
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'lg', queryClient })
 
-    await user.click(screen.getByTestId('reset-overrides-button'))
+    await user.click(screen.getByTestId('viewport-reset-trigger'))
 
-    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
-    expect(screen.getByText('Reset Large overrides')).toBeInTheDocument()
-    expect(screen.getByText('Reset overrides for 1 column on Large?')).toBeInTheDocument()
-    expect(screen.getByText('Reset')).toBeInTheDocument()
+    expect(screen.getByTestId('viewport-reset-dropdown')).toBeInTheDocument()
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
   })
 })

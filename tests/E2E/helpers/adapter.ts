@@ -111,3 +111,15 @@ export function twoNonDefaultViewports(config: AdapterConfig): [string, string] 
   }
   return [nonDefault[0], nonDefault[1]]
 }
+
+/**
+ * The adapter's display label for a viewport key — the wording the reset menu
+ * lists its scopes under. Adapter-driven, so specs stay framework-agnostic.
+ */
+export function viewportLabel(config: AdapterConfig, key: string): string {
+  const viewport = config.viewports.find((vp) => vp.key === key)
+  if (viewport === undefined) {
+    throw new Error(`Adapter exposes no viewport "${key}".`)
+  }
+  return viewport.label
+}

@@ -84,16 +84,19 @@
   "WeDevelopGrid.useArchiveAction.DIALOG_TITLE": "Archiveren bevestigen",
   "WeDevelopGrid.useDuplicateAction.ACTION_LABEL": "Dupliceren",
   "WeDevelopGrid.useDuplicateToAction.ACTION_LABEL": "Dupliceren naar…",
+  "WeDevelopGrid.useResetOverridesAction.ALL_VIEWPORTS": "Alle viewports",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_MANY": "Alle viewport-overrides over {count} kolommen resetten?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_ALL_ONE": "Alle viewport-overrides over {count} kolom resetten?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_MANY": "Overrides voor {count} kolommen op {viewport} resetten?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_ONE": "Overrides voor {count} kolom op {viewport} resetten?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_TITLE_ALL": "Alle overrides resetten",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_TITLE_VIEWPORT": "{viewport}-overrides resetten",
-  "WeDevelopGrid.useResetOverridesAction.RESET_ALL_LABEL": "Alle resetten",
-  "WeDevelopGrid.useResetOverridesAction.RESET_VIEWPORT_LABEL": "Viewport resetten",
+  "WeDevelopGrid.ViewportResetMenu.ITEM_LABEL_MANY": "{label} resetten, {count} kolommen",
+  "WeDevelopGrid.ViewportResetMenu.ITEM_LABEL_ONE": "{label} resetten, {count} kolom",
+  "WeDevelopGrid.ViewportResetMenu.MENU_LABEL": "Overrides per viewport resetten",
+  "WeDevelopGrid.ViewportResetMenu.RESET_CONFIRM_LABEL": "Resetten",
+  "WeDevelopGrid.ViewportResetMenu.TRIGGER_LABEL": "Viewport-overrides resetten",
   "WeDevelopGrid.ViewportSwitcher.GROUP_LABEL": "Viewport-formaat",
   "WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_MANY": "{count} kolommen overschrijven deze viewport",
-  "WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_ONE": "{count} kolom overschrijft deze viewport",
-  "WeDevelopGrid.ViewportSwitcher.RESET_CONFIRM_LABEL": "Resetten"
+  "WeDevelopGrid.ViewportSwitcher.HAS_OVERRIDES_ONE": "{count} kolom overschrijft deze viewport"
 }

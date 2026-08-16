@@ -9,25 +9,21 @@ import {
 } from '@/testing/factories'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
 import { createProviderWrapper } from '@/testing/renderWithProviders'
-import type { ColumnNode, TreeApiResponse, ViewportSettings } from '@/types/elements'
+import type { ColumnNode, ViewportSettings } from '@/types/elements'
 import { queryKeys } from './queryKeys'
-import { useResetOverridesAction } from './useResetOverridesAction'
+import { type ResetScopeOption, useResetOverridesAction } from './useResetOverridesAction'
 
 /**
- * Build a tree fixture whose derived override counts match the given spec.
- * `total` is a spec key, not a viewport: when present, any remainder beyond the
- * sum of the per-viewport counts is padded with `xxl` overrides so the derived
- * total lands on the requested number.
+ * One column per unit, each overriding exactly the named viewport. Because
+ * every column here deviates at a single viewport, the derived total equals the
+ * sum of the per-viewport counts — the multi-viewport case is built by hand.
  */
-function treeFromCounts(counts: Record<string, number>): TreeApiResponse {
+function columnsFromCounts(counts: Record<string, number>): ColumnNode[] {
   const override: ViewportSettings = { width: 6, offset: 0, visible: true }
   const defaults: ViewportSettings = { width: 12, offset: 0, visible: true }
   const columns: ColumnNode[] = []
 
-  let specificTotal = 0
   for (const [viewport, n] of Object.entries(counts)) {
-    if (viewport === 'total') continue
-    specificTotal += n
     for (let i = 0; i < n; i++) {
       columns.push(
         createColumnNode({
@@ -38,269 +34,289 @@ function treeFromCounts(counts: Record<string, number>): TreeApiResponse {
     }
   }
 
-  // biome-ignore lint/suspicious/noUnnecessaryConditions: Record index is typed `number`, but counts.total is `undefined` when the case omits it; the ?? specificTotal fallback derives the total at runtime.
-  const total = counts.total ?? specificTotal
-  for (let i = specificTotal; i < total; i++) {
-    columns.push(
-      createColumnNode({
-        gridSettings: { default: defaults, overrides: { xxl: override } },
-        children: [],
-      }),
-    )
-  }
-
-  const row = createRowNode({ children: columns })
-  const section = createSectionNode({ parent: { type: 'page', id: 1 }, children: [row] })
-  return createTreeApiResponse({ pageId: 1, sections: [section] })
+  return columns
 }
 
-function setupWithOverrides(
-  overrideCounts: Record<string, number>,
-  viewport = 'md',
-  pageId = 1,
-  zone = 'main',
-) {
+function setupWithTree(columns: ColumnNode[], viewport = 'md') {
+  const pageId = 1
+  const zone = 'main'
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   })
 
+  const section = createSectionNode({
+    parent: { type: 'page', id: pageId },
+    children: [createRowNode({ children: columns })],
+  })
   queryClient.setQueryData(
     queryKeys.elementTree.byPage(pageId, zone),
-    treeFromCounts(overrideCounts),
+    createTreeApiResponse({ pageId, sections: [section] }),
   )
 
-  const { wrapper } = createProviderWrapper({
-    pageId,
-    zone,
-    viewport,
-    queryClient,
-  })
+  const { wrapper } = createProviderWrapper({ pageId, zone, viewport, queryClient })
 
   return { wrapper, queryClient }
 }
 
+function setupWithOverrides(overrideCounts: Record<string, number>, viewport = 'md') {
+  return setupWithTree(columnsFromCounts(overrideCounts), viewport)
+}
+
+/** The scope entry for a viewport label, so tests read by name not by index. */
+function scopeNamed(options: readonly ResetScopeOption[], label: string): ResetScopeOption {
+  const found = options.find((option) => option.label === label)
+  if (!found) {
+    throw new Error(`no reset scope labelled "${label}" in [${options.map((o) => o.label)}]`)
+  }
+  return found
+}
+
+async function findResetCall() {
+  return await waitFor(() => {
+    const call = getFetchCalls().find(([url]) =>
+      (url as string).includes('/api/resetGridSettingsOverrides'),
+    )
+    expect(call).toBeDefined()
+    return call!
+  })
+}
+
 describe('useResetOverridesAction', () => {
-  it('should set showReset to false when affectedCount is 0', () => {
-    const { wrapper } = setupWithOverrides({})
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.showReset).toBe(false)
-    expect(result.current.affectedCount).toBe(0)
-  })
-
-  it('should set showReset to true when override counts exist', () => {
-    const { wrapper } = setupWithOverrides({ total: 3, md: 2 })
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.showReset).toBe(true)
-  })
-
-  it('should use label "Reset all" when active viewport is the default', () => {
-    // Default viewport is 'md' per vitest.setup.ts
-    const { wrapper } = setupWithOverrides({ total: 5 }, 'md')
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.label).toBe('Reset all')
-  })
-
-  it('should use label "Reset viewport" for non-default viewports', () => {
-    const { wrapper } = setupWithOverrides({ lg: 2 }, 'lg')
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.label).toBe('Reset viewport')
-  })
-
-  it('should use the total for affected count when on default viewport', () => {
-    const { wrapper } = setupWithOverrides({ total: 7, md: 3 }, 'md')
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.affectedCount).toBe(7)
-  })
-
-  it('should use viewport key for affected count on non-default viewport', () => {
-    const { wrapper } = setupWithOverrides({ total: 10, lg: 4 }, 'lg')
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.affectedCount).toBe(4)
-  })
-
-  it('should use singular "column" when affected count is 1', () => {
-    const { wrapper } = setupWithOverrides({ total: 1 }, 'md')
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.dialogMessage).toBe('Reset all viewport overrides across 1 column?')
-  })
-
-  it('should use plural "columns" when affected count is greater than 1', () => {
-    const { wrapper } = setupWithOverrides({ total: 5 }, 'md')
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.dialogMessage).toBe('Reset all viewport overrides across 5 columns?')
-  })
-
-  it('should set dialogTitle to "Reset all overrides" on default viewport', () => {
-    const { wrapper } = setupWithOverrides({ total: 3 }, 'md')
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.dialogTitle).toBe('Reset all overrides')
-  })
-
-  it('should set dialogTitle with viewport label for non-default viewport', () => {
-    const { wrapper } = setupWithOverrides({ lg: 2 }, 'lg')
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.dialogTitle).toBe('Reset Large overrides')
-  })
-
-  it('should use viewport label "Large" in dialogMessage for lg viewport', () => {
-    const { wrapper } = setupWithOverrides({ lg: 3 }, 'lg')
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.dialogMessage).toBe('Reset overrides for 3 columns on Large?')
-  })
-
-  it('should use singular "column" in non-default viewport dialogMessage', () => {
-    const { wrapper } = setupWithOverrides({ lg: 1 }, 'lg')
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.dialogMessage).toBe('Reset overrides for 1 column on Large?')
-  })
-
-  it('should open dialog on reset click', () => {
-    const { wrapper } = setupWithOverrides({ total: 2 }, 'md')
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    expect(result.current.isDialogOpen).toBe(false)
-
-    act(() => {
-      result.current.onResetClick()
-    })
-
-    expect(result.current.isDialogOpen).toBe(true)
-  })
-
-  it('should close dialog on cancel', () => {
-    const { wrapper } = setupWithOverrides({ total: 2 }, 'md')
-
-    const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-    act(() => {
-      result.current.onResetClick()
-    })
-
-    act(() => {
-      result.current.onCancel()
-    })
-
-    expect(result.current.isDialogOpen).toBe(false)
-  })
-
-  describe('handleConfirm', () => {
-    it('should trigger resetGridSettingsOverrides mutation', async () => {
-      mockFetchSuccess({})
-      const { wrapper } = setupWithOverrides({ total: 2 }, 'md')
+  describe('scope options', () => {
+    it('offers no scopes when nothing is overridden', () => {
+      const { wrapper } = setupWithOverrides({})
 
       const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
 
+      expect(result.current.options).toEqual([])
+    })
+
+    it('lists only the viewports something actually overrides, with their counts', () => {
+      const { wrapper } = setupWithOverrides({ xs: 2, lg: 1 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+
+      expect(result.current.options).toEqual([
+        { viewport: 'xs', label: 'Extra small', count: 2 },
+        { viewport: 'lg', label: 'Large', count: 1 },
+        { viewport: null, label: 'All viewports', count: 3 },
+      ])
+    })
+
+    it('orders viewport scopes by the adapter, not by count or discovery', () => {
+      // Seeded lg-before-xs so a fixture-order implementation fails here.
+      const { wrapper } = setupWithOverrides({ lg: 1, xs: 1, sm: 1 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+
+      expect(result.current.options.map((o) => o.viewport)).toEqual(['xs', 'sm', 'lg', null])
+    })
+
+    it('omits "all viewports" when a single viewport is overridden', () => {
+      // It would clear exactly the same columns as the entry above it, and a
+      // menu listing one action twice reads as a mistake.
+      const { wrapper } = setupWithOverrides({ lg: 3 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+
+      expect(result.current.options).toEqual([{ viewport: 'lg', label: 'Large', count: 3 }])
+    })
+
+    it('counts a column once in the total however many viewports it overrides', () => {
+      // One column deviating at two viewports: each viewport scope clears it,
+      // and so does "all", but "all" must not double-count it into 2.
+      const override: ViewportSettings = { width: 6, offset: 0, visible: true }
+      const { wrapper } = setupWithTree([
+        createColumnNode({
+          gridSettings: {
+            default: { width: 12, offset: 0, visible: true },
+            overrides: { xs: override, lg: override },
+          },
+          children: [],
+        }),
+      ])
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+
+      expect(result.current.options).toEqual([
+        { viewport: 'xs', label: 'Extra small', count: 1 },
+        { viewport: 'lg', label: 'Large', count: 1 },
+        { viewport: null, label: 'All viewports', count: 1 },
+      ])
+    })
+
+    // The defect this hook was reshaped for: scope used to be inferred from the
+    // selected tab, which put "reset everything" behind whichever viewport the
+    // adapter happened to call default and made it unreachable from any other.
+    it.each(['xs', 'md', 'xxl'])(
+      'offers the same scopes regardless of the active viewport (%s)',
+      (activeViewport) => {
+        const { wrapper } = setupWithOverrides({ xs: 2, lg: 1 }, activeViewport)
+
+        const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+
+        expect(result.current.options).toEqual([
+          { viewport: 'xs', label: 'Extra small', count: 2 },
+          { viewport: 'lg', label: 'Large', count: 1 },
+          { viewport: null, label: 'All viewports', count: 3 },
+        ])
+      },
+    )
+  })
+
+  describe('confirmation dialog', () => {
+    it('has no dialog until a scope is requested', () => {
+      const { wrapper } = setupWithOverrides({ lg: 2 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+
+      expect(result.current.dialog).toBeNull()
+    })
+
+    it('titles and phrases the dialog for a viewport scope', () => {
+      const { wrapper } = setupWithOverrides({ lg: 3 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
       act(() => {
-        result.current.onResetClick()
+        result.current.requestReset(scopeNamed(result.current.options, 'Large'))
       })
 
+      expect(result.current.dialog).toEqual({
+        title: 'Reset Large overrides',
+        message: 'Reset overrides for 3 columns on Large?',
+      })
+    })
+
+    it('titles and phrases the dialog for the all-viewports scope', () => {
+      const { wrapper } = setupWithOverrides({ xs: 2, lg: 3 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+      act(() => {
+        result.current.requestReset(scopeNamed(result.current.options, 'All viewports'))
+      })
+
+      expect(result.current.dialog).toEqual({
+        title: 'Reset all overrides',
+        message: 'Reset all viewport overrides across 5 columns?',
+      })
+    })
+
+    it('uses the singular noun for a one-column viewport scope', () => {
+      const { wrapper } = setupWithOverrides({ lg: 1 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+      act(() => {
+        result.current.requestReset(scopeNamed(result.current.options, 'Large'))
+      })
+
+      expect(result.current.dialog?.message).toBe('Reset overrides for 1 column on Large?')
+    })
+
+    it('uses the singular noun for a one-column all-viewports scope', () => {
+      const { wrapper } = setupWithOverrides({ xs: 1 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+      act(() => {
+        // Only one viewport is overridden, so "all viewports" is not offered —
+        // request the scope directly to reach the aggregate wording.
+        result.current.requestReset({ viewport: null, label: 'All viewports', count: 1 })
+      })
+
+      expect(result.current.dialog?.message).toBe('Reset all viewport overrides across 1 column?')
+    })
+
+    it('clears the dialog on cancel without calling the API', async () => {
+      mockFetchSuccess({})
+      const { wrapper } = setupWithOverrides({ lg: 2 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+      act(() => {
+        result.current.requestReset(scopeNamed(result.current.options, 'Large'))
+      })
+      act(() => {
+        result.current.onCancel()
+      })
+
+      expect(result.current.dialog).toBeNull()
+      await waitFor(() => {
+        expect(
+          getFetchCalls().some(([url]) =>
+            (url as string).includes('/api/resetGridSettingsOverrides'),
+          ),
+        ).toBe(false)
+      })
+    })
+  })
+
+  describe('confirming', () => {
+    it('sends the viewport for a viewport scope and closes the dialog', async () => {
+      mockFetchSuccess({})
+      const { wrapper } = setupWithOverrides({ xs: 1, lg: 3 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+      act(() => {
+        result.current.requestReset(scopeNamed(result.current.options, 'Large'))
+      })
+      act(() => {
+        result.current.onConfirm()
+      })
+
+      expect(result.current.dialog).toBeNull()
+      const call = await findResetCall()
+      expect(call[1]?.method).toBe('DELETE')
+      expect(String(call[0])).toContain('pageId=1')
+      expect(String(call[0])).toContain('zone=main')
+      expect(String(call[0])).toContain('viewport=lg')
+    })
+
+    it('omits the viewport for the all-viewports scope', async () => {
+      mockFetchSuccess({})
+      const { wrapper } = setupWithOverrides({ xs: 1, lg: 3 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+      act(() => {
+        result.current.requestReset(scopeNamed(result.current.options, 'All viewports'))
+      })
+      act(() => {
+        result.current.onConfirm()
+      })
+
+      const call = await findResetCall()
+      expect(String(call[0])).not.toContain('viewport=')
+    })
+
+    // The active tab used to decide the scope; it must now be inert.
+    it('sends the requested viewport even while another tab is active', async () => {
+      mockFetchSuccess({})
+      const { wrapper } = setupWithOverrides({ xs: 1, lg: 3 }, 'xs')
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
+      act(() => {
+        result.current.requestReset(scopeNamed(result.current.options, 'Large'))
+      })
+      act(() => {
+        result.current.onConfirm()
+      })
+
+      expect(String((await findResetCall())[0])).toContain('viewport=lg')
+    })
+
+    it('does nothing when confirmed with no scope pending', async () => {
+      mockFetchSuccess({})
+      const { wrapper } = setupWithOverrides({ lg: 2 })
+
+      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
       act(() => {
         result.current.onConfirm()
       })
 
       await waitFor(() => {
-        const resetCall = getFetchCalls().find(([url]) =>
-          (url as string).includes('/api/resetGridSettingsOverrides'),
-        )
-        expect(resetCall).toBeDefined()
-        expect(resetCall![1]?.method).toBe('DELETE')
+        expect(
+          getFetchCalls().some(([url]) =>
+            (url as string).includes('/api/resetGridSettingsOverrides'),
+          ),
+        ).toBe(false)
       })
-    })
-
-    it('should send params without viewport key for default viewport', async () => {
-      mockFetchSuccess({})
-      const { wrapper } = setupWithOverrides({ total: 2 }, 'md')
-
-      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-      act(() => {
-        result.current.onResetClick()
-      })
-
-      act(() => {
-        result.current.onConfirm()
-      })
-
-      await waitFor(() => {
-        const resetCall = getFetchCalls().find(([url]) =>
-          (url as string).includes('/api/resetGridSettingsOverrides'),
-        )
-        expect(resetCall).toBeDefined()
-        const urlString = String(resetCall![0])
-        expect(urlString).toContain('pageId=1')
-        expect(urlString).toContain('zone=main')
-        expect(urlString).not.toContain('viewport=')
-        expect(resetCall![1]?.body).toBeUndefined()
-      })
-    })
-
-    it('should send params with viewport key for non-default viewport', async () => {
-      mockFetchSuccess({})
-      const { wrapper } = setupWithOverrides({ lg: 3 }, 'lg')
-
-      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-      act(() => {
-        result.current.onResetClick()
-      })
-
-      act(() => {
-        result.current.onConfirm()
-      })
-
-      await waitFor(() => {
-        const resetCall = getFetchCalls().find(([url]) =>
-          (url as string).includes('/api/resetGridSettingsOverrides'),
-        )
-        expect(resetCall).toBeDefined()
-        const urlString = String(resetCall![0])
-        expect(urlString).toContain('pageId=1')
-        expect(urlString).toContain('zone=main')
-        expect(urlString).toContain('viewport=lg')
-        expect(resetCall![1]?.body).toBeUndefined()
-      })
-    })
-
-    it('should close dialog on confirm', () => {
-      mockFetchSuccess({})
-      const { wrapper } = setupWithOverrides({ total: 2 }, 'md')
-
-      const { result } = renderHook(() => useResetOverridesAction(), { wrapper })
-
-      act(() => {
-        result.current.onResetClick()
-      })
-      expect(result.current.isDialogOpen).toBe(true)
-
-      act(() => {
-        result.current.onConfirm()
-      })
-      expect(result.current.isDialogOpen).toBe(false)
     })
   })
 })
