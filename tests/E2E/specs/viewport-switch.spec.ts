@@ -66,7 +66,9 @@ test.describe('Viewport switcher — create and reset overrides', () => {
       await expect(resetTrigger).toBeVisible()
       // No "all viewports" entry — it would clear exactly the same column.
       expect(await openResetScopes()).toEqual([`${labelA}1`])
+
       await page.keyboard.press('Escape')
+      await expect(resetMenu).toBeHidden()
     })
 
     await test.step('a second overridden viewport adds its own scope and the aggregate', async () => {
@@ -99,10 +101,24 @@ test.describe('Viewport switcher — create and reset overrides', () => {
       await expect(leftBadge).toHaveText(thirdWidth)
     })
 
-    await test.step('the last scope clears the rest and retires the menu', async () => {
-      // One viewport left overridden, so the menu is back to a single entry.
+    await test.step('the menu drops back to a single scope once one viewport is clean', async () => {
+      // With only viewportB overridden the aggregate would clear the same
+      // column as the entry above it, so it is withdrawn.
       expect(await openResetScopes()).toEqual([`${labelB}1`])
-      await resetMenu.getByRole('menuitem').filter({ hasText: labelB }).click()
+
+      await page.keyboard.press('Escape')
+      await expect(resetMenu).toBeHidden()
+    })
+
+    await test.step('the aggregate scope clears every viewport at once', async () => {
+      // Restore a second override so "all viewports" is offered again — it
+      // takes a different path to the API than the per-viewport scopes above
+      // (no viewport parameter), so it needs its own journey.
+      await activateViewport(page, viewportA)
+      await setBadgeWidth(halfWidth)
+      expect(await openResetScopes()).toEqual([`${labelA}1`, `${labelB}1`, 'All viewports1'])
+
+      await resetMenu.getByRole('menuitem').filter({ hasText: 'All viewports' }).click()
       await expect(confirmDialog).toBeVisible()
       await confirmDialog.getByRole('button', { name: 'Reset', exact: true }).click()
 
