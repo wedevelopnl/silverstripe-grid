@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '@/hooks/queryKeys'
@@ -13,14 +13,10 @@ import {
 import { mockFetchSuccess } from '@/testing/mockFetch'
 import { renderWithProviders } from '@/testing/renderWithProviders'
 import type { TreeApiResponse, ViewportSettings } from '@/types/elements'
-
 import ViewportSwitcher from './ViewportSwitcher'
 
-// Setup file (client/src/js/testing/setup.ts) configures 6 viewports in this order.
+// Setup file configures 6 viewports in this order, default 'md'.
 const VIEWPORT_KEYS = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl']
-
-const viewportButtons = () =>
-  VIEWPORT_KEYS.map((key) => screen.getByTestId(`viewport-button-${key}`))
 
 function treeWithOverride(viewport: string): TreeApiResponse {
   const override: ViewportSettings = { width: 6, offset: 0, visible: true }
@@ -36,6 +32,19 @@ function treeWithOverride(viewport: string): TreeApiResponse {
   return createTreeApiResponse({ pageId: 1, sections: [section] })
 }
 
+function seeded(...entries: [readonly unknown[], TreeApiResponse][]) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  })
+  for (const [key, tree] of entries) {
+    queryClient.setQueryData(key, tree)
+  }
+  return queryClient
+}
+
+const trigger = () => screen.getByTestId('viewport-picker-trigger')
+const dropdown = () => screen.getByTestId('viewport-picker-dropdown')
+
 describe('ViewportSwitcher', () => {
   beforeEach(() => {
     // jsdom does not implement HTMLDialogElement.showModal/close
@@ -43,377 +52,150 @@ describe('ViewportSwitcher', () => {
     HTMLDialogElement.prototype.close = vi.fn()
   })
 
-  it('renders buttons for all viewports', () => {
-    mockFetchSuccess({})
-
-    renderWithProviders(<ViewportSwitcher />)
-
-    const buttons = viewportButtons()
-
-    expect(buttons).toHaveLength(6)
-    expect(buttons[0]).toHaveTextContent('Extra small')
-    expect(buttons[5]).toHaveTextContent('Extra extra large')
-  })
-
-  it('active viewport button has active class and aria-pressed', () => {
+  it('presents the viewport control as a picker', () => {
     mockFetchSuccess({})
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' })
 
-    const mdButton = screen.getByTestId('viewport-button-md')
-
-    expect(mdButton).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('viewport-switcher')).toBeInTheDocument()
+    expect(trigger()).toHaveAttribute('data-viewport', 'md')
   })
 
-  it('clicking inactive button switches viewport', async () => {
+  it('offers every adapter viewport', async () => {
     const user = userEvent.setup()
     mockFetchSuccess({})
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' })
+    await user.click(trigger())
 
-    const mdButton = screen.getByTestId('viewport-button-md')
-    const lgButton = screen.getByTestId('viewport-button-lg')
-
-    expect(lgButton).toHaveAttribute('aria-pressed', 'false')
-
-    await user.click(lgButton)
-
-    expect(lgButton).toHaveAttribute('aria-pressed', 'true')
-    expect(mdButton).toHaveAttribute('aria-pressed', 'false')
+    expect(within(dropdown()).getAllByRole('menuitemradio')).toHaveLength(VIEWPORT_KEYS.length)
   })
 
-  it('active button click does not call setActiveViewport', async () => {
+  it('drives the shared active-viewport store when a viewport is chosen', async () => {
     const user = userEvent.setup()
     mockFetchSuccess({})
-
-    // Spy on the shared store setter the component invokes via useViewportContext.
-    // The store itself no-ops on an unchanged key, so aria-pressed alone can't
-    // distinguish "setter skipped" (guard present) from "setter called with the
-    // same key" (guard removed) — we must assert on the call directly.
     const setSpy = vi.spyOn(activeViewportStore, 'setActiveViewport')
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md' })
     // renderWithProviders seeds the active viewport through the same setter.
     setSpy.mockClear()
 
-    const mdButton = screen.getByTestId('viewport-button-md')
-    await user.click(mdButton)
+    await user.click(trigger())
+    await user.click(screen.getByTestId('viewport-picker-option-lg'))
 
-    // Clicking the already-active button must NOT call the setter (the `!isActive`
-    // guard). A mutant that always calls it would invoke setActiveViewport('md').
-    expect(setSpy).not.toHaveBeenCalled()
-    expect(mdButton).toHaveAttribute('aria-pressed', 'true')
-
-    // Sanity: an inactive button DOES call the setter.
-    await user.click(screen.getByTestId('viewport-button-lg'))
     expect(setSpy).toHaveBeenCalledWith('lg')
+    expect(trigger()).toHaveAttribute('data-viewport', 'lg')
 
     setSpy.mockRestore()
   })
 
-  it('reset button not shown when no overrides', () => {
-    mockFetchSuccess({})
-
-    renderWithProviders(<ViewportSwitcher />)
-
-    expect(screen.queryByTestId('viewport-reset-trigger')).not.toBeInTheDocument()
-  })
-
-  it('active button has aria-disabled attribute', () => {
-    mockFetchSuccess({})
-
-    renderWithProviders(<ViewportSwitcher />, { viewport: 'md' })
-
-    const mdButton = screen.getByTestId('viewport-button-md')
-
-    expect(mdButton).toHaveAttribute('aria-disabled', 'true')
-  })
-
-  it('inactive buttons do not have aria-disabled attribute', () => {
-    mockFetchSuccess({})
-
-    renderWithProviders(<ViewportSwitcher />, { viewport: 'md' })
-
-    expect(screen.getByTestId('viewport-button-xs')).not.toHaveAttribute('aria-disabled')
-    expect(screen.getByTestId('viewport-button-lg')).not.toHaveAttribute('aria-disabled')
-  })
-
-  it('inactive buttons do not have active class', () => {
-    mockFetchSuccess({})
-
-    renderWithProviders(<ViewportSwitcher />, { viewport: 'md' })
-
-    const xsButton = screen.getByTestId('viewport-button-xs')
-
-    expect(xsButton).toHaveAttribute('aria-pressed', 'false')
-  })
-
-  it('clicking active button does not change active state', async () => {
+  it('marks the viewports the cached tree actually overrides', async () => {
     const user = userEvent.setup()
     mockFetchSuccess({})
-
-    renderWithProviders(<ViewportSwitcher />, { viewport: 'md' })
-
-    const mdButton = screen.getByTestId('viewport-button-md')
-
-    await user.click(mdButton)
-
-    expect(mdButton).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByTestId('viewport-button-xs')).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByTestId('viewport-button-lg')).toHaveAttribute('aria-pressed', 'false')
-  })
-
-  it('inactive buttons do not have aria-disabled attribute at all', () => {
-    mockFetchSuccess({})
-
-    renderWithProviders(<ViewportSwitcher />, { viewport: 'md' })
-
-    for (const key of VIEWPORT_KEYS) {
-      if (key === 'md') continue
-      expect(screen.getByTestId(`viewport-button-${key}`)).not.toHaveAttribute('aria-disabled')
-    }
-  })
-
-  it('shows reset button when overrides exist in cache', () => {
-    mockFetchSuccess({})
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    })
-
-    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('md'))
+    const queryClient = seeded([queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg')])
 
     renderWithProviders(<ViewportSwitcher />, { viewport: 'md', queryClient })
-
-    expect(screen.getByTestId('viewport-reset-trigger')).toBeInTheDocument()
-  })
-
-  it('shows the reset button by default (readonly omitted) when overrides exist', () => {
-    mockFetchSuccess({})
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    })
-
-    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('md'))
-
-    renderWithProviders(<ViewportSwitcher readonly={false} />, { viewport: 'md', queryClient })
-
-    expect(screen.getByTestId('viewport-reset-trigger')).toBeInTheDocument()
-  })
-
-  it('hides the reset button and dialog when readonly even with overrides present', () => {
-    mockFetchSuccess({})
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    })
-
-    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('md'))
-
-    renderWithProviders(<ViewportSwitcher readonly />, { viewport: 'md', queryClient })
-
-    expect(screen.queryByTestId('viewport-reset-trigger')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
-  })
-
-  it('offers the reset menu from a non-default viewport too', () => {
-    // The trigger used to be a button whose scope came from the active tab, so
-    // it is worth pinning that it is now the same control from any of them.
-    mockFetchSuccess({})
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    })
-
-    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg'))
-
-    renderWithProviders(<ViewportSwitcher />, { viewport: 'lg', queryClient })
-
-    expect(screen.getByTestId('viewport-reset-trigger')).toBeInTheDocument()
-  })
-
-  it('marks a viewport carrying overrides with a dot, whether or not it is active', () => {
-    mockFetchSuccess({})
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    })
-
-    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg'))
-
-    // Active viewport is md; the override lives on lg. The dot tracks where
-    // overrides exist, not which tab is selected — that is what separates it
-    // from the pressed state.
-    renderWithProviders(<ViewportSwitcher />, { viewport: 'md', queryClient })
-
-    const lgButton = screen.getByTestId('viewport-button-lg')
-    expect(lgButton.querySelector('.ssgrid-viewport-switcher__override-dot')).not.toBeNull()
-    expect(lgButton).toHaveTextContent('1 column overrides this viewport')
-
-    const mdButton = screen.getByTestId('viewport-button-md')
-    expect(mdButton).toHaveAttribute('aria-pressed', 'true')
-    expect(mdButton.querySelector('.ssgrid-viewport-switcher__override-dot')).toBeNull()
-  })
-
-  it('pluralises the override count in the dot label', () => {
-    mockFetchSuccess({})
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    })
-
-    const override: ViewportSettings = { width: 6, offset: 0, visible: true }
-    const settings = {
-      default: { width: 12, offset: 0, visible: true },
-      overrides: { lg: override },
-    }
-    const row = createRowNode({
-      children: [
-        createColumnNode({ gridSettings: settings, children: [] }),
-        createColumnNode({ gridSettings: settings, children: [] }),
-      ],
-    })
-    const section = createSectionNode({ parent: { type: 'page', id: 1 }, children: [row] })
-
-    queryClient.setQueryData(
-      queryKeys.elementTree.byPage(1, 'main'),
-      createTreeApiResponse({ pageId: 1, sections: [section] }),
-    )
-
-    renderWithProviders(<ViewportSwitcher />, { viewport: 'md', queryClient })
-
-    expect(screen.getByTestId('viewport-button-lg')).toHaveTextContent(
-      '2 columns override this viewport',
-    )
-  })
-
-  it('renders no override dots when nothing overrides', () => {
-    mockFetchSuccess({})
-
-    renderWithProviders(<ViewportSwitcher />)
-
-    for (const button of viewportButtons()) {
-      expect(button.querySelector('.ssgrid-viewport-switcher__override-dot')).toBeNull()
-    }
-  })
-
-  it('marks overridden viewports in readonly mode too', () => {
-    mockFetchSuccess({})
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    })
-
-    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg'))
-
-    // The history viewer hides the reset control but still benefits from
-    // seeing which viewports the archived version deviated at.
-    renderWithProviders(<ViewportSwitcher readonly />, { viewport: 'md', queryClient })
+    await user.click(trigger())
 
     expect(
       screen
-        .getByTestId('viewport-button-lg')
-        .querySelector('.ssgrid-viewport-switcher__override-dot'),
-    ).not.toBeNull()
-    expect(screen.queryByTestId('viewport-reset-trigger')).not.toBeInTheDocument()
-  })
-
-  it('reads the versioned tree, not the draft, when a version is given', () => {
-    mockFetchSuccess({})
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    })
-
-    // The history viewer renders an archived version while the draft may have
-    // moved on. Seed the two keys with overrides at different viewports: the
-    // dots must follow the version on screen, not whatever the draft holds.
-    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg'))
-    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main', 7), treeWithOverride('xl'))
-
-    renderWithProviders(<ViewportSwitcher readonly version={7} />, {
-      viewport: 'md',
-      queryClient,
-    })
-
-    expect(
-      screen
-        .getByTestId('viewport-button-xl')
-        .querySelector('.ssgrid-viewport-switcher__override-dot'),
+        .getByTestId('viewport-picker-option-lg')
+        .querySelector('.ssgrid-viewport-picker__override-dot'),
     ).not.toBeNull()
     expect(
       screen
-        .getByTestId('viewport-button-lg')
-        .querySelector('.ssgrid-viewport-switcher__override-dot'),
+        .getByTestId('viewport-picker-option-md')
+        .querySelector('.ssgrid-viewport-picker__override-dot'),
     ).toBeNull()
   })
 
-  it('exposes an accessible toolbar name', () => {
-    mockFetchSuccess({})
-
-    renderWithProviders(<ViewportSwitcher />)
-
-    expect(screen.getByRole('toolbar', { name: 'Viewport size' })).toBeInTheDocument()
-  })
-
-  it('renders the upper-bound range label for a non-final viewport', () => {
-    mockFetchSuccess({})
-
-    renderWithProviders(<ViewportSwitcher />)
-
-    // The first viewport (xs) is followed by sm (minWidth 576), so its
-    // range label reads the next viewport's lower bound.
-    const xsButton = screen.getByTestId('viewport-button-xs')
-    expect(xsButton).toHaveTextContent('<576')
-  })
-
-  it('omits the range label for the final viewport', () => {
-    mockFetchSuccess({})
-
-    renderWithProviders(<ViewportSwitcher />)
-
-    // xxl is the last viewport — it has no upper bound, so no range text.
-    const xxlButton = screen.getByTestId('viewport-button-xxl')
-    expect(xxlButton).not.toHaveTextContent('<')
-    expect(xxlButton).toHaveTextContent('Extra extra large')
-    // The `range !== null` guard must omit the span element entirely — not
-    // render an empty one — for the final viewport.
-    expect(xxlButton.querySelector('.ssgrid-viewport-switcher__range')).toBeNull()
-  })
-
-  it('does not render the confirm dialog until reset is clicked', () => {
-    mockFetchSuccess({})
-
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    })
-
-    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg'))
-
-    renderWithProviders(<ViewportSwitcher />, { viewport: 'lg', queryClient })
-
-    expect(screen.queryByText('Reset Large overrides')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
-  })
-
-  it('opens the reset menu, not a dialog, from the trigger', async () => {
-    // The dialog now comes one step later, once a scope has been picked; the
-    // menu's own contents are covered in ViewportResetMenu.test.tsx.
+  it('reads the versioned tree, not the draft, when a version is given', async () => {
     const user = userEvent.setup()
     mockFetchSuccess({})
 
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    })
+    // The history viewer renders an archived version while the draft may have
+    // moved on. Seed the two keys with overrides at different viewports: the
+    // marks must follow the version on screen, not whatever the draft holds.
+    const queryClient = seeded(
+      [queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg')],
+      [queryKeys.elementTree.byPage(1, 'main', 7), treeWithOverride('xl')],
+    )
 
-    queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg'))
+    renderWithProviders(<ViewportSwitcher readonly version={7} />, { viewport: 'md', queryClient })
+    await user.click(trigger())
 
-    renderWithProviders(<ViewportSwitcher />, { viewport: 'lg', queryClient })
+    expect(
+      screen
+        .getByTestId('viewport-picker-option-xl')
+        .querySelector('.ssgrid-viewport-picker__override-dot'),
+    ).not.toBeNull()
+    expect(
+      screen
+        .getByTestId('viewport-picker-option-lg')
+        .querySelector('.ssgrid-viewport-picker__override-dot'),
+    ).toBeNull()
+  })
 
-    await user.click(screen.getByTestId('viewport-reset-trigger'))
+  it('offers no reset scopes when nothing is overridden', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
 
-    expect(screen.getByTestId('viewport-reset-dropdown')).toBeInTheDocument()
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'md' })
+    await user.click(trigger())
+
+    expect(within(dropdown()).queryAllByRole('menuitem')).toHaveLength(0)
+  })
+
+  it('offers a reset scope for an overridden viewport', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+    const queryClient = seeded([queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg')])
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'md', queryClient })
+    await user.click(trigger())
+
+    expect(
+      within(dropdown()).getByRole('menuitem', { name: 'Reset Large, 1 column' }),
+    ).toBeInTheDocument()
+  })
+
+  it('withholds every reset scope when readonly, keeping the viewports switchable', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+    const queryClient = seeded([queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg')])
+
+    renderWithProviders(<ViewportSwitcher readonly />, { viewport: 'md', queryClient })
+    await user.click(trigger())
+
+    expect(within(dropdown()).queryAllByRole('menuitem')).toHaveLength(0)
+    expect(within(dropdown()).getAllByRole('menuitemradio')).toHaveLength(VIEWPORT_KEYS.length)
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+  })
+
+  it('confirms before running a reset chosen from the menu', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+    const queryClient = seeded([queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg')])
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'md', queryClient })
+    await user.click(trigger())
+    await user.click(screen.getByRole('menuitem', { name: 'Reset Large, 1 column' }))
+
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    expect(screen.getByText('Reset Large overrides')).toBeInTheDocument()
+    expect(screen.getByText('Reset overrides for 1 column on Large?')).toBeInTheDocument()
+  })
+
+  it('dismisses the dialog on cancel without resetting', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+    const queryClient = seeded([queryKeys.elementTree.byPage(1, 'main'), treeWithOverride('lg')])
+
+    renderWithProviders(<ViewportSwitcher />, { viewport: 'md', queryClient })
+    await user.click(trigger())
+    await user.click(screen.getByRole('menuitem', { name: 'Reset Large, 1 column' }))
+    await user.click(screen.getByText('Cancel'))
+
     expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
   })
 })

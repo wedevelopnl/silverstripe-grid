@@ -120,11 +120,15 @@ test.describe('History view readonly grid', () => {
           .filter({ hasText: 'Original Alpha Section' }),
       ).toBeVisible()
 
-      // The viewport switcher is mounted in readonly mode so admins can
-      // inspect the grid at each responsive breakpoint while browsing
-      // history. The reset-overrides button stays hidden in readonly.
+      // The viewport picker is mounted in readonly mode so admins can inspect
+      // the grid at each responsive breakpoint while browsing history — but it
+      // offers only viewports, never a reset scope.
       await expect(historyGridEditor.getByTestId('viewport-switcher')).toBeVisible()
-      await expect(historyGridEditor.getByTestId(/^viewport-button-/).first()).toBeVisible()
+      await historyGridEditor.getByTestId('viewport-picker-trigger').click()
+      const historyPicker = historyGridEditor.getByTestId('viewport-picker-dropdown')
+      await expect(historyPicker.getByRole('menuitemradio').first()).toBeVisible()
+      await expect(historyPicker.getByRole('menuitem')).toHaveCount(0)
+      await page.keyboard.press('Escape')
 
       // ALL interactive controls must be hidden in readonly mode —
       // proves `useReadonly()` gates the block components correctly.
@@ -133,7 +137,6 @@ test.describe('History view readonly grid', () => {
       await expect(historyGridEditor.getByTestId('add-child-append')).toHaveCount(0)
       await expect(historyGridEditor.getByTestId('add-child-empty')).toHaveCount(0)
       await expect(historyGridEditor.getByTestId('add-content-button')).toHaveCount(0)
-      await expect(historyGridEditor.getByTestId('viewport-reset-trigger')).toHaveCount(0)
       await expect(historyGridEditor.getByTestId('section-edit-link')).toHaveCount(0)
       await expect(historyGridEditor.getByTestId('row-edit-link')).toHaveCount(0)
       await expect(historyGridEditor.getByTestId('column-edit-link')).toHaveCount(0)

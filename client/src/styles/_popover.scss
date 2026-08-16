@@ -1,9 +1,12 @@
-// Shared popover surface for the two flyouts the editor renders inline (not in
-// a portal): the column width/offset listbox (GridSettingsPicker) and the
-// per-element actions menu (ActionsMenu). Both anchor to a `position: relative`
-// wrapper and drop a white card below the trigger. Keyboard state lives on the
-// elements as `tabindex`/`aria-selected`/`aria-activedescendant` (set by React);
-// look lives here.
+@use './a11y';
+
+// Shared popover surface for the three flyouts the editor renders inline (not
+// in a portal): the column width/offset listbox (GridSettingsPicker), the
+// per-element actions menu (ActionsMenu) and the viewport picker. All anchor to
+// a `position: relative` wrapper and drop a white card below the trigger.
+// Keyboard state lives on the elements as
+// `tabindex`/`aria-selected`/`aria-activedescendant` (set by React); look lives
+// here.
 
 %ssgrid-popover-anchor {
   position: relative;
@@ -133,35 +136,36 @@
   }
 }
 
-// --- Reset-overrides menu (trails the viewport tabs) --------------------------
+// --- Viewport picker ---------------------------------------------------------
 
-.ssgrid-viewport-reset {
+// One button naming the current viewport, one menu holding every viewport and
+// every reset scope.
+.ssgrid-viewport-picker {
   @extend %ssgrid-popover-anchor;
 
-  align-items: center;
+  display: flex;
+  width: 100%;
 
-  // Matches the tab height so the strip's own padding stays the only vertical
-  // rhythm; the tabs flex-grow around it, so it must not take a share.
   &__trigger {
     display: inline-flex;
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     align-items: center;
-    justify-content: center;
-    width: var(--ssgrid-size-field);
-    height: var(--ssgrid-size-field);
-    padding: 0;
-    background: transparent;
-    border: 0;
+    gap: var(--ssgrid-space-2);
+    min-height: var(--ssgrid-size-field);
+    padding: 11px var(--ssgrid-space-3);
+    background: var(--ssgrid-surface-page);
+    border: 1px solid var(--ssgrid-border-subtle);
     border-radius: var(--ssgrid-radius-sm);
     color: var(--ssgrid-text-default);
-    font-size: var(--ssgrid-size-icon);
-    line-height: 1;
+    font: inherit;
+    font-size: var(--ssgrid-font-size-body);
+    line-height: var(--ssgrid-line-height-tight);
+    text-align: left;
     cursor: pointer;
 
     &:hover,
     &[aria-expanded='true'] {
       background: var(--ssgrid-surface-hover);
-      color: var(--ssgrid-text-brand);
     }
 
     &:focus-visible {
@@ -170,32 +174,93 @@
     }
   }
 
+  &__label {
+    font-weight: var(--ssgrid-font-weight-medium);
+  }
+
+  &__icon {
+    flex: 0 0 auto;
+    color: var(--ssgrid-icon-brand);
+    font-size: var(--ssgrid-font-size-body);
+  }
+
+  // Half-opacity so the upper bound reads as a footnote to the label.
+  &__range {
+    font-weight: var(--ssgrid-font-weight-regular);
+    opacity: 0.5;
+  }
+
+  // Pushed to the trailing edge so the caret marks the button's full width as
+  // the hit target, rather than trailing the label at whatever width it lands.
+  &__caret {
+    flex: 0 0 auto;
+    margin-left: auto;
+    opacity: 0.5;
+  }
+
+  // Sized to its rows, not to the trigger: the trigger spans the panel like the
+  // CMS's other form fields, and a menu that wide would strand each row's count
+  // far from its label.
   &__menu {
     @extend %ssgrid-popover-surface;
 
-    right: 0; // the trigger sits at the strip's trailing edge
-    min-width: 220px;
+    left: 0;
+    width: max-content;
+    min-width: 260px;
+    max-width: 100%;
   }
 
   &__item {
     @extend %ssgrid-popover-item;
 
-    // The label takes the slack so the counts sit flush right; without it they
-    // ragged-align under viewport names of differing length.
-    justify-content: space-between;
+    &[aria-checked='true'] {
+      font-weight: var(--ssgrid-font-weight-medium);
+      background: var(--ssgrid-surface-selected);
+    }
   }
 
-  // Separates the aggregate from the per-viewport entries it subsumes.
-  &__item[data-scope='all'] {
-    margin-top: var(--ssgrid-space-1);
-    padding-top: var(--ssgrid-space-2);
-    border-top: 1px solid var(--ssgrid-border-default);
-    border-radius: 0;
+  &__item-label {
+    flex: 1 1 auto;
   }
 
   &__item-count {
     flex: 0 0 auto;
     font-variant-numeric: tabular-nums;
     opacity: 0.5;
+  }
+
+  // Separates the reset scopes from the viewport rows they act on.
+  &__group {
+    margin-top: var(--ssgrid-space-1);
+    padding-top: var(--ssgrid-space-1);
+    border-top: 1px solid var(--ssgrid-border-default);
+  }
+
+  &__group-heading {
+    padding: var(--ssgrid-space-1) var(--ssgrid-space-2);
+    color: var(--ssgrid-text-default);
+    font-size: var(--ssgrid-font-size-label);
+    font-weight: var(--ssgrid-font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.5;
+  }
+
+  // Brand disc marking a viewport that at least one column overrides — on the
+  // trigger it means "somewhere on this page", on a row it means that row.
+  // Purely decorative; `&__override-label` carries the same fact to assistive
+  // tech.
+  &__override-dot {
+    flex: 0 0 auto;
+    width: var(--ssgrid-size-dot);
+    height: var(--ssgrid-size-dot);
+    border-radius: 50%;
+    background: var(--ssgrid-surface-action);
+  }
+
+  // Clipped, not `display: none` — a hidden element is dropped from the
+  // accessible name, which is the whole point of this span.
+  &__override-label {
+    @include a11y.visually-hidden;
   }
 }

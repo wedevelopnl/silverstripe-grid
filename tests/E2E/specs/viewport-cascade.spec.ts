@@ -3,7 +3,7 @@ import {
   activateViewport,
   readAdapterConfig,
   twoNonDefaultViewports,
-  viewportButton,
+  expectActiveViewport,
   widthLabel,
 } from '../helpers/adapter'
 import { loadFixture, resetFixtures } from '../helpers/fixtures'
@@ -44,10 +44,7 @@ test.describe('Viewport override resolution (isolated strategy)', () => {
     const overrideWidth = widthLabel(Math.floor(adapter.columnCount / 2))
 
     await test.step('default viewport is active on first load, badge shows the stored default', async () => {
-      await expect(viewportButton(page, adapter.defaultViewport)).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
+      await expectActiveViewport(page, adapter.defaultViewport)
       await expect(badge).toHaveText(fullWidth)
     })
 

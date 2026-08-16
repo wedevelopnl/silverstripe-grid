@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test'
+import { type Locator, type Page, expect } from '@playwright/test'
 
 /**
  * Shape of the adapter config exposed by GridController::buildAdapterConfig()
@@ -56,29 +56,32 @@ export function widthLabel(span: number): string {
 }
 
 /**
- * Locator for the viewport switcher button corresponding to `key`.
- *
- * Relies on the composed testid `viewport-button-<key>` emitted by
- * ViewportSwitcher.tsx — adapter-agnostic: each adapter's viewport keys
- * produce their own unique testids at render time.
+ * The viewport picker's trigger, which names the viewport currently in effect
+ * and carries it as `data-viewport`.
  */
-export function viewportButton(page: Page, key: string): Locator {
-  return page.getByTestId(`viewport-button-${key}`)
+export function viewportTrigger(page: Page): Locator {
+  return page.getByTestId('viewport-picker-trigger')
+}
+
+/** Assert which viewport the editor is currently laid out for. */
+export async function expectActiveViewport(page: Page, key: string): Promise<void> {
+  await expect(viewportTrigger(page)).toHaveAttribute('data-viewport', key)
 }
 
 /**
  * Ensure the given viewport is the active one. No-op if already active.
  *
- * The active viewport button renders with `aria-disabled="true"`, which
- * Playwright's auto-wait treats as unclickable. Loops that iterate every
- * adapter viewport must use this helper rather than an unconditional click.
+ * Choosing the active row closes the menu without re-selecting, so callers that
+ * loop over every adapter viewport can call this unconditionally.
  */
 export async function activateViewport(page: Page, key: string): Promise<void> {
-  const button = viewportButton(page, key)
-  if ((await button.getAttribute('aria-pressed')) === 'true') {
+  const trigger = viewportTrigger(page)
+  if ((await trigger.getAttribute('data-viewport')) === key) {
     return
   }
-  await button.click()
+  await trigger.click()
+  await page.getByTestId(`viewport-picker-option-${key}`).click()
+  await expect(trigger).toHaveAttribute('data-viewport', key)
 }
 
 /**

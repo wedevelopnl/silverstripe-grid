@@ -287,7 +287,7 @@ describe('GridEditor', () => {
       expect(screen.getByTestId('viewport-switcher')).toBeInTheDocument()
       // But its reset-overrides button is gated on readonly and must
       // be absent in history view.
-      expect(screen.queryByTestId('viewport-reset-trigger')).not.toBeInTheDocument()
+      expect(screen.getByTestId('viewport-picker-trigger')).toBeInTheDocument()
     })
 
     it('does not render any drag handles in readonly mode', async () => {

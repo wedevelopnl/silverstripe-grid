@@ -4,7 +4,7 @@ import {
   activateViewport,
   readAdapterConfig,
   twoNonDefaultViewports,
-  viewportButton,
+  expectActiveViewport,
 } from '../helpers/adapter'
 import { loadAndNavigate, resetFixtures } from '../helpers/fixtures'
 import { forceSplitViewMode } from '../helpers/preview'
@@ -89,10 +89,7 @@ test.describe('CMS preview viewport sync', () => {
       await expect(page.getByTestId('viewport-switcher')).toBeVisible()
       await expect(cmsSelector).toBeVisible({ timeout: 15_000 })
 
-      await expect(viewportButton(page, adapter.defaultViewport)).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
+      await expectActiveViewport(page, adapter.defaultViewport)
       await expect(cmsButton(adapter.defaultViewport)).toHaveAttribute('aria-pressed', 'true')
 
       await expect
@@ -114,8 +111,7 @@ test.describe('CMS preview viewport sync', () => {
     await test.step('switching viewport in the CMS bar drives the editor and rescales preview', async () => {
       await cmsButton(viewportB).click()
 
-      await expect(viewportButton(page, viewportB)).toHaveAttribute('aria-pressed', 'true')
-      await expect(viewportButton(page, viewportA)).toHaveAttribute('aria-pressed', 'false')
+      await expectActiveViewport(page, viewportB)
 
       await expect
         .poll(deviceSize, { timeout: 5_000 })
@@ -134,7 +130,7 @@ test.describe('CMS preview viewport sync', () => {
       // Sync still works after the remount — switch via the CMS bar and
       // confirm the editor + iframe follow through the fresh React root.
       await cmsButton(viewportA).click()
-      await expect(viewportButton(page, viewportA)).toHaveAttribute('aria-pressed', 'true')
+      await expectActiveViewport(page, viewportA)
       await expect
         .poll(deviceSize, { timeout: 5_000 })
         .toEqual(expectedDeviceSize(adapter, viewportA))

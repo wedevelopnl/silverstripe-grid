@@ -1,20 +1,21 @@
 import { expect, test } from '@playwright/test'
-import { loadFixture, resetFixtures } from '../helpers/fixtures'
 import {
   activateViewport,
+  expectActiveViewport,
   readAdapterConfig,
   twoNonDefaultViewports,
-  viewportButton,
   viewportLabel,
+  viewportTrigger,
   widthLabel,
 } from '../helpers/adapter'
+import { loadFixture, resetFixtures } from '../helpers/fixtures'
 
-test.describe('Viewport switcher — create and reset overrides', () => {
+test.describe('Viewport picker — create and reset overrides', () => {
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
   })
 
-  test('editor creates per-viewport overrides and resets them via the viewport switcher', async ({
+  test('editor creates per-viewport overrides and resets them through the picker', async ({
     page,
   }) => {
     const fixture = await loadFixture(page.request, 'element-tree')
@@ -24,23 +25,28 @@ test.describe('Viewport switcher — create and reset overrides', () => {
 
     const adapter = await readAdapterConfig(page)
     const [viewportA, viewportB] = twoNonDefaultViewports(adapter)
+    const labelA = viewportLabel(adapter, viewportA)
+    const labelB = viewportLabel(adapter, viewportB)
 
+    const trigger = viewportTrigger(page)
+    const menu = page.getByTestId('viewport-picker-dropdown')
+    const confirmDialog = page.getByTestId('confirm-dialog')
     const leftColumn = page.getByTestId('column-block').first()
     const leftBadge = leftColumn.getByTestId('column-badge')
-    const resetTrigger = page.getByTestId('viewport-reset-trigger')
-    const resetMenu = page.getByTestId('viewport-reset-dropdown')
-    const confirmDialog = page.getByTestId('confirm-dialog')
 
-    /** Menu-item labels, in order, as the reset menu currently offers them. */
+    const fullWidth = widthLabel(adapter.columnCount)
+    const halfWidth = widthLabel(Math.floor(adapter.columnCount / 2))
+    const thirdWidth = widthLabel(Math.floor(adapter.columnCount / 3))
+
+    /** Reset-scope rows, in order, as the picker currently offers them. */
     const openResetScopes = async (): Promise<string[]> => {
-      await resetTrigger.click()
-      await expect(resetMenu).toBeVisible()
-      return await resetMenu
+      await trigger.click()
+      await expect(menu).toBeVisible()
+      return await menu
         .getByRole('menuitem')
         .evaluateAll((items) => items.map((item) => item.textContent ?? ''))
     }
 
-    // Change a column's width via the badge listbox at a given viewport.
     const setBadgeWidth = async (label: string) => {
       await leftBadge.click()
       await leftColumn
@@ -50,25 +56,27 @@ test.describe('Viewport switcher — create and reset overrides', () => {
       await expect(leftBadge).toHaveText(label)
     }
 
-    await test.step('no overrides — the reset menu is not offered at all', async () => {
-      await expect(resetTrigger).toBeHidden()
+    await test.step('the picker names the default viewport and offers all of them', async () => {
+      await expectActiveViewport(page, adapter.defaultViewport)
+      await trigger.click()
+      await expect(menu.getByRole('menuitemradio')).toHaveCount(adapter.viewports.length)
+      await expect(
+        page.getByTestId(`viewport-picker-option-${adapter.defaultViewport}`),
+      ).toHaveAttribute('aria-checked', 'true')
+      // Nothing is overridden yet, so no reset scopes are offered.
+      await expect(menu.getByRole('menuitem')).toHaveCount(0)
+      await page.keyboard.press('Escape')
+      await expect(menu).toBeHidden()
     })
-
-    const halfWidth = widthLabel(Math.floor(adapter.columnCount / 2))
-    const thirdWidth = widthLabel(Math.floor(adapter.columnCount / 3))
-    const labelA = viewportLabel(adapter, viewportA)
-    const labelB = viewportLabel(adapter, viewportB)
 
     await test.step('one overridden viewport is offered alone, with its column count', async () => {
       await activateViewport(page, viewportA)
       await setBadgeWidth(halfWidth)
 
-      await expect(resetTrigger).toBeVisible()
       // No "all viewports" entry — it would clear exactly the same column.
       expect(await openResetScopes()).toEqual([`${labelA}1`])
-
       await page.keyboard.press('Escape')
-      await expect(resetMenu).toBeHidden()
+      await expect(menu).toBeHidden()
     })
 
     await test.step('a second overridden viewport adds its own scope and the aggregate', async () => {
@@ -80,8 +88,6 @@ test.describe('Viewport switcher — create and reset overrides', () => {
     })
 
     await test.step('every scope stays reachable from the adapter default viewport', async () => {
-      // The control this replaced put "reset everything" behind this one tab
-      // and offered only the single-viewport reset from any other.
       await activateViewport(page, adapter.defaultViewport)
 
       expect(await openResetScopes()).toEqual([`${labelA}1`, `${labelB}1`, 'All viewports1'])
@@ -90,57 +96,48 @@ test.describe('Viewport switcher — create and reset overrides', () => {
 
     await test.step('resetting one viewport leaves the other override standing', async () => {
       await openResetScopes()
-      await resetMenu.getByRole('menuitem').filter({ hasText: labelA }).click()
+      await menu.getByRole('menuitem').filter({ hasText: labelA }).click()
       await expect(confirmDialog).toBeVisible()
       await confirmDialog.getByRole('button', { name: 'Reset', exact: true }).click()
 
-      const fullWidth = widthLabel(adapter.columnCount)
       await activateViewport(page, viewportA)
       await expect(leftBadge).toHaveText(fullWidth)
       await activateViewport(page, viewportB)
       await expect(leftBadge).toHaveText(thirdWidth)
     })
 
-    await test.step('the menu drops back to a single scope once one viewport is clean', async () => {
-      // With only viewportB overridden the aggregate would clear the same
-      // column as the entry above it, so it is withdrawn.
+    await test.step('the aggregate withdraws once a single viewport is left', async () => {
       expect(await openResetScopes()).toEqual([`${labelB}1`])
-
       await page.keyboard.press('Escape')
-      await expect(resetMenu).toBeHidden()
+      await expect(menu).toBeHidden()
     })
 
     await test.step('the aggregate scope clears every viewport at once', async () => {
-      // Restore a second override so "all viewports" is offered again — it
-      // takes a different path to the API than the per-viewport scopes above
-      // (no viewport parameter), so it needs its own journey.
+      // A different path to the API than the per-viewport scopes above (no
+      // viewport parameter), so it needs its own journey.
       await activateViewport(page, viewportA)
       await setBadgeWidth(halfWidth)
       expect(await openResetScopes()).toEqual([`${labelA}1`, `${labelB}1`, 'All viewports1'])
 
-      await resetMenu.getByRole('menuitem').filter({ hasText: 'All viewports' }).click()
+      await menu.getByRole('menuitem').filter({ hasText: 'All viewports' }).click()
       await expect(confirmDialog).toBeVisible()
       await confirmDialog.getByRole('button', { name: 'Reset', exact: true }).click()
 
-      await expect(resetTrigger).toBeHidden()
-
-      const fullWidth = widthLabel(adapter.columnCount)
       for (const key of [viewportA, viewportB]) {
         await activateViewport(page, key)
         await expect(leftBadge).toHaveText(fullWidth)
       }
+      expect(await openResetScopes()).toEqual([])
     })
   })
 })
 
-test.describe('Viewport switcher — independent overrides and publish', () => {
+test.describe('Viewport picker — independent overrides and publish', () => {
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
   })
 
-  test('viewport switcher preserves per-viewport overrides independently and publishes successfully', async ({
-    page,
-  }) => {
+  test('per-viewport overrides stay independent and the page publishes', async ({ page }) => {
     const fixture = await loadFixture(page.request, 'element-tree')
 
     await page.goto(`/admin/pages/edit/show/${fixture.pageId}`)
@@ -149,7 +146,6 @@ test.describe('Viewport switcher — independent overrides and publish', () => {
     const adapter = await readAdapterConfig(page)
     const [viewportA, viewportB] = twoNonDefaultViewports(adapter)
 
-    const viewportButtons = page.getByTestId(/^viewport-button-/)
     const leftColumn = page.getByTestId('column-block').first()
     const leftBadge = leftColumn.getByTestId('column-badge')
 
@@ -157,17 +153,14 @@ test.describe('Viewport switcher — independent overrides and publish', () => {
     const halfWidth = widthLabel(Math.floor(adapter.columnCount / 2))
     const thirdWidth = widthLabel(Math.floor(adapter.columnCount / 3))
 
-    await test.step('switcher renders one button per adapter viewport with the default viewport active', async () => {
-      await expect(viewportButtons).toHaveCount(adapter.viewports.length)
-      await expect(viewportButton(page, adapter.defaultViewport)).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
-      for (const vp of adapter.viewports) {
-        if (vp.key === adapter.defaultViewport) continue
-        await expect(viewportButton(page, vp.key)).toHaveAttribute('aria-pressed', 'false')
-      }
-    })
+    const setBadgeWidth = async (label: string) => {
+      await leftBadge.click()
+      await leftColumn
+        .getByTestId('column-badge-listbox')
+        .getByRole('option', { name: label, exact: true })
+        .click()
+      await expect(leftBadge).toHaveText(label)
+    }
 
     await test.step('baseline width renders at all viewports (no overrides)', async () => {
       for (const vp of adapter.viewports) {
@@ -178,12 +171,7 @@ test.describe('Viewport switcher — independent overrides and publish', () => {
 
     await test.step('override at viewportA does not affect other viewports', async () => {
       await activateViewport(page, viewportA)
-      await leftBadge.click()
-      await leftColumn
-        .getByTestId('column-badge-listbox')
-        .getByRole('option', { name: halfWidth, exact: true })
-        .click()
-      await expect(leftBadge).toHaveText(halfWidth)
+      await setBadgeWidth(halfWidth)
 
       for (const vp of adapter.viewports) {
         if (vp.key === viewportA) continue
@@ -194,14 +182,8 @@ test.describe('Viewport switcher — independent overrides and publish', () => {
 
     await test.step('a second override at viewportB is independent of viewportA', async () => {
       await activateViewport(page, viewportB)
-      await leftBadge.click()
-      await leftColumn
-        .getByTestId('column-badge-listbox')
-        .getByRole('option', { name: thirdWidth, exact: true })
-        .click()
-      await expect(leftBadge).toHaveText(thirdWidth)
+      await setBadgeWidth(thirdWidth)
 
-      // Original override intact.
       await activateViewport(page, viewportA)
       await expect(leftBadge).toHaveText(halfWidth)
     })
@@ -218,5 +200,32 @@ test.describe('Viewport switcher — independent overrides and publish', () => {
         page.getByRole('heading', { level: 1, name: 'E2E Grid Test Page', exact: true }),
       ).toBeVisible()
     })
+  })
+})
+
+test.describe('Viewport picker — narrow panels', () => {
+  test.afterAll(async ({ request }) => {
+    await resetFixtures(request)
+  })
+
+  // Split mode is the CMS's default and leaves the editor around 600px, the
+  // width the control has to survive without spilling the edit form sideways.
+  test('the control fits a split-mode panel without overflowing it', async ({ page }) => {
+    const fixture = await loadFixture(page.request, 'element-tree')
+
+    await page.setViewportSize({ width: 1000, height: 900 })
+    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`)
+    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
+
+    const adapter = await readAdapterConfig(page)
+    const control = page.getByTestId('viewport-switcher')
+
+    const overflow = await control.evaluate((el) => el.scrollWidth - el.clientWidth)
+    expect(overflow).toBeLessThanOrEqual(0)
+
+    await viewportTrigger(page).click()
+    await expect(
+      page.getByTestId('viewport-picker-dropdown').getByRole('menuitemradio'),
+    ).toHaveCount(adapter.viewports.length)
   })
 })
