@@ -93,6 +93,7 @@
   "WeDevelopGrid.useResetOverridesAction.DIALOG_MESSAGE_VIEWPORT_ONE": "Reset overrides for {count} column on {viewport}?",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_TITLE_ALL": "Reset all overrides",
   "WeDevelopGrid.useResetOverridesAction.DIALOG_TITLE_VIEWPORT": "Reset {viewport} overrides",
+  "WeDevelopGrid.ViewportPicker.DEFAULT": "Default",
   "WeDevelopGrid.ViewportPicker.GROUP_RESET": "Reset overrides",
   "WeDevelopGrid.ViewportPicker.GROUP_VIEWPORT": "Viewport size",
   "WeDevelopGrid.ViewportPicker.HAS_OVERRIDES_MANY": "{count} columns override this viewport",

@@ -245,6 +245,23 @@
     opacity: 0.5;
   }
 
+  // Marks the adapter's base viewport, the one whose widths apply everywhere.
+  // Neutral on purpose: the orange pills next to it report unpublished work and
+  // call for an action, whereas this is a standing fact about the viewport.
+  &__default {
+    flex: 0 0 auto;
+    padding: 1px var(--ssgrid-space-1);
+    background: var(--ssgrid-surface-muted);
+    border: 1px solid var(--ssgrid-border-default);
+    border-radius: var(--ssgrid-radius-sm);
+    color: var(--ssgrid-text-default);
+    font-size: var(--ssgrid-font-size-label);
+    font-weight: var(--ssgrid-font-weight-regular);
+    line-height: var(--ssgrid-line-height-tight);
+    white-space: nowrap;
+    opacity: 0.65;
+  }
+
   // Brand disc marking a viewport that at least one column overrides — on the
   // trigger it means "somewhere on this page", on a row it means that row.
   // Purely decorative; `&__override-label` carries the same fact to assistive
