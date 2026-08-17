@@ -423,6 +423,14 @@ describe('ElementActions', () => {
       expect(buttons[1].tabIndex).toBe(0)
       expect(buttons[0].tabIndex).toBe(-1)
 
+      await user.keyboard('{ArrowRight}')
+      expect(buttons[2]).toHaveFocus()
+
+      // From index 2, so a decrement is distinguishable from a jump to first.
+      await user.keyboard('{ArrowLeft}')
+      expect(buttons[1]).toHaveFocus()
+      expect(buttons[1].tabIndex).toBe(0)
+
       await user.keyboard('{ArrowLeft}')
       expect(buttons[0]).toHaveFocus()
       expect(buttons[0].tabIndex).toBe(0)
@@ -464,7 +472,13 @@ describe('ElementActions', () => {
       enabledToolbarButtons()[0].focus()
       await user.keyboard('{End}')
 
-      expect(screen.getByTestId('actions-menu-trigger')).toHaveFocus()
+      const trigger = screen.getByTestId('actions-menu-trigger')
+      expect(trigger).toHaveFocus()
+      // The tab stop has to travel with focus. Focus moves imperatively, so
+      // without this the trigger could hold tabIndex -1 alongside every icon
+      // button and the whole toolbar would drop out of the tab order.
+      expect(trigger).toHaveAttribute('tabindex', '0')
+      expect(enabledToolbarButtons().filter((b) => b.tabIndex === 0)).toHaveLength(1)
     })
 
     it('leaves the open overflow menu to handle its own Home/End', async () => {
@@ -482,8 +496,11 @@ describe('ElementActions', () => {
       // must not steal the key and yank focus back to a toolbar control.
       await user.keyboard('{Home}')
 
+      // Focus staying on the menu is the assertion that pins the guard: the
+      // dropdown outliving Home either way, and the trigger not holding focus
+      // while the menu does, are both true when the toolbar has stolen it.
+      expect(screen.getByTestId('actions-menu-dropdown')).toHaveFocus()
       expect(trigger).not.toHaveFocus()
-      expect(screen.getByTestId('actions-menu-dropdown')).toBeInTheDocument()
     })
   })
 })

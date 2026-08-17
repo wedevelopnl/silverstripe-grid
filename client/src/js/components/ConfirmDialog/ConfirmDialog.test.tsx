@@ -47,7 +47,7 @@ describe('ConfirmDialog', () => {
     )
   })
 
-  it('gives each instance distinct label ids so two dialogs cannot collide', () => {
+  it('gives each instance a distinct label id that survives a title change', () => {
     const { rerender } = render(<ConfirmDialog {...defaultProps} />)
     const first = screen.getByTestId('confirm-dialog').getAttribute('aria-labelledby')
 
@@ -59,6 +59,9 @@ describe('ConfirmDialog', () => {
       .map((dialog) => dialog.getAttribute('aria-labelledby'))
 
     expect(first).not.toBeNull()
+    // The id is instance identity, not content — deriving it from the title
+    // would move the aria-labelledby target on every title change.
+    expect(ids[0]).toBe(first)
     expect(new Set(ids).size).toBe(ids.length)
   })
 

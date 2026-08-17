@@ -114,6 +114,11 @@ describe('ColumnInsertButton', () => {
     renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />)
 
     const button = screen.getByTestId('column-insert-start')
+    // Idle first: `aria-disabled` is the only disabled signal now, so a stuck
+    // `true` would announce the button as unavailable for its whole resting
+    // life while every click-path test stayed green.
+    expect(button).toHaveAttribute('aria-disabled', 'false')
+
     await user.click(button)
 
     await waitFor(() => {
