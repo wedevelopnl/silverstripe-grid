@@ -78,17 +78,41 @@ describe('AddChildButton', () => {
     })
   })
 
-  it('button is disabled during mutation', async () => {
+  it('marks the button aria-disabled during mutation without blurring it', async () => {
     const user = userEvent.setup()
     vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
     renderWithProviders(<AddChildButton parentId={10} childType="row" variant="append" />)
 
-    await user.click(screen.getByTestId('add-child-button'))
+    const button = screen.getByTestId('add-child-button')
+    await user.click(button)
 
     await waitFor(() => {
-      expect(screen.getByTestId('add-child-button')).toBeDisabled()
+      expect(button).toHaveAttribute('aria-disabled', 'true')
     })
+    // A real `disabled` would have been blurred by the browser, stranding the
+    // keyboard user and silencing the label change.
+    expect(button).toHaveFocus()
+    expect(button).toBeEnabled()
+  })
+
+  it('ignores a second click while the mutation is still pending', async () => {
+    const user = userEvent.setup()
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
+
+    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="append" />)
+
+    const button = screen.getByTestId('add-child-button')
+    await user.click(button)
+    await waitFor(() => {
+      expect(button).toHaveAttribute('aria-disabled', 'true')
+    })
+
+    await user.click(button)
+
+    // aria-disabled does not stop the click, so the handler's own guard is the
+    // only thing preventing a duplicate element.
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
   })
 
   it('empty-state variant renders message', () => {

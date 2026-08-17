@@ -39,7 +39,7 @@
     line-height: var(--ssgrid-line-height-tight);
     cursor: pointer;
 
-    &:hover:not(:disabled) {
+    &:hover:not([aria-disabled='true']) {
       background: var(--ssgrid-surface-hover);
     }
 
@@ -48,7 +48,9 @@
       outline-offset: 2px;
     }
 
-    &:disabled {
+    // Pending, not disabled: the button stays focusable so keyboard focus
+    // survives the submit and the label change is announced.
+    &[aria-disabled='true'] {
       cursor: progress;
       opacity: 0.6;
     }

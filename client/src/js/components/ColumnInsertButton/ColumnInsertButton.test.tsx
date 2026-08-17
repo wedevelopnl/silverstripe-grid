@@ -107,16 +107,36 @@ describe('ColumnInsertButton', () => {
     ).toBe('')
   })
 
-  it('is disabled while the mutation is pending', async () => {
+  it('marks itself aria-disabled while the mutation is pending, keeping focus', async () => {
     const user = userEvent.setup()
     vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
     renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />)
 
-    await user.click(screen.getByTestId('column-insert-start'))
+    const button = screen.getByTestId('column-insert-start')
+    await user.click(button)
 
     await waitFor(() => {
-      expect(screen.getByTestId('column-insert-start')).toBeDisabled()
+      expect(button).toHaveAttribute('aria-disabled', 'true')
     })
+    expect(button).toHaveFocus()
+    expect(button).toBeEnabled()
+  })
+
+  it('ignores a second click while the mutation is still pending', async () => {
+    const user = userEvent.setup()
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
+
+    renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />)
+
+    const button = screen.getByTestId('column-insert-start')
+    await user.click(button)
+    await waitFor(() => {
+      expect(button).toHaveAttribute('aria-disabled', 'true')
+    })
+
+    await user.click(button)
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
   })
 })

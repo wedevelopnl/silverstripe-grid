@@ -81,6 +81,10 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
   const labels = labelsFor(childType)
 
   function handleClick() {
+    // aria-disabled keeps the button focusable, so it can still be clicked —
+    // the real guard against a double submit lives here.
+    if (isPending) return
+
     const parent: NodeRef = {
       type: PARENT_TYPE_FOR_CHILD[childType],
       id: parentId,
@@ -104,12 +108,17 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
     })
   }
 
+  // `aria-disabled` rather than `disabled`: a real disabled button is blurred
+  // by the browser, so submitting stranded a keyboard user at the top of the
+  // document and silenced the label change that reports progress. Left
+  // focusable, the swap to "Adding …" is announced as the focused control's
+  // new name.
   const button = (
     <button
       type="button"
       className="ssgrid-add-child__button"
       data-testid="add-child-button"
-      disabled={isPending}
+      aria-disabled={isPending}
       onClick={handleClick}
     >
       <i className="ssgrid-add-child__icon font-icon-plus" aria-hidden="true" />

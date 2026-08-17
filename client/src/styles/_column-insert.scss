@@ -18,7 +18,9 @@
   font: inherit;
   cursor: pointer;
 
-  &:disabled {
+  // Pending, not disabled: the button stays focusable so keyboard focus
+  // survives the insert (see AddChildButton).
+  &[aria-disabled='true'] {
     cursor: progress;
     opacity: 0.6;
   }
@@ -47,7 +49,7 @@
     border-radius: var(--ssgrid-radius-sm);
     background: var(--ssgrid-surface-action);
 
-    &:hover:not(:disabled) {
+    &:hover:not([aria-disabled='true']) {
       filter: brightness(0.92);
     }
   }
