@@ -1,34 +1,61 @@
 # SilverStripe Grid
 
-A grid-based content block system for SilverStripe 6 CMS — structured Section → Row → Column layouts with configurable CSS framework adapters (Bootstrap, Tailwind, Bulma).
+A grid-based content block system for SilverStripe 6. Editors compose pages from **Section → Row → Column → content block** instead of one long HTML field, and the column widths they pick are emitted as your CSS framework's own classes — Bootstrap, Tailwind, Bulma, or an adapter you write yourself.
+
+![The grid editor inside the SilverStripe page edit form, showing a section with a centred intro row above a row of three cards](docs/images/cms-context.png)
+
+## Why
+
+Elemental-style modules give editors a flat list of blocks and leave layout to the developer. Page builders give editors full layout control and leave the design system behind. This module sits between the two: the hierarchy is fixed and validated on the server, but within it editors control widths, offsets, and per-breakpoint visibility — and every choice resolves to classes your theme already ships.
+
+- **A hierarchy that cannot be broken.** Sections hold rows, rows hold columns, columns hold content. Enforced at write time and at drop time, not just in the UI.
+- **Framework-agnostic output.** One config-driven adapter turns a column of width 8 at the `md` breakpoint into `col-md-8` (Bootstrap), `md:col-span-8` (Tailwind), `is-8-md` (Bulma), or whatever your own framework spells it.
+- **Responsive per column.** Each column has one default layout plus overrides for the breakpoints that differ — no override is stored when nothing changes.
+- **Versioned like the rest of the CMS.** Draft/live, publish-with-the-page, per-element history, and a read-only grid in the history viewer.
+- **Drag and drop across containers.** Move a block into another column, a column into another row, a row into another section — with optimistic updates and rollback on failure.
+- **Multi-locale ready.** Optional [Fluent](docs/fluent.md) integration gives each locale its own isolated grid.
+
+## The content model
+
+```
+Page
+└── Section          zone-scoped band; the only thing allowed at page level
+    └── Row          horizontal group
+        └── Column   carries width / offset / visibility per viewport
+            └── Content block   any ContentElement subclass
+```
+
+Writing a Section automatically creates the Row and Column beneath it, so a new section is usable immediately. Sections carry a **zone** (`main`, `sidebar`, …), which is how one page can host several independent grids.
 
 ## Requirements
 
 - PHP ^8.3
-- silverstripe/framework ^6.0, silverstripe/cms ^6.0, silverstripe/admin ^3.0, silverstripe/versioned ^3.0, silverstripe/vendor-plugin ^3.0
-- unclecheese/display-logic ^4.0, wedevelopnl/silverstripe-media-field ^6.0.0-rc3
-- Node >= 26 (only needed if you build the frontend yourself)
+- `silverstripe/framework` ^6.0, `silverstripe/cms` ^6.0, `silverstripe/admin` ^3.0, `silverstripe/versioned` ^3.0, `silverstripe/vendor-plugin` ^3.0
+- `unclecheese/display-logic` ^4.0, `wedevelopnl/silverstripe-media-field` ^6.0.0-rc3
+- Node >= 26 — only if you build the frontend bundle yourself; the package ships a compiled one
 
 Optional:
 
-- `silverstripe/reports` — enables the Grid Elements report in CMS Reports
-- `tractorcow/silverstripe-fluent` — multi-locale support with isolated grid records per locale (see [Fluent integration](docs/fluent.md))
+- `silverstripe/reports` — adds the Grid Elements report to CMS Reports
+- `tractorcow/silverstripe-fluent` — multi-locale support, one isolated grid per locale ([guide](docs/fluent.md))
 
-> **Conflict**: this module conflicts with `dnadesign/silverstripe-elemental` and replaces its functionality.
+> **Conflict:** this module conflicts with `dnadesign/silverstripe-elemental` and replaces its functionality. Coming from Elemental? See the [migration guide](docs/migration.md).
 
-## Installation
+## Getting started
+
+**1. Install.**
 
 ```bash
 composer require wedevelopnl/silverstripe-grid
 ```
 
-Then run `dev/build?flush=1` to pick up the new database schema and configuration.
+**2. Choose a CSS framework adapter.** `SS_GRID_ADAPTER` is required and has no default — an unset, empty, or invalid value throws when the container boots, which will also abort `dev/build`. Set it to a bundled preset (`bootstrap`, `tailwind`, or `bulma`, case-insensitive) or to the FQCN of your own adapter:
 
-Set the required `SS_GRID_ADAPTER` environment variable to select the active CSS framework adapter — a bundled preset name (`bootstrap`, `tailwind`, or `bulma`, case-insensitive) or the fully-qualified class name of a custom adapter. If it is unset, empty, or invalid the module throws when the container boots. See [Grid Adapter System](docs/architecture/grid-adapter.md) for the full reference.
+```dotenv
+SS_GRID_ADAPTER="bootstrap"
+```
 
-## Usage
-
-Apply `GridPageExtension` to the page types that should have grid editing:
+**3. Enable the editor on your page types.**
 
 ```yaml
 # app/_config/grid.yml
@@ -37,36 +64,50 @@ Page:
     Grid: WeDevelop\Grid\Extensions\GridPageExtension
 ```
 
-Render the grid in the page template:
+**4. Render the grid in the page template.**
 
 ```silverstripe
 <% loop $Sections %>$Me<% end_loop %>
 ```
 
-That's a working integration. See [Template integration](docs/usage/templates.md) for the per-page editor toggle, default-behavior configuration, theme overrides, and the holder chain.
+**5. Build the database.**
+
+```bash
+vendor/bin/sake dev/build flush=1
+```
+
+That is a complete integration. Open a page in the CMS and the grid editor is on its Content tab.
+
+From here, the two things most projects do next are [adding their own content blocks](docs/usage/custom-elements.md) and [overriding the module's templates in their theme](docs/usage/templates.md).
 
 ## Documentation
 
-### Usage guides
+The full map, with a line on what each document covers, is in [`docs/`](docs/README.md).
 
-- [Custom content elements](docs/usage/custom-elements.md) — subclass `ContentElement`, register CMS fields, add templates
-- [Template integration](docs/usage/templates.md) — `GridPageExtension` configuration, holder chain, theme overrides, extension hooks
-- [Internationalization](docs/usage/i18n.md) — translating strings, adding a locale, PHP + JS collectors
+**Start here**
 
-### Integration guides
+- [The grid editor](docs/usage/grid-editor.md) — what the CMS editing experience looks like and what every control does
 
-- [Migrating from Elemental / ElementalGrid](docs/migration.md) — `BuildTask`-based upgrade from SS5 `silverstripe-elemental` / `silverstripe-elemental-grid`
-- [Fluent (multi-locale) support](docs/fluent.md) — optional integration with `tractorcow/silverstripe-fluent`
+**Building with it**
 
-### Architecture
+- [Custom content elements](docs/usage/custom-elements.md) — subclass `ContentElement`, add CMS fields and templates
+- [Template integration](docs/usage/templates.md) — the holder chain, zones, theme overrides, extension hooks
+- [Internationalization](docs/usage/i18n.md) — translating strings, adding a locale, the PHP and JS collectors
 
-- [Backend architecture](docs/architecture/backend.md) — data model, API layer, service design, validation
-- [Drag and Drop](docs/architecture/drag-and-drop.md) — frontend dnd-kit integration and backend reorder pipeline
-- [Grid Adapter System](docs/architecture/grid-adapter.md) — building a new CSS framework adapter
+**Integrating**
 
-### Contributing
+- [Migrating from Elemental / ElementalGrid](docs/migration.md) — the `BuildTask`-based upgrade from SilverStripe 5
+- [Fluent (multi-locale)](docs/fluent.md) — setup, copy/clear behaviour, and the locale-aware migration task
 
-- [Contributing guide](docs/contributing.md) — dev environment, test/coverage/QA commands, pull-request conventions
+**Architecture**
+
+- [Backend architecture](docs/architecture/backend.md) — data model, API layer, services, validation
+- [Grid Adapter System](docs/architecture/grid-adapter.md) — writing an adapter for another CSS framework
+- [Drag and Drop](docs/architecture/drag-and-drop.md) — the frontend dnd-kit integration and backend reorder pipeline
+
+**Contributing**
+
+- [Contributing guide](CONTRIBUTING.md) — dev environment, tests, coverage, QA, and PR conventions
 - [E2E fixture protocol](docs/testing/e2e-fixtures.md) — YAML schema, post-actions, dev fixture endpoint
 
 ## Changelog
@@ -75,7 +116,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
-See [LICENSE](LICENSE).
+BSD-3-Clause. See [LICENSE](LICENSE).
 
 ## Maintainers
 
