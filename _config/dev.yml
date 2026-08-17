@@ -193,6 +193,22 @@ WeDevelop\E2e\Fixtures\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
+    # Not used by any spec — backs `npm run docs:screenshots`, so the images in
+    # docs/images/ can be regenerated from a known page whenever the UI changes.
+    docs-page:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/DocsPage.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
+        - action: unpublish
+          class: 'WeDevelop\Grid\Model\ContentElement'
+          identifier: opening_hours_block
+        - action: modify
+          class: 'WeDevelop\Grid\Model\ContentElement'
+          identifier: office_block
+          fields:
+            Title: 'Office and parking'
     history-view-test:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/HistoryViewTest.yml'
       # No post_actions: the history-view E2E spec creates all versions
