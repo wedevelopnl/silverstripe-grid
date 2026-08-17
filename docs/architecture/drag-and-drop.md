@@ -131,6 +131,18 @@ Drop target validity follows hierarchy rules:
 
 This prevents the user from seeing invalid drop indicators and ensures sibling reordering always takes priority over container drops. The filtering happens entirely on the client; the backend validates independently.
 
+### Keyboard Support
+
+There is none: dragging is pointer-only. That is a known accessibility gap, recorded here so the cost is visible — every other editor control is keyboard-operable (see [The Grid Editor](../usage/grid-editor.md#keyboard-and-screen-readers)).
+
+Registering dnd-kit's `KeyboardSensor` does **not** close it. It yields a drag that completes and drops in the *wrong place*, which is worse than one that never starts, because three parts of the system take the pointer as their reference point:
+
+1. **Drop direction always resolves to "after".** `getPointerPosition()` (`useDragAndDrop.ts`) returns `null` unless `activatorEvent instanceof PointerEvent`; a keyboard drag's activator is a `KeyboardEvent`. Both call sites guard on a non-null pointer and otherwise fall through to the "after" branch, so nothing can ever be inserted *before* a target.
+2. **Pass 2's containment-first branch never runs.** It is wholly inside an `args.pointerCoordinates` check, which dnd-kit leaves null for keyboard drags, so entering a container degrades to the `closestCenter` distance guess this branch exists to correct. The pointer-inside-source-sibling guard is gated the same way and is skipped too.
+3. **`sortableKeyboardCoordinates` is not type-aware.** It runs its own `closestCorners` over *all* droppables, so arrow keys steer toward structurally invalid targets (a Section while dragging a Column). The type filtering above then removes that target and returns no collision, leaving `over` null — arrow keys that appear dead in many directions.
+
+Closing it properly means giving direction resolution and the collision passes a pointer-free reference point (the dragged item's own `collisionRect` centre) and writing a type-aware keyboard coordinate getter, each with its own tests. That is a project, not a patch.
+
 ### Nested SortableContexts
 
 Each container's children live in their own `SortableContext` registered under the container's `nodeKey`. This creates a hierarchy of sortable regions:

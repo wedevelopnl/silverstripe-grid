@@ -85,6 +85,8 @@ Each section, row, column, and content block has a drag handle (the dotted grip 
 
 Drops persist immediately, with the same optimistic-then-reconcile behaviour described above. Sort order is tracked per parent and, for sections, per zone: reordering one zone never renumbers another.
 
+Dragging needs a pointer — mouse, trackpad or touch. It is the one part of the editor with no keyboard equivalent; see [Keyboard and screen readers](#keyboard-and-screen-readers).
+
 The full mechanics are in [Drag and Drop](../architecture/drag-and-drop.md).
 
 ## Publishing state
@@ -121,6 +123,37 @@ Permissions are applied per action: **Archive** needs delete permission on the e
 The header strip above the canvas also has a **collapse/expand all** button that folds every section at once.
 
 > The strip's other three buttons — *Reset changes*, *Open page*, *Remove all sections* — are rendered disabled on purpose. They are placeholders for actions the design specifies but the editor does not implement yet.
+
+## Keyboard and screen readers
+
+Every control in this guide except the drag handles can be driven from the keyboard.
+
+Grouped controls follow the W3C toolbar and listbox patterns: the **group** is a single tab stop and the arrow keys move inside it. That is what keeps a page of element cards to a few tab stops rather than a dozen per card.
+
+| Control | Tab reaches | Arrow keys | Enter / Space | Escape |
+|---------|-------------|-----------|---------------|--------|
+| Element action row | the row, once | `←` `→` between actions, `Home` / `End` to either end | runs the action | — |
+| `⋯` overflow menu | its trigger, the row's last stop | `↑` `↓` between items, `Home` / `End` | runs the item | closes it, focus returns to `⋯` |
+| Width and offset pickers | the trigger | `↑` `↓` between values, `Home` / `End` | picks the value | closes it, focus returns to the trigger |
+| **Duplicate to…** lists | each list, once | `↑` `↓` between options, `Home` / `End` | selects it and moves to the next step | closes the dialog |
+| **Add content** tiles | each tile | — | adds the block | closes the dialog |
+
+Navigation stops at the ends rather than wrapping. Entries you cannot use stay reachable so the list still reads completely — they simply refuse to activate, which is how a page with no grid zones behaves in **Duplicate to…**.
+
+Two things are announced that the visual design conveys silently:
+
+- **The dialogs are named by their own heading**, so *Add content element*, each **Duplicate to…** step, and the archive confirmation announce as a named dialog rather than an anonymous one. The confirmation reads its message — including the child count — along with the name.
+- **Collapse toggles point at the region they fold**, so the expanded or collapsed state is announced against the element it belongs to instead of on its own.
+
+`Add Section` and `Add Row` keep focus while the insert is in flight, and their label changes to *"Adding Section…"* and back. That swap *is* the progress announcement, which is why the button stays focused rather than going inert the way a disabled control would — and focus is still on it once the element lands, so you can add several without hunting for the button again. The `⊕` column buttons keep focus the same way, but being icon-only they announce nothing while the column is on its way. A second press mid-insert is ignored either way, so a slow response cannot produce two elements.
+
+### Working without a pointer
+
+Moving an existing element is the gap. **Duplicate to…** is the nearest substitute: it copies an element, with everything beneath it, into a container on another page, after which **Archive** removes the original. It offers no control over where in the target the copy lands, so it replaces a cross-container move, not a reorder within one.
+
+Its page step lists up to 50 editable pages at a time, so on a large site the search box at the top of that step — a plain text field, reached with `Tab` — is how you find the target rather than the list itself.
+
+The reasoning behind the gap, and what closing it would take, is in [Drag and Drop](../architecture/drag-and-drop.md#keyboard-support).
 
 ## Version history
 
