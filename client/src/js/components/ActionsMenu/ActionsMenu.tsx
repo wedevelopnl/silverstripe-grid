@@ -12,9 +12,19 @@ export interface ActionItem {
 interface ActionsMenuProps {
   readonly actions: readonly ActionItem[]
   readonly testId?: string
+  /**
+   * Tab-order position of the trigger. Set by a parent that owns a roving
+   * tabindex (the element toolbar); left undefined the trigger is a tab stop
+   * of its own, which is right for a standalone menu.
+   */
+  readonly triggerTabIndex?: number
 }
 
-export default function ActionsMenu({ actions, testId = 'actions-menu' }: ActionsMenuProps) {
+export default function ActionsMenu({
+  actions,
+  testId = 'actions-menu',
+  triggerTabIndex,
+}: ActionsMenuProps) {
   const popup = useRovingPopup({ itemCount: actions.length })
 
   // preventDefault is required because this button may be nested inside a
@@ -63,6 +73,7 @@ export default function ActionsMenu({ actions, testId = 'actions-menu' }: Action
         type="button"
         className="ssgrid-icon-button"
         data-testid="actions-menu-trigger"
+        tabIndex={triggerTabIndex}
         aria-haspopup="menu"
         aria-expanded={popup.isOpen}
         aria-controls={popup.isOpen ? menuId : undefined}
