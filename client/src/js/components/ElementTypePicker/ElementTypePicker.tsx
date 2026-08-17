@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useId, useRef } from 'react'
 import { t } from '@/i18n'
 import type { AllowedTypeInfo } from '@/types/elements'
 
@@ -16,6 +16,7 @@ export default function ElementTypePicker({
   onSelect,
 }: ElementTypePickerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -47,10 +48,11 @@ export default function ElementTypePicker({
       ref={dialogRef}
       className="ssgrid-dialog"
       data-testid="element-type-picker"
+      aria-labelledby={titleId}
       onClose={handleClose}
     >
       <div className="ssgrid-dialog__header">
-        <h3>{t('WeDevelopGrid.ElementTypePicker.TITLE', 'Add content element')}</h3>
+        <h3 id={titleId}>{t('WeDevelopGrid.ElementTypePicker.TITLE', 'Add content element')}</h3>
         <button
           type="button"
           className="ssgrid-dialog__close"

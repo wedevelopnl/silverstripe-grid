@@ -1472,18 +1472,161 @@ describe('DuplicateToDialog', () => {
     })
   })
 
-  describe('disabled page focusability and gating', () => {
-    it('keeps disabled pages out of the tab order', async () => {
+  describe('arrow navigation within the step lists', () => {
+    it('walks the page list with ArrowDown/ArrowUp and clamps at both ends', async () => {
       mockApiRoutes()
       renderDialog()
 
       await goToPageStep()
 
-      // L241 tabIndex `-1` for pages without grid zones.
-      const legacyItem = screen.getByText('Legacy').closest('[role="option"]')
-      expect(legacyItem).toHaveAttribute('tabindex', '-1')
-      const aboutItem = screen.getByText('About').closest('[role="option"]')
-      expect(aboutItem).toHaveAttribute('tabindex', '0')
+      const list = screen.getByTestId('duplicate-to-page-list')
+      const [home, about, legacy] = screen.getAllByTestId('duplicate-to-page-item')
+
+      expect(list).toHaveAttribute('aria-activedescendant', home.id)
+
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      expect(list).toHaveAttribute('aria-activedescendant', about.id)
+
+      fireEvent.keyDown(list, { key: 'ArrowUp' })
+      expect(list).toHaveAttribute('aria-activedescendant', home.id)
+
+      // Clamps rather than wrapping, at the top…
+      fireEvent.keyDown(list, { key: 'ArrowUp' })
+      expect(list).toHaveAttribute('aria-activedescendant', home.id)
+
+      // …and at the bottom.
+      fireEvent.keyDown(list, { key: 'End' })
+      expect(list).toHaveAttribute('aria-activedescendant', legacy.id)
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      expect(list).toHaveAttribute('aria-activedescendant', legacy.id)
+
+      fireEvent.keyDown(list, { key: 'Home' })
+      expect(list).toHaveAttribute('aria-activedescendant', home.id)
+    })
+
+    it('marks the active option so it is visible without moving DOM focus', async () => {
+      mockApiRoutes()
+      renderDialog()
+
+      await goToPageStep()
+
+      const list = screen.getByTestId('duplicate-to-page-list')
+      const [home, about] = screen.getAllByTestId('duplicate-to-page-item')
+
+      expect(home).toHaveAttribute('data-active', 'true')
+      expect(about).not.toHaveAttribute('data-active')
+
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+
+      expect(about).toHaveAttribute('data-active', 'true')
+      expect(home).not.toHaveAttribute('data-active')
+    })
+
+    it('clicking an option moves the active descendant to it', async () => {
+      const user = userEvent.setup()
+      mockApiRoutes()
+      renderDialog()
+
+      await goToPageStep()
+
+      const list = screen.getByTestId('duplicate-to-page-list')
+      const about = screen.getByText('About').closest('[role="option"]')!
+      await user.click(about)
+
+      // Arrowing on from a clicked option continues from there, not from the
+      // seeded index.
+      expect(list).toHaveAttribute('aria-activedescendant', about.id)
+    })
+
+    it('navigates the zone list with arrow keys', async () => {
+      const user = userEvent.setup()
+      mockApiRoutes()
+      renderDialog()
+
+      await goToZoneStep(user)
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
+      })
+
+      const list = screen.getByTestId('duplicate-to-zone-list')
+      const [main, sidebar] = screen.getAllByTestId('duplicate-to-zone-item')
+
+      expect(list).toHaveAttribute('aria-activedescendant', main.id)
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      expect(list).toHaveAttribute('aria-activedescendant', sidebar.id)
+    })
+
+    it('navigates the container list with arrow keys', async () => {
+      const user = userEvent.setup()
+      mockApiRoutes()
+      renderDialog({ elementType: 'row' })
+
+      await goToContainerStep(user)
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-container-list')).toBeInTheDocument()
+      })
+
+      const list = screen.getByTestId('duplicate-to-container-list')
+      const [row1, row2] = screen.getAllByTestId('duplicate-to-container-item')
+
+      expect(list).toHaveAttribute('aria-activedescendant', row1.id)
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      expect(list).toHaveAttribute('aria-activedescendant', row2.id)
+    })
+
+    it('names each list for assistive technology', async () => {
+      const user = userEvent.setup()
+      mockApiRoutes()
+      renderDialog()
+
+      await goToPageStep()
+      expect(screen.getByTestId('duplicate-to-page-list')).toHaveAccessibleName('Target page')
+
+      await goToZoneStep(user)
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-zone-list')).toHaveAccessibleName('Target zone')
+      })
+    })
+  })
+
+  describe('disabled page focusability and gating', () => {
+    it('exposes the list as a single tab stop, not each option', async () => {
+      mockApiRoutes()
+      renderDialog()
+
+      await goToPageStep()
+
+      // Keyboard handling lives on the listbox (aria-activedescendant pattern);
+      // options are navigated with arrows, never tabbed between.
+      expect(screen.getByTestId('duplicate-to-page-list')).toHaveAttribute('tabindex', '0')
+      for (const option of screen.getAllByTestId('duplicate-to-page-item')) {
+        expect(option).toHaveAttribute('tabindex', '-1')
+      }
+    })
+
+    it('keeps disabled pages navigable but refuses to select them', async () => {
+      mockApiRoutes()
+      renderDialog()
+
+      await goToPageStep()
+
+      const list = screen.getByTestId('duplicate-to-page-list')
+      const legacyItem = screen.getByText('Legacy').closest('[role="option"]')!
+      expect(legacyItem).toHaveAttribute('aria-disabled', 'true')
+
+      // Legacy is index 2; arrow onto it so it is the active descendant, then
+      // confirm Enter does not select it and the prior selection survives.
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      expect(list).toHaveAttribute('aria-activedescendant', legacyItem.id)
+
+      fireEvent.keyDown(list, { key: 'Enter' })
+
+      expect(legacyItem).toHaveAttribute('aria-selected', 'false')
+      expect(screen.getByText('Home').closest('[role="option"]')).toHaveAttribute(
+        'aria-selected',
+        'true',
+      )
     })
   })
 
@@ -1587,10 +1730,16 @@ describe('DuplicateToDialog', () => {
 
       await goToPageStep()
 
-      const aboutItem = screen.getByText('About').closest('[role="option"]')!
-      fireEvent.keyDown(aboutItem, { key: 'Enter' })
+      // About is index 1; arrow onto it so Enter resolves to it rather than
+      // the seeded index 0.
+      const list = screen.getByTestId('duplicate-to-page-list')
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      fireEvent.keyDown(list, { key: 'Enter' })
 
-      expect(aboutItem).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByText('About').closest('[role="option"]')).toHaveAttribute(
+        'aria-selected',
+        'true',
+      )
     })
 
     it('selects a zone when Enter is pressed (no click fallback)', async () => {
@@ -1603,10 +1752,14 @@ describe('DuplicateToDialog', () => {
         expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
       })
 
-      const sidebarItem = screen.getByText('sidebar').closest('[role="option"]')!
-      fireEvent.keyDown(sidebarItem, { key: 'Enter' })
+      const list = screen.getByTestId('duplicate-to-zone-list')
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      fireEvent.keyDown(list, { key: 'Enter' })
 
-      expect(sidebarItem).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByText('sidebar').closest('[role="option"]')).toHaveAttribute(
+        'aria-selected',
+        'true',
+      )
     })
 
     it('selects a container when Enter is pressed (no click fallback)', async () => {
@@ -1619,10 +1772,14 @@ describe('DuplicateToDialog', () => {
         expect(screen.getByTestId('duplicate-to-container-list')).toBeInTheDocument()
       })
 
-      const row1Item = screen.getByText('Row 1').closest('[role="option"]')!
-      fireEvent.keyDown(row1Item, { key: 'Enter' })
+      const list = screen.getByTestId('duplicate-to-container-list')
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      fireEvent.keyDown(list, { key: 'Enter' })
 
-      expect(row1Item).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByText('Row 2').closest('[role="option"]')).toHaveAttribute(
+        'aria-selected',
+        'true',
+      )
     })
   })
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useId, useRef } from 'react'
 import { t } from '@/i18n'
 
 interface ConfirmDialogProps {
@@ -21,6 +21,8 @@ export default function ConfirmDialog({
   destructive = false,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+  const messageId = useId()
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -42,6 +44,8 @@ export default function ConfirmDialog({
       ref={dialogRef}
       className="ssgrid-dialog"
       data-testid="confirm-dialog"
+      aria-labelledby={titleId}
+      aria-describedby={messageId}
       onClose={handleClose}
       // onClick guard prevents clicks inside the dialog from bubbling to
       // ancestor ElementCard anchors. Both preventDefault and stopPropagation
@@ -55,10 +59,10 @@ export default function ConfirmDialog({
       }}
     >
       <div className="ssgrid-dialog__header">
-        <h3>{title}</h3>
+        <h3 id={titleId}>{title}</h3>
       </div>
       <div className="ssgrid-dialog__body">
-        <p>{message}</p>
+        <p id={messageId}>{message}</p>
       </div>
       <div className="ssgrid-dialog__footer">
         <div className="ssgrid-dialog__actions">
