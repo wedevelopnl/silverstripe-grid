@@ -29,6 +29,7 @@ applyTo: "**/*"
 | `npm run test:e2e` | Run Playwright E2E tests |
 | `npm run test:e2e:ui` | Playwright with interactive UI |
 | `npm run test:e2e:debug` | Playwright in debug mode |
+| `npm run docs:screenshots` | Regenerate `docs/images/` from the `docs-page` fixture (separate config; not part of `test:e2e`) |
 | `npm run qa` | Full QA: lint + format:check + typecheck + test + i18n:check + check:icons + vite build |
 
 ## PHP (via Task — requires Docker)
