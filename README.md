@@ -2,7 +2,7 @@
 
 A grid-based content block system for SilverStripe 6. Editors compose pages from **Section → Row → Column → content block** instead of one long HTML field, and the column widths they pick are emitted as your CSS framework's own classes — Bootstrap, Tailwind, Bulma, or an adapter you write yourself.
 
-![The grid editor inside the SilverStripe page edit form, showing a section with a centred intro row above a row of three cards](docs/images/cms-context.png)
+![The grid editor on the Content tab of the SilverStripe page edit form, replacing the usual single HTML content field](docs/images/cms-context.png)
 
 ## Why
 
@@ -10,7 +10,7 @@ Elemental-style modules give editors a flat list of blocks and leave layout to t
 
 - **A hierarchy that cannot be broken.** Sections hold rows, rows hold columns, columns hold content. Enforced at write time and at drop time, not just in the UI.
 - **Framework-agnostic output.** One config-driven adapter turns a column of width 8 at the `md` breakpoint into `col-md-8` (Bootstrap), `md:col-span-8` (Tailwind), `is-8-md` (Bulma), or whatever your own framework spells it.
-- **Responsive per column.** Each column has one default layout plus overrides for the breakpoints that differ — no override is stored when nothing changes.
+- **Responsive per column.** One default layout per column, plus overrides only for the breakpoints that differ.
 - **Versioned like the rest of the CMS.** Draft/live, publish-with-the-page, per-element history, and a read-only grid in the history viewer.
 - **Drag and drop across containers.** Move a block into another column, a column into another row, a row into another section — with optimistic updates and rollback on failure.
 - **Multi-locale ready.** Optional [Fluent](docs/fluent.md) integration gives each locale its own isolated grid.
@@ -26,6 +26,20 @@ Page
 ```
 
 Writing a Section automatically creates the Row and Column beneath it, so a new section is usable immediately. Sections carry a **zone** (`main`, `sidebar`, …), which is how one page can host several independent grids.
+
+That same tree in the editor — a section holding a centred 8-of-12 intro row above a row of three 4-column cards:
+
+![A section containing two rows: a centred 8-of-12 intro column, then a row of three 4-column cards, each column showing its width and offset picker](docs/images/editor-overview.png)
+
+## Responsive layout, per column
+
+Each column stores one default layout plus overrides for the breakpoints that differ. Editors pick which viewport they are editing from the adapter's own breakpoints, and the picker reports which ones carry overrides and offers to reset them:
+
+![The viewport picker listing six Bootstrap viewports, marking the default, and offering to reset overrides per viewport or across all of them](docs/images/viewport-picker.png)
+
+Nothing is written for a viewport that matches the default, so a column that never changes stores no overrides at all.
+
+The [grid editor guide](docs/usage/grid-editor.md) walks through the rest of the editing experience.
 
 ## Requirements
 
