@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useId } from 'react'
 import ReadonlyColumnBlock from '@/components/ColumnBlock/ReadonlyColumnBlock'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import type { RowNode } from '@/types/elements'
@@ -14,6 +14,7 @@ const ReadonlyRowBlock = memo(function ReadonlyRowBlockComponent({ row }: Readon
   const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid'
   const status = row.status
   const { isCollapsed, onToggle } = useElementCollapse(row.nodeKey)
+  const bodyId = useId()
 
   return (
     <RowChrome
@@ -23,8 +24,10 @@ const ReadonlyRowBlock = memo(function ReadonlyRowBlockComponent({ row }: Readon
       isCollapsed={isCollapsed}
       onToggle={onToggle}
       columnCount={row.children?.length ?? 0}
+      bodyId={bodyId}
     >
       <div
+        id={bodyId}
         className="ssgrid-row__columns"
         data-testid="row-block-columns"
         data-layout-mode={layoutMode}

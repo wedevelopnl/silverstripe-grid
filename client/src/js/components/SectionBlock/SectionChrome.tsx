@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useId } from 'react'
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle'
 import StatusBadge from '@/components/StatusBadge/StatusBadge'
 import UnpublishedIndicator from '@/components/UnpublishedIndicator/UnpublishedIndicator'
@@ -42,6 +42,8 @@ export default function SectionChrome({
   trailing,
   children,
 }: SectionChromeProps) {
+  const bodyId = useId()
+
   return (
     <section
       ref={setNodeRef}
@@ -55,7 +57,12 @@ export default function SectionChrome({
     >
       <div className="ssgrid-section__header" data-testid="section-header">
         {leading}
-        <CollapseToggle isCollapsed={isCollapsed} onToggle={onToggle} label={title} />
+        <CollapseToggle
+          isCollapsed={isCollapsed}
+          onToggle={onToggle}
+          label={title}
+          controlsId={bodyId}
+        />
         <h2 className="ssgrid-section__title" data-testid="section-title">
           {titleHref !== undefined ? (
             <a href={titleHref} data-testid="section-edit-link">
@@ -71,7 +78,12 @@ export default function SectionChrome({
         )}
         {trailing}
       </div>
-      <div className="ssgrid-section__body" data-testid="section-body" data-dnd-container="">
+      <div
+        id={bodyId}
+        className="ssgrid-section__body"
+        data-testid="section-body"
+        data-dnd-container=""
+      >
         {children}
       </div>
     </section>

@@ -1,5 +1,5 @@
 import { horizontalListSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable'
-import { memo, useMemo } from 'react'
+import { memo, useId, useMemo } from 'react'
 import AddChildButton from '@/components/AddChildButton/AddChildButton'
 import EditableColumnBlock from '@/components/ColumnBlock/EditableColumnBlock'
 import ColumnInsertButton from '@/components/ColumnInsertButton/ColumnInsertButton'
@@ -59,6 +59,7 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
   const columns = row.children ?? []
   const hasColumns = columns.length > 0
   const insertBeforeByKey = useInsertBeforeByColumnKey(row)
+  const bodyId = useId()
 
   return (
     <RowChrome
@@ -69,6 +70,7 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
       isCollapsed={isCollapsed}
       onToggle={onToggle}
       columnCount={row.children?.length ?? 0}
+      bodyId={bodyId}
       dropTarget={showDropTarget}
       setNodeRef={setNodeRef}
       style={style}
@@ -83,7 +85,7 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
         <ElementActions node={row} collapse={{ isCollapsed, onToggle, label: row.title }} />
       }
     >
-      <div className="ssgrid-row__columns-area" data-testid="row-block-columns-area">
+      <div id={bodyId} className="ssgrid-row__columns-area" data-testid="row-block-columns-area">
         {hasColumns && <ColumnInsertButton rowId={row.self.id} placement="start" />}
         <div
           className="ssgrid-row__columns"

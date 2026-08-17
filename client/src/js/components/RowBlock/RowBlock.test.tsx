@@ -312,6 +312,19 @@ describe('EditableRowBlock', () => {
 
       expect(collapseState.toggle).toHaveBeenCalledWith(row.nodeKey)
     })
+
+    it('wires the collapse toggle to the columns area it controls', () => {
+      mockFetchSuccess({})
+
+      const row = createRowNode({ children: null })
+
+      renderWithProviders(<EditableRowBlock row={row} />)
+
+      const controlsId = screen.getByTestId('collapse-toggle').getAttribute('aria-controls')
+
+      expect(controlsId).not.toBeNull()
+      expect(screen.getByTestId('row-block-columns-area')).toHaveAttribute('id', controlsId)
+    })
   })
 
   describe('status marks', () => {
@@ -402,6 +415,21 @@ describe('ReadonlyRowBlock', () => {
     renderWithProviders(<ReadonlyRowBlock row={row} />, { collapsedKeys: [row.nodeKey] })
 
     expect(screen.getByTestId('row-block')).toHaveAttribute('data-collapsed', '')
+  })
+
+  it('wires the collapse toggle to the columns body it controls', () => {
+    mockFetchSuccess({})
+
+    const row = createRowNode({ columnCount: 1 })
+
+    renderWithProviders(<ReadonlyRowBlock row={row} />)
+
+    // Readonly mode has no columns-area wrapper — the id lives on the columns
+    // grid itself, so the readonly path needs its own assertion.
+    const controlsId = screen.getAllByTestId('collapse-toggle')[0].getAttribute('aria-controls')
+
+    expect(controlsId).not.toBeNull()
+    expect(screen.getByTestId('row-block-columns')).toHaveAttribute('id', controlsId)
   })
 
   it('does not set data-collapsed when expanded', () => {

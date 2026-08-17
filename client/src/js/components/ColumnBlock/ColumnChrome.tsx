@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useId } from 'react'
 import CollapseToggle from '@/components/CollapseToggle/CollapseToggle'
 import StatusBadge from '@/components/StatusBadge/StatusBadge'
 import UnpublishedIndicator from '@/components/UnpublishedIndicator/UnpublishedIndicator'
@@ -52,6 +52,8 @@ export default function ColumnChrome({
   footer,
   overlay,
 }: ColumnChromeProps) {
+  const bodyId = useId()
+
   return (
     <div
       ref={setNodeRef}
@@ -72,7 +74,12 @@ export default function ColumnChrome({
         <div className="ssgrid-column__header" data-testid="column-header">
           <div className="ssgrid-column__toolbar">
             {leading}
-            <CollapseToggle isCollapsed={isCollapsed} onToggle={onToggle} label={title} />
+            <CollapseToggle
+              isCollapsed={isCollapsed}
+              onToggle={onToggle}
+              label={title}
+              controlsId={bodyId}
+            />
             <i className={`ssgrid-column__icon ${icon}`} aria-hidden="true" />
             <span className="ssgrid-column__title" data-testid="column-title">
               {titleHref !== undefined ? (
@@ -93,7 +100,12 @@ export default function ColumnChrome({
             <div className="ssgrid-column__layout-settings">{layoutSettings}</div>
           )}
         </div>
-        <div className="ssgrid-column__body" data-testid="column-body" data-dnd-container="">
+        <div
+          id={bodyId}
+          className="ssgrid-column__body"
+          data-testid="column-body"
+          data-dnd-container=""
+        >
           {children}
           {footer}
         </div>
