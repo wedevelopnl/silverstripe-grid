@@ -43,10 +43,13 @@ const CONTAINERS = [
  */
 function mockApiRoutes(overrides?: {
   pages?: typeof PAGES
+  /** Served instead of `pages` once the query carries a search term. */
+  searchPages?: typeof PAGES
   zones?: string[]
   containers?: typeof CONTAINERS
 }) {
   const pages = overrides?.pages ?? PAGES
+  const searchPages = overrides?.searchPages ?? pages
   const zones = overrides?.zones ?? ZONES
   const containers = overrides?.containers ?? CONTAINERS
 
@@ -54,7 +57,7 @@ function mockApiRoutes(overrides?: {
     const url = resolveRequestUrl(input)
 
     let body: unknown = {}
-    if (url.includes('/api/pages')) body = pages
+    if (url.includes('/api/pages')) body = url.includes('search=') ? searchPages : pages
     else if (url.includes('/api/zones/')) body = zones
     else if (url.includes('/api/acceptableContainers/')) body = containers
 
@@ -1432,10 +1435,17 @@ describe('DuplicateToDialog', () => {
       renderDialog()
 
       await goToPageStep()
+      const list = screen.getByTestId('duplicate-to-page-list')
       const aboutItem = screen.getByText('About').closest('[role="option"]')!
-      fireEvent.keyDown(aboutItem, { key: 'a' })
 
-      // L231 keydown guard: only Enter / Space select; 'a' must not.
+      // Arrow onto About first. The listbox handler activates whatever
+      // activeIndex points at, so firing on a non-active option would leave
+      // this green even with the Enter/Space guard deleted.
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      expect(list).toHaveAttribute('aria-activedescendant', aboutItem.id)
+
+      fireEvent.keyDown(list, { key: 'a' })
+
       expect(aboutItem).toHaveAttribute('aria-selected', 'false')
     })
 
@@ -1448,10 +1458,14 @@ describe('DuplicateToDialog', () => {
       await waitFor(() => {
         expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
       })
+      const list = screen.getByTestId('duplicate-to-zone-list')
       const sidebarItem = screen.getByText('sidebar').closest('[role="option"]')!
-      fireEvent.keyDown(sidebarItem, { key: 'a' })
 
-      // L273 keydown guard.
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      expect(list).toHaveAttribute('aria-activedescendant', sidebarItem.id)
+
+      fireEvent.keyDown(list, { key: 'a' })
+
       expect(sidebarItem).toHaveAttribute('aria-selected', 'false')
     })
 
@@ -1464,11 +1478,15 @@ describe('DuplicateToDialog', () => {
       await waitFor(() => {
         expect(screen.getByTestId('duplicate-to-container-list')).toBeInTheDocument()
       })
-      const row1Item = screen.getByText('Row 1').closest('[role="option"]')!
-      fireEvent.keyDown(row1Item, { key: 'a' })
+      const list = screen.getByTestId('duplicate-to-container-list')
+      const row2Item = screen.getByText('Row 2').closest('[role="option"]')!
 
-      // L321 keydown guard.
-      expect(row1Item).toHaveAttribute('aria-selected', 'false')
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      expect(list).toHaveAttribute('aria-activedescendant', row2Item.id)
+
+      fireEvent.keyDown(list, { key: 'a' })
+
+      expect(row2Item).toHaveAttribute('aria-selected', 'false')
     })
   })
 
@@ -1520,6 +1538,59 @@ describe('DuplicateToDialog', () => {
 
       expect(about).toHaveAttribute('data-active', 'true')
       expect(home).not.toHaveAttribute('data-active')
+    })
+
+    it('keeps a usable active option after the list empties and refills', async () => {
+      const user = userEvent.setup()
+      mockApiRoutes({ searchPages: [] })
+      renderDialog()
+
+      await goToPageStep()
+
+      await user.type(screen.getByTestId('duplicate-to-search'), 'zzz')
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-page-list')).toBeInTheDocument()
+        expect(screen.queryAllByTestId('duplicate-to-page-item')).toHaveLength(0)
+      })
+
+      // Navigating an empty list must not drive activeIndex below 0 — the clamp
+      // effect only ever lowers it, so a negative index would survive the refill
+      // and point aria-activedescendant at an id that does not exist.
+      const emptyList = screen.getByTestId('duplicate-to-page-list')
+      fireEvent.keyDown(emptyList, { key: 'End' })
+      fireEvent.keyDown(emptyList, { key: 'ArrowDown' })
+
+      await user.clear(screen.getByTestId('duplicate-to-search'))
+      await waitFor(() => {
+        expect(screen.getAllByTestId('duplicate-to-page-item')).toHaveLength(3)
+      })
+
+      const list = screen.getByTestId('duplicate-to-page-list')
+      const [home, about] = screen.getAllByTestId('duplicate-to-page-item')
+      expect(list).toHaveAttribute('aria-activedescendant', home.id)
+      expect(home).toHaveAttribute('data-active', 'true')
+
+      // …and the index still resolves to a real page, so Enter selects.
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+      fireEvent.keyDown(list, { key: 'Enter' })
+      expect(about).toHaveAttribute('aria-selected', 'true')
+    })
+
+    it('scrolls the active option into view as it moves', async () => {
+      mockApiRoutes()
+      renderDialog()
+
+      await goToPageStep()
+
+      const list = screen.getByTestId('duplicate-to-page-list')
+      const [, about] = screen.getAllByTestId('duplicate-to-page-item')
+      const scrollIntoView = vi.spyOn(about, 'scrollIntoView')
+
+      fireEvent.keyDown(list, { key: 'ArrowDown' })
+
+      // aria-activedescendant moves no DOM focus, so the browser scrolls
+      // nothing for us and the highlight would leave the capped-height list.
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' })
     })
 
     it('clicking an option moves the active descendant to it', async () => {

@@ -43,9 +43,19 @@ export function useRovingList({ itemCount }: UseRovingListOptions): UseRovingLis
     setActiveIndex((i) => Math.min(i, Math.max(0, itemCount - 1)))
   }, [itemCount])
 
+  // aria-activedescendant moves the active item without moving DOM focus, so
+  // the browser never scrolls it into view the way a real focus change would.
+  // Without this the highlight walks out of a scrolling list unseen.
+  useEffect(() => {
+    document.getElementById(getItemId(activeIndex))?.scrollIntoView({ block: 'nearest' })
+  }, [activeIndex, getItemId])
+
   const handleNavigationKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>): boolean => {
-      const last = itemCount - 1
+      // Floored at 0: on an empty list `itemCount - 1` is -1, and the clamp
+      // effect above only ever lowers the index, so a negative one would stick
+      // once items returned — pointing aria-activedescendant at a dead id.
+      const last = Math.max(0, itemCount - 1)
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault()
