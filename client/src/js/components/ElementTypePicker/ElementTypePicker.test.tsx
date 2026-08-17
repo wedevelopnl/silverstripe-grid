@@ -41,6 +41,18 @@ describe('ElementTypePicker', () => {
     expect(screen.getAllByTestId('element-type-tile')).toHaveLength(2)
   })
 
+  // Asserted through the id reference rather than toHaveAccessibleName: jsdom
+  // leaves <dialog> without an `open` attribute (showModal is stubbed), which
+  // dom-accessibility-api treats as hidden and names as empty.
+  it('names itself from its own heading', () => {
+    render(<ElementTypePicker {...defaultProps} />)
+
+    const labelId = screen.getByTestId('element-type-picker').getAttribute('aria-labelledby')
+
+    expect(labelId).not.toBeNull()
+    expect(document.getElementById(labelId ?? '')).toHaveTextContent('Add content element')
+  })
+
   it('calls onSelect with className when tile is clicked', async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()

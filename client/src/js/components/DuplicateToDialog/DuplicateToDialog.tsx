@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useAcceptableContainers, usePages, useZones } from '@/hooks/useDuplicateToQueries'
+import { useRovingList } from '@/hooks/useRovingList'
 import { t } from '@/i18n'
 import type { NodeRef, NodeType } from '@/types/identity'
 import type { ElementTypeKey } from '@/utils/getElementType'
@@ -67,6 +68,7 @@ export default function DuplicateToDialog({
   error,
 }: DuplicateToDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
 
   const [step, setStep] = useState<Step>('page')
   const [searchTerm, setSearchTerm] = useState('')
@@ -120,6 +122,10 @@ export default function DuplicateToDialog({
     step === 'container' ? selectedZone : null,
     step === 'container' ? elementType : null,
   )
+
+  const pageList = useRovingList({ itemCount: pages.data?.length ?? 0 })
+  const zoneList = useRovingList({ itemCount: zones.data?.length ?? 0 })
+  const containerList = useRovingList({ itemCount: containers.data?.length ?? 0 })
 
   const handlePageSelect = useCallback((pageId: number) => {
     setSelectedPageId(pageId)
@@ -202,6 +208,7 @@ export default function DuplicateToDialog({
       ref={dialogRef}
       className="ssgrid-dialog ssgrid-dialog--wide"
       data-testid="duplicate-to-dialog"
+      aria-labelledby={titleId}
       onClose={handleClose}
       // onClick guard prevents clicks inside the dialog from bubbling to
       // ancestor ElementCard anchors. Both preventDefault and stopPropagation
@@ -215,7 +222,7 @@ export default function DuplicateToDialog({
       }}
     >
       <div className="ssgrid-dialog__header">
-        <h3>
+        <h3 id={titleId}>
           {step === 'page' &&
             t('WeDevelopGrid.DuplicateToDialog.STEP_PAGE_TITLE', 'Select target page')}
           {step === 'zone' && t('WeDevelopGrid.DuplicateToDialog.STEP_ZONE_TITLE', 'Select zone')}
@@ -248,33 +255,49 @@ export default function DuplicateToDialog({
             {pages.isError && <ListLoadError error={pages.error} onRetry={pages.refetch} />}
             {pages.data !== undefined && (
               <div
+                ref={pageList.listRef}
                 className="ssgrid-dialog__list"
                 data-testid="duplicate-to-page-list"
                 role="listbox"
+                aria-label={t('WeDevelopGrid.DuplicateToDialog.PAGE_LIST_LABEL', 'Target page')}
+                tabIndex={0}
+                aria-activedescendant={
+                  pages.data.length > 0 ? pageList.getItemId(pageList.activeIndex) : undefined
+                }
+                onKeyDown={(e) => {
+                  if (pageList.handleNavigationKeyDown(e)) return
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    // Cancel Space-scroll / stray <dialog> submit before running
+                    // the select handler (matches ActionsMenu / GridSettingsPicker).
+                    e.preventDefault()
+                    const page = pages.data[pageList.activeIndex]
+                    if (page?.hasGridZones) {
+                      handlePageSelect(page.id)
+                    }
+                  }
+                }}
               >
-                {pages.data.map((page) => (
+                {pages.data.map((page, index) => (
                   <div
                     key={page.id}
+                    id={pageList.getItemId(index)}
                     className="ssgrid-dialog__option"
                     role="option"
                     aria-selected={page.id === selectedPageId}
                     aria-disabled={!page.hasGridZones}
+                    data-active={index === pageList.activeIndex ? 'true' : undefined}
                     data-testid="duplicate-to-page-item"
-                    onClick={page.hasGridZones ? () => handlePageSelect(page.id) : undefined}
-                    onKeyDown={
+                    // -1 keeps the listbox the single tab stop: focus stays on
+                    // the container and aria-activedescendant does the moving.
+                    tabIndex={-1}
+                    onClick={
                       page.hasGridZones
-                        ? (e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              // Cancel Space-scroll / stray <dialog> submit before
-                              // running the select handler (matches ActionsMenu /
-                              // GridSettingsPicker).
-                              e.preventDefault()
-                              handlePageSelect(page.id)
-                            }
+                        ? () => {
+                            pageList.setActiveIndex(index)
+                            handlePageSelect(page.id)
                           }
                         : undefined
                     }
-                    tabIndex={page.hasGridZones ? 0 : -1}
                   >
                     {page.title}
                   </div>
@@ -294,25 +317,38 @@ export default function DuplicateToDialog({
             {zones.isError && <ListLoadError error={zones.error} onRetry={zones.refetch} />}
             {hasMultipleZones && (
               <div
+                ref={zoneList.listRef}
                 className="ssgrid-dialog__list"
                 data-testid="duplicate-to-zone-list"
                 role="listbox"
+                aria-label={t('WeDevelopGrid.DuplicateToDialog.ZONE_LIST_LABEL', 'Target zone')}
+                tabIndex={0}
+                aria-activedescendant={zoneList.getItemId(zoneList.activeIndex)}
+                onKeyDown={(e) => {
+                  if (zoneList.handleNavigationKeyDown(e)) return
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    const zone = zones.data[zoneList.activeIndex]
+                    if (zone !== undefined) {
+                      handleZoneSelect(zone)
+                    }
+                  }
+                }}
               >
-                {zones.data.map((zone) => (
+                {zones.data.map((zone, index) => (
                   <div
                     key={zone}
+                    id={zoneList.getItemId(index)}
                     className="ssgrid-dialog__option"
                     role="option"
                     aria-selected={zone === selectedZone}
+                    data-active={index === zoneList.activeIndex ? 'true' : undefined}
                     data-testid="duplicate-to-zone-item"
-                    onClick={() => handleZoneSelect(zone)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        handleZoneSelect(zone)
-                      }
+                    tabIndex={-1}
+                    onClick={() => {
+                      zoneList.setActiveIndex(index)
+                      handleZoneSelect(zone)
                     }}
-                    tabIndex={0}
                   >
                     {zone}
                   </div>
@@ -345,25 +381,41 @@ export default function DuplicateToDialog({
             )}
             {containers.data !== undefined && containers.data.length > 0 && (
               <div
+                ref={containerList.listRef}
                 className="ssgrid-dialog__list"
                 data-testid="duplicate-to-container-list"
                 role="listbox"
+                aria-label={t(
+                  'WeDevelopGrid.DuplicateToDialog.CONTAINER_LIST_LABEL',
+                  'Target container',
+                )}
+                tabIndex={0}
+                aria-activedescendant={containerList.getItemId(containerList.activeIndex)}
+                onKeyDown={(e) => {
+                  if (containerList.handleNavigationKeyDown(e)) return
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    const container = containers.data[containerList.activeIndex]
+                    if (container !== undefined) {
+                      handleContainerSelect(container.id)
+                    }
+                  }
+                }}
               >
-                {containers.data.map((container) => (
+                {containers.data.map((container, index) => (
                   <div
                     key={container.id}
+                    id={containerList.getItemId(index)}
                     className="ssgrid-dialog__option"
                     role="option"
                     aria-selected={container.id === selectedContainerId}
+                    data-active={index === containerList.activeIndex ? 'true' : undefined}
                     data-testid="duplicate-to-container-item"
-                    onClick={() => handleContainerSelect(container.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        handleContainerSelect(container.id)
-                      }
+                    tabIndex={-1}
+                    onClick={() => {
+                      containerList.setActiveIndex(index)
+                      handleContainerSelect(container.id)
                     }}
-                    tabIndex={0}
                   >
                     <span>{container.title}</span>
                     <span>{container.type}</span>

@@ -1,4 +1,5 @@
-import { type RefObject, useCallback, useEffect, useId, useRef, useState } from 'react'
+import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
+import { useRovingList } from './useRovingList'
 
 interface UseRovingPopupOptions {
   /** Number of items in the popup; used to clamp and bound navigation. */
@@ -29,9 +30,8 @@ export interface UseRovingPopupReturn {
 }
 
 /**
- * Open/close state, roving `aria-activedescendant` navigation, and dismissal
- * for a trigger-plus-popup pair, per the W3C APG pattern where keyboard
- * handling lives on the popup container and items are not focusable.
+ * Open/close state and dismissal for a trigger-plus-popup pair, layered over
+ * the roving `aria-activedescendant` navigation in {@link useRovingList}.
  *
  * Owns everything the actions menu (role=menu) and the grid-settings picker
  * (role=listbox) share; each keeps its own markup and its own Enter/Space
@@ -42,14 +42,15 @@ export function useRovingPopup({
   seedIndex = 0,
 }: UseRovingPopupOptions): UseRovingPopupReturn {
   const [isOpen, setIsOpen] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(seedIndex)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const popupRef = useRef<HTMLDivElement>(null)
-  // Stable DOM id prefix so aria-activedescendant references a real element id.
-  const itemIdPrefix = useId()
-
-  const getItemId = useCallback((index: number) => `${itemIdPrefix}item-${index}`, [itemIdPrefix])
+  const {
+    activeIndex,
+    setActiveIndex,
+    listRef: popupRef,
+    getItemId,
+    handleNavigationKeyDown,
+  } = useRovingList({ itemCount })
 
   const close = useCallback(() => setIsOpen(false), [])
   const toggle = useCallback(() => setIsOpen((prev) => !prev), [])
@@ -61,14 +62,7 @@ export function useRovingPopup({
     if (!isOpen) return
     setActiveIndex(seedIndex)
     popupRef.current?.focus()
-  }, [isOpen, seedIndex])
-
-  // If the item list shrinks while the popup is open, activeIndex can point
-  // past the last item — aria-activedescendant would then reference a dead id
-  // and Enter/Space would resolve to undefined. Clamp it back into range.
-  useEffect(() => {
-    setActiveIndex((i) => Math.min(i, Math.max(0, itemCount - 1)))
-  }, [itemCount])
+  }, [isOpen, seedIndex, setActiveIndex, popupRef])
 
   useEffect(() => {
     // Stryker disable next-line ConditionalExpression: Equivalent — the outside-mousedown listener's only side effect is the idempotent close(), so registering it while closed is inert
@@ -99,33 +93,6 @@ export function useRovingPopup({
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, close])
-
-  const handleNavigationKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>): boolean => {
-      const last = itemCount - 1
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault()
-          setActiveIndex((i) => (i >= last ? last : i + 1))
-          return true
-        case 'ArrowUp':
-          e.preventDefault()
-          setActiveIndex((i) => (i <= 0 ? 0 : i - 1))
-          return true
-        case 'Home':
-          e.preventDefault()
-          setActiveIndex(0)
-          return true
-        case 'End':
-          e.preventDefault()
-          setActiveIndex(last)
-          return true
-        default:
-          return false
-      }
-    },
-    [itemCount],
-  )
 
   return {
     isOpen,

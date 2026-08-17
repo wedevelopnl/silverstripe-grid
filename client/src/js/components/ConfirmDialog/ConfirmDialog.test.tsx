@@ -28,6 +28,40 @@ describe('ConfirmDialog', () => {
     expect(screen.getByText('Delete')).toBeInTheDocument()
   })
 
+  // jsdom leaves <dialog> without an `open` attribute (showModal is stubbed),
+  // and dom-accessibility-api treats that as hidden — so the name/description
+  // are asserted through the id references rather than via
+  // toHaveAccessibleName, which computes empty for any hidden element.
+  it('names and describes itself from its own title and message', () => {
+    render(<ConfirmDialog {...defaultProps} />)
+
+    const dialog = screen.getByTestId('confirm-dialog')
+    const labelId = dialog.getAttribute('aria-labelledby')
+    const descriptionId = dialog.getAttribute('aria-describedby')
+
+    expect(labelId).not.toBeNull()
+    expect(descriptionId).not.toBeNull()
+    expect(document.getElementById(labelId ?? '')).toHaveTextContent('Delete element')
+    expect(document.getElementById(descriptionId ?? '')).toHaveTextContent(
+      'Are you sure you want to delete this element?',
+    )
+  })
+
+  it('gives each instance distinct label ids so two dialogs cannot collide', () => {
+    const { rerender } = render(<ConfirmDialog {...defaultProps} />)
+    const first = screen.getByTestId('confirm-dialog').getAttribute('aria-labelledby')
+
+    rerender(<ConfirmDialog {...defaultProps} title="Archive element" />)
+    render(<ConfirmDialog {...defaultProps} title="Publish element" />)
+
+    const ids = screen
+      .getAllByTestId('confirm-dialog')
+      .map((dialog) => dialog.getAttribute('aria-labelledby'))
+
+    expect(first).not.toBeNull()
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
   it('calls onCancel when Cancel button is clicked', async () => {
     const user = userEvent.setup()
     const onCancel = vi.fn()

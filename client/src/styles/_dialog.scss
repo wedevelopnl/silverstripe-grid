@@ -131,6 +131,11 @@
     border: 1px solid var(--ssgrid-border-default);
     border-radius: var(--ssgrid-radius-sm);
     padding: 4px;
+
+    &:focus-visible {
+      outline: 2px solid var(--ssgrid-border-focus);
+      outline-offset: 2px;
+    }
   }
 
   &__option {
@@ -164,6 +169,13 @@
     &:focus-visible {
       outline: 2px solid var(--ssgrid-border-focus);
       outline-offset: -2px;
+    }
+
+    // The aria-activedescendant target — keyboard focus ring without moving
+    // real DOM focus off the listbox container.
+    &[data-active='true'] {
+      outline: 1px solid var(--ssgrid-border-focus);
+      outline-offset: -1px;
     }
   }
 
