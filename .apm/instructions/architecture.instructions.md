@@ -31,6 +31,7 @@ tests/E2E/            # Playwright E2E tests
 tests/E2E/Fixture/    # YAML fixtures for E2E test data
 tests/E2E/specs/      # E2E test specs
 tests/E2E/helpers/    # Shared E2E test utilities
+tests/E2E/screenshots/ # Doc screenshot captures (npm run docs:screenshots); NOT run by test-e2e
 client/src/           # Frontend source (React/TS/SCSS): js/ + styles/
 client/src/js/        # React/TS source
 client/src/js/api/    # API client layers (client, endpoints, config, errors)
@@ -51,7 +52,10 @@ scripts/              # Build scripts (i18n collection, parity checks)
 phpstan/stubs/        # PHPStan stubs (e.g. AdminController.stub)
 .docker/              # Docker dev env: Caddy + PHP + MySQL 8
 .docker/app/src/      # Harness-owned page types (App\MultiZonePage — the E2E multi-zone page); COPYed to /app/src at image build
+docs/                 # User documentation; docs/README.md is the index
+docs/usage/           # Usage guides (grid-editor, custom-elements, templates, i18n)
 docs/architecture/    # Architecture documents (backend, drag-and-drop, grid-adapter)
+docs/images/          # Generated doc screenshots — regenerate, never hand-edit
 ```
 
 - PSR-4 namespace: `WeDevelop\Grid\` → `src/`
@@ -66,6 +70,7 @@ docs/architecture/    # Architecture documents (backend, drag-and-drop, grid-ada
 - `vite.config.ts` — Build config + Vitest test config, `@` alias → `client/src/js`
 - `tsconfig.json` — TypeScript config
 - `playwright.config.ts` — Playwright E2E test config (base URL from `.docker/.env` or `E2E_BASE_URL`)
+- `playwright.docs.config.ts` — Doc screenshot config. Separate file on purpose: `task test-e2e` runs `npx playwright test` with no project filter, so a screenshot project in the main config would rewrite `docs/images/` on every E2E run.
 - `stryker.config.mjs` — Stryker JS mutation testing config
 - `Taskfile.yml` — Docker-based PHP test/coverage commands (run via [Task](https://taskfile.dev))
 - `.docker/compose.yml` — Docker service definitions
