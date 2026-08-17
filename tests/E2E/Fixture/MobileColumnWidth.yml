@@ -10,9 +10,14 @@
 # The row declares its grid unconditionally, so the smallest viewport's classes
 # are the only ones covering the band below the second breakpoint. Halving the
 # width there and leaving the default at full width makes that band observable
-# as geometry: the columns sit side by side on a phone and stack above the
-# breakpoint. A smallest viewport that emits a breakpoint-prefixed class instead
-# matches nothing on a phone and collapses each column to a single grid track.
+# as geometry: each column takes half the row on a phone and the full row above
+# the breakpoint. A smallest viewport whose class does not apply from 0px up
+# leaves each column at whatever the framework defaults to — a single grid track
+# on Bootstrap/Tailwind, the full row on Bulma.
+#
+# The spec measures width only, not adjacency: Bulma's `.columns` becomes a flex
+# container at 769px, so its halved columns stack on a phone rather than sitting
+# side by side.
 #
 # CI runs the E2E suite against all three presets, and they share no viewport
 # keys, so the override names the smallest viewport of each one: `xs`

@@ -7,9 +7,9 @@ namespace WeDevelop\Grid\Adapter;
 /**
  * Bulma CSS framework grid preset (Flexbox column system).
  *
- * Five breakpoints: mobile (unsuffixed default), tablet (769px), desktop (1024px),
- * widescreen (1216px), fullhd (1408px). Mobile is the base viewport — width/offset
- * classes use `is-{n}` without a viewport suffix.
+ * Five breakpoints: mobile (0px), tablet (769px), desktop (1024px), widescreen
+ * (1216px), fullhd (1408px). Mobile is the base viewport and emits a pair of
+ * width/offset classes — see `$base_width_format`.
  *
  * Requires the `column` base class on grid columns.
  *
@@ -41,11 +41,24 @@ final class BulmaAdapter extends GridAdapter
 
     private static ?string $base_viewport_key = 'mobile';
 
-    private static string $base_width_format = 'is-%d';
+    // The base arm emits TWO classes because Bulma has no single class covering
+    // 0px upwards: `is-6` lives in `@media (min-width: 769px)` and `is-6-mobile`
+    // in `@media (max-width: 768px)`. Emitting only the unsuffixed form leaves
+    // the phone band with no width rule at all, and `ColumnClassResolver` emits
+    // a width class at the smallest viewport and then only on change, so nothing
+    // downstream fills it in. The two are contiguous and never overlap.
+    //
+    // The `-mobile` half must come first and the unsuffixed half must stay: the
+    // larger viewports' `is-{n}-{vp}` classes sit in the same media block and at
+    // the same specificity as the unsuffixed one, so anything that raises the
+    // base arm's specificity (notably an `is-mobile` row modifier, which pulls in
+    // the unscoped `.columns.is-mobile > .column.is-{n}` rule) makes the base
+    // width outrank every override above it.
+    private static string $base_width_format = 'is-%1$d-mobile is-%1$d';
 
     private static string $responsive_width_format = 'is-%2$d-%1$s';
 
-    private static string $base_offset_format = 'is-offset-%d';
+    private static string $base_offset_format = 'is-offset-%1$d-mobile is-offset-%1$d';
 
     private static string $responsive_offset_format = 'is-offset-%2$d-%1$s';
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING (custom adapters): `GridAdapterInterface` gains `getBaseColumnClass(): ?string`** — the method already existed on `ContentLayoutAdapterInterface`, where only the media block could reach it, while the grid's own columns needed it too (see below). It is now declared on both; `GridAdapter` implements it once, so every preset and every adapter subclassing it is unaffected. A custom adapter implementing `GridAdapterInterface` from scratch must add the method — it is already required to implement both interfaces, so in practice it has one.
+
+### Fixed
+
+- **Grid columns never carried the framework's base column class** — `base_column_class` was declared on the adapter (Bulma sets it to `column`) but only ever read by `BlockMediaExtension`, so the grid's own columns rendered as `<div class="is-6 is-12-tablet">`. Every Bulma width, offset and gutter helper is written `.column.is-{n}`, so on Bulma none of them matched and column settings had no effect on the frontend at all — the CSS was inert rather than wrong, which is why it went unnoticed. `ColumnClassResolver` now emits it ahead of the viewport classes. Bootstrap and Tailwind set it to `null` and their output is byte-identical.
+- **Bulma columns ignored their width below 769px** — the base viewport emitted the unsuffixed `is-{n}`, which Bulma scopes to `@media (min-width: 769px)`; its `is-{n}-mobile` counterpart is scoped to `@media (max-width: 768px)`. Neither covers 0px upwards alone, so the phone band had no width rule and every column rendered full width regardless of its settings — the same gap the Tailwind base viewport had, reached from the opposite direction (a class with no infix that is nonetheless breakpoint-scoped). `BulmaAdapter`'s `base_width_format` / `base_offset_format` now emit both halves (`is-6-mobile is-6`), so a base format may return several space-separated classes. Rendered output above 769px is unchanged, and stored content needs no migration. Bulma columns are now sized from 0px up but still stack below 769px, where `.columns` is not yet a flex container: adding an `is-mobile` row modifier would fix the stacking but pulls in Bulma's unscoped `.columns.is-mobile > .column.is-{n}` rule, whose extra class of specificity would make the base width outrank every larger-viewport override.
+
 ## [6.0.0-beta.3] - 2026-08-12
 
 ### Added

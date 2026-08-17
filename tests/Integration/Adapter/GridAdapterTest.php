@@ -242,7 +242,9 @@ final class GridAdapterTest extends SapphireTest
     }
 
     /**
-     * Width class for the no-infix base viewport, width 6.
+     * Width class for the base viewport, width 6. Bootstrap and Tailwind drop the
+     * infix; Bulma pairs its `-mobile` form (max-width 768px) with the unsuffixed
+     * one (min-width 769px), because neither covers 0px upwards on its own.
      *
      * @return iterable<string, array{class-string<GridAdapter>, string, string}>
      */
@@ -250,14 +252,14 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'xs', 'col-6'];
         yield 'tailwind' => [TailwindAdapter::class, 'base', 'col-span-6'];
-        yield 'bulma' => [BulmaAdapter::class, 'mobile', 'is-6'];
+        yield 'bulma' => [BulmaAdapter::class, 'mobile', 'is-6-mobile is-6'];
     }
 
     /**
      * @param class-string<GridAdapter> $adapterClass
      */
     #[DataProvider('baseViewportWidthClassProvider')]
-    public function testGetWidthClassForBaseViewportOmitsInfix(string $adapterClass, string $baseViewport, string $expected): void
+    public function testGetWidthClassForBaseViewportUsesBaseFormat(string $adapterClass, string $baseViewport, string $expected): void
     {
         self::assertSame($expected, (new $adapterClass())->getWidthClass($baseViewport, 6));
     }
@@ -285,8 +287,9 @@ final class GridAdapterTest extends SapphireTest
     }
 
     /**
-     * Offset class for the no-infix base viewport, offset 3. Tailwind's
-     * offset_adjustment of 1 applies to the base arm too, so 3 becomes 4.
+     * Offset class for the base viewport, offset 3. Tailwind's offset_adjustment
+     * of 1 applies to the base arm too, so 3 becomes 4; Bulma emits the same
+     * `-mobile` + unsuffixed pair as the width arm.
      *
      * @return iterable<string, array{class-string<GridAdapter>, string, string}>
      */
@@ -294,14 +297,14 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'xs', 'offset-3'];
         yield 'tailwind' => [TailwindAdapter::class, 'base', 'col-start-4'];
-        yield 'bulma' => [BulmaAdapter::class, 'mobile', 'is-offset-3'];
+        yield 'bulma' => [BulmaAdapter::class, 'mobile', 'is-offset-3-mobile is-offset-3'];
     }
 
     /**
      * @param class-string<GridAdapter> $adapterClass
      */
     #[DataProvider('baseViewportOffsetClassProvider')]
-    public function testGetOffsetClassForBaseViewportOmitsInfix(string $adapterClass, string $baseViewport, string $expected): void
+    public function testGetOffsetClassForBaseViewportUsesBaseFormat(string $adapterClass, string $baseViewport, string $expected): void
     {
         self::assertSame($expected, (new $adapterClass())->getOffsetClass($baseViewport, 3));
     }
@@ -472,7 +475,7 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'col-6'];
         yield 'tailwind' => [TailwindAdapter::class, 'col-span-6'];
-        yield 'bulma' => [BulmaAdapter::class, 'is-6'];
+        yield 'bulma' => [BulmaAdapter::class, 'is-6-mobile is-6'];
     }
 
     /**
@@ -493,7 +496,7 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'offset-3'];
         yield 'tailwind' => [TailwindAdapter::class, 'col-start-4'];
-        yield 'bulma' => [BulmaAdapter::class, 'is-offset-3'];
+        yield 'bulma' => [BulmaAdapter::class, 'is-offset-3-mobile is-offset-3'];
     }
 
     /**

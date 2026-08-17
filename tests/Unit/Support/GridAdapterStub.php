@@ -25,12 +25,15 @@ final class GridAdapterStub implements GridAdapterInterface
      * @param bool $cascadeVisibility When true (default) the stub mimics
      *     Bootstrap/Tailwind — hides cascade upward and expose a restore class.
      *     When false it mimics Bulma — hides are viewport-scoped, restore is null.
+     * @param string|null $baseColumnClass Framework class every column carries,
+     *     as Bulma's `column`. Null (default) mimics Bootstrap/Tailwind.
      */
     public function __construct(
         ?array $viewports = null,
         private readonly int $columnCount = 12,
         ?Viewport $defaultViewport = null,
         private readonly bool $cascadeVisibility = true,
+        private readonly ?string $baseColumnClass = null,
     ) {
         $this->viewports = $viewports ?? [
             new Viewport('xs', 'Extra Small', 0),
@@ -81,6 +84,11 @@ final class GridAdapterStub implements GridAdapterInterface
     public function getRowClasses(): string
     {
         return 'row';
+    }
+
+    public function getBaseColumnClass(): ?string
+    {
+        return $this->baseColumnClass;
     }
 
     public function getContainerClass(bool $fluid): string

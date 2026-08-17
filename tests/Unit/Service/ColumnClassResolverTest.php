@@ -64,6 +64,21 @@ final class ColumnClassResolverTest extends TestCase
     }
 
     /**
+     * Bulma-style adapter: every column carries a framework base class, without
+     * which none of the width helpers match.
+     */
+    private static function baseColumnClassStub(): GridAdapterStub
+    {
+        return new GridAdapterStub(
+            [
+                new Viewport('xs', 'Extra Small', 0),
+                new Viewport('md', 'Medium', 768),
+            ],
+            baseColumnClass: 'column',
+        );
+    }
+
+    /**
      * @return iterable<string, array{array<string, ViewportConfig>, GridAdapterStub, string}>
      */
     public static function resolveProvider(): iterable
@@ -205,6 +220,24 @@ final class ColumnClassResolverTest extends TestCase
             ],
             self::threeViewportStub(),
             'col-xs-12 hidden-md visible-lg col-lg-8 offset-lg-0',
+        ];
+
+        yield 'base column class leads the viewport classes' => [
+            [
+                'xs' => new ViewportConfig(6, 0, true),
+                'md' => new ViewportConfig(12, 0, true),
+            ],
+            self::baseColumnClassStub(),
+            'column col-xs-6 col-md-12',
+        ];
+
+        yield 'base column class is emitted even when the column starts hidden' => [
+            [
+                'xs' => new ViewportConfig(6, 0, false),
+                'md' => new ViewportConfig(6, 0, true),
+            ],
+            self::baseColumnClassStub(),
+            'column hidden-xs visible-md col-md-6',
         ];
     }
 
