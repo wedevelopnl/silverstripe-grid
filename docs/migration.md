@@ -157,9 +157,48 @@ When stdin is not a TTY (CI pipelines, `sake` called from a script), there is no
 
 If a run finishes with failures, the task exits with a non-zero status and the failing page IDs are logged as errors. Pages that failed remain un-migrated and can be re-run after the cause is fixed.
 
-## Multi-locale (Fluent)
+## Multi-locale (Fluent) sites
 
-On Fluent sites, use `migrate-grid-with-fluent` (not `migrate-grid`) — the plain task refuses to run when localised legacy tables are present. See [Migrating Elemental content under Fluent](fluent.md).
+On a Fluent site, run `migrate-grid-with-fluent` instead of `migrate-grid`. The plain task **refuses to run** when it detects either a locale-isolated target grid (`GridElement` carrying Fluent's isolated extension) or localised legacy tables, and points you here. The isolation check catches even single-locale legacy content, which table-shape detection alone cannot see.
+
+```bash
+vendor/bin/sake dev/tasks/migrate-grid-with-fluent \
+    --default-viewport=MD --zone=main --strategy=sections --dry-run
+```
+
+The task accepts the same options as `migrate-grid` (see the [Options Reference](#options-reference)).
+
+### Additional prerequisites
+
+- **The legacy `BaseElement_Localised` / `*_Localised` (and `_Live`) tables must still be present.** If `dev/build` moved them to `_obsolete_*` after the old element relation was dropped, rename them back first — the migration reads legacy tables by name.
+- Fluent must be installed and wired into the grid as described in [Fluent (multi-locale) support](fluent.md).
+
+### How the task works
+
+The task migrates per locale: the default locale first, then each additional locale in turn, each inside a `FluentState` context, writing isolated per-locale `GridElement` trees.
+
+It inspects the database table shape to determine which Fluent strategy the SilverStripe 5 site used:
+
+| Legacy table shape | Detected model | Behaviour |
+|--------------------|----------------|-----------|
+| `BaseElement_Localised` present | Field-localised | Shared element structure; per-locale content read from `*_Localised` tables and overlaid onto the base row. |
+| `BaseElement.LocaleID` column present | Isolated | Separate element rows exist per locale; each locale's rows are filtered by `LocaleID`. |
+| Neither | Single-locale | No locale-specific data; elements are migrated once into the default locale only. |
+| Both | Unsupported | Ambiguous mixed configuration — the task aborts with an error. |
+
+> **Isolated model prerequisite — Locale IDs must be stable.** The migration filters legacy element rows by `LocaleID`, treating those integers as equal to the current Fluent `Locale` record IDs. That holds for a standard in-place SilverStripe 5 → 6 upgrade, where the same database is carried forward and the `Locale` rows keep their original IDs. **If the `Locale` records were deleted and recreated between the time the legacy content was authored and when you run the migration, the IDs will differ, and the Isolated per-locale filter may select the wrong content or return nothing at all.** Verify your `Locale` table IDs are unchanged before running the task on an Isolated site.
+
+### What differs per locale
+
+**Layout is locale-invariant.** Column grouping and `Size`/`Offset`/`Visibility` grid settings are derived from the base element rows and applied equally across all locales. Per-locale layout differences present in the legacy data are not honoured — an accepted limitation of a one-shot migration. Only content fields (`Title`, `HTML`, media text) differ per locale.
+
+**Untranslated elements fall back to base content.** In the field-localised model, an element with no `*_Localised` row for a given locale is migrated using its base content. This matches Fluent's render-time fallback and ensures nothing is silently omitted.
+
+**`UseGrid` is a shared page flag.** It is excluded from Fluent localisation in the module's `_config/fluent.yml` and is set once on the page record — not per locale — when the migration completes successfully.
+
+### Not the same as `AssignGridLocaleTask`
+
+`migrate-grid-with-fluent` reads *legacy Elemental tables* and writes fully-localised grid trees from scratch. The `AssignGridLocaleTask` recipe in [Fluent — enabling Fluent on existing grid content](fluent.md#enabling-fluent-on-existing-grid-content) does something different: it re-localises grid data that was already migrated while locale-blind (`LocaleID = 0`). Use that one only if you enabled Fluent *after* the grid content already existed.
 
 ## What Gets Migrated
 
@@ -409,3 +448,9 @@ Carry the block link FK fields across during the grid pass with the `updateEleme
 **Draft-deleted content reappeared on draft.** — This is expected. Live-only elements are recreated on both stages to preserve Versioned integrity.
 
 **"SS_GRID_ADAPTER environment variable is not set" (or "Invalid SS_GRID_ADAPTER value …").** — The active grid adapter is selected from the required `SS_GRID_ADAPTER` environment variable and there is no default. The container throws this `RuntimeException` at boot, so it surfaces during `dev/build` and on every migration task before any data is read or written. Set `SS_GRID_ADAPTER` to a preset (`bootstrap`, `tailwind`, `bulma`) or an FQCN implementing `GridAdapterInterface` — see [Requirements](#requirements) — then re-run the task.
+
+## See also
+
+- [The grid editor](usage/grid-editor.md) — what migrated content looks like in the CMS afterwards
+- [Fluent (multi-locale) support](fluent.md) — installing and configuring Fluent alongside the grid
+- [Grid Adapter System](architecture/grid-adapter.md) — viewport keys and column counts, which `--default-viewport` and `--viewport-map` are matched against
