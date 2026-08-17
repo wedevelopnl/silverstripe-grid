@@ -131,6 +131,16 @@ Tier 3 runs in three steps, in order:
 
 Without step 2, step 3 returns the element's **own** parent, and `resolveDropPlacement`'s container branch appends at its end — a silent no-op that contradicts the visible preview.
 
+### Why there is no KeyboardSensor
+
+Drag and drop is pointer-only, and that is a known accessibility gap — not an oversight. Adding `KeyboardSensor` alone does **not** produce working keyboard DnD; it produces a drag that silently drops in the wrong place, which is worse than none. Three things break, because the whole system takes the pointer as its reference point:
+
+1. **Drop direction always resolves to "after".** `getPointerPosition()` (`useDragAndDrop.ts`) returns `null` unless `activatorEvent instanceof PointerEvent`; a keyboard drag's activator is a `KeyboardEvent`. Both call sites guard `pointer !== null` and fall through to the "after" branch, so nothing can ever be inserted *before* a target.
+2. **Tier 3 containment never runs.** It is wholly gated on `args.pointerCoordinates`, which dnd-kit leaves null for keyboard drags. Entering a container degrades to the `closestCenter` distance guess, and the pointer-inside-source-sibling guard is skipped too.
+3. **`sortableKeyboardCoordinates` is not type-aware.** It runs its own `closestCorners` over *all* droppables, so arrow keys steer toward structurally invalid targets (a Section while dragging a Column). Our detector then filters that target out and returns no collision, leaving `over` null — arrow keys that appear dead in many directions.
+
+Doing this properly means giving the collision tiers and direction resolution a pointer-free reference point (the dragged item's own `collisionRect` centre) and writing a custom type-aware keyboard coordinate getter, plus its own test suite. That is a project, not a patch. Note also that the winner-only return below is documented as safe *because* no keyboard sensor is wired.
+
 ### Performance Contract
 
 Collision detection runs on every pointer move (60Hz+), so the hot path avoids per-cycle work that doesn't change the outcome. These decisions are deliberate — don't "restore" the naive versions:
