@@ -476,7 +476,7 @@ WeDevelop\Grid\Service\GridSettingsResolver:
 | Adapter | Viewports | Base viewport | Width pattern |
 |---------|-----------|--------------|---------------|
 | Bootstrap | xs, sm, md, lg, xl, xxl | xs (no infix) | `col-{vp}-{n}` |
-| Tailwind | sm, md, lg, xl, 2xl | sm | `{vp}:col-span-{n}` |
+| Tailwind | base, sm, md, lg, xl, 2xl | base (no prefix) | `{vp}:col-span-{n}` |
 | Bulma | mobile, tablet, desktop, widescreen, fullhd | mobile (no suffix) | `is-{n}-{vp}` |
 
 There is no compile-time default. `GridAdapterInterface` is bound through a factory that selects the active adapter from the **required** `SS_GRID_ADAPTER` env var — a bundled preset name (`bootstrap`, `tailwind`, or `bulma`, case-insensitive) or the FQCN of a custom adapter implementing `GridAdapterInterface`. Unset, empty, or invalid values throw at container boot:

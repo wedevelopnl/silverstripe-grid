@@ -1,0 +1,72 @@
+# E2E fixture for the rendered width of a smallest-viewport override.
+#
+# Structure:
+#   Page (E2E Mobile Column Width Test Page):
+#     Section
+#       Row
+#         Left Column  — default width 12, half width at the smallest viewport
+#         Right Column — default width 12, half width at the smallest viewport
+#
+# The row declares its grid unconditionally, so the smallest viewport's classes
+# are the only ones covering the band below the second breakpoint. Halving the
+# width there and leaving the default at full width makes that band observable
+# as geometry: the columns sit side by side on a phone and stack above the
+# breakpoint. A smallest viewport that emits a breakpoint-prefixed class instead
+# matches nothing on a phone and collapses each column to a single grid track.
+#
+# CI runs the E2E suite against all three presets, and they share no viewport
+# keys, so the override names the smallest viewport of each one: `xs`
+# (Bootstrap), `base` (Tailwind), `mobile` (Bulma). Resolution iterates the
+# active adapter's viewports, so the two keys that do not belong to it are
+# inert — nothing validates override keys against the adapter.
+#
+# Published so the spec can assert the frontend's real, CSS-resolved geometry.
+#
+# Top-down ordering: parents before children. Auto-scaffolding is
+# suppressed by FixtureLoader.
+
+Page:
+  e2e_page:
+    Title: 'E2E Mobile Column Width Test Page'
+    URLSegment: 'e2e-mobile-column-width'
+
+WeDevelop\Grid\Model\Section:
+  section1:
+    Title: 'Width Section'
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+
+WeDevelop\Grid\Model\Row:
+  row1:
+    Title: 'Width Row'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.section1
+
+WeDevelop\Grid\Model\Column:
+  col1:
+    Title: 'Left Column'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.row1
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{"xs":{"width":6,"offset":0,"visible":true},"base":{"width":6,"offset":0,"visible":true},"mobile":{"width":6,"offset":0,"visible":true}}}'
+  col2:
+    Title: 'Right Column'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Row.row1
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{"xs":{"width":6,"offset":0,"visible":true},"base":{"width":6,"offset":0,"visible":true},"mobile":{"width":6,"offset":0,"visible":true}}}'
+
+# ShowTitle defaults to 0, so each element opts in explicitly — the spec waits on
+# the rendered title to know the frontend has painted before it measures.
+WeDevelop\Grid\Model\ContentElement:
+  leaf1:
+    Title: 'Content element 1'
+    ShowTitle: 1
+    HTML: '<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col1
+  leaf2:
+    Title: 'Content element 2'
+    ShowTitle: 1
+    HTML: '<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.col2

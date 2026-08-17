@@ -814,10 +814,15 @@ final class MigrationAcceptanceTest extends SapphireTest
      * Verifies migration when changing CSS framework during the SS5→SS6 upgrade.
      *
      * Old module used Bootstrap (XS, SM, MD, LG, XL).
-     * New module uses Tailwind (sm, md, lg, xl, 2xl — no xs equivalent).
+     * New module uses Tailwind (base, sm, md, lg, xl, 2xl).
+     *
+     * The key map is supplied by the migrating project, not derived from the
+     * adapter, so this one exercises a map that deliberately drops XS. Tailwind
+     * does have a zero-width tier (`base`) a project could map XS onto — that
+     * choice is the project's, and the migration must not silently invent it.
      *
      * Key behaviors:
-     * - XS viewport data is LOST (no mapping target) — accepted trade-off
+     * - Unmapped XS viewport data is LOST — accepted trade-off
      * - MD remains the default viewport
      * - XL maps to xl, SM maps to sm, LG maps to lg
      * - Viewport overrides use the new Tailwind keys
@@ -828,7 +833,7 @@ final class MigrationAcceptanceTest extends SapphireTest
         $areaId = 1700;
         $this->seeder->seedPage($pageId, $areaId);
 
-        // Tailwind viewport map: no XS mapping (Tailwind has no xs breakpoint)
+        // Tailwind viewport map, XS deliberately unmapped.
         $tailwindKeyMap = [
             'SM' => 'sm',
             'MD' => 'md',

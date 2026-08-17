@@ -32,12 +32,11 @@ use WeDevelop\Grid\Value\Viewport;
  * data providers before the SilverStripe config manifest is booted, and the
  * adapter constructor reads config, so each test instantiates inside its body.
  *
- * The no-infix base-viewport branch (the TRUE arm of `$viewport === base_viewport_key`)
- * only applies to presets that declare a base viewport — Bootstrap (`xs`) and Bulma
- * (`mobile`); Tailwind has none, so it is excluded from those providers and only ever
- * exercises the responsive arm. Generic base-class validation (malformed config,
- * pixel rounding) is not framework-specific output, so it is asserted once against
- * the default preset (Tailwind) rather than redundantly across all three.
+ * Every preset declares a base viewport — Bootstrap (`xs`), Tailwind (`base`), Bulma
+ * (`mobile`) — so all three exercise both arms of `$viewport === base_viewport_key`.
+ * Generic base-class validation (malformed config, pixel rounding) is not
+ * framework-specific output, so it is asserted once against the default preset
+ * (Tailwind) rather than redundantly across all three.
  */
 #[CoversClass(GridAdapter::class)]
 #[CoversClass(BootstrapAdapter::class)]
@@ -59,7 +58,7 @@ final class GridAdapterTest extends SapphireTest
     public static function viewportKeysProvider(): iterable
     {
         yield 'bootstrap' => [BootstrapAdapter::class, ['xs', 'sm', 'md', 'lg', 'xl', 'xxl']];
-        yield 'tailwind' => [TailwindAdapter::class, ['sm', 'md', 'lg', 'xl', '2xl']];
+        yield 'tailwind' => [TailwindAdapter::class, ['base', 'sm', 'md', 'lg', 'xl', '2xl']];
         yield 'bulma' => [BulmaAdapter::class, ['mobile', 'tablet', 'desktop', 'widescreen', 'fullhd']];
     }
 
@@ -84,7 +83,7 @@ final class GridAdapterTest extends SapphireTest
     public static function viewportMinWidthProvider(): iterable
     {
         yield 'bootstrap' => [BootstrapAdapter::class, ['xs' => 0, 'sm' => 576, 'md' => 768, 'lg' => 992, 'xl' => 1200, 'xxl' => 1400]];
-        yield 'tailwind' => [TailwindAdapter::class, ['sm' => 640, 'md' => 768, 'lg' => 1024, 'xl' => 1280, '2xl' => 1536]];
+        yield 'tailwind' => [TailwindAdapter::class, ['base' => 0, 'sm' => 640, 'md' => 768, 'lg' => 1024, 'xl' => 1280, '2xl' => 1536]];
         yield 'bulma' => [BulmaAdapter::class, ['mobile' => 0, 'tablet' => 769, 'desktop' => 1024, 'widescreen' => 1216, 'fullhd' => 1408]];
     }
 
@@ -111,6 +110,25 @@ final class GridAdapterTest extends SapphireTest
         yield 'bootstrap' => [BootstrapAdapter::class];
         yield 'tailwind' => [TailwindAdapter::class];
         yield 'bulma' => [BulmaAdapter::class];
+    }
+
+    /**
+     * Below the second breakpoint only the smallest viewport's classes apply, so
+     * they must be the framework's unprefixed form. A preset whose smallest
+     * viewport emits a prefixed class leaves the narrowest screens unstyled and
+     * every column collapses to a single grid track.
+     *
+     * @param class-string<GridAdapter> $adapterClass
+     */
+    #[DataProvider('allAdaptersProvider')]
+    public function testSmallestViewportIsTheBaseViewport(string $adapterClass): void
+    {
+        $adapter = new $adapterClass();
+        $smallest = $adapter->getViewports()[0];
+
+        self::assertSame(0, $smallest->minWidth);
+        self::assertSame($adapter->getBaseWidthClass(6), $adapter->getWidthClass($smallest->key, 6));
+        self::assertSame($adapter->getBaseOffsetClass(3), $adapter->getOffsetClass($smallest->key, 3));
     }
 
     /**
@@ -224,14 +242,14 @@ final class GridAdapterTest extends SapphireTest
     }
 
     /**
-     * Width class for the no-infix base viewport, width 6. Only presets that
-     * declare a base viewport reach this branch; Tailwind has none.
+     * Width class for the no-infix base viewport, width 6.
      *
      * @return iterable<string, array{class-string<GridAdapter>, string, string}>
      */
     public static function baseViewportWidthClassProvider(): iterable
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'xs', 'col-6'];
+        yield 'tailwind' => [TailwindAdapter::class, 'base', 'col-span-6'];
         yield 'bulma' => [BulmaAdapter::class, 'mobile', 'is-6'];
     }
 
@@ -267,13 +285,15 @@ final class GridAdapterTest extends SapphireTest
     }
 
     /**
-     * Offset class for the no-infix base viewport, offset 3. Base-viewport presets only.
+     * Offset class for the no-infix base viewport, offset 3. Tailwind's
+     * offset_adjustment of 1 applies to the base arm too, so 3 becomes 4.
      *
      * @return iterable<string, array{class-string<GridAdapter>, string, string}>
      */
     public static function baseViewportOffsetClassProvider(): iterable
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'xs', 'offset-3'];
+        yield 'tailwind' => [TailwindAdapter::class, 'base', 'col-start-4'];
         yield 'bulma' => [BulmaAdapter::class, 'mobile', 'is-offset-3'];
     }
 
@@ -299,7 +319,7 @@ final class GridAdapterTest extends SapphireTest
     /**
      * The hide class per viewport. Cascade frameworks (Bootstrap/Tailwind) use a
      * viewport-infixed hide; Bulma uses a viewport-scoped `-only` hide. The no-infix
-     * base viewport (Bootstrap xs, Bulma mobile) uses base_hide_class.
+     * base viewport (Bootstrap xs, Tailwind base, Bulma mobile) uses base_hide_class.
      *
      * @return iterable<string, array{class-string<GridAdapter>, string, string}>
      */
@@ -310,6 +330,7 @@ final class GridAdapterTest extends SapphireTest
         yield 'bootstrap base' => [BootstrapAdapter::class, 'xs', 'd-none'];
         yield 'tailwind middle' => [TailwindAdapter::class, 'md', 'md:hidden'];
         yield 'tailwind last' => [TailwindAdapter::class, '2xl', '2xl:hidden'];
+        yield 'tailwind base' => [TailwindAdapter::class, 'base', 'hidden'];
         yield 'bulma middle' => [BulmaAdapter::class, 'tablet', 'is-hidden-tablet-only'];
         yield 'bulma last' => [BulmaAdapter::class, 'fullhd', 'is-hidden-fullhd'];
         yield 'bulma base' => [BulmaAdapter::class, 'mobile', 'is-hidden-mobile'];
