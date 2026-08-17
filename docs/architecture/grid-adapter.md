@@ -125,9 +125,9 @@ All properties are `private static` on `GridAdapter`. Preset subclasses override
 | Property | Type | Purpose |
 |----------|------|---------|
 | `base_viewport_key` | `?string` | Viewport using base format — must be the smallest (`min_width` 0) |
-| `base_width_format` | `string` | Base width class (`%d` = width) |
+| `base_width_format` | `string` | Base width class (`%d` = width). May emit several space-separated classes — use `%1$d` when the value repeats |
 | `responsive_width_format` | `string` | Responsive width class |
-| `base_offset_format` | `string` | Base offset class (`%d` = offset) |
+| `base_offset_format` | `string` | Base offset class (`%d` = offset). Same multi-class rule as `base_width_format` |
 | `responsive_offset_format` | `string` | Responsive offset class |
 | `offset_adjustment` | `int` | Added to offset before formatting (0 or 1) |
 
@@ -160,7 +160,7 @@ All properties are `private static` on `GridAdapter`. Preset subclasses override
 | `responsive_order_format` | `string` | Responsive order (`%1$s` = viewport, `%2$d` = position) |
 | `padding_direction_map` | `array<string, string>` | `'left'\|'right'` → CSS prefix |
 | `padding_format` | `string` | Padding (`%1$s` = prefix, `%2$s` = viewport, `%3$d` = size) |
-| `base_column_class` | `?string` | Framework base class (e.g. Bulma's `'column'`), null if not needed |
+| `base_column_class` | `?string` | Framework base class (e.g. Bulma's `'column'`), null if not needed. Not content-layout-only: `ColumnClassResolver` emits it on every grid column too, ahead of the width classes |
 
 ### 3. Base Viewport Pattern
 
@@ -169,6 +169,10 @@ Every adapter needs a "base" viewport: the smallest one, with `min_width` 0, nam
 **This is not optional.** The row wrapper's `row_class_format` has no responsive variant, so the grid is declared from 0px up. `ColumnClassResolver` always emits a width class at the smallest viewport — if that class carries a breakpoint prefix, it matches nothing below the breakpoint and every column falls back to `grid-column: auto`, one track out of `total_columns`. Leaving `base_viewport_key` at `null`, or filtering the named key out via `enabled_viewports`, produces columns crushed to ~8% width on phones.
 
 Frameworks that name their zero-width tier expose it directly (Bootstrap's `xs`, Bulma's `mobile`). Tailwind does not name it — an unprefixed utility *is* the 0px tier — so `TailwindAdapter` models it as a synthetic `base` viewport sitting below `sm` (640px).
+
+**Naming the tier is not enough — the emitted class has to apply there.** What matters is the media query the class ends up in, not whether it carries an infix. Bootstrap's `col-6` and Tailwind's `col-span-6` are unscoped and cascade upward, so one class covers 0px→∞. Bulma splits the same range in two: `is-6` lives in `@media (min-width: 769px)` and `is-6-mobile` in `@media (max-width: 768px)`. `BulmaAdapter` therefore sets `base_width_format` to `'is-%1$d-mobile is-%1$d'` — a base format may emit several space-separated classes, and Bulma's must, or the phone band gets no width rule and every column renders full width.
+
+Bulma also rules out raising the base arm's specificity to compensate. Its `is-{n}-{vp}` classes share a media block and a specificity with the unsuffixed `is-{n}`, so adding an `is-mobile` modifier to `row_class_format` — which brings in the unscoped `.columns.is-mobile > .column.is-{n}` rule at one class higher — makes the base width outrank every override above it. The consequence is that Bulma columns are *sized* from 0px up but still stack below 769px, since `.columns` only becomes a flex container there.
 
 `getBaseWidthClass()` / `getBaseOffsetClass()` use the same base format strings for the CMS editor preview, independent of which viewport is the base one.
 
@@ -230,7 +234,7 @@ Content layout (aspect ratios, media ordering, vertical alignment, directional p
 | `getMediaWidthClass(int)` | `string` | Width class for media column |
 | `getContentWidthClass(int)` | `string` | Width class for content column |
 | `getPaddingClass(direction, size)` | `string` | Directional padding/margin for gap |
-| `getBaseColumnClass()` | `?string` | Framework base class (e.g. Bulma's `column`) |
+| `getBaseColumnClass()` | `?string` | Framework base class (e.g. Bulma's `column`). Also declared on `GridAdapterInterface`, which needs it for the grid's own columns — one implementation serves both |
 
 ### How the content layout adapter is resolved
 

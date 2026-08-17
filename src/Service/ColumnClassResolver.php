@@ -14,6 +14,9 @@ use WeDevelop\Grid\Value\ViewportConfig;
  * Walks adapter viewports smallest→largest. Only emits CSS classes at breakpoints
  * where the effective value changes from the previous breakpoint. The first
  * viewport always emits a width class.
+ *
+ * The framework's base column class, when it has one, leads the list — Bulma's
+ * width helpers are all scoped `.column.is-{n}` and match nothing without it.
  */
 final class ColumnClassResolver
 {
@@ -24,6 +27,11 @@ final class ColumnClassResolver
     {
         $parts = [];
         $viewports = $adapter->getViewports();
+
+        $baseColumnClass = $adapter->getBaseColumnClass();
+        if ($baseColumnClass !== null) {
+            $parts[] = $baseColumnClass;
+        }
 
         // Sentinels: width=0 ensures first viewport always emits (valid widths are >0).
         // Offset=0 suppresses emission of offset-0 at the first viewport (it's the default).

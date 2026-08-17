@@ -107,6 +107,20 @@ interface GridAdapterInterface
     public function getRowClasses(): string;
 
     /**
+     * Base class every column inside a row carries, or null when the framework
+     * needs none. Bulma's width helpers are all written `.column.is-{n}`, so
+     * without it none of them match.
+     *
+     * Also declared by {@see ContentLayoutAdapterInterface}, whose media block
+     * builds column elements of its own. Both interfaces resolve to the same
+     * singleton, so `GridAdapter` implements it once for both.
+     *
+     * @example Bootstrap: null
+     * @example Bulma:     'column'
+     */
+    public function getBaseColumnClass(): ?string;
+
+    /**
      * CSS class for the outermost grid container.
      *
      * @param bool $fluid Whether the container should span full width
@@ -133,11 +147,14 @@ interface GridAdapterInterface
      * size the panel happens to be. Base classes ensure columns always apply
      * without requiring a specific screen width.
      *
+     * Space-separated when the framework needs more than one class to span the
+     * whole range, as Bulma does.
+     *
      * @param positive-int $width
      *
      * @example Bootstrap: getBaseWidthClass(6) → 'col-6'
      * @example Tailwind:  getBaseWidthClass(6) → 'col-span-6'
-     * @example Bulma:     getBaseWidthClass(6) → 'is-6'
+     * @example Bulma:     getBaseWidthClass(6) → 'is-6-mobile is-6'
      */
     public function getBaseWidthClass(int $width): string;
 
@@ -148,7 +165,7 @@ interface GridAdapterInterface
      *
      * @example Bootstrap: getBaseOffsetClass(3) → 'offset-3'
      * @example Tailwind:  getBaseOffsetClass(3) → 'col-start-4'
-     * @example Bulma:     getBaseOffsetClass(3) → 'is-offset-3'
+     * @example Bulma:     getBaseOffsetClass(3) → 'is-offset-3-mobile is-offset-3'
      */
     public function getBaseOffsetClass(int $offset): string;
 

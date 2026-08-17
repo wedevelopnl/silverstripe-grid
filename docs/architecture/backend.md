@@ -435,6 +435,7 @@ Grid adapters translate the abstract layout model (viewports, column widths, off
 | `getHideClass(viewport)` | `string` | Hide class for viewport |
 | `getRestoreClass(viewport)` | `?string` | Restore-visibility class, or null when the framework's hides are viewport-scoped (e.g. Bulma) |
 | `getRowClasses()` | `string` | Row container classes |
+| `getBaseColumnClass()` | `?string` | Class every column carries (Bulma's `column`), or null. `ColumnClassResolver` emits it first. Also on `ContentLayoutAdapterInterface` — one implementation serves both |
 | `getContainerClass(fluid)` | `string` | Container wrapper classes |
 | `getTitleClassOptions()` | `array<string, string>` | CSS class to label mapping |
 | `getOffsetStrategy()` | `OffsetStrategy` | Margin-based vs grid-placement |
@@ -477,7 +478,7 @@ WeDevelop\Grid\Service\GridSettingsResolver:
 |---------|-----------|--------------|---------------|
 | Bootstrap | xs, sm, md, lg, xl, xxl | xs (no infix) | `col-{vp}-{n}` |
 | Tailwind | base, sm, md, lg, xl, 2xl | base (no prefix) | `{vp}:col-span-{n}` |
-| Bulma | mobile, tablet, desktop, widescreen, fullhd | mobile (no suffix) | `is-{n}-{vp}` |
+| Bulma | mobile, tablet, desktop, widescreen, fullhd | mobile (`is-{n}-mobile is-{n}`) | `is-{n}-{vp}` |
 
 There is no compile-time default. `GridAdapterInterface` is bound through a factory that selects the active adapter from the **required** `SS_GRID_ADAPTER` env var — a bundled preset name (`bootstrap`, `tailwind`, or `bulma`, case-insensitive) or the FQCN of a custom adapter implementing `GridAdapterInterface`. Unset, empty, or invalid values throw at container boot:
 
