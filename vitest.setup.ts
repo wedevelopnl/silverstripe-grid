@@ -20,6 +20,13 @@ failOnConsole({
   silenceMessage: (message) => isConsoleMessageAllowed(message),
 })
 
+// jsdom does no layout, so it ships no Element.scrollIntoView at all. The
+// roving-list hook calls it to keep the active option visible; without a stub
+// every arrow keypress in a test would throw.
+if (typeof Element !== 'undefined' && Element.prototype.scrollIntoView === undefined) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {}
+}
+
 const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController'
 
 const defaultAdapterConfig: AdapterConfig = {
