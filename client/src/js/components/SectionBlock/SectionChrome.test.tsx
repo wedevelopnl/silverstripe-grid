@@ -132,4 +132,13 @@ describe('SectionChrome', () => {
 
     expect(screen.getByTestId('section-body')).toContainElement(screen.getByTestId('body-slot'))
   })
+
+  it('wires the collapse toggle to the body it controls', () => {
+    render(<SectionChrome {...baseProps} />)
+
+    const controlsId = screen.getByTestId('collapse-toggle').getAttribute('aria-controls')
+
+    expect(controlsId).not.toBeNull()
+    expect(screen.getByTestId('section-body')).toHaveAttribute('id', controlsId)
+  })
 })

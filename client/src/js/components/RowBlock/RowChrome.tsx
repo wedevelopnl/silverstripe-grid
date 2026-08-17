@@ -19,6 +19,13 @@ interface RowChromeProps {
   readonly style?: React.CSSProperties
   readonly leading?: ReactNode
   readonly trailing?: ReactNode
+  /**
+   * id of the columns body, which `children` owns. Unlike a section or column,
+   * a row's body is supplied by the caller and differs between modes, so the
+   * caller sets this id on its own wrapper and passes it here for the collapse
+   * toggle's aria-controls.
+   */
+  readonly bodyId: string
   readonly children: ReactNode
 }
 
@@ -44,6 +51,7 @@ export default function RowChrome({
   style,
   leading,
   trailing,
+  bodyId,
   children,
 }: RowChromeProps) {
   return (
@@ -59,7 +67,12 @@ export default function RowChrome({
     >
       <div className="ssgrid-row__header" data-testid="row-header">
         {leading}
-        <CollapseToggle isCollapsed={isCollapsed} onToggle={onToggle} label={title} />
+        <CollapseToggle
+          isCollapsed={isCollapsed}
+          onToggle={onToggle}
+          label={title}
+          controlsId={bodyId}
+        />
         <h3 className="ssgrid-row__title" data-testid="row-title">
           {titleHref !== undefined ? (
             <a href={titleHref} data-testid="row-edit-link">

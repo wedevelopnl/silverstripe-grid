@@ -164,4 +164,13 @@ describe('ColumnChrome', () => {
 
     expect(screen.getByTestId('column-body')).toContainElement(screen.getByTestId('body-slot'))
   })
+
+  it('wires the collapse toggle to the body it controls', () => {
+    render(<ColumnChrome {...baseProps} />)
+
+    const controlsId = screen.getByTestId('collapse-toggle').getAttribute('aria-controls')
+
+    expect(controlsId).not.toBeNull()
+    expect(screen.getByTestId('column-body')).toHaveAttribute('id', controlsId)
+  })
 })

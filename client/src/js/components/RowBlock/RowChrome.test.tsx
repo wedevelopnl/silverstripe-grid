@@ -9,6 +9,7 @@ const baseProps = {
   isCollapsed: false,
   onToggle: vi.fn(),
   columnCount: 0,
+  bodyId: 'row-body-id',
   children: <span data-testid="body-slot" />,
 }
 

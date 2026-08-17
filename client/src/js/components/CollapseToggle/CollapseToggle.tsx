@@ -4,14 +4,22 @@ interface CollapseToggleProps {
   readonly isCollapsed: boolean
   readonly onToggle: () => void
   readonly label: string
+  /** id of the region this toggle expands and collapses. */
+  readonly controlsId: string
 }
 
-export default function CollapseToggle({ isCollapsed, onToggle, label }: CollapseToggleProps) {
+export default function CollapseToggle({
+  isCollapsed,
+  onToggle,
+  label,
+  controlsId,
+}: CollapseToggleProps) {
   return (
     <button
       type="button"
       className="ssgrid-icon-button"
       aria-expanded={!isCollapsed}
+      aria-controls={controlsId}
       aria-label={
         isCollapsed
           ? t('WeDevelopGrid.CollapseToggle.EXPAND_LABEL', 'Expand {label}', { label })
