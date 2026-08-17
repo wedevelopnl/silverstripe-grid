@@ -184,6 +184,7 @@ The grid requires the `SS_GRID_ADAPTER` env var to be set (a preset name — `bo
 
 ## See also
 
+- [The grid editor](grid-editor.md) — what CMS users build with the structure these templates render
 - [Custom content elements](custom-elements.md) — adding new block types
 - [Backend Architecture](../architecture/backend.md#cms-integration) — how `GridPageExtension` wires `$UseGrid` and `$Sections`
 - [Grid Adapter System](../architecture/grid-adapter.md) — how width/offset classes get generated for Section/Row/Column holders

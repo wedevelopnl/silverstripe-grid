@@ -96,6 +96,10 @@ WeDevelop\E2e\Fixtures\FixtureLoader:
 
 Most reorder and visibility specs follow this pattern — load the YAML, then publish the top-level page so the fixture exists on both draft and live.
 
+### The `docs-page` fixture
+
+One registered fixture, `docs-page` (`tests/E2E/Fixture/DocsPage.yml`), is referenced by no spec. It backs `npm run docs:screenshots`, which regenerates the images in `docs/images/` used by the README and the [grid editor guide](../usage/grid-editor.md). Leave it registered, and re-run that command if you change the page it produces.
+
 ## YAML schema
 
 Fixtures use SilverStripe's standard `YamlFixture` syntax. Example (`tests/E2E/Fixture/ElementTree.yml`):

@@ -191,6 +191,7 @@ Override `provideHolderClasses()` on your element if you want to inject classes 
 
 ## See also
 
+- [The grid editor](grid-editor.md) — where your element shows up: the type picker, the editor card, and the action menu
 - [Templates guide](templates.md) — how the holder chain composes and how themes override templates
 - [Backend Architecture](../architecture/backend.md#cms-integration) — the DI and permission model behind element CRUD
 - [Internationalization](i18n.md) — translating element field labels
