@@ -197,8 +197,8 @@ final class GridSettingsFieldTest extends SapphireTest
     {
         $field = $this->createField();
 
-        // Tailwind adapter has 5 viewports: sm, md, lg, xl, 2xl
-        self::assertCount(5, $field->getViewportData());
+        // Tailwind adapter has 6 viewports: base, sm, md, lg, xl, 2xl
+        self::assertCount(6, $field->getViewportData());
     }
 
     public function testGetViewportDataMarksDefaultViewport(): void

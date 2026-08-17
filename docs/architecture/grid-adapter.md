@@ -24,7 +24,7 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single `abstrac
 | Preset | Default Columns | Default Viewport | Viewports |
 |--------|----------------|------------------|-----------|
 | `BootstrapAdapter` | 12 | `md` | xs, sm, md, lg, xl, xxl |
-| `TailwindAdapter` | 12 | `sm` | sm, md, lg, xl, 2xl |
+| `TailwindAdapter` | 12 | `sm` | base, sm, md, lg, xl, 2xl |
 | `BulmaAdapter` | 12 | `desktop` | mobile, tablet, desktop, widescreen, fullhd |
 
 > **Bulma and media order classes.** Bulma ships no flex-order utilities, so
@@ -48,6 +48,7 @@ final class YourAdapter extends GridAdapter
     // ─── Grid topology ──────────────────────────────────────────
     /** @var array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}> */
     private static array $viewport_definitions = [
+        'xs' => ['label' => 'Mobile', 'min_width' => 0],
         'sm' => ['label' => 'Small',  'min_width' => 640],
         'md' => ['label' => 'Medium', 'min_width' => 768],
         'lg' => ['label' => 'Large',  'min_width' => 1024],
@@ -62,7 +63,7 @@ final class YourAdapter extends GridAdapter
     private static string $default_viewport = 'md';
 
     // ─── Width & offset formats ─────────────────────────────────
-    private static ?string $base_viewport_key = null;
+    private static ?string $base_viewport_key = 'xs';
     private static string $base_width_format = 'col-span-%d';
     private static string $responsive_width_format = '%1$s:col-span-%2$d';
     private static string $base_offset_format = 'col-start-%d';
@@ -70,7 +71,7 @@ final class YourAdapter extends GridAdapter
     private static int $offset_adjustment = 0;
 
     // ─── Visibility formats ─────────────────────────────────────
-    private static string $base_hide_class = '';
+    private static string $base_hide_class = 'hidden';
     private static string $responsive_hide_format = '%s:hidden';
     private static string $responsive_restore_format = '%s:block';
 
@@ -123,7 +124,7 @@ All properties are `private static` on `GridAdapter`. Preset subclasses override
 
 | Property | Type | Purpose |
 |----------|------|---------|
-| `base_viewport_key` | `?string` | Viewport using base format; null if none |
+| `base_viewport_key` | `?string` | Viewport using base format — must be the smallest (`min_width` 0) |
 | `base_width_format` | `string` | Base width class (`%d` = width) |
 | `responsive_width_format` | `string` | Responsive width class |
 | `base_offset_format` | `string` | Base offset class (`%d` = offset) |
@@ -163,9 +164,13 @@ All properties are `private static` on `GridAdapter`. Preset subclasses override
 
 ### 3. Base Viewport Pattern
 
-Frameworks with a "base" viewport (Bootstrap's `xs`, Bulma's `mobile`) set `base_viewport_key` to that viewport's key. At that viewport, the base format strings are used (no viewport infix). All other viewports use the responsive format strings.
+Every adapter needs a "base" viewport: the smallest one, with `min_width` 0, named by `base_viewport_key`. At that viewport the base format strings are used (no viewport infix); all other viewports use the responsive format strings.
 
-Frameworks without a base viewport (Tailwind) set `base_viewport_key` to `null` — all viewports use the responsive format. The base format strings are still used for `getBaseWidthClass()` / `getBaseOffsetClass()` (CMS editor preview).
+**This is not optional.** The row wrapper's `row_class_format` has no responsive variant, so the grid is declared from 0px up. `ColumnClassResolver` always emits a width class at the smallest viewport — if that class carries a breakpoint prefix, it matches nothing below the breakpoint and every column falls back to `grid-column: auto`, one track out of `total_columns`. Leaving `base_viewport_key` at `null`, or filtering the named key out via `enabled_viewports`, produces columns crushed to ~8% width on phones.
+
+Frameworks that name their zero-width tier expose it directly (Bootstrap's `xs`, Bulma's `mobile`). Tailwind does not name it — an unprefixed utility *is* the 0px tier — so `TailwindAdapter` models it as a synthetic `base` viewport sitting below `sm` (640px).
+
+`getBaseWidthClass()` / `getBaseOffsetClass()` use the same base format strings for the CMS editor preview, independent of which viewport is the base one.
 
 ### 4. Register the Adapter
 

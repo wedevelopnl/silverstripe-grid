@@ -196,6 +196,27 @@ final class ColumnTest extends SapphireTest
     }
 
     /**
+     * The row wrapper declares its grid unconditionally, so a column whose only
+     * width class is breakpoint-prefixed gets no width below that breakpoint and
+     * collapses to a single grid track. The smallest viewport must always
+     * contribute an unprefixed width class.
+     *
+     * The trailing `lg:col-span-12` is the isolated strategy reasserting the
+     * default above the single `md` override, not part of the invariant.
+     */
+    public function testGetColumnClassesAlwaysEmitsAnUnprefixedWidthForTheSmallestViewport(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+        $row = GridTreeFactory::row($section);
+
+        $settings = GridSettings::initial(12)->withOverride('md', new ViewportConfig(6, 0, true));
+        $column = GridTreeFactory::column($row, gridSettings: $settings);
+
+        self::assertSame('col-span-12 md:col-span-6 lg:col-span-12', $column->getColumnClasses());
+    }
+
+    /**
      * getColumnClasses() must resolve grid classes through the DI-configured
      * GridSettingsResolver, which the Column receives via $dependencies injection
      * at construction. With `cascade` configured, an override at a larger viewport
@@ -210,18 +231,17 @@ final class ColumnTest extends SapphireTest
         $row = GridTreeFactory::row($section);
 
         // Default width 12, override only at 'lg' (width 6). Under isolated, the
-        // smaller viewports keep the default 12, so the default viewport (Tailwind
-        // `sm`) renders sm:col-span-12 and the override surfaces as lg:col-span-6.
+        // smaller viewports keep the default 12, so Tailwind's base viewport renders
+        // the unprefixed col-span-12 and the override surfaces as lg:col-span-6.
         // Under cascade, the 'lg' override flows down to the smallest viewport, so
-        // the default width becomes 6 (sm:col-span-6) and the standalone 12 class
+        // the base width becomes 6 (col-span-6) and the standalone 12 class
         // disappears.
         $settings = GridSettings::initial(12)->withOverride('lg', new ViewportConfig(6, 0, true));
 
         // Baseline: column built under the default (isolated) resolver.
         $isolatedColumn = GridTreeFactory::column($row, gridSettings: $settings);
         $isolatedClasses = $isolatedColumn->getColumnClasses();
-        self::assertStringContainsString('sm:col-span-12', $isolatedClasses);
-        self::assertStringContainsString('lg:col-span-6', $isolatedClasses);
+        self::assertSame('col-span-12 lg:col-span-6 xl:col-span-12', $isolatedClasses);
 
         // Register a cascade-configured resolver, then build a column so it receives
         // that strategy via $dependencies injection at construction.
@@ -237,9 +257,9 @@ final class ColumnTest extends SapphireTest
             'getColumnClasses() must reflect the DI-configured cascade strategy, not a hard-coded isolated resolver',
         );
 
-        // Cascade pushes the width-6 override down to the smallest viewport.
-        self::assertStringContainsString('sm:col-span-6', $cascadeClasses);
-        self::assertStringNotContainsString('sm:col-span-12', $cascadeClasses);
+        // Cascade pushes the width-6 override down to the smallest viewport, so the
+        // unprefixed class carries 6 and only xl reverts to the default 12.
+        self::assertSame('col-span-6 xl:col-span-12', $cascadeClasses);
     }
 
     public function testGetCMSFieldsIncludesGridTab(): void

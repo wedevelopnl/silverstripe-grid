@@ -7,9 +7,12 @@ namespace WeDevelop\Grid\Adapter;
 /**
  * Tailwind CSS grid preset using utility classes for a 12-column CSS Grid layout.
  *
- * Five breakpoints matching Tailwind v3/v4 defaults: sm (640px), md (768px),
- * lg (1024px), xl (1280px), 2xl (1536px). No base viewport — all breakpoints
- * use the responsive `{viewport}:` prefix format.
+ * Tailwind is mobile-first: an unprefixed utility applies from 0px up, and the
+ * five named breakpoints — sm (640px), md (768px), lg (1024px), xl (1280px),
+ * 2xl (1536px) — layer on top of it. The unprefixed tier is modelled as the
+ * `base` viewport so the smallest viewport emits `col-span-N` rather than
+ * `sm:col-span-N`; without it nothing styles 0-639px and every column collapses
+ * to a single grid track on phones.
  *
  * Uses grid-placement offset strategy (`col-start-N`, 1-based) instead of
  * margin-based offsets.
@@ -18,18 +21,19 @@ namespace WeDevelop\Grid\Adapter;
  * ```yaml
  * WeDevelop\Grid\Adapter\TailwindAdapter:
  *   total_columns: 16
- *   enabled_viewports: [sm, md, lg]
+ *   enabled_viewports: [base, md, lg]
  * ```
  */
 final class TailwindAdapter extends GridAdapter
 {
     /** @var array<non-empty-string, array{label: non-empty-string, min_width: int<0, max>}> */
     private static array $viewport_definitions = [
-        'sm'  => ['label' => 'Small',       'min_width' => 640],
-        'md'  => ['label' => 'Medium',      'min_width' => 768],
-        'lg'  => ['label' => 'Large',       'min_width' => 1024],
-        'xl'  => ['label' => 'Extra Large', 'min_width' => 1280],
-        '2xl' => ['label' => '2X Large',    'min_width' => 1536],
+        'base' => ['label' => 'Mobile',      'min_width' => 0],
+        'sm'   => ['label' => 'Small',       'min_width' => 640],
+        'md'   => ['label' => 'Medium',      'min_width' => 768],
+        'lg'   => ['label' => 'Large',       'min_width' => 1024],
+        'xl'   => ['label' => 'Extra Large', 'min_width' => 1280],
+        '2xl'  => ['label' => '2X Large',    'min_width' => 1536],
     ];
 
     /** @var positive-int */
@@ -40,6 +44,8 @@ final class TailwindAdapter extends GridAdapter
 
     private static string $default_viewport = 'sm';
 
+    private static ?string $base_viewport_key = 'base';
+
     private static string $base_width_format = 'col-span-%d';
 
     private static string $responsive_width_format = '%1$s:col-span-%2$d';
@@ -49,6 +55,8 @@ final class TailwindAdapter extends GridAdapter
     private static string $responsive_offset_format = '%1$s:col-start-%2$d';
 
     private static int $offset_adjustment = 1;
+
+    private static string $base_hide_class = 'hidden';
 
     private static string $responsive_hide_format = '%s:hidden';
 

@@ -27,7 +27,7 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single **abstra
 | Preset | Default Columns | Default Viewport | Viewports |
 |--------|----------------|------------------|-----------|
 | `BootstrapAdapter` | 12 | `md` | xs, sm, md, lg, xl, xxl |
-| `TailwindAdapter` | 12 | `sm` | sm, md, lg, xl, 2xl |
+| `TailwindAdapter` | 12 | `sm` | base, sm, md, lg, xl, 2xl |
 | `BulmaAdapter` | 12 | `desktop` | mobile, tablet, desktop, widescreen, fullhd |
 
 ## Core Rules
@@ -36,7 +36,7 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single **abstra
 - The active adapter is selected by the required `SS_GRID_ADAPTER` env var. Accepts a bundled preset name (`bootstrap`|`tailwind`|`bulma`, case-insensitive) or the FQCN of a custom adapter that implements **both** `GridAdapterInterface` and `ContentLayoutAdapterInterface` — the same singleton is aliased to both, so an adapter missing the latter would only fail later at render. Unset, empty, or invalid values throw at container boot. Subclassing `GridAdapter` satisfies both interfaces automatically.
 - `.docker/env.sh` seeds `SS_GRID_ADAPTER=tailwind` into `.docker/.env` so first-run dev works; edit or override via shell env to switch.
 - Any property can be overridden per-project via YAML without writing PHP.
-- `base_viewport_key` identifies the "no infix" viewport (Bootstrap's `xs`, Bulma's `mobile`); set to `null` for frameworks without one (Tailwind).
+- `base_viewport_key` identifies the "no infix" viewport and **must** name the smallest viewport, whose `min_width` is 0 (Bootstrap `xs`, Tailwind `base`, Bulma `mobile`). Rows declare their grid unprefixed, so a prefixed class at the smallest viewport leaves 0px upwards unstyled and crushes every column to one grid track. Never `null`, and never filtered out via `enabled_viewports`.
 - `ContentLayoutAdapterInterface` is implemented by the same `GridAdapter` instance — both interfaces resolve to one singleton via `GridAdapterFactory` in `_config/content-layout.yml`.
 - Override strategy (`isolated` vs `cascade`) lives on `GridSettingsResolver`, **not** on the adapter.
 

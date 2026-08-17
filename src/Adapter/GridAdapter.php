@@ -46,7 +46,15 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
     /** @var list<string>|null Restrict active viewports; null = all */
     private static ?array $enabled_viewports = null;
 
-    /** Viewport key that uses base (no-infix) format; null if all viewports use responsive format */
+    /**
+     * Viewport key that uses base (no-infix) format.
+     *
+     * Must name the smallest enabled viewport, whose `min_width` is 0 — that
+     * viewport's classes are the only ones covering the band below the next
+     * breakpoint. Leaving this null (or filtering the named key out via
+     * `enabled_viewports`) means the smallest viewport emits a prefixed class
+     * and nothing styles 0px upwards, collapsing every column to one grid track.
+     */
     private static ?string $base_viewport_key = null;
 
     /** sprintf: %d = width */

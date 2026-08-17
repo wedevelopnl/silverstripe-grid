@@ -187,6 +187,12 @@ WeDevelop\E2e\Fixtures\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
+    mobile-column-width:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/MobileColumnWidth.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
     history-view-test:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/HistoryViewTest.yml'
       # No post_actions: the history-view E2E spec creates all versions

@@ -46,7 +46,7 @@ final class AdapterConfigTest extends SapphireTest
         self::assertSame('col-start-12', $config->baseOffsetClasses[11]);
 
         self::assertSame(
-            ['sm', 'md', 'lg', 'xl', '2xl'],
+            ['base', 'sm', 'md', 'lg', 'xl', '2xl'],
             array_map(static fn (Viewport $viewport): string => $viewport->key, $config->viewports),
         );
     }
