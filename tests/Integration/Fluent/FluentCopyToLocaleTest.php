@@ -6,14 +6,16 @@ namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversNothing;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Versioned\Versioned;
 use TractorCow\Fluent\Service\CopyToLocaleService;
 use TractorCow\Fluent\State\FluentState;
-use WeDevelop\Grid\Extensions\FluentGridPageExtension;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Service\LocalisedSubtreeCloner;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 
 /**
@@ -23,18 +25,29 @@ use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 #[CoversNothing]
 final class FluentCopyToLocaleTest extends FluentGridTestCase
 {
-    /** Invokes the private decision core of onAfterLocalisedCopy via reflection. */
+    /**
+     * The decision core of onAfterLocalisedCopy now lives on
+     * {@see LocalisedSubtreeCloner} so pages and shared blocks share it. It
+     * takes a "how many roots does this locale hold?" callable, which is what
+     * makes it host-agnostic — here it counts a page's roots.
+     */
     private function findSourceLocale(Page $page, string $targetLocale): ?string
     {
-        $extension = new FluentGridPageExtension();
-        $extension->setOwner($page);
+        return $this->cloner()->findSourceLocale($this->pageRootCounter($page), $targetLocale);
+    }
 
-        $method = new \ReflectionMethod($extension, 'findSourceLocale');
+    /** @return callable(): int<0, max> */
+    private function pageRootCounter(Page $page): callable
+    {
+        return static fn (): int => GridElement::get()->filter([
+            'ParentID' => $page->ID,
+            'ParentClass' => Page::class,
+        ])->count();
+    }
 
-        /** @var ?string $result */
-        $result = $method->invoke($extension, (int) $page->ID, Page::class, $targetLocale);
-
-        return $result;
+    private function cloner(): LocalisedSubtreeCloner
+    {
+        return Injector::inst()->get(LocalisedSubtreeCloner::class);
     }
 
     /**
@@ -109,10 +122,10 @@ final class FluentCopyToLocaleTest extends FluentGridTestCase
 
     /**
      * `findSourceLocale` is the decision core of `onAfterLocalisedCopy`.
-     * The mutants at line 155 (NotIdentical/LogicalAnd/negation) all permute
+     * The mutants (NotIdentical/LogicalAnd/negation) all permute
      * `$defaultLocale !== null && $defaultLocale->Locale !== $targetLocale`.
-     * These tests exercise the private method via reflection so we can pin
-     * every branch independently of the CMS copy-button trigger.
+     * These tests call it directly rather than through the CMS copy button so
+     * every branch is pinned independently.
      */
     public function testFindSourceLocaleReturnsDefaultWhenDefaultHasSections(): void
     {

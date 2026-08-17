@@ -13,6 +13,13 @@ SilverStripe\CMS\Model\SiteTree:
   field_exclude:
     - UseGrid
 
+WeDevelop\Grid\Model\SharedBlock:
+  extensions:
+    FluentSharedBlock: WeDevelop\Grid\Extensions\FluentSharedBlockExtension
+
 SilverStripe\Core\Injector\Injector:
   TractorCow\Fluent\Model\Delete\DeleteLocalisationPolicy:
     class: WeDevelop\Grid\Service\GridAwareDeleteLocalisationPolicy
+  WeDevelop\Grid\Service\LocalisedSubtreeCloner:
+    constructor:
+      treeService: '%$WeDevelop\Grid\Service\GridTreeService'

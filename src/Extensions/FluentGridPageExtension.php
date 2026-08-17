@@ -14,9 +14,7 @@ use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
-use WeDevelop\Grid\Service\GridTreeService;
-use WeDevelop\Grid\Service\Transactional;
-use WeDevelop\Grid\Value\Result;
+use WeDevelop\Grid\Service\LocalisedSubtreeCloner;
 
 /**
  * Copies the grid element tree when Fluent localises a page to a new locale.
@@ -56,7 +54,10 @@ class FluentGridPageExtension extends Extension
         /** @var positive-int $pageId */
         $pageId = (int) $page->ID;
 
-        $sourceLocale = $this->findSourceLocale($pageId, $page::class, $targetLocale);
+        $sourceLocale = $this->cloner()->findSourceLocale(
+            fn (): int => $this->countRootsInLocale($pageId, $page::class),
+            $targetLocale,
+        );
         if ($sourceLocale === null) {
             return;
         }
@@ -76,14 +77,11 @@ class FluentGridPageExtension extends Extension
             return;
         }
 
-        // Use a direct query instead of the has_many relation to avoid the
-        // relation cache returning stale data from the source locale context.
-        $targetSectionCount = Section::get()->filter([
-            'ParentID' => $page->ID,
-            'ParentClass' => $page::class,
-        ])->count();
+        /** @var positive-int $pageId */
+        $pageId = (int) $page->ID;
 
-        if ($targetSectionCount > 0) {
+        // Idempotency: a re-save must not copy a second time.
+        if ($this->countRootsInLocale($pageId, $page::class) > 0) {
             return;
         }
 
@@ -110,38 +108,26 @@ class FluentGridPageExtension extends Extension
         Config::modify()->set(Row::class, 'auto_scaffold', false);
 
         try {
-            $treeService = Injector::inst()->get(GridTreeService::class);
+            $cloner = $this->cloner();
 
-            // Atomic: each section is cloned and then has every node in its
-            // subtree rewritten to the target locale. A failure part-way leaves
-            // clones carrying the SOURCE LocaleID — visible in the wrong locale
-            // and invisible in the target one — which no later save repairs,
-            // because the target-locale emptiness check above then sees the
-            // half-copied sections and declines to run again.
-            Transactional::run(static function () use ($sourceLocale, $page, $targetLocaleId, $treeService): Result {
-                FluentState::singleton()->withState(function (FluentState $state) use ($sourceLocale, $page, $targetLocaleId, $treeService): void {
+            // The clone walk runs in the SOURCE locale, where the originals —
+            // and, once written, their clones — are visible.
+            FluentState::singleton()->withState(
+                static function (FluentState $state) use ($sourceLocale, $page, $targetLocaleId, $cloner): void {
                     $state->setLocale($sourceLocale);
 
-                    foreach ($page->Sections() as $section) {
-                        $clone = $section->duplicate(true);
+                    // Every root element, not just Sections: a shared block
+                    // placement is page content too, and cloning it carries the
+                    // BlockID across so the new locale points at the same block
+                    // — without duplicating the block's own subtree.
+                    $roots = GridElement::get()->filter([
+                        'ParentID' => $page->ID,
+                        'ParentClass' => $page::class,
+                    ]);
 
-                        // Reload the freshly-written subtree from the DB while still in
-                        // the source locale (where the clones are visible). The clone
-                        // itself is prepended — findDescendants excludes the root.
-                        $allCloned = [$clone, ...$treeService->findDescendants($clone)];
-
-                        // Reassign all LocaleIDs to the target locale.
-                        // FluentIsolatedExtension::onBeforeWrite only auto-assigns when empty,
-                        // so we must set it explicitly since duplicate() copies the source LocaleID.
-                        foreach ($allCloned as $element) {
-                            $element->LocaleID = $targetLocaleId;
-                            $element->write();
-                        }
-                    }
-                });
-
-                return Result::ok(null);
-            })->unwrap();
+                    $cloner->cloneSubtrees($roots, $targetLocaleId)->unwrap();
+                }
+            );
         } finally {
             Config::modify()->set(Section::class, 'auto_scaffold', $priorSectionScaffold);
             Config::modify()->set(Row::class, 'auto_scaffold', $priorRowScaffold);
@@ -149,55 +135,23 @@ class FluentGridPageExtension extends Extension
     }
 
     /**
-     * Finds a locale that has Sections for the given page.
-     * Tries the default locale first, then iterates all cached locales.
+     * Root elements this page holds in whichever locale is currently active —
+     * Sections and shared block placements alike.
      *
-     * @param positive-int $pageId
-     * @param class-string $pageClass
-     * @param non-empty-string $targetLocale Locale to exclude
-     */
-    private function findSourceLocale(int $pageId, string $pageClass, string $targetLocale): ?string
-    {
-        $defaultLocale = Locale::getDefault();
-
-        if ($defaultLocale !== null && $defaultLocale->Locale !== $targetLocale) {
-            $count = $this->countSectionsInLocale($defaultLocale->Locale, $pageId, $pageClass);
-            if ($count > 0) {
-                return $defaultLocale->Locale;
-            }
-        }
-
-        foreach (Locale::getCached() as $locale) {
-            if ($locale->Locale === $targetLocale) {
-                continue;
-            }
-
-            $count = $this->countSectionsInLocale($locale->Locale, $pageId, $pageClass);
-            if ($count > 0) {
-                return $locale->Locale;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * @param non-empty-string $locale
      * @param positive-int $pageId
      * @param class-string $pageClass
      * @return int<0, max>
      */
-    private function countSectionsInLocale(string $locale, int $pageId, string $pageClass): int
+    private function countRootsInLocale(int $pageId, string $pageClass): int
     {
-        return FluentState::singleton()->withState(
-            function (FluentState $state) use ($locale, $pageId, $pageClass): int {
-                $state->setLocale($locale);
+        return GridElement::get()->filter([
+            'ParentID' => $pageId,
+            'ParentClass' => $pageClass,
+        ])->count();
+    }
 
-                return Section::get()->filter([
-                    'ParentID' => $pageId,
-                    'ParentClass' => $pageClass,
-                ])->count();
-            }
-        );
+    private function cloner(): LocalisedSubtreeCloner
+    {
+        return Injector::inst()->get(LocalisedSubtreeCloner::class);
     }
 }
