@@ -383,4 +383,107 @@ describe('ElementActions', () => {
 
     expect(screen.getByTestId('duplicate-to-dialog')).toBeInTheDocument()
   })
+
+  describe('toolbar roving tabindex', () => {
+    function enabledToolbarButtons(): HTMLButtonElement[] {
+      return Array.from(
+        screen
+          .getByTestId('element-toolbar')
+          .querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
+      )
+    }
+
+    it('exposes the toolbar as a single tab stop', () => {
+      mockFetchSuccess({})
+
+      renderWithProviders(
+        <ElementActions node={createSimpleElement({ canDelete: true, canCreate: true })} />,
+      )
+
+      const tabbable = enabledToolbarButtons().filter((b) => b.tabIndex === 0)
+
+      expect(tabbable).toHaveLength(1)
+      // The first enabled control holds the tab stop until an arrow moves it.
+      expect(tabbable[0]).toBe(enabledToolbarButtons()[0])
+    })
+
+    it('moves focus and the tab stop with ArrowRight and ArrowLeft', async () => {
+      const user = userEvent.setup()
+      mockFetchSuccess({})
+
+      renderWithProviders(
+        <ElementActions node={createSimpleElement({ canDelete: true, canCreate: true })} />,
+      )
+
+      const buttons = enabledToolbarButtons()
+      buttons[0].focus()
+
+      await user.keyboard('{ArrowRight}')
+      expect(buttons[1]).toHaveFocus()
+      expect(buttons[1].tabIndex).toBe(0)
+      expect(buttons[0].tabIndex).toBe(-1)
+
+      await user.keyboard('{ArrowLeft}')
+      expect(buttons[0]).toHaveFocus()
+      expect(buttons[0].tabIndex).toBe(0)
+    })
+
+    it('clamps at both ends rather than wrapping', async () => {
+      const user = userEvent.setup()
+      mockFetchSuccess({})
+
+      renderWithProviders(
+        <ElementActions node={createSimpleElement({ canDelete: true, canCreate: true })} />,
+      )
+
+      const buttons = enabledToolbarButtons()
+      const last = buttons.length - 1
+      buttons[0].focus()
+
+      await user.keyboard('{ArrowLeft}')
+      expect(buttons[0]).toHaveFocus()
+
+      await user.keyboard('{End}')
+      expect(buttons[last]).toHaveFocus()
+
+      await user.keyboard('{ArrowRight}')
+      expect(buttons[last]).toHaveFocus()
+
+      await user.keyboard('{Home}')
+      expect(buttons[0]).toHaveFocus()
+    })
+
+    it('reaches the overflow trigger as the last stop', async () => {
+      const user = userEvent.setup()
+      mockFetchSuccess({})
+
+      renderWithProviders(
+        <ElementActions node={createSimpleElement({ canDelete: true, canCreate: true })} />,
+      )
+
+      enabledToolbarButtons()[0].focus()
+      await user.keyboard('{End}')
+
+      expect(screen.getByTestId('actions-menu-trigger')).toHaveFocus()
+    })
+
+    it('leaves the open overflow menu to handle its own Home/End', async () => {
+      const user = userEvent.setup()
+      mockFetchSuccess({})
+
+      renderWithProviders(
+        <ElementActions node={createSimpleElement({ canDelete: true, canCreate: true })} />,
+      )
+
+      const trigger = screen.getByTestId('actions-menu-trigger')
+      await user.click(trigger)
+
+      // Focus sits on the menu container, not a toolbar button; the toolbar
+      // must not steal the key and yank focus back to a toolbar control.
+      await user.keyboard('{Home}')
+
+      expect(trigger).not.toHaveFocus()
+      expect(screen.getByTestId('actions-menu-dropdown')).toBeInTheDocument()
+    })
+  })
 })

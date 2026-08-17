@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react'
+import { type MouseEvent, useRef, useState } from 'react'
 import ActionsMenu from '@/components/ActionsMenu/ActionsMenu'
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog'
 import DuplicateToDialog from '@/components/DuplicateToDialog/DuplicateToDialog'
@@ -59,6 +59,7 @@ function ToolbarButton({
   disabled,
   destructive,
   testId,
+  tabIndex,
 }: {
   readonly glyph: string
   readonly label: string
@@ -66,6 +67,7 @@ function ToolbarButton({
   readonly disabled: boolean
   readonly destructive?: boolean
   readonly testId: string
+  readonly tabIndex: number
 }) {
   // The block toolbar can sit inside a clickable ElementCard <a>; cancel the
   // anchor's navigation (preventDefault) and stop other React handlers
@@ -86,6 +88,7 @@ function ToolbarButton({
       data-destructive={destructive === true ? 'true' : undefined}
       data-testid={testId}
       disabled={disabled}
+      tabIndex={tabIndex}
       title={label}
       aria-label={label}
       onClick={handleClick}
@@ -97,6 +100,8 @@ function ToolbarButton({
 
 export default function ElementActions({ node, collapse, kebabOnly = false }: ElementActionsProps) {
   const { pageId } = useGridEditorContext()
+  const toolbarRef = useRef<HTMLDivElement>(null)
+  const [activeIndex, setActiveIndex] = useState(0)
   const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(node)
   const { action: duplicateAction } = useDuplicateAction(node)
   const { action: duplicateToAction, dialog: duplicateToDialog } = useDuplicateToAction(node)
@@ -231,13 +236,60 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
   const iconActions = actions.filter((a) => a.overflowOnly !== true)
   const overflowActions = actions.filter((a) => a.overflowOnly === true)
 
+  // Roving tabindex over the toolbar (W3C APG): the whole toolbar is one tab
+  // stop and Arrow/Home/End move between controls. Only enabled buttons take
+  // part — a disabled <button> cannot hold focus, so it is skipped rather than
+  // being made focusable-but-inert. The overflow trigger is the last stop.
+  const enabledIconKeys = iconActions.filter((a) => a.onAction !== undefined).map((a) => a.key)
+  const overflowIndex = enabledIconKeys.length
+  const hasOverflow = toMenuItems(overflowActions).length > 0
+  const stopCount = overflowIndex + (hasOverflow ? 1 : 0)
+  // Clamped so a shrinking action set cannot strand the tab stop on a control
+  // that no longer renders, which would leave the toolbar unreachable by Tab.
+  const activeStop = Math.min(activeIndex, Math.max(0, stopCount - 1))
+
+  function handleToolbarKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    const buttons = Array.from(
+      toolbarRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [],
+    )
+    const current = buttons.findIndex((button) => button === document.activeElement)
+    // Focus is on the open overflow menu's container, not a toolbar control —
+    // these keys are the menu's to handle, so leave it be.
+    if (current === -1) return
+
+    const last = buttons.length - 1
+    let next: number
+    switch (e.key) {
+      case 'ArrowRight':
+        next = current >= last ? last : current + 1
+        break
+      case 'ArrowLeft':
+        next = current <= 0 ? 0 : current - 1
+        break
+      case 'Home':
+        next = 0
+        break
+      case 'End':
+        next = last
+        break
+      default:
+        return
+    }
+
+    e.preventDefault()
+    setActiveIndex(next)
+    buttons[next]?.focus()
+  }
+
   return (
     <>
       <div
+        ref={toolbarRef}
         className="ssgrid-element-toolbar"
         data-testid="element-toolbar"
         role="toolbar"
         aria-label={t('WeDevelopGrid.ElementActions.TOOLBAR_LABEL', 'Element actions')}
+        onKeyDown={handleToolbarKeyDown}
       >
         {iconActions.map((action) => (
           <ToolbarButton
@@ -248,9 +300,13 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
             disabled={action.onAction === undefined}
             destructive={action.destructive}
             testId={`element-action-${action.key}`}
+            tabIndex={enabledIconKeys.indexOf(action.key) === activeStop ? 0 : -1}
           />
         ))}
-        <ActionsMenu actions={toMenuItems(overflowActions)} />
+        <ActionsMenu
+          actions={toMenuItems(overflowActions)}
+          triggerTabIndex={activeStop === overflowIndex ? 0 : -1}
+        />
       </div>
       {dialogs}
     </>
