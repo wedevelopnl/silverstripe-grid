@@ -43,6 +43,10 @@ const ColumnInsertButton = memo(function ColumnInsertButtonComponent(
   const { mutate, isPending } = useCreateElement(pageId, zone)
 
   function handleClick() {
+    // aria-disabled keeps the button focusable, so the click still lands — this
+    // guard is what prevents a double submit.
+    if (isPending) return
+
     const parent: NodeRef = { type: 'row', id: props.rowId }
     const placementParams =
       props.placement === 'start'
@@ -73,7 +77,9 @@ const ColumnInsertButton = memo(function ColumnInsertButtonComponent(
       data-placement={props.placement}
       data-testid={`column-insert-${props.placement}`}
       style={shiftStyle}
-      disabled={isPending}
+      // See AddChildButton: a real `disabled` is blurred by the browser, which
+      // strands keyboard focus mid-insert.
+      aria-disabled={isPending}
       onClick={handleClick}
       title={label}
       aria-label={label}
