@@ -1,0 +1,280 @@
+/* Shared popover surface for the three flyouts the editor renders inline (not
+   in a portal): the column width/offset listbox (GridSettingsPicker), the
+   per-element actions menu (ActionsMenu) and the viewport picker. All anchor to
+   a `position: relative` wrapper and drop a white card below the trigger.
+   Keyboard state lives on the elements as
+   `tabindex`/`aria-selected`/`aria-activedescendant` (set by React); look lives
+   here. The three `.ssgrid-popover-*` classes are composed into the markup
+   alongside each flyout's own block class. */
+
+.ssgrid-popover-anchor {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.ssgrid-popover-surface {
+  position: absolute;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 100%;
+  max-height: 280px;
+  margin: 0;
+  padding: var(--ssgrid-space-1);
+  overflow-y: auto;
+  background: var(--ssgrid-surface-default);
+  border: 1px solid var(--ssgrid-border-default);
+  border-radius: var(--ssgrid-radius-sm);
+  box-shadow: var(--ssgrid-shadow-1);
+  font-size: var(--ssgrid-font-size-body);
+  line-height: var(--ssgrid-line-height-tight);
+}
+
+.ssgrid-popover-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ssgrid-space-2);
+  padding: 7px var(--ssgrid-space-2);
+  border-radius: var(--ssgrid-radius-sm);
+  color: var(--ssgrid-text-default);
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ssgrid-surface-hover);
+  }
+
+  /* The roving-tabindex item (aria-activedescendant target) — keyboard focus
+     ring without moving real DOM focus off the listbox/menu container. */
+  &[tabindex='0'] {
+    background: var(--ssgrid-surface-selected);
+    outline: 1px solid var(--ssgrid-border-focus);
+    outline-offset: -1px;
+  }
+}
+
+/* --- Column width / offset listbox ------------------------------------------- */
+
+/* Overrides the anchor utility's inline-flex (same specificity, later in the
+   bundle): the trigger (a .ssgrid-column-badge) is full-width. */
+.ssgrid-settings-picker {
+  display: block;
+}
+
+/* `.ssgrid-settings-picker-trigger` gets no rule of its own: both consumers
+   pass `.ssgrid-column-badge` alongside it, which already carries the
+   identical layout. The class stays as a selector/test hook. */
+
+.ssgrid-settings-picker-label {
+  /* Truncation comes from `.ssgrid-truncate` in the markup. Without this the
+     label is a flex item at `min-width: auto`, so it refuses to shrink below
+     its text and pushes the trigger wider than its column — the ellipsis only
+     engages once the box is allowed to get smaller. */
+  min-width: 0;
+}
+
+.ssgrid-settings-picker-caret {
+  flex: 0 0 auto;
+  font-size: var(--ssgrid-font-size-body);
+  line-height: 1;
+}
+
+.ssgrid-settings-picker-listbox {
+  left: 0;
+}
+
+.ssgrid-settings-picker-option {
+  &[aria-selected='true'] {
+    color: var(--ssgrid-text-brand);
+    font-weight: var(--ssgrid-font-weight-medium);
+  }
+
+  /* The "Hidden" choice sits below a hairline divider. */
+  &[data-separator='true'] {
+    margin-top: var(--ssgrid-space-1);
+    padding-top: 11px;
+    border-top: 1px solid var(--ssgrid-border-default);
+  }
+}
+
+/* --- Per-element actions menu (kebab flyout) --------------------------------- */
+
+.ssgrid-actions-menu-popup {
+  right: 0; /* right-align under the kebab, which sits at the toolbar's edge */
+  min-width: 180px;
+}
+
+.ssgrid-actions-menu-item {
+  &[data-destructive='true'] {
+    color: var(--ssgrid-text-danger);
+
+    &:hover,
+    &[tabindex='0'] {
+      background: var(--ssgrid-color-danger-tint);
+    }
+  }
+}
+
+/* --- Viewport picker ---------------------------------------------------------- */
+
+/* One button naming the current viewport, one menu holding every viewport and
+   every reset scope. */
+
+/* Sized to the current viewport's name, not to the header row: it shares that
+   row with the area-level actions, which claim the far edge. */
+.ssgrid-viewport-picker-trigger {
+  /* Inset ring: the trigger sits flush in the editor header row, where an
+     outset ring would overlap its neighbours. The ring itself comes from
+     `.ssgrid-focus-ring` in the markup. */
+  --ssgrid-focus-ring-offset: -2px;
+
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--ssgrid-space-2);
+  min-height: var(--ssgrid-size-field);
+  padding: 11px var(--ssgrid-space-3);
+  background: var(--ssgrid-surface-page);
+  border: 1px solid var(--ssgrid-border-subtle);
+  border-radius: var(--ssgrid-radius-sm);
+  color: var(--ssgrid-text-default);
+  font: inherit;
+  font-size: var(--ssgrid-font-size-body);
+  line-height: var(--ssgrid-line-height-tight);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--ssgrid-surface-hover);
+  }
+}
+
+.ssgrid-viewport-picker-label {
+  font-weight: var(--ssgrid-font-weight-medium);
+}
+
+.ssgrid-viewport-picker-icon {
+  flex: 0 0 auto;
+  color: var(--ssgrid-text-brand);
+  font-size: var(--ssgrid-font-size-body);
+}
+
+/* Half-opacity so the upper bound reads as a footnote to the label. */
+.ssgrid-viewport-picker-range {
+  font-weight: var(--ssgrid-font-weight-regular);
+  opacity: 0.5;
+}
+
+.ssgrid-viewport-picker-caret {
+  flex: 0 0 auto;
+  opacity: 0.5;
+}
+
+/* Sized to its own rows and bounded on width only: the trigger is
+   shrink-to-fit and narrower than the menu needs, while an adapter free to
+   declare labels of any length would otherwise stretch the menu arbitrarily
+   wide.
+   Height is deliberately uncapped, unlike the shared surface. This menu's
+   content is inherently bounded — one row per viewport the adapter declares,
+   plus at most one reset scope each — so it can always show every row, and a
+   scrolling menu would put the reset scopes below the fold on a six-viewport
+   adapter. Roving moves aria-activedescendant rather than real focus, so
+   nothing would scroll a row back into view. */
+.ssgrid-viewport-picker-menu {
+  left: 0;
+  width: max-content;
+  min-width: 260px;
+  max-width: 320px;
+  max-height: none;
+}
+
+.ssgrid-viewport-picker-item {
+  &[aria-checked='true'] {
+    font-weight: var(--ssgrid-font-weight-medium);
+    background: var(--ssgrid-surface-selected);
+  }
+
+  /* The aggregate reset scope outranks the per-viewport scopes above it — it
+     is their superset, and the only one that reaches viewports the adapter no
+     longer declares. Said with weight alone, the way a totals row carries a
+     column: a rule or a gap would read as a section boundary, which is what
+     `.ssgrid-viewport-picker-group` already uses its hairline to mean, and the
+     row would then look like a third group rather than the last member of this
+     one. Colour is unavailable for the same reason it is elsewhere here —
+     orange reports publish status and purple is the interaction hue of focus
+     rings and drop targets. Only reset rows carry `data-scope`, so the
+     attribute alone identifies them. */
+  &[data-scope='all'] {
+    font-weight: var(--ssgrid-font-weight-medium);
+  }
+
+  /* A scope with nothing to clear. Dimmed rather than removed so the row
+     holds its place; the keyboard ring still lands here, so only the hover
+     affordance is withdrawn — a pointer target that does nothing must not
+     light up as though it would. */
+  &[aria-disabled='true'] {
+    opacity: var(--ssgrid-opacity-disabled);
+    cursor: default;
+
+    &:hover {
+      background: none;
+    }
+  }
+}
+
+.ssgrid-viewport-picker-item-label {
+  flex: 1 1 auto;
+}
+
+.ssgrid-viewport-picker-item-count {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.5;
+}
+
+/* Separates the reset scopes from the viewport rows they act on. */
+.ssgrid-viewport-picker-group {
+  margin-top: var(--ssgrid-space-1);
+  padding-top: var(--ssgrid-space-1);
+  border-top: 1px solid var(--ssgrid-border-default);
+}
+
+.ssgrid-viewport-picker-group-heading {
+  padding: var(--ssgrid-space-1) var(--ssgrid-space-2);
+  color: var(--ssgrid-text-default);
+  font-size: var(--ssgrid-font-size-label);
+  font-weight: var(--ssgrid-font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.5;
+}
+
+/* Marks the adapter's base viewport, the one whose widths apply everywhere.
+   Neutral on purpose: the orange pills next to it report unpublished work and
+   call for an action, whereas this is a standing fact about the viewport. */
+.ssgrid-viewport-picker-default {
+  flex: 0 0 auto;
+  padding: 1px var(--ssgrid-space-1);
+  background: var(--ssgrid-surface-muted);
+  border: 1px solid var(--ssgrid-border-default);
+  border-radius: var(--ssgrid-radius-sm);
+  color: var(--ssgrid-text-default);
+  font-size: var(--ssgrid-font-size-label);
+  font-weight: var(--ssgrid-font-weight-regular);
+  line-height: var(--ssgrid-line-height-tight);
+  white-space: nowrap;
+  opacity: 0.65;
+}
+
+/* Brand disc marking a viewport that at least one column overrides — on the
+   trigger it means "somewhere on this page", on a row it means that row.
+   Purely decorative; the visually-hidden override label carries the same fact
+   to assistive tech. */
+.ssgrid-viewport-picker-override-dot {
+  flex: 0 0 auto;
+  width: var(--ssgrid-size-dot);
+  height: var(--ssgrid-size-dot);
+  border-radius: 50%;
+  background: var(--ssgrid-surface-action);
+}

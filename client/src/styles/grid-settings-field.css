@@ -1,0 +1,65 @@
+/* Per-viewport override table rendered inside the CMS column edit form
+   (GridSettingsField). The first row is the "default" layout; the remaining
+   rows are viewport overrides toggled on/off by the checkbox in the "Override"
+   column. The entwine binding in bridge/gridSettingsField.ts enables/disables
+   a row's inputs and toggles `data-overridden` — the attribute and the
+   toggle's class name are a shared contract with this stylesheet, so keep
+   them in sync. */
+
+.ssgrid-grid-settings-field {
+  /* Rendered in a CMS edit form, outside `.ssgrid-editor` — so it has to opt
+     into the editor's typeface itself rather than inheriting it. */
+  font-family: var(--ssgrid-font-family);
+}
+
+.ssgrid-grid-settings-field-overrides {
+  width: 100%;
+  font-size: 13px;
+
+  th {
+    padding: 6px var(--ssgrid-space-2);
+    border-bottom: 2px solid var(--ssgrid-border-default);
+    font-size: var(--ssgrid-font-size-caption);
+    font-weight: var(--ssgrid-font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    color: var(--ssgrid-text-muted);
+  }
+
+  td {
+    padding: 6px var(--ssgrid-space-2);
+    border-bottom: 1px solid var(--ssgrid-border-subtle);
+    vertical-align: middle;
+  }
+
+  /* A row without its override enabled inherits the default layout, so dim
+     its width/offset/visible cells to read as "not in effect". The default
+     row is excluded by the same test: the template always ships it as
+     `data-default data-overridden` and it has no toggle to turn that off. */
+  tr:not([data-overridden]) td:nth-child(n + 3) {
+    opacity: var(--ssgrid-opacity-disabled);
+  }
+
+  tr[data-default] {
+    background: var(--ssgrid-surface-sunken);
+  }
+
+  select {
+    width: 100%;
+    min-width: 60px;
+  }
+}
+
+/* "default" pill next to the base row's viewport label. */
+.ssgrid-grid-settings-field-badge {
+  padding: 2px 6px;
+  border-radius: var(--ssgrid-radius-sm);
+  background: var(--ssgrid-surface-action);
+  font-size: 10px;
+  font-weight: var(--ssgrid-font-weight-semibold);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  vertical-align: middle;
+  color: var(--ssgrid-text-on-action);
+}

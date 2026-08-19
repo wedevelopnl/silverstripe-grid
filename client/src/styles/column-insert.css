@@ -1,0 +1,101 @@
+/* Column-insert affordances on a Row (ColumnInsertButton). Three placements,
+   all creating a new Column under the row:
+   - `start` / `end` — the Figma "+" squares flanking the row's columns. Always
+     visible, 24×24, solid brand, white "+".
+   - `between` — the Figma "Dot" handle sitting in a column gutter: an 8px brand
+     ring by default that, on hover/focus, blooms into the same 24×24 "+" square
+     (lifted with the design's 0 4px 8px / 15% drop shadow). Absolutely positioned
+     so it never disturbs the column width math in `.ssgrid-row-columns`.
+   The focus ring comes from `.ssgrid-focus-ring` in the markup. */
+
+.ssgrid-column-insert-icon {
+  color: var(--ssgrid-text-on-action);
+  font-size: var(--ssgrid-size-icon);
+  line-height: 1;
+}
+
+/* The brand ring — only rendered for the `between` placement (see below). */
+.ssgrid-column-insert-dot {
+  display: none;
+}
+
+.ssgrid-column-insert {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+
+  /* Pending, not disabled: the button stays focusable so keyboard focus
+     survives the insert (see AddChildButton). */
+  &[aria-disabled='true'] {
+    cursor: progress;
+    opacity: 0.6;
+  }
+
+  /* --- Edge squares (placement=start | end) --------------------------------- */
+  &[data-placement='start'],
+  &[data-placement='end'] {
+    width: var(--ssgrid-size-chip);
+    height: var(--ssgrid-size-chip);
+    border-radius: var(--ssgrid-radius-sm);
+    background: var(--ssgrid-surface-action);
+
+    &:hover:not([aria-disabled='true']) {
+      filter: brightness(0.92);
+    }
+  }
+
+  /* --- Gutter handle (placement=between) ------------------------------------
+     Anchored to the left edge of the column it precedes — the centre of a plain
+     16px gutter. When that column carries a margin offset the gutter is wider,
+     so ColumnInsertButton sets --ssgrid-insert-shift (a % of the column width)
+     to slide the handle back to the new gutter centre instead of hugging the
+     column. Grid-placement offsets are left alone (the gap math differs). */
+  &[data-placement='between'] {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: calc(-1 * var(--ssgrid-insert-shift, 0%));
+    z-index: 2;
+    width: var(--ssgrid-size-chip); /* generous hit area straddling the gutter */
+    height: var(--ssgrid-size-chip);
+    transform: translate(-50%, -50%);
+    border-radius: var(--ssgrid-radius-sm);
+    transition:
+      background 120ms ease,
+      box-shadow 120ms ease;
+
+    .ssgrid-column-insert-dot {
+      display: block;
+      width: var(--ssgrid-size-dot);
+      height: var(--ssgrid-size-dot);
+      border: 2px solid var(--ssgrid-border-focus);
+      border-radius: 50%;
+      background: transparent;
+    }
+
+    .ssgrid-column-insert-icon {
+      position: absolute;
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: var(--ssgrid-surface-action);
+      box-shadow: var(--ssgrid-shadow-2);
+
+      .ssgrid-column-insert-dot {
+        background: var(--ssgrid-border-focus);
+      }
+
+      .ssgrid-column-insert-icon {
+        opacity: 1;
+      }
+    }
+  }
+}

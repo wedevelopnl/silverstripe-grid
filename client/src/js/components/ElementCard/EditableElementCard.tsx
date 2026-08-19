@@ -22,7 +22,7 @@ interface EditableElementCardProps {
  * wraps instead — which is the ugly outcome the fold exists to avoid. 360
  * clears it by a hair.
  *
- * The status pill has its own, higher threshold in `_element-card.scss`: it is
+ * The status pill has its own, higher threshold in `element-card.css`: it is
  * an enhancement and goes first, so it never costs the icon row a line.
  */
 const NARROW_HEADER_WIDTH = 360

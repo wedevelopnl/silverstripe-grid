@@ -10,17 +10,17 @@ describe('EmptyState', () => {
     expect(screen.getByText('No elements found')).toBeInTheDocument()
   })
 
-  it('does not apply centered state without variant', () => {
+  it('does not apply the centered variant without variant', () => {
     render(<EmptyState message="No elements found" />)
 
     const element = screen.getByTestId('empty-state')
-    expect(element).not.toHaveAttribute('data-state', 'centered')
+    expect(element).not.toHaveAttribute('data-variant', 'centered')
   })
 
-  it('applies centered state with variant="centered"', () => {
+  it('applies the centered variant with variant="centered"', () => {
     render(<EmptyState message="No elements found" variant="centered" />)
 
     const element = screen.getByTestId('empty-state')
-    expect(element).toHaveAttribute('data-state', 'centered')
+    expect(element).toHaveAttribute('data-variant', 'centered')
   })
 })

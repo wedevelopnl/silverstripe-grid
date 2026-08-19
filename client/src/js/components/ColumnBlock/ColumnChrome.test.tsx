@@ -140,7 +140,7 @@ describe('ColumnChrome', () => {
     expect(screen.getByTestId('trailing-slot')).toBeInTheDocument()
     expect(screen.getByTestId('layout-slot')).toBeInTheDocument()
     // The layout-settings wrapper div is only rendered when layoutSettings is provided.
-    expect(document.querySelector('.ssgrid-column__layout-settings')).not.toBeNull()
+    expect(document.querySelector('.ssgrid-column-layout-settings')).not.toBeNull()
     expect(screen.getByTestId('footer-slot')).toBeInTheDocument()
     expect(screen.getByTestId('overlay-slot')).toBeInTheDocument()
   })
@@ -154,7 +154,7 @@ describe('ColumnChrome', () => {
     expect(screen.queryByTestId('layout-slot')).not.toBeInTheDocument()
     // The `layoutSettings !== undefined` guard must omit the wrapper div entirely
     // (not render an empty one) when the slot is absent.
-    expect(document.querySelector('.ssgrid-column__layout-settings')).toBeNull()
+    expect(document.querySelector('.ssgrid-column-layout-settings')).toBeNull()
     expect(screen.queryByTestId('footer-slot')).not.toBeInTheDocument()
     expect(screen.queryByTestId('overlay-slot')).not.toBeInTheDocument()
   })

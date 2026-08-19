@@ -1,0 +1,61 @@
+/* Add-child button — Figma "Add row" / "Add section" button: dashed brand
+   outline, brand-tinted fill, 32px tall, plus icon + label, full width inside
+   its parent. The wrapper's placement is stated by `data-variant` (set by
+   AddChildButton): `empty` adds a hint line above the button; `append` and
+   `between` are just the button. (Column adds use the "+" squares of
+   ColumnInsertButton instead — see column-insert.css.) A column's inline
+   "+ Add content" trigger reuses `.ssgrid-add-child-button` directly, so every
+   "add a child here" affordance in the editor is this one rule. */
+
+.ssgrid-add-child[data-variant='empty'] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ssgrid-space-2);
+  padding: var(--ssgrid-space-4) 0;
+}
+
+.ssgrid-add-child-hint {
+  margin: 0;
+  color: var(--ssgrid-text-default);
+  font-size: var(--ssgrid-font-size-body);
+  line-height: var(--ssgrid-line-height-tight);
+  text-align: center;
+}
+
+/* The focus ring comes from `.ssgrid-focus-ring` in the markup. */
+.ssgrid-add-child-button {
+  display: inline-flex;
+  width: 100%;
+  height: var(--ssgrid-size-control);
+  align-items: center;
+  justify-content: center;
+  gap: var(--ssgrid-space-1);
+  padding: 0 var(--ssgrid-space-2);
+  background: var(--ssgrid-surface-selected);
+  border: 1px dashed var(--ssgrid-border-focus);
+  border-radius: var(--ssgrid-radius-sm);
+  color: var(--ssgrid-text-brand);
+  font: inherit;
+  font-size: var(--ssgrid-font-size-body);
+  font-weight: var(--ssgrid-font-weight-medium);
+  line-height: var(--ssgrid-line-height-tight);
+  cursor: pointer;
+
+  &:hover:not([aria-disabled='true']) {
+    background: var(--ssgrid-surface-hover);
+  }
+
+  /* Pending, not disabled: the button stays focusable so keyboard focus
+     survives the submit and the label change is announced. */
+  &[aria-disabled='true'] {
+    cursor: progress;
+    opacity: 0.6;
+  }
+}
+
+.ssgrid-add-child-icon {
+  color: var(--ssgrid-text-brand);
+  font-size: var(--ssgrid-size-icon);
+  line-height: 1;
+}

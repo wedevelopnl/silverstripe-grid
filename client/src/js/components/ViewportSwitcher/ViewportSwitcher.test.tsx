@@ -100,12 +100,12 @@ describe('ViewportSwitcher', () => {
     expect(
       screen
         .getByTestId('viewport-picker-option-lg')
-        .querySelector('.ssgrid-viewport-picker__override-dot'),
+        .querySelector('.ssgrid-viewport-picker-override-dot'),
     ).not.toBeNull()
     expect(
       screen
         .getByTestId('viewport-picker-option-md')
-        .querySelector('.ssgrid-viewport-picker__override-dot'),
+        .querySelector('.ssgrid-viewport-picker-override-dot'),
     ).toBeNull()
   })
 
@@ -127,12 +127,12 @@ describe('ViewportSwitcher', () => {
     expect(
       screen
         .getByTestId('viewport-picker-option-xl')
-        .querySelector('.ssgrid-viewport-picker__override-dot'),
+        .querySelector('.ssgrid-viewport-picker-override-dot'),
     ).not.toBeNull()
     expect(
       screen
         .getByTestId('viewport-picker-option-lg')
-        .querySelector('.ssgrid-viewport-picker__override-dot'),
+        .querySelector('.ssgrid-viewport-picker-override-dot'),
     ).toBeNull()
   })
 

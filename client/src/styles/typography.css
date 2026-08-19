@@ -1,0 +1,57 @@
+/* Shared text treatments, composed into markup via `className`. The Figma
+   gives every container header the same title: 14px Poppins Medium on a 125%
+   line, truncating with an ellipsis when the name outgrows its header. Four
+   components render that exact treatment (section, row, column, element card),
+   so it lives here once — and the drag overlay's ghost title reuses the
+   truncation half of it. */
+
+/* Clip an overlong single line to an ellipsis. Callers supply their own
+   `min-width` floor: `.ssgrid-title` sets one, the settings picker's label
+   needs `0` to shrink at all, and the drag overlay is width-capped by its own
+   card. */
+.ssgrid-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The truncating block title. Callers supply their own `margin`, since a
+   section <h2> and a column <span> sit in different layouts. */
+.ssgrid-title {
+  /* A flex item with `min-width: 0` shrinks all the way to nothing, which is
+     how header titles were disappearing entirely in cramped columns instead of
+     truncating. Floor it so the title always keeps enough room to show a few
+     characters and an ellipsis — losing the tail of a name is recoverable,
+     losing the whole name is not. */
+  min-width: 4rem;
+
+  /* Shrinks to truncate, but never grows: the status marks that follow must sit
+     beside the title, not be pushed to the far edge. The action toolbar claims
+     the leftover space via its own `margin-left: auto`. */
+  flex: 0 1 auto;
+  overflow: hidden;
+  color: var(--ssgrid-text-default);
+  font-size: var(--ssgrid-font-size-body);
+  font-weight: var(--ssgrid-font-weight-medium);
+  line-height: var(--ssgrid-line-height-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Container titles double as links to the element's edit form. The Figma paints
+   them plain black; jQuery UI's admin theme paints every link inside a widget
+   `#0071c4` via `.ui-widget.ui-widget-content a`, which at (0,2,1) outranks a
+   bare `.ssgrid-title a` (0,1,1) — so titles rendered blue. Qualifying with
+   the editor root and `:any-link` reaches (0,3,1) and wins outright, which is
+   why this is not simply `a { color: inherit }`. The underline returns on hover
+   so the title still reads as clickable. The element card's title never nests
+   an anchor (the whole card is the anchor), so this rule simply never matches
+   there. */
+.ssgrid-editor .ssgrid-title a:any-link {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

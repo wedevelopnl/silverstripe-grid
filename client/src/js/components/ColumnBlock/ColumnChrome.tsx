@@ -63,7 +63,7 @@ export default function ColumnChrome({
     >
       {insertBefore}
       <div
-        className="ssgrid-column__card"
+        className="ssgrid-column-card ssgrid-card-surface"
         data-testid="column-block"
         data-status={status}
         data-descendant-unpublished={hasUnpublishedDescendant ? '' : undefined}
@@ -71,8 +71,8 @@ export default function ColumnChrome({
         data-drop-target={dropTarget ? '' : undefined}
         data-hidden={hidden ? '' : undefined}
       >
-        <div className="ssgrid-column__header" data-testid="column-header">
-          <div className="ssgrid-column__toolbar">
+        <div className="ssgrid-column-header" data-testid="column-header">
+          <div className="ssgrid-column-toolbar">
             {leading}
             <CollapseToggle
               isCollapsed={isCollapsed}
@@ -80,8 +80,8 @@ export default function ColumnChrome({
               label={title}
               controlsId={bodyId}
             />
-            <i className={`ssgrid-column__icon ${icon}`} aria-hidden="true" />
-            <span className="ssgrid-column__title" data-testid="column-title">
+            <i className={`ssgrid-column-icon ${icon}`} aria-hidden="true" />
+            <span className="ssgrid-column-title ssgrid-title" data-testid="column-title">
               {titleHref !== undefined ? (
                 <a href={titleHref} data-testid="column-edit-link">
                   {title}
@@ -97,12 +97,12 @@ export default function ColumnChrome({
             {trailing}
           </div>
           {layoutSettings !== undefined && (
-            <div className="ssgrid-column__layout-settings">{layoutSettings}</div>
+            <div className="ssgrid-column-layout-settings">{layoutSettings}</div>
           )}
         </div>
         <div
           id={bodyId}
-          className="ssgrid-column__body"
+          className="ssgrid-column-body"
           data-testid="column-body"
           data-dnd-container=""
         >

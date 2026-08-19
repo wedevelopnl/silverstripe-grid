@@ -116,31 +116,32 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
   const button = (
     <button
       type="button"
-      className="ssgrid-add-child__button"
+      className="ssgrid-add-child-button ssgrid-focus-ring"
       data-testid="add-child-button"
       aria-disabled={isPending}
       onClick={handleClick}
     >
-      <i className="ssgrid-add-child__icon font-icon-plus" aria-hidden="true" />
+      <i className="ssgrid-add-child-icon font-icon-plus" aria-hidden="true" />
       <span>{isPending ? labels.adding : labels.add}</span>
     </button>
   )
 
   if (variant === 'empty-state') {
     return (
-      <div className="ssgrid-add-child ssgrid-add-child--empty" data-testid="add-child-empty">
-        <p className="ssgrid-add-child__hint">{labels.empty}</p>
+      <div className="ssgrid-add-child" data-variant="empty" data-testid="add-child-empty">
+        <p className="ssgrid-add-child-hint">{labels.empty}</p>
         {button}
       </div>
     )
   }
 
-  // Both gap placements share the --between look and the parent list's gap;
+  // Both gap placements share the between look and the parent list's gap;
   // only the test id distinguishes the leading slot from an interior one.
   if (variant === 'between' || variant === 'before-first') {
     return (
       <div
-        className="ssgrid-add-child ssgrid-add-child--between"
+        className="ssgrid-add-child"
+        data-variant="between"
         data-testid={variant === 'before-first' ? 'add-child-before-first' : 'add-child-between'}
       >
         {button}
@@ -149,7 +150,7 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
   }
 
   return (
-    <div className="ssgrid-add-child ssgrid-add-child--append" data-testid="add-child-append">
+    <div className="ssgrid-add-child" data-variant="append" data-testid="add-child-append">
       {button}
     </div>
   )

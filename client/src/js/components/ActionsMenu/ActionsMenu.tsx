@@ -67,11 +67,11 @@ export default function ActionsMenu({
   const menuId = `${testId}-menu`
 
   return (
-    <div ref={popup.wrapperRef} className="ssgrid-actions-menu">
+    <div ref={popup.wrapperRef} className="ssgrid-actions-menu ssgrid-popover-anchor">
       <button
         ref={popup.triggerRef}
         type="button"
-        className="ssgrid-icon-button"
+        className="ssgrid-icon-button ssgrid-focus-ring"
         data-testid="actions-menu-trigger"
         tabIndex={triggerTabIndex}
         aria-haspopup="menu"
@@ -80,13 +80,13 @@ export default function ActionsMenu({
         aria-label={t('WeDevelopGrid.ActionsMenu.TRIGGER_LABEL', 'Actions')}
         onClick={handleTriggerClick}
       >
-        <span className="ssgrid-icon-button__glyph font-icon-dot-3" aria-hidden="true" />
+        <span className="ssgrid-icon-button-glyph font-icon-dot-3" aria-hidden="true" />
       </button>
       {popup.isOpen && (
         <div
           id={menuId}
           ref={popup.popupRef}
-          className="ssgrid-actions-menu__menu"
+          className="ssgrid-actions-menu-popup ssgrid-popover-surface"
           role="menu"
           tabIndex={-1}
           aria-activedescendant={popup.getItemId(popup.activeIndex)}
@@ -98,7 +98,7 @@ export default function ActionsMenu({
             <div
               key={action.key}
               id={popup.getItemId(index)}
-              className="ssgrid-actions-menu__item"
+              className="ssgrid-actions-menu-item ssgrid-popover-item"
               role="menuitem"
               tabIndex={index === popup.activeIndex ? 0 : -1}
               data-destructive={action.destructive ? 'true' : undefined}

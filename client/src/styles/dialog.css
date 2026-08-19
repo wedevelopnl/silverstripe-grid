@@ -1,0 +1,278 @@
+/* Modal dialogs (`<dialog>` + showModal): ConfirmDialog, DuplicateToDialog,
+   ElementTypePicker. The Figma never mocked these, so the chrome is built from
+   the same token vocabulary as the rest of the editor — white card, 8px radius,
+   the standard elevation, a translucent scrim — and reads as a member of the
+   CMS rather than an OS dialog. Focus rings throughout come from
+   `.ssgrid-focus-ring` in the markup. */
+
+.ssgrid-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  padding: 0;
+  overflow: hidden;
+  background: var(--ssgrid-surface-default);
+  border: 1px solid var(--ssgrid-border-default);
+  border-radius: var(--ssgrid-radius-md);
+  box-shadow: var(--ssgrid-shadow-1);
+  color: var(--ssgrid-text-default);
+  font-size: var(--ssgrid-font-size-body);
+  line-height: 1.5;
+
+  &::backdrop {
+    background: rgb(0 0 0 / 35%);
+  }
+
+  /* Wider variant for the multi-step "duplicate to" flow. */
+  &[data-variant='wide'] {
+    width: min(720px, calc(100vw - 32px));
+  }
+}
+
+.ssgrid-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ssgrid-space-4);
+  padding: var(--ssgrid-space-4) 20px;
+  border-bottom: 1px solid var(--ssgrid-border-default);
+
+  h3 {
+    flex: 1 1 auto;
+    margin: 0;
+    font-size: var(--ssgrid-font-size-heading);
+    font-weight: var(--ssgrid-font-weight-semibold);
+    line-height: var(--ssgrid-line-height-tight);
+  }
+}
+
+.ssgrid-dialog-close {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--ssgrid-radius-sm);
+  color: var(--ssgrid-text-default);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ssgrid-surface-hover);
+    color: var(--ssgrid-text-brand);
+  }
+}
+
+.ssgrid-dialog-body {
+  padding: 20px;
+  overflow-y: auto;
+
+  p {
+    margin: 0 0 var(--ssgrid-space-3);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.ssgrid-dialog-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ssgrid-space-3);
+  padding: var(--ssgrid-space-4) 20px;
+  border-top: 1px solid var(--ssgrid-border-default);
+}
+
+/* Right-aligned button row inside the footer (DuplicateToDialog wraps its
+   buttons in an extra div; ConfirmDialog uses the footer directly — both get
+   the same class so the row reads identically). */
+.ssgrid-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ssgrid-space-2);
+}
+
+.ssgrid-dialog-error {
+  margin: 0;
+  color: var(--ssgrid-text-danger);
+}
+
+/* --- Selection lists (page / zone / container pickers) ----------------------- */
+
+.ssgrid-dialog-search {
+  /* Flush inside the dialog body's inset — a 2px offset would put the ring
+     outside the field's own box and touch the body padding. */
+  --ssgrid-focus-ring-offset: 0;
+
+  width: 100%;
+  height: 36px;
+  margin-bottom: var(--ssgrid-space-3);
+  padding: 0 10px;
+  background: var(--ssgrid-surface-default);
+  border: 1px solid var(--ssgrid-border-default);
+  border-radius: var(--ssgrid-radius-sm);
+  font: inherit;
+}
+
+.ssgrid-dialog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--ssgrid-border-default);
+  border-radius: var(--ssgrid-radius-sm);
+  padding: var(--ssgrid-space-1);
+}
+
+/* No `.ssgrid-focus-ring` here on purpose: every option is `tabIndex={-1}`
+   (DuplicateToDialog) and `useRovingList` moves aria-activedescendant rather
+   than real focus, so the option can never be the focused element. The
+   keyboard cursor is painted by `[data-active='true']` below. */
+.ssgrid-dialog-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ssgrid-space-2);
+  padding: var(--ssgrid-space-2) 10px;
+  border-radius: var(--ssgrid-radius-sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ssgrid-surface-hover);
+  }
+
+  &[aria-selected='true'] {
+    background: var(--ssgrid-surface-selected);
+    color: var(--ssgrid-text-brand);
+    font-weight: var(--ssgrid-font-weight-medium);
+  }
+
+  /* Dimmed rather than removed so the row holds its place; the keyboard ring
+     still lands here, so only the hover affordance is withdrawn — a pointer
+     target that does nothing must not light up as though it would. Same
+     treatment as a disabled popover row. */
+  &[aria-disabled='true'] {
+    opacity: var(--ssgrid-opacity-disabled);
+    cursor: default;
+
+    &:hover {
+      background: none;
+    }
+  }
+
+  /* The aria-activedescendant target — keyboard focus ring without moving
+     real DOM focus off the listbox container. */
+  &[data-active='true'] {
+    outline: 1px solid var(--ssgrid-border-focus);
+    outline-offset: -1px;
+  }
+}
+
+/* --- Element type picker tile grid ------------------------------------------- */
+
+.ssgrid-dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--ssgrid-space-3);
+}
+
+.ssgrid-dialog-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ssgrid-space-2);
+  padding: var(--ssgrid-space-4);
+  text-align: left;
+  background: var(--ssgrid-surface-muted);
+  border: 1px solid var(--ssgrid-border-default);
+  border-radius: var(--ssgrid-radius-md);
+  color: var(--ssgrid-text-default);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ssgrid-surface-selected);
+    border-color: var(--ssgrid-border-focus);
+  }
+}
+
+/* The picker tile shows the same chip as the placed card
+   (`.ssgrid-type-icon-chip` in the markup), one step up the control scale
+   because the tile is a browsing target rather than a header ornament. */
+.ssgrid-dialog-tile-icon {
+  --ssgrid-chip-size: var(--ssgrid-size-control);
+  --ssgrid-chip-glyph: 18px;
+}
+
+.ssgrid-dialog-tile-label {
+  font-weight: var(--ssgrid-font-weight-medium);
+}
+
+.ssgrid-dialog-tile-description {
+  color: var(--ssgrid-text-default);
+  opacity: 0.65;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.ssgrid-dialog-empty {
+  margin: 0;
+  opacity: 0.65;
+}
+
+/* --- Buttons (dialog footers) -------------------------------------------------
+   Variants are stated by `data-variant` (set by the dialogs). */
+
+.ssgrid-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 var(--ssgrid-space-4);
+  border: 1px solid transparent;
+  border-radius: var(--ssgrid-radius-sm);
+  font: inherit;
+  font-size: var(--ssgrid-font-size-body);
+  font-weight: var(--ssgrid-font-weight-medium);
+  line-height: var(--ssgrid-line-height-tight);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: var(--ssgrid-opacity-disabled);
+    cursor: not-allowed;
+  }
+
+  &[data-variant='primary'] {
+    background: var(--ssgrid-surface-action);
+    color: var(--ssgrid-text-on-action);
+
+    &:not(:disabled):hover {
+      filter: brightness(0.92);
+    }
+  }
+
+  &[data-variant='danger'] {
+    background: var(--ssgrid-color-danger-500);
+    color: var(--ssgrid-text-on-action);
+
+    &:not(:disabled):hover {
+      filter: brightness(0.92);
+    }
+  }
+
+  &[data-variant='ghost'] {
+    background: transparent;
+    border-color: var(--ssgrid-border-default);
+    color: var(--ssgrid-text-default);
+
+    &:not(:disabled):hover {
+      border-color: var(--ssgrid-border-focus);
+      color: var(--ssgrid-text-brand);
+    }
+  }
+}

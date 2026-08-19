@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
  * gridSettingsField.ts registers a single entwine rule against the
  * override-toggle checkbox inside a .ssgrid-grid-settings-field row. The rule's
  * onchange handler enables/disables the other inputs in that row and toggles
- * an `is-overridden` class. These tests stub window.jQuery so importing the
+ * a `data-overridden` attribute. These tests stub window.jQuery so importing the
  * module registers the entwine rule against a stubbed `$`, then exercise the
  * onchange handler directly with a controllable checked state and a spying
  * row mock.
@@ -18,7 +18,8 @@ interface RowMock {
   find: ReturnType<typeof vi.fn>
   not: ReturnType<typeof vi.fn>
   prop: ReturnType<typeof vi.fn>
-  toggleClass: ReturnType<typeof vi.fn>
+  attr: ReturnType<typeof vi.fn>
+  removeAttr: ReturnType<typeof vi.fn>
 }
 
 interface CapturedRegistration {
@@ -35,12 +36,14 @@ function createRowMock(): RowMock {
     find: vi.fn(),
     not: vi.fn(),
     prop: vi.fn(),
-    toggleClass: vi.fn(),
+    attr: vi.fn(),
+    removeAttr: vi.fn(),
   }
   row.find.mockReturnValue(row)
   row.not.mockReturnValue(row)
   row.prop.mockReturnValue(row)
-  row.toggleClass.mockReturnValue(row)
+  row.attr.mockReturnValue(row)
+  row.removeAttr.mockReturnValue(row)
   return row
 }
 
@@ -129,23 +132,25 @@ describe('gridSettingsField onchange handler', () => {
     removeJQueryStub()
   })
 
-  it('enables the row inputs and adds the is-overridden class when the toggle is checked', () => {
+  it('enables the row inputs and sets the data-overridden attribute when the toggle is checked', () => {
     isCheckedValue = true
 
     rule.onchange.call({})
 
     expect(rowMock?.find).toHaveBeenCalledWith('select, input')
-    expect(rowMock?.not).toHaveBeenCalledWith('.ssgrid-grid-settings-field__override-toggle')
+    expect(rowMock?.not).toHaveBeenCalledWith('.ssgrid-grid-settings-field-override-toggle')
     expect(rowMock?.prop).toHaveBeenCalledWith('disabled', false)
-    expect(rowMock?.toggleClass).toHaveBeenCalledWith('is-overridden', true)
+    expect(rowMock?.attr).toHaveBeenCalledWith('data-overridden', '')
+    expect(rowMock?.removeAttr).not.toHaveBeenCalled()
   })
 
-  it('disables the row inputs and removes the is-overridden class when the toggle is unchecked', () => {
+  it('disables the row inputs and removes the data-overridden attribute when the toggle is unchecked', () => {
     isCheckedValue = false
 
     rule.onchange.call({})
 
     expect(rowMock?.prop).toHaveBeenCalledWith('disabled', true)
-    expect(rowMock?.toggleClass).toHaveBeenCalledWith('is-overridden', false)
+    expect(rowMock?.removeAttr).toHaveBeenCalledWith('data-overridden')
+    expect(rowMock?.attr).not.toHaveBeenCalled()
   })
 })

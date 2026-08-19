@@ -84,7 +84,7 @@ function ToolbarButton({
   return (
     <button
       type="button"
-      className="ssgrid-icon-button"
+      className="ssgrid-icon-button ssgrid-focus-ring"
       data-destructive={destructive === true ? 'true' : undefined}
       data-testid={testId}
       disabled={disabled}
@@ -93,7 +93,7 @@ function ToolbarButton({
       aria-label={label}
       onClick={handleClick}
     >
-      <span className={`ssgrid-icon-button__glyph ${glyph}`} aria-hidden="true" />
+      <span className={`ssgrid-icon-button-glyph ${glyph}`} aria-hidden="true" />
     </button>
   )
 }

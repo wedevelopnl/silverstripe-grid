@@ -5,9 +5,9 @@ import { check, collectDefinitions, collectReferences, isExcluded } from './chec
 describe('collectReferences()', () => {
   it('finds icon classes in JSX attributes and string literals', () => {
     const source = `
-      <span className="ssgrid-icon-button__glyph font-icon-dot-3" />
+      <span className="ssgrid-icon-button-glyph font-icon-dot-3" />
       const glyph = 'font-icon-back-in-time'
-      return \`ssgrid-viewport-switcher__icon font-icon-mobile\`
+      return \`ssgrid-viewport-picker-icon font-icon-mobile\`
     `
     expect(collectReferences(source)).toEqual(
       new Set(['font-icon-dot-3', 'font-icon-back-in-time', 'font-icon-mobile']),

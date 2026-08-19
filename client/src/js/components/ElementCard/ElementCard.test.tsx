@@ -154,24 +154,30 @@ describe('EditableElementCard', () => {
     expect(screen.getByTestId('element-card').tagName).toBe('DIV')
   })
 
-  it('sets the clickable state when editLink is provided', () => {
+  // The card being an <a href> IS the clickable state — the stylesheet hooks
+  // :any-link, so the tag and href are the behaviour to pin.
+  it('renders the card as a link when editLink is provided', () => {
     mockFetchSuccess({})
 
     const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
 
     renderWithProviders(<EditableElementCard element={element} />)
 
-    expect(screen.getByTestId('element-card')).toHaveAttribute('data-state', 'clickable')
+    const card = screen.getByTestId('element-card')
+    expect(card.tagName).toBe('A')
+    expect(card).toHaveAttribute('href', '/admin/pages/edit/show/5')
   })
 
-  it('does not set the clickable state when editLink is null', () => {
+  it('does not render the card as a link when editLink is null', () => {
     mockFetchSuccess({})
 
     const element = createSimpleElement({ editLink: null })
 
     renderWithProviders(<EditableElementCard element={element} />)
 
-    expect(screen.getByTestId('element-card')).not.toHaveAttribute('data-state', 'clickable')
+    const card = screen.getByTestId('element-card')
+    expect(card.tagName).toBe('DIV')
+    expect(card).not.toHaveAttribute('href')
   })
 
   it('renders the icon with the blockSchema icon class', () => {

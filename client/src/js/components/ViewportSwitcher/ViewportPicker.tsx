@@ -105,11 +105,11 @@ export default function ViewportPicker({
   const menuId = 'viewport-picker-menu'
 
   return (
-    <div ref={popup.wrapperRef} className="ssgrid-viewport-picker">
+    <div ref={popup.wrapperRef} className="ssgrid-viewport-picker ssgrid-popover-anchor">
       <button
         ref={popup.triggerRef}
         type="button"
-        className="ssgrid-viewport-picker__trigger"
+        className="ssgrid-viewport-picker-trigger ssgrid-focus-ring"
         data-testid="viewport-picker-trigger"
         data-viewport={current.key}
         aria-haspopup="menu"
@@ -121,28 +121,28 @@ export default function ViewportPicker({
         onClick={popup.toggle}
       >
         <i
-          className={`ssgrid-viewport-picker__icon ${getViewportIcon(current.minWidth)}`}
+          className={`ssgrid-viewport-picker-icon ${getViewportIcon(current.minWidth)}`}
           aria-hidden="true"
         />
-        <span className="ssgrid-viewport-picker__label">{current.label}</span>
+        <span className="ssgrid-viewport-picker-label">{current.label}</span>
         {nextUp !== undefined && (
-          <span className="ssgrid-viewport-picker__range">{`<${nextUp.minWidth}`}</span>
+          <span className="ssgrid-viewport-picker-range">{`<${nextUp.minWidth}`}</span>
         )}
         {current.key === defaultViewport && (
-          <span className="ssgrid-viewport-picker__default">
+          <span className="ssgrid-viewport-picker-default">
             {t('WeDevelopGrid.ViewportPicker.DEFAULT', 'Default')}
           </span>
         )}
         {anyOverrides && (
-          <span className="ssgrid-viewport-picker__override-dot" aria-hidden="true" />
+          <span className="ssgrid-viewport-picker-override-dot" aria-hidden="true" />
         )}
-        <i className="ssgrid-viewport-picker__caret font-icon-down-open" aria-hidden="true" />
+        <i className="ssgrid-viewport-picker-caret font-icon-down-open" aria-hidden="true" />
       </button>
       {popup.isOpen && (
         <div
           id={menuId}
           ref={popup.popupRef}
-          className="ssgrid-viewport-picker__menu"
+          className="ssgrid-viewport-picker-menu ssgrid-popover-surface"
           role="menu"
           tabIndex={-1}
           aria-activedescendant={popup.getItemId(popup.activeIndex)}
@@ -160,7 +160,7 @@ export default function ViewportPicker({
                 <div
                   key={entry.viewport.key}
                   id={popup.getItemId(index)}
-                  className="ssgrid-viewport-picker__item"
+                  className="ssgrid-viewport-picker-item ssgrid-popover-item"
                   role="menuitemradio"
                   aria-checked={entry.viewport.key === activeViewport}
                   tabIndex={index === popup.activeIndex ? 0 : -1}
@@ -168,19 +168,19 @@ export default function ViewportPicker({
                   onClick={() => activate(entry)}
                 >
                   <i
-                    className={`ssgrid-viewport-picker__icon ${getViewportIcon(entry.viewport.minWidth)}`}
+                    className={`ssgrid-viewport-picker-icon ${getViewportIcon(entry.viewport.minWidth)}`}
                     aria-hidden="true"
                   />
-                  <span className="ssgrid-viewport-picker__item-label">{entry.viewport.label}</span>
+                  <span className="ssgrid-viewport-picker-item-label">{entry.viewport.label}</span>
                   {entry.viewport.key === defaultViewport && (
-                    <span className="ssgrid-viewport-picker__default">
+                    <span className="ssgrid-viewport-picker-default">
                       {t('WeDevelopGrid.ViewportPicker.DEFAULT', 'Default')}
                     </span>
                   )}
                   {entry.overrides > 0 && (
                     <>
-                      <span className="ssgrid-viewport-picker__override-dot" aria-hidden="true" />
-                      <span className="ssgrid-viewport-picker__override-label">
+                      <span className="ssgrid-viewport-picker-override-dot" aria-hidden="true" />
+                      <span className="ssgrid-viewport-picker-override-label ssgrid-visually-hidden">
                         {entry.overrides === 1
                           ? t(
                               'WeDevelopGrid.ViewportPicker.HAS_OVERRIDES_ONE',
@@ -203,14 +203,14 @@ export default function ViewportPicker({
             // biome-ignore lint/a11y/useSemanticElements: the W3C APG menu pattern groups menu items with role="group"; a fieldset inside role="menu" would import form semantics and a legend requirement into a menu
             <div
               role="group"
-              className="ssgrid-viewport-picker__group"
+              className="ssgrid-viewport-picker-group"
               aria-label={t('WeDevelopGrid.ViewportPicker.GROUP_RESET', 'Reset overrides')}
             >
               {/* Visible heading, because a reset row and the viewport row above
                   it read almost identically ("Extra small" either way) — the
                   divider and the icon alone do not say which one clears. Hidden
                   from assistive tech, which already gets the group's label. */}
-              <div className="ssgrid-viewport-picker__group-heading" aria-hidden="true">
+              <div className="ssgrid-viewport-picker-group-heading" aria-hidden="true">
                 {t('WeDevelopGrid.ViewportPicker.GROUP_RESET', 'Reset overrides')}
               </div>
               {entries.map((entry, index) =>
@@ -219,7 +219,7 @@ export default function ViewportPicker({
                   <div
                     key={entry.option.viewport ?? ' all'}
                     id={popup.getItemId(index)}
-                    className="ssgrid-viewport-picker__item ssgrid-viewport-picker__item--reset"
+                    className="ssgrid-viewport-picker-item ssgrid-popover-item"
                     role="menuitem"
                     // Kept focusable while disabled: a scope the author cannot
                     // find is not a scope, and discoverability is the whole
@@ -231,8 +231,8 @@ export default function ViewportPicker({
                     onClick={() => activate(entry)}
                   >
                     <i className="font-icon-sync" aria-hidden="true" />
-                    <span className="ssgrid-viewport-picker__item-label">{entry.option.label}</span>
-                    <span className="ssgrid-viewport-picker__item-count">
+                    <span className="ssgrid-viewport-picker-item-label">{entry.option.label}</span>
+                    <span className="ssgrid-viewport-picker-item-count">
                       {entry.option.countLabel}
                     </span>
                   </div>

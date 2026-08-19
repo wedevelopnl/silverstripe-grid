@@ -1,0 +1,26 @@
+/* Single stylesheet entry, bundled (imports inlined) by Vite at build time.
+   Order matters twice over: the shared treatments (a11y/typography/surfaces/
+   publish-status) define utility classes and the shared status-ring rule that
+   the component files override at equal specificity, so components must come
+   later in the cascade. */
+
+@import url('./fonts.css');
+@import url('./tokens.css');
+@import url('./a11y.css');
+@import url('./typography.css');
+@import url('./surfaces.css');
+@import url('./publish-status.css');
+@import url('./grid-editor.css');
+@import url('./toolbar.css');
+@import url('./section-block.css');
+@import url('./row-block.css');
+@import url('./column-block.css');
+@import url('./column-insert.css');
+@import url('./element-card.css');
+@import url('./element-toolbar.css');
+@import url('./add-child-button.css');
+@import url('./popover.css');
+@import url('./dialog.css');
+@import url('./column-width-picker.css');
+@import url('./grid-settings-field.css');
+@import url('./drag-overlay.css');

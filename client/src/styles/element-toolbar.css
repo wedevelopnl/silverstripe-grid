@@ -1,0 +1,31 @@
+/* Per-element action toolbar — Figma block/section/row "Toolbar" right cluster:
+   a 12px-spaced row of 16px icon buttons (reset, fold, duplicate, open-in-tab,
+   edit, archive) plus an overflow ellipsis menu for actions the icon set has no
+   glyph for ("duplicate to page"). Sits at the right edge of a block header
+   because it claims all the leftover space itself — the title and the status
+   marks before it are sized to their content so they stay grouped on the left. */
+
+.ssgrid-element-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--ssgrid-space-3);
+  margin-left: auto;
+
+  /* The archive icon reads red on hover. */
+  .ssgrid-icon-button[data-destructive='true']:not(:disabled):hover
+    > .ssgrid-icon-button-glyph {
+    color: var(--ssgrid-text-danger);
+  }
+}
+
+/* A header that folds to the kebab alone (column headers always, element cards
+   under `NARROW_HEADER_WIDTH`) renders no toolbar to carry the auto margin —
+   `ElementActions` returns the bare menu — so the same claim has to be made by
+   the menu when it is the trailing item itself. Direct children only: the
+   overflow trigger inside a toolbar is a grandchild and must stay beside its
+   icon row, not be pushed off it. */
+.ssgrid-column-toolbar > .ssgrid-actions-menu,
+.ssgrid-block-header > .ssgrid-actions-menu {
+  margin-left: auto;
+}

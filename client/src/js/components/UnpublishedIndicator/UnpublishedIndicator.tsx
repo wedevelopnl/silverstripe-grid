@@ -9,7 +9,7 @@ interface UnpublishedIndicatorProps {
  * Assistive tech only — it renders no visible mark.
  *
  * Sighted users already read this off the unpublished ring. The ring fires for
- * "at or below" (see `status-rings` in `_publish-status.scss`), so a ring with
+ * "at or below" (see the shared ring rule in `publish-status.css`), so a ring with
  * no "Draft"/"Modified" pill can only mean the work is below; and where the
  * pill *is* present the extra bit is unactionable, because publishing is
  * recursive and clears the element and its subtree in one action either way.
@@ -21,7 +21,7 @@ interface UnpublishedIndicatorProps {
  */
 export default function UnpublishedIndicator({ testId }: UnpublishedIndicatorProps) {
   return (
-    <span className="ssgrid-unpublished-note" data-testid={testId}>
+    <span className="ssgrid-unpublished-note ssgrid-visually-hidden" data-testid={testId}>
       {t('WeDevelopGrid.UnpublishedIndicator.CONTAINS', 'Contains unpublished changes')}
     </span>
   )

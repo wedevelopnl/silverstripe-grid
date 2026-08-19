@@ -28,7 +28,7 @@ const ReadonlyRowBlock = memo(function ReadonlyRowBlockComponent({ row }: Readon
     >
       <div
         id={bodyId}
-        className="ssgrid-row__columns"
+        className="ssgrid-row-columns"
         data-testid="row-block-columns"
         data-layout-mode={layoutMode}
         style={

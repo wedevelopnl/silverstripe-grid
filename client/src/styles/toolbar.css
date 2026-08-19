@@ -1,0 +1,52 @@
+/* Shared editor chrome: the 16px icon-only buttons used in every block toolbar
+   (drag handle, collapse toggle, actions kebab). State lives on data-attributes
+   (set by React); structure/look lives here. The publish-status marks live in
+   `publish-status.css`. */
+
+.ssgrid-icon-button-glyph {
+  font-size: var(--ssgrid-size-icon);
+  line-height: 1;
+}
+
+.ssgrid-icon-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: var(--ssgrid-size-icon);
+  height: var(--ssgrid-size-icon);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--ssgrid-text-default);
+  line-height: 1;
+  cursor: pointer;
+
+  /* The ring itself comes from `.ssgrid-focus-ring` in the markup. */
+  &:focus-visible {
+    border-radius: var(--ssgrid-radius-sm);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: var(--ssgrid-opacity-disabled);
+  }
+
+  /* The Figma renders every grip-vertical handle at 25% opacity so it reads as
+     a passive grab affordance until interacted with; hover restores it. */
+  &[data-variant='drag'] {
+    cursor: grab;
+
+    > .ssgrid-icon-button-glyph {
+      opacity: 0.25;
+    }
+  }
+
+  &:hover:not(:disabled) > .ssgrid-icon-button-glyph {
+    color: var(--ssgrid-text-brand);
+  }
+
+  &[data-variant='drag']:hover:not(:disabled) > .ssgrid-icon-button-glyph {
+    opacity: 1;
+  }
+}
