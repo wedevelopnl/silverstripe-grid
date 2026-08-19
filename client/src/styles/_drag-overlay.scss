@@ -1,6 +1,11 @@
 // Drag overlay — the floating "ghost" dnd-kit renders under the pointer while
 // reordering. Not in the Figma; modelled as a compact, slightly-lifted version
-// of a block toolbar row so the user keeps a sense of what's in flight.
+// of a block toolbar row so the user keeps a sense of what's in flight. The
+// chip and the title share their treatment with the card the ghost stands in
+// for — the two are on screen together for the whole drag.
+
+@use './surfaces';
+@use './typography';
 
 .ssgrid-drag-overlay {
   display: inline-flex;
@@ -18,24 +23,13 @@
   cursor: grabbing;
 
   &__icon {
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    width: var(--ssgrid-size-chip);
-    height: var(--ssgrid-size-chip);
-    border-radius: var(--ssgrid-radius-sm);
-    background: var(--ssgrid-surface-hover);
-    color: var(--ssgrid-text-brand);
-    font-size: var(--ssgrid-size-icon);
-    line-height: 1;
+    @include surfaces.type-icon-chip;
   }
 
   &__title {
-    overflow: hidden;
+    @include typography.truncate;
+
     font-weight: var(--ssgrid-font-weight-medium);
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   &__meta {

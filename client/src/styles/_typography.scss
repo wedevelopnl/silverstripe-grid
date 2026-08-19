@@ -1,10 +1,20 @@
 // Shared text treatments. The Figma gives every container header the same
 // title: 14px Poppins Medium on a 125% line, truncating with an ellipsis when
 // the name outgrows its header. Four components render that exact treatment
-// (section, row, column, element card), so it lives here once.
+// (section, row, column, element card), so it lives here once — and the drag
+// overlay's ghost title reuses the truncation half of it.
 
-// The truncating block title. Callers supply their own `flex`/`margin`, since
-// a section <h3> and a column <span> sit in different layouts.
+// Clip an overlong single line to an ellipsis. Callers supply their own
+// `min-width` floor: `block-title` sets one, the settings picker's label needs
+// `0` to shrink at all, and the drag overlay is width-capped by its own card.
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// The truncating block title. Callers supply their own `margin`, since a
+// section <h2> and a column <span> sit in different layouts.
 @mixin block-title {
   // A flex item with `min-width: 0` shrinks all the way to nothing, which is
   // how header titles were disappearing entirely in cramped columns instead of
@@ -12,13 +22,17 @@
   // characters and an ellipsis — losing the tail of a name is recoverable,
   // losing the whole name is not.
   min-width: 4rem;
-  overflow: hidden;
+
+  // Shrinks to truncate, but never grows: the status marks that follow must sit
+  // beside the title, not be pushed to the far edge. The action toolbar claims
+  // the leftover space via its own `margin-left: auto`.
+  flex: 0 1 auto;
   color: var(--ssgrid-text-default);
   font-size: var(--ssgrid-font-size-body);
   font-weight: var(--ssgrid-font-weight-medium);
   line-height: var(--ssgrid-line-height-tight);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+
+  @include truncate;
 }
 
 // Container titles double as links to the element's edit form. The Figma paints

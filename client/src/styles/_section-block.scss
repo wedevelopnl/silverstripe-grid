@@ -3,13 +3,11 @@
 // row; the title flexes to fill so the actions kebab lands at the right edge.
 
 @use './publish-status';
+@use './surfaces';
 @use './typography';
 
 .ssgrid-section {
-  background: var(--ssgrid-surface-muted);
-  border: 1px solid var(--ssgrid-border-default);
-  border-radius: var(--ssgrid-radius-md);
-  padding: var(--ssgrid-space-4);
+  @include surfaces.card-surface;
 
   // Skip layout/paint for off-screen sections on long pages — the browser
   // still reserves a 400px box per section so scrollbars and dnd-kit
@@ -38,10 +36,6 @@
     @include typography.block-title;
     @include typography.block-title-link;
 
-    // Shrinks to truncate, but never grows: the status marks that follow
-    // must sit beside the title, not be pushed to the far edge. The action
-    // toolbar claims the leftover space via its own `margin-left: auto`.
-    flex: 0 1 auto;
     margin: 0;
   }
 

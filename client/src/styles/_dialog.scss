@@ -4,6 +4,9 @@
 // the standard elevation, a translucent scrim — and reads as a member of the
 // CMS rather than an OS dialog.
 
+@use './a11y';
+@use './surfaces';
+
 .ssgrid-dialog {
   width: min(560px, calc(100vw - 32px));
   max-height: calc(100vh - 64px);
@@ -64,8 +67,7 @@
     }
 
     &:focus-visible {
-      outline: 2px solid var(--ssgrid-border-focus);
-      outline-offset: 2px;
+      @include a11y.focus-ring;
     }
   }
 
@@ -74,7 +76,7 @@
     overflow-y: auto;
 
     p {
-      margin: 0 0 12px;
+      margin: 0 0 var(--ssgrid-space-3);
 
       &:last-child {
         margin-bottom: 0;
@@ -85,8 +87,8 @@
   &__footer {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 16px 20px;
+    gap: var(--ssgrid-space-3);
+    padding: var(--ssgrid-space-4) 20px;
     border-top: 1px solid var(--ssgrid-border-default);
   }
 
@@ -96,7 +98,7 @@
   &__actions {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
+    gap: var(--ssgrid-space-2);
   }
 
   &__error {
@@ -109,16 +111,17 @@
   &__search {
     width: 100%;
     height: 36px;
-    margin-bottom: 12px;
+    margin-bottom: var(--ssgrid-space-3);
     padding: 0 10px;
     background: var(--ssgrid-surface-default);
     border: 1px solid var(--ssgrid-border-default);
     border-radius: var(--ssgrid-radius-sm);
     font: inherit;
 
+    // Flush inside the dialog body's inset — a 2px offset would put the ring
+    // outside the field's own box and touch the body padding.
     &:focus-visible {
-      outline: 2px solid var(--ssgrid-border-focus);
-      outline-offset: 0;
+      @include a11y.focus-ring(0);
     }
   }
 
@@ -130,20 +133,23 @@
     overflow-y: auto;
     border: 1px solid var(--ssgrid-border-default);
     border-radius: var(--ssgrid-radius-sm);
-    padding: 4px;
+    padding: var(--ssgrid-space-1);
 
     &:focus-visible {
-      outline: 2px solid var(--ssgrid-border-focus);
-      outline-offset: 2px;
+      @include a11y.focus-ring;
     }
   }
 
+  // No `:focus-visible` rule here on purpose: every option is `tabIndex={-1}`
+  // (DuplicateToDialog) and `useRovingList` moves aria-activedescendant rather
+  // than real focus, so the option can never be the focused element. The
+  // keyboard cursor is painted by `[data-active='true']` below.
   &__option {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 8px 10px;
+    gap: var(--ssgrid-space-2);
+    padding: var(--ssgrid-space-2) 10px;
     border-radius: var(--ssgrid-radius-sm);
     cursor: pointer;
 
@@ -154,21 +160,20 @@
     &[aria-selected='true'] {
       background: var(--ssgrid-surface-selected);
       color: var(--ssgrid-text-brand);
-      font-weight: 500;
+      font-weight: var(--ssgrid-font-weight-medium);
     }
 
+    // Dimmed rather than removed so the row holds its place; the keyboard ring
+    // still lands here, so only the hover affordance is withdrawn — a pointer
+    // target that does nothing must not light up as though it would. Same
+    // treatment as a disabled popover row.
     &[aria-disabled='true'] {
-      opacity: 0.45;
-      cursor: not-allowed;
+      opacity: var(--ssgrid-opacity-disabled);
+      cursor: default;
 
       &:hover {
-        background: transparent;
+        background: none;
       }
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--ssgrid-border-focus);
-      outline-offset: -2px;
     }
 
     // The aria-activedescendant target — keyboard focus ring without moving
@@ -184,15 +189,15 @@
   &__grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 12px;
+    gap: var(--ssgrid-space-3);
   }
 
   &__tile {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
-    padding: 16px;
+    gap: var(--ssgrid-space-2);
+    padding: var(--ssgrid-space-4);
     text-align: left;
     background: var(--ssgrid-surface-muted);
     border: 1px solid var(--ssgrid-border-default);
@@ -207,26 +212,19 @@
     }
 
     &:focus-visible {
-      outline: 2px solid var(--ssgrid-border-focus);
-      outline-offset: 2px;
+      @include a11y.focus-ring;
     }
   }
 
+  // The picker tile shows the same chip as the placed card, one step up the
+  // control scale because the tile is a browsing target rather than a header
+  // ornament.
   &__tile-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: var(--ssgrid-radius-sm);
-    background: var(--ssgrid-surface-hover);
-    color: var(--ssgrid-text-brand);
-    font-size: 18px;
-    line-height: 1;
+    @include surfaces.type-icon-chip(var(--ssgrid-size-control), 18px);
   }
 
   &__tile-label {
-    font-weight: 500;
+    font-weight: var(--ssgrid-font-weight-medium);
   }
 
   &__tile-description {
@@ -259,13 +257,12 @@
   cursor: pointer;
 
   &:disabled {
-    opacity: 0.5;
+    opacity: var(--ssgrid-opacity-disabled);
     cursor: not-allowed;
   }
 
   &:focus-visible {
-    outline: 2px solid var(--ssgrid-border-focus);
-    outline-offset: 2px;
+    @include a11y.focus-ring;
   }
 
   &--primary {

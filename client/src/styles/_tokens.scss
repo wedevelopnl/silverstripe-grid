@@ -156,15 +156,28 @@
   --ssgrid-border-unpublished: var(--ssgrid-color-unpublished-500);
 
   // ---------------------------------------------------------------------------
-  // Semantics — text and icons
+  // Semantics — text
   // ---------------------------------------------------------------------------
 
+  // Icons take these too: a glyph is text in an icon font here, and a separate
+  // --ssgrid-icon-* axis only ever gave authors two indistinguishable tokens to
+  // pick between.
   --ssgrid-text-default: var(--ssgrid-color-neutral-1000);
   --ssgrid-text-muted: var(--ssgrid-color-neutral-500);
   --ssgrid-text-brand: var(--ssgrid-color-brand-500);
   --ssgrid-text-unpublished: var(--ssgrid-color-unpublished-700);
   --ssgrid-text-danger: var(--ssgrid-color-danger-500);
   --ssgrid-text-on-action: var(--ssgrid-color-neutral-0);
-  --ssgrid-icon-default: var(--ssgrid-color-neutral-1000);
-  --ssgrid-icon-brand: var(--ssgrid-color-brand-500);
+
+  // ---------------------------------------------------------------------------
+  // Semantics — state
+  // ---------------------------------------------------------------------------
+
+  // How strongly a control reads as unavailable. One value for every disabled
+  // affordance — button, chip, listbox row, picker tile — because "you cannot
+  // use this" is one fact and an author comparing two dimmed controls should
+  // not be able to tell them apart. Distinct from the 0.6 pending state (a
+  // control that is momentarily busy, not unavailable) and from the drag
+  // handle's 0.25 resting opacity (a passive affordance, not a disabled one).
+  --ssgrid-opacity-disabled: 0.5;
 }

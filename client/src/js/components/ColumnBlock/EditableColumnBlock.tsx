@@ -221,7 +221,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
         hasAllowedTypes ? (
           <button
             type="button"
-            className="ssgrid-column__add-content"
+            className="ssgrid-add-child__button"
             data-testid="add-content-button"
             onClick={handleOpenPicker}
           >

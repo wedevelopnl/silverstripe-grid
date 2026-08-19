@@ -2,7 +2,11 @@
 // outline, brand-tinted fill, 32px tall, plus icon + label, full width inside
 // its parent. The append variant is just the button; the empty-state variant
 // adds a hint line above it. (Column adds use the "+" squares of
-// ColumnInsertButton instead — see _column-insert.scss.)
+// ColumnInsertButton instead — see _column-insert.scss.) A column's inline
+// "+ Add content" trigger reuses `&__button` directly, so every "add a child
+// here" affordance in the editor is this one rule.
+
+@use './a11y';
 
 .ssgrid-add-child {
   &--empty {
@@ -44,8 +48,7 @@
     }
 
     &:focus-visible {
-      outline: 2px solid var(--ssgrid-border-focus);
-      outline-offset: 2px;
+      @include a11y.focus-ring;
     }
 
     // Pending, not disabled: the button stays focusable so keyboard focus
