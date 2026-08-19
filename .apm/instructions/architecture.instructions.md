@@ -61,7 +61,7 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 - PSR-4 namespace: `WeDevelop\Grid\` → `src/`
 - Frontend: React 18, TypeScript 6, Vite 8, SCSS
 - Key frontend libs: dnd-kit (drag & drop), TanStack Query (data fetching), Valibot (validation)
-- Testing: Vitest + React Testing Library (jsdom), PHPUnit 11, Playwright (E2E)
+- Testing: Vitest + React Testing Library (jsdom), PHPUnit 12, Playwright (E2E)
 - Node: >=26 (pinned to 26.4.0 in `.nvmrc`)
 - Docker dev env: Caddy + PHP + MySQL 8 (see `.docker/`)
 
@@ -82,7 +82,7 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 
 ## PHP Testing
 
-- PHPUnit 11 — runs inside Docker via `task test`
+- PHPUnit 12 — runs inside Docker via `task test`
 - PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, and `fluent` testsuites, selected via `--testsuite` flag). COPYed into the image at build, **not** volume-mounted — after editing, rebuild with `task build` or push it with `docker compose -f .docker/compose.yml cp .docker/app/phpunit.xml.dist app:/app/phpunit.xml.dist` (and the same to `app-fluent`)
 - `failOnRisky` + `failOnWarning` are on: a test that asserts nothing fails the run rather than being reported as risky and exiting 0
 - Test namespace: `WeDevelop\Grid\Tests\` → `tests/` (mirrors the subdirectory: `Tests\Functional\Controllers` → `tests/Functional/Controllers/`)
@@ -100,6 +100,5 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 - Enforced as a QA gate: the internal `qa-rector` task runs `rector process --dry-run` inside `task qa` and fails the build if any rule would change a file
 - Workflow: contributors run `task rector` locally to apply fixes, commit the result, then push
 - Curated rule set — `codingStyle` prepared set is **not** enabled. The following rules are explicitly skipped via `withSkip()`:
-  - `ChangeOrIfContinueToMultiContinueRector` — splitting `if (!a \|\| !b) continue` into two `if` blocks is often less readable
   - `FlipTypeControlToUseExclusiveTypeRector` — `$x !== null` on a typed `?Foo` property is more honest about intent than `$x instanceof Foo`
   - `PostIncDecToPreIncDecRector` — pure micro-style, codebase consistently uses post-increment

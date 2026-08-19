@@ -5,13 +5,11 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Migration\Support;
 
 use Page;
-use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 
-#[CoversClass(LegacyTableSeeder::class)]
 final class LegacyTableSeederTest extends SapphireTest
 {
     protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';

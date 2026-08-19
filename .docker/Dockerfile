@@ -13,6 +13,12 @@ RUN install-php-extensions \
 
 RUN echo 'pcov.directory=/module/src' > /usr/local/etc/php/conf.d/99-pcov.ini
 
+# Collecting coverage over the full suite exceeds PHP's 128M default under
+# phpunit 12 / php-code-coverage 12 — it OOMs partway through, and only on
+# some `executionOrder="random"` seeds, so it reads as a flaky test rather
+# than a memory ceiling. This image is the test/dev harness only.
+RUN echo 'memory_limit=512M' > /usr/local/etc/php/conf.d/99-memory.ini
+
 # Major-pinned: :latest would silently adopt a future Composer major release
 # mid-build, and the binary it copies runs against this module's composer.json.
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
