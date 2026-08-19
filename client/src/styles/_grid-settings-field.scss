@@ -31,11 +31,12 @@
       vertical-align: middle;
     }
 
-    // A row that neither is the default nor has its override enabled inherits
-    // the default layout, so dim its width/offset/visible cells to read as
-    // "not in effect".
-    tr:not(.is-overridden, .is-default) td:nth-child(n + 3) {
-      opacity: 0.5;
+    // A row without its override enabled inherits the default layout, so dim
+    // its width/offset/visible cells to read as "not in effect". The default
+    // row is excluded by the same test: the template always ships it as
+    // `class="is-default is-overridden"` and it has no toggle to turn that off.
+    tr:not(.is-overridden) td:nth-child(n + 3) {
+      opacity: var(--ssgrid-opacity-disabled);
     }
 
     tr.is-default {

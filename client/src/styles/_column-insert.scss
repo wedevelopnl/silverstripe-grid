@@ -7,6 +7,8 @@
 //   (lifted with the design's 0 4px 8px / 15% drop shadow). Absolutely positioned
 //   so it never disturbs the column width math in `.ssgrid-row__columns`.
 
+@use './a11y';
+
 .ssgrid-column-insert {
   display: inline-flex;
   flex: 0 0 auto;
@@ -26,8 +28,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid var(--ssgrid-border-focus);
-    outline-offset: 2px;
+    @include a11y.focus-ring;
   }
 
   &__icon {

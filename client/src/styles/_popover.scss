@@ -1,4 +1,5 @@
 @use './a11y';
+@use './typography';
 
 // Shared popover surface for the three flyouts the editor renders inline (not
 // in a portal): the column width/offset listbox (GridSettingsPicker), the
@@ -61,24 +62,17 @@
 
   display: block; // the trigger (a .ssgrid-column__badge) is full-width
 
-  &__trigger {
-    // Layout/look comes from the `.ssgrid-column__badge` class the consumer
-    // also applies; this hook only exists so a bare picker is still usable.
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--ssgrid-space-2);
-    width: 100%;
-  }
+  // `&__trigger` gets no rule of its own: both consumers pass
+  // `.ssgrid-column__badge` alongside it, which already carries the identical
+  // layout. The class stays as a selector/test hook.
 
   &__label {
     // Without this the label is a flex item at `min-width: auto`, so it refuses
     // to shrink below its text and pushes the trigger wider than its column —
     // the ellipsis above only engages once the box is allowed to get smaller.
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+
+    @include typography.truncate;
   }
 
   &__caret {
@@ -167,9 +161,10 @@
       background: var(--ssgrid-surface-hover);
     }
 
+    // Inset: the trigger sits flush in the editor header row, where an outset
+    // ring would overlap its neighbours.
     &:focus-visible {
-      outline: 2px solid var(--ssgrid-border-focus);
-      outline-offset: -2px;
+      @include a11y.focus-ring(-2px);
     }
   }
 
@@ -179,7 +174,7 @@
 
   &__icon {
     flex: 0 0 auto;
-    color: var(--ssgrid-icon-brand);
+    color: var(--ssgrid-text-brand);
     font-size: var(--ssgrid-font-size-body);
   }
 
@@ -239,7 +234,7 @@
     // affordance is withdrawn — a pointer target that does nothing must not
     // light up as though it would.
     &[aria-disabled='true'] {
-      opacity: 0.4;
+      opacity: var(--ssgrid-opacity-disabled);
       cursor: default;
 
       &:hover {

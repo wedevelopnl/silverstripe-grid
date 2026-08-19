@@ -6,6 +6,7 @@
 
 @use './a11y';
 @use './publish-status';
+@use './surfaces';
 @use './typography';
 
 .ssgrid-block {
@@ -67,20 +68,8 @@
     padding: var(--ssgrid-space-4);
   }
 
-  // Type icon — brand-tinted rounded chip (Figma: 24px square, 10% brand fill,
-  // 4px radius, 16px brand glyph).
   &__icon {
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    width: var(--ssgrid-size-chip);
-    height: var(--ssgrid-size-chip);
-    border-radius: var(--ssgrid-radius-sm);
-    background: var(--ssgrid-surface-hover);
-    color: var(--ssgrid-text-brand);
-    font-size: var(--ssgrid-size-icon);
-    line-height: 1;
+    @include surfaces.type-icon-chip;
   }
 
   // No link reset here: the whole card is the anchor, so the title never
@@ -88,10 +77,6 @@
   &__title {
     @include typography.block-title;
 
-    // Shrinks to truncate, but never grows: the status marks that follow
-    // must sit beside the title, not be pushed to the far edge. The action
-    // toolbar claims the leftover space via its own `margin-left: auto`.
-    flex: 0 1 auto;
     margin: 0;
   }
 

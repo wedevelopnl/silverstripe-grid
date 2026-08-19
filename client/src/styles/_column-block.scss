@@ -1,11 +1,13 @@
-// Column block — outlined card inside a Row. Figma "Column" component: 3%
-// black surface, 15% black border, 8px radius, 16px padding, 16px internal
-// gap. The header has two stacked rows — a toolbar (drag/collapse/icon/title/
-// status-marks/actions) and a layout-settings row (width + offset pickers,
-// side-by-side, equal width). The body renders content blocks vertically.
+// Column block — outlined card inside a Row. Figma "Column" component: the
+// shared card chrome (see `_surfaces.scss`) over a 3% black surface, with a
+// 16px internal gap. The header has two stacked rows — a toolbar (drag/collapse/
+// icon/title/status-marks/actions) and a layout-settings row (width + offset
+// pickers, side-by-side, equal width). The body renders content blocks
+// vertically.
 
 @use './a11y';
 @use './publish-status';
+@use './surfaces';
 @use './typography';
 
 .ssgrid-column {
@@ -20,14 +22,12 @@
   flex-direction: column;
 
   &__card {
+    @include surfaces.card-surface(var(--ssgrid-surface-sunken));
+
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
     gap: var(--ssgrid-space-4);
-    padding: var(--ssgrid-space-4);
-    background: var(--ssgrid-surface-sunken);
-    border: 1px solid var(--ssgrid-border-default);
-    border-radius: var(--ssgrid-radius-md);
 
     @include publish-status.status-rings;
 
@@ -74,11 +74,6 @@
   &__title {
     @include typography.block-title;
     @include typography.block-title-link;
-
-    // Shrinks to truncate, but never grows: the status marks that follow
-    // must sit beside the title, not be pushed to the far edge. The action
-    // toolbar claims the leftover space via its own `margin-left: auto`.
-    flex: 0 1 auto;
   }
 
   &__layout-settings {
@@ -134,51 +129,23 @@
     }
 
     &:focus-visible {
-      outline: 2px solid var(--ssgrid-border-focus);
-      outline-offset: 2px;
+      @include a11y.focus-ring;
     }
 
     &:disabled {
       cursor: not-allowed;
-      opacity: 0.5;
+      opacity: var(--ssgrid-opacity-disabled);
     }
   }
 
+  // The "+ Add content" trigger that opens the element type picker is not
+  // styled here: it renders with `.ssgrid-add-child__button`, the same class as
+  // the "+ Add row/section" buttons, so every "add a child here" affordance is
+  // one rule rather than a copy per level.
   &__body {
     display: flex;
     flex-direction: column;
     gap: var(--ssgrid-space-4);
-  }
-
-  // Inline "+ Add content" trigger (opens the element type picker) — same
-  // brand-tinted dashed look as the "+ Add row/section" buttons (Figma "+ Add
-  // block"), so all the "add a child here" affordances read alike.
-  &__add-content {
-    display: inline-flex;
-    width: 100%;
-    height: var(--ssgrid-size-control);
-    align-items: center;
-    justify-content: center;
-    gap: var(--ssgrid-space-1);
-    padding: 0 var(--ssgrid-space-2);
-    background: var(--ssgrid-surface-selected);
-    border: 1px dashed var(--ssgrid-border-focus);
-    border-radius: var(--ssgrid-radius-sm);
-    color: var(--ssgrid-text-brand);
-    font: inherit;
-    font-size: var(--ssgrid-font-size-body);
-    font-weight: var(--ssgrid-font-weight-medium);
-    line-height: var(--ssgrid-line-height-tight);
-    cursor: pointer;
-
-    &:hover {
-      background: var(--ssgrid-surface-hover);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--ssgrid-border-focus);
-      outline-offset: 2px;
-    }
   }
 }
 

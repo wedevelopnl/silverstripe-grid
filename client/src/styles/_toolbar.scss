@@ -3,6 +3,8 @@
 // (set by React); structure/look lives here. The publish-status marks live in
 // `_publish-status.scss`.
 
+@use './a11y';
+
 .ssgrid-icon-button {
   display: inline-flex;
   flex: 0 0 auto;
@@ -27,14 +29,14 @@
   }
 
   &:focus-visible {
-    outline: 2px solid var(--ssgrid-border-focus);
-    outline-offset: 2px;
+    @include a11y.focus-ring;
+
     border-radius: var(--ssgrid-radius-sm);
   }
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.3;
+    opacity: var(--ssgrid-opacity-disabled);
   }
 
   // The Figma renders every grip-vertical handle at 25% opacity so it reads as

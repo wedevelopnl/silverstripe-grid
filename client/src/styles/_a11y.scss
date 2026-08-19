@@ -12,3 +12,15 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+// The keyboard focus indicator, used by every focusable control in the editor.
+// One decision in one place: a control that draws its own ring is a control
+// whose ring silently stops matching the others.
+// The offset is the only knob that legitimately varies, and only for two
+// reasons: a control clipped by an `overflow: hidden` ancestor needs a negative
+// offset to stay visible, and a control flush against a container edge needs 0
+// so the ring does not spill outside it.
+@mixin focus-ring($offset: 2px) {
+  outline: 2px solid var(--ssgrid-border-focus);
+  outline-offset: $offset;
+}

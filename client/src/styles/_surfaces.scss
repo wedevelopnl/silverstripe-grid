@@ -1,0 +1,36 @@
+// Shared box treatments — the two recipes the editor repaints often enough that
+// they need one owner. Mixin-only, like `_a11y.scss` and `_typography.scss`, so
+// this partial is `@use`d by the partials that need it and is NOT in
+// `bundle.scss` (including it there would emit nothing).
+
+// The nested card chrome: section, row, column card, editor canvas and the
+// transient notice all draw the same 1px hairline, 8px radius and 16px inset.
+// Only the fill differs, so it is the one parameter. The geometry has to stay
+// one decision — the Section > Row > Column stack nests three of these inside
+// each other, and a radius or hairline that drifts on one level makes the stack
+// read as three unrelated boxes rather than one system.
+@mixin card-surface($surface: var(--ssgrid-surface-muted)) {
+  padding: var(--ssgrid-space-4);
+  background: $surface;
+  border: 1px solid var(--ssgrid-border-default);
+  border-radius: var(--ssgrid-radius-md);
+}
+
+// The brand-tinted type-icon chip (Figma: 24px square, 10% brand fill, 4px
+// radius, 16px brand glyph). Rendered at three moments of one flow — browsing
+// element types in the picker, the placed card, and the drag ghost — so the
+// three must agree; the ghost and the card being seen simultaneously mid-drag
+// is the whole point of the ghost.
+@mixin type-icon-chip($size: var(--ssgrid-size-chip), $glyph: var(--ssgrid-size-icon)) {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: $size;
+  height: $size;
+  border-radius: var(--ssgrid-radius-sm);
+  background: var(--ssgrid-surface-hover);
+  color: var(--ssgrid-text-brand);
+  font-size: $glyph;
+  line-height: 1;
+}

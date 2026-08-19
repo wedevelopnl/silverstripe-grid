@@ -1,21 +1,20 @@
 // Row block — rendered inside a Section. Figma "Row" card chrome: muted
 // surface inside the section's muted surface (stacks to a slightly darker
-// shade), 15% black hairline, 8px radius, 16px padding. The drop-target
+// shade). The card chrome itself lives in `_surfaces.scss`. The drop-target
 // highlight switches the
 // hairline to brand purple — same pattern as the section/column cards. The
 // status ring is orange and lives in `_publish-status.scss`.
 
 @use './publish-status';
+@use './surfaces';
 @use './typography';
 
 .ssgrid-row {
+  @include surfaces.card-surface;
+
   display: flex;
   flex-direction: column;
   gap: var(--ssgrid-space-4);
-  padding: var(--ssgrid-space-4);
-  background: var(--ssgrid-surface-muted);
-  border: 1px solid var(--ssgrid-border-default);
-  border-radius: var(--ssgrid-radius-md);
 
   @include publish-status.status-rings;
 
@@ -44,10 +43,6 @@
     @include typography.block-title;
     @include typography.block-title-link;
 
-    // Shrinks to truncate, but never grows: the status marks that follow
-    // must sit beside the title, not be pushed to the far edge. The action
-    // toolbar claims the leftover space via its own `margin-left: auto`.
-    flex: 0 1 auto;
     margin: 0;
   }
 
@@ -107,7 +102,6 @@
         padding: 0 var(--ssgrid-space-2);
       }
 
-      > .ssgrid-add-child--append,
       > .ssgrid-add-child--empty {
         flex: 0 0 100%;
         padding: 0 var(--ssgrid-space-2);
@@ -123,7 +117,6 @@
         grid-column: var(--col-start, auto) / span var(--col-span);
       }
 
-      > .ssgrid-add-child--append,
       > .ssgrid-add-child--empty {
         grid-column: 1 / -1;
       }
