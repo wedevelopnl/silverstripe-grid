@@ -18,6 +18,10 @@
 
   @include publish-status.status-rings;
 
+  &[data-drop-target] {
+    border-color: var(--ssgrid-border-focus);
+  }
+
   &[data-collapsed] > :not(.ssgrid-section__header) {
     display: none;
   }
