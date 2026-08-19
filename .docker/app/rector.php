@@ -7,7 +7,6 @@ use Netwerkstatt\SilverstripeRector\Set\SilverstripeSetList;
 use Rector\CodeQuality\Rector\Identical\FlipTypeControlToUseExclusiveTypeRector;
 use Rector\CodingStyle\Rector\PostInc\PostIncDecToPreIncDecRector;
 use Rector\Config\RectorConfig;
-use Rector\EarlyReturn\Rector\If_\ChangeOrIfContinueToMultiContinueRector;
 
 return RectorConfig::configure()
     ->withPaths([
@@ -28,7 +27,6 @@ return RectorConfig::configure()
     ])
     ->withSkip([
         // Subjective style — see CLAUDE.md "Rector" section for rationale.
-        ChangeOrIfContinueToMultiContinueRector::class,
         FlipTypeControlToUseExclusiveTypeRector::class,
         PostIncDecToPreIncDecRector::class,
     ]);

@@ -647,7 +647,7 @@ final class GridAdapterTest extends SapphireTest
      * @param class-string<GridAdapter> $adapterClass
      */
     #[DataProvider('orderClassesProvider')]
-    public function testGetMediaOrderClasses(string $adapterClass, MediaPosition $position, string $expectedMedia): void
+    public function testGetMediaOrderClasses(string $adapterClass, MediaPosition $position, string $expectedMedia, string $_expectedContent): void
     {
         self::assertSame($expectedMedia, (new $adapterClass())->getMediaOrderClasses($position));
     }
