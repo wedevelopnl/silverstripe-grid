@@ -73,7 +73,7 @@ describe('ViewportPicker', () => {
     renderPicker({ activeViewport: 'md' })
 
     expect(
-      screen.getByTestId('viewport-picker-trigger').querySelector('.ssgrid-viewport-picker__range')
+      screen.getByTestId('viewport-picker-trigger').querySelector('.ssgrid-viewport-picker-range')
         ?.textContent,
     ).toBe('<992')
   })
@@ -84,7 +84,7 @@ describe('ViewportPicker', () => {
     renderPicker({ activeViewport: 'lg' })
 
     expect(
-      screen.getByTestId('viewport-picker-trigger').querySelector('.ssgrid-viewport-picker__range'),
+      screen.getByTestId('viewport-picker-trigger').querySelector('.ssgrid-viewport-picker-range'),
     ).toBeNull()
   })
 
@@ -94,7 +94,7 @@ describe('ViewportPicker', () => {
     expect(
       screen
         .getByTestId('viewport-picker-trigger')
-        .querySelector('.ssgrid-viewport-picker__override-dot'),
+        .querySelector('.ssgrid-viewport-picker-override-dot'),
     ).not.toBeNull()
   })
 
@@ -104,7 +104,7 @@ describe('ViewportPicker', () => {
     expect(
       screen
         .getByTestId('viewport-picker-trigger')
-        .querySelector('.ssgrid-viewport-picker__override-dot'),
+        .querySelector('.ssgrid-viewport-picker-override-dot'),
     ).toBeNull()
   })
 
@@ -118,7 +118,7 @@ describe('ViewportPicker', () => {
 
     const marked = within(dropdown())
       .getAllByRole('menuitemradio')
-      .filter((row) => row.querySelector('.ssgrid-viewport-picker__default') !== null)
+      .filter((row) => row.querySelector('.ssgrid-viewport-picker-default') !== null)
     expect(marked).toHaveLength(1)
     expect(marked[0]).toHaveAttribute('data-testid', 'viewport-picker-option-md')
   })
@@ -129,7 +129,7 @@ describe('ViewportPicker', () => {
     expect(
       screen
         .getByTestId('viewport-picker-trigger')
-        .querySelector('.ssgrid-viewport-picker__default'),
+        .querySelector('.ssgrid-viewport-picker-default'),
     ).not.toBeNull()
   })
 
@@ -141,7 +141,7 @@ describe('ViewportPicker', () => {
     expect(
       screen
         .getByTestId('viewport-picker-trigger')
-        .querySelector('.ssgrid-viewport-picker__default'),
+        .querySelector('.ssgrid-viewport-picker-default'),
     ).toBeNull()
   })
 
@@ -153,7 +153,7 @@ describe('ViewportPicker', () => {
 
     const radios = within(dropdown()).getAllByRole('menuitemradio')
     expect(
-      radios.map((r) => r.querySelector('.ssgrid-viewport-picker__item-label')?.textContent),
+      radios.map((r) => r.querySelector('.ssgrid-viewport-picker-item-label')?.textContent),
     ).toEqual(['Extra small', 'Medium', 'Large'])
     expect(radios.map((r) => r.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false'])
   })
@@ -177,7 +177,7 @@ describe('ViewportPicker', () => {
     await user.click(screen.getByTestId('viewport-picker-trigger'))
 
     const rows = within(dropdown()).getAllByRole('menuitemradio')
-    expect(rows[0].querySelector('.ssgrid-viewport-picker__override-label')?.textContent).toBe(
+    expect(rows[0].querySelector('.ssgrid-viewport-picker-override-label')?.textContent).toBe(
       '1 column overrides this viewport',
     )
   })
@@ -208,7 +208,7 @@ describe('ViewportPicker', () => {
     expect(
       within(dropdown())
         .getAllByRole('menuitem')
-        .map((i) => i.querySelector('.ssgrid-viewport-picker__item-count')?.textContent),
+        .map((i) => i.querySelector('.ssgrid-viewport-picker-item-count')?.textContent),
     ).toEqual(['2 columns', '2 columns'])
   })
 

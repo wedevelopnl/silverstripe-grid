@@ -62,14 +62,14 @@ export default function GridSettingsPicker({
   }
 
   return (
-    <div ref={popup.wrapperRef} className="ssgrid-settings-picker">
+    <div ref={popup.wrapperRef} className="ssgrid-settings-picker ssgrid-popover-anchor">
       <button
         ref={popup.triggerRef}
         type="button"
         className={
           className !== undefined
-            ? `ssgrid-settings-picker__trigger ${className}`
-            : 'ssgrid-settings-picker__trigger'
+            ? `ssgrid-settings-picker-trigger ${className}`
+            : 'ssgrid-settings-picker-trigger'
         }
         data-testid={testId}
         aria-haspopup="listbox"
@@ -78,14 +78,14 @@ export default function GridSettingsPicker({
         disabled={disabled}
         onClick={handleTriggerClick}
       >
-        <span className="ssgrid-settings-picker__label">{label}</span>
-        <i className="ssgrid-settings-picker__caret font-icon-down-open" aria-hidden="true" />
+        <span className="ssgrid-settings-picker-label ssgrid-truncate">{label}</span>
+        <i className="ssgrid-settings-picker-caret font-icon-down-open" aria-hidden="true" />
       </button>
       {popup.isOpen && (
         <div
           id={listboxId}
           ref={popup.popupRef}
-          className="ssgrid-settings-picker__listbox"
+          className="ssgrid-settings-picker-listbox ssgrid-popover-surface"
           role="listbox"
           tabIndex={-1}
           aria-activedescendant={popup.getItemId(popup.activeIndex)}
@@ -97,7 +97,7 @@ export default function GridSettingsPicker({
             <div
               key={option.value}
               id={popup.getItemId(index)}
-              className="ssgrid-settings-picker__option"
+              className="ssgrid-settings-picker-option ssgrid-popover-item"
               role="option"
               aria-selected={option.value === selectedValue}
               data-separator={option.value === 'hidden' ? 'true' : undefined}

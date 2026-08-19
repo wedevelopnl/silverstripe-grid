@@ -32,7 +32,7 @@ tests/E2E/Fixture/    # YAML fixtures for E2E test data
 tests/E2E/specs/      # E2E test specs
 tests/E2E/helpers/    # Shared E2E test utilities
 tests/E2E/screenshots/ # Doc screenshot captures (npm run docs:screenshots); NOT run by test-e2e
-client/src/           # Frontend source (React/TS/SCSS): js/ + styles/
+client/src/           # Frontend source (React/TS/CSS): js/ + styles/
 client/src/js/        # React/TS source
 client/src/js/api/    # API client layers (client, endpoints, config, errors)
 client/src/js/boot/   # Component registration
@@ -45,7 +45,7 @@ client/src/js/types/  # Valibot schemas, TypeScript types
 client/src/js/utils/  # Frontend utility functions
 client/src/js/testing/ # Test infrastructure (factories, helpers, mocks)
 client/src/js/i18n/   # Internationalization utilities
-client/src/styles/    # SCSS styles (_tokens + _fonts + _typography + _a11y are the shared layer)
+client/src/styles/    # Plain modern CSS (native nesting; tokens + fonts + a11y + typography + surfaces + publish-status are the shared layer). Class names are flat kebab-case (ssgrid-block-part; no BEM __/--); state/variants live on data-/aria- attributes; shared treatments are utility classes composed in className (ssgrid-card-surface, ssgrid-title, ssgrid-focus-ring, ssgrid-type-icon-chip, ssgrid-popover-*), parameterized via --ssgrid-* custom properties
 client/fonts/         # Self-hosted Poppins woff2 subsets + OFL licence; copied to client/dist/fonts/ at build
 client/dist/          # Vite build output (exposed, created by build)
 scripts/              # Build scripts (i18n collection, parity checks)
@@ -59,7 +59,7 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 ```
 
 - PSR-4 namespace: `WeDevelop\Grid\` → `src/`
-- Frontend: React 18, TypeScript 6, Vite 8, SCSS
+- Frontend: React 18, TypeScript 6, Vite 8, plain modern CSS (no Sass)
 - Key frontend libs: dnd-kit (drag & drop), TanStack Query (data fetching), Valibot (validation)
 - Testing: Vitest + React Testing Library (jsdom), PHPUnit 12, Playwright (E2E)
 - Node: >=26 (pinned to 26.4.0 in `.nvmrc`)

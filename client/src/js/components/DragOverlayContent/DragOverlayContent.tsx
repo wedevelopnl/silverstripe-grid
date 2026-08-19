@@ -47,14 +47,17 @@ export default function DragOverlayContent({
   return (
     <div className="ssgrid-drag-overlay" data-testid={`drag-overlay-${type}`}>
       <i
-        className={`ssgrid-drag-overlay__icon ${node.blockSchema.icon}`}
+        className={`ssgrid-drag-overlay-icon ssgrid-type-icon-chip ${node.blockSchema.icon}`}
         data-testid={`drag-overlay-${type}-icon`}
       />
-      <span className="ssgrid-drag-overlay__title" data-testid={`drag-overlay-${type}-title`}>
+      <span
+        className="ssgrid-drag-overlay-title ssgrid-truncate"
+        data-testid={`drag-overlay-${type}-title`}
+      >
         {node.title}
       </span>
       {meta !== null && (
-        <span className="ssgrid-drag-overlay__meta" data-testid={`drag-overlay-${type}-meta`}>
+        <span className="ssgrid-drag-overlay-meta" data-testid={`drag-overlay-${type}-meta`}>
           {meta}
         </span>
       )}

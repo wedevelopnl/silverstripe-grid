@@ -17,7 +17,7 @@ export default function CollapseToggle({
   return (
     <button
       type="button"
-      className="ssgrid-icon-button"
+      className="ssgrid-icon-button ssgrid-focus-ring"
       aria-expanded={!isCollapsed}
       aria-controls={controlsId}
       aria-label={
@@ -33,7 +33,7 @@ export default function CollapseToggle({
       }}
     >
       <span
-        className={`ssgrid-icon-button__glyph ${isCollapsed ? 'font-icon-down-open' : 'font-icon-up-open'}`}
+        className={`ssgrid-icon-button-glyph ${isCollapsed ? 'font-icon-down-open' : 'font-icon-up-open'}`}
         aria-hidden="true"
       />
     </button>

@@ -33,14 +33,15 @@ function ListLoadError({
 }) {
   return (
     <div data-testid="duplicate-to-load-error" role="alert">
-      <p className="ssgrid-dialog__error">
+      <p className="ssgrid-dialog-error">
         {t('WeDevelopGrid.DuplicateToDialog.LOAD_FAILED', 'Could not load this list: {message}', {
           message: error.message,
         })}
       </p>
       <button
         type="button"
-        className="ssgrid-button ssgrid-button--ghost"
+        className="ssgrid-button ssgrid-focus-ring"
+        data-variant="ghost"
         data-testid="duplicate-to-retry"
         onClick={onRetry}
       >
@@ -206,7 +207,8 @@ export default function DuplicateToDialog({
   return (
     <dialog
       ref={dialogRef}
-      className="ssgrid-dialog ssgrid-dialog--wide"
+      className="ssgrid-dialog"
+      data-variant="wide"
       data-testid="duplicate-to-dialog"
       aria-labelledby={titleId}
       onClose={handleClose}
@@ -221,7 +223,7 @@ export default function DuplicateToDialog({
         e.stopPropagation()
       }}
     >
-      <div className="ssgrid-dialog__header">
+      <div className="ssgrid-dialog-header">
         <h3 id={titleId}>
           {step === 'page' &&
             t('WeDevelopGrid.DuplicateToDialog.STEP_PAGE_TITLE', 'Select target page')}
@@ -233,12 +235,12 @@ export default function DuplicateToDialog({
         </h3>
       </div>
 
-      <div className="ssgrid-dialog__body">
+      <div className="ssgrid-dialog-body">
         {step === 'page' && (
           <div data-testid="duplicate-to-step-page">
             <input
               type="text"
-              className="ssgrid-dialog__search"
+              className="ssgrid-dialog-search ssgrid-focus-ring"
               data-testid="duplicate-to-search"
               placeholder={t(
                 'WeDevelopGrid.DuplicateToDialog.SEARCH_PLACEHOLDER',
@@ -256,7 +258,7 @@ export default function DuplicateToDialog({
             {pages.data !== undefined && (
               <div
                 ref={pageList.listRef}
-                className="ssgrid-dialog__list"
+                className="ssgrid-dialog-list ssgrid-focus-ring"
                 data-testid="duplicate-to-page-list"
                 role="listbox"
                 aria-label={t('WeDevelopGrid.DuplicateToDialog.PAGE_LIST_LABEL', 'Target page')}
@@ -281,7 +283,7 @@ export default function DuplicateToDialog({
                   <div
                     key={page.id}
                     id={pageList.getItemId(index)}
-                    className="ssgrid-dialog__option"
+                    className="ssgrid-dialog-option"
                     role="option"
                     aria-selected={page.id === selectedPageId}
                     aria-disabled={!page.hasGridZones}
@@ -318,7 +320,7 @@ export default function DuplicateToDialog({
             {hasMultipleZones && (
               <div
                 ref={zoneList.listRef}
-                className="ssgrid-dialog__list"
+                className="ssgrid-dialog-list ssgrid-focus-ring"
                 data-testid="duplicate-to-zone-list"
                 role="listbox"
                 aria-label={t('WeDevelopGrid.DuplicateToDialog.ZONE_LIST_LABEL', 'Target zone')}
@@ -339,7 +341,7 @@ export default function DuplicateToDialog({
                   <div
                     key={zone}
                     id={zoneList.getItemId(index)}
-                    className="ssgrid-dialog__option"
+                    className="ssgrid-dialog-option"
                     role="option"
                     aria-selected={zone === selectedZone}
                     data-active={index === zoneList.activeIndex ? 'true' : undefined}
@@ -382,7 +384,7 @@ export default function DuplicateToDialog({
             {containers.data !== undefined && containers.data.length > 0 && (
               <div
                 ref={containerList.listRef}
-                className="ssgrid-dialog__list"
+                className="ssgrid-dialog-list ssgrid-focus-ring"
                 data-testid="duplicate-to-container-list"
                 role="listbox"
                 aria-label={t(
@@ -406,7 +408,7 @@ export default function DuplicateToDialog({
                   <div
                     key={container.id}
                     id={containerList.getItemId(index)}
-                    className="ssgrid-dialog__option"
+                    className="ssgrid-dialog-option"
                     role="option"
                     aria-selected={container.id === selectedContainerId}
                     data-active={index === containerList.activeIndex ? 'true' : undefined}
@@ -450,17 +452,18 @@ export default function DuplicateToDialog({
         )}
       </div>
 
-      <div className="ssgrid-dialog__footer">
+      <div className="ssgrid-dialog-footer">
         {error !== undefined && error !== null && (
-          <p className="ssgrid-dialog__error" data-testid="duplicate-to-error">
+          <p className="ssgrid-dialog-error" data-testid="duplicate-to-error">
             {error}
           </p>
         )}
-        <div className="ssgrid-dialog__actions">
+        <div className="ssgrid-dialog-actions">
           {step !== 'page' && (
             <button
               type="button"
-              className="ssgrid-button ssgrid-button--ghost"
+              className="ssgrid-button ssgrid-focus-ring"
+              data-variant="ghost"
               data-testid="duplicate-to-back"
               onClick={goBack}
             >
@@ -469,7 +472,8 @@ export default function DuplicateToDialog({
           )}
           <button
             type="button"
-            className="ssgrid-button ssgrid-button--ghost"
+            className="ssgrid-button ssgrid-focus-ring"
+            data-variant="ghost"
             onClick={handleClose}
           >
             {t('WeDevelopGrid.DuplicateToDialog.CANCEL_BUTTON', 'Cancel')}
@@ -477,7 +481,8 @@ export default function DuplicateToDialog({
           {step === 'page' && (
             <button
               type="button"
-              className="ssgrid-button ssgrid-button--primary"
+              className="ssgrid-button ssgrid-focus-ring"
+              data-variant="primary"
               data-testid="duplicate-to-next"
               onClick={advanceFromPage}
             >
@@ -487,7 +492,8 @@ export default function DuplicateToDialog({
           {step === 'zone' && (
             <button
               type="button"
-              className="ssgrid-button ssgrid-button--primary"
+              className="ssgrid-button ssgrid-focus-ring"
+              data-variant="primary"
               data-testid="duplicate-to-next"
               disabled={selectedZone === null}
               onClick={advanceFromZone}
@@ -498,7 +504,8 @@ export default function DuplicateToDialog({
           {step === 'container' && (
             <button
               type="button"
-              className="ssgrid-button ssgrid-button--primary"
+              className="ssgrid-button ssgrid-focus-ring"
+              data-variant="primary"
               data-testid="duplicate-to-confirm"
               disabled={selectedContainerId === null}
               onClick={handleConfirm}
@@ -509,7 +516,8 @@ export default function DuplicateToDialog({
           {step === 'confirm' && (
             <button
               type="button"
-              className="ssgrid-button ssgrid-button--primary"
+              className="ssgrid-button ssgrid-focus-ring"
+              data-variant="primary"
               data-testid="duplicate-to-confirm"
               onClick={handleConfirm}
             >

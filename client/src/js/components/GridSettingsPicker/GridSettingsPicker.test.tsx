@@ -240,7 +240,7 @@ describe('GridSettingsPicker', () => {
     renderPicker({ className: 'custom-class' })
 
     expect(screen.getByTestId('width-picker')).toHaveClass(
-      'ssgrid-settings-picker__trigger',
+      'ssgrid-settings-picker-trigger',
       'custom-class',
     )
   })
@@ -248,7 +248,7 @@ describe('GridSettingsPicker', () => {
   it('omits any extra trigger class when no className is provided', () => {
     renderPicker()
 
-    expect(screen.getByTestId('width-picker').className).toBe('ssgrid-settings-picker__trigger')
+    expect(screen.getByTestId('width-picker').className).toBe('ssgrid-settings-picker-trigger')
   })
 
   it('keeps the listbox itself out of the tab order', async () => {

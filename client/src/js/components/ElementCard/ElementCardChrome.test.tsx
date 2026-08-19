@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest'
 import ElementCardChrome from './ElementCardChrome'
 
 describe('ElementCardChrome', () => {
-  it('renders an anchor with clickable state when href is provided', () => {
+  // The anchor itself is the clickable state: the stylesheet hooks :any-link,
+  // so no data attribute is needed.
+  it('renders an anchor when href is provided', () => {
     render(
       <ElementCardChrome
         status="published"
@@ -16,7 +18,7 @@ describe('ElementCardChrome', () => {
     const link = screen.getByRole('link')
     expect(link.tagName).toBe('A')
     expect(link).toHaveAttribute('href', '/admin/pages/edit/show/5')
-    expect(link).toHaveAttribute('data-state', 'clickable')
+    expect(link).toBe(screen.getByTestId('element-card'))
   })
 
   it('renders a div with no link when href is omitted', () => {

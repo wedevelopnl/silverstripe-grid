@@ -37,21 +37,21 @@ export default function ElementCardChrome({
 }: ElementCardChromeProps) {
   const header = (
     <>
-      <div className="ssgrid-block__header" ref={headerRef}>
+      <div className="ssgrid-block-header" ref={headerRef}>
         {leading}
         <i
-          className={`ssgrid-block__icon ${icon}`}
+          className={`ssgrid-block-icon ssgrid-type-icon-chip ${icon}`}
           data-testid="element-card-icon"
           aria-hidden="true"
         />
-        <h4 className="ssgrid-block__title" data-testid="element-card-title">
+        <h4 className="ssgrid-block-title ssgrid-title" data-testid="element-card-title">
           {title}
         </h4>
         <StatusBadge status={status} testId="element-card-status-badge" />
         {trailing}
       </div>
       {summary ? (
-        <p className="ssgrid-block__body" data-testid="element-card-summary">
+        <p className="ssgrid-block-body" data-testid="element-card-summary">
           {summary}
         </p>
       ) : null}
@@ -66,7 +66,6 @@ export default function ElementCardChrome({
         style={style}
         className="ssgrid-block"
         data-testid="element-card"
-        data-state="clickable"
         data-status={status}
         onClick={onClick}
       >

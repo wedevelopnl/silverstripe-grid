@@ -85,12 +85,16 @@ export default function GridEditorShell({
       data-readonly={readonly ? '' : undefined}
     >
       {status === 'loading' && (
-        <p className="ssgrid-editor__notice" data-testid="grid-editor-loading">
+        <p className="ssgrid-editor-notice ssgrid-card-surface" data-testid="grid-editor-loading">
           {t('WeDevelopGrid.GridEditor.LOADING', 'Loading elements...')}
         </p>
       )}
       {status === 'error' && error !== null && (
-        <p className="ssgrid-editor__notice" data-tone="error" data-testid="grid-editor-error">
+        <p
+          className="ssgrid-editor-notice ssgrid-card-surface"
+          data-tone="error"
+          data-testid="grid-editor-error"
+        >
           {t('WeDevelopGrid.GridEditor.LOAD_ERROR', 'Failed to load elements: {message}', {
             message: error.message,
           })}
@@ -102,7 +106,7 @@ export default function GridEditorShell({
             <div className="ssgrid-editor">
               <GridAreaHeader sections={sections} readonly={readonly} version={version} />
               <div
-                className="ssgrid-editor__canvas"
+                className="ssgrid-editor-canvas ssgrid-card-surface"
                 data-testid="grid-editor-canvas"
                 data-dnd-container=""
                 data-descendant-unpublished={anyUnpublished ? '' : undefined}

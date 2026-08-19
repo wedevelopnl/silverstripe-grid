@@ -58,14 +58,14 @@ export default function RowChrome({
     <div
       ref={setNodeRef}
       style={style}
-      className="ssgrid-row"
+      className="ssgrid-row ssgrid-card-surface"
       data-testid="row-block"
       data-status={status}
       data-descendant-unpublished={hasUnpublishedDescendant ? '' : undefined}
       data-collapsed={isCollapsed ? '' : undefined}
       data-drop-target={dropTarget ? '' : undefined}
     >
-      <div className="ssgrid-row__header" data-testid="row-header">
+      <div className="ssgrid-row-header" data-testid="row-header">
         {leading}
         <CollapseToggle
           isCollapsed={isCollapsed}
@@ -73,7 +73,7 @@ export default function RowChrome({
           label={title}
           controlsId={bodyId}
         />
-        <h3 className="ssgrid-row__title" data-testid="row-title">
+        <h3 className="ssgrid-row-title ssgrid-title" data-testid="row-title">
           {titleHref !== undefined ? (
             <a href={titleHref} data-testid="row-edit-link">
               {title}
@@ -85,7 +85,7 @@ export default function RowChrome({
         <StatusBadge status={status} testId="row-status-badge" />
         {hasUnpublishedDescendant && <UnpublishedIndicator testId="row-unpublished-indicator" />}
         {columnCount > 0 && (
-          <span className="ssgrid-row__meta" data-testid="row-column-count">
+          <span className="ssgrid-row-meta" data-testid="row-column-count">
             {columnCount === 1
               ? t('WeDevelopGrid.RowBlock.COLUMN_COUNT_ONE', '{count} column', {
                   count: columnCount,

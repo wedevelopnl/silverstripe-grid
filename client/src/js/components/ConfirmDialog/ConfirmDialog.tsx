@@ -58,24 +58,26 @@ export default function ConfirmDialog({
         e.stopPropagation()
       }}
     >
-      <div className="ssgrid-dialog__header">
+      <div className="ssgrid-dialog-header">
         <h3 id={titleId}>{title}</h3>
       </div>
-      <div className="ssgrid-dialog__body">
+      <div className="ssgrid-dialog-body">
         <p id={messageId}>{message}</p>
       </div>
-      <div className="ssgrid-dialog__footer">
-        <div className="ssgrid-dialog__actions">
+      <div className="ssgrid-dialog-footer">
+        <div className="ssgrid-dialog-actions">
           <button
             type="button"
-            className="ssgrid-button ssgrid-button--ghost"
+            className="ssgrid-button ssgrid-focus-ring"
+            data-variant="ghost"
             onClick={handleClose}
           >
             {t('WeDevelopGrid.ConfirmDialog.CANCEL_BUTTON', 'Cancel')}
           </button>
           <button
             type="button"
-            className={`ssgrid-button ${destructive ? 'ssgrid-button--danger' : 'ssgrid-button--primary'}`}
+            className="ssgrid-button ssgrid-focus-ring"
+            data-variant={destructive ? 'danger' : 'primary'}
             data-destructive={destructive ? 'true' : undefined}
             onClick={onConfirm}
           >

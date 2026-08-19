@@ -6,5 +6,5 @@ applyTo: "**/*"
 # Code Style
 
 - 4 spaces: PHP, `composer.json`
-- 2 spaces: YML, JS, TS, TSX, JSON, CSS, SCSS (enforced via `.editorconfig`)
+- 2 spaces: YML, JS, TS, TSX, JSON, CSS (enforced via `.editorconfig`)
 - LF line endings, UTF-8, trailing newline

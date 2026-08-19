@@ -49,51 +49,51 @@ export default function GridAreaHeader({
     : t('WeDevelopGrid.GridEditor.ACTION_COLLAPSE_ALL', 'Collapse all sections')
 
   return (
-    <header className="ssgrid-editor__header">
-      <h1 className="ssgrid-editor__title">
+    <header className="ssgrid-editor-header">
+      <h1 className="ssgrid-editor-title ssgrid-visually-hidden">
         {t('WeDevelopGrid.GridEditor.AREA_TITLE', 'Grid area')}
       </h1>
       <ViewportSwitcher readonly={readonly} version={version} />
-      <div className="ssgrid-editor__header-actions">
+      <div className="ssgrid-editor-header-actions">
         <button
           type="button"
-          className="ssgrid-icon-button"
+          className="ssgrid-icon-button ssgrid-focus-ring"
           disabled
           title={t('WeDevelopGrid.GridEditor.ACTION_RESET', 'Reset changes')}
           aria-label={t('WeDevelopGrid.GridEditor.ACTION_RESET', 'Reset changes')}
         >
-          <span className="ssgrid-icon-button__glyph font-icon-back-in-time" aria-hidden="true" />
+          <span className="ssgrid-icon-button-glyph font-icon-back-in-time" aria-hidden="true" />
         </button>
         <button
           type="button"
-          className="ssgrid-icon-button"
+          className="ssgrid-icon-button ssgrid-focus-ring"
           disabled={!canToggleAll}
           onClick={toggleAll}
           title={toggleAllLabel}
           aria-label={toggleAllLabel}
         >
           <span
-            className={`ssgrid-icon-button__glyph ${allCollapsed ? 'font-icon-down-open-big' : 'font-icon-up-open-big'}`}
+            className={`ssgrid-icon-button-glyph ${allCollapsed ? 'font-icon-down-open-big' : 'font-icon-up-open-big'}`}
             aria-hidden="true"
           />
         </button>
         <button
           type="button"
-          className="ssgrid-icon-button"
+          className="ssgrid-icon-button ssgrid-focus-ring"
           disabled
           title={t('WeDevelopGrid.GridEditor.ACTION_OPEN', 'Open page')}
           aria-label={t('WeDevelopGrid.GridEditor.ACTION_OPEN', 'Open page')}
         >
-          <span className="ssgrid-icon-button__glyph font-icon-external-link" aria-hidden="true" />
+          <span className="ssgrid-icon-button-glyph font-icon-external-link" aria-hidden="true" />
         </button>
         <button
           type="button"
-          className="ssgrid-icon-button"
+          className="ssgrid-icon-button ssgrid-focus-ring"
           disabled
           title={t('WeDevelopGrid.GridEditor.ACTION_CLEAR', 'Remove all sections')}
           aria-label={t('WeDevelopGrid.GridEditor.ACTION_CLEAR', 'Remove all sections')}
         >
-          <span className="ssgrid-icon-button__glyph font-icon-trash-bin" aria-hidden="true" />
+          <span className="ssgrid-icon-button-glyph font-icon-trash-bin" aria-hidden="true" />
         </button>
       </div>
     </header>

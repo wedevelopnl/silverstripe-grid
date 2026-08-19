@@ -85,10 +85,10 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
         <ElementActions node={row} collapse={{ isCollapsed, onToggle, label: row.title }} />
       }
     >
-      <div id={bodyId} className="ssgrid-row__columns-area" data-testid="row-block-columns-area">
+      <div id={bodyId} className="ssgrid-row-columns-area" data-testid="row-block-columns-area">
         {hasColumns && <ColumnInsertButton rowId={row.self.id} placement="start" />}
         <div
-          className="ssgrid-row__columns"
+          className="ssgrid-row-columns"
           data-testid="row-block-columns"
           data-dnd-container=""
           data-layout-mode={layoutMode}

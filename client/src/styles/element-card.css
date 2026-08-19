@@ -1,0 +1,104 @@
+/* Element card — the content "Block" inside a Column. Figma "Block" component:
+   white surface, 15% black border, 8px radius, no padding of its own. A 16px-
+   padded Header (drag handle, brand-tinted type-icon chip, title, status pill,
+   actions kebab) and, when the element exposes a summary, a 16px-padded Body
+   below it, separated by a 1px top hairline. */
+
+.ssgrid-block {
+  display: flex;
+  flex-direction: column;
+  background: var(--ssgrid-surface-default);
+  border: 1px solid var(--ssgrid-border-default);
+  border-radius: var(--ssgrid-radius-md);
+  color: var(--ssgrid-text-default);
+
+  /* The clickable variant renders as an <a>; strip the inherited link chrome
+     so the card reads as a card, not a hyperlink. The CMS admin stylesheet
+     re-adds `text-decoration: underline` on `a:hover`/`a:focus`, which a block
+     propagates to every in-flow descendant (title, icon chip, action buttons) —
+     so the override has to repeat on those states too. */
+  text-decoration: none;
+
+  &:hover,
+  &:focus {
+    text-decoration: none;
+  }
+
+  /* Being an anchor is what makes the card clickable, so the anchor state is
+     the styling hook — no class or attribute needed. */
+  &:any-link {
+    cursor: pointer;
+
+    &:hover {
+      box-shadow: var(--ssgrid-shadow-1);
+    }
+  }
+
+  /* Lift the dragged card above its siblings (dnd-kit sets an inline transform). */
+  &[style*='transform'] {
+    z-index: 1;
+  }
+}
+
+/* …and jQuery UI's `.ui-widget.ui-widget-content a` (0,2,1) outranks the
+   `color` above (0,1,0), so the anchor variant needs its own qualified rule
+   to stay black — same cause as the container titles, see `typography.css`. */
+.ssgrid-editor .ssgrid-block:any-link {
+  color: var(--ssgrid-text-default);
+}
+
+.ssgrid-block-header {
+  /* Queried by the status-pill rule at the foot of this file. */
+  container: ssgrid-block-header / inline-size;
+  display: flex;
+
+  /* A column can be narrower than the header's own furniture: at a 4/12 span
+     in a slim CMS panel there is under 70px of content box, less than the
+     drag handle, type chip and kebab need between them. Folding the action
+     row into the menu cannot rescue that, and a title floor makes it worse —
+     so let the row wrap and the card grow taller rather than spill its
+     contents past the card edge. */
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ssgrid-space-2);
+  padding: var(--ssgrid-space-4);
+}
+
+/* Chip treatment comes from `.ssgrid-type-icon-chip` in the markup; title
+   treatment from `.ssgrid-title`. No link reset on the title: the whole card
+   is the anchor, so the title never nests one of its own. */
+.ssgrid-block-title {
+  margin: 0;
+}
+
+/* Body — the summary text. Only rendered when the element has a summary; the
+   1px top border is what visually separates it from the header. */
+.ssgrid-block-body {
+  margin: 0;
+  padding: var(--ssgrid-space-4);
+  border-top: 1px solid var(--ssgrid-border-default);
+  font-size: var(--ssgrid-font-size-body);
+  font-weight: var(--ssgrid-font-weight-regular);
+  line-height: var(--ssgrid-line-height-relaxed);
+  color: var(--ssgrid-text-default);
+  overflow-wrap: anywhere;
+}
+
+/* The status pill is an enhancement, not the signal — the ring already says
+   "unpublished". Measured: this header wraps at 414px of content box with the
+   pill present and survives to 358px without it, so drop the pill just above
+   the former rather than let it push the action row onto a second line. The
+   declarations are `.ssgrid-visually-hidden`'s — a class cannot be applied
+   conditionally by a container query, so they repeat here. */
+@container ssgrid-block-header (width < 420px) {
+  .ssgrid-status-badge {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

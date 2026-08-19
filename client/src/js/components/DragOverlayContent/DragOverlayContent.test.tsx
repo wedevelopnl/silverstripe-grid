@@ -125,7 +125,7 @@ describe('DragOverlayContent', () => {
     render(<DragOverlayContent node={column} type="column" />)
 
     const icon = screen.getByTestId('drag-overlay-column-icon')
-    expect(icon).toHaveClass('ssgrid-drag-overlay__icon')
+    expect(icon).toHaveClass('ssgrid-drag-overlay-icon')
     expect(icon).toHaveClass('font-icon-block-column')
   })
 
@@ -143,7 +143,7 @@ describe('DragOverlayContent', () => {
     render(<DragOverlayContent node={element} type="element" />)
 
     const icon = screen.getByTestId('drag-overlay-element-icon')
-    expect(icon).toHaveClass('ssgrid-drag-overlay__icon')
+    expect(icon).toHaveClass('ssgrid-drag-overlay-icon')
     expect(icon).toHaveClass('font-icon-block-content')
   })
 

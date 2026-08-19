@@ -85,7 +85,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
   // A margin offset before this column widens the gutter the "+ insert here"
   // handle sits in; shift the handle (as a % of the column width) back to that
   // gutter's centre so it doesn't hug the column edge. Grid-placement offsets
-  // are left alone — see _column-insert.scss.
+  // are left alone — see column-insert.css.
   const gutterShiftPct =
     // Stryker disable next-line ConditionalExpression,EqualityOperator: Equivalent — `offset > 0` only differs at offset === 0, where the true branch (0/width)*50 equals the else 0; ColumnInsertButton omits the shift var for a falsy 0 either way
     getOffsetStrategy() === 'margin' && settings.offset > 0
@@ -198,7 +198,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
       layoutSettings={
         <>
           <GridSettingsPicker
-            className="ssgrid-column__badge"
+            className="ssgrid-column-badge ssgrid-focus-ring"
             label={widthLabel}
             options={widthOptions}
             selectedValue={widthSelectedValue}
@@ -207,7 +207,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
             onSelect={handleWidthSelect}
           />
           <GridSettingsPicker
-            className="ssgrid-column__badge"
+            className="ssgrid-column-badge ssgrid-focus-ring"
             label={offsetLabel}
             options={offsetOptions}
             selectedValue={settings.offset}
@@ -221,7 +221,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
         hasAllowedTypes ? (
           <button
             type="button"
-            className="ssgrid-add-child__button"
+            className="ssgrid-add-child-button ssgrid-focus-ring"
             data-testid="add-content-button"
             onClick={handleOpenPicker}
           >

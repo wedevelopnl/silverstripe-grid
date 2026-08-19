@@ -73,7 +73,7 @@ const ColumnInsertButton = memo(function ColumnInsertButtonComponent(
   return (
     <button
       type="button"
-      className="ssgrid-column-insert"
+      className="ssgrid-column-insert ssgrid-focus-ring"
       data-placement={props.placement}
       data-testid={`column-insert-${props.placement}`}
       style={shiftStyle}
@@ -84,8 +84,8 @@ const ColumnInsertButton = memo(function ColumnInsertButtonComponent(
       title={label}
       aria-label={label}
     >
-      <span className="ssgrid-column-insert__dot" aria-hidden="true" />
-      <i className="ssgrid-column-insert__icon font-icon-plus" aria-hidden="true" />
+      <span className="ssgrid-column-insert-dot" aria-hidden="true" />
+      <i className="ssgrid-column-insert-icon font-icon-plus" aria-hidden="true" />
     </button>
   )
 })

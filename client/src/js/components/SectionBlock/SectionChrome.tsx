@@ -48,14 +48,14 @@ export default function SectionChrome({
     <section
       ref={setNodeRef}
       style={style}
-      className="ssgrid-section"
+      className="ssgrid-section ssgrid-card-surface"
       data-testid="section-block"
       data-status={status}
       data-descendant-unpublished={hasUnpublishedDescendant ? '' : undefined}
       data-collapsed={isCollapsed ? '' : undefined}
       data-drop-target={dropTarget ? '' : undefined}
     >
-      <div className="ssgrid-section__header" data-testid="section-header">
+      <div className="ssgrid-section-header" data-testid="section-header">
         {leading}
         <CollapseToggle
           isCollapsed={isCollapsed}
@@ -63,7 +63,7 @@ export default function SectionChrome({
           label={title}
           controlsId={bodyId}
         />
-        <h2 className="ssgrid-section__title" data-testid="section-title">
+        <h2 className="ssgrid-section-title ssgrid-title" data-testid="section-title">
           {titleHref !== undefined ? (
             <a href={titleHref} data-testid="section-edit-link">
               {title}
@@ -80,7 +80,7 @@ export default function SectionChrome({
       </div>
       <div
         id={bodyId}
-        className="ssgrid-section__body"
+        className="ssgrid-section-body"
         data-testid="section-body"
         data-dnd-container=""
       >

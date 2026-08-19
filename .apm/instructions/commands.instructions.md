@@ -12,7 +12,7 @@ applyTo: "**/*"
 | `npm run build` | Vite production build |
 | `npm run dev` | Vite watch mode for development |
 | `npm run test` | Run Vitest tests |
-| `npm run lint` | Biome lint (JS/TS) + Stylelint (SCSS) |
+| `npm run lint` | Biome lint (JS/TS) + Stylelint (CSS) |
 | `npm run lint:js` | Biome lint only (no fix) |
 | `npm run lint:js:fix` | Biome lint with auto-fix |
 | `npm run lint:css` | Stylelint only (no fix) |

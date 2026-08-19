@@ -1,7 +1,7 @@
 <div id="$HolderID" class="field ssgrid-grid-settings-field $extraClass">
   <% if $Title %><label class="left">$Title</label><% end_if %>
   <div class="middleColumn">
-    <table class="table ssgrid-grid-settings-field__overrides">
+    <table class="table ssgrid-grid-settings-field-overrides">
       <thead>
         <tr>
           <th>Viewport</th>
@@ -14,8 +14,8 @@
       <tbody>
         <% loop $ViewportData %>
           <% if $IsDefault %>
-            <tr class="is-default is-overridden">
-              <td>$Label <span class="ssgrid-grid-settings-field__badge">default</span></td>
+            <tr data-default data-overridden>
+              <td>$Label <span class="ssgrid-grid-settings-field-badge">default</span></td>
               <td></td>
               <td>
                 <select name="{$FieldName}[$Key][width]">
@@ -41,14 +41,14 @@
               </td>
             </tr>
           <% else %>
-            <tr class="<% if $Override %>is-overridden<% end_if %>">
+            <tr<% if $Override %> data-overridden<% end_if %>>
               <td>$Label</td>
               <td>
                 <input
                   type="checkbox"
                   name="{$FieldName}[$Key][override]"
                   value="1"
-                  class="ssgrid-grid-settings-field__override-toggle"
+                  class="ssgrid-grid-settings-field-override-toggle"
                   <% if $Override %>checked="checked"<% end_if %>
                 />
               </td>

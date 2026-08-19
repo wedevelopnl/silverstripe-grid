@@ -74,7 +74,8 @@ declare global {
     trigger(eventType: string, extraParameters?: unknown): JQueryEntwineElement
     addClass(className: string): JQueryEntwineElement
     removeClass(className: string): JQueryEntwineElement
-    toggleClass(className: string, state: boolean): JQueryEntwineElement
+    attr(name: string, value: string): JQueryEntwineElement
+    removeAttr(name: string): JQueryEntwineElement
     length: number
     _super(): void
     [index: number]: HTMLElement

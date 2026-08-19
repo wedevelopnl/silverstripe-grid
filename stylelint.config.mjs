@@ -1,14 +1,14 @@
 export default {
-  extends: ['stylelint-config-standard-scss'],
+  extends: ['stylelint-config-standard'],
   rules: {
-    // BEM-like selectors: .block__element--modifier
+    // Flat kebab-case selectors (ssgrid-block-part). BEM's __/-- separators are
+    // deliberately out: parts are full flat names, modifiers live on data-/aria-
+    // attributes.
     'selector-class-pattern': [
-      '^[a-z][a-z0-9]*(-[a-z0-9]+)*(__[a-z0-9]+(-[a-z0-9]+)*)?(--[a-z0-9]+(-[a-z0-9]+)*)?$',
-      { message: 'Expected class selector to follow BEM pattern' },
+      '^[a-z][a-z0-9]*(-[a-z0-9]+)*$',
+      { message: 'Expected class selector to be flat kebab-case (no __ or -- separators)' },
     ],
-    // Existing code nests up to 4 levels
+    // Existing code nests up to 4 levels (native CSS nesting)
     'max-nesting-depth': 4,
-    // Allow @use/@forward (standard-scss handles this, but be explicit)
-    'scss/at-rule-no-unknown': true,
   },
 };
