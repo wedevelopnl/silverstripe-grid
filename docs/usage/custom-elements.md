@@ -161,13 +161,13 @@ You'll usually also want a holder template. The default holder (`WeDevelop/Grid/
 
 ## 5. How the render chain composes
 
-When a page template loops sections, each element's `forTemplate()` resolves through:
+When a page template loops a zone, each element's `forTemplate()` resolves through:
 
 1. `$Me` (on the element) → `forTemplate()` → renders the `*_holder.ss` template
 2. The holder template refers to `$Element` → renders the inner `*.ss` template
 
 ```silverstripe
-<% loop $Sections %>
+<% loop $GridZone('main') %>
     $Me   {# renders Section_holder.ss, which loops rows, etc. #}
 <% end_loop %>
 ```
