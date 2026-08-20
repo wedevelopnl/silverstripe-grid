@@ -4,6 +4,16 @@ import { resetFixtures } from '../helpers/fixtures'
 test.describe('Build page from scratch', () => {
   // The page title "E2E Build Test" generates URL segment "e2e-build-test",
   // which resetFixtures identifies and deletes by the "e2e-" prefix.
+  //
+  // Reset before every attempt, not only after the spec: the frontend URL below
+  // is hardcoded, so an attempt that fails after saving leaves that segment
+  // taken. SilverStripe would hand the retry's page "e2e-build-test-2", and the
+  // retry would then assert against the previous attempt's unpublished draft —
+  // failing on "Page not found" instead of retrying the flake cleanly.
+  test.beforeEach(async ({ request }) => {
+    await resetFixtures(request)
+  })
+
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
   })
