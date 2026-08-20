@@ -82,8 +82,8 @@ See the [E2E fixture protocol](docs/testing/e2e-fixtures.md) for the YAML fixtur
 | `task qa-js` | JS-only QA (Biome, format check, typecheck, Vitest, Vite build) |
 | `task analyse` | PHPStan static analysis (level max + Silverstan, 100% type coverage) |
 | `task rector-dry` / `task rector` | Preview / apply Rector refactorings |
-| `npm run lint` | Biome (JS/TS) + Stylelint (SCSS) |
-| `npm run format` | Biome format --write (JS/TS) |
+| `npm run lint` | Biome (JS/TS) + Stylelint (CSS) |
+| `npm run format` | Biome format --write (JS/TS + CSS) |
 | `npm run typecheck` | TypeScript type checking |
 | `npm run i18n:check` | Dry-run string collection + locale parity check |
 
@@ -106,8 +106,14 @@ CI runs the same suite, plus `npm run i18n:check` and a check that the committed
 - Use the `@` path alias for imports from `client/src/js/`
 - Follow the existing component patterns in `client/src/js/components/`
 
-**CSS / SCSS**
+**CSS**
 
+- Plain modern CSS in `client/src/styles/` — no Sass. Native nesting is used for
+  pseudo/state selectors only; add new files to the `@import` list in `bundle.css`
+- Flat kebab-case class names (`ssgrid-block-part`). BEM `__`/`--` separators are
+  rejected by Stylelint's `selector-class-pattern`; variants and state live on
+  `data-`/`aria-` attributes, and shared treatments are utility classes
+  parameterised via `--ssgrid-*` custom properties
 - 2-space indentation, must pass Stylelint
 
 **General**

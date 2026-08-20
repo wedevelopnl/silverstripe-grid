@@ -17,7 +17,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
  * while doing it), which tripled the stylesheet and defeated `unicode-range`
  * — an inlined @font-face is fetched whether or not the page uses a character
  * from its subset. So `fonts.css` points at `../fonts/…`, a path that does
- * not exist relative to the SCSS source; Vite logs that it "didn't resolve at
+ * not resolve from `client/src/styles/`; Vite logs that it "didn't resolve at
  * build time" and emits the URL verbatim, which is what we want. This plugin
  * then puts real files where that URL lands, next to `dist/styles/`.
  */
