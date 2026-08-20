@@ -5,21 +5,16 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
-use SilverStripe\PolyExecution\PolyOutput;
 use SilverStripe\Versioned\Versioned;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputDefinition;
-use Symfony\Component\Console\Output\BufferedOutput;
 use TractorCow\Fluent\Extension\FluentIsolatedExtension;
 use TractorCow\Fluent\Model\Locale;
 use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Model\Row;
-use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
+use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 
 /**
  * The plain `migrate-grid` task must refuse on a Fluent site whose grid is
@@ -30,6 +25,8 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 #[CoversClass(MigrateGridTask::class)]
 final class MigrateGridFluentGuardTest extends SapphireTest
 {
+    use DisablesAutoScaffolding;
+
     protected static $fixture_file = __DIR__ . '/Fixture/migration-locales.yml';
 
     /** @var array<class-string, list<class-string>> */
@@ -48,8 +45,7 @@ final class MigrateGridFluentGuardTest extends SapphireTest
     {
         parent::setUp();
         Versioned::set_stage(Versioned::DRAFT);
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
+        $this->disableAutoScaffolding();
         Locale::clearCached();
 
         $this->seeder = new LegacyTableSeeder();
@@ -74,22 +70,15 @@ final class MigrateGridFluentGuardTest extends SapphireTest
         $this->seeder->seedElement(7500, 100, self::CONTENT_CLASS, 1, ['Title' => 'Single', 'SizeMD' => 12]);
         $this->seeder->seedContentMedia(7500);
 
-        $task = new MigrateGridTask();
-        $definition = new InputDefinition($task->getOptions());
         // --dry-run bypasses the confirmation gate, so any FAILURE here is the
         // preflight guard (which runs before the gate), not the gate itself.
-        $input = new ArrayInput([
+        $result = TaskRunner::run(new MigrateGridTask(), [
             '--default-viewport' => 'MD',
             '--zone' => self::ZONE,
             '--dry-run' => true,
-        ], $definition);
-        $input->setInteractive(false);
-        $buffered = new BufferedOutput();
-        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+        ]);
 
-        $exitCode = $task->execute($input, $output);
-
-        self::assertSame(Command::FAILURE, $exitCode);
-        self::assertStringContainsString('migrate-grid-with-fluent', $buffered->fetch());
+        self::assertSame(Command::FAILURE, $result['exitCode']);
+        self::assertStringContainsString('migrate-grid-with-fluent', $result['output']);
     }
 }

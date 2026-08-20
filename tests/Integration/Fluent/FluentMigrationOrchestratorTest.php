@@ -16,6 +16,7 @@ use WeDevelop\Grid\Migration\Service\LegacyLocalisationDetector;
 use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 use WeDevelop\Grid\Tests\Integration\Support\RejectAllWritesExtension;
 
 /**
@@ -39,20 +40,6 @@ final class FluentMigrationOrchestratorTest extends FluentMigrationTestCase
         );
     }
 
-    /** @return object{messages: list<array{level: string, message: string, context: array<string, mixed>}>} */
-    private function recordingLogger(): object
-    {
-        return new class () extends NullLogger {
-            /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
-            public array $messages = [];
-
-            public function log($level, string|\Stringable $message, array $context = []): void
-            {
-                $this->messages[] = ['level' => (string) $level, 'message' => (string) $message, 'context' => $context];
-            }
-        };
-    }
-
     public function testLogsOnePerLocalePassAndMarksOnlyTheDefaultLocale(): void
     {
         $pageId = $this->pageId();
@@ -61,7 +48,7 @@ final class FluentMigrationOrchestratorTest extends FluentMigrationTestCase
         // A localised model yields a multi-locale plan; the None model would collapse to one.
         $this->seeder->addFieldLocalisedTables();
 
-        $logger = $this->recordingLogger();
+        $logger = new RecordingLogger();
         $this->makeOrchestrator($logger)->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);
 
         $passes = [];

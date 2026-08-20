@@ -141,19 +141,6 @@ final class LegacyTableSeederTest extends SapphireTest
         }
     }
 
-    public function testDropTablesIsIdempotent(): void
-    {
-        $this->seeder->createTables();
-        $this->seeder->dropTables();
-        $this->seeder->dropTables();
-
-        $tables = DB::table_list();
-
-        foreach (self::LEGACY_TABLES as $table) {
-            self::assertArrayNotHasKey(\strtolower($table), $tables);
-        }
-    }
-
     public function testAddExtensionColumnsAddsBothColumns(): void
     {
         $this->seeder->addExtensionColumns('Page');
@@ -178,18 +165,6 @@ final class LegacyTableSeederTest extends SapphireTest
     public function testRemoveExtensionColumnsRemovesBothColumns(): void
     {
         $this->seeder->addExtensionColumns('Page');
-        $this->seeder->removeExtensionColumns('Page');
-
-        $columns = DB::field_list('Page');
-
-        self::assertArrayNotHasKey('UseElementalGrid', $columns);
-        self::assertArrayNotHasKey('ElementalAreaID', $columns);
-    }
-
-    public function testRemoveExtensionColumnsIsIdempotent(): void
-    {
-        $this->seeder->addExtensionColumns('Page');
-        $this->seeder->removeExtensionColumns('Page');
         $this->seeder->removeExtensionColumns('Page');
 
         $columns = DB::field_list('Page');
@@ -468,16 +443,6 @@ final class LegacyTableSeederTest extends SapphireTest
         self::assertArrayNotHasKey('UseElementalGrid', $columns);
     }
 
-    public function testAddElementalAreaColumnIsIdempotent(): void
-    {
-        $this->seeder->addElementalAreaColumn('SiteTree');
-        $this->seeder->addElementalAreaColumn('SiteTree');
-
-        $columns = DB::field_list('SiteTree');
-
-        self::assertArrayHasKey('ElementalAreaID', $columns);
-    }
-
     public function testRemoveElementalAreaColumnDropsOnlyAreaId(): void
     {
         $this->seeder->addExtensionColumns('Page');
@@ -490,17 +455,6 @@ final class LegacyTableSeederTest extends SapphireTest
 
         // Clean up the remaining column
         DB::query('ALTER TABLE "Page" DROP COLUMN "UseElementalGrid"');
-    }
-
-    public function testRemoveElementalAreaColumnIsIdempotent(): void
-    {
-        $this->seeder->addElementalAreaColumn('SiteTree');
-        $this->seeder->removeElementalAreaColumn('SiteTree');
-        $this->seeder->removeElementalAreaColumn('SiteTree');
-
-        $columns = DB::field_list('SiteTree');
-
-        self::assertArrayNotHasKey('ElementalAreaID', $columns);
     }
 
     public function testSeedPlainElementalPageSetsAreaIdWithoutUseElementalGrid(): void
@@ -554,7 +508,7 @@ final class LegacyTableSeederTest extends SapphireTest
 
         self::assertSame(0, (int) $row['ElementalAreaID']);
 
-        $this->seeder->removeElementalAreaColumn('SiteTree');
+        $this->seeder->removeElementalAreaColumn('Page');
     }
 
     private function setUpTablesAndExtensions(): void

@@ -63,6 +63,32 @@ final class GridTreeFactory
         return $column;
     }
 
+    /**
+     * Build the full container ancestry in one call: Section > Row > Column.
+     *
+     * @return array{section: Section, row: Row, column: Column}
+     */
+    public static function containerTree(SiteTree $page, string $zone = 'main'): array
+    {
+        $section = self::section($page, $zone);
+        $row = self::row($section);
+        $column = self::column($row);
+
+        return ['section' => $section, 'row' => $row, 'column' => $column];
+    }
+
+    /**
+     * Build a complete element tree: Section > Row > Column > ContentElement.
+     *
+     * @return array{section: Section, row: Row, column: Column, content: ContentElement}
+     */
+    public static function treeFor(SiteTree $page, string $zone = 'main'): array
+    {
+        $tree = self::containerTree($page, $zone);
+
+        return [...$tree, 'content' => self::contentElement($tree['column'])];
+    }
+
     public static function contentElement(Column $column, int $sort = 0, string $title = ''): ContentElement
     {
         $element = ContentElement::create();

@@ -6,16 +6,14 @@ namespace WeDevelop\Grid\Tests\Integration\Model;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Model\Column;
-use WeDevelop\Grid\Model\Row;
-use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\GridSettingsResolver;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridSettings;
@@ -24,14 +22,15 @@ use WeDevelop\Grid\Value\ViewportConfig;
 #[CoversClass(Column::class)]
 final class ColumnTest extends SapphireTest
 {
+    use DisablesAutoScaffolding;
+
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
     protected function setUp(): void
     {
         parent::setUp();
         Versioned::set_stage(Versioned::DRAFT);
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
+        $this->disableAutoScaffolding();
 
         // Pin the active adapter to a concrete instance of the default preset
         // (Tailwind) so column-class output is deterministic regardless of the
@@ -42,11 +41,9 @@ final class ColumnTest extends SapphireTest
     public function testGridSettingsInitializedOnFirstWrite(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
 
         // Create column without explicit GridSettings — onBeforeWrite should initialize
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         // Reload from DB to verify settings were persisted, not just the in-memory fallback
         $reloaded = Column::get()->byID($column->ID);
@@ -70,14 +67,23 @@ final class ColumnTest extends SapphireTest
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
 
-        $custom = GridSettings::initial(12)->withOverride('md', new ViewportConfig(6, 2, false));
+        $custom = (new GridSettings(new ViewportConfig(8, 2, true), []))
+            ->withOverride('md', new ViewportConfig(6, 2, false));
         $column = GridTreeFactory::column($row, gridSettings: $custom);
 
-        // Write again
+        // Write again with a title change
         $column->Title = 'Updated';
         $column->write();
 
-        $settings = $column->getGridSettings();
+        // Reload from DB: neither the custom default nor the override may be
+        // re-initialized away by the second write.
+        $reloaded = Column::get()->byID($column->ID);
+        self::assertInstanceOf(Column::class, $reloaded);
+
+        $settings = $reloaded->getGridSettings();
+        self::assertSame(8, $settings->default->width);
+        self::assertSame(2, $settings->default->offset);
+        self::assertTrue($settings->default->visible);
         self::assertSame(6, $settings->overrides['md']->width);
         self::assertSame(2, $settings->overrides['md']->offset);
         self::assertFalse($settings->overrides['md']->visible);
@@ -104,25 +110,6 @@ final class ColumnTest extends SapphireTest
         self::assertSame(6, $settings->overrides['md']->width);
     }
 
-    public function testSetGridSettingsWithJsonString(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
-
-        $json = '{"default":{"width":8,"offset":1,"visible":true},"overrides":{}}';
-        $column->setGridSettings($json);
-        $column->write();
-
-        $reloaded = Column::get()->byID($column->ID);
-        $settings = $reloaded->getGridSettings();
-
-        self::assertSame(8, $settings->default->width);
-        self::assertSame(1, $settings->default->offset);
-        self::assertTrue($settings->default->visible);
-    }
-
     public function testGetGridSettingsReturnsInitialWhenNoData(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -142,10 +129,7 @@ final class ColumnTest extends SapphireTest
     public function testGetChildrenReturnsElements(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
-        $leaf = GridTreeFactory::contentElement($column);
+        ['column' => $column, 'content' => $leaf] = GridTreeFactory::treeFor($page);
 
         $children = $column->getChildren();
         self::assertCount(1, $children);
@@ -172,23 +156,7 @@ final class ColumnTest extends SapphireTest
     public function testGetColumnClassesReturnsNonEmptyString(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
-
-        $classes = $column->getColumnClasses();
-
-        self::assertNotEmpty($classes);
-    }
-
-    public function testGetColumnClassesWithOverrides(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-
-        $settings = GridSettings::initial(12)->withOverride('md', new ViewportConfig(6, 0, true));
-        $column = GridTreeFactory::column($row, gridSettings: $settings);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $classes = $column->getColumnClasses();
 
@@ -265,35 +233,10 @@ final class ColumnTest extends SapphireTest
     public function testGetCMSFieldsIncludesGridTab(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $fields = $column->getCMSFields();
 
         self::assertNotNull($fields->fieldByName('Root.Grid'));
-    }
-
-    public function testGridSettingsNotReInitializedOnSubsequentWrite(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-
-        $custom = new GridSettings(new ViewportConfig(8, 2, true), []);
-        $column = GridTreeFactory::column($row, gridSettings: $custom);
-
-        // Write again with a title change
-        $column->Title = 'Changed';
-        $column->write();
-
-        // Reload from DB
-        $reloaded = Column::get()->byID($column->ID);
-        self::assertInstanceOf(Column::class, $reloaded);
-
-        $settings = $reloaded->getGridSettings();
-        self::assertSame(8, $settings->default->width);
-        self::assertSame(2, $settings->default->offset);
-        self::assertTrue($settings->default->visible);
     }
 }

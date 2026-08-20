@@ -730,7 +730,7 @@ final class FieldMapperTest extends TestCase
     public function testDefaultViewportVisibilityMapping(?string $rawVisibility, bool $expectedVisible, bool $expectsWarning): void
     {
         $warnings = [];
-        $logger = $this->createMock(LoggerInterface::class);
+        $logger = $this->createStub(LoggerInterface::class);
         $logger->method('warning')->willReturnCallback(
             static function (string|\Stringable $message) use (&$warnings): void {
                 $warnings[] = (string) $message;
@@ -815,7 +815,7 @@ final class FieldMapperTest extends TestCase
         // hidden override; it falls back to the default's visibility (true here)
         // so no visibility-driven override is produced, and a warning is logged.
         $warnings = [];
-        $logger = $this->createMock(LoggerInterface::class);
+        $logger = $this->createStub(LoggerInterface::class);
         $logger->method('warning')->willReturnCallback(
             static function (string|\Stringable $message, array $ctx) use (&$warnings): void {
                 $warnings[] = ['message' => (string) $message, 'context' => $ctx];
@@ -951,25 +951,7 @@ final class FieldMapperTest extends TestCase
         $logger->expects(self::never())->method('warning');
 
         $mapper = new FieldMapper(logger: $logger);
-        $mapper->mapMediaFields(new LegacyMediaData([
-            'ContentColumns'             => '',
-            'ContentVerticalAlign'       => '',
-            'ExtraColumnGap'             => 0,
-            'MediaType'                  => '',
-            'MediaCaption'               => '',
-            'MediaRatio'                 => null,
-            'MediaPosition'              => null,
-            'MediaImageID'               => null,
-            'MediaVideoFullURL'          => '',
-            'MediaVideoProvider'         => '',
-            'MediaVideoHasOverlay'       => false,
-            'MediaVideoCustomThumbnailID' => 0,
-            'MediaVideoEmbeddedName'     => '',
-            'MediaVideoEmbeddedURL'      => '',
-            'MediaVideoEmbeddedDescription' => '',
-            'MediaVideoEmbeddedThumbnail' => '',
-            'MediaVideoEmbeddedCreated'  => '',
-        ]));
+        $mapper->mapMediaFields(new LegacyMediaData(self::allMediaFieldsPresent()));
     }
 
     public function testNonNumericContentColumnsLogsWarningAndResetsToZero(): void

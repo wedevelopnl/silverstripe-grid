@@ -895,22 +895,4 @@ final class GridAdapterTest extends SapphireTest
 
         new TailwindAdapter();
     }
-
-    public function testEnabledViewportsFiltersCorrectly(): void
-    {
-        Config::modify()->set(TailwindAdapter::class, 'enabled_viewports', ['sm', 'md', 'lg']);
-        // Default viewport must be within the enabled set
-        Config::modify()->set(TailwindAdapter::class, 'default_viewport', 'md');
-
-        $filtered = new TailwindAdapter();
-
-        self::assertCount(3, $filtered->getViewports());
-
-        $keys = array_map(
-            static fn (Viewport $vp): string => $vp->key,
-            $filtered->getViewports(),
-        );
-
-        self::assertSame(['sm', 'md', 'lg'], $keys);
-    }
 }

@@ -7,26 +7,28 @@ namespace WeDevelop\Grid\Tests\Integration\Forms;
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Control\Controller;
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Forms\GridEditorField;
-use WeDevelop\Grid\Model\Row;
-use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 
 #[CoversClass(GridEditorField::class)]
 final class GridEditorFieldTest extends SapphireTest
 {
+    use DisablesAutoScaffolding;
+
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
     protected function setUp(): void
     {
         parent::setUp();
         Versioned::set_stage(Versioned::DRAFT);
+        $this->disableAutoScaffolding();
     }
 
     public function testConstructorSetsPageIdAndZone(): void
@@ -69,13 +71,8 @@ final class GridEditorFieldTest extends SapphireTest
 
     public function testSaveIntoIsNoOp(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $field = new GridEditorField('GridEditor', $page->ID);
 
@@ -102,14 +99,7 @@ final class GridEditorFieldTest extends SapphireTest
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $field = new GridEditorField('GridEditor', $page->ID);
-        $form = Form::create(
-            Controller::create(),
-            'TestForm',
-            FieldList::create($field),
-            FieldList::create(),
-        );
-        $form->setFormAction('/test');
-        $form->loadDataFrom($page);
+        $form = $this->attachToForm($field, $page);
 
         self::assertSame($page, $form->getRecord());
 
@@ -141,13 +131,7 @@ final class GridEditorFieldTest extends SapphireTest
         // SECOND nullsafe operator is what protects the Version read. The no-form test
         // above short-circuits on the first operator and never exercises this.
         $field = new GridEditorField('GridEditor', 42);
-        $form = Form::create(
-            Controller::create(),
-            'TestForm',
-            FieldList::create($field),
-            FieldList::create(),
-        );
-        $form->setFormAction('/test');
+        $form = $this->attachToForm($field);
         self::assertNull($form->getRecord());
 
         $readonly = $field->performReadonlyTransformation();
@@ -291,9 +275,10 @@ final class GridEditorFieldTest extends SapphireTest
     }
 
     /**
-     * Attach a field to a minimal Form so Link() resolves.
+     * Attach a field to a minimal Form so Link() resolves, optionally loading
+     * a record so the form has one to expose via getRecord().
      */
-    private function attachToForm(GridEditorField $field): void
+    private function attachToForm(GridEditorField $field, ?DataObject $record = null): Form
     {
         $form = Form::create(
             Controller::create(),
@@ -302,5 +287,11 @@ final class GridEditorFieldTest extends SapphireTest
             FieldList::create(),
         );
         $form->setFormAction('/test');
+
+        if ($record !== null) {
+            $form->loadDataFrom($record);
+        }
+
+        return $form;
     }
 }

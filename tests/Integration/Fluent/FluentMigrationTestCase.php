@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use Psr\Log\NullLogger;
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use TractorCow\Fluent\Extension\FluentIsolatedExtension;
@@ -20,10 +19,10 @@ use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 
 /**
  * Shared lifecycle and read helpers for the per-mode Fluent migration tests.
@@ -40,6 +39,7 @@ use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
 abstract class FluentMigrationTestCase extends SapphireTest
 {
     use CleansGridTables;
+    use DisablesAutoScaffolding;
 
     protected static $fixture_file = __DIR__ . '/Fixture/migration-locales.yml';
 
@@ -61,8 +61,7 @@ abstract class FluentMigrationTestCase extends SapphireTest
     {
         parent::setUp();
         Versioned::set_stage(Versioned::DRAFT);
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
+        $this->disableAutoScaffolding();
         Locale::clearCached();
 
         $this->seeder = new LegacyTableSeeder();

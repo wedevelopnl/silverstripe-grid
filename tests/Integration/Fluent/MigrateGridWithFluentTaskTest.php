@@ -6,14 +6,11 @@ namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Dev\SapphireTest;
-use SilverStripe\PolyExecution\PolyOutput;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputDefinition;
-use Symfony\Component\Console\Output\BufferedOutput;
 use TractorCow\Fluent\Model\Locale;
 use WeDevelop\Grid\Migration\Task\MigrateGridWithFluentTask;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 
 /**
  * Preflight behaviour for the Fluent migration task.
@@ -61,25 +58,18 @@ final class MigrateGridWithFluentTaskTest extends SapphireTest
         $this->seeder->addFieldLocalisedTables();
         $this->seeder->addLocaleIdColumn();
 
-        $task = new MigrateGridWithFluentTask();
-        $definition = new InputDefinition($task->getOptions());
         // Interactive with an empty input stream: if execution ever reached the
         // confirmation prompt it would read EOF, default to "no", and return
         // SUCCESS ("aborted"). Asserting FAILURE proves preflight caught the
         // ambiguous config first — before the prompt.
-        $input = new ArrayInput(['--default-viewport' => 'MD', '--zone' => 'main'], $definition);
-        $input->setInteractive(true);
-        $stream = fopen('php://memory', 'r+');
-        self::assertIsResource($stream);
-        $input->setStream($stream);
+        $result = TaskRunner::runInteractive(
+            new MigrateGridWithFluentTask(),
+            ['--default-viewport' => 'MD', '--zone' => 'main'],
+            '',
+        );
 
-        $buffered = new BufferedOutput();
-        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
-
-        $result = $task->execute($input, $output);
-
-        self::assertSame(Command::FAILURE, $result);
-        self::assertStringContainsString('Ambiguous legacy localisation', $buffered->fetch());
+        self::assertSame(Command::FAILURE, $result['exitCode']);
+        self::assertStringContainsString('Ambiguous legacy localisation', $result['output']);
     }
 
     public function testRefusesWhenNoDefaultLocaleResolves(): void
@@ -93,27 +83,20 @@ final class MigrateGridWithFluentTaskTest extends SapphireTest
         Locale::get()->removeAll();
         Locale::clearCached();
 
-        $task = new MigrateGridWithFluentTask();
-        $definition = new InputDefinition($task->getOptions());
         // --dry-run bypasses the confirmation gate, so any FAILURE here is the
         // preflight guard (which runs before the gate), not the gate itself.
-        $input = new ArrayInput([
+        $result = TaskRunner::run(new MigrateGridWithFluentTask(), [
             '--default-viewport' => 'MD',
             '--zone' => 'main',
             '--dry-run' => true,
-        ], $definition);
-        $input->setInteractive(false);
-        $buffered = new BufferedOutput();
-        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+        ]);
 
-        $exitCode = $task->execute($input, $output);
-
-        self::assertSame(Command::FAILURE, $exitCode);
+        self::assertSame(Command::FAILURE, $result['exitCode']);
         self::assertStringContainsString(
             'No Fluent default locale resolves; configure at least one locale '
             . '(and a global default) before migrating per locale, or use '
             . '"migrate-grid" for a single-locale site.',
-            $buffered->fetch(),
+            $result['output'],
         );
     }
 }

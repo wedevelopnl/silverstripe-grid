@@ -12,22 +12,28 @@ use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Value\ContainerType;
 
 #[CoversClass(Section::class)]
 final class SectionTest extends SapphireTest
 {
+    use DisablesAutoScaffolding;
+
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
     protected function setUp(): void
     {
         parent::setUp();
         Versioned::set_stage(Versioned::DRAFT);
+        $this->disableAutoScaffolding();
     }
 
     public function testAutoScaffoldCreatesRowAndColumn(): void
     {
+        $this->enableAutoScaffolding();
+
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
@@ -45,6 +51,8 @@ final class SectionTest extends SapphireTest
 
     public function testAutoScaffoldIdempotent(): void
     {
+        $this->enableAutoScaffolding();
+
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
@@ -60,9 +68,6 @@ final class SectionTest extends SapphireTest
 
     public function testAutoScaffoldDisabledViaConfig(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
@@ -71,7 +76,8 @@ final class SectionTest extends SapphireTest
 
     public function testAutoScaffoldSkippedOnLiveStage(): void
     {
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
+        // Section scaffolding stays ON so the LIVE-stage guard is what prevents it
+        Config::modify()->set(Section::class, 'auto_scaffold', true);
 
         $page = $this->objFromFixture(Page::class, 'test_page');
 
@@ -88,9 +94,6 @@ final class SectionTest extends SapphireTest
 
     public function testAutoScaffoldSkippedWhenChildrenExist(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
@@ -109,9 +112,6 @@ final class SectionTest extends SapphireTest
 
     public function testEnsureSortSetFiltersByZone(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
 
         $main1 = GridTreeFactory::section($page, zone: 'main');
@@ -138,9 +138,6 @@ final class SectionTest extends SapphireTest
         // Pins the `if ($this->Sort > 0) return;` guard in Section::ensureSortSet.
         // Removing it would overwrite the explicit Sort with the computed max+1 (=1
         // for the first section in the zone), losing the caller-supplied value.
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
 
         $section = GridTreeFactory::section($page, zone: 'main', sort: 5);
@@ -155,9 +152,6 @@ final class SectionTest extends SapphireTest
     {
         // Pins the `'ParentID' => $this->ParentID` filter in Section::ensureSortSet.
         // Without it, Sort would be computed across ALL pages' sections in the same zone.
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $pageA = $this->objFromFixture(Page::class, 'test_page');
         $pageB = $this->objFromFixture(Page::class, 'test_page_2');
 
@@ -178,9 +172,6 @@ final class SectionTest extends SapphireTest
 
     public function testGetChildrenReturnsRows(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
@@ -192,9 +183,6 @@ final class SectionTest extends SapphireTest
 
     public function testHasChildrenReturnsTrueWhenRowsExist(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         GridTreeFactory::row($section);
@@ -204,8 +192,6 @@ final class SectionTest extends SapphireTest
 
     public function testHasChildrenReturnsFalseWhenEmpty(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
@@ -214,9 +200,6 @@ final class SectionTest extends SapphireTest
 
     public function testGetChildCountSummary(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
@@ -236,8 +219,6 @@ final class SectionTest extends SapphireTest
 
     public function testGetContainerClasses(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
 
@@ -248,8 +229,6 @@ final class SectionTest extends SapphireTest
 
     public function testGetContainerClassesFluid(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
 
         Config::modify()->set(Section::class, 'fluid_container', true);

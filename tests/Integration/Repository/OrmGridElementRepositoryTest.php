@@ -6,7 +6,6 @@ namespace WeDevelop\Grid\Tests\Integration\Repository;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
@@ -14,11 +13,14 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Repository\OrmGridElementRepository;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 
 #[CoversClass(OrmGridElementRepository::class)]
 final class OrmGridElementRepositoryTest extends SapphireTest
 {
+    use DisablesAutoScaffolding;
+
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
     private OrmGridElementRepository $repository;
@@ -27,8 +29,7 @@ final class OrmGridElementRepositoryTest extends SapphireTest
     {
         parent::setUp();
         Versioned::set_stage(Versioned::DRAFT);
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
+        $this->disableAutoScaffolding();
 
         $this->repository = new OrmGridElementRepository();
     }
@@ -131,9 +132,7 @@ final class OrmGridElementRepositoryTest extends SapphireTest
     public function testFindByParentsWithoutZoneFilter(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['section' => $section, 'row' => $row, 'column' => $column] = GridTreeFactory::containerTree($page);
 
         // Without zone, queries GridElement::get() — returns all element types
         $results = $this->repository->findByParents(
@@ -171,6 +170,15 @@ final class OrmGridElementRepositoryTest extends SapphireTest
         self::assertSame((int) $row->ID, (int) $results[0]->ID);
     }
 
+    /**
+     * Pins the `usort` comparator (spaceship over the [Sort, ID] tuple):
+     *   - Spaceship direction (ascending): Sort=1 rows precede the Sort=2 section
+     *     even though the Page-parented section is queried first — without the
+     *     usort call, results come back in class-insertion order.
+     *   - Tuple shape [Sort, ID]: the equal-Sort rows force the ID tiebreaker,
+     *     so dropping either tuple field (or reversing the Spaceship) breaks
+     *     the exact expected order.
+     */
     public function testFindByParentsSortsMergedResultsBySortThenId(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -215,58 +223,5 @@ final class OrmGridElementRepositoryTest extends SapphireTest
         $results = $this->repository->findByParents([]);
 
         self::assertSame([], $results);
-    }
-
-    /**
-     * Pins the `usort` comparator at line 92-95:
-     *   - Spaceship direction (ascending)
-     *   - Tuple shape [Sort, ID]: removing either field breaks tie-breaking
-     *   - The call itself: without usort, results come back in class-insertion order
-     *
-     * With two parent classes feeding the result, same-Sort ties between classes
-     * force the ID tiebreaker to disambiguate, which the test asserts.
-     */
-    public function testFindByParentsSortsBySortThenIdAscending(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page, sort: 2);
-        $row = GridTreeFactory::row($section, sort: 2); // same Sort as section
-
-        // Combined query: tuple ordering must put the lower ID first.
-        $results = $this->repository->findByParents([
-            Page::class => [(int) $page->ID],
-            Section::class => [(int) $section->ID],
-        ]);
-
-        self::assertCount(2, $results);
-
-        $ids = array_map(static fn (GridElement $el): int => (int) $el->ID, $results);
-        $sorted = $ids;
-        sort($sorted);
-        self::assertSame(
-            $sorted,
-            $ids,
-            'Tuple sort [Sort, ID] ascending: reversing Spaceship or dropping ID would break this',
-        );
-    }
-
-    public function testFindByParentsSortsByPrimarySortThenId(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-
-        // Three sections with deliberately non-sequential IDs (created in this order)
-        // and Sort values that isolate primary vs. secondary keys.
-        $third = GridTreeFactory::section($page, sort: 3);
-        $first = GridTreeFactory::section($page, sort: 1);
-        $second = GridTreeFactory::section($page, sort: 2);
-
-        $results = $this->repository->findByParents([
-            Page::class => [(int) $page->ID],
-        ]);
-
-        self::assertCount(3, $results);
-        self::assertSame((int) $first->ID, (int) $results[0]->ID, 'Sort=1 must be first');
-        self::assertSame((int) $second->ID, (int) $results[1]->ID, 'Sort=2 must be second');
-        self::assertSame((int) $third->ID, (int) $results[2]->ID, 'Sort=3 must be third');
     }
 }

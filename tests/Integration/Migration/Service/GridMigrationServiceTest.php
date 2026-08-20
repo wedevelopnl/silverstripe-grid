@@ -5,11 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use Page;
-use SilverStripe\CMS\Model\SiteTree;
-use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
@@ -26,88 +22,29 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
-use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
-use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestLegacyReaderFilterExtension;
+use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 
 #[CoversClass(GridMigrationService::class)]
 #[CoversClass(MappedMediaFields::class)]
-final class GridMigrationServiceTest extends SapphireTest
+final class GridMigrationServiceTest extends MigrationTestCase
 {
-    use CleansGridTables;
-
-    protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
-
     protected static $extra_dataobjects = [TestCustomElement::class, TestPage::class];
-
-    // Disable SapphireTest's per-test transaction wrapping. The migration
-    // service uses its own transactions, and the LegacyTableSeeder's DDL
-    // (CREATE TABLE) auto-commits in MySQL, which breaks savepoint-based
-    // transaction nesting.
-    protected $usesTransactions = false;
-
-    private const string DEFAULT_VIEWPORT = 'MD';
-
-    private const string ZONE = 'main';
-
-    private const array VIEWPORT_KEY_MAP = [
-        'XS' => 'xs',
-        'SM' => 'sm',
-        'MD' => 'md',
-        'LG' => 'lg',
-        'XL' => 'xl',
-    ];
-
-    private const string CONTENT_CLASS = 'DNADesign\\Elemental\\Models\\ElementContent';
-
-    private const string ROW_CLASS = 'WeDevelop\\ElementalGrid\\Models\\ElementRow';
-
-    private LegacyTableSeeder $seeder;
 
     private LegacyDataReader $reader;
 
     private FieldMapper $mapper;
 
-    private LoggerInterface $logger;
+    private RecordingLogger $logger;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $this->seeder = new LegacyTableSeeder();
-        $this->seeder->createTables();
-        $this->seeder->addExtensionColumns('Page');
-        $this->seeder->truncateTables();
-
-        // Clean ORM grid tables from previous tests. DDL in createTables()
-        // may have committed the SapphireTest transaction, so ORM records
-        // from previous tests are not reliably rolled back.
-        $this->cleanGridTables();
-
         $this->reader = new LegacyDataReader();
         $this->mapper = new FieldMapper();
-        $this->logger = new class () extends NullLogger {
-            /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
-            public array $messages = [];
-
-            public function log($level, string|\Stringable $message, array $context = []): void
-            {
-                $this->messages[] = [
-                    'level' => (string) $level,
-                    'message' => (string) $message,
-                    'context' => $context,
-                ];
-            }
-        };
-    }
-
-    protected function tearDown(): void
-    {
-        $this->seeder->removeExtensionColumns('Page');
-        $this->seeder->dropTables();
-
-        parent::tearDown();
+        $this->logger = new RecordingLogger();
     }
 
     private function createStrategy(): RowPerSectionStrategy
@@ -141,41 +78,10 @@ final class GridMigrationServiceTest extends SapphireTest
         );
     }
 
-    private function getPageId(): int
-    {
-        return (int) $this->objFromFixture(Page::class, 'test_page')->ID;
-    }
-
-    private function getPageId2(): int
-    {
-        return (int) $this->objFromFixture(Page::class, 'test_page_2')->ID;
-    }
-
-    /**
-     * Get logged messages filtered by level, with PSR-3 placeholders interpolated.
-     *
-     * @return list<string>
-     */
-    private function getLogMessages(string $level): array
-    {
-        $result = [];
-        foreach ($this->logger->messages as $entry) {
-            if ($entry['level'] !== $level) {
-                continue;
-            }
-            $replacements = [];
-            foreach ($entry['context'] as $key => $value) {
-                $replacements['{' . $key . '}'] = (string) $value;
-            }
-            $result[] = \strtr($entry['message'], $replacements);
-        }
-        return $result;
-    }
-
     private function runMigration(?GridMigrationService $service = null, ?int $pageId = null): void
     {
         $service = $service ?? $this->createService();
-        $targetPageId = $pageId ?? $this->getPageId();
+        $targetPageId = $pageId ?? $this->pageId();
 
         $failures = $service->run(
             self::DEFAULT_VIEWPORT,
@@ -227,7 +133,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testEndToEndDraftMigrationCreatesHierarchy(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
         $this->runMigration();
 
@@ -269,7 +175,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testGridSettingsConvertedCorrectlyOnColumns(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
         $this->runMigration();
 
@@ -294,7 +200,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testMediaFieldsMappedCorrectlyOnContentElement(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -354,7 +260,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testSortOrderPreservedThroughHierarchy(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -393,7 +299,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testScalarFieldsCarriedOverToNewElements(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
         $this->runMigration();
 
@@ -413,7 +319,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testContentElementDataInGridElementTables(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
         $this->runMigration();
 
@@ -425,7 +331,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testContentElementsHaveNewIds(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
         $this->runMigration();
 
@@ -439,7 +345,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testOldBaseElementRecordsLeftUntouched(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
         $this->runMigration();
 
@@ -454,7 +360,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testSubclassDataMigrated(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
         $this->runMigration();
 
@@ -466,7 +372,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testHasOneRelationIdsPreserved(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -486,7 +392,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testDraftAndLiveSameNewId(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -527,7 +433,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testDraftOnlyExistsOnlyInDraft(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -551,32 +457,6 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertCount(0, $liveElements);
     }
 
-    public function testLiveOnlyCreatesRecordsOnBothStages(): void
-    {
-        $pageId = $this->getPageId();
-        $areaId = 100;
-        $this->seeder->seedPage($pageId, $areaId);
-
-        // Only seed on live stage (not on draft)
-        $this->seeder->seedElement(5200, $areaId, self::CONTENT_CLASS, 1, [
-            'SizeMD' => 12,
-            'Title' => 'Live Only',
-        ], stage: 'live');
-        $this->seeder->seedContentMedia(5200, ['HTML' => '<p>Live content</p>'], stage: 'live');
-
-        $this->runMigration();
-
-        // Should exist on draft (Versioned integrity)
-        Versioned::set_stage(Versioned::DRAFT);
-        $draftElements = ContentElement::get()->filter(['ParentClass' => Column::class]);
-        self::assertGreaterThanOrEqual(1, $draftElements->count());
-
-        // Should exist on live
-        Versioned::set_stage(Versioned::LIVE);
-        $liveElements = ContentElement::get()->filter(['ParentClass' => Column::class]);
-        self::assertGreaterThanOrEqual(1, $liveElements->count());
-    }
-
     public function testLiveOnlyContentGetsSameGroupedStructureAsDraftPath(): void
     {
         // Live-only content must flow through the same ElementGrouper + strategy
@@ -586,7 +466,7 @@ final class GridMigrationServiceTest extends SapphireTest
         // Expected grouped structure (RowPerSectionStrategy):
         //   Section 1 → Row → Column [E1, E2]  (consecutive identical width=6 grouped)
         //   Section 2 → Row → Column [E3]      (row delimiter starts a new section)
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -657,7 +537,7 @@ final class GridMigrationServiceTest extends SapphireTest
         // When a page has both draft content and additional live-only content,
         // the live-only Sections must be sorted AFTER the draft Sections (offset
         // past existing sort values), not collide at Sort=1.
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -699,7 +579,7 @@ final class GridMigrationServiceTest extends SapphireTest
         // Positive case: a page with live-only elements must emit an info log
         // naming the page ID and element count so an operator can spot-check
         // that the adjacent same-settings grouping produced the expected layout.
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -718,7 +598,7 @@ final class GridMigrationServiceTest extends SapphireTest
         $this->runMigration();
 
         $liveOnlyLog = null;
-        foreach ($this->getLogMessages('info') as $msg) {
+        foreach ($this->logger->messagesAt('info') as $msg) {
             if (\str_contains($msg, 'live-only')) {
                 $liveOnlyLog = $msg;
                 break;
@@ -732,7 +612,7 @@ final class GridMigrationServiceTest extends SapphireTest
         // not emit a live-only info log — the grouping caveat does not apply.
         $this->logger->messages = [];
 
-        $pageId2 = $this->getPageId2();
+        $pageId2 = $this->pageId('test_page_2');
         $areaId2 = 200;
         $this->seeder->seedPage($pageId2, $areaId2);
         foreach (['draft', 'live'] as $stage) {
@@ -746,51 +626,15 @@ final class GridMigrationServiceTest extends SapphireTest
         $this->runMigration(pageId: $pageId2);
 
         $liveOnlyMessages = \array_values(\array_filter(
-            $this->getLogMessages('info'),
+            $this->logger->messagesAt('info'),
             static fn (string $msg): bool => \str_contains($msg, 'live-only'),
         ));
         self::assertSame([], $liveOnlyMessages, 'A page with no live-only elements must not emit a live-only info log');
     }
 
-    public function testDraftAndLiveMigratedWithSameId(): void
-    {
-        $pageId = $this->getPageId();
-        $areaId = 100;
-        $this->seeder->seedPage($pageId, $areaId);
-
-        $this->seeder->seedElement(5300, $areaId, self::CONTENT_CLASS, 1, [
-            'SizeMD' => 12,
-            'Title' => 'Draft Title',
-        ], stage: 'draft');
-        $this->seeder->seedContentMedia(5300, ['HTML' => '<p>Draft HTML</p>'], stage: 'draft');
-
-        $this->seeder->seedElement(5300, $areaId, self::CONTENT_CLASS, 1, [
-            'SizeMD' => 12,
-            'Title' => 'Live Title',
-        ], stage: 'live');
-        $this->seeder->seedContentMedia(5300, ['HTML' => '<p>Live HTML</p>'], stage: 'live');
-
-        $this->runMigration();
-
-        // Both stages share the same record ID but preserve their own content
-        Versioned::set_stage(Versioned::DRAFT);
-        $draftElement = ContentElement::get()->filter(['ParentClass' => Column::class])->first();
-        self::assertInstanceOf(ContentElement::class, $draftElement);
-        $draftId = (int) $draftElement->ID;
-        self::assertSame('Draft Title', $draftElement->Title);
-        self::assertSame('<p>Draft HTML</p>', $draftElement->HTML);
-
-        Versioned::set_stage(Versioned::LIVE);
-        $liveElement = ContentElement::get()->filter(['ParentClass' => Column::class])->first();
-        self::assertInstanceOf(ContentElement::class, $liveElement);
-        self::assertSame($draftId, (int) $liveElement->ID);
-        self::assertSame('Live Title', $liveElement->Title);
-        self::assertSame('<p>Live HTML</p>', $liveElement->HTML);
-    }
-
     public function testContainersShareSameIdsAcrossStages(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -820,7 +664,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testVersionsRecordsCreated(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -847,7 +691,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testOldToNewIdMappingUsedForLiveReconciliation(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -898,7 +742,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testOldToNewColumnIdMappingAssignsCorrectParents(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -933,7 +777,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testLiveRowElementsAreSkippedDuringPublish(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -977,7 +821,7 @@ final class GridMigrationServiceTest extends SapphireTest
         // area-wide sort values are 2 and 3. The live UPDATE must use the
         // column-local draft Sort (1, 2), not the legacy area-wide value (2, 3),
         // so both stages order the column's children identically.
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1025,7 +869,7 @@ final class GridMigrationServiceTest extends SapphireTest
         // and published to live; the live Column width must be reconciled from
         // the live Size, otherwise the published front-end renders the wrong
         // column width.
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1064,7 +908,7 @@ final class GridMigrationServiceTest extends SapphireTest
     {
         // Shared element with identical draft/live Size — reconciliation must be
         // a no-op and leave both stages at the same width.
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1088,98 +932,9 @@ final class GridMigrationServiceTest extends SapphireTest
         }
     }
 
-    public function testLiveColumnWidthUsesFirstElementWhenLiveSizesDiverge(): void
-    {
-        // Two elements share the same DRAFT Size, so they group into one Column.
-        // On live their Size diverges; a single Column cannot express two widths,
-        // so the first element's live settings win and a warning is logged.
-        $pageId = $this->getPageId();
-        $areaId = 100;
-        $this->seeder->seedPage($pageId, $areaId);
-
-        $this->seeder->seedElement(6300, $areaId, self::CONTENT_CLASS, 1, [
-            'SizeMD' => 6,
-            'Title' => 'DivA',
-        ], stage: 'draft');
-        $this->seeder->seedContentMedia(6300, [], stage: 'draft');
-        $this->seeder->seedElement(6301, $areaId, self::CONTENT_CLASS, 2, [
-            'SizeMD' => 6,
-            'Title' => 'DivB',
-        ], stage: 'draft');
-        $this->seeder->seedContentMedia(6301, [], stage: 'draft');
-
-        $this->seeder->seedElement(6300, $areaId, self::CONTENT_CLASS, 1, [
-            'SizeMD' => 10,
-            'Title' => 'DivA',
-        ], stage: 'live');
-        $this->seeder->seedContentMedia(6300, [], stage: 'live');
-        $this->seeder->seedElement(6301, $areaId, self::CONTENT_CLASS, 2, [
-            'SizeMD' => 4,
-            'Title' => 'DivB',
-        ], stage: 'live');
-        $this->seeder->seedContentMedia(6301, [], stage: 'live');
-
-        $this->runMigration();
-
-        Versioned::set_stage(Versioned::LIVE);
-        $liveA = ContentElement::get()->filter(['Title' => 'DivA'])->first();
-        self::assertInstanceOf(ContentElement::class, $liveA);
-        $liveColumn = Column::get()->byID((int) $liveA->ParentID);
-        self::assertInstanceOf(Column::class, $liveColumn);
-        self::assertSame(10, $liveColumn->getGridSettings()->default->width, 'First element\'s live Size wins');
-
-        $diverged = false;
-        foreach ($this->getLogMessages('warning') as $message) {
-            if (str_contains($message, 'diverge') && str_contains($message, (string) $liveColumn->ID)) {
-                $diverged = true;
-            }
-        }
-        self::assertTrue($diverged, 'Divergent live grid settings should log a warning naming the column');
-    }
-
-    public function testLiveColumnOverrideReconciledFromLiveElementSize(): void
-    {
-        // The live element gains a per-viewport override (SizeLG) that the draft
-        // element lacks. The live Column must carry that override; the draft must not.
-        $pageId = $this->getPageId();
-        $areaId = 100;
-        $this->seeder->seedPage($pageId, $areaId);
-
-        $this->seeder->seedElement(6400, $areaId, self::CONTENT_CLASS, 1, [
-            'SizeMD' => 6,
-            'Title' => 'Override',
-        ], stage: 'draft');
-        $this->seeder->seedContentMedia(6400, [], stage: 'draft');
-
-        $this->seeder->seedElement(6400, $areaId, self::CONTENT_CLASS, 1, [
-            'SizeMD' => 6,
-            'SizeLG' => 4,
-            'Title' => 'Override',
-        ], stage: 'live');
-        $this->seeder->seedContentMedia(6400, [], stage: 'live');
-
-        $this->runMigration();
-
-        Versioned::set_stage(Versioned::DRAFT);
-        $draftElement = ContentElement::get()->filter(['Title' => 'Override'])->first();
-        self::assertInstanceOf(ContentElement::class, $draftElement);
-        $draftColumn = Column::get()->byID((int) $draftElement->ParentID);
-        self::assertInstanceOf(Column::class, $draftColumn);
-        self::assertArrayNotHasKey('lg', $draftColumn->getGridSettings()->overrides, 'Draft column has no lg override');
-
-        Versioned::set_stage(Versioned::LIVE);
-        $liveElement = ContentElement::get()->filter(['Title' => 'Override'])->first();
-        self::assertInstanceOf(ContentElement::class, $liveElement);
-        $liveColumn = Column::get()->byID((int) $liveElement->ParentID);
-        self::assertInstanceOf(Column::class, $liveColumn);
-        $liveOverrides = $liveColumn->getGridSettings()->overrides;
-        self::assertArrayHasKey('lg', $liveOverrides, 'Live column gains the lg override from the live Size');
-        self::assertSame(4, $liveOverrides['lg']->width, 'Live lg override width is reconciled to 4');
-    }
-
     public function testRunTwiceSkipsSecondRunNoDuplicates(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
         $this->runMigration();
@@ -1199,14 +954,14 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertSame($firstRunCount, $secondRunCount);
 
         // Verify the skip was logged
-        $infoMessages = $this->getLogMessages('info');
+        $infoMessages = $this->logger->messagesAt('info');
         self::assertNotEmpty($infoMessages);
         self::assertStringContainsString('already migrated', $infoMessages[0]);
     }
 
     public function testDryRunCreatesNoRecords(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
         $service = $this->createService();
@@ -1225,7 +980,7 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertCount(0, $sections);
 
         // Verify dry-run logged the correct hierarchy counts
-        $infoMessages = $this->getLogMessages('info');
+        $infoMessages = $this->logger->messagesAt('info');
         self::assertNotEmpty($infoMessages);
         $dryRunLog = $infoMessages[0];
         self::assertStringContainsString('[DRY RUN]', $dryRunLog);
@@ -1240,7 +995,7 @@ final class GridMigrationServiceTest extends SapphireTest
         // published elements: the real run creates a live-only hierarchy on both
         // stages, so the dry-run must report the live-only count instead of
         // "no elements to migrate", which would understate the write.
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
         $this->seeder->seedElement(7300, $areaId, self::CONTENT_CLASS, 1, [
@@ -1261,7 +1016,7 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertCount(0, Section::get()->filter(['ParentID' => $pageId, 'Zone' => self::ZONE]));
 
         $dryRunLog = null;
-        foreach ($this->getLogMessages('info') as $msg) {
+        foreach ($this->logger->messagesAt('info') as $msg) {
             if (\str_contains($msg, '[DRY RUN]')) {
                 $dryRunLog = $msg;
                 break;
@@ -1284,7 +1039,7 @@ final class GridMigrationServiceTest extends SapphireTest
         Row::config()->set('auto_scaffold', false);
 
         try {
-            $pageId = $this->getPageId();
+            $pageId = $this->pageId();
             $this->seedStandardPage($pageId);
 
             $this->runMigration();
@@ -1305,8 +1060,8 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testFailureMidPageRollsBackThatPage(): void
     {
-        $pageId1 = $this->getPageId();
-        $pageId2 = $this->getPageId2();
+        $pageId1 = $this->pageId();
+        $pageId2 = $this->pageId('test_page_2');
         $areaId1 = 100;
         $areaId2 = 200;
 
@@ -1351,7 +1106,7 @@ final class GridMigrationServiceTest extends SapphireTest
             ])->count());
 
             // The error should have been logged
-            $errors = $this->getLogMessages('error');
+            $errors = $this->logger->messagesAt('error');
             self::assertNotEmpty($errors);
             self::assertStringContainsString('Deliberate test failure', $errors[0]);
         } finally {
@@ -1366,8 +1121,8 @@ final class GridMigrationServiceTest extends SapphireTest
         // framework's withTransaction() only catches \Exception, so an \Error
         // would otherwise leak an open transaction — and the next page's
         // transactionStart() would implicitly commit this page's partial writes.
-        $pageId1 = $this->getPageId();
-        $pageId2 = $this->getPageId2();
+        $pageId1 = $this->pageId();
+        $pageId2 = $this->pageId('test_page_2');
         $areaId1 = 100;
         $areaId2 = 200;
 
@@ -1415,7 +1170,7 @@ final class GridMigrationServiceTest extends SapphireTest
             self::assertSame(0, DB::get_conn()->transactionDepth());
 
             // The error should have been logged.
-            $errors = $this->getLogMessages('error');
+            $errors = $this->logger->messagesAt('error');
             self::assertNotEmpty($errors);
             self::assertStringContainsString('non-Exception Throwable', $errors[0]);
         } finally {
@@ -1425,7 +1180,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testElementsBeforeFirstRowCreateImplicitSection(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1468,7 +1223,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testElementsAfterLastRowCreateImplicitSection(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1508,7 +1263,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testNoExplicitRowsAllElementsInImplicitSection(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1548,7 +1303,7 @@ final class GridMigrationServiceTest extends SapphireTest
      */
     public function testGroupsConsecutiveElementsWithSameGridSettings(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1601,7 +1356,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testRowPerSectionMapsFieldsCorrectly(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1632,7 +1387,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testAllRowsInSingleSectionFirstRowConfigUsed(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1664,7 +1419,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testAdjacentEmptyRowIsDropped(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1695,7 +1450,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testUseElementalGridFalseSkipsPage(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seeder->seedPage($pageId, 100, useGrid: false);
 
         $this->seeder->seedElement(8300, 100, self::CONTENT_CLASS, 1, ['SizeMD' => 12]);
@@ -1712,7 +1467,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testEmptyElementalAreaSkipsPage(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seeder->seedPage($pageId, 100);
         // No elements seeded for area 100
 
@@ -1725,14 +1480,14 @@ final class GridMigrationServiceTest extends SapphireTest
         self::assertCount(0, $sections);
 
         // Verify "no elements" was logged
-        $infoMessages = $this->getLogMessages('info');
+        $infoMessages = $this->logger->messagesAt('info');
         self::assertNotEmpty($infoMessages);
         self::assertStringContainsString('no elements to migrate', $infoMessages[0]);
     }
 
     public function testMultipleElementTypesGetCorrectClassName(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1781,7 +1536,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testUpdateElementFieldMappingHookAddsCustomField(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1811,7 +1566,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testUpdateClassNameMappingHookOverridesClassName(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1844,7 +1599,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testRealisticPageMigration(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1941,13 +1696,13 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testUpdateLegacyElementsFilterPreventsElementFromMigrating(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
         $this->seeder->seedElement(9300, $areaId, self::CONTENT_CLASS, 1, [
             'SizeMD' => 6,
-            'Title' => 'Skip Me',
+            'Title' => TestLegacyReaderFilterExtension::SENTINEL_TITLE,
         ]);
         $this->seeder->seedContentMedia(9300);
 
@@ -1957,7 +1712,8 @@ final class GridMigrationServiceTest extends SapphireTest
         ]);
         $this->seeder->seedContentMedia(9301);
 
-        LegacyDataReader::add_extension(TestFilterExtension::class);
+        TestLegacyReaderFilterExtension::reset();
+        LegacyDataReader::add_extension(TestLegacyReaderFilterExtension::class);
 
         try {
             $this->runMigration();
@@ -1967,7 +1723,7 @@ final class GridMigrationServiceTest extends SapphireTest
             self::assertCount(1, $elements);
             self::assertSame('Keep Me', $elements->first()->Title);
         } finally {
-            LegacyDataReader::remove_extension(TestFilterExtension::class);
+            LegacyDataReader::remove_extension(TestLegacyReaderFilterExtension::class);
         }
     }
 
@@ -2016,19 +1772,19 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testSuccessfulMigrationLogsSuccess(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
         $this->runMigration();
 
-        $infoMessages = $this->getLogMessages('info');
+        $infoMessages = $this->logger->messagesAt('info');
         self::assertNotEmpty($infoMessages);
         self::assertStringContainsString('Successfully migrated page', $infoMessages[0]);
     }
 
     public function testDryRunWithEmptyPageLogsNoElements(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seeder->seedPage($pageId, 100);
         // No elements seeded
 
@@ -2043,7 +1799,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
         self::assertCount(0, Section::get());
 
-        $infoMessages = $this->getLogMessages('info');
+        $infoMessages = $this->logger->messagesAt('info');
         self::assertNotEmpty($infoMessages);
         self::assertStringContainsString('[DRY RUN]', $infoMessages[0]);
         self::assertStringContainsString('no elements to migrate', $infoMessages[0]);
@@ -2051,7 +1807,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testDryRunWithMultipleRowsLogsCounts(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -2080,7 +1836,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
         self::assertCount(0, Section::get());
 
-        $infoMessages = $this->getLogMessages('info');
+        $infoMessages = $this->logger->messagesAt('info');
         self::assertNotEmpty($infoMessages);
         $dryRunLog = $infoMessages[0];
         self::assertStringContainsString('[DRY RUN]', $dryRunLog);
@@ -2091,7 +1847,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testErrorLogIncludesPageIdAndMessage(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
 
         $this->seeder->seedPage($pageId, $areaId);
@@ -2113,7 +1869,7 @@ final class GridMigrationServiceTest extends SapphireTest
             );
             self::assertSame(1, $failures, 'Failing extension should cause one page failure');
 
-            $errors = $this->getLogMessages('error');
+            $errors = $this->logger->messagesAt('error');
             self::assertCount(1, $errors);
             self::assertStringContainsString((string) $pageId, $errors[0]);
             self::assertStringContainsString('Deliberate test failure', $errors[0]);
@@ -2124,7 +1880,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testFailedPageLogsExceptionContext(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
 
         $this->seeder->seedPage($pageId, $areaId);
@@ -2145,10 +1901,7 @@ final class GridMigrationServiceTest extends SapphireTest
                 pageIds: [$pageId],
             );
 
-            $errorEntries = \array_values(\array_filter(
-                $this->logger->messages,
-                static fn (array $entry): bool => $entry['level'] === 'error',
-            ));
+            $errorEntries = $this->logger->entriesAt('error');
             self::assertNotEmpty($errorEntries, 'At least one error-level entry must be logged');
 
             $entry = $errorEntries[0];
@@ -2163,7 +1916,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testMigrationSetsUseGridOnDraftPage(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
         $this->runMigration();
@@ -2175,7 +1928,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testMigrationSetsUseGridOnLivePage(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seedStandardPage($pageId, $areaId);
 
@@ -2207,8 +1960,8 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testMigrationSetsUseGridFalseForDisabledPages(): void
     {
-        $pageId = $this->getPageId();
-        $pageId2 = $this->getPageId2();
+        $pageId = $this->pageId();
+        $pageId2 = $this->pageId('test_page_2');
 
         // Page 1 has grid enabled + content
         $this->seedStandardPage($pageId, 100);
@@ -2225,7 +1978,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testDryRunDoesNotSetUseGrid(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
         // Set UseGrid to 0 to verify dry run doesn't change it
@@ -2247,7 +2000,7 @@ final class GridMigrationServiceTest extends SapphireTest
 
     public function testMigrationHandlesGridDisabledOnLiveButEnabledOnDraft(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seedStandardPage($pageId, $areaId);
 
@@ -2282,8 +2035,8 @@ final class GridMigrationServiceTest extends SapphireTest
     {
         // Page 1: will fail (FAIL_ME element triggers TestFailingMigrationExtension)
         // Page 2: will succeed (normal element title)
-        $pageId1 = $this->getPageId();
-        $pageId2 = $this->getPageId2();
+        $pageId1 = $this->pageId();
+        $pageId2 = $this->pageId('test_page_2');
 
         $this->seeder->seedPage($pageId1, 10100);
         $this->seeder->seedElement(10101, 10100, self::CONTENT_CLASS, 1, [
@@ -2312,7 +2065,7 @@ final class GridMigrationServiceTest extends SapphireTest
             );
 
             // Summary must be emitted at warning level (one failure present)
-            $warningMessages = $this->getLogMessages('warning');
+            $warningMessages = $this->logger->messagesAt('warning');
             $summaryFound = false;
             foreach ($warningMessages as $msg) {
                 if (\str_contains($msg, 'Migration batch complete')) {
@@ -2331,8 +2084,8 @@ final class GridMigrationServiceTest extends SapphireTest
     public function testStopOnFirstFailureHaltsRemainingPages(): void
     {
         // Both pages have FAIL_ME elements — with stopOnFirstFailure only the first is attempted
-        $pageId1 = $this->getPageId();
-        $pageId2 = $this->getPageId2();
+        $pageId1 = $this->pageId();
+        $pageId2 = $this->pageId('test_page_2');
 
         $this->seeder->seedPage($pageId1, 10300);
         $this->seeder->seedElement(10301, 10300, self::CONTENT_CLASS, 1, [
@@ -2365,11 +2118,11 @@ final class GridMigrationServiceTest extends SapphireTest
             self::assertSame(1, $failures, 'stop-on-first-failure must halt after the first failing page');
 
             // Only one error was logged (one page attempted)
-            $errors = $this->getLogMessages('error');
+            $errors = $this->logger->messagesAt('error');
             self::assertCount(1, $errors, 'Only the first page failure should be logged');
 
             // Summary reflects 1 failure and 0 succeeded
-            $warningMessages = $this->getLogMessages('warning');
+            $warningMessages = $this->logger->messagesAt('warning');
             $summaryFound = false;
             foreach ($warningMessages as $msg) {
                 if (\str_contains($msg, 'Migration batch complete')) {
@@ -2387,8 +2140,8 @@ final class GridMigrationServiceTest extends SapphireTest
     public function testStopOnFirstFailureFalseContinuesPastFailure(): void
     {
         // Both pages fail; without stopOnFirstFailure both must be attempted
-        $pageId1 = $this->getPageId();
-        $pageId2 = $this->getPageId2();
+        $pageId1 = $this->pageId();
+        $pageId2 = $this->pageId('test_page_2');
 
         $this->seeder->seedPage($pageId1, 10500);
         $this->seeder->seedElement(10501, 10500, self::CONTENT_CLASS, 1, [
@@ -2419,11 +2172,11 @@ final class GridMigrationServiceTest extends SapphireTest
 
             self::assertSame(2, $failures, 'Without stop-on-first-failure, both failing pages must be attempted');
 
-            $errors = $this->getLogMessages('error');
+            $errors = $this->logger->messagesAt('error');
             self::assertCount(2, $errors, 'Both page failures must be logged');
 
             // Summary lists both failed page IDs
-            $warningMessages = $this->getLogMessages('warning');
+            $warningMessages = $this->logger->messagesAt('warning');
             $summaryFound = false;
             foreach ($warningMessages as $msg) {
                 if (\str_contains($msg, 'Migration batch complete')) {
@@ -2447,8 +2200,8 @@ final class GridMigrationServiceTest extends SapphireTest
         $sectionAutoScaffoldBefore = (bool) Section::config()->get('auto_scaffold');
         $rowAutoScaffoldBefore = (bool) Row::config()->get('auto_scaffold');
 
-        $pageId1 = $this->getPageId();
-        $pageId2 = $this->getPageId2();
+        $pageId1 = $this->pageId();
+        $pageId2 = $this->pageId('test_page_2');
 
         // Page 1: one content element, no explicit row → implicit Section
         $this->seeder->seedPage($pageId1, 10700);

@@ -7,31 +7,30 @@ namespace WeDevelop\Grid\Tests\Integration\ORM\FieldType;
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
-use WeDevelop\Grid\Model\Row;
-use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\ORM\FieldType\DBGridSettings;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
 
 #[CoversClass(DBGridSettings::class)]
 final class DBGridSettingsTest extends SapphireTest
 {
+    use DisablesAutoScaffolding;
+
     protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
 
     protected function setUp(): void
     {
         parent::setUp();
         Versioned::set_stage(Versioned::DRAFT);
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
+        $this->disableAutoScaffolding();
     }
 
     public function testRoundTripViaColumnWrite(): void
@@ -69,9 +68,7 @@ final class DBGridSettingsTest extends SapphireTest
     public function testSetValueWithJsonString(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $json = '{"default":{"width":8,"offset":1,"visible":true},"overrides":{}}';
         $column->setGridSettings($json);
@@ -89,6 +86,8 @@ final class DBGridSettingsTest extends SapphireTest
     public function testSetValueWithInvalidString(): void
     {
         $field = DBGridSettings::create('GridSettings');
+
+        // Invalid JSON falls through to parent::setValue(null) — sub-fields not populated
         $field->setValue('not-json');
 
         self::assertNull($field->getValue());
@@ -102,15 +101,7 @@ final class DBGridSettingsTest extends SapphireTest
      */
     public function testSetValueWithMalformedJsonLogsWarningAndCoercesToNull(): void
     {
-        $logger = new class () extends NullLogger {
-            /** @var list<string> */
-            public array $warnings = [];
-
-            public function warning(string|\Stringable $message, array $context = []): void
-            {
-                $this->warnings[] = (string) $message;
-            }
-        };
+        $logger = new RecordingLogger();
         Injector::inst()->registerService($logger, LoggerInterface::class);
 
         // Valid JSON, but the "default" object is missing required keys —
@@ -121,8 +112,9 @@ final class DBGridSettingsTest extends SapphireTest
         $field->setValue($malformed);
 
         self::assertNull($field->getValue(), 'malformed JSON must coerce to null, not crash');
-        self::assertCount(1, $logger->warnings);
-        self::assertStringContainsString('DBGridSettings discarded malformed JSON', $logger->warnings[0]);
+        $warnings = $logger->entriesAt('warning');
+        self::assertCount(1, $warnings);
+        self::assertStringContainsString('DBGridSettings discarded malformed JSON', $warnings[0]['message']);
     }
 
     /**
@@ -134,15 +126,7 @@ final class DBGridSettingsTest extends SapphireTest
      */
     public function testGetValueWithMalformedOverridesColumnLogsWarningAndDegrades(): void
     {
-        $logger = new class () extends NullLogger {
-            /** @var list<string> */
-            public array $warnings = [];
-
-            public function warning(string|\Stringable $message, array $context = []): void
-            {
-                $this->warnings[] = (string) $message;
-            }
-        };
+        $logger = new RecordingLogger();
         Injector::inst()->registerService($logger, LoggerInterface::class);
 
         $field = new DBGridSettings('Settings');
@@ -160,8 +144,9 @@ final class DBGridSettingsTest extends SapphireTest
         self::assertNotNull($value, 'malformed overrides must not crash the read path');
         self::assertSame(6, $value->default->width, 'the valid default must still decode');
         self::assertSame([], $value->overrides, 'malformed overrides degrade to empty');
-        self::assertCount(1, $logger->warnings);
-        self::assertStringContainsString('DBGridSettings discarded malformed overrides column', $logger->warnings[0]);
+        $warnings = $logger->entriesAt('warning');
+        self::assertCount(1, $warnings);
+        self::assertStringContainsString('DBGridSettings discarded malformed overrides column', $warnings[0]['message']);
     }
 
     public function testGetValueWhenNoData(): void
@@ -174,9 +159,7 @@ final class DBGridSettingsTest extends SapphireTest
     public function testExistsWhenWidthStored(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         // Column gets initial GridSettings on first write
         /** @var DBGridSettings $dbField */
@@ -239,9 +222,7 @@ final class DBGridSettingsTest extends SapphireTest
     public function testFieldValidationBlocksExcessiveWidth(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $this->expectException(ValidationException::class);
 
@@ -254,9 +235,7 @@ final class DBGridSettingsTest extends SapphireTest
     public function testFieldValidationBlocksExcessiveOffset(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $this->expectException(ValidationException::class);
 
@@ -269,9 +248,7 @@ final class DBGridSettingsTest extends SapphireTest
     public function testFieldValidationBlocksWidthPlusOffset(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $this->expectException(ValidationException::class);
 
@@ -284,9 +261,7 @@ final class DBGridSettingsTest extends SapphireTest
     public function testGetColumnCountFromAdapter(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         /** @var DBGridSettings $dbField */
         $dbField = $column->dbObject('GridSettings');
@@ -297,9 +272,7 @@ final class DBGridSettingsTest extends SapphireTest
     public function testScaffoldFormFieldReturnsNull(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         /** @var DBGridSettings $field */
         $field = $column->dbObject('GridSettings');
@@ -310,9 +283,7 @@ final class DBGridSettingsTest extends SapphireTest
     public function testSetValueWithGridSettingsAndRecord(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         /** @var DBGridSettings $field */
         $field = $column->dbObject('GridSettings');
@@ -327,23 +298,10 @@ final class DBGridSettingsTest extends SapphireTest
         self::assertTrue($result->default->visible);
     }
 
-    public function testSetValueWithInvalidStringDoesNotSetSubFields(): void
-    {
-        // Create a fresh composite field not bound to a record
-        $dbField = DBGridSettings::create('GridSettings');
-
-        // Invalid JSON falls through to parent::setValue(null) — sub-fields not populated
-        $dbField->setValue('not-valid-json');
-
-        self::assertNull($dbField->getValue());
-    }
-
     public function testGetValueDefaultOffsetIsZero(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $settings = $column->getGridSettings();
         self::assertNotNull($settings);
@@ -404,24 +362,10 @@ final class DBGridSettingsTest extends SapphireTest
         self::assertNotNull($field->getValue());
     }
 
-    /**
-     * exists() and getValue() must agree on absence: with no stored width the
-     * field does not exist and getValue() returns null.
-     */
-    public function testExistsAndGetValueAgreeWhenNoWidth(): void
-    {
-        $field = new DBGridSettings('Settings');
-
-        self::assertFalse($field->exists());
-        self::assertNull($field->getValue());
-    }
-
     public function testGetValueDefaultVisibleIsTrue(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $settings = $column->getGridSettings();
         self::assertNotNull($settings);

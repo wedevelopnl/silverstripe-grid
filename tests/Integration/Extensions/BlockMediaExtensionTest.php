@@ -10,7 +10,6 @@ use Page;
 use SilverStripe\Assets\Dev\TestAssetStore;
 use SilverStripe\Assets\Image;
 use SilverStripe\Core\Config\Config;
-use SilverStripe\Core\Environment;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -18,9 +17,9 @@ use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Extensions\BlockMediaExtension;
 use WeDevelop\Grid\Model\ContentElement;
-use WeDevelop\Grid\Model\Row;
-use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Tests\Integration\Support\RestoresGridAdapterEnv;
 use WeDevelop\Grid\Value\AspectRatio;
 use WeDevelop\Grid\Value\MediaPosition;
 use WeDevelop\Grid\Value\VerticalAlignment;
@@ -28,26 +27,26 @@ use WeDevelop\Grid\Value\VerticalAlignment;
 #[CoversClass(BlockMediaExtension::class)]
 final class BlockMediaExtensionTest extends SapphireTest
 {
+    use DisablesAutoScaffolding;
+    use RestoresGridAdapterEnv;
+
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
     private const TEST_IMAGE_PATH = __DIR__ . '/../../E2E/Fixture/assets/test-image.png';
-
-    private string|false $previousAdapterEnv = false;
 
     protected function setUp(): void
     {
         parent::setUp();
         Versioned::set_stage(Versioned::DRAFT);
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
+        $this->disableAutoScaffolding();
 
         // Pin the active adapter to the default preset (Tailwind) so the
         // extension's layout/dimension output is deterministic regardless of the
         // container's configured SS_GRID_ADAPTER. The env var (not a registered
         // instance) is used so the rebuildGridAdapter() re-resolution in the
         // total_columns/container_max_width override tests still yields Tailwind.
-        $this->previousAdapterEnv = Environment::getEnv('SS_GRID_ADAPTER');
-        Environment::putEnv('SS_GRID_ADAPTER=tailwind');
+        $this->captureGridAdapterEnv();
+        $this->pinAdapterEnv('tailwind');
         $this->rebuildGridAdapter();
 
         TestAssetStore::activate('BlockMediaExtensionTest');
@@ -56,7 +55,7 @@ final class BlockMediaExtensionTest extends SapphireTest
     protected function tearDown(): void
     {
         TestAssetStore::reset();
-        Environment::putEnv('SS_GRID_ADAPTER=' . ($this->previousAdapterEnv === false ? '' : $this->previousAdapterEnv));
+        $this->restoreGridAdapterEnv();
         parent::tearDown();
     }
 
@@ -91,9 +90,7 @@ final class BlockMediaExtensionTest extends SapphireTest
     private function createContentElement(): ContentElement
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         return GridTreeFactory::contentElement($column, title: 'Media Test');
     }

@@ -5,17 +5,9 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\CMS\Model\SiteTree;
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
-use SilverStripe\Dev\SapphireTest;
-use SilverStripe\Versioned\Versioned;
-use TractorCow\Fluent\Extension\FluentIsolatedExtension;
 use TractorCow\Fluent\Model\Locale;
 use TractorCow\Fluent\State\FluentState;
-use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Model\Row;
-use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\GridTreeService;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Value\ContainerType;
@@ -25,45 +17,16 @@ use WeDevelop\Grid\Value\ContainerType;
  * and assembles recursive trees when Fluent locale filtering is active.
  */
 #[CoversClass(GridTreeService::class)]
-final class FluentTreeServiceTest extends SapphireTest
+final class FluentTreeServiceTest extends FluentGridTestCase
 {
-    protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';
-
-    /** @var array<class-string, list<class-string>> */
-    protected static $required_extensions = [
-        GridElement::class => [FluentIsolatedExtension::class],
-    ];
-
     private GridTreeService $service;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Versioned::set_stage(Versioned::DRAFT);
-
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
-
-        // Clear cached locale records so fixture-loaded locales are visible
-        Locale::clearCached();
-
-        $locale = $this->objFromFixture(Locale::class, 'en');
-        FluentState::singleton()->setLocale($locale->Locale);
-
         $this->service = Injector::inst()->get(GridTreeService::class);
-    }
-
-    private function createPage(string $title = 'Test Page'): SiteTree
-    {
-        $page = SiteTree::create();
-        $page->Title = $title;
-        $page->URLSegment = 'fluent-tree-builder-test';
-        $page->writeToStage(Versioned::DRAFT);
-
-        return $page;
     }
 
     /**

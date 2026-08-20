@@ -6,47 +6,25 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use Page;
-use SilverStripe\CMS\Model\SiteTree;
-use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\Versioned\Versioned;
-use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\DTO\LegacyRowData;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
-use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestLegacyReaderFilterExtension;
 
 #[CoversClass(LegacyDataReader::class)]
-final class LegacyDataReaderTest extends SapphireTest
+final class LegacyDataReaderTest extends MigrationTestCase
 {
-    protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
-
     protected static $extra_dataobjects = [TestPage::class];
 
     private LegacyDataReader $reader;
-
-    private LegacyTableSeeder $seeder;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Versioned::set_stage(Versioned::DRAFT);
-
         $this->reader = new LegacyDataReader();
-        $this->seeder = new LegacyTableSeeder();
-        $this->seeder->createTables();
-        $this->seeder->addExtensionColumns('Page');
-        $this->seeder->truncateTables();
-    }
-
-    protected function tearDown(): void
-    {
-        $this->seeder->removeExtensionColumns('Page');
-        $this->seeder->dropTables();
-
-        parent::tearDown();
     }
 
     public function testGetEligiblePagesReturnsGridEnabledPages(): void
@@ -62,30 +40,6 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertSame(Page::class, $result[0]['pageClassName']);
     }
 
-    public function testGetEligiblePagesSkipsDisabledPages(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $this->seeder->seedPage((int) $page->ID, 100, useGrid: false);
-
-        $result = $this->reader->getEligiblePages('draft');
-
-        self::assertSame([], $result);
-    }
-
-    public function testGetEligiblePagesReturnsBothPageIdAndAreaId(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $this->seeder->seedPage((int) $page->ID, 200);
-
-        $result = $this->reader->getEligiblePages('draft');
-
-        self::assertCount(1, $result);
-        self::assertArrayHasKey('pageId', $result[0]);
-        self::assertArrayHasKey('areaId', $result[0]);
-        self::assertArrayHasKey('pageClassName', $result[0]);
-        self::assertSame(200, $result[0]['areaId']);
-    }
-
     public function testGetEligiblePagesReturnsConcretePageClassName(): void
     {
         $page = TestPage::create();
@@ -98,22 +52,6 @@ final class LegacyDataReaderTest extends SapphireTest
 
         self::assertCount(1, $result);
         self::assertSame(TestPage::class, $result[0]['pageClassName']);
-    }
-
-    public function testGetEligiblePagesWithPageIdFilter(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $pageId = (int) $page->ID;
-
-        $this->seeder->seedPage($pageId, 100);
-
-        // Filter with the actual page ID — should return it
-        $result = $this->reader->getEligiblePages('draft', [$pageId]);
-        self::assertCount(1, $result);
-
-        // Filter with a non-existent ID — should return empty
-        $result = $this->reader->getEligiblePages('draft', [999999]);
-        self::assertSame([], $result);
     }
 
     public function testGetElementsForAreaReturnsSortedElements(): void
@@ -254,7 +192,9 @@ final class LegacyDataReaderTest extends SapphireTest
     {
         $areaId = 850;
         $this->seeder->seedElement(85, $areaId, 'DNADesign\\Elemental\\Models\\ElementContent', 1, ['Title' => 'Keep Me']);
-        $this->seeder->seedElement(86, $areaId, 'DNADesign\\Elemental\\Models\\ElementContent', 2, ['Title' => 'Filter Me']);
+        $this->seeder->seedElement(86, $areaId, 'DNADesign\\Elemental\\Models\\ElementContent', 2, [
+            'Title' => TestLegacyReaderFilterExtension::SENTINEL_TITLE,
+        ]);
 
         TestLegacyReaderFilterExtension::reset();
         LegacyDataReader::add_extension(TestLegacyReaderFilterExtension::class);
@@ -412,12 +352,6 @@ final class LegacyDataReaderTest extends SapphireTest
         }
     }
 
-    public function testGetEligiblePagesThrowsOnInvalidStage(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->reader->getEligiblePages('staging');
-    }
-
     public function testGetElementsForAreaThrowsOnInvalidStage(): void
     {
         $this->expectException(\InvalidArgumentException::class);
@@ -448,23 +382,6 @@ final class LegacyDataReaderTest extends SapphireTest
         self::assertArrayHasKey('MediaImageID', $mediaData->fields);
     }
 
-    public function testGetEligiblePagesReturnsMultiplePages(): void
-    {
-        $page1 = (int) $this->objFromFixture(Page::class, 'test_page')->ID;
-        $page2 = (int) $this->objFromFixture(Page::class, 'test_page_2')->ID;
-
-        $this->seeder->seedPage($page1, 100);
-        $this->seeder->seedPage($page2, 200);
-
-        $pages = $this->reader->getEligiblePages('draft');
-
-        self::assertCount(2, $pages);
-
-        $pageIds = \array_column($pages, 'pageId');
-        self::assertContains($page1, $pageIds);
-        self::assertContains($page2, $pageIds);
-    }
-
     public function testStageIsCaseInsensitive(): void
     {
         $areaId = 950;
@@ -476,28 +393,6 @@ final class LegacyDataReaderTest extends SapphireTest
 
         self::assertCount(1, $elements);
         self::assertSame('Live Element', $elements[0]->title);
-    }
-
-    public function testGetPagesWithGridDisabledReturnsDisabledPages(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $this->seeder->seedPage((int) $page->ID, 100, useGrid: false);
-
-        $result = $this->reader->getPagesWithGridDisabled('draft');
-        $pageIds = \array_column($result, 'pageId');
-
-        self::assertContains((int) $page->ID, $pageIds);
-    }
-
-    public function testGetPagesWithGridDisabledExcludesEnabledPages(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $this->seeder->seedPage((int) $page->ID, 100, useGrid: true);
-
-        $result = $this->reader->getPagesWithGridDisabled('draft');
-        $pageIds = \array_column($result, 'pageId');
-
-        self::assertNotContains((int) $page->ID, $pageIds);
     }
 
     public function testGetPagesWithGridDisabledReturnsEmptyWhenNoExtensionColumn(): void

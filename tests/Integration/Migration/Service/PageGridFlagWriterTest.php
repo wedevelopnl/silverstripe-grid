@@ -6,16 +6,13 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use SilverStripe\Core\Injector\Injector;
-use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DataObjectSchema;
 use SilverStripe\ORM\DB;
-use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Migration\Service\PageGridFlagWriter;
-use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
+use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 
 /**
  * Direct coverage for the UseGrid page-flag collaborator extracted from
@@ -25,59 +22,23 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
  * DataObjectSchema mock so no production code needs to change.
  */
 #[CoversClass(PageGridFlagWriter::class)]
-final class PageGridFlagWriterTest extends SapphireTest
+final class PageGridFlagWriterTest extends MigrationTestCase
 {
-    protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
-
-    // Disable SapphireTest's per-test transaction wrapping. The LegacyTableSeeder's
-    // DDL (CREATE TABLE / ALTER TABLE) issues implicit commits in MySQL, which
-    // breaks savepoint-based transaction nesting.
-    protected $usesTransactions = false;
-
-    private LegacyTableSeeder $seeder;
-
     private LegacyDataReader $reader;
 
-    private LoggerInterface $logger;
+    private RecordingLogger $logger;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $this->seeder = new LegacyTableSeeder();
-        $this->seeder->createTables();
-        $this->seeder->addExtensionColumns('Page');
-        $this->seeder->truncateTables();
-
         $this->reader = new LegacyDataReader();
-        $this->logger = new class () extends NullLogger {
-            /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
-            public array $messages = [];
-
-            public function log($level, string|\Stringable $message, array $context = []): void
-            {
-                $this->messages[] = [
-                    'level' => (string) $level,
-                    'message' => (string) $message,
-                    'context' => $context,
-                ];
-            }
-        };
-    }
-
-    protected function tearDown(): void
-    {
-        $this->seeder->removeExtensionColumns('Page');
-        $this->seeder->dropTables();
-
-        parent::tearDown();
+        $this->logger = new RecordingLogger();
     }
 
     public function testSetUseGridOnPageSetsDraftOnlyByDefault(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         // Publish so a live row exists and the default includeLive=false is observable.
         $page = $this->objFromFixture(Page::class, 'test_page');
         $page->publishSingle();
@@ -102,12 +63,12 @@ final class PageGridFlagWriterTest extends SapphireTest
 
         $this->createWriter()->migrateDisabledGridPages();
 
-        self::assertSame([], $this->getLogMessages('info'), 'no disabled pages means no summary log');
+        self::assertSame([], $this->logger->messagesAt('info'), 'no disabled pages means no summary log');
     }
 
     public function testSetUseGridOnPageSetsBothDraftAndLive(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         // Publish so Page_Live has a row for this page
         $page = $this->objFromFixture(Page::class, 'test_page');
         $page->publishSingle();
@@ -125,7 +86,7 @@ final class PageGridFlagWriterTest extends SapphireTest
 
     public function testSetUseGridOnPageSetsLiveOnlyWhenDraftExcluded(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         // Publish so Page_Live has a row, then adjust both to a known state
         $page = $this->objFromFixture(Page::class, 'test_page');
         $page->publishSingle();
@@ -147,8 +108,8 @@ final class PageGridFlagWriterTest extends SapphireTest
 
     public function testMigrateDisabledGridPagesSetsUseGridFalseAndLogsCount(): void
     {
-        $pageId = $this->getPageId();   // draft-disabled (UseElementalGrid=0 default)
-        $pageId2 = $this->getPageId2(); // draft-enabled, live-disabled
+        $pageId = $this->pageId();   // draft-disabled (UseElementalGrid=0 default)
+        $pageId2 = $this->pageId('test_page_2'); // draft-enabled, live-disabled
 
         // page1: UseElementalGrid=0 on draft (DEFAULT from addExtensionColumns) → draft-disabled
         // page2: UseElementalGrid=1 on draft → NOT draft-disabled; live-disabled
@@ -182,7 +143,7 @@ final class PageGridFlagWriterTest extends SapphireTest
         self::assertSame(1, (int) $draftRow2['UseGrid'], 'Draft UseGrid must be untouched for a live-only disabled page');
 
         // Verify the count summary was logged
-        $infoMessages = $this->getLogMessages('info');
+        $infoMessages = $this->logger->messagesAt('info');
         $logText = \implode(' ', $infoMessages);
         self::assertStringContainsString('UseGrid = 0', $logText);
         self::assertStringContainsString('1 draft', $logText);
@@ -199,9 +160,9 @@ final class PageGridFlagWriterTest extends SapphireTest
         // SapphireTest::setUp() nests the Injector and tearDown() unnests it, so
         // the Injector registration is automatically discarded after this test.
         // The static cache is explicitly restored in the finally block.
-        // Resolve the page ID via ORM before touching the schema, since getPageId()
+        // Resolve the page ID via ORM before touching the schema, since pageId()
         // itself calls objFromFixture() which also queries DataObject::getSchema().
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         // Pre-set UseGrid=1 (raw SQL — does not go through the ORM schema) so that
         // a no-op can be confirmed by checking the value is still 1 afterwards.
         DB::prepared_query('UPDATE "Page" SET "UseGrid" = 1 WHERE "ID" = ?', [$pageId]);
@@ -211,7 +172,7 @@ final class PageGridFlagWriterTest extends SapphireTest
         $schemaProp->setValue(null, null); // reset static cache so Injector is consulted next
 
         try {
-            $schema = $this->createMock(DataObjectSchema::class);
+            $schema = $this->createStub(DataObjectSchema::class);
             $schema->method('classForField')->willReturn(null);
             Injector::inst()->registerService($schema, DataObjectSchema::class);
 
@@ -230,36 +191,5 @@ final class PageGridFlagWriterTest extends SapphireTest
     private function createWriter(): PageGridFlagWriter
     {
         return new PageGridFlagWriter($this->reader, $this->logger);
-    }
-
-    private function getPageId(): int
-    {
-        return (int) $this->objFromFixture(Page::class, 'test_page')->ID;
-    }
-
-    private function getPageId2(): int
-    {
-        return (int) $this->objFromFixture(Page::class, 'test_page_2')->ID;
-    }
-
-    /**
-     * Get logged messages filtered by level, with PSR-3 placeholders interpolated.
-     *
-     * @return list<string>
-     */
-    private function getLogMessages(string $level): array
-    {
-        $result = [];
-        foreach ($this->logger->messages as $entry) {
-            if ($entry['level'] !== $level) {
-                continue;
-            }
-            $replacements = [];
-            foreach ($entry['context'] as $key => $value) {
-                $replacements['{' . $key . '}'] = (string) $value;
-            }
-            $result[] = \strtr($entry['message'], $replacements);
-        }
-        return $result;
     }
 }

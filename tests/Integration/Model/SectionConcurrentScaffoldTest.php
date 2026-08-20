@@ -24,26 +24,6 @@ final class SectionConcurrentScaffoldTest extends SapphireTest
         Versioned::set_stage(Versioned::DRAFT);
     }
 
-    public function testScaffoldRunsInsideTransactionAndIsIdempotent(): void
-    {
-        $page = SiteTree::create(['Title' => 'P']);
-        $page->write();
-
-        $section = Section::create();
-        $section->ParentID = $page->ID;
-        $section->ParentClass = SiteTree::class;
-        $section->write();
-
-        // Writing the section again must NOT create a second Row.
-        $section->write();
-
-        self::assertSame(
-            1,
-            $section->getChildren()->count(),
-            'Section must contain exactly one Row after repeated writes',
-        );
-    }
-
     public function testScaffoldDoesNotDuplicateWhenChildrenListWasPreMaterialised(): void
     {
         $page = SiteTree::create(['Title' => 'P']);

@@ -96,17 +96,7 @@ final class GridSettingsResolverTest extends TestCase
     #[DataProvider('isolatedProvider')]
     public function testIsolated(GridSettings $settings, array $expected): void
     {
-        $resolver = new GridSettingsResolver(new GridAdapterStub(), 'isolated');
-        $result = $resolver->resolveEffective($settings);
-
-        self::assertSame(array_keys($expected), array_keys($result), 'Result keys must match expected viewport order');
-
-        foreach ($expected as $viewport => $expectedConfig) {
-            self::assertTrue(
-                $result[$viewport]->equals($expectedConfig),
-                sprintf('Viewport "%s": expected %s, got %s', $viewport, json_encode($expectedConfig->toArray()), json_encode($result[$viewport]->toArray())),
-            );
-        }
+        self::assertResolvesTo('isolated', $settings, $expected);
     }
 
     /**
@@ -191,17 +181,7 @@ final class GridSettingsResolverTest extends TestCase
     #[DataProvider('cascadeProvider')]
     public function testCascade(GridSettings $settings, array $expected): void
     {
-        $resolver = new GridSettingsResolver(new GridAdapterStub(), 'cascade');
-        $result = $resolver->resolveEffective($settings);
-
-        self::assertSame(array_keys($expected), array_keys($result), 'Result keys must match expected viewport order');
-
-        foreach ($expected as $viewport => $expectedConfig) {
-            self::assertTrue(
-                $result[$viewport]->equals($expectedConfig),
-                sprintf('Viewport "%s": expected %s, got %s', $viewport, json_encode($expectedConfig->toArray()), json_encode($result[$viewport]->toArray())),
-            );
-        }
+        self::assertResolvesTo('cascade', $settings, $expected);
     }
 
     public function testInvalidStrategyThrowsException(): void
@@ -212,20 +192,23 @@ final class GridSettingsResolverTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{string}>
+     * Resolves $settings under the given strategy and asserts the effective
+     * per-viewport configs (and their adapter-defined key order) match.
+     *
+     * @param array<string, ViewportConfig> $expected
      */
-    public static function strategyProvider(): iterable
-    {
-        yield 'isolated' => ['isolated'];
-        yield 'cascade' => ['cascade'];
-    }
-
-    #[DataProvider('strategyProvider')]
-    public function testResultKeysMatchAdapterViewportOrder(string $strategy): void
+    private static function assertResolvesTo(string $strategy, GridSettings $settings, array $expected): void
     {
         $resolver = new GridSettingsResolver(new GridAdapterStub(), $strategy);
-        $result = $resolver->resolveEffective(GridSettings::initial(12));
+        $result = $resolver->resolveEffective($settings);
 
-        self::assertSame(['xs', 'md', 'lg'], array_keys($result));
+        self::assertSame(array_keys($expected), array_keys($result), 'Result keys must match expected viewport order');
+
+        foreach ($expected as $viewport => $expectedConfig) {
+            self::assertTrue(
+                $result[$viewport]->equals($expectedConfig),
+                sprintf('Viewport "%s": expected %s, got %s', $viewport, json_encode($expectedConfig->toArray()), json_encode($result[$viewport]->toArray())),
+            );
+        }
     }
 }

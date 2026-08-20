@@ -6,8 +6,6 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use RuntimeException;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DB;
@@ -27,6 +25,9 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
+use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
+use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\MigrationIdMap;
 use WeDevelop\Grid\Value\ViewportConfig;
@@ -42,6 +43,7 @@ use WeDevelop\Grid\Value\ViewportConfig;
 final class LivePublisherTest extends SapphireTest
 {
     use CleansGridTables;
+    use DisablesAutoScaffolding;
 
     /** $extra_dataobjects alone does not provision the temp DB — this test writes records. */
     protected $usesDatabase = true;
@@ -75,11 +77,7 @@ final class LivePublisherTest extends SapphireTest
 
     private LivePublisher $publisher;
 
-    private LoggerInterface $logger;
-
-    private bool $sectionAutoScaffold;
-
-    private bool $rowAutoScaffold;
+    private RecordingLogger $logger;
 
     protected function setUp(): void
     {
@@ -90,10 +88,7 @@ final class LivePublisherTest extends SapphireTest
         // The publisher's caller (GridMigrationService::run) suppresses
         // Section/Row auto-scaffolding for the batch; replicate that so a single
         // Section write does not also scaffold an extra Row + Column.
-        $this->sectionAutoScaffold = (bool) Section::config()->get('auto_scaffold');
-        $this->rowAutoScaffold = (bool) Row::config()->get('auto_scaffold');
-        Section::config()->set('auto_scaffold', false);
-        Row::config()->set('auto_scaffold', false);
+        $this->disableAutoScaffolding();
 
         // No DDL/transaction rollback runs (usesTransactions = false), so purge any
         // grid records leaked from a previous test before each method.
@@ -101,19 +96,7 @@ final class LivePublisherTest extends SapphireTest
 
         $this->mapper = new FieldMapper();
         $this->draftWriter = new DraftHierarchyWriter($this->mapper);
-        $this->logger = new class () extends NullLogger {
-            /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
-            public array $messages = [];
-
-            public function log($level, string|\Stringable $message, array $context = []): void
-            {
-                $this->messages[] = [
-                    'level' => (string) $level,
-                    'message' => (string) $message,
-                    'context' => $context,
-                ];
-            }
-        };
+        $this->logger = new RecordingLogger();
 
         $strategy = new RowPerSectionStrategy(
             new ElementGrouper(),
@@ -123,14 +106,6 @@ final class LivePublisherTest extends SapphireTest
         );
 
         $this->publisher = new LivePublisher($this->mapper, $this->draftWriter, $this->logger, $strategy);
-    }
-
-    protected function tearDown(): void
-    {
-        Section::config()->set('auto_scaffold', $this->sectionAutoScaffold);
-        Row::config()->set('auto_scaffold', $this->rowAutoScaffold);
-
-        parent::tearDown();
     }
 
     public function testSharedElementIsPublishedToLiveWithLiveValuesAndContainerChain(): void
@@ -289,7 +264,7 @@ final class LivePublisherTest extends SapphireTest
 
         $this->publish($pageId, Page::class, [$liveA, $liveB], [9001 => true, 9002 => true], $idMap);
 
-        $warnings = $this->entriesAtLevel('warning');
+        $warnings = $this->logger->entriesAt('warning');
         self::assertCount(1, $warnings);
         self::assertSame(
             'Live grid settings diverge within migrated column {columnId}; '
@@ -490,7 +465,7 @@ final class LivePublisherTest extends SapphireTest
 
         $this->publish($pageId, Page::class, [$liveOnly], [], $idMap);
 
-        $infos = $this->entriesAtLevel('info');
+        $infos = $this->logger->entriesAt('info');
         self::assertCount(1, $infos);
         self::assertSame(
             'Page {pageId}: {liveOnlyCount} live-only legacy element(s) found; '
@@ -649,7 +624,8 @@ final class LivePublisherTest extends SapphireTest
     }
 
     /**
-     * @param array<string, int> $sizeFields
+     * @param array<string, int>         $sizeFields
+     * @param array<string, string|null> $visibilityFields
      */
     private function legacyElement(
         int $id,
@@ -661,21 +637,19 @@ final class LivePublisherTest extends SapphireTest
         string $titleTag = 'h2',
         array $visibilityFields = [],
     ): LegacyElement {
-        return new LegacyElement(
-            id: $id,
-            className: $isRow ? self::ROW_CLASS : self::CONTENT_CLASS,
-            title: $title,
-            showTitle: $showTitle,
-            titleTag: $titleTag,
-            titleClass: '',
-            sort: $id,
-            extraClass: '',
-            isRow: $isRow,
-            sizeFields: $sizeFields,
-            offsetFields: [],
-            visibilityFields: $visibilityFields,
-            mediaData: $media,
-        );
+        $overrides = [
+            'className' => $isRow ? self::ROW_CLASS : self::CONTENT_CLASS,
+            'title' => $title,
+            'showTitle' => $showTitle,
+            'titleTag' => $titleTag,
+            'sizeFields' => $sizeFields,
+            'visibilityFields' => $visibilityFields,
+            'mediaData' => $media,
+        ];
+
+        return $isRow
+            ? LegacyElementFactory::row($id, $id, overrides: $overrides)
+            : LegacyElementFactory::content($id, $id, $overrides);
     }
 
     private function gridSettings(int $width): GridSettings
@@ -785,32 +759,5 @@ final class LivePublisherTest extends SapphireTest
     private function liveRowCount(): int
     {
         return Versioned::get_by_stage(Row::class, Versioned::LIVE)->count();
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function warningMessages(): array
-    {
-        $result = [];
-        foreach ($this->logger->messages as $entry) {
-            if ($entry['level'] !== 'warning') {
-                continue;
-            }
-            $result[] = $entry['message'];
-        }
-
-        return $result;
-    }
-
-    /**
-     * @return list<array{level: string, message: string, context: array<string, mixed>}>
-     */
-    private function entriesAtLevel(string $level): array
-    {
-        return \array_values(\array_filter(
-            $this->logger->messages,
-            static fn (array $entry): bool => $entry['level'] === $level,
-        ));
     }
 }

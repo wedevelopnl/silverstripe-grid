@@ -10,6 +10,11 @@ use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 
+/**
+ * Facade smoke test for {@see LegacyDataReader::getElementsForAreaInLocale()}.
+ * The locale-overlay behaviour itself is owned by LegacyElementReaderTest; this
+ * suite only pins that the facade delegation returns the full element list.
+ */
 #[CoversClass(LegacyDataReader::class)]
 final class LegacyDataReaderLocaleTest extends SapphireTest
 {
@@ -35,26 +40,8 @@ final class LegacyDataReaderLocaleTest extends SapphireTest
     protected function tearDown(): void
     {
         $this->seeder->removeFieldLocalisedTables();
-        $this->seeder->removeLocaleIdColumn();
         $this->seeder->dropTables();
         parent::tearDown();
-    }
-
-    public function testFieldLocalisedOverlaysLocalisedValues(): void
-    {
-        $this->seeder->seedElement(7000, 100, self::CONTENT_CLASS, 1, ['Title' => 'EN Title', 'SizeMD' => 6]);
-        $this->seeder->seedContentMedia(7000, ['HTML' => '<p>EN</p>']);
-        $this->seeder->addFieldLocalisedTables();
-        $this->seeder->seedLocalisedElement(7000, 'nl_NL', ['Title' => 'NL Title']);
-        $this->seeder->seedLocalisedContent(7000, 'nl_NL', ['HTML' => '<p>NL</p>']);
-
-        $elements = $this->reader->getElementsForAreaInLocale(100, 'draft', LegacyLocalisationModel::FieldLocalised, 'nl_NL', 2);
-
-        self::assertCount(1, $elements);
-        self::assertSame('NL Title', $elements[0]->title, 'localised Title overlays base');
-        self::assertSame(6, $elements[0]->sizeFields['MD'], 'layout (SizeMD) comes from base, not localised');
-        self::assertNotNull($elements[0]->mediaData);
-        self::assertSame('<p>NL</p>', $elements[0]->mediaData->fields['HTML'], 'localised HTML overlays base');
     }
 
     public function testFacadeReturnsEveryElementNotJustTheFirst(): void
@@ -67,45 +54,5 @@ final class LegacyDataReaderLocaleTest extends SapphireTest
 
         self::assertCount(2, $elements);
         self::assertSame(['First', 'Second'], array_map(static fn ($e): string => $e->title, $elements));
-    }
-
-    public function testFieldLocalisedFallsBackToBaseWhenUntranslated(): void
-    {
-        $this->seeder->seedElement(7001, 100, self::CONTENT_CLASS, 1, ['Title' => 'EN Only']);
-        $this->seeder->seedContentMedia(7001, ['HTML' => '<p>EN Only</p>']);
-        $this->seeder->addFieldLocalisedTables(); // no nl row seeded
-
-        $elements = $this->reader->getElementsForAreaInLocale(100, 'draft', LegacyLocalisationModel::FieldLocalised, 'nl_NL', 2);
-
-        self::assertCount(1, $elements, 'untranslated element is included, not omitted');
-        self::assertSame('EN Only', $elements[0]->title, 'falls back to base Title');
-        self::assertNotNull($elements[0]->mediaData);
-        self::assertSame('<p>EN Only</p>', $elements[0]->mediaData->fields['HTML']);
-    }
-
-    public function testIsolatedFiltersByLocaleId(): void
-    {
-        $this->seeder->addLocaleIdColumn();
-        $this->seeder->seedElement(7100, 100, self::CONTENT_CLASS, 1, ['Title' => 'EN', 'LocaleID' => 1]);
-        $this->seeder->seedContentMedia(7100);
-        $this->seeder->seedElement(7101, 100, self::CONTENT_CLASS, 2, ['Title' => 'NL', 'LocaleID' => 2]);
-        $this->seeder->seedContentMedia(7101);
-
-        $en = $this->reader->getElementsForAreaInLocale(100, 'draft', LegacyLocalisationModel::Isolated, 'en_US', 1);
-        $nl = $this->reader->getElementsForAreaInLocale(100, 'draft', LegacyLocalisationModel::Isolated, 'nl_NL', 2);
-
-        self::assertSame(['EN'], array_map(static fn ($e) => $e->title, $en));
-        self::assertSame(['NL'], array_map(static fn ($e) => $e->title, $nl));
-    }
-
-    public function testNoneDelegatesToBaseRead(): void
-    {
-        $this->seeder->seedElement(7200, 100, self::CONTENT_CLASS, 1, ['Title' => 'Base']);
-        $this->seeder->seedContentMedia(7200);
-
-        $elements = $this->reader->getElementsForAreaInLocale(100, 'draft', LegacyLocalisationModel::None, 'en_US', 1);
-
-        self::assertCount(1, $elements);
-        self::assertSame('Base', $elements[0]->title);
     }
 }

@@ -7,31 +7,29 @@ namespace WeDevelop\Grid\Tests\Integration\Reports;
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\CMS\Model\SiteTree;
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
-use WeDevelop\Grid\Model\Column;
-use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Reports\GridElementReport;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 
 #[CoversClass(GridElementReport::class)]
 final class GridElementReportTest extends SapphireTest
 {
+    use DisablesAutoScaffolding;
+
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
     protected function setUp(): void
     {
         parent::setUp();
         Versioned::set_stage(Versioned::DRAFT);
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
+        $this->disableAutoScaffolding();
     }
 
     private function report(): GridElementReport
@@ -52,10 +50,7 @@ final class GridElementReportTest extends SapphireTest
     public function testSourceRecordsReturnsAllElements(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
-        GridTreeFactory::contentElement($column);
+        GridTreeFactory::treeFor($page);
 
         $records = $this->report()->sourceRecords();
 
@@ -67,9 +62,7 @@ final class GridElementReportTest extends SapphireTest
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         GridTreeFactory::section($page);
-        $section2 = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section2);
-        $column = GridTreeFactory::column($row);
+        ['section' => $section2, 'row' => $row, 'column' => $column] = GridTreeFactory::containerTree($page);
 
         $records = $this->report()->sourceRecords(['ClassName' => Section::class]);
 
@@ -87,30 +80,37 @@ final class GridElementReportTest extends SapphireTest
         self::assertGreaterThanOrEqual(2, $records->count());
     }
 
-    public function testSourceRecordsFiltersByPageId(): void
+    public function testSourceRecordsFiltersByPageIdSkippingMismatches(): void
     {
-        $page = $this->objFromFixture(Page::class, 'test_page');
+        $page1 = $this->objFromFixture(Page::class, 'test_page');
         $page2 = $this->objFromFixture(Page::class, 'test_page_2');
-        GridTreeFactory::section($page);
-        GridTreeFactory::section($page2);
 
-        // Filter to page1 only — PageID is passed as string (from form submission)
-        $records = $this->report()->sourceRecords(['PageID' => (string) $page->ID]);
+        // page1's section is created (and therefore iterated) first. Filtering to page2
+        // means the very first element mismatches: it must be skipped, not stop the loop.
+        // PageID is passed as string (from form submission).
+        $section1 = GridTreeFactory::section($page1, 'main', 0, 'Page1 Section');
+        $section2 = GridTreeFactory::section($page2, 'main', 0, 'Page2 Section');
 
+        $records = $this->report()->sourceRecords(['PageID' => (string) $page2->ID]);
+        $ids = array_map('intval', $records->column('ID'));
+
+        // page2's section is present, page1's is absent. Dropping the `continue` on
+        // the PageID mismatch (or flipping the `!==`) would leak page1's section in.
+        self::assertContains((int) $section2->ID, $ids);
+        self::assertNotContains((int) $section1->ID, $ids);
+
+        // Every surviving record belongs to the filtered page.
         foreach ($records as $record) {
             $recordPage = $record->getPage();
             self::assertInstanceOf(SiteTree::class, $recordPage);
-            self::assertSame((int) $page->ID, (int) $recordPage->ID);
+            self::assertSame((int) $page2->ID, (int) $recordPage->ID);
         }
     }
 
     public function testSourceRecordsFiltersOrphanedOnly(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
-        $normalElement = GridTreeFactory::contentElement($column);
+        ['column' => $column, 'content' => $normalElement] = GridTreeFactory::treeFor($page);
 
         // Create an orphan: write with valid parent, then orphan via raw SQL and reload
         $orphan = GridTreeFactory::contentElement($column);
@@ -143,13 +143,17 @@ final class GridElementReportTest extends SapphireTest
         return $matches[1];
     }
 
-    private function locationHtmlFor(GridElement $element): string
+    /**
+     * Render one report cell for the given element by locating its record in
+     * sourceRecords() and applying the named column's formatting callback.
+     */
+    private function cellHtmlFor(GridElement $element, string $column = 'Location'): string
     {
-        $locationFormatter = $this->report()->columns()['Location']['formatting'];
+        $formatter = $this->report()->columns()[$column]['formatting'];
 
         foreach ($this->report()->sourceRecords() as $record) {
             if ((int) $record->ID === (int) $element->ID) {
-                return $locationFormatter(null, $record);
+                return $formatter(null, $record);
             }
         }
 
@@ -168,33 +172,22 @@ final class GridElementReportTest extends SapphireTest
         $column = GridTreeFactory::column($row);
         $content = GridTreeFactory::contentElement($column, 0, 'Intro Text');
 
-        $locationFormatter = $this->report()->columns()['Location']['formatting'];
+        $html = $this->cellHtmlFor($content);
 
-        foreach ($this->report()->sourceRecords() as $record) {
-            if ((int) $record->ID !== (int) $content->ID) {
-                continue;
-            }
-
-            $html = $locationFormatter(null, $record);
-
-            self::assertStringContainsString(
-                sprintf('href="%s"', htmlspecialchars((string) $page->getCMSEditLink(), ENT_QUOTES)),
-                $html,
-            );
-            self::assertStringContainsString(
-                sprintf('href="%s"', htmlspecialchars((string) $section->getCMSEditLink(), ENT_QUOTES)),
-                $html,
-            );
-            self::assertStringContainsString(
-                sprintf('href="%s"', htmlspecialchars((string) $column->getCMSEditLink(), ENT_QUOTES)),
-                $html,
-            );
-            // The element's own level is not part of its trail.
-            self::assertStringNotContainsString('Intro Text', $html);
-            return;
-        }
-
-        self::fail('Content element should appear in sourceRecords');
+        self::assertStringContainsString(
+            sprintf('href="%s"', htmlspecialchars((string) $page->getCMSEditLink(), ENT_QUOTES)),
+            $html,
+        );
+        self::assertStringContainsString(
+            sprintf('href="%s"', htmlspecialchars((string) $section->getCMSEditLink(), ENT_QUOTES)),
+            $html,
+        );
+        self::assertStringContainsString(
+            sprintf('href="%s"', htmlspecialchars((string) $column->getCMSEditLink(), ENT_QUOTES)),
+            $html,
+        );
+        // The element's own level is not part of its trail.
+        self::assertStringNotContainsString('Intro Text', $html);
     }
 
     public function testLocationTrailRootsAtPageFollowedByAncestors(): void
@@ -205,7 +198,7 @@ final class GridElementReportTest extends SapphireTest
         $column = GridTreeFactory::column($row);
         $content = GridTreeFactory::contentElement($column, 0, 'Intro Text');
 
-        $labels = self::trailLabels($this->locationHtmlFor($content));
+        $labels = self::trailLabels($this->cellHtmlFor($content));
 
         // Page root, then each ancestor outermost-first; the element itself omitted.
         self::assertSame(
@@ -233,7 +226,7 @@ final class GridElementReportTest extends SapphireTest
             (int) $row->ID,
         ));
 
-        $labels = self::trailLabels($this->locationHtmlFor($content));
+        $labels = self::trailLabels($this->cellHtmlFor($content));
 
         // Row segment (index 2) falls back to the element type instead of an empty label.
         self::assertSame($row->getType(), $labels[2]);
@@ -242,30 +235,19 @@ final class GridElementReportTest extends SapphireTest
     public function testLocationColumnRendersOrphanWithoutLink(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
-        $orphan = GridTreeFactory::contentElement($column);
-        $orphanId = (int) $orphan->ID;
+        ['content' => $orphan] = GridTreeFactory::treeFor($page);
 
         $table = DataObject::getSchema()->tableName(GridElement::class);
         DB::query(sprintf(
             "UPDATE \"%s\" SET \"ParentID\" = 0, \"ParentClass\" = '' WHERE \"ID\" = %d",
             $table,
-            $orphanId,
+            (int) $orphan->ID,
         ));
 
-        $locationFormatter = $this->report()->columns()['Location']['formatting'];
+        $html = $this->cellHtmlFor($orphan);
 
-        foreach ($this->report()->sourceRecords() as $record) {
-            if ((int) $record->ID === $orphanId) {
-                $html = $locationFormatter(null, $record);
-                self::assertStringContainsString('Orphaned', $html);
-                self::assertStringNotContainsString('href=', $html);
-                return;
-            }
-        }
-        self::fail('Orphan element should appear in sourceRecords');
+        self::assertStringContainsString('Orphaned', $html);
+        self::assertStringNotContainsString('href=', $html);
     }
 
     public function testColumnsReturnsExpectedKeys(): void
@@ -308,44 +290,6 @@ final class GridElementReportTest extends SapphireTest
         self::assertArrayNotHasKey(GridElement::class, $source);
         // Should include concrete subclasses
         self::assertNotEmpty($source);
-    }
-
-    public function testSourceRecordsFiltersByPageIdContinuesOnMismatch(): void
-    {
-        $page1 = $this->objFromFixture(Page::class, 'test_page');
-        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
-
-        $section1 = GridTreeFactory::section($page1, 'main', 0, 'Page1 Section');
-        $section2 = GridTreeFactory::section($page2, 'main', 0, 'Page2 Section');
-
-        // Filter to page1 only — page2 elements must be excluded entirely.
-        $records = $this->report()->sourceRecords([
-            'PageID' => (string) $page1->ID,
-        ]);
-
-        $ids = array_map('intval', $records->column('ID'));
-
-        // page1's section is present, page2's is absent. Dropping the `continue` on
-        // the PageID mismatch (or flipping the `!==`) would leak page2's section in.
-        self::assertContains((int) $section1->ID, $ids);
-        self::assertNotContains((int) $section2->ID, $ids);
-    }
-
-    public function testSourceRecordsSkipsMismatchesWithoutEndingTheSweep(): void
-    {
-        $page1 = $this->objFromFixture(Page::class, 'test_page');
-        $page2 = $this->objFromFixture(Page::class, 'test_page_2');
-
-        // page1's section is created (and therefore iterated) first. Filtering to page2
-        // means the very first element mismatches: it must be skipped, not stop the loop.
-        $section1 = GridTreeFactory::section($page1, 'main', 0, 'Page1 Section');
-        $section2 = GridTreeFactory::section($page2, 'main', 0, 'Page2 Section');
-
-        $records = $this->report()->sourceRecords(['PageID' => (string) $page2->ID]);
-        $ids = array_map('intval', $records->column('ID'));
-
-        self::assertContains((int) $section2->ID, $ids);
-        self::assertNotContains((int) $section1->ID, $ids);
     }
 
     public function testSourceRecordsAcceptsAnIntegerPageIdParam(): void
@@ -399,29 +343,15 @@ final class GridElementReportTest extends SapphireTest
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page, 'main', 0, 'Formatted Section');
 
-        $columns = $this->report()->columns();
+        // Title formatter — links the element to its own CMS edit URL.
+        $titleResult = $this->cellHtmlFor($section, 'Title');
+        self::assertStringContainsString('Formatted Section', $titleResult);
+        self::assertStringContainsString((string) $section->getCMSEditLink(), $titleResult);
 
-        $records = $this->report()->sourceRecords();
-        foreach ($records as $record) {
-            if ((int) $record->ID === (int) $section->ID) {
-                // Title formatter — links the element to its own CMS edit URL.
-                $titleFormatter = $columns['Title']['formatting'];
-                $titleResult = $titleFormatter(null, $record);
-                self::assertStringContainsString('Formatted Section', $titleResult);
-                self::assertStringContainsString((string) $section->getCMSEditLink(), $titleResult);
+        // Type formatter
+        self::assertNotEmpty($this->cellHtmlFor($section, 'Type'));
 
-                // Type formatter
-                $typeFormatter = $columns['Type']['formatting'];
-                $typeResult = $typeFormatter(null, $record);
-                self::assertNotEmpty($typeResult);
-
-                // Location formatter — passes through the enriched trail.
-                $locationFormatter = $columns['Location']['formatting'];
-                $locationResult = $locationFormatter(null, $record);
-                self::assertStringContainsString((string) $page->Title, $locationResult);
-
-                break;
-            }
-        }
+        // Location formatter — passes through the enriched trail.
+        self::assertStringContainsString((string) $page->Title, $this->cellHtmlFor($section));
     }
 }
