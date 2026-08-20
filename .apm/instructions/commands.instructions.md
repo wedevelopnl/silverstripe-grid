@@ -12,12 +12,9 @@ applyTo: "**/*"
 | `npm run build` | Vite production build |
 | `npm run dev` | Vite watch mode for development |
 | `npm run test` | Run Vitest tests |
-| `npm run lint` | Biome lint (JS/TS) + Stylelint (CSS) |
-| `npm run lint:js` | Biome lint only (no fix) |
-| `npm run lint:js:fix` | Biome lint with auto-fix |
-| `npm run lint:css` | Stylelint only (no fix) |
-| `npm run lint:css:fix` | Stylelint with auto-fix |
-| `npm run format` | Biome format --write (JS/TS) |
+| `npm run lint` | Biome lint (JS/TS + CSS, no fix) |
+| `npm run lint:fix` | Biome lint with auto-fix |
+| `npm run format` | Biome format --write (JS/TS + CSS) |
 | `npm run format:check` | Biome format check (no write) |
 | `npm run typecheck` | TypeScript type checking |
 | `npm run test:watch` | Vitest in watch mode |
@@ -66,4 +63,4 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task dev-build` | Run dev/build to rebuild database and manifest |
 | `task seed-fixture` | Seed the dev DB with an E2E fixture (`FIXTURE=<name>`, default `complex-page`; idempotent) |
 | `task qa` | Full QA suite (PHPStan + Rector + PHP coverage + JS QA, parallel) |
-| `task qa-js` | JavaScript QA (Biome + Stylelint + typecheck + Vitest + vite build) |
+| `task qa-js` | JavaScript QA (Biome + typecheck + Vitest + vite build) |

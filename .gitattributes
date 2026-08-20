@@ -47,7 +47,6 @@
 /playwright.docs.config.ts export-ignore
 /stryker.config.mjs      export-ignore
 /stryker-ignorers.mjs    export-ignore
-/stylelint.config.mjs    export-ignore
 /tsconfig.json           export-ignore
 /vitest.setup.ts         export-ignore
 /vite.config.ts          export-ignore

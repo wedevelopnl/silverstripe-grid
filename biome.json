@@ -12,6 +12,7 @@
       "client/src/js/**/*.js",
       "client/src/js/**/*.mjs",
       "client/src/js/**/*.cjs",
+      "client/src/styles/**/*.css",
       "tests/E2E/**/*.ts",
       "scripts/**/*.mjs",
       "vite.config.ts",
@@ -36,20 +37,44 @@
       "bracketSpacing": true
     }
   },
+  "css": {
+    "formatter": {
+      "quoteStyle": "single"
+    },
+    "linter": {
+      "enabled": true
+    }
+  },
   "linter": {
     "enabled": true,
     "rules": {
       "preset": "recommended",
+      "a11y": {
+        "useGenericFontNames": "error"
+      },
       "complexity": {
         "noUselessUndefined": "error",
-        "noUselessReturn": "error"
+        "noUselessReturn": "error",
+        "noImportantStyles": "error"
       },
       "correctness": {
         "useExhaustiveDependencies": "warn",
         "noUnusedImports": "error",
         "noUnusedVariables": "error",
         "noUnusedFunctionParameters": "error",
-        "noNestedComponentDefinitions": "error"
+        "noNestedComponentDefinitions": "error",
+        "noInvalidDirectionInLinearGradient": "error",
+        "noInvalidGridAreas": "error",
+        "noInvalidPositionAtImportRule": "error",
+        "noMissingVarFunction": "error",
+        "noUnknownFunction": "error",
+        "noUnknownMediaFeatureName": "error",
+        "noUnknownProperty": "error",
+        "noUnknownPseudoClass": "error",
+        "noUnknownPseudoElement": "error",
+        "noUnknownTypeSelector": "error",
+        "noUnknownUnit": "error",
+        "noUnmatchableAnbSelector": "error"
       },
       "performance": {
         "noAwaitInLoops": "error",
@@ -63,7 +88,10 @@
         "noNestedTernary": "error",
         "noParameterAssign": "error",
         "noProcessEnv": "error",
-        "useThrowOnlyError": "error"
+        "useThrowOnlyError": "error",
+        "noDescendingSpecificity": "error",
+        "noHexColors": "error",
+        "noValueAtRule": "error"
       },
       "suspicious": {
         "noExplicitAny": "error",
@@ -83,7 +111,17 @@
         "noProto": "error",
         "noUnnecessaryConditions": "warn",
         "noShadow": "error",
-        "useArraySortCompare": "error"
+        "useArraySortCompare": "error",
+        "noDeprecatedMediaType": "error",
+        "noDuplicateAtImportRules": "error",
+        "noDuplicateCustomProperties": "error",
+        "noDuplicateFontNames": "error",
+        "noDuplicateProperties": "error",
+        "noDuplicateSelectorsKeyframeBlock": "error",
+        "noEmptyBlock": "error",
+        "noImportantInKeyframe": "error",
+        "noShorthandPropertyOverrides": "error",
+        "noUnknownAtRules": "error"
       },
       "nursery": {
         "noFloatingPromises": "error",
@@ -108,7 +146,16 @@
         "noPlaywrightWaitForNavigation": "error",
         "noPlaywrightPagePause": "error",
         "noPlaywrightEval": "error",
-        "noPlaywrightUselessAwait": "error"
+        "noPlaywrightUselessAwait": "error",
+        "noDuplicateSelectors": "error",
+        "noExcessiveSelectorClasses": "error",
+        "noInvalidPropertyInitValue": "error",
+        "useBaseline": {
+          "level": "error",
+          "options": {
+            "available": "newly"
+          }
+        }
       },
       "security": {
         "noScriptUrl": "error"
@@ -116,6 +163,16 @@
     }
   },
   "overrides": [
+    {
+      "includes": ["client/src/styles/tokens.css"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noHexColors": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["**/*.test.ts", "**/*.test.tsx", "client/src/js/testing/**"],
       "linter": {
