@@ -85,9 +85,13 @@
      Primitives — space
      --------------------------------------------------------------------------- */
 
-  /* A strict 4px scale; the design uses no value off it. `-3` is reserved for
-     the icon-toolbar rhythm (the Figma spaces action icons 12px apart while
-     every other cluster uses 8px), so don't collapse it into `-2`/`-4`. */
+  /* A 4px scale, and the only scale a new rule should reach for. `-3` is
+     reserved for the icon-toolbar rhythm (the Figma spaces action icons 12px
+     apart while every other cluster uses 8px), so don't collapse it into
+     `-2`/`-4`. Existing rules carry a handful of off-scale values that are
+     optical rather than rhythmic — a 7px cell inset that pairs with a 1px
+     border to read as 8px, the dialog's 20px gutter — so the scale is a
+     default, not an invariant. */
   --ssgrid-space-1: 4px;
   --ssgrid-space-2: 8px;
   --ssgrid-space-3: 12px;
@@ -128,6 +132,9 @@
      Semantics — surfaces
      --------------------------------------------------------------------------- */
 
+  /* The page wash. Read as a recessed fill rather than a backdrop: its only
+     consumer is the viewport trigger, which is meant to sit *into* the editor
+     header rather than on top of it. */
   --ssgrid-surface-page: var(--ssgrid-color-neutral-100);
   --ssgrid-surface-default: var(--ssgrid-color-neutral-0);
   --ssgrid-surface-muted: var(--ssgrid-color-overlay-black-2);
@@ -163,6 +170,11 @@
      --ssgrid-icon-* axis only ever gave authors two indistinguishable tokens to
      pick between. */
   --ssgrid-text-default: var(--ssgrid-color-neutral-1000);
+
+  /* Every piece of secondary copy in the editor: captions, counts, group
+     headings, empty-state lines, the drag ghost's meta. A solid neutral rather
+     than dimmed black — see the note on --ssgrid-opacity-disabled. 4.68:1 on
+     white, so it clears WCAG AA at the 12px end of the type scale. */
   --ssgrid-text-muted: var(--ssgrid-color-neutral-500);
   --ssgrid-text-brand: var(--ssgrid-color-brand-500);
   --ssgrid-text-unpublished: var(--ssgrid-color-unpublished-700);
@@ -173,11 +185,33 @@
      Semantics — state
      --------------------------------------------------------------------------- */
 
-  /* How strongly a control reads as unavailable. One value for every disabled
-     affordance — button, chip, listbox row, picker tile — because "you cannot
-     use this" is one fact and an author comparing two dimmed controls should
-     not be able to tell them apart. Distinct from the 0.6 pending state (a
-     control that is momentarily busy, not unavailable) and from the drag
-     handle's 0.25 resting opacity (a passive affordance, not a disabled one). */
+  /* Box-level dimming. Four facts, four values, and an author comparing two
+     dimmed boxes must be able to tell which fact is being stated — so nothing
+     here may drift onto a neighbour's value.
+
+     Dimming TEXT is not on this list: secondary copy takes
+     `--ssgrid-text-muted` instead. Opacity over black lands at #808080 by 0.5,
+     which is 3.95:1 on white and fails WCAG AA outright, and the fix has to be
+     a colour rather than a nudged alpha — otherwise every caption re-derives
+     its own "dim enough but still legible" number. Opacity stays for whole
+     boxes, where it dims border and fill along with the text and that is the
+     point. */
+
+  /* Not in play — a disabled control, or a column the current viewport hides.
+     Both say "this is here but does nothing right now". */
   --ssgrid-opacity-disabled: 0.5;
+
+  /* Momentarily busy, not unavailable: an insert/add button mid-submit, which
+     deliberately stays focusable so keyboard focus survives the write. */
+  --ssgrid-opacity-pending: 0.6;
+
+  /* A quiet standing mark — the base-viewport pill, which reports a fact
+     nobody is being asked to act on. Not named `-muted`: that word belongs to
+     --ssgrid-text-muted, and the whole point of keeping the two apart is that
+     an author never reaches for an alpha when they mean a text colour. */
+  --ssgrid-opacity-quiet: 0.65;
+
+  /* A passive affordance at rest: the Figma's grip handle, which comes up to
+     full strength on hover. */
+  --ssgrid-opacity-passive: 0.25;
 }

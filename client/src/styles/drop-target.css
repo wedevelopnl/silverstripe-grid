@@ -1,0 +1,17 @@
+/* The drag drop-target ring. One rule for all three containers: mid-drag,
+   whichever of section / row / column card would receive the drop switches its
+   hairline to brand purple. `data-drop-target` is set by exactly those three
+   chromes (SectionChrome, RowChrome, ColumnChrome) and by nothing else, so the
+   attribute alone identifies them and no per-level copy is needed.
+
+   Ordering is the whole reason this is its own file rather than a paragraph in
+   publish-status.css. Both rules paint the same `border-color` at (0,2,0), and
+   purple has to win: an orange status ring on the column you are about to drop
+   into would hide the only feedback that says the drop will land there. Equal
+   specificity means the later import wins, so this must stay imported after
+   publish-status.css and before the component files — which is also why a
+   component may still override it deliberately (the column card adds a fill of
+   its own on top, in column-block.css). */
+.ssgrid-editor [data-drop-target] {
+  border-color: var(--ssgrid-border-focus);
+}

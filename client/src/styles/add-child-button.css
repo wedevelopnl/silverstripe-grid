@@ -17,9 +17,7 @@
 
 .ssgrid-add-child-hint {
   margin: 0;
-  color: var(--ssgrid-text-default);
-  font-size: var(--ssgrid-font-size-body);
-  line-height: var(--ssgrid-line-height-tight);
+  color: var(--ssgrid-text-muted);
   text-align: center;
 }
 
@@ -36,10 +34,11 @@
   border: 1px dashed var(--ssgrid-border-focus);
   border-radius: var(--ssgrid-radius-sm);
   color: var(--ssgrid-text-brand);
+
+  /* `font: inherit` to shed the UA button font; only the weight then deviates
+     from what the editor already hands down. */
   font: inherit;
-  font-size: var(--ssgrid-font-size-body);
   font-weight: var(--ssgrid-font-weight-medium);
-  line-height: var(--ssgrid-line-height-tight);
   cursor: pointer;
 
   &:hover:not([aria-disabled='true']) {
@@ -50,12 +49,11 @@
      survives the submit and the label change is announced. */
   &[aria-disabled='true'] {
     cursor: progress;
-    opacity: 0.6;
+    opacity: var(--ssgrid-opacity-pending);
   }
 }
 
+/* Geometry from `.ssgrid-glyph` in the markup. */
 .ssgrid-add-child-icon {
   color: var(--ssgrid-text-brand);
-  font-size: var(--ssgrid-size-icon);
-  line-height: 1;
 }

@@ -79,6 +79,7 @@ export default function GridEditorShell({
 
   return (
     <div
+      className="ssgrid-editor"
       data-page-id={pageId}
       data-zone={zone}
       data-testid="grid-editor"
@@ -103,16 +104,14 @@ export default function GridEditorShell({
       {status === 'ready' && (
         <GridEditorProvider value={gridEditorContextValue}>
           <CollapseContext.Provider value={collapseState}>
-            <div className="ssgrid-editor">
-              <GridAreaHeader sections={sections} readonly={readonly} version={version} />
-              <div
-                className="ssgrid-editor-canvas ssgrid-card-surface"
-                data-testid="grid-editor-canvas"
-                data-dnd-container=""
-                data-descendant-unpublished={anyUnpublished ? '' : undefined}
-              >
-                {children}
-              </div>
+            <GridAreaHeader sections={sections} readonly={readonly} version={version} />
+            <div
+              className="ssgrid-editor-canvas ssgrid-card-surface"
+              data-testid="grid-editor-canvas"
+              data-dnd-container=""
+              data-descendant-unpublished={anyUnpublished ? '' : undefined}
+            >
+              {children}
             </div>
           </CollapseContext.Provider>
         </GridEditorProvider>

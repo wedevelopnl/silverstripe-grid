@@ -121,7 +121,7 @@ export default function ViewportPicker({
         onClick={popup.toggle}
       >
         <i
-          className={`ssgrid-viewport-picker-icon ${getViewportIcon(current.minWidth)}`}
+          className={`ssgrid-glyph ssgrid-viewport-picker-icon ${getViewportIcon(current.minWidth)}`}
           aria-hidden="true"
         />
         <span className="ssgrid-viewport-picker-label">{current.label}</span>
@@ -136,7 +136,10 @@ export default function ViewportPicker({
         {anyOverrides && (
           <span className="ssgrid-viewport-picker-override-dot" aria-hidden="true" />
         )}
-        <i className="ssgrid-viewport-picker-caret font-icon-down-open" aria-hidden="true" />
+        <i
+          className="ssgrid-glyph ssgrid-viewport-picker-caret font-icon-down-open"
+          aria-hidden="true"
+        />
       </button>
       {popup.isOpen && (
         <div
@@ -168,7 +171,7 @@ export default function ViewportPicker({
                   onClick={() => activate(entry)}
                 >
                   <i
-                    className={`ssgrid-viewport-picker-icon ${getViewportIcon(entry.viewport.minWidth)}`}
+                    className={`ssgrid-glyph ssgrid-viewport-picker-icon ${getViewportIcon(entry.viewport.minWidth)}`}
                     aria-hidden="true"
                   />
                   <span className="ssgrid-viewport-picker-item-label">{entry.viewport.label}</span>

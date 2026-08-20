@@ -80,7 +80,7 @@ export default function ActionsMenu({
         aria-label={t('WeDevelopGrid.ActionsMenu.TRIGGER_LABEL', 'Actions')}
         onClick={handleTriggerClick}
       >
-        <span className="ssgrid-icon-button-glyph font-icon-dot-3" aria-hidden="true" />
+        <span className="ssgrid-glyph font-icon-dot-3" aria-hidden="true" />
       </button>
       {popup.isOpen && (
         <div

@@ -121,7 +121,7 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
       aria-disabled={isPending}
       onClick={handleClick}
     >
-      <i className="ssgrid-add-child-icon font-icon-plus" aria-hidden="true" />
+      <i className="ssgrid-glyph ssgrid-add-child-icon font-icon-plus" aria-hidden="true" />
       <span>{isPending ? labels.adding : labels.add}</span>
     </button>
   )

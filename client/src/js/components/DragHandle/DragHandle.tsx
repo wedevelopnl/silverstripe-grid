@@ -25,7 +25,7 @@ const DragHandle = memo(function DragHandleComponent({
     >
       <span
         data-testid="drag-handle-icon"
-        className="ssgrid-icon-button-glyph font-icon-drag-handle"
+        className="ssgrid-glyph font-icon-drag-handle"
         aria-hidden="true"
       />
     </button>

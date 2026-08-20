@@ -62,7 +62,7 @@ export default function GridAreaHeader({
           title={t('WeDevelopGrid.GridEditor.ACTION_RESET', 'Reset changes')}
           aria-label={t('WeDevelopGrid.GridEditor.ACTION_RESET', 'Reset changes')}
         >
-          <span className="ssgrid-icon-button-glyph font-icon-back-in-time" aria-hidden="true" />
+          <span className="ssgrid-glyph font-icon-back-in-time" aria-hidden="true" />
         </button>
         <button
           type="button"
@@ -73,7 +73,7 @@ export default function GridAreaHeader({
           aria-label={toggleAllLabel}
         >
           <span
-            className={`ssgrid-icon-button-glyph ${allCollapsed ? 'font-icon-down-open-big' : 'font-icon-up-open-big'}`}
+            className={`ssgrid-glyph ${allCollapsed ? 'font-icon-down-open-big' : 'font-icon-up-open-big'}`}
             aria-hidden="true"
           />
         </button>
@@ -84,7 +84,7 @@ export default function GridAreaHeader({
           title={t('WeDevelopGrid.GridEditor.ACTION_OPEN', 'Open page')}
           aria-label={t('WeDevelopGrid.GridEditor.ACTION_OPEN', 'Open page')}
         >
-          <span className="ssgrid-icon-button-glyph font-icon-external-link" aria-hidden="true" />
+          <span className="ssgrid-glyph font-icon-external-link" aria-hidden="true" />
         </button>
         <button
           type="button"
@@ -93,7 +93,7 @@ export default function GridAreaHeader({
           title={t('WeDevelopGrid.GridEditor.ACTION_CLEAR', 'Remove all sections')}
           aria-label={t('WeDevelopGrid.GridEditor.ACTION_CLEAR', 'Remove all sections')}
         >
-          <span className="ssgrid-icon-button-glyph font-icon-trash-bin" aria-hidden="true" />
+          <span className="ssgrid-glyph font-icon-trash-bin" aria-hidden="true" />
         </button>
       </div>
     </header>

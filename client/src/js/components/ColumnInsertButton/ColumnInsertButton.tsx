@@ -85,7 +85,7 @@ const ColumnInsertButton = memo(function ColumnInsertButtonComponent(
       aria-label={label}
     >
       <span className="ssgrid-column-insert-dot" aria-hidden="true" />
-      <i className="ssgrid-column-insert-icon font-icon-plus" aria-hidden="true" />
+      <i className="ssgrid-glyph ssgrid-column-insert-icon font-icon-plus" aria-hidden="true" />
     </button>
   )
 })

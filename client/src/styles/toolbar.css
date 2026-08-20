@@ -3,11 +3,6 @@
    (set by React); structure/look lives here. The publish-status marks live in
    `publish-status.css`. */
 
-.ssgrid-icon-button-glyph {
-  font-size: var(--ssgrid-size-icon);
-  line-height: 1;
-}
-
 .ssgrid-icon-button {
   display: inline-flex;
   flex: 0 0 auto;
@@ -37,16 +32,16 @@
   &[data-variant='drag'] {
     cursor: grab;
 
-    > .ssgrid-icon-button-glyph {
-      opacity: 0.25;
+    > .ssgrid-glyph {
+      opacity: var(--ssgrid-opacity-passive);
     }
   }
 
-  &:hover:not(:disabled) > .ssgrid-icon-button-glyph {
+  &:hover:not(:disabled) > .ssgrid-glyph {
     color: var(--ssgrid-text-brand);
   }
 
-  &[data-variant='drag']:hover:not(:disabled) > .ssgrid-icon-button-glyph {
+  &[data-variant='drag']:hover:not(:disabled) > .ssgrid-glyph {
     opacity: 1;
   }
 }
