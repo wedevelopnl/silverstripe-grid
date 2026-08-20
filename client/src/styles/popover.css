@@ -26,8 +26,6 @@
   border: 1px solid var(--ssgrid-border-default);
   border-radius: var(--ssgrid-radius-sm);
   box-shadow: var(--ssgrid-shadow-1);
-  font-size: var(--ssgrid-font-size-body);
-  line-height: var(--ssgrid-line-height-tight);
 }
 
 .ssgrid-popover-item {
@@ -36,7 +34,6 @@
   gap: var(--ssgrid-space-2);
   padding: 7px var(--ssgrid-space-2);
   border-radius: var(--ssgrid-radius-sm);
-  color: var(--ssgrid-text-default);
   white-space: nowrap;
   cursor: pointer;
 
@@ -50,6 +47,25 @@
     background: var(--ssgrid-surface-selected);
     outline: 1px solid var(--ssgrid-border-focus);
     outline-offset: -1px;
+  }
+}
+
+/* A row with nothing to act on. Dimmed rather than removed so it holds its
+   place; the keyboard cursor still lands there, so only the hover affordance is
+   withdrawn — a pointer target that does nothing must not light up as though it
+   would.
+
+   The dialog's option rows are the same control under a different surface, so
+   they are named here rather than carrying their own copy. `:is()` takes its
+   specificity from its single-class arms, which leaves this at (0,3,0) — still
+   ahead of the plain `:hover` each surface declares for itself, whichever of
+   them the bundle imports later. */
+:is(.ssgrid-popover-item, .ssgrid-dialog-option)[aria-disabled='true'] {
+  opacity: var(--ssgrid-opacity-disabled);
+  cursor: default;
+
+  &:hover {
+    background: none;
   }
 }
 
@@ -73,10 +89,10 @@
   min-width: 0;
 }
 
+/* Sits inline with the trigger's label rather than in a 16px hit box, so it
+   steps `.ssgrid-glyph` down to the label's own size. */
 .ssgrid-settings-picker-caret {
-  flex: 0 0 auto;
-  font-size: var(--ssgrid-font-size-body);
-  line-height: 1;
+  --ssgrid-glyph-size: var(--ssgrid-font-size-body);
 }
 
 .ssgrid-settings-picker-listbox {
@@ -139,8 +155,6 @@
   border-radius: var(--ssgrid-radius-sm);
   color: var(--ssgrid-text-default);
   font: inherit;
-  font-size: var(--ssgrid-font-size-body);
-  line-height: var(--ssgrid-line-height-tight);
   text-align: left;
   cursor: pointer;
 
@@ -155,20 +169,21 @@
 }
 
 .ssgrid-viewport-picker-icon {
-  flex: 0 0 auto;
+  --ssgrid-glyph-size: var(--ssgrid-font-size-body);
+
   color: var(--ssgrid-text-brand);
-  font-size: var(--ssgrid-font-size-body);
 }
 
-/* Half-opacity so the upper bound reads as a footnote to the label. */
+/* Muted so the upper bound reads as a footnote to the label it follows — a
+   sibling of that label, not a child, so it takes the trigger's own weight. */
 .ssgrid-viewport-picker-range {
-  font-weight: var(--ssgrid-font-weight-regular);
-  opacity: 0.5;
+  color: var(--ssgrid-text-muted);
 }
 
 .ssgrid-viewport-picker-caret {
-  flex: 0 0 auto;
-  opacity: 0.5;
+  --ssgrid-glyph-size: var(--ssgrid-font-size-body);
+
+  color: var(--ssgrid-text-muted);
 }
 
 /* Sized to its own rows and bounded on width only: the trigger is
@@ -189,6 +204,8 @@
   max-height: none;
 }
 
+/* A reset scope with nothing to clear reads as disabled through the shared
+   flyout-row rule above — every one of these composes `.ssgrid-popover-item`. */
 .ssgrid-viewport-picker-item {
   &[aria-checked='true'] {
     font-weight: var(--ssgrid-font-weight-medium);
@@ -208,19 +225,6 @@
   &[data-scope='all'] {
     font-weight: var(--ssgrid-font-weight-medium);
   }
-
-  /* A scope with nothing to clear. Dimmed rather than removed so the row
-     holds its place; the keyboard ring still lands here, so only the hover
-     affordance is withdrawn — a pointer target that does nothing must not
-     light up as though it would. */
-  &[aria-disabled='true'] {
-    opacity: var(--ssgrid-opacity-disabled);
-    cursor: default;
-
-    &:hover {
-      background: none;
-    }
-  }
 }
 
 .ssgrid-viewport-picker-item-label {
@@ -229,8 +233,8 @@
 
 .ssgrid-viewport-picker-item-count {
   flex: 0 0 auto;
+  color: var(--ssgrid-text-muted);
   font-variant-numeric: tabular-nums;
-  opacity: 0.5;
 }
 
 /* Separates the reset scopes from the viewport rows they act on. */
@@ -242,12 +246,11 @@
 
 .ssgrid-viewport-picker-group-heading {
   padding: var(--ssgrid-space-1) var(--ssgrid-space-2);
-  color: var(--ssgrid-text-default);
+  color: var(--ssgrid-text-muted);
   font-size: var(--ssgrid-font-size-label);
   font-weight: var(--ssgrid-font-weight-medium);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.5;
 }
 
 /* Marks the adapter's base viewport, the one whose widths apply everywhere.
@@ -259,12 +262,9 @@
   background: var(--ssgrid-surface-muted);
   border: 1px solid var(--ssgrid-border-default);
   border-radius: var(--ssgrid-radius-sm);
-  color: var(--ssgrid-text-default);
   font-size: var(--ssgrid-font-size-label);
-  font-weight: var(--ssgrid-font-weight-regular);
-  line-height: var(--ssgrid-line-height-tight);
   white-space: nowrap;
-  opacity: 0.65;
+  opacity: var(--ssgrid-opacity-quiet);
 }
 
 /* Brand disc marking a viewport that at least one column overrides — on the

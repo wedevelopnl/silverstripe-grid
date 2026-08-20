@@ -93,7 +93,7 @@ function ToolbarButton({
       aria-label={label}
       onClick={handleClick}
     >
-      <span className={`ssgrid-icon-button-glyph ${glyph}`} aria-hidden="true" />
+      <span className={`ssgrid-glyph ${glyph}`} aria-hidden="true" />
     </button>
   )
 }

@@ -38,6 +38,23 @@
   white-space: nowrap;
 }
 
+/* An icon-font glyph. Seven of these are rendered across the editor — toolbar
+   button, column header, insert "+", add-child "+", viewport marker and the two
+   carets — and every one of them wants the same three things: hold your size,
+   don't flex, and take up no more line box than the glyph itself. Only the
+   colour genuinely varies, so that stays with the consumer; a glyph that reads
+   at 14px because it sits inline with a label rather than in a 16px hit box
+   says so with `--ssgrid-glyph-size`.
+
+   A glyph is text in an icon font here, which is why this lives with the type
+   treatments and takes the --ssgrid-text-* colours rather than an icon axis of
+   its own — see the note in tokens.css. */
+.ssgrid-glyph {
+  flex: 0 0 auto;
+  font-size: var(--ssgrid-glyph-size, var(--ssgrid-size-icon));
+  line-height: 1;
+}
+
 /* Container titles double as links to the element's edit form. The Figma paints
    them plain black; jQuery UI's admin theme paints every link inside a widget
    `#0071c4` via `.ui-widget.ui-widget-content a`, which at (0,2,1) outranks a

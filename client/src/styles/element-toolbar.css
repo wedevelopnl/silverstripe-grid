@@ -13,8 +13,7 @@
   margin-left: auto;
 
   /* The archive icon reads red on hover. */
-  .ssgrid-icon-button[data-destructive='true']:not(:disabled):hover
-    > .ssgrid-icon-button-glyph {
+  .ssgrid-icon-button[data-destructive='true']:not(:disabled):hover > .ssgrid-glyph {
     color: var(--ssgrid-text-danger);
   }
 }

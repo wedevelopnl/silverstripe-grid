@@ -1,6 +1,7 @@
 /* Column block — outlined card inside a Row. Figma "Column" component: the
    shared card chrome (`.ssgrid-card-surface` in the markup) over a 3% black
-   surface, with a 16px internal gap. The header has two stacked rows — a
+   surface, with a 16px internal gap. The hairline is repainted by the shared
+   ring rules in `publish-status.css` and `drop-target.css`. The header has two stacked rows — a
    toolbar (drag/collapse/icon/title/status-marks/actions) and a
    layout-settings row (width + offset pickers, side-by-side, equal width).
    The body renders content blocks vertically. */
@@ -26,13 +27,14 @@
   flex-direction: column;
   gap: var(--ssgrid-space-4);
 
+  /* The only container that tints its fill as well; the ring itself is the
+     shared rule's, in drop-target.css. */
   &[data-drop-target] {
     background: var(--ssgrid-surface-selected);
-    border-color: var(--ssgrid-border-focus);
   }
 
   &[data-hidden] {
-    opacity: 0.5;
+    opacity: var(--ssgrid-opacity-disabled);
   }
 
   &[data-collapsed] > :not(.ssgrid-column-header) {
@@ -59,14 +61,9 @@
   gap: var(--ssgrid-space-2);
 }
 
-.ssgrid-column-icon {
-  flex: 0 0 auto;
-  color: var(--ssgrid-text-default);
-  font-size: var(--ssgrid-size-icon);
-  line-height: 1;
-}
-
-/* Title treatment comes from `.ssgrid-title` in the markup. */
+/* The header's type glyph renders with `.ssgrid-glyph` alone — its colour is
+   the editor's default, so it had nothing of its own left to say. Title
+   treatment comes from `.ssgrid-title` in the markup. */
 
 .ssgrid-column-layout-settings {
   display: flex;
@@ -101,11 +98,13 @@
   background: var(--ssgrid-surface-muted);
   border: 1px solid var(--ssgrid-border-default);
   border-radius: var(--ssgrid-radius-sm);
+
+  /* `color` and `font` both have to be said: the UA paints a button in
+     `buttontext` at its own font, neither of which inherits on its own. Past
+     that the editor's own size, weight and measure are already the ones we
+     want. */
   color: var(--ssgrid-text-default);
   font: inherit;
-  font-size: var(--ssgrid-font-size-body);
-  font-weight: var(--ssgrid-font-weight-regular);
-  line-height: var(--ssgrid-line-height-tight);
   cursor: pointer;
 
   &:disabled {

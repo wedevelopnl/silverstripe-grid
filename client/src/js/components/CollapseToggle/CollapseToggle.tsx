@@ -33,7 +33,7 @@ export default function CollapseToggle({
       }}
     >
       <span
-        className={`ssgrid-icon-button-glyph ${isCollapsed ? 'font-icon-down-open' : 'font-icon-up-open'}`}
+        className={`ssgrid-glyph ${isCollapsed ? 'font-icon-down-open' : 'font-icon-up-open'}`}
         aria-hidden="true"
       />
     </button>

@@ -152,18 +152,8 @@
     font-weight: var(--ssgrid-font-weight-medium);
   }
 
-  /* Dimmed rather than removed so the row holds its place; the keyboard ring
-     still lands here, so only the hover affordance is withdrawn — a pointer
-     target that does nothing must not light up as though it would. Same
-     treatment as a disabled popover row. */
-  &[aria-disabled='true'] {
-    opacity: var(--ssgrid-opacity-disabled);
-    cursor: default;
-
-    &:hover {
-      background: none;
-    }
-  }
+  /* `[aria-disabled='true']` is painted by the shared flyout-row rule in
+     popover.css — an unavailable option is one fact, not one per surface. */
 
   /* The aria-activedescendant target — keyboard focus ring without moving
      real DOM focus off the listbox container. */
@@ -214,15 +204,14 @@
 }
 
 .ssgrid-dialog-tile-description {
-  color: var(--ssgrid-text-default);
-  opacity: 0.65;
+  color: var(--ssgrid-text-muted);
   font-size: 13px;
   line-height: 1.4;
 }
 
 .ssgrid-dialog-empty {
   margin: 0;
-  opacity: 0.65;
+  color: var(--ssgrid-text-muted);
 }
 
 /* --- Buttons (dialog footers) -------------------------------------------------
@@ -247,8 +236,11 @@
     cursor: not-allowed;
   }
 
-  &[data-variant='primary'] {
-    background: var(--ssgrid-surface-action);
+  /* The two solid variants are one button with two fills — same white label,
+     same darken-on-hover — so the fill is the only thing each declares. */
+  &[data-variant='primary'],
+  &[data-variant='danger'] {
+    background: var(--ssgrid-button-fill);
     color: var(--ssgrid-text-on-action);
 
     &:not(:disabled):hover {
@@ -256,13 +248,12 @@
     }
   }
 
-  &[data-variant='danger'] {
-    background: var(--ssgrid-color-danger-500);
-    color: var(--ssgrid-text-on-action);
+  &[data-variant='primary'] {
+    --ssgrid-button-fill: var(--ssgrid-surface-action);
+  }
 
-    &:not(:disabled):hover {
-      filter: brightness(0.92);
-    }
+  &[data-variant='danger'] {
+    --ssgrid-button-fill: var(--ssgrid-color-danger-500);
   }
 
   &[data-variant='ghost'] {

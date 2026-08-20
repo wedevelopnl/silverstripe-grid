@@ -79,7 +79,10 @@ export default function GridSettingsPicker({
         onClick={handleTriggerClick}
       >
         <span className="ssgrid-settings-picker-label ssgrid-truncate">{label}</span>
-        <i className="ssgrid-settings-picker-caret font-icon-down-open" aria-hidden="true" />
+        <i
+          className="ssgrid-glyph ssgrid-settings-picker-caret font-icon-down-open"
+          aria-hidden="true"
+        />
       </button>
       {popup.isOpen && (
         <div

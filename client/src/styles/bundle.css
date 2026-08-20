@@ -1,8 +1,10 @@
 /* Single stylesheet entry, bundled (imports inlined) by Vite at build time.
-   Order matters twice over: the shared treatments (a11y/typography/surfaces/
-   publish-status) define utility classes and the shared status-ring rule that
-   the component files override at equal specificity, so components must come
-   later in the cascade. */
+   Order matters twice over. The shared treatments (a11y/typography/surfaces)
+   define utility classes the component files override at equal specificity, so
+   components must come later in the cascade. And the two state rings are
+   ordered against each other: publish-status paints a border-color at (0,2,0)
+   and drop-target repaints it at (0,2,0), so drop-target has to be imported
+   second for purple to beat orange while a drag is in flight. */
 
 @import url('./fonts.css');
 @import url('./tokens.css');
@@ -10,6 +12,7 @@
 @import url('./typography.css');
 @import url('./surfaces.css');
 @import url('./publish-status.css');
+@import url('./drop-target.css');
 @import url('./grid-editor.css');
 @import url('./toolbar.css');
 @import url('./section-block.css');

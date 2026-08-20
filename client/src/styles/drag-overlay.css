@@ -4,7 +4,11 @@
    chip (`.ssgrid-type-icon-chip`) and the title's truncation
    (`.ssgrid-truncate`) are shared treatments composed in the markup — the
    ghost and the card it stands in for are on screen together for the whole
-   drag, so the two must agree. */
+   drag, so the two must agree.
+
+   dnd-kit only portals the overlay when it is handed a `container` prop, and
+   EditableGridEditor hands it none — so the ghost sits inside `.ssgrid-editor`
+   and inherits its typeface, size, measure and colour like anything else. */
 
 .ssgrid-drag-overlay {
   display: inline-flex;
@@ -16,9 +20,6 @@
   border: 1px solid var(--ssgrid-border-focus);
   border-radius: var(--ssgrid-radius-md);
   box-shadow: var(--ssgrid-shadow-3);
-  color: var(--ssgrid-text-default);
-  font-size: var(--ssgrid-font-size-body);
-  line-height: var(--ssgrid-line-height-tight);
   cursor: grabbing;
 }
 
@@ -28,5 +29,5 @@
 
 .ssgrid-drag-overlay-meta {
   flex: 0 0 auto;
-  opacity: 0.6;
+  color: var(--ssgrid-text-muted);
 }

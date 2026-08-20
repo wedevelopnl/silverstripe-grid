@@ -83,10 +83,7 @@
 .ssgrid-empty-state {
   margin: 0;
   padding: var(--ssgrid-space-3);
-  color: var(--ssgrid-text-default);
-  opacity: 0.55;
-  font-size: var(--ssgrid-font-size-body);
-  line-height: var(--ssgrid-line-height-tight);
+  color: var(--ssgrid-text-muted);
   text-align: center;
 
   &[data-variant='centered'] {

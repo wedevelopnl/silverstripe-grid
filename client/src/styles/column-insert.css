@@ -8,10 +8,10 @@
      so it never disturbs the column width math in `.ssgrid-row-columns`.
    The focus ring comes from `.ssgrid-focus-ring` in the markup. */
 
+/* Geometry from `.ssgrid-glyph` in the markup; the white fill is this
+   button's own, since the "+" sits on solid brand. */
 .ssgrid-column-insert-icon {
   color: var(--ssgrid-text-on-action);
-  font-size: var(--ssgrid-size-icon);
-  line-height: 1;
 }
 
 /* The brand ring — only rendered for the `between` placement (see below). */
@@ -34,7 +34,7 @@
      survives the insert (see AddChildButton). */
   &[aria-disabled='true'] {
     cursor: progress;
-    opacity: 0.6;
+    opacity: var(--ssgrid-opacity-pending);
   }
 
   /* --- Edge squares (placement=start | end) --------------------------------- */

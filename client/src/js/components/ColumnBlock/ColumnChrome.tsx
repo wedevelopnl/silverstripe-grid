@@ -80,7 +80,7 @@ export default function ColumnChrome({
               label={title}
               controlsId={bodyId}
             />
-            <i className={`ssgrid-column-icon ${icon}`} aria-hidden="true" />
+            <i className={`ssgrid-glyph ${icon}`} aria-hidden="true" />
             <span className="ssgrid-column-title ssgrid-title" data-testid="column-title">
               {titleHref !== undefined ? (
                 <a href={titleHref} data-testid="column-edit-link">

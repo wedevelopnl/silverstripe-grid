@@ -10,9 +10,12 @@
   background: var(--ssgrid-surface-default);
   border: 1px solid var(--ssgrid-border-default);
   border-radius: var(--ssgrid-radius-md);
-  color: var(--ssgrid-text-default);
 
-  /* The clickable variant renders as an <a>; strip the inherited link chrome
+  /* No `color` here: as a <div> the card inherits the editor's, and as an <a>
+     jQuery UI outranks anything unqualified — which is what the rule below is
+     for. A declaration here would take effect in neither case.
+
+     The clickable variant renders as an <a>; strip the inherited link chrome
      so the card reads as a card, not a hyperlink. The CMS admin stylesheet
      re-adds `text-decoration: underline` on `a:hover`/`a:focus`, which a block
      propagates to every in-flow descendant (title, icon chip, action buttons) —
@@ -77,10 +80,10 @@
   margin: 0;
   padding: var(--ssgrid-space-4);
   border-top: 1px solid var(--ssgrid-border-default);
-  font-size: var(--ssgrid-font-size-body);
-  font-weight: var(--ssgrid-font-weight-regular);
+
+  /* The one relaxed measure in the editor; size, weight and colour are the
+     inherited ones. */
   line-height: var(--ssgrid-line-height-relaxed);
-  color: var(--ssgrid-text-default);
   overflow-wrap: anywhere;
 }
 
