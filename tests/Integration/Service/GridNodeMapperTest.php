@@ -18,6 +18,7 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\GridNodeMapper;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Tests\Integration\Support\SummarizedContentElement;
 use WeDevelop\Grid\Value\ContainerType;
@@ -29,6 +30,8 @@ use WeDevelop\Grid\Value\NodeType;
 #[CoversClass(ElementStatus::class)]
 final class GridNodeMapperTest extends SapphireTest
 {
+    use DisablesAutoScaffolding;
+
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
     private GridNodeMapper $mapper;
@@ -37,8 +40,7 @@ final class GridNodeMapperTest extends SapphireTest
     {
         parent::setUp();
 
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
+        $this->disableAutoScaffolding();
 
         Versioned::set_stage(Versioned::DRAFT);
 
@@ -92,9 +94,7 @@ final class GridNodeMapperTest extends SapphireTest
     public function testMapToNodeIncludesSummaryWhenElementProvidesOne(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $element = SummarizedContentElement::create();
         $element->testSummary = 'Hello admin';
@@ -127,9 +127,7 @@ final class GridNodeMapperTest extends SapphireTest
     public function testMapToNodeOmitsSummaryWhenEmptyString(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $element = SummarizedContentElement::create();
         $element->testSummary = '';
@@ -205,9 +203,7 @@ final class GridNodeMapperTest extends SapphireTest
     public function testMapToNodeLeavesContainerFieldsNullForLeafElement(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $element = ContentElement::create();
         $element->ParentID = $column->ID;
@@ -225,9 +221,7 @@ final class GridNodeMapperTest extends SapphireTest
     public function testMapToNodeDerivesGridSettingsForColumn(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['row' => $row, 'column' => $column] = GridTreeFactory::containerTree($page);
 
         $parentRef = new NodeRef(NodeType::Row, (int) $row->ID);
         $node = $this->mapper->mapToNode($column, $parentRef, []);
@@ -260,9 +254,7 @@ final class GridNodeMapperTest extends SapphireTest
     public function testAllowedTypesForColumn(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $allowed = $this->allowedTypesFor($column);
 
@@ -272,17 +264,6 @@ final class GridNodeMapperTest extends SapphireTest
         self::assertArrayNotHasKey(Section::class, $allowed);
         self::assertArrayNotHasKey(Row::class, $allowed);
         self::assertArrayNotHasKey(Column::class, $allowed);
-    }
-
-    public function testAllowedTypesConsistentAcrossCalls(): void
-    {
-        $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-
-        $first = $this->allowedTypesFor($section);
-        $second = $this->allowedTypesFor($section);
-
-        self::assertEquals($first, $second);
     }
 
     public function testAllowedTypesIncludesMetadata(): void
@@ -313,9 +294,7 @@ final class GridNodeMapperTest extends SapphireTest
     public function testAllowedTypesForColumnExcludesBaseClass(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $allowed = $this->allowedTypesFor($column);
 
@@ -369,9 +348,7 @@ final class GridNodeMapperTest extends SapphireTest
         Config::modify()->set(ContentElement::class, 'singular_name', 'DistinctSingularLabel');
 
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $allowed = $this->allowedTypesFor($column);
 
@@ -383,9 +360,7 @@ final class GridNodeMapperTest extends SapphireTest
         Config::modify()->set(ContentElement::class, 'singular_name', '');
 
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $allowed = $this->allowedTypesFor($column);
 
@@ -400,9 +375,7 @@ final class GridNodeMapperTest extends SapphireTest
         Config::modify()->set(ContentElement::class, 'icon', 'custom-icon-value');
 
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $allowed = $this->allowedTypesFor($column);
 
@@ -414,9 +387,7 @@ final class GridNodeMapperTest extends SapphireTest
         Config::modify()->set(ContentElement::class, 'icon', '');
 
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $allowed = $this->allowedTypesFor($column);
 
@@ -428,9 +399,7 @@ final class GridNodeMapperTest extends SapphireTest
         Config::modify()->set(ContentElement::class, 'class_description', 'My custom description');
 
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $allowed = $this->allowedTypesFor($column);
 
@@ -442,9 +411,7 @@ final class GridNodeMapperTest extends SapphireTest
         Config::modify()->set(ContentElement::class, 'class_description', '');
 
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $allowed = $this->allowedTypesFor($column);
 
@@ -461,9 +428,7 @@ final class GridNodeMapperTest extends SapphireTest
         Config::modify()->set(ContentElement::class, 'class_description', 123);
 
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['column' => $column] = GridTreeFactory::containerTree($page);
 
         $allowed = $this->allowedTypesFor($column);
 

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Value;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Core\Validation\ValidationResult;
 use SilverStripe\Dev\SapphireTest;
+use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 use WeDevelop\Grid\Value\WriteResult;
 
 #[CoversClass(WriteResult::class)]
@@ -104,19 +104,7 @@ final class WriteResultTest extends SapphireTest
         // The raw framework detail must reach the log even though only the composed,
         // translated messages reach the client. Without this assertion the debug()
         // call could be dropped silently while every other test stayed green.
-        $logger = new class extends AbstractLogger {
-            /** @var list<string> */
-            public array $records = [];
-
-            /**
-             * @param mixed $level
-             * @param array<string, mixed> $context
-             */
-            public function log($level, string|\Stringable $message, array $context = []): void
-            {
-                $this->records[] = (string) $level . ':' . (string) ($context['message'] ?? '');
-            }
-        };
+        $logger = new RecordingLogger();
         Injector::inst()->registerService($logger, LoggerInterface::class);
 
         $result = WriteResult::from(static function (): never {
@@ -124,6 +112,10 @@ final class WriteResultTest extends SapphireTest
         });
 
         self::assertTrue($result->isErr());
-        self::assertContains('debug:Raw framework detail', $logger->records);
+        $debugContextMessages = array_map(
+            static fn (array $entry): string => (string) ($entry['context']['message'] ?? ''),
+            $logger->entriesAt('debug'),
+        );
+        self::assertContains('Raw framework detail', $debugContextMessages);
     }
 }

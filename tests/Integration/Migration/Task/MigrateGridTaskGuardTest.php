@@ -7,15 +7,12 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Task;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
-use SilverStripe\PolyExecution\PolyOutput;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputDefinition;
-use Symfony\Component\Console\Output\BufferedOutput;
 use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 
 #[CoversClass(MigrateGridTask::class)]
 final class MigrateGridTaskGuardTest extends SapphireTest
@@ -49,16 +46,13 @@ final class MigrateGridTaskGuardTest extends SapphireTest
         // --default-viewport must be one of the legacy keys (XS/SM/MD/LG/XL). An
         // unvalidated value misses the uppercase-keyed legacy sizeFields lookup and
         // silently full-widths every migrated column, so it must fail loudly.
-        $task = new MigrateGridTask();
-        $definition = new InputDefinition($task->getOptions());
-        $input = new ArrayInput(['--default-viewport' => 'ZZ', '--zone' => 'main', '--dry-run' => true], $definition);
-        $buffered = new BufferedOutput();
-        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+        $result = TaskRunner::run(
+            new MigrateGridTask(),
+            ['--default-viewport' => 'ZZ', '--zone' => 'main', '--dry-run' => true],
+        );
 
-        $result = $task->execute($input, $output);
-
-        self::assertSame(Command::FAILURE, $result);
-        self::assertStringContainsString('Invalid --default-viewport "ZZ"', $buffered->fetch());
+        self::assertSame(Command::FAILURE, $result['exitCode']);
+        self::assertStringContainsString('Invalid --default-viewport "ZZ"', $result['output']);
     }
 
     public function testFailsWhenNoLegacyKeyMatchesAnAdapterViewport(): void
@@ -68,17 +62,14 @@ final class MigrateGridTaskGuardTest extends SapphireTest
         // empty map would silently drop every responsive override.
         Injector::inst()->registerService(new BulmaAdapter(), GridAdapterInterface::class);
 
-        $task = new MigrateGridTask();
-        $definition = new InputDefinition($task->getOptions());
-        $input = new ArrayInput(['--default-viewport' => 'MD', '--zone' => 'main', '--dry-run' => true], $definition);
-        $buffered = new BufferedOutput();
-        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+        $result = TaskRunner::run(
+            new MigrateGridTask(),
+            ['--default-viewport' => 'MD', '--zone' => 'main', '--dry-run' => true],
+        );
 
-        $result = $task->execute($input, $output);
+        $rendered = $result['output'];
 
-        $rendered = $buffered->fetch();
-
-        self::assertSame(Command::FAILURE, $result);
+        self::assertSame(Command::FAILURE, $result['exitCode']);
         self::assertStringContainsString('Could not derive a viewport map', $rendered);
         // The remediation half of the message must survive in order: asserting only the
         // opening clause lets a reordered or truncated message pass.
@@ -89,20 +80,17 @@ final class MigrateGridTaskGuardTest extends SapphireTest
     {
         $this->seeder->addFieldLocalisedTables();
 
-        $task = new MigrateGridTask();
-        $definition = new InputDefinition($task->getOptions());
-        $input = new ArrayInput(['--default-viewport' => 'MD', '--zone' => 'main', '--dry-run' => true], $definition);
-        $buffered = new BufferedOutput();
-        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+        $result = TaskRunner::run(
+            new MigrateGridTask(),
+            ['--default-viewport' => 'MD', '--zone' => 'main', '--dry-run' => true],
+        );
 
-        $result = $task->execute($input, $output);
-
-        self::assertSame(Command::FAILURE, $result, 'must refuse on localised legacy data');
+        self::assertSame(Command::FAILURE, $result['exitCode'], 'must refuse on localised legacy data');
         self::assertStringContainsString(
             'Fluent site detected (locale-isolated grid or localised legacy tables). '
             . 'Run "migrate-grid-with-fluent" instead — this task migrates content without '
             . 'locale context and would write records invisible in every locale.',
-            $buffered->fetch(),
+            $result['output'],
         );
     }
 
@@ -115,15 +103,12 @@ final class MigrateGridTaskGuardTest extends SapphireTest
         $this->seeder->addFieldLocalisedTables();
         $this->seeder->addLocaleIdColumn();
 
-        $task = new MigrateGridTask();
-        $definition = new InputDefinition($task->getOptions());
-        $input = new ArrayInput(['--default-viewport' => 'MD', '--zone' => 'main', '--dry-run' => true], $definition);
-        $buffered = new BufferedOutput();
-        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+        $result = TaskRunner::run(
+            new MigrateGridTask(),
+            ['--default-viewport' => 'MD', '--zone' => 'main', '--dry-run' => true],
+        );
 
-        $result = $task->execute($input, $output);
-
-        self::assertSame(Command::FAILURE, $result);
-        self::assertStringContainsString('Ambiguous legacy localisation', $buffered->fetch());
+        self::assertSame(Command::FAILURE, $result['exitCode']);
+        self::assertStringContainsString('Ambiguous legacy localisation', $result['output']);
     }
 }

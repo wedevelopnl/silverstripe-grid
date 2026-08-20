@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\PolyExecution\PolyOutput;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputDefinition;
-use Symfony\Component\Console\Output\BufferedOutput;
 use TractorCow\Fluent\Model\Locale;
 use WeDevelop\Grid\Migration\Task\MigrateGridWithFluentTask;
+use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 
 /**
  * The strategy axis (--strategy flag) and the Fluent-locale axis are otherwise
@@ -61,22 +58,15 @@ final class FluentStrategySelectionMigrationTest extends FluentMigrationTestCase
         $pageId = $this->pageId();
         $this->seedTwoRowsPerLocale($pageId);
 
-        $task = new MigrateGridWithFluentTask();
-        $definition = new InputDefinition($task->getOptions());
-        $input = new ArrayInput([
+        $result = TaskRunner::run(new MigrateGridWithFluentTask(), [
             '--default-viewport' => self::DEFAULT_VIEWPORT,
             '--zone' => self::ZONE,
             '--strategy' => 'single-section',
             '--page-ids' => (string) $pageId,
             '--force' => true,
-        ], $definition);
-        $input->setInteractive(false);
-        $buffered = new BufferedOutput();
-        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
+        ]);
 
-        $exitCode = $task->execute($input, $output);
-
-        self::assertSame(Command::SUCCESS, $exitCode);
+        self::assertSame(Command::SUCCESS, $result['exitCode']);
         // single-section collapses both rows into one Section *per locale*; the
         // default RowPerSection strategy would yield two. One Section in each
         // locale therefore proves the flag reached every per-locale run.

@@ -6,48 +6,26 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use Page;
-use SilverStripe\Dev\SapphireTest;
-use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\Service\LegacyPageDiscovery;
-use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
 
 /**
- * Direct surface tests for the discovery half of the split reader.
- *
- * The exhaustive page-discovery behaviour is exercised through the facade by
- * {@see LegacyDataReaderTest}; these assertions pin the same eligible-set and
- * grid-disabled results when calling {@see LegacyPageDiscovery} directly.
+ * Sole owner of the page-discovery behaviour (eligible set, grid-disabled set,
+ * stage/table scanning). {@see LegacyDataReaderTest} keeps only a facade smoke
+ * test per one-line delegation.
  */
 #[CoversClass(LegacyPageDiscovery::class)]
-final class LegacyPageDiscoveryTest extends SapphireTest
+final class LegacyPageDiscoveryTest extends MigrationTestCase
 {
-    protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
-
     protected static $extra_dataobjects = [TestPage::class];
 
     private LegacyPageDiscovery $discovery;
-
-    private LegacyTableSeeder $seeder;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Versioned::set_stage(Versioned::DRAFT);
-
         $this->discovery = new LegacyPageDiscovery();
-        $this->seeder = new LegacyTableSeeder();
-        $this->seeder->createTables();
-        $this->seeder->addExtensionColumns('Page');
-        $this->seeder->truncateTables();
-    }
-
-    protected function tearDown(): void
-    {
-        $this->seeder->removeExtensionColumns('Page');
-        $this->seeder->dropTables();
-
-        parent::tearDown();
     }
 
     public function testGetEligiblePagesReturnsGridEnabledPages(): void

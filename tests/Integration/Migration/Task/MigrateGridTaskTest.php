@@ -6,13 +6,7 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Task;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\Dev\SapphireTest;
-use SilverStripe\PolyExecution\PolyOutput;
-use SilverStripe\Versioned\Versioned;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputDefinition;
-use Symfony\Component\Console\Output\BufferedOutput;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
 use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Model\Column;
@@ -21,51 +15,13 @@ use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Migration\Service\TestFailingMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\FieldMapperConfigStubExtension;
-use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
-use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
+use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 use WeDevelop\Grid\Value\VerticalAlignment;
 
 #[CoversClass(MigrateGridTask::class)]
-final class MigrateGridTaskTest extends SapphireTest
+final class MigrateGridTaskTest extends MigrationTestCase
 {
-    use CleansGridTables;
-
-    protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
-
-    // Disable SapphireTest's per-test transaction wrapping. The migration
-    // task uses its own transactions, and the LegacyTableSeeder's DDL
-    // (CREATE TABLE) auto-commits in MySQL, which breaks savepoint-based
-    // transaction nesting.
-    protected $usesTransactions = false;
-
-    private const string CONTENT_CLASS = 'DNADesign\\Elemental\\Models\\ElementContent';
-
-    private const string ROW_CLASS = 'WeDevelop\\ElementalGrid\\Models\\ElementRow';
-
-    private LegacyTableSeeder $seeder;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $this->seeder = new LegacyTableSeeder();
-        $this->seeder->createTables();
-        $this->seeder->addExtensionColumns('Page');
-        $this->seeder->truncateTables();
-
-        $this->cleanGridTables();
-    }
-
-    protected function tearDown(): void
-    {
-        $this->seeder->removeExtensionColumns('Page');
-        $this->seeder->dropTables();
-
-        parent::tearDown();
-    }
-
     /**
      * @param array<string, mixed> $options
      */
@@ -79,34 +35,20 @@ final class MigrateGridTaskTest extends SapphireTest
     }
 
     /**
-     * Execute the task without injecting --force. Returns the exit code and the
-     * buffered output so tests can assert against what was printed. The input
-     * is forced non-interactive to make the confirmation gate deterministic in
-     * the test environment (where STDIN is not a real TTY).
+     * Execute the task without injecting --force, non-interactively.
      *
      * @param array<string, mixed> $options
      * @return array{exitCode: int, output: string}
      */
     private function executeTaskRaw(array $options): array
     {
-        $task = new MigrateGridTask();
-        $definition = new InputDefinition($task->getOptions());
-        $input = new ArrayInput($options, $definition);
-        $input->setInteractive(false);
-        $buffered = new BufferedOutput();
-        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
-
-        return [
-            'exitCode' => $task->execute($input, $output),
-            'output' => $buffered->fetch(),
-        ];
+        return TaskRunner::run(new MigrateGridTask(), $options);
     }
 
     /**
      * Execute the task with an interactive STDIN-style stream so the destructive
      * confirmation prompt is actually answered (rather than skipped via --force or
-     * --dry-run). The answer is written to an in-memory stream that Symfony's
-     * QuestionHelper reads from, exercising the real [y/N] gate.
+     * --dry-run), exercising the real [y/N] gate.
      *
      * @param array<string, mixed> $options
      * @param string               $answer Raw stream content fed to the prompt (e.g. "y\n" or "n\n")
@@ -114,34 +56,7 @@ final class MigrateGridTaskTest extends SapphireTest
      */
     private function executeTaskInteractive(array $options, string $answer): array
     {
-        $task = new MigrateGridTask();
-        $definition = new InputDefinition($task->getOptions());
-        $input = new ArrayInput($options, $definition);
-        $input->setInteractive(true);
-
-        $stream = fopen('php://memory', 'r+');
-        self::assertIsResource($stream);
-        fwrite($stream, $answer);
-        rewind($stream);
-        $input->setStream($stream);
-
-        $buffered = new BufferedOutput();
-        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
-
-        return [
-            'exitCode' => $task->execute($input, $output),
-            'output' => $buffered->fetch(),
-        ];
-    }
-
-    private function getPageId(): int
-    {
-        return (int) $this->objFromFixture(Page::class, 'test_page')->ID;
-    }
-
-    private function getPageId2(): int
-    {
-        return (int) $this->objFromFixture(Page::class, 'test_page_2')->ID;
+        return TaskRunner::runInteractive(new MigrateGridTask(), $options, $answer);
     }
 
     /**
@@ -203,7 +118,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testExecuteWithValidArgsCreatesHierarchy(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
         $exitCode = $this->executeTask([
@@ -241,7 +156,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testExecuteUsesRowPerSectionStrategy(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 200;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -273,7 +188,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testNonInteractiveRefusesWithoutForce(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
         $result = $this->executeTaskRaw([
@@ -290,7 +205,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testDryRunBypassesConfirmationGateWithoutForce(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
         $result = $this->executeTaskRaw([
@@ -307,7 +222,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testInteractiveConfirmationAcceptedRunsMigration(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
         // Answering "y" at the [y/N] prompt proceeds with the destructive write.
@@ -322,7 +237,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testInteractiveConfirmationDefaultsToNoOnAnEmptyAnswer(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
         // Just pressing Enter must take the safe default. The prompt reads [y/N], so a
@@ -339,7 +254,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testInteractiveConfirmationDeclinedAbortsMigration(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
         // Answering "n" at the [y/N] prompt aborts without writing anything.
@@ -362,7 +277,7 @@ final class MigrateGridTaskTest extends SapphireTest
         DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
 
         try {
-            $pageId = $this->getPageId();
+            $pageId = $this->pageId();
             $areaId = 1100;
             $this->seeder->seedPage($pageId, $areaId);
             $this->seeder->seedElement(11001, $areaId, self::CONTENT_CLASS, 1, [
@@ -388,7 +303,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testDryRunCreatesNoRecords(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
         $exitCode = $this->executeTask([
@@ -405,8 +320,8 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testPageIdsFilterRestrictsMigration(): void
     {
-        $pageId1 = $this->getPageId();
-        $pageId2 = $this->getPageId2();
+        $pageId1 = $this->pageId();
+        $pageId2 = $this->pageId('test_page_2');
 
         $this->seedStandardPage($pageId1, 100);
 
@@ -439,7 +354,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testViewportMapParsedFromArgument(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 400;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -483,7 +398,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testViewportMapAutoDerivesFromAdapter(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 500;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -520,7 +435,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testViewportMapWithWhitespaceParsesCorrectly(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 600;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -566,7 +481,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testViewportMapSinglePairParsedCorrectly(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 700;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -594,7 +509,7 @@ final class MigrateGridTaskTest extends SapphireTest
         MigrateGridTask::add_extension(FieldMapperConfigStubExtension::class);
 
         try {
-            $pageId = $this->getPageId();
+            $pageId = $this->pageId();
             $areaId = 900;
             $this->seeder->seedPage($pageId, $areaId);
 
@@ -629,7 +544,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testFieldMapperUsesBuiltInDefaultsWhenNoExtensionRegistered(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 950;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -661,7 +576,7 @@ final class MigrateGridTaskTest extends SapphireTest
         // A pair without "=" must fail loudly, like a --strategy typo: skipping it
         // leaves the map non-empty, so the empty-map guard never fires and every
         // responsive override for that viewport is lost on a destructive run.
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 800;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -685,7 +600,7 @@ final class MigrateGridTaskTest extends SapphireTest
 
     public function testViewportMapToleratesStrayCommas(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 800;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -718,8 +633,8 @@ final class MigrateGridTaskTest extends SapphireTest
         DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
 
         try {
-            $pageId1 = $this->getPageId();
-            $pageId2 = $this->getPageId2();
+            $pageId1 = $this->pageId();
+            $pageId2 = $this->pageId('test_page_2');
 
             $this->seeder->seedPage($pageId1, 1200);
             $this->seeder->seedElement(12001, 1200, self::CONTENT_CLASS, 1, [
@@ -757,8 +672,8 @@ final class MigrateGridTaskTest extends SapphireTest
         DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
 
         try {
-            $pageId1 = $this->getPageId();
-            $pageId2 = $this->getPageId2();
+            $pageId1 = $this->pageId();
+            $pageId2 = $this->pageId('test_page_2');
 
             $this->seeder->seedPage($pageId1, 1400);
             $this->seeder->seedElement(14001, 1400, self::CONTENT_CLASS, 1, [

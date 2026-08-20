@@ -6,16 +6,12 @@ namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversNothing;
-use SilverStripe\Core\Config\Config;
-use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
-use TractorCow\Fluent\Extension\FluentIsolatedExtension;
-use TractorCow\Fluent\Model\Locale;
 use TractorCow\Fluent\Service\CopyToLocaleService;
 use TractorCow\Fluent\State\FluentState;
+use WeDevelop\Grid\Extensions\FluentGridPageExtension;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
-use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
@@ -23,41 +19,22 @@ use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 /**
  * Verifies that copy-to-locale duplicates the full grid hierarchy
  * (Section → Row → Column → Content) into the target locale.
- *
- * Pages are created manually (not via fixture) because FluentExtension
- * needs an active FluentState during write to create localised records.
  */
 #[CoversNothing]
-final class FluentCopyToLocaleTest extends SapphireTest
+final class FluentCopyToLocaleTest extends FluentGridTestCase
 {
-    protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';
-
-    /** @var array<class-string, list<class-string>> */
-    protected static $required_extensions = [
-        GridElement::class => [FluentIsolatedExtension::class],
-    ];
-
-    protected function setUp(): void
+    /** Invokes the private decision core of onAfterLocalisedCopy via reflection. */
+    private function findSourceLocale(Page $page, string $targetLocale): ?string
     {
-        parent::setUp();
+        $extension = new FluentGridPageExtension();
+        $extension->setOwner($page);
 
-        Versioned::set_stage(Versioned::DRAFT);
-        Locale::clearCached();
+        $method = new \ReflectionMethod($extension, 'findSourceLocale');
 
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
+        /** @var ?string $result */
+        $result = $method->invoke($extension, (int) $page->ID, Page::class, $targetLocale);
 
-        FluentState::singleton()->setLocale('en_US');
-    }
-
-    private function createPage(string $title = 'Test Page'): Page
-    {
-        $page = Page::create();
-        $page->Title = $title;
-        $page->URLSegment = 'fluent-copy-test';
-        $page->writeToStage(Versioned::DRAFT);
-
-        return $page;
+        return $result;
     }
 
     /**
@@ -134,7 +111,7 @@ final class FluentCopyToLocaleTest extends SapphireTest
      * `findSourceLocale` is the decision core of `onAfterLocalisedCopy`.
      * The mutants at line 155 (NotIdentical/LogicalAnd/negation) all permute
      * `$defaultLocale !== null && $defaultLocale->Locale !== $targetLocale`.
-     * This test exercises the private method via reflection so we can pin
+     * These tests exercise the private method via reflection so we can pin
      * every branch independently of the CMS copy-button trigger.
      */
     public function testFindSourceLocaleReturnsDefaultWhenDefaultHasSections(): void
@@ -143,15 +120,7 @@ final class FluentCopyToLocaleTest extends SapphireTest
         // Section created in en_US (the global default)
         GridTreeFactory::section($page, title: 'EN Section');
 
-        $extension = new \WeDevelop\Grid\Extensions\FluentGridPageExtension();
-        $extension->setOwner($page);
-
-        $method = new \ReflectionMethod($extension, 'findSourceLocale');
-        $method->setAccessible(true);
-
-        $result = $method->invoke($extension, (int) $page->ID, Page::class, 'nl_NL');
-
-        self::assertSame('en_US', $result);
+        self::assertSame('en_US', $this->findSourceLocale($page, 'nl_NL'));
     }
 
     public function testFindSourceLocaleSkipsDefaultWhenTargetEqualsDefault(): void
@@ -159,18 +128,10 @@ final class FluentCopyToLocaleTest extends SapphireTest
         $page = $this->createPage();
         GridTreeFactory::section($page, title: 'EN Section');
 
-        $extension = new \WeDevelop\Grid\Extensions\FluentGridPageExtension();
-        $extension->setOwner($page);
-
-        $method = new \ReflectionMethod($extension, 'findSourceLocale');
-        $method->setAccessible(true);
-
         // Target == default → the default branch must be skipped.
         // en_US is the only locale with sections, and it equals the target, so
         // after the loop also excludes it we end up with null.
-        $result = $method->invoke($extension, (int) $page->ID, Page::class, 'en_US');
-
-        self::assertNull($result);
+        self::assertNull($this->findSourceLocale($page, 'en_US'));
     }
 
     public function testFindSourceLocaleFallsThroughWhenDefaultHasNoSections(): void
@@ -183,32 +144,19 @@ final class FluentCopyToLocaleTest extends SapphireTest
             GridTreeFactory::section($page, title: 'NL Section');
         });
 
-        $extension = new \WeDevelop\Grid\Extensions\FluentGridPageExtension();
-        $extension->setOwner($page);
-
-        $method = new \ReflectionMethod($extension, 'findSourceLocale');
-        $method->setAccessible(true);
-
         // Target is en_US (default). Default has no sections → falls through to
         // the Locale::getCached() loop, finds nl_NL with sections.
-        $result = $method->invoke($extension, (int) $page->ID, Page::class, 'en_US');
-
-        self::assertSame('nl_NL', $result);
+        self::assertSame('nl_NL', $this->findSourceLocale($page, 'en_US'));
     }
 
     public function testFindSourceLocaleReturnsNullWhenNoLocaleHasSections(): void
     {
         $page = $this->createPage(); // page has no sections anywhere
 
-        $extension = new \WeDevelop\Grid\Extensions\FluentGridPageExtension();
-        $extension->setOwner($page);
-
-        $method = new \ReflectionMethod($extension, 'findSourceLocale');
-        $method->setAccessible(true);
-
-        $result = $method->invoke($extension, (int) $page->ID, Page::class, 'nl_NL');
-
-        self::assertNull($result, 'No locale has sections → nothing to copy from');
+        self::assertNull(
+            $this->findSourceLocale($page, 'nl_NL'),
+            'No locale has sections → nothing to copy from',
+        );
     }
 
     /**
@@ -264,8 +212,7 @@ final class FluentCopyToLocaleTest extends SapphireTest
         GridTreeFactory::section($page, title: 'Hero Section');
 
         // Set a known non-default prior value (setUp set both to false).
-        Config::modify()->set(Section::class, 'auto_scaffold', true);
-        Config::modify()->set(Row::class, 'auto_scaffold', true);
+        $this->enableAutoScaffolding();
 
         CopyToLocaleService::singleton()->copyToLocale(
             Page::class,
@@ -298,8 +245,7 @@ final class FluentCopyToLocaleTest extends SapphireTest
         GridTreeFactory::section($page, title: 'Hero Section');
 
         // setUp already sets both to false; assert this is the captured prior.
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
+        $this->disableAutoScaffolding();
 
         CopyToLocaleService::singleton()->copyToLocale(
             Page::class,

@@ -6,61 +6,17 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Task;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\Dev\SapphireTest;
-use SilverStripe\PolyExecution\PolyOutput;
-use SilverStripe\Versioned\Versioned;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputDefinition;
-use Symfony\Component\Console\Output\BufferedOutput;
 use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
-use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
-use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
+use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 
 #[CoversClass(MigrateGridTask::class)]
-final class MigrateGridSingleSectionTaskTest extends SapphireTest
+final class MigrateGridSingleSectionTaskTest extends MigrationTestCase
 {
-    use CleansGridTables;
-
-    protected static $fixture_file = __DIR__ . '/../../Fixture/page.yml';
-
-    // Disable SapphireTest's per-test transaction wrapping. The migration
-    // task uses its own transactions, and the LegacyTableSeeder's DDL
-    // (CREATE TABLE) auto-commits in MySQL, which breaks savepoint-based
-    // transaction nesting.
-    protected $usesTransactions = false;
-
-    private const string CONTENT_CLASS = 'DNADesign\\Elemental\\Models\\ElementContent';
-
-    private const string ROW_CLASS = 'WeDevelop\\ElementalGrid\\Models\\ElementRow';
-
-    private LegacyTableSeeder $seeder;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        Versioned::set_stage(Versioned::DRAFT);
-
-        $this->seeder = new LegacyTableSeeder();
-        $this->seeder->createTables();
-        $this->seeder->addExtensionColumns('Page');
-        $this->seeder->truncateTables();
-
-        $this->cleanGridTables();
-    }
-
-    protected function tearDown(): void
-    {
-        $this->seeder->removeExtensionColumns('Page');
-        $this->seeder->dropTables();
-
-        parent::tearDown();
-    }
-
     /**
      * @param array<string, mixed> $options
      */
@@ -72,33 +28,7 @@ final class MigrateGridSingleSectionTaskTest extends SapphireTest
         // Using += preserves any per-test override (e.g. --dry-run).
         $options += ['--force' => true, '--strategy' => 'single-section'];
 
-        $task = new MigrateGridTask();
-        $definition = new InputDefinition($task->getOptions());
-        $input = new ArrayInput($options, $definition);
-        $buffered = new BufferedOutput();
-        $output = new PolyOutput(PolyOutput::FORMAT_ANSI, wrappedOutput: $buffered);
-        return $task->execute($input, $output);
-    }
-
-    private function getPageId(): int
-    {
-        return (int) $this->objFromFixture(Page::class, 'test_page')->ID;
-    }
-
-    public function testMissingDefaultViewportReturnsFailure(): void
-    {
-        $exitCode = $this->executeTask(['--zone' => 'main']);
-
-        self::assertSame(Command::FAILURE, $exitCode);
-        self::assertCount(0, Section::get());
-    }
-
-    public function testMissingZoneReturnsFailure(): void
-    {
-        $exitCode = $this->executeTask(['--default-viewport' => 'MD']);
-
-        self::assertSame(Command::FAILURE, $exitCode);
-        self::assertCount(0, Section::get());
+        return TaskRunner::run(new MigrateGridTask(), $options)['exitCode'];
     }
 
     public function testLowercaseDefaultViewportIsNormalisedAndPreservesColumnWidth(): void
@@ -107,7 +37,7 @@ final class MigrateGridSingleSectionTaskTest extends SapphireTest
         // Unnormalised, the lookup missed and every migrated column silently became
         // full-width on a destructive run. Asserting only "the task did not error"
         // would pass against the buggy code too, so assert the migrated width.
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
         $this->seeder->seedElement(7400, $areaId, self::CONTENT_CLASS, 1, [
@@ -127,7 +57,7 @@ final class MigrateGridSingleSectionTaskTest extends SapphireTest
 
     public function testExecuteUsesAllRowsInSectionStrategy(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 

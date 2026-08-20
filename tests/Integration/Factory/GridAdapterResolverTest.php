@@ -14,30 +14,27 @@ use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Factory\GridAdapterResolver;
+use WeDevelop\Grid\Tests\Integration\Support\RestoresGridAdapterEnv;
 use WeDevelop\Grid\Tests\Unit\Support\GridAdapterStub;
 
 #[CoversClass(GridAdapterResolver::class)]
 final class GridAdapterResolverTest extends SapphireTest
 {
-    protected $usesDatabase = false;
+    use RestoresGridAdapterEnv;
 
-    private string|false $previousEnv;
+    protected $usesDatabase = false;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->previousEnv = Environment::getEnv('SS_GRID_ADAPTER');
-        Environment::putEnv('SS_GRID_ADAPTER=');
+        $this->captureGridAdapterEnv();
+        $this->pinAdapterEnv('');
     }
 
     protected function tearDown(): void
     {
-        if ($this->previousEnv === false) {
-            Environment::putEnv('SS_GRID_ADAPTER=');
-        } else {
-            Environment::putEnv('SS_GRID_ADAPTER=' . $this->previousEnv);
-        }
+        $this->restoreGridAdapterEnv();
 
         parent::tearDown();
     }

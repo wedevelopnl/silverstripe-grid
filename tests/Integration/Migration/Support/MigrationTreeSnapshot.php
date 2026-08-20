@@ -234,22 +234,21 @@ final class MigrationTreeSnapshot
 
     /**
      * Assert a Column's raw GridSettingsOverrides JSON carries the expected
-     * per-viewport width override (the WS4 tri-state content check).
+     * lg width override (the WS4 tri-state content check).
      *
-     * @param positive-int     $expectedWidth
-     * @param non-empty-string $viewport
+     * @param positive-int $expectedWidth
      */
-    public static function assertLgOverrideWidth(?string $raw, int $expectedWidth, string $viewport = 'lg'): void
+    public static function assertLgOverrideWidth(?string $raw, int $expectedWidth): void
     {
         Assert::assertIsString($raw, 'Column must persist a non-null JSON overrides column');
-        Assert::assertStringContainsString('"' . $viewport . '"', $raw, \sprintf('Column carries the %s override', $viewport));
+        Assert::assertStringContainsString('"lg"', $raw, 'Column carries the lg override');
         $decoded = json_decode($raw, true);
         Assert::assertIsArray($decoded);
-        Assert::assertArrayHasKey($viewport, $decoded, \sprintf('Overrides JSON contains the %s viewport key', $viewport));
+        Assert::assertArrayHasKey('lg', $decoded, 'Overrides JSON contains the lg viewport key');
         Assert::assertSame(
             $expectedWidth,
-            $decoded[$viewport]['width'] ?? null,
-            \sprintf('%s override width is %d', $viewport, $expectedWidth),
+            $decoded['lg']['width'] ?? null,
+            \sprintf('lg override width is %d', $expectedWidth),
         );
     }
 

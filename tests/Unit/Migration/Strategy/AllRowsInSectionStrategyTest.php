@@ -6,18 +6,16 @@ namespace WeDevelop\Grid\Tests\Unit\Migration\Strategy;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
-use WeDevelop\Grid\Migration\DTO\LegacyRowData;
 use WeDevelop\Grid\Migration\DTO\MigrationColumn;
 use WeDevelop\Grid\Migration\DTO\MigrationRow;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Strategy\AllRowsInSectionStrategy;
-use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
+use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementBuilder;
 use WeDevelop\Grid\Value\GridSettings;
 
 #[CoversClass(AllRowsInSectionStrategy::class)]
@@ -27,21 +25,29 @@ use WeDevelop\Grid\Value\GridSettings;
 #[CoversClass(GridSettings::class)]
 final class AllRowsInSectionStrategyTest extends TestCase
 {
+    use AssertsSectionHierarchy;
+
     private AllRowsInSectionStrategy $strategy;
 
-    /** @var MockObject&LoggerInterface */
-    private MockObject $logger;
+    private LegacyElementBuilder $builder;
 
     protected function setUp(): void
     {
-        $this->logger = $this->createMock(LoggerInterface::class);
+        $this->builder = new LegacyElementBuilder();
 
-        $this->strategy = new AllRowsInSectionStrategy(
+        // Most tests never assert on logging, so the shared strategy gets a stub;
+        // the warning tests build their own strategy around a mock instead.
+        $this->strategy = $this->strategyLogging($this->createStub(LoggerInterface::class));
+    }
+
+    private function strategyLogging(LoggerInterface $logger): AllRowsInSectionStrategy
+    {
+        return new AllRowsInSectionStrategy(
             grouper: new ElementGrouper(),
             mapper: new FieldMapper(),
             defaultViewport: 'MD',
             viewportKeyMap: ['XS' => 'xs', 'SM' => 'sm', 'MD' => 'md', 'LG' => 'lg', 'XL' => 'xl'],
-            logger: $this->logger,
+            logger: $logger,
         );
     }
 
@@ -49,12 +55,13 @@ final class AllRowsInSectionStrategyTest extends TestCase
 
     public function testLaterRowWithDifferentCustomSectionClassLogsWarning(): void
     {
-        $row1 = self::r('', '', 'first-class');
-        $row2 = self::r('', '', 'second-class');
+        $row1 = $this->builder->r('', '', 'first-class');
+        $row2 = $this->builder->r('', '', 'second-class');
 
         // Message and context asserted verbatim: the context names the discarded row,
         // which is the only way an operator can find it in the legacy data.
-        $this->logger->expects(self::once())
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())
             ->method('warning')
             ->with(
                 'AllRowsInSectionStrategy: row customSectionClass conflicts with section value; discarding row value.',
@@ -63,8 +70,8 @@ final class AllRowsInSectionStrategyTest extends TestCase
 
         // Each row needs a content element, or the empty row groups are dropped
         // and no section is produced.
-        $sections = $this->strategy->buildHierarchy(
-            [$row1, self::e(6), $row2, self::e(4)],
+        $sections = $this->strategyLogging($logger)->buildHierarchy(
+            [$row1, $this->builder->e(6), $row2, $this->builder->e(4)],
             pageId: 10,
             zone: 'main',
         );
@@ -76,10 +83,10 @@ final class AllRowsInSectionStrategyTest extends TestCase
     {
         // The leading content element forms a group with no row (and no rowData). That
         // group must be skipped, not end the search for a section class.
-        $row = self::r('', '', 'late-class');
+        $row = $this->builder->r('', '', 'late-class');
 
         $sections = $this->strategy->buildHierarchy(
-            [self::e(6), $row, self::e(4)],
+            [$this->builder->e(6), $row, $this->builder->e(4)],
             pageId: 10,
             zone: 'main',
         );
@@ -91,11 +98,11 @@ final class AllRowsInSectionStrategyTest extends TestCase
     {
         // The first delimiter has no content behind it, so its group yields no columns.
         // It must be skipped, leaving the second row intact.
-        $empty = self::r('empty-row');
-        $filled = self::r('filled-row');
+        $empty = $this->builder->r('empty-row');
+        $filled = $this->builder->r('filled-row');
 
         $sections = $this->strategy->buildHierarchy(
-            [$empty, $filled, self::e(6)],
+            [$empty, $filled, $this->builder->e(6)],
             pageId: 10,
             zone: 'main',
         );
@@ -106,60 +113,18 @@ final class AllRowsInSectionStrategyTest extends TestCase
 
     public function testNoWarningWhenAllRowsHaveSameCustomSectionClass(): void
     {
-        $row1 = self::r('', '', 'same-class');
-        $row2 = self::r('', '', 'same-class');
+        $row1 = $this->builder->r('', '', 'same-class');
+        $row2 = $this->builder->r('', '', 'same-class');
 
-        $this->logger->expects(self::never())->method('warning');
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::never())->method('warning');
 
-        $this->strategy->buildHierarchy([$row1, self::e(6), $row2, self::e(4)], pageId: 10, zone: 'main');
+        $this->strategyLogging($logger)->buildHierarchy([$row1, $this->builder->e(6), $row2, $this->builder->e(4)], pageId: 10, zone: 'main');
     }
 
     public function testEmptyElementsReturnsNoSections(): void
     {
         self::assertSame([], $this->strategy->buildHierarchy([], pageId: 1, zone: 'main'));
-    }
-
-    private static int $nextId = 0;
-
-    /**
-     * @param array<string, int> $sizeFields
-     * @param array<string, int> $offsetFields
-     * @param array<string, ?string> $visibilityFields
-     */
-    private static function e(
-        int $width,
-        int $offset = 0,
-        array $sizeFields = [],
-        array $offsetFields = [],
-        array $visibilityFields = [],
-    ): LegacyElement {
-        $id = ++self::$nextId;
-        return LegacyElementFactory::content($id, $id, [
-            'sizeFields' => $sizeFields !== [] ? $sizeFields : ['MD' => $width],
-            'offsetFields' => $offsetFields !== [] ? $offsetFields : ['MD' => $offset],
-            'visibilityFields' => $visibilityFields,
-        ]);
-    }
-
-    private static function r(string $title = '', string $extraClass = '', string $sectionClass = ''): LegacyElement
-    {
-        $id = ++self::$nextId;
-
-        return new LegacyElement(
-            id: $id,
-            className: 'Test\Row',
-            title: $title,
-            showTitle: false,
-            titleTag: 'h2',
-            titleClass: '',
-            sort: $id,
-            extraClass: $extraClass,
-            isRow: true,
-            sizeFields: [],
-            offsetFields: [],
-            visibilityFields: [],
-            rowData: new LegacyRowData(customSectionClass: $sectionClass),
-        );
     }
 
     /**
@@ -172,52 +137,52 @@ final class AllRowsInSectionStrategyTest extends TestCase
      */
     public static function hierarchyProvider(): iterable
     {
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'single row, three elements with same width are grouped' => [
-            [self::r(), self::e(4), self::e(4), self::e(4)],
+            [$b->r(), $b->e(4), $b->e(4), $b->e(4)],
             'main',
             ['rows' => [['columns' => [['w' => 4, 'n' => 3]]]]],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'two rows, varying element counts' => [
-            [self::r(), self::e(8), self::e(4), self::r(), self::e(12)],
+            [$b->r(), $b->e(8), $b->e(4), $b->r(), $b->e(12)],
             'main',
             ['rows' => [['columns' => [['w' => 8], ['w' => 4]]], ['columns' => [['w' => 12]]]]],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'orphans before first row' => [
-            [self::e(8), self::e(4), self::r(), self::e(12)],
+            [$b->e(8), $b->e(4), $b->r(), $b->e(12)],
             'main',
             ['rows' => [['columns' => [['w' => 8], ['w' => 4]]], ['columns' => [['w' => 12]]]]],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'orphans only with same width are grouped' => [
-            [self::e(6), self::e(6)],
+            [$b->e(6), $b->e(6)],
             'main',
             ['rows' => [['columns' => [['w' => 6, 'n' => 2]]]]],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'three rows: 3 same elements grouped, 1 element, trailing empty row dropped' => [
-            [self::r(), self::e(4), self::e(4), self::e(4), self::r(), self::e(12), self::r()],
+            [$b->r(), $b->e(4), $b->e(4), $b->e(4), $b->r(), $b->e(12), $b->r()],
             'main',
             // The trailing empty row delimiter produces no columns and is dropped.
             ['rows' => [['columns' => [['w' => 4, 'n' => 3]]], ['columns' => [['w' => 12]]]]],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'elements with offsets' => [
-            [self::r(), self::e(8, 2), self::e(4)],
+            [$b->r(), $b->e(8, 2), $b->e(4)],
             'main',
             ['rows' => [['columns' => [['w' => 8, 'o' => 2], ['w' => 4]]]]],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'mixed offsets across rows' => [
-            [self::r(), self::e(6, 3), self::r(), self::e(4, 1), self::e(4, 1)],
+            [$b->r(), $b->e(6, 3), $b->r(), $b->e(4, 1), $b->e(4, 1)],
             'main',
             [
                 'rows' => [
@@ -227,35 +192,35 @@ final class AllRowsInSectionStrategyTest extends TestCase
             ],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'consecutive same then different then same splits correctly' => [
-            [self::r(), self::e(6), self::e(6), self::e(4), self::e(6), self::e(6)],
+            [$b->r(), $b->e(6), $b->e(6), $b->e(4), $b->e(6), $b->e(6)],
             'main',
             ['rows' => [['columns' => [['w' => 6, 'n' => 2], ['w' => 4], ['w' => 6, 'n' => 2]]]]],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'viewport override difference prevents grouping' => [
             [
-                self::r(),
-                self::e(6, 0, ['MD' => 6], ['MD' => 0]),
-                self::e(6, 0, ['MD' => 6], ['MD' => 0], ['SM' => 'hidden']),
-                self::e(6, 0, ['MD' => 6], ['MD' => 0]),
+                $b->r(),
+                $b->e(6, 0, ['MD' => 6], ['MD' => 0]),
+                $b->e(6, 0, ['MD' => 6], ['MD' => 0], ['SM' => 'hidden']),
+                $b->e(6, 0, ['MD' => 6], ['MD' => 0]),
             ],
             'main',
             ['rows' => [['columns' => [['w' => 6], ['w' => 6], ['w' => 6]]]]],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'first row customSectionClass applied to section' => [
-            [self::r('', '', 'hero-section'), self::e(12)],
+            [$b->r('', '', 'hero-section'), $b->e(12)],
             'main',
             ['extraClass' => 'hero-section', 'rows' => [['columns' => [['w' => 12]]]]],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'row title and extraClass mapped to migration rows' => [
-            [self::r('Row One', 'one-extra'), self::e(8), self::r('Row Two', 'two-extra'), self::e(4)],
+            [$b->r('Row One', 'one-extra'), $b->e(8), $b->r('Row Two', 'two-extra'), $b->e(4)],
             'main',
             [
                 'rows' => [
@@ -265,23 +230,23 @@ final class AllRowsInSectionStrategyTest extends TestCase
             ],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'implicit group produces row with default values' => [
-            [self::e(12)],
+            [$b->e(12)],
             'main',
             ['rows' => [['title' => '', 'extraClass' => '', 'columns' => [['w' => 12]]]]],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'invalid grid settings are clamped to valid range' => [
-            [self::r(), self::e(15, 14)],
+            [$b->r(), $b->e(15, 14)],
             'main',
             ['rows' => [['columns' => [['w' => 12, 'o' => 0]]]]],
         ];
 
-        self::$nextId = 0;
+        $b = new LegacyElementBuilder();
         yield 'zone passed through to section' => [
-            [self::r(), self::e(6)],
+            [$b->r(), $b->e(6)],
             'sidebar',
             ['rows' => [['columns' => [['w' => 6]]]]],
         ];
@@ -296,36 +261,7 @@ final class AllRowsInSectionStrategyTest extends TestCase
     {
         $sections = $this->strategy->buildHierarchy($elements, pageId: 1, zone: $zone);
 
-        self::assertCount(1, $sections, 'AllRows always produces 1 section');
-
-        $section = $sections[0];
-        self::assertSame($zone, $section->zone, 'Section: zone');
-        self::assertSame(1, $section->sort, 'Section: sort');
-        self::assertSame($expectedSection['extraClass'] ?? '', $section->extraClass, 'Section: extraClass');
-
-        $expectedRows = $expectedSection['rows'];
-        self::assertCount(\count($expectedRows), $section->rows, 'Row count');
-
-        foreach ($section->rows as $ri => $row) {
-            $expectedRow = $expectedRows[$ri];
-            $rowPath = "Row {$ri}";
-
-            self::assertSame($ri + 1, $row->sort, "{$rowPath}: sort");
-            self::assertSame($expectedRow['title'] ?? '', $row->title, "{$rowPath}: title");
-            self::assertSame($expectedRow['extraClass'] ?? '', $row->extraClass, "{$rowPath}: extraClass");
-
-            $expectedColumns = $expectedRow['columns'];
-            self::assertCount(\count($expectedColumns), $row->columns, "{$rowPath}: column count");
-
-            foreach ($row->columns as $ci => $column) {
-                $colPath = "{$rowPath} > Column {$ci}";
-                $expectedCol = $expectedColumns[$ci];
-
-                self::assertSame($ci + 1, $column->sort, "{$colPath}: sort");
-                self::assertSame($expectedCol['w'], $column->gridSettings->default->width, "{$colPath}: width");
-                self::assertSame($expectedCol['o'] ?? 0, $column->gridSettings->default->offset, "{$colPath}: offset");
-                self::assertCount($expectedCol['n'] ?? 1, $column->elements, "{$colPath}: element count");
-            }
-        }
+        // AllRows always produces exactly 1 section; rows sort sequentially within it.
+        self::assertSectionsMatchSpec($sections, $zone, [$expectedSection], rowSortFollowsIndex: true);
     }
 }

@@ -15,6 +15,9 @@ use WeDevelop\Grid\Migration\DTO\LegacyElement;
  */
 final class TestLegacyReaderFilterExtension extends Extension
 {
+    /** Elements seeded with this title are filtered out of the migration input. */
+    public const string SENTINEL_TITLE = 'Filter Me';
+
     public static bool $hookCalled = false;
 
     public static int $receivedAreaId = 0;
@@ -39,7 +42,7 @@ final class TestLegacyReaderFilterExtension extends Extension
 
         $elements = \array_values(\array_filter(
             $elements,
-            static fn (LegacyElement $el): bool => $el->title !== 'Filter Me',
+            static fn (LegacyElement $el): bool => $el->title !== self::SENTINEL_TITLE,
         ));
     }
 }

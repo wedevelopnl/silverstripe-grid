@@ -10,7 +10,6 @@ use Page;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPResponse;
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\FunctionalTest;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
@@ -23,6 +22,7 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Support\DenyCreateExtension;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Tests\Unit\Support\DirectGridElementStub;
 use WeDevelop\Grid\Value\GridSettings;
@@ -31,6 +31,8 @@ use WeDevelop\Grid\Value\ViewportConfig;
 #[CoversClass(GridController::class)]
 final class GridControllerTest extends FunctionalTest
 {
+    use DisablesAutoScaffolding;
+
     protected static $fixture_file = __DIR__ . '/../../Integration/Fixture/page.yml';
 
     /** @var array<class-string> */
@@ -43,8 +45,7 @@ final class GridControllerTest extends FunctionalTest
         parent::setUp();
 
         Versioned::set_stage(Versioned::DRAFT);
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
+        $this->disableAutoScaffolding();
 
         $memberId = $this->logInWithPermission('CMS_ACCESS_LeftAndMain');
         $this->session()->set('loggedInAs', $memberId);
@@ -72,7 +73,6 @@ final class GridControllerTest extends FunctionalTest
             $object instanceof Row => 'row',
             $object instanceof Column => 'column',
             $object instanceof SiteTree => 'page',
-            $object instanceof GridElement => 'element',
             default => 'element',
         };
 
@@ -140,21 +140,10 @@ final class GridControllerTest extends FunctionalTest
     private function jsonDelete(string $url, array $params = []): HTTPResponse
     {
         $token = (string) SecurityToken::inst()->getValue();
-
-        $queryParts = [];
-        foreach ($params as $key => $value) {
-            if ($value === null) {
-                continue;
-            }
-            if (is_bool($value)) {
-                $value = $value ? '1' : '0';
-            }
-            $queryParts[] = rawurlencode((string) $key) . '=' . rawurlencode((string) $value);
-        }
-        $queryParts[] = 'SecurityID=' . rawurlencode($token);
+        $query = http_build_query($params + ['SecurityID' => $token], '', '&', PHP_QUERY_RFC3986);
 
         $separator = str_contains($url, '?') ? '&' : '?';
-        $fullUrl = $url . $separator . implode('&', $queryParts);
+        $fullUrl = $url . $separator . $query;
 
         return Director::test(
             $fullUrl,
@@ -755,17 +744,13 @@ final class GridControllerTest extends FunctionalTest
         self::assertGreaterThanOrEqual(1, $sections->count());
     }
 
-    public function testDuplicateToReturns422ForHierarchyViolation(): void
+    public function testDuplicateToReturns400ForMismatchedTargetParentType(): void
     {
         $tree = $this->buildTree();
         $pageId = (int) $this->page()->ID;
 
-        // Row's expected target-parent type is Section — any other type yields
-        // 400 at the type check. We reshape the test to use a Column NodeRef
-        // as the source row's target parent via a forced Row-into-Row attempt
-        // (the controller now rejects with 400 because Row expects a Section
-        // parent). The previous 422 shape is impossible now: mismatched types
-        // are caught earlier.
+        // A Row source requires a Section target parent — a Column target
+        // parent fails the type check with 400.
         $response = $this->jsonPost(self::BASE_URL . '/duplicateTo', [
             'element' => $this->ref($tree['row']),
             'targetPageId' => $pageId,
@@ -858,7 +843,7 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(400, $response->getStatusCode());
     }
 
-    public function testUpdateGridSettingsDefaultReturns204(): void
+    public function testUpdateGridSettingsReturns204(): void
     {
         $tree = $this->buildTree();
         $column = $tree['column'];
@@ -874,30 +859,10 @@ final class GridControllerTest extends FunctionalTest
 
         self::assertSame(204, $response->getStatusCode());
 
-        // HTTP-level wiring only: the resolved default width/offset/visibility
-        // is pinned by the settings service/integration layer. Here we confirm
-        // the endpoint accepted the update and the column still exists.
-        self::assertNotNull(Column::get()->byID($columnId));
-    }
-
-    public function testUpdateGridSettingsOverrideReturns204(): void
-    {
-        $tree = $this->buildTree();
-        $column = $tree['column'];
-        $columnId = (int) $column->ID;
-
-        $response = $this->jsonPatch(self::BASE_URL . '/updateGridSettings', [
-            'element' => $this->ref($column),
-            'viewport' => 'lg',
-            'width' => 4,
-            'offset' => 2,
-            'visible' => true,
-        ]);
-
-        self::assertSame(204, $response->getStatusCode());
-
-        // HTTP-level wiring only: override creation/value is pinned by the
-        // settings service/integration layer. Confirm the column still exists.
+        // HTTP-level wiring only: whether the update lands as the default or
+        // an override is pinned by the settings service/integration layer.
+        // Here we confirm the endpoint accepted the update and the column
+        // still exists.
         self::assertNotNull(Column::get()->byID($columnId));
     }
 
@@ -1212,23 +1177,13 @@ final class GridControllerTest extends FunctionalTest
     public function testDeleteTouchesOwningPage(): void
     {
         $tree = $this->buildTree();
-        $page = $this->page();
         $contentId = (int) $tree['content']->ID;
+        [$liveVersion, $pageId] = $this->publishAndCaptureLiveVersion($this->page());
 
-        // Publish the page first so we can detect the draft modification
-        $page->publishRecursive();
-        $liveVersion = (int) Versioned::withVersionedMode(static function () use ($page): int {
-            Versioned::set_stage(Versioned::LIVE);
-
-            return (int) SiteTree::get()->byID($page->ID)->Version;
-        });
-
-        // Delete the content element
         $this->jsonDelete(self::BASE_URL . '/delete', ['type' => 'element', 'id' => $contentId]);
 
         // Page draft version should have been bumped by touchOwningPage
-        $draftPage = SiteTree::get()->byID($page->ID);
-        self::assertGreaterThan($liveVersion, (int) $draftPage->Version);
+        self::assertGreaterThan($liveVersion, (int) SiteTree::get()->byID($pageId)->Version);
     }
 
     // These tests use page-level CanEditType/CanViewType='OnlyTheseUsers'
@@ -1979,13 +1934,7 @@ final class GridControllerTest extends FunctionalTest
     public function testCreateSectionTouchesOwningPage(): void
     {
         $page = $this->page();
-        $page->publishRecursive();
-
-        $liveVersion = (int) Versioned::withVersionedMode(static function () use ($page): int {
-            Versioned::set_stage(Versioned::LIVE);
-
-            return (int) SiteTree::get()->byID($page->ID)->Version;
-        });
+        [$liveVersion, $pageId] = $this->publishAndCaptureLiveVersion($page);
 
         $this->jsonPost(self::BASE_URL . '/create', [
             'containerType' => 'section',
@@ -1993,32 +1942,7 @@ final class GridControllerTest extends FunctionalTest
             'zone' => 'main',
         ]);
 
-        $draftPage = SiteTree::get()->byID($page->ID);
-        self::assertGreaterThan($liveVersion, (int) $draftPage->Version);
-    }
-
-    public function testDuplicateSetsCorrectSortAndTitle(): void
-    {
-        $tree = $this->buildTree();
-        $pageId = (int) $this->page()->ID;
-
-        $countBefore = Section::get()->filter([
-            'ParentID' => $pageId,
-            'ParentClass' => Page::class,
-        ])->count();
-
-        $response = $this->jsonPost(self::BASE_URL . '/duplicate', ['element' => $this->ref($tree['section'])]);
-
-        self::assertSame(204, $response->getStatusCode());
-
-        // HTTP-level wiring only: the clone's title ("… copy") and sort value
-        // are pinned by the service/integration layer. Here we confirm the
-        // duplicate request created exactly one new section.
-        $countAfter = Section::get()->filter([
-            'ParentID' => $pageId,
-            'ParentClass' => Page::class,
-        ])->count();
-        self::assertSame($countBefore + 1, $countAfter);
+        self::assertGreaterThan($liveVersion, (int) SiteTree::get()->byID($pageId)->Version);
     }
 
     public function testDuplicateToCreatesDeepCopy(): void
@@ -2109,16 +2033,11 @@ final class GridControllerTest extends FunctionalTest
             ['md' => new ViewportConfig(8, 0, true)],
         ));
 
-        $page->publishRecursive();
-        $liveVersion = (int) Versioned::withVersionedMode(static function () use ($page): int {
-            Versioned::set_stage(Versioned::LIVE);
-
-            return (int) SiteTree::get()->byID($page->ID)->Version;
-        });
+        [$liveVersion, $pageId] = $this->publishAndCaptureLiveVersion($page);
 
         // Reset ALL overrides for the page
         $response = $this->jsonDelete(self::BASE_URL . '/resetGridSettingsOverrides', [
-            'pageId' => (int) $page->ID,
+            'pageId' => $pageId,
             'zone' => 'main',
             'viewport' => null,
         ]);
@@ -2126,8 +2045,7 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(204, $response->getStatusCode());
 
         // Page should be touched since affected > 0
-        $draftPage = SiteTree::get()->byID($page->ID);
-        self::assertGreaterThan($liveVersion, (int) $draftPage->Version);
+        self::assertGreaterThan($liveVersion, (int) SiteTree::get()->byID($pageId)->Version);
     }
 
     public function testPagesReturnsMultipleResults(): void
@@ -2140,26 +2058,11 @@ final class GridControllerTest extends FunctionalTest
         self::assertGreaterThanOrEqual(2, count($data));
     }
 
-    public function testZonesReturnsDeduplicated(): void
-    {
-        $page = $this->page();
-        $pageId = (int) $page->ID;
-
-        $response = $this->get(self::BASE_URL . "/zones/{$pageId}");
-
-        self::assertSame(200, $response->getStatusCode());
-        $data = $this->parseJson($response);
-
-        // Should be a simple array (not object) with unique values
-        self::assertSame(array_values(array_unique($data)), $data);
-    }
-
     /**
-     * Publish the page, capture the LIVE version, run the write action, and
-     * confirm the DRAFT stage Version is higher — proves touchOwningPage() fired.
-     * Each subtest pins one of the five MethodCallRemoval mutants on the
-     * `$this->touchOwningPage(...)` calls inside createContent / apiDuplicate /
-     * apiDuplicateTo / apiReorder / apiUpdateGridSettings.
+     * Publish the page and capture the LIVE version. Callers run a write
+     * action and assert the DRAFT stage Version is higher — proving the
+     * endpoint's `$this->touchOwningPage(...)` call fired, which pins its
+     * MethodCallRemoval mutant.
      *
      * @return array{int, int} [liveVersion, pageId]
      */

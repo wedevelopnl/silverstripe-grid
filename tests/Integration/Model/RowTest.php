@@ -11,25 +11,28 @@ use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\Row;
-use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Value\ContainerType;
 
 #[CoversClass(Row::class)]
 final class RowTest extends SapphireTest
 {
+    use DisablesAutoScaffolding;
+
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
     protected function setUp(): void
     {
         parent::setUp();
         Versioned::set_stage(Versioned::DRAFT);
+        $this->disableAutoScaffolding();
     }
 
     public function testAutoScaffoldCreatesColumn(): void
     {
-        // Suppress Section scaffold so we control the tree, but leave Row scaffold on
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        // Section scaffold stays suppressed so we control the tree; Row scaffold is the subject
+        Config::modify()->set(Row::class, 'auto_scaffold', true);
 
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
@@ -42,7 +45,7 @@ final class RowTest extends SapphireTest
 
     public function testAutoScaffoldIdempotent(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        Config::modify()->set(Row::class, 'auto_scaffold', true);
 
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
@@ -58,9 +61,6 @@ final class RowTest extends SapphireTest
 
     public function testAutoScaffoldDisabledViaConfig(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);
@@ -70,7 +70,8 @@ final class RowTest extends SapphireTest
 
     public function testAutoScaffoldSkippedOnLiveStage(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        // Row scaffolding stays ON so the LIVE-stage guard is what prevents it
+        Config::modify()->set(Row::class, 'auto_scaffold', true);
 
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
@@ -87,13 +88,8 @@ final class RowTest extends SapphireTest
 
     public function testGetChildrenReturnsColumns(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
-        $section = GridTreeFactory::section($page);
-        $row = GridTreeFactory::row($section);
-        $column = GridTreeFactory::column($row);
+        ['row' => $row, 'column' => $column] = GridTreeFactory::containerTree($page);
 
         $children = $row->getChildren();
         self::assertCount(1, $children);
@@ -107,9 +103,6 @@ final class RowTest extends SapphireTest
 
     public function testGetRowClassesReturnsNonEmptyString(): void
     {
-        Config::modify()->set(Section::class, 'auto_scaffold', false);
-        Config::modify()->set(Row::class, 'auto_scaffold', false);
-
         $page = $this->objFromFixture(Page::class, 'test_page');
         $section = GridTreeFactory::section($page);
         $row = GridTreeFactory::row($section);

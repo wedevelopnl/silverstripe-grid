@@ -4,15 +4,10 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
-use Page;
 use PHPUnit\Framework\Attributes\CoversNothing;
-use SilverStripe\Dev\SapphireTest;
-use SilverStripe\Versioned\Versioned;
-use TractorCow\Fluent\Extension\FluentIsolatedExtension;
 use TractorCow\Fluent\Model\Locale;
 use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Model\Column;
-use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Value\ContainerType;
@@ -23,36 +18,14 @@ use WeDevelop\Grid\Value\ContainerType;
  * ContainerInterface when Fluent locale filtering is active.
  */
 #[CoversNothing]
-final class FluentAutoScaffoldingTest extends SapphireTest
+final class FluentAutoScaffoldingTest extends FluentGridTestCase
 {
-    protected static $fixture_file = __DIR__ . '/Fixture/locales.yml';
-
-    /** @var array<class-string, list<class-string>> */
-    protected static $required_extensions = [
-        GridElement::class => [FluentIsolatedExtension::class],
-    ];
-
     protected function setUp(): void
     {
         parent::setUp();
 
-        Versioned::set_stage(Versioned::DRAFT);
-
-        // Clear cached locale records so fixture-loaded locales are visible
-        Locale::clearCached();
-
-        $locale = $this->objFromFixture(Locale::class, 'en');
-        FluentState::singleton()->setLocale($locale->Locale);
-    }
-
-    private function createPage(string $title = 'Test Page'): Page
-    {
-        $page = Page::create();
-        $page->Title = $title;
-        $page->URLSegment = 'fluent-autoscaffolding-test';
-        $page->writeToStage(Versioned::DRAFT);
-
-        return $page;
+        // This suite exercises the scaffolding cascade itself.
+        $this->enableAutoScaffolding();
     }
 
     /**

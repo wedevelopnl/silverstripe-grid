@@ -44,28 +44,10 @@ final class BulmaAdapterVisibilityTest extends SapphireTest
         'is-hidden-fullhd',
     ];
 
-    public function testHideAtMiddleViewportUsesIsHiddenOnly(): void
-    {
-        self::assertSame('is-hidden-tablet-only', $this->adapter->getHideClass('tablet'));
-    }
-
-    public function testHideAtBaseViewportUsesPlainHidden(): void
-    {
-        // 'mobile' is Bulma's base viewport and `is-hidden-mobile` already means
-        // "up to 768px" — Bulma ships no `-only` variant for it.
-        self::assertSame('is-hidden-mobile', $this->adapter->getHideClass('mobile'));
-    }
-
-    public function testHideAtLastViewportUsesPlainHidden(): void
-    {
-        // `is-hidden-fullhd` means "from 1408px", which is all of the largest
-        // breakpoint; Bulma ships no `-only` variant for it either.
-        self::assertSame('is-hidden-fullhd', $this->adapter->getHideClass('fullhd'));
-    }
-
     public function testEveryHideClassExistsInBulma(): void
     {
-        // The per-viewport assertions above pin the two exceptions; this one fails
+        // The exact per-viewport mappings (including the two `-only` exceptions)
+        // are pinned by GridAdapterTest's hideClassProvider; this one fails
         // for any viewport whose class the framework does not actually ship, which
         // is what let the invented `-only` variants render as no-ops.
         foreach (['mobile', 'tablet', 'desktop', 'widescreen', 'fullhd'] as $viewport) {
@@ -84,20 +66,6 @@ final class BulmaAdapterVisibilityTest extends SapphireTest
         // explicitly rather than relying on an upward cascade.
         foreach (['mobile', 'tablet', 'desktop', 'widescreen', 'fullhd'] as $viewport) {
             self::assertNull($this->adapter->getRestoreClass($viewport));
-        }
-    }
-
-    public function testHideClassesDoNotContainNonexistentIsBlockUtilities(): void
-    {
-        foreach (['mobile', 'tablet', 'desktop', 'widescreen', 'fullhd'] as $viewport) {
-            $class = $this->adapter->getHideClass($viewport);
-
-            self::assertStringNotContainsString(
-                'is-block-',
-                $class,
-                "Bulma has no is-block-{viewport} utility; got {$class} for viewport {$viewport}",
-            );
-            self::assertNotSame('', $class, 'Must not emit empty class strings');
         }
     }
 }

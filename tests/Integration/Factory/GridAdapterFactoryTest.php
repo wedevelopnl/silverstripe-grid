@@ -5,35 +5,31 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Factory;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use SilverStripe\Core\Environment;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Contract\ContentLayoutAdapterInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Factory\GridAdapterFactory;
+use WeDevelop\Grid\Tests\Integration\Support\RestoresGridAdapterEnv;
 
 #[CoversClass(GridAdapterFactory::class)]
 final class GridAdapterFactoryTest extends SapphireTest
 {
-    protected $usesDatabase = false;
+    use RestoresGridAdapterEnv;
 
-    private string|false $previousEnv;
+    protected $usesDatabase = false;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->previousEnv = Environment::getEnv('SS_GRID_ADAPTER');
-        Environment::putEnv('SS_GRID_ADAPTER=bootstrap');
+        $this->captureGridAdapterEnv();
+        $this->pinAdapterEnv('bootstrap');
     }
 
     protected function tearDown(): void
     {
-        if ($this->previousEnv === false) {
-            Environment::putEnv('SS_GRID_ADAPTER=');
-        } else {
-            Environment::putEnv('SS_GRID_ADAPTER=' . $this->previousEnv);
-        }
+        $this->restoreGridAdapterEnv();
 
         parent::tearDown();
     }

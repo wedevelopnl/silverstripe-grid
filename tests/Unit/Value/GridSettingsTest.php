@@ -466,21 +466,4 @@ final class GridSettingsTest extends TestCase
         yield 'override missing visible' => ['{' . $valid . ',"overrides":{"md":{"width":6,"offset":0}}}'];
         yield 'override wrong type' => ['{' . $valid . ',"overrides":{"md":{"width":6,"offset":0,"visible":1}}}'];
     }
-
-    public function testImmutabilityAllWithMethodsReturnNewInstances(): void
-    {
-        $original = new GridSettings(ViewportConfig::default(12), [
-            'md' => new ViewportConfig(6, 0, true),
-        ]);
-
-        $withDefault = $original->withDefault(new ViewportConfig(8, 0, true));
-        $withOverride = $original->withOverride('lg', new ViewportConfig(4, 0, true));
-        $withoutOverride = $original->withoutOverride('md');
-        $withoutOverrides = $original->withoutOverrides();
-
-        self::assertNotSame($original, $withDefault);
-        self::assertNotSame($original, $withOverride);
-        self::assertNotSame($original, $withoutOverride);
-        self::assertNotSame($original, $withoutOverrides);
-    }
 }

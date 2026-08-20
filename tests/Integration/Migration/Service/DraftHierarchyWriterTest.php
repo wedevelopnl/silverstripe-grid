@@ -20,6 +20,8 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
+use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\MigrationIdMap;
 use WeDevelop\Grid\Value\ViewportConfig;
@@ -34,6 +36,7 @@ use WeDevelop\Grid\Value\ViewportConfig;
 final class DraftHierarchyWriterTest extends SapphireTest
 {
     use CleansGridTables;
+    use DisablesAutoScaffolding;
 
     /** $extra_dataobjects alone does not provision the temp DB — this test writes records. */
     protected $usesDatabase = true;
@@ -51,10 +54,6 @@ final class DraftHierarchyWriterTest extends SapphireTest
 
     private DraftHierarchyWriter $writer;
 
-    private bool $sectionAutoScaffold;
-
-    private bool $rowAutoScaffold;
-
     protected function setUp(): void
     {
         parent::setUp();
@@ -64,24 +63,13 @@ final class DraftHierarchyWriterTest extends SapphireTest
         // The writer assumes its caller (GridMigrationService::run) has suppressed
         // Section/Row auto-scaffolding for the batch; replicate that precondition
         // so a single Section write does not also scaffold an extra Row + Column.
-        $this->sectionAutoScaffold = (bool) Section::config()->get('auto_scaffold');
-        $this->rowAutoScaffold = (bool) Row::config()->get('auto_scaffold');
-        Section::config()->set('auto_scaffold', false);
-        Row::config()->set('auto_scaffold', false);
+        $this->disableAutoScaffolding();
 
         // No DDL/transaction rollback runs (usesTransactions = false), so purge any
         // grid records leaked from a previous test before each method.
         $this->cleanGridTables();
 
         $this->writer = new DraftHierarchyWriter(new FieldMapper());
-    }
-
-    protected function tearDown(): void
-    {
-        Section::config()->set('auto_scaffold', $this->sectionAutoScaffold);
-        Row::config()->set('auto_scaffold', $this->rowAutoScaffold);
-
-        parent::tearDown();
     }
 
     public function testWritesFullHierarchyToDraftUnderParentChain(): void
@@ -220,21 +208,13 @@ final class DraftHierarchyWriterTest extends SapphireTest
 
     private function legacyContent(int $id, string $title, ?LegacyMediaData $media = null): LegacyElement
     {
-        return new LegacyElement(
-            id: $id,
-            className: 'DNADesign\\Elemental\\Models\\ElementContent',
-            title: $title,
-            showTitle: true,
-            titleTag: 'h3',
-            titleClass: '',
-            sort: $id,
-            extraClass: '',
-            isRow: false,
-            sizeFields: [],
-            offsetFields: [],
-            visibilityFields: [],
-            mediaData: $media,
-        );
+        return LegacyElementFactory::content($id, $id, [
+            'className' => 'DNADesign\\Elemental\\Models\\ElementContent',
+            'title' => $title,
+            'showTitle' => true,
+            'titleTag' => 'h3',
+            'mediaData' => $media,
+        ]);
     }
 
     public function testColumnReceivesProvidedGridSettings(): void
@@ -305,20 +285,14 @@ final class DraftHierarchyWriterTest extends SapphireTest
      */
     private function buildSection(GridSettings $gridSettings): MigrationSection
     {
-        $element = new LegacyElement(
-            id: self::LEGACY_ID,
-            className: 'DNADesign\\Elemental\\Models\\ElementContent',
-            title: 'Hello',
-            showTitle: true,
-            titleTag: 'h3',
-            titleClass: 'title-class',
-            sort: 5,
-            extraClass: 'el-extra',
-            isRow: false,
-            sizeFields: [],
-            offsetFields: [],
-            visibilityFields: [],
-        );
+        $element = LegacyElementFactory::content(self::LEGACY_ID, 5, [
+            'className' => 'DNADesign\\Elemental\\Models\\ElementContent',
+            'title' => 'Hello',
+            'showTitle' => true,
+            'titleTag' => 'h3',
+            'titleClass' => 'title-class',
+            'extraClass' => 'el-extra',
+        ]);
 
         $column = new MigrationColumn($gridSettings, 1, [$element]);
         $row = new MigrationRow('Row title', 'row-extra', 1, [$column]);

@@ -6,14 +6,13 @@ namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
-use Psr\Log\NullLogger;
-use Stringable;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Migration\Service\LegacyLocalisationDetector;
 use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
+use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 
 /**
  * Inverse guard for WS5 #8: when a Fluent default locale DOES resolve, the
@@ -47,15 +46,7 @@ final class FluentDisabledPageReconciliationTest extends FluentMigrationTestCase
         $page->UseGrid = true;
         $page->write();
 
-        $logger = new class () extends NullLogger {
-            /** @var list<string> */
-            public array $messages = [];
-
-            public function log($level, string|Stringable $message, array $context = []): void
-            {
-                $this->messages[] = (string) $message;
-            }
-        };
+        $logger = new RecordingLogger();
 
         $mapper = new FieldMapper();
         $strategy = new RowPerSectionStrategy(new ElementGrouper(), $mapper, self::DEFAULT_VIEWPORT, self::VIEWPORT_KEY_MAP);
@@ -78,7 +69,7 @@ final class FluentDisabledPageReconciliationTest extends FluentMigrationTestCase
 
         $reconcileLogCount = \count(\array_filter(
             $logger->messages,
-            static fn (string $message): bool => \str_contains($message, 'Set UseGrid = 0'),
+            static fn (array $entry): bool => \str_contains($entry['message'], 'Set UseGrid = 0'),
         ));
         self::assertSame(
             1,

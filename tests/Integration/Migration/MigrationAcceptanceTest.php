@@ -7,8 +7,6 @@ namespace WeDevelop\Grid\Tests\Integration\Migration;
 use Page;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use Psr\Log\NullLogger;
-use SilverStripe\CMS\Model\SiteTree;
-use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
@@ -25,10 +23,9 @@ use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Migration\Service\TestCustomElement;
 use WeDevelop\Grid\Tests\Integration\Migration\Service\TestPage;
-use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestCustomElementMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestCustomElementReaderExtension;
-use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
 
 /**
  * End-to-end acceptance tests for the SS5 → SS6 grid migration pipeline.
@@ -38,59 +35,17 @@ use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
  * element, grid setting, and media field.
  */
 #[CoversNothing]
-final class MigrationAcceptanceTest extends SapphireTest
+final class MigrationAcceptanceTest extends MigrationTestCase
 {
-    use CleansGridTables;
-
-    protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
-
     /** @var list<class-string> */
     protected static $extra_dataobjects = [
         TestCustomElement::class,
         TestPage::class,
     ];
 
-    protected $usesTransactions = false;
-
-    private const string DEFAULT_VIEWPORT = 'MD';
-
-    private const string ZONE = 'main';
-
-    private const array VIEWPORT_KEY_MAP = [
-        'XS' => 'xs',
-        'SM' => 'sm',
-        'MD' => 'md',
-        'LG' => 'lg',
-        'XL' => 'xl',
-    ];
-
-    private const string CONTENT_CLASS = 'DNADesign\\Elemental\\Models\\ElementContent';
-
-    private const string ROW_CLASS = 'WeDevelop\\ElementalGrid\\Models\\ElementRow';
-
-    private LegacyTableSeeder $seeder;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        Versioned::set_stage(Versioned::DRAFT);
-        $this->seeder = new LegacyTableSeeder();
-        $this->seeder->createTables();
-        $this->seeder->addExtensionColumns('Page');
-        $this->seeder->truncateTables();
-        $this->cleanGridTables();
-    }
-
-    protected function tearDown(): void
-    {
-        $this->seeder->removeExtensionColumns('Page');
-        $this->seeder->dropTables();
-        parent::tearDown();
-    }
-
     public function testSimpleTextPage(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -167,7 +122,7 @@ final class MigrationAcceptanceTest extends SapphireTest
 
     public function testMarketingLandingPage(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 500;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -313,7 +268,7 @@ final class MigrationAcceptanceTest extends SapphireTest
 
     public function testPageWithOrphanElements(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 200;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -428,7 +383,7 @@ final class MigrationAcceptanceTest extends SapphireTest
 
     public function testDraftLiveDivergence(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 900;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -542,7 +497,7 @@ final class MigrationAcceptanceTest extends SapphireTest
 
     public function testAllDefaultsPage(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 300;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -585,7 +540,7 @@ final class MigrationAcceptanceTest extends SapphireTest
 
     public function testMarketingPageAllRowsInSingleSection(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 500;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -723,7 +678,7 @@ final class MigrationAcceptanceTest extends SapphireTest
 
     public function testAdjacentEmptyRowsAreDroppedButContentSurvives(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 400;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -829,7 +784,7 @@ final class MigrationAcceptanceTest extends SapphireTest
      */
     public function testCrossFrameworkMigrationBootstrapToTailwind(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 1700;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -915,7 +870,7 @@ final class MigrationAcceptanceTest extends SapphireTest
      */
     public function testCustomElementWithProjectSpecificFields(): void
     {
-        $pageId = $this->getPageId();
+        $pageId = $this->pageId();
         $areaId = 1600;
         $this->seeder->seedPage($pageId, $areaId);
 
@@ -1063,7 +1018,7 @@ final class MigrationAcceptanceTest extends SapphireTest
         $this->switchToPlainElementalSchema();
 
         try {
-            $pageId = $this->getPageId();
+            $pageId = $this->pageId();
             $areaId = 2000;
             $this->seeder->seedPlainElementalPage($pageId, $areaId);
 
@@ -1117,7 +1072,7 @@ final class MigrationAcceptanceTest extends SapphireTest
         $this->switchToPlainElementalSchema();
 
         try {
-            $pageId = $this->getPageId();
+            $pageId = $this->pageId();
             $areaId = 2100;
             $this->seeder->seedPlainElementalPage($pageId, $areaId);
 
@@ -1179,7 +1134,7 @@ final class MigrationAcceptanceTest extends SapphireTest
         $this->switchToPlainElementalSchema();
 
         try {
-            $pageId = $this->getPageId();
+            $pageId = $this->pageId();
             $areaId = 2200;
             $this->seeder->seedPlainElementalPage($pageId, $areaId);
 
@@ -1305,8 +1260,6 @@ final class MigrationAcceptanceTest extends SapphireTest
      *         }>,
      *     }>,
      * }> $expectedSections
-     */
-    /**
      * @param class-string $parentClass
      */
     private function assertMigratedHierarchy(
@@ -1555,11 +1508,6 @@ final class MigrationAcceptanceTest extends SapphireTest
         $service = new GridMigrationService($reader, $mapper, $strategy, new NullLogger());
         $failures = $service->run($viewport, self::ZONE, $keyMap, false, [$pageId]);
         self::assertSame(0, $failures, 'Migration should complete without failures');
-    }
-
-    private function getPageId(): int
-    {
-        return (int) $this->objFromFixture(Page::class, 'test_page')->ID;
     }
 
     /**
