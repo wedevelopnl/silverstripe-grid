@@ -4,62 +4,35 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDragContext } from '@/hooks/useDragAndDrop'
 import { createColumnNode, createSimpleElement } from '@/testing/factories'
+import { defaultSortable, resetDndMocks } from '@/testing/mockDndKit'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
 import { createCollapseStateStub, renderWithProviders } from '@/testing/renderWithProviders'
 
 import EditableColumnBlock from './EditableColumnBlock'
 import ReadonlyColumnBlock from './ReadonlyColumnBlock'
 
-// jsdom doesn't support native dialog showModal/close
+vi.mock('@dnd-kit/sortable', async () =>
+  (await import('@/testing/mockDndKit')).mockSortableModule(),
+)
+
+vi.mock('@dnd-kit/core', async (importOriginal) =>
+  (await import('@/testing/mockDndKit')).mockDndCoreModule(await importOriginal()),
+)
+
+vi.mock('@/hooks/useDragAndDrop', async () =>
+  (await import('@/testing/mockDndKit')).mockUseDragContextModule(),
+)
+
 beforeEach(() => {
-  HTMLDialogElement.prototype.showModal = vi.fn(function showModal(this: HTMLDialogElement) {
-    this.setAttribute('open', '')
-  })
-  HTMLDialogElement.prototype.close = vi.fn(function close(this: HTMLDialogElement) {
-    this.removeAttribute('open')
-  })
+  mockFetchSuccess({})
 })
-
-const defaultSortable = {
-  attributes: {},
-  listeners: {},
-  setNodeRef: vi.fn(),
-  transform: null,
-  transition: undefined,
-  isDragging: false,
-  isOver: false,
-}
-
-vi.mock('@dnd-kit/sortable', () => ({
-  useSortable: vi.fn(() => ({ ...defaultSortable })),
-  SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  verticalListSortingStrategy: {},
-  horizontalListSortingStrategy: {},
-}))
-
-vi.mock('@dnd-kit/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@dnd-kit/core')>()
-  return {
-    ...actual,
-    DndContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  }
-})
-
-vi.mock('@/hooks/useDragAndDrop', () => ({
-  useDragContext: vi.fn(() => ({ activeType: null, pendingActive: false })),
-}))
 
 afterEach(() => {
-  vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<
-    typeof useSortable
-  >)
-  vi.mocked(useDragContext).mockReturnValue({ activeType: null, pendingActive: false })
+  resetDndMocks({ useSortable, useDragContext })
 })
 
 describe('EditableColumnBlock', () => {
   it('renders column children (element cards)', () => {
-    mockFetchSuccess({})
-
     const children = [
       createSimpleElement({ id: 101, title: 'Content A' }),
       createSimpleElement({ id: 102, title: 'Content B' }),
@@ -74,8 +47,6 @@ describe('EditableColumnBlock', () => {
   })
 
   it('shows empty state when no children and no allowed types', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({ children: null, childCount: 0, allowedTypes: null })
 
     renderWithProviders(<EditableColumnBlock column={column} />)
@@ -84,8 +55,6 @@ describe('EditableColumnBlock', () => {
   })
 
   it('does not show empty state when no children but allowedTypes exist', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({
       children: null,
       childCount: 0,
@@ -100,8 +69,6 @@ describe('EditableColumnBlock', () => {
   })
 
   it('does not show "Add content" button when allowedTypes is null', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({ allowedTypes: null })
 
     renderWithProviders(<EditableColumnBlock column={column} />)
@@ -110,8 +77,6 @@ describe('EditableColumnBlock', () => {
   })
 
   it('does not show "Add content" button when allowedTypes is empty object', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({ allowedTypes: {} })
 
     renderWithProviders(<EditableColumnBlock column={column} />)
@@ -120,9 +85,9 @@ describe('EditableColumnBlock', () => {
   })
 
   describe('status and state attributes', () => {
-    it('includes draft status attribute', () => {
-      mockFetchSuccess({})
-
+    it('forwards the node status to the chrome data-status attribute', () => {
+      // Per-status application is pinned in ColumnChrome.test.tsx — this only
+      // proves the block wires the node's status through.
       const column = createColumnNode({ status: 'draft' })
 
       renderWithProviders(<EditableColumnBlock column={column} />)
@@ -130,29 +95,7 @@ describe('EditableColumnBlock', () => {
       expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'draft')
     })
 
-    it('includes modified status attribute', () => {
-      mockFetchSuccess({})
-
-      const column = createColumnNode({ status: 'modified' })
-
-      renderWithProviders(<EditableColumnBlock column={column} />)
-
-      expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'modified')
-    })
-
-    it('includes published status attribute by default', () => {
-      mockFetchSuccess({})
-
-      const column = createColumnNode({ status: 'published' })
-
-      renderWithProviders(<EditableColumnBlock column={column} />)
-
-      expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'published')
-    })
-
     it('sets data-hidden when column is not visible', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
       })
@@ -163,8 +106,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('does not set data-hidden when column is visible', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
@@ -175,8 +116,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('sets data-collapsed when the column is collapsed in the context', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({})
 
       renderWithProviders(<EditableColumnBlock column={column} />, {
@@ -192,8 +131,6 @@ describe('EditableColumnBlock', () => {
         isOver: true,
       } as unknown as ReturnType<typeof useSortable>)
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'column', pendingActive: false })
-      mockFetchSuccess({})
-
       const column = createColumnNode({})
 
       renderWithProviders(<EditableColumnBlock column={column} />)
@@ -207,8 +144,6 @@ describe('EditableColumnBlock', () => {
         isOver: true,
       } as unknown as ReturnType<typeof useSortable>)
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'row', pendingActive: false })
-      mockFetchSuccess({})
-
       const column = createColumnNode({})
 
       renderWithProviders(<EditableColumnBlock column={column} />)
@@ -222,8 +157,6 @@ describe('EditableColumnBlock', () => {
         isOver: false,
       } as unknown as ReturnType<typeof useSortable>)
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'column', pendingActive: false })
-      mockFetchSuccess({})
-
       const column = createColumnNode({})
 
       renderWithProviders(<EditableColumnBlock column={column} />)
@@ -234,8 +167,6 @@ describe('EditableColumnBlock', () => {
 
   describe('width picker', () => {
     it('shows current width label', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
@@ -246,8 +177,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('shows "hidden" label when column is not visible', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
       })
@@ -259,8 +188,6 @@ describe('EditableColumnBlock', () => {
 
     it('width selection calls updateGridSettings with new width and visible=true', async () => {
       const user = userEvent.setup()
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         id: 50,
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
@@ -270,10 +197,7 @@ describe('EditableColumnBlock', () => {
 
       await user.click(screen.getByTestId('column-badge'))
 
-      const options = screen.getAllByRole('option')
-      const option = options.find((opt) => opt.textContent === '8 columns')
-      expect(option).toBeDefined()
-      await user.click(option!)
+      await user.click(screen.getByRole('option', { name: '8 columns' }))
 
       await waitFor(() => {
         expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
@@ -294,8 +218,6 @@ describe('EditableColumnBlock', () => {
 
     it('selecting "hidden" calls updateGridSettings with visible=false', async () => {
       const user = userEvent.setup()
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         id: 51,
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
@@ -305,10 +227,7 @@ describe('EditableColumnBlock', () => {
 
       await user.click(screen.getByTestId('column-badge'))
 
-      const options = screen.getAllByRole('option')
-      const hiddenOption = options.find((opt) => opt.textContent === 'hidden')
-      expect(hiddenOption).toBeDefined()
-      await user.click(hiddenOption!)
+      await user.click(screen.getByRole('option', { name: 'hidden' }))
 
       await waitFor(() => {
         expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
@@ -326,8 +245,6 @@ describe('EditableColumnBlock', () => {
 
     it('clamps offset when selecting a width that makes current offset too large', async () => {
       const user = userEvent.setup()
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         id: 52,
         gridSettings: { default: { width: 4, offset: 7, visible: true }, overrides: {} },
@@ -338,10 +255,7 @@ describe('EditableColumnBlock', () => {
       await user.click(screen.getByTestId('column-badge'))
 
       // Select width 10 — max offset is 12-10=2, but current offset is 7
-      const options = screen.getAllByRole('option')
-      const option = options.find((opt) => opt.textContent === '10 columns')
-      expect(option).toBeDefined()
-      await user.click(option!)
+      await user.click(screen.getByRole('option', { name: '10 columns' }))
 
       await waitFor(() => {
         expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
@@ -360,8 +274,6 @@ describe('EditableColumnBlock', () => {
 
     it('disables the width picker when a drag is active', () => {
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'column', pendingActive: false })
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
@@ -374,8 +286,6 @@ describe('EditableColumnBlock', () => {
 
   describe('offset picker', () => {
     it('shows "none" label when offset is 0', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
@@ -386,8 +296,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('labels a non-zero offset with its value', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 3, visible: true }, overrides: {} },
       })
@@ -398,8 +306,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('disabled when width equals column count', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
       })
@@ -410,8 +316,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('disabled when column is not visible', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
       })
@@ -422,8 +326,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('enabled when width < column count and visible', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
@@ -435,8 +337,6 @@ describe('EditableColumnBlock', () => {
 
     it('offset selection calls updateGridSettings with offset value', async () => {
       const user = userEvent.setup()
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         id: 53,
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
@@ -446,10 +346,7 @@ describe('EditableColumnBlock', () => {
 
       await user.click(screen.getByTestId('column-offset-badge'))
 
-      const options = screen.getAllByRole('option')
-      const option = options.find((opt) => opt.textContent === 'Offset 3')
-      expect(option).toBeDefined()
-      await user.click(option!)
+      await user.click(screen.getByRole('option', { name: 'Offset 3' }))
 
       await waitFor(() => {
         expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
@@ -468,8 +365,6 @@ describe('EditableColumnBlock', () => {
 
   describe('column style (margin strategy)', () => {
     it('sets --col-width CSS variable based on width/columnCount', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
@@ -481,8 +376,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('sets --col-offset CSS variable when offset > 0', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 3, visible: true }, overrides: {} },
       })
@@ -494,8 +387,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('does not set --col-offset when offset is 0', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
@@ -512,8 +403,6 @@ describe('EditableColumnBlock', () => {
       // Override the adapter config to use grid-placement
       window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
 
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 4, offset: 2, visible: true }, overrides: {} },
       })
@@ -529,8 +418,6 @@ describe('EditableColumnBlock', () => {
 
   describe('element type picker', () => {
     it('shows "Add content" button when allowedTypes exist', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         children: null,
         childCount: 0,
@@ -546,8 +433,6 @@ describe('EditableColumnBlock', () => {
 
     it('opens type picker on "Add content" click and calls createContentElement on select', async () => {
       const user = userEvent.setup()
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         id: 60,
         children: null,
@@ -585,8 +470,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('does not render the type picker until "Add content" is clicked', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         children: null,
         childCount: 0,
@@ -607,8 +490,6 @@ describe('EditableColumnBlock', () => {
 
     it('closes the element type picker when close handler is invoked', async () => {
       const user = userEvent.setup()
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         children: null,
         childCount: 0,
@@ -638,8 +519,6 @@ describe('EditableColumnBlock', () => {
   })
 
   it('shows EmptyState when children is empty array and no allowedTypes', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({
       children: [] as never,
       childCount: 0,
@@ -652,8 +531,6 @@ describe('EditableColumnBlock', () => {
   })
 
   it('renders edit link when editLink is set', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({ editLink: '/admin/pages/edit/show/42' })
 
     renderWithProviders(<EditableColumnBlock column={column} />)
@@ -664,8 +541,6 @@ describe('EditableColumnBlock', () => {
   })
 
   it('renders title as plain text when editLink is null', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({ editLink: null })
 
     renderWithProviders(<EditableColumnBlock column={column} />)
@@ -677,8 +552,6 @@ describe('EditableColumnBlock', () => {
   describe('collapse toggle', () => {
     it('toggles this column when the collapse control is clicked', async () => {
       const user = userEvent.setup()
-      mockFetchSuccess({})
-
       const column = createColumnNode({})
       const collapseState = createCollapseStateStub()
 
@@ -692,8 +565,6 @@ describe('EditableColumnBlock', () => {
 
   describe('modified indicator', () => {
     it('renders the indicator with its accessible label when status is modified', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({ status: 'modified' })
 
       renderWithProviders(<EditableColumnBlock column={column} />)
@@ -702,8 +573,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('does not render the indicator when status is not modified', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({ status: 'published' })
 
       renderWithProviders(<EditableColumnBlock column={column} />)
@@ -714,8 +583,6 @@ describe('EditableColumnBlock', () => {
 
   describe('drag handle label', () => {
     it('labels the drag handle with the column title', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({ title: 'Hero column' })
 
       renderWithProviders(<EditableColumnBlock column={column} />)
@@ -730,8 +597,6 @@ describe('EditableColumnBlock', () => {
 
   describe('between-column insert handle', () => {
     it('passes an offset-aware gutter shift to the handle when the column has a margin offset', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 2, offset: 1, visible: true }, overrides: {} },
       })
@@ -747,8 +612,6 @@ describe('EditableColumnBlock', () => {
     })
 
     it('omits the gutter shift when the column has no offset', () => {
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
       })
@@ -767,8 +630,6 @@ describe('EditableColumnBlock', () => {
       // the offset is expressed via grid-column-start, so no handle nudge is
       // applied regardless of the column's offset.
       window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
-      mockFetchSuccess({})
-
       const column = createColumnNode({
         gridSettings: { default: { width: 2, offset: 1, visible: true }, overrides: {} },
       })
@@ -791,8 +652,6 @@ describe('ReadonlyColumnBlock', () => {
   // picker) where the ternary survives.
 
   it('renders an ElementCard for each child and no empty-state', () => {
-    mockFetchSuccess({})
-
     const children = [
       createSimpleElement({ id: 201, title: 'Readonly A' }),
       createSimpleElement({ id: 202, title: 'Readonly B' }),
@@ -810,8 +669,6 @@ describe('ReadonlyColumnBlock', () => {
   })
 
   it('renders the empty-state message and no ElementCards when children are empty', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({ children: null, childCount: 0 })
 
     renderWithProviders(<ReadonlyColumnBlock column={column} />)
@@ -821,8 +678,6 @@ describe('ReadonlyColumnBlock', () => {
   })
 
   it('sets data-collapsed (empty value) when collapsed', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({})
 
     renderWithProviders(<ReadonlyColumnBlock column={column} />, {
@@ -833,8 +688,6 @@ describe('ReadonlyColumnBlock', () => {
   })
 
   it('does not set data-collapsed when expanded', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({})
 
     renderWithProviders(<ReadonlyColumnBlock column={column} />)
@@ -843,8 +696,6 @@ describe('ReadonlyColumnBlock', () => {
   })
 
   it('sets data-hidden (empty value) when the column is not visible', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({
       gridSettings: { default: { width: 6, offset: 0, visible: false }, overrides: {} },
     })
@@ -855,8 +706,6 @@ describe('ReadonlyColumnBlock', () => {
   })
 
   it('does not set data-hidden when the column is visible', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({
       gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
     })
@@ -867,8 +716,6 @@ describe('ReadonlyColumnBlock', () => {
   })
 
   it('renders the modified indicator with its accessible label when status is modified', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({ status: 'modified' })
 
     renderWithProviders(<ReadonlyColumnBlock column={column} />)
@@ -877,8 +724,6 @@ describe('ReadonlyColumnBlock', () => {
   })
 
   it('does not render the modified indicator when status is not modified', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({ status: 'published' })
 
     renderWithProviders(<ReadonlyColumnBlock column={column} />)
@@ -887,8 +732,6 @@ describe('ReadonlyColumnBlock', () => {
   })
 
   it('renders no drag handle, badges or add-content button', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({
       allowedTypes: {
         'App\\Model\\TextBlock': { label: 'Text Block', icon: 'font-icon-text', description: '' },
@@ -904,8 +747,6 @@ describe('ReadonlyColumnBlock', () => {
   })
 
   it('renders the title as plain text even when editLink is set', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({ editLink: '/admin/pages/edit/show/42' })
 
     renderWithProviders(<ReadonlyColumnBlock column={column} />)
@@ -915,8 +756,6 @@ describe('ReadonlyColumnBlock', () => {
   })
 
   it('applies the --col-width CSS variable via buildColumnStyle (margin strategy)', () => {
-    mockFetchSuccess({})
-
     const column = createColumnNode({
       gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} },
     })
@@ -930,8 +769,6 @@ describe('ReadonlyColumnBlock', () => {
 
   it('applies the --col-span CSS variable via buildColumnStyle (grid-placement strategy)', () => {
     window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
-    mockFetchSuccess({})
-
     const column = createColumnNode({
       gridSettings: { default: { width: 4, offset: 0, visible: true }, overrides: {} },
     })

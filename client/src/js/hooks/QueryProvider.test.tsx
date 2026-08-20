@@ -17,31 +17,16 @@ describe('GridQueryProvider', () => {
     expect(result.current).toBeDefined()
   })
 
-  it('should configure retry: false', () => {
+  it('should configure the CMS query defaults (no retry, 5-minute gcTime, no focus refetch)', () => {
     const { result } = renderHook(() => useQueryClient(), {
       wrapper: Wrapper,
     })
 
-    const defaults = result.current.getDefaultOptions()
-    expect(defaults.queries?.retry).toBe(false)
-  })
-
-  it('should set gcTime to 5 minutes (5 * 60_000 ms)', () => {
-    const { result } = renderHook(() => useQueryClient(), {
-      wrapper: Wrapper,
+    expect(result.current.getDefaultOptions().queries).toMatchObject({
+      retry: false,
+      gcTime: 300_000,
+      refetchOnWindowFocus: false,
     })
-
-    const defaults = result.current.getDefaultOptions()
-    expect(defaults.queries?.gcTime).toBe(300_000)
-  })
-
-  it('should disable refetchOnWindowFocus', () => {
-    const { result } = renderHook(() => useQueryClient(), {
-      wrapper: Wrapper,
-    })
-
-    const defaults = result.current.getDefaultOptions()
-    expect(defaults.queries?.refetchOnWindowFocus).toBe(false)
   })
 
   it('should create isolated QueryClient per mount', () => {

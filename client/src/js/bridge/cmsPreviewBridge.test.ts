@@ -1,14 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { flushObservers } from '@/testing/flush'
 import { registerCmsPreviewBridge, teardownCmsPreviewBridge } from './cmsPreviewBridge'
 
-vi.mock('@/utils/gridAdapter', () => ({
-  getDefaultViewport: () => 'md',
-  getViewports: () => [
-    { key: 'xs', label: 'Extra Small', minWidth: 0 },
-    { key: 'sm', label: 'Small', minWidth: 576 },
-    { key: 'md', label: 'Medium', minWidth: 768 },
-  ],
-}))
+vi.mock('@/utils/gridAdapter', async () =>
+  (await import('@/testing/mockGridAdapter')).mockGridAdapterModule(),
+)
 
 /**
  * Minimal CMS DOM approximation. vendorPreview.ts owns the detailed
@@ -40,7 +36,7 @@ describe('cmsPreviewBridge — lifecycle', () => {
   it('mounts the selector when both grid editor and vendor DOM are present', async () => {
     const root = createCmsDom()
     registerCmsPreviewBridge()
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
 
     expect(root.querySelector('[data-testid="cms-preview-viewport-selector"]')).not.toBeNull()
     const vendorWrapper = root.querySelector<HTMLElement>('#preview-size-dropdown')
@@ -50,7 +46,7 @@ describe('cmsPreviewBridge — lifecycle', () => {
   it('no-ops when the vendor DOM is absent', async () => {
     document.body.innerHTML = '<div data-react-mount="grid-editor"></div>'
     registerCmsPreviewBridge()
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
 
     expect(document.querySelector('[data-testid="cms-preview-viewport-selector"]')).toBeNull()
   })
@@ -58,7 +54,7 @@ describe('cmsPreviewBridge — lifecycle', () => {
   it('no-ops on non-grid CMS pages (vendor DOM present, no grid editor)', async () => {
     createCmsDom({ withGridEditor: false })
     registerCmsPreviewBridge()
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
 
     expect(document.querySelector('[data-testid="cms-preview-viewport-selector"]')).toBeNull()
     const vendor = document.getElementById('preview-size-dropdown')
@@ -68,7 +64,7 @@ describe('cmsPreviewBridge — lifecycle', () => {
   it('teardown removes the selector and re-shows the vendor wrapper', async () => {
     const root = createCmsDom()
     registerCmsPreviewBridge()
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
 
     teardownCmsPreviewBridge()
 
@@ -80,14 +76,14 @@ describe('cmsPreviewBridge — lifecycle', () => {
   it('remounts after a CMS content-area swap (save/publish Pjax)', async () => {
     const oldRoot = createCmsDom()
     registerCmsPreviewBridge()
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
     expect(document.querySelector('[data-testid="cms-preview-viewport-selector"]')).not.toBeNull()
 
     // Simulate Pjax swap: remove the old content area, insert a fresh one.
     oldRoot.remove()
     const newRoot = createCmsDom()
-    await new Promise((r) => setTimeout(r, 0))
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
+    await flushObservers()
 
     expect(newRoot.querySelector('[data-testid="cms-preview-viewport-selector"]')).not.toBeNull()
     const newVendor = newRoot.querySelector<HTMLElement>('#preview-size-dropdown')
@@ -97,13 +93,13 @@ describe('cmsPreviewBridge — lifecycle', () => {
   it('mounts when the grid editor arrives after registration (vendor DOM first)', async () => {
     const root = createCmsDom({ withGridEditor: false })
     registerCmsPreviewBridge()
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
     expect(document.querySelector('[data-testid="cms-preview-viewport-selector"]')).toBeNull()
 
     const editor = document.createElement('div')
     editor.setAttribute('data-react-mount', 'grid-editor')
     root.appendChild(editor)
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
 
     expect(root.querySelector('[data-testid="cms-preview-viewport-selector"]')).not.toBeNull()
   })
@@ -111,7 +107,7 @@ describe('cmsPreviewBridge — lifecycle', () => {
   it('mounts when the vendor bar arrives after the grid editor', async () => {
     document.body.innerHTML = '<div data-react-mount="grid-editor"></div>'
     registerCmsPreviewBridge()
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
     expect(document.querySelector('[data-testid="cms-preview-viewport-selector"]')).toBeNull()
 
     const preview = document.createElement('div')
@@ -122,7 +118,7 @@ describe('cmsPreviewBridge — lifecycle', () => {
       </span>
     `
     document.body.appendChild(preview)
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
 
     expect(document.querySelector('[data-testid="cms-preview-viewport-selector"]')).not.toBeNull()
   })
@@ -130,12 +126,12 @@ describe('cmsPreviewBridge — lifecycle', () => {
   it('does not mount on a non-grid page when unrelated DOM is added', async () => {
     const root = createCmsDom({ withGridEditor: false })
     registerCmsPreviewBridge()
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
 
     const noise = document.createElement('div')
     noise.innerHTML = '<p>unrelated CMS activity</p>'
     root.appendChild(noise)
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
 
     expect(document.querySelector('[data-testid="cms-preview-viewport-selector"]')).toBeNull()
   })
@@ -143,11 +139,11 @@ describe('cmsPreviewBridge — lifecycle', () => {
   it('tears down and restores the vendor bar when only the editor is removed', async () => {
     const root = createCmsDom()
     registerCmsPreviewBridge()
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
     expect(root.querySelector('[data-testid="cms-preview-viewport-selector"]')).not.toBeNull()
 
     root.querySelector('[data-react-mount="grid-editor"]')?.remove()
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
 
     expect(root.querySelector('[data-testid="cms-preview-viewport-selector"]')).toBeNull()
     const vendor = root.querySelector<HTMLElement>('#preview-size-dropdown')
@@ -157,7 +153,7 @@ describe('cmsPreviewBridge — lifecycle', () => {
   it('stays mounted when the editor is swapped for a replacement in one batch', async () => {
     const root = createCmsDom()
     registerCmsPreviewBridge()
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
 
     // Grid page → grid page swap where the vendor bar survives: the old
     // editor leaves and a replacement arrives in the same mutation batch.
@@ -165,7 +161,7 @@ describe('cmsPreviewBridge — lifecycle', () => {
     const replacement = document.createElement('div')
     replacement.setAttribute('data-react-mount', 'grid-editor')
     root.appendChild(replacement)
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
 
     expect(root.querySelector('[data-testid="cms-preview-viewport-selector"]')).not.toBeNull()
     const vendor = root.querySelector<HTMLElement>('#preview-size-dropdown')
@@ -175,7 +171,7 @@ describe('cmsPreviewBridge — lifecycle', () => {
   it('installs the viewport stylesheet on mount and removes it on teardown', async () => {
     createCmsDom()
     registerCmsPreviewBridge()
-    await new Promise((r) => setTimeout(r, 0))
+    await flushObservers()
 
     expect(document.getElementById('grid-preview-viewport-styles')).not.toBeNull()
 

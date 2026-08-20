@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as v from 'valibot'
+import { createTreeApiResponse } from '@/testing/factories'
 import { elementNodeWireSchema, treeApiResponseWireSchema, viewportSettingsSchema } from './schemas'
 
 /**
@@ -241,5 +242,15 @@ describe('extensions (object record, never an array)', () => {
     ['an empty array', []],
   ])('rejects %s (parity with zod z.record, which rejects all arrays)', (_label, extensions) => {
     expect(v.safeParse(elementNodeWireSchema, { ...baseLeaf, extensions }).success).toBe(false)
+  })
+})
+
+describe('testing factory ↔ wire schema alignment', () => {
+  it('createTreeApiResponse output parses through treeApiResponseWireSchema', () => {
+    // Every suite that feeds factory trees through normaliseTreeResponse
+    // relies on the factories producing valid wire payloads — pin that here,
+    // against the schema, rather than by hand-asserting factory internals.
+    const tree = createTreeApiResponse({ pageId: 1 })
+    expect(v.safeParse(treeApiResponseWireSchema, tree).success).toBe(true)
   })
 })

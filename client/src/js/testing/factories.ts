@@ -29,8 +29,8 @@ export function viewportKey(key: string): ViewportKey {
 
 let nextId = 1
 
-export function resetIdCounter(start = 1): void {
-  nextId = start
+export function resetIdCounter(): void {
+  nextId = 1
 }
 
 function id(): number {
@@ -63,55 +63,70 @@ function defaultGridSettings(overrides?: Partial<GridSettings>): GridSettings {
   }
 }
 
-/**
- * Shorthand factory input that lets tests mix the old-style numeric parent id
- * with the new-style `parent: NodeRef`.
- */
 interface NodeOverrideBase {
   id?: number
   parent?: NodeRef
-  /**
-   * Legacy shorthand — if provided and `parent` is omitted, constructs a
-   * NodeRef using the inferred parent type.
-   */
-  parentId?: number
 }
 
 function resolveSelf(nodeType: NodeType, overrideId?: number): NodeRef {
   return { type: nodeType, id: overrideId ?? id() }
 }
 
-function resolveParent(
-  defaultType: NodeType,
-  override: NodeOverrideBase,
-  fallbackId: number,
-): NodeRef {
-  if (override.parent) return override.parent
-  return { type: defaultType, id: override.parentId ?? fallbackId }
-}
+type BaseNodeFields = Omit<SimpleElementNode, 'containerType'>
 
-export function createSimpleElement(
-  overrides?: Partial<SimpleElementNode> & NodeOverrideBase,
-): SimpleElementNode {
-  const self = resolveSelf('element', overrides?.id)
-  const parent = resolveParent('column', overrides ?? {}, 100)
-  const { parentId: _omitParentId, ...rest } = overrides ?? {}
+function baseNodeFields(
+  self: NodeRef,
+  parent: NodeRef,
+  title: string,
+  blockSchema: BlockSchema,
+  editLink: string | null,
+): BaseNodeFields {
   return {
     self,
     parent,
     nodeKey: NodeIdentity.toKey(self.type, self.id),
     parentKey: NodeIdentity.toKey(parent.type, parent.id),
-    title: overrides?.title ?? `Element ${self.id}`,
-    blockSchema: overrides?.blockSchema ?? defaultBlockSchema('Content'),
+    title,
+    blockSchema,
     obsoleteClassName: null,
     version: 1,
     canDelete: true,
     canPublish: true,
     canUnpublish: true,
     canCreate: true,
-    editLink: `/admin/pages/edit/show/${self.id}`,
+    editLink,
     status: 'published',
-    ...rest,
+  }
+}
+
+function resolveChildren<T>(
+  explicit: T[] | null | undefined,
+  count: number,
+  make: () => T,
+): T[] | null {
+  if (explicit !== undefined) {
+    return explicit
+  }
+  if (count > 0) {
+    return Array.from({ length: count }, make)
+  }
+  return null
+}
+
+export function createSimpleElement(
+  overrides?: Partial<SimpleElementNode> & NodeOverrideBase,
+): SimpleElementNode {
+  const self = resolveSelf('element', overrides?.id)
+  const parent = overrides?.parent ?? { type: 'column', id: 100 }
+  return {
+    ...baseNodeFields(
+      self,
+      parent,
+      overrides?.title ?? `Element ${self.id}`,
+      overrides?.blockSchema ?? defaultBlockSchema('Content'),
+      `/admin/pages/edit/show/${self.id}`,
+    ),
+    ...overrides,
   }
 }
 
@@ -119,38 +134,20 @@ export function createColumnNode(
   overrides?: Partial<ColumnNode> & NodeOverrideBase & { childCount?: number },
 ): ColumnNode {
   const self = resolveSelf('column', overrides?.id)
-  const parent = resolveParent('row', overrides ?? {}, 100)
-  const childCount = overrides?.childCount ?? 1
-
-  const children: SimpleElementNode[] | null = ((): SimpleElementNode[] | null => {
-    if (overrides?.children !== undefined) {
-      return overrides.children
-    }
-    if (childCount > 0) {
-      return Array.from({ length: childCount }, () =>
-        createSimpleElement({ parent: { type: 'column', id: self.id } }),
-      )
-    }
-    return null
-  })()
-
-  const { parentId: _omitParentId, childCount: _omitChildCount, ...rest } = overrides ?? {}
+  const parent = overrides?.parent ?? { type: 'row', id: 100 }
+  const children = resolveChildren(overrides?.children, overrides?.childCount ?? 1, () =>
+    createSimpleElement({ parent: { type: 'column', id: self.id } }),
+  )
+  const { childCount: _omitChildCount, ...rest } = overrides ?? {}
 
   return {
-    self,
-    parent,
-    nodeKey: NodeIdentity.toKey(self.type, self.id),
-    parentKey: NodeIdentity.toKey(parent.type, parent.id),
-    title: overrides?.title ?? `Column ${self.id}`,
-    blockSchema: overrides?.blockSchema ?? defaultBlockSchema('Column'),
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: true,
-    canCreate: true,
-    editLink: null,
-    status: 'published',
+    ...baseNodeFields(
+      self,
+      parent,
+      overrides?.title ?? `Column ${self.id}`,
+      overrides?.blockSchema ?? defaultBlockSchema('Column'),
+      null,
+    ),
     containerType: 'column',
     allowedTypes: overrides?.allowedTypes ?? null,
     gridSettings: defaultGridSettings(overrides?.gridSettings),
@@ -163,38 +160,20 @@ export function createRowNode(
   overrides?: Partial<RowNode> & NodeOverrideBase & { columnCount?: number },
 ): RowNode {
   const self = resolveSelf('row', overrides?.id)
-  const parent = resolveParent('section', overrides ?? {}, 100)
-  const columnCount = overrides?.columnCount ?? 1
-
-  const children: ColumnNode[] | null = ((): ColumnNode[] | null => {
-    if (overrides?.children !== undefined) {
-      return overrides.children
-    }
-    if (columnCount > 0) {
-      return Array.from({ length: columnCount }, () =>
-        createColumnNode({ parent: { type: 'row', id: self.id } }),
-      )
-    }
-    return null
-  })()
-
-  const { parentId: _omitParentId, columnCount: _omitColumnCount, ...rest } = overrides ?? {}
+  const parent = overrides?.parent ?? { type: 'section', id: 100 }
+  const children = resolveChildren(overrides?.children, overrides?.columnCount ?? 1, () =>
+    createColumnNode({ parent: { type: 'row', id: self.id } }),
+  )
+  const { columnCount: _omitColumnCount, ...rest } = overrides ?? {}
 
   return {
-    self,
-    parent,
-    nodeKey: NodeIdentity.toKey(self.type, self.id),
-    parentKey: NodeIdentity.toKey(parent.type, parent.id),
-    title: overrides?.title ?? `Row ${self.id}`,
-    blockSchema: overrides?.blockSchema ?? defaultBlockSchema('Row'),
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: true,
-    canCreate: true,
-    editLink: null,
-    status: 'published',
+    ...baseNodeFields(
+      self,
+      parent,
+      overrides?.title ?? `Row ${self.id}`,
+      overrides?.blockSchema ?? defaultBlockSchema('Row'),
+      null,
+    ),
     containerType: 'row',
     allowedTypes: overrides?.allowedTypes ?? null,
     ...rest,
@@ -206,53 +185,25 @@ export function createSectionNode(
   overrides?: Partial<SectionNode> & NodeOverrideBase & { rowCount?: number },
 ): SectionNode {
   const self = resolveSelf('section', overrides?.id)
-  const parent = resolveParent('page', overrides ?? {}, 1)
-  const rowCount = overrides?.rowCount ?? 1
-
-  const children: RowNode[] | null = ((): RowNode[] | null => {
-    if (overrides?.children !== undefined) {
-      return overrides.children
-    }
-    if (rowCount > 0) {
-      return Array.from({ length: rowCount }, () =>
-        createRowNode({ parent: { type: 'section', id: self.id } }),
-      )
-    }
-    return null
-  })()
-
-  const { parentId: _omitParentId, rowCount: _omitRowCount, ...rest } = overrides ?? {}
+  const parent = overrides?.parent ?? { type: 'page', id: 1 }
+  const children = resolveChildren(overrides?.children, overrides?.rowCount ?? 1, () =>
+    createRowNode({ parent: { type: 'section', id: self.id } }),
+  )
+  const { rowCount: _omitRowCount, ...rest } = overrides ?? {}
 
   return {
-    self,
-    parent,
-    nodeKey: NodeIdentity.toKey(self.type, self.id),
-    parentKey: NodeIdentity.toKey(parent.type, parent.id),
-    title: overrides?.title ?? `Section ${self.id}`,
-    blockSchema: overrides?.blockSchema ?? defaultBlockSchema('Section'),
-    obsoleteClassName: null,
-    version: 1,
-    canDelete: true,
-    canPublish: true,
-    canUnpublish: true,
-    canCreate: true,
-    editLink: null,
-    status: 'published',
+    ...baseNodeFields(
+      self,
+      parent,
+      overrides?.title ?? `Section ${self.id}`,
+      overrides?.blockSchema ?? defaultBlockSchema('Section'),
+      null,
+    ),
     containerType: 'section',
     allowedTypes: overrides?.allowedTypes ?? null,
     ...rest,
     children,
   }
-}
-
-/**
- * Build a flat list of root sections. The `pageId` parameter is retained to
- * keep the legacy positional API stable across test files, even though the
- * tree response now carries `rootParent` explicitly via
- * {@link createTreeApiResponse}.
- */
-export function createTree(sections?: SectionNode[], pageId = 1): SectionNode[] {
-  return sections ?? [createSectionNode({ parent: { type: 'page', id: pageId } })]
 }
 
 /** Wire-shape root map: allowed child types per container type. */
@@ -274,10 +225,79 @@ export function createTreeApiResponse(
   // the extra key, fetch-mock tests parse it through normaliseTreeResponse.
 ): TreeApiResponse & { allowedTypes: AllowedTypesByContainerType } {
   const pageId = overrides?.pageId ?? overrides?.rootParent?.id ?? 1
-  const sections = overrides?.sections ?? overrides?.nodes ?? createTree(undefined, pageId)
+  const sections = overrides?.sections ?? [
+    createSectionNode({ parent: { type: 'page', id: pageId } }),
+  ]
   return {
     rootParent: overrides?.rootParent ?? { type: 'page', id: pageId },
     allowedTypes: overrides?.allowedTypes ?? { section: {}, row: {}, column: {} },
     nodes: sections as ElementNode[],
+  }
+}
+
+interface ColumnSpec {
+  id?: number
+  /** Explicit leaf children; overrides `childCount`. `null` = empty column. */
+  children?: SimpleElementNode[] | null
+  childCount?: number
+}
+
+interface RowSpec {
+  id?: number
+  /** One default column when omitted. */
+  columns?: ColumnSpec[]
+}
+
+export interface BuildTreeOptions {
+  pageId?: number
+  sectionId?: number
+  /** One default row when omitted. */
+  rows?: RowSpec[]
+}
+
+export interface BuiltTree {
+  tree: TreeApiResponse & { allowedTypes: AllowedTypesByContainerType }
+  section: SectionNode
+  rows: RowNode[]
+  columns: ColumnNode[]
+}
+
+/**
+ * Compose a fully wired single-section tree (section → rows → columns →
+ * elements) with matching parent refs at every level. Tests that need a
+ * coherent tree should use this instead of hand-wiring the parent chain.
+ */
+export function buildTree(options: BuildTreeOptions = {}): BuiltTree {
+  const pageId = options.pageId ?? 1
+  const sectionId = options.sectionId ?? id()
+
+  const rows = (options.rows ?? [{}]).map((rowSpec) => {
+    const rowId = rowSpec.id ?? id()
+    const columns = (rowSpec.columns ?? [{}]).map((columnSpec) =>
+      createColumnNode({
+        id: columnSpec.id,
+        parent: { type: 'row', id: rowId },
+        ...(columnSpec.children !== undefined ? { children: columnSpec.children } : {}),
+        ...(columnSpec.childCount !== undefined ? { childCount: columnSpec.childCount } : {}),
+      }),
+    )
+    return createRowNode({
+      id: rowId,
+      parent: { type: 'section', id: sectionId },
+      children: columns,
+    })
+  })
+
+  const section = createSectionNode({
+    id: sectionId,
+    parent: { type: 'page', id: pageId },
+    children: rows,
+  })
+
+  return {
+    tree: createTreeApiResponse({ pageId, sections: [section] }),
+    section,
+    rows,
+    columns: rows.flatMap((row) => row.children ?? []),
   }
 }

@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getFetchCalls, mockFetchError, mockFetchSuccess } from '@/testing/mockFetch'
+import {
+  createResponse,
+  getFetchCalls,
+  mockFetchError,
+  mockFetchSuccess,
+} from '@/testing/mockFetch'
 import { apiDelete, apiGet, apiPatch, apiPost } from './client'
 import { ApiError } from './errors'
 
@@ -178,23 +183,11 @@ describe('error extraction', () => {
     statusText: string,
     json: () => Promise<unknown>,
   ): void {
+    // The shared createResponse can't express a rejecting/non-object json()
+    // on its own, so override just that member on the inert base.
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: false,
-      status,
-      statusText,
+      ...createResponse({ status, statusText }),
       json,
-      headers: new Headers(),
-      redirected: false,
-      type: 'basic',
-      url: '',
-      clone: vi.fn(),
-      body: null,
-      bodyUsed: false,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-      blob: () => Promise.resolve(new Blob()),
-      bytes: () => Promise.resolve(new Uint8Array()),
-      formData: () => Promise.resolve(new FormData()),
-      text: () => Promise.resolve(''),
     })
   }
 

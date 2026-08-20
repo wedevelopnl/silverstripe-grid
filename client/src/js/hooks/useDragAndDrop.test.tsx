@@ -7,10 +7,16 @@ import type {
 } from '@dnd-kit/core'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createActive, createOver } from '@/testing/dndHelpers'
-import { createDroppable, createDroppableWithRect, makeDomRect } from '@/testing/dndRectFactories'
 import {
-  createColumnNode,
+  createActive,
+  createDroppable,
+  createDroppableWithRect,
+  createOver,
+  makeDomRect,
+} from '@/testing/dndRectFactories'
+import {
+  buildTree,
+  type createColumnNode,
   createRowNode,
   createSectionNode,
   createSimpleElement,
@@ -18,7 +24,13 @@ import {
   resetIdCounter,
 } from '@/testing/factories'
 import { buildDraggableId } from '@/types/dnd'
-import type { TreeApiResponse } from '@/types/elements'
+import type {
+  ColumnNode,
+  RowNode,
+  SectionNode,
+  SimpleElementNode,
+  TreeApiResponse,
+} from '@/types/elements'
 import type { UseDragAndDropOptions } from './useDragAndDrop'
 import { useDragAndDrop, useDragContext } from './useDragAndDrop'
 
@@ -140,53 +152,93 @@ function makePointerDragOverEvent(
   } as unknown as DragOverEvent
 }
 
+// section 10 → row 20 → column 30 holding elements 40 and 41.
 function buildSingleColumnTree(pageId = 1) {
   const element1 = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })
   const element2 = createSimpleElement({ id: 41, parent: { type: 'column', id: 30 } })
-  const column = createColumnNode({
-    id: 30,
-    parent: { type: 'row', id: 20 },
-    children: [element1, element2],
+  const { tree, section, rows, columns } = buildTree({
+    pageId,
+    sectionId: 10,
+    rows: [{ id: 20, columns: [{ id: 30, children: [element1, element2] }] }],
   })
-  const row = createRowNode({
-    id: 20,
-    parent: { type: 'section', id: 10 },
-    children: [column],
-  })
-  const section = createSectionNode({
-    id: 10,
-    parent: { type: 'page', id: pageId },
-    children: [row],
-  })
-  const tree = createTreeApiResponse({ pageId, sections: [section] })
-  return { tree, element1, element2, column, row, section }
+  return { tree, element1, element2, column: columns[0], row: rows[0], section }
 }
 
+// section 10 → row 20 → columns 30 (element 40) and 31 (element 41).
 function buildTwoColumnTree(pageId = 1) {
   const element1 = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })
   const element2 = createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })
-  const col1 = createColumnNode({
-    id: 30,
-    parent: { type: 'row', id: 20 },
-    children: [element1],
+  const { tree, section, rows, columns } = buildTree({
+    pageId,
+    sectionId: 10,
+    rows: [
+      {
+        id: 20,
+        columns: [
+          { id: 30, children: [element1] },
+          { id: 31, children: [element2] },
+        ],
+      },
+    ],
   })
-  const col2 = createColumnNode({
-    id: 31,
-    parent: { type: 'row', id: 20 },
-    children: [element2],
+  return {
+    tree,
+    element1,
+    element2,
+    col1: columns[0],
+    col2: columns[1],
+    row: rows[0],
+    section,
+  }
+}
+
+// col30 holds the dragged element (40); col31 is the cross-container target
+// whose membership varies per test. Both columns share row 20 in section 10.
+function buildCrossContainerElementTree(col31Children: SimpleElementNode[]) {
+  const moved = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })
+  const { tree } = buildTree({
+    sectionId: 10,
+    rows: [
+      {
+        id: 20,
+        columns: [
+          { id: 30, children: [moved] },
+          { id: 31, children: col31Children },
+        ],
+      },
+    ],
   })
-  const row = createRowNode({
-    id: 20,
-    parent: { type: 'section', id: 10 },
-    children: [col1, col2],
+  return { tree, moved }
+}
+
+// Two rows with one column each (row 20 → col 30 with element 40; row 21 →
+// col 31 with element 41), so col30 → col31 is a genuine cross-container
+// column move.
+function buildTwoRowColumnTree() {
+  const { tree } = buildTree({
+    sectionId: 10,
+    rows: [
+      {
+        id: 20,
+        columns: [
+          {
+            id: 30,
+            children: [createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })],
+          },
+        ],
+      },
+      {
+        id: 21,
+        columns: [
+          {
+            id: 31,
+            children: [createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })],
+          },
+        ],
+      },
+    ],
   })
-  const section = createSectionNode({
-    id: 10,
-    parent: { type: 'page', id: pageId },
-    children: [row],
-  })
-  const tree = createTreeApiResponse({ pageId, sections: [section] })
-  return { tree, element1, element2, col1, col2, row, section }
+  return tree
 }
 
 function renderDndHook(options: Partial<UseDragAndDropOptions> = {}) {
@@ -415,35 +467,6 @@ describe('useDragAndDrop', () => {
     // reach: getPointerPosition bails to null on a plain Event, short-circuiting
     // the `pointer !== null && resolveInsertDirection(...) === 'before'` guard.
     // The resulting pending-tree order is the observable contract.
-
-    // col30 holds the dragged element; col31 is the cross-container target whose
-    // membership varies per test. Both columns share row20.
-    function buildCrossContainerElementTree(
-      col31Children: ReturnType<typeof createSimpleElement>[],
-    ) {
-      const moved = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })
-      const col30 = createColumnNode({
-        id: 30,
-        parent: { type: 'row', id: 20 },
-        children: [moved],
-      })
-      const col31 = createColumnNode({
-        id: 31,
-        parent: { type: 'row', id: 20 },
-        children: col31Children,
-      })
-      const row = createRowNode({
-        id: 20,
-        parent: { type: 'section', id: 10 },
-        children: [col30, col31],
-      })
-      const section = createSectionNode({
-        id: 10,
-        parent: { type: 'page', id: 1 },
-        children: [row],
-      })
-      return { tree: createTreeApiResponse({ pageId: 1, sections: [section] }), moved }
-    }
 
     function targetColumnChildIds(pendingTree: TreeApiResponse | null): number[] {
       // section → row → col31 (second column) → its children ids
@@ -730,33 +753,7 @@ describe('useDragAndDrop', () => {
     // bypassed and the stale full-width node is used, the axis becomes 'y',
     // flipping the before/after decision for the same pointer and over.rect.
     it('ignores a stale snapshot whose id differs from the current over element', () => {
-      // Two rows so col30 → col31 is a genuine cross-container column drop.
-      const col30 = createColumnNode({
-        id: 30,
-        parent: { type: 'row', id: 20 },
-        children: [createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })],
-      })
-      const col31 = createColumnNode({
-        id: 31,
-        parent: { type: 'row', id: 21 },
-        children: [createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })],
-      })
-      const row20 = createRowNode({
-        id: 20,
-        parent: { type: 'section', id: 10 },
-        children: [col30],
-      })
-      const row21 = createRowNode({
-        id: 21,
-        parent: { type: 'section', id: 10 },
-        children: [col31],
-      })
-      const section = createSectionNode({
-        id: 10,
-        parent: { type: 'page', id: 1 },
-        children: [row20, row21],
-      })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+      const tree = buildTwoRowColumnTree()
 
       const onReorder = vi.fn()
       const { result } = renderDndHook({ tree, onReorder })
@@ -854,27 +851,7 @@ describe('useDragAndDrop', () => {
         translated: { top: 300, left: 0, width: 200, height: 50 },
       }
       const element2 = createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })
-      const col30 = createColumnNode({
-        id: 30,
-        parent: { type: 'row', id: 20 },
-        children: [createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })],
-      })
-      const col31 = createColumnNode({
-        id: 31,
-        parent: { type: 'row', id: 20 },
-        children: [element2],
-      })
-      const row = createRowNode({
-        id: 20,
-        parent: { type: 'section', id: 10 },
-        children: [col30, col31],
-      })
-      const section = createSectionNode({
-        id: 10,
-        parent: { type: 'page', id: 1 },
-        children: [row],
-      })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+      const { tree } = buildCrossContainerElementTree([element2])
 
       const onReorder = vi.fn()
       const { result } = renderDndHook({ tree, onReorder })
@@ -932,34 +909,8 @@ describe('useDragAndDrop', () => {
     ])(
       'resolves column X direction using the grab offset — $name',
       ({ overRect, expectedOrder }) => {
-        // Two rows so col30 → row21 is a genuine cross-container column move.
         // row21 = [col31] only; dropping col30 before/after col31 reorders row21.
-        const col30 = createColumnNode({
-          id: 30,
-          parent: { type: 'row', id: 20 },
-          children: [createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })],
-        })
-        const col31 = createColumnNode({
-          id: 31,
-          parent: { type: 'row', id: 21 },
-          children: [createSimpleElement({ id: 41, parent: { type: 'column', id: 31 } })],
-        })
-        const row20 = createRowNode({
-          id: 20,
-          parent: { type: 'section', id: 10 },
-          children: [col30],
-        })
-        const row21 = createRowNode({
-          id: 21,
-          parent: { type: 'section', id: 10 },
-          children: [col31],
-        })
-        const section = createSectionNode({
-          id: 10,
-          parent: { type: 'page', id: 1 },
-          children: [row20, row21],
-        })
-        const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+        const tree = buildTwoRowColumnTree()
 
         const { result } = renderDndHook({ tree })
 
@@ -1122,22 +1073,10 @@ describe('useDragAndDrop', () => {
 
     it('does not call onReorder when drop resolves to same position (no-op)', () => {
       const element = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })
-      const column = createColumnNode({
-        id: 30,
-        parent: { type: 'row', id: 20 },
-        children: [element],
+      const { tree } = buildTree({
+        sectionId: 10,
+        rows: [{ id: 20, columns: [{ id: 30, children: [element] }] }],
       })
-      const row = createRowNode({
-        id: 20,
-        parent: { type: 'section', id: 10 },
-        children: [column],
-      })
-      const section = createSectionNode({
-        id: 10,
-        parent: { type: 'page', id: 1 },
-        children: [row],
-      })
-      const tree: TreeApiResponse = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const onReorder = vi.fn()
       const { result } = renderDndHook({ tree, onReorder })
@@ -1305,34 +1244,13 @@ describe('useDragAndDrop', () => {
       // Empty target column: `children.length > 0` must be FALSE so `after` is null
       // rather than dereferencing children[-1].self (which would throw). Mutants that
       // force `true`, `>= 0`, or `<= 0` evaluate the length=0 branch as true and crash.
-      const moved = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })
-      const col1 = createColumnNode({
-        id: 30,
-        parent: { type: 'row', id: 20 },
-        children: [moved],
-      })
-      const col2 = createColumnNode({
-        id: 31,
-        parent: { type: 'row', id: 20 },
-        children: [],
-      })
-      const row = createRowNode({
-        id: 20,
-        parent: { type: 'section', id: 10 },
-        children: [col1, col2],
-      })
-      const section = createSectionNode({
-        id: 10,
-        parent: { type: 'page', id: 1 },
-        children: [row],
-      })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+      const { tree } = buildCrossContainerElementTree([])
 
       const onReorder = vi.fn()
       const { result } = renderDndHook({ tree, onReorder })
 
       const activeId = buildDraggableId('element', 40)
-      const overContainerId = buildDraggableId('column', col2.self.id)
+      const overContainerId = buildDraggableId('column', 31)
 
       act(() => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
@@ -1358,36 +1276,15 @@ describe('useDragAndDrop', () => {
       // container should position active AFTER the last existing child. Mutants that
       // force the `after = …` ternary to `false`/`<= 0` return null and place active at
       // the head, changing pending-tree order.
-      const moved = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })
       const x = createSimpleElement({ id: 50, parent: { type: 'column', id: 31 } })
       const y = createSimpleElement({ id: 51, parent: { type: 'column', id: 31 } })
       const z = createSimpleElement({ id: 52, parent: { type: 'column', id: 31 } })
-      const col1 = createColumnNode({
-        id: 30,
-        parent: { type: 'row', id: 20 },
-        children: [moved],
-      })
-      const col2 = createColumnNode({
-        id: 31,
-        parent: { type: 'row', id: 20 },
-        children: [x, y, z],
-      })
-      const row = createRowNode({
-        id: 20,
-        parent: { type: 'section', id: 10 },
-        children: [col1, col2],
-      })
-      const section = createSectionNode({
-        id: 10,
-        parent: { type: 'page', id: 1 },
-        children: [row],
-      })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
+      const { tree } = buildCrossContainerElementTree([x, y, z])
 
       const { result } = renderDndHook({ tree })
 
       const activeId = buildDraggableId('element', 40)
-      const overContainerId = buildDraggableId('column', col2.self.id)
+      const overContainerId = buildDraggableId('column', 31)
 
       act(() => {
         result.current.dndContextProps.onDragStart(makeDragStartEvent(activeId))
@@ -1399,10 +1296,10 @@ describe('useDragAndDrop', () => {
       // Verify the pending tree places active at the END of the target column.
       const pending = result.current.pendingTree
       expect(pending).not.toBeNull()
-      const pendingSection = pending?.nodes[0] as typeof section
-      const pendingRow = pendingSection.children?.[0] as typeof row
-      const targetCol = pendingRow.children?.[1]
-      expect((targetCol as typeof col2).children?.map((c) => c.self.id)).toEqual([50, 51, 52, 40])
+      const pendingSection = pending?.nodes[0] as SectionNode
+      const pendingRow = pendingSection.children?.[0] as RowNode
+      const targetCol = pendingRow.children?.[1] as ColumnNode
+      expect(targetCol.children?.map((c) => c.self.id)).toEqual([50, 51, 52, 40])
     })
   })
 
@@ -1454,22 +1351,10 @@ describe('useDragAndDrop', () => {
       const a = createSimpleElement({ id: 40, parent: { type: 'column', id: 30 } })
       const b = createSimpleElement({ id: 41, parent: { type: 'column', id: 30 } })
       const c = createSimpleElement({ id: 42, parent: { type: 'column', id: 30 } })
-      const column = createColumnNode({
-        id: 30,
-        parent: { type: 'row', id: 20 },
-        children: [a, b, c],
+      const { tree } = buildTree({
+        sectionId: 10,
+        rows: [{ id: 20, columns: [{ id: 30, children: [a, b, c] }] }],
       })
-      const row = createRowNode({
-        id: 20,
-        parent: { type: 'section', id: 10 },
-        children: [column],
-      })
-      const section = createSectionNode({
-        id: 10,
-        parent: { type: 'page', id: 1 },
-        children: [row],
-      })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const onReorder = vi.fn()
       const { result } = renderDndHook({ tree, onReorder })

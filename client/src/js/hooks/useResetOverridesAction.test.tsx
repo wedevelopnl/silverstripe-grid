@@ -1,4 +1,3 @@
-import { QueryClient } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
@@ -7,8 +6,9 @@ import {
   createSectionNode,
   createTreeApiResponse,
 } from '@/testing/factories'
+import { flushObservers } from '@/testing/flush'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
-import { createProviderWrapper } from '@/testing/renderWithProviders'
+import { createProviderWrapper, createTestQueryClient } from '@/testing/renderWithProviders'
 import type { ColumnNode, ViewportSettings } from '@/types/elements'
 import { queryKeys } from './queryKeys'
 import { type ResetScopeOption, useResetOverridesAction } from './useResetOverridesAction'
@@ -40,9 +40,7 @@ function columnsFromCounts(counts: Record<string, number>): ColumnNode[] {
 function setupWithTree(columns: ColumnNode[], viewport = 'md') {
   const pageId = 1
   const zone = 'main'
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  })
+  const queryClient = createTestQueryClient()
 
   const section = createSectionNode({
     parent: { type: 'page', id: pageId },
@@ -283,13 +281,15 @@ describe('useResetOverridesAction', () => {
       })
 
       expect(result.current.dialog).toBeNull()
-      await waitFor(() => {
-        expect(
-          getFetchCalls().some(([url]) =>
-            (url as string).includes('/api/resetGridSettingsOverrides'),
-          ),
-        ).toBe(false)
-      })
+      // Flush any queued mutation tasks, then assert the endpoint was never
+      // hit — waitFor over a negative resolves on the first tick and
+      // guarantees nothing.
+      await flushObservers()
+      expect(
+        getFetchCalls().some(([url]) =>
+          (url as string).includes('/api/resetGridSettingsOverrides'),
+        ),
+      ).toBe(false)
     })
   })
 
@@ -355,13 +355,15 @@ describe('useResetOverridesAction', () => {
         result.current.onConfirm()
       })
 
-      await waitFor(() => {
-        expect(
-          getFetchCalls().some(([url]) =>
-            (url as string).includes('/api/resetGridSettingsOverrides'),
-          ),
-        ).toBe(false)
-      })
+      // Flush any queued mutation tasks, then assert the endpoint was never
+      // hit — waitFor over a negative resolves on the first tick and
+      // guarantees nothing.
+      await flushObservers()
+      expect(
+        getFetchCalls().some(([url]) =>
+          (url as string).includes('/api/resetGridSettingsOverrides'),
+        ),
+      ).toBe(false)
     })
   })
 })

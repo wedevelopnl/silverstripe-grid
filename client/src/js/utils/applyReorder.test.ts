@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
-  createColumnNode,
+  buildTree,
   createRowNode,
   createSectionNode,
   createSimpleElement,
   createTreeApiResponse,
-  resetIdCounter,
 } from '@/testing/factories'
 import type { ColumnNode, RowNode, SectionNode, SimpleElementNode } from '@/types/elements'
 import { NodeIdentity } from '@/types/identity'
@@ -20,21 +19,17 @@ function firstColumnOf(result: { nodes: unknown[] }): ColumnNode {
   return row.children?.[0] as ColumnNode
 }
 
+function elements(columnId: number, ...ids: number[]): SimpleElementNode[] {
+  return ids.map((id) => createSimpleElement({ id, parent: { type: 'column', id: columnId } }))
+}
+
 describe('applyReorder', () => {
   describe('same-container reorder', () => {
     it('moves an element to a later position within the same parent', () => {
-      resetIdCounter()
-      const e1 = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
-      const e2 = createSimpleElement({ id: 11, parent: { type: 'column', id: 30 } })
-      const e3 = createSimpleElement({ id: 12, parent: { type: 'column', id: 30 } })
-      const column = createColumnNode({ id: 30, children: [e1, e2, e3] })
-      const row = createRowNode({ id: 20, children: [column] })
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
+      const { tree } = buildTree({
+        sectionId: 1,
+        rows: [{ id: 20, columns: [{ id: 30, children: elements(30, 10, 11, 12) }] }],
       })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const result = applyReorder(
         tree,
@@ -51,17 +46,10 @@ describe('applyReorder', () => {
     })
 
     it('prepends when afterKey is null', () => {
-      resetIdCounter()
-      const e1 = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
-      const e2 = createSimpleElement({ id: 11, parent: { type: 'column', id: 30 } })
-      const column = createColumnNode({ id: 30, children: [e1, e2] })
-      const row = createRowNode({ id: 20, children: [column] })
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
+      const { tree } = buildTree({
+        sectionId: 1,
+        rows: [{ id: 20, columns: [{ id: 30, children: elements(30, 10, 11) }] }],
       })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const result = applyReorder(
         tree,
@@ -78,16 +66,10 @@ describe('applyReorder', () => {
     })
 
     it('returns the same reference when the element is already at the target position', () => {
-      const e1 = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
-      const e2 = createSimpleElement({ id: 11, parent: { type: 'column', id: 30 } })
-      const column = createColumnNode({ id: 30, children: [e1, e2] })
-      const row = createRowNode({ id: 20, children: [column] })
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
+      const { tree } = buildTree({
+        sectionId: 1,
+        rows: [{ id: 20, columns: [{ id: 30, children: elements(30, 10, 11) }] }],
       })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const result = applyReorder(
         tree,
@@ -103,17 +85,18 @@ describe('applyReorder', () => {
 
   describe('cross-container move', () => {
     it('moves an element to a different column and updates parent fields', () => {
-      resetIdCounter()
-      const e1 = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
-      const col30 = createColumnNode({ id: 30, children: [e1] })
-      const col31 = createColumnNode({ id: 31, children: [] })
-      const row = createRowNode({ id: 20, children: [col30, col31] })
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
+      const { tree } = buildTree({
+        sectionId: 1,
+        rows: [
+          {
+            id: 20,
+            columns: [
+              { id: 30, children: elements(30, 10) },
+              { id: 31, children: [] },
+            ],
+          },
+        ],
       })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const result = applyReorder(
         tree,
@@ -134,8 +117,8 @@ describe('applyReorder', () => {
   })
 
   describe('collision regression', () => {
+    // Two-section fixtures — outside buildTree's single-section shape on purpose.
     it('reorders sections correctly when section id equals page id', () => {
-      resetIdCounter()
       const section1 = createSectionNode({
         id: 1,
         parent: { type: 'page', id: 1 },
@@ -165,7 +148,6 @@ describe('applyReorder', () => {
     })
 
     it('moves a row across sections when numeric IDs collide', () => {
-      resetIdCounter()
       const row10 = createRowNode({
         id: 10,
         parent: { type: 'section', id: 1 },
@@ -230,20 +212,18 @@ describe('applyReorder', () => {
     })
 
     it('appends to the end when afterKey is not found in the target', () => {
-      resetIdCounter()
-      const e1 = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
-      const col30 = createColumnNode({ id: 30, children: [e1] })
-      const col31 = createColumnNode({
-        id: 31,
-        children: [createSimpleElement({ id: 20, parent: { type: 'column', id: 31 } })],
+      const { tree } = buildTree({
+        sectionId: 1,
+        rows: [
+          {
+            id: 40,
+            columns: [
+              { id: 30, children: elements(30, 10) },
+              { id: 31, children: elements(31, 20) },
+            ],
+          },
+        ],
       })
-      const row = createRowNode({ id: 40, children: [col30, col31] })
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
-      })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const result = applyReorder(
         tree,
@@ -267,18 +247,10 @@ describe('applyReorder', () => {
       // C is already directly after B. The isNoOp check `afterIndex + 1 === sourceIndex`
       // (1 + 1 === 2) must return true. This distinguishes the default predicate from
       // mutants that alter the findIndex callback or the afterIndex comparison.
-      resetIdCounter()
-      const a = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
-      const b = createSimpleElement({ id: 11, parent: { type: 'column', id: 30 } })
-      const c = createSimpleElement({ id: 12, parent: { type: 'column', id: 30 } })
-      const column = createColumnNode({ id: 30, children: [a, b, c] })
-      const row = createRowNode({ id: 20, children: [column] })
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
+      const { tree } = buildTree({
+        sectionId: 1,
+        rows: [{ id: 20, columns: [{ id: 30, children: elements(30, 10, 11, 12) }] }],
       })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const result = applyReorder(
         tree,
@@ -296,18 +268,10 @@ describe('applyReorder', () => {
       // guard in isNoOp. Default: guard returns false → move applied, appending to end.
       // Mutant `if (false) return false;`: falls through to `afterIndex + 1 === sourceIndex`
       // → `-1 + 1 === 0` → true → wrongly treats as no-op → returns tree unchanged.
-      resetIdCounter()
-      const a = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
-      const b = createSimpleElement({ id: 11, parent: { type: 'column', id: 30 } })
-      const c = createSimpleElement({ id: 12, parent: { type: 'column', id: 30 } })
-      const column = createColumnNode({ id: 30, children: [a, b, c] })
-      const row = createRowNode({ id: 20, children: [column] })
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
+      const { tree } = buildTree({
+        sectionId: 1,
+        rows: [{ id: 20, columns: [{ id: 30, children: elements(30, 10, 11, 12) }] }],
       })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const result = applyReorder(
         tree,
@@ -337,19 +301,10 @@ describe('applyReorder', () => {
       //   - removing the `{ return afterIndex - 1 }` block would yield [B, C, D, A]
       //   - flipping `afterIndex > source` to `afterIndex <= source` skips the
       //     subtraction, also yielding [B, C, D, A]
-      resetIdCounter()
-      const a = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
-      const b = createSimpleElement({ id: 11, parent: { type: 'column', id: 30 } })
-      const c = createSimpleElement({ id: 12, parent: { type: 'column', id: 30 } })
-      const d = createSimpleElement({ id: 13, parent: { type: 'column', id: 30 } })
-      const column = createColumnNode({ id: 30, children: [a, b, c, d] })
-      const row = createRowNode({ id: 20, children: [column] })
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
+      const { tree } = buildTree({
+        sectionId: 1,
+        rows: [{ id: 20, columns: [{ id: 30, children: elements(30, 10, 11, 12, 13) }] }],
       })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const result = applyReorder(
         tree,
@@ -371,19 +326,18 @@ describe('applyReorder', () => {
       // shift the target anchor, so no `-1` adjustment applies → [20, 21, 10].
       // A mutant forcing the same-parent condition to `true` would subtract 1 and
       // produce [20, 10, 21] instead.
-      resetIdCounter()
-      const moved = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
-      const col30 = createColumnNode({ id: 30, children: [moved] })
-      const e20 = createSimpleElement({ id: 20, parent: { type: 'column', id: 31 } })
-      const e21 = createSimpleElement({ id: 21, parent: { type: 'column', id: 31 } })
-      const col31 = createColumnNode({ id: 31, children: [e20, e21] })
-      const row = createRowNode({ id: 40, children: [col30, col31] })
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
+      const { tree } = buildTree({
+        sectionId: 1,
+        rows: [
+          {
+            id: 40,
+            columns: [
+              { id: 30, children: elements(30, 10) },
+              { id: 31, children: elements(31, 20, 21) },
+            ],
+          },
+        ],
       })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const result = applyReorder(
         tree,
@@ -409,21 +363,18 @@ describe('applyReorder', () => {
       // A mutant dropping the `afterNode.parentKey !== targetParentKey` guard
       // (or the whole condition) would treat 99's source index (1) as a target
       // index and splice → [20, 21, 10, 22].
-      resetIdCounter()
-      const moved = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
-      const sourceSibling = createSimpleElement({ id: 99, parent: { type: 'column', id: 30 } })
-      const col30 = createColumnNode({ id: 30, children: [moved, sourceSibling] })
-      const e20 = createSimpleElement({ id: 20, parent: { type: 'column', id: 31 } })
-      const e21 = createSimpleElement({ id: 21, parent: { type: 'column', id: 31 } })
-      const e22 = createSimpleElement({ id: 22, parent: { type: 'column', id: 31 } })
-      const col31 = createColumnNode({ id: 31, children: [e20, e21, e22] })
-      const row = createRowNode({ id: 40, children: [col30, col31] })
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
+      const { tree } = buildTree({
+        sectionId: 1,
+        rows: [
+          {
+            id: 40,
+            columns: [
+              { id: 30, children: elements(30, 10, 99) },
+              { id: 31, children: elements(31, 20, 21, 22) },
+            ],
+          },
+        ],
       })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const result = applyReorder(
         tree,
@@ -451,20 +402,18 @@ describe('applyReorder', () => {
       // A mutant forcing that guard's condition to `false` skips it, hits the
       // coincidental `afterIndex + 1 === sourceIndex`, and returns the tree
       // unchanged (wrong no-op).
-      resetIdCounter()
-      const a = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
-      const b = createSimpleElement({ id: 11, parent: { type: 'column', id: 30 } })
-      const c = createSimpleElement({ id: 12, parent: { type: 'column', id: 30 } })
-      const col30 = createColumnNode({ id: 30, children: [a, b, c] })
-      const x = createSimpleElement({ id: 50, parent: { type: 'column', id: 31 } })
-      const col31 = createColumnNode({ id: 31, children: [x] })
-      const row = createRowNode({ id: 40, children: [col30, col31] })
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
+      const { tree } = buildTree({
+        sectionId: 1,
+        rows: [
+          {
+            id: 40,
+            columns: [
+              { id: 30, children: elements(30, 10, 11, 12) },
+              { id: 31, children: elements(31, 50) },
+            ],
+          },
+        ],
       })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const result = applyReorder(
         tree,
@@ -488,19 +437,18 @@ describe('applyReorder', () => {
       // with afterKey=20 must position 10 immediately after 20 → [20, 10, 21]. This
       // distinguishes the real predicate from mutants that force findIndex to always
       // return 0, true, or -1 (all of which would yield different orderings).
-      resetIdCounter()
-      const movedEl = createSimpleElement({ id: 10, parent: { type: 'column', id: 30 } })
-      const col30 = createColumnNode({ id: 30, children: [movedEl] })
-      const existing20 = createSimpleElement({ id: 20, parent: { type: 'column', id: 31 } })
-      const existing21 = createSimpleElement({ id: 21, parent: { type: 'column', id: 31 } })
-      const col31 = createColumnNode({ id: 31, children: [existing20, existing21] })
-      const row = createRowNode({ id: 40, children: [col30, col31] })
-      const section = createSectionNode({
-        id: 1,
-        parent: { type: 'page', id: 1 },
-        children: [row],
+      const { tree } = buildTree({
+        sectionId: 1,
+        rows: [
+          {
+            id: 40,
+            columns: [
+              { id: 30, children: elements(30, 10) },
+              { id: 31, children: elements(31, 20, 21) },
+            ],
+          },
+        ],
       })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const result = applyReorder(
         tree,

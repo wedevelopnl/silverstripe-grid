@@ -16,36 +16,12 @@ describe('parseDraggableId', () => {
     expect(result).toEqual({ type: 'row', id: 5, key: 'row-5' })
   })
 
-  it('returns null for empty string', () => {
-    expect(parseDraggableId('')).toBeNull()
-  })
-
-  it('returns null for string without separator', () => {
-    expect(parseDraggableId('section')).toBeNull()
-  })
-
-  it('returns null for unknown type prefix', () => {
-    expect(parseDraggableId('unknown-5')).toBeNull()
-  })
-
-  it('returns null for non-numeric id', () => {
+  it('returns null for a malformed key (delegated to NodeIdentity.fromKey)', () => {
+    // The full rejection table (empty, no separator, unknown type, zero,
+    // negative, float, leading separator) is pinned in identity.test.ts —
+    // parseDraggableId delegates parsing, so one representative case proves
+    // the null path through the wrapper (including its parse cache).
     expect(parseDraggableId('row-abc')).toBeNull()
-  })
-
-  it('returns null for zero id', () => {
-    expect(parseDraggableId('row-0')).toBeNull()
-  })
-
-  it('returns null for negative id', () => {
-    expect(parseDraggableId('row--1')).toBeNull()
-  })
-
-  it('returns null for floating point id', () => {
-    expect(parseDraggableId('row-1.5')).toBeNull()
-  })
-
-  it('returns null when separator is first character', () => {
-    expect(parseDraggableId('-5')).toBeNull()
   })
 
   it('returns null for a page key — a valid NodeKey type that is not draggable', () => {

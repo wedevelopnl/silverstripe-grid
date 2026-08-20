@@ -25,7 +25,9 @@ afterEach(() => {
 
 describe('getInjector', () => {
   it('returns window.Injector.default when the global is present', () => {
-    const container = { component: { registerMany: vi.fn() } }
+    // getInjector only checks `default !== undefined` — a plain sentinel
+    // suffices; a richer stub would suggest a contract the unit doesn't have.
+    const container = {}
     setInjector({ default: container, loadComponent: vi.fn() })
 
     expect(getInjector()).toBe(container)
@@ -49,7 +51,7 @@ describe('loadComponent', () => {
   it('delegates to window.Injector.loadComponent and returns its result', () => {
     const Stub: ComponentType<unknown> = () => createElement('div', { 'data-stub': 'true' })
     const loader = vi.fn(() => Stub)
-    setInjector({ default: { component: { registerMany: vi.fn() } }, loadComponent: loader })
+    setInjector({ default: {}, loadComponent: loader })
 
     const context = { foo: 'bar' }
     const result = loadComponent('GridEditor', context)
@@ -61,7 +63,7 @@ describe('loadComponent', () => {
   it('passes undefined context through to the global loader', () => {
     const Stub: ComponentType<unknown> = () => null
     const loader = vi.fn(() => Stub)
-    setInjector({ default: { component: { registerMany: vi.fn() } }, loadComponent: loader })
+    setInjector({ default: {}, loadComponent: loader })
 
     loadComponent('Widget')
 
@@ -76,7 +78,7 @@ describe('loadComponent', () => {
   })
 
   it('throws TypeError when loadComponent is not a function', () => {
-    setInjector({ default: { component: { registerMany: vi.fn() } } })
+    setInjector({ default: {} })
 
     expect(() => loadComponent('GridEditor')).toThrow(TypeError)
   })

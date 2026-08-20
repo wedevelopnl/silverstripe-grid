@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createTreeApiResponse, resetIdCounter } from '@/testing/factories'
+import { resetIdCounter } from '@/testing/factories'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
 import { isColumnNode, isSectionNode } from '@/types/elements'
 import {
@@ -23,6 +23,40 @@ import {
 /** Wire root map with no allowed child types — the minimal valid shape. */
 const EMPTY_ALLOWED = { section: {}, row: {}, column: {} }
 
+/** Minimal valid readTree body for the URL-construction tests. */
+const EMPTY_TREE_BODY = {
+  rootParent: { type: 'page', id: 42 },
+  allowedTypes: EMPTY_ALLOWED,
+  nodes: [],
+}
+
+/**
+ * Base wire-shape section node for normaliseTreeResponse tests — spread and
+ * override per test (the pattern schemas.test.ts uses with `baseLeaf`).
+ */
+const baseWireSection = {
+  self: { type: 'section', id: 10 },
+  parent: { type: 'page', id: 1 },
+  title: 'Section A',
+  blockSchema: {
+    typeName: 'Section',
+    type: 'section',
+    title: 'Section A',
+    label: 'Section',
+    icon: 'font-icon-block',
+  },
+  obsoleteClassName: null,
+  version: 1,
+  canDelete: true,
+  canPublish: true,
+  canUnpublish: false,
+  canCreate: true,
+  editLink: null,
+  status: 'published',
+  containerType: 'section',
+  children: [],
+}
+
 beforeEach(() => {
   resetIdCounter()
   mockFetchSuccess({})
@@ -30,11 +64,7 @@ beforeEach(() => {
 
 describe('fetchElementTree', () => {
   it('constructs correct URL with encoded zone and normalises the response', async () => {
-    mockFetchSuccess({
-      rootParent: { type: 'page', id: 42 },
-      allowedTypes: EMPTY_ALLOWED,
-      nodes: [],
-    })
+    mockFetchSuccess(EMPTY_TREE_BODY)
     const result = await fetchElementTree(42, 'main area')
     const [url] = getFetchCalls()[0]
     expect(url).toBe('/admin/grid/api/readTree/42/main%20area')
@@ -42,22 +72,14 @@ describe('fetchElementTree', () => {
   })
 
   it('appends /version/N path segment when version is provided', async () => {
-    mockFetchSuccess({
-      rootParent: { type: 'page', id: 42 },
-      allowedTypes: EMPTY_ALLOWED,
-      nodes: [],
-    })
+    mockFetchSuccess(EMPTY_TREE_BODY)
     await fetchElementTree(42, 'main', 5)
     const [url] = getFetchCalls()[0]
     expect(url).toBe('/admin/grid/api/readTree/42/main/version/5')
   })
 
   it('omits /version path segment when version is undefined', async () => {
-    mockFetchSuccess({
-      rootParent: { type: 'page', id: 42 },
-      allowedTypes: EMPTY_ALLOWED,
-      nodes: [],
-    })
+    mockFetchSuccess(EMPTY_TREE_BODY)
     await fetchElementTree(42, 'main')
     const [url] = getFetchCalls()[0]
     expect(url).toBe('/admin/grid/api/readTree/42/main')
@@ -69,31 +91,7 @@ describe('normaliseTreeResponse', () => {
     const raw = {
       rootParent: { type: 'page', id: 1 },
       allowedTypes: EMPTY_ALLOWED,
-      nodes: [
-        {
-          self: { type: 'section', id: 10 },
-          parent: { type: 'page', id: 1 },
-          title: 'Section A',
-          blockSchema: {
-            typeName: 'Section',
-            type: 'section',
-            title: 'Section A',
-
-            label: 'Section',
-            icon: 'font-icon-block',
-          },
-          obsoleteClassName: null,
-          version: 1,
-          canDelete: true,
-          canPublish: true,
-          canUnpublish: false,
-          canCreate: true,
-          editLink: null,
-          status: 'published',
-          containerType: 'section',
-          children: [],
-        },
-      ],
+      nodes: [{ ...baseWireSection }],
     }
 
     const normalised = normaliseTreeResponse(raw)
@@ -105,20 +103,9 @@ describe('normaliseTreeResponse', () => {
   it('attaches the root allowedTypes map to container nodes by reference', () => {
     const sectionTypes = { Foo: { label: 'Foo', icon: 'i', description: 'd' } }
     const node = (id: number) => ({
+      ...baseWireSection,
       self: { type: 'section', id },
-      parent: { type: 'page', id: 1 },
       title: `S${String(id)}`,
-      blockSchema: { typeName: 'S', label: 'S', icon: 'i', type: 's', title: 'S' },
-      obsoleteClassName: null,
-      version: 1,
-      canDelete: true,
-      canPublish: true,
-      canUnpublish: false,
-      canCreate: true,
-      editLink: null,
-      status: 'published',
-      containerType: 'section',
-      children: [],
     })
     const raw = {
       rootParent: { type: 'page', id: 1 },
@@ -151,23 +138,8 @@ describe('normaliseTreeResponse', () => {
       rootParent: { type: 'page', id: 1 },
       allowedTypes: EMPTY_ALLOWED,
       nodes: [
-        {
-          self: { type: 'section', id: 10 },
-          parent: { type: 'page', id: 1 },
-          title: 'S',
-          blockSchema: { typeName: 'S', label: 'S', icon: 'i', type: 's', title: 'S' },
-          obsoleteClassName: null,
-          version: 1,
-          canDelete: true,
-          canPublish: true,
-          canUnpublish: false,
-          canCreate: true,
-          editLink: null,
-          status: 'published',
-          // container-only fields present, but containerType is a bogus value:
-          containerType: 'nonsense',
-          children: [],
-        },
+        // container-only fields present, but containerType is a bogus value:
+        { ...baseWireSection, containerType: 'nonsense' },
       ],
     }
     expect(() => normaliseTreeResponse(raw)).toThrow()
@@ -179,26 +151,12 @@ describe('normaliseTreeResponse', () => {
       allowedTypes: EMPTY_ALLOWED,
       nodes: [
         {
+          ...baseWireSection,
           self: { type: 'column', id: 30 },
           parent: { type: 'row', id: 20 },
           title: 'Col',
-          blockSchema: {
-            typeName: 'Column',
-            label: 'Column',
-            icon: 'i',
-            type: 'column',
-            title: 'Col',
-          },
-          obsoleteClassName: null,
-          version: 1,
-          canDelete: true,
-          canPublish: true,
-          canUnpublish: false,
-          canCreate: true,
-          editLink: null,
           status: 'draft',
           containerType: 'column',
-          children: [],
           gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
         },
       ],
@@ -393,14 +351,5 @@ describe('fetchPages', () => {
     await fetchPages('my page')
     const [url] = getFetchCalls()[0]
     expect(url).toBe('/admin/grid/api/pages?search=my%20page')
-  })
-})
-
-describe('factory integration — createTreeApiResponse', () => {
-  it('produces a valid tree response shape', () => {
-    const tree = createTreeApiResponse({ pageId: 1 })
-    expect(tree.rootParent).toEqual({ type: 'page', id: 1 })
-    expect(tree.nodes.length).toBeGreaterThan(0)
-    expect(tree.nodes[0].nodeKey).toMatch(/^section-\d+$/)
   })
 })

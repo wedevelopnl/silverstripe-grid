@@ -7,15 +7,8 @@ import { renderWithProviders } from '@/testing/renderWithProviders'
 
 import ElementActions from './ElementActions'
 
-// jsdom doesn't implement native <dialog> showModal/close — stub them so the
-// archive/duplicate-to dialogs can actually open under test.
 beforeEach(() => {
-  HTMLDialogElement.prototype.showModal = vi.fn(function showModal(this: HTMLDialogElement) {
-    this.setAttribute('open', '')
-  })
-  HTMLDialogElement.prototype.close = vi.fn(function close(this: HTMLDialogElement) {
-    this.removeAttribute('open')
-  })
+  mockFetchSuccess({})
 })
 
 const originalLocation = window.location
@@ -47,8 +40,6 @@ function stubLocationAssign(): ReturnType<typeof vi.fn> {
 describe('ElementActions', () => {
   it('renders the action toolbar with duplicate/archive enabled when permitted', async () => {
     const user = userEvent.setup()
-    mockFetchSuccess({})
-
     const node = createSimpleElement({
       canDelete: true,
       canCreate: true,
@@ -73,8 +64,6 @@ describe('ElementActions', () => {
   })
 
   it('disables the history action when the element has no CMS edit link', () => {
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ editLink: null })
 
     renderWithProviders(<ElementActions node={node} />)
@@ -83,8 +72,6 @@ describe('ElementActions', () => {
   })
 
   it('renders the toolbar without overflow menu and with disabled actions when not permitted', () => {
-    mockFetchSuccess({})
-
     const node = createSimpleElement({
       canDelete: false,
       canCreate: false,
@@ -101,8 +88,6 @@ describe('ElementActions', () => {
 
   it('wires the toolbar fold icon to the supplied collapse control', async () => {
     const user = userEvent.setup()
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ canDelete: true, canCreate: true })
     let toggled = 0
 
@@ -126,8 +111,6 @@ describe('ElementActions', () => {
   })
 
   it('renders only the overflow menu in kebab-only mode (column header)', () => {
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ canDelete: true, canCreate: true })
 
     renderWithProviders(<ElementActions node={node} kebabOnly />)
@@ -138,8 +121,6 @@ describe('ElementActions', () => {
 
   it('surfaces the whole permitted action set in the kebab-only overflow menu', async () => {
     const user = userEvent.setup()
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ canDelete: true, canCreate: true })
 
     renderWithProviders(<ElementActions node={node} kebabOnly />)
@@ -164,8 +145,6 @@ describe('ElementActions', () => {
 
   it('omits archive from the kebab-only menu when the element cannot be deleted', async () => {
     const user = userEvent.setup()
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ canDelete: false, canCreate: true })
 
     renderWithProviders(<ElementActions node={node} kebabOnly />)
@@ -180,8 +159,6 @@ describe('ElementActions', () => {
 
   it('omits the duplicate actions from the kebab-only menu when the element cannot be created', async () => {
     const user = userEvent.setup()
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ canDelete: true, canCreate: false })
 
     renderWithProviders(<ElementActions node={node} kebabOnly />)
@@ -197,8 +174,6 @@ describe('ElementActions', () => {
   })
 
   it('labels every toolbar button with its visible action name', () => {
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ canDelete: true, canCreate: true })
 
     renderWithProviders(<ElementActions node={node} />)
@@ -212,8 +187,6 @@ describe('ElementActions', () => {
   })
 
   it('marks only the archive button as destructive', () => {
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ canDelete: true, canCreate: true })
 
     renderWithProviders(<ElementActions node={node} />)
@@ -225,8 +198,6 @@ describe('ElementActions', () => {
   })
 
   it('labels the fold icon "Collapse" with no title when no collapse control is supplied', () => {
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ canDelete: true, canCreate: true })
 
     renderWithProviders(<ElementActions node={node} />)
@@ -237,8 +208,6 @@ describe('ElementActions', () => {
   })
 
   it('labels the fold icon to collapse the named block when it is expanded', () => {
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ canDelete: true, canCreate: true })
 
     renderWithProviders(
@@ -255,8 +224,6 @@ describe('ElementActions', () => {
   })
 
   it('labels the fold icon to expand the named block when it is collapsed', () => {
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ canDelete: true, canCreate: true })
 
     renderWithProviders(
@@ -273,7 +240,6 @@ describe('ElementActions', () => {
 
   it('navigates to the element history tab when the history action is clicked', async () => {
     const user = userEvent.setup()
-    mockFetchSuccess({})
     const assign = stubLocationAssign()
 
     const node = createSimpleElement({ canDelete: true, canCreate: true })
@@ -287,7 +253,6 @@ describe('ElementActions', () => {
 
   it('does not navigate to history when the element has no edit link', async () => {
     const user = userEvent.setup()
-    mockFetchSuccess({})
     const assign = stubLocationAssign()
 
     const node = createSimpleElement({ editLink: null })
@@ -302,7 +267,6 @@ describe('ElementActions', () => {
 
   it('navigates to the element edit form when the edit action is clicked', async () => {
     const user = userEvent.setup()
-    mockFetchSuccess({})
     const assign = stubLocationAssign()
 
     const node = createSimpleElement({ canDelete: true, canCreate: true })
@@ -315,8 +279,6 @@ describe('ElementActions', () => {
   })
 
   it('disables the edit action when the element has no edit link', () => {
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ editLink: null })
 
     renderWithProviders(<ElementActions node={node} />)
@@ -326,7 +288,6 @@ describe('ElementActions', () => {
 
   it('opens the element edit form in a new tab when the open action is clicked', async () => {
     const user = userEvent.setup()
-    mockFetchSuccess({})
     const open = vi.spyOn(window, 'open').mockImplementation(() => null)
 
     const node = createSimpleElement({ canDelete: true, canCreate: true })
@@ -339,8 +300,6 @@ describe('ElementActions', () => {
   })
 
   it('disables the open-in-new-tab action when the element has no edit link', () => {
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ editLink: null })
 
     renderWithProviders(<ElementActions node={node} />)
@@ -350,8 +309,6 @@ describe('ElementActions', () => {
 
   it('opens the archive confirmation dialog from the toolbar with the Archive confirm label', async () => {
     const user = userEvent.setup()
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ canDelete: true, canCreate: true, title: 'Hero' })
 
     renderWithProviders(<ElementActions node={node} />)
@@ -370,8 +327,6 @@ describe('ElementActions', () => {
 
   it('opens the duplicate-to dialog from the overflow menu', async () => {
     const user = userEvent.setup()
-    mockFetchSuccess({})
-
     const node = createSimpleElement({ canDelete: true, canCreate: true })
 
     renderWithProviders(<ElementActions node={node} />)
@@ -394,8 +349,6 @@ describe('ElementActions', () => {
     }
 
     it('exposes the toolbar as a single tab stop', () => {
-      mockFetchSuccess({})
-
       renderWithProviders(
         <ElementActions node={createSimpleElement({ canDelete: true, canCreate: true })} />,
       )
@@ -409,8 +362,6 @@ describe('ElementActions', () => {
 
     it('moves focus and the tab stop with ArrowRight and ArrowLeft', async () => {
       const user = userEvent.setup()
-      mockFetchSuccess({})
-
       renderWithProviders(
         <ElementActions node={createSimpleElement({ canDelete: true, canCreate: true })} />,
       )
@@ -438,8 +389,6 @@ describe('ElementActions', () => {
 
     it('clamps at both ends rather than wrapping', async () => {
       const user = userEvent.setup()
-      mockFetchSuccess({})
-
       renderWithProviders(
         <ElementActions node={createSimpleElement({ canDelete: true, canCreate: true })} />,
       )
@@ -463,8 +412,6 @@ describe('ElementActions', () => {
 
     it('reaches the overflow trigger as the last stop', async () => {
       const user = userEvent.setup()
-      mockFetchSuccess({})
-
       renderWithProviders(
         <ElementActions node={createSimpleElement({ canDelete: true, canCreate: true })} />,
       )
@@ -483,8 +430,6 @@ describe('ElementActions', () => {
 
     it('leaves the open overflow menu to handle its own Home/End', async () => {
       const user = userEvent.setup()
-      mockFetchSuccess({})
-
       renderWithProviders(
         <ElementActions node={createSimpleElement({ canDelete: true, canCreate: true })} />,
       )

@@ -79,88 +79,55 @@ describe('DragOverlayContent', () => {
     expect(screen.queryByTestId('drag-overlay-element-meta')).toBeNull()
   })
 
-  it('icon includes the blockSchema icon class for section', () => {
-    const section = createSectionNode({
-      blockSchema: {
-        typeName: 'Section',
-        label: 'Section',
-        icon: 'font-icon-block-layout',
-        type: 'Section',
-        title: 'Section',
-      },
-    })
+  function schema(typeName: string, icon: string) {
+    return { typeName, label: typeName, icon, type: typeName, title: typeName }
+  }
 
-    render(<DragOverlayContent node={section} type="section" />)
+  it.each([
+    {
+      type: 'section' as const,
+      icon: 'font-icon-block-layout',
+      make: () => createSectionNode({ blockSchema: schema('Section', 'font-icon-block-layout') }),
+    },
+    {
+      type: 'row' as const,
+      icon: 'font-icon-block-row',
+      make: () => createRowNode({ blockSchema: schema('Row', 'font-icon-block-row') }),
+    },
+    {
+      type: 'column' as const,
+      icon: 'font-icon-block-column',
+      make: () => createColumnNode({ blockSchema: schema('Column', 'font-icon-block-column') }),
+    },
+    {
+      type: 'element' as const,
+      icon: 'font-icon-block-content',
+      make: () =>
+        createSimpleElement({ blockSchema: schema('Content', 'font-icon-block-content') }),
+    },
+  ])('icon includes the blockSchema icon class for $type', ({ type, icon, make }) => {
+    render(<DragOverlayContent node={make()} type={type} />)
 
-    expect(screen.getByTestId('drag-overlay-section-icon')).toHaveClass('font-icon-block-layout')
+    const iconElement = screen.getByTestId(`drag-overlay-${type}-icon`)
+    expect(iconElement).toHaveClass('ssgrid-drag-overlay-icon')
+    expect(iconElement).toHaveClass(icon)
   })
 
-  it('icon includes the blockSchema icon class for row', () => {
-    const row = createRowNode({
-      blockSchema: {
-        typeName: 'Row',
-        label: 'Row',
-        icon: 'font-icon-block-row',
-        type: 'Row',
-        title: 'Row',
-      },
-    })
+  it.each([
+    {
+      type: 'section' as const,
+      title: 'My Section',
+      make: () => createSectionNode({ title: 'My Section', rowCount: 1 }),
+    },
+    {
+      type: 'row' as const,
+      title: 'My Row',
+      make: () => createRowNode({ title: 'My Row', columnCount: 1 }),
+    },
+  ])('renders the title in the type-scoped title testid for a $type', ({ type, title, make }) => {
+    render(<DragOverlayContent node={make()} type={type} />)
 
-    render(<DragOverlayContent node={row} type="row" />)
-
-    expect(screen.getByTestId('drag-overlay-row-icon')).toHaveClass('font-icon-block-row')
-  })
-
-  it('icon includes the blockSchema icon class for column', () => {
-    const column = createColumnNode({
-      blockSchema: {
-        typeName: 'Column',
-        label: 'Column',
-        icon: 'font-icon-block-column',
-        type: 'Column',
-        title: 'Column',
-      },
-    })
-
-    render(<DragOverlayContent node={column} type="column" />)
-
-    const icon = screen.getByTestId('drag-overlay-column-icon')
-    expect(icon).toHaveClass('ssgrid-drag-overlay-icon')
-    expect(icon).toHaveClass('font-icon-block-column')
-  })
-
-  it('icon includes the blockSchema icon class for content element', () => {
-    const element = createSimpleElement({
-      blockSchema: {
-        typeName: 'Content',
-        label: 'Content',
-        icon: 'font-icon-block-content',
-        type: 'Content',
-        title: 'Content',
-      },
-    })
-
-    render(<DragOverlayContent node={element} type="element" />)
-
-    const icon = screen.getByTestId('drag-overlay-element-icon')
-    expect(icon).toHaveClass('ssgrid-drag-overlay-icon')
-    expect(icon).toHaveClass('font-icon-block-content')
-  })
-
-  it('renders the title in the type-scoped title testid for a section', () => {
-    const section = createSectionNode({ title: 'My Section', rowCount: 1 })
-
-    render(<DragOverlayContent node={section} type="section" />)
-
-    expect(screen.getByTestId('drag-overlay-section-title')).toHaveTextContent('My Section')
-  })
-
-  it('renders the title in the type-scoped title testid for a row', () => {
-    const row = createRowNode({ title: 'My Row', columnCount: 1 })
-
-    render(<DragOverlayContent node={row} type="row" />)
-
-    expect(screen.getByTestId('drag-overlay-row-title')).toHaveTextContent('My Row')
+    expect(screen.getByTestId(`drag-overlay-${type}-title`)).toHaveTextContent(title)
   })
 
   it('data-testid includes the type for each variant', () => {

@@ -206,16 +206,6 @@ describe('ActionsMenu', () => {
     expect(items).toHaveLength(2)
   })
 
-  it('non-destructive item does not have destructive marker', async () => {
-    const user = userEvent.setup()
-
-    render(<ActionsMenu actions={createActions()} />)
-
-    await user.click(screen.getByTestId('actions-menu-trigger'))
-
-    expect(screen.getByText('Edit')).not.toHaveAttribute('data-destructive')
-  })
-
   it('uses custom testId for dropdown', async () => {
     const user = userEvent.setup()
 

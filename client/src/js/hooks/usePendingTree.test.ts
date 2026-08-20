@@ -1,16 +1,13 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
-  createColumnNode,
+  buildTree,
   createParsedDraggableId,
-  createRowNode,
-  createSectionNode,
   createSimpleElement,
-  createTreeApiResponse,
   resetIdCounter,
 } from '@/testing/factories'
 import type { TreeApiResponse } from '@/types/elements'
-import { NodeIdentity } from '@/types/identity'
+import { NodeIdentity, type NodeKey } from '@/types/identity'
 import { buildMaps } from './useElementMaps'
 import { usePendingTree } from './usePendingTree'
 
@@ -19,33 +16,44 @@ beforeEach(() => {
 })
 
 /**
- * Build a tree with two columns under one row: col 10 has one element, col 20
- * is empty. The root page id is 1.
+ * Fixture: section 1000 → row 100 → column 10 (holding element 5) and
+ * column 20 (empty). The root page id defaults to 1.
  */
-function buildTwoColumnTree(pageId = 1) {
+function buildFixtureTree(pageId = 1) {
   const element = createSimpleElement({ id: 5, parent: { type: 'column', id: 10 } })
-  const col1 = createColumnNode({
-    id: 10,
-    parent: { type: 'row', id: 100 },
-    children: [element],
+  const { tree } = buildTree({
+    pageId,
+    sectionId: 1000,
+    rows: [
+      {
+        id: 100,
+        columns: [
+          { id: 10, children: [element] },
+          { id: 20, children: [] },
+        ],
+      },
+    ],
   })
-  const col2 = createColumnNode({
-    id: 20,
-    parent: { type: 'row', id: 100 },
-    children: [],
+  return { tree, element }
+}
+
+/** Wrap act + parsed-id + map building around applyPendingMove. */
+function move(
+  result: { current: ReturnType<typeof usePendingTree> },
+  tree: TreeApiResponse,
+  targetKey: NodeKey = NodeIdentity.toKey('column', 20),
+  after: number | null = null,
+  elementId = 5,
+) {
+  act(() => {
+    result.current.applyPendingMove(
+      createParsedDraggableId('element', elementId),
+      targetKey,
+      after,
+      tree,
+      buildMaps(tree),
+    )
   })
-  const row = createRowNode({
-    id: 100,
-    parent: { type: 'section', id: 1000 },
-    children: [col1, col2],
-  })
-  const section = createSectionNode({
-    id: 1000,
-    parent: { type: 'page', id: pageId },
-    children: [row],
-  })
-  const tree = createTreeApiResponse({ pageId, sections: [section] })
-  return { tree, element, col1, col2 }
 }
 
 describe('usePendingTree', () => {
@@ -61,20 +69,12 @@ describe('usePendingTree', () => {
 
   describe('applyPendingMove', () => {
     it('sets pending tree for a cross-container move', () => {
-      const { tree, element } = buildTwoColumnTree()
+      const { tree, element } = buildFixtureTree()
       const canonicalMaps = buildMaps(tree)
 
       const { result } = renderHook(() => usePendingTree())
 
-      act(() => {
-        result.current.applyPendingMove(
-          createParsedDraggableId('element', element.self.id),
-          NodeIdentity.toKey('column', 20),
-          null,
-          tree,
-          buildMaps(tree),
-        )
-      })
+      move(result, tree)
 
       expect(result.current.pendingTree).not.toBeNull()
 
@@ -88,35 +88,19 @@ describe('usePendingTree', () => {
     })
 
     it('sets hasPendingMoveRef to true', () => {
-      const { tree, element } = buildTwoColumnTree()
+      const { tree } = buildFixtureTree()
       const { result } = renderHook(() => usePendingTree())
 
-      act(() => {
-        result.current.applyPendingMove(
-          createParsedDraggableId('element', element.self.id),
-          NodeIdentity.toKey('column', 20),
-          null,
-          tree,
-          buildMaps(tree),
-        )
-      })
+      move(result, tree)
 
       expect(result.current.collisionRefs.hasPendingMoveRef.current).toBe(true)
     })
 
     it('updates pendingContainerItemsRef with target siblings', () => {
-      const { tree, element } = buildTwoColumnTree()
+      const { tree, element } = buildFixtureTree()
       const { result } = renderHook(() => usePendingTree())
 
-      act(() => {
-        result.current.applyPendingMove(
-          createParsedDraggableId('element', element.self.id),
-          NodeIdentity.toKey('column', 20),
-          null,
-          tree,
-          buildMaps(tree),
-        )
-      })
+      move(result, tree)
 
       const pendingItems = result.current.collisionRefs.pendingContainerItemsRef.current
       expect(pendingItems).not.toBeNull()
@@ -125,24 +109,16 @@ describe('usePendingTree', () => {
     })
 
     it('leaves pendingTree null for a no-op move (same position)', () => {
-      const { tree } = buildTwoColumnTree()
+      const { tree } = buildFixtureTree()
       const { result } = renderHook(() => usePendingTree())
 
-      act(() => {
-        result.current.applyPendingMove(
-          createParsedDraggableId('element', 5),
-          NodeIdentity.toKey('column', 10),
-          null,
-          tree,
-          buildMaps(tree),
-        )
-      })
+      move(result, tree, NodeIdentity.toKey('column', 10))
 
       expect(result.current.pendingTree).toBeNull()
     })
 
     it('clears a stale overRectRef snapshot when entering the pending path', () => {
-      const { tree, element } = buildTwoColumnTree()
+      const { tree } = buildFixtureTree()
       const { result } = renderHook(() => usePendingTree())
 
       // Simulate a tier-1 (same-container) snapshot captured before the
@@ -154,21 +130,13 @@ describe('usePendingTree', () => {
         }
       })
 
-      act(() => {
-        result.current.applyPendingMove(
-          createParsedDraggableId('element', element.self.id),
-          NodeIdentity.toKey('column', 20),
-          null,
-          tree,
-          buildMaps(tree),
-        )
-      })
+      move(result, tree)
 
       expect(result.current.collisionRefs.overRectRef.current).toBeNull()
     })
 
     it('clears overRectRef even for a no-op move (same position)', () => {
-      const { tree } = buildTwoColumnTree()
+      const { tree } = buildFixtureTree()
       const { result } = renderHook(() => usePendingTree())
 
       act(() => {
@@ -178,15 +146,7 @@ describe('usePendingTree', () => {
         }
       })
 
-      act(() => {
-        result.current.applyPendingMove(
-          createParsedDraggableId('element', 5),
-          NodeIdentity.toKey('column', 10),
-          null,
-          tree,
-          buildMaps(tree),
-        )
-      })
+      move(result, tree, NodeIdentity.toKey('column', 10))
 
       expect(result.current.collisionRefs.overRectRef.current).toBeNull()
     })
@@ -194,7 +154,7 @@ describe('usePendingTree', () => {
 
   describe('getEffective', () => {
     it('returns canonical tree when no pending tree', () => {
-      const { tree } = buildTwoColumnTree()
+      const { tree } = buildFixtureTree()
       const maps = buildMaps(tree)
 
       const { result } = renderHook(() => usePendingTree())
@@ -204,7 +164,7 @@ describe('usePendingTree', () => {
     })
 
     it('returns pending tree when one is set', () => {
-      const { tree, element } = buildTwoColumnTree()
+      const { tree } = buildFixtureTree()
 
       const canonicalTree: TreeApiResponse = {
         rootParent: { type: 'page', id: 99 },
@@ -214,15 +174,7 @@ describe('usePendingTree', () => {
 
       const { result } = renderHook(() => usePendingTree())
 
-      act(() => {
-        result.current.applyPendingMove(
-          createParsedDraggableId('element', element.self.id),
-          NodeIdentity.toKey('column', 20),
-          null,
-          tree,
-          buildMaps(tree),
-        )
-      })
+      move(result, tree)
 
       const effective = result.current.getEffective(canonicalTree, canonicalMaps)
       expect(effective.tree).not.toBe(canonicalTree)
@@ -237,18 +189,10 @@ describe('usePendingTree', () => {
     })
 
     it('reports the active element at the head of the target (after = null)', () => {
-      const { tree, element } = buildTwoColumnTree()
+      const { tree, element } = buildFixtureTree()
       const { result } = renderHook(() => usePendingTree())
 
-      act(() => {
-        result.current.applyPendingMove(
-          createParsedDraggableId('element', element.self.id),
-          NodeIdentity.toKey('column', 20),
-          null,
-          tree,
-          buildMaps(tree),
-        )
-      })
+      move(result, tree)
 
       const placement = result.current.getActivePlacement(
         NodeIdentity.toKey('element', element.self.id),
@@ -262,39 +206,25 @@ describe('usePendingTree', () => {
       // col 10 has [element 5]; col 20 has [element 6]. Move element 5 into col 20
       // after element 6 → col 20 = [6, 5]. The placement anchor is element 6.
       const existing = createSimpleElement({ id: 6, parent: { type: 'column', id: 20 } })
-      const col1 = createColumnNode({
-        id: 10,
-        parent: { type: 'row', id: 100 },
-        children: [createSimpleElement({ id: 5, parent: { type: 'column', id: 10 } })],
+      const { tree } = buildTree({
+        sectionId: 1000,
+        rows: [
+          {
+            id: 100,
+            columns: [
+              {
+                id: 10,
+                children: [createSimpleElement({ id: 5, parent: { type: 'column', id: 10 } })],
+              },
+              { id: 20, children: [existing] },
+            ],
+          },
+        ],
       })
-      const col2 = createColumnNode({
-        id: 20,
-        parent: { type: 'row', id: 100 },
-        children: [existing],
-      })
-      const row = createRowNode({
-        id: 100,
-        parent: { type: 'section', id: 1000 },
-        children: [col1, col2],
-      })
-      const section = createSectionNode({
-        id: 1000,
-        parent: { type: 'page', id: 1 },
-        children: [row],
-      })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
 
       const { result } = renderHook(() => usePendingTree())
 
-      act(() => {
-        result.current.applyPendingMove(
-          createParsedDraggableId('element', 5),
-          NodeIdentity.toKey('column', 20),
-          6,
-          tree,
-          buildMaps(tree),
-        )
-      })
+      move(result, tree, NodeIdentity.toKey('column', 20), 6)
 
       const placement = result.current.getActivePlacement(NodeIdentity.toKey('element', 5))
       expect(placement?.parent).toEqual({ type: 'column', id: 20 })
@@ -302,18 +232,10 @@ describe('usePendingTree', () => {
     })
 
     it('returns null for an active key absent from the pending tree', () => {
-      const { tree, element } = buildTwoColumnTree()
+      const { tree } = buildFixtureTree()
       const { result } = renderHook(() => usePendingTree())
 
-      act(() => {
-        result.current.applyPendingMove(
-          createParsedDraggableId('element', element.self.id),
-          NodeIdentity.toKey('column', 20),
-          null,
-          tree,
-          buildMaps(tree),
-        )
-      })
+      move(result, tree)
 
       expect(result.current.getActivePlacement(NodeIdentity.toKey('element', 999))).toBeNull()
     })
@@ -321,19 +243,13 @@ describe('usePendingTree', () => {
 
   describe('clear', () => {
     it('resets pendingTree and collision refs', () => {
-      const { tree, element } = buildTwoColumnTree()
+      const { tree } = buildFixtureTree()
       const { result } = renderHook(() => usePendingTree())
 
       act(() => {
         result.current.setSourceSiblings(new Set(['element-1']))
-        result.current.applyPendingMove(
-          createParsedDraggableId('element', element.self.id),
-          NodeIdentity.toKey('column', 20),
-          null,
-          tree,
-          buildMaps(tree),
-        )
       })
+      move(result, tree)
       expect(result.current.pendingTree).not.toBeNull()
 
       act(() => {
