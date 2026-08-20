@@ -52,7 +52,12 @@ export interface RenderWithProvidersResult extends RenderResult {
   queryClient: QueryClient
 }
 
-function createTestQueryClient(): QueryClient {
+/**
+ * QueryClient with the suite's standard test defaults (no retries, immediate
+ * garbage collection). Tests that need to seed or spy on a client before
+ * rendering should use this instead of re-typing the config.
+ */
+export function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
@@ -67,31 +72,10 @@ export function renderWithProviders(
   ui: ReactNode,
   options: RenderOptions = {},
 ): RenderWithProvidersResult {
-  const {
-    pageId = 1,
-    zone = 'main',
-    viewport = 'md',
-    queryClient = createTestQueryClient(),
-    collapsedKeys,
-    collapseState,
-  } = options
-
-  const resolvedCollapse: CollapseState =
-    collapseState ?? createCollapseStateStub(collapsedKeys ?? [])
-
-  setActiveViewport(viewport)
-
-  const result = render(
-    <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <GridEditorProvider value={{ pageId, zone }}>
-          <CollapseContext.Provider value={resolvedCollapse}>{ui}</CollapseContext.Provider>
-        </GridEditorProvider>
-      </QueryClientProvider>
-    </StrictMode>,
-  )
-
-  return { ...result, queryClient }
+  const { wrapper, queryClient } = createProviderWrapper(options)
+  // Object.assign (not spread): spreading RTL's mapped-type RenderResult makes
+  // tsc drop the bound query methods from the resulting object type.
+  return Object.assign(render(ui, { wrapper }), { queryClient })
 }
 
 /**

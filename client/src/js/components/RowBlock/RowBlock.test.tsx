@@ -1,47 +1,34 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDragContext } from '@/hooks/useDragAndDrop'
 import { createRowNode } from '@/testing/factories'
+import { defaultSortable, resetDndMocks } from '@/testing/mockDndKit'
 import { mockFetchSuccess } from '@/testing/mockFetch'
 import { createCollapseStateStub, renderWithProviders } from '@/testing/renderWithProviders'
 
 import EditableRowBlock from './EditableRowBlock'
 import ReadonlyRowBlock from './ReadonlyRowBlock'
 
-const defaultSortable = {
-  attributes: {},
-  listeners: {},
-  setNodeRef: vi.fn(),
-  transform: null,
-  transition: undefined,
-  isDragging: false,
-  isOver: false,
-}
+vi.mock('@dnd-kit/sortable', async () =>
+  (await import('@/testing/mockDndKit')).mockSortableModule(),
+)
 
-vi.mock('@dnd-kit/sortable', () => ({
-  useSortable: vi.fn(() => ({ ...defaultSortable })),
-  SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  verticalListSortingStrategy: {},
-  horizontalListSortingStrategy: {},
-}))
+vi.mock('@/hooks/useDragAndDrop', async () =>
+  (await import('@/testing/mockDndKit')).mockUseDragContextModule(),
+)
 
-vi.mock('@/hooks/useDragAndDrop', () => ({
-  useDragContext: vi.fn(() => ({ activeType: null, pendingActive: false })),
-}))
+beforeEach(() => {
+  mockFetchSuccess({})
+})
 
 afterEach(() => {
-  vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<
-    typeof useSortable
-  >)
-  vi.mocked(useDragContext).mockReturnValue({ activeType: null, pendingActive: false })
+  resetDndMocks({ useSortable, useDragContext })
 })
 
 describe('EditableRowBlock', () => {
   it('renders row title', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ title: 'Main Row' })
 
     renderWithProviders(<EditableRowBlock row={row} />)
@@ -50,8 +37,6 @@ describe('EditableRowBlock', () => {
   })
 
   it('renders child columns', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ columnCount: 3 })
 
     renderWithProviders(<EditableRowBlock row={row} />)
@@ -60,8 +45,6 @@ describe('EditableRowBlock', () => {
   })
 
   it('shows empty state when no children', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ children: null })
 
     renderWithProviders(<EditableRowBlock row={row} />)
@@ -71,8 +54,6 @@ describe('EditableRowBlock', () => {
   })
 
   it('shows empty state when children is an empty array', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ children: [] as never })
 
     renderWithProviders(<EditableRowBlock row={row} />)
@@ -81,8 +62,6 @@ describe('EditableRowBlock', () => {
   })
 
   it('flanks the columns with the start/end "+" insert squares when columns exist', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ columnCount: 1 })
 
     renderWithProviders(<EditableRowBlock row={row} />)
@@ -95,8 +74,6 @@ describe('EditableRowBlock', () => {
   })
 
   it('renders a "between" column-insert handle in each internal gutter', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ columnCount: 3 })
 
     renderWithProviders(<EditableRowBlock row={row} />)
@@ -108,9 +85,9 @@ describe('EditableRowBlock', () => {
   })
 
   describe('status and state attributes', () => {
-    it('includes draft status attribute', () => {
-      mockFetchSuccess({})
-
+    it('forwards the node status to the chrome data-status attribute', () => {
+      // Per-status application is pinned in the Chrome test file — this only
+      // proves the block wires the node's status through.
       const row = createRowNode({ status: 'draft' })
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -118,29 +95,7 @@ describe('EditableRowBlock', () => {
       expect(screen.getByTestId('row-block')).toHaveAttribute('data-status', 'draft')
     })
 
-    it('includes modified status attribute', () => {
-      mockFetchSuccess({})
-
-      const row = createRowNode({ status: 'modified' })
-
-      renderWithProviders(<EditableRowBlock row={row} />)
-
-      expect(screen.getByTestId('row-block')).toHaveAttribute('data-status', 'modified')
-    })
-
-    it('includes published status attribute by default', () => {
-      mockFetchSuccess({})
-
-      const row = createRowNode({ status: 'published' })
-
-      renderWithProviders(<EditableRowBlock row={row} />)
-
-      expect(screen.getByTestId('row-block')).toHaveAttribute('data-status', 'published')
-    })
-
     it('sets data-collapsed when the row is collapsed in the context', () => {
-      mockFetchSuccess({})
-
       const row = createRowNode({})
 
       renderWithProviders(<EditableRowBlock row={row} />, {
@@ -151,8 +106,6 @@ describe('EditableRowBlock', () => {
     })
 
     it('does not set data-collapsed when expanded', () => {
-      mockFetchSuccess({})
-
       const row = createRowNode({})
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -166,8 +119,6 @@ describe('EditableRowBlock', () => {
         isOver: true,
       } as unknown as ReturnType<typeof useSortable>)
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'row', pendingActive: false })
-      mockFetchSuccess({})
-
       const row = createRowNode({})
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -181,8 +132,6 @@ describe('EditableRowBlock', () => {
         isOver: true,
       } as unknown as ReturnType<typeof useSortable>)
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'section', pendingActive: false })
-      mockFetchSuccess({})
-
       const row = createRowNode({})
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -196,8 +145,6 @@ describe('EditableRowBlock', () => {
         isOver: false,
       } as unknown as ReturnType<typeof useSortable>)
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'row', pendingActive: false })
-      mockFetchSuccess({})
-
       const row = createRowNode({})
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -208,8 +155,6 @@ describe('EditableRowBlock', () => {
 
   describe('layout mode', () => {
     it('uses flex layout when offset strategy is margin', () => {
-      mockFetchSuccess({})
-
       const row = createRowNode({ columnCount: 1 })
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -222,8 +167,6 @@ describe('EditableRowBlock', () => {
       // Override adapter config for this test
       window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
 
-      mockFetchSuccess({})
-
       const row = createRowNode({ columnCount: 1 })
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -235,8 +178,6 @@ describe('EditableRowBlock', () => {
     it('sets --grid-columns CSS variable in grid mode', () => {
       window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
 
-      mockFetchSuccess({})
-
       const row = createRowNode({ columnCount: 1 })
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -246,8 +187,6 @@ describe('EditableRowBlock', () => {
     })
 
     it('does not set --grid-columns CSS variable in flex mode', () => {
-      mockFetchSuccess({})
-
       const row = createRowNode({ columnCount: 1 })
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -258,8 +197,6 @@ describe('EditableRowBlock', () => {
   })
 
   it('renders edit link when editLink is set', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ editLink: '/admin/pages/edit/show/10' })
 
     renderWithProviders(<EditableRowBlock row={row} />)
@@ -270,8 +207,6 @@ describe('EditableRowBlock', () => {
   })
 
   it('renders title as plain text when editLink is null', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ editLink: null })
 
     renderWithProviders(<EditableRowBlock row={row} />)
@@ -282,8 +217,6 @@ describe('EditableRowBlock', () => {
 
   describe('drag handle label', () => {
     it('names the drag handle with the row title', () => {
-      mockFetchSuccess({})
-
       // No child columns, so the only DragHandle in the tree is the row's own.
       const row = createRowNode({ title: 'Hero Row', children: null })
 
@@ -298,8 +231,6 @@ describe('EditableRowBlock', () => {
 
   describe('collapse toggle', () => {
     it('toggles the row collapse state with the row key when clicked', async () => {
-      mockFetchSuccess({})
-
       // No child columns, so the only CollapseToggle is the row's own.
       const row = createRowNode({ children: null })
       const collapseState = createCollapseStateStub()
@@ -314,8 +245,6 @@ describe('EditableRowBlock', () => {
     })
 
     it('wires the collapse toggle to the columns area it controls', () => {
-      mockFetchSuccess({})
-
       const row = createRowNode({ children: null })
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -329,8 +258,6 @@ describe('EditableRowBlock', () => {
 
   describe('status marks', () => {
     it('renders the indicator with its label when status is modified', () => {
-      mockFetchSuccess({})
-
       const row = createRowNode({ status: 'modified' })
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -339,8 +266,6 @@ describe('EditableRowBlock', () => {
     })
 
     it('badges a never-published row as draft', () => {
-      mockFetchSuccess({})
-
       const row = createRowNode({ status: 'draft' })
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -349,8 +274,6 @@ describe('EditableRowBlock', () => {
     })
 
     it('does not render the badge when the row is published', () => {
-      mockFetchSuccess({})
-
       const row = createRowNode({ status: 'published' })
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -361,8 +284,6 @@ describe('EditableRowBlock', () => {
 
   describe('column count meta', () => {
     it('renders the column count text when the row has columns', () => {
-      mockFetchSuccess({})
-
       const row = createRowNode({ columnCount: 3 })
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -371,8 +292,6 @@ describe('EditableRowBlock', () => {
     })
 
     it('does not render the column count meta when children is an empty array', () => {
-      mockFetchSuccess({})
-
       const row = createRowNode({ children: [] as never })
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -383,8 +302,6 @@ describe('EditableRowBlock', () => {
     })
 
     it('does not render the column count meta when children is null', () => {
-      mockFetchSuccess({})
-
       const row = createRowNode({ children: null })
 
       renderWithProviders(<EditableRowBlock row={row} />)
@@ -396,8 +313,6 @@ describe('EditableRowBlock', () => {
 
 describe('ReadonlyRowBlock', () => {
   it('renders child columns', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ columnCount: 2 })
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
@@ -408,8 +323,6 @@ describe('ReadonlyRowBlock', () => {
   })
 
   it('sets data-collapsed to empty string when collapsed', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({})
 
     renderWithProviders(<ReadonlyRowBlock row={row} />, { collapsedKeys: [row.nodeKey] })
@@ -418,8 +331,6 @@ describe('ReadonlyRowBlock', () => {
   })
 
   it('wires the collapse toggle to the columns body it controls', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ columnCount: 1 })
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
@@ -433,8 +344,6 @@ describe('ReadonlyRowBlock', () => {
   })
 
   it('does not set data-collapsed when expanded', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({})
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
@@ -443,8 +352,6 @@ describe('ReadonlyRowBlock', () => {
   })
 
   it('renders the modified indicator with its label when status is modified', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ status: 'modified' })
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
@@ -453,8 +360,6 @@ describe('ReadonlyRowBlock', () => {
   })
 
   it('badges a never-published readonly row as draft', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ status: 'draft' })
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
@@ -463,8 +368,6 @@ describe('ReadonlyRowBlock', () => {
   })
 
   it('does not render the badge when the readonly row is published', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ status: 'published' })
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
@@ -473,8 +376,6 @@ describe('ReadonlyRowBlock', () => {
   })
 
   it('renders the column count text when the row has columns', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ columnCount: 2 })
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
@@ -483,8 +384,6 @@ describe('ReadonlyRowBlock', () => {
   })
 
   it('does not render the column count meta when children is an empty array', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ children: [] as never })
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
@@ -493,8 +392,6 @@ describe('ReadonlyRowBlock', () => {
   })
 
   it('renders title as plain text even when editLink is set', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ editLink: '/admin/pages/edit/show/10' })
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
@@ -504,8 +401,6 @@ describe('ReadonlyRowBlock', () => {
   })
 
   it('does not render the start/end insert squares or the row drag handle', () => {
-    mockFetchSuccess({})
-
     const row = createRowNode({ columnCount: 1 })
 
     renderWithProviders(<ReadonlyRowBlock row={row} />)
@@ -520,8 +415,6 @@ describe('ReadonlyRowBlock', () => {
     // the `layoutMode === 'grid'` guard on the readonly path.
 
     it('uses flex layout and omits --grid-columns when offset strategy is margin', () => {
-      mockFetchSuccess({})
-
       const row = createRowNode({ columnCount: 1 })
 
       renderWithProviders(<ReadonlyRowBlock row={row} />)
@@ -533,8 +426,6 @@ describe('ReadonlyRowBlock', () => {
 
     it('uses grid layout and sets --grid-columns when offset strategy is grid-placement', () => {
       window.ss!.config.sections[0].gridAdapter!.offsetStrategy = 'grid-placement'
-      mockFetchSuccess({})
-
       const row = createRowNode({ columnCount: 1 })
 
       renderWithProviders(<ReadonlyRowBlock row={row} />)

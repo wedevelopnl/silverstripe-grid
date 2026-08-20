@@ -6,13 +6,9 @@ import {
   STYLE_TAG_ID,
 } from './viewportPreviewStyles'
 
-vi.mock('@/utils/gridAdapter', () => ({
-  getViewports: () => [
-    { key: 'xs', label: 'Extra Small', minWidth: 0 },
-    { key: 'sm', label: 'Small', minWidth: 576 },
-    { key: 'md', label: 'Medium', minWidth: 768 },
-  ],
-}))
+vi.mock('@/utils/gridAdapter', async () =>
+  (await import('@/testing/mockGridAdapter')).mockGridAdapterModule(),
+)
 
 describe('heightForWidth', () => {
   it('clamps widths below 500 to the 500px floor', () => {

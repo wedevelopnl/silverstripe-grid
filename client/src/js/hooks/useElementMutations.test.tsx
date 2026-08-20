@@ -15,63 +15,66 @@ import {
   useUpdateGridSettings,
 } from '@/hooks/useElementMutations'
 import { useElementTree } from '@/hooks/useElementTree'
-import {
-  createColumnNode,
-  createRowNode,
-  createSectionNode,
-  createTreeApiResponse,
-  resetIdCounter,
-} from '@/testing/factories'
+import { buildTree, resetIdCounter } from '@/testing/factories'
 import {
   getFetchCalls,
   mockFetchError,
   mockFetchSequence,
   mockFetchSuccess,
 } from '@/testing/mockFetch'
-import { createProviderWrapper } from '@/testing/renderWithProviders'
+import { createProviderWrapper, createTestQueryClient } from '@/testing/renderWithProviders'
 import type { ContainerNode, TreeApiResponse } from '@/types/elements'
 
 /**
- * Build a tree with explicit IDs and consistent parent chains for reorder tests.
+ * Build a tree with explicit IDs and consistent parent chains for reorder
+ * tests: section 100 → row 200 → column 300 with two auto-id elements.
+ * The tree is seeded into the returned QueryClient's cache unless
+ * `seedCache: false`; `gcTime` overrides the test default of 0.
  */
-function createReorderTree(pageId = 1, zone = 'main') {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  })
+function createReorderTree(
+  pageId = 1,
+  zone = 'main',
+  options: { gcTime?: number; seedCache?: boolean } = {},
+) {
+  const queryClient =
+    options.gcTime === undefined
+      ? createTestQueryClient()
+      : new QueryClient({
+          defaultOptions: { queries: { retry: false, gcTime: options.gcTime } },
+        })
 
-  const column = createColumnNode({
-    id: 300,
-    parent: { type: 'row', id: 200 },
-    childCount: 2,
+  const { tree, columns } = buildTree({
+    pageId,
+    sectionId: 100,
+    rows: [{ id: 200, columns: [{ id: 300, childCount: 2 }] }],
   })
-  // Re-parent the auto-generated child elements to point at column 300.
-  for (const child of column.children ?? []) {
-    ;(child as { parent: { type: 'column'; id: number }; parentKey: string }).parent = {
-      type: 'column',
-      id: 300,
-    }
-    ;(child as { parent: { type: 'column'; id: number }; parentKey: string }).parentKey =
-      'column-300'
+  const column = columns[0]
+
+  if (options.seedCache !== false) {
+    queryClient.setQueryData(queryKeys.elementTree.byPage(pageId, zone), tree)
   }
-
-  const row = createRowNode({
-    id: 200,
-    parent: { type: 'section', id: 100 },
-    children: [column],
-  })
-  const section = createSectionNode({
-    id: 100,
-    parent: { type: 'page', id: pageId },
-    children: [row],
-  })
-
-  const treeApiResponse = createTreeApiResponse({ pageId, sections: [section] })
-
-  queryClient.setQueryData(queryKeys.elementTree.byPage(pageId, zone), treeApiResponse)
 
   const [elemA, elemB] = column.children ?? []
 
-  return { queryClient, tree: treeApiResponse, treeApiResponse, column, elemA, elemB }
+  return { queryClient, tree, treeApiResponse: tree, column, elemA, elemB }
+}
+
+/** Install a fresh CMS store dispatch stub and return it for toast assertions. */
+function stubToastDispatch() {
+  const dispatch = vi.fn()
+  window.ss!.store = { dispatch }
+  return dispatch
+}
+
+async function awaitErrorToast(dispatch: ReturnType<typeof vi.fn>) {
+  await waitFor(() => {
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'DISPLAY_TOAST',
+        payload: expect.objectContaining({ type: 'error' }),
+      }),
+    )
+  })
 }
 
 describe('useElementMutations', () => {
@@ -95,28 +98,6 @@ describe('useElementMutations', () => {
 
       const [url] = getFetchCalls()[0]
       expect(url).toContain('/api/create')
-    })
-
-    it('should show toast on error', async () => {
-      mockFetchError(500, { message: 'Create failed' })
-      const dispatch = vi.fn()
-      window.ss!.store = { dispatch }
-
-      const { wrapper } = createProviderWrapper()
-      const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper })
-
-      act(() => {
-        result.current.mutate({ className: 'Content', parent: { type: 'column', id: 10 } })
-      })
-
-      await waitFor(() => {
-        expect(dispatch).toHaveBeenCalledWith(
-          expect.objectContaining({
-            type: 'DISPLAY_TOAST',
-            payload: expect.objectContaining({ type: 'error' }),
-          }),
-        )
-      })
     })
   })
 
@@ -143,34 +124,6 @@ describe('useElementMutations', () => {
       const [url] = getFetchCalls()[0]
       expect(url).toContain('/api/updateGridSettings')
     })
-
-    it('should show toast on error', async () => {
-      mockFetchError(422, { message: 'Invalid settings' })
-      const dispatch = vi.fn()
-      window.ss!.store = { dispatch }
-
-      const { wrapper } = createProviderWrapper()
-      const { result } = renderHook(() => useUpdateGridSettings(1, 'main'), { wrapper })
-
-      act(() => {
-        result.current.mutate({
-          element: { type: 'column', id: 5 },
-          viewport: 'md',
-          width: 6,
-          offset: 0,
-          visible: true,
-        })
-      })
-
-      await waitFor(() => {
-        expect(dispatch).toHaveBeenCalledWith(
-          expect.objectContaining({
-            type: 'DISPLAY_TOAST',
-            payload: expect.objectContaining({ type: 'error' }),
-          }),
-        )
-      })
-    })
   })
 
   describe('useResetGridSettingsOverrides', () => {
@@ -190,82 +143,85 @@ describe('useElementMutations', () => {
       const [url] = getFetchCalls()[0]
       expect(url).toContain('/api/resetGridSettingsOverrides')
     })
-
-    it('should show toast on error', async () => {
-      mockFetchError(500, { message: 'Reset failed' })
-      const dispatch = vi.fn()
-      window.ss!.store = { dispatch }
-
-      const { wrapper } = createProviderWrapper()
-      const { result } = renderHook(() => useResetGridSettingsOverrides(1, 'main'), { wrapper })
-
-      act(() => {
-        result.current.mutate({ pageId: 1, zone: 'main' })
-      })
-
-      await waitFor(() => {
-        expect(dispatch).toHaveBeenCalledWith(
-          expect.objectContaining({
-            type: 'DISPLAY_TOAST',
-            payload: expect.objectContaining({ type: 'error' }),
-          }),
-        )
-      })
-    })
   })
 
-  describe('usePublishElement', () => {
-    it('should show toast on error', async () => {
-      mockFetchError(500, { message: 'Publish failed' })
-      const dispatch = vi.fn()
-      window.ss!.store = { dispatch }
+  // The error toast fires from the single shared useStandardMutationOptions
+  // onError (useElementMutations.ts:51-52). One parametrized test per consuming
+  // hook keeps each hook's error path exercised without five copies of the
+  // arrange/assert shape.
+  describe('useStandardMutationOptions onError', () => {
+    it.each([
+      {
+        name: 'useCreateContentElement',
+        hook: () => useCreateContentElement(1, 'main'),
+        variables: { className: 'Content', parent: { type: 'column', id: 10 } },
+        status: 500,
+        message: 'Create failed',
+      },
+      {
+        name: 'useUpdateGridSettings',
+        hook: () => useUpdateGridSettings(1, 'main'),
+        variables: {
+          element: { type: 'column', id: 5 },
+          viewport: 'md',
+          width: 6,
+          offset: 0,
+          visible: true,
+        },
+        status: 422,
+        message: 'Invalid settings',
+      },
+      {
+        name: 'useResetGridSettingsOverrides',
+        hook: () => useResetGridSettingsOverrides(1, 'main'),
+        variables: { pageId: 1, zone: 'main' },
+        status: 500,
+        message: 'Reset failed',
+      },
+      {
+        name: 'usePublishElement',
+        hook: () => usePublishElement(1, 'main'),
+        variables: { type: 'section', id: 5 },
+        status: 500,
+        message: 'Publish failed',
+      },
+      {
+        name: 'useUnpublishElement',
+        hook: () => useUnpublishElement(1, 'main'),
+        variables: { type: 'section', id: 5 },
+        status: 500,
+        message: 'Unpublish failed',
+      },
+    ])(
+      'shows an error toast with the API message when $name fails',
+      async ({ hook, variables, status, message }) => {
+        mockFetchError(status, { message })
+        const dispatch = stubToastDispatch()
 
-      const { wrapper } = createProviderWrapper()
-      const { result } = renderHook(() => usePublishElement(1, 'main'), { wrapper })
+        const { wrapper } = createProviderWrapper()
+        // The rows return differently-parameterised mutations; the test only
+        // needs the mutate seam, so widen to that.
+        const { result } = renderHook(hook as () => { mutate: (variables: never) => void }, {
+          wrapper,
+        })
 
-      act(() => {
-        result.current.mutate({ type: 'section', id: 5 })
-      })
+        act(() => {
+          result.current.mutate(variables as never)
+        })
 
-      await waitFor(() => {
-        expect(dispatch).toHaveBeenCalledWith(
-          expect.objectContaining({
-            type: 'DISPLAY_TOAST',
-            payload: expect.objectContaining({
-              type: 'error',
-              text: expect.stringContaining('Publish failed'),
+        await waitFor(() => {
+          expect(dispatch).toHaveBeenCalledWith(
+            expect.objectContaining({
+              type: 'DISPLAY_TOAST',
+              payload: expect.objectContaining({
+                type: 'error',
+                text: expect.stringContaining(message),
+              }),
             }),
-          }),
-        )
-      })
-    })
-  })
-
-  describe('useUnpublishElement', () => {
-    it('should show toast on error', async () => {
-      mockFetchError(500, { message: 'Unpublish failed' })
-      const dispatch = vi.fn()
-      window.ss!.store = { dispatch }
-
-      const { wrapper } = createProviderWrapper()
-      const { result } = renderHook(() => useUnpublishElement(1, 'main'), { wrapper })
-
-      act(() => {
-        result.current.mutate({ type: 'section', id: 5 })
-      })
-
-      await waitFor(() => {
-        expect(dispatch).toHaveBeenCalledWith(
-          expect.objectContaining({
-            type: 'DISPLAY_TOAST',
-            payload: expect.objectContaining({
-              type: 'error',
-              text: expect.stringContaining('Unpublish failed'),
-            }),
-          }),
-        )
-      })
-    })
+          )
+        })
+      },
+    )
   })
 
   describe('useReorderElement', () => {
@@ -310,8 +266,7 @@ describe('useElementMutations', () => {
         // The onSettled invalidation triggers a refetch — provide the original response
         { status: 200, body: treeApiResponse },
       ])
-      const dispatch = vi.fn()
-      window.ss!.store = { dispatch }
+      const dispatch = stubToastDispatch()
 
       const { wrapper } = createProviderWrapper({ queryClient })
       const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
@@ -327,14 +282,7 @@ describe('useElementMutations', () => {
         })
       })
 
-      await waitFor(() => {
-        expect(dispatch).toHaveBeenCalledWith(
-          expect.objectContaining({
-            type: 'DISPLAY_TOAST',
-            payload: expect.objectContaining({ type: 'error' }),
-          }),
-        )
-      })
+      await awaitErrorToast(dispatch)
     })
 
     it('does not refetch after an optimistic rollback', async () => {
@@ -351,8 +299,7 @@ describe('useElementMutations', () => {
         // the test fails cleanly on the call-count assertion instead of crashing.
         { status: 200, body: treeApiResponse },
       ])
-      const dispatch = vi.fn()
-      window.ss!.store = { dispatch }
+      const dispatch = stubToastDispatch()
 
       const { wrapper } = createProviderWrapper({ queryClient })
       // Mount a reader for the tree query so it becomes an *active* query —
@@ -375,14 +322,7 @@ describe('useElementMutations', () => {
       })
 
       // Wait for the error toast so the mutation has fully settled.
-      await waitFor(() => {
-        expect(dispatch).toHaveBeenCalledWith(
-          expect.objectContaining({
-            type: 'DISPLAY_TOAST',
-            payload: expect.objectContaining({ type: 'error' }),
-          }),
-        )
-      })
+      await awaitErrorToast(dispatch)
 
       // Flush any queued microtasks that an invalidate-triggered refetch
       // would use to schedule its fetch.
@@ -434,40 +374,16 @@ describe('useElementMutations', () => {
       // [elemB, elemA]; the reorder POST fails; onError must restore the cache
       // to the captured snapshot order [elemA, elemB]. No tree observer is
       // mounted, so the success-only invalidation cannot refetch and overwrite.
-      // gcTime: Infinity from construction keeps the rolled-back cache entry
-      // alive for inspection — with gcTime 0 and no mounted observer the entry
-      // is garbage-collected the moment the mutation settles.
-      const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+      // gcTime: Infinity keeps the rolled-back cache entry alive for
+      // inspection — with gcTime 0 and no mounted observer the entry is
+      // garbage-collected the moment the mutation settles.
+      const { queryClient, tree, column, elemA, elemB } = createReorderTree(1, 'main', {
+        gcTime: Infinity,
       })
       const queryKey = queryKeys.elementTree.byPage(1, 'main')
 
-      const column = createColumnNode({ id: 300, parent: { type: 'row', id: 200 }, childCount: 2 })
-      for (const child of column.children ?? []) {
-        ;(child as { parent: { type: 'column'; id: number }; parentKey: string }).parent = {
-          type: 'column',
-          id: 300,
-        }
-        ;(child as { parent: { type: 'column'; id: number }; parentKey: string }).parentKey =
-          'column-300'
-      }
-      const row = createRowNode({
-        id: 200,
-        parent: { type: 'section', id: 100 },
-        children: [column],
-      })
-      const section = createSectionNode({
-        id: 100,
-        parent: { type: 'page', id: 1 },
-        children: [row],
-      })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
-      queryClient.setQueryData(queryKey, tree)
-      const [elemA, elemB] = column.children ?? []
-
       mockFetchError(500, { message: 'Reorder failed' })
-      const dispatch = vi.fn()
-      window.ss!.store = { dispatch }
+      const dispatch = stubToastDispatch()
 
       const { wrapper } = createProviderWrapper({ queryClient })
       const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
@@ -485,14 +401,7 @@ describe('useElementMutations', () => {
           .catch(() => undefined)
       })
 
-      await waitFor(() => {
-        expect(dispatch).toHaveBeenCalledWith(
-          expect.objectContaining({
-            type: 'DISPLAY_TOAST',
-            payload: expect.objectContaining({ type: 'error' }),
-          }),
-        )
-      })
+      await awaitErrorToast(dispatch)
 
       // Cache must reflect the restored snapshot order, not the optimistic swap.
       const cached = queryClient.getQueryData<TreeApiResponse>(queryKey)
@@ -503,48 +412,26 @@ describe('useElementMutations', () => {
     })
 
     it('skips setQueryData rollback when no snapshot was captured', async () => {
-      // Fresh QueryClient — no pre-seeded tree, so onMutate's
-      // getQueryData returns undefined and onError must NOT attempt to
-      // restore a snapshot. Pins the `if (snapshot !== undefined)` guard
-      // at useElementMutations.ts:152.
-      const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false, gcTime: 0 } },
+      // No pre-seeded tree (seedCache: false), so onMutate's getQueryData
+      // returns undefined and onError must NOT attempt to restore a snapshot.
+      // Pins the `if (snapshot !== undefined)` guard at useElementMutations.ts:152.
+      const { queryClient, tree, column, elemB } = createReorderTree(1, 'main', {
+        seedCache: false,
       })
       const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData')
 
       mockFetchError(500, { message: 'fail' })
-      const dispatch = vi.fn()
-      window.ss!.store = { dispatch }
+      const dispatch = stubToastDispatch()
 
       const { wrapper } = createProviderWrapper({ queryClient })
       const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
-
-      // Build a minimal tree for the onMutate applyReorder call. The tree
-      // is NOT seeded into the cache — that's the scenario under test.
-      const column = createColumnNode({
-        id: 300,
-        parent: { type: 'row', id: 200 },
-        childCount: 1,
-      })
-      const row = createRowNode({
-        id: 200,
-        parent: { type: 'section', id: 100 },
-        children: [column],
-      })
-      const section = createSectionNode({
-        id: 100,
-        parent: { type: 'page', id: 1 },
-        children: [row],
-      })
-      const tree = createTreeApiResponse({ pageId: 1, sections: [section] })
-      const elem = column.children?.[0]
 
       await act(async () => {
         await result.current
           .mutateAsync({
             params: {
-              element: { type: 'element', id: elem!.self.id },
-              parent: { type: 'column', id: 300 },
+              element: { type: 'element', id: elemB.self.id },
+              parent: { type: 'column', id: column.self.id },
               after: null,
             },
             tree,
@@ -552,14 +439,7 @@ describe('useElementMutations', () => {
           .catch(() => undefined)
       })
 
-      await waitFor(() => {
-        expect(dispatch).toHaveBeenCalledWith(
-          expect.objectContaining({
-            type: 'DISPLAY_TOAST',
-            payload: expect.objectContaining({ type: 'error' }),
-          }),
-        )
-      })
+      await awaitErrorToast(dispatch)
 
       // onMutate ran setQueryData once (optimistic write on undefined
       // snapshot). onError must NOT have called it again with the
@@ -625,9 +505,7 @@ describe('useElementMutations', () => {
 
   describe('useDuplicateToElement', () => {
     it('invalidates both the source and destination tree on a cross-target duplicate', async () => {
-      const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false, gcTime: 0 } },
-      })
+      const queryClient = createTestQueryClient()
       const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
       mockFetchSuccess({})
 
@@ -663,9 +541,7 @@ describe('useElementMutations', () => {
 
   describe('useStandardMutationOptions onSuccess', () => {
     it('invalidates the specific page tree queryKey after a successful mutation', async () => {
-      const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false, gcTime: 0 } },
-      })
+      const queryClient = createTestQueryClient()
       const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
       mockFetchSuccess({})
 
@@ -685,9 +561,7 @@ describe('useElementMutations', () => {
     })
 
     it('invalidates the acceptableContainers query after a successful create', async () => {
-      const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false, gcTime: 0 } },
-      })
+      const queryClient = createTestQueryClient()
       const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
       mockFetchSuccess({})
 

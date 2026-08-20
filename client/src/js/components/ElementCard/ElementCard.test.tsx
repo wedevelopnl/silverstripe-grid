@@ -1,8 +1,9 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { act, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSimpleElement } from '@/testing/factories'
+import { defaultSortable, resetDndMocks } from '@/testing/mockDndKit'
 import { mockResizeObserver } from '@/testing/mockResizeObserver'
 import { mockFetchSuccess } from '@/testing/mockFetch'
 import { renderWithProviders } from '@/testing/renderWithProviders'
@@ -10,23 +11,16 @@ import { renderWithProviders } from '@/testing/renderWithProviders'
 import EditableElementCard from './EditableElementCard'
 import ReadonlyElementCard from './ReadonlyElementCard'
 
-const defaultSortable = {
-  attributes: {},
-  listeners: {},
-  setNodeRef: vi.fn(),
-  transform: null,
-  transition: undefined,
-  isDragging: false,
-}
+vi.mock('@dnd-kit/sortable', async () =>
+  (await import('@/testing/mockDndKit')).mockSortableModule(),
+)
 
-vi.mock('@dnd-kit/sortable', () => ({
-  useSortable: vi.fn(() => ({ ...defaultSortable })),
-}))
+beforeEach(() => {
+  mockFetchSuccess({})
+})
 
 afterEach(() => {
-  vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<
-    typeof useSortable
-  >)
+  resetDndMocks({ useSortable })
 })
 
 describe('EditableElementCard', () => {
@@ -36,7 +30,6 @@ describe('EditableElementCard', () => {
     // its floor, and the header wraps onto two lines — so the actions fold into
     // the overflow menu at exactly that point instead.
     function renderAtWidth(width: number) {
-      mockFetchSuccess({})
       const observer = mockResizeObserver()
       const element = createSimpleElement({ title: 'My Content Block' })
       const view = renderWithProviders(<EditableElementCard element={element} />)
@@ -97,7 +90,6 @@ describe('EditableElementCard', () => {
     })
 
     it('restores the icon row when the column is widened again', () => {
-      mockFetchSuccess({})
       const observer = mockResizeObserver()
       const element = createSimpleElement({ title: 'My Content Block' })
       renderWithProviders(<EditableElementCard element={element} />)
@@ -112,8 +104,6 @@ describe('EditableElementCard', () => {
   })
 
   it('renders element title', () => {
-    mockFetchSuccess({})
-
     const element = createSimpleElement({ title: 'My Content Block' })
 
     renderWithProviders(<EditableElementCard element={element} />)
@@ -122,8 +112,6 @@ describe('EditableElementCard', () => {
   })
 
   it('status attribute applied correctly', () => {
-    mockFetchSuccess({})
-
     const element = createSimpleElement({ status: 'draft' })
 
     renderWithProviders(<EditableElementCard element={element} />)
@@ -131,9 +119,9 @@ describe('EditableElementCard', () => {
     expect(screen.getByTestId('element-card')).toHaveAttribute('data-status', 'draft')
   })
 
+  // The card being an <a href> IS the clickable state — the stylesheet hooks
+  // :any-link, so the tag and href are the behaviour to pin.
   it('renders an anchor with the editLink href when editLink is set', () => {
-    mockFetchSuccess({})
-
     const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
 
     renderWithProviders(<EditableElementCard element={element} />)
@@ -144,8 +132,6 @@ describe('EditableElementCard', () => {
   })
 
   it('renders a div with no link when editLink is null', () => {
-    mockFetchSuccess({})
-
     const element = createSimpleElement({ editLink: null })
 
     renderWithProviders(<EditableElementCard element={element} />)
@@ -154,35 +140,7 @@ describe('EditableElementCard', () => {
     expect(screen.getByTestId('element-card').tagName).toBe('DIV')
   })
 
-  // The card being an <a href> IS the clickable state — the stylesheet hooks
-  // :any-link, so the tag and href are the behaviour to pin.
-  it('renders the card as a link when editLink is provided', () => {
-    mockFetchSuccess({})
-
-    const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
-
-    renderWithProviders(<EditableElementCard element={element} />)
-
-    const card = screen.getByTestId('element-card')
-    expect(card.tagName).toBe('A')
-    expect(card).toHaveAttribute('href', '/admin/pages/edit/show/5')
-  })
-
-  it('does not render the card as a link when editLink is null', () => {
-    mockFetchSuccess({})
-
-    const element = createSimpleElement({ editLink: null })
-
-    renderWithProviders(<EditableElementCard element={element} />)
-
-    const card = screen.getByTestId('element-card')
-    expect(card.tagName).toBe('DIV')
-    expect(card).not.toHaveAttribute('href')
-  })
-
   it('renders the icon with the blockSchema icon class', () => {
-    mockFetchSuccess({})
-
     const element = createSimpleElement({
       blockSchema: {
         typeName: 'Content',
@@ -200,8 +158,6 @@ describe('EditableElementCard', () => {
 
   describe('summary', () => {
     it('renders the summary line when a non-empty value is provided', () => {
-      mockFetchSuccess({})
-
       const element = createSimpleElement({ summary: 'A short preview of the block' })
 
       renderWithProviders(<EditableElementCard element={element} />)
@@ -212,8 +168,6 @@ describe('EditableElementCard', () => {
     })
 
     it('does not render the summary line when the field is absent', () => {
-      mockFetchSuccess({})
-
       const element = createSimpleElement()
 
       renderWithProviders(<EditableElementCard element={element} />)
@@ -222,8 +176,6 @@ describe('EditableElementCard', () => {
     })
 
     it('does not render the summary line when the value is an empty string', () => {
-      mockFetchSuccess({})
-
       const element = createSimpleElement({ summary: '' })
 
       renderWithProviders(<EditableElementCard element={element} />)
@@ -234,8 +186,6 @@ describe('EditableElementCard', () => {
 
   describe('drag handle', () => {
     it('renders the drag handle with the interpolated element title label', () => {
-      mockFetchSuccess({})
-
       const element = createSimpleElement({ title: 'Hero Banner' })
 
       renderWithProviders(<EditableElementCard element={element} />)
@@ -247,8 +197,6 @@ describe('EditableElementCard', () => {
 
   describe('modified badge', () => {
     it('renders the modified badge when status is modified', () => {
-      mockFetchSuccess({})
-
       const element = createSimpleElement({ status: 'modified' })
 
       renderWithProviders(<EditableElementCard element={element} />)
@@ -257,8 +205,6 @@ describe('EditableElementCard', () => {
     })
 
     it('does not render the modified badge when status is not modified', () => {
-      mockFetchSuccess({})
-
       const element = createSimpleElement({ status: 'published' })
 
       renderWithProviders(<EditableElementCard element={element} />)
@@ -277,8 +223,6 @@ describe('EditableElementCard', () => {
         ...defaultSortable,
         isDragging: true,
       } as unknown as ReturnType<typeof useSortable>)
-      mockFetchSuccess({})
-
       const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
       renderWithProviders(<EditableElementCard element={element} />)
 
@@ -292,8 +236,6 @@ describe('EditableElementCard', () => {
     })
 
     it('prevents navigation when a click originates inside an interactive descendant', () => {
-      mockFetchSuccess({})
-
       const element = createSimpleElement({ editLink: '/admin/pages/edit/show/5' })
       renderWithProviders(<EditableElementCard element={element} />)
 
@@ -309,8 +251,6 @@ describe('EditableElementCard', () => {
     })
 
     it('allows navigation when the click target has no interactive ancestor inside the card', () => {
-      mockFetchSuccess({})
-
       // A same-document fragment href keeps jsdom from attempting a real
       // cross-document navigation (which logs "Not implemented: navigation")
       // while still exercising the un-prevented click path this test asserts.
@@ -331,8 +271,6 @@ describe('EditableElementCard', () => {
     })
 
     it('allows navigation when the only interactive ancestor lies outside the card', () => {
-      mockFetchSuccess({})
-
       const element = createSimpleElement({
         title: 'Navigate me',
         editLink: '#edit',

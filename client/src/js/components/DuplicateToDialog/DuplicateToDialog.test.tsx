@@ -1,10 +1,11 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { StrictMode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { renderWithProviders } from '@/testing/renderWithProviders'
+import { createResponse } from '@/testing/mockFetch'
+import { createTestQueryClient, renderWithProviders } from '@/testing/renderWithProviders'
 
 import DuplicateToDialog from './DuplicateToDialog'
 
@@ -13,16 +14,6 @@ function resolveRequestUrl(input: string | URL | Request): string {
   if (input instanceof URL) return input.toString()
   return input.url
 }
-
-// jsdom doesn't support native dialog showModal/close — stub them
-beforeEach(() => {
-  HTMLDialogElement.prototype.showModal = vi.fn(function showModal(this: HTMLDialogElement) {
-    this.setAttribute('open', '')
-  })
-  HTMLDialogElement.prototype.close = vi.fn(function close(this: HTMLDialogElement) {
-    this.removeAttribute('open')
-  })
-})
 
 const PAGES = [
   { id: 1, title: 'Home', parentId: 0, hasGridZones: true },
@@ -61,31 +52,14 @@ function mockApiRoutes(overrides?: {
     else if (url.includes('/api/zones/')) body = zones
     else if (url.includes('/api/acceptableContainers/')) body = containers
 
-    return Promise.resolve({
-      ok: true,
-      status: 200,
-      statusText: 'OK',
-      json: () => Promise.resolve(body),
-      headers: new Headers(),
-      redirected: false,
-      type: 'basic',
-      url: '',
-      clone() {
-        return this
-      },
-      body: null,
-      bodyUsed: false,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-      blob: () => Promise.resolve(new Blob()),
-      bytes: () => Promise.resolve(new Uint8Array()),
-      formData: () => Promise.resolve(new FormData()),
-      text: () => Promise.resolve(JSON.stringify(body)),
-    } as Response)
+    return Promise.resolve(createResponse({ body }))
   })
 }
 
-function renderDialog(overrides: Partial<React.ComponentProps<typeof DuplicateToDialog>> = {}) {
-  const props: React.ComponentProps<typeof DuplicateToDialog> = {
+function defaultDialogProps(
+  overrides: Partial<React.ComponentProps<typeof DuplicateToDialog>> = {},
+): React.ComponentProps<typeof DuplicateToDialog> {
+  return {
     isOpen: true,
     elementType: 'row',
     currentPageId: 1,
@@ -94,6 +68,10 @@ function renderDialog(overrides: Partial<React.ComponentProps<typeof DuplicateTo
     error: null,
     ...overrides,
   }
+}
+
+function renderDialog(overrides: Partial<React.ComponentProps<typeof DuplicateToDialog>> = {}) {
+  const props = defaultDialogProps(overrides)
 
   return { ...renderWithProviders(<DuplicateToDialog {...props} />), props }
 }
@@ -107,19 +85,9 @@ function renderDialog(overrides: Partial<React.ComponentProps<typeof DuplicateTo
 function renderToggleableDialog(
   overrides: Partial<React.ComponentProps<typeof DuplicateToDialog>> = {},
 ) {
-  const props: React.ComponentProps<typeof DuplicateToDialog> = {
-    isOpen: true,
-    elementType: 'row',
-    currentPageId: 1,
-    onConfirm: vi.fn(),
-    onCancel: vi.fn(),
-    error: null,
-    ...overrides,
-  }
+  const props = defaultDialogProps(overrides)
 
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  })
+  const queryClient = createTestQueryClient()
 
   function renderTree(treeProps: React.ComponentProps<typeof DuplicateToDialog>) {
     return (
@@ -178,26 +146,13 @@ function mockApiRoutesFailing(failing: 'pages' | 'zones' | 'containers') {
       ? { status: 'error', errors: [{ type: 'error', code: 500, value: 'Database is on fire' }] }
       : (bodies[route ?? 'pages'] as unknown)
 
-    return Promise.resolve({
-      ok: !failed,
-      status: failed ? 500 : 200,
-      statusText: failed ? 'Internal Server Error' : 'OK',
-      json: () => Promise.resolve(body),
-      headers: new Headers(),
-      redirected: false,
-      type: 'basic' as ResponseType,
-      url: '',
-      clone() {
-        return this
-      },
-      body: null,
-      bodyUsed: false,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-      blob: () => Promise.resolve(new Blob()),
-      bytes: () => Promise.resolve(new Uint8Array()),
-      formData: () => Promise.resolve(new FormData()),
-      text: () => Promise.resolve(JSON.stringify(body)),
-    } as Response)
+    return Promise.resolve(
+      createResponse({
+        status: failed ? 500 : 200,
+        statusText: failed ? 'Internal Server Error' : 'OK',
+        body,
+      }),
+    )
   })
 }
 
@@ -423,14 +378,7 @@ describe('DuplicateToDialog', () => {
       mockApiRoutes()
       renderDialog({ elementType: 'row' })
 
-      await goToZoneStep(user)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByText('main'))
-      await user.click(screen.getByTestId('duplicate-to-next'))
+      await selectZoneAndAdvance(user)
 
       await waitFor(() => {
         expect(screen.getByTestId('duplicate-to-step-container')).toBeInTheDocument()
@@ -442,14 +390,7 @@ describe('DuplicateToDialog', () => {
       mockApiRoutes()
       renderDialog({ elementType: 'section' })
 
-      await goToZoneStep(user)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByText('main'))
-      await user.click(screen.getByTestId('duplicate-to-next'))
+      await selectZoneAndAdvance(user)
 
       await waitFor(() => {
         expect(screen.getByTestId('duplicate-to-step-confirm')).toBeInTheDocument()
@@ -560,14 +501,7 @@ describe('DuplicateToDialog', () => {
       mockApiRoutes()
       renderDialog({ elementType: 'section' })
 
-      await goToZoneStep(user)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByText('main'))
-      await user.click(screen.getByTestId('duplicate-to-next'))
+      await selectZoneAndAdvance(user)
 
       await waitFor(() => {
         expect(screen.getByTestId('duplicate-to-step-confirm')).toBeInTheDocument()
@@ -585,14 +519,7 @@ describe('DuplicateToDialog', () => {
       const onConfirm = vi.fn()
       renderDialog({ elementType: 'section', onConfirm })
 
-      await goToZoneStep(user)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByText('main'))
-      await user.click(screen.getByTestId('duplicate-to-next'))
+      await selectZoneAndAdvance(user)
 
       await waitFor(() => {
         expect(screen.getByTestId('duplicate-to-confirm')).toBeInTheDocument()
@@ -629,12 +556,7 @@ describe('DuplicateToDialog', () => {
       renderDialog({ elementType: 'section' })
 
       // Navigate to confirm step
-      await goToZoneStep(user)
-      await waitFor(() => {
-        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
-      })
-      await user.click(screen.getByText('main'))
-      await user.click(screen.getByTestId('duplicate-to-next'))
+      await selectZoneAndAdvance(user)
 
       await waitFor(() => {
         expect(screen.getByTestId('duplicate-to-step-confirm')).toBeInTheDocument()
@@ -804,34 +726,11 @@ describe('DuplicateToDialog', () => {
     it('shows "Loading zones..." before zone data arrives', async () => {
       const user = userEvent.setup()
 
-      function createUrlResponse(body: unknown): Response {
-        return {
-          ok: true,
-          status: 200,
-          statusText: 'OK',
-          json: () => Promise.resolve(body),
-          headers: new Headers(),
-          redirected: false,
-          type: 'basic' as ResponseType,
-          url: '',
-          clone() {
-            return this
-          },
-          body: null,
-          bodyUsed: false,
-          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-          blob: () => Promise.resolve(new Blob()),
-          bytes: () => Promise.resolve(new Uint8Array()),
-          formData: () => Promise.resolve(new FormData()),
-          text: () => Promise.resolve(JSON.stringify(body)),
-        } as Response
-      }
-
       vi.spyOn(globalThis, 'fetch').mockImplementation((input: string | URL | Request) => {
         const url = resolveRequestUrl(input)
 
         if (url.includes('/api/pages')) {
-          return Promise.resolve(createUrlResponse(PAGES))
+          return Promise.resolve(createResponse({ body: PAGES }))
         }
 
         // Zones never resolve
@@ -855,34 +754,11 @@ describe('DuplicateToDialog', () => {
     it('shows "Loading containers..." before container data arrives', async () => {
       const user = userEvent.setup()
 
-      function createUrlResponse(body: unknown): Response {
-        return {
-          ok: true,
-          status: 200,
-          statusText: 'OK',
-          json: () => Promise.resolve(body),
-          headers: new Headers(),
-          redirected: false,
-          type: 'basic' as ResponseType,
-          url: '',
-          clone() {
-            return this
-          },
-          body: null,
-          bodyUsed: false,
-          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-          blob: () => Promise.resolve(new Blob()),
-          bytes: () => Promise.resolve(new Uint8Array()),
-          formData: () => Promise.resolve(new FormData()),
-          text: () => Promise.resolve(JSON.stringify(body)),
-        } as Response
-      }
-
       vi.spyOn(globalThis, 'fetch').mockImplementation((input: string | URL | Request) => {
         const url = resolveRequestUrl(input)
 
-        if (url.includes('/api/pages')) return Promise.resolve(createUrlResponse(PAGES))
-        if (url.includes('/api/zones/')) return Promise.resolve(createUrlResponse(ZONES))
+        if (url.includes('/api/pages')) return Promise.resolve(createResponse({ body: PAGES }))
+        if (url.includes('/api/zones/')) return Promise.resolve(createResponse({ body: ZONES }))
 
         // Containers never resolve
         return new Promise(() => {})
@@ -975,13 +851,6 @@ describe('DuplicateToDialog', () => {
   })
 
   describe('step titles', () => {
-    it('shows "Select target page" on page step', () => {
-      mockApiRoutes()
-      renderDialog()
-
-      expect(screen.getByText('Select target page')).toBeInTheDocument()
-    })
-
     it('shows "Select zone" on zone step', async () => {
       const user = userEvent.setup()
       mockApiRoutes()
@@ -1009,12 +878,7 @@ describe('DuplicateToDialog', () => {
       mockApiRoutes()
       renderDialog({ elementType: 'section' })
 
-      await goToZoneStep(user)
-      await waitFor(() => {
-        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
-      })
-      await user.click(screen.getByText('main'))
-      await user.click(screen.getByTestId('duplicate-to-next'))
+      await selectZoneAndAdvance(user)
 
       await waitFor(() => {
         expect(screen.getByText('Confirm duplication')).toBeInTheDocument()
@@ -1124,12 +988,7 @@ describe('DuplicateToDialog', () => {
       mockApiRoutes()
       renderDialog({ elementType: 'section' })
 
-      await goToZoneStep(user)
-      await waitFor(() => {
-        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
-      })
-      await user.click(screen.getByText('sidebar'))
-      await user.click(screen.getByTestId('duplicate-to-next'))
+      await selectZoneAndAdvance(user, 'sidebar')
 
       await waitFor(() => {
         expect(screen.getByTestId('duplicate-to-step-confirm')).toBeInTheDocument()
@@ -1346,12 +1205,7 @@ describe('DuplicateToDialog', () => {
       mockApiRoutes()
       renderDialog({ elementType: 'section' })
 
-      await goToZoneStep(user)
-      await waitFor(() => {
-        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
-      })
-      await user.click(screen.getByText('main'))
-      await user.click(screen.getByTestId('duplicate-to-next'))
+      await selectZoneAndAdvance(user)
       await waitFor(() => {
         expect(screen.getByTestId('duplicate-to-step-confirm')).toBeInTheDocument()
       })
@@ -1926,12 +1780,7 @@ describe('DuplicateToDialog', () => {
       mockApiRoutes()
       renderDialog({ elementType: 'section' })
 
-      await goToZoneStep(user)
-      await waitFor(() => {
-        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
-      })
-      await user.click(screen.getByText('main'))
-      await user.click(screen.getByTestId('duplicate-to-next'))
+      await selectZoneAndAdvance(user)
 
       await waitFor(() => {
         expect(screen.getByTestId('duplicate-to-step-confirm')).toBeInTheDocument()

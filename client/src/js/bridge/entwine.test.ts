@@ -1,5 +1,6 @@
 import { createElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushObservers } from '@/testing/flush'
 
 // Return a trivial component from the Injector so the real GridEditor (which
 // pulls in TanStack Query, DnD, etc.) never loads during the test. We only
@@ -9,10 +10,6 @@ vi.mock('./Injector', () => ({
 }))
 
 const HOST_SELECTOR = '[data-react-mount="grid-editor"]'
-
-async function flushMicrotasks(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 0))
-}
 
 function createHost(): HTMLElement {
   const host = document.createElement('div')
@@ -60,7 +57,7 @@ describe('entwine bridge MutationObserver fallback', () => {
     const host = createHost()
     bootRoot?.appendChild(host)
 
-    await flushMicrotasks()
+    await flushObservers()
 
     expect(host.getAttribute('data-grid-editor-mounted')).toBe('true')
     expect(host.querySelector('[data-grid-editor-stub="true"]')).not.toBeNull()
@@ -72,7 +69,7 @@ describe('entwine bridge MutationObserver fallback', () => {
     const bootRoot = document.querySelector('.js-injector-boot')
     const host = createHost()
     bootRoot?.appendChild(host)
-    await flushMicrotasks()
+    await flushObservers()
     expect(host.getAttribute('data-grid-editor-mounted')).toBe('true')
 
     // Content churn inside a mounted editor is React-managed and can never
@@ -80,7 +77,7 @@ describe('entwine bridge MutationObserver fallback', () => {
     // be picked up by the Pjax observer.
     const nested = createHost()
     host.appendChild(nested)
-    await flushMicrotasks()
+    await flushObservers()
 
     expect(nested.getAttribute('data-grid-editor-mounted')).toBeNull()
   })
@@ -91,12 +88,12 @@ describe('entwine bridge MutationObserver fallback', () => {
     const bootRoot = document.querySelector('.js-injector-boot')
     const host = createHost()
     bootRoot?.appendChild(host)
-    await flushMicrotasks()
+    await flushObservers()
 
     expect(host.getAttribute('data-grid-editor-mounted')).toBe('true')
 
     host.remove()
-    await flushMicrotasks()
+    await flushObservers()
 
     expect(document.querySelector(`${HOST_SELECTOR}[data-grid-editor-mounted="true"]`)).toBeNull()
   })

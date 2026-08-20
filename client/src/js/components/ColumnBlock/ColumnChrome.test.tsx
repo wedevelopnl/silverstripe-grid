@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { type ChromeContractOverrides, describeChromeContract } from '@/testing/chromeContract'
 import ColumnChrome from './ColumnChrome'
 
 const baseProps = {
@@ -15,30 +16,19 @@ const baseProps = {
 }
 
 describe('ColumnChrome', () => {
+  describeChromeContract({
+    prefix: 'column',
+    title: 'Sidebar',
+    renderChrome: (overrides: ChromeContractOverrides = {}) =>
+      render(<ColumnChrome {...baseProps} {...overrides} />),
+  })
+
   it('renders the outer wrapper, card and header', () => {
     render(<ColumnChrome {...baseProps} />)
 
     expect(screen.getByTestId('column-block-outer')).toBeInTheDocument()
     expect(screen.getByTestId('column-block')).toBeInTheDocument()
     expect(screen.getByTestId('column-header')).toBeInTheDocument()
-  })
-
-  it('applies data-status from the status prop', () => {
-    render(<ColumnChrome {...baseProps} status="draft" />)
-
-    expect(screen.getByTestId('column-block')).toHaveAttribute('data-status', 'draft')
-  })
-
-  it('sets data-collapsed when isCollapsed is true', () => {
-    render(<ColumnChrome {...baseProps} isCollapsed={true} />)
-
-    expect(screen.getByTestId('column-block')).toHaveAttribute('data-collapsed', '')
-  })
-
-  it('does not set data-collapsed when isCollapsed is false', () => {
-    render(<ColumnChrome {...baseProps} isCollapsed={false} />)
-
-    expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-collapsed')
   })
 
   it('sets data-hidden when hidden is true', () => {
@@ -53,82 +43,11 @@ describe('ColumnChrome', () => {
     expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-hidden')
   })
 
-  it('sets data-drop-target when dropTarget is true', () => {
-    render(<ColumnChrome {...baseProps} dropTarget={true} />)
-
-    expect(screen.getByTestId('column-block')).toHaveAttribute('data-drop-target', '')
-  })
-
-  it('does not set data-drop-target when dropTarget is falsy', () => {
-    render(<ColumnChrome {...baseProps} />)
-
-    expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-drop-target')
-  })
-
-  it('renders the title as a link when titleHref is provided', () => {
-    render(<ColumnChrome {...baseProps} titleHref="/admin/pages/edit/show/7" />)
-
-    const link = screen.getByTestId('column-edit-link')
-    expect(link).toHaveAttribute('href', '/admin/pages/edit/show/7')
-    expect(link).toHaveTextContent('Sidebar')
-  })
-
-  it('renders the title as plain text when titleHref is omitted', () => {
-    render(<ColumnChrome {...baseProps} />)
-
-    expect(screen.queryByTestId('column-edit-link')).not.toBeInTheDocument()
-    expect(screen.getByTestId('column-title')).toHaveTextContent('Sidebar')
-  })
-
-  it('badges the element and adds no descendant note when only the element is modified', () => {
-    render(<ColumnChrome {...baseProps} status="modified" />)
-
-    expect(screen.getByTestId('column-status-badge')).toBeInTheDocument()
-    expect(screen.queryByTestId('column-unpublished-indicator')).not.toBeInTheDocument()
-  })
-
-  it('announces the descendant, with no badge, when only a descendant is modified', () => {
-    render(<ColumnChrome {...baseProps} status="published" hasUnpublishedDescendant={true} />)
-
-    expect(screen.getByTestId('column-unpublished-indicator')).toBeInTheDocument()
-    expect(screen.queryByTestId('column-status-badge')).not.toBeInTheDocument()
-  })
-
-  it('badges the element and announces the descendant when both are modified', () => {
-    render(<ColumnChrome {...baseProps} status="modified" hasUnpublishedDescendant={true} />)
-
-    expect(screen.getByTestId('column-status-badge')).toBeInTheDocument()
-    expect(screen.getByTestId('column-unpublished-indicator')).toBeInTheDocument()
-  })
-
-  it('sets data-descendant-unpublished only when a descendant is unpublished', () => {
-    const { rerender } = render(<ColumnChrome {...baseProps} />)
-    expect(screen.getByTestId('column-block')).not.toHaveAttribute('data-descendant-unpublished')
-
-    rerender(<ColumnChrome {...baseProps} hasUnpublishedDescendant={true} />)
-    expect(screen.getByTestId('column-block')).toHaveAttribute('data-descendant-unpublished')
-  })
-
-  it('badges a never-published element as draft', () => {
-    render(<ColumnChrome {...baseProps} status="draft" />)
-
-    expect(screen.getByTestId('column-status-badge')).toHaveTextContent('Draft')
-  })
-
-  it('renders neither mark when nothing is unpublished', () => {
-    render(<ColumnChrome {...baseProps} status="published" />)
-
-    expect(screen.queryByTestId('column-status-badge')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('column-unpublished-indicator')).not.toBeInTheDocument()
-  })
-
-  it('renders each optional slot when provided', () => {
+  it('renders each column-specific optional slot when provided', () => {
     render(
       <ColumnChrome
         {...baseProps}
         insertBefore={<span data-testid="insert-slot" />}
-        leading={<span data-testid="leading-slot" />}
-        trailing={<span data-testid="trailing-slot" />}
         layoutSettings={<span data-testid="layout-slot" />}
         footer={<span data-testid="footer-slot" />}
         overlay={<span data-testid="overlay-slot" />}
@@ -136,8 +55,6 @@ describe('ColumnChrome', () => {
     )
 
     expect(screen.getByTestId('insert-slot')).toBeInTheDocument()
-    expect(screen.getByTestId('leading-slot')).toBeInTheDocument()
-    expect(screen.getByTestId('trailing-slot')).toBeInTheDocument()
     expect(screen.getByTestId('layout-slot')).toBeInTheDocument()
     // The layout-settings wrapper div is only rendered when layoutSettings is provided.
     expect(document.querySelector('.ssgrid-column-layout-settings')).not.toBeNull()
@@ -145,12 +62,10 @@ describe('ColumnChrome', () => {
     expect(screen.getByTestId('overlay-slot')).toBeInTheDocument()
   })
 
-  it('omits the optional slots when absent', () => {
+  it('omits the column-specific optional slots when absent', () => {
     render(<ColumnChrome {...baseProps} />)
 
     expect(screen.queryByTestId('insert-slot')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('leading-slot')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('trailing-slot')).not.toBeInTheDocument()
     expect(screen.queryByTestId('layout-slot')).not.toBeInTheDocument()
     // The `layoutSettings !== undefined` guard must omit the wrapper div entirely
     // (not render an empty one) when the slot is absent.

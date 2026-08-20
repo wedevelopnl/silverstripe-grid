@@ -1,7 +1,6 @@
-import { QueryClient } from '@tanstack/react-query'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '@/hooks/queryKeys'
 import * as activeViewportStore from '@/state/activeViewport'
 import {
@@ -11,7 +10,7 @@ import {
   createTreeApiResponse,
 } from '@/testing/factories'
 import { mockFetchSuccess } from '@/testing/mockFetch'
-import { renderWithProviders } from '@/testing/renderWithProviders'
+import { createTestQueryClient, renderWithProviders } from '@/testing/renderWithProviders'
 import type { TreeApiResponse, ViewportSettings } from '@/types/elements'
 import ViewportSwitcher from './ViewportSwitcher'
 
@@ -33,9 +32,7 @@ function treeWithOverride(viewport: string): TreeApiResponse {
 }
 
 function seeded(...entries: [readonly unknown[], TreeApiResponse][]) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  })
+  const queryClient = createTestQueryClient()
   for (const [key, tree] of entries) {
     queryClient.setQueryData(key, tree)
   }
@@ -46,12 +43,6 @@ const trigger = () => screen.getByTestId('viewport-picker-trigger')
 const dropdown = () => screen.getByTestId('viewport-picker-dropdown')
 
 describe('ViewportSwitcher', () => {
-  beforeEach(() => {
-    // jsdom does not implement HTMLDialogElement.showModal/close
-    HTMLDialogElement.prototype.showModal = vi.fn()
-    HTMLDialogElement.prototype.close = vi.fn()
-  })
-
   it('presents the viewport control as a picker', () => {
     mockFetchSuccess({})
 

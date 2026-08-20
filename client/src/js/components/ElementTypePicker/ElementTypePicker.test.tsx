@@ -1,16 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { AllowedTypeInfo } from '@/types/elements'
 
 import ElementTypePicker from './ElementTypePicker'
-
-beforeEach(() => {
-  // jsdom does not implement HTMLDialogElement.showModal/close
-  HTMLDialogElement.prototype.showModal = vi.fn()
-  HTMLDialogElement.prototype.close = vi.fn()
-})
 
 const allowedTypes: Record<string, AllowedTypeInfo> = {
   'App\\TextBlock': {

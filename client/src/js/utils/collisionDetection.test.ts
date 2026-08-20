@@ -1,11 +1,19 @@
 import type { ClientRect, DroppableContainer } from '@dnd-kit/core'
-import { createDroppable, createDroppableWithRect, makeDomRect } from '@/testing/dndRectFactories'
+import {
+  buildCollisionArgs,
+  createDroppable,
+  createDroppableWithRect,
+  makeDomRect,
+} from '@/testing/dndRectFactories'
 import {
   centerCrossing,
   createTypedCollisionDetection,
   filterParentContainers,
   filterSiblings,
+  type OverRectSnapshot,
 } from './collisionDetection'
+
+type OverRectRef = { current: OverRectSnapshot | null }
 
 describe('filterSiblings', () => {
   const containers = [
@@ -118,31 +126,23 @@ describe('centerCrossing', () => {
     const rect = overrides.target ?? targetRect
     const droppables = overrides.containers ?? [createDroppable('row-2')]
 
-    const initialRect = makeDomRect(
-      initialX - collisionWidth / 2,
-      initialY - collisionHeight / 2,
-      collisionWidth,
-      collisionHeight,
-    )
-
-    const collisionRect = makeDomRect(
-      currentX - collisionWidth / 2,
-      currentY - collisionHeight / 2,
-      collisionWidth,
-      collisionHeight,
-    )
-
-    return {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: droppables,
-      droppableRects: new Map([[droppables[0].id, rect]]),
-      pointerCoordinates: { x: pointerX, y: pointerY },
-    }
+    return buildCollisionArgs({
+      initialRect: makeDomRect(
+        initialX - collisionWidth / 2,
+        initialY - collisionHeight / 2,
+        collisionWidth,
+        collisionHeight,
+      ),
+      collisionRect: makeDomRect(
+        currentX - collisionWidth / 2,
+        currentY - collisionHeight / 2,
+        collisionWidth,
+        collisionHeight,
+      ),
+      containers: droppables,
+      rects: [[String(droppables[0].id), rect]],
+      pointer: { x: pointerX, y: pointerY },
+    })
   }
 
   it('detects collision when center crosses threshold moving down past target', () => {
@@ -150,7 +150,7 @@ describe('centerCrossing', () => {
     // Initial at y=100 (below threshold? No, initial < threshold).
     // Current at y=310 (above threshold). Crossed from below.
     const args = buildArgs({ currentY: 310, pointerY: 310 })
-    const collisions = centerCrossing(args as never)
+    const collisions = centerCrossing(args)
 
     expect(collisions).toHaveLength(1)
     expect(collisions[0].id).toBe('row-2')
@@ -159,7 +159,7 @@ describe('centerCrossing', () => {
   it('returns empty when threshold not yet crossed', () => {
     // Target threshold at ~300. Current at 200 — hasn't crossed yet.
     const args = buildArgs({ currentY: 200, pointerY: 200 })
-    const collisions = centerCrossing(args as never)
+    const collisions = centerCrossing(args)
 
     expect(collisions).toHaveLength(0)
   })
@@ -169,7 +169,7 @@ describe('centerCrossing', () => {
     // outside the target rect + MARGIN_X (50px).
     // Target rect: left=50, width=200, so right=250. Margin extends to 300.
     const args = buildArgs({ currentY: 310, pointerY: 310, pointerX: 400 })
-    const collisions = centerCrossing(args as never)
+    const collisions = centerCrossing(args)
 
     expect(collisions).toHaveLength(0)
   })
@@ -184,7 +184,7 @@ describe('centerCrossing', () => {
       currentY: 600,
       pointerY: 600,
     })
-    const collisions = centerCrossing(args as never)
+    const collisions = centerCrossing(args)
 
     expect(collisions).toHaveLength(0)
   })
@@ -198,7 +198,7 @@ describe('centerCrossing', () => {
     // With our small overlay (50px), threshold is at 300 (permissive).
     // Position just past 300 should trigger.
     const args = buildArgs({ currentY: 301, pointerY: 301 })
-    const collisions = centerCrossing(args as never)
+    const collisions = centerCrossing(args)
 
     expect(collisions).toHaveLength(1)
   })
@@ -212,7 +212,7 @@ describe('centerCrossing', () => {
       currentY: 320,
       pointerY: 320,
     })
-    const collisions = centerCrossing(args as never)
+    const collisions = centerCrossing(args)
 
     expect(collisions).toHaveLength(1)
     expect(collisions[0].id).toBe('row-2')
@@ -221,7 +221,7 @@ describe('centerCrossing', () => {
   it('returns empty when initial rect is null', () => {
     const args = buildArgs({})
     ;(args.active.rect.current as unknown as { initial: null }).initial = null
-    const collisions = centerCrossing(args as never)
+    const collisions = centerCrossing(args)
 
     expect(collisions).toHaveLength(0)
   })
@@ -229,7 +229,7 @@ describe('centerCrossing', () => {
   it('skips containers with no droppable rect', () => {
     const args = buildArgs({ currentY: 310, pointerY: 310 })
     args.droppableRects.clear()
-    const collisions = centerCrossing(args as never)
+    const collisions = centerCrossing(args)
 
     expect(collisions).toHaveLength(0)
   })
@@ -243,9 +243,8 @@ describe('centerCrossing', () => {
     const args = buildArgs({ currentY: 450, pointerY: 450, containers: [far, near] })
     args.droppableRects.set('row-2', nearRect)
     args.droppableRects.set('row-3', farRect)
-    args.droppableContainers = [far, near]
 
-    const collisions = centerCrossing(args as never)
+    const collisions = centerCrossing(args)
 
     // Both targets have crossed (row-2 threshold 300, row-3 threshold 425;
     // current center 450 passes both), but only the winner is returned.
@@ -265,38 +264,27 @@ describe('createTypedCollisionDetection', () => {
   function buildArgs(overrides: {
     activeId?: string
     containers?: DroppableContainer[]
-    rects?: Map<string | number, ClientRect>
+    rects?: ReadonlyArray<readonly [string, ClientRect]>
     pointerX?: number
     pointerY?: number
   }) {
-    const activeId = overrides.activeId ?? 'row-1'
     const pointerX = overrides.pointerX ?? 150
     const pointerY = overrides.pointerY ?? 310
 
-    const collisionRect = makeDomRect(100, pointerY - 25, 100, 50)
-    const initialRect = makeDomRect(100, 75, 100, 50)
-
-    return {
-      active: {
-        id: activeId,
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: overrides.containers ?? [],
-      droppableRects: overrides.rects ?? new Map(),
-      pointerCoordinates: { x: pointerX, y: pointerY },
-    }
+    return buildCollisionArgs({
+      activeId: overrides.activeId ?? 'row-1',
+      initialRect: makeDomRect(100, 75, 100, 50),
+      collisionRect: makeDomRect(100, pointerY - 25, 100, 50),
+      containers: overrides.containers ?? [],
+      rects: overrides.rects,
+      pointer: { x: pointerX, y: pointerY },
+    })
   }
 
   describe('without pending move', () => {
     it('uses centerCrossing for siblings and returns collision', () => {
       const sibling = createDroppable('row-2')
       const parent = createDroppable('section-1')
-      const rects = new Map<string | number, ClientRect>([
-        ['row-2', siblingRect],
-        ['section-1', parentRect],
-      ])
 
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
@@ -305,11 +293,14 @@ describe('createTypedCollisionDetection', () => {
       const args = buildArgs({
         activeId: 'row-1',
         containers: [sibling, parent],
-        rects,
+        rects: [
+          ['row-2', siblingRect],
+          ['section-1', parentRect],
+        ],
         pointerY: 310,
       })
 
-      const collisions = detect(args as never)
+      const collisions = detect(args)
 
       expect(collisions).toHaveLength(1)
       expect(collisions[0].id).toBe('row-2')
@@ -317,7 +308,6 @@ describe('createTypedCollisionDetection', () => {
 
     it('falls back to parent containers when no sibling collision', () => {
       const parent = createDroppable('section-1')
-      const rects = new Map<string | number, ClientRect>([['section-1', parentRect]])
 
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
@@ -327,12 +317,12 @@ describe('createTypedCollisionDetection', () => {
       const args = buildArgs({
         activeId: 'row-1',
         containers: [parent],
-        rects,
+        rects: [['section-1', parentRect]],
         pointerX: 400,
         pointerY: 300,
       })
 
-      const collisions = detect(args as never)
+      const collisions = detect(args)
 
       expect(collisions).toHaveLength(1)
       expect(collisions[0].id).toBe('section-1')
@@ -341,10 +331,6 @@ describe('createTypedCollisionDetection', () => {
     it('excludes the active item from droppable containers', () => {
       const self = createDroppable('row-1')
       const parent = createDroppable('section-1')
-      const rects = new Map<string | number, ClientRect>([
-        ['row-1', makeDomRect(100, 95, 100, 50)],
-        ['section-1', parentRect],
-      ])
 
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
@@ -353,12 +339,15 @@ describe('createTypedCollisionDetection', () => {
       const args = buildArgs({
         activeId: 'row-1',
         containers: [self, parent],
-        rects,
+        rects: [
+          ['row-1', makeDomRect(100, 95, 100, 50)],
+          ['section-1', parentRect],
+        ],
         pointerX: 400,
         pointerY: 300,
       })
 
-      const collisions = detect(args as never)
+      const collisions = detect(args)
       const ids = collisions.map((c) => c.id)
 
       expect(ids).not.toContain('row-1')
@@ -384,11 +373,11 @@ describe('createTypedCollisionDetection', () => {
       const args = buildArgs({
         activeId: 'row-1',
         containers: [sibling],
-        rects: new Map([['row-2', siblingRect]]),
+        rects: [['row-2', siblingRect]],
         pointerY: 310,
       })
 
-      const collisions = detect(args as never)
+      const collisions = detect(args)
 
       expect(collisions).toHaveLength(1)
       expect(collisions[0].id).toBe('row-2')
@@ -417,14 +406,14 @@ describe('createTypedCollisionDetection', () => {
       const args = buildArgs({
         activeId: 'row-1',
         containers: [inPending, notInPending],
-        rects: new Map([
+        rects: [
           ['row-2', siblingRect],
           ['row-3', makeDomRect(50, 400, 200, 100)],
-        ]),
+        ],
         pointerY: 310,
       })
 
-      const collisions = detect(args as never)
+      const collisions = detect(args)
       const ids = collisions.map((c) => c.id)
 
       expect(ids).toContain('row-2')
@@ -437,7 +426,6 @@ describe('createTypedCollisionDetection', () => {
       // When the source container has no items (e.g. dragged the only row out),
       // centerCrossing should check ALL siblings, not just source-container ones.
       const targetSibling = createDroppable('row-5')
-      const rects = new Map<string | number, ClientRect>([['row-5', siblingRect]])
 
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
@@ -447,11 +435,11 @@ describe('createTypedCollisionDetection', () => {
       const args = buildArgs({
         activeId: 'row-1',
         containers: [targetSibling],
-        rects,
+        rects: [['row-5', siblingRect]],
         pointerY: 310,
       })
 
-      const collisions = detect(args as never)
+      const collisions = detect(args)
 
       expect(collisions).toHaveLength(1)
       expect(collisions[0].id).toBe('row-5')
@@ -466,24 +454,21 @@ describe('createTypedCollisionDetection', () => {
         width: 200,
         height: 100,
       })
-      const overRectRef = { current: null } as {
-        current: { id: string | number; nodeRef: { readonly current: HTMLElement | null } } | null
-      }
+      const overRectRef: OverRectRef = { current: null }
 
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
         overRectRef,
       })
 
-      const rects = new Map<string | number, ClientRect>([['row-2', siblingRect]])
       const args = buildArgs({
         activeId: 'row-1',
         containers: [sibling],
-        rects,
+        rects: [['row-2', siblingRect]],
         pointerY: 310,
       })
 
-      detect(args as never)
+      detect(args)
 
       expect(overRectRef.current).not.toBeNull()
       expect(overRectRef.current!.id).toBe('row-2')
@@ -498,9 +483,7 @@ describe('createTypedCollisionDetection', () => {
         height: 100,
       })
       const pendingItems = new Set<string | number>(['row-2'])
-      const overRectRef = { current: null } as {
-        current: { id: string | number; nodeRef: { readonly current: HTMLElement | null } } | null
-      }
+      const overRectRef: OverRectRef = { current: null }
 
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: true },
@@ -511,11 +494,11 @@ describe('createTypedCollisionDetection', () => {
       const args = buildArgs({
         activeId: 'row-1',
         containers: [sibling],
-        rects: new Map([['row-2', siblingRect]]),
+        rects: [['row-2', siblingRect]],
         pointerY: 310,
       })
 
-      detect(args as never)
+      detect(args)
 
       // The pending path captures the winner's node so handleDragMove can read
       // a live getBoundingClientRect() for before/after direction (over.rect
@@ -530,25 +513,22 @@ describe('createTypedCollisionDetection', () => {
         width: 800,
         height: 600,
       })
-      const overRectRef = { current: null } as {
-        current: { id: string | number; nodeRef: { readonly current: HTMLElement | null } } | null
-      }
+      const overRectRef: OverRectRef = { current: null }
 
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
         overRectRef,
       })
 
-      const rects = new Map<string | number, ClientRect>([['section-1', parentRect]])
       const args = buildArgs({
         activeId: 'row-1',
         containers: [parent],
-        rects,
+        rects: [['section-1', parentRect]],
         pointerX: 400,
         pointerY: 300,
       })
 
-      detect(args as never)
+      detect(args)
 
       expect(overRectRef.current).not.toBeNull()
       expect(overRectRef.current!.id).toBe('section-1')
@@ -566,16 +546,15 @@ describe('createTypedCollisionDetection', () => {
       })
 
       const sibling = createDroppable('row-2')
-      const rects = new Map<string | number, ClientRect>([['row-2', siblingRect]])
 
       // First drag: trigger a sibling hit
       const args = buildArgs({
         activeId: 'row-1',
         containers: [sibling],
-        rects,
+        rects: [['row-2', siblingRect]],
         pointerY: 310,
       })
-      detect(args as never)
+      detect(args)
 
       // Simulate new drag: change sourceContainerItemsRef
       sourceRef.current = new Set<string | number>(['row-5'])
@@ -584,10 +563,10 @@ describe('createTypedCollisionDetection', () => {
       const args2 = buildArgs({
         activeId: 'row-1',
         containers: [sibling],
-        rects,
+        rects: [['row-2', siblingRect]],
         pointerY: 200, // Not crossing threshold
       })
-      const collisions = detect(args2 as never)
+      const collisions = detect(args2)
 
       // Without hadSiblingHit, the pointer-inside-sibling guard should
       // return empty (not fall through to closestCenterLive)
@@ -605,18 +584,9 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       containers: DroppableContainer[],
       collisionRect: ClientRect,
       initialRect: ClientRect,
+      pointer: { x: number; y: number } = { x: 125, y: 125 },
     ) {
-      return {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: containers,
-        droppableRects: new Map(),
-        pointerCoordinates: { x: 125, y: 125 },
-      }
+      return buildCollisionArgs({ initialRect, collisionRect, containers, pointer })
     }
 
     it('computes value = dx² + dy² with precise numeric expectation', () => {
@@ -640,7 +610,7 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
         makeDomRect(100, 100, 50, 50),
         makeDomRect(100, 75, 50, 50),
       )
-      const collisions = detect(args as never)
+      const collisions = detect(args)
 
       expect(collisions).toHaveLength(1)
       expect(collisions[0].data?.value).toBe(20000)
@@ -675,7 +645,7 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
         makeDomRect(100, 100, 50, 50),
         makeDomRect(100, 75, 50, 50),
       )
-      const collisions = detect(args as never)
+      const collisions = detect(args)
 
       expect(collisions.map((c) => c.id)).toEqual(['row-2'])
       expect(collisions[0].data?.value).toBe(5000)
@@ -712,15 +682,13 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
         pendingContainerItemsRef: { current: pendingItems },
       })
 
-      const args = {
-        ...buildPendingPathArgs(
-          [closer, containing],
-          makeDomRect(100, 100, 50, 50),
-          makeDomRect(100, 75, 50, 50),
-        ),
-        pointerCoordinates: { x: 500, y: 500 },
-      }
-      const collisions = detect(args as never)
+      const args = buildPendingPathArgs(
+        [closer, containing],
+        makeDomRect(100, 100, 50, 50),
+        makeDomRect(100, 75, 50, 50),
+        { x: 500, y: 500 },
+      )
+      const collisions = detect(args)
 
       expect(collisions.map((c) => c.id)).toEqual(['row-2'])
       // Confirm the winner is the FARTHER-by-distance one, proving containment
@@ -743,22 +711,15 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
     // and currentCY(125) >= 100 → TRUE.
     it('records collision value equal to dx² + dy² of collision-rect center vs target-rect center', () => {
       const target = createDroppable('row-2')
-      const targetRect = makeDomRect(50, 75, 100, 100)
-      const collisionRect = makeDomRect(75, 100, 100, 50)
-      const initialRect = makeDomRect(75, 50, 100, 50)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [target],
-        droppableRects: new Map([['row-2', targetRect]]),
-        pointerCoordinates: { x: 125, y: 125 },
-      }
+      const args = buildCollisionArgs({
+        initialRect: makeDomRect(75, 50, 100, 50),
+        collisionRect: makeDomRect(75, 100, 100, 50),
+        containers: [target],
+        rects: [['row-2', makeDomRect(50, 75, 100, 100)]],
+        pointer: { x: 125, y: 125 },
+      })
 
-      const collisions = centerCrossing(args as never)
+      const collisions = centerCrossing(args)
 
       expect(collisions).toHaveLength(1)
       expect(collisions[0].data?.value).toBe(625)
@@ -773,26 +734,18 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       // Far   dx=-25, dy=-20 → value = 625 + 400  = 1025. Far is CLOSER to currentY.
       const close = createDroppable('row-2')
       const far = createDroppable('row-3')
-      const closeRect = makeDomRect(50, 400, 200, 100)
-      const farRect = makeDomRect(50, 500, 200, 100)
-      const collisionRect = makeDomRect(75, 505, 100, 50)
-      const initialRect = makeDomRect(75, 75, 100, 50)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [close, far],
-        droppableRects: new Map([
-          ['row-2', closeRect],
-          ['row-3', farRect],
-        ]),
-        pointerCoordinates: { x: 125, y: 530 },
-      }
+      const args = buildCollisionArgs({
+        initialRect: makeDomRect(75, 75, 100, 50),
+        collisionRect: makeDomRect(75, 505, 100, 50),
+        containers: [close, far],
+        rects: [
+          ['row-2', makeDomRect(50, 400, 200, 100)],
+          ['row-3', makeDomRect(50, 500, 200, 100)],
+        ],
+        pointer: { x: 125, y: 530 },
+      })
 
-      const collisions = centerCrossing(args as never)
+      const collisions = centerCrossing(args)
 
       // At currentY=530, the far target is nearer (1025) than the close target
       // (7025) — the winner must be row-3, killing flipped-comparison mutants.
@@ -807,22 +760,29 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
     // Overlap-Y window: ptrY ∈ (125, 525).
     // Set up a scenario where crossedY is true (so the gate is the only filter).
     function runWithPointer(pointerX: number, pointerY: number) {
-      const target = createDroppable('row-2')
-      const targetRect = makeDomRect(200, 275, 100, 100)
-      const collisionRect = makeDomRect(200, pointerY - 25, 100, 50)
-      const initialRect = makeDomRect(200, 50, 100, 50)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [target],
-        droppableRects: new Map([['row-2', targetRect]]),
-        pointerCoordinates: { x: pointerX, y: pointerY },
-      }
-      return centerCrossing(args as never)
+      return centerCrossing(
+        buildCollisionArgs({
+          initialRect: makeDomRect(200, 50, 100, 50),
+          collisionRect: makeDomRect(200, pointerY - 25, 100, 50),
+          containers: [createDroppable('row-2')],
+          rects: [['row-2', makeDomRect(200, 275, 100, 100)]],
+          pointer: { x: pointerX, y: pointerY },
+        }),
+      )
+    }
+
+    // Gate scenario with the collision rect pinned past the threshold (center
+    // (250, 310)) so only the pointer position decides the gate outcome.
+    function runGateWithPointer(pointerX: number, pointerY: number) {
+      return centerCrossing(
+        buildCollisionArgs({
+          initialRect: makeDomRect(200, 50, 100, 50),
+          collisionRect: makeDomRect(200, 285, 100, 50),
+          containers: [createDroppable('row-2')],
+          rects: [['row-2', makeDomRect(200, 275, 100, 100)]],
+          pointer: { x: pointerX, y: pointerY },
+        }),
+      )
     }
 
     it('includes pointer 1px inside MARGIN_X on the left (ptrX = 151)', () => {
@@ -842,46 +802,14 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
     })
 
     it('includes pointer 1px inside MARGIN_Y on the top (ptrY = 126)', () => {
-      // With pointerY=126, collisionRect center is (250, 101). initialCY=75, targetCY=325.
-      // Moving down, thresholdY = 275 + 25 = 300. currentCY max(101, 126) = 126. 126 >= 300?
-      // No — not crossed. So we need currentCY past threshold. Use ptrY just inside Y margin
-      // AND another location for the collision rect that has crossed threshold. Simplest:
-      // force collisionRect past threshold by positioning it there, use pointerY for the gate.
-      const target = createDroppable('row-2')
-      const targetRect = makeDomRect(200, 275, 100, 100)
-      const collisionRect = makeDomRect(200, 285, 100, 50) // center (250, 310) past threshold
-      const initialRect = makeDomRect(200, 50, 100, 50)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [target],
-        droppableRects: new Map([['row-2', targetRect]]),
-        pointerCoordinates: { x: 250, y: 126 },
-      }
-      expect(centerCrossing(args as never)).toHaveLength(1)
+      // The collision rect must already be past the threshold (a pointer at
+      // y=126 alone has not crossed), so the fixed-rect variant drives the
+      // crossing and pointerY only exercises the gate.
+      expect(runGateWithPointer(250, 126)).toHaveLength(1)
     })
 
     it('excludes pointer exactly on the MARGIN_Y boundary on the top (ptrY = 125)', () => {
-      const target = createDroppable('row-2')
-      const targetRect = makeDomRect(200, 275, 100, 100)
-      const collisionRect = makeDomRect(200, 285, 100, 50)
-      const initialRect = makeDomRect(200, 50, 100, 50)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [target],
-        droppableRects: new Map([['row-2', targetRect]]),
-        pointerCoordinates: { x: 250, y: 125 },
-      }
-      expect(centerCrossing(args as never)).toHaveLength(0)
+      expect(runGateWithPointer(250, 125)).toHaveLength(0)
     })
   })
 
@@ -889,22 +817,28 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
     // Target rect (50, 275, 200, 100). Initial Y=75 (above), moving DOWN.
     // thresholdY (initialCY < targetCY branch) = rect.top + collisionRect.height/2 = 275 + 25 = 300.
     function runWithCurrentY(currentY: number) {
-      const target = createDroppable('row-2')
-      const targetRect = makeDomRect(50, 275, 200, 100)
-      const collisionRect = makeDomRect(100, currentY - 25, 100, 50)
-      const initialRect = makeDomRect(100, 50, 100, 50)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [target],
-        droppableRects: new Map([['row-2', targetRect]]),
-        pointerCoordinates: { x: 150, y: currentY },
-      }
-      return centerCrossing(args as never)
+      return centerCrossing(
+        buildCollisionArgs({
+          initialRect: makeDomRect(100, 50, 100, 50),
+          collisionRect: makeDomRect(100, currentY - 25, 100, 50),
+          containers: [createDroppable('row-2')],
+          rects: [['row-2', makeDomRect(50, 275, 200, 100)]],
+          pointer: { x: 150, y: currentY },
+        }),
+      )
+    }
+
+    // Same geometry but dragging UP from initial Y=575 (initial rect below target).
+    function runWithCurrentYUp(currentY: number) {
+      return centerCrossing(
+        buildCollisionArgs({
+          initialRect: makeDomRect(100, 575, 100, 50),
+          collisionRect: makeDomRect(100, currentY - 25, 100, 50),
+          containers: [createDroppable('row-2')],
+          rects: [['row-2', makeDomRect(50, 275, 200, 100)]],
+          pointer: { x: 150, y: currentY },
+        }),
+      )
     }
 
     it('excludes collision when current Y has not yet reached the threshold (299)', () => {
@@ -943,23 +877,16 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       pointerX: number
       pointerY?: number
     }) {
-      const target = createDroppable('row-2')
-      const targetRect = makeDomRect(250, 275, 100, 100)
       const pointerY = opts.pointerY ?? 325
-      const collisionRect = makeDomRect(opts.currentX - 50, pointerY - 25, 100, 50)
-      const initialRect = makeDomRect(opts.initialX - 50, pointerY - 25, 100, 50)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [target],
-        droppableRects: new Map([['row-2', targetRect]]),
-        pointerCoordinates: { x: opts.pointerX, y: pointerY },
-      }
-      return centerCrossing(args as never)
+      return centerCrossing(
+        buildCollisionArgs({
+          initialRect: makeDomRect(opts.initialX - 50, pointerY - 25, 100, 50),
+          collisionRect: makeDomRect(opts.currentX - 50, pointerY - 25, 100, 50),
+          containers: [createDroppable('row-2')],
+          rects: [['row-2', makeDomRect(250, 275, 100, 100)]],
+          pointer: { x: opts.pointerX, y: pointerY },
+        }),
+      )
     }
 
     it('crosses threshold when dragging RIGHT toward target (initialCX < targetCX)', () => {
@@ -981,24 +908,17 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       // Wide target: (200, 275, 300, 100). targetCX = 200 + 150 = 350. rect.left + rect.width -
       // collisionRect.width/2 = 200+300-50 = 450. Math.min(450, 350) = 350 (clamped to targetCX).
       // Without Math.min (e.g. Math.max mutant), threshold would be 450.
-      const target = createDroppable('row-2')
-      const wideRect = makeDomRect(200, 275, 300, 100)
       function runWide(currentX: number) {
         const pointerY = 325
-        const collisionRect = makeDomRect(currentX - 50, pointerY - 25, 100, 50)
-        const initialRect = makeDomRect(700 - 50, pointerY - 25, 100, 50)
-        const args = {
-          active: {
-            id: 'row-1',
-            rect: { current: { initial: initialRect, translated: collisionRect } },
-            data: { current: undefined },
-          },
-          collisionRect,
-          droppableContainers: [target],
-          droppableRects: new Map([['row-2', wideRect]]),
-          pointerCoordinates: { x: currentX, y: pointerY },
-        }
-        return centerCrossing(args as never)
+        return centerCrossing(
+          buildCollisionArgs({
+            initialRect: makeDomRect(700 - 50, pointerY - 25, 100, 50),
+            collisionRect: makeDomRect(currentX - 50, pointerY - 25, 100, 50),
+            containers: [createDroppable('row-2')],
+            rects: [['row-2', makeDomRect(200, 275, 300, 100)]],
+            pointer: { x: currentX, y: pointerY },
+          }),
+        )
       }
 
       // currentCX=351: default NOT crossed (351 > 350). Math.max mutant WOULD cross (351 <= 450).
@@ -1037,23 +957,16 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
     // exactly on the threshold counts as crossed. Mutants tightening these to `<` / `>`
     // are only discriminated at the exact boundary.
     function runHorizontalAtCurrent(currentX: number, initialX: number) {
-      const target = createDroppable('row-2')
-      const targetRect = makeDomRect(250, 275, 100, 100)
       const pointerY = 325
-      const collisionRect = makeDomRect(currentX - 50, pointerY - 25, 100, 50)
-      const initialRect = makeDomRect(initialX - 50, pointerY - 25, 100, 50)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [target],
-        droppableRects: new Map([['row-2', targetRect]]),
-        pointerCoordinates: { x: currentX, y: pointerY },
-      }
-      return centerCrossing(args as never)
+      return centerCrossing(
+        buildCollisionArgs({
+          initialRect: makeDomRect(initialX - 50, pointerY - 25, 100, 50),
+          collisionRect: makeDomRect(currentX - 50, pointerY - 25, 100, 50),
+          containers: [createDroppable('row-2')],
+          rects: [['row-2', makeDomRect(250, 275, 100, 100)]],
+          pointer: { x: currentX, y: pointerY },
+        }),
+      )
     }
 
     it('counts as crossed when dragging RIGHT with currentCX exactly at the threshold (toward-crossing >=)', () => {
@@ -1071,88 +984,50 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
   describe('centerCrossing margin gate at exact edge', () => {
     // Margin gate uses strict `<` on the outer side. A pointer exactly on
     // `rect.right + MARGIN_X` must be OUT (default) — mutant `<=` would put it IN.
+    function runGateEdge(pointerX: number, pointerY: number) {
+      return centerCrossing(
+        buildCollisionArgs({
+          initialRect: makeDomRect(200, 50, 100, 50),
+          collisionRect: makeDomRect(200, 285, 100, 50),
+          containers: [createDroppable('row-2')],
+          rects: [['row-2', makeDomRect(200, 275, 100, 100)]],
+          pointer: { x: pointerX, y: pointerY },
+        }),
+      )
+    }
+
     it('excludes pointer exactly on rect.right + MARGIN_X (strict < upper bound)', () => {
-      const target = createDroppable('row-2')
-      const targetRect = makeDomRect(200, 275, 100, 100) // right = 300, MARGIN_X = 50
-      const collisionRect = makeDomRect(200, 285, 100, 50)
-      const initialRect = makeDomRect(200, 50, 100, 50)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [target],
-        droppableRects: new Map([['row-2', targetRect]]),
-        pointerCoordinates: { x: 350, y: 310 }, // exactly at rect.right + MARGIN_X
-      }
-      expect(centerCrossing(args as never)).toEqual([])
+      // Target right = 300, MARGIN_X = 50 → boundary at ptrX = 350.
+      expect(runGateEdge(350, 310)).toEqual([])
     })
 
     it('excludes pointer exactly on rect.bottom + MARGIN_Y (strict < upper bound)', () => {
       // Target bottom = 275 + 100 = 375. MARGIN_Y = 150. Boundary at ptrY = 525.
-      const target = createDroppable('row-2')
-      const targetRect = makeDomRect(200, 275, 100, 100)
-      const collisionRect = makeDomRect(200, 285, 100, 50)
-      const initialRect = makeDomRect(200, 50, 100, 50)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [target],
-        droppableRects: new Map([['row-2', targetRect]]),
-        pointerCoordinates: { x: 250, y: 525 },
-      }
-      expect(centerCrossing(args as never)).toEqual([])
+      expect(runGateEdge(250, 525)).toEqual([])
     })
   })
 
   describe('centerCrossing UP-direction threshold with wide target', () => {
     // Default thresholdY when moving UP: Math.min(rect.top + rect.height - collisionRect.height/2, targetCY).
-    // Mutant `-` → `+` only differs when the formula branch is NOT clamped by targetCY.
-    // Use a very tall target so the formula value exceeds targetCY for `-` but not for `+`
-    // → wait, both would exceed. We need collisionRect tall enough that the `-` value
-    // sits BELOW targetCY. Use collisionRect.height such that formula = rect.top + h - collisionRect.h/2
-    // is less than targetCY.
+    // The `-` → `+` mutant only differs when the formula branch is NOT clamped by targetCY,
+    // which requires the collision rect to be TALLER than the target's half-height:
     //
     // target (50, 200, 200, 600): targetCY = 500, rect.bottom = 800.
-    // Small collisionRect.height=100: formula = 200+600-50 = 750. Math.min(750, 500) = 500.
-    // Large collisionRect.height=800: formula = 200+600-400 = 400. Math.min(400, 500) = 400.
-    //   Mutant +: formula = 200+600+400 = 1200. Math.min(1200, 500) = 500. DIFFERENT.
-    //
-    // Moving UP, initial Y high (below target). Threshold = 400 (default) vs 500 (mutant).
-    // currentY=450: default crossedY (initial>threshold=400, currentY<=400? 450<=400 false → not crossed).
-    //   Hmm need currentY<=threshold for UP crossing.
-    // currentY=400: default 400<=400 true → crossed. Mutant 400<=500 true → also crossed. Same.
-    // currentY=500: default 500<=400 false → not crossed. Mutant 500<=500 true → crossed. DIFFERENT.
+    // collisionRect.height=800: formula = 200+600-400 = 400 → Math.min(400, 500) = 400.
+    //   Mutant `+`: formula = 200+600+400 = 1200 → Math.min(1200, 500) = 500. DIFFERENT.
+    // Moving UP, currentY=500: default 500<=400 false → not crossed; mutant 500<=500 → crossed.
     it('kills Math.min formula `+` mutant when collisionRect is taller than target/2', () => {
-      const target = createDroppable('row-2')
-      const targetRect = makeDomRect(50, 200, 200, 600) // targetCY = 500, rect.bottom = 800
-      // Large collisionRect.height shifts the UP-formula threshold BELOW targetCY (to 400),
-      // so Math.min picks the formula branch. Moving UP from below target, currentY=500 means:
-      // default (threshold=400): 500 <= 400 → not crossed. Mutant + (threshold=500): 500<=500 → crossed.
-      //
       // X is neutralised (initialCX === targetCX === 150) so crossedX can't independently
       // trigger a collision.
-      const collisionRect = makeDomRect(50, 100, 200, 800) // center (150, 500), h=800
-      const initialRect = makeDomRect(50, 900, 200, 800) // center (150, 1300)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [target],
-        droppableRects: new Map([['row-2', targetRect]]),
-        pointerCoordinates: { x: 150, y: 500 },
-      }
+      const args = buildCollisionArgs({
+        initialRect: makeDomRect(50, 900, 200, 800), // center (150, 1300)
+        collisionRect: makeDomRect(50, 100, 200, 800), // center (150, 500), h=800
+        containers: [createDroppable('row-2')],
+        rects: [['row-2', makeDomRect(50, 200, 200, 600)]],
+        pointer: { x: 150, y: 500 },
+      })
       // Default threshold = 400 → currentCY=500 NOT <= 400 → not crossed → empty.
-      expect(centerCrossing(args as never)).toEqual([])
+      expect(centerCrossing(args)).toEqual([])
     })
   })
 
@@ -1173,84 +1048,45 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
         width: 200,
         height: 100,
       })
-      const overRectRef = { current: null } as {
-        current: { id: string | number; nodeRef: { readonly current: HTMLElement | null } } | null
-      }
+      const overRectRef: OverRectRef = { current: null }
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
         overRectRef,
       })
 
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: {
-            current: {
-              initial: makeDomRect(100, 75, 100, 50),
-              translated: makeDomRect(100, 285, 100, 50),
-            },
-          },
-          data: { current: undefined },
-        },
+      const args = buildCollisionArgs({
+        initialRect: makeDomRect(100, 75, 100, 50),
         collisionRect: makeDomRect(100, 285, 100, 50),
-        droppableContainers: [decoy, near], // decoy first to detect first-wins bugs
-        droppableRects: new Map([
+        containers: [decoy, near], // decoy first to detect first-wins bugs
+        rects: [
           ['row-2', makeDomRect(50, 275, 200, 100)],
           ['row-99', makeDomRect(50, 900, 200, 100)],
-        ]),
-        pointerCoordinates: { x: 150, y: 310 },
-      }
+        ],
+        pointer: { x: 150, y: 310 },
+      })
 
-      detect(args as never)
+      detect(args)
       expect(overRectRef.current?.id).toBe('row-2')
       expect(overRectRef.current?.nodeRef).toBe(near.node)
     })
   })
 
   describe('centerCrossing initial-rect center computation', () => {
-    // Pin the initialCX/initialCY formulas. initialCY = initialRect.top + initialRect.height/2.
-    // Mutants `+` → `-` or `/2` → `*2` shift the direction classification (initialCY < targetCY
-    // flips), causing the threshold to be computed from the wrong branch.
+    // Pin the initialCX/initialCY formulas (initialCY = initialRect.top + initialRect.height/2)
+    // via a precisely-engineered down-motion scenario:
+    // initialRect (100, 0, 100, 200) → initialCY = 100. target (50, 275, 200, 100) → targetCY = 325.
+    // initialCY(100) < targetCY(325) → down-branch: threshold = rect.top + collisionRect.height/2
+    // = 275 + 25 = 300. collisionRect center (150, 310) crosses, and the exact collision value
+    // pins the down-branch arithmetic.
     it('places initialCY precisely at the rect center — flipping the direction branch if mutated', () => {
-      // initialRect top=0, height=200 → initialCY = 100. target (50, 275, 200, 100) → targetCY=325.
-      // initialCY(100) < targetCY(325) → down-move branch: threshold = rect.top + collisionRect.height/2
-      //                                                              = 275 + 25 = 300.
-      // currentY=310 crosses. collisionRect center (150, 310).
-      //
-      // Mutant `+` → `-`: initialCY = 0 - 100 = -100. Still < 325 → same branch. Same result.
-      // Mutant `/2` → `*2`: initialCY = 0 + 400 = 400 > 325 → UP-branch. threshold =
-      //   Math.min(rect.top + rect.height - collisionRect.height/2, targetCY)
-      //   = Math.min(275+100-25, 325) = Math.min(350, 325) = 325.
-      // For currentY=310: default crossed (310 >= 300); mutant: initialCY(400) > thresholdY(325)
-      // needs currentY <= 325. currentY=310 <= 325 → ALSO crossed. Same result. Hmm.
-      //
-      // Need asymmetry. Use initialRect near target so the direction classification flips
-      // between default and mutant, and pick a currentY that crosses only one branch's threshold.
-      // initialRect (100, 300, 100, 50) → initialCY = 300 + 25 = 325. target (50, 275, 200, 100)
-      // targetCY = 325. initialCY === targetCY → strict < is false → UP-branch.
-      // Mutant `/2` → `*2`: initialCY = 300 + 100 = 400. > 325 → UP-branch. Same.
-      // Mutant `+` → `-`: initialCY = 300 - 25 = 275. < 325 → DOWN-branch. thresholdY = 275+25=300.
-      // currentY=310: up-branch threshold=325, crossedY if currentY <= 325. True. down-branch
-      // threshold=300, crossedY if currentY >= 300. Also true. Still same.
-      //
-      // The most effective test simply asserts collision fires for the precisely-engineered
-      // down-motion scenario above, pinning the down-branch arithmetic.
-      const target = createDroppable('row-2')
-      const targetRect = makeDomRect(50, 275, 200, 100)
-      const collisionRect = makeDomRect(100, 285, 100, 50) // center (150, 310)
-      const initialRect = makeDomRect(100, 0, 100, 200) // initialCY = 100
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [target],
-        droppableRects: new Map([['row-2', targetRect]]),
-        pointerCoordinates: { x: 150, y: 310 },
-      }
-      const collisions = centerCrossing(args as never)
+      const args = buildCollisionArgs({
+        initialRect: makeDomRect(100, 0, 100, 200), // initialCY = 100
+        collisionRect: makeDomRect(100, 285, 100, 50), // center (150, 310)
+        containers: [createDroppable('row-2')],
+        rects: [['row-2', makeDomRect(50, 275, 200, 100)]],
+        pointer: { x: 150, y: 310 },
+      })
+      const collisions = centerCrossing(args)
       expect(collisions).toHaveLength(1)
       // Pin exact value: dx = 150 - 150 = 0, dy = 310 - 325 = -15 → value = 225.
       expect(collisions[0].data?.value).toBe(225)
@@ -1267,20 +1103,15 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
       })
-      const collisionRect = makeDomRect(50, pointerY - 25, 100, 50)
-      const initialRect = makeDomRect(50, 75, 100, 50)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [parent],
-        droppableRects: new Map([['section-1', parentRect]]),
-        pointerCoordinates: { x: pointerX, y: pointerY },
-      }
-      return detect(args as never)
+      return detect(
+        buildCollisionArgs({
+          initialRect: makeDomRect(50, 75, 100, 50),
+          collisionRect: makeDomRect(50, pointerY - 25, 100, 50),
+          containers: [parent],
+          rects: [['section-1', parentRect]],
+          pointer: { x: pointerX, y: pointerY },
+        }),
+      )
     }
 
     // Containment path sets value=0 (synthetic); closestCenter fallback sets value to the
@@ -1338,24 +1169,17 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
       // to parent (none) → returns []. Mutant `(c) => true`: active included as sibling,
       // centerCrossing may detect its own rect (pointer inside) → returns a non-empty array.
       const self = createDroppable('row-1')
-      const selfRect = makeDomRect(100, 95, 100, 50) // initialRect position
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
       })
-      const collisionRect = makeDomRect(100, 285, 100, 50) // center (150, 310)
-      const initialRect = makeDomRect(100, 75, 100, 50)
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: { current: { initial: initialRect, translated: collisionRect } },
-          data: { current: undefined },
-        },
-        collisionRect,
-        droppableContainers: [self],
-        droppableRects: new Map([['row-1', selfRect]]),
-        pointerCoordinates: { x: 150, y: 120 },
-      }
-      expect(detect(args as never)).toEqual([])
+      const args = buildCollisionArgs({
+        initialRect: makeDomRect(100, 75, 100, 50),
+        collisionRect: makeDomRect(100, 285, 100, 50), // center (150, 310)
+        containers: [self],
+        rects: [['row-1', makeDomRect(100, 95, 100, 50)]],
+        pointer: { x: 150, y: 120 },
+      })
+      expect(detect(args)).toEqual([])
     })
   })
 
@@ -1368,30 +1192,18 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
         width: 50,
         height: 50,
       })
-      const overRectRef = { current: null } as {
-        current: { id: string | number; nodeRef: { readonly current: HTMLElement | null } } | null
-      }
+      const overRectRef: OverRectRef = { current: null }
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
         overRectRef,
       })
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: {
-            current: {
-              initial: makeDomRect(0, 0, 50, 50),
-              translated: makeDomRect(0, 50, 50, 50),
-            },
-          },
-          data: { current: undefined },
-        },
+      const args = buildCollisionArgs({
+        initialRect: makeDomRect(0, 0, 50, 50),
         collisionRect: makeDomRect(0, 50, 50, 50),
-        droppableContainers: [unrelated],
-        droppableRects: new Map(),
-        pointerCoordinates: { x: 25, y: 75 },
-      }
-      detect(args as never)
+        containers: [unrelated],
+        pointer: { x: 25, y: 75 },
+      })
+      detect(args)
       expect(overRectRef.current).toBeNull()
     })
   })
@@ -1404,32 +1216,21 @@ describe('arithmetic hardening (mutation-kill tests)', () => {
         width: 200,
         height: 100,
       })
-      const overRectRef = { current: null } as {
-        current: { id: string | number; nodeRef: { readonly current: HTMLElement | null } } | null
-      }
+      const overRectRef: OverRectRef = { current: null }
       const detect = createTypedCollisionDetection({
         hasPendingMoveRef: { current: false },
         overRectRef,
       })
 
-      const args = {
-        active: {
-          id: 'row-1',
-          rect: {
-            current: {
-              initial: makeDomRect(100, 75, 100, 50),
-              translated: makeDomRect(100, 285, 100, 50),
-            },
-          },
-          data: { current: undefined },
-        },
+      const args = buildCollisionArgs({
+        initialRect: makeDomRect(100, 75, 100, 50),
         collisionRect: makeDomRect(100, 285, 100, 50),
-        droppableContainers: [target],
-        droppableRects: new Map([['row-2', makeDomRect(50, 275, 200, 100)]]),
-        pointerCoordinates: { x: 150, y: 310 },
-      }
+        containers: [target],
+        rects: [['row-2', makeDomRect(50, 275, 200, 100)]],
+        pointer: { x: 150, y: 310 },
+      })
 
-      detect(args as never)
+      detect(args)
 
       expect(overRectRef.current?.nodeRef).toBe(target.node)
     })
@@ -1442,20 +1243,6 @@ describe('closestCenterLive pointer fallback (no pointerCoordinates)', () => {
   // refY = collisionRect.top + collisionRect.height/2. Exercised only via the pending
   // path with pointerCoordinates omitted. Pins the `??` fallback arms and
   // their arithmetic.
-  function buildPendingArgsNoPointer(containers: DroppableContainer[], collisionRect: ClientRect) {
-    return {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: makeDomRect(100, 75, 50, 50), translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: containers,
-      droppableRects: new Map(),
-      pointerCoordinates: null,
-    }
-  }
-
   it('uses collision-rect center as the reference when pointerCoordinates is null', () => {
     // collisionRect (100,100,50,50) → fallback center (125, 125).
     // close target center (125,125): dx=0, dy=0 → value 0.
@@ -1469,8 +1256,13 @@ describe('closestCenterLive pointer fallback (no pointerCoordinates)', () => {
       pendingContainerItemsRef: { current: pendingItems },
     })
 
-    const args = buildPendingArgsNoPointer([far, close], makeDomRect(100, 100, 50, 50))
-    const collisions = detect(args as never)
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(100, 75, 50, 50),
+      collisionRect: makeDomRect(100, 100, 50, 50),
+      containers: [far, close],
+      pointer: null,
+    })
+    const collisions = detect(args)
 
     expect(collisions.map((c) => c.id)).toEqual(['row-2'])
     // refX fallback = 100 + 50/2 = 125, refY = 100 + 50/2 = 125 → exact zero
@@ -1481,71 +1273,68 @@ describe('closestCenterLive pointer fallback (no pointerCoordinates)', () => {
   })
 })
 
-describe('closestCenterLive containment edges (contains boundary comparisons)', () => {
-  // The `contains` discriminant uses `>=` / `<=` on all four edges. A mutant tightening any
-  // edge to `>` / `<` only differs when the pointer sits EXACTLY on that edge. Each test puts
-  // the pointer on one edge of a large "containing" candidate so that, with `>=`/`<=`, it is
-  // contained and wins; with the strict mutant it loses containment and a closer-by-
-  // distance non-containing candidate wins instead. Asserting the containing candidate is the
-  // winner kills the per-edge mutant. Runs through the pending path (delegates to closestCenterLive).
-  const containingRect = { left: 400, top: 400, width: 1000, height: 1000 } // edges 400/1400
+// Shared fixture for the two closestCenterLive containment suites below. The
+// `contains` discriminant is a four-conjunct `>=`/`<=` chain over one large
+// containing candidate (edges 400/1400) vs a tiny closer-by-distance decoy that
+// never contains the pointer (30px offset vs 10px half-size). Runs through the
+// pending path (delegates to closestCenterLive).
+const CONTAINING_RECT = { left: 400, top: 400, width: 1000, height: 1000 } // edges 400 / 1400
 
-  function runEdge(pointerX: number, pointerY: number) {
-    const containing = createDroppableWithRect('row-2', containingRect)
-    // Closer candidate: a tiny rect whose center sits 30px below the pointer — far closer by
-    // distance (30² = 900 « 290000) than the containing candidate's center, but it does NOT
-    // contain the pointer (pointer is 30px from center, half-height only 10px). So distance
-    // alone would rank it first; only the containment discriminant can keep row-2 ahead.
-    const closer = createDroppableWithRect('row-3', {
-      left: pointerX - 10,
-      top: pointerY + 20,
-      width: 20,
-      height: 20,
-    })
-    const pendingItems = new Set<string | number>(['row-2', 'row-3'])
-    const detect = createTypedCollisionDetection({
-      hasPendingMoveRef: { current: true },
-      pendingContainerItemsRef: { current: pendingItems },
-    })
-    const collisionRect = makeDomRect(0, 0, 50, 50)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: makeDomRect(0, 0, 50, 50), translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
+function runContainmentEdge(pointerX: number, pointerY: number) {
+  const containing = createDroppableWithRect('row-2', CONTAINING_RECT)
+  // Closer candidate: a tiny rect whose center sits 30px below the pointer — far closer by
+  // distance (30² = 900 « 290000) than the containing candidate's center, but it does NOT
+  // contain the pointer. So distance alone would rank it first; only the containment
+  // discriminant can keep row-2 ahead.
+  const closer = createDroppableWithRect('row-3', {
+    left: pointerX - 10,
+    top: pointerY + 20,
+    width: 20,
+    height: 20,
+  })
+  const pendingItems = new Set<string | number>(['row-2', 'row-3'])
+  const detect = createTypedCollisionDetection({
+    hasPendingMoveRef: { current: true },
+    pendingContainerItemsRef: { current: pendingItems },
+  })
+  return detect(
+    buildCollisionArgs({
+      initialRect: makeDomRect(0, 0, 50, 50),
+      collisionRect: makeDomRect(0, 0, 50, 50),
       // closer first so a comparator ignoring `contains` (or a flipped edge) returns row-3 first.
-      droppableContainers: [closer, containing],
-      droppableRects: new Map(),
-      pointerCoordinates: { x: pointerX, y: pointerY },
-    }
-    return detect(args as never)
-  }
+      containers: [closer, containing],
+      pointer: { x: pointerX, y: pointerY },
+    }),
+  )
+}
 
+describe('closestCenterLive containment edges (contains boundary comparisons)', () => {
+  // A mutant tightening any edge to `>` / `<` only differs when the pointer sits EXACTLY on
+  // that edge: with `>=`/`<=` it is contained and the containing candidate wins; with the
+  // strict mutant it loses containment and the closer-by-distance decoy wins instead.
   it('contains when pointer is exactly on the LEFT edge (refX >= rect.left)', () => {
     // Pointer (400, 700): refX === rect.left (400). With `>=` contained → row-2 first.
-    expect(runEdge(400, 700).map((c) => c.id)).toEqual(['row-2'])
+    expect(runContainmentEdge(400, 700).map((c) => c.id)).toEqual(['row-2'])
   })
 
   it('contains when pointer is exactly on the RIGHT edge (refX <= rect.right)', () => {
     // Pointer (1400, 700): refX === rect.right (1400). With `<=` contained → row-2 first.
-    expect(runEdge(1400, 700).map((c) => c.id)).toEqual(['row-2'])
+    expect(runContainmentEdge(1400, 700).map((c) => c.id)).toEqual(['row-2'])
   })
 
   it('contains when pointer is exactly on the TOP edge (refY >= rect.top)', () => {
     // Pointer (700, 400): refY === rect.top (400). With `>=` contained → row-2 first.
-    expect(runEdge(700, 400).map((c) => c.id)).toEqual(['row-2'])
+    expect(runContainmentEdge(700, 400).map((c) => c.id)).toEqual(['row-2'])
   })
 
   it('contains when pointer is exactly on the BOTTOM edge (refY <= rect.bottom)', () => {
     // Pointer (700, 1400): refY === rect.bottom (1400). With `<=` contained → row-2 first.
-    expect(runEdge(700, 1400).map((c) => c.id)).toEqual(['row-2'])
+    expect(runContainmentEdge(700, 1400).map((c) => c.id)).toEqual(['row-2'])
   })
 
   it('does NOT contain when pointer is just outside the LEFT edge', () => {
     // Pointer (399, 700): refX < rect.left → not contained → closer-by-distance row-3 wins.
-    expect(runEdge(399, 700).map((c) => c.id)).toEqual(['row-3'])
+    expect(runContainmentEdge(399, 700).map((c) => c.id)).toEqual(['row-3'])
   })
 })
 
@@ -1566,24 +1355,18 @@ describe('pointer-inside-source-sibling guard (no-pending path)', () => {
       height: 100,
     })
     const containers: DroppableContainer[] = [sibling]
-    const rects = new Map<string | number, ClientRect>([['row-2', siblingRect]])
+    const rects: Array<readonly [string, ClientRect]> = [['row-2', siblingRect]]
     if (opts.withParent) {
       containers.push(createDroppable('section-1'))
-      rects.set('section-1', parentRect)
+      rects.push(['section-1', parentRect])
     }
-    const collisionRect = makeDomRect(100, opts.currentY - 25, 100, 50)
-    const initialRect = makeDomRect(100, 75, 100, 50) // initialCY = 100, above target
-    return {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: containers,
-      droppableRects: rects,
-      pointerCoordinates: { x: 150, y: opts.pointerY },
-    }
+    return buildCollisionArgs({
+      initialRect: makeDomRect(100, 75, 100, 50), // initialCY = 100, above target
+      collisionRect: makeDomRect(100, opts.currentY - 25, 100, 50),
+      containers,
+      rects,
+      pointer: { x: 150, y: opts.pointerY },
+    })
   }
 
   it('returns empty (not the parent) when pointer is inside a source sibling but threshold not crossed', () => {
@@ -1596,9 +1379,7 @@ describe('pointer-inside-source-sibling guard (no-pending path)', () => {
       sourceContainerItemsRef: { current: new Set<string | number>(['row-2']) },
     })
 
-    const collisions = detect(
-      buildArgs({ currentY: 290, pointerY: 290, withParent: true }) as never,
-    )
+    const collisions = detect(buildArgs({ currentY: 290, pointerY: 290, withParent: true }))
 
     expect(collisions).toEqual([])
   })
@@ -1614,9 +1395,7 @@ describe('pointer-inside-source-sibling guard (no-pending path)', () => {
       sourceContainerItemsRef: { current: new Set<string | number>() },
     })
 
-    const collisions = detect(
-      buildArgs({ currentY: 290, pointerY: 290, withParent: true }) as never,
-    )
+    const collisions = detect(buildArgs({ currentY: 290, pointerY: 290, withParent: true }))
 
     expect(collisions).toHaveLength(1)
     expect(collisions[0].id).toBe('section-1')
@@ -1632,13 +1411,13 @@ describe('pointer-inside-source-sibling guard (no-pending path)', () => {
     })
 
     // Cycle 1: currentY=310 >= 300 threshold → crossed → sibling hit recorded.
-    const hit = detect(buildArgs({ currentY: 310, pointerY: 310 }) as never)
+    const hit = detect(buildArgs({ currentY: 310, pointerY: 310 }))
     expect(hit).toHaveLength(1)
     expect(hit[0].id).toBe('row-2')
 
     // Cycle 2: currentY=290 < 300 → not crossed, but pointer (150,290) inside source
     // sibling → recovery via closestCenterLive returns the live sibling rather than [].
-    const recovered = detect(buildArgs({ currentY: 290, pointerY: 290, withParent: true }) as never)
+    const recovered = detect(buildArgs({ currentY: 290, pointerY: 290, withParent: true }))
     expect(recovered).toHaveLength(1)
     expect(recovered[0].id).toBe('row-2')
   })
@@ -1659,24 +1438,18 @@ describe('pointer-inside-source-sibling guard (no-pending path)', () => {
       sourceContainerItemsRef: { current: new Set<string | number>(['row-2']) },
     })
 
-    const collisionRect = makeDomRect(350, 265, 100, 50) // center (400, 290)
-    const initialRect = makeDomRect(350, 75, 100, 50)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [sibling, createDroppable('section-1')],
-      droppableRects: new Map<string | number, ClientRect>([
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(350, 75, 100, 50),
+      collisionRect: makeDomRect(350, 265, 100, 50), // center (400, 290)
+      containers: [sibling, createDroppable('section-1')],
+      rects: [
         ['row-2', siblingRect],
         ['section-1', parentRect],
-      ]),
-      pointerCoordinates: { x: 400, y: 290 },
-    }
+      ],
+      pointer: { x: 400, y: 290 },
+    })
 
-    const collisions = detect(args as never)
+    const collisions = detect(args)
 
     expect(collisions).toHaveLength(1)
     expect(collisions[0].id).toBe('section-1')
@@ -1698,23 +1471,15 @@ describe('centerCrossing same-X/Y direction boundary (initialC === targetC)', ()
     // X is neutralised: initialCX === targetCX too, so the X axis is likewise an AWAY branch
     // with threshold === initialCX and never crosses. Therefore the default returns []; the
     // `<=` mutant returns one collision. Asserting [] kills the mutant.
-    const target = createDroppable('row-2')
-    const targetRect = makeDomRect(50, 275, 200, 100) // targetCX = 150, targetCY = 325
-    const collisionRect = makeDomRect(100, 275, 100, 50) // center (150, 300): currentCY = 300, currentCX = 150
-    const initialRect = makeDomRect(100, 300, 100, 50) // center (150, 325) === (targetCX, targetCY)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [target],
-      droppableRects: new Map([['row-2', targetRect]]),
-      pointerCoordinates: { x: 150, y: 300 },
-    }
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(100, 300, 100, 50), // center (150, 325) === (targetCX, targetCY)
+      collisionRect: makeDomRect(100, 275, 100, 50), // center (150, 300): currentCY = 300, currentCX = 150
+      containers: [createDroppable('row-2')],
+      rects: [['row-2', makeDomRect(50, 275, 200, 100)]], // targetCX = 150, targetCY = 325
+      pointer: { x: 150, y: 300 },
+    })
 
-    expect(centerCrossing(args as never)).toEqual([])
+    expect(centerCrossing(args)).toEqual([])
   })
 
   it('does NOT cross in X when initialCX equals targetCX and currentCX reaches the toward-threshold (strict < on the X direction branch)', () => {
@@ -1727,70 +1492,40 @@ describe('centerCrossing same-X/Y direction boundary (initialC === targetC)', ()
     // Y is neutralised: initialCY === targetCY (325) and currentCY held at 325, an AWAY tie that
     //   never crosses. So the default returns []; the `<=` mutant returns one collision.
     // collisionRect width must match initial width (20) so dnd-kit's currentCX math lines up.
-    const target = createDroppable('row-2')
-    const targetRect = makeDomRect(250, 275, 100, 100) // targetCX = 300, targetCY = 325
-    const collisionRect = makeDomRect(250, 300, 20, 50) // center (260, 325): currentCX = 260
-    const initialRect = makeDomRect(290, 300, 20, 50) // center (300, 325) === (targetCX, targetCY)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [target],
-      droppableRects: new Map([['row-2', targetRect]]),
-      pointerCoordinates: { x: 260, y: 325 },
-    }
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(290, 300, 20, 50), // center (300, 325) === (targetCX, targetCY)
+      collisionRect: makeDomRect(250, 300, 20, 50), // center (260, 325): currentCX = 260
+      containers: [createDroppable('row-2')],
+      rects: [['row-2', makeDomRect(250, 275, 100, 100)]], // targetCX = 300, targetCY = 325
+      pointer: { x: 260, y: 325 },
+    })
 
-    expect(centerCrossing(args as never)).toEqual([])
+    expect(centerCrossing(args)).toEqual([])
   })
 })
 
 describe('centerCrossing LEFT-drag thresholdX uses the formula branch (edge-formula minus)', () => {
   // Away branch: thresholdX = Math.min(rect.left + rect.width - collisionRect.width/2, targetCX).
-  // The existing wide-target test only exercises the clamped (targetCX) outcome, leaving the
-  // `rect.left + rect.width - collisionRect.width/2` formula and its `-` operator unpinned.
-  // Here the formula value is the SMALLER of the two, so Math.min returns it; a `-`→`+` mutant
-  // shifts the threshold and changes whether a boundary currentCX counts as crossed.
+  // The formula branch only wins Math.min when the collision rect is WIDER than the target
+  // (rect.left + rect.width - w/2 < targetCX ⇔ w > rect.width), so:
+  // target (400, 275, 100, 100) → targetCX = 450, rect.right = 500.
+  // collisionRect.width = 300 → formula = 400 + 100 - 150 = 350 → Math.min(350, 450) = 350.
+  // Mutant `-`→`+`: 400 + 100 + 150 = 650 → Math.min(650, 450) = 450.
+  // LEFT drag (initialCX 700 > targetCX): crossing needs currentCX <= threshold. currentCX = 400
+  // sits between the two thresholds: default 400 <= 350 false (no crossing), mutant 400 <= 450
+  // true (crossing). Y is aligned (initialCY === targetCY) so only X can trigger.
   it('crosses exactly at the formula threshold when the formula is below targetCX', () => {
-    // Narrow target far to the right so targetCX is large; collisionRect wide so
-    // rect.left + rect.width - w/2 < targetCX.
-    // target (300, 275, 400, 100) → targetCX = 500, rect.right = 700.
-    // collisionRect.width = 200 → formula = 300 + 400 - 100 = 600. Math.min(600, 500) = 500??
-    // We need formula < targetCX. Make target wider so targetCX > formula:
-    // target (300, 275, 600, 100) → targetCX = 600, rect.right = 900.
-    // collisionRect.width = 200 → formula = 300 + 600 - 100 = 800. Math.min(800, 600) = 600 (clamp).
-    // That clamps again. To make the FORMULA win we need formula < targetCX, i.e.
-    // rect.left + rect.width - w/2 < rect.left + rect.width/2  ⇒  rect.width/2 < w/2 ⇒ w > rect.width.
-    // So the collision rect must be WIDER than the target.
-    // target (400, 275, 100, 100) → targetCX = 450, rect.right = 500.
-    // collisionRect.width = 300 → formula = 400 + 100 - 150 = 350. Math.min(350, 450) = 350 (formula wins).
-    // LEFT drag (initialCX > targetCX): crossedX needs currentCX <= 350.
-    // Default threshold 350; mutant `+`: 400 + 100 + 150 = 650 → Math.min(650, 450) = 450.
-    // currentCX = 350: default 350 <= 350 → crossed; mutant 350 <= 450 → also crossed. Same. Need
-    // a currentCX between the two thresholds: currentCX = 400 → default 400 <= 350 false (not crossed),
-    // mutant 400 <= 450 true (crossed). Discriminated. Keep Y aligned so only X can trigger.
-    const target = createDroppable('row-2')
-    const targetRect = makeDomRect(400, 275, 100, 100) // targetCX = 450, targetCY = 325
-    // initialCX large (right of target) → LEFT drag. initialCY === targetCY so Y never crosses.
-    const initialRect = makeDomRect(700 - 150, 325 - 25, 300, 50) // center (700, 325)
-    const collisionRect = makeDomRect(400 - 150, 325 - 25, 300, 50) // center (400, 325)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [target],
-      droppableRects: new Map([['row-2', targetRect]]),
-      pointerCoordinates: { x: 400, y: 325 },
-    }
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(700 - 150, 325 - 25, 300, 50), // center (700, 325)
+      collisionRect: makeDomRect(400 - 150, 325 - 25, 300, 50), // center (400, 325)
+      containers: [createDroppable('row-2')],
+      rects: [['row-2', makeDomRect(400, 275, 100, 100)]], // targetCX = 450, targetCY = 325
+      pointer: { x: 400, y: 325 },
+    })
 
     // Default formula threshold = 350: currentCX 400 is NOT <= 350 → no crossing → empty.
     // A `-`→`+` mutant raises the threshold to 450, making 400 <= 450 cross → 1 collision.
-    expect(centerCrossing(args as never)).toEqual([])
+    expect(centerCrossing(args)).toEqual([])
   })
 })
 
@@ -1805,44 +1540,28 @@ describe('centerCrossing UP-direction currentCY uses Math.min (away/else branch)
     // currentCY <= 325. collisionRect center crCY = 340 (still above threshold), pointer ptrY = 320
     // (already past). Math.min(340, 320) = 320 <= 325 → crossed (default).
     // Math.max mutant: Math.max(340, 320) = 340 <= 325 false → NOT crossed. Discriminated.
-    const target = createDroppable('row-2')
-    const targetRect = makeDomRect(50, 275, 200, 100)
-    const collisionRect = makeDomRect(100, 340 - 25, 100, 50) // crCY = 340
-    const initialRect = makeDomRect(100, 575 - 25, 100, 50) // initialCY = 575
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [target],
-      droppableRects: new Map([['row-2', targetRect]]),
-      pointerCoordinates: { x: 150, y: 320 }, // ptrY = 320, ahead of crCY
-    }
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(100, 575 - 25, 100, 50), // initialCY = 575
+      collisionRect: makeDomRect(100, 340 - 25, 100, 50), // crCY = 340
+      containers: [createDroppable('row-2')],
+      rects: [['row-2', makeDomRect(50, 275, 200, 100)]],
+      pointer: { x: 150, y: 320 }, // ptrY = 320, ahead of crCY
+    })
 
-    expect(centerCrossing(args as never)).toHaveLength(1)
+    expect(centerCrossing(args)).toHaveLength(1)
   })
 
   it('does not cross UP when neither crCY nor ptrY has reached the threshold', () => {
     // Both above threshold 325: crCY = 340, ptrY = 335. Math.min(340,335)=335 <= 325 false → empty.
-    const target = createDroppable('row-2')
-    const targetRect = makeDomRect(50, 275, 200, 100)
-    const collisionRect = makeDomRect(100, 340 - 25, 100, 50)
-    const initialRect = makeDomRect(100, 575 - 25, 100, 50)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [target],
-      droppableRects: new Map([['row-2', targetRect]]),
-      pointerCoordinates: { x: 150, y: 335 },
-    }
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(100, 575 - 25, 100, 50),
+      collisionRect: makeDomRect(100, 340 - 25, 100, 50),
+      containers: [createDroppable('row-2')],
+      rects: [['row-2', makeDomRect(50, 275, 200, 100)]],
+      pointer: { x: 150, y: 335 },
+    })
 
-    expect(centerCrossing(args as never)).toEqual([])
+    expect(centerCrossing(args)).toEqual([])
   })
 })
 
@@ -1853,26 +1572,20 @@ describe('createTypedCollisionDetection reset guard (hadSiblingHit reset)', () =
   // (new drag), a stale hadSiblingHit must NOT carry over.
   const siblingRect = makeDomRect(50, 275, 200, 100)
 
-  function insidePointerArgs(currentY: number, pointerY: number): unknown {
+  function insidePointerArgs(currentY: number, pointerY: number) {
     const sibling = createDroppableWithRect('row-2', {
       left: 50,
       top: 275,
       width: 200,
       height: 100,
     })
-    const collisionRect = makeDomRect(100, currentY - 25, 100, 50)
-    const initialRect = makeDomRect(100, 75, 100, 50)
-    return {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [sibling],
-      droppableRects: new Map([['row-2', siblingRect]]),
-      pointerCoordinates: { x: 150, y: pointerY },
-    }
+    return buildCollisionArgs({
+      initialRect: makeDomRect(100, 75, 100, 50),
+      collisionRect: makeDomRect(100, currentY - 25, 100, 50),
+      containers: [sibling],
+      rects: [['row-2', siblingRect]],
+      pointer: { x: 150, y: pointerY },
+    })
   }
 
   it('keeps the recovery path within a single drag when sourceContainerItemsRef is unchanged', () => {
@@ -1885,9 +1598,9 @@ describe('createTypedCollisionDetection reset guard (hadSiblingHit reset)', () =
     })
 
     // Cycle 1 (same ref): cross threshold → hadSiblingHit = true.
-    expect(detect(insidePointerArgs(310, 310) as never)).toHaveLength(1)
+    expect(detect(insidePointerArgs(310, 310))).toHaveLength(1)
     // Cycle 2 (same ref, no reset): not crossed but pointer inside → recovery fires → returns sibling.
-    expect(detect(insidePointerArgs(290, 290) as never)).toHaveLength(1)
+    expect(detect(insidePointerArgs(290, 290))).toHaveLength(1)
   })
 
   it('resets the recovery path when sourceContainerItemsRef changes between drags', () => {
@@ -1900,12 +1613,12 @@ describe('createTypedCollisionDetection reset guard (hadSiblingHit reset)', () =
     })
 
     // Drag 1: register a sibling hit.
-    expect(detect(insidePointerArgs(310, 310) as never)).toHaveLength(1)
+    expect(detect(insidePointerArgs(310, 310))).toHaveLength(1)
 
     // New drag: swap the ref → reset must clear hadSiblingHit. Source still contains row-2 so the
     // pointer-inside guard still fires, but with hadSiblingHit reset it returns [] (no recovery).
     sourceRef.current = new Set<string | number>(['row-2'])
-    expect(detect(insidePointerArgs(290, 290) as never)).toEqual([])
+    expect(detect(insidePointerArgs(290, 290))).toEqual([])
   })
 })
 
@@ -1932,24 +1645,18 @@ describe('pending path falls through to parent when no sibling collision (length
       pendingContainerItemsRef: { current: new Set<string | number>(['row-999']) },
     })
 
-    const collisionRect = makeDomRect(350, 275, 100, 50)
-    const initialRect = makeDomRect(350, 75, 100, 50)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [sibling, parent],
-      droppableRects: new Map<string | number, ClientRect>([
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(350, 75, 100, 50),
+      collisionRect: makeDomRect(350, 275, 100, 50),
+      containers: [sibling, parent],
+      rects: [
         ['row-2', makeDomRect(50, 275, 200, 100)],
         ['section-1', makeDomRect(0, 0, 800, 600)],
-      ]),
-      pointerCoordinates: { x: 400, y: 300 },
-    }
+      ],
+      pointer: { x: 400, y: 300 },
+    })
 
-    const collisions = detect(args as never)
+    const collisions = detect(args)
 
     expect(collisions).toHaveLength(1)
     expect(collisions[0].id).toBe('section-1')
@@ -1987,24 +1694,18 @@ describe('source-container sibling filter (sameContainerSiblings)', () => {
       sourceContainerItemsRef: { current: new Set<string | number>(['row-2']) },
     })
 
-    const collisionRect = makeDomRect(100, 125, 100, 50) // center (150, 150)
-    const initialRect = makeDomRect(100, 25, 100, 50) // center (150, 50), above both targets
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [sourceSibling, foreignSibling],
-      droppableRects: new Map<string | number, ClientRect>([
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(100, 25, 100, 50), // center (150, 50), above both targets
+      collisionRect: makeDomRect(100, 125, 100, 50), // center (150, 150)
+      containers: [sourceSibling, foreignSibling],
+      rects: [
         ['row-2', makeDomRect(50, 275, 200, 100)],
         ['row-3', makeDomRect(50, 100, 200, 100)],
-      ]),
-      pointerCoordinates: { x: 150, y: 150 },
-    }
+      ],
+      pointer: { x: 150, y: 150 },
+    })
 
-    const collisions = detect(args as never)
+    const collisions = detect(args)
     expect(collisions.map((c) => c.id)).not.toContain('row-3')
     expect(collisions).toEqual([])
   })
@@ -2033,24 +1734,16 @@ describe('parent fallback ignores parents with no measured rect (containment rec
       hasPendingMoveRef: { current: false },
     })
 
-    const collisionRect = makeDomRect(900, 900, 100, 50)
-    const initialRect = makeDomRect(900, 800, 100, 50)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [unmeasured, measured],
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(900, 800, 100, 50),
+      collisionRect: makeDomRect(900, 900, 100, 50),
+      containers: [unmeasured, measured],
       // section-2 deliberately absent → its containment check hits the rect guard.
-      droppableRects: new Map<string | number, ClientRect>([
-        ['section-1', makeDomRect(0, 0, 800, 600)],
-      ]),
-      pointerCoordinates: { x: 950, y: 925 }, // outside section-1 (right=800, bottom=600)
-    }
+      rects: [['section-1', makeDomRect(0, 0, 800, 600)]],
+      pointer: { x: 950, y: 925 }, // outside section-1 (right=800, bottom=600)
+    })
 
-    const collisions = detect(args as never)
+    const collisions = detect(args)
 
     expect(collisions[0].id).toBe('section-1')
     expect(collisions[0].data?.value).not.toBe(0)
@@ -2058,59 +1751,27 @@ describe('parent fallback ignores parents with no measured rect (containment rec
 })
 
 describe('closestCenterLive containment forced-true conjuncts', () => {
-  // `contains` is a four-conjunct `&&` chain. `ConditionalExpression => true`
-  // mutants force one conjunct to `true`, so a pointer that is OUTSIDE on that single
-  // axis is wrongly treated as contained. Each test puts the pointer 1px outside one of
-  // the RIGHT / TOP / BOTTOM edges (the LEFT-edge "just outside" case is already covered
-  // in the containment-edges suite above). Default: not contained → the closer-by-distance non-containing
-  // candidate (row-3) wins. Mutant forcing that conjunct true: the far-but-
-  // "contained" row-2 wins. Asserting row-3 is the winner kills the forced-true mutant.
-  const containingRect = { left: 400, top: 400, width: 1000, height: 1000 } // edges 400 / 1400
-
-  function runEdge(pointerX: number, pointerY: number) {
-    const containing = createDroppableWithRect('row-2', containingRect)
-    // Tiny rect 30px past the pointer on the relevant outside direction — far closer by
-    // distance, but it never contains the pointer (half-size 10px « 30px offset).
-    const closer = createDroppableWithRect('row-3', {
-      left: pointerX - 10,
-      top: pointerY + 20,
-      width: 20,
-      height: 20,
-    })
-    const pendingItems = new Set<string | number>(['row-2', 'row-3'])
-    const detect = createTypedCollisionDetection({
-      hasPendingMoveRef: { current: true },
-      pendingContainerItemsRef: { current: pendingItems },
-    })
-    const collisionRect = makeDomRect(0, 0, 50, 50)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: makeDomRect(0, 0, 50, 50), translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [closer, containing],
-      droppableRects: new Map(),
-      pointerCoordinates: { x: pointerX, y: pointerY },
-    }
-    return detect(args as never)
-  }
-
+  // `ConditionalExpression => true` mutants force one conjunct of the four-edge `contains`
+  // chain to `true`, so a pointer that is OUTSIDE on that single axis is wrongly treated as
+  // contained. Each test puts the pointer 1px outside one of the RIGHT / TOP / BOTTOM edges
+  // (the LEFT-edge "just outside" case is covered in the containment-edges suite above).
+  // Default: not contained → the closer-by-distance non-containing candidate (row-3) wins.
+  // Mutant forcing that conjunct true: the far-but-"contained" row-2 wins. Asserting row-3 is
+  // the winner kills the forced-true mutant. Shares runContainmentEdge with the edges suite.
   it('does NOT contain a pointer 1px outside the RIGHT edge (refX <= rect.right conjunct)', () => {
     // Pointer (1401, 700): refX > rect.right → conjunct false → not contained.
     // Forcing the conjunct true would (wrongly) rank the containing row-2 first.
-    expect(runEdge(1401, 700).map((c) => c.id)).toEqual(['row-3'])
+    expect(runContainmentEdge(1401, 700).map((c) => c.id)).toEqual(['row-3'])
   })
 
   it('does NOT contain a pointer 1px outside the TOP edge (refY >= rect.top conjunct)', () => {
     // Pointer (700, 399): refY < rect.top → conjunct false → not contained.
-    expect(runEdge(700, 399).map((c) => c.id)).toEqual(['row-3'])
+    expect(runContainmentEdge(700, 399).map((c) => c.id)).toEqual(['row-3'])
   })
 
   it('does NOT contain a pointer 1px outside the BOTTOM edge (refY <= rect.bottom conjunct)', () => {
     // Pointer (700, 1401): refY > rect.bottom → conjunct false → not contained.
-    expect(runEdge(700, 1401).map((c) => c.id)).toEqual(['row-3'])
+    expect(runContainmentEdge(700, 1401).map((c) => c.id)).toEqual(['row-3'])
   })
 })
 
@@ -2130,24 +1791,16 @@ describe('centerCrossing currentC direction selection (Math.max/Math.min)', () =
     // Mutant `<=` (450 <= 450 → toward) → Math.max(340, 360) = 360 <= 350 false → no crossing.
     // Y neutralised: initialCY === targetCY === 325 with a clamped away threshold == initialCY,
     // which never crosses.
-    const target = createDroppable('row-2')
-    const targetRect = makeDomRect(400, 275, 100, 100)
-    const initialRect = makeDomRect(300, 300, 300, 50) // center (450, 325)
-    const collisionRect = makeDomRect(190, 300, 300, 50) // center (340, 325) → crCX = 340
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [target],
-      droppableRects: new Map([['row-2', targetRect]]),
-      pointerCoordinates: { x: 360, y: 325 },
-    }
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(300, 300, 300, 50), // center (450, 325)
+      collisionRect: makeDomRect(190, 300, 300, 50), // center (340, 325) → crCX = 340
+      containers: [createDroppable('row-2')],
+      rects: [['row-2', makeDomRect(400, 275, 100, 100)]],
+      pointer: { x: 360, y: 325 },
+    })
 
     // Default (Math.min picks the crossed 340): 1 collision. Mutant (Math.max picks 360): [].
-    expect(centerCrossing(args as never)).toHaveLength(1)
+    expect(centerCrossing(args)).toHaveLength(1)
   })
 
   it('uses Math.min(crCY, ptrY) on the Y away-tie so the threshold is reached', () => {
@@ -2158,24 +1811,16 @@ describe('centerCrossing currentC direction selection (Math.max/Math.min)', () =
     // Default Math.min(340, 360) = 340 <= 350 → crossed → 1 collision.
     // Mutant `<=` → Math.max(340, 360) = 360 <= 350 false → no crossing. X neutralised by an
     // initialCX === targetCX clamped away-tie.
-    const target = createDroppable('row-2')
-    const targetRect = makeDomRect(50, 400, 100, 100)
-    const initialRect = makeDomRect(50, 300, 100, 300) // center (100, 450)
-    const collisionRect = makeDomRect(50, 190, 100, 300) // center (100, 340) → crCY = 340
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [target],
-      droppableRects: new Map([['row-2', targetRect]]),
-      pointerCoordinates: { x: 100, y: 360 },
-    }
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(50, 300, 100, 300), // center (100, 450)
+      collisionRect: makeDomRect(50, 190, 100, 300), // center (100, 340) → crCY = 340
+      containers: [createDroppable('row-2')],
+      rects: [['row-2', makeDomRect(50, 400, 100, 100)]],
+      pointer: { x: 100, y: 360 },
+    })
 
     // Default (Math.min picks the crossed 340): 1 collision. Mutant (Math.max picks 360): [].
-    expect(centerCrossing(args as never)).toHaveLength(1)
+    expect(centerCrossing(args)).toHaveLength(1)
   })
 })
 
@@ -2200,28 +1845,22 @@ describe('pointer-inside-source-sibling guard predicate (.some containment)', ()
       width: 100,
       height: 100,
     })
-    const parent = createDroppable('section-1')
     const detect = createTypedCollisionDetection({
       hasPendingMoveRef: { current: false },
       sourceContainerItemsRef: { current: new Set<string | number>(['row-2']) },
     })
-    const initialRect = makeDomRect(200, 225, 100, 50) // center (250, 250)
-    const collisionRect = makeDomRect(200, 225, 100, 50) // center (250, 250)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [sibling, parent],
-      droppableRects: new Map<string | number, ClientRect>([
-        ['row-2', makeDomRect(200, 200, 100, 100)],
-        ['section-1', parentRect],
-      ]),
-      pointerCoordinates: { x: pointerX, y: pointerY },
-    }
-    return detect(args as never)
+    return detect(
+      buildCollisionArgs({
+        initialRect: makeDomRect(200, 225, 100, 50), // center (250, 250)
+        collisionRect: makeDomRect(200, 225, 100, 50), // center (250, 250)
+        containers: [sibling, createDroppable('section-1')],
+        rects: [
+          ['row-2', makeDomRect(200, 200, 100, 100)],
+          ['section-1', parentRect],
+        ],
+        pointer: { x: pointerX, y: pointerY },
+      }),
+    )
   }
 
   // On-edge pointers pin the `>=` / `<=` EqualityOperator mutants: exactly on an edge is
@@ -2284,7 +1923,6 @@ describe('pointer-inside guard uses .some, not .every', () => {
       width: 100,
       height: 100,
     })
-    const parent = createDroppable('section-1')
     const detect = createTypedCollisionDetection({
       hasPendingMoveRef: { current: false },
       sourceContainerItemsRef: { current: new Set<string | number>(['row-2', 'row-3']) },
@@ -2293,27 +1931,21 @@ describe('pointer-inside guard uses .some, not .every', () => {
     // Pointer (250, 205): inside row-2 (200-300 / 200-300), outside row-3 (x 250 < 500).
     // Down-drag that crosses NEITHER threshold (currentCY 205 < both thresholds 225); X-axis
     // is an away-tie for row-2 and never overlaps row-3 → centerCrossing returns [].
-    const initialRect = makeDomRect(200, 75, 100, 50) // center (250, 100)
-    const collisionRect = makeDomRect(200, 180, 100, 50) // center (250, 205)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [inside, outside, parent],
-      droppableRects: new Map<string | number, ClientRect>([
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(200, 75, 100, 50), // center (250, 100)
+      collisionRect: makeDomRect(200, 180, 100, 50), // center (250, 205)
+      containers: [inside, outside, createDroppable('section-1')],
+      rects: [
         ['row-2', makeDomRect(200, 200, 100, 100)],
         ['row-3', makeDomRect(500, 200, 100, 100)],
         ['section-1', makeDomRect(0, 0, 800, 600)],
-      ]),
-      pointerCoordinates: { x: 250, y: 205 },
-    }
+      ],
+      pointer: { x: 250, y: 205 },
+    })
 
     // Default `.some`: pointer inside row-2 → true → guard returns []. Mutant `.every`: row-3
     // outside → false → falls through → returns section-1. Asserting [] kills `.every`.
-    expect(detect(args as never)).toEqual([])
+    expect(detect(args)).toEqual([])
   })
 })
 
@@ -2338,58 +1970,30 @@ describe('pointer-inside guard skips unmeasured source siblings (rect guard)', (
       width: 100,
       height: 100,
     })
-    const parent = createDroppable('section-1')
     const detect = createTypedCollisionDetection({
       hasPendingMoveRef: { current: false },
       sourceContainerItemsRef: { current: new Set<string | number>(['row-2', 'row-3']) },
     })
 
-    // Pointer (250, 205): outside row-2 vertically below its top? It is inside row-2's rect
-    // (200-300 / 200-300) — so to make row-2 NOT contain, move the pointer outside it. Use
-    // (400, 205): outside both row-2 (x 400 > 300) and would be inside row-3's rect, but row-3
-    // is UNMEASURED so the rect guard is the only thing that can include it.
-    const initialRect = makeDomRect(350, 75, 100, 50) // center (400, 100)
-    const collisionRect = makeDomRect(350, 180, 100, 50) // center (400, 205)
-    const args = {
-      active: {
-        id: 'row-1',
-        rect: { current: { initial: initialRect, translated: collisionRect } },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [measured, unmeasured, parent],
-      droppableRects: new Map<string | number, ClientRect>([
+    // Pointer (400, 205): outside row-2 (x 400 > 300) and geometrically inside row-3's rect,
+    // but row-3 is UNMEASURED so the rect guard is the only thing that can include it.
+    const args = buildCollisionArgs({
+      initialRect: makeDomRect(350, 75, 100, 50), // center (400, 100)
+      collisionRect: makeDomRect(350, 180, 100, 50), // center (400, 205)
+      containers: [measured, unmeasured, createDroppable('section-1')],
+      rects: [
         // row-3 deliberately absent → callback hits the rect guard for it.
         ['row-2', makeDomRect(200, 200, 100, 100)],
         ['section-1', makeDomRect(0, 0, 800, 600)],
-      ]),
-      pointerCoordinates: { x: 400, y: 205 },
-    }
+      ],
+      pointer: { x: 400, y: 205 },
+    })
 
-    const collisions = detect(args as never)
+    const collisions = detect(args)
     expect(collisions).toHaveLength(1)
     expect(collisions[0].id).toBe('section-1')
   })
 })
-
-function runWithCurrentYUp(currentY: number) {
-  const target = createDroppable('row-2')
-  const targetRect = makeDomRect(50, 275, 200, 100)
-  const collisionRect = makeDomRect(100, currentY - 25, 100, 50)
-  const initialRect = makeDomRect(100, 575, 100, 50)
-  const args = {
-    active: {
-      id: 'row-1',
-      rect: { current: { initial: initialRect, translated: collisionRect } },
-      data: { current: undefined },
-    },
-    collisionRect,
-    droppableContainers: [target],
-    droppableRects: new Map([['row-2', targetRect]]),
-    pointerCoordinates: { x: 150, y: currentY },
-  }
-  return centerCrossing(args as never)
-}
 
 describe('lost-lock recovery after auto-scroll drift (no-pending path)', () => {
   // Regression (cross-section-drop.spec.ts:172, "Intra-container: B3 before A2"):
@@ -2407,17 +2011,10 @@ describe('lost-lock recovery after auto-scroll drift (no-pending path)', () => {
   // Drifted: sibling rect top 600 → overlapY needs 320 > 600-150 = 450. It fails.
 
   function build(opts: { siblingTop: number; parentTop: number; parentHeight: number }) {
-    const collisionRect = makeDomRect(100, 295, 100, 50)
-    return {
-      active: {
-        id: 'row-1',
-        rect: {
-          current: { initial: makeDomRect(100, 700, 100, 100), translated: collisionRect },
-        },
-        data: { current: undefined },
-      },
-      collisionRect,
-      droppableContainers: [
+    return buildCollisionArgs({
+      initialRect: makeDomRect(100, 700, 100, 100),
+      collisionRect: makeDomRect(100, 295, 100, 50),
+      containers: [
         createDroppableWithRect('row-2', {
           left: 50,
           top: opts.siblingTop,
@@ -2426,12 +2023,12 @@ describe('lost-lock recovery after auto-scroll drift (no-pending path)', () => {
         }),
         createDroppable('section-1'),
       ],
-      droppableRects: new Map<string | number, ClientRect>([
+      rects: [
         ['row-2', makeDomRect(50, opts.siblingTop, 200, 100)],
         ['section-1', makeDomRect(0, opts.parentTop, 800, opts.parentHeight)],
-      ]),
-      pointerCoordinates: { x: 150, y: 320 },
-    }
+      ],
+      pointer: { x: 150, y: 320 },
+    })
   }
 
   const locked = () => build({ siblingTop: 300, parentTop: 200, parentHeight: 400 })
@@ -2444,11 +2041,11 @@ describe('lost-lock recovery after auto-scroll drift (no-pending path)', () => {
       sourceContainerItemsRef: { current: new Set<string | number>(['row-2']) },
     })
 
-    expect(detect(locked() as never)[0].id).toBe('row-2')
+    expect(detect(locked())[0].id).toBe('row-2')
 
     // Parent [700, 900] does not contain the pointer, so the old code reached
     // the closestCenter guess and returned 'section-1'.
-    const collisions = detect(drifted(700, 200) as never)
+    const collisions = detect(drifted(700, 200))
 
     expect(collisions).toHaveLength(1)
     expect(collisions[0].id).toBe('row-2')
@@ -2460,11 +2057,11 @@ describe('lost-lock recovery after auto-scroll drift (no-pending path)', () => {
       sourceContainerItemsRef: { current: new Set<string | number>(['row-2']) },
     })
 
-    expect(detect(locked() as never)[0].id).toBe('row-2')
+    expect(detect(locked())[0].id).toBe('row-2')
 
     // Parent [200, 600] contains the pointer at y=320 — cross-container entry
     // must keep winning, otherwise a held lock would trap the drag in its source.
-    const collisions = detect(drifted(200, 400) as never)
+    const collisions = detect(drifted(200, 400))
 
     expect(collisions[0].id).toBe('section-1')
   })
@@ -2477,12 +2074,12 @@ describe('lost-lock recovery after auto-scroll drift (no-pending path)', () => {
       pendingContainerItemsRef: { current: new Set<string | number>() },
     })
 
-    expect(detect(locked() as never)[0].id).toBe('row-2')
+    expect(detect(locked())[0].id).toBe('row-2')
 
     // The item has visually left its source container, so its source siblings
     // are the wrong candidates to re-resolve against.
     hasPendingMoveRef.current = true
-    const collisions = detect(drifted(700, 200) as never)
+    const collisions = detect(drifted(700, 200))
 
     expect(collisions[0].id).toBe('section-1')
   })
@@ -2493,9 +2090,9 @@ describe('lost-lock recovery after auto-scroll drift (no-pending path)', () => {
       sourceContainerItemsRef: { current: new Set<string | number>() },
     })
 
-    expect(detect(locked() as never)[0].id).toBe('row-2')
+    expect(detect(locked())[0].id).toBe('row-2')
 
-    const collisions = detect(drifted(700, 200) as never)
+    const collisions = detect(drifted(700, 200))
 
     expect(collisions[0].id).toBe('section-1')
   })

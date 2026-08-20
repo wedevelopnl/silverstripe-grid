@@ -11,7 +11,7 @@ import {
   resetIdCounter,
 } from '@/testing/factories'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
-import { createProviderWrapper } from '@/testing/renderWithProviders'
+import { createProviderWrapper, createTestQueryClient } from '@/testing/renderWithProviders'
 import type { ColumnNode, TreeApiResponse, ViewportSettings } from '@/types/elements'
 
 const override: ViewportSettings = { width: 6, offset: 0, visible: true }
@@ -164,9 +164,7 @@ describe('useViewportOverrideCounts', () => {
     // 3 md-override columns, 1 lg-override column → total=4, md=3, lg=1
     const apiResponse = treeWithOverrides({ md: 3, lg: 1 })
 
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    })
+    const queryClient = createTestQueryClient()
     queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), apiResponse)
 
     const { wrapper } = createProviderWrapper({ queryClient, pageId: 1, zone: 'main' })
@@ -188,9 +186,7 @@ describe('useViewportOverrideCounts', () => {
   it('should use version-keyed cache entry when version is provided', async () => {
     const apiResponse = treeWithOverrides({ md: 2 })
 
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    })
+    const queryClient = createTestQueryClient()
     queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main', 5), apiResponse)
 
     const { wrapper } = createProviderWrapper({ queryClient, pageId: 1, zone: 'main' })

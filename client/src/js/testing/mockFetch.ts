@@ -1,12 +1,21 @@
 import { vi } from 'vitest'
 
-interface MockResponse {
+export interface MockResponse {
   status?: number
   body?: unknown
   statusText?: string
 }
 
-function createResponse({ status = 200, body = {}, statusText = 'OK' }: MockResponse): Response {
+/**
+ * Inert Response double. Exported for tests that route responses themselves
+ * via `vi.spyOn(globalThis, 'fetch').mockImplementation(...)` — never
+ * hand-roll the Response literal.
+ */
+export function createResponse({
+  status = 200,
+  body = {},
+  statusText = 'OK',
+}: MockResponse): Response {
   return {
     ok: status >= 200 && status < 300,
     status,

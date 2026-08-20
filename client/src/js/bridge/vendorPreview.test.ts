@@ -1,13 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openVendorPreview } from './vendorPreview'
 
-vi.mock('@/utils/gridAdapter', () => ({
-  getViewports: () => [
-    { key: 'xs', label: 'Extra Small', minWidth: 0 },
-    { key: 'sm', label: 'Small', minWidth: 576 },
-    { key: 'md', label: 'Medium', minWidth: 768 },
-  ],
-}))
+vi.mock('@/utils/gridAdapter', async () =>
+  (await import('@/testing/mockGridAdapter')).mockGridAdapterModule(),
+)
 
 function createVendorDom(): void {
   document.body.innerHTML = `

@@ -22,12 +22,7 @@ interface RowMock {
   removeAttr: ReturnType<typeof vi.fn>
 }
 
-interface CapturedRegistration {
-  selector: string
-  rule: EntwineRule
-}
-
-let captured: CapturedRegistration | null = null
+let captured: EntwineRule | null = null
 let rowMock: RowMock | null = null
 let isCheckedValue = false
 
@@ -59,7 +54,7 @@ function installJQueryStub(): void {
       return {
         // selector-registration path
         entwine: (rule: EntwineRule) => {
-          captured = { selector: '<registered>', rule }
+          captured = rule
         },
         // onchange runtime path
         closest: (_selector: string): RowMock => {
@@ -105,7 +100,7 @@ describe('gridSettingsField entwine guard', () => {
     await import('./gridSettingsField')
 
     expect(captured).not.toBeNull()
-    expect(typeof captured?.rule.onchange).toBe('function')
+    expect(typeof captured?.onchange).toBe('function')
   })
 })
 
@@ -121,11 +116,11 @@ describe('gridSettingsField onchange handler', () => {
     // TS narrows `captured` to `null` across the async import boundary because
     // the outer assignment is not visible to control-flow analysis. Read it
     // through an explicit widening cast so downstream type narrowing works.
-    const registration = captured as CapturedRegistration | null
-    if (registration === null) {
+    const registered = captured as EntwineRule | null
+    if (registered === null) {
       throw new Error('rule was not registered')
     }
-    rule = registration.rule
+    rule = registered
   })
 
   afterEach(() => {

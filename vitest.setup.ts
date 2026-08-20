@@ -86,6 +86,16 @@ beforeEach(() => {
 
   if (typeof window === 'undefined') return
 
+  // jsdom implements the <dialog> `open` reflection but not showModal/close.
+  // Stub them (tracking `open`) with fresh mocks per test so call assertions
+  // don't leak across tests.
+  HTMLDialogElement.prototype.showModal = vi.fn(function showModal(this: HTMLDialogElement) {
+    this.setAttribute('open', '')
+  })
+  HTMLDialogElement.prototype.close = vi.fn(function close(this: HTMLDialogElement) {
+    this.removeAttribute('open')
+  })
+
   // jsdom's localStorage is shadowed by Node's (unavailable) native one, so
   // provide a fresh, isolated Map-backed store for every test.
   Object.defineProperty(globalThis, 'localStorage', {
@@ -106,9 +116,4 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks()
-
-  // Reset fetch if it was mocked
-  if (vi.isMockFunction(globalThis.fetch)) {
-    vi.mocked(globalThis.fetch).mockRestore()
-  }
 })

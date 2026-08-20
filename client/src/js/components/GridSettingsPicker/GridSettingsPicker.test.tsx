@@ -159,16 +159,6 @@ describe('GridSettingsPicker', () => {
     expect(screen.getByText('Hidden')).toBeInTheDocument()
   })
 
-  it('listbox has role="listbox"', async () => {
-    const user = userEvent.setup()
-
-    renderPicker()
-
-    await user.click(screen.getByTestId('width-picker'))
-
-    expect(screen.getByRole('listbox')).toBeInTheDocument()
-  })
-
   it('options have role="option"', async () => {
     const user = userEvent.setup()
 

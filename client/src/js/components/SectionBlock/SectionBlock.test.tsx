@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDragContext } from '@/hooks/useDragAndDrop'
 import {
   createColumnNode,
@@ -9,44 +9,31 @@ import {
   createSectionNode,
   createSimpleElement,
 } from '@/testing/factories'
+import { defaultSortable, resetDndMocks } from '@/testing/mockDndKit'
 import { mockFetchSuccess } from '@/testing/mockFetch'
 import { createCollapseStateStub, renderWithProviders } from '@/testing/renderWithProviders'
 
 import EditableSectionBlock from './EditableSectionBlock'
 import ReadonlySectionBlock from './ReadonlySectionBlock'
 
-const defaultSortable = {
-  attributes: {},
-  listeners: {},
-  setNodeRef: vi.fn(),
-  transform: null,
-  transition: undefined,
-  isDragging: false,
-  isOver: false,
-}
+vi.mock('@dnd-kit/sortable', async () =>
+  (await import('@/testing/mockDndKit')).mockSortableModule(),
+)
 
-vi.mock('@dnd-kit/sortable', () => ({
-  useSortable: vi.fn(() => ({ ...defaultSortable })),
-  SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  verticalListSortingStrategy: {},
-  horizontalListSortingStrategy: {},
-}))
+vi.mock('@/hooks/useDragAndDrop', async () =>
+  (await import('@/testing/mockDndKit')).mockUseDragContextModule(),
+)
 
-vi.mock('@/hooks/useDragAndDrop', () => ({
-  useDragContext: vi.fn(() => ({ activeType: null, pendingActive: false })),
-}))
+beforeEach(() => {
+  mockFetchSuccess({})
+})
 
 afterEach(() => {
-  vi.mocked(useSortable).mockReturnValue({ ...defaultSortable } as unknown as ReturnType<
-    typeof useSortable
-  >)
-  vi.mocked(useDragContext).mockReturnValue({ activeType: null, pendingActive: false })
+  resetDndMocks({ useSortable, useDragContext })
 })
 
 describe('EditableSectionBlock', () => {
   it('renders section title', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ title: 'Hero Section' })
 
     renderWithProviders(<EditableSectionBlock section={section} />)
@@ -55,8 +42,6 @@ describe('EditableSectionBlock', () => {
   })
 
   it('renders child rows', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ rowCount: 2 })
 
     renderWithProviders(<EditableSectionBlock section={section} />)
@@ -65,8 +50,6 @@ describe('EditableSectionBlock', () => {
   })
 
   it('shows empty state when no children', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ children: null })
 
     renderWithProviders(<EditableSectionBlock section={section} />)
@@ -76,8 +59,6 @@ describe('EditableSectionBlock', () => {
   })
 
   it('shows empty state when children is an empty array', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ children: [] as never })
 
     renderWithProviders(<EditableSectionBlock section={section} />)
@@ -86,8 +67,6 @@ describe('EditableSectionBlock', () => {
   })
 
   it('shows append AddChildButton when children exist', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ rowCount: 1 })
 
     renderWithProviders(<EditableSectionBlock section={section} />)
@@ -101,8 +80,6 @@ describe('EditableSectionBlock', () => {
   })
 
   it('renders a between button in the gap separating two rows', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ rowCount: 2 })
 
     renderWithProviders(<EditableSectionBlock section={section} />)
@@ -114,8 +91,6 @@ describe('EditableSectionBlock', () => {
   })
 
   it('renders no between button with a single row', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ rowCount: 1 })
 
     renderWithProviders(<EditableSectionBlock section={section} />)
@@ -126,8 +101,6 @@ describe('EditableSectionBlock', () => {
   })
 
   it('edit link rendered when editLink exists', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ editLink: '/admin/pages/edit/show/5' })
 
     renderWithProviders(<EditableSectionBlock section={section} />)
@@ -138,8 +111,6 @@ describe('EditableSectionBlock', () => {
   })
 
   it('renders title as plain text when editLink is null', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ editLink: null })
 
     renderWithProviders(<EditableSectionBlock section={section} />)
@@ -149,34 +120,14 @@ describe('EditableSectionBlock', () => {
   })
 
   describe('status and state attributes', () => {
-    it('includes draft status attribute', () => {
-      mockFetchSuccess({})
-
+    it('forwards the node status to the chrome data-status attribute', () => {
+      // Per-status application is pinned in the Chrome test file — this only
+      // proves the block wires the node's status through.
       const section = createSectionNode({ status: 'draft' })
 
       renderWithProviders(<EditableSectionBlock section={section} />)
 
       expect(screen.getByTestId('section-block')).toHaveAttribute('data-status', 'draft')
-    })
-
-    it('includes modified status attribute', () => {
-      mockFetchSuccess({})
-
-      const section = createSectionNode({ status: 'modified' })
-
-      renderWithProviders(<EditableSectionBlock section={section} />)
-
-      expect(screen.getByTestId('section-block')).toHaveAttribute('data-status', 'modified')
-    })
-
-    it('includes published status attribute by default', () => {
-      mockFetchSuccess({})
-
-      const section = createSectionNode({ status: 'published' })
-
-      renderWithProviders(<EditableSectionBlock section={section} />)
-
-      expect(screen.getByTestId('section-block')).toHaveAttribute('data-status', 'published')
     })
 
     it('sets data-drop-target when isOver and activeType is section', () => {
@@ -185,8 +136,6 @@ describe('EditableSectionBlock', () => {
         isOver: true,
       } as unknown as ReturnType<typeof useSortable>)
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'section', pendingActive: false })
-      mockFetchSuccess({})
-
       const section = createSectionNode({})
 
       renderWithProviders(<EditableSectionBlock section={section} />)
@@ -200,8 +149,6 @@ describe('EditableSectionBlock', () => {
         isOver: true,
       } as unknown as ReturnType<typeof useSortable>)
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'row', pendingActive: false })
-      mockFetchSuccess({})
-
       const section = createSectionNode({})
 
       renderWithProviders(<EditableSectionBlock section={section} />)
@@ -215,8 +162,6 @@ describe('EditableSectionBlock', () => {
         isOver: false,
       } as unknown as ReturnType<typeof useSortable>)
       vi.mocked(useDragContext).mockReturnValue({ activeType: 'section', pendingActive: false })
-      mockFetchSuccess({})
-
       const section = createSectionNode({})
 
       renderWithProviders(<EditableSectionBlock section={section} />)
@@ -227,8 +172,6 @@ describe('EditableSectionBlock', () => {
 
   describe('publish-status marks', () => {
     it('badges the section when the section itself is modified', () => {
-      mockFetchSuccess({})
-
       const section = createSectionNode({ status: 'modified' })
 
       renderWithProviders(<EditableSectionBlock section={section} />)
@@ -242,8 +185,6 @@ describe('EditableSectionBlock', () => {
     // The case the roll-up exists for: nothing about the section itself
     // changed, but a block three levels down did.
     it('announces the section descendant when only a nested block is modified', () => {
-      mockFetchSuccess({})
-
       const section = createSectionNode({
         status: 'published',
         children: [
@@ -268,8 +209,6 @@ describe('EditableSectionBlock', () => {
     // been published is exactly as hidden inside a collapsed section, and
     // publishing is the same remedy for both.
     it('announces the section descendant when only a nested block is draft', () => {
-      mockFetchSuccess({})
-
       const section = createSectionNode({
         status: 'published',
         children: [
@@ -288,8 +227,6 @@ describe('EditableSectionBlock', () => {
     })
 
     it('omits both marks when nothing in the section is unpublished', () => {
-      mockFetchSuccess({})
-
       const section = createSectionNode({ status: 'published' })
 
       renderWithProviders(<EditableSectionBlock section={section} />)
@@ -303,8 +240,6 @@ describe('EditableSectionBlock', () => {
 
   describe('drag handle', () => {
     it('labels the drag handle with the interpolated section title', () => {
-      mockFetchSuccess({})
-
       const section = createSectionNode({ title: 'Hero Section', children: null })
 
       renderWithProviders(<EditableSectionBlock section={section} />)
@@ -317,8 +252,6 @@ describe('EditableSectionBlock', () => {
   describe('collapse', () => {
     it('calls toggle with the section node key when the collapse toggle is clicked', async () => {
       const user = userEvent.setup()
-      mockFetchSuccess({})
-
       const section = createSectionNode({ rowCount: 1 })
       const collapseState = createCollapseStateStub()
 
@@ -338,8 +271,6 @@ describe('EditableSectionBlock', () => {
     })
 
     it('applies collapsed attribute when the section is collapsed in the context', () => {
-      mockFetchSuccess({})
-
       const section = createSectionNode({ rowCount: 1 })
 
       renderWithProviders(<EditableSectionBlock section={section} />, {
@@ -353,8 +284,6 @@ describe('EditableSectionBlock', () => {
 
 describe('ReadonlySectionBlock', () => {
   it('renders child rows in the readonly tree', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ rowCount: 2 })
 
     renderWithProviders(<ReadonlySectionBlock section={section} />)
@@ -363,8 +292,6 @@ describe('ReadonlySectionBlock', () => {
   })
 
   it('renders no rows when children is null', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ children: null })
 
     renderWithProviders(<ReadonlySectionBlock section={section} />)
@@ -373,8 +300,6 @@ describe('ReadonlySectionBlock', () => {
   })
 
   it('marks a collapsed readonly section with an empty data-collapsed attribute', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ rowCount: 1 })
 
     renderWithProviders(<ReadonlySectionBlock section={section} />, {
@@ -385,8 +310,6 @@ describe('ReadonlySectionBlock', () => {
   })
 
   it('badges a readonly section that is itself modified', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ status: 'modified' })
 
     renderWithProviders(<ReadonlySectionBlock section={section} />)
@@ -395,8 +318,6 @@ describe('ReadonlySectionBlock', () => {
   })
 
   it('announces the descendant on a readonly section when a nested block is modified', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({
       status: 'published',
       children: [
@@ -414,8 +335,6 @@ describe('ReadonlySectionBlock', () => {
   })
 
   it('omits the modified indicator when a readonly section is not modified', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ status: 'published' })
 
     renderWithProviders(<ReadonlySectionBlock section={section} />)
@@ -424,8 +343,6 @@ describe('ReadonlySectionBlock', () => {
   })
 
   it('renders no drag handle or add-child buttons', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ rowCount: 1 })
 
     renderWithProviders(<ReadonlySectionBlock section={section} />)
@@ -436,8 +353,6 @@ describe('ReadonlySectionBlock', () => {
   })
 
   it('renders title as plain text even when editLink is set', () => {
-    mockFetchSuccess({})
-
     const section = createSectionNode({ editLink: '/admin/pages/edit/show/5' })
 
     renderWithProviders(<ReadonlySectionBlock section={section} />)
