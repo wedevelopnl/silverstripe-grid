@@ -296,7 +296,7 @@ tasks:
   qa-lint:
     internal: true
     cmds:
-      - 'echo "==> [lint] running Biome + Stylelint..."'
+      - 'echo "==> [lint] running Biome..."'
       - npm run lint
       - 'echo "==> [lint] done"'
 
