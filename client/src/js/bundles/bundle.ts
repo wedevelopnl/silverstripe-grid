@@ -2,6 +2,7 @@
 import '../bridge/entwine'
 import '../bridge/gridSettingsField'
 
+import { registerAddSharedBlockBridge } from '../bridge/addSharedBlockButton'
 import { registerCmsPreviewBridge } from '../bridge/cmsPreviewBridge'
 
 // Boot system — registers components with Injector on DOMContentLoaded
@@ -18,4 +19,8 @@ if (typeof document !== 'undefined') {
   } else {
     registerCmsPreviewBridge()
   }
+
+  // Observes document.body, and sweeps what is already there — so it covers
+  // both a listing that arrives later through Pjax and one already rendered.
+  registerAddSharedBlockBridge()
 }

@@ -16,7 +16,12 @@ import { useElementCollapse } from '@/hooks/useElementCollapse'
 import { useCreateContentElement, useUpdateGridSettings } from '@/hooks/useElementMutations'
 import { useViewportContext } from '@/hooks/ViewportContext'
 import { t } from '@/i18n'
-import { type ColumnNode, isSharedBlockReferenceNode, type ViewportSettings } from '@/types/elements'
+import {
+  type ColumnNode,
+  isSharedBlockReferenceNode,
+  isSharedBlockRootNode,
+  type ViewportSettings,
+} from '@/types/elements'
 import type { NodeKey } from '@/types/identity'
 import {
   formatOffsetLabel,
@@ -100,6 +105,9 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
   // belong in the library. The size/offset pickers stay visible — they carry
   // layout information — but disabled.
   const insideShared = usePlacement() !== null
+
+  // A block's root has nowhere to be dragged to — see isSharedBlockRootNode.
+  const isBlockRoot = isSharedBlockRootNode(column)
 
   const showDropTarget = isOver && activeType === 'column'
   const isDragActive = activeType !== null
@@ -251,7 +259,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
         ) : undefined
       }
       leading={
-        insideShared ? undefined : (
+        insideShared || isBlockRoot ? undefined : (
           <DragHandle
             listeners={listeners}
             attributes={attributes}

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { ActionItem } from '@/components/ActionsMenu/ActionsMenu'
 import { t } from '@/i18n'
-import type { ElementNode } from '@/types/elements'
+import { type ElementNode, isSharedBlockRootNode } from '@/types/elements'
 import type { NodeRef } from '@/types/identity'
 import { type ElementTypeKey, getElementType } from '@/utils/getElementType'
 import { useGridEditorContext } from './GridEditorContext'
@@ -54,7 +54,9 @@ export function useDuplicateToAction(node: ElementNode): UseDuplicateToActionRes
     [duplicateToElement, node.self],
   )
 
-  if (!node.canCreate) {
+  // Copying a block's root out to a page breaks no invariant, but the root
+  // carries no duplicate controls at all — the block is the unit here.
+  if (!node.canCreate || isSharedBlockRootNode(node)) {
     return { action: null, dialog: null }
   }
 

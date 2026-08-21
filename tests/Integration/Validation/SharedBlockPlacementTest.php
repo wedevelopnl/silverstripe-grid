@@ -321,8 +321,10 @@ final class SharedBlockPlacementTest extends SapphireTest
         $root = GridTreeFactory::section($block, zone: '');
         $reference = GridTreeFactory::reference($page, $block);
 
-        // Emptying the block is explicitly allowed — GridElement::canDelete()
-        // delegates to the block's canEdit().
+        // No author path empties a block any more — GridElement::canDelete()
+        // refuses the root — but the ORM has no permission gate, so migrations,
+        // dev tasks and legacy data can still produce this state. It must not
+        // take the consuming pages down with it.
         $root->delete();
 
         self::assertNull(

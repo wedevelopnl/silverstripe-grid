@@ -41,6 +41,16 @@ describe('useDuplicateAction', () => {
     expect(result.current.action?.key).toBe('duplicate')
   })
 
+  // Duplicating in place reuses the original's parent, so a block's root would
+  // gain a sibling root — and getRootElement() returns the first, leaving the
+  // copy as invisible orphaned content. The server refuses it too.
+  it('offers no duplicate on a block root, whose parent is the block itself', () => {
+    const node = createSimpleElement({ canCreate: true, parent: { type: 'sharedBlock', id: 4 } })
+    const { result } = renderDuplicateAction(node)
+
+    expect(result.current.action).toBeNull()
+  })
+
   it('labels the action "Duplicate"', () => {
     const node = createSimpleElement({ canCreate: true })
     const { result } = renderDuplicateAction(node)

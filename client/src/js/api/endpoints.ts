@@ -10,8 +10,12 @@ import type {
   TreeApiResponse,
 } from '@/types/elements'
 import { NodeIdentity, type NodeKey, type NodeRef } from '@/types/identity'
-import type { SharedBlockListEntry, SharedBlockParentType } from '@/types/sharedBlocks'
-import { sharedBlockListSchema } from '@/types/sharedBlocks'
+import type {
+  SharedBlockCreated,
+  SharedBlockListEntry,
+  SharedBlockParentType,
+} from '@/types/sharedBlocks'
+import { sharedBlockCreatedSchema, sharedBlockListSchema } from '@/types/sharedBlocks'
 import * as v from 'valibot'
 import {
   acceptableContainerListSchema,
@@ -329,6 +333,21 @@ export async function fetchSharedBlockTree(blockId: number): Promise<TreeApiResp
   const base = getSharedBlockControllerLink()
   const raw = await apiGet<unknown>(`${base}/api/readTree/${blockId}`)
   return normaliseTreeResponse(raw)
+}
+
+/**
+ * Create a block seeded with its single root: a container type for a section-,
+ * row- or column-rooted block, a class name for a leaf-rooted one. Exactly one
+ * of the two, which is what the server accepts.
+ */
+export type CreateSharedBlockParams = { containerType: ContainerType } | { className: string }
+
+export async function createSharedBlock(
+  params: CreateSharedBlockParams,
+): Promise<SharedBlockCreated> {
+  const base = getSharedBlockControllerLink()
+  const raw = await apiPostJson<unknown>(`${base}/api/create`, params)
+  return v.parse(sharedBlockCreatedSchema, raw)
 }
 
 export interface PlaceSharedBlockParams {

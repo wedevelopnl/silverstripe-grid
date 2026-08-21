@@ -7,11 +7,13 @@ namespace WeDevelop\Grid\Service;
 use NoDiscard;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use InvalidArgumentException;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\ConvertToSharedBlockRequest;
 use WeDevelop\Grid\Value\CreateContentRequest;
 use WeDevelop\Grid\Value\CreateElementRequest;
+use WeDevelop\Grid\Value\CreateSharedBlockRequest;
 use WeDevelop\Grid\Value\DuplicateToRequest;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
@@ -89,23 +91,11 @@ final readonly class RequestBodyParser
         $className = $data['className'] ?? null;
         $afterElementID = $data['insertAfterElementID'] ?? null;
 
-        if (!is_string($className)) {
-            return Result::fail(new ValidationError('className must be a string.'));
+        $classResult = $this->parseLeafElementClass($className);
+        if ($classResult->isErr()) {
+            return Result::fail(...$classResult->errors());
         }
-
-        if (!class_exists($className)) {
-            return Result::fail(new ValidationError('className does not refer to an existing class.'));
-        }
-
-        if (!ContainerType::Column->isChildCreatable($className)) {
-            return Result::fail(new ValidationError('className is not an element type a column can hold.'));
-        }
-
-        // A reference carries the block it stands for, which this body has no
-        // slot for. Placements go through the dedicated shared-block endpoints.
-        if (is_a($className, SharedBlockReference::class, true)) {
-            return Result::fail(new ValidationError('Shared blocks are placed through their own endpoint.'));
-        }
+        $className = $classResult->unwrap();
 
         $parentResult = $this->parseNodeRef($data['parent'] ?? null, 'parent');
         if ($parentResult->isErr()) {
@@ -118,6 +108,76 @@ final readonly class RequestBodyParser
         }
 
         return Result::ok(new CreateContentRequest($className, $parent, $afterElementID));
+    }
+
+    /**
+     * The four shapes a library block may root, named the same way the element
+     * create body names them: a container type OR a leaf class, never both and
+     * never neither. There is no parent to parse — the block being created IS
+     * the parent.
+     *
+     * @param array<string, mixed> $data
+     * @return Result<CreateSharedBlockRequest>
+     */
+    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
+    public function parseCreateSharedBlockBody(array $data): Result
+    {
+        $hasContainerType = array_key_exists('containerType', $data);
+        $hasClassName = array_key_exists('className', $data);
+
+        if ($hasContainerType === $hasClassName) {
+            return Result::fail(new ValidationError('Exactly one of containerType or className is required.'));
+        }
+
+        if ($hasClassName) {
+            $classResult = $this->parseLeafElementClass($data['className']);
+            if ($classResult->isErr()) {
+                return Result::fail(...$classResult->errors());
+            }
+
+            return Result::ok(new CreateSharedBlockRequest($classResult->unwrap()));
+        }
+
+        $containerTypeValue = $data['containerType'];
+        $containerType = is_string($containerTypeValue) ? ContainerType::tryFrom($containerTypeValue) : null;
+
+        if ($containerType === null) {
+            return Result::fail(new ValidationError('Invalid or missing containerType.'));
+        }
+
+        return Result::ok(new CreateSharedBlockRequest($containerType->toElementClass()));
+    }
+
+    /**
+     * A concrete element class a Column can hold — the rule shared by content
+     * elements created inside a column and leaf-rooted library blocks.
+     *
+     * @return Result<class-string<GridElement>>
+     */
+    #[NoDiscard('The Result carries the validated class name or the reason it was rejected.')]
+    private function parseLeafElementClass(mixed $className): Result
+    {
+        if (!is_string($className)) {
+            return Result::fail(new ValidationError('className must be a string.'));
+        }
+
+        if (!class_exists($className)) {
+            return Result::fail(new ValidationError('className does not refer to an existing class.'));
+        }
+
+        if (!ContainerType::Column->isChildCreatable($className)) {
+            return Result::fail(new ValidationError('className is not an element type a column can hold.'));
+        }
+
+        // A reference carries the block it stands for, which these bodies have
+        // no slot for. Placements go through the dedicated shared-block
+        // endpoints, and a reference may never root a block at all.
+        if (is_a($className, SharedBlockReference::class, true)) {
+            return Result::fail(new ValidationError('Shared blocks are placed through their own endpoint.'));
+        }
+
+        /** @var class-string<GridElement> $className Narrowed by isChildCreatable() above */
+        return Result::ok($className);
     }
 
     /**

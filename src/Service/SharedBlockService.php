@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Service;
 
 use NoDiscard;
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\GridElement;
@@ -36,6 +37,41 @@ class SharedBlockService
         private readonly ElementPlacementService $placementService,
         private readonly GridElementRepositoryInterface $elementRepository,
     ) {
+    }
+
+    /**
+     * Create a library block seeded with its single root element.
+     *
+     * Block and root are written together because a block without a root is a
+     * broken state, not an intermediate one: it resolves no effective root
+     * class, so every page placing it renders nothing and later grid writes on
+     * those pages fail with BLOCK_EMPTY.
+     *
+     * The root's own write cascades the rest — a Section scaffolds a Row and a
+     * Column, a Row scaffolds a Column, a Column and a leaf scaffold nothing.
+     * No Zone is assigned: zone is placement data that belongs to a page root,
+     * and the library's subtree has none ({@see convertToShared()} clears it
+     * for the same reason).
+     *
+     * @param class-string<GridElement> $rootClass
+     * @return Result<SharedBlock>
+     */
+    #[NoDiscard('The Result carries the created block or the reason the write failed.')]
+    public function create(string $rootClass): Result
+    {
+        return Transactional::run(fn(): Result => WriteResult::from(
+            static function () use ($rootClass): SharedBlock {
+                $block = SharedBlock::create();
+                $block->write();
+
+                $root = Injector::inst()->create($rootClass);
+                $root->ParentID = $block->ID;
+                $root->ParentClass = SharedBlock::class;
+                $root->write();
+
+                return $block;
+            },
+        ));
     }
 
     /**

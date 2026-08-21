@@ -11,11 +11,15 @@ use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Dev\FunctionalTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Admin\SharedBlockAdmin;
+use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\SharedBlock;
+use WeDevelop\Grid\Forms\GridFieldAddSharedBlockButton;
+use WeDevelop\Grid\Tests\Integration\Support\DenyBlockCreateExtension;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 
 #[CoversClass(SharedBlockAdmin::class)]
+#[CoversClass(GridFieldAddSharedBlockButton::class)]
 final class SharedBlockAdminTest extends FunctionalTest
 {
     use DisablesAutoScaffolding;
@@ -161,4 +165,90 @@ final class SharedBlockAdminTest extends FunctionalTest
             (string) $section->getCMSEditLink(),
         );
     }
+
+
+
+    public function testListingOffersTheSplitAddControlCarryingTheLeafTypes(): void
+    {
+        $body = (string) $this->visit('admin/shared-blocks')->getBody();
+
+        self::assertStringContainsString('data-grid-add-shared-block', $body);
+
+        // Decoded, not merely searched for: the payload is base64 precisely
+        // because the template layer mangles the backslashes in raw JSON class
+        // names, and a substring check would not have caught that.
+        self::assertArrayHasKey(
+            ContentElement::class,
+            $this->leafTypesFrom($body),
+            'the control carries the element types a leaf-rooted block may be seeded with',
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function leafTypesFrom(string $body): array
+    {
+        self::assertSame(
+            1,
+            preg_match('/data-grid-leaf-types="([^"]*)"/', $body, $matches),
+            'the add control must carry a leaf-type payload',
+        );
+
+        $decoded = json_decode(
+            (string) base64_decode(html_entity_decode($matches[1]), true),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        );
+        self::assertIsArray($decoded);
+
+        return $decoded;
+    }
+
+    /**
+     * One add affordance, not two. The stock button opens an unsaved record —
+     * which cannot host the grid editor — so it is removed rather than joined,
+     * and the only `new-link` left in the listing is our own fallback.
+     */
+    public function testStockAddButtonIsGoneFromTheListing(): void
+    {
+        $body = (string) $this->visit('admin/shared-blocks')->getBody();
+
+        self::assertSame(1, substr_count($body, 'new-link'));
+    }
+
+    /**
+     * The primary action leads the toolbar, as it does in every stock
+     * ModelAdmin. Fragments concatenate in component order, so simply appending
+     * the replacement lands it last in the row — behind Export, Print and
+     * Import — which is why it is inserted at the stock button's position
+     * before that button is removed.
+     */
+    public function testAddControlLeadsTheListingToolbar(): void
+    {
+        $body = (string) $this->visit('admin/shared-blocks')->getBody();
+
+        $addPosition = strpos($body, 'data-grid-add-shared-block');
+        $exportPosition = strpos($body, 'action_export');
+
+        self::assertIsInt($addPosition);
+        self::assertIsInt($exportPosition);
+        self::assertLessThan(
+            $exportPosition,
+            $addPosition,
+            'the add control must render ahead of the export button, which is the first of the stock toolbar buttons',
+        );
+    }
+
+    public function testNoAddControlForAMemberWhoMayNotCreateBlocks(): void
+    {
+        SharedBlock::add_extension(DenyBlockCreateExtension::class);
+
+        $body = (string) $this->visit('admin/shared-blocks')->getBody();
+
+        self::assertStringNotContainsString('data-grid-add-shared-block', $body);
+        self::assertStringNotContainsString('new-link', $body);
+    }
+
 }

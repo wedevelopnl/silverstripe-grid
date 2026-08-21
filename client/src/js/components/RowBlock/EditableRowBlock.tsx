@@ -10,7 +10,7 @@ import ElementActions from '@/components/ElementActions/ElementActions'
 import { useDragContext } from '@/hooks/useDragAndDrop'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import { t } from '@/i18n'
-import { isSharedBlockReferenceNode, type RowNode } from '@/types/elements'
+import { isSharedBlockReferenceNode, isSharedBlockRootNode, type RowNode } from '@/types/elements'
 import type { NodeKey } from '@/types/identity'
 import { getColumnCount, getOffsetStrategy } from '@/utils/gridAdapter'
 import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
@@ -70,6 +70,9 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
   // belong in the library, and the frame's own bar carries the block's actions.
   const insideShared = usePlacement() !== null
 
+  // A block's root has nowhere to be dragged to — see isSharedBlockRootNode.
+  const isBlockRoot = isSharedBlockRootNode(row)
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({ id: row.nodeKey })
 
@@ -101,7 +104,7 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
       setNodeRef={setNodeRef}
       style={style}
       leading={
-        insideShared ? undefined : (
+        insideShared || isBlockRoot ? undefined : (
           <DragHandle
             listeners={listeners}
             attributes={attributes}

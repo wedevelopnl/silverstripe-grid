@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import type { ActionItem } from '@/components/ActionsMenu/ActionsMenu'
 import { t } from '@/i18n'
-import type { ElementNode } from '@/types/elements'
+import { type ElementNode, isSharedBlockRootNode } from '@/types/elements'
 import { useGridEditorContext } from './GridEditorContext'
 import { useDuplicateElement } from './useElementMutations'
 
@@ -19,7 +19,9 @@ export function useDuplicateAction(node: ElementNode): UseDuplicateActionResult 
     duplicateElement.mutate(node.self)
   }, [duplicateElement, node.self])
 
-  if (!node.canCreate) {
+  // Duplicating a block's root would give the block a second root; the server
+  // refuses it too.
+  if (!node.canCreate || isSharedBlockRootNode(node)) {
     return { action: null }
   }
 

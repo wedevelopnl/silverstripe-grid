@@ -8,13 +8,27 @@ function renderMenu(onSelect = vi.fn()) {
   render(
     <PlacementMenu
       triggerLabel="More ways to add a row"
-      itemLabel="Place shared row…"
-      onSelect={onSelect}
+      items={[{ key: 'shared', label: 'Place shared row…', onSelect }]}
       variant="strip"
       testId="placement-menu"
     />,
   )
   return onSelect
+}
+
+function renderMultiMenu(onSelect: (key: string) => void) {
+  render(
+    <PlacementMenu
+      triggerLabel="More ways to add a block"
+      items={[
+        { key: 'row', label: 'Row', onSelect: () => onSelect('row') },
+        { key: 'column', label: 'Column', onSelect: () => onSelect('column') },
+        { key: 'element', label: 'Content element…', onSelect: () => onSelect('element') },
+      ]}
+      variant="strip"
+      testId="placement-menu"
+    />,
+  )
 }
 
 describe('PlacementMenu', () => {
@@ -91,5 +105,52 @@ describe('PlacementMenu', () => {
     renderMenu()
 
     expect(screen.getByTestId('placement-menu')).toHaveAttribute('data-variant', 'strip')
+  })
+
+  it('lists every route in order', async () => {
+    const user = userEvent.setup()
+    renderMultiMenu(vi.fn())
+
+    await user.click(screen.getByTestId('placement-menu-trigger'))
+
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Row',
+      'Column',
+      'Content element…',
+    ])
+  })
+
+  it('invokes the clicked route, not the first one', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    renderMultiMenu(onSelect)
+
+    await user.click(screen.getByTestId('placement-menu-trigger'))
+    await user.click(screen.getByRole('menuitem', { name: 'Content element…' }))
+
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith('element')
+  })
+
+  it('activates the arrowed-to route from the keyboard', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    renderMultiMenu(onSelect)
+
+    await user.click(screen.getByTestId('placement-menu-trigger'))
+    await user.keyboard('{ArrowDown}{Enter}')
+
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith('column')
+  })
+
+  it('tracks the arrowed-to route in aria-activedescendant', async () => {
+    const user = userEvent.setup()
+    renderMultiMenu(vi.fn())
+
+    await user.click(screen.getByTestId('placement-menu-trigger'))
+    await user.keyboard('{ArrowDown}')
+
+    const menu = screen.getByRole('menu')
+    const active = screen.getByRole('menuitem', { name: 'Column' })
+    expect(menu).toHaveAttribute('aria-activedescendant', active.id)
   })
 })

@@ -16,11 +16,13 @@ use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Model\SharedBlock;
 use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
+use WeDevelop\Grid\Tests\Integration\Support\GrantDeleteExtension;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Tests\Integration\Support\VetoBlockDeleteExtension;
 
 #[CoversClass(SharedBlock::class)]
 #[CoversClass(SharedBlockReference::class)]
+#[CoversClass(GridElement::class)]
 final class SharedBlockTest extends SapphireTest
 {
     use DisablesAutoScaffolding;
@@ -141,8 +143,79 @@ final class SharedBlockTest extends SapphireTest
         GridTreeFactory::reference($page, $block);
 
         self::assertFalse($block->canDelete(), 'precondition: the block itself refuses deletion');
-        self::assertTrue($section->canDelete(), 'the block root must stay deletable');
         self::assertTrue($row->canDelete(), 'elements inside the block must stay deletable');
+    }
+
+    /**
+     * The root is the block's whole subtree: deleting it would leave a block
+     * that resolves no effective root class, so every consuming page renders
+     * nothing and later grid writes there fail with BLOCK_EMPTY. The block is
+     * deleted as a whole instead.
+     */
+    public function testTheBlockRootIsNeverDeletable(): void
+    {
+        $this->logInWithPermission('ADMIN');
+
+        $block = GridTreeFactory::sharedBlock();
+        $root = GridTreeFactory::section($block, zone: '');
+        $row = GridTreeFactory::row($root);
+
+        self::assertTrue($block->canEdit(), 'precondition: an admin may edit the block');
+        self::assertFalse($root->canDelete(), 'the block root carries no delete');
+        self::assertTrue($row->canDelete(), 'only the root is protected, not its subtree');
+    }
+
+    /**
+     * A leaf-rooted block has no container to hide behind — its single element
+     * IS the root, and the same protection applies.
+     */
+    public function testTheRootOfALeafRootedBlockIsNeverDeletable(): void
+    {
+        $this->logInWithPermission('ADMIN');
+
+        $block = GridTreeFactory::sharedBlock();
+
+        $leaf = ContentElement::create();
+        $leaf->ParentID = $block->ID;
+        $leaf->ParentClass = SharedBlock::class;
+        $leaf->write();
+
+        self::assertFalse($leaf->canDelete());
+    }
+
+    /**
+     * The veto is a structural invariant, not a permission, so it sits above
+     * the extension hook: an updateCanDelete that grants deletion must not be
+     * able to strand a block.
+     */
+    public function testAnExtensionCannotGrantDeletionOfTheBlockRoot(): void
+    {
+        GridElement::add_extension(GrantDeleteExtension::class);
+        $this->logInWithPermission('ADMIN');
+
+        $block = GridTreeFactory::sharedBlock();
+        $root = GridTreeFactory::section($block, zone: '');
+        $pageElement = GridTreeFactory::section($this->objFromFixture(Page::class, 'test_page'));
+
+        self::assertTrue($pageElement->canDelete(), 'precondition: the extension grants deletion');
+        self::assertFalse($root->canDelete());
+    }
+
+    /**
+     * The framework's own removal paths do not consult canDelete(), so deleting
+     * the block still takes its subtree with it through $cascade_deletes.
+     */
+    public function testDeletingTheBlockStillCascadesToItsProtectedRoot(): void
+    {
+        $this->logInWithPermission('ADMIN');
+
+        $block = GridTreeFactory::sharedBlock();
+        $root = GridTreeFactory::section($block, zone: '');
+        $rootId = (int) $root->ID;
+
+        $block->delete();
+
+        self::assertNull(Section::get()->byID($rootId));
     }
 
     public function testReferenceIsNotScaffolded(): void

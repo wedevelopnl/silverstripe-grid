@@ -120,11 +120,16 @@ const ColumnInsertButton = memo(function ColumnInsertButtonComponent(
             'WeDevelopGrid.ColumnInsertButton.MORE_COLUMN',
             'More ways to add a column',
           )}
-          itemLabel={t(
-            'WeDevelopGrid.ColumnInsertButton.PLACE_SHARED_COLUMN',
-            'Place shared column…',
-          )}
-          onSelect={() => setSharedPickerOpen(true)}
+          items={[
+            {
+              key: 'shared',
+              label: t(
+                'WeDevelopGrid.ColumnInsertButton.PLACE_SHARED_COLUMN',
+                'Place shared column…',
+              ),
+              onSelect: () => setSharedPickerOpen(true),
+            },
+          ]}
         />
       )}
       {isSharedPickerOpen && !isLibraryEditor && (

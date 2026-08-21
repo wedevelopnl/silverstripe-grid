@@ -8,9 +8,11 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
+use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\RequestBodyParser;
 use WeDevelop\Grid\Tests\Unit\Support\DirectGridElementStub;
@@ -18,6 +20,7 @@ use WeDevelop\Grid\Tests\Unit\Support\GridAdapterStub;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\CreateContentRequest;
 use WeDevelop\Grid\Value\CreateElementRequest;
+use WeDevelop\Grid\Value\CreateSharedBlockRequest;
 use WeDevelop\Grid\Value\DuplicateToRequest;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
@@ -29,6 +32,7 @@ use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
 #[CoversClass(RequestBodyParser::class)]
 #[CoversClass(CreateContentRequest::class)]
 #[CoversClass(CreateElementRequest::class)]
+#[CoversClass(CreateSharedBlockRequest::class)]
 #[CoversClass(DuplicateToRequest::class)]
 #[CoversClass(NodeRef::class)]
 #[CoversClass(PlaceSharedBlockRequest::class)]
@@ -271,6 +275,103 @@ final class RequestBodyParserTest extends TestCase
         yield 'non-int insertAfterElementID' => [
             ['className' => ContentElement::class, 'parent' => $validParent, 'insertAfterElementID' => 'abc'],
             'insertAfterElementID must be a positive integer or null.',
+        ];
+    }
+
+    /**
+     * @param class-string<GridElement> $expectedClass
+     */
+    #[DataProvider('createSharedBlockContainerProvider')]
+    public function testParseCreateSharedBlockBodyResolvesAContainerTypeToItsClass(
+        string $containerType,
+        string $expectedClass,
+    ): void {
+        $result = $this->parser->parseCreateSharedBlockBody(['containerType' => $containerType]);
+
+        self::assertTrue($result->isOk());
+        self::assertSame($expectedClass, $result->unwrap()->rootClass);
+    }
+
+    /**
+     * @return iterable<string, array{string, class-string<GridElement>}>
+     */
+    public static function createSharedBlockContainerProvider(): iterable
+    {
+        yield 'section' => ['section', Section::class];
+        yield 'row' => ['row', Row::class];
+        yield 'column' => ['column', Column::class];
+    }
+
+    /**
+     * A leaf-rooted block is seeded with a single content element, judged by the
+     * same rule a column uses — so anything a column accepts may root a block.
+     */
+    public function testParseCreateSharedBlockBodyAcceptsALeafClass(): void
+    {
+        $result = $this->parser->parseCreateSharedBlockBody(['className' => ContentElement::class]);
+
+        self::assertTrue($result->isOk());
+        self::assertSame(ContentElement::class, $result->unwrap()->rootClass);
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     */
+    #[DataProvider('createSharedBlockBodyErrorProvider')]
+    public function testParseCreateSharedBlockBodyRejectsInvalidInput(
+        array $input,
+        string $expectedMessage,
+    ): void {
+        $result = $this->parser->parseCreateSharedBlockBody($input);
+
+        self::assertTrue($result->isErr());
+        self::assertStringContainsString($expectedMessage, $result->errors()[0]->message);
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
+    public static function createSharedBlockBodyErrorProvider(): iterable
+    {
+        $exactlyOne = 'Exactly one of containerType or className is required.';
+
+        yield 'no discriminator' => [[], $exactlyOne];
+
+        yield 'both discriminators' => [
+            ['containerType' => 'section', 'className' => ContentElement::class],
+            $exactlyOne,
+        ];
+
+        yield 'unknown container type' => [
+            ['containerType' => 'block'],
+            'Invalid or missing containerType.',
+        ];
+
+        yield 'non-string container type' => [
+            ['containerType' => 1],
+            'Invalid or missing containerType.',
+        ];
+
+        yield 'non-string className' => [
+            ['className' => 123],
+            'className must be a string.',
+        ];
+
+        yield 'non-existent class' => [
+            ['className' => 'NonExistent\\Class'],
+            'className does not refer to an existing class.',
+        ];
+
+        // A container is named by containerType, never by class: the two routes
+        // must not overlap, or 'section' would have two spellings.
+        yield 'a container class' => [
+            ['className' => Section::class],
+            'className is not an element type a column can hold.',
+        ];
+
+        yield 'shared block reference' => [
+            ['className' => SharedBlockReference::class],
+            'Shared blocks are placed through their own endpoint.',
         ];
     }
 

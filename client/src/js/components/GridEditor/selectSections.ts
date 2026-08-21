@@ -12,7 +12,17 @@ import { isSectionNode, isSharedBlockReferenceNode } from '@/types/elements'
  * DndContext/SortableContext props).
  */
 export function selectSections(tree: TreeApiResponse | undefined): ElementNode[] {
-  return tree === undefined
-    ? []
-    : tree.nodes.filter((node) => isSectionNode(node) || isSharedBlockReferenceNode(node))
+  if (tree === undefined) {
+    return []
+  }
+
+  // A block roots ONE subtree of any shape — a Row, a Column or a lone element
+  // just as legitimately as a Section — so the library editor's root list is
+  // whatever the server sent. Filtering it by shape rendered an empty editor
+  // for every block that was not section-rooted.
+  if (tree.rootParent.type === 'sharedBlock') {
+    return tree.nodes
+  }
+
+  return tree.nodes.filter((node) => isSectionNode(node) || isSharedBlockReferenceNode(node))
 }
