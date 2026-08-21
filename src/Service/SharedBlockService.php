@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Service;
 use NoDiscard;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\GridElement;
@@ -15,20 +16,25 @@ use WeDevelop\Grid\Model\SharedBlock;
 use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Value\Result;
+use WeDevelop\Grid\Value\SharedBlockDeleteMode;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\ValidationErrorCode;
 use WeDevelop\Grid\Value\WriteResult;
 
 /**
- * The four operations that move content across the shared boundary: placing a
- * block on a page, promoting page content into the library, pulling a placement
- * back out as a local copy, and publishing the block itself.
+ * The operations that move content across the shared boundary: placing a block
+ * on a page, promoting page content into the library, pulling a placement back
+ * out as a local copy, publishing the block itself, and retiring it.
  *
- * All four write to DRAFT only; live changes on the next publish of the page or
- * the block. That leaves one window worth knowing about: converting disowns the
- * subtree from the page, so the NEXT page publish clears its live parent link
- * and the placement renders nothing on live until the block is published too.
- * The editor's notPublished badge is what warns the author.
+ * Placing, converting and detaching write to DRAFT only; live changes on the
+ * next publish of the page or the block. That leaves one window worth knowing
+ * about: converting disowns the subtree from the page, so the NEXT page publish
+ * clears that subtree's live parent link and the placement renders nothing on
+ * live until the block is published too. The editor's notPublished badge is
+ * what warns the author.
+ *
+ * Publishing and deleting are the exceptions — both reach live immediately, on
+ * every consuming page at once, which is the point of them.
  */
 class SharedBlockService
 {
@@ -288,25 +294,101 @@ class SharedBlockService
             ));
         }
 
-        return Transactional::run(fn(): Result => WriteResult::from(static function () use ($reference, $root): GridElement {
-            // cascade_duplicates carries the whole subtree; the copy comes
-            // back still pointing at the block, so re-point it immediately.
-            $copy = $root->duplicate(true);
+        return Transactional::run(fn(): Result => WriteResult::from(
+            fn(): GridElement => $this->replaceWithCopy($reference, $root),
+        ));
+    }
 
-            $copy->ParentID = $reference->ParentID;
-            $copy->ParentClass = $reference->ParentClass;
-            $copy->Sort = $reference->Sort;
+    /**
+     * The detach itself, without a transaction of its own so {@see delete()}
+     * can run it many times inside one.
+     */
+    private function replaceWithCopy(SharedBlockReference $reference, GridElement $root): GridElement
+    {
+        // cascade_duplicates carries the whole subtree; the copy comes
+        // back still pointing at the block, so re-point it immediately.
+        $copy = $root->duplicate(true);
 
-            if ($copy instanceof Section) {
-                $copy->Zone = (string) $reference->Zone;
+        $copy->ParentID = $reference->ParentID;
+        $copy->ParentClass = $reference->ParentClass;
+        $copy->Sort = $reference->Sort;
+
+        if ($copy instanceof Section) {
+            $copy->Zone = (string) $reference->Zone;
+        }
+
+        $copy->write();
+
+        $reference->doArchive();
+
+        return $copy;
+    }
+
+    /**
+     * Retire $block from the library, resolving what happens to the content on
+     * every page that places it.
+     *
+     * Both modes reach live without the consuming pages being republished,
+     * which is what makes the operation usable at all: the alternative — making
+     * the author clear every placement by hand first — scales with the size of
+     * the site.
+     *
+     * @return Result<int<0, max>> Placements handled.
+     */
+    #[NoDiscard('The Result carries the number of placements handled or the reason the delete was refused.')]
+    public function delete(SharedBlock $block, SharedBlockDeleteMode $mode): Result
+    {
+        return Transactional::run(fn(): Result => WriteResult::from(function () use ($block, $mode): int {
+            /** @var list<SharedBlockReference> $references */
+            $references = SharedBlockReference::get()->filter(['BlockID' => $block->ID])->toArray();
+
+            if ($mode === SharedBlockDeleteMode::Unshare) {
+                $this->unshareAll($block, $references);
             }
 
-            $copy->write();
+            // Placements the unshare path did not consume — all of them in
+            // Remove mode, plus any live-only stragglers in either — are
+            // cleaned up by SharedBlock::onBeforeDelete().
+            $block->doArchive();
 
-            $reference->doArchive();
-
-            return $copy;
+            return count($references);
         }));
+    }
+
+    /**
+     * @param list<SharedBlockReference> $references
+     * @throws ValidationException When the block has no content left to copy.
+     */
+    private function unshareAll(SharedBlock $block, array $references): void
+    {
+        if ($references === []) {
+            return;
+        }
+
+        $root = $block->getRootElement();
+
+        if ($root === null) {
+            // Nothing to copy, so "keep the content" cannot be honoured. Saying
+            // so beats silently degrading into the destructive mode.
+            throw ValidationException::create(_t(
+                self::class . '.UNSHARE_EMPTY_BLOCK',
+                'This block has no content left to keep. Delete it and remove the placements instead.',
+            ));
+        }
+
+        foreach ($references as $reference) {
+            // Read before the detach archives the reference: the copy has to
+            // reach live wherever the placement already was, or "each page
+            // keeps its own copy" would be false on every published page until
+            // someone happened to republish it.
+            $wasLive = $reference->isPublished();
+
+            $copy = $this->replaceWithCopy($reference, $root);
+
+            if ($wasLive) {
+                $copy->publishRecursive();
+            }
+        }
     }
 
     /**

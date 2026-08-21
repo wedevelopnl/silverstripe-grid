@@ -84,8 +84,10 @@ final class SharedBlockTest extends SapphireTest
         );
     }
 
-    public function testCanDeleteFalseWhileReferenced(): void
+    public function testCanDeleteWhileReferenced(): void
     {
+        // Being placed is not a veto: the library resolves what happens to the
+        // consuming pages instead of refusing the delete.
         $this->logInWithPermission('ADMIN');
 
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -93,7 +95,7 @@ final class SharedBlockTest extends SapphireTest
         GridTreeFactory::section($block, zone: '');
         GridTreeFactory::reference($page, $block);
 
-        self::assertFalse($block->canDelete());
+        self::assertTrue($block->canDelete());
     }
 
     public function testCanDeleteTrueWhenUnreferenced(): void
@@ -106,8 +108,46 @@ final class SharedBlockTest extends SapphireTest
         self::assertTrue($block->canDelete());
     }
 
-    public function testCanDeleteFalseWhileReferencedOnLiveOnly(): void
+    public function testDeletingBlockArchivesItsPlacements(): void
     {
+        $this->logInWithPermission('ADMIN');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+        $reference = GridTreeFactory::reference($page, $block);
+
+        $block->doArchive();
+
+        self::assertNull(
+            SharedBlockReference::get()->byID($reference->ID),
+            'a placement left behind resolves no root class and breaks later writes on that page',
+        );
+    }
+
+    public function testDeletingBlockRemovesPlacementsFromLive(): void
+    {
+        $this->logInWithPermission('ADMIN');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+        $reference = GridTreeFactory::reference($page, $block);
+        $reference->publishSingle();
+
+        $block->doArchive();
+
+        Versioned::set_stage(Versioned::LIVE);
+        self::assertNull(
+            SharedBlockReference::get()->byID($reference->ID),
+            'the delete must reach the public site, not wait for each page to be republished',
+        );
+    }
+
+    public function testDeletingBlockRemovesPlacementsThatSurviveOnLiveAlone(): void
+    {
+        // A placement whose draft row was dropped without unpublishing is
+        // invisible to a draft-stage sweep, so it needs its own cleanup pass.
         $this->logInWithPermission('ADMIN');
 
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -123,7 +163,11 @@ final class SharedBlockTest extends SapphireTest
             SharedBlockReference::get()->filter('BlockID', $block->ID)->count(),
             'precondition: the reference is gone from DRAFT',
         );
-        self::assertFalse($block->canDelete(), 'a live-only placement still consumes the block');
+
+        $block->doArchive();
+
+        Versioned::set_stage(Versioned::LIVE);
+        self::assertNull(SharedBlockReference::get()->byID($reference->ID));
     }
 
     public function testSubtreeElementRemainsDeletableWhileBlockIsReferenced(): void

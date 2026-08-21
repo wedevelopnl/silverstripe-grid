@@ -308,30 +308,57 @@ class SharedBlock extends DataObject
     }
 
     /**
-     * Deleting a placed block would break every consumer, so the library
-     * refuses it while any reference survives on either stage. This guards the
-     * block record only — {@see GridElement::canDelete()} deliberately routes
-     * the block's own elements past it so the subtree stays editable.
+     * Being placed is deliberately NOT a veto. Refusing the delete would oblige
+     * the author to visit every consuming page by hand first, an unbounded
+     * chore the library offers no tooling for; the informed confirmation in
+     * {@see \WeDevelop\Grid\Value\SharedBlockDeleteMode} carries that weight
+     * instead, exactly as the unpublish flow already does.
      *
      * @param Member|null $member
      */
     #[Override]
     public function canDelete(mixed $member = null): bool
     {
-        $member = $member ?: Security::getCurrentUser();
-
-        if ($member !== null) {
-            $extended = $this->extendedCan(__FUNCTION__, $member);
-            if ($extended !== null) {
-                return $extended;
-            }
-        }
-
-        if ($this->isReferenced()) {
-            return false;
-        }
-
         return $this->checkPermission(__FUNCTION__, $member, self::ADMIN_PERMISSION);
+    }
+
+    /**
+     * Placements are page content, so no ownership config on this record
+     * reaches them and a delete would strand every reference. A stranded
+     * reference does more than render empty: it resolves no effective root
+     * class, which fails every later write on that page's grid with
+     * BLOCK_EMPTY. Cleaning up here rather than in
+     * {@see \WeDevelop\Grid\Service\SharedBlockService::delete()} holds the
+     * invariant on every delete path — the CMS action, a dev task, a bare
+     * delete() in project code.
+     *
+     * The unshare path detaches its placements before deleting, so by the time
+     * this runs there is nothing left for it to find.
+     */
+    #[Override]
+    protected function onBeforeDelete(): void
+    {
+        parent::onBeforeDelete();
+
+        $blockId = (int) $this->ID;
+
+        if ($blockId <= 0) {
+            return;
+        }
+
+        foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
+            $reference->doArchive();
+        }
+
+        // A placement survives on live alone when its draft row was deleted
+        // without unpublishing first, and doArchive() above never sees those.
+        Versioned::withVersionedMode(static function () use ($blockId): void {
+            Versioned::set_stage(Versioned::LIVE);
+
+            foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
+                $reference->deleteFromStage(Versioned::LIVE);
+            }
+        });
     }
 
     /**

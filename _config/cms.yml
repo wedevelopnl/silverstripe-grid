@@ -9,3 +9,10 @@ SilverStripe\Admin\LeftAndMain:
     - 'wedevelopnl/silverstripe-grid:client/dist/styles/bundle.css'
   extra_requirements_i18n:
     'wedevelopnl/silverstripe-grid:client/lang': true
+
+# The library's delete dialog replaces the stock archive button. Registered on
+# the base item request so it also covers VersionedGridFieldItemRequest, which
+# is what a versioned record like SharedBlock actually gets.
+SilverStripe\Forms\GridField\GridFieldDetailForm_ItemRequest:
+  extensions:
+    - WeDevelop\Grid\Extensions\SharedBlockDeleteActionExtension

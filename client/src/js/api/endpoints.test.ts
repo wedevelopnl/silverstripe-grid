@@ -12,6 +12,7 @@ import {
   convertToSharedBlock,
   createContentElement,
   createElement,
+  deleteSharedBlock,
   duplicateElement,
   detachSharedBlock,
   duplicateToElement,
@@ -20,6 +21,7 @@ import {
   fetchPages,
   fetchSharedBlocks,
   fetchSharedBlockTree,
+  fetchSharedBlockUsage,
   fetchZones,
   normaliseTreeResponse,
   placeSharedBlock,
@@ -542,5 +544,20 @@ describe('shared block endpoints', () => {
     expect(url).toBe('/admin/grid-shared-blocks/api/setPublished')
     expect(init?.method).toBe('PATCH')
     expect(JSON.parse(String(init?.body))).toEqual({ blockId: 3, published: true })
+  })
+
+  it('fetchSharedBlockUsage reads the usage route and validates the counts', async () => {
+    mockFetchSuccess({ usageCount: 4, liveUsageCount: 1 })
+
+    await expect(fetchSharedBlockUsage(3)).resolves.toEqual({ usageCount: 4, liveUsageCount: 1 })
+    expect(getFetchCalls()[0][0]).toBe('/admin/grid-shared-blocks/api/usage/3')
+  })
+
+  it('deleteSharedBlock sends the block id and mode on the query string', async () => {
+    await deleteSharedBlock({ blockId: 3, mode: 'unshare' })
+
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid-shared-blocks/api/delete?blockId=3&mode=unshare')
+    expect(init?.method).toBe('DELETE')
   })
 })
