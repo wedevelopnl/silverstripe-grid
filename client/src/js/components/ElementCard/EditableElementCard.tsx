@@ -2,6 +2,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { type MouseEvent, memo } from 'react'
 import DragHandle from '@/components/DragHandle/DragHandle'
 import ElementActions from '@/components/ElementActions/ElementActions'
+import { usePlacement } from '@/components/SharedBlockFrame/PlacementContext'
 import { useIsNarrowerThan } from '@/hooks/useIsNarrowerThan'
 import { t } from '@/i18n'
 import type { SimpleElementNode } from '@/types/elements'
@@ -37,6 +38,12 @@ const EditableElementCard = memo(function EditableElementCardComponent({
   const style = buildSortableStyle(transform, transition, isDragging)
   const [headerRef, isNarrow] = useIsNarrowerThan(NARROW_HEADER_WIDTH)
 
+  // Inside a placed shared block the content is read-only on the page: edits
+  // belong in the library, and the card stops being a clickable link.
+  const insideShared = usePlacement() !== null
+
+  const trailing = insideShared ? undefined : <ElementActions node={element} kebabOnly={isNarrow} />
+
   // Swallow clicks from interactive descendants (drag handle, actions menu,
   // nested buttons/links/inputs) or while a drag is in progress — the anchor
   // would otherwise navigate when the user interacts with those controls or
@@ -66,24 +73,26 @@ const EditableElementCard = memo(function EditableElementCardComponent({
       icon={element.blockSchema.icon}
       title={element.title}
       summary={element.summary}
-      href={editLink ?? undefined}
+      href={insideShared ? undefined : (editLink ?? undefined)}
       onClick={
         // Stryker disable next-line ConditionalExpression: Equivalent — differs only when editLink === null, where href is undefined and ElementCardChrome renders a div with no onClick, so the handler is unused
-        editLink !== null ? handleAnchorClick : undefined
+        editLink !== null && !insideShared ? handleAnchorClick : undefined
       }
       setNodeRef={setNodeRef}
       style={style}
       leading={
-        <DragHandle
-          listeners={listeners}
-          attributes={attributes}
-          label={t('WeDevelopGrid.ElementCard.MOVE_LABEL', 'Move {title}', {
-            title: element.title,
-          })}
-        />
+        insideShared ? undefined : (
+          <DragHandle
+            listeners={listeners}
+            attributes={attributes}
+            label={t('WeDevelopGrid.ElementCard.MOVE_LABEL', 'Move {title}', {
+              title: element.title,
+            })}
+          />
+        )
       }
       headerRef={headerRef}
-      trailing={<ElementActions node={element} kebabOnly={isNarrow} />}
+      trailing={trailing}
     />
   )
 })

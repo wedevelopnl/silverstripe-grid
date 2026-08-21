@@ -19,6 +19,7 @@
 @import url('./row-block.css');
 @import url('./column-block.css');
 @import url('./column-insert.css');
+@import url('./shared-block.css');
 @import url('./element-card.css');
 @import url('./element-toolbar.css');
 @import url('./add-child-button.css');

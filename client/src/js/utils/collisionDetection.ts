@@ -6,6 +6,8 @@ import {
 } from '@dnd-kit/core'
 
 import { getDraggableType, PARENT_CONTAINER_TYPE } from '@/types/dnd'
+import type { ElementNode } from '@/types/elements'
+import type { NodeKey } from '@/types/identity'
 
 /**
  * Like closestCenter, but reads live DOM rects via getBoundingClientRect()
@@ -66,16 +68,48 @@ const closestCenterLive: CollisionDetection = (args) => {
 }
 
 /**
- * Returns only same-type sibling containers for the active draggable.
+ * Whether two nodes sit on the same side of every shared-block boundary.
+ *
+ * Content may not be dragged into or out of a shared block: page content would
+ * silently become shared, and block content would silently vanish from every
+ * other page using it. Both undefined = both page-local = allowed; equal keys =
+ * inside the same block = allowed; any mismatch = blocked.
+ *
+ * Nodes absent from the map (a page-level droppable with an unparseable id)
+ * read as page-local, which correctly refuses a shared element dropped at page
+ * root. With no map supplied the check is inert — callers without tree context
+ * keep the pre-shared-blocks behaviour.
+ */
+export function sameSharedContext(
+  activeId: string,
+  candidateId: string,
+  nodeMap?: ReadonlyMap<NodeKey, ElementNode>,
+): boolean {
+  if (nodeMap === undefined) return true
+
+  return (
+    nodeMap.get(activeId as NodeKey)?.sharedBlockKey ===
+    nodeMap.get(candidateId as NodeKey)?.sharedBlockKey
+  )
+}
+
+/**
+ * Returns only same-type sibling containers for the active draggable, on the
+ * active item's side of any shared-block boundary.
  */
 export function filterSiblings(
   activeId: string,
   containers: DroppableContainer[],
+  nodeMap?: ReadonlyMap<NodeKey, ElementNode>,
 ): DroppableContainer[] {
   const activeType = getDraggableType(activeId)
   if (activeType === null) return []
 
-  return containers.filter((container) => getDraggableType(String(container.id)) === activeType)
+  return containers.filter(
+    (container) =>
+      getDraggableType(String(container.id)) === activeType &&
+      sameSharedContext(activeId, String(container.id), nodeMap),
+  )
 }
 
 /**
@@ -85,6 +119,7 @@ export function filterSiblings(
 export function filterParentContainers(
   activeId: string,
   containers: DroppableContainer[],
+  nodeMap?: ReadonlyMap<NodeKey, ElementNode>,
 ): DroppableContainer[] {
   const activeType = getDraggableType(activeId)
   if (activeType === null) return []
@@ -92,7 +127,10 @@ export function filterParentContainers(
   const parentType = PARENT_CONTAINER_TYPE[activeType]
 
   return containers.filter((container) => {
-    const containerType = getDraggableType(String(container.id))
+    const containerId = String(container.id)
+    const containerType = getDraggableType(containerId)
+
+    if (!sameSharedContext(activeId, containerId, nodeMap)) return false
 
     if (parentType === 'page') return containerType === null
 
@@ -262,6 +300,12 @@ export interface TypedCollisionDetectionOptions {
   sourceContainerItemsRef?: { current: ReadonlySet<string | number> | null }
   /** Updated on every collision detection cycle with the winning element's rect. */
   overRectRef?: { current: OverRectSnapshot | null }
+  /**
+   * Live node lookup, as a ref because the detector is constructed once per
+   * editor while the map is rebuilt on every tree change. Used only to keep
+   * drags from crossing a shared-block boundary.
+   */
+  nodeMapRef?: { current: ReadonlyMap<NodeKey, ElementNode> }
 }
 
 /**
@@ -329,7 +373,7 @@ export function createTypedCollisionDetection(
       return collisions
     }
 
-    const siblings = filterSiblings(activeId, nonActiveContainers)
+    const siblings = filterSiblings(activeId, nonActiveContainers, options.nodeMapRef?.current)
 
     // Source-container siblings. Hoisted out of the no-pending branch below
     // because pass 2's lost-lock recovery needs the same set.
@@ -450,7 +494,11 @@ export function createTypedCollisionDetection(
     // containers when the cursor is near the boundary between a tall and
     // short section — the short section's center is closer even though the
     // cursor is visually inside the tall section.
-    const parents = filterParentContainers(activeId, nonActiveContainers)
+    const parents = filterParentContainers(
+      activeId,
+      nonActiveContainers,
+      options.nodeMapRef?.current,
+    )
 
     if (args.pointerCoordinates) {
       const pointer = args.pointerCoordinates

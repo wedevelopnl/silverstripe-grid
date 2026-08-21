@@ -1,13 +1,16 @@
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Fragment, memo, useMemo } from 'react'
+import { Fragment, memo, useMemo, useState } from 'react'
 import AddChildButton from '@/components/AddChildButton/AddChildButton'
 import DragHandle from '@/components/DragHandle/DragHandle'
 import ElementActions from '@/components/ElementActions/ElementActions'
 import EditableRowBlock from '@/components/RowBlock/EditableRowBlock'
+import { usePlacement } from '@/components/SharedBlockFrame/PlacementContext'
+import SharedChild from '@/components/SharedBlockFrame/SharedChild'
+import SharedBlockPickerDialog from '@/components/SharedBlockPickerDialog/SharedBlockPickerDialog'
 import { useDragContext } from '@/hooks/useDragAndDrop'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import { t } from '@/i18n'
-import type { SectionNode } from '@/types/elements'
+import { isSharedBlockReferenceNode, type SectionNode } from '@/types/elements'
 import type { NodeKey } from '@/types/identity'
 import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
 import { hasUnpublishedDescendant } from '@/utils/publishStatus'
@@ -17,8 +20,25 @@ interface EditableSectionBlockProps {
   readonly section: SectionNode
 }
 
+/**
+ * Sortable ids for this container's children, excluding shared block
+ * placements.
+ *
+ * A placement registers no sortable — `SharedBlockFrame` is deliberately not
+ * one, and the sortable rendered inside it carries the block ROOT's nodeKey.
+ * Leaving its key in `items` puts a hole in dnd-kit's `getSortedRects`, so
+ * `getItemGap` reads no rect on either side of it and the siblings after it
+ * shift by the wrong distance during a same-container drag. `useGridEditorDnd`
+ * filters the page root for exactly this reason.
+ */
 function useChildSortableKeys(section: SectionNode): NodeKey[] {
-  return useMemo(() => section.children?.map((r) => r.nodeKey) ?? [], [section.children])
+  return useMemo(
+    () =>
+      section.children
+        ?.filter((child) => !isSharedBlockReferenceNode(child))
+        .map((r) => r.nodeKey) ?? [],
+    [section.children],
+  )
 }
 
 const EditableSectionBlock = memo(function EditableSectionBlockComponent({
@@ -28,6 +48,10 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
   const { isCollapsed, onToggle } = useElementCollapse(section.nodeKey)
   const { activeType, pendingActive } = useDragContext()
 
+  // Inside a placed shared block the content is read-only on the page: edits
+  // belong in the library, and the frame's own bar carries the block's actions.
+  const insideShared = usePlacement() !== null
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({ id: section.nodeKey })
 
@@ -35,33 +59,39 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
 
   const style = buildSortableStyle(transform, transition, isDragging)
 
+  const [isSharedPickerOpen, setSharedPickerOpen] = useState(false)
+
   const childKeys = useChildSortableKeys(section)
   const rows = section.children ?? []
   const hasRows = rows.length > 0
+
+  const trailing = insideShared ? undefined : (
+    <ElementActions node={section} collapse={{ isCollapsed, onToggle, label: section.title }} />
+  )
 
   return (
     <SectionChrome
       status={status}
       hasUnpublishedDescendant={hasUnpublishedDescendant(section)}
       title={section.title}
-      titleHref={section.editLink ?? undefined}
+      titleHref={insideShared ? undefined : (section.editLink ?? undefined)}
       isCollapsed={isCollapsed}
       onToggle={onToggle}
       dropTarget={showDropTarget}
       setNodeRef={setNodeRef}
       style={style}
       leading={
-        <DragHandle
-          listeners={listeners}
-          attributes={attributes}
-          label={t('WeDevelopGrid.SectionBlock.MOVE_LABEL', 'Move {title}', {
-            title: section.title,
-          })}
-        />
+        insideShared ? undefined : (
+          <DragHandle
+            listeners={listeners}
+            attributes={attributes}
+            label={t('WeDevelopGrid.SectionBlock.MOVE_LABEL', 'Move {title}', {
+              title: section.title,
+            })}
+          />
+        )
       }
-      trailing={
-        <ElementActions node={section} collapse={{ isCollapsed, onToggle, label: section.title }} />
-      }
+      trailing={trailing}
     >
       <SortableContext
         items={childKeys}
@@ -69,10 +99,12 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
       >
         {hasRows ? (
           <>
-            <AddChildButton parentId={section.self.id} childType="row" variant="before-first" />
+            {!insideShared && (
+              <AddChildButton parentId={section.self.id} childType="row" variant="before-first" />
+            )}
             {rows.map((row, index) => (
               <Fragment key={row.nodeKey}>
-                {index > 0 && (
+                {index > 0 && !insideShared && (
                   <AddChildButton
                     parentId={section.self.id}
                     childType="row"
@@ -80,15 +112,41 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
                     insertAfterId={rows[index - 1].self.id}
                   />
                 )}
-                <EditableRowBlock row={row} />
+                <SharedChild
+                  child={row}
+                  siblings={rows}
+                  render={(node) => <EditableRowBlock row={node} />}
+                />
               </Fragment>
             ))}
-            <AddChildButton parentId={section.self.id} childType="row" variant="append" />
+            {!insideShared && (
+              <AddChildButton
+                parentId={section.self.id}
+                childType="row"
+                variant="append"
+                onAddShared={() => setSharedPickerOpen(true)}
+              />
+            )}
           </>
         ) : (
-          <AddChildButton parentId={section.self.id} childType="row" variant="empty-state" />
+          !insideShared && (
+            <AddChildButton
+              parentId={section.self.id}
+              childType="row"
+              variant="empty-state"
+              onAddShared={() => setSharedPickerOpen(true)}
+            />
+          )
         )}
       </SortableContext>
+      {isSharedPickerOpen && (
+        <SharedBlockPickerDialog
+          parentType="section"
+          parent={section.self}
+          isOpen={isSharedPickerOpen}
+          onClose={() => setSharedPickerOpen(false)}
+        />
+      )}
     </SectionChrome>
   )
 })

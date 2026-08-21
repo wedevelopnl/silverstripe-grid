@@ -1,0 +1,71 @@
+/* Shared block frame — the boundary around content that is not this page's.
+   It has to read as "different from everything around it" at a glance, because
+   the whole risk of shared blocks is editing one without noticing the change
+   lands on other pages too. Hence a dashed accent border rather than the solid
+   surfaces every local container uses, plus a chip that never goes away.
+
+   Deliberately NOT composing `.ssgrid-card-surface`: that utility is a solid
+   hairline over a fill at `--ssgrid-space-4`, and the dashed borderless-fill
+   treatment here is the entire signal. Composing it would mean overriding three
+   of its four declarations. Only the radius token is shared, and a token is not
+   a reason to take a utility. */
+
+.ssgrid-shared-block {
+  padding: var(--ssgrid-space-3);
+  border: 1px dashed var(--ssgrid-border-focus);
+  border-radius: var(--ssgrid-radius-md);
+  margin-block: var(--ssgrid-space-2);
+}
+
+/* In a row's columns track the frame is the track item (a column-rooted
+   placement) sitting beside plain columns, so the vertical rhythm margin it
+   carries in a vertical stack would drop it out of line with them. Its sizing
+   in that track lives with the other track rules, in row-block.css. */
+.ssgrid-row-columns > .ssgrid-shared-block {
+  margin-block: 0;
+}
+
+.ssgrid-shared-block-bar {
+  display: flex;
+
+  /* Same wrapping rule as the section header: the chip carries a title and a
+     page count, so it outgrows narrow columns well before the actions do. */
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ssgrid-space-2);
+  margin-block-end: var(--ssgrid-space-2);
+}
+
+/* The always-present "shared" marker. The unpublished marker beside it is not
+   declared here — it is `.ssgrid-status-badge` from publish-status.css, the
+   same pill every element status uses, composed into the markup. */
+.ssgrid-shared-block-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: var(--ssgrid-size-chip);
+  padding: 0 var(--ssgrid-space-2);
+  background: var(--ssgrid-surface-muted);
+  border: 1px solid var(--ssgrid-border-default);
+  border-radius: var(--ssgrid-radius-sm);
+  color: var(--ssgrid-text-default);
+  font-size: var(--ssgrid-font-size-label);
+  line-height: var(--ssgrid-line-height-tight);
+  white-space: nowrap;
+}
+
+/* Trailing edge, matching the block toolbars this frame sits alongside. The
+   icon row and the overflow menu travel together, so the auto margin lives on
+   their wrapper rather than on either control. */
+.ssgrid-shared-block-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+
+  /* Matches `.ssgrid-element-toolbar`'s own gap on purpose: the overflow
+     trigger is the fourth icon in one visual row, so a tighter wrapper gap
+     would leave it sitting closer to the trash icon than the trash icon is to
+     the pencil, and the row reads as misaligned. */
+  gap: var(--ssgrid-space-3);
+  margin-inline-start: auto;
+}

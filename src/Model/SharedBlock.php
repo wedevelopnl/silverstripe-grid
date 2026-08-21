@@ -6,6 +6,8 @@ namespace WeDevelop\Grid\Model;
 
 use Override;
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Control\Controller;
+use SilverStripe\Control\Director;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
@@ -15,6 +17,7 @@ use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Admin\SharedBlockAdmin;
 use WeDevelop\Grid\Forms\GridEditorField;
 use WeDevelop\Grid\Service\SharedBlockUsageResolver;
 
@@ -158,6 +161,42 @@ class SharedBlock extends DataObject
         }
 
         return LiteralField::create('UsedOn', '<ul class="grid-shared-block__usage">' . $items . '</ul>');
+    }
+
+    #[Override]
+    public function getCMSEditLink(): ?string
+    {
+        if ((int) $this->ID <= 0) {
+            return null;
+        }
+
+        return Controller::join_links(self::cmsItemLink((int) $this->ID), 'edit');
+    }
+
+    /**
+     * ModelAdmin nests its item URLs as
+     * `{admin}/{sanitisedClass}/EditForm/field/{sanitisedClass}/item/{id}`;
+     * `sanitiseClassName` turns backslashes into dashes. The trailing action
+     * segment is the caller's: `edit` for the block's own form, or the deeper
+     * `ItemEditForm/field/BlockEditor/...` walk {@see GridElement} uses to
+     * reach an element inside the block's grid editor.
+     *
+     * SharedBlockAdminTest asserts a GET on the generated URL actually resolves
+     * — this shape is verified against the running CMS, not assumed.
+     */
+    public static function cmsItemLink(int $blockId): string
+    {
+        $sanitisedClass = str_replace('\\', '-', self::class);
+
+        return Controller::join_links(
+            Director::baseURL(),
+            SharedBlockAdmin::singleton()->Link($sanitisedClass),
+            'EditForm',
+            'field',
+            $sanitisedClass,
+            'item',
+            (string) $blockId,
+        );
     }
 
     /**

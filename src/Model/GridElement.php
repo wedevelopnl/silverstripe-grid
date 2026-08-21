@@ -24,7 +24,6 @@ use SilverStripe\Security\Security;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\VersionedAdmin\Forms\HistoryViewerField;
 use WeDevelop\Grid\Contract\ContainerInterface;
-use WeDevelop\Grid\Admin\SharedBlockAdmin;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 
 /**
@@ -218,26 +217,14 @@ class GridElement extends DataObject
     }
 
     /**
-     * ModelAdmin nests its item URLs as
-     * `{admin}/{sanitisedClass}/EditForm/field/{sanitisedClass}/item/{id}`,
-     * and our element sits one level deeper again inside the block's own
-     * GridEditorField. `sanitiseClassName` turns backslashes into dashes.
-     *
-     * SharedBlockAdminTest asserts a GET on the generated URL actually resolves
-     * — this shape is verified against the running CMS, not assumed.
+     * The element sits one level deeper than the block's own edit form, inside
+     * the GridEditorField that form hosts — hence the second `field/item` walk
+     * on top of {@see SharedBlock::cmsItemLink()}.
      */
     private function buildSharedBlockEditLink(SharedBlock $block): string
     {
-        $sanitisedClass = str_replace('\\', '-', SharedBlock::class);
-
         return Controller::join_links(
-            Director::baseURL(),
-            SharedBlockAdmin::singleton()->Link($sanitisedClass),
-            'EditForm',
-            'field',
-            $sanitisedClass,
-            'item',
-            (string) $block->ID,
+            SharedBlock::cmsItemLink((int) $block->ID),
             'ItemEditForm',
             'field',
             'BlockEditor',

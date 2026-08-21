@@ -1,3 +1,4 @@
+import { sharedBlockMetaWireSchema } from './sharedBlocks';
 /**
  * Valibot schemas for API responses.
  *
@@ -13,7 +14,7 @@
  */
 import * as v from 'valibot';
 export declare const nodeRefSchema: v.ObjectSchema<{
-    readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element"], undefined>;
+    readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element", "sharedBlock"], undefined>;
     readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
 }, undefined>;
 export declare const viewportSettingsSchema: v.ObjectSchema<{
@@ -33,13 +34,23 @@ declare const gridSettingsSchema: v.ObjectSchema<{
         readonly visible: v.BooleanSchema<undefined>;
     }, undefined>, undefined>]>;
 }, undefined>;
+/**
+ * A standalone element-type map, for the one place that receives it outside a
+ * tree response: the library's add button, which is server-rendered with the
+ * types a Column accepts — the same set that may root a leaf-rooted block.
+ */
+export declare const allowedTypeMapSchema: v.SchemaWithPipe<readonly [v.CustomSchema<unknown, undefined>, v.TransformAction<unknown, unknown>, v.RecordSchema<v.StringSchema<undefined>, v.ObjectSchema<{
+    readonly label: v.StringSchema<undefined>;
+    readonly icon: v.StringSchema<undefined>;
+    readonly description: v.StringSchema<undefined>;
+}, undefined>, undefined>]>;
 declare const baseFieldsWireSchema: v.ObjectSchema<{
     readonly self: v.ObjectSchema<{
-        readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element"], undefined>;
+        readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element", "sharedBlock"], undefined>;
         readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
     }, undefined>;
     readonly parent: v.ObjectSchema<{
-        readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element"], undefined>;
+        readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element", "sharedBlock"], undefined>;
         readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
     }, undefined>;
     readonly title: v.StringSchema<undefined>;
@@ -72,11 +83,18 @@ declare const baseFieldsWireSchema: v.ObjectSchema<{
  */
 type ElementNodeWire = v.InferOutput<typeof baseFieldsWireSchema> & ({
     containerType?: undefined;
+    sharedBlock?: undefined;
+} | {
+    containerType?: undefined;
+    sharedBlock: v.InferOutput<typeof sharedBlockMetaWireSchema>;
+    children: ElementNodeWire[];
 } | {
     containerType: 'section' | 'row';
+    sharedBlock?: undefined;
     children: ElementNodeWire[] | null;
 } | {
     containerType: 'column';
+    sharedBlock?: undefined;
     children: ElementNodeWire[] | null;
     gridSettings: v.InferOutput<typeof gridSettingsSchema>;
 });
@@ -91,7 +109,7 @@ type ElementNodeWire = v.InferOutput<typeof baseFieldsWireSchema> & ({
 export declare const elementNodeWireSchema: v.GenericSchema<ElementNodeWire>;
 export declare const treeApiResponseWireSchema: v.ObjectSchema<{
     readonly rootParent: v.ObjectSchema<{
-        readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element"], undefined>;
+        readonly type: v.PicklistSchema<readonly ["page", "section", "row", "column", "element", "sharedBlock"], undefined>;
         readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
     }, undefined>;
     readonly allowedTypes: v.ObjectSchema<{

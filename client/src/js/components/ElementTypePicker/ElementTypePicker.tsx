@@ -7,6 +7,12 @@ interface ElementTypePickerProps {
   readonly isOpen: boolean
   readonly onClose: () => void
   readonly onSelect: (className: string) => void
+  /**
+   * Adds a "Shared block" tile after the class tiles. Placements carry the
+   * block they stand for, which the create endpoint has no slot for, so
+   * choosing this tile hands off to the block chooser instead of creating.
+   */
+  readonly onSelectSharedBlock?: () => void
 }
 
 export default function ElementTypePicker({
@@ -14,6 +20,7 @@ export default function ElementTypePicker({
   isOpen,
   onClose,
   onSelect,
+  onSelectSharedBlock,
 }: ElementTypePickerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -41,7 +48,13 @@ export default function ElementTypePicker({
     [onSelect, onClose],
   )
 
+  const handleSharedClick = useCallback(() => {
+    onSelectSharedBlock?.()
+    onClose()
+  }, [onSelectSharedBlock, onClose])
+
   const entries = Object.entries(allowedTypes)
+  const hasSharedTile = onSelectSharedBlock !== undefined
 
   return (
     <dialog
@@ -64,7 +77,7 @@ export default function ElementTypePicker({
         </button>
       </div>
       <div className="ssgrid-dialog-body">
-        {entries.length > 0 ? (
+        {entries.length > 0 || hasSharedTile ? (
           <div className="ssgrid-dialog-grid">
             {entries.map(([className, info]) => (
               <button
@@ -89,6 +102,28 @@ export default function ElementTypePicker({
                 )}
               </button>
             ))}
+            {hasSharedTile && (
+              <button
+                type="button"
+                className="ssgrid-dialog-tile ssgrid-focus-ring"
+                data-testid="element-type-tile-shared"
+                onClick={handleSharedClick}
+              >
+                <span className="ssgrid-dialog-tile-icon ssgrid-type-icon-chip font-icon-block-layout" />
+                <span className="ssgrid-dialog-tile-label">
+                  {t('WeDevelopGrid.ElementTypePicker.SHARED_BLOCK', 'Shared block')}
+                </span>
+                <span
+                  className="ssgrid-dialog-tile-description"
+                  data-testid="element-type-description"
+                >
+                  {t(
+                    'WeDevelopGrid.ElementTypePicker.SHARED_BLOCK_DESCRIPTION',
+                    'Place a block maintained once in the shared library',
+                  )}
+                </span>
+              </button>
+            )}
           </div>
         ) : (
           <p className="ssgrid-dialog-empty">

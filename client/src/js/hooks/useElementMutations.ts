@@ -26,7 +26,8 @@ import { buildMaps } from '@/hooks/useElementMaps'
 import { applyReorder } from '@/utils/applyReorder'
 import { refreshPreview } from '@/utils/refreshPreview'
 import { showToast } from '@/utils/toast'
-import { queryKeys } from './queryKeys'
+import type { GridEditorRootType } from './queryKeys'
+import { editorTreeQueryKey, queryKeys } from './queryKeys'
 
 /**
  * Shared mutation defaults: invalidate the element tree on success and toast on error.
@@ -35,7 +36,7 @@ import { queryKeys } from './queryKeys'
  * automatically reports failures to the user. Mutations with custom onError (e.g.
  * useReorderElement's optimistic rollback) should still call showToast explicitly.
  */
-function useStandardMutationOptions(pageId: number, zone: string) {
+export function useStandardMutationOptions(pageId: number, zone: string) {
   const queryClient = useQueryClient()
 
   return {
@@ -45,6 +46,11 @@ function useStandardMutationOptions(pageId: number, zone: string) {
       })
       queryClient.invalidateQueries({
         queryKey: queryKeys.acceptableContainers.all(),
+      })
+      // An edit inside a shared block changes its status and, after a detach or
+      // convert, its usage — both of which every other page's chip reads.
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.sharedBlocks.all(),
       })
       refreshPreview()
     },
@@ -140,9 +146,16 @@ interface ReorderMutationVariables {
   clearPendingTree?: () => void
 }
 
-export function useReorderElement(pageId: number, zone: string) {
+export function useReorderElement(
+  pageId: number,
+  zone: string,
+  rootType: GridEditorRootType = 'page',
+) {
   const queryClient = useQueryClient()
-  const queryKey = queryKeys.elementTree.byPage(pageId, zone)
+  // Not elementTree unconditionally: in the library editor `pageId` is a block
+  // id and the rendered tree is `sharedBlocks.tree`, so the snapshot, the
+  // optimistic write and the invalidation below all have to target that entry.
+  const queryKey = editorTreeQueryKey(rootType, pageId, zone)
 
   // onMutate (applyReorder) can throw a plain Error/TypeError, which TanStack
   // routes to onError — so the error channel is `Error | ApiError`, not just
@@ -184,6 +197,9 @@ export function useReorderElement(pageId: number, zone: string) {
       // (flicker) after the rollback has settled visually.
       onSuccess: async () => {
         await queryClient.invalidateQueries({ queryKey })
+        // Reordering inside a block leaves it with unpublished changes, which
+        // every consuming page's chip reads.
+        await queryClient.invalidateQueries({ queryKey: queryKeys.sharedBlocks.all() })
         refreshPreview()
       },
     },

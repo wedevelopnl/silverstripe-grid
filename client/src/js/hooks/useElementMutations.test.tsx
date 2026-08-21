@@ -501,6 +501,60 @@ describe('useElementMutations', () => {
         queryKey: queryKeys.elementTree.byPage(1, 'main'),
       })
     })
+
+    // In the library editor `pageId` is a BLOCK id and the rendered tree comes
+    // from `sharedBlocks.tree`. Writing the optimistic update to `elementTree`
+    // there put it in an entry nothing displays: the drag snapped back and the
+    // stale order survived until a reload.
+    it('optimistically updates the block tree when rooted at a shared block', async () => {
+      mockFetchSuccess({})
+      const blockId = 1
+      // No page-tree entry at all: the library editor has none, so seeding one
+      // would assert "never writes elementTree" against a cache state that
+      // cannot occur, leaving the claim resting on spy-install ordering.
+      const { queryClient, tree, column, elemA, elemB } = createReorderTree(1, '', {
+        seedCache: false,
+      })
+      const blockKey = queryKeys.sharedBlocks.tree(blockId)
+      queryClient.setQueryData(blockKey, tree)
+
+      // Asserted on the write rather than on the cache afterwards: the test
+      // client uses gcTime 0, so an entry with no observer is collected before
+      // the assertion could read it back.
+      const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData')
+
+      const { wrapper } = createProviderWrapper({ queryClient })
+      const { result } = renderHook(() => useReorderElement(blockId, '', 'sharedBlock'), {
+        wrapper,
+      })
+
+      await act(async () => {
+        result.current.mutate({
+          params: {
+            element: { type: 'element', id: elemB.self.id },
+            parent: { type: 'column', id: column.self.id },
+            after: null,
+          },
+          tree,
+        })
+        await Promise.resolve()
+      })
+
+      const writtenKeys = setQueryDataSpy.mock.calls.map(([key]) => key)
+      expect(writtenKeys).toContainEqual(blockKey)
+      expect(writtenKeys.every((key) => (key as unknown[])[0] !== 'elementTree')).toBe(true)
+
+      const optimistic = setQueryDataSpy.mock.calls.find(
+        ([key]) => JSON.stringify(key) === JSON.stringify(blockKey),
+      )?.[1] as TreeApiResponse
+      const optimisticSection = optimistic.nodes[0] as ContainerNode
+      const optimisticRow = optimisticSection.children?.[0] as ContainerNode
+      const optimisticColumn = optimisticRow.children?.[0] as ContainerNode
+      expect(optimisticColumn.children?.map((c) => c.self.id)).toEqual([
+        elemB.self.id,
+        elemA.self.id,
+      ])
+    })
   })
 
   describe('useDuplicateToElement', () => {

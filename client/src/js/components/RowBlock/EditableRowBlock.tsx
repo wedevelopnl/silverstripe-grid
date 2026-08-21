@@ -1,14 +1,17 @@
 import { horizontalListSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable'
-import { memo, useId, useMemo } from 'react'
+import { memo, useId, useMemo, useState } from 'react'
 import AddChildButton from '@/components/AddChildButton/AddChildButton'
 import EditableColumnBlock from '@/components/ColumnBlock/EditableColumnBlock'
+import { usePlacement } from '@/components/SharedBlockFrame/PlacementContext'
+import SharedChild from '@/components/SharedBlockFrame/SharedChild'
+import SharedBlockPickerDialog from '@/components/SharedBlockPickerDialog/SharedBlockPickerDialog'
 import ColumnInsertButton from '@/components/ColumnInsertButton/ColumnInsertButton'
 import DragHandle from '@/components/DragHandle/DragHandle'
 import ElementActions from '@/components/ElementActions/ElementActions'
 import { useDragContext } from '@/hooks/useDragAndDrop'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import { t } from '@/i18n'
-import type { RowNode } from '@/types/elements'
+import { isSharedBlockReferenceNode, type RowNode } from '@/types/elements'
 import type { NodeKey } from '@/types/identity'
 import { getColumnCount, getOffsetStrategy } from '@/utils/gridAdapter'
 import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
@@ -38,15 +41,36 @@ function useInsertBeforeByColumnKey(
   }, [row.children, row.self.id])
 }
 
+/**
+ * Sortable ids for this container's children, excluding shared block
+ * placements.
+ *
+ * A placement registers no sortable — `SharedBlockFrame` is deliberately not
+ * one, and the sortable rendered inside it carries the block ROOT's nodeKey.
+ * Leaving its key in `items` puts a hole in dnd-kit's `getSortedRects`, so
+ * `getItemGap` reads no rect on either side of it and the siblings after it
+ * shift by the wrong distance during a same-container drag. `useGridEditorDnd`
+ * filters the page root for exactly this reason.
+ */
 function useChildColumnKeys(row: RowNode): NodeKey[] {
-  return useMemo(() => row.children?.map((c) => c.nodeKey) ?? [], [row.children])
+  return useMemo(
+    () =>
+      row.children?.filter((child) => !isSharedBlockReferenceNode(child)).map((c) => c.nodeKey) ??
+      [],
+    [row.children],
+  )
 }
 
 const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: EditableRowBlockProps) {
+  const [isSharedPickerOpen, setSharedPickerOpen] = useState(false)
   const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid'
   const status = row.status
   const { isCollapsed, onToggle } = useElementCollapse(row.nodeKey)
   const { activeType, pendingActive } = useDragContext()
+
+  // Inside a placed shared block the content is read-only on the page: edits
+  // belong in the library, and the frame's own bar carries the block's actions.
+  const insideShared = usePlacement() !== null
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({ id: row.nodeKey })
@@ -61,12 +85,16 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
   const insertBeforeByKey = useInsertBeforeByColumnKey(row)
   const bodyId = useId()
 
+  const trailing = insideShared ? undefined : (
+    <ElementActions node={row} collapse={{ isCollapsed, onToggle, label: row.title }} />
+  )
+
   return (
     <RowChrome
       status={status}
       hasUnpublishedDescendant={hasUnpublishedDescendant(row)}
       title={row.title}
-      titleHref={row.editLink ?? undefined}
+      titleHref={insideShared ? undefined : (row.editLink ?? undefined)}
       isCollapsed={isCollapsed}
       onToggle={onToggle}
       columnCount={row.children?.length ?? 0}
@@ -75,18 +103,20 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
       setNodeRef={setNodeRef}
       style={style}
       leading={
-        <DragHandle
-          listeners={listeners}
-          attributes={attributes}
-          label={t('WeDevelopGrid.RowBlock.MOVE_LABEL', 'Move {title}', { title: row.title })}
-        />
+        insideShared ? undefined : (
+          <DragHandle
+            listeners={listeners}
+            attributes={attributes}
+            label={t('WeDevelopGrid.RowBlock.MOVE_LABEL', 'Move {title}', { title: row.title })}
+          />
+        )
       }
-      trailing={
-        <ElementActions node={row} collapse={{ isCollapsed, onToggle, label: row.title }} />
-      }
+      trailing={trailing}
     >
       <div id={bodyId} className="ssgrid-row-columns-area" data-testid="row-block-columns-area">
-        {hasColumns && <ColumnInsertButton rowId={row.self.id} placement="start" />}
+        {hasColumns && !insideShared && (
+          <ColumnInsertButton rowId={row.self.id} placement="start" />
+        )}
         <div
           className="ssgrid-row-columns"
           data-testid="row-block-columns"
@@ -102,20 +132,41 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
             items={childKeys}
             strategy={pendingActive ? noopSortingStrategy : horizontalListSortingStrategy}
           >
-            {hasColumns ? (
-              columns.map((column) => (
-                <EditableColumnBlock
-                  key={column.nodeKey}
-                  column={column}
-                  insertBefore={insertBeforeByKey.get(column.nodeKey)}
-                />
-              ))
-            ) : (
-              <AddChildButton parentId={row.self.id} childType="column" variant="empty-state" />
-            )}
+            {hasColumns
+              ? columns.map((column) => (
+                  <SharedChild
+                    key={column.nodeKey}
+                    child={column}
+                    siblings={columns}
+                    render={(node) => (
+                      <EditableColumnBlock
+                        column={node}
+                        insertBefore={
+                          insideShared ? undefined : insertBeforeByKey.get(column.nodeKey)
+                        }
+                      />
+                    )}
+                  />
+                ))
+              : !insideShared && (
+                  <AddChildButton
+                    parentId={row.self.id}
+                    childType="column"
+                    variant="empty-state"
+                    onAddShared={() => setSharedPickerOpen(true)}
+                  />
+                )}
           </SortableContext>
         </div>
-        {hasColumns && (
+        {isSharedPickerOpen && (
+          <SharedBlockPickerDialog
+            parentType="row"
+            parent={row.self}
+            isOpen={isSharedPickerOpen}
+            onClose={() => setSharedPickerOpen(false)}
+          />
+        )}
+        {hasColumns && !insideShared && (
           <ColumnInsertButton
             rowId={row.self.id}
             placement="end"

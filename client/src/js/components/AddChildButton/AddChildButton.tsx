@@ -13,6 +13,17 @@ interface AddChildButtonBaseProps {
    */
   readonly parentId: number
   readonly childType: ContainerType
+  /**
+   * Overrides the inferred parent NodeType. Only the library editor needs it:
+   * there a Section's parent is the SharedBlock that roots the tree, not a page.
+   */
+  readonly parentType?: NodeType
+  /**
+   * Adds a secondary "shared" affordance beside the main button. Provided only
+   * where a placement is legal — never in the library editor, where nesting is
+   * forbidden.
+   */
+  readonly onAddShared?: () => void
 }
 
 /**
@@ -76,7 +87,9 @@ function labelsFor(childType: ContainerType): { add: string; adding: string; emp
 
 const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButtonProps) {
   const { parentId, childType, variant } = props
-  const { pageId, zone } = useGridEditorContext()
+  const { pageId, zone, rootType } = useGridEditorContext()
+  // The whole library-editor tree is inside a block, root node included.
+  const isLibraryEditor = rootType === 'sharedBlock'
   const { mutate, isPending } = useCreateElement(pageId, zone)
   const labels = labelsFor(childType)
 
@@ -86,7 +99,7 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
     if (isPending) return
 
     const parent: NodeRef = {
-      type: PARENT_TYPE_FOR_CHILD[childType],
+      type: props.parentType ?? PARENT_TYPE_FOR_CHILD[childType],
       id: parentId,
     }
 
@@ -108,6 +121,8 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
     })
   }
 
+  const onAddShared = props.onAddShared
+
   // `aria-disabled` rather than `disabled`: a real disabled button is blurred
   // by the browser, so submitting stranded a keyboard user at the top of the
   // document and silenced the label change that reports progress. Left
@@ -126,12 +141,38 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
     </button>
   )
 
+  /**
+   * Its own strip, deliberately NOT inside the primary wrapper: those wrappers
+   * are full-width click targets holding exactly one button, and putting a
+   * second one in would move what the centre of the strip hits.
+   */
+  const sharedStrip =
+    onAddShared === undefined ? null : (
+      <div className="ssgrid-add-child" data-variant="shared">
+        <button
+          type="button"
+          className="ssgrid-add-child-button ssgrid-focus-ring"
+          data-testid="add-shared-button"
+          onClick={onAddShared}
+        >
+          <i
+            className="ssgrid-glyph ssgrid-add-child-icon font-icon-block-layout"
+            aria-hidden="true"
+          />
+          <span>{t('WeDevelopGrid.AddChildButton.ADD_SHARED', 'Add shared block')}</span>
+        </button>
+      </div>
+    )
+
   if (variant === 'empty-state') {
     return (
-      <div className="ssgrid-add-child" data-variant="empty" data-testid="add-child-empty">
-        <p className="ssgrid-add-child-hint">{labels.empty}</p>
-        {button}
-      </div>
+      <>
+        <div className="ssgrid-add-child" data-variant="empty" data-testid="add-child-empty">
+          <p className="ssgrid-add-child-hint">{labels.empty}</p>
+          {button}
+        </div>
+        {sharedStrip}
+      </>
     )
   }
 
@@ -150,9 +191,12 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
   }
 
   return (
-    <div className="ssgrid-add-child" data-variant="append" data-testid="add-child-append">
-      {button}
-    </div>
+    <>
+      <div className="ssgrid-add-child" data-variant="append" data-testid="add-child-append">
+        {button}
+      </div>
+      {sharedStrip}
+    </>
   )
 })
 

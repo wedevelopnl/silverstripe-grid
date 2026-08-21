@@ -29,8 +29,22 @@
    never carries `data-descendant-unpublished`, so that arm never matches.
    Same (0,2,0) specificity as the components' `[data-drop-target]` rules,
    which are imported later in bundle.css — so mid-drag the drop-target purple
-   still wins over the status orange, as it must. */
-.ssgrid-editor :is([data-status='draft'], [data-status='modified'], [data-descendant-unpublished]) {
+   still wins over the status orange, as it must.
+
+   `notPublished` is the shared block frame's own word for "never published"
+   (SharedBlockStatus in PHP, mirrored by the wire schema). It means what
+   `draft` means on an element and calls for the same action, so it rings the
+   same. Without it the frame would ring orange when modified and stay purple
+   when it had never been published at all — the louder state marked more
+   quietly. The frame's DASHED border is what says "this content is shared";
+   only the colour carries publish state, exactly as on every other card. */
+.ssgrid-editor
+:is(
+  [data-status='draft'],
+  [data-status='notPublished'],
+  [data-status='modified'],
+  [data-descendant-unpublished]
+) {
   border-color: var(--ssgrid-border-unpublished);
 }
 

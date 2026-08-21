@@ -13,6 +13,21 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 400px;
 
+  /* ...but `content-visibility: auto` also applies PAINT containment, which
+     clips every descendant to the section's box. Any flyout opening near the
+     bottom edge is cut off at it — the add strips' caret menus, an actions menu
+     on the last row, the column width listbox. Lift the containment for as long
+     as something inside is open.
+     `aria-haspopup` is what narrows this to flyouts: `aria-expanded` alone also
+     matches every CollapseToggle, which sets it on the section's own header and
+     reports `true` whenever the section is NOT collapsed — the default — so the
+     rule applied to essentially every section at all times and silently
+     disabled the off-screen skipping above. Any future flyout trigger carries
+     `aria-haspopup` too, so this still needs no per-component hook. */
+  &:has([aria-haspopup][aria-expanded='true']) {
+    content-visibility: visible;
+  }
+
   &[data-collapsed] > :not(.ssgrid-section-header) {
     display: none;
   }

@@ -11,19 +11,23 @@ use Override;
  * The shared-block facts a reference node carries on the wire: enough for the
  * editor to draw its frame, chip and status badge without a second request.
  *
- * @phpstan-type SerializedSharedBlockMeta array{blockId: positive-int, title: string, usageCount: int<0, max>, status: value-of<SharedBlockStatus>}
+ * @phpstan-type SerializedSharedBlockMeta array{blockId: positive-int, title: string, usageCount: int<0, max>, status: value-of<SharedBlockStatus>, editLink: string|null}
  */
 final readonly class SharedBlockMeta implements JsonSerializable
 {
     /**
      * @param positive-int $blockId
      * @param int<0, max> $usageCount Distinct pages placing this block, not placements.
+     * @param string|null $editLink The block's own form in the library — where a
+     *   placement's view and edit actions lead. Null for a block that is not in
+     *   the database yet, which no placement can reference.
      */
     public function __construct(
         public int $blockId,
         public string $title,
         public int $usageCount,
         public SharedBlockStatus $status,
+        public ?string $editLink,
     ) {
     }
 
@@ -36,6 +40,7 @@ final readonly class SharedBlockMeta implements JsonSerializable
             'title' => $this->title,
             'usageCount' => $this->usageCount,
             'status' => $this->status->value,
+            'editLink' => $this->editLink,
         ];
     }
 }

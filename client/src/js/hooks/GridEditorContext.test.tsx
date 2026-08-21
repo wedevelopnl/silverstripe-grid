@@ -5,10 +5,12 @@ import { renderExpectingError } from '@/testing/renderExpectingError'
 import { GridEditorProvider, useGridEditorContext } from './GridEditorContext'
 
 describe('useGridEditorContext', () => {
-  it('returns pageId and zone from provider', () => {
+  it('returns pageId, zone and rootType from provider', () => {
     function Wrapper({ children }: { children: ReactNode }) {
       return (
-        <GridEditorProvider value={{ pageId: 42, zone: 'sidebar' }}>{children}</GridEditorProvider>
+        <GridEditorProvider value={{ pageId: 42, zone: 'sidebar', rootType: 'sharedBlock' }}>
+          {children}
+        </GridEditorProvider>
       )
     }
 
@@ -18,6 +20,7 @@ describe('useGridEditorContext', () => {
 
     expect(result.current.pageId).toBe(42)
     expect(result.current.zone).toBe('sidebar')
+    expect(result.current.rootType).toBe('sharedBlock')
   })
 
   it('throws a clear error when used outside a provider', () => {

@@ -1,21 +1,32 @@
 import { describe, expect, it } from 'vitest'
 import { resetIdCounter } from '@/testing/factories'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
-import { isColumnNode, isSectionNode } from '@/types/elements'
+import {
+  isColumnNode,
+  isContainerNode,
+  isSectionNode,
+  isSharedBlockReferenceNode,
+} from '@/types/elements'
 import {
   archiveElement,
+  convertToSharedBlock,
   createContentElement,
   createElement,
   duplicateElement,
+  detachSharedBlock,
   duplicateToElement,
   fetchAcceptableContainers,
   fetchElementTree,
   fetchPages,
+  fetchSharedBlocks,
+  fetchSharedBlockTree,
   fetchZones,
   normaliseTreeResponse,
+  placeSharedBlock,
   publishElement,
   reorderElement,
   resetGridSettingsOverrides,
+  setSharedBlockPublished,
   unpublishElement,
   updateGridSettings,
 } from './endpoints'
@@ -351,5 +362,185 @@ describe('fetchPages', () => {
     await fetchPages('my page')
     const [url] = getFetchCalls()[0]
     expect(url).toBe('/admin/grid/api/pages?search=my%20page')
+  })
+})
+
+describe('shared block placements', () => {
+  const sharedBlock = {
+    blockId: 7,
+    title: 'Banner',
+    usageCount: 2,
+    status: 'published' as const,
+    editLink: '/admin/shared-blocks/item/7/edit',
+  }
+
+  const wireLeaf = (id: number, parent: { type: string; id: number }) => ({
+    self: { type: 'element', id },
+    parent,
+    title: `Leaf ${id}`,
+    blockSchema: { typeName: 'Foo', label: 'Foo', icon: 'i', type: 'Foo', title: 'Foo' },
+    obsoleteClassName: null,
+    version: 1,
+    canDelete: true,
+    canPublish: true,
+    canUnpublish: true,
+    canCreate: true,
+    editLink: null,
+    status: 'draft',
+  })
+
+  const wireColumn = (id: number, parent: { type: string; id: number }, children: unknown[]) => ({
+    ...wireLeaf(id, parent),
+    self: { type: 'column', id },
+    containerType: 'column',
+    gridSettings: { default: { width: 12, offset: 0, visible: true }, overrides: {} },
+    children,
+  })
+
+  /** A reference at page root wrapping column 20, which holds leaf 30. */
+  const referenceTree = {
+    rootParent: { type: 'page', id: 1 },
+    allowedTypes: EMPTY_ALLOWED,
+    nodes: [
+      {
+        ...wireLeaf(10, { type: 'page', id: 1 }),
+        sharedBlock,
+        children: [
+          wireColumn(20, { type: 'element', id: 10 }, [wireLeaf(30, { type: 'column', id: 20 })]),
+        ],
+      },
+      {
+        ...wireLeaf(40, { type: 'page', id: 1 }),
+        self: { type: 'section', id: 40 },
+        containerType: 'section',
+        children: [],
+      },
+    ],
+  }
+
+  it('stamps sharedBlockKey on every descendant but not on the placement itself', () => {
+    const [reference, sibling] = normaliseTreeResponse(referenceTree).nodes
+    expect(isSharedBlockReferenceNode(reference)).toBe(true)
+    if (!isSharedBlockReferenceNode(reference)) return
+
+    expect(reference.nodeKey).toBe('element-10')
+    expect(reference.sharedBlockKey).toBeUndefined()
+
+    const root = reference.children[0]
+    expect(root?.sharedBlockKey).toBe('element-10')
+    expect(isColumnNode(root!) && root.children![0].sharedBlockKey).toBe('element-10')
+
+    expect(sibling.sharedBlockKey).toBeUndefined()
+  })
+
+  it('keeps the placement typed as an element node carrying its block meta', () => {
+    const [reference] = normaliseTreeResponse(referenceTree).nodes
+
+    expect(isContainerNode(reference)).toBe(false)
+    expect(isSharedBlockReferenceNode(reference)).toBe(true)
+    if (!isSharedBlockReferenceNode(reference)) return
+
+    expect(reference.sharedBlock).toEqual(sharedBlock)
+  })
+
+  it('normalises an empty block to an empty children list', () => {
+    const tree = normaliseTreeResponse({
+      ...referenceTree,
+      nodes: [{ ...wireLeaf(10, { type: 'page', id: 1 }), sharedBlock, children: [] }],
+    })
+
+    const [reference] = tree.nodes
+    expect(isSharedBlockReferenceNode(reference) && reference.children).toEqual([])
+  })
+
+  it('parents the block root to the placement, not to the page', () => {
+    const [reference] = normaliseTreeResponse(referenceTree).nodes
+
+    expect(isSharedBlockReferenceNode(reference) && reference.children[0]?.parentKey).toBe(
+      'element-10',
+    )
+  })
+})
+
+describe('shared block endpoints', () => {
+  it('fetchSharedBlocks requests the filtered list and validates it', async () => {
+    mockFetchSuccess([
+      { id: 3, title: 'Banner', rootType: 'section', usageCount: 2, status: 'modified' },
+    ])
+
+    const blocks = await fetchSharedBlocks('column')
+
+    expect(getFetchCalls()[0][0]).toBe('/admin/grid-shared-blocks/api/list?parentType=column')
+    expect(blocks).toEqual([
+      { id: 3, title: 'Banner', rootType: 'section', usageCount: 2, status: 'modified' },
+    ])
+  })
+
+  it('fetchSharedBlocks accepts an entry for a still-empty block', async () => {
+    mockFetchSuccess([
+      { id: 3, title: 'New', rootType: null, usageCount: 0, status: 'notPublished' },
+    ])
+
+    await expect(fetchSharedBlocks('page')).resolves.toHaveLength(1)
+  })
+
+  it('fetchSharedBlockTree reads the block-rooted route', async () => {
+    mockFetchSuccess({
+      rootParent: { type: 'sharedBlock', id: 9 },
+      allowedTypes: EMPTY_ALLOWED,
+      nodes: [],
+    })
+
+    const tree = await fetchSharedBlockTree(9)
+
+    expect(getFetchCalls()[0][0]).toBe('/admin/grid-shared-blocks/api/readTree/9')
+    expect(tree.rootParent).toEqual({ type: 'sharedBlock', id: 9 })
+  })
+
+  it('placeSharedBlock posts the exact body', async () => {
+    await placeSharedBlock({
+      blockId: 3,
+      parent: { type: 'page', id: 1 },
+      zone: 'main',
+      insertAfterElementID: 8,
+    })
+
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid-shared-blocks/api/place')
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(String(init?.body))).toEqual({
+      blockId: 3,
+      parent: { type: 'page', id: 1 },
+      zone: 'main',
+      insertAfterElementID: 8,
+    })
+  })
+
+  it('convertToSharedBlock returns the new block id', async () => {
+    mockFetchSuccess({ blockId: 12 })
+
+    await expect(
+      convertToSharedBlock({ element: { type: 'section', id: 4 }, title: 'Hero' }),
+    ).resolves.toEqual({
+      blockId: 12,
+    })
+    expect(getFetchCalls()[0][0]).toBe('/admin/grid-shared-blocks/api/convert')
+  })
+
+  it('detachSharedBlock posts the placement ref', async () => {
+    await detachSharedBlock({ element: { type: 'element', id: 10 } })
+
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid-shared-blocks/api/detach')
+    expect(JSON.parse(String(init?.body))).toEqual({ element: { type: 'element', id: 10 } })
+  })
+
+  it('setSharedBlockPublished patches the publish flag', async () => {
+    await setSharedBlockPublished({ blockId: 3, published: true })
+
+    const [url, init] = getFetchCalls()[0]
+    expect(url).toBe('/admin/grid-shared-blocks/api/setPublished')
+    expect(init?.method).toBe('PATCH')
+    expect(JSON.parse(String(init?.body))).toEqual({ blockId: 3, published: true })
   })
 })

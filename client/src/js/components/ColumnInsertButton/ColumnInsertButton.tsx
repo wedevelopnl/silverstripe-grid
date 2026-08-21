@@ -39,7 +39,9 @@ type ColumnInsertButtonProps =
 const ColumnInsertButton = memo(function ColumnInsertButtonComponent(
   props: ColumnInsertButtonProps,
 ) {
-  const { pageId, zone } = useGridEditorContext()
+  const { pageId, zone, rootType } = useGridEditorContext()
+  // A block may not contain a block — see AddChildButton for the same gate.
+  const isLibraryEditor = rootType === 'sharedBlock'
   const { mutate, isPending } = useCreateElement(pageId, zone)
 
   function handleClick() {

@@ -1,4 +1,5 @@
 import type { NodeKey, NodeRef } from './identity'
+import type { SharedBlockMeta } from './sharedBlocks'
 import type { ElementStatus } from './status'
 
 export const CONTAINER_TYPES = ['section', 'row', 'column'] as const
@@ -47,6 +48,13 @@ interface BaseFields {
    */
   summary?: string
   extensions?: Record<string, unknown>
+  /**
+   * Set on every DESCENDANT of a shared block placement — the block's root and
+   * everything under it — and never on the placement itself. Two nodes belong
+   * to the same context when this field matches, which is what drag collision
+   * filtering uses to keep content from crossing the shared boundary.
+   */
+  sharedBlockKey?: NodeKey
 }
 
 /**
@@ -77,26 +85,51 @@ export interface AllowedTypeInfo {
   description: string
 }
 
+/**
+ * Any child slot can instead hold a shared block placement standing in for a
+ * subtree of that shape — a row-rooted block inside a section, a leaf-rooted
+ * one inside a column. The placement is judged by its block's root class, so it
+ * is legal exactly where the type it stands in for is.
+ */
+export type ChildOf<TNode> = TNode | SharedBlockReferenceNode
+
 export interface ColumnNode extends BaseFields {
   containerType: 'column'
   allowedTypes: Record<string, AllowedTypeInfo> | null
-  children: SimpleElementNode[] | null
+  children: ChildOf<SimpleElementNode>[] | null
   gridSettings: GridSettings
 }
 
 export interface RowNode extends BaseFields {
   containerType: 'row'
   allowedTypes: Record<string, AllowedTypeInfo> | null
-  children: ColumnNode[] | null
+  children: ChildOf<ColumnNode>[] | null
 }
 
 export interface SectionNode extends BaseFields {
   containerType: 'section'
   allowedTypes: Record<string, AllowedTypeInfo> | null
-  children: RowNode[] | null
+  children: ChildOf<RowNode>[] | null
 }
 
-export type ElementNode = SectionNode | RowNode | ColumnNode | SimpleElementNode
+/**
+ * A placement of a shared block. Not a container — it holds exactly one child,
+ * the block's root element, which is a completely normal typed node. That is
+ * what lets the shared subtree render and drag with the existing components:
+ * only the frame around it is new.
+ */
+export interface SharedBlockReferenceNode extends BaseFields {
+  containerType?: never
+  sharedBlock: SharedBlockMeta
+  children: [ElementNode] | []
+}
+
+export type ElementNode =
+  | SectionNode
+  | RowNode
+  | ColumnNode
+  | SharedBlockReferenceNode
+  | SimpleElementNode
 export type ContainerNode = SectionNode | RowNode | ColumnNode
 
 export interface TreeApiResponse {
@@ -122,6 +155,30 @@ export function isColumnNode(node: ElementNode): node is ColumnNode {
   return 'containerType' in node && node.containerType === 'column'
 }
 
+export function isSharedBlockReferenceNode(node: ElementNode): node is SharedBlockReferenceNode {
+  return 'sharedBlock' in node && node.sharedBlock !== undefined
+}
+
+/** Whether this node lives inside a shared block's subtree. */
+export function isInsideSharedBlock(node: ElementNode): boolean {
+  return node.sharedBlockKey !== undefined
+}
+
+/**
+ * Whether this node IS a block's single root — the library editor's top node,
+ * the only one parented by the SharedBlock itself.
+ *
+ * It carries no delete, no duplicate and no drag handle. Archiving it would
+ * leave the block rootless and duplicating it would give the block a second
+ * root, so both are removed from the UI here and refused by the server. The
+ * handle goes for a different reason: the root is the only node at its level
+ * and every slot below it belongs to a different shape, so a drag from it can
+ * never have a legal target.
+ */
+export function isSharedBlockRootNode(node: ElementNode): boolean {
+  return node.parent.type === 'sharedBlock'
+}
+
 export function isSimpleElementNode(node: ElementNode): node is SimpleElementNode {
-  return !('containerType' in node)
+  return !('containerType' in node) && !isSharedBlockReferenceNode(node)
 }

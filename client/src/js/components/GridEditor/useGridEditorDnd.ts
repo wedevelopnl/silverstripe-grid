@@ -2,12 +2,14 @@ import { useCallback, useMemo } from 'react'
 import type { DragContextValue, UseDragAndDropReturn } from '@/hooks/useDragAndDrop'
 import { useDragAndDrop } from '@/hooks/useDragAndDrop'
 import { useReorderElement } from '@/hooks/useElementMutations'
-import type { SectionNode, TreeApiResponse } from '@/types/elements'
+import type { GridEditorRootType } from '@/hooks/queryKeys'
+import type { ElementNode, TreeApiResponse } from '@/types/elements'
+import { isSectionNode } from '@/types/elements'
 import type { NodeKey, NodeRef } from '@/types/identity'
 import { selectSections } from './selectSections'
 
 export interface UseGridEditorDndReturn {
-  readonly sections: SectionNode[]
+  readonly sections: ElementNode[]
   readonly sectionIds: NodeKey[]
   readonly dndContextProps: UseDragAndDropReturn['dndContextProps']
   readonly dragState: UseDragAndDropReturn['dragState']
@@ -23,8 +25,9 @@ export function useGridEditorDnd(
   data: TreeApiResponse | undefined,
   pageId: number,
   zone: string,
+  rootType: GridEditorRootType = 'page',
 ): UseGridEditorDndReturn {
-  const reorderMutation = useReorderElement(pageId, zone)
+  const reorderMutation = useReorderElement(pageId, zone, rootType)
 
   // useDragAndDrop puts onReorder in its handleDragEnd useCallback deps. An
   // inline arrow would burn that memoisation on every parent render and
@@ -61,7 +64,10 @@ export function useGridEditorDnd(
   // `sections` and the derived `sectionIds` (and thus DndContext/SortableContext
   // props) reference-stable across unrelated re-renders.
   const sections = useMemo(() => selectSections(effectiveData), [effectiveData])
-  const sectionIds = useMemo(() => sections.map((s) => s.nodeKey), [sections])
+  // Only Sections register as sortables. A shared block placement is framed,
+  // not dragged (v1): mixed-type sibling dragging at page root is the module's
+  // highest-risk surface, so placements move via explicit up/down actions.
+  const sectionIds = useMemo(() => sections.filter(isSectionNode).map((s) => s.nodeKey), [sections])
 
   const dragContextValue = useMemo<DragContextValue>(
     () => ({ activeType: dragState?.activeType ?? null, pendingActive: pendingTree !== null }),

@@ -15,6 +15,8 @@
 import * as v from 'valibot'
 import { CONTAINER_TYPES } from './elements'
 import { NODE_TYPES } from './identity'
+import { editLinkWireSchema } from './editLink'
+import { sharedBlockMetaWireSchema } from './sharedBlocks'
 
 const nodeTypeSchema = v.picklist(NODE_TYPES)
 const containerTypeSchema = v.picklist(CONTAINER_TYPES)
@@ -79,37 +81,6 @@ const allowedTypeInfoSchema = v.object({
   description: v.string(),
 })
 
-/**
- * Guard for `editLink` values. CMS edit URLs ("/admin/pages/edit/show/5") are
- * root-relative and safe. Absolute URLs must use http/https; javascript:,
- * data:, vbscript:, and other schemes are rejected. Protocol-relative URLs
- * ("//evil.com") are also rejected — they start with "/" but also with "//",
- * so we require a single-slash prefix (!value.startsWith('//')).
- */
-function isSafeEditLink(value: string): boolean {
-  // Relative links (CMS edit URLs like "/admin/pages/edit/show/5") are safe.
-  // Absolute URLs must use http/https; reject javascript:, data:, vbscript:, etc.
-  // Backslash rejection prevents browser backslash→slash normalisation open-redirect
-  // (e.g. /\evil.com → https://evil.com/ per WHATWG URL spec).
-  // Tab/LF/CR rejection prevents WHATWG-stripping open-redirect: browsers strip these
-  // control characters from URLs before routing, so "/\t/evil.com" normalises to
-  // "//evil.com" — a protocol-relative off-origin redirect.
-  if (
-    value.startsWith('/') &&
-    !value.startsWith('//') &&
-    !value.includes('\\') &&
-    !/[\t\n\r]/.test(value)
-  )
-    return true
-  try {
-    const url = new URL(value)
-    return url.protocol === 'http:' || url.protocol === 'https:'
-  } catch {
-    // Not a parseable absolute URL and not root-relative → reject.
-    return false
-  }
-}
-
 const baseFieldsWireSchema = v.object({
   self: nodeRefSchema,
   parent: nodeRefSchema,
@@ -121,13 +92,7 @@ const baseFieldsWireSchema = v.object({
   canPublish: v.boolean(),
   canUnpublish: v.boolean(),
   canCreate: v.boolean(),
-  editLink: v.pipe(
-    v.nullable(v.string()),
-    v.check(
-      (value) => value === null || isSafeEditLink(value),
-      'editLink must be a relative path or an http(s) URL',
-    ),
-  ),
+  editLink: editLinkWireSchema,
   status: elementStatusSchema,
   summary: v.optional(v.pipe(v.string(), v.minLength(1))),
   // Reject arrays before `v.record`: valibot's `v.record` accepts an array as a
@@ -154,13 +119,20 @@ const baseFieldsWireSchema = v.object({
  */
 type ElementNodeWire = v.InferOutput<typeof baseFieldsWireSchema> &
   (
-    | { containerType?: undefined }
+    | { containerType?: undefined; sharedBlock?: undefined }
+    | {
+        containerType?: undefined
+        sharedBlock: v.InferOutput<typeof sharedBlockMetaWireSchema>
+        children: ElementNodeWire[]
+      }
     | {
         containerType: 'section' | 'row'
+        sharedBlock?: undefined
         children: ElementNodeWire[] | null
       }
     | {
         containerType: 'column'
+        sharedBlock?: undefined
         children: ElementNodeWire[] | null
         gridSettings: v.InferOutput<typeof gridSettingsSchema>
       }
@@ -191,9 +163,24 @@ const columnWireSchema = v.object({
   gridSettings: gridSettingsSchema,
 })
 
+/**
+ * A shared block placement. It carries children without being a container —
+ * exactly one child, the block's root — so it is discriminated by the presence
+ * of `sharedBlock` rather than by a `containerType` literal.
+ */
+const sharedBlockReferenceWireSchema = v.object({
+  ...baseFieldsWireSchema.entries,
+  containerType: v.optional(v.undefined_()),
+  sharedBlock: sharedBlockMetaWireSchema,
+  children: v.lazy(() => v.array(elementNodeWireSchema)),
+})
+
 const simpleElementWireSchema = v.object({
   ...baseFieldsWireSchema.entries,
   containerType: v.optional(v.undefined_()),
+  // Belt and braces alongside union order: a reference can never fall through
+  // to the plain-element variant, whichever way valibot resolves the union.
+  sharedBlock: v.optional(v.undefined_()),
 })
 
 /**
@@ -208,6 +195,7 @@ export const elementNodeWireSchema = v.union([
   sectionWireSchema,
   rowWireSchema,
   columnWireSchema,
+  sharedBlockReferenceWireSchema,
   simpleElementWireSchema,
 ]) as v.GenericSchema<ElementNodeWire>
 

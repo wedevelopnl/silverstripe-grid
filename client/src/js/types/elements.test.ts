@@ -3,14 +3,18 @@ import {
   createColumnNode,
   createRowNode,
   createSectionNode,
+  createSharedBlockReferenceNode,
   createSimpleElement,
   resetIdCounter,
 } from '@/testing/factories'
+import type { ElementNode, SectionNode } from './elements'
 import {
   isColumnNode,
   isContainerNode,
+  isInsideSharedBlock,
   isRowNode,
   isSectionNode,
+  isSharedBlockReferenceNode,
   isSimpleElementNode,
 } from './elements'
 
@@ -63,5 +67,40 @@ describe('isSimpleElementNode', () => {
     expect(isSimpleElementNode(createSectionNode())).toBe(false)
     expect(isSimpleElementNode(createRowNode())).toBe(false)
     expect(isSimpleElementNode(createColumnNode())).toBe(false)
+  })
+})
+
+describe('shared block placement guards', () => {
+  const reference = createSharedBlockReferenceNode({ root: createSectionNode() })
+
+  it('identifies a placement', () => {
+    expect(isSharedBlockReferenceNode(reference)).toBe(true)
+  })
+
+  it('does not treat a placement as a container or a simple element', () => {
+    expect(isContainerNode(reference)).toBe(false)
+    expect(isSimpleElementNode(reference)).toBe(false)
+  })
+
+  it('does not mistake a plain leaf for a placement', () => {
+    expect(isSharedBlockReferenceNode(createSimpleElement())).toBe(false)
+  })
+
+  it('reports the placement itself as outside the shared block', () => {
+    expect(isInsideSharedBlock(reference)).toBe(false)
+  })
+
+  it('reports the block root and its descendants as inside the shared block', () => {
+    const root = reference.children[0]
+    expect(root).toBeDefined()
+    expect(isInsideSharedBlock(root as ElementNode)).toBe(true)
+
+    const row = (root as SectionNode).children?.[0]
+    expect(row).toBeDefined()
+    expect(isInsideSharedBlock(row as ElementNode)).toBe(true)
+  })
+
+  it('reports page-local content as outside any shared block', () => {
+    expect(isInsideSharedBlock(createSectionNode())).toBe(false)
   })
 })

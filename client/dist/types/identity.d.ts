@@ -12,7 +12,13 @@
  * object below — there's no free-function API surface. Contributors only need
  * to discover `NodeIdentity.*` to work with node identities.
  */
-export declare const NODE_TYPES: readonly ["page", "section", "row", "column", "element"];
+/**
+ * `sharedBlock` appears only as a tree's `rootParent`, when the library editor
+ * is rooted at a block instead of a page. A shared block PLACEMENT is typed
+ * `element` — it is an ordinary element on the wire, discriminated by its
+ * `sharedBlock` field rather than by a type string.
+ */
+export declare const NODE_TYPES: readonly ["page", "section", "row", "column", "element", "sharedBlock"];
 export type NodeType = (typeof NODE_TYPES)[number];
 export interface NodeRef {
     readonly type: NodeType;
