@@ -6,10 +6,10 @@ namespace WeDevelop\Grid\Repository;
 
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\Deprecation;
+use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
 
@@ -26,7 +26,10 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
 
     public function findByRef(NodeRef $ref): ?GridElement
     {
-        if ($ref->type === NodeType::Page) {
+        // Page and SharedBlock are the two node types that are not grid elements
+        // — they own a tree rather than live in one. Callers that can accept
+        // either resolve them separately ({@see GridController::resolveNodeRef()}).
+        if ($ref->type === NodeType::Page || $ref->type === NodeType::SharedBlock) {
             return null;
         }
 
@@ -91,21 +94,32 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
                 'ParentID' => $ids,
             ];
 
-            // The Zone filter only applies to root-level sections (parented to a
+            // The Zone filter only applies to root elements (parented to a
             // page). Branch on the parent class — not merely on whether a zone
             // was passed — so a stray zone on a non-page parent never silently
-            // swaps the query base to Section::get(). Child elements (rows,
+            // swaps the query base to the root classes. Child elements (rows,
             // columns, content) are scoped by their container parent and carry
             // no zone of their own.
             if ($zone !== null && is_a($class, SiteTree::class, true)) {
                 $filter['Zone'] = $zone;
-                $list = Section::get();
+
+                // Zone is a subclass column, so GridElement::get() cannot filter
+                // it. Query each root class in turn and let the Sort/ID pass
+                // below interleave the results into one sequence.
+                $lists = [];
+                foreach (GridElement::ROOT_ELEMENT_CLASSES as $rootClass) {
+                    /** @var DataList<GridElement> $rootList */
+                    $rootList = DataObject::get($rootClass);
+                    $lists[] = $rootList;
+                }
             } else {
-                $list = GridElement::get();
+                $lists = [GridElement::get()];
             }
 
-            foreach ($list->filter($filter) as $element) {
-                $merged[] = $element;
+            foreach ($lists as $list) {
+                foreach ($list->filter($filter) as $element) {
+                    $merged[] = $element;
+                }
             }
         }
 

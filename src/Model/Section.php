@@ -17,12 +17,12 @@ use WeDevelop\Grid\Value\ContainerType;
  * to create a Column) when no children exist.
  *
  * @property string $Zone
- * @method HasManyList<Row> Rows()
- * @implements ContainerInterface<Row>
+ * @method HasManyList<GridElement> Rows()
+ * @implements ContainerInterface<GridElement>
  */
 class Section extends GridElement implements ContainerInterface
 {
-    /** @use ContainerElementTrait<Row> */
+    /** @use ContainerElementTrait<GridElement> */
     use ContainerElementTrait;
 
     private static string $table_name = 'WeDevelop_Grid_Section';
@@ -56,9 +56,20 @@ class Section extends GridElement implements ContainerInterface
         'getChildCountSummary' => 'Contents',
     ];
 
-    /** @var array<string, string> */
+    /**
+     * Typed to the GridElement base, not to Row: a shared block whose root is a
+     * Row is placed here as a SharedBlockReference and is a row for every
+     * purpose this relation serves — ownership, cascades and `<% loop $Rows %>`.
+     * A class-narrowed relation left those placements unpublished and unrendered.
+     *
+     * One relation, like {@see Column::$has_many}: a second has_many to the same
+     * polymorphic `.Parent` makes the reverse owner lookup ambiguous and
+     * silently breaks the publish cascade.
+     *
+     * @var array<string, string>
+     */
     private static array $has_many = [
-        'Rows' => Row::class . '.Parent',
+        'Rows' => GridElement::class . '.Parent',
     ];
 
     /** @var list<string> */
@@ -117,26 +128,4 @@ class Section extends GridElement implements ContainerInterface
 
         return $classes;
     }
-
-    #[Override]
-    protected function ensureSortSet(): void
-    {
-        if ($this->Sort > 0) {
-            return;
-        }
-
-        // Section::get(), not static::get(): sections in a zone form one Sort
-        // sequence across all Section subclasses, so a project subclass must not
-        // scope the max to its own class and collide with base-Section siblings.
-        $max = Section::get()
-            ->filter([
-                'ParentID' => $this->ParentID,
-                'ParentClass' => $this->ParentClass,
-                'Zone' => $this->Zone ?: '',
-            ])
-            ->max('Sort');
-
-        $this->Sort = (is_numeric($max) ? (int) $max : 0) + 1;
-    }
-
 }

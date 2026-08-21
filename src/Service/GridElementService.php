@@ -52,8 +52,10 @@ final readonly class GridElementService
         $newElement->ParentID = $parent->ID;
         $newElement->ParentClass = $parent::class;
 
+        // Zone scopes page roots only. A section rooting a SharedBlock is the
+        // library's single subtree and belongs to no zone.
         if ($containerType === ContainerType::Section) {
-            $newElement->Zone = $zone;
+            $newElement->Zone = $parent instanceof SiteTree ? $zone : '';
         }
 
         return $this->writeAndPlace($newElement, $parent, $insertAfterElementID, $insertAtStart);

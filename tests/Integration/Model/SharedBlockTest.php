@@ -1,0 +1,298 @@
+<?php
+
+declare(strict_types=1);
+
+namespace WeDevelop\Grid\Tests\Integration\Model;
+
+use Page;
+use PHPUnit\Framework\Attributes\CoversClass;
+use SilverStripe\Dev\SapphireTest;
+use SilverStripe\Versioned\Versioned;
+use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Model\Row;
+use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Model\SharedBlock;
+use WeDevelop\Grid\Model\SharedBlockReference;
+use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
+use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Tests\Integration\Support\VetoBlockDeleteExtension;
+
+#[CoversClass(SharedBlock::class)]
+#[CoversClass(SharedBlockReference::class)]
+final class SharedBlockTest extends SapphireTest
+{
+    use DisablesAutoScaffolding;
+
+    protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Versioned::set_stage(Versioned::DRAFT);
+        $this->disableAutoScaffolding();
+    }
+
+    public function testSubtreeParentsToBlockViaPolymorphicRelation(): void
+    {
+        $block = GridTreeFactory::sharedBlock();
+        $section = GridTreeFactory::section($block, zone: '');
+
+        self::assertCount(1, $block->RootElements());
+        self::assertSame((int) $section->ID, (int) $block->getRootElement()?->ID);
+    }
+
+    public function testGetRootElementReturnsNullWithoutChildren(): void
+    {
+        $block = GridTreeFactory::sharedBlock();
+
+        self::assertNull($block->getRootElement());
+    }
+
+    public function testGetRootElementReturnsNullForUnsavedBlock(): void
+    {
+        // An unsaved block has ID 0; RootElements() would otherwise query
+        // ParentID = 0 and could match orphaned rows.
+        self::assertNull(SharedBlock::create()->getRootElement());
+    }
+
+    public function testPublishRecursiveCascadesThroughSubtree(): void
+    {
+        $this->logInWithPermission('ADMIN');
+
+        $block = GridTreeFactory::sharedBlock();
+        $section = GridTreeFactory::section($block, zone: '');
+        $row = GridTreeFactory::row($section);
+        $column = GridTreeFactory::column($row);
+        $leaf = GridTreeFactory::contentElement($column);
+
+        $block->publishRecursive();
+
+        Versioned::set_stage(Versioned::LIVE);
+
+        self::assertInstanceOf(Section::class, Section::get()->byID($section->ID), 'Section should exist on LIVE');
+        self::assertInstanceOf(Row::class, Row::get()->byID($row->ID), 'Row should exist on LIVE');
+        self::assertInstanceOf(Column::class, Column::get()->byID($column->ID), 'Column should exist on LIVE');
+        self::assertInstanceOf(
+            ContentElement::class,
+            ContentElement::get()->byID($leaf->ID),
+            'Content element should exist on LIVE',
+        );
+    }
+
+    public function testCanDeleteFalseWhileReferenced(): void
+    {
+        $this->logInWithPermission('ADMIN');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+        GridTreeFactory::reference($page, $block);
+
+        self::assertFalse($block->canDelete());
+    }
+
+    public function testCanDeleteTrueWhenUnreferenced(): void
+    {
+        $this->logInWithPermission('ADMIN');
+
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+
+        self::assertTrue($block->canDelete());
+    }
+
+    public function testCanDeleteFalseWhileReferencedOnLiveOnly(): void
+    {
+        $this->logInWithPermission('ADMIN');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+        $reference = GridTreeFactory::reference($page, $block);
+
+        $reference->publishSingle();
+        $reference->deleteFromStage(Versioned::DRAFT);
+
+        self::assertSame(
+            0,
+            SharedBlockReference::get()->filter('BlockID', $block->ID)->count(),
+            'precondition: the reference is gone from DRAFT',
+        );
+        self::assertFalse($block->canDelete(), 'a live-only placement still consumes the block');
+    }
+
+    public function testSubtreeElementRemainsDeletableWhileBlockIsReferenced(): void
+    {
+        // GridElement::canDelete() delegates to its owning record, and for a
+        // block that means canEdit(), not canDelete(). The veto extension is
+        // what makes the two answers differ: without it both resolve to the same
+        // permission code for every member, so swapping canEdit() for
+        // canDelete() in GridElement would leave this test green.
+        SharedBlock::add_extension(VetoBlockDeleteExtension::class);
+        $this->logInWithPermission('ADMIN');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        $section = GridTreeFactory::section($block, zone: '');
+        $row = GridTreeFactory::row($section);
+        GridTreeFactory::reference($page, $block);
+
+        self::assertFalse($block->canDelete(), 'precondition: the block itself refuses deletion');
+        self::assertTrue($section->canDelete(), 'the block root must stay deletable');
+        self::assertTrue($row->canDelete(), 'elements inside the block must stay deletable');
+    }
+
+    public function testReferenceIsNotScaffolded(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+        GridTreeFactory::reference($page, $block);
+
+        self::assertSame(
+            0,
+            GridElement::get()->filter('ParentClass', SharedBlockReference::class)->count(),
+        );
+    }
+
+    public function testEffectiveRootClassMatchesBlockRoot(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+        $reference = GridTreeFactory::reference($page, $block);
+
+        self::assertSame(Section::class, $reference->getEffectiveRootClass());
+    }
+
+    public function testEffectiveRootClassNullOnceBlockIsEmptied(): void
+    {
+        // An author can empty a block that is already placed; the reference then
+        // survives with nothing to stand in for.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        $section = GridTreeFactory::section($block, zone: '');
+        $reference = GridTreeFactory::reference($page, $block);
+
+        $section->delete();
+
+        self::assertNull($reference->getEffectiveRootClass());
+    }
+
+    public function testEffectiveRootClassNullForDanglingReference(): void
+    {
+        // Placement validation refuses to write a reference with no block, so
+        // this state only arises from raw DB damage. It must still resolve to
+        // null rather than querying ParentID = 0 and matching orphaned rows.
+        $reference = SharedBlockReference::create();
+        $reference->BlockID = 0;
+
+        self::assertNull($reference->getEffectiveRootClass());
+    }
+
+    public function testSortIsZoneScopedAtPageRoot(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+
+        GridTreeFactory::section($page, zone: 'main', sort: 3);
+        GridTreeFactory::section($page, zone: 'sidebar', sort: 1);
+
+        $reference = GridTreeFactory::reference($page, $block, zone: 'sidebar');
+
+        self::assertSame(2, (int) $reference->Sort, 'Sort continues the sidebar sequence, not main');
+    }
+
+    public function testForTemplateRendersTheBlockRootMarkup(): void
+    {
+        $this->logInWithPermission('ADMIN');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        $section = GridTreeFactory::section($block, zone: '', title: 'Shared section');
+        GridTreeFactory::column(GridTreeFactory::row($section));
+        $reference = GridTreeFactory::reference($page, $block);
+
+        $block->publishRecursive();
+        $reference->publishSingle();
+
+        Versioned::set_stage(Versioned::LIVE);
+
+        $liveReference = SharedBlockReference::get()->byID($reference->ID);
+        $liveSection = Section::get()->byID($section->ID);
+        self::assertInstanceOf(SharedBlockReference::class, $liveReference);
+        self::assertInstanceOf(Section::class, $liveSection);
+
+        // Byte-identical: the reference contributes no wrapper of its own.
+        self::assertSame($liveSection->forTemplate(), $liveReference->forTemplate());
+        self::assertStringContainsString('data-element', $liveReference->forTemplate());
+    }
+
+    public function testForTemplateIsEmptyWhenTheBlockIsNotPublished(): void
+    {
+        $this->logInWithPermission('ADMIN');
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+        $reference = GridTreeFactory::reference($page, $block);
+
+        $reference->publishSingle();
+
+        Versioned::set_stage(Versioned::LIVE);
+        $liveReference = SharedBlockReference::get()->byID($reference->ID);
+        self::assertInstanceOf(SharedBlockReference::class, $liveReference);
+
+        self::assertSame('', $liveReference->forTemplate());
+    }
+
+    public function testForTemplateIsEmptyWhenTheBlockIsMissing(): void
+    {
+        // Defensive: raw DB damage must render empty, never throw.
+        $reference = SharedBlockReference::create();
+        $reference->BlockID = 0;
+
+        self::assertSame('', $reference->forTemplate());
+    }
+
+    public function testSortFollowsExistingReferencesInTheSameZone(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+
+        $first = GridTreeFactory::reference($page, $block, zone: 'main');
+        $second = GridTreeFactory::reference($page, $block, zone: 'main');
+
+        self::assertSame(1, (int) $first->Sort);
+        self::assertSame(2, (int) $second->Sort);
+    }
+
+    public function testRootTypeLabelNamesTheRootElementType(): void
+    {
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+
+        self::assertSame('Section', $block->getRootTypeLabel());
+    }
+
+    public function testRootTypeLabelNamesALeafRootedBlockAfterItsElementType(): void
+    {
+        $block = GridTreeFactory::sharedBlock();
+        $leaf = ContentElement::create();
+        $leaf->ParentID = (int) $block->ID;
+        $leaf->ParentClass = SharedBlock::class;
+        $leaf->write();
+
+        self::assertSame('Content element', $block->getRootTypeLabel());
+    }
+
+    public function testRootTypeLabelFallsBackToEmptyForABlockWithNoRoot(): void
+    {
+        self::assertSame('Empty', GridTreeFactory::sharedBlock()->getRootTypeLabel());
+    }
+}

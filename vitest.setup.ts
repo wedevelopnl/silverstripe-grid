@@ -28,6 +28,7 @@ if (typeof Element !== 'undefined' && Element.prototype.scrollIntoView === undef
 }
 
 const CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\GridController'
+const SHARED_BLOCK_CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\SharedBlockController'
 
 const defaultAdapterConfig: AdapterConfig = {
   viewports: [
@@ -58,6 +59,14 @@ const defaultConfig: SilverStripeConfig = {
       url: '/admin/grid',
       controllerLink: '/admin/grid',
       gridAdapter: defaultAdapterConfig,
+    },
+    // The block library is a second AdminController, so the CMS publishes it as
+    // its own section with its own base URL. No gridAdapter: only the grid
+    // section carries one, and getAdapterConfig() reads it from there.
+    {
+      name: SHARED_BLOCK_CONTROLLER_FQCN,
+      url: '/admin/grid-shared-blocks',
+      controllerLink: '/admin/grid-shared-blocks',
     },
   ],
 }

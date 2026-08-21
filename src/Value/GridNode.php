@@ -21,7 +21,8 @@ use Override;
  * instead of repeating identical maps on every container node.
  *
  * @phpstan-import-type SerializedNodeRef from NodeRef
- * @phpstan-type SerializedNode array{self: SerializedNodeRef, parent: SerializedNodeRef, title: non-empty-string, blockSchema: array{typeName: string, type: string, title: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, status: value-of<ElementStatus>, summary?: non-empty-string, containerType?: string, children?: list<mixed>|null, gridSettings?: array{default: array{width: int, offset: int, visible: bool}, overrides: array<non-empty-string, array{width: int, offset: int, visible: bool}>}, extensions?: array<string, mixed>}
+ * @phpstan-import-type SerializedSharedBlockMeta from SharedBlockMeta
+ * @phpstan-type SerializedNode array{self: SerializedNodeRef, parent: SerializedNodeRef, title: non-empty-string, blockSchema: array{typeName: string, type: string, title: string, label: string, icon: string}, obsoleteClassName: string|null, version: int, canDelete: bool, canPublish: bool, canUnpublish: bool, canCreate: bool, editLink: string|null, status: value-of<ElementStatus>, summary?: non-empty-string, containerType?: string, children?: list<mixed>|null, gridSettings?: array{default: array{width: int, offset: int, visible: bool}, overrides: array<non-empty-string, array{width: int, offset: int, visible: bool}>}, extensions?: array<string, mixed>, sharedBlock?: SerializedSharedBlockMeta}
  */
 final readonly class GridNode implements JsonSerializable
 {
@@ -49,6 +50,7 @@ final readonly class GridNode implements JsonSerializable
         public ?array $children = null,
         public ?GridSettings $gridSettings = null,
         public array $extensions = [],
+        public ?SharedBlockMeta $sharedBlock = null,
     ) {
         if ($gridSettings !== null && $containerType !== ContainerType::Column) {
             throw new InvalidArgumentException(
@@ -56,9 +58,11 @@ final readonly class GridNode implements JsonSerializable
             );
         }
 
-        if ($containerType === null && $children !== null) {
+        // A shared-block reference is the one node that holds children without
+        // being a container: its single child is the block's root element.
+        if ($containerType === null && $sharedBlock === null && $children !== null) {
             throw new InvalidArgumentException(
-                'children require a container type',
+                'children require a container type or a shared block',
             );
         }
     }
@@ -117,6 +121,13 @@ final readonly class GridNode implements JsonSerializable
 
         if ($this->containerType === ContainerType::Column && $this->gridSettings !== null) {
             $data['gridSettings'] = $this->gridSettings->toArray();
+        }
+
+        if ($this->sharedBlock instanceof SharedBlockMeta) {
+            $data['sharedBlock'] = $this->sharedBlock->jsonSerialize();
+            /** @var list<mixed> $sharedChildren */
+            $sharedChildren = $this->children ?? [];
+            $data['children'] = $sharedChildren;
         }
 
         if ($this->extensions !== []) {

@@ -14,6 +14,7 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Service\ElementPlacementService;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Tests\Integration\Support\RejectOnReindexExtension;
@@ -438,5 +439,115 @@ final class ElementPlacementServiceTest extends SapphireTest
         self::assertTrue($result->isErr());
         $error = $result->errors()[0];
         self::assertSame(ReorderValidator::class . '.PARENT_REJECTED', $error->key);
+    }
+
+    // --- Mixed root siblings ----------------------------------------------
+    //
+    // A page zone holds TWO root classes: Sections and shared-block placements.
+    // Scoping the sibling list to Sections dropped placements out of it, so a
+    // move anchored on one failed outright, and a reindex renumbered only the
+    // Sections and collided with the placement's Sort.
+
+    /** @return array{page: Page, block: \WeDevelop\Grid\Model\SharedBlock} */
+    private function pageWithBlock(): array
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+
+        return ['page' => $page, 'block' => $block];
+    }
+
+    public function testSectionCanBeMovedAfterASharedBlockPlacement(): void
+    {
+        ['page' => $page, 'block' => $block] = $this->pageWithBlock();
+
+        $first = GridTreeFactory::section($page, sort: 1);
+        $placement = GridTreeFactory::reference($page, $block, sort: 2);
+        $moved = GridTreeFactory::section($page, sort: 3);
+
+        $result = $this->service->reorder($moved, $page, (int) $placement->ID);
+
+        self::assertTrue($result->isOk(), implode(' ', array_map(
+            static fn ($e): string => $e->message,
+            $result->errors(),
+        )));
+        self::assertSame(1, (int) Section::get()->byID((int) $first->ID)->Sort);
+        self::assertSame(2, (int) SharedBlockReference::get()->byID((int) $placement->ID)->Sort);
+        self::assertSame(3, (int) Section::get()->byID((int) $moved->ID)->Sort);
+    }
+
+    public function testPlacementCanBeMovedAfterASection(): void
+    {
+        ['page' => $page, 'block' => $block] = $this->pageWithBlock();
+
+        $first = GridTreeFactory::section($page, sort: 1);
+        $second = GridTreeFactory::section($page, sort: 2);
+        $placement = GridTreeFactory::reference($page, $block, sort: 3);
+
+        $result = $this->service->reorder($placement, $page, (int) $first->ID);
+
+        self::assertTrue($result->isOk());
+        self::assertSame(1, (int) Section::get()->byID((int) $first->ID)->Sort);
+        self::assertSame(2, (int) SharedBlockReference::get()->byID((int) $placement->ID)->Sort);
+        self::assertSame(3, (int) Section::get()->byID((int) $second->ID)->Sort);
+    }
+
+    public function testInsertingAtTheStartRenumbersPlacementsToo(): void
+    {
+        // The silent half of the bug: reindexing only the Sections left the
+        // placement on its old Sort, so the saved order differed from the one
+        // the editor showed.
+        ['page' => $page, 'block' => $block] = $this->pageWithBlock();
+
+        $placement = GridTreeFactory::reference($page, $block, sort: 1);
+        $existing = GridTreeFactory::section($page, sort: 2);
+        $inserted = GridTreeFactory::section($page, sort: 3);
+
+        $result = $this->service->reorder($inserted, $page, null);
+
+        self::assertTrue($result->isOk());
+        self::assertSame(1, (int) Section::get()->byID((int) $inserted->ID)->Sort);
+        self::assertSame(2, (int) SharedBlockReference::get()->byID((int) $placement->ID)->Sort);
+        self::assertSame(3, (int) Section::get()->byID((int) $existing->ID)->Sort);
+    }
+
+    public function testZonesStayIndependentWhenPlacementsAreInvolved(): void
+    {
+        // The zone scoping the old class filter also provided must survive:
+        // a sidebar placement is not a sibling of a main-zone section.
+        ['page' => $page, 'block' => $block] = $this->pageWithBlock();
+
+        $sidebar = GridTreeFactory::reference($page, $block, zone: 'sidebar', sort: 1);
+        $mainFirst = GridTreeFactory::section($page, zone: 'main', sort: 1);
+        $mainSecond = GridTreeFactory::section($page, zone: 'main', sort: 2);
+
+        $result = $this->service->reorder($mainSecond, $page, null);
+
+        self::assertTrue($result->isOk());
+        self::assertSame(1, (int) Section::get()->byID((int) $mainSecond->ID)->Sort);
+        self::assertSame(2, (int) Section::get()->byID((int) $mainFirst->ID)->Sort);
+        self::assertSame(
+            1,
+            (int) SharedBlockReference::get()->byID((int) $sidebar->ID)->Sort,
+            'the sidebar zone keeps its own sequence',
+        );
+    }
+
+    public function testNewSectionTakesASortPastAPlacementInTheSameZone(): void
+    {
+        // ensureSortSet(): a zone's max Sort spans both root classes, so a new
+        // section written behind a placement must not reuse its Sort.
+        ['page' => $page, 'block' => $block] = $this->pageWithBlock();
+
+        GridTreeFactory::reference($page, $block, sort: 7);
+
+        $section = Section::create();
+        $section->Zone = 'main';
+        $section->ParentID = $page->ID;
+        $section->ParentClass = $page::class;
+        $section->write();
+
+        self::assertSame(8, (int) $section->Sort);
     }
 }

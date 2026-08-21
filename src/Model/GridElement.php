@@ -24,6 +24,7 @@ use SilverStripe\Security\Security;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\VersionedAdmin\Forms\HistoryViewerField;
 use WeDevelop\Grid\Contract\ContainerInterface;
+use WeDevelop\Grid\Admin\SharedBlockAdmin;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 
 /**
@@ -46,6 +47,23 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
  */
 class GridElement extends DataObject
 {
+    /**
+     * The element classes that may sit directly under a page, each carrying its
+     * own Zone column.
+     *
+     * Enumerated once because every consumer must cover ALL of them: a zone's
+     * Sort sequence spans the whole set, and any read of a page's root elements
+     * that misses one silently omits content. `Section::get()` at page root is
+     * nearly always a bug — see {@see OrmGridElementRepository::findByParents()}
+     * and {@see GridPageExtension::GridZone()}.
+     *
+     * @var list<class-string<GridElement>>
+     */
+    public const array ROOT_ELEMENT_CLASSES = [
+        Section::class,
+        SharedBlockReference::class,
+    ];
+
     private static string $table_name = 'WeDevelop_Grid_GridElement';
 
     private static string $singular_name = 'Grid element';
@@ -177,6 +195,12 @@ class GridElement extends DataObject
     {
         $page = $this->getPage();
 
+        // Content inside a shared block is edited in the library, through the
+        // block's own nested grid editor rather than a page's.
+        if ($page instanceof SharedBlock) {
+            return $this->buildSharedBlockEditLink($page);
+        }
+
         if (!$page instanceof SiteTree) {
             return null;
         }
@@ -189,6 +213,36 @@ class GridElement extends DataObject
             'GridEditor',
             'item',
             $this->ID,
+            'edit',
+        );
+    }
+
+    /**
+     * ModelAdmin nests its item URLs as
+     * `{admin}/{sanitisedClass}/EditForm/field/{sanitisedClass}/item/{id}`,
+     * and our element sits one level deeper again inside the block's own
+     * GridEditorField. `sanitiseClassName` turns backslashes into dashes.
+     *
+     * SharedBlockAdminTest asserts a GET on the generated URL actually resolves
+     * — this shape is verified against the running CMS, not assumed.
+     */
+    private function buildSharedBlockEditLink(SharedBlock $block): string
+    {
+        $sanitisedClass = str_replace('\\', '-', SharedBlock::class);
+
+        return Controller::join_links(
+            Director::baseURL(),
+            SharedBlockAdmin::singleton()->Link($sanitisedClass),
+            'EditForm',
+            'field',
+            $sanitisedClass,
+            'item',
+            (string) $block->ID,
+            'ItemEditForm',
+            'field',
+            'BlockEditor',
+            'item',
+            (string) $this->ID,
             'edit',
         );
     }
@@ -418,6 +472,15 @@ class GridElement extends DataObject
 
         $page = $this->getPage();
 
+        // canEdit(), never canDelete(): removing an element from a shared block
+        // is an EDIT of the block, not a deletion of it. The two answers only
+        // diverge once a project vetoes the block's own deletion — and such a
+        // veto must protect the library record, not freeze its contents.
+        // ({@see SharedBlock::canDelete()} itself does not veto on usage.)
+        if ($page instanceof SharedBlock) {
+            return $page->canEdit($member);
+        }
+
         if ($page instanceof DataObject) {
             return $page->canDelete($member);
         }
@@ -460,19 +523,65 @@ class GridElement extends DataObject
             return;
         }
 
+        $filter = [
+            'ParentID' => $this->ParentID,
+            'ParentClass' => $this->ParentClass,
+        ];
+
+        if ($this->isZoneScoped()) {
+            // At page root each zone is its own Sort sequence, and the siblings
+            // sharing it are spread over one table per root class. Zone is a
+            // subclass column, so the base list cannot filter it — ask every
+            // root class for its own max and take the highest.
+            $filter['Zone'] = $this->getZoneValue();
+
+            $max = 0;
+            foreach (self::ROOT_ELEMENT_CLASSES as $rootClass) {
+                $classMax = DataObject::get($rootClass)->filter($filter)->max('Sort');
+                $max = max($max, is_numeric($classMax) ? (int) $classMax : 0);
+            }
+
+            $this->Sort = $max + 1;
+
+            return;
+        }
+
         // Query the shared GridElement base list, NOT static::get(): late static
         // binding would scope the max to this element's concrete subclass, but Sort
         // is one sequence across ALL element classes under a parent (a Column holds
         // mixed content types). Scoping per-class would assign a colliding Sort when
         // the first element of a new type is added, dropping it mid-list.
         $max = GridElement::get()
-            ->filter([
-                'ParentID' => $this->ParentID,
-                'ParentClass' => $this->ParentClass,
-            ])
+            ->filter($filter)
             ->max('Sort');
 
         $this->Sort = (is_numeric($max) ? (int) $max : 0) + 1;
+    }
+
+    /**
+     * True when this element sits directly under a PAGE — the only position
+     * where Zone applies.
+     *
+     * Matched to {@see \WeDevelop\Grid\Repository\OrmGridElementRepository::findByParents()}:
+     * a block-rooted element is not zone-scoped either, even though its parent
+     * is not a grid element, because a block holds one unzoned subtree.
+     */
+    protected function isZoneScoped(): bool
+    {
+        return $this->ParentClass !== '' && is_a($this->ParentClass, SiteTree::class, true);
+    }
+
+    /**
+     * This element's Zone, or '' when its class carries no Zone column.
+     *
+     * Read through getField() rather than ->Zone: Zone is declared on the root
+     * subclasses ({@see self::ROOT_ELEMENT_CLASSES}), not on this base class.
+     */
+    protected function getZoneValue(): string
+    {
+        $zone = $this->getField('Zone');
+
+        return is_string($zone) ? $zone : '';
     }
 
     /**
@@ -573,7 +682,14 @@ class GridElement extends DataObject
             // Re-query with a fresh ORM query (not $this->getChildren(), which
             // can return an eager-loaded/relation-cached stale list) so the
             // check reflects committed state inside the transaction.
-            $existing = $childClass::get()
+            //
+            // Counted on the GridElement base list, NOT on $childClass: a
+            // shared block placed here stands in for the child class and is a
+            // child by every rule that matters, but it is a
+            // SharedBlockReference row. Counting per-class made a container
+            // holding only a placement scaffold a phantom empty child on its
+            // next write.
+            $existing = GridElement::get()
                 ->filter([
                     'ParentID' => $this->ID,
                     'ParentClass' => static::class,

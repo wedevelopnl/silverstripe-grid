@@ -10,12 +10,17 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Model\SharedBlock;
+use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Value\GridTree;
 use WeDevelop\Grid\Value\NodeRef;
+use WeDevelop\Grid\Value\ElementStatus;
 use WeDevelop\Grid\Value\NodeType;
+use WeDevelop\Grid\Value\SharedBlockMeta;
+use WeDevelop\Grid\Value\SharedBlockStatus;
 
 /**
  * Builds a recursive element tree for a page using batch-loading to avoid N+1 queries.
@@ -31,6 +36,7 @@ class GridTreeService
     public function __construct(
         private readonly GridElementRepositoryInterface $elementRepository,
         private readonly GridNodeMapper $nodeMapper,
+        private readonly SharedBlockUsageResolver $usageResolver,
     ) {
     }
 
@@ -42,23 +48,38 @@ class GridTreeService
      * Applies canView() filtering per node ({@see assembleSubTree()}); the
      * mechanism-layer methods never filter.
      *
-     * @param non-empty-string $zone
+     * Two hosts, one editor: a page + zone, or a SharedBlock whose single
+     * subtree is the library's editable content. Zones scope page roots only,
+     * so a block root ignores $zone.
+     *
+     * @param SiteTree|SharedBlock $root
+     * @param string $zone Ignored for a SharedBlock root, which owns one subtree.
      */
-    public function buildViewableTree(SiteTree $page, string $zone): GridTree
+    public function buildViewableTree(DataObject $root, string $zone): GridTree
     {
-        /** @var positive-int $pageId */
-        $pageId = $page->ID;
+        /** @var positive-int $rootId */
+        $rootId = (int) $root->ID;
 
-        $elementsByParent = $this->loadAllElements($pageId, $page::class, $zone);
+        $zoneFilter = null;
+        if (!$root instanceof SharedBlock && $zone !== '') {
+            $zoneFilter = $zone;
+        }
+
+        $elementsByParent = $this->loadAllElements($rootId, $root::class, $zoneFilter);
 
         $this->prepopulateVersionNumberCache($elementsByParent);
 
-        $rootKey = $page::class . ':' . $pageId;
-        $rootParent = new NodeRef(NodeType::fromClass($page::class), $pageId);
+        $rootKey = $root::class . ':' . $rootId;
+        $rootParent = new NodeRef(NodeType::fromClass($root::class), $rootId);
+
+        // One block placed N times on a page must cost one subtree load, so the
+        // expansion memo spans the whole traversal.
+        /** @var array<int, array<string, list<GridElement>>> $blockSubtrees */
+        $blockSubtrees = [];
 
         return new GridTree(
             $rootParent,
-            $this->assembleSubTree($elementsByParent, $rootKey, $rootParent, $page),
+            $this->assembleSubTree($elementsByParent, $rootKey, $rootParent, $root, $blockSubtrees),
             $this->nodeMapper->allowedTypesByContainerType(),
         );
     }
@@ -328,6 +349,7 @@ class GridTreeService
      * in-memory instead of issuing a fresh ORM fetch per node (avoids N+1).
      *
      * @param array<string, list<GridElement>> $elementsByParent
+     * @param array<int, array<string, list<GridElement>>> $blockSubtrees
      * @return list<GridNode>
      */
     private function assembleSubTree(
@@ -335,6 +357,7 @@ class GridTreeService
         string $parentKey,
         NodeRef $parent,
         DataObject $parentObject,
+        array &$blockSubtrees,
     ): array {
         $nodes = [];
 
@@ -345,7 +368,7 @@ class GridTreeService
                 continue;
             }
 
-            $nodes[] = $this->buildElementNode($element, $elementsByParent, $parent);
+            $nodes[] = $this->buildElementNode($element, $elementsByParent, $parent, $blockSubtrees);
         }
 
         return $nodes;
@@ -356,9 +379,18 @@ class GridTreeService
      * delegate all node content to the mapper.
      *
      * @param array<string, list<GridElement>> $elementsByParent
+     * @param array<int, array<string, list<GridElement>>> $blockSubtrees
      */
-    private function buildElementNode(GridElement $element, array $elementsByParent, NodeRef $parent): GridNode
-    {
+    private function buildElementNode(
+        GridElement $element,
+        array $elementsByParent,
+        NodeRef $parent,
+        array &$blockSubtrees,
+    ): GridNode {
+        if ($element instanceof SharedBlockReference) {
+            return $this->buildReferenceNode($element, $parent, $blockSubtrees);
+        }
+
         $children = null;
 
         if ($element instanceof ContainerInterface) {
@@ -367,9 +399,107 @@ class GridTreeService
             $childKey = $element::class . ':' . $elementId;
             $selfRef = new NodeRef(NodeType::fromClass($element::class), $elementId);
 
-            $children = $this->assembleSubTree($elementsByParent, $childKey, $selfRef, $element);
+            $children = $this->assembleSubTree($elementsByParent, $childKey, $selfRef, $element, $blockSubtrees);
         }
 
         return $this->nodeMapper->mapToNode($element, $parent, $children);
+    }
+
+    /**
+     * Expand a placement into the block's own subtree.
+     *
+     * The reference keeps an ordinary element identity on the wire, so reorder,
+     * delete and publish of the PLACEMENT flow through the existing endpoints
+     * unchanged. What marks it out is the sharedBlock meta and its single child:
+     * the block's root, a completely normal typed node.
+     *
+     * @param array<int, array<string, list<GridElement>>> $blockSubtrees
+     */
+    private function buildReferenceNode(
+        SharedBlockReference $reference,
+        NodeRef $parent,
+        array &$blockSubtrees,
+    ): GridNode {
+        $block = $reference->Block();
+
+        if ($block === null || !$block->exists() || !$block->canView()) {
+            // Two cases, one degradation. A blockless reference is raw DB
+            // damage (placement validation never writes one); an unviewable
+            // block is a project's updateCanView veto, which SharedBlockMeta
+            // would otherwise leak straight past — it carries the block's
+            // title, its usage count and its CMS edit link, while the block's
+            // own elements ARE filtered by canView() in assembleSubTree().
+            // apiPlace() re-checks canView() for exactly this reason.
+            //
+            // Either way, degrade to a plain node rather than fail the whole
+            // tree — the editor still renders the rest of the page.
+            return $this->nodeMapper->mapToNode($reference, $parent, null);
+        }
+
+        /** @var positive-int $blockId */
+        $blockId = (int) $block->ID;
+
+        if (!isset($blockSubtrees[$blockId])) {
+            $subtree = $this->loadAllElements($blockId, SharedBlock::class, null);
+            $this->prepopulateVersionNumberCache($subtree);
+            $blockSubtrees[$blockId] = $subtree;
+        }
+
+        $subtree = $blockSubtrees[$blockId];
+
+        /** @var positive-int $referenceId */
+        $referenceId = (int) $reference->ID;
+        $selfRef = new NodeRef(NodeType::Element, $referenceId);
+
+        $children = $this->assembleSubTree(
+            $subtree,
+            SharedBlock::class . ':' . $blockId,
+            $selfRef,
+            $block,
+            $blockSubtrees,
+        );
+
+        $meta = new SharedBlockMeta(
+            $blockId,
+            (string) $block->Title,
+            $this->usageResolver->usageCount($block),
+            $this->aggregateBlockStatus($block, $subtree),
+        );
+
+        return $this->nodeMapper->mapToNode($reference, $parent, $children, $meta);
+    }
+
+    /**
+     * Aggregate publication state of a block, for callers that hold no tree —
+     * the library list and the block picker.
+     */
+    public function blockStatus(SharedBlock $block): SharedBlockStatus
+    {
+        /** @var positive-int $blockId */
+        $blockId = (int) $block->ID;
+
+        return $this->aggregateBlockStatus($block, $this->loadAllElements($blockId, SharedBlock::class, null));
+    }
+
+    /**
+     * A block is only as published as its least published part, so the badge
+     * folds the block record's own state together with every element under it.
+     *
+     * @param array<string, list<GridElement>> $subtree
+     */
+    private function aggregateBlockStatus(SharedBlock $block, array $subtree): SharedBlockStatus
+    {
+        /** @var list<ElementStatus> $statuses */
+        $statuses = [];
+
+        foreach ($subtree as $elements) {
+            foreach ($elements as $element) {
+                /** @var array<string, array{text: string, title: string}> $flags */
+                $flags = $element->getStatusFlags();
+                $statuses[] = ElementStatus::fromStatusFlags($flags);
+            }
+        }
+
+        return SharedBlockStatus::compute($block->isPublished(), $block->stagesDiffer(), $statuses);
     }
 }

@@ -35,8 +35,16 @@ class GridEditorField extends GridField
     private ?int $version = null;
 
     /**
+     * Which kind of record the tree is rooted at. 'page' reads a page + zone;
+     * 'sharedBlock' reads the library block whose id sits in $pageId.
+     *
+     * @var 'page'|'sharedBlock'
+     */
+    private string $rootType = 'page';
+
+    /**
      * @param positive-int $pageId
-     * @param non-empty-string $zone
+     * @param string $zone Empty only for a block-rooted editor, which has no zones.
      */
     public function __construct(string $name, private readonly int $pageId, private readonly string $zone = 'main')
     {
@@ -74,13 +82,32 @@ class GridEditorField extends GridField
         return $context->renderWith($this->getFieldHolderTemplates());
     }
 
+    /**
+     * A block-rooted editor: one subtree, no zones, and the id is a
+     * SharedBlock's rather than a page's.
+     *
+     * @param positive-int $blockId
+     */
+    public static function forSharedBlock(string $name, int $blockId): self
+    {
+        $field = new self($name, $blockId, '');
+        $field->rootType = 'sharedBlock';
+
+        return $field;
+    }
+
+    /** @return 'page'|'sharedBlock' */
+    public function getRootType(): string
+    {
+        return $this->rootType;
+    }
+
     /** @return positive-int */
     public function getPageId(): int
     {
         return $this->pageId;
     }
 
-    /** @return non-empty-string */
     public function getZone(): string
     {
         return $this->zone;
@@ -97,6 +124,7 @@ class GridEditorField extends GridField
         // top-level keys from the rendered <div>'s data-schema attribute.
         $schemaData['grid-page-id'] = $this->pageId;
         $schemaData['grid-zone'] = $this->zone;
+        $schemaData['grid-root-type'] = $this->rootType;
 
         // React FormBuilder path (history viewer): the wrapper component
         // reads from the nested data sub-array, which FormBuilder passes
@@ -105,6 +133,7 @@ class GridEditorField extends GridField
         $data = $schemaData['data'] ?? [];
         $data['pageId'] = $this->pageId;
         $data['zone'] = $this->zone;
+        $data['rootType'] = $this->rootType;
 
         if ($this->isReadonlyField) {
             $schemaData['grid-readonly'] = true;

@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Service\RequestBodyParser;
@@ -233,6 +234,11 @@ final class RequestBodyParserTest extends TestCase
         yield 'non-existent class' => [
             ['className' => 'NonExistent\\Class', 'parent' => $validParent],
             'className does not refer to an existing class.',
+        ];
+
+        yield 'shared block reference' => [
+            ['className' => SharedBlockReference::class, 'parent' => $validParent],
+            'Shared blocks are placed through their own endpoint.',
         ];
 
         yield 'not a GridElement at all' => [

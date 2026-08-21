@@ -294,4 +294,57 @@ final class GridEditorFieldTest extends SapphireTest
 
         return $form;
     }
+
+    public function testDefaultRootTypeIsPage(): void
+    {
+        // Additive: the entwine bridge ignores keys it does not know, so an
+        // existing page-rooted field simply gains an explicit default.
+        $field = GridEditorField::create('GridEditor', 42, 'main');
+        $this->attachToForm($field);
+
+        $schema = $field->getSchemaDataDefaults();
+
+        self::assertSame('page', $schema['grid-root-type']);
+
+        /** @var array<string, mixed> $data */
+        $data = $schema['data'];
+        self::assertSame('page', $data['rootType']);
+    }
+
+    public function testForSharedBlockEmitsRootTypeInSchemaData(): void
+    {
+        $field = GridEditorField::forSharedBlock('BlockEditor', 7);
+        $this->attachToForm($field);
+
+        $schema = $field->getSchemaDataDefaults();
+
+        self::assertSame('sharedBlock', $schema['grid-root-type']);
+        self::assertSame(7, $schema['grid-page-id'], 'the block id travels in the page-id slot');
+        self::assertSame('', $schema['grid-zone'], 'a block has no zones');
+
+        /** @var array<string, mixed> $data */
+        $data = $schema['data'];
+        self::assertSame('sharedBlock', $data['rootType']);
+        self::assertSame(7, $data['pageId']);
+        self::assertSame('', $data['zone']);
+    }
+
+    public function testForSharedBlockExposesItsRootTypeAndId(): void
+    {
+        $field = GridEditorField::forSharedBlock('BlockEditor', 9);
+
+        self::assertSame('sharedBlock', $field->getRootType());
+        self::assertSame(9, $field->getPageId());
+    }
+
+    public function testReadonlyTransformationPreservesRootType(): void
+    {
+        $field = GridEditorField::forSharedBlock('BlockEditor', 9);
+        $this->attachToForm($field);
+
+        $readonly = $field->performReadonlyTransformation();
+
+        self::assertSame('sharedBlock', $readonly->getRootType());
+        self::assertSame('sharedBlock', $readonly->getSchemaDataDefaults()['grid-root-type']);
+    }
 }
