@@ -4,6 +4,7 @@ import '../bridge/gridSettingsField'
 
 import { registerAddSharedBlockBridge } from '../bridge/addSharedBlockButton'
 import { registerCmsPreviewBridge } from '../bridge/cmsPreviewBridge'
+import { registerSharedBlockDeleteBridge } from '../bridge/sharedBlockDelete'
 
 // Boot system — registers components with Injector on DOMContentLoaded
 import '../boot'
@@ -19,6 +20,9 @@ if (typeof document !== 'undefined') {
   } else {
     registerCmsPreviewBridge()
   }
+
+  // Delegated from the document, so it needs no DOM-ready wait of its own.
+  registerSharedBlockDeleteBridge()
 
   // Observes document.body, and sweeps what is already there — so it covers
   // both a listing that arrives later through Pjax and one already rendered.

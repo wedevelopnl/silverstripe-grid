@@ -42,6 +42,13 @@ final class SharedBlockAdminTest extends FunctionalTest
         return Director::test($url, null, $this->session());
     }
 
+    private function editUrl(SharedBlock $block): string
+    {
+        $sanitised = str_replace('\\', '-', SharedBlock::class);
+
+        return "admin/shared-blocks/{$sanitised}/EditForm/field/{$sanitised}/item/{$block->ID}/edit";
+    }
+
     private function populatedBlock(string $title = 'Shared banner'): SharedBlock
     {
         $block = GridTreeFactory::sharedBlock($title);
@@ -166,7 +173,38 @@ final class SharedBlockAdminTest extends FunctionalTest
         );
     }
 
+    public function testEditFormOffersTheLibraryDeleteTrigger(): void
+    {
+        $block = $this->populatedBlock('Deletable banner');
 
+        $body = (string) $this->visit($this->editUrl($block))->getBody();
+
+        self::assertStringContainsString(
+            sprintf('data-grid-shared-block-delete="%d"', (int) $block->ID),
+            $body,
+        );
+        self::assertStringContainsString('data-grid-shared-block-title="Deletable banner"', $body);
+        // Absolute on purpose: the front end assigns it to location from a URL
+        // several segments deep, where a relative link resolves against the
+        // edit form's own path.
+        self::assertMatchesRegularExpression(
+            '#data-grid-shared-block-return="https?://[^"]*/admin/shared-blocks[^"]*"#',
+            $body,
+            'the trigger must carry an absolute link back to the library',
+        );
+    }
+
+    public function testEditFormDropsTheStockArchiveAction(): void
+    {
+        // The stock button archives on a generic "are you sure?", which cannot
+        // convey that the delete reaches every consuming page — nor ask which
+        // of the two outcomes the author means.
+        $block = $this->populatedBlock();
+
+        $body = (string) $this->visit($this->editUrl($block))->getBody();
+
+        self::assertStringNotContainsString('action_doArchive', $body);
+    }
 
     public function testListingOffersTheSplitAddControlCarryingTheLeafTypes(): void
     {
@@ -251,4 +289,25 @@ final class SharedBlockAdminTest extends FunctionalTest
         self::assertStringNotContainsString('new-link', $body);
     }
 
+    public function testStockArchiveActionSurvivesForOtherRecordTypes(): void
+    {
+        // The extension is registered on the shared item request base class, so
+        // it sees every GridField detail form in the CMS. A page's own elements
+        // must keep their normal actions.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, zone: 'main');
+
+        $body = (string) $this->visit((string) $section->getCMSEditLink())->getBody();
+
+        self::assertStringNotContainsString('data-grid-shared-block-delete', $body);
+        // The half that actually guards the regression: moving the two
+        // removeByName() calls above the `!$record instanceof SharedBlock`
+        // guard would strip archive from every GridField detail form in the
+        // CMS, which asserting only on the shared-block trigger cannot see.
+        self::assertStringContainsString(
+            'action_doArchive',
+            $body,
+            'a non-block record must keep its stock archive action',
+        );
+    }
 }

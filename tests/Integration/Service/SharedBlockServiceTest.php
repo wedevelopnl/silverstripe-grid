@@ -19,6 +19,7 @@ use WeDevelop\Grid\Service\SharedBlockService;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Validation\ReorderValidator;
+use WeDevelop\Grid\Value\SharedBlockDeleteMode;
 
 #[CoversClass(SharedBlockService::class)]
 final class SharedBlockServiceTest extends SapphireTest
@@ -481,6 +482,129 @@ final class SharedBlockServiceTest extends SapphireTest
         self::assertTrue($this->service->setPublished($block, false)->isOk());
 
         Versioned::set_stage(Versioned::LIVE);
+        self::assertNull(SharedBlock::get()->byID($block->ID));
+    }
+
+    public function testDeleteInRemoveModeArchivesBlockAndPlacements(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = $this->sectionRootedBlock();
+        $reference = GridTreeFactory::reference($page, $block);
+
+        $result = $this->service->delete($block, SharedBlockDeleteMode::Remove);
+
+        self::assertTrue($result->isOk());
+        self::assertSame(1, $result->unwrap(), 'the count reports the placements handled');
+        self::assertNull(SharedBlock::get()->byID($block->ID));
+        self::assertNull(SharedBlockReference::get()->byID($reference->ID));
+        self::assertSame(0, Section::get()->filter(['Title' => 'Shared section'])->count());
+    }
+
+    public function testDeleteInRemoveModeTakesTheContentOffLiveImmediately(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = $this->sectionRootedBlock();
+        $reference = GridTreeFactory::reference($page, $block);
+        self::assertTrue($this->service->setPublished($block, true)->isOk());
+        $reference->publishSingle();
+
+        self::assertTrue($this->service->delete($block, SharedBlockDeleteMode::Remove)->isOk());
+
+        Versioned::set_stage(Versioned::LIVE);
+        self::assertNull(SharedBlockReference::get()->byID($reference->ID));
+        self::assertNull(SharedBlock::get()->byID($block->ID));
+    }
+
+    public function testDeleteInUnshareModeLeavesEachPageAnIndependentCopy(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = $this->sectionRootedBlock();
+        $reference = GridTreeFactory::reference($page, $block, zone: 'main', sort: 3);
+
+        $result = $this->service->delete($block, SharedBlockDeleteMode::Unshare);
+
+        self::assertTrue($result->isOk());
+        self::assertNull(SharedBlock::get()->byID($block->ID), 'the library record is gone either way');
+        self::assertNull(SharedBlockReference::get()->byID($reference->ID));
+
+        $copy = Section::get()->filter([
+            'ParentID' => $page->ID,
+            'ParentClass' => $page::class,
+        ])->first();
+
+        self::assertInstanceOf(Section::class, $copy);
+        self::assertSame('Shared section', $copy->Title);
+        self::assertSame(3, (int) $copy->Sort, 'the copy takes over the placement position');
+        self::assertSame('main', (string) $copy->Zone);
+
+        $copiedLeaf = $copy->Rows()->first()?->Columns()->first()?->getChildren()->first();
+        self::assertInstanceOf(ContentElement::class, $copiedLeaf);
+        self::assertSame('Shared leaf', $copiedLeaf->Title, 'the whole subtree comes across, not just the root');
+    }
+
+    public function testDeleteInUnshareModePublishesTheCopyWhereThePlacementWasLive(): void
+    {
+        // Without this the mode's promise is false on every published page:
+        // the placement leaves live with the block, so a draft-only copy would
+        // blank the page until someone happened to republish it.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = $this->sectionRootedBlock();
+        $reference = GridTreeFactory::reference($page, $block);
+        self::assertTrue($this->service->setPublished($block, true)->isOk());
+        $reference->publishSingle();
+
+        self::assertTrue($this->service->delete($block, SharedBlockDeleteMode::Unshare)->isOk());
+
+        Versioned::set_stage(Versioned::LIVE);
+
+        $copy = Section::get()->filter([
+            'ParentID' => $page->ID,
+            'ParentClass' => $page::class,
+        ])->first();
+
+        self::assertInstanceOf(Section::class, $copy, 'the copy must reach live where the placement was live');
+        self::assertSame('Shared leaf', ContentElement::get()->filter(['Title' => 'Shared leaf'])->first()?->Title);
+    }
+
+    public function testDeleteInUnshareModeLeavesADraftOnlyPlacementUnpublished(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = $this->sectionRootedBlock();
+        GridTreeFactory::reference($page, $block);
+
+        self::assertTrue($this->service->delete($block, SharedBlockDeleteMode::Unshare)->isOk());
+
+        Versioned::set_stage(Versioned::LIVE);
+        self::assertSame(
+            0,
+            Section::get()->filter(['ParentID' => $page->ID, 'ParentClass' => $page::class])->count(),
+            'unsharing must not publish content the placement had not published',
+        );
+    }
+
+    public function testDeleteInUnshareModeRefusesWhenTheBlockHasNoContentLeft(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = $this->sectionRootedBlock();
+        $reference = GridTreeFactory::reference($page, $block);
+
+        $block->getRootElement()?->delete();
+
+        $result = $this->service->delete($block, SharedBlockDeleteMode::Unshare);
+
+        self::assertTrue($result->isErr(), 'there is nothing to keep, so the mode cannot be honoured');
+        self::assertNotNull(SharedBlock::get()->byID($block->ID), 'the failure rolls the whole delete back');
+        self::assertNotNull(SharedBlockReference::get()->byID($reference->ID));
+    }
+
+    public function testDeleteWithoutPlacementsReportsNone(): void
+    {
+        $block = $this->sectionRootedBlock();
+
+        $result = $this->service->delete($block, SharedBlockDeleteMode::Unshare);
+
+        self::assertTrue($result->isOk());
+        self::assertSame(0, $result->unwrap());
         self::assertNull(SharedBlock::get()->byID($block->ID));
     }
 }

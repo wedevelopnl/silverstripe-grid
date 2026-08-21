@@ -163,6 +163,42 @@
   }
 }
 
+/* --- Radio choices (shared block delete) -------------------------------------
+   Full-width rows rather than a bare radio list: the two outcomes are the
+   decision the dialog exists to force, so each needs a click target the size of
+   its own sentence. The focus ring comes from `.ssgrid-focus-ring` on the input
+   itself, so a control that draws its own never drifts from the rest. */
+
+.ssgrid-dialog-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ssgrid-space-2);
+}
+
+.ssgrid-dialog-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ssgrid-space-3);
+  padding: 10px;
+  border: 1px solid var(--ssgrid-border-default);
+  border-radius: var(--ssgrid-radius-sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ssgrid-surface-hover);
+  }
+
+  &:has(input:checked) {
+    background: var(--ssgrid-surface-selected);
+    border-color: var(--ssgrid-border-focus);
+  }
+
+  & input {
+    flex: 0 0 auto;
+    margin: 3px 0 0;
+  }
+}
+
 /* --- Shared block library rows -----------------------------------------------
    A library row answers three questions the plain option never had to: what is
    it called, where may it go (its root type), and is it safe to place yet.

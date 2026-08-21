@@ -21,6 +21,7 @@ export const queryKeys = {
     all: () => ['sharedBlocks'] as const,
     list: (parentType: string) => ['sharedBlocks', 'list', parentType] as const,
     tree: (blockId: number) => ['sharedBlocks', 'tree', blockId] as const,
+    usage: (blockId: number) => ['sharedBlocks', 'usage', blockId] as const,
   },
 } as const
 

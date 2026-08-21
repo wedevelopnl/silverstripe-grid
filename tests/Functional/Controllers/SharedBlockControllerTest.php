@@ -431,15 +431,147 @@ final class SharedBlockControllerTest extends FunctionalTest
         self::assertSame(400, $response->getStatusCode());
     }
 
+    public function testUsageEndpointReportsTotalAndLiveUsage(): void
+    {
+        $block = $this->sectionRootedBlock();
+        $livePage = $this->page();
+        GridTreeFactory::reference($livePage, $block, zone: 'main');
+        // Ownership carries the placement to live with its page.
+        $livePage->publishRecursive();
 
+        GridTreeFactory::reference($this->objFromFixture(Page::class, 'test_page_2'), $block, zone: 'main');
 
+        $response = $this->jsonRequest('GET', self::BASE_URL . '/usage/' . (int) $block->ID);
 
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame(['usageCount' => 2, 'liveUsageCount' => 1], $this->parseJson($response));
+    }
 
+    public function testUsageEndpointRejectsUnknownBlock(): void
+    {
+        $response = $this->jsonRequest('GET', self::BASE_URL . '/usage/9999');
 
+        self::assertSame(404, $response->getStatusCode());
+    }
 
+    public function testUsageEndpointNeedsNoCsrfToken(): void
+    {
+        $block = $this->sectionRootedBlock();
 
+        $tokenWasEnabled = SecurityToken::is_enabled();
+        SecurityToken::enable();
 
+        try {
+            $response = $this->jsonRequest(
+                'GET',
+                self::BASE_URL . '/usage/' . (int) $block->ID,
+                withToken: false,
+            );
+        } finally {
+            if (!$tokenWasEnabled) {
+                SecurityToken::disable();
+            }
+        }
 
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testDeleteEndpointInRemoveModeDropsBlockAndPlacements(): void
+    {
+        $block = $this->sectionRootedBlock();
+        $reference = GridTreeFactory::reference($this->page(), $block, zone: 'main');
+
+        $response = $this->jsonRequest(
+            'DELETE',
+            self::BASE_URL . '/delete?blockId=' . (int) $block->ID . '&mode=remove',
+        );
+
+        self::assertSame(204, $response->getStatusCode());
+        self::assertNull(SharedBlock::get()->byID($block->ID));
+        self::assertNull(SharedBlockReference::get()->byID($reference->ID));
+    }
+
+    public function testDeleteEndpointInUnshareModeKeepsTheContentOnThePage(): void
+    {
+        $page = $this->page();
+        $block = $this->sectionRootedBlock();
+        GridTreeFactory::reference($page, $block, zone: 'main');
+
+        $response = $this->jsonRequest(
+            'DELETE',
+            self::BASE_URL . '/delete?blockId=' . (int) $block->ID . '&mode=unshare',
+        );
+
+        self::assertSame(204, $response->getStatusCode());
+        self::assertNull(SharedBlock::get()->byID($block->ID));
+        self::assertSame(
+            1,
+            Section::get()->filter(['ParentID' => $page->ID, 'ParentClass' => $page::class])->count(),
+        );
+    }
+
+    public function testDeleteEndpointRejectsAMissingMode(): void
+    {
+        $block = $this->sectionRootedBlock();
+
+        $response = $this->jsonRequest(
+            'DELETE',
+            self::BASE_URL . '/delete?blockId=' . (int) $block->ID,
+        );
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertNotNull(SharedBlock::get()->byID($block->ID));
+    }
+
+    public function testDeleteEndpointRejectsAnUnknownMode(): void
+    {
+        $block = $this->sectionRootedBlock();
+
+        $response = $this->jsonRequest(
+            'DELETE',
+            self::BASE_URL . '/delete?blockId=' . (int) $block->ID . '&mode=obliterate',
+        );
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertNotNull(SharedBlock::get()->byID($block->ID));
+    }
+
+    public function testDeleteEndpointRejectsANonNumericBlockId(): void
+    {
+        $response = $this->jsonRequest('DELETE', self::BASE_URL . '/delete?blockId=abc&mode=remove');
+
+        self::assertSame(400, $response->getStatusCode());
+    }
+
+    public function testDeleteEndpointRejectsUnknownBlock(): void
+    {
+        $response = $this->jsonRequest('DELETE', self::BASE_URL . '/delete?blockId=9999&mode=remove');
+
+        self::assertSame(404, $response->getStatusCode());
+    }
+
+    public function testDeleteEndpointRequiresCsrfToken(): void
+    {
+        $block = $this->sectionRootedBlock();
+
+        $tokenWasEnabled = SecurityToken::is_enabled();
+        SecurityToken::enable();
+
+        try {
+            $response = $this->jsonRequest(
+                'DELETE',
+                self::BASE_URL . '/delete?blockId=' . (int) $block->ID . '&mode=remove',
+                withToken: false,
+            );
+        } finally {
+            if (!$tokenWasEnabled) {
+                SecurityToken::disable();
+            }
+        }
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertNotNull(SharedBlock::get()->byID($block->ID), 'an untokened delete must not reach the library');
+    }
 
     // --- Permission gates -------------------------------------------------
     //
@@ -463,6 +595,20 @@ final class SharedBlockControllerTest extends FunctionalTest
         self::assertCount(0, SharedBlock::get(), 'no block may be created');
     }
 
+    public function testDeleteIsRefusedWithoutLibraryAccess(): void
+    {
+        $block = $this->sectionRootedBlock();
+
+        $this->logInAsPageEditorOnly();
+
+        $response = $this->jsonRequest(
+            'DELETE',
+            self::BASE_URL . '/delete?blockId=' . (int) $block->ID . '&mode=remove',
+        );
+
+        self::assertSame(403, $response->getStatusCode());
+        self::assertNotNull(SharedBlock::get()->byID($block->ID), 'the block must survive');
+    }
 
     public function testSetPublishedIsRefusedWithoutLibraryAccess(): void
     {
@@ -530,6 +676,18 @@ final class SharedBlockControllerTest extends FunctionalTest
         self::assertSame(403, $response->getStatusCode());
     }
 
+    public function testUsageIsRefusedForABlockTheAuthorMayNotView(): void
+    {
+        SharedBlock::add_extension(VetoBlockViewExtension::class);
+        $block = $this->sectionRootedBlock();
+
+        $response = $this->jsonRequest(
+            'GET',
+            self::BASE_URL . '/usage/' . (int) $block->ID,
+        );
+
+        self::assertSame(403, $response->getStatusCode());
+    }
 
     public function testBlockListOmitsBlocksTheAuthorMayNotView(): void
     {
