@@ -11,6 +11,9 @@ use SilverStripe\Dev\FunctionalTest;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\View\Parsers\URLSegmentFilter;
 use WeDevelop\E2e\Fixtures\FixtureLoader;
+use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Model\SharedBlock;
+use WeDevelop\Grid\Model\SharedBlockReference;
 
 /**
  * Guards the grid's _config/dev.yml wiring of the silverstripe-e2e module.
@@ -125,6 +128,114 @@ final class FixtureEndpointTest extends FunctionalTest
             SiteTree::get()->byID($unrelatedId),
             'reset() must not archive a non-fixture SiteTree that only shares the e2e- prefix',
         );
+    }
+
+    public function testResetSweepsSharedBlocksNothingPlacesAnyMore(): void
+    {
+        // A SharedBlock has no page and no URLSegment, so the module's own reset
+        // never collected one: every fixture load left another behind until the
+        // library listed dozens of identical blocks.
+        $blockId = Versioned::withVersionedMode(static function (): int {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            $block = SharedBlock::create();
+            $block->Title = 'Orphaned by an earlier run';
+
+            return (int) $block->write();
+        });
+
+        FixtureLoader::create()->reset();
+
+        self::assertNull(
+            SharedBlock::get()->byID($blockId),
+            'reset() must sweep a shared block that no page places',
+        );
+    }
+
+    public function testResetSweepsABlockHeldOnlyByAPlacementWhosePageIsGone(): void
+    {
+        // Archiving a page leaves its placement rows behind, and isReferenced()
+        // counts one of those as a placement — so without dropping the debris
+        // first the sweep keeps every block any past run ever placed. This is
+        // the case that made a dev database accumulate them.
+        $blockId = Versioned::withVersionedMode(static function (): int {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            $block = SharedBlock::create();
+            $block->Title = 'Held by debris';
+            $blockId = (int) $block->write();
+
+            $root = Section::create();
+            $root->Title = 'Block root';
+            $root->ParentID = $blockId;
+            $root->ParentClass = SharedBlock::class;
+            $root->write();
+
+            // A placement pointing at a page id that does not exist.
+            $reference = SharedBlockReference::create();
+            $reference->BlockID = $blockId;
+            $reference->ParentID = 999_999;
+            $reference->ParentClass = SiteTree::class;
+            $reference->Zone = 'main';
+            $reference->write();
+
+            return $blockId;
+        });
+
+        FixtureLoader::create()->reset();
+
+        self::assertNull(
+            SharedBlock::get()->byID($blockId),
+            'reset() must sweep a block whose only placement points at a page that is gone',
+        );
+    }
+
+    public function testResetKeepsASharedBlockAPageStillPlaces(): void
+    {
+        // The sweep is scoped by placement, not by "is a shared block": a block
+        // a developer put on a page of their own must survive a fixture reset.
+        $ids = Versioned::withVersionedMode(static function (): array {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            $block = SharedBlock::create();
+            $block->Title = 'Placed on real content';
+            $blockId = (int) $block->write();
+
+            // A reference to an empty block is refused by hierarchy validation,
+            // so the block needs the root that decides where it may be placed.
+            $root = Section::create();
+            $root->Title = 'Block root';
+            $root->ParentID = $blockId;
+            $root->ParentClass = SharedBlock::class;
+            $root->write();
+
+            $page = SiteTree::create();
+            $page->Title = 'Unrelated page';
+            $page->URLSegment = URLSegmentFilter::create()->filter('unrelated-real-page');
+            $pageId = (int) $page->write();
+
+            $reference = SharedBlockReference::create();
+            $reference->BlockID = $blockId;
+            $reference->ParentID = $pageId;
+            $reference->ParentClass = SiteTree::class;
+            $reference->Zone = 'main';
+            $reference->write();
+
+            return ['block' => $blockId, 'page' => $pageId];
+        });
+
+        FixtureLoader::create()->reset();
+
+        self::assertNotNull(
+            SharedBlock::get()->byID($ids['block']),
+            'reset() must not sweep a shared block a page still places',
+        );
+
+        // Clean up the page this test created outside the e2e- prefix.
+        Versioned::withVersionedMode(static function () use ($ids): void {
+            Versioned::set_stage(Versioned::DRAFT);
+            SiteTree::get()->byID($ids['page'])?->doArchive();
+        });
     }
 
     public function testFixturePageClassesCoversEveryFixturePageType(): void
