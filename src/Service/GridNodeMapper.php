@@ -11,11 +11,13 @@ use SilverStripe\Core\Injector\Injectable;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\ElementStatus;
 use WeDevelop\Grid\Value\GridNode;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
+use WeDevelop\Grid\Value\SharedBlockMeta;
 
 /**
  * Maps GridElement models to GridNode DTOs.
@@ -39,11 +41,15 @@ class GridNodeMapper
      * @param list<GridNode>|null $children Assembled child nodes — null for leaf elements.
      *   The only structural fact the traversal must supply besides $parent; all
      *   node content (containerType, allowedTypes, gridSettings) is derived here.
+     * @param SharedBlockMeta|null $sharedBlock Set only for a SharedBlockReference,
+     *   whose block facts the traversal resolves. It discriminates the node on the
+     *   wire and, unusually, lets a non-container carry children — the block's root.
      */
     public function mapToNode(
         GridElement $element,
         NodeRef $parent,
         ?array $children,
+        ?SharedBlockMeta $sharedBlock = null,
     ): GridNode {
         $containerType = null;
         $gridSettings = null;
@@ -107,6 +113,7 @@ class GridNodeMapper
             children: $children,
             gridSettings: $gridSettings,
             extensions: $extensions,
+            sharedBlock: $sharedBlock,
         );
     }
 
@@ -148,6 +155,12 @@ class GridNodeMapper
         // promise the create endpoint will accept it, so both sides must ask the
         // same question — it also narrows $class for the array key below.
         foreach (ClassInfo::subclassesFor(GridElement::class, false) as $class) {
+            // A reference is never offered as a plain type: it needs the block it
+            // stands for, so the picker routes it through the shared-block dialog.
+            if (is_a($class, SharedBlockReference::class, true)) {
+                continue;
+            }
+
             if ($containerType->isChildCreatable($class)) {
                 $types[$class] = $this->getElementTypeInfo($class);
             }

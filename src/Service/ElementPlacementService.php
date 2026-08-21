@@ -8,7 +8,6 @@ use NoDiscard;
 use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
@@ -73,14 +72,10 @@ class ElementPlacementService
         $isCrossParent = $sourceParentId !== $targetParentId;
 
         // Fetch target siblings, excluding the moved element.
-        // For Sections, scope to the element's zone. Sort values are per-zone-per-parent:
-        // main zone has Sort 1,2,3 and sidebar zone independently has Sort 1,2,3.
-        // This is safe because all queries (readTree, ensureSortSet) filter by zone.
-        $allTargetSiblings = $this->elementRepository->findByParentIds([$targetParentId], $targetParent::class);
-        $targetSiblings = $element instanceof Section
-            ? $this->filterByZone($allTargetSiblings, $element->Zone ?: '')
-            : $allTargetSiblings;
-        $targetSiblings = $this->excludeElement($targetSiblings, $element);
+        $targetSiblings = $this->excludeElement(
+            $this->siblingSequence($targetParent::class, $targetParentId, $element),
+            $element,
+        );
 
         $insertionIndex = $this->resolveInsertionIndex($targetSiblings, $afterElementId);
         if ($insertionIndex === null) {
@@ -107,11 +102,10 @@ class ElementPlacementService
 
         $dirty = $this->reindex($targetSiblings, $element);
 
-        $allSourceSiblings = $this->elementRepository->findByParentIds([$sourceParentId], $sourceParentClass);
-        $sourceSiblings = $element instanceof Section
-            ? $this->filterByZone($allSourceSiblings, $element->Zone ?: '')
-            : $allSourceSiblings;
-        $sourceSiblings = $this->excludeElement($sourceSiblings, $element);
+        $sourceSiblings = $this->excludeElement(
+            $this->siblingSequence($sourceParentClass, $sourceParentId, $element),
+            $element,
+        );
 
         $dirtyElements = [...$dirty, ...$this->reindex($sourceSiblings)];
 
@@ -162,17 +156,41 @@ class ElementPlacementService
     }
 
     /**
-     * Filter siblings to only Sections matching the given zone.
+     * The Sort sequence $element competes in under the given parent, in order.
      *
-     * @param list<GridElement> $siblings
+     * At page root that sequence is scoped to a zone and spans every root class
+     * ({@see GridElement::ROOT_ELEMENT_CLASSES}), so only the zone-aware
+     * repository query returns it — filtering the base list by class here is
+     * what dropped shared-block placements out of the list and made any move
+     * anchored on one fail. Inside a container there is no zone and a single
+     * parent-wide sequence covers every child class.
+     *
+     * @param class-string $parentClass
+     * @param positive-int $parentId
      * @return list<GridElement>
      */
-    private function filterByZone(array $siblings, string $zone): array
+    private function siblingSequence(string $parentClass, int $parentId, GridElement $element): array
     {
-        return array_values(array_filter(
-            $siblings,
-            static fn (GridElement $s): bool => $s instanceof Section && ($s->Zone ?: '') === $zone,
-        ));
+        if (is_a($parentClass, GridElement::class, true)) {
+            return $this->elementRepository->findByParentIds([$parentId], $parentClass);
+        }
+
+        return $this->elementRepository->findByParents(
+            [$parentClass => [$parentId]],
+            $this->zoneOf($element),
+        );
+    }
+
+    /**
+     * Zone is declared on the root subclasses, not on GridElement, so it is read
+     * through getField() — which yields null (and so '') for any class without
+     * the column.
+     */
+    private function zoneOf(GridElement $element): string
+    {
+        $zone = $element->getField('Zone');
+
+        return is_string($zone) ? $zone : '';
     }
 
     /**

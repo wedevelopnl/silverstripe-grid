@@ -14,12 +14,12 @@ use WeDevelop\Grid\Value\ContainerType;
  * Lives inside a Section only. On draft-stage write, auto-scaffolds
  * a child Column when no children exist.
  *
- * @method HasManyList<Column> Columns()
- * @implements ContainerInterface<Column>
+ * @method HasManyList<GridElement> Columns()
+ * @implements ContainerInterface<GridElement>
  */
 class Row extends GridElement implements ContainerInterface
 {
-    /** @use ContainerElementTrait<Column> */
+    /** @use ContainerElementTrait<GridElement> */
     use ContainerElementTrait;
 
     private static string $table_name = 'WeDevelop_Grid_Row';
@@ -38,9 +38,15 @@ class Row extends GridElement implements ContainerInterface
         'getChildCountSummary' => 'Contents',
     ];
 
-    /** @var array<string, string> */
+    /**
+     * Typed to the GridElement base for the same reason as
+     * {@see Section::$has_many}: a column-rooted shared block is placed here as
+     * a SharedBlockReference and must publish, cascade and render with the row.
+     *
+     * @var array<string, string>
+     */
     private static array $has_many = [
-        'Columns' => Column::class . '.Parent',
+        'Columns' => GridElement::class . '.Parent',
     ];
 
     /** @var list<string> */

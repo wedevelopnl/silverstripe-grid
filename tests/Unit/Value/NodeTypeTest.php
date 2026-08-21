@@ -15,6 +15,8 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Model\SharedBlock;
+use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Value\NodeType;
 
 #[CoversClass(NodeType::class)]
@@ -32,6 +34,10 @@ final class NodeTypeTest extends TestCase
             'Column → Column' => [Column::class, NodeType::Column],
             'ContentElement → Element' => [ContentElement::class, NodeType::Element],
             'Abstract GridElement → Element' => [GridElement::class, NodeType::Element],
+            'SharedBlock → SharedBlock' => [SharedBlock::class, NodeType::SharedBlock],
+            // A reference is an ordinary element on the wire: reorder/delete/publish
+            // of the placement itself resolve through the GridElement base class.
+            'SharedBlockReference → Element' => [SharedBlockReference::class, NodeType::Element],
         ];
     }
 
@@ -58,6 +64,7 @@ final class NodeTypeTest extends TestCase
             'Row → Row' => [NodeType::Row, Row::class],
             'Column → Column' => [NodeType::Column, Column::class],
             'Element → GridElement' => [NodeType::Element, GridElement::class],
+            'SharedBlock → SharedBlock' => [NodeType::SharedBlock, SharedBlock::class],
         ];
     }
 
@@ -78,6 +85,7 @@ final class NodeTypeTest extends TestCase
             'Row is parented to Section' => [NodeType::Row, NodeType::Section],
             'Column is parented to Row' => [NodeType::Column, NodeType::Row],
             'Element is parented to Column' => [NodeType::Element, NodeType::Column],
+            'SharedBlock is a tree root and has no parent' => [NodeType::SharedBlock, null],
         ];
     }
 
@@ -98,6 +106,7 @@ final class NodeTypeTest extends TestCase
             'Row is a container' => [NodeType::Row, true],
             'Column is a container' => [NodeType::Column, true],
             'Element is not a container' => [NodeType::Element, false],
+            'SharedBlock is not a container' => [NodeType::SharedBlock, false],
         ];
     }
 
@@ -118,6 +127,7 @@ final class NodeTypeTest extends TestCase
             'Row is draggable' => [NodeType::Row, true],
             'Column is draggable' => [NodeType::Column, true],
             'Element is draggable' => [NodeType::Element, true],
+            'SharedBlock is draggable' => [NodeType::SharedBlock, true],
         ];
     }
 

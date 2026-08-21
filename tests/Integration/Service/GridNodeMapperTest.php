@@ -17,6 +17,7 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Service\GridNodeMapper;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
@@ -302,6 +303,17 @@ final class GridNodeMapperTest extends SapphireTest
         self::assertArrayNotHasKey(GridElement::class, $allowed);
         // Should have at least ContentElement
         self::assertNotEmpty($allowed);
+    }
+
+    public function testAllowedTypesExcludesSharedBlockReference(): void
+    {
+        // A column would otherwise accept it (it is a non-container element),
+        // but a reference needs the block it stands for, which the generic
+        // create body cannot carry.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        ['column' => $column] = GridTreeFactory::containerTree($page);
+
+        self::assertArrayNotHasKey(SharedBlockReference::class, $this->allowedTypesFor($column));
     }
 
     public function testAllowedTypesCacheReturnsIdenticalResult(): void

@@ -18,10 +18,12 @@ SilverStripe\Core\Injector\Injector:
   WeDevelop\Grid\Repository\GridElementRepositoryInterface:
     class: WeDevelop\Grid\Repository\OrmGridElementRepository
   WeDevelop\Grid\Service\GridNodeMapper: ~
+  WeDevelop\Grid\Service\SharedBlockUsageResolver: ~
   WeDevelop\Grid\Service\GridTreeService:
     constructor:
       elementRepository: '%$WeDevelop\Grid\Repository\GridElementRepositoryInterface'
       nodeMapper: '%$WeDevelop\Grid\Service\GridNodeMapper'
+      usageResolver: '%$WeDevelop\Grid\Service\SharedBlockUsageResolver'
   WeDevelop\Grid\Contract\ReorderValidatorInterface:
     class: WeDevelop\Grid\Validation\ReorderValidator
   WeDevelop\Grid\Service\RequestBodyParser:
@@ -32,6 +34,10 @@ SilverStripe\Core\Injector\Injector:
       validator: '%$WeDevelop\Grid\Contract\ReorderValidatorInterface'
       elementRepository: '%$WeDevelop\Grid\Repository\GridElementRepositoryInterface'
   WeDevelop\Grid\Service\GridElementService:
+    constructor:
+      validator: '%$WeDevelop\Grid\Contract\ReorderValidatorInterface'
+      placementService: '%$WeDevelop\Grid\Service\ElementPlacementService'
+  WeDevelop\Grid\Service\SharedBlockService:
     constructor:
       validator: '%$WeDevelop\Grid\Contract\ReorderValidatorInterface'
       placementService: '%$WeDevelop\Grid\Service\ElementPlacementService'

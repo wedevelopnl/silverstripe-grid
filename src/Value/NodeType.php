@@ -10,6 +10,7 @@ use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Model\SharedBlock;
 
 /**
  * Pages and grid elements live in separate DB tables with independent
@@ -24,6 +25,8 @@ enum NodeType: string
     case Row = 'row';
     case Column = 'column';
     case Element = 'element';
+    /** Tree ROOT only: the library editor is rooted at a block instead of a page. */
+    case SharedBlock = 'sharedBlock';
 
     /**
      * Sections/Rows/Columns are matched by hierarchy. Any non-container
@@ -39,6 +42,7 @@ enum NodeType: string
             is_a($class, Row::class, true) => self::Row,
             is_a($class, Column::class, true) => self::Column,
             is_a($class, GridElement::class, true) => self::Element,
+            is_a($class, SharedBlock::class, true) => self::SharedBlock,
             is_a($class, SiteTree::class, true) => self::Page,
             default => throw new InvalidArgumentException(sprintf(
                 'Cannot resolve NodeType for class %s',
@@ -62,6 +66,7 @@ enum NodeType: string
             self::Row => Row::class,
             self::Column => Column::class,
             self::Element => GridElement::class,
+            self::SharedBlock => SharedBlock::class,
         };
     }
 
@@ -81,6 +86,7 @@ enum NodeType: string
             self::Row => self::Section,
             self::Column => self::Row,
             self::Element => self::Column,
+            self::SharedBlock => null,
         };
     }
 
@@ -88,7 +94,7 @@ enum NodeType: string
     {
         return match ($this) {
             self::Section, self::Row, self::Column => true,
-            self::Page, self::Element => false,
+            self::Page, self::Element, self::SharedBlock => false,
         };
     }
 

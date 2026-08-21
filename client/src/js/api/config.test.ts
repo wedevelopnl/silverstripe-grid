@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { getAdapterConfig, getConfig, getControllerLink, getSecurityId } from './config'
+import {
+  getAdapterConfig,
+  getConfig,
+  getControllerLink,
+  getSecurityId,
+  getSharedBlockControllerLink,
+} from './config'
 
 describe('getConfig', () => {
   it('returns the CMS config from window.ss.config', () => {
     const config = getConfig()
     expect(config.SecurityID).toBe('test-security-id')
-    expect(config.sections).toHaveLength(1)
+    expect(config.sections).toHaveLength(2)
   })
 
   it('throws ConfigError with exact message when window.ss.config is undefined', () => {
@@ -43,6 +49,26 @@ describe('getControllerLink', () => {
 
     expect(() => getControllerLink()).toThrow(
       'Controller section "WeDevelop\\Grid\\Controllers\\GridController" not found in CMS config. Ensure the grid module is installed.',
+    )
+  })
+})
+
+describe('getSharedBlockControllerLink', () => {
+  it('returns the block library controller base URL, not the grid one', () => {
+    expect(getSharedBlockControllerLink()).toBe('/admin/grid-shared-blocks')
+    expect(getSharedBlockControllerLink()).not.toBe(getControllerLink())
+  })
+
+  it('throws ConfigError naming the shared block controller when its section is missing', () => {
+    // Removing only the block section must not fall back to the grid section:
+    // the two controllers live under different admin URL segments, so a silent
+    // fallback would send every block request to the wrong controller.
+    window.ss!.config.sections = window.ss!.config.sections.filter(
+      (s) => s.name === 'WeDevelop\\Grid\\Controllers\\GridController',
+    )
+
+    expect(() => getSharedBlockControllerLink()).toThrow(
+      'Controller section "WeDevelop\\Grid\\Controllers\\SharedBlockController" not found in CMS config. Ensure the grid module is installed.',
     )
   })
 })

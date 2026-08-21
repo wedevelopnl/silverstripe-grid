@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Controllers;
 
 use Override;
-use SilverStripe\Admin\AdminController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\Security\SecurityToken;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Extensions\GridPageExtension;
@@ -21,52 +19,40 @@ use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridTree;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
-use WeDevelop\Grid\Value\Result;
-use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\ValidationErrorCode;
 use WeDevelop\Grid\Forms\GridEditorField;
-use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Service\ElementPlacementService;
 use WeDevelop\Grid\Service\GridElementService;
 use WeDevelop\Grid\Service\GridSettingsService;
 use WeDevelop\Grid\Service\GridTreeService;
-use WeDevelop\Grid\Service\RequestBodyParser;
 
 /**
- * @property GridElementRepositoryInterface $elementRepository
- * @property GridTreeService $treeService
- * @property ElementPlacementService $placementService
- * @property GridAdapterInterface $gridAdapter
- * @property RequestBodyParser $requestBodyParser
- * @property GridElementService $elementService
- * @property GridSettingsService $settingsService
+ * The JSON API for a page's grid: reading a zone's tree and every operation on
+ * the elements in it.
+ *
+ * The block library has its own controller, {@see SharedBlockController}. The
+ * line between them is the resource, not the feature: a placement is a
+ * GridElement, so it is deleted and reordered through this controller like any
+ * other element.
  */
-class GridController extends AdminController
+class GridController extends GridApiController
 {
     private static string $url_segment = 'grid';
 
-    private static string $required_permission_codes = 'CMS_ACCESS';
-
     /** @var array<string, string> */
     private static array $dependencies = [
-        'elementRepository' => '%$' . GridElementRepositoryInterface::class,
         'treeService' => '%$' . GridTreeService::class,
         'placementService' => '%$' . ElementPlacementService::class,
         'gridAdapter' => '%$' . GridAdapterInterface::class,
-        'requestBodyParser' => '%$' . RequestBodyParser::class,
         'elementService' => '%$' . GridElementService::class,
         'settingsService' => '%$' . GridSettingsService::class,
     ];
-
-    public GridElementRepositoryInterface $elementRepository;
 
     public GridTreeService $treeService;
 
     public ElementPlacementService $placementService;
 
     public GridAdapterInterface $gridAdapter;
-
-    public RequestBodyParser $requestBodyParser;
 
     public GridElementService $elementService;
 
@@ -106,13 +92,8 @@ class GridController extends AdminController
         'apiPages',
     ];
 
-    /**
-     * Lowercased names of the actions that only read data, and therefore need no
-     * security token.
-     *
-     * @var list<string>
-     */
-    private const array READ_ONLY_ACTIONS = [
+    /** @var list<string> */
+    protected const array READ_ONLY_ACTIONS = [
         'apireadtree',
         'apireadtreeatversion',
         'apiacceptablecontainers',
@@ -120,36 +101,9 @@ class GridController extends AdminController
         'apipages',
     ];
 
-    /**
-     * Require a security token for every action outside READ_ONLY_ACTIONS.
-     *
-     * The check cannot be keyed on the HTTP verb: the verb-bound $url_handlers
-     * above are not the only route to these methods. RequestHandler::findAction()
-     * walks up the class hierarchy and falls back to Controller's verb-agnostic
-     * '$Action//$ID/$OtherID' rule, which resolves any $allowed_actions entry
-     * from the first URL segment — so a plain GET reaches apiDelete() and every
-     * other mutation. Actions are matched case-insensitively because that
-     * fallback passes the segment through as typed, and hasMethod() accepts any
-     * casing.
-     *
-     * @param HTTPRequest $request
-     * @param string $action
-     */
-    #[Override]
-    protected function handleAction(mixed $request, mixed $action): mixed
-    {
-        if (!in_array(strtolower($action), self::READ_ONLY_ACTIONS, true)
-            && !SecurityToken::inst()->checkRequest($request)
-        ) {
-            $this->jsonError(400);
-        }
-
-        return parent::handleAction($request, $action);
-    }
-
     public function apiReadTree(HTTPRequest $request): HTTPResponse
     {
-        $pageId = $this->requirePageId($request);
+        $pageId = $this->requireIdParam($request, 'PageID');
 
         $zone = $this->requireZone($request);
 
@@ -185,20 +139,11 @@ class GridController extends AdminController
      */
     public function apiReadTreeAtVersion(HTTPRequest $request): HTTPResponse
     {
-        $pageId = $this->requirePageId($request);
+        $pageId = $this->requireIdParam($request, 'PageID');
 
         $zone = $this->requireZone($request);
 
-        $version = filter_var(
-            $request->param('Version'),
-            FILTER_VALIDATE_INT,
-            ['options' => ['min_range' => 1]],
-        );
-        if ($version === false) {
-            $this->jsonError(404);
-        }
-
-        /** @var positive-int $version filter_var guarantees min_range=1 */
+        $version = $this->requireIdParam($request, 'Version');
 
         /** @var SiteTree|null $page */
         $page = Versioned::get_version(SiteTree::class, $pageId, $version);
@@ -266,7 +211,12 @@ class GridController extends AdminController
         // The parent's NodeType is client-supplied and selects the ORM table in
         // resolveNodeRef(), so it must be checked against the hierarchy before
         // the lookup rather than left to the downstream write-time validator.
-        if ($body->parent->type !== NodeType::fromClass($newElementClass)->expectedParentType()) {
+        // A block is the exception: it roots a subtree of any shape, so the
+        // library editor may seed a new block with any container type.
+        if (
+            $body->parent->type !== NodeType::SharedBlock
+            && $body->parent->type !== NodeType::fromClass($newElementClass)->expectedParentType()
+        ) {
             $this->jsonError(400);
         }
 
@@ -638,7 +588,7 @@ class GridController extends AdminController
             return $this->jsonSuccess(200, []);
         }
 
-        $pageId = $this->requirePageId($request);
+        $pageId = $this->requireIdParam($request, 'PageID');
 
         $page = $this->requireDraftPage($pageId);
 
@@ -667,7 +617,7 @@ class GridController extends AdminController
 
     public function apiZones(HTTPRequest $request): HTTPResponse
     {
-        $pageId = $this->requirePageId($request);
+        $pageId = $this->requireIdParam($request, 'PageID');
 
         $page = $this->requireDraftPage($pageId);
 
@@ -743,77 +693,10 @@ class GridController extends AdminController
     #[Override]
     public function getClientConfig(): array
     {
-        /** @var array<string, mixed> $clientConfig */
         $clientConfig = parent::getClientConfig();
-        // Wire contract: a base URL without trailing slash — the client
-        // concatenates "/api/..." onto it. Link() carries a trailing slash on
-        // projects that enable Controller.add_trailing_slash.
-        $clientConfig['controllerLink'] = rtrim((string) $this->Link(), '/');
         $clientConfig['gridAdapter'] = AdapterConfig::fromAdapter($this->gridAdapter);
 
         return $clientConfig;
-    }
-
-    /**
-     * Write the owning page to DRAFT so it appears as "modified" in the CMS.
-     *
-     * Accepts either a GridElement (walks parent chain) or a pre-resolved SiteTree
-     * (for delete operations where the element is already archived).
-     */
-    private function touchOwningPage(GridElement|SiteTree $subject): void
-    {
-        $page = $subject instanceof SiteTree ? $subject : $subject->getPage();
-
-        if (!$page instanceof SiteTree) {
-            return;
-        }
-
-        // writeToStage calls forceChange() + write() within the correct
-        // reading mode and creates a new draft version even when no page
-        // fields have changed
-        $page->writeToStage(Versioned::DRAFT);
-    }
-
-    /**
-     * Decode the JSON request body into an associative array, or 400 on failure.
-     *
-     * @return array<string, mixed>
-     */
-    private function parseJsonBody(HTTPRequest $request): array
-    {
-        $data = json_decode($request->getBody() ?? '', true);
-
-        if (!is_array($data)) {
-            $this->jsonError(400);
-        }
-
-        /** @var array<string, mixed> $data JSON object keys are always strings */
-        return $data;
-    }
-
-    /**
-     * Read the required `PageID` route param as a page ID, or 404.
-     *
-     * `$PageID!` only makes the URL segment mandatory — the router matches any
-     * non-empty string, so the value is validated rather than cast: a plain
-     * `(int)` cast would silently turn `abc` into 0 and `12abc` into page 12.
-     *
-     * @return positive-int
-     */
-    private function requirePageId(HTTPRequest $request): int
-    {
-        $pageId = filter_var(
-            $request->param('PageID'),
-            FILTER_VALIDATE_INT,
-            ['options' => ['min_range' => 1]],
-        );
-        if ($pageId === false) {
-            $this->jsonError(404);
-        }
-
-        /** @var positive-int $pageId filter_var guarantees min_range=1 */
-
-        return $pageId;
     }
 
     /**
@@ -851,47 +734,6 @@ class GridController extends AdminController
     }
 
     /**
-     * Load a grid element by NodeRef, or 400/403 on failure.
-     *
-     * Uses NodeRef rather than a bare ID so the lookup is collision-free
-     * across SilverStripe's polymorphic ID namespaces (page IDs and grid
-     * element IDs share the numeric space but live in separate tables).
-     *
-     * @param callable(GridElement): bool $permissionCheck
-     */
-    private function requireElementWithPermission(NodeRef $ref, callable $permissionCheck): GridElement
-    {
-        $element = $this->elementRepository->findByRef($ref);
-        if ($element === null) {
-            $this->jsonError(400);
-        }
-
-        if (!$permissionCheck($element)) {
-            $this->jsonError(403);
-        }
-
-        return $element;
-    }
-
-    /**
-     * Fetch a page on the DRAFT stage, regardless of the ambient reading stage.
-     *
-     * Every grid endpoint edits or previews draft content, so the stage is pinned
-     * here rather than at each call site — a request whose ambient stage is LIVE
-     * would otherwise miss a draft-only page.
-     *
-     * @param positive-int $pageId
-     */
-    private function findDraftPage(int $pageId): ?SiteTree
-    {
-        return Versioned::withVersionedMode(static function () use ($pageId): ?SiteTree {
-            Versioned::set_stage(Versioned::DRAFT);
-
-            return SiteTree::get()->byID($pageId);
-        });
-    }
-
-    /**
      * Fetch a page on the DRAFT stage, or 404. The permission check stays at the
      * call site — read endpoints require canView(), writes canEdit().
      *
@@ -906,42 +748,4 @@ class GridController extends AdminController
 
         return $page;
     }
-
-    /**
-     * Resolve a {@see NodeRef} to the concrete DataObject it refers to.
-     *
-     * Element refs go through the repository, so stage pinning and the
-     * polymorphic-collision guard (a Row ref whose numeric ID also exists as
-     * another GridElement subclass) live in one place. The Page type is the one
-     * case {@see GridElementRepositoryInterface::findByRef()} deliberately
-     * excludes, because it is not a grid element — resolved here.
-     */
-    private function resolveNodeRef(NodeRef $ref): ?DataObject
-    {
-        if ($ref->type === NodeType::Page) {
-            /** @var positive-int $pageId NodeRef rejects non-positive ids */
-            $pageId = $ref->id;
-
-            return $this->findDraftPage($pageId);
-        }
-
-        return $this->elementRepository->findByRef($ref);
-    }
-
-    /**
-     * Convert a failed Result into a JSON error response.
-     *
-     * @template T
-     * @param Result<T> $result
-     */
-    private function resultToResponse(Result $result, int $statusCode = 422): never
-    {
-        $messages = array_map(
-            static fn (ValidationError $error): string => $error->translate(),
-            $result->errors(),
-        );
-
-        $this->jsonError($statusCode, implode(' ', $messages));
-    }
-
 }

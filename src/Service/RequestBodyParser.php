@@ -7,15 +7,19 @@ namespace WeDevelop\Grid\Service;
 use NoDiscard;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use InvalidArgumentException;
+use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Value\ContainerType;
+use WeDevelop\Grid\Value\ConvertToSharedBlockRequest;
 use WeDevelop\Grid\Value\CreateContentRequest;
 use WeDevelop\Grid\Value\CreateElementRequest;
 use WeDevelop\Grid\Value\DuplicateToRequest;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
+use WeDevelop\Grid\Value\PlaceSharedBlockRequest;
 use WeDevelop\Grid\Value\ReorderRequest;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ResetGridSettingsOverridesRequest;
+use WeDevelop\Grid\Value\SetSharedBlockPublishedRequest;
 use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\Viewport;
@@ -97,6 +101,12 @@ final readonly class RequestBodyParser
             return Result::fail(new ValidationError('className is not an element type a column can hold.'));
         }
 
+        // A reference carries the block it stands for, which this body has no
+        // slot for. Placements go through the dedicated shared-block endpoints.
+        if (is_a($className, SharedBlockReference::class, true)) {
+            return Result::fail(new ValidationError('Shared blocks are placed through their own endpoint.'));
+        }
+
         $parentResult = $this->parseNodeRef($data['parent'] ?? null, 'parent');
         if ($parentResult->isErr()) {
             return Result::fail(...$parentResult->errors());
@@ -108,6 +118,79 @@ final readonly class RequestBodyParser
         }
 
         return Result::ok(new CreateContentRequest($className, $parent, $afterElementID));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return Result<PlaceSharedBlockRequest>
+     */
+    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
+    public function parsePlaceSharedBlockBody(array $data): Result
+    {
+        $blockId = $data['blockId'] ?? null;
+        $zone = $data['zone'] ?? '';
+        $afterElementID = $data['insertAfterElementID'] ?? null;
+
+        if (!is_int($blockId) || $blockId < 1) {
+            return Result::fail(new ValidationError('blockId must be a positive integer.'));
+        }
+
+        $parentResult = $this->parseNodeRef($data['parent'] ?? null, 'parent');
+        if ($parentResult->isErr()) {
+            return Result::fail(...$parentResult->errors());
+        }
+
+        if (!is_string($zone)) {
+            return Result::fail(new ValidationError('zone must be a string.'));
+        }
+
+        if ($afterElementID !== null && (!is_int($afterElementID) || $afterElementID < 1)) {
+            return Result::fail(new ValidationError('insertAfterElementID must be a positive integer or null.'));
+        }
+
+        return Result::ok(new PlaceSharedBlockRequest($blockId, $parentResult->unwrap(), $zone, $afterElementID));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return Result<ConvertToSharedBlockRequest>
+     */
+    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
+    public function parseConvertToSharedBlockBody(array $data): Result
+    {
+        $title = $data['title'] ?? '';
+
+        $elementResult = $this->parseElementRef($data);
+        if ($elementResult->isErr()) {
+            return Result::fail(...$elementResult->errors());
+        }
+
+        if (!is_string($title)) {
+            return Result::fail(new ValidationError('title must be a string.'));
+        }
+
+        return Result::ok(new ConvertToSharedBlockRequest($elementResult->unwrap(), $title));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return Result<SetSharedBlockPublishedRequest>
+     */
+    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
+    public function parseSetSharedBlockPublishedBody(array $data): Result
+    {
+        $blockId = $data['blockId'] ?? null;
+        $published = $data['published'] ?? null;
+
+        if (!is_int($blockId) || $blockId < 1) {
+            return Result::fail(new ValidationError('blockId must be a positive integer.'));
+        }
+
+        if (!is_bool($published)) {
+            return Result::fail(new ValidationError('published must be a boolean.'));
+        }
+
+        return Result::ok(new SetSharedBlockPublishedRequest($blockId, $published));
     }
 
     /**
