@@ -14,6 +14,7 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Extensions\GridPageExtension;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Model\SharedBlock;
 use WeDevelop\Grid\Value\AdapterConfig;
 use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\GridTree;
@@ -367,6 +368,13 @@ class GridController extends GridApiController
         $parent = $element->Parent();
         if ($parent === null || !$parent->exists() || !$parent->canEdit()) {
             $this->jsonError(403);
+        }
+
+        // Duplicating in place reuses the original's ParentID/ParentClass, so
+        // under a block it would write a SECOND root. getRootElement() returns
+        // the first one, leaving the copy as invisible orphaned content.
+        if ($parent instanceof SharedBlock) {
+            $this->jsonError(400);
         }
 
         $result = $this->elementService->duplicateElement($element);

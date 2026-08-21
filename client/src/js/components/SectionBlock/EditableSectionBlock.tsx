@@ -9,7 +9,11 @@ import SharedChild from '@/components/SharedBlockFrame/SharedChild'
 import { useDragContext } from '@/hooks/useDragAndDrop'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import { t } from '@/i18n'
-import { isSharedBlockReferenceNode, type SectionNode } from '@/types/elements'
+import {
+  isSharedBlockReferenceNode,
+  isSharedBlockRootNode,
+  type SectionNode,
+} from '@/types/elements'
 import type { NodeKey } from '@/types/identity'
 import { buildSortableStyle, noopSortingStrategy } from '@/utils/sortableStyles'
 import { hasUnpublishedDescendant } from '@/utils/publishStatus'
@@ -51,6 +55,9 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
   // belong in the library, and the frame's own bar carries the block's actions.
   const insideShared = usePlacement() !== null
 
+  // A block's root has nowhere to be dragged to — see isSharedBlockRootNode.
+  const isBlockRoot = isSharedBlockRootNode(section)
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({ id: section.nodeKey })
 
@@ -78,7 +85,7 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
       setNodeRef={setNodeRef}
       style={style}
       leading={
-        insideShared ? undefined : (
+        insideShared || isBlockRoot ? undefined : (
           <DragHandle
             listeners={listeners}
             attributes={attributes}

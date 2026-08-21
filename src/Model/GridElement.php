@@ -448,6 +448,21 @@ class GridElement extends DataObject
     #[Override]
     public function canDelete(mixed $member = null): bool
     {
+        // A block owns exactly one subtree, and this element IS that subtree.
+        // Removing it leaves a block that resolves no effective root class:
+        // every page placing it renders nothing, and later grid writes on those
+        // pages fail with BLOCK_EMPTY. The block is removed as a whole instead
+        // ({@see \WeDevelop\Grid\Extensions\SharedBlockDeleteActionExtension}),
+        // which is why this sits ABOVE extendedCan — it is a structural
+        // invariant, not a permission an extension may grant.
+        //
+        // The framework's own removal paths are unaffected: DataObject::delete()
+        // and doArchive() check no permission, and $cascade_deletes reaches this
+        // element through onBeforeDelete() when the block itself is deleted.
+        if ($this->Parent() instanceof SharedBlock) {
+            return false;
+        }
+
         $member = $member ?: Security::getCurrentUser();
 
         if ($member !== null) {

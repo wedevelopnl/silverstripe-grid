@@ -47,6 +47,7 @@ class SharedBlockController extends GridApiController
         'GET api/list' => 'apiList',
         'GET api/readTree/$BlockID!' => 'apiReadTree',
         'GET api/usage/$BlockID!' => 'apiUsage',
+        'POST api/create' => 'apiCreate',
         'POST api/place' => 'apiPlace',
         'POST api/convert' => 'apiConvert',
         'POST api/detach' => 'apiDetach',
@@ -59,6 +60,7 @@ class SharedBlockController extends GridApiController
         'apiList',
         'apiReadTree',
         'apiUsage',
+        'apiCreate',
         'apiPlace',
         'apiConvert',
         'apiDetach',
@@ -140,6 +142,42 @@ class SharedBlockController extends GridApiController
         return $this->jsonSuccess(200, [
             'usageCount' => $this->usageResolver->usageCount($block),
             'liveUsageCount' => $this->usageResolver->liveUsageCount($block),
+        ]);
+    }
+
+    /**
+     * Create a block seeded with its root, and hand back where to edit it.
+     *
+     * The library's add button creates rather than opening an empty form: the
+     * grid editor is keyed by the block's id, so a block has to exist before it
+     * can host one, and a block without a root is a broken state rather than an
+     * intermediate one.
+     */
+    public function apiCreate(HTTPRequest $request): HTTPResponse
+    {
+        $parseResult = $this->requestBodyParser->parseCreateSharedBlockBody($this->parseJsonBody($request));
+        if ($parseResult->isErr()) {
+            return $this->resultToResponse($parseResult, 400);
+        }
+
+        $rootClass = $parseResult->unwrap()->rootClass;
+
+        // Both gates: the library record is what the author is adding, and the
+        // root is an element a project may forbid creating on its own.
+        if (!SharedBlock::singleton()->canCreate() || !singleton($rootClass)->canCreate()) {
+            $this->jsonError(403);
+        }
+
+        $result = $this->sharedBlockService->create($rootClass);
+        if ($result->isErr()) {
+            return $this->resultToResponse($result);
+        }
+
+        $block = $result->unwrap();
+
+        return $this->jsonSuccess(200, [
+            'id' => (int) $block->ID,
+            'editLink' => (string) $block->getCMSEditLink(),
         ]);
     }
 

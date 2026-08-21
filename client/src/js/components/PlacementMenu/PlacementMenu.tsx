@@ -1,12 +1,19 @@
 // biome-ignore-all lint/suspicious/noUnnecessaryConditions: biome's inference treats the Enter/' ' comparisons as unreachable, but they handle real KeyboardEvent.key values at runtime.
 import { useRovingPopup } from '@/hooks/useRovingPopup'
 
+export interface PlacementMenuItem {
+  /** Stable React key; also the item's `data-route` for tests and styling. */
+  readonly key: string
+  /** Already translated. */
+  readonly label: string
+  readonly onSelect: () => void
+}
+
 interface PlacementMenuProps {
   /** Accessible name for the caret; the caret itself shows only a glyph. */
   readonly triggerLabel: string
-  /** The one alternative route offered here, already translated. */
-  readonly itemLabel: string
-  readonly onSelect: () => void
+  /** The alternative routes offered here, in display order. */
+  readonly items: readonly PlacementMenuItem[]
   /** `strip` rides a full-width dashed add strip; `chip` rides a solid brand square. */
   readonly variant: 'strip' | 'chip'
   readonly testId: string
@@ -20,18 +27,14 @@ interface PlacementMenuProps {
  * an "Actions" label. Both share `useRovingPopup`, which owns open/close,
  * outside-mousedown dismissal, Escape-with-focus-return and the roving
  * aria-activedescendant pattern.
- *
- * One item, because there is one alternative route. A second one turns
- * itemLabel/onSelect into a list; nothing else here changes.
  */
 export default function PlacementMenu({
   triggerLabel,
-  itemLabel,
-  onSelect,
+  items,
   variant,
   testId,
 }: PlacementMenuProps) {
-  const popup = useRovingPopup({ itemCount: 1 })
+  const popup = useRovingPopup({ itemCount: items.length })
 
   // preventDefault/stopPropagation: this sits inside full-width click targets
   // (the add strip) whose own handler would otherwise create an element.
@@ -41,11 +44,15 @@ export default function PlacementMenu({
     popup.toggle()
   }
 
-  function handleItemClick(e: React.MouseEvent) {
+  function select(index: number) {
+    items[index]?.onSelect()
+    popup.close()
+  }
+
+  function handleItemClick(e: React.MouseEvent, index: number) {
     e.preventDefault()
     e.stopPropagation()
-    onSelect()
-    popup.close()
+    select(index)
   }
 
   function handleMenuKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
@@ -54,8 +61,7 @@ export default function PlacementMenu({
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       e.stopPropagation()
-      onSelect()
-      popup.close()
+      select(popup.activeIndex)
     }
   }
 
@@ -91,20 +97,24 @@ export default function PlacementMenu({
           className="ssgrid-placement-menu-menu ssgrid-popover-surface"
           role="menu"
           tabIndex={-1}
-          aria-activedescendant={popup.getItemId(0)}
+          aria-activedescendant={popup.getItemId(popup.activeIndex)}
           data-testid={`${testId}-dropdown`}
           onKeyDown={handleMenuKeyDown}
         >
-          {/* biome-ignore lint/a11y/useKeyWithClickEvents: keyboard handling lives on the menu (aria-activedescendant per W3C APG); menuitems are not focusable themselves */}
-          <div
-            id={popup.getItemId(0)}
-            className="ssgrid-placement-menu-item ssgrid-popover-item"
-            role="menuitem"
-            tabIndex={0}
-            onClick={handleItemClick}
-          >
-            {itemLabel}
-          </div>
+          {items.map((item, index) => (
+            // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard handling lives on the menu (aria-activedescendant per W3C APG); menuitems are not focusable themselves
+            <div
+              key={item.key}
+              id={popup.getItemId(index)}
+              className="ssgrid-placement-menu-item ssgrid-popover-item"
+              role="menuitem"
+              tabIndex={index === popup.activeIndex ? 0 : -1}
+              data-route={item.key}
+              onClick={(e) => handleItemClick(e, index)}
+            >
+              {item.label}
+            </div>
+          ))}
         </div>
       )}
     </div>

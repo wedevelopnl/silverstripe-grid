@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Admin;
 
+use Override;
 use SilverStripe\Admin\ModelAdmin;
+use SilverStripe\Forms\GridField\GridFieldAddNewButton;
+use SilverStripe\Forms\GridField\GridFieldConfig;
+use WeDevelop\Grid\Forms\GridFieldAddSharedBlockButton;
 use WeDevelop\Grid\Model\SharedBlock;
 
 /**
@@ -26,4 +30,26 @@ class SharedBlockAdmin extends ModelAdmin
     private static array $managed_models = [
         SharedBlock::class,
     ];
+
+    /**
+     * Swaps the stock add button for one that creates the block and its root in
+     * one step. The stock button opens an unsaved record, which cannot host the
+     * grid editor and offers no choice of root shape.
+     *
+     * It is inserted before the button it replaces, which is only then removed,
+     * so it inherits that slot: fragments concatenate in component order, and
+     * `GridFieldConfig_RecordEditor` registers the stock button ahead of
+     * ModelAdmin's export, print and import buttons. Appending instead would
+     * land the primary action last in the row, behind Import CSV.
+     */
+    #[Override]
+    protected function getGridFieldConfig(): GridFieldConfig
+    {
+        $config = parent::getGridFieldConfig();
+
+        $config->addComponent(GridFieldAddSharedBlockButton::create(), GridFieldAddNewButton::class);
+        $config->removeComponentsByType(GridFieldAddNewButton::class);
+
+        return $config;
+    }
 }

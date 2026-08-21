@@ -368,4 +368,34 @@ describe('AddChildButton shared route', () => {
 
     expect(screen.getByTestId('add-child-shared-trigger')).toBeInTheDocument()
   })
+
+  // A block-rooted editor's zone is '' — a block has none — and the server
+  // rejects an empty zone before the service, which clears the zone for a block
+  // parent anyway, ever sees it. Sending it made seeding a block a 400.
+  it('omits the zone when seeding a block, whose root section belongs to no zone', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+
+    renderWithProviders(
+      <AddChildButton
+        parentId={9}
+        childType="section"
+        variant="empty-state"
+        parentType="sharedBlock"
+      />,
+      { rootType: 'sharedBlock', zone: '' },
+    )
+
+    await user.click(screen.getByTestId('add-child-button'))
+
+    await waitFor(() => {
+      expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
+    })
+
+    const [, init] = getFetchCalls()[0]
+    const body = JSON.parse(init!.body as string)
+
+    expect(body).toMatchObject({ containerType: 'section', parent: { type: 'sharedBlock', id: 9 } })
+    expect(body.zone).toBeUndefined()
+  })
 })

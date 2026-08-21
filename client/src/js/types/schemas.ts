@@ -81,6 +81,13 @@ const allowedTypeInfoSchema = v.object({
   description: v.string(),
 })
 
+/**
+ * A standalone element-type map, for the one place that receives it outside a
+ * tree response: the library's add button, which is server-rendered with the
+ * types a Column accepts — the same set that may root a leaf-rooted block.
+ */
+export const allowedTypeMapSchema = phpMapSchema(allowedTypeInfoSchema)
+
 const baseFieldsWireSchema = v.object({
   self: nodeRefSchema,
   parent: nodeRefSchema,

@@ -143,6 +143,136 @@ describe('EditableGridEditor rooted at a shared block', () => {
 
     expect(await screen.findByTestId('add-child-button')).toBeInTheDocument()
   })
+
+  // A page zone only ever roots Sections, so the root renderer used to draw
+  // nothing else — which left a row-, column- or leaf-rooted block showing an
+  // empty editor, with its content reachable nowhere.
+  it.each([
+    ['row', 'row-block'],
+    ['column', 'column-block'],
+  ])('renders a %s-rooted block through that shape’s own component', async (shape, testId) => {
+    mockFetchSuccess({
+      rootParent: { type: 'sharedBlock', id: 9 },
+      allowedTypes: { section: {}, row: {}, column: {} },
+      nodes: [
+        {
+          ...wireBase(40, shape, { type: 'sharedBlock', id: 9 }, `Shared ${shape}`),
+          containerType: shape,
+          ...(shape === 'column'
+            ? { gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} } }
+            : {}),
+          children: [],
+        },
+      ],
+    })
+
+    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+
+    expect(await screen.findByTestId(testId)).toBeInTheDocument()
+    expect(screen.getByTestId(testId)).toHaveTextContent(`Shared ${shape}`)
+  })
+
+  // The root is the only node at its level and every slot below it belongs to
+  // a different shape, so a drag from it could never land anywhere.
+  it.each([
+    ['section', 'section-block'],
+    ['row', 'row-block'],
+    ['column', 'column-block'],
+  ])('gives a %s-rooted block no drag handle on its root', async (shape, testId) => {
+    mockFetchSuccess({
+      rootParent: { type: 'sharedBlock', id: 9 },
+      allowedTypes: { section: {}, row: {}, column: {} },
+      nodes: [
+        {
+          ...wireBase(40, shape, { type: 'sharedBlock', id: 9 }, `Shared ${shape}`),
+          containerType: shape,
+          ...(shape === 'column'
+            ? { gridSettings: { default: { width: 6, offset: 0, visible: true }, overrides: {} } }
+            : {}),
+          children: [],
+        },
+      ],
+    })
+
+    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+
+    await screen.findByTestId(testId)
+    expect(screen.queryByTestId('drag-handle')).toBeNull()
+  })
+
+  it('draws no area-level chrome — every action there names a page', async () => {
+    mockFetchSuccess({
+      rootParent: { type: 'sharedBlock', id: 9 },
+      allowedTypes: { section: {}, row: {}, column: {} },
+      nodes: [
+        {
+          ...wireBase(40, 'section', { type: 'sharedBlock', id: 9 }, 'Shared section'),
+          containerType: 'section',
+          children: [],
+        },
+      ],
+    })
+
+    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+
+    await screen.findByTestId('section-block')
+
+    for (const name of [
+      'Reset changes',
+      'Collapse all sections',
+      'Open page',
+      'Remove all sections',
+    ]) {
+      expect(screen.queryByRole('button', { name })).toBeNull()
+    }
+
+    // The region heading survives — it is the only thing left, so the strip
+    // itself goes visually hidden rather than sitting empty above the canvas.
+    expect(screen.getByRole('heading', { name: 'Grid area' })).toBeInTheDocument()
+    expect(screen.getByTestId('grid-editor-header')).toHaveClass('ssgrid-visually-hidden')
+  })
+
+  it('keeps the drag handle on content inside the block', async () => {
+    mockFetchSuccess({
+      rootParent: { type: 'sharedBlock', id: 9 },
+      allowedTypes: { section: {}, row: {}, column: {} },
+      nodes: [
+        {
+          ...wireBase(40, 'section', { type: 'sharedBlock', id: 9 }, 'Shared section'),
+          containerType: 'section',
+          children: [
+            {
+              ...wireBase(41, 'row', { type: 'section', id: 40 }, 'Shared row'),
+              containerType: 'row',
+              children: [],
+            },
+          ],
+        },
+      ],
+    })
+
+    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+
+    await screen.findByTestId('row-block')
+
+    // Exactly one: the row's. The section above it is the block's root.
+    const handles = screen.getAllByTestId('drag-handle')
+    expect(handles).toHaveLength(1)
+    expect(within(screen.getByTestId('row-block')).getByTestId('drag-handle')).toBe(handles[0])
+  })
+
+  it('renders a leaf-rooted block as the element card itself, handle-less', async () => {
+    mockFetchSuccess({
+      rootParent: { type: 'sharedBlock', id: 9 },
+      allowedTypes: { section: {}, row: {}, column: {} },
+      nodes: [wireBase(41, 'element', { type: 'sharedBlock', id: 9 }, 'Shared paragraph')],
+    })
+
+    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+
+    expect(await screen.findByTestId('element-card-title')).toHaveTextContent('Shared paragraph')
+    expect(screen.queryByTestId('drag-handle')).toBeNull()
+  })
 })
 
 /**
@@ -327,9 +457,14 @@ describe('a placed shared block renders read-only', () => {
 
     await screen.findByText('Shared hero')
 
-    expect(screen.getAllByTestId('drag-handle').length).toBeGreaterThan(0)
     expect(screen.getAllByTestId('element-toolbar').length).toBeGreaterThan(0)
     expect(screen.queryByTestId('shared-placement-toolbar')).not.toBeInTheDocument()
+
+    // Not the drag handle: the root has none by design (see the drag-handle
+    // tests above). What proves this tree is editable rather than a placement
+    // is its own toolbar, and the absence of the placement bar that would
+    // otherwise own every action.
+    expect(screen.queryByTestId('drag-handle')).toBeNull()
   })
 })
 

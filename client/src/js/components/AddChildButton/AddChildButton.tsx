@@ -173,8 +173,7 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
         variant="strip"
         testId="add-child-shared"
         triggerLabel={labels.sharedTrigger}
-        itemLabel={labels.shared}
-        onSelect={() => setSharedPickerOpen(true)}
+        items={[{ key: 'shared', label: labels.shared, onSelect: () => setSharedPickerOpen(true) }]}
       />
     )
 

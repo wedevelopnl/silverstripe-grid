@@ -100,6 +100,31 @@ class SharedBlock extends DataObject
     /** @var string|null */
     public $StatusLabel;
 
+    /**
+     * Assigns a numbered default title when Title is empty, so a block created
+     * straight from the library's add button is identifiable in the listing
+     * before the author renames it. Mirrors
+     * {@see GridElement::ensureDefaultTitle()}, including its known property:
+     * the count is of existing rows, so deletions can recycle a number.
+     */
+    #[Override]
+    protected function onBeforeWrite(): void
+    {
+        parent::onBeforeWrite();
+
+        if ((string) $this->Title !== '') {
+            return;
+        }
+
+        $blockCount = self::get()->exclude(['ID' => $this->ID])->count();
+
+        $this->Title = _t(
+            self::class . '.DEFAULT_TITLE',
+            'New shared block {count}',
+            ['count' => $blockCount + 1],
+        );
+    }
+
     #[Override]
     public function getCMSFields(): FieldList
     {

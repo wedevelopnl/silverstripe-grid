@@ -5,7 +5,7 @@ import ElementActions from '@/components/ElementActions/ElementActions'
 import { usePlacement } from '@/components/SharedBlockFrame/PlacementContext'
 import { useIsNarrowerThan } from '@/hooks/useIsNarrowerThan'
 import { t } from '@/i18n'
-import type { SimpleElementNode } from '@/types/elements'
+import { isSharedBlockRootNode, type SimpleElementNode } from '@/types/elements'
 import { buildSortableStyle } from '@/utils/sortableStyles'
 import ElementCardChrome from './ElementCardChrome'
 
@@ -41,6 +41,9 @@ const EditableElementCard = memo(function EditableElementCardComponent({
   // Inside a placed shared block the content is read-only on the page: edits
   // belong in the library, and the card stops being a clickable link.
   const insideShared = usePlacement() !== null
+
+  // A block's root has nowhere to be dragged to — see isSharedBlockRootNode.
+  const isBlockRoot = isSharedBlockRootNode(element)
 
   const trailing = insideShared ? undefined : <ElementActions node={element} kebabOnly={isNarrow} />
 
@@ -81,7 +84,7 @@ const EditableElementCard = memo(function EditableElementCardComponent({
       setNodeRef={setNodeRef}
       style={style}
       leading={
-        insideShared ? undefined : (
+        insideShared || isBlockRoot ? undefined : (
           <DragHandle
             listeners={listeners}
             attributes={attributes}

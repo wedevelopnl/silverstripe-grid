@@ -2232,4 +2232,69 @@ final class GridControllerTest extends FunctionalTest
 
         self::assertSame(204, $response->getStatusCode());
     }
+
+    /**
+     * A block owns exactly one subtree. Archiving its root would leave every
+     * page placing the block rendering nothing, so the generic delete endpoint
+     * refuses it — the block is deleted as a whole from the library instead.
+     */
+    public function testDeleteRefusesTheRootOfASharedBlock(): void
+    {
+        $block = GridTreeFactory::sharedBlock();
+        $root = GridTreeFactory::section($block, zone: '');
+
+        $response = $this->jsonDelete(self::BASE_URL . '/delete', [
+            'type' => 'section',
+            'id' => (int) $root->ID,
+        ]);
+
+        self::assertSame(403, $response->getStatusCode());
+        self::assertNotNull(Section::get()->byID($root->ID), 'the root must survive');
+    }
+
+    public function testDeleteStillArchivesAnElementInsideABlock(): void
+    {
+        $block = GridTreeFactory::sharedBlock();
+        $row = GridTreeFactory::row(GridTreeFactory::section($block, zone: ''));
+
+        $response = $this->jsonDelete(self::BASE_URL . '/delete', [
+            'type' => 'row',
+            'id' => (int) $row->ID,
+        ]);
+
+        self::assertSame(204, $response->getStatusCode());
+        self::assertNull(Row::get()->byID($row->ID));
+    }
+
+    /**
+     * Duplicating in place reuses the original's parent, which under a block
+     * would write a second root — and `getRootElement()` returns the first, so
+     * the copy would be invisible content nothing can reach.
+     */
+    public function testDuplicateRefusesTheRootOfASharedBlock(): void
+    {
+        $block = GridTreeFactory::sharedBlock();
+        $root = GridTreeFactory::section($block, zone: '');
+
+        $response = $this->jsonPost(self::BASE_URL . '/duplicate', [
+            'element' => $this->ref($root),
+        ]);
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertSame(1, $block->RootElements()->count(), 'the block keeps exactly one root');
+    }
+
+    public function testDuplicateStillCopiesAnElementInsideABlock(): void
+    {
+        $block = GridTreeFactory::sharedBlock();
+        $section = GridTreeFactory::section($block, zone: '');
+        $row = GridTreeFactory::row($section);
+
+        $response = $this->jsonPost(self::BASE_URL . '/duplicate', [
+            'element' => $this->ref($row),
+        ]);
+
+        self::assertSame(204, $response->getStatusCode());
+        self::assertCount(2, $section->getChildren());
+    }
 }

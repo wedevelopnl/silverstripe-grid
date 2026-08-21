@@ -33,6 +33,16 @@ describe('useDuplicateToAction', () => {
     expect(result.current.dialog).not.toBeNull()
   })
 
+  // Copying a block's root out to a page breaks no invariant, but the root
+  // carries no duplicate controls at all — the block is the unit here.
+  it('offers nothing on a block root, whose parent is the block itself', () => {
+    const node = createSimpleElement({ canCreate: true, parent: { type: 'sharedBlock', id: 4 } })
+    const { result } = renderDuplicateToAction(node)
+
+    expect(result.current.action).toBeNull()
+    expect(result.current.dialog).toBeNull()
+  })
+
   it('should set elementType to container type for container nodes', () => {
     const node = createSectionNode()
     const { result } = renderDuplicateToAction(node)

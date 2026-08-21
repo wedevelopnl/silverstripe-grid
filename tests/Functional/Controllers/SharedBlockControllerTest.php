@@ -430,4 +430,224 @@ final class SharedBlockControllerTest extends FunctionalTest
 
         self::assertSame(400, $response->getStatusCode());
     }
+
+
+
+
+
+
+
+
+
+
+
+    // --- Permission gates -------------------------------------------------
+    //
+    // Every mutating endpoint below is guarded by one canX() call and nothing
+    // else. Without these the guards could all be deleted and the suite would
+    // stay green, which is how a page-only editor came to be able to edit and
+    // delete library records through the API.
+
+    public function testConvertIsRefusedWithoutLibraryAccess(): void
+    {
+        $page = $this->page();
+        $section = GridTreeFactory::section($page, zone: 'main', title: 'Local section');
+
+        $this->logInAsPageEditorOnly();
+
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/convert', [
+            'element' => $this->ref($section),
+        ]);
+
+        self::assertSame(403, $response->getStatusCode());
+        self::assertCount(0, SharedBlock::get(), 'no block may be created');
+    }
+
+
+    public function testSetPublishedIsRefusedWithoutLibraryAccess(): void
+    {
+        $block = $this->sectionRootedBlock();
+
+        $this->logInAsPageEditorOnly();
+
+        $response = $this->jsonRequest('PATCH', self::BASE_URL . '/setPublished', [
+            'blockId' => (int) $block->ID,
+            'published' => true,
+        ]);
+
+        self::assertSame(403, $response->getStatusCode());
+    }
+
+    public function testPlaceIsRefusedWhenThePageMayNotBeEdited(): void
+    {
+        $block = $this->sectionRootedBlock();
+        $page = $this->page();
+
+        // Library access but no page rights: the mirror image of the tests
+        // above, pinning the OTHER guard on this endpoint.
+        $memberId = $this->logInWithPermission(self::LIBRARY_PERMISSION);
+        $this->session()->set('loggedInAs', $memberId);
+        $page->CanEditType = 'OnlyTheseUsers';
+        $page->write();
+
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/place', [
+            'blockId' => (int) $block->ID,
+            'parent' => $this->ref($page),
+            'zone' => 'main',
+        ]);
+
+        self::assertSame(403, $response->getStatusCode());
+        self::assertCount(0, SharedBlockReference::get(), 'no placement may be written');
+    }
+
+    public function testPlaceIsRefusedForABlockTheAuthorMayNotView(): void
+    {
+        // The picker filters on canView(), but that is UI: a direct call carries
+        // an arbitrary blockId, so the endpoint has to apply the same gate.
+        SharedBlock::add_extension(VetoBlockViewExtension::class);
+        $block = $this->sectionRootedBlock();
+
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/place', [
+            'blockId' => (int) $block->ID,
+            'parent' => $this->ref($this->page()),
+            'zone' => 'main',
+        ]);
+
+        self::assertSame(403, $response->getStatusCode());
+        self::assertCount(0, SharedBlockReference::get(), 'no placement may be written');
+    }
+
+    public function testReadTreeIsRefusedForABlockTheAuthorMayNotView(): void
+    {
+        SharedBlock::add_extension(VetoBlockViewExtension::class);
+        $block = $this->sectionRootedBlock();
+
+        $response = $this->jsonRequest(
+            'GET',
+            self::BASE_URL . '/readTree/' . (int) $block->ID,
+        );
+
+        self::assertSame(403, $response->getStatusCode());
+    }
+
+
+    public function testBlockListOmitsBlocksTheAuthorMayNotView(): void
+    {
+        SharedBlock::add_extension(VetoBlockViewExtension::class);
+        $this->sectionRootedBlock('Hidden block');
+
+        $response = $this->jsonRequest('GET', self::BASE_URL . '/list');
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame([], $this->parseJson($response));
+    }
+
+    public function testCreateSeedsABlockWithTheRequestedContainerRoot(): void
+    {
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/create', [
+            'containerType' => 'section',
+        ]);
+
+        self::assertSame(200, $response->getStatusCode());
+
+        $body = $this->parseJson($response);
+        $block = SharedBlock::get()->byID($body['id']);
+
+        self::assertNotNull($block);
+        self::assertInstanceOf(Section::class, $block->getRootElement());
+    }
+
+    /**
+     * The response is what the add button navigates to, so the link has to
+     * address this block's own form rather than the library listing.
+     */
+    public function testCreateReturnsTheNewBlocksEditLink(): void
+    {
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/create', [
+            'containerType' => 'section',
+        ]);
+
+        $body = $this->parseJson($response);
+
+        self::assertSame(
+            SharedBlock::get()->byID($body['id'])?->getCMSEditLink(),
+            $body['editLink'],
+        );
+    }
+
+    public function testCreateSeedsABlockWithALeafRoot(): void
+    {
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/create', [
+            'className' => ContentElement::class,
+        ]);
+
+        self::assertSame(200, $response->getStatusCode());
+
+        $block = SharedBlock::get()->byID($this->parseJson($response)['id']);
+
+        self::assertInstanceOf(ContentElement::class, $block?->getRootElement());
+    }
+
+    public function testCreateRejectsABodyNamingBothARootTypeAndAClass(): void
+    {
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/create', [
+            'containerType' => 'section',
+            'className' => ContentElement::class,
+        ]);
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertCount(0, SharedBlock::get(), 'no block may be created');
+    }
+
+    public function testCreateRejectsABodyNamingNoRootAtAll(): void
+    {
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/create', []);
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertCount(0, SharedBlock::get(), 'no block may be created');
+    }
+
+    public function testCreateRejectsAClassAColumnCannotHold(): void
+    {
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/create', [
+            'className' => SharedBlockReference::class,
+        ]);
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertCount(0, SharedBlock::get(), 'no block may be created');
+    }
+
+    public function testCreateIsRefusedWithoutLibraryAccess(): void
+    {
+        $this->logInAsPageEditorOnly();
+
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/create', [
+            'containerType' => 'section',
+        ]);
+
+        self::assertSame(403, $response->getStatusCode());
+        self::assertCount(0, SharedBlock::get(), 'no block may be created');
+    }
+
+    public function testCreateEndpointRequiresCsrfToken(): void
+    {
+        $tokenWasEnabled = SecurityToken::is_enabled();
+        SecurityToken::enable();
+
+        try {
+            $response = $this->jsonRequest(
+                'POST',
+                self::BASE_URL . '/create',
+                ['containerType' => 'section'],
+                withToken: false,
+            );
+        } finally {
+            if (!$tokenWasEnabled) {
+                SecurityToken::disable();
+            }
+        }
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertCount(0, SharedBlock::get(), 'no block may be created');
+    }
 }
