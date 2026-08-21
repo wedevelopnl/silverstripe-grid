@@ -4,17 +4,29 @@ This guide covers the frontend render contract: where to put templates, how the 
 
 ## Page template
 
-Page types with `GridPageExtension` expose `$UseGrid` and `$Sections`. The canonical pattern is:
+Page types with `GridPageExtension` expose `$UseGrid`, `$GridZone(<zone>)` and `$Sections`. The canonical pattern is:
 
 ```silverstripe
 <% if $UseGrid %>
-    <% loop $Sections %>$Me<% end_loop %>
+    <% loop $GridZone('main') %>$Me<% end_loop %>
 <% else %>
     $Content
 <% end_if %>
 ```
 
-The frontend template renders the raw stored `$UseGrid` field unconditionally — there is no separate render-time gate. The stored value is seeded from `use_grid_by_default` when a page is created (see [Default editor on new pages](#default-editor-on-new-pages)), so with the default (`true`) the `<% else %>` branch never fires and you can simplify to `<% loop $Sections %>$Me<% end_loop %>`. The per-page editor toggle (see [below](#per-page-editor-toggle)) only governs which editor the CMS shows; it does not change how the template reads `$UseGrid`.
+The frontend template renders the raw stored `$UseGrid` field unconditionally — there is no separate render-time gate. The stored value is seeded from `use_grid_by_default` when a page is created (see [Default editor on new pages](#default-editor-on-new-pages)), so with the default (`true`) the `<% else %>` branch never fires and you can simplify to `<% loop $GridZone('main') %>$Me<% end_loop %>`. The per-page editor toggle (see [below](#per-page-editor-toggle)) only governs which editor the CMS shows; it does not change how the template reads `$UseGrid`.
+
+### `$GridZone` vs `$Sections`
+
+`$GridZone(<zone>)` returns **every** root element of a zone in Sort order. `$Sections` is a Section-only relation, so it never includes [shared blocks](shared-blocks.md) — a page that places one renders it only through `$GridZone`.
+
+| | `$GridZone('main')` | `$Sections` |
+|---|---|---|
+| Sections | yes | yes |
+| Shared block placements | yes | **no** |
+| Zone filtering | built in | `.Filter('Zone', …)` |
+
+`$Sections` remains supported for backwards compatibility. Use `$GridZone` in new templates, and switch existing ones before placing a shared block on a page they render.
 
 ## Multi-zone pages
 
@@ -25,16 +37,18 @@ $fields->addFieldToTab('Root.Main', GridEditorField::create('GridEditorMain', (i
 $fields->addFieldToTab('Root.Main', GridEditorField::create('GridEditorSidebar', (int) $this->ID, 'sidebar'));
 ```
 
-`Sections()` returns every section on the page regardless of zone, so the template picks a zone by filtering on the `Zone` field:
+`$GridZone` takes the zone name, so each region loops its own call:
 
 ```silverstripe
 <div class="main">
-    <% loop $Sections.Filter('Zone', 'main') %>$Me<% end_loop %>
+    <% loop $GridZone('main') %>$Me<% end_loop %>
 </div>
 <aside>
-    <% loop $Sections.Filter('Zone', 'sidebar') %>$Me<% end_loop %>
+    <% loop $GridZone('sidebar') %>$Me<% end_loop %>
 </aside>
 ```
+
+The older `$Sections.Filter('Zone', 'main')` form still works, but it omits shared block placements.
 
 Sort values are independent per zone, so reordering one zone never renumbers another. `.docker/app/src/MultiZonePage.php` in this repository is a working two-zone page type used by the E2E suite.
 
@@ -158,7 +172,7 @@ class SectionThemeExtension extends Extension
 Using `$Me` in loops lets the element pick its own template chain:
 
 ```silverstripe
-<% loop $Sections %>$Me<% end_loop %>          {# → Section_holder.ss → Section.ss          #}
+<% loop $GridZone('main') %>$Me<% end_loop %>  {# → Section_holder.ss → Section.ss          #}
 <% loop $Rows %>$Me<% end_loop %>              {# → Row_holder.ss → Row.ss                  #}
 <% loop $Columns %>$Me<% end_loop %>           {# → Column_holder.ss → Column.ss            #}
 <% loop $Elements %>$Me<% end_loop %>          {# → {ClassName}_holder.ss → {ClassName}.ss  #}

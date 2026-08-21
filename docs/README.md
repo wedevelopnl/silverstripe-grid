@@ -9,6 +9,7 @@ Read these in order if you are new to the module.
 | Guide | Covers |
 |-------|--------|
 | [The grid editor](usage/grid-editor.md) | What CMS users see and do: hierarchy, adding content, widths and offsets, viewports, drag and drop, publishing, element actions |
+| [Shared blocks](usage/shared-blocks.md) | Content maintained once and placed on many pages: creating, placing, editing in place, the independent publish lifecycle, detaching, templates, Fluent |
 | [Custom content elements](usage/custom-elements.md) | Subclassing `ContentElement`, CMS fields, editor-card summaries, icons, templates |
 | [Template integration](usage/templates.md) | The holder chain, zones and multi-zone pages, the per-page editor toggle, theme overrides, class-contribution hooks |
 | [Internationalization](usage/i18n.md) | Translating PHP and React strings, adding a locale, the collectors and the parity check |

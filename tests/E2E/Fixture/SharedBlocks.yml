@@ -1,0 +1,115 @@
+Page:
+  e2e_shared_a:
+    Title: 'E2E Shared Blocks A'
+    URLSegment: 'e2e-shared-blocks-a'
+  e2e_shared_b:
+    Title: 'E2E Shared Blocks B'
+    URLSegment: 'e2e-shared-blocks-b'
+  # Its own page for the populated-row placement tests. Page A cannot host them:
+  # the boundary-drag test asserts that dragging over the shared frame fires no
+  # reorder at all, and any extra content on that page moves the pointer path
+  # far enough to register a legal drop on the way.
+  e2e_shared_c:
+    Title: 'E2E Shared Blocks C'
+    URLSegment: 'e2e-shared-blocks-c'
+
+WeDevelop\Grid\Model\SharedBlock:
+  block1:
+    Title: 'Shared Banner'
+  # Column-rooted, so it can be placed from a row's insert handles.
+  block2:
+    Title: 'Shared Card'
+
+# The block's own subtree hangs off the block record, not off a page.
+WeDevelop\Grid\Model\Section:
+  shared_section:
+    Title: 'Shared Banner Section'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\SharedBlock.block1
+  local_section_a:
+    Title: 'Local Section A'
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_shared_a
+  local_section_c:
+    Title: 'Local Section C'
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_shared_c
+
+WeDevelop\Grid\Model\Row:
+  shared_row:
+    Title: 'Shared Row'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.shared_section
+  local_row_a:
+    Title: 'Local Row A'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.local_section_a
+  local_row_c:
+    Title: 'Local Row C'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.local_section_c
+
+WeDevelop\Grid\Model\Column:
+  shared_col:
+    Title: 'Shared Column'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.shared_row
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
+  # Roots block2 directly — a block's subtree hangs off the block record.
+  shared_card_col:
+    Title: 'Shared Card Column'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\SharedBlock.block2
+    GridSettings: '{"default":{"width":4,"offset":0,"visible":true},"overrides":{}}'
+  local_col_a:
+    Title: 'Local Column A'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.local_row_a
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
+  # Two columns, so the row has an internal gutter — the between-placement
+  # insert handle only exists between adjacent columns.
+  local_col_c1:
+    Title: 'Local Column C1'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.local_row_c
+    GridSettings: '{"default":{"width":6,"offset":0,"visible":true},"overrides":{}}'
+  local_col_c2:
+    Title: 'Local Column C2'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Row.local_row_c
+    GridSettings: '{"default":{"width":6,"offset":0,"visible":true},"overrides":{}}'
+
+WeDevelop\Grid\Model\ContentElement:
+  shared_leaf:
+    Title: 'Shared Banner Text'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.shared_col
+  shared_card_leaf:
+    Title: 'Shared Card Text'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.shared_card_col
+  local_leaf_a:
+    Title: 'Local Text A'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.local_col_a
+  local_leaf_c:
+    Title: 'Local Text C'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.local_col_c1
+
+# One block, placed on two pages — the point of the whole feature.
+WeDevelop\Grid\Model\SharedBlockReference:
+  ref_a:
+    Title: 'Shared Banner'
+    Sort: 2
+    Zone: main
+    Block: =>WeDevelop\Grid\Model\SharedBlock.block1
+    Parent: =>Page.e2e_shared_a
+  ref_b:
+    Title: 'Shared Banner'
+    Sort: 1
+    Zone: main
+    Block: =>WeDevelop\Grid\Model\SharedBlock.block1
+    Parent: =>Page.e2e_shared_b

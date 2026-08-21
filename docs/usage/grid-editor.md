@@ -26,8 +26,9 @@ Reading the screenshot from the outside in:
 | **Row** (`Introduction`, `Service cards`) | A horizontal group inside a section. The header shows the row title and its column count. |
 | **Column** (`Centred intro`, `Design`, …) | A slot in the grid, with its own width and offset pickers. |
 | **Content block** (the white cards) | The actual content. Each card shows its type icon, title, and a short text summary. |
-| **`Add Section` / `Add Row` / `+ Add content`** | Insert a new child at that level. |
-| **The `⊕` buttons flanking a row** | Insert a column before or after the ones already there. |
+| **`Add Section` / `Add Row`** | Insert a new child at that level. The caret at the button's right-hand end offers [placing a shared block](shared-blocks.md#placing-a-block) there instead. |
+| **`+ Add content`** | Opens the type picker for a column's content. The picker's **Shared block** tile [places a shared block](shared-blocks.md#placing-a-block) instead of creating a new element; this button carries no caret. |
+| **The `⊕` buttons flanking a row** | Insert a column before or after the ones already there — likewise with a caret for a shared column. |
 
 The hierarchy is fixed and enforced on the server: **Section → Row → Column → content**. A section only ever holds rows, a row only ever holds columns, and a column holds any content block. You cannot nest a section inside a column.
 
@@ -106,7 +107,7 @@ Outline with no pill therefore reads as "the change is somewhere below this". Sc
 
 Every element exposes the same action set. On wide headers it renders as an icon row; on narrow ones — a card in a 4-column slot, or any column header — the whole set folds into the `⋯` menu:
 
-![The overflow menu on a content block: View history, Duplicate, Open in a new tab, Edit, Archive, Duplicate to…](../images/element-actions.png)
+![The overflow menu on a content block: View history, Duplicate, Open in a new tab, Edit, Archive, Duplicate to…, Convert to shared block](../images/element-actions.png)
 
 | Action | Effect |
 |--------|--------|
@@ -117,8 +118,9 @@ Every element exposes the same action set. On wide headers it renders as an icon
 | **Edit** | The element's edit form, in the current tab. |
 | **Archive** | Removes the element. Asks for confirmation and names how many child elements go with it. |
 | **Duplicate to…** | Copies the element to another page, choosing target page → zone → parent container. |
+| **Convert to shared block** | Moves the element and its subtree into the shared block library, leaving a placement behind so this page keeps showing it. See [Shared blocks](shared-blocks.md). Not offered on a placement, on anything inside a block, or on content that already holds a placement — a block may not contain another one. |
 
-Permissions are applied per action: **Archive** needs delete permission on the element, **Duplicate** and **Duplicate to…** need create permission. An action the user cannot perform is dropped from the overflow menu entirely, and rendered greyed out in the icon row so the toolbar keeps a stable shape.
+Permissions are applied per action: **Archive** needs delete permission on the element, **Duplicate** and **Duplicate to…** need create permission, and **Convert to shared block** needs create permission on shared blocks (the library's own CMS section). An action the user cannot perform is dropped from the overflow menu entirely, and rendered greyed out in the icon row so the toolbar keeps a stable shape.
 
 The header strip above the canvas also has a **collapse/expand all** button that folds every section at once.
 

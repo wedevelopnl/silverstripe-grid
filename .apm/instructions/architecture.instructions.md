@@ -11,15 +11,16 @@ templates/            # SilverStripe .ss templates (element holders + form field
 src/                  # PHP source (PSR-4: WeDevelop\Grid\)
 src/Adapter/          # Grid framework adapters: GridAdapter base class + framework presets (Bootstrap, Tailwind, Bulma)
 src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderValidatorInterface)
-src/Controllers/      # API controllers (GridController)
+src/Controllers/      # API controllers: GridApiController (abstract base — CSRF gate, draft lookups, NodeRef resolution) + GridController (page elements, /admin/grid) + SharedBlockController (block library, /admin/grid-shared-blocks)
 src/Factory/          # Factories (GridAdapterFactory)
-src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement) + ContainerElementTrait
-src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaExtension, FluentGridPageExtension)
+src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement, SharedBlock, SharedBlockReference) + ContainerElementTrait
+src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaExtension, FluentGridPageExtension, FluentSharedBlockExtension, SharedBlockDeleteActionExtension)
 src/Forms/            # Form field implementations (GridEditorField, GridAwareVersionFormFactory)
 src/Migration/        # SS5→SS6 migration (DTOs, strategies, tasks, services); src/Migration/Service/ holds GridMigrationService (orchestration), DraftHierarchyWriter, LivePublisher, PageGridFlagWriter, LegacyPageDiscovery, LegacyElementReader, LegacyDataReader (facade)
-src/Reports/          # CMS reports (GridElementReport)
+src/Admin/            # ModelAdmin screens (SharedBlockAdmin — the shared block library)
+src/Reports/          # CMS reports (GridElementReport, SharedBlockReport)
 src/Value/            # Value objects, DTOs, and request objects (NodeRef, NodeType, ElementStatus, GridNode, Result, MigrationIdMap, ...)
-src/Service/          # Domain services (GridTreeService, GridNodeMapper, ElementPlacementService, GridElementService, GridSettingsService, GridSettingsResolver, TitleGenerator, RequestBodyParser, ColumnClassResolver, GridAwareDeleteLocalisationPolicy)
+src/Service/          # Domain services (GridTreeService, GridNodeMapper, ElementPlacementService, GridElementService, GridSettingsService, GridSettingsResolver, TitleGenerator, RequestBodyParser, ColumnClassResolver, GridAwareDeleteLocalisationPolicy, SharedBlockService, SharedBlockUsageResolver, LocalisedSubtreeCloner)
 src/Validation/       # Write-time + reorder-time validation (HierarchyValidationExtension, HierarchyValidationService, HierarchyValidatorInterface, ReorderValidator, GridSettingsFieldValidator)
 src/Exception/        # Domain exceptions (GridDomainException, InvalidGridValueException)
 src/ORM/FieldType/    # Custom DB field types (DBGridSettings composite field)
@@ -53,7 +54,7 @@ phpstan/stubs/        # PHPStan stubs (e.g. AdminController.stub)
 .docker/              # Docker dev env: Caddy + PHP + MySQL 8
 .docker/app/src/      # Harness-owned page types (App\MultiZonePage — the E2E multi-zone page); COPYed to /app/src at image build
 docs/                 # User documentation; docs/README.md is the index
-docs/usage/           # Usage guides (grid-editor, custom-elements, templates, i18n)
+docs/usage/           # Usage guides (grid-editor, shared-blocks, custom-elements, templates, i18n)
 docs/architecture/    # Architecture documents (backend, drag-and-drop, grid-adapter)
 docs/images/          # Generated doc screenshots — regenerate, never hand-edit
 ```

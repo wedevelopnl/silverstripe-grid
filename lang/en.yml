@@ -49,6 +49,8 @@ en:
     USE_GRID_DESCRIPTION: 'Save the page after changing this setting'
     db_UseGrid: 'Use grid'
     has_many_Sections: Sections
+  WeDevelop\Grid\Forms\GridFieldAddSharedBlockButton:
+    ADD_BLOCK: 'Add new shared section'
   WeDevelop\Grid\Forms\GridSettingsField:
     DEFAULT_TITLE: 'Grid Settings'
     HIDDEN_SUFFIX: ' (hidden)'
@@ -136,9 +138,42 @@ en:
     FILTER_TYPE: 'Element type'
     ORPHANED: Orphaned
     TITLE: 'Grid Elements'
+  WeDevelop\Grid\Model\SharedBlock:
+    DEFAULT_TITLE: 'New shared block {count}'
+    DELETE_ACTION: 'Delete block…'
+    EMPTY_ROOT: Empty
+    NOT_USED: 'This block is not placed on any page yet.'
+    SAVE_FIRST: 'Save this block to start adding content to it.'
+    PLURALNAME: 'Shared blocks'
+    SINGULARNAME: 'Shared block'
+  WeDevelop\Grid\Model\SharedBlockReference:
+    PLURALNAME: 'Shared blocks'
+    SINGULARNAME: 'Shared block'
+  WeDevelop\Grid\Reports\SharedBlockReport:
+    COLUMN_ROOT_TYPE: 'Root type'
+    COLUMN_STATUS: Status
+    COLUMN_TITLE: Title
+    COLUMN_USAGE: 'Used on (pages)'
+    DESCRIPTION: 'Lists every shared block with its root type, how many pages use it, and whether it has unpublished changes.'
+    TITLE: 'Shared blocks'
+  WeDevelop\Grid\Service\SharedBlockService:
+    ALREADY_SHARED: 'This element is already a shared block.'
+    BLOCK_EMPTY: 'This shared block has no content to detach.'
+    NESTED_PLACEMENT: 'This content holds a shared block, which cannot be nested inside another one.'
+    UNSHARE_EMPTY_BLOCK: 'This block has no content left to keep. Delete it and remove the placements instead.'
+    NOT_PLACED: 'Only an element that sits on a page can be shared.'
+    SHARED_NESTING: 'Content inside a shared block cannot be shared again.'
   WeDevelop\Grid\Validation\HierarchyValidationService:
     PAGE_LEVEL_REJECTED: 'A {element} cannot be placed at the page level.'
     PARENT_REJECTED: 'A {element} cannot be placed inside a {parent}.'
+    SHARED_NESTING: 'A shared block cannot be placed inside another shared block.'
   WeDevelop\Grid\Validation\ReorderValidator:
+    BLOCK_EMPTY: 'This shared block has no content yet, so it cannot be placed.'
     PAGE_LEVEL_REJECTED: 'A {element} cannot be placed at the page level.'
     PARENT_REJECTED: 'A {element} cannot be placed inside a {parent}.'
+    SHARED_BOUNDARY: 'Content cannot be moved into or out of a shared block.'
+    SHARED_NESTING: 'A shared block cannot be placed inside another shared block.'
+  WeDevelop\Grid\Value\SharedBlockStatus:
+    MODIFIED: 'Unpublished changes'
+    NOT_PUBLISHED: 'Not published'
+    PUBLISHED: Published

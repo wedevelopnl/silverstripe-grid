@@ -56,6 +56,15 @@ WeDevelop\E2e\Fixtures\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
+    shared-blocks:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/SharedBlocks.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_shared_a
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_shared_b
     multi-zone:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/MultiZone.yml'
       post_actions:

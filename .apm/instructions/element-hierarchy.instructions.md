@@ -75,27 +75,54 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML (b
 
 `getDisplayTitle()` is the read-time counterpart and a separate mechanism: it falls back to a translatable `(untitled)` for elements that were never written, and for rows predating the write-time default.
 
+## Shared Blocks
+
+A `SharedBlock` is a library record owning ONE subtree via the same polymorphic parent (`ParentClass = SharedBlock::class`). A `SharedBlockReference` is the placed element; it holds only placement data (`Parent`, `Sort`, `Zone`) and a `has_one Block`.
+
+- **Effective class**: placement rules judge a reference by its block's ROOT class, never by `SharedBlockReference`. Resolved in `SharedBlockReference::getEffectiveRootClass()`, which pins the DRAFT stage — a block's shape is structural, and resolving on the ambient stage makes page publish fail whenever the block is unpublished.
+- **Placement matrix**: section-rooted → page root; row-rooted → inside a Section; column-rooted → inside a Row; leaf-rooted → inside a Column. Same rules as the class it stands in for.
+- **No nesting**: a reference may never sit anywhere inside a shared subtree, nor root a block. This is what removes cycle detection entirely.
+- **No boundary crossing**: `ReorderValidator` rejects any move whose source and target sit on different sides of a shared boundary. Client-side collision filtering mirrors it; the validator is the backstop.
+- **Independent publish**: the reference declares no `$owns` to `Block`, so page publish stops at the boundary. `GridPageExtension` owns the single `GridRoots` relation (`GridElement.Parent`), which covers both root classes — a placement is page content and must publish, archive and duplicate with its page.
+- **Excluded from the generic create path**: `RequestBodyParser` rejects it and `GridNodeMapper::getAllowedTypes` filters it out. Placements are CREATED only by `SharedBlockController` (`api/place`, `api/convert`), which carry the `blockId`; once created they are ordinary elements, archived and reordered through `GridController`.
+- `NodeType::SharedBlock` is a tree ROOT type only (the library editor's `rootParent`). A placement's own node is typed `Element`.
+- `GridElement::canDelete()` delegates to the owning record's `canEdit()` for elements inside a block, never its `canDelete()` — a project extension vetoing block deletion must not freeze the block's contents.
+- **The block's ROOT is undeletable and undupliable.** `GridElement::canDelete()` returns false when the parent is a `SharedBlock`, checked ABOVE `extendedCan` — structural invariant, not a permission, so no `updateCanDelete` can grant it. It reaches the UI through the tree payload's `canDelete` (`useArchiveAction` returns no action) and the API through `apiDelete`. `GridController::apiDuplicate` refuses the root for the mirror reason: duplicating in place copies `ParentID`/`ParentClass`, giving the block a second root that `getRootElement()`'s `->first()` then hides. Client-side both duplicate actions gate on `isSharedBlockRootNode()`, as does the drag handle in all four editable components (`Editable{Section,Row,Column}Block`, `EditableElementCard`) — the root is alone at its level, so a drag from it has no legal target. Framework removal paths check no permission (`DataObject::delete()`, `doArchive()`, `$cascade_deletes`), so deleting the BLOCK still takes its root with it.
+- **Blocks are created already seeded.** `SharedBlockService::create(class-string<GridElement> $rootClass)` writes block + root in one transaction; the root's own write scaffolds the rest. Reached via `SharedBlockController` `POST api/create`, body `{containerType}` XOR `{className}` (leaf classes validated by `ContainerType::Column->isChildCreatable()`), responding `{id, editLink}`. `SharedBlockAdmin::getGridFieldConfig()` drops `GridFieldAddNewButton` for `GridFieldAddSharedBlockButton`, whose React mount (`AddSharedBlockButton`, bridged by `bridge/addSharedBlockButton.ts`) is the split add control. An empty `Title` gets a numbered `SharedBlock.DEFAULT_TITLE` in `onBeforeWrite()`.
+- **Never send a `zone` when the parent is a `SharedBlock`.** A block has no zones, `GridElementService::createElement()` forces `Zone = ''` for a non-`SiteTree` parent, and `parseCreateBody()` rejects the empty string the library editor's context holds — so the client omits the field entirely there.
+- **Deleting a block is always allowed; the MODE is mandatory.** `SharedBlock::canDelete()` does NOT veto on usage. `SharedBlockService::delete($block, SharedBlockDeleteMode)` resolves the placements: `Remove` archives them, `Unshare` replaces each with an independent copy first (publishing the copy where the placement was live). Both reach live without republishing the consuming pages.
+- **`SharedBlock::onBeforeDelete()` archives every remaining reference, on both stages.** Placements are page content, so no ownership config reaches them; a stranded reference resolves no effective root class and renders nothing on every page that placed it. Never bypass it by deleting the row directly.
+- **Managing a block requires the library's OWN section code** (`CMS_ACCESS_` + `SharedBlockAdmin::class`), checked by `canEdit`/`canDelete`/`canCreate`. Never the bare `CMS_ACCESS`: the framework special-cases it to succeed for ANY `CMS_ACCESS_*` grant, so it gates nothing. `canView` stays on the broad gate on purpose — placing an existing block is a page-editing act.
+- **A placed block renders READ-ONLY in the page editor.** `SharedBlockFrame` provides `PlacementContext` (`client/src/js/components/SharedBlockFrame/PlacementContext.ts`); the editable components consume it to drop drag handles, add/insert buttons, toolbars and title links, and to disable the column size/offset pickers. Nothing inside the frame carries actions — the frame's own bar does, via `SharedPlacementActions` beside its overflow menu: open/edit → `sharedBlock.editLink` (the BLOCK's form in the library, never the root element's), remove → archives the PLACEMENT via the generic delete endpoint. The library editor stays editable because its block-rooted tree contains no placement node, so the context is never provided there. That same absence is why the no-nesting suppressions (place, convert) must key off `GridEditorContext.rootType` and NOT off per-node fields: inside the library editor no node carries `sharedBlockKey`, so a per-node check sees page-local content everywhere.
+
 ## Hierarchy Validation
 
-Validation happens in two contexts, both delegating to the hardcoded `ContainerType` rules.
+Validation happens in two contexts, both delegating to the hardcoded `ContainerType` rules via the shared `PlacementRulesTrait`.
 
 ### At Write Time: `HierarchyValidationExtension`
 
 Applied globally to `GridElement` via YAML. Hooks into `updateValidate()` and delegates to `HierarchyValidationService`:
 
-1. No parent → pass (orphan)
-2. Parent is a SiteTree page → check `getContainerType()->canBeRoot()` on the element
-3. Parent is a container → check `getContainerType()->isChildAllowed($element::class)` on the parent
+1. Reference anywhere inside a shared context → fail `SHARED_NESTING`
+2. Effective class unresolvable (block empty, or no content in this locale) → **pass**. A block may be emptied long after it was placed, and publish writes every owned root to LIVE, so failing here made consuming pages unpublishable. Refusing to PLACE an empty block is `ReorderValidator`'s job instead.
+3. No parent → pass (orphan)
+4. Parent is a SiteTree page → check `canBeRoot()` on the EFFECTIVE class
+5. Parent is a `SharedBlock` → pass (any non-reference class may root a block)
+6. Parent is a container → check `isChildAllowed($effectiveClass)` on the parent
 
 Violation throws `ValidationException`, preventing the database write.
 
 ### At Reorder Time: `ReorderValidator`
 
+Placement-time only, before the shared rules: a reference to a block with no root fails `BLOCK_EMPTY`.
+
+
 Called by `ElementPlacementService` (used for both `reorder()` and `insertAfter()` paths, including placement of newly-written elements from `GridElementService`):
 
-1. Applies the `canBeRoot()` and `isChildAllowed()` checks (both on `ContainerType`) against the target parent
-2. Returns `Result::fail()` for violations (uses Result pattern, not exceptions)
-3. Same-parent moves pass the checks trivially — hierarchy cannot have changed
+1. Same-parent moves short-circuit to ok — hierarchy cannot have changed
+2. Source and target shared contexts must match, else fail `SHARED_BOUNDARY`. An unparented (fresh) element has no source context and skips this check
+3. Then the shared placement rules above
+4. Returns `Result::fail()` for violations (uses Result pattern, not exceptions)
 
 ## Integration Test Implications
 
