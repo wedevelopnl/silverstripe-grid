@@ -7,13 +7,16 @@ import EditableElementCard from '@/components/ElementCard/EditableElementCard'
 import ElementTypePicker from '@/components/ElementTypePicker/ElementTypePicker'
 import EmptyState from '@/components/EmptyState/EmptyState'
 import GridSettingsPicker from '@/components/GridSettingsPicker/GridSettingsPicker'
+import { usePlacement } from '@/components/SharedBlockFrame/PlacementContext'
+import SharedChild from '@/components/SharedBlockFrame/SharedChild'
+import SharedBlockPickerDialog from '@/components/SharedBlockPickerDialog/SharedBlockPickerDialog'
 import { useGridEditorContext } from '@/hooks/GridEditorContext'
 import { useDragContext } from '@/hooks/useDragAndDrop'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import { useCreateContentElement, useUpdateGridSettings } from '@/hooks/useElementMutations'
 import { useViewportContext } from '@/hooks/ViewportContext'
 import { t } from '@/i18n'
-import type { ColumnNode, ViewportSettings } from '@/types/elements'
+import { type ColumnNode, isSharedBlockReferenceNode, type ViewportSettings } from '@/types/elements'
 import type { NodeKey } from '@/types/identity'
 import {
   formatOffsetLabel,
@@ -41,8 +44,25 @@ interface EditableColumnBlockProps {
   readonly insertBefore?: ColumnInsertBeforeRef
 }
 
+/**
+ * Sortable ids for this container's children, excluding shared block
+ * placements.
+ *
+ * A placement registers no sortable — `SharedBlockFrame` is deliberately not
+ * one, and the sortable rendered inside it carries the block ROOT's nodeKey.
+ * Leaving its key in `items` puts a hole in dnd-kit's `getSortedRects`, so
+ * `getItemGap` reads no rect on either side of it and the siblings after it
+ * shift by the wrong distance during a same-container drag. `useGridEditorDnd`
+ * filters the page root for exactly this reason.
+ */
 function useChildElementKeys(column: ColumnNode): NodeKey[] {
-  return useMemo(() => column.children?.map((e) => e.nodeKey) ?? [], [column.children])
+  return useMemo(
+    () =>
+      column.children
+        ?.filter((child) => !isSharedBlockReferenceNode(child))
+        .map((e) => e.nodeKey) ?? [],
+    [column.children],
+  )
 }
 
 const EditableColumnBlock = memo(function EditableColumnBlockComponent({
@@ -53,7 +73,9 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
   // base layout `default` settings represent — so edits target `default`.
   const { activeViewport: selectedViewport } = useViewportContext()
   const activeViewport = selectedViewport ?? getDefaultViewport()
-  const { pageId, zone } = useGridEditorContext()
+  const { pageId, zone, rootType } = useGridEditorContext()
+  // A block may not contain a block — see AddChildButton for the same gate.
+  const isLibraryEditor = rootType === 'sharedBlock'
   const columnCount = getColumnCount()
   // Stabilise `settings` so downstream useCallback/useMemo dependencies don't
   // see a fresh object identity on every render of an unrelated parent.
@@ -67,15 +89,21 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
   const updateGridSettings = useUpdateGridSettings(pageId, zone)
   const createContentElement = useCreateContentElement(pageId, zone)
   const [isPickerOpen, setPickerOpen] = useState(false)
+  const [isSharedPickerOpen, setSharedPickerOpen] = useState(false)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } =
     useSortable({ id: column.nodeKey })
 
   const childKeys = useChildElementKeys(column)
 
+  // Inside a placed shared block the content is read-only on the page: edits
+  // belong in the library. The size/offset pickers stay visible — they carry
+  // layout information — but disabled.
+  const insideShared = usePlacement() !== null
+
   const showDropTarget = isOver && activeType === 'column'
   const isDragActive = activeType !== null
-  const isPickerDisabled = isDragActive || updateGridSettings.isPending
+  const isPickerDisabled = isDragActive || updateGridSettings.isPending || insideShared
 
   const columnStyle = useMemo(
     () => buildColumnStyle(settings, buildSortableStyle(transform, transition, isDragging)),
@@ -157,17 +185,54 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
     [createContentElement, column.self],
   )
 
+  const handleSelectSharedBlock = useCallback(() => {
+    setSharedPickerOpen(true)
+  }, [])
+
+  const handleCloseSharedPicker = useCallback(() => {
+    setSharedPickerOpen(false)
+  }, [])
+
   const children = column.children ?? []
   const allowedTypes = column.allowedTypes ?? {}
   const hasChildren = children.length > 0
   const hasAllowedTypes = Object.keys(allowedTypes).length > 0
+
+  const trailing = insideShared ? undefined : <ElementActions node={column} kebabOnly />
+
+  // The type picker hands off to the block chooser, so only one of the two is
+  // ever mounted; picking the dialog here keeps the JSX below flat.
+  const overlay = (() => {
+    if (isSharedPickerOpen) {
+      return (
+        <SharedBlockPickerDialog
+          parentType="column"
+          parent={column.self}
+          isOpen={isSharedPickerOpen}
+          onClose={handleCloseSharedPicker}
+        />
+      )
+    }
+
+    if (hasAllowedTypes && isPickerOpen) {
+      return (
+        <ElementTypePicker
+          allowedTypes={allowedTypes}
+          isOpen={isPickerOpen}
+          onClose={handleClosePicker}
+          onSelect={handleTypeSelect}
+          onSelectSharedBlock={isLibraryEditor ? undefined : handleSelectSharedBlock}
+        />
+      )
+    }
+  })()
 
   return (
     <ColumnChrome
       status={status}
       hasUnpublishedDescendant={hasUnpublishedDescendant(column)}
       title={column.title}
-      titleHref={column.editLink ?? undefined}
+      titleHref={insideShared ? undefined : (column.editLink ?? undefined)}
       icon={column.blockSchema.icon}
       isCollapsed={isCollapsed}
       onToggle={onToggle}
@@ -176,7 +241,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
       dropTarget={showDropTarget}
       setNodeRef={setNodeRef}
       insertBefore={
-        insertBefore !== undefined ? (
+        insertBefore !== undefined && !insideShared ? (
           <ColumnInsertButton
             rowId={insertBefore.rowId}
             placement="between"
@@ -186,15 +251,17 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
         ) : undefined
       }
       leading={
-        <DragHandle
-          listeners={listeners}
-          attributes={attributes}
-          label={t('WeDevelopGrid.ColumnBlock.MOVE_LABEL', 'Move {title}', {
-            title: column.title,
-          })}
-        />
+        insideShared ? undefined : (
+          <DragHandle
+            listeners={listeners}
+            attributes={attributes}
+            label={t('WeDevelopGrid.ColumnBlock.MOVE_LABEL', 'Move {title}', {
+              title: column.title,
+            })}
+          />
+        )
       }
-      trailing={<ElementActions node={column} kebabOnly />}
+      trailing={trailing}
       layoutSettings={
         <>
           <GridSettingsPicker
@@ -218,7 +285,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
         </>
       }
       footer={
-        hasAllowedTypes ? (
+        hasAllowedTypes && !insideShared ? (
           <button
             type="button"
             className="ssgrid-add-child-button ssgrid-focus-ring"
@@ -229,24 +296,22 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
           </button>
         ) : undefined
       }
-      overlay={
-        hasAllowedTypes && isPickerOpen ? (
-          <ElementTypePicker
-            allowedTypes={allowedTypes}
-            isOpen={isPickerOpen}
-            onClose={handleClosePicker}
-            onSelect={handleTypeSelect}
-          />
-        ) : undefined
-      }
+      overlay={overlay}
     >
       <SortableContext
         items={childKeys}
         strategy={pendingActive ? noopSortingStrategy : verticalListSortingStrategy}
       >
         {hasChildren
-          ? children.map((child) => <EditableElementCard key={child.nodeKey} element={child} />)
-          : !hasAllowedTypes && (
+          ? children.map((child) => (
+              <SharedChild
+                key={child.nodeKey}
+                child={child}
+                siblings={children}
+                render={(element) => <EditableElementCard element={element} />}
+              />
+            ))
+          : (!hasAllowedTypes || insideShared) && (
               <EmptyState
                 message={t('WeDevelopGrid.ColumnBlock.NO_CONTENT_BLOCKS', 'No content blocks')}
               />

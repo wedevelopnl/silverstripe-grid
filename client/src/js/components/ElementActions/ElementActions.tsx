@@ -1,13 +1,15 @@
-import { type MouseEvent, useRef, useState } from 'react'
+import type { MouseEvent } from 'react'
 import ActionsMenu from '@/components/ActionsMenu/ActionsMenu'
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog'
 import DuplicateToDialog from '@/components/DuplicateToDialog/DuplicateToDialog'
 import { useGridEditorContext } from '@/hooks/GridEditorContext'
 import { useArchiveAction } from '@/hooks/useArchiveAction'
 import { useDuplicateAction } from '@/hooks/useDuplicateAction'
+import { useConvertToSharedAction } from '@/hooks/useConvertToSharedAction'
 import { useDuplicateToAction } from '@/hooks/useDuplicateToAction'
+import { useRovingToolbar } from '@/hooks/useRovingToolbar'
 import { t } from '@/i18n'
-import type { ElementNode } from '@/types/elements'
+import { type ElementNode, isSharedBlockRootNode } from '@/types/elements'
 
 /** Collapse toggle the host block already owns; wires the toolbar's fold icon. */
 interface CollapseControl {
@@ -41,6 +43,10 @@ interface ElementActionsProps {
  * `onAction: undefined` means unavailable — the icon row shows it disabled (so
  * the toolbar keeps a stable shape), while the menu omits it outright, since a
  * dead row in a popup is just noise.
+ *
+ * `omitted` is the stronger statement: the action does not exist for this node
+ * and never will, so it is dropped from both presentations. Reserved for
+ * structural impossibility, not for a permission the author might be granted.
  */
 interface ElementAction {
   readonly key: string
@@ -50,9 +56,10 @@ interface ElementAction {
   readonly destructive?: boolean
   /** Has no icon in the design, so it only ever appears in the overflow menu. */
   readonly overflowOnly?: boolean
+  readonly omitted?: boolean
 }
 
-function ToolbarButton({
+export function ToolbarButton({
   glyph,
   label,
   onClick,
@@ -100,11 +107,10 @@ function ToolbarButton({
 
 export default function ElementActions({ node, collapse, kebabOnly = false }: ElementActionsProps) {
   const { pageId } = useGridEditorContext()
-  const toolbarRef = useRef<HTMLDivElement>(null)
-  const [activeIndex, setActiveIndex] = useState(0)
   const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(node)
   const { action: duplicateAction } = useDuplicateAction(node)
   const { action: duplicateToAction, dialog: duplicateToDialog } = useDuplicateToAction(node)
+  const { action: convertAction, dialog: convertDialog } = useConvertToSharedAction(node)
 
   const editLink = node.editLink
 
@@ -122,10 +128,17 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
     })
   })()
 
+  // Archiving a block's root would leave the block rootless and duplicating it
+  // would give the block a second root, so the server refuses both outright —
+  // see isSharedBlockRootNode. A control that can never be enabled on the one
+  // node that can never gain it is noise, not a stable toolbar shape, hence
+  // omitted rather than disabled.
+  const isBlockRoot = isSharedBlockRootNode(node)
+
   // Single source of truth for the action set, in the Figma's toolbar order.
   // Both presentations below read from this, so a narrow card can never end up
   // offering a different set of actions than a wide one.
-  const actions: readonly ElementAction[] = [
+  const allActions: readonly ElementAction[] = [
     {
       key: 'history',
       label: t('WeDevelopGrid.ElementActions.ACTION_HISTORY', 'View history'),
@@ -154,6 +167,7 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
       label: t('WeDevelopGrid.ElementActions.ACTION_DUPLICATE', 'Duplicate'),
       glyph: 'font-icon-clone',
       onAction: duplicateAction?.onAction,
+      omitted: isBlockRoot,
     },
     {
       key: 'open',
@@ -183,6 +197,7 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
       glyph: 'font-icon-trash-bin',
       destructive: true,
       onAction: archiveAction?.onAction,
+      omitted: isBlockRoot,
     },
     {
       key: 'duplicate-to',
@@ -191,7 +206,16 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
       overflowOnly: true,
       onAction: duplicateToAction?.onAction,
     },
+    {
+      key: 'convert-to-shared',
+      label: t('WeDevelopGrid.ElementActions.CONVERT_TO_SHARED', 'Convert to shared block'),
+      glyph: '',
+      overflowOnly: true,
+      onAction: convertAction?.onAction,
+    },
   ]
+
+  const actions = allActions.filter((action) => action.omitted !== true)
 
   const toMenuItems = (items: readonly ElementAction[]) =>
     items
@@ -211,6 +235,16 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
           destructive
         />
       )}
+      {convertDialog?.isOpen && (
+        <ConfirmDialog
+          isOpen={convertDialog.isOpen}
+          title={convertDialog.title}
+          message={convertDialog.message}
+          confirmLabel={t('WeDevelopGrid.ElementActions.CONVERT_CONFIRM_LABEL', 'Convert')}
+          onConfirm={convertDialog.onConfirm}
+          onCancel={convertDialog.onCancel}
+        />
+      )}
       {duplicateToDialog?.isOpen && (
         <DuplicateToDialog
           isOpen={duplicateToDialog.isOpen}
@@ -224,6 +258,16 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
     </>
   )
 
+  const iconActions = actions.filter((a) => a.overflowOnly !== true)
+  const overflowActions = actions.filter((a) => a.overflowOnly === true)
+
+  // The toolbar is one tab stop; the hook owns the arrow-key walk. Only enabled
+  // buttons are stops, and the overflow trigger is the last one.
+  const enabledIconKeys = iconActions.filter((a) => a.onAction !== undefined).map((a) => a.key)
+  const overflowIndex = enabledIconKeys.length
+  const hasOverflow = toMenuItems(overflowActions).length > 0
+  const toolbar = useRovingToolbar({ stopCount: overflowIndex + (hasOverflow ? 1 : 0) })
+
   if (kebabOnly) {
     return (
       <>
@@ -233,63 +277,15 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
     )
   }
 
-  const iconActions = actions.filter((a) => a.overflowOnly !== true)
-  const overflowActions = actions.filter((a) => a.overflowOnly === true)
-
-  // Roving tabindex over the toolbar (W3C APG): the whole toolbar is one tab
-  // stop and Arrow/Home/End move between controls. Only enabled buttons take
-  // part — a disabled <button> cannot hold focus, so it is skipped rather than
-  // being made focusable-but-inert. The overflow trigger is the last stop.
-  const enabledIconKeys = iconActions.filter((a) => a.onAction !== undefined).map((a) => a.key)
-  const overflowIndex = enabledIconKeys.length
-  const hasOverflow = toMenuItems(overflowActions).length > 0
-  const stopCount = overflowIndex + (hasOverflow ? 1 : 0)
-  // Clamped so a shrinking action set cannot strand the tab stop on a control
-  // that no longer renders, which would leave the toolbar unreachable by Tab.
-  const activeStop = Math.min(activeIndex, Math.max(0, stopCount - 1))
-
-  function handleToolbarKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-    const buttons = Array.from(
-      toolbarRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [],
-    )
-    const current = buttons.findIndex((button) => button === document.activeElement)
-    // Focus is on the open overflow menu's container, not a toolbar control —
-    // these keys are the menu's to handle, so leave it be.
-    if (current === -1) return
-
-    const last = buttons.length - 1
-    let next: number
-    switch (e.key) {
-      case 'ArrowRight':
-        next = current >= last ? last : current + 1
-        break
-      case 'ArrowLeft':
-        next = current <= 0 ? 0 : current - 1
-        break
-      case 'Home':
-        next = 0
-        break
-      case 'End':
-        next = last
-        break
-      default:
-        return
-    }
-
-    e.preventDefault()
-    setActiveIndex(next)
-    buttons[next]?.focus()
-  }
-
   return (
     <>
       <div
-        ref={toolbarRef}
+        ref={toolbar.toolbarRef}
         className="ssgrid-element-toolbar"
         data-testid="element-toolbar"
         role="toolbar"
         aria-label={t('WeDevelopGrid.ElementActions.TOOLBAR_LABEL', 'Element actions')}
-        onKeyDown={handleToolbarKeyDown}
+        onKeyDown={toolbar.handleKeyDown}
       >
         {iconActions.map((action) => (
           <ToolbarButton
@@ -300,12 +296,12 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
             disabled={action.onAction === undefined}
             destructive={action.destructive}
             testId={`element-action-${action.key}`}
-            tabIndex={enabledIconKeys.indexOf(action.key) === activeStop ? 0 : -1}
+            tabIndex={enabledIconKeys.indexOf(action.key) === toolbar.activeStop ? 0 : -1}
           />
         ))}
         <ActionsMenu
           actions={toMenuItems(overflowActions)}
-          triggerTabIndex={activeStop === overflowIndex ? 0 : -1}
+          triggerTabIndex={toolbar.activeStop === overflowIndex ? 0 : -1}
         />
       </div>
       {dialogs}

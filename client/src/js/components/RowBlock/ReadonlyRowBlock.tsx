@@ -1,5 +1,6 @@
 import { memo, useId } from 'react'
 import ReadonlyColumnBlock from '@/components/ColumnBlock/ReadonlyColumnBlock'
+import SharedChild from '@/components/SharedBlockFrame/SharedChild'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import type { RowNode } from '@/types/elements'
 import { getColumnCount, getOffsetStrategy } from '@/utils/gridAdapter'
@@ -38,7 +39,13 @@ const ReadonlyRowBlock = memo(function ReadonlyRowBlockComponent({ row }: Readon
         }
       >
         {row.children?.map((column) => (
-          <ReadonlyColumnBlock key={column.nodeKey} column={column} />
+          <SharedChild
+            key={column.nodeKey}
+            child={column}
+            siblings={row.children ?? []}
+            readonly
+            render={(node) => <ReadonlyColumnBlock column={node} />}
+          />
         ))}
       </div>
     </RowChrome>

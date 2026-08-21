@@ -89,6 +89,31 @@ final class SharedBlockAdminTest extends FunctionalTest
         self::assertStringContainsString('sharedBlock', $body);
     }
 
+    public function testBlockEditLinkResolvesToItsOwnForm(): void
+    {
+        // The link a placement's view/edit actions follow. It must reach the
+        // BLOCK's form, not the form of whichever element roots it.
+        $block = $this->populatedBlock('Linked banner');
+
+        $link = $block->getCMSEditLink();
+        self::assertNotNull($link);
+        self::assertStringEndsWith($this->editUrl($block), $link);
+
+        $response = $this->visit($link);
+
+        self::assertSame(
+            200,
+            $response->getStatusCode(),
+            'the generated edit link must resolve; fix the URL builder, not this test',
+        );
+        self::assertStringContainsString('Linked banner', (string) $response->getBody());
+    }
+
+    public function testBlockEditLinkIsNullBeforeTheBlockIsSaved(): void
+    {
+        self::assertNull(SharedBlock::create()->getCMSEditLink());
+    }
+
     public function testSharedElementEditLinkResolves(): void
     {
         // Pins the nested ModelAdmin URL shape built by

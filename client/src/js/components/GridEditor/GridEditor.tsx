@@ -8,6 +8,12 @@ interface GridEditorProps {
   readonly zone: string
   readonly readonly?: boolean
   readonly version?: number
+  /**
+   * Which record the tree is rooted at. 'sharedBlock' means `pageId` carries a
+   * SharedBlock id and the editor reads the block-rooted tree endpoint — the
+   * library hosting the same editor as a page does.
+   */
+  readonly rootType?: 'page' | 'sharedBlock'
 }
 
 /**
@@ -30,7 +36,13 @@ interface GridEditorProps {
  * sentinel here so every hook below this guard sees a guaranteed numeric id —
  * no `?? 0` / `?? 1` placeholders flowing into query keys or tree fabrications.
  */
-export default function GridEditor({ pageId, zone, readonly = false, version }: GridEditorProps) {
+export default function GridEditor({
+  pageId,
+  zone,
+  readonly = false,
+  version,
+  rootType = 'page',
+}: GridEditorProps) {
   if (pageId === null) {
     return (
       <div className="grid-editor" data-zone={zone} data-testid="grid-editor">
@@ -45,6 +57,6 @@ export default function GridEditor({ pageId, zone, readonly = false, version }: 
   return readonly ? (
     <ReadonlyGridEditor pageId={pageId} zone={zone} version={version} />
   ) : (
-    <EditableGridEditor pageId={pageId} zone={zone} />
+    <EditableGridEditor pageId={pageId} zone={zone} rootType={rootType} />
   )
 }

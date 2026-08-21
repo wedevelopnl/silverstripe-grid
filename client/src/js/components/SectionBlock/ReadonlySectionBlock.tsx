@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import ReadonlyRowBlock from '@/components/RowBlock/ReadonlyRowBlock'
+import SharedChild from '@/components/SharedBlockFrame/SharedChild'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import type { SectionNode } from '@/types/elements'
 import SectionChrome from './SectionChrome'
@@ -24,7 +25,13 @@ const ReadonlySectionBlock = memo(function ReadonlySectionBlockComponent({
       onToggle={onToggle}
     >
       {section.children?.map((row) => (
-        <ReadonlyRowBlock key={row.nodeKey} row={row} />
+        <SharedChild
+          key={row.nodeKey}
+          child={row}
+          siblings={section.children ?? []}
+          readonly
+          render={(node) => <ReadonlyRowBlock row={node} />}
+        />
       ))}
     </SectionChrome>
   )

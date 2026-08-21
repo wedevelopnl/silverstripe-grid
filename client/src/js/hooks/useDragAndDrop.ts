@@ -8,7 +8,7 @@ import type {
   SensorOptions,
 } from '@dnd-kit/core'
 import { PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
 import { useElementMaps } from '@/hooks/useElementMaps'
 import { usePendingTree } from '@/hooks/usePendingTree'
 import type { DraggableType } from '@/types/dnd'
@@ -123,8 +123,14 @@ export function useDragAndDrop({ tree, onReorder }: UseDragAndDropOptions): UseD
   const maps = useElementMaps(tree)
   const pending = usePendingTree()
 
+  // The detector is constructed once, but the node map is rebuilt on every
+  // tree change — hand it over as a ref so the shared-boundary check always
+  // reads the current tree.
+  const nodeMapRef = useRef(maps.nodeMap)
+  nodeMapRef.current = maps.nodeMap
+
   const [collisionDetection] = useState<CollisionDetection>(() =>
-    createTypedCollisionDetection(pending.collisionRefs),
+    createTypedCollisionDetection({ ...pending.collisionRefs, nodeMapRef }),
   )
 
   const sensors = useSensors(

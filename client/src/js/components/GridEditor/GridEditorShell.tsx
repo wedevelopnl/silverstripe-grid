@@ -2,9 +2,10 @@ import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 import type { ApiError } from '@/api/errors'
 import { GridEditorProvider } from '@/hooks/GridEditorContext'
+import type { GridEditorRootType } from '@/hooks/queryKeys'
 import { CollapseContext, useCollapseState } from '@/hooks/useCollapseState'
 import { t } from '@/i18n'
-import type { SectionNode, TreeApiResponse } from '@/types/elements'
+import type { ElementNode, TreeApiResponse } from '@/types/elements'
 import { hasUnpublishedDescendant, isUnpublished } from '@/utils/publishStatus'
 import GridAreaHeader from './GridAreaHeader'
 
@@ -39,9 +40,11 @@ interface GridEditorShellProps {
   readonly pageId: number
   readonly zone: string
   readonly readonly: boolean
+  /** 'sharedBlock' means `pageId` is a block id; forwarded to the editor context. */
+  readonly rootType?: GridEditorRootType
   readonly status: GridEditorStatus
   readonly error: ApiError | null
-  readonly sections: SectionNode[]
+  readonly sections: ElementNode[]
   /** Set by the history viewer; identifies which tree the chrome describes. */
   readonly version?: number
   readonly children: ReactNode
@@ -58,6 +61,7 @@ export default function GridEditorShell({
   pageId,
   zone,
   readonly,
+  rootType = 'page',
   status,
   error,
   sections,
@@ -65,7 +69,10 @@ export default function GridEditorShell({
   children,
 }: GridEditorShellProps) {
   const collapseState = useCollapseState(pageId)
-  const gridEditorContextValue = useMemo(() => ({ pageId, zone }), [pageId, zone])
+  const gridEditorContextValue = useMemo(
+    () => ({ pageId, zone, rootType }),
+    [pageId, zone, rootType],
+  )
   // Deep, not shallow: an unpublished block several levels down is the case the
   // canvas ring exists to surface, and the old `sections.some(...)` check
   // never saw it.

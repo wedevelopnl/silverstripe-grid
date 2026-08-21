@@ -73,6 +73,20 @@
       padding: 0 var(--ssgrid-space-2);
     }
 
+    /* A column-rooted shared block: the frame IS the track item, so it takes
+       the column's sizing (SharedBlockFrame sets the same --col-* vars on it).
+       Its gutter is margin where a column's is padding, because the frame draws
+       a visible dashed border: padding would put that border on the track's
+       -8px overhang, hanging it outside the row card at both edges. Same outer
+       box either way, so the width math is unchanged. */
+    > .ssgrid-shared-block {
+      box-sizing: border-box;
+      flex: 0 0 calc(var(--col-width) - 2 * var(--ssgrid-space-2));
+      max-width: calc(var(--col-width) - 2 * var(--ssgrid-space-2));
+      margin-right: var(--ssgrid-space-2);
+      margin-left: calc(var(--col-offset, 0px) + var(--ssgrid-space-2));
+    }
+
     > .ssgrid-add-child[data-variant='empty'] {
       flex: 0 0 100%;
       padding: 0 var(--ssgrid-space-2);
@@ -84,7 +98,14 @@
     grid-template-columns: repeat(var(--grid-columns, 12), 1fr);
     gap: var(--ssgrid-space-4);
 
-    > .ssgrid-column {
+    /* The frame is listed beside the column for the same reason as in flex
+       mode: a column-rooted placement makes it the grid item, and the
+       .ssgrid-column carrying the span sits two levels inside it. No gutter
+       adjustment here — grid mode separates tracks with `gap`, which the frame
+       gets for free. */
+    > .ssgrid-column,
+    > .ssgrid-shared-block {
+      box-sizing: border-box;
       grid-column: var(--col-start, auto) / span var(--col-span);
     }
 

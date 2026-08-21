@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { ElementNode, TreeApiResponse } from '@/types/elements'
-import { isContainerNode } from '@/types/elements'
+import { isContainerNode, isSharedBlockReferenceNode } from '@/types/elements'
 import { NodeIdentity, type NodeKey } from '@/types/identity'
 
 export interface ElementMaps {
@@ -32,9 +32,15 @@ function walkNodes(
     nodeMap.set(node.nodeKey, node)
     indexByNodeKey.set(node.nodeKey, i)
 
-    if (isContainerNode(node) && node.children) {
-      childrenByParentKey.set(node.nodeKey, node.children)
-      walkNodes(node.children, nodeMap, childrenByParentKey, indexByNodeKey)
+    // A shared block placement holds children without being a container — its
+    // single child is the block's root. Indexing it (and everything below)
+    // is what lets drags inside a placed block resolve at all.
+    const children =
+      isContainerNode(node) || isSharedBlockReferenceNode(node) ? node.children : null
+
+    if (children) {
+      childrenByParentKey.set(node.nodeKey, children)
+      walkNodes(children, nodeMap, childrenByParentKey, indexByNodeKey)
     }
   }
 }

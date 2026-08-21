@@ -12,6 +12,7 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Model\SharedBlock;
 use WeDevelop\Grid\Model\SharedBlockReference;
+use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\ValidationErrorCode;
@@ -33,6 +34,7 @@ class SharedBlockService
     public function __construct(
         private readonly ReorderValidatorInterface $validator,
         private readonly ElementPlacementService $placementService,
+        private readonly GridElementRepositoryInterface $elementRepository,
     ) {
     }
 
@@ -125,6 +127,15 @@ class SharedBlockService
             ));
         }
 
+        if ($this->containsPlacement($root)) {
+            return Result::fail(new ValidationError(
+                message: 'This content holds a shared block, which cannot be nested inside another one.',
+                field: 'element',
+                code: ValidationErrorCode::HierarchyViolation,
+                key: self::class . '.NESTED_PLACEMENT',
+            ));
+        }
+
         $parent = $root->Parent();
         if ($parent === null || !$parent->exists()) {
             return Result::fail(new ValidationError(
@@ -168,6 +179,46 @@ class SharedBlockService
 
             return $block;
         }));
+    }
+
+    /**
+     * Whether any descendant of $root is a shared block placement.
+     *
+     * Conversion re-parents $root with a single UPDATE and never rewrites what
+     * hangs below it, so no descendant's own validation fires — the no-nesting
+     * rule has to be evaluated here, over the whole subtree, or a nested
+     * placement lands inside the new block unchallenged. It would then fail
+     * SHARED_NESTING on the block's first publish, leaving a block that can
+     * never be published and can only be repaired by hand.
+     *
+     * Breadth-first so the cost is one query per level (three or four), and
+     * through the repository so each level stays pair-matched on
+     * ParentClass + ParentID.
+     */
+    private function containsPlacement(GridElement $root): bool
+    {
+        /** @var positive-int $rootId */
+        $rootId = (int) $root->ID;
+
+        /** @var array<class-string, list<positive-int>> $frontier */
+        $frontier = [$root::class => [$rootId]];
+
+        while ($frontier !== []) {
+            $children = $this->elementRepository->findByParents($frontier);
+            $frontier = [];
+
+            foreach ($children as $child) {
+                if ($child instanceof SharedBlockReference) {
+                    return true;
+                }
+
+                /** @var positive-int $childId */
+                $childId = (int) $child->ID;
+                $frontier[$child::class][] = $childId;
+            }
+        }
+
+        return false;
     }
 
     /**

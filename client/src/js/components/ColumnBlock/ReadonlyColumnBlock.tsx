@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import ReadonlyElementCard from '@/components/ElementCard/ReadonlyElementCard'
+import SharedChild from '@/components/SharedBlockFrame/SharedChild'
 import EmptyState from '@/components/EmptyState/EmptyState'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import { useViewportContext } from '@/hooks/ViewportContext'
@@ -37,7 +38,15 @@ const ReadonlyColumnBlock = memo(function ReadonlyColumnBlockComponent({
       hidden={!settings.visible}
     >
       {children.length > 0 ? (
-        children.map((child) => <ReadonlyElementCard key={child.nodeKey} element={child} />)
+        children.map((child) => (
+          <SharedChild
+            key={child.nodeKey}
+            child={child}
+            siblings={children}
+            readonly
+            render={(element) => <ReadonlyElementCard element={element} />}
+          />
+        ))
       ) : (
         <EmptyState
           message={t('WeDevelopGrid.ColumnBlock.NO_CONTENT_BLOCKS', 'No content blocks')}

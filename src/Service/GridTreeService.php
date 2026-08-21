@@ -464,6 +464,7 @@ class GridTreeService
             (string) $block->Title,
             $this->usageResolver->usageCount($block),
             $this->aggregateBlockStatus($block, $subtree),
+            $block->getCMSEditLink(),
         );
 
         return $this->nodeMapper->mapToNode($reference, $parent, $children, $meta);

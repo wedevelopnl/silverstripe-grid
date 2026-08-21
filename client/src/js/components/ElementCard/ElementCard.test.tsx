@@ -85,6 +85,7 @@ describe('EditableElementCard', () => {
         'Edit',
         'Archive',
         'Duplicate to…',
+        'Convert to shared block',
       ])
       restore()
     })

@@ -63,6 +63,25 @@ describe('ElementActions', () => {
     expect(screen.getByText(/duplicate to/i)).toBeInTheDocument()
   })
 
+  it('drops duplicate and archive entirely on a block root, keeping the rest', () => {
+    // Structural, not a permission: archiving the root leaves the block
+    // rootless and duplicating it gives the block a second root, so neither
+    // control can ever come alive here — disabled icons would be dead weight.
+    const node = createSimpleElement({
+      parent: { type: 'sharedBlock', id: 9 },
+      canDelete: true,
+      canCreate: true,
+    })
+
+    renderWithProviders(<ElementActions node={node} />)
+
+    expect(screen.queryByTestId('element-action-duplicate')).toBeNull()
+    expect(screen.queryByTestId('element-action-archive')).toBeNull()
+    expect(screen.getByTestId('element-action-history')).toBeEnabled()
+    expect(screen.getByTestId('element-action-edit')).toBeEnabled()
+    expect(screen.getByTestId('element-action-open')).toBeEnabled()
+  })
+
   it('disables the history action when the element has no CMS edit link', () => {
     const node = createSimpleElement({ editLink: null })
 
@@ -140,6 +159,7 @@ describe('ElementActions', () => {
       'Edit',
       'Archive',
       'Duplicate to…',
+      'Convert to shared block',
     ])
   })
 

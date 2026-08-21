@@ -10,6 +10,8 @@ interface BridgeSchema {
   zone: string
   readonly: boolean
   version: number | undefined
+  /** Which record the tree is rooted at; 'sharedBlock' puts a block id in pageId. */
+  rootType: 'page' | 'sharedBlock'
 }
 
 const MOUNT_SELECTOR = '[data-react-mount="grid-editor"]'
@@ -33,12 +35,19 @@ function parseBridgeData(data: unknown): BridgeSchema {
   const rawZone = record['grid-zone']
   const rawReadonly = record['grid-readonly']
   const rawVersion = record['grid-version']
+  const rawRootType = record['grid-root-type']
+
+  const rootType = rawRootType === 'sharedBlock' ? 'sharedBlock' : 'page'
+  const pageZone = typeof rawZone === 'string' && rawZone !== '' ? rawZone : 'main'
 
   return {
     pageId: typeof rawPageId === 'number' ? rawPageId : null,
-    zone: typeof rawZone === 'string' && rawZone !== '' ? rawZone : 'main',
+    // A block-rooted editor has no zones, so its empty zone must survive the
+    // 'main' default that page-rooted fields rely on.
+    zone: rootType === 'sharedBlock' ? '' : pageZone,
     readonly: rawReadonly === true,
     version: typeof rawVersion === 'number' ? rawVersion : undefined,
+    rootType,
   }
 }
 
@@ -72,7 +81,7 @@ export function mountGridEditor(element: HTMLElement, schemaData: unknown): void
 
   try {
     const GridEditor = loadComponent('GridEditor')
-    const { pageId, zone, readonly, version } = parseBridgeData(schemaData)
+    const { pageId, zone, readonly, version, rootType } = parseBridgeData(schemaData)
 
     const root = createRoot(element)
     mountedRoots.set(element, root)
@@ -94,7 +103,7 @@ export function mountGridEditor(element: HTMLElement, schemaData: unknown): void
           createElement(
             GridEditorErrorBoundary,
             null,
-            createElement(GridEditor, { pageId, zone, readonly, version }),
+            createElement(GridEditor, { pageId, zone, readonly, version, rootType }),
           ),
         ),
       ),

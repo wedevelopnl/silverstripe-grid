@@ -76,7 +76,7 @@ export async function apiGet<T>(url: string): Promise<T> {
  *
  * @throws ApiError on non-OK HTTP status
  */
-async function apiMutate(method: 'POST' | 'PATCH', url: string, body: object): Promise<void> {
+async function apiMutate(method: 'POST' | 'PATCH', url: string, body: object): Promise<Response> {
   const response = await fetch(url, {
     method,
     credentials: 'same-origin',
@@ -92,6 +92,8 @@ async function apiMutate(method: 'POST' | 'PATCH', url: string, body: object): P
     const message = await extractErrorMessage(response)
     throw new ApiError(response.status, message)
   }
+
+  return response
 }
 
 /**
@@ -99,8 +101,20 @@ async function apiMutate(method: 'POST' | 'PATCH', url: string, body: object): P
  *
  * @throws ApiError on non-OK HTTP status
  */
-export function apiPost(url: string, body: object): Promise<void> {
-  return apiMutate('POST', url, body)
+export async function apiPost(url: string, body: object): Promise<void> {
+  await apiMutate('POST', url, body)
+}
+
+/**
+ * POST whose response body carries data the caller needs — the few endpoints
+ * that answer with a created record's identity rather than 204.
+ *
+ * @throws ApiError on non-OK HTTP status
+ */
+export async function apiPostJson<T>(url: string, body: object): Promise<T> {
+  const response = await apiMutate('POST', url, body)
+
+  return response.json() as Promise<T>
 }
 
 /**
@@ -108,8 +122,8 @@ export function apiPost(url: string, body: object): Promise<void> {
  *
  * @throws ApiError on non-OK HTTP status
  */
-export function apiPatch(url: string, body: object): Promise<void> {
-  return apiMutate('PATCH', url, body)
+export async function apiPatch(url: string, body: object): Promise<void> {
+  await apiMutate('PATCH', url, body)
 }
 
 /**

@@ -281,6 +281,9 @@ final class SharedBlockTreeTest extends SapphireTest
                 'title' => 'Shared block',
                 'usageCount' => 1,
                 'status' => 'notPublished',
+                // The BLOCK's own form in the library — what a placement's
+                // view/edit actions follow, never the root element's link.
+                'editLink' => $block->getCMSEditLink(),
             ],
             $node['sharedBlock'],
         );

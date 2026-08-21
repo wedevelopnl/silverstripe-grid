@@ -231,6 +231,56 @@ final class SharedBlockServiceTest extends SapphireTest
         self::assertSame(SharedBlockService::class . '.SHARED_NESTING', $result->errors()[0]->key);
     }
 
+    public function testConvertRejectsContentHoldingAPlacementDirectly(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page);
+
+        // A row-rooted block placed inside the section, i.e. the section's own
+        // child is a placement.
+        $rowBlock = GridTreeFactory::sharedBlock('Row block');
+        $rowRoot = Row::create();
+        $rowRoot->ParentID = $rowBlock->ID;
+        $rowRoot->ParentClass = SharedBlock::class;
+        $rowRoot->write();
+        GridTreeFactory::reference($section, $rowBlock, zone: '');
+
+        $result = $this->service->convertToShared($section, 'Nope');
+
+        self::assertTrue($result->isErr());
+        self::assertSame(
+            SharedBlockService::class . '.NESTED_PLACEMENT',
+            $result->errors()[0]->key,
+        );
+    }
+
+    public function testConvertRejectsContentHoldingAPlacementDeeperDown(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $tree = GridTreeFactory::containerTree($page);
+        GridTreeFactory::reference($tree['column'], $this->leafRootedBlock(), zone: '');
+
+        // The placement sits three levels below the section being promoted, so
+        // only a subtree walk finds it.
+        $result = $this->service->convertToShared($tree['section'], 'Nope');
+
+        self::assertTrue($result->isErr());
+        self::assertSame(
+            SharedBlockService::class . '.NESTED_PLACEMENT',
+            $result->errors()[0]->key,
+        );
+    }
+
+    public function testConvertAcceptsContentWithNoPlacementAnywhereBelow(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $tree = GridTreeFactory::treeFor($page);
+
+        $result = $this->service->convertToShared($tree['section'], 'Fine');
+
+        self::assertTrue($result->isOk(), 'the subtree walk must not reject ordinary content');
+    }
+
     public function testConvertRejectsUnplacedElement(): void
     {
         $orphan = Section::create();

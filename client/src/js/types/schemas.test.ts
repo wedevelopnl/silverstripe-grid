@@ -254,3 +254,68 @@ describe('testing factory ↔ wire schema alignment', () => {
     expect(v.safeParse(treeApiResponseWireSchema, tree).success).toBe(true)
   })
 })
+
+describe('shared block reference wire nodes', () => {
+  const sharedBlock = {
+    blockId: 7,
+    title: 'Banner',
+    usageCount: 2,
+    status: 'published',
+    editLink: '/admin/shared-blocks/item/7/edit',
+  }
+
+  const reference = {
+    ...baseLeaf,
+    self: { type: 'element', id: 10 },
+    parent: { type: 'page', id: 3 },
+    sharedBlock,
+    children: [baseLeaf],
+  }
+
+  it('parses a placement carrying sharedBlock and children but no containerType', () => {
+    const result = v.safeParse(elementNodeWireSchema, reference)
+    expect(result.success).toBe(true)
+    expect(result.success && result.output).toMatchObject({ sharedBlock, children: [baseLeaf] })
+  })
+
+  it('parses a placement whose block is empty', () => {
+    expect(v.safeParse(elementNodeWireSchema, { ...reference, children: [] }).success).toBe(true)
+  })
+
+  it('parses a plain element that carries no sharedBlock as a simple element', () => {
+    const result = v.safeParse(elementNodeWireSchema, baseLeaf)
+    expect(result.success).toBe(true)
+    expect(result.success && 'sharedBlock' in result.output).toBe(false)
+  })
+
+  it('parses a plain element with an explicitly undefined sharedBlock', () => {
+    expect(
+      v.safeParse(elementNodeWireSchema, { ...baseLeaf, sharedBlock: undefined }).success,
+    ).toBe(true)
+  })
+
+  it.each([
+    ['an unknown status', { ...sharedBlock, status: 'archived' }],
+    ['a zero blockId', { ...sharedBlock, blockId: 0 }],
+    ['a negative usageCount', { ...sharedBlock, usageCount: -1 }],
+    ['a missing title', { blockId: 7, usageCount: 0, status: 'published' }],
+  ])('rejects a placement with %s', (_label, meta) => {
+    expect(v.safeParse(elementNodeWireSchema, { ...reference, sharedBlock: meta }).success).toBe(
+      false,
+    )
+  })
+
+  it('rejects a placement with a null children list', () => {
+    // A placement always has a children array — empty when the block is empty.
+    expect(v.safeParse(elementNodeWireSchema, { ...reference, children: null }).success).toBe(false)
+  })
+
+  it('accepts a sharedBlock-rooted tree', () => {
+    const result = v.safeParse(treeApiResponseWireSchema, {
+      rootParent: { type: 'sharedBlock', id: 3 },
+      allowedTypes: { section: {}, row: {}, column: {} },
+      nodes: [],
+    })
+    expect(result.success).toBe(true)
+  })
+})

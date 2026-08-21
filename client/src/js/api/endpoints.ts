@@ -5,10 +5,13 @@ import type {
   ElementNode,
   RowNode,
   SectionNode,
+  SharedBlockReferenceNode,
   SimpleElementNode,
   TreeApiResponse,
 } from '@/types/elements'
-import { NodeIdentity, type NodeRef } from '@/types/identity'
+import { NodeIdentity, type NodeKey, type NodeRef } from '@/types/identity'
+import type { SharedBlockListEntry, SharedBlockParentType } from '@/types/sharedBlocks'
+import { sharedBlockListSchema } from '@/types/sharedBlocks'
 import * as v from 'valibot'
 import {
   acceptableContainerListSchema,
@@ -16,8 +19,8 @@ import {
   treeApiResponseWireSchema,
   zoneListSchema,
 } from '@/types/schemas'
-import { apiDelete, apiGet, apiPatch, apiPost } from './client'
-import { getControllerLink } from './config'
+import { apiDelete, apiGet, apiPatch, apiPost, apiPostJson } from './client'
+import { getControllerLink, getSharedBlockControllerLink } from './config'
 
 /**
  * Fetch the full element tree for a CMS page.
@@ -68,12 +71,33 @@ type ParsedTreeWire = v.InferOutput<typeof treeApiResponseWireSchema>
 type NodeWire = ParsedTreeWire['nodes'][number]
 type AllowedTypesByContainerType = ParsedTreeWire['allowedTypes']
 
+/**
+ * @param sharedBlockKey Key of the enclosing shared block placement, stamped on
+ *   every descendant so drag collision filtering can tell the two sides of the
+ *   shared boundary apart. Undefined for page-local content.
+ */
 function attachDerivedFields(
   node: NodeWire,
   allowedTypes: AllowedTypesByContainerType,
+  sharedBlockKey?: NodeKey,
 ): ElementNode {
   const nodeKey = NodeIdentity.toKey(node.self.type, node.self.id)
   const parentKey = NodeIdentity.toKey(node.parent.type, node.parent.id)
+
+  if (node.sharedBlock !== undefined) {
+    // The placement itself is page-local — it is the boundary, not inside it —
+    // so its own sharedBlockKey stays unset while everything below inherits it.
+    const children = node.children.map((child) => attachDerivedFields(child, allowedTypes, nodeKey))
+    const { containerType: _ct, ...referenceFields } = node
+    return {
+      ...referenceFields,
+      nodeKey,
+      parentKey,
+      ...(sharedBlockKey !== undefined ? { sharedBlockKey } : {}),
+      sharedBlock: node.sharedBlock,
+      children: children as [ElementNode] | [],
+    } satisfies SharedBlockReferenceNode
+  }
 
   if (node.containerType === 'section') {
     // The PHP domain layer enforces the Section→Row→Column→leaf hierarchy.
@@ -84,12 +108,15 @@ function attachDerivedFields(
     // returns the wide ElementNode union.
     const children =
       node.children !== null
-        ? (node.children.map((child) => attachDerivedFields(child, allowedTypes)) as RowNode[])
+        ? (node.children.map((child) =>
+            attachDerivedFields(child, allowedTypes, sharedBlockKey),
+          ) as RowNode[])
         : null
     return {
       ...node,
       nodeKey,
       parentKey,
+      ...(sharedBlockKey !== undefined ? { sharedBlockKey } : {}),
       containerType: 'section',
       allowedTypes: allowedTypes.section,
       children,
@@ -101,12 +128,15 @@ function attachDerivedFields(
     // guarantees a row's children are columns.
     const children =
       node.children !== null
-        ? (node.children.map((child) => attachDerivedFields(child, allowedTypes)) as ColumnNode[])
+        ? (node.children.map((child) =>
+            attachDerivedFields(child, allowedTypes, sharedBlockKey),
+          ) as ColumnNode[])
         : null
     return {
       ...node,
       nodeKey,
       parentKey,
+      ...(sharedBlockKey !== undefined ? { sharedBlockKey } : {}),
       containerType: 'row',
       allowedTypes: allowedTypes.row,
       children,
@@ -119,13 +149,14 @@ function attachDerivedFields(
     const children =
       node.children !== null
         ? (node.children.map((child) =>
-            attachDerivedFields(child, allowedTypes),
+            attachDerivedFields(child, allowedTypes, sharedBlockKey),
           ) as SimpleElementNode[])
         : null
     return {
       ...node,
       nodeKey,
       parentKey,
+      ...(sharedBlockKey !== undefined ? { sharedBlockKey } : {}),
       containerType: 'column',
       allowedTypes: allowedTypes.column,
       children,
@@ -142,6 +173,7 @@ function attachDerivedFields(
     ...leafFields,
     nodeKey,
     parentKey,
+    ...(sharedBlockKey !== undefined ? { sharedBlockKey } : {}),
   } satisfies SimpleElementNode
 }
 
@@ -272,4 +304,62 @@ export async function fetchPages(search?: string): Promise<PageEntry[]> {
   const params = search ? `?search=${encodeURIComponent(search)}` : ''
   const raw = await apiGet<unknown>(`${base}/api/pages${params}`)
   return v.parse(pageEntryListSchema, raw)
+}
+
+/* ------------------------------------------------------------------ *
+ * Shared blocks — served by SharedBlockController, a separate admin
+ * controller with its own base URL. Placements are ordinary elements and
+ * stay on the grid endpoints above (archiveElement, reorderElement).
+ * ------------------------------------------------------------------ */
+
+/**
+ * Blocks the author may place under `parentType`. The server filters by the
+ * block's root type, so a row-rooted block is never offered at page level.
+ */
+export async function fetchSharedBlocks(
+  parentType: SharedBlockParentType,
+): Promise<SharedBlockListEntry[]> {
+  const base = getSharedBlockControllerLink()
+  const raw = await apiGet<unknown>(`${base}/api/list?parentType=${encodeURIComponent(parentType)}`)
+  return v.parse(sharedBlockListSchema, raw)
+}
+
+/** The library editor's tree, rooted at a block instead of a page + zone. */
+export async function fetchSharedBlockTree(blockId: number): Promise<TreeApiResponse> {
+  const base = getSharedBlockControllerLink()
+  const raw = await apiGet<unknown>(`${base}/api/readTree/${blockId}`)
+  return normaliseTreeResponse(raw)
+}
+
+export interface PlaceSharedBlockParams {
+  blockId: number
+  parent: NodeRef
+  zone?: string
+  insertAfterElementID?: number
+}
+
+export async function placeSharedBlock(params: PlaceSharedBlockParams): Promise<void> {
+  const base = getSharedBlockControllerLink()
+  await apiPost(`${base}/api/place`, params)
+}
+
+export async function convertToSharedBlock(params: {
+  element: NodeRef
+  title?: string
+}): Promise<{ blockId: number }> {
+  const base = getSharedBlockControllerLink()
+  return await apiPostJson<{ blockId: number }>(`${base}/api/convert`, params)
+}
+
+export async function detachSharedBlock(params: { element: NodeRef }): Promise<void> {
+  const base = getSharedBlockControllerLink()
+  await apiPost(`${base}/api/detach`, params)
+}
+
+export async function setSharedBlockPublished(params: {
+  blockId: number
+  published: boolean
+}): Promise<void> {
+  const base = getSharedBlockControllerLink()
+  await apiPatch(`${base}/api/setPublished`, params)
 }

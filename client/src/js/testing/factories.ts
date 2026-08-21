@@ -3,16 +3,19 @@ import { buildDraggableId, type DraggableType, type ParsedDraggableId } from '@/
 import type {
   AllowedTypeInfo,
   BlockSchema,
+  ChildOf,
   ColumnNode,
   ElementNode,
   GridSettings,
   RowNode,
   SectionNode,
+  SharedBlockReferenceNode,
   SimpleElementNode,
   TreeApiResponse,
   ViewportSettings,
 } from '@/types/elements'
-import { NodeIdentity, type NodeRef, type NodeType } from '@/types/identity'
+import { NodeIdentity, type NodeKey, type NodeRef, type NodeType } from '@/types/identity'
+import type { SharedBlockMeta } from '@/types/sharedBlocks'
 
 export function createParsedDraggableId(type: DraggableType, nodeId: number): ParsedDraggableId {
   return { type, id: nodeId, key: buildDraggableId(type, nodeId) }
@@ -130,13 +133,74 @@ export function createSimpleElement(
   }
 }
 
+/**
+ * A shared block placement wrapping a single root child.
+ *
+ * The child (and its whole subtree) is stamped with `sharedBlockKey` exactly as
+ * the API normalisation does, so tests exercise the same boundary the drag
+ * filtering reads.
+ */
+export function createSharedBlockReferenceNode(
+  overrides?: Partial<SharedBlockReferenceNode> & NodeOverrideBase & { root?: ElementNode },
+): SharedBlockReferenceNode {
+  const self = resolveSelf('element', overrides?.id)
+  const parent = overrides?.parent ?? { type: 'page', id: 100 }
+  const nodeKey = NodeIdentity.toKey(self.type, self.id)
+
+  const sharedBlock: SharedBlockMeta = overrides?.sharedBlock ?? {
+    blockId: self.id,
+    title: `Shared block ${self.id}`,
+    usageCount: 1,
+    status: 'published',
+    editLink: `/admin/shared-blocks/item/${self.id}/edit`,
+  }
+
+  const root = overrides?.root ?? overrides?.children?.[0]
+  const children: [ElementNode] | [] =
+    root !== undefined ? [stampSharedBlockKey(root, nodeKey)] : []
+
+  const { root: _omitRoot, children: _omitChildren, ...rest } = overrides ?? {}
+
+  return {
+    ...baseNodeFields(
+      self,
+      parent,
+      overrides?.title ?? sharedBlock.title,
+      overrides?.blockSchema ?? defaultBlockSchema('Shared block'),
+      null,
+    ),
+    ...rest,
+    sharedBlock,
+    children,
+  }
+}
+
+/** Recursively stamp `sharedBlockKey` on a subtree, mirroring attachDerivedFields. */
+function stampSharedBlockKey<TNode extends ElementNode>(
+  node: TNode,
+  sharedBlockKey: NodeKey,
+): TNode {
+  const children =
+    'children' in node && node.children !== null && node.children !== undefined
+      ? node.children.map((child) => stampSharedBlockKey(child as ElementNode, sharedBlockKey))
+      : undefined
+
+  return {
+    ...node,
+    sharedBlockKey,
+    ...(children !== undefined ? { children } : {}),
+  } as TNode
+}
+
 export function createColumnNode(
   overrides?: Partial<ColumnNode> & NodeOverrideBase & { childCount?: number },
 ): ColumnNode {
   const self = resolveSelf('column', overrides?.id)
   const parent = overrides?.parent ?? { type: 'row', id: 100 }
-  const children = resolveChildren(overrides?.children, overrides?.childCount ?? 1, () =>
-    createSimpleElement({ parent: { type: 'column', id: self.id } }),
+  const children = resolveChildren<ChildOf<SimpleElementNode>>(
+    overrides?.children,
+    overrides?.childCount ?? 1,
+    () => createSimpleElement({ parent: { type: 'column', id: self.id } }),
   )
   const { childCount: _omitChildCount, ...rest } = overrides ?? {}
 
@@ -161,8 +225,10 @@ export function createRowNode(
 ): RowNode {
   const self = resolveSelf('row', overrides?.id)
   const parent = overrides?.parent ?? { type: 'section', id: 100 }
-  const children = resolveChildren(overrides?.children, overrides?.columnCount ?? 1, () =>
-    createColumnNode({ parent: { type: 'row', id: self.id } }),
+  const children = resolveChildren<ChildOf<ColumnNode>>(
+    overrides?.children,
+    overrides?.columnCount ?? 1,
+    () => createColumnNode({ parent: { type: 'row', id: self.id } }),
   )
   const { columnCount: _omitColumnCount, ...rest } = overrides ?? {}
 
@@ -186,8 +252,10 @@ export function createSectionNode(
 ): SectionNode {
   const self = resolveSelf('section', overrides?.id)
   const parent = overrides?.parent ?? { type: 'page', id: 1 }
-  const children = resolveChildren(overrides?.children, overrides?.rowCount ?? 1, () =>
-    createRowNode({ parent: { type: 'section', id: self.id } }),
+  const children = resolveChildren<ChildOf<RowNode>>(
+    overrides?.children,
+    overrides?.rowCount ?? 1,
+    () => createRowNode({ parent: { type: 'section', id: self.id } }),
   )
   const { rowCount: _omitRowCount, ...rest } = overrides ?? {}
 
@@ -225,13 +293,16 @@ export function createTreeApiResponse(
   // the extra key, fetch-mock tests parse it through normaliseTreeResponse.
 ): TreeApiResponse & { allowedTypes: AllowedTypesByContainerType } {
   const pageId = overrides?.pageId ?? overrides?.rootParent?.id ?? 1
-  const sections = overrides?.sections ?? [
-    createSectionNode({ parent: { type: 'page', id: pageId } }),
-  ]
+  // `nodes` as well as `sections`: a page root also holds shared block
+  // placements, which are not SectionNodes and so cannot go through `sections`.
+  // Without this arm `nodes` would type-check and then be silently dropped,
+  // seeding a default section in place of the roots the caller asked for.
+  const nodes: ElementNode[] = overrides?.nodes ??
+    overrides?.sections ?? [createSectionNode({ parent: { type: 'page', id: pageId } })]
   return {
     rootParent: overrides?.rootParent ?? { type: 'page', id: pageId },
     allowedTypes: overrides?.allowedTypes ?? { section: {}, row: {}, column: {} },
-    nodes: sections as ElementNode[],
+    nodes,
   }
 }
 
@@ -271,7 +342,10 @@ export function buildTree(options: BuildTreeOptions = {}): BuiltTree {
   const pageId = options.pageId ?? 1
   const sectionId = options.sectionId ?? id()
 
-  const rows = (options.rows ?? [{}]).map((rowSpec) => {
+  // Columns are kept as they are built rather than read back out of
+  // `row.children`: that field admits a SharedBlockReferenceNode, while
+  // buildTree only ever creates plain columns and BuiltTree promises as much.
+  const built = (options.rows ?? [{}]).map((rowSpec) => {
     const rowId = rowSpec.id ?? id()
     const columns = (rowSpec.columns ?? [{}]).map((columnSpec) =>
       createColumnNode({
@@ -281,12 +355,15 @@ export function buildTree(options: BuildTreeOptions = {}): BuiltTree {
         ...(columnSpec.childCount !== undefined ? { childCount: columnSpec.childCount } : {}),
       }),
     )
-    return createRowNode({
+    const row = createRowNode({
       id: rowId,
       parent: { type: 'section', id: sectionId },
       children: columns,
     })
+    return { row, columns }
   })
+
+  const rows = built.map((entry) => entry.row)
 
   const section = createSectionNode({
     id: sectionId,
@@ -298,6 +375,6 @@ export function buildTree(options: BuildTreeOptions = {}): BuiltTree {
     tree: createTreeApiResponse({ pageId, sections: [section] }),
     section,
     rows,
-    columns: rows.flatMap((row) => row.children ?? []),
+    columns: built.flatMap((entry) => entry.columns),
   }
 }

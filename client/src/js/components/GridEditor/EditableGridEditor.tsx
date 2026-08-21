@@ -1,26 +1,43 @@
 import { DndContext, DragOverlay } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
 import AddChildButton from '@/components/AddChildButton/AddChildButton'
 import DragOverlayContent from '@/components/DragOverlayContent/DragOverlayContent'
-import EditableSectionBlock from '@/components/SectionBlock/EditableSectionBlock'
 import { DragContext } from '@/hooks/useDragAndDrop'
 import { useElementTree } from '@/hooks/useElementTree'
+import { useSharedBlockTree } from '@/hooks/useSharedBlockQueries'
 import GridEditorShell, { resolveGridEditorStatus } from './GridEditorShell'
+import SharedBlockPickerDialog from '@/components/SharedBlockPickerDialog/SharedBlockPickerDialog'
+import { renderRootEntry } from './renderRootEntry'
 import { useGridEditorDnd } from './useGridEditorDnd'
 
 interface EditableGridEditorProps {
   readonly pageId: number
   readonly zone: string
+  /** 'sharedBlock' means `pageId` is a block id and the tree comes from the library route. */
+  readonly rootType?: 'page' | 'sharedBlock'
 }
 
-export default function EditableGridEditor({ pageId, zone }: EditableGridEditorProps) {
-  const { data, error } = useElementTree(pageId, zone)
+export default function EditableGridEditor({
+  pageId,
+  zone,
+  rootType = 'page',
+}: EditableGridEditorProps) {
+  const isBlockRooted = rootType === 'sharedBlock'
+
+  // Exactly one of these runs; the other is disabled via skipToken/enabled, so
+  // switching hosts never fires the wrong endpoint.
+  const pageTree = useElementTree(isBlockRooted ? null : pageId, zone)
+  const blockTree = useSharedBlockTree(isBlockRooted ? pageId : null)
+  const { data, error } = isBlockRooted ? blockTree : pageTree
   const { sections, sectionIds, dndContextProps, dragState, dragContextValue } = useGridEditorDnd(
     data,
     pageId,
     zone,
+    rootType,
   )
+
+  const [isSharedPickerOpen, setSharedPickerOpen] = useState(false)
 
   const status = resolveGridEditorStatus(data, error)
 
@@ -28,13 +45,22 @@ export default function EditableGridEditor({ pageId, zone }: EditableGridEditorP
   // after the last one; when there are no sections, a single empty-state add
   // button. Always rendered inside DndContext/SortableContext (sectionIds is
   // [] when empty).
+  // Placements are never offered inside the library editor: a block may not
+  // contain another block.
+  const openSharedPicker = isBlockRooted ? undefined : () => setSharedPickerOpen(true)
+
+  // A block owns exactly one subtree, so the library editor offers the add
+  // affordance only while the block is still empty — that is the one moment a
+  // root is missing. A page zone, by contrast, takes any number of sections.
   const editableSectionList =
     sections.length > 0 ? (
       <>
-        <AddChildButton parentId={pageId} childType="section" variant="before-first" />
-        {sections.map((section, index) => (
-          <Fragment key={section.nodeKey}>
-            {index > 0 && (
+        {!isBlockRooted && (
+          <AddChildButton parentId={pageId} childType="section" variant="before-first" />
+        )}
+        {sections.map((entry, index) => (
+          <Fragment key={entry.nodeKey}>
+            {index > 0 && !isBlockRooted && (
               <AddChildButton
                 parentId={pageId}
                 childType="section"
@@ -42,13 +68,26 @@ export default function EditableGridEditor({ pageId, zone }: EditableGridEditorP
                 insertAfterId={sections[index - 1].self.id}
               />
             )}
-            <EditableSectionBlock section={section} />
+            {renderRootEntry(entry, { siblings: sections })}
           </Fragment>
         ))}
-        <AddChildButton parentId={pageId} childType="section" variant="append" />
+        {!isBlockRooted && (
+          <AddChildButton
+            parentId={pageId}
+            childType="section"
+            variant="append"
+            onAddShared={openSharedPicker}
+          />
+        )}
       </>
     ) : (
-      <AddChildButton parentId={pageId} childType="section" variant="empty-state" />
+      <AddChildButton
+        parentId={pageId}
+        childType="section"
+        variant="empty-state"
+        parentType={isBlockRooted ? 'sharedBlock' : undefined}
+        onAddShared={openSharedPicker}
+      />
     )
 
   return (
@@ -56,6 +95,7 @@ export default function EditableGridEditor({ pageId, zone }: EditableGridEditorP
       pageId={pageId}
       zone={zone}
       readonly={false}
+      rootType={rootType}
       status={status}
       error={error}
       sections={sections}
@@ -77,6 +117,15 @@ export default function EditableGridEditor({ pageId, zone }: EditableGridEditorP
           )}
         </DragOverlay>
       </DndContext>
+      {isSharedPickerOpen && (
+        <SharedBlockPickerDialog
+          parentType="page"
+          parent={{ type: 'page', id: pageId }}
+          zone={zone}
+          isOpen={isSharedPickerOpen}
+          onClose={() => setSharedPickerOpen(false)}
+        />
+      )}
     </GridEditorShell>
   )
 }
