@@ -130,6 +130,7 @@ final readonly class RequestBodyParser
         $blockId = $data['blockId'] ?? null;
         $zone = $data['zone'] ?? '';
         $afterElementID = $data['insertAfterElementID'] ?? null;
+        $insertAtStart = $data['insertAtStart'] ?? false;
 
         if (!is_int($blockId) || $blockId < 1) {
             return Result::fail(new ValidationError('blockId must be a positive integer.'));
@@ -148,7 +149,15 @@ final readonly class RequestBodyParser
             return Result::fail(new ValidationError('insertAfterElementID must be a positive integer or null.'));
         }
 
-        return Result::ok(new PlaceSharedBlockRequest($blockId, $parentResult->unwrap(), $zone, $afterElementID));
+        if (!is_bool($insertAtStart)) {
+            return Result::fail(new ValidationError('insertAtStart must be a boolean.'));
+        }
+
+        if ($insertAtStart && $afterElementID !== null) {
+            return Result::fail(new ValidationError('insertAtStart and insertAfterElementID are mutually exclusive.'));
+        }
+
+        return Result::ok(new PlaceSharedBlockRequest($blockId, $parentResult->unwrap(), $zone, $afterElementID, $insertAtStart));
     }
 
     /**

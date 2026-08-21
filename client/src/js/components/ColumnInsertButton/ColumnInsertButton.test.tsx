@@ -14,7 +14,7 @@ describe('ColumnInsertButton', () => {
 
     renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />)
 
-    const button = screen.getByTestId('column-insert-start')
+    const button = screen.getByTestId('column-insert-start-add')
     expect(button).toHaveAccessibleName('Add a column at the start')
 
     await user.click(button)
@@ -40,7 +40,7 @@ describe('ColumnInsertButton', () => {
 
     renderWithProviders(<ColumnInsertButton rowId={7} placement="end" afterColumnId={42} />)
 
-    const button = screen.getByTestId('column-insert-end')
+    const button = screen.getByTestId('column-insert-end-add')
     expect(button).toHaveAccessibleName('Add a column at the end')
 
     await user.click(button)
@@ -66,7 +66,7 @@ describe('ColumnInsertButton', () => {
 
     renderWithProviders(<ColumnInsertButton rowId={7} placement="between" afterColumnId={9} />)
 
-    const button = screen.getByTestId('column-insert-between')
+    const button = screen.getByTestId('column-insert-between-add')
     expect(button).toHaveAccessibleName('Add a column here')
 
     await user.click(button)
@@ -113,7 +113,7 @@ describe('ColumnInsertButton', () => {
 
     renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />)
 
-    const button = screen.getByTestId('column-insert-start')
+    const button = screen.getByTestId('column-insert-start-add')
     // Idle first: `aria-disabled` is the only disabled signal now, so a stuck
     // `true` would announce the button as unavailable for its whole resting
     // life while every click-path test stayed green.
@@ -134,7 +134,7 @@ describe('ColumnInsertButton', () => {
 
     renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />)
 
-    const button = screen.getByTestId('column-insert-start')
+    const button = screen.getByTestId('column-insert-start-add')
     await user.click(button)
     await waitFor(() => {
       expect(button).toHaveAttribute('aria-disabled', 'true')
@@ -143,5 +143,114 @@ describe('ColumnInsertButton', () => {
     await user.click(button)
 
     expect(fetchSpy).toHaveBeenCalledTimes(1)
+  })
+
+  describe('shared route', () => {
+    it('offers the shared route at every placement, named for what it places', async () => {
+      const user = userEvent.setup()
+      mockFetchSuccess({})
+
+      renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />)
+
+      await user.click(screen.getByTestId('column-insert-shared-trigger'))
+
+      expect(screen.getByRole('menuitem', { name: 'Place shared column…' })).toBeInTheDocument()
+    })
+
+    it('start placement places a shared column before every sibling', async () => {
+      const user = userEvent.setup()
+      mockFetchSuccess([
+        { id: 3, title: 'Card', rootType: 'column', usageCount: 1, status: 'published' },
+      ])
+
+      renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />)
+
+      await user.click(screen.getByTestId('column-insert-shared-trigger'))
+      await user.click(screen.getByRole('menuitem', { name: 'Place shared column…' }))
+      await user.click(await screen.findByTestId('shared-block-picker-row'))
+
+      await waitFor(() => {
+        const call = getFetchCalls().find(([url]) =>
+          String(url).includes('/admin/grid-shared-blocks/api/place'),
+        )
+        expect(call).toBeDefined()
+        const body = JSON.parse(call![1]!.body as string)
+        expect(body).toMatchObject({
+          blockId: 3,
+          parent: { type: 'row', id: 7 },
+          insertAtStart: true,
+        })
+        expect(body.insertAfterElementID).toBeUndefined()
+      })
+    })
+
+    it('between placement places a shared column after the column to its left', async () => {
+      const user = userEvent.setup()
+      mockFetchSuccess([
+        { id: 3, title: 'Card', rootType: 'column', usageCount: 1, status: 'published' },
+      ])
+
+      renderWithProviders(<ColumnInsertButton rowId={7} placement="between" afterColumnId={9} />)
+
+      await user.click(screen.getByTestId('column-insert-shared-trigger'))
+      await user.click(screen.getByRole('menuitem', { name: 'Place shared column…' }))
+      await user.click(await screen.findByTestId('shared-block-picker-row'))
+
+      await waitFor(() => {
+        const call = getFetchCalls().find(([url]) =>
+          String(url).includes('/admin/grid-shared-blocks/api/place'),
+        )
+        expect(call).toBeDefined()
+        expect(JSON.parse(call![1]!.body as string)).toMatchObject({
+          blockId: 3,
+          parent: { type: 'row', id: 7 },
+          insertAfterElementID: 9,
+        })
+      })
+    })
+
+    it('filters the library to column-rooted blocks', async () => {
+      const user = userEvent.setup()
+      mockFetchSuccess([])
+
+      renderWithProviders(<ColumnInsertButton rowId={7} placement="end" afterColumnId={42} />)
+
+      await user.click(screen.getByTestId('column-insert-shared-trigger'))
+      await user.click(screen.getByRole('menuitem', { name: 'Place shared column…' }))
+
+      expect(await screen.findByTestId('shared-block-picker')).toBeInTheDocument()
+
+      const listCall = getFetchCalls().find(([url]) => String(url).includes('api/list?'))
+      expect(listCall?.[0]).toBe('/admin/grid-shared-blocks/api/list?parentType=row')
+    })
+  })
+
+  it('offers no shared column route inside the library editor', () => {
+    // The caret had no suppression signal at all before: a block may not
+    // contain a block, at any depth.
+    renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />, {
+      rootType: 'sharedBlock',
+    })
+
+    expect(screen.queryByTestId('column-insert-shared-trigger')).toBeNull()
+  })
+
+  // `data-split` is what the stylesheet sizes the pill from: with the caret
+  // suppressed the control is the bare "+" square, and without the flag it kept
+  // the split's 44px width and squared trailing corners — a half-empty pill.
+  it('flags itself as split only while the caret is rendered', () => {
+    const { unmount } = renderWithProviders(
+      <ColumnInsertButton rowId={7} placement="between" afterColumnId={9} />,
+    )
+
+    expect(screen.getByTestId('column-insert-between')).toHaveAttribute('data-split', '')
+
+    unmount()
+
+    renderWithProviders(<ColumnInsertButton rowId={7} placement="between" afterColumnId={9} />, {
+      rootType: 'sharedBlock',
+    })
+
+    expect(screen.getByTestId('column-insert-between')).not.toHaveAttribute('data-split')
   })
 })

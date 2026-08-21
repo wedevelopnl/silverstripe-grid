@@ -336,6 +336,7 @@ export interface PlaceSharedBlockParams {
   parent: NodeRef
   zone?: string
   insertAfterElementID?: number
+  insertAtStart?: boolean
 }
 
 export async function placeSharedBlock(params: PlaceSharedBlockParams): Promise<void> {

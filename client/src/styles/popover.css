@@ -1,10 +1,10 @@
-/* Shared popover surface for the three flyouts the editor renders inline (not
+/* Shared popover surface for the four flyouts the editor renders inline (not
    in a portal): the column width/offset listbox (GridSettingsPicker), the
-   per-element actions menu (ActionsMenu) and the viewport picker. All anchor to
-   a `position: relative` wrapper and drop a white card below the trigger.
-   Keyboard state lives on the elements as
-   `tabindex`/`aria-selected`/`aria-activedescendant` (set by React); look lives
-   here. The three `.ssgrid-popover-*` classes are composed into the markup
+   per-element actions menu (ActionsMenu), the viewport picker and the placement
+   menu on the split add controls. All anchor to a `position: relative` wrapper
+   and drop a white card below the trigger. Keyboard state lives on the elements
+   as `tabindex`/`aria-selected`/`aria-activedescendant` (set by React); look
+   lives here. The three `.ssgrid-popover-*` classes are composed into the markup
    alongside each flyout's own block class. */
 
 .ssgrid-popover-anchor {
@@ -277,4 +277,69 @@
   height: var(--ssgrid-size-dot);
   border-radius: 50%;
   background: var(--ssgrid-surface-action);
+}
+
+/* --- Placement menu (the caret half of a split add control) -----------------
+   Two scales, one behaviour: `strip` is a 32px stub divided from
+   AddChildButton's full-width button by the strip's own dashed rule; `chip` is
+   a 20px stub on ColumnInsertButton's solid brand square, divided by a
+   translucent white rule. The flyout itself is the shared popover surface, so
+   only the trigger and the two scales are declared here. */
+.ssgrid-placement-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: currentcolor;
+  font: inherit;
+  cursor: pointer;
+
+  /* Flush against its sibling button inside a shared outline — a positive
+     offset would draw the ring outside the control it belongs to. */
+  --ssgrid-focus-ring-offset: -2px;
+}
+
+.ssgrid-placement-menu-caret {
+  --ssgrid-glyph-size: var(--ssgrid-size-icon);
+}
+
+/* The caret always sits at its control's trailing edge, so the menu hangs from
+   the right rather than the left. */
+.ssgrid-placement-menu-menu {
+  right: 0;
+  min-width: 200px;
+}
+
+/* Strip scale: inside the dashed outline of .ssgrid-add-child-split. */
+.ssgrid-placement-menu[data-variant='strip'] .ssgrid-placement-menu-trigger {
+  width: var(--ssgrid-size-control);
+  height: var(--ssgrid-size-control);
+  border-left: 1px dashed var(--ssgrid-border-focus);
+  border-radius: 0 var(--ssgrid-radius-sm) var(--ssgrid-radius-sm) 0;
+  color: var(--ssgrid-text-brand);
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--ssgrid-surface-hover);
+  }
+}
+
+/* Chip scale: on the solid brand square of a column insert control. */
+.ssgrid-placement-menu[data-variant='chip'] .ssgrid-placement-menu-trigger {
+  width: 20px;
+  height: var(--ssgrid-size-chip);
+  border-left: 1px solid var(--ssgrid-color-overlay-white-38);
+  border-radius: 0 var(--ssgrid-radius-sm) var(--ssgrid-radius-sm) 0;
+  color: var(--ssgrid-text-on-action);
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--ssgrid-color-overlay-black-10);
+  }
+}
+
+.ssgrid-placement-menu[data-variant='chip'] .ssgrid-placement-menu-caret {
+  --ssgrid-glyph-size: 10px;
 }

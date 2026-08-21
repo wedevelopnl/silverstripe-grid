@@ -1,11 +1,18 @@
-/* Column-insert affordances on a Row (ColumnInsertButton). Three placements,
-   all creating a new Column under the row:
-   - `start` / `end` — the Figma "+" squares flanking the row's columns. Always
-     visible, 24×24, solid brand, white "+".
+/* Column-insert affordances on a Row (ColumnInsertButton). Each is a split
+   control: a "+" button plus the caret stub of PlacementMenu (see popover.css),
+   which places a shared column at the same spot. Three placements, all adding a
+   Column under the row:
+   - `start` / `end` — the Figma "+" squares flanking the row's columns, now
+     24px of "+" plus a 20px caret. Always visible, solid brand, white glyphs.
    - `between` — the Figma "Dot" handle sitting in a column gutter: an 8px brand
-     ring by default that, on hover/focus, blooms into the same 24×24 "+" square
-     (lifted with the design's 0 4px 8px / 15% drop shadow). Absolutely positioned
-     so it never disturbs the column width math in `.ssgrid-row-columns`.
+     ring by default that, on hover/focus, blooms into the full 44px split pill
+     (lifted with the design's 0 4px 8px / 15% drop shadow). Absolutely
+     positioned so it never disturbs the column width math in
+     `.ssgrid-row-columns`.
+   `data-split` on the wrapper says whether the caret half is actually there:
+   the library editor drops it (a block may not contain a block), and every
+   dimension that counts the caret in is gated on that attribute so the lone
+   "+" stays a square rather than a half-filled pill.
    The focus ring comes from `.ssgrid-focus-ring` in the markup. */
 
 /* Geometry from `.ssgrid-glyph` in the markup; the white fill is this
@@ -19,13 +26,22 @@
   display: none;
 }
 
+/* Deliberately NOT `overflow: hidden`, tempting as that is for the bloom
+   transition: the caret's flyout is absolutely positioned inside this box, and
+   clipping here would clip the open menu. */
 .ssgrid-column-insert {
   display: inline-flex;
   flex: 0 0 auto;
+  align-items: stretch;
+}
+
+.ssgrid-column-insert-add {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: 0;
+  border-radius: var(--ssgrid-radius-sm);
   background: none;
   font: inherit;
   cursor: pointer;
@@ -36,66 +52,113 @@
     cursor: progress;
     opacity: var(--ssgrid-opacity-pending);
   }
+}
 
-  /* --- Edge squares (placement=start | end) --------------------------------- */
-  &[data-placement='start'],
-  &[data-placement='end'] {
+/* Square trailing corners only where the caret butts against them. The library
+   editor renders no caret (a block may not contain a block), so there the "+"
+   is the whole control and keeps all four — hence `data-split` rather than an
+   unconditional half-radius. */
+.ssgrid-column-insert[data-split] .ssgrid-column-insert-add {
+  border-radius: var(--ssgrid-radius-sm) 0 0 var(--ssgrid-radius-sm);
+}
+
+/* --- Edge pills (placement=start | end) -------------------------------------
+   Always visible: the 24px "+" square plus the 20px caret stub, one radius. */
+.ssgrid-column-insert[data-placement='start'],
+.ssgrid-column-insert[data-placement='end'] {
+  height: var(--ssgrid-size-chip);
+  border-radius: var(--ssgrid-radius-sm);
+  background: var(--ssgrid-surface-action);
+
+  & .ssgrid-column-insert-add {
     width: var(--ssgrid-size-chip);
-    height: var(--ssgrid-size-chip);
-    border-radius: var(--ssgrid-radius-sm);
-    background: var(--ssgrid-surface-action);
 
     &:hover:not([aria-disabled='true']) {
-      filter: brightness(0.92);
+      background: var(--ssgrid-color-overlay-black-10);
+    }
+  }
+}
+
+/* --- Gutter handle (placement=between) --------------------------------------
+   Collapsed geometry is unchanged: an 8px ring in a 24px hit box, absolutely
+   positioned so it never disturbs the column width math. Anchored to the left
+   edge of the column it precedes — the centre of a plain 16px gutter; when that
+   column carries a margin offset the gutter is wider, so --ssgrid-insert-shift
+   (a % of the column width) slides the handle back to the new gutter centre.
+   Grid-placement offsets are left alone (the gap math differs). On hover/focus
+   it blooms into the same pill as the edges — 24 + 20 = 44px where the caret is
+   there, the bare 24px square where it is not — overhanging both neighbouring
+   columns, which is why it carries the lift shadow. */
+.ssgrid-column-insert[data-placement='between'] {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: calc(-1 * var(--ssgrid-insert-shift, 0%));
+  z-index: 2;
+  width: var(--ssgrid-size-chip); /* generous hit area straddling the gutter */
+  height: var(--ssgrid-size-chip);
+  transform: translate(-50%, -50%);
+  border-radius: var(--ssgrid-radius-sm);
+  transition:
+    width 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease;
+
+  & .ssgrid-column-insert-add {
+    width: var(--ssgrid-size-chip);
+    flex: 0 0 auto;
+  }
+
+  & .ssgrid-column-insert-dot {
+    display: block;
+    width: var(--ssgrid-size-dot);
+    height: var(--ssgrid-size-dot);
+    border: 2px solid var(--ssgrid-border-focus);
+    border-radius: 50%;
+    background: transparent;
+  }
+
+  & .ssgrid-column-insert-icon {
+    position: absolute;
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+
+  /* The caret only exists once bloomed — it has no collapsed state. Collapsed
+     on the trigger, not on the menu wrapper: the wrapper anchors the flyout, so
+     clipping it would clip the open menu. The extra attribute selector buys the
+     specificity to beat the chip variant's own 20px width, declared later in
+     the bundle. */
+  & .ssgrid-placement-menu[data-variant='chip'] .ssgrid-placement-menu-trigger {
+    width: 0;
+    overflow: hidden;
+    transition: width 120ms ease;
+  }
+
+  /* `:focus-within`, not `:focus-visible` — the wrapper is a span, so the
+     focusable thing is the button or the caret inside it. */
+  &:hover,
+  &:focus-within {
+    /* Caret-less (library editor), the bloom is just the "+" square; the split
+       adds the 20px caret stub on top of it. */
+    width: var(--ssgrid-size-chip);
+    background: var(--ssgrid-surface-action);
+    box-shadow: var(--ssgrid-shadow-2);
+
+    & .ssgrid-column-insert-dot {
+      background: var(--ssgrid-border-focus);
+    }
+
+    & .ssgrid-column-insert-icon {
+      opacity: 1;
+    }
+
+    & .ssgrid-placement-menu[data-variant='chip'] .ssgrid-placement-menu-trigger {
+      width: 20px;
     }
   }
 
-  /* --- Gutter handle (placement=between) ------------------------------------
-     Anchored to the left edge of the column it precedes — the centre of a plain
-     16px gutter. When that column carries a margin offset the gutter is wider,
-     so ColumnInsertButton sets --ssgrid-insert-shift (a % of the column width)
-     to slide the handle back to the new gutter centre instead of hugging the
-     column. Grid-placement offsets are left alone (the gap math differs). */
-  &[data-placement='between'] {
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-start: calc(-1 * var(--ssgrid-insert-shift, 0%));
-    z-index: 2;
-    width: var(--ssgrid-size-chip); /* generous hit area straddling the gutter */
-    height: var(--ssgrid-size-chip);
-    transform: translate(-50%, -50%);
-    border-radius: var(--ssgrid-radius-sm);
-    transition:
-      background 120ms ease,
-      box-shadow 120ms ease;
-
-    .ssgrid-column-insert-dot {
-      display: block;
-      width: var(--ssgrid-size-dot);
-      height: var(--ssgrid-size-dot);
-      border: 2px solid var(--ssgrid-border-focus);
-      border-radius: 50%;
-      background: transparent;
-    }
-
-    .ssgrid-column-insert-icon {
-      position: absolute;
-      opacity: 0;
-      transition: opacity 120ms ease;
-    }
-
-    &:hover,
-    &:focus-visible {
-      background: var(--ssgrid-surface-action);
-      box-shadow: var(--ssgrid-shadow-2);
-
-      .ssgrid-column-insert-dot {
-        background: var(--ssgrid-border-focus);
-      }
-
-      .ssgrid-column-insert-icon {
-        opacity: 1;
-      }
-    }
+  &[data-split]:hover,
+  &[data-split]:focus-within {
+    width: 44px;
   }
 }

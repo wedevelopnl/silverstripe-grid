@@ -3,7 +3,8 @@ import { readAdapterConfig } from '../helpers/adapter'
 import { loadAndNavigate } from '../helpers/fixtures'
 
 /**
- * Regenerates the images embedded in README.md and docs/usage/grid-editor.md.
+ * Regenerates the images embedded in README.md, docs/usage/grid-editor.md and
+ * docs/usage/shared-blocks.md.
  *
  * Run with `npm run docs:screenshots` (not part of `task test-e2e` — see
  * playwright.docs.config.ts). Every capture comes from the `docs-page`
@@ -143,6 +144,21 @@ test('element type picker', async ({ page }) => {
   await expect(picker).toBeVisible()
 
   await shoot(page, 'element-type-picker', [picker])
+})
+
+test('shared block placement', async ({ page }) => {
+  await openDocsPage(page)
+
+  // The ROOT add strip, scoped by canvas child so a section's nested one
+  // (which offers row-rooted blocks) cannot be picked up.
+  const strip = page.getByTestId('grid-editor-canvas').locator('> [data-testid="add-child-append"]')
+  await strip.scrollIntoViewIfNeeded()
+  await strip.getByTestId('add-child-shared-trigger').click()
+
+  const menu = page.getByTestId('add-child-shared-dropdown')
+  await expect(menu).toBeVisible()
+
+  await shoot(page, 'shared-block-placement', [strip, menu])
 })
 
 test('column width and offset', async ({ page }) => {

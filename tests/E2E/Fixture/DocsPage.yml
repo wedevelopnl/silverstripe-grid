@@ -24,8 +24,20 @@ Page:
     Title: 'Home'
     URLSegment: 'e2e-docs-home'
 
-# --- Sections (into page) ---
+# --- Shared block library ---
+# Section-rooted, and deliberately NOT placed on the page: it exists so the
+# placement caret's menu has something real behind it in the screenshot, while
+# the page's own structure — and every other capture — stays unchanged.
+WeDevelop\Grid\Model\SharedBlock:
+  cta_block:
+    Title: 'Newsletter call to action'
+
+# --- Sections (into page, and one into the block) ---
 WeDevelop\Grid\Model\Section:
+  cta_section:
+    Title: 'Newsletter call to action'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\SharedBlock.cta_block
   hero_section:
     Title: 'Hero'
     Sort: 1
@@ -44,6 +56,10 @@ WeDevelop\Grid\Model\Section:
 
 # --- Rows (into sections) ---
 WeDevelop\Grid\Model\Row:
+  cta_row:
+    Title: 'Signup'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.cta_section
   hero_row:
     Title: 'Banner'
     Sort: 1
@@ -63,6 +79,11 @@ WeDevelop\Grid\Model\Row:
 
 # --- Columns (into rows) ---
 WeDevelop\Grid\Model\Column:
+  cta_col:
+    Title: 'Full width'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.cta_row
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
   hero_col:
     Title: 'Full width'
     Sort: 1
@@ -101,6 +122,11 @@ WeDevelop\Grid\Model\Column:
 
 # --- Content blocks (into columns) ---
 WeDevelop\Grid\Model\ContentElement:
+  cta_content:
+    Title: 'Stay in the loop'
+    HTML: '<p>One short email a month about what we shipped.</p>'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.cta_col
   hero_block:
     Title: 'Publish faster'
     HTML: '<p>Give editors a real layout tool without handing them a page builder they can break.</p>'

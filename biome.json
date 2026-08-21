@@ -243,7 +243,8 @@
     {
       "includes": [
         "client/src/js/components/ConfirmDialog/ConfirmDialog.tsx",
-        "client/src/js/components/DuplicateToDialog/DuplicateToDialog.tsx"
+        "client/src/js/components/DuplicateToDialog/DuplicateToDialog.tsx",
+        "client/src/js/components/SharedBlockPickerDialog/SharedBlockPickerDialog.tsx"
       ],
       "linter": {
         "rules": {

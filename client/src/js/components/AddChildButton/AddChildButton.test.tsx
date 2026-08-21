@@ -239,3 +239,133 @@ describe('AddChildButton', () => {
     createSpy.mockRestore()
   })
 })
+
+describe('AddChildButton shared route', () => {
+  it('offers the caret on every gap variant, not just the trailing one', () => {
+    mockFetchSuccess({})
+
+    for (const variant of ['append', 'before-first', 'empty-state'] as const) {
+      const { unmount } = renderWithProviders(
+        <AddChildButton parentId={10} childType="row" variant={variant} />,
+      )
+      expect(screen.getByTestId('add-child-shared-trigger')).toBeInTheDocument()
+      unmount()
+    }
+
+    renderWithProviders(
+      <AddChildButton parentId={10} childType="row" variant="between" insertAfterId={7} />,
+    )
+    expect(screen.getByTestId('add-child-shared-trigger')).toBeInTheDocument()
+  })
+
+  it('names the route after what it actually places', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess({})
+
+    renderWithProviders(<AddChildButton parentId={1} childType="section" variant="append" />)
+
+    await user.click(screen.getByTestId('add-child-shared-trigger'))
+
+    expect(screen.getByRole('menuitem', { name: 'Place shared section…' })).toBeInTheDocument()
+  })
+
+  it('offers no shared route inside the library editor — a block may not hold a block', () => {
+    mockFetchSuccess({})
+
+    renderWithProviders(
+      <AddChildButton
+        parentId={9}
+        childType="section"
+        variant="empty-state"
+        parentType="sharedBlock"
+      />,
+    )
+
+    expect(screen.queryByTestId('add-child-shared-trigger')).not.toBeInTheDocument()
+  })
+
+  it('opens the picker filtered to the parent kind this host represents', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess([])
+
+    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="append" />)
+
+    await user.click(screen.getByTestId('add-child-shared-trigger'))
+    await user.click(screen.getByRole('menuitem', { name: 'Place shared row…' }))
+
+    expect(await screen.findByTestId('shared-block-picker')).toBeInTheDocument()
+
+    const listCall = getFetchCalls().find(([url]) => String(url).includes('api/list?'))
+    expect(listCall?.[0]).toBe('/admin/grid-shared-blocks/api/list?parentType=section')
+  })
+
+  it('carries the gap position into the placement — between sends insertAfterElementID', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess([
+      { id: 3, title: 'Banner', rootType: 'row', usageCount: 1, status: 'published' },
+    ])
+
+    renderWithProviders(
+      <AddChildButton parentId={10} childType="row" variant="between" insertAfterId={7} />,
+    )
+
+    await user.click(screen.getByTestId('add-child-shared-trigger'))
+    await user.click(screen.getByRole('menuitem', { name: 'Place shared row…' }))
+    await user.click(await screen.findByTestId('shared-block-picker-row'))
+
+    await waitFor(() => {
+      const call = getFetchCalls().find(([url]) =>
+        String(url).includes('/admin/grid-shared-blocks/api/place'),
+      )
+      expect(call).toBeDefined()
+      expect(JSON.parse(call![1]!.body as string)).toMatchObject({
+        blockId: 3,
+        parent: { type: 'section', id: 10 },
+        insertAfterElementID: 7,
+      })
+    })
+  })
+
+  it('carries the leading gap into the placement — before-first sends insertAtStart', async () => {
+    const user = userEvent.setup()
+    mockFetchSuccess([
+      { id: 3, title: 'Banner', rootType: 'row', usageCount: 1, status: 'published' },
+    ])
+
+    renderWithProviders(<AddChildButton parentId={10} childType="row" variant="before-first" />)
+
+    await user.click(screen.getByTestId('add-child-shared-trigger'))
+    await user.click(screen.getByRole('menuitem', { name: 'Place shared row…' }))
+    await user.click(await screen.findByTestId('shared-block-picker-row'))
+
+    await waitFor(() => {
+      const call = getFetchCalls().find(([url]) =>
+        String(url).includes('/admin/grid-shared-blocks/api/place'),
+      )
+      expect(call).toBeDefined()
+      const body = JSON.parse(call![1]!.body as string)
+      expect(body).toMatchObject({ blockId: 3, insertAtStart: true })
+      expect(body.insertAfterElementID).toBeUndefined()
+    })
+  })
+
+  // Regression: the suppression used to key off `parentType`, which only the
+  // root empty-state button receives. Every nested add strip inside the library
+  // editor therefore still offered a placement the server rejects.
+  it.each(['section', 'row', 'column'] as const)(
+    'offers no shared route on a %s add strip inside the library editor',
+    (childType) => {
+      renderWithProviders(<AddChildButton parentId={7} childType={childType} variant="append" />, {
+        rootType: 'sharedBlock',
+      })
+
+      expect(screen.queryByTestId('add-child-shared-trigger')).toBeNull()
+    },
+  )
+
+  it('still offers the shared route on the same strip in a page zone', () => {
+    renderWithProviders(<AddChildButton parentId={7} childType="row" variant="append" />)
+
+    expect(screen.getByTestId('add-child-shared-trigger')).toBeInTheDocument()
+  })
+})

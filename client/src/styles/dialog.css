@@ -163,6 +163,63 @@
   }
 }
 
+/* --- Shared block library rows -----------------------------------------------
+   A library row answers three questions the plain option never had to: what is
+   it called, where may it go (its root type), and is it safe to place yet.
+   Hence a two-line label with the tags claiming the trailing edge, rather than
+   one run-on line of metadata. */
+
+.ssgrid-dialog-option-block {
+  align-items: center;
+  gap: var(--ssgrid-space-3);
+  padding: 10px;
+}
+
+.ssgrid-dialog-option-main {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Truncation comes from `.ssgrid-truncate` in the markup. */
+.ssgrid-dialog-option-title {
+  font-weight: var(--ssgrid-font-weight-medium);
+}
+
+.ssgrid-dialog-option-meta {
+  color: var(--ssgrid-text-muted);
+  font-size: var(--ssgrid-font-size-label);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--ssgrid-line-height-tight);
+}
+
+.ssgrid-dialog-option-tags {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--ssgrid-space-2);
+}
+
+/* The root type is a standing structural fact, so it stays neutral: orange is
+   reserved for "needs publishing" and purple is the interaction hue. The
+   unpublished tag beside it is `.ssgrid-status-badge` from publish-status.css,
+   the same pill every element status uses. */
+.ssgrid-dialog-option-kind {
+  display: inline-flex;
+  align-items: center;
+  height: var(--ssgrid-size-chip);
+  padding: 0 var(--ssgrid-space-2);
+  background: var(--ssgrid-surface-muted);
+  border: 1px solid var(--ssgrid-border-default);
+  border-radius: var(--ssgrid-radius-sm);
+  color: var(--ssgrid-text-muted);
+  font-size: var(--ssgrid-font-size-label);
+  line-height: var(--ssgrid-line-height-tight);
+  white-space: nowrap;
+}
+
 /* --- Element type picker tile grid ------------------------------------------- */
 
 .ssgrid-dialog-grid {

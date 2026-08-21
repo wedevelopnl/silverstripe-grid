@@ -42,6 +42,7 @@ class SharedBlockService
      * Create a reference to $block under $parent.
      *
      * @param positive-int|null $insertAfterElementID
+     * @param bool $insertAtStart Place the reference before all existing siblings. Mutually exclusive with $insertAfterElementID.
      * @return Result<SharedBlockReference>
      */
     #[NoDiscard('The Result carries the created reference or the validation errors that blocked it.')]
@@ -50,6 +51,7 @@ class SharedBlockService
         DataObject $parent,
         string $zone,
         ?int $insertAfterElementID,
+        bool $insertAtStart = false,
     ): Result {
         $reference = SharedBlockReference::create();
         $reference->BlockID = $block->ID;
@@ -74,7 +76,7 @@ class SharedBlockService
         $reference->ParentClass = $parent::class;
 
         return Transactional::run(
-            function () use ($reference, $parent, $insertAfterElementID): Result {
+            function () use ($reference, $parent, $insertAfterElementID, $insertAtStart): Result {
                 $write = WriteResult::from(static function () use ($reference): SharedBlockReference {
                     $reference->write();
 
@@ -83,6 +85,15 @@ class SharedBlockService
 
                 if ($write->isErr()) {
                     return $write;
+                }
+
+                // A null reference id tells the placement service "splice at
+                // index 0 and reindex the rest" — the same contract
+                // GridElementService::writeThenPlace() relies on.
+                if ($insertAtStart) {
+                    $placed = $this->placementService->insertAfter($reference, $parent, null);
+
+                    return $placed->isErr() ? Result::fail(...$placed->errors()) : Result::ok($reference);
                 }
 
                 if ($insertAfterElementID === null) {
