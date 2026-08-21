@@ -13,6 +13,7 @@ Elemental-style modules give editors a flat list of blocks and leave layout to t
 - **Responsive per column.** One default layout per column, plus overrides only for the breakpoints that differ.
 - **Versioned like the rest of the CMS.** Draft/live, publish-with-the-page, per-element history, and a read-only grid in the history viewer.
 - **Drag and drop across containers.** Move a block into another column, a column into another row, a row into another section — with optimistic updates and rollback on failure.
+- **Shared blocks.** Maintain a piece of content once in a central library and place it on any number of pages. Edit it anywhere, publish it on its own schedule, detach it when one page needs to diverge. ([guide](docs/usage/shared-blocks.md))
 - **Multi-locale ready.** Optional [Fluent](docs/fluent.md) integration gives each locale its own isolated grid.
 
 ## The content model
@@ -104,6 +105,7 @@ The full map, with a line on what each document covers, is in [`docs/`](docs/REA
 
 **Building with it**
 
+- [Shared blocks](docs/usage/shared-blocks.md) — content maintained once and placed on many pages
 - [Custom content elements](docs/usage/custom-elements.md) — subclass `ContentElement`, add CMS fields and templates
 - [Template integration](docs/usage/templates.md) — the holder chain, zones, theme overrides, extension hooks
 - [Internationalization](docs/usage/i18n.md) — translating strings, adding a locale, the PHP and JS collectors

@@ -48,7 +48,19 @@ When Fluent is installed, the module automatically handles two CMS operations:
 - **Copy to locale**: When a page is copied to a new locale (via CMS "Copy to other locales" or `CopyToLocaleService`), the entire grid hierarchy is duplicated into the target locale. The source locale's tree is unchanged.
 - **Clear from locale**: When a locale is cleared from a page, all grid elements in that locale are deleted (cascade through Section → Row → Column → Content). Other locales are unaffected.
 
-This is handled by `FluentGridPageExtension` (applied to SiteTree) and `GridAwareDeleteLocalisationPolicy` (registered in place of Fluent's `DeleteLocalisationPolicy` via DI). Both are registered automatically in `_config/fluent.yml` when Fluent is installed.
+### Shared blocks
+
+[Shared blocks](usage/shared-blocks.md) follow the same isolation model, with one wrinkle worth knowing:
+
+- The block **record** is a single cross-locale row; its **subtree** is locale-isolated like any other element.
+- Copying a **page** carries its placements, pointing at the same block — it does not duplicate the block's subtree.
+- Copying a **block** clones that block's subtree into the target locale.
+- Clearing a locale removes that locale's block subtrees and that locale's placements; the block record survives.
+- A placement whose block has no content in the current locale renders empty on the front end.
+
+`FluentSharedBlockExtension` handles the block side, sharing its clone mechanics with the page side through `LocalisedSubtreeCloner`.
+
+This is handled by `FluentGridPageExtension` (applied to SiteTree), `FluentSharedBlockExtension` (applied to SharedBlock) and `GridAwareDeleteLocalisationPolicy` (registered in place of Fluent's `DeleteLocalisationPolicy` via DI). All three are registered automatically in `_config/fluent.yml` when Fluent is installed.
 
 **Note:** `GridAwareDeleteLocalisationPolicy` is a wrapper — it delegates to Fluent's original `DeleteLocalisationPolicy` first and then handles grid element cleanup on top. Standard Fluent behavior is preserved for all non-grid DataObjects.
 

@@ -29,6 +29,8 @@ GridElement
 
 Elements link to their parent via `ParentID + ParentClass`. A Section's parent is a `SiteTree` page; a Row's parent is a `Section`; a Column's parent is a `Row`; a content element's parent is a `Column`. This removes the need for intermediary ownership tables — the parent chain is a direct object graph.
 
+The same polymorphic parent is what makes [shared blocks](../usage/shared-blocks.md) cheap: a `SharedBlock` is simply another parent record, holding one subtree whose root points at it instead of at a page. A `SharedBlockReference` is an ordinary element carrying only placement data, judged by its block's root class wherever the hierarchy rules apply. A page zone therefore has two root classes — `Section` and `SharedBlockReference` — and anything enumerating a page's roots must cover both.
+
 The tradeoff: page IDs and element IDs share no namespace separation, so lookup maps must key by the composite `"ParentClass:ParentID"` string, not by `ParentID` alone.
 
 ### Container Interface
@@ -178,7 +180,24 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 
 ### Endpoints
 
-`GridController` extends `AdminController` and uses property injection (`$dependencies`) for all service dependencies. Every mutating endpoint validates the CSRF token and checks permissions before delegating to the service layer.
+There are two API controllers, one per resource, both extending the abstract
+`GridApiController` (which owns the CSRF gate, draft-stage lookups, `NodeRef`
+resolution and the `Result`-to-response mapping). Both use property injection
+(`$dependencies`) for their service dependencies. Every mutating endpoint
+validates the CSRF token and checks permissions before delegating to the service
+layer.
+
+| Controller | Base URL | Serves |
+|---|---|---|
+| `GridController` | `/admin/grid` | A page's elements — the tree for a zone and every operation on the elements in it |
+| `SharedBlockController` | `/admin/grid-shared-blocks` | The block library — the block entity, and the boundary between a block and the pages placing it |
+
+The line between them is the resource, not the feature. A placement
+(`SharedBlockReference`) is a `GridElement`, so it is archived through
+`GridController`'s `api/delete` and moved through its `api/reorder`, exactly like
+any other element.
+
+#### `GridController` (`/admin/grid`)
 
 | Method | Route | Purpose | Response |
 |--------|-------|---------|----------|
@@ -195,6 +214,25 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 | GET | `api/acceptableContainers/{PageID}/{Zone}/{ElementType}` | List containers on a page/zone that accept the given element type | 200 + `{ id, title, type }[]` (empty array when `ElementType=section`) |
 | GET | `api/zones/{PageID}` | List zones declared by `GridEditorField`s on a page's CMS fields | 200 + `string[]` |
 | GET | `api/pages` | List pages (optional `?search=` by title), for the duplicate-to target picker | 200 + `{ id, title, parentId, hasGridZones }[]` |
+
+#### `SharedBlockController` (`/admin/grid-shared-blocks`)
+
+| Method | Route | Purpose | Response |
+|--------|-------|---------|----------|
+| GET | `api/list` | List shared blocks, optionally narrowed by `?parentType=` to those whose root type fits that parent | 200 + `{ id, title, rootType, usageCount, status }[]` |
+| GET | `api/readTree/{BlockID}` | Load a shared block's own tree, for the library editor | 200 + `{ rootParent: NodeRef, nodes: GridNode[] }` |
+| POST | `api/create` | Create a block already seeded with its root element — body `{containerType}` XOR `{className}`; the library's add-button caret | 200 + `{ id, editLink }` |
+| GET | `api/usage/{BlockID}` | How many pages place a block, and how many of those are live — the figures the delete confirmation quotes | 200 + `{ usageCount, liveUsageCount }` |
+| POST | `api/place` | Place a block under a parent | 204 |
+| POST | `api/convert` | Move an element's subtree into a new block, leaving a placement | 200 + `{ blockId }` |
+| POST | `api/detach` | Replace a placement with an independent deep copy | 204 |
+| PATCH | `api/setPublished` | Publish or unpublish a block, and with it every page that places it | 204 |
+| DELETE | `api/delete` | Delete a block (`?blockId=&mode=remove\|unshare`); the mode decides whether consuming pages lose the content or keep an independent copy | 204 |
+
+Both controllers publish their own `controllerLink` into the CMS client config,
+keyed by FQCN; the frontend reads them via `getControllerLink()` and
+`getSharedBlockControllerLink()` in `client/src/js/api/config.ts`. Only the grid
+section carries the `gridAdapter` payload.
 
 All mutations return 204 (no body) on success. The frontend refetches the tree after each mutation to reconcile state.
 

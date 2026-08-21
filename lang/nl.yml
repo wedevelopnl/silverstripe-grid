@@ -49,6 +49,8 @@ nl:
     USE_GRID_DESCRIPTION: 'Sla de pagina op nadat je deze instelling hebt gewijzigd'
     db_UseGrid: 'Gebruik grid'
     has_many_Sections: Secties
+  WeDevelop\Grid\Forms\GridFieldAddSharedBlockButton:
+    ADD_BLOCK: 'Nieuwe gedeelde sectie'
   WeDevelop\Grid\Forms\GridSettingsField:
     DEFAULT_TITLE: 'Grid-instellingen'
     HIDDEN_SUFFIX: ' (verborgen)'
@@ -136,9 +138,42 @@ nl:
     FILTER_TYPE: Element-type
     ORPHANED: Wees
     TITLE: 'Grid-elementen'
+  WeDevelop\Grid\Model\SharedBlock:
+    DEFAULT_TITLE: 'Nieuw gedeeld blok {count}'
+    DELETE_ACTION: 'Blok verwijderen…'
+    EMPTY_ROOT: Leeg
+    NOT_USED: 'Dit blok staat nog op geen enkele pagina.'
+    SAVE_FIRST: 'Sla dit blok op om er inhoud aan toe te voegen.'
+    PLURALNAME: 'Gedeelde blokken'
+    SINGULARNAME: 'Gedeeld blok'
+  WeDevelop\Grid\Model\SharedBlockReference:
+    PLURALNAME: 'Gedeelde blokken'
+    SINGULARNAME: 'Gedeeld blok'
+  WeDevelop\Grid\Reports\SharedBlockReport:
+    COLUMN_ROOT_TYPE: 'Type hoofdelement'
+    COLUMN_STATUS: Status
+    COLUMN_TITLE: Titel
+    COLUMN_USAGE: 'Gebruikt op (pagina''s)'
+    DESCRIPTION: 'Toont elk gedeeld blok met het type hoofdelement, op hoeveel pagina''s het wordt gebruikt en of er niet-gepubliceerde wijzigingen zijn.'
+    TITLE: 'Gedeelde blokken'
+  WeDevelop\Grid\Service\SharedBlockService:
+    ALREADY_SHARED: 'Dit element is al een gedeeld blok.'
+    BLOCK_EMPTY: 'Dit gedeelde blok heeft geen inhoud om los te koppelen.'
+    NESTED_PLACEMENT: 'Deze inhoud bevat een gedeeld blok en kan daarom niet in een ander gedeeld blok worden geplaatst.'
+    NOT_PLACED: 'Alleen een element dat op een pagina staat kan gedeeld worden.'
+    UNSHARE_EMPTY_BLOCK: 'Dit blok heeft geen inhoud meer om te behouden. Verwijder het blok en haal de plaatsingen weg.'
+    SHARED_NESTING: 'Inhoud binnen een gedeeld blok kan niet nogmaals gedeeld worden.'
   WeDevelop\Grid\Validation\HierarchyValidationService:
     PAGE_LEVEL_REJECTED: 'Een {element} kan niet op paginaniveau worden geplaatst.'
     PARENT_REJECTED: 'Een {element} kan niet in een {parent} worden geplaatst.'
+    SHARED_NESTING: 'Een gedeeld blok kan niet in een ander gedeeld blok worden geplaatst.'
   WeDevelop\Grid\Validation\ReorderValidator:
+    BLOCK_EMPTY: 'Dit gedeelde blok heeft nog geen inhoud en kan daarom niet worden geplaatst.'
     PAGE_LEVEL_REJECTED: 'Een {element} kan niet op paginaniveau worden geplaatst.'
     PARENT_REJECTED: 'Een {element} kan niet in een {parent} worden geplaatst.'
+    SHARED_BOUNDARY: 'Inhoud kan niet in of uit een gedeeld blok worden verplaatst.'
+    SHARED_NESTING: 'Een gedeeld blok kan niet in een ander gedeeld blok worden geplaatst.'
+  WeDevelop\Grid\Value\SharedBlockStatus:
+    MODIFIED: 'Niet-gepubliceerde wijzigingen'
+    NOT_PUBLISHED: 'Niet gepubliceerd'
+    PUBLISHED: Gepubliceerd
