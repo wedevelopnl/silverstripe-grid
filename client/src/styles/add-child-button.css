@@ -5,7 +5,14 @@
    `between` are just the button. (Column adds use the "+" squares of
    ColumnInsertButton instead — see column-insert.css.) A column's inline
    "+ Add content" trigger reuses `.ssgrid-add-child-button` directly, so every
-   "add a child here" affordance in the editor is this one rule. */
+   "add a child here" affordance in the editor is this one rule.
+
+   Outside the library editor the button is half of a split control: the caret
+   stub of PlacementMenu (see popover.css) sits beside it under one dashed
+   outline carried by `.ssgrid-add-child-split`. The outline stays declared on
+   the button itself and is only neutralised *inside* a split — the column's
+   inline trigger has no split wrapper, and moving the outline unconditionally
+   would leave it with no border at all. */
 
 .ssgrid-add-child[data-variant='empty'] {
   display: flex;
@@ -51,6 +58,29 @@
     cursor: progress;
     opacity: var(--ssgrid-opacity-pending);
   }
+}
+
+/* Button and caret under one dashed outline. The button keeps the full-width
+   click target; the caret claims a fixed stub at the trailing edge. */
+.ssgrid-add-child-split {
+  display: flex;
+  width: 100%;
+  background: var(--ssgrid-surface-selected);
+  border: 1px dashed var(--ssgrid-border-focus);
+  border-radius: var(--ssgrid-radius-sm);
+}
+
+/* The button's own outline and fill belong to the wrapper once it is split; it
+   contributes only its half of the shared border, hence the square trailing
+   corners and the inset focus ring. */
+.ssgrid-add-child-split .ssgrid-add-child-button {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--ssgrid-radius-sm) 0 0 var(--ssgrid-radius-sm);
+  --ssgrid-focus-ring-offset: -2px;
 }
 
 /* Geometry from `.ssgrid-glyph` in the markup. */

@@ -1,10 +1,9 @@
 import { horizontalListSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable'
-import { memo, useId, useMemo, useState } from 'react'
+import { memo, useId, useMemo } from 'react'
 import AddChildButton from '@/components/AddChildButton/AddChildButton'
 import EditableColumnBlock from '@/components/ColumnBlock/EditableColumnBlock'
 import { usePlacement } from '@/components/SharedBlockFrame/PlacementContext'
 import SharedChild from '@/components/SharedBlockFrame/SharedChild'
-import SharedBlockPickerDialog from '@/components/SharedBlockPickerDialog/SharedBlockPickerDialog'
 import ColumnInsertButton from '@/components/ColumnInsertButton/ColumnInsertButton'
 import DragHandle from '@/components/DragHandle/DragHandle'
 import ElementActions from '@/components/ElementActions/ElementActions'
@@ -62,7 +61,6 @@ function useChildColumnKeys(row: RowNode): NodeKey[] {
 }
 
 const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: EditableRowBlockProps) {
-  const [isSharedPickerOpen, setSharedPickerOpen] = useState(false)
   const layoutMode = getOffsetStrategy() === 'margin' ? 'flex' : 'grid'
   const status = row.status
   const { isCollapsed, onToggle } = useElementCollapse(row.nodeKey)
@@ -149,23 +147,10 @@ const EditableRowBlock = memo(function EditableRowBlockComponent({ row }: Editab
                   />
                 ))
               : !insideShared && (
-                  <AddChildButton
-                    parentId={row.self.id}
-                    childType="column"
-                    variant="empty-state"
-                    onAddShared={() => setSharedPickerOpen(true)}
-                  />
+                  <AddChildButton parentId={row.self.id} childType="column" variant="empty-state" />
                 )}
           </SortableContext>
         </div>
-        {isSharedPickerOpen && (
-          <SharedBlockPickerDialog
-            parentType="row"
-            parent={row.self}
-            isOpen={isSharedPickerOpen}
-            onClose={() => setSharedPickerOpen(false)}
-          />
-        )}
         {hasColumns && !insideShared && (
           <ColumnInsertButton
             rowId={row.self.id}

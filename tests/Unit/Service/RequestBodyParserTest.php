@@ -21,6 +21,7 @@ use WeDevelop\Grid\Value\CreateElementRequest;
 use WeDevelop\Grid\Value\DuplicateToRequest;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
+use WeDevelop\Grid\Value\PlaceSharedBlockRequest;
 use WeDevelop\Grid\Value\ReorderRequest;
 use WeDevelop\Grid\Value\ResetGridSettingsOverridesRequest;
 use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
@@ -30,6 +31,7 @@ use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
 #[CoversClass(CreateElementRequest::class)]
 #[CoversClass(DuplicateToRequest::class)]
 #[CoversClass(NodeRef::class)]
+#[CoversClass(PlaceSharedBlockRequest::class)]
 #[CoversClass(ReorderRequest::class)]
 #[CoversClass(ResetGridSettingsOverridesRequest::class)]
 #[CoversClass(UpdateGridSettingsRequest::class)]
@@ -724,5 +726,59 @@ final class RequestBodyParserTest extends TestCase
         $result = $this->parser->parseResetGridSettingsOverridesFromQuery('abc', 'main', null);
 
         self::assertTrue($result->isErr());
+    }
+
+    public function testParsePlaceSharedBlockBodyDefaultsInsertAtStartToFalse(): void
+    {
+        $result = $this->parser->parsePlaceSharedBlockBody([
+            'blockId' => 4,
+            'parent' => ['type' => 'page', 'id' => 2],
+            'zone' => 'main',
+        ]);
+
+        self::assertTrue($result->isOk());
+        self::assertFalse($result->unwrap()->insertAtStart);
+    }
+
+    public function testParsePlaceSharedBlockBodyAcceptsInsertAtStart(): void
+    {
+        $result = $this->parser->parsePlaceSharedBlockBody([
+            'blockId' => 4,
+            'parent' => ['type' => 'page', 'id' => 2],
+            'zone' => 'main',
+            'insertAtStart' => true,
+        ]);
+
+        self::assertTrue($result->isOk());
+        self::assertTrue($result->unwrap()->insertAtStart);
+        self::assertNull($result->unwrap()->insertAfterElementID);
+    }
+
+    public function testParsePlaceSharedBlockBodyRejectsNonBoolInsertAtStart(): void
+    {
+        $result = $this->parser->parsePlaceSharedBlockBody([
+            'blockId' => 4,
+            'parent' => ['type' => 'page', 'id' => 2],
+            'insertAtStart' => 'yes',
+        ]);
+
+        self::assertTrue($result->isErr());
+        self::assertSame('insertAtStart must be a boolean.', $result->errors()[0]->message);
+    }
+
+    public function testParsePlaceSharedBlockBodyRejectsInsertAtStartWithAfterElementId(): void
+    {
+        $result = $this->parser->parsePlaceSharedBlockBody([
+            'blockId' => 4,
+            'parent' => ['type' => 'page', 'id' => 2],
+            'insertAfterElementID' => 9,
+            'insertAtStart' => true,
+        ]);
+
+        self::assertTrue($result->isErr());
+        self::assertSame(
+            'insertAtStart and insertAfterElementID are mutually exclusive.',
+            $result->errors()[0]->message,
+        );
     }
 }

@@ -88,7 +88,7 @@ test.describe('Build page from scratch', () => {
 
       // Step 6: Add a second column to the first row via the row's trailing "+" square
       const firstRow = firstSection.getByTestId('row-block').first()
-      await firstRow.getByTestId('column-insert-end').click()
+      await firstRow.getByTestId('column-insert-end-add').click()
       await expect(firstRow.getByTestId('column-block')).toHaveCount(2, { timeout: 10_000 })
 
       // Step 7: Prepend a section via the leading slot — the previously-first

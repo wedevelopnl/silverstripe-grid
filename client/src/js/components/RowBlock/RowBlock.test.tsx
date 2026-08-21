@@ -84,6 +84,17 @@ describe('EditableRowBlock', () => {
     expect(screen.getByTestId('column-insert-end')).toBeInTheDocument()
   })
 
+  it('offers a shared column in a row that already has columns', () => {
+    const row = createRowNode({ columnCount: 2 })
+
+    renderWithProviders(<EditableRowBlock row={row} />)
+
+    // Two gutters flank the columns and one sits between them; every one of
+    // them can place a shared column. Before this change a populated row
+    // offered no shared route at all.
+    expect(screen.getAllByTestId('column-insert-shared-trigger').length).toBeGreaterThanOrEqual(3)
+  })
+
   describe('status and state attributes', () => {
     it('forwards the node status to the chrome data-status attribute', () => {
       // Per-status application is pinned in the Chrome test file — this only

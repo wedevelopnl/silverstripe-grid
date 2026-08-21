@@ -352,7 +352,7 @@ describe('shared block placement affordances', () => {
 
     renderWithProviders(<EditableGridEditor pageId={1} zone="main" />)
 
-    expect(await screen.findByTestId('add-shared-button')).toBeInTheDocument()
+    expect(await screen.findByTestId('add-child-shared-trigger')).toBeInTheDocument()
   })
 
   it('opens the picker scoped to the page and zone', async () => {
@@ -363,7 +363,8 @@ describe('shared block placement affordances', () => {
     })
 
     renderWithProviders(<EditableGridEditor pageId={1} zone="sidebar" />)
-    await userEvent.click(await screen.findByTestId('add-shared-button'))
+    await userEvent.click(await screen.findByTestId('add-child-shared-trigger'))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Place shared section…' }))
 
     expect(screen.getByTestId('shared-block-picker')).toBeInTheDocument()
 
@@ -382,6 +383,6 @@ describe('shared block placement affordances', () => {
     renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
 
     await screen.findByTestId('add-child-button')
-    expect(screen.queryByTestId('add-shared-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('add-child-shared-trigger')).not.toBeInTheDocument()
   })
 })

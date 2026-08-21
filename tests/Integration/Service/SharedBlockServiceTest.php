@@ -150,6 +150,23 @@ final class SharedBlockServiceTest extends SapphireTest
         );
     }
 
+    public function testPlaceInsertAtStartPositionsReferenceFirst(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $first = GridTreeFactory::section($page, zone: 'main', sort: 1, title: 'First');
+        $second = GridTreeFactory::section($page, zone: 'main', sort: 2, title: 'Second');
+
+        $result = $this->service->place($this->sectionRootedBlock(), $page, 'main', null, true);
+
+        self::assertTrue($result->isOk());
+        $reference = $result->unwrap();
+
+        self::assertSame(
+            [(int) $reference->ID, (int) $first->ID, (int) $second->ID],
+            $this->rootOrder($page, 'main'),
+        );
+    }
+
     /**
      * Root-level element IDs for a page + zone, in Sort order across both root
      * tables — the same interleave the tree read performs.

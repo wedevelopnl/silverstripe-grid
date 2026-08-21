@@ -1,12 +1,11 @@
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Fragment, memo, useMemo, useState } from 'react'
+import { Fragment, memo, useMemo } from 'react'
 import AddChildButton from '@/components/AddChildButton/AddChildButton'
 import DragHandle from '@/components/DragHandle/DragHandle'
 import ElementActions from '@/components/ElementActions/ElementActions'
 import EditableRowBlock from '@/components/RowBlock/EditableRowBlock'
 import { usePlacement } from '@/components/SharedBlockFrame/PlacementContext'
 import SharedChild from '@/components/SharedBlockFrame/SharedChild'
-import SharedBlockPickerDialog from '@/components/SharedBlockPickerDialog/SharedBlockPickerDialog'
 import { useDragContext } from '@/hooks/useDragAndDrop'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import { t } from '@/i18n'
@@ -58,8 +57,6 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
   const showDropTarget = isOver && activeType === 'section'
 
   const style = buildSortableStyle(transform, transition, isDragging)
-
-  const [isSharedPickerOpen, setSharedPickerOpen] = useState(false)
 
   const childKeys = useChildSortableKeys(section)
   const rows = section.children ?? []
@@ -120,33 +117,15 @@ const EditableSectionBlock = memo(function EditableSectionBlockComponent({
               </Fragment>
             ))}
             {!insideShared && (
-              <AddChildButton
-                parentId={section.self.id}
-                childType="row"
-                variant="append"
-                onAddShared={() => setSharedPickerOpen(true)}
-              />
+              <AddChildButton parentId={section.self.id} childType="row" variant="append" />
             )}
           </>
         ) : (
           !insideShared && (
-            <AddChildButton
-              parentId={section.self.id}
-              childType="row"
-              variant="empty-state"
-              onAddShared={() => setSharedPickerOpen(true)}
-            />
+            <AddChildButton parentId={section.self.id} childType="row" variant="empty-state" />
           )
         )}
       </SortableContext>
-      {isSharedPickerOpen && (
-        <SharedBlockPickerDialog
-          parentType="section"
-          parent={section.self}
-          isOpen={isSharedPickerOpen}
-          onClose={() => setSharedPickerOpen(false)}
-        />
-      )}
     </SectionChrome>
   )
 })
