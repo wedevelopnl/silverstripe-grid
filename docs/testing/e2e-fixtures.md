@@ -13,7 +13,7 @@ POST /dev/e2e-fixtures/load  (WeDevelop\E2e\Fixtures\FixtureController, dev-only
   ├── canInit() + init() guard on Director::isDev()
   ├── Looks up name in FixtureLoader::$fixtures config
   └── Delegates to FixtureLoader::load()
-       ├── reset()                  — archives all e2e-* pages
+       ├── reset()                  — deletes every record of the purge_classes
        ├── applyConfigOverrides()   — grid's config_overrides force auto_scaffold
        │                              off on Section/Row for the fixture write
        ├── YamlFixture::writeInto() — writes the YAML into the factory
@@ -57,7 +57,11 @@ Failure response: `400 { success: false, error: "..." }`.
 
 ### `POST /dev/e2e-fixtures/reset?confirm=1`
 
-Archives every page whose `URLSegment` starts with `e2e-` **and** whose `ClassName` is one of the fixture page types (the `FixtureLoader.fixture_page_classes` config in `_config/dev.yml`). Requiring both prevents collateral archiving of a hand-authored page that merely shares the `e2e-` prefix on a shared dev DB. The `confirm=1` query parameter is required so an accidental curl or browser visit cannot wipe the dev database.
+Deletes **every record of the `FixtureLoader.purge_classes` config in `_config/dev.yml`, and of their subclasses, on both stages** — currently `Page`, `WeDevelop\Grid\Model\GridElement` and `WeDevelop\Grid\Model\SharedBlock`. Ownership is declared, not inferred: nothing keys off a URL segment or off which records the fixture happened to write, so a reset also collects what no reachability rule could — a shared block the library holds but no page places, an element a spec created by driving the CMS, a placement whose page a crashed run took with it.
+
+The consequence is a constraint on the database you point the suite at: **content you authored yourself in a purged class is deleted too.** `task seed-fixture` seeds this same dev DB, so treat its page tree, grid elements and shared block library as disposable. Files are deliberately outside the scope — the image an `attach_image` post-action uploads survives a reset rather than the reset emptying the whole asset store.
+
+The `confirm=1` query parameter is required so an accidental curl or browser visit cannot wipe the dev database.
 
 ### `POST /dev/e2e-fixtures/load-all`
 
@@ -149,7 +153,7 @@ Fixtures are written **top-down** (page → section → row → column → leaf)
 
 | Class | Required fields |
 |-------|----------------|
-| `Page` (or any `SiteTree` subclass) | `Title`, `URLSegment` (must start with `e2e-`) |
+| `Page` (or any `SiteTree` subclass) | `Title`, `URLSegment` (`e2e-` prefix by convention) |
 | `Section` | `Title`, `Sort`, `Zone`, `Parent` (→ page) |
 | `Row` | `Title`, `Sort`, `Parent` (→ section) |
 | `Column` | `Title`, `Sort`, `Parent` (→ row), optional `GridSettings` (JSON string) |
@@ -159,9 +163,9 @@ The `Parent` field resolves to the `ParentID` column. YamlFixture also sets `Par
 
 ### The `e2e-` URLSegment prefix
 
-Every page created by a fixture **must** use a `URLSegment` that starts with `e2e-`. `FixtureLoader::reset()` and `POST /reset` archive matching pages via `doArchive()` (which cascades through `cascade_deletes` and removes from Draft + Live). Without the prefix your fixture pages will leak across test runs.
+Cleanup no longer keys off the prefix — `purge_classes` decides what a reset deletes (see [`POST /reset`](#post-deve2e-fixturesresetconfirm1)). Keep using it anyway: it is how a page a fixture created reads as fixture data at a glance in the CMS, and specs navigate by these segments.
 
-Cleanup matches on `URLSegment:StartsWith => 'e2e-'` **and** `ClassName` ∈ the `FixtureLoader.fixture_page_classes` config, and the `ClassName` filter is non-polymorphic (exact match). So if you add a fixture that creates a **new** `SiteTree`/`Page` subclass, you **must** also add that class to `fixture_page_classes` in `_config/dev.yml` — otherwise `reset()` silently leaves those pages behind. The `testFixturePageClassesCoversEveryFixturePageType` guard test fails loudly if you forget.
+What you **must** do when a fixture introduces a new page type is keep it inside the purge scope. The match is polymorphic, so any `Page` subclass is already covered; a type descending straight from `SiteTree` is not, and needs its own `purge_classes` entry in `_config/dev.yml` — otherwise `reset()` silently leaves those pages behind. The `testPurgeClassesCoversEveryFixturePageType` guard test fails loudly if you forget.
 
 ### GridSettings inline
 
@@ -254,7 +258,7 @@ Not currently supported in the shared fixture loader — the Fluent E2E suite ha
 
 - [ ] New YAML file under `tests/E2E/Fixture/<Name>.yml`
 - [ ] Top-down ordering (page → section → row → column → leaf)
-- [ ] Page `URLSegment` starts with `e2e-`
+- [ ] Page `URLSegment` starts with `e2e-` (convention) and its class is under `purge_classes`
 - [ ] Every element has `Sort` and `Parent` set
 - [ ] Register the fixture in `_config/dev.yml` under `FixtureLoader.fixtures`
 - [ ] Add a `publish_recursive` post-action on the page if the spec needs live content

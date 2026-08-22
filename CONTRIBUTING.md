@@ -175,9 +175,9 @@ In the `dev` environment the `wedevelopnl/silverstripe-e2e` module exposes endpo
 | Method | URL | Purpose |
 |--------|-----|---------|
 | `POST` | `/dev/e2e-fixtures/load` | Load a registered fixture (name in the POST field `fixture`, e.g. `-d fixture=complex-page`) |
-| `POST` | `/dev/e2e-fixtures/reset?confirm=1` | Remove all fixture-created pages |
+| `POST` | `/dev/e2e-fixtures/reset?confirm=1` | Delete every page, grid element and shared block |
 
-Both are gated by `Director::isDev()` and refuse to run outside the dev environment; reset additionally requires `?confirm=1` so a stray request cannot wipe fixture pages. `task seed-fixture` is a wrapper around the load endpoint. See the [E2E fixture protocol](docs/testing/e2e-fixtures.md) for the full protocol.
+Both are gated by `Director::isDev()` and refuse to run outside the dev environment; reset additionally requires `?confirm=1` so a stray request cannot wipe the database. `task seed-fixture` is a wrapper around the load endpoint — and load resets first, so **content you authored by hand in the dev CMS is deleted along with the fixture data.** The scope is the `FixtureLoader.purge_classes` list in `_config/dev.yml`; see the [E2E fixture protocol](docs/testing/e2e-fixtures.md) for what that covers and why it is declared rather than inferred.
 
 ## Troubleshooting
 

@@ -61,7 +61,7 @@ const fixture = await loadFixture(page.request, 'element-tree');
 // Shorthand: load + navigate + wait for grid
 const fixture = await loadAndNavigate(page, 'element-tree');
 
-// Reset all E2E data (removes pages with e2e-* URL segments)
+// Reset all E2E data (deletes every Page, GridElement and SharedBlock, both stages)
 await resetFixtures(request);
 ```
 
@@ -249,7 +249,7 @@ WeDevelop\Grid\Model\ContentElement:
 ```
 
 **Conventions:**
-- Page URLSegments must start with `e2e-` (the reset endpoint removes pages matching this prefix)
+- Page URLSegments start with `e2e-` by convention; cleanup is by class (`FixtureLoader.purge_classes` in `_config/dev.yml`), not by prefix
 - Use fully qualified class names for model references
 - Polymorphic parent: `Parent: =>ClassName.identifier` (the fixture system resolves `ParentID` + `ParentClass`)
 - Sections carry a `Zone` field (e.g., `main`, `sidebar`)
