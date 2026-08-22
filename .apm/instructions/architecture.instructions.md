@@ -20,7 +20,7 @@ src/Migration/        # SS5→SS6 migration (DTOs, strategies, tasks, services);
 src/Admin/            # ModelAdmin screens (SharedBlockAdmin — the shared block library)
 src/Reports/          # CMS reports (GridElementReport, SharedBlockReport)
 src/Value/            # Value objects, DTOs, and request objects (NodeRef, NodeType, ElementStatus, GridNode, Result, MigrationIdMap, ...)
-src/Service/          # Domain services (GridTreeService, GridNodeMapper, ElementPlacementService, GridElementService, GridSettingsService, GridSettingsResolver, TitleGenerator, RequestBodyParser, ColumnClassResolver, GridAwareDeleteLocalisationPolicy, SharedBlockService, SharedBlockUsageResolver, LocalisedSubtreeCloner)
+src/Service/          # Domain services (GridTreeService, GridNodeMapper, ElementPlacementService, GridElementService, GridSettingsService, GridSettingsResolver, TitleGenerator, RequestBodyParser, ColumnClassResolver, GridAwareDeleteLocalisationPolicy, SharedBlockService, SharedBlockUsageResolver, LocalisedSubtreeCloner, SharedBlockLocaliser)
 src/Task/OneTime/     # One-time upgrade tasks, namespaced per release (Beta4\BackfillGridZoneTask — the Zone hoist back-fill)
 src/Validation/       # Write-time + reorder-time validation (HierarchyValidationExtension, HierarchyValidationService, HierarchyValidatorInterface, ReorderValidator, GridSettingsFieldValidator)
 src/Exception/        # Domain exceptions (GridDomainException, InvalidGridValueException)

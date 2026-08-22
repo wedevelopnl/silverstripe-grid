@@ -36,9 +36,9 @@ abstract class GridApiController extends AdminController
     /**
      * Deliberately the broad CMS gate on both subclasses, including the block
      * library's: placing or reading an existing block is a page-editing act.
-     * The library's own section code (`CMS_ACCESS_SharedBlockAdmin`) gates
-     * MANAGING a block, and is checked per-record by SharedBlock::canEdit() and
-     * friends rather than at the controller door.
+     * MANAGING a block requires page access (`CMS_ACCESS_CMSMain`), checked
+     * per-record by SharedBlock::canEdit() and friends rather than at the
+     * controller door.
      */
     private static string $required_permission_codes = 'CMS_ACCESS';
 

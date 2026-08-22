@@ -33,15 +33,27 @@ use WeDevelop\Grid\Service\SharedBlockUsageResolver;
 class SharedBlock extends DataObject
 {
     /**
-     * The library's own CMS section code — what managing a block actually
-     * requires.
+     * Managing a block requires PAGE access, not a library-specific grant: a
+     * shared block is page content maintained in one place, so whoever may edit
+     * the pages that show it may maintain it — the same authority an ordinary
+     * block on a page carries. It is also what makes localising a page able to
+     * localise the blocks it places, rather than silently skipping them for an
+     * author who holds no library grant.
      *
      * NOT the bare 'CMS_ACCESS': the framework special-cases that code to
      * succeed for ANY CMS_ACCESS_* grant, so checking it would let a member who
-     * only reaches, say, the files manager edit or delete shared blocks through
-     * the API while {@see SharedBlockAdmin} refused to even open for them.
+     * only reaches, say, the files manager edit or delete shared blocks.
+     * {@see SharedBlockAdmin::$required_permission_codes} gates the library
+     * SCREEN on the same code, so API and UI agree.
+     *
+     * The literal is deliberate and must NOT become
+     * `'CMS_ACCESS_' . CMSMain::class`. SilverStripe\CMS\Controllers\CMSMain
+     * registers its code under the SHORT name in providePermissions(), and
+     * declares the same short name in its own $required_permission_codes; the
+     * FQCN-suffixed variant is a code nobody is ever granted, so building it
+     * that way silently denies every non-admin.
      */
-    private const string ADMIN_PERMISSION = 'CMS_ACCESS_' . SharedBlockAdmin::class;
+    private const string ADMIN_PERMISSION = 'CMS_ACCESS_CMSMain';
 
     private static string $table_name = 'WeDevelop_Grid_SharedBlock';
 
@@ -274,9 +286,8 @@ class SharedBlock extends DataObject
 
     /**
      * Deliberately the broad CMS gate rather than {@see self::ADMIN_PERMISSION}:
-     * placing an existing block is a page-editing act, so an author who may
-     * edit pages must be able to see the library's contents in the picker
-     * without also being granted the library section. Narrow it per project
+     * seeing what is in the library is not editing it, and a picker may be
+     * rendered in contexts narrower than page editing. Narrow it per project
      * with an updateCanView extension.
      *
      * @param Member|null $member
