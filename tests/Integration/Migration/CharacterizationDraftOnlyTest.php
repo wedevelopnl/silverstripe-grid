@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\CoversNothing;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTreeSnapshot;
+use WeDevelop\Grid\Model\Section;
 
 /**
  * Golden-master (characterization) test for the simplest migration scenario:
@@ -73,7 +74,7 @@ final class CharacterizationDraftOnlyTest extends CharacterizationTestCase
         // setUseGridOnPage runs with includeLive: false.
         self::assertSame(1, MigrationTreeSnapshot::useGridFlag($pageId, Versioned::DRAFT));
         self::assertTrue(
-            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId, Page::class, self::ZONE, Versioned::DRAFT),
+            MigrationTreeSnapshot::recordExistsOnStage(Section::class, $pageId, Page::class, self::ZONE, Versioned::DRAFT),
             'The migrated Section exists on DRAFT',
         );
 
@@ -81,7 +82,7 @@ final class CharacterizationDraftOnlyTest extends CharacterizationTestCase
         self::assertSame([], MigrationTreeSnapshot::snapshotTree($pageId, Page::class, self::ZONE, Versioned::LIVE));
         self::assertSame(0, MigrationTreeSnapshot::useGridFlag($pageId, Versioned::LIVE));
         self::assertFalse(
-            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId, Page::class, self::ZONE, Versioned::LIVE),
+            MigrationTreeSnapshot::recordExistsOnStage(Section::class, $pageId, Page::class, self::ZONE, Versioned::LIVE),
             'No Section is published to LIVE for a draft-only page',
         );
     }

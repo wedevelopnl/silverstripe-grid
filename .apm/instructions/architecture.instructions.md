@@ -21,6 +21,7 @@ src/Admin/            # ModelAdmin screens (SharedBlockAdmin — the shared bloc
 src/Reports/          # CMS reports (GridElementReport, SharedBlockReport)
 src/Value/            # Value objects, DTOs, and request objects (NodeRef, NodeType, ElementStatus, GridNode, Result, MigrationIdMap, ...)
 src/Service/          # Domain services (GridTreeService, GridNodeMapper, ElementPlacementService, GridElementService, GridSettingsService, GridSettingsResolver, TitleGenerator, RequestBodyParser, ColumnClassResolver, GridAwareDeleteLocalisationPolicy, SharedBlockService, SharedBlockUsageResolver, LocalisedSubtreeCloner)
+src/Task/OneTime/     # One-time upgrade tasks, namespaced per release (Beta4\BackfillGridZoneTask — the Zone hoist back-fill)
 src/Validation/       # Write-time + reorder-time validation (HierarchyValidationExtension, HierarchyValidationService, HierarchyValidatorInterface, ReorderValidator, GridSettingsFieldValidator)
 src/Exception/        # Domain exceptions (GridDomainException, InvalidGridValueException)
 src/ORM/FieldType/    # Custom DB field types (DBGridSettings composite field)

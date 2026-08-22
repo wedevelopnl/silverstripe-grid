@@ -41,20 +41,24 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
  * @property string $Style
  * @property int $ParentID
  * @property string $ParentClass
+ * @property string $Zone
  * @method DataObject|null Parent()
  * @mixin Versioned
  */
 class GridElement extends DataObject
 {
     /**
-     * The element classes that may sit directly under a page, each carrying its
-     * own Zone column.
+     * The element classes that may sit directly under a page.
      *
      * Enumerated once because every consumer must cover ALL of them: a zone's
      * Sort sequence spans the whole set, and any read of a page's root elements
      * that misses one silently omits content. `Section::get()` at page root is
      * nearly always a bug — see {@see OrmGridElementRepository::findByParents()}
      * and {@see GridPageExtension::GridZone()}.
+     *
+     * Zone itself lives on this base class, so a root read is one query; this
+     * constant remains the answer to "what may root a zone?", not a query
+     * fan-out list.
      *
      * @var list<class-string<GridElement>>
      */
@@ -87,6 +91,11 @@ class GridElement extends DataObject
         'Sort' => 'Int',
         'ExtraClass' => 'Varchar(255)',
         'Style' => 'Varchar(255)',
+        // Meaningful only when this element sits directly under a page
+        // ({@see self::isZoneScoped()}); '' everywhere else. Declared on the
+        // base so a single query can filter a page's whole root sequence —
+        // Sections and shared-block placements alike.
+        'Zone' => 'Varchar(50)',
     ];
 
     /** @var array<string, string> */
@@ -125,9 +134,12 @@ class GridElement extends DataObject
      * assignment, default-title count and scaffold re-check filters on
      * (ParentClass, ParentID) and orders by Sort. Equality columns lead, the
      * ORDER BY column trails, so the index serves both the WHERE and the sort
-     * in one read. Section's zone-scoped variant additionally filters Zone,
-     * which lives on the Section subclass table and so cannot join this
-     * base-table index — Section keeps its own single-column Zone index.
+     * in one read.
+     *
+     * ParentZoneSort is the root-level variant: reads of a page's root elements
+     * additionally filter Zone. Two indexes rather than one four-column index,
+     * because child reads do not filter Zone and would fall back to a filesort
+     * on a (ParentClass, ParentID, Zone, Sort) index.
      *
      * @var array<string, array<string, string|list<string>>>
      */
@@ -135,6 +147,10 @@ class GridElement extends DataObject
         'ParentSort' => [
             'type' => 'index',
             'columns' => ['ParentClass', 'ParentID', 'Sort'],
+        ],
+        'ParentZoneSort' => [
+            'type' => 'index',
+            'columns' => ['ParentClass', 'ParentID', 'Zone', 'Sort'],
         ],
     ];
 
@@ -234,6 +250,29 @@ class GridElement extends DataObject
         );
     }
 
+    /**
+     * The class the grid's placement rules must judge this element by.
+     *
+     * For every ordinary element that is simply its own class. A
+     * {@see SharedBlockReference} overrides it to answer with the class its
+     * block is rooted at, because a placement stands in for that class
+     * everywhere position is decided — what may contain it, what it may
+     * contain, and which slot it occupies.
+     *
+     * Ask this rather than testing `instanceof`: a caller that reads
+     * `$element::class` directly sees `SharedBlockReference` and silently
+     * treats a section-rooted placement as a leaf.
+     *
+     * Null only for a placement whose block is missing or empty — no position
+     * is valid then.
+     *
+     * @return class-string<GridElement>|null
+     */
+    public function getPlacementClass(): ?string
+    {
+        return static::class;
+    }
+
     /** Human-readable element type identifier (e.g., "Section", "Row", "Text"). */
     public function getType(): string
     {
@@ -316,7 +355,7 @@ class GridElement extends DataObject
             $fields->removeByName([
                 'Title', 'TitleTag', 'TitleClass', 'ShowTitle',
                 'Sort', 'ExtraClass', 'Style',
-                'ParentID', 'ParentClass',
+                'ParentID', 'ParentClass', 'Zone',
             ]);
 
             $titleGroup = FieldGroup::create(
@@ -530,22 +569,10 @@ class GridElement extends DataObject
             'ParentClass' => $this->ParentClass,
         ];
 
+        // At page root each zone is its own Sort sequence; inside a container
+        // there is no zone and the parent-wide sequence covers every child.
         if ($this->isZoneScoped()) {
-            // At page root each zone is its own Sort sequence, and the siblings
-            // sharing it are spread over one table per root class. Zone is a
-            // subclass column, so the base list cannot filter it — ask every
-            // root class for its own max and take the highest.
-            $filter['Zone'] = $this->getZoneValue();
-
-            $max = 0;
-            foreach (self::ROOT_ELEMENT_CLASSES as $rootClass) {
-                $classMax = DataObject::get($rootClass)->filter($filter)->max('Sort');
-                $max = max($max, is_numeric($classMax) ? (int) $classMax : 0);
-            }
-
-            $this->Sort = $max + 1;
-
-            return;
+            $filter['Zone'] = (string) $this->Zone;
         }
 
         // Query the shared GridElement base list, NOT static::get(): late static
@@ -571,19 +598,6 @@ class GridElement extends DataObject
     protected function isZoneScoped(): bool
     {
         return $this->ParentClass !== '' && is_a($this->ParentClass, SiteTree::class, true);
-    }
-
-    /**
-     * This element's Zone, or '' when its class carries no Zone column.
-     *
-     * Read through getField() rather than ->Zone: Zone is declared on the root
-     * subclasses ({@see self::ROOT_ELEMENT_CLASSES}), not on this base class.
-     */
-    protected function getZoneValue(): string
-    {
-        $zone = $this->getField('Zone');
-
-        return is_string($zone) ? $zone : '';
     }
 
     /**

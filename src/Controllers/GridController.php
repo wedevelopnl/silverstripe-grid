@@ -408,9 +408,20 @@ class GridController extends GridApiController
             static fn (GridElement $e): bool => $e->canCreate() && $e->canEdit(),
         );
 
-        // Never null: the repository only returns GridElement subclasses, so the
-        // source can never resolve to NodeType::Page (the one rootless type).
-        $expectedTargetType = NodeType::fromClass($element::class)->expectedParentType();
+        // Judged by the PLACEMENT class, not the concrete one: a shared-block
+        // placement is a SharedBlockReference, which NodeType classifies as a
+        // leaf Element and so demanded a Column parent — refusing every legal
+        // target for a section-, row- or column-rooted placement.
+        $placementClass = $element->getPlacementClass();
+        if ($placementClass === null) {
+            // The block is missing or empty, so the copy would stand in for
+            // nothing and no target could be validated.
+            $this->jsonError(422);
+        }
+
+        // Never null: the placement class is always a GridElement subclass, so
+        // the source can never resolve to NodeType::Page (the one rootless type).
+        $expectedTargetType = NodeType::fromClass($placementClass)->expectedParentType();
         if ($body->targetParent->type !== $expectedTargetType) {
             $this->jsonError(400);
         }

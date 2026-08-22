@@ -299,6 +299,49 @@ final class SharedBlockTest extends SapphireTest
         self::assertNull($reference->getEffectiveRootClass());
     }
 
+    public function testPlacementClassOfAnOrdinaryElementIsItsOwnClass(): void
+    {
+        // The base answer every consumer relies on: asking an ordinary element
+        // what it stands in for gets its own class back, so no caller needs to
+        // know whether it holds a placement or a real element.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        ['section' => $section, 'row' => $row, 'column' => $column] = GridTreeFactory::containerTree($page);
+
+        self::assertSame(Section::class, $section->getPlacementClass());
+        self::assertSame(Row::class, $row->getPlacementClass());
+        self::assertSame(Column::class, $column->getPlacementClass());
+        self::assertSame(ContentElement::class, GridTreeFactory::contentElement($column)->getPlacementClass());
+    }
+
+    public function testPlacementClassOfAReferenceIsItsBlockRootClass(): void
+    {
+        // A placement is judged by what it stands in for, so a row-rooted block
+        // answers Row — the fact that makes it placeable inside a Section.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        ['section' => $section] = GridTreeFactory::containerTree($page);
+
+        $rowRootedBlock = GridTreeFactory::sharedBlock('Row block');
+        $blockRoot = Row::create();
+        $blockRoot->ParentID = (int) $rowRootedBlock->ID;
+        $blockRoot->ParentClass = SharedBlock::class;
+        $blockRoot->write();
+
+        $reference = GridTreeFactory::reference($section, $rowRootedBlock, zone: '');
+
+        self::assertSame(Row::class, $reference->getPlacementClass());
+    }
+
+    public function testPlacementClassIsNullForAnEmptyBlock(): void
+    {
+        // Null is the signal every caller keys off to refuse a position; it must
+        // come from the placement itself, not from an instanceof at the call site.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        $reference = GridTreeFactory::reference($page, $block);
+
+        self::assertNull($reference->getPlacementClass());
+    }
+
     public function testEffectiveRootClassNullForDanglingReference(): void
     {
         // Placement validation refuses to write a reference with no block, so

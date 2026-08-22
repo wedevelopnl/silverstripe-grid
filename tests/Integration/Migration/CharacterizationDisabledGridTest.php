@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\CoversNothing;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTreeSnapshot;
+use WeDevelop\Grid\Model\Section;
 
 /**
  * Golden-master (characterization) test for the disabled-grid reconciliation
@@ -88,11 +89,11 @@ final class CharacterizationDisabledGridTest extends CharacterizationTestCase
         self::assertSame([], MigrationTreeSnapshot::snapshotTree($pageId2, Page::class, self::ZONE, Versioned::DRAFT), 'Disabled page has no DRAFT tree');
         self::assertSame([], MigrationTreeSnapshot::snapshotTree($pageId2, Page::class, self::ZONE, Versioned::LIVE), 'Disabled page has no LIVE tree');
         self::assertFalse(
-            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId2, Page::class, self::ZONE, Versioned::DRAFT),
+            MigrationTreeSnapshot::recordExistsOnStage(Section::class, $pageId2, Page::class, self::ZONE, Versioned::DRAFT),
             'No Section is created on DRAFT for a grid-disabled page',
         );
         self::assertFalse(
-            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId2, Page::class, self::ZONE, Versioned::LIVE),
+            MigrationTreeSnapshot::recordExistsOnStage(Section::class, $pageId2, Page::class, self::ZONE, Versioned::LIVE),
             'No Section is created on LIVE for a grid-disabled page',
         );
 
@@ -103,7 +104,7 @@ final class CharacterizationDisabledGridTest extends CharacterizationTestCase
         // ── Page 1: grid-enabled — migrated normally ─────────────────
         self::assertSame(1, MigrationTreeSnapshot::useGridFlag($pageId1, Versioned::DRAFT), 'Enabled sibling draft UseGrid is 1');
         self::assertTrue(
-            MigrationTreeSnapshot::recordExistsOnStage('WeDevelop_Grid_Section', $pageId1, Page::class, self::ZONE, Versioned::DRAFT),
+            MigrationTreeSnapshot::recordExistsOnStage(Section::class, $pageId1, Page::class, self::ZONE, Versioned::DRAFT),
             'The enabled sibling migrated a Section on DRAFT',
         );
     }

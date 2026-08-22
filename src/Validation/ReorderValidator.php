@@ -10,7 +10,6 @@ use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\SharedBlock;
-use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\ValidationErrorCode;
@@ -36,11 +35,13 @@ class ReorderValidator implements ReorderValidatorInterface
             return $boundary;
         }
 
-        // Placement time only. A block with no content resolves no root class,
-        // so there is no position it could legally take — but an ALREADY-placed
-        // reference whose block was later emptied stays valid, which is why
-        // this lives here and not in the shared rules.
-        if ($element instanceof SharedBlockReference && $element->getEffectiveRootClass() === null) {
+        // Placement time only. A block with no content resolves no placement
+        // class, so there is no position it could legally take — but an
+        // ALREADY-placed reference whose block was later emptied stays valid,
+        // which is why this lives here and not in the shared rules. Only a
+        // placement can answer null; every ordinary element answers its own
+        // class, so no instanceof guard is needed.
+        if ($element->getPlacementClass() === null) {
             return Result::fail(new ValidationError(
                 message: 'This shared block has no content yet, so it cannot be placed.',
                 field: 'placement',

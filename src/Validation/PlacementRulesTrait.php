@@ -51,7 +51,7 @@ trait PlacementRulesTrait
 
         // A reference stands in for its block's root, so every rule below judges
         // it by that class rather than by SharedBlockReference itself.
-        $effectiveClass = $this->resolveEffectiveClass($element);
+        $effectiveClass = $element->getPlacementClass();
 
         // An empty block yields no class to judge by, so the rules below cannot
         // be evaluated. That is NOT a persistence failure: a block may be
@@ -109,18 +109,6 @@ trait PlacementRulesTrait
         ));
     }
 
-    /**
-     * The class the placement rules judge $element by. Null for a reference
-     * whose block is missing or still empty — no placement is valid then.
-     *
-     * @return class-string<GridElement>|null
-     */
-    private function resolveEffectiveClass(GridElement $element): ?string
-    {
-        return $element instanceof SharedBlockReference
-            ? $element->getEffectiveRootClass()
-            : $element::class;
-    }
 
     /**
      * The ContainerType a class represents, or null for a leaf element.

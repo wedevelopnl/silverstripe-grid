@@ -177,20 +177,8 @@ class ElementPlacementService
 
         return $this->elementRepository->findByParents(
             [$parentClass => [$parentId]],
-            $this->zoneOf($element),
+            (string) $element->Zone,
         );
-    }
-
-    /**
-     * Zone is declared on the root subclasses, not on GridElement, so it is read
-     * through getField() — which yields null (and so '') for any class without
-     * the column.
-     */
-    private function zoneOf(GridElement $element): string
-    {
-        $zone = $element->getField('Zone');
-
-        return is_string($zone) ? $zone : '';
     }
 
     /**

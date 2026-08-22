@@ -11,7 +11,6 @@ use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\ORM\DataObject;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Model\SharedBlock;
 use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
@@ -206,7 +205,7 @@ class SharedBlockService
 
             // Capture the vacated position before the root moves out of it.
             $sort = (int) $root->Sort;
-            $zone = $root instanceof Section ? (string) $root->Zone : '';
+            $zone = (string) $root->Zone;
             $parentId = (int) $root->ParentID;
             $parentClass = (string) $root->ParentClass;
 
@@ -214,9 +213,7 @@ class SharedBlockService
             $root->ParentClass = SharedBlock::class;
 
             // Zone is placement data and moves to the reference with it.
-            if ($root instanceof Section) {
-                $root->Zone = '';
-            }
+            $root->Zone = '';
 
             $root->write();
 
@@ -313,9 +310,9 @@ class SharedBlockService
         $copy->ParentClass = $reference->ParentClass;
         $copy->Sort = $reference->Sort;
 
-        if ($copy instanceof Section) {
-            $copy->Zone = (string) $reference->Zone;
-        }
+        // The copy lands exactly where the reference sat, so it inherits the
+        // reference's Zone — '' whenever that was mid-tree.
+        $copy->Zone = (string) $reference->Zone;
 
         $copy->write();
 

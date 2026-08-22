@@ -21,6 +21,8 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Model\SharedBlock;
+use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Tests\Integration\Support\DenyCreateExtension;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
@@ -2296,5 +2298,117 @@ final class GridControllerTest extends FunctionalTest
 
         self::assertSame(204, $response->getStatusCode());
         self::assertCount(2, $section->getChildren());
+    }
+
+    /**
+     * A placement is a SharedBlockReference, which NodeType classifies as a leaf
+     * Element — so the expected-parent check demanded a Column and refused the
+     * page root with 400, making "duplicate to another page" unreachable for
+     * every placement that is not leaf-rooted. The check now asks the element
+     * what it stands in for.
+     */
+    public function testDuplicateToSectionRootedPlacementToAnotherPageReturns204(): void
+    {
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+
+        $page = $this->page();
+        $reference = GridTreeFactory::reference($page, $block, zone: 'main');
+
+        $page2 = $this->page2();
+        $page2Id = (int) $page2->ID;
+
+        $response = $this->jsonPost(self::BASE_URL . '/duplicateTo', [
+            'element' => $this->ref($reference),
+            'targetPageId' => $page2Id,
+            'targetZone' => 'main',
+            'targetParent' => $this->ref($page2),
+        ]);
+
+        self::assertSame(204, $response->getStatusCode());
+
+        $copies = SharedBlockReference::get()->filter([
+            'ParentID' => $page2Id,
+            'ParentClass' => Page::class,
+        ]);
+        self::assertCount(1, $copies);
+        self::assertSame(
+            (int) $block->ID,
+            (int) $copies->first()?->BlockID,
+            'the copy points at the same block — the placement is copied, not the content',
+        );
+    }
+
+    public function testDuplicateToPlacementCarriesTheTargetZone(): void
+    {
+        // Zone was assigned only when the clone was a Section, so a placement
+        // landed in the target page's root with an empty Zone and vanished from
+        // every zone on that page.
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+
+        $reference = GridTreeFactory::reference($this->page(), $block, zone: 'main');
+
+        $page2 = $this->page2();
+        $page2Id = (int) $page2->ID;
+
+        $this->jsonPost(self::BASE_URL . '/duplicateTo', [
+            'element' => $this->ref($reference),
+            'targetPageId' => $page2Id,
+            'targetZone' => 'sidebar',
+            'targetParent' => $this->ref($page2),
+        ]);
+
+        $copy = SharedBlockReference::get()->filter([
+            'ParentID' => $page2Id,
+            'ParentClass' => Page::class,
+        ])->first();
+
+        self::assertNotNull($copy);
+        self::assertSame('sidebar', $copy->Zone);
+    }
+
+    public function testDuplicateToRefusesAPlacementWhoseBlockIsEmpty(): void
+    {
+        // With no root the placement stands in for nothing, so there is no class
+        // to validate a target against.
+        $block = GridTreeFactory::sharedBlock();
+        $reference = GridTreeFactory::reference($this->page(), $block, zone: 'main');
+
+        $page2 = $this->page2();
+
+        $response = $this->jsonPost(self::BASE_URL . '/duplicateTo', [
+            'element' => $this->ref($reference),
+            'targetPageId' => (int) $page2->ID,
+            'targetZone' => 'main',
+            'targetParent' => $this->ref($page2),
+        ]);
+
+        self::assertSame(422, $response->getStatusCode());
+    }
+
+    public function testDuplicateToRowRootedPlacementIntoASectionReturns204(): void
+    {
+        // The mid-tree case: a row-rooted placement stands in for a Row, so its
+        // legal target is a Section — not the Column a leaf Element would need.
+        $block = GridTreeFactory::sharedBlock();
+        $blockRoot = Row::create();
+        $blockRoot->ParentID = (int) $block->ID;
+        $blockRoot->ParentClass = SharedBlock::class;
+        $blockRoot->write();
+
+        $tree = $this->buildTree();
+        $reference = GridTreeFactory::reference($tree['section'], $block, zone: '');
+
+        $page2Tree = $this->buildTree($this->page2());
+
+        $response = $this->jsonPost(self::BASE_URL . '/duplicateTo', [
+            'element' => $this->ref($reference),
+            'targetPageId' => (int) $this->page2()->ID,
+            'targetZone' => 'main',
+            'targetParent' => $this->ref($page2Tree['section']),
+        ]);
+
+        self::assertSame(204, $response->getStatusCode());
     }
 }

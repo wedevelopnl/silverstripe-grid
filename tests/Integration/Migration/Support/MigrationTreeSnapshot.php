@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Migration\Support;
 
 use PHPUnit\Framework\Assert;
+use SilverStripe\Core\ClassInfo;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
@@ -120,33 +121,38 @@ final class MigrationTreeSnapshot
     }
 
     /**
-     * Whether the page has any Section row on a stage, in a zone.
+     * Whether the page has any row of $elementClass on a stage, in a zone.
      *
-     * Convenience for "did this page get a grid tree on this stage". Sections
-     * use multi-table inheritance — `ParentID` lives on the base GridElement
-     * table while `Zone` lives on the Section subclass table — so the existence
-     * check joins the two stage-appropriate tables.
+     * Convenience for "did this page get a grid tree on this stage". ParentID,
+     * Zone and ClassName all live on the base GridElement table, so this is a
+     * single-table read — the element class is matched by ClassName rather than
+     * by which subclass table the row appears in, which is what a class with no
+     * own $db fields (Section) no longer has.
      *
-     * @param non-empty-string $gridTable Section ORM table (e.g. `WeDevelop_Grid_Section`)
+     * @param class-string<GridElement> $elementClass matched inclusive of subclasses
      * @param positive-int     $pageId
      * @param class-string     $pageClass polymorphic parent class (page IDs and element IDs share a numeric namespace)
      * @param non-empty-string $zone
      * @param non-empty-string $stage
      */
-    public static function recordExistsOnStage(string $gridTable, int $pageId, string $pageClass, string $zone, string $stage): bool
+    public static function recordExistsOnStage(string $elementClass, int $pageId, string $pageClass, string $zone, string $stage): bool
     {
-        $subTable = self::stageTable($gridTable, $stage);
         $baseTable = self::stageTable(self::GRID_ELEMENT_TABLE, $stage);
+
+        // Inclusive of subclasses, matching the old subclass-table join: a row of
+        // any Section subclass lived in the Section table and counted here.
+        $classNames = array_values(ClassInfo::subclassesFor($elementClass, true));
+        $placeholders = implode(', ', array_fill(0, count($classNames), '?'));
 
         $count = DB::prepared_query(
             \sprintf(
-                'SELECT COUNT(*) FROM "%s" AS "sub" '
-                . 'INNER JOIN "%s" AS "base" ON "base"."ID" = "sub"."ID" '
-                . 'WHERE "base"."ParentID" = ? AND "base"."ParentClass" = ? AND "sub"."Zone" = ?',
-                $subTable,
+                'SELECT COUNT(*) FROM "%s" AS "base" '
+                . 'WHERE "base"."ParentID" = ? AND "base"."ParentClass" = ? AND "base"."Zone" = ? '
+                . 'AND "base"."ClassName" IN (%s)',
                 $baseTable,
+                $placeholders,
             ),
-            [$pageId, $pageClass, $zone],
+            [$pageId, $pageClass, $zone, ...$classNames],
         )->value();
 
         return (int) $count > 0;
