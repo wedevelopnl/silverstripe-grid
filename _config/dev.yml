@@ -14,18 +14,23 @@ Only:
 # module: WeDevelop\E2e\Fixtures\FixtureController gates on Director::isDev()
 # (canInit() + a defence-in-depth 404), and its _config registers the route
 # with `Only: environment: dev`. Read that class before exposing this anywhere.
-# The module's reset() only archives SiteTree pages, so shared blocks — library
-# records with no page and no URL — accumulated one per run. The subclass sweeps
-# the unreferenced ones after the pages are gone. Test-only class, autoloaded via
-# the container's autoload-dev mapping.
-SilverStripe\Core\Injector\Injector:
-  WeDevelop\E2e\Fixtures\FixtureLoader:
-    class: WeDevelop\Grid\Tests\E2E\Support\GridFixtureLoader
-
 WeDevelop\E2e\Fixtures\FixtureLoader:
-  # reset() archives only pages whose ClassName is listed here AND whose
-  # URLSegment starts with "e2e-". Every SiteTree page type the fixtures
-  # create must be listed — FixtureEndpointTest guards this.
+  # Everything a run can leave behind, declared by class: reset() deletes every
+  # record of these and their subclasses on both stages, however it was created.
+  # That covers what no reachability rule could — a shared block the library
+  # still holds but no page places, an element a spec created by driving the
+  # CMS, a placement whose page a crashed run took with it.
+  #
+  # The trade: a listed class is disposable, so anything YOU authored in one is
+  # gone after a fixture load. `task seed-fixture` runs against this same dev DB.
+  # Files are deliberately absent — the image an `attach_image` post-action
+  # uploads survives, rather than a reset emptying the whole asset store.
+  purge_classes:
+    - Page
+    - WeDevelop\Grid\Model\GridElement
+    - WeDevelop\Grid\Model\SharedBlock
+  # Navigation only: the loader walks this list in order to pick the page a
+  # fixture load returns, falling back to the first SiteTree the fixture made.
   # Both entries are harness-app page types (see .docker/app/src/), not module
   # classes — the grid ships no page type of its own.
   fixture_page_classes:

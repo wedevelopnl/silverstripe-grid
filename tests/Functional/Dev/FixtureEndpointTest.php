@@ -19,9 +19,9 @@ use WeDevelop\Grid\Model\SharedBlockReference;
  * Guards the grid's _config/dev.yml wiring of the silverstripe-e2e module.
  *
  * The module's own test suite covers the FixtureLoader/FixtureController
- * mechanics (error handling, method restrictions, reset allowlisting). These
+ * mechanics (error handling, method restrictions, the purge itself). These
  * tests only verify what the GRID supplies: the fixture registrations, the
- * fixture_page_classes allowlist, and the extension registration reachable
+ * purge scope those fixtures need, and the extension registration reachable
  * through the real /dev/e2e-fixtures endpoint. CoversNothing because every
  * class exercised here is vendor code — incidental execution of grid models
  * must not count toward grid coverage.
@@ -41,16 +41,12 @@ final class FixtureEndpointTest extends FunctionalTest
 
     protected function tearDown(): void
     {
-        // Clean up any E2E pages created during tests. This filters on the
-        // "e2e-" prefix ALONE — deliberately broader than FixtureLoader::reset(),
-        // which also constrains ClassName — because testResetDoesNotArchiveNonFixturePageSharingPrefix()
-        // creates a bare SiteTree that reset() (correctly) refuses to touch, and
-        // tearDown must still remove it. Do not narrow this to match reset().
+        // reset() purges the declared classes, so only records OUTSIDE that
+        // scope survive a test — the bare SiteTree below is the one case.
         Versioned::withVersionedMode(static function (): void {
             Versioned::set_stage(Versioned::DRAFT);
 
-            $pages = SiteTree::get()->filter(['URLSegment:StartsWith' => 'e2e-']);
-            foreach ($pages as $page) {
+            foreach (SiteTree::get()->filter(['ClassName' => SiteTree::class]) as $page) {
                 $page->doArchive();
             }
         });
@@ -81,36 +77,31 @@ final class FixtureEndpointTest extends FunctionalTest
 
     public function testResetRemovesLoadedGridFixtures(): void
     {
-        // End-to-end proof that the configured fixture_page_classes allowlist
-        // actually matches the pages the grid fixtures create: if it did not,
-        // reset() would leave residue behind and this count would stay > 0.
+        // End-to-end proof that the declared purge_classes actually cover what
+        // the grid fixtures write: a class missing from the scope would leave
+        // its records behind and one of these counts would stay above 0.
         $this->post(self::BASE_URL . '/load', ['fixture' => 'element-tree']);
 
-        self::assertGreaterThan(
-            0,
-            SiteTree::get()->filter(['URLSegment:StartsWith' => 'e2e-'])->count(),
-        );
+        self::assertGreaterThan(0, SiteTree::get()->count());
+        self::assertGreaterThan(0, Section::get()->count());
 
         $this->post(self::BASE_URL . '/reset?confirm=1', []);
 
-        self::assertSame(
-            0,
-            SiteTree::get()->filter(['URLSegment:StartsWith' => 'e2e-'])->count(),
-        );
+        self::assertSame(0, SiteTree::get()->count());
+        self::assertSame(0, Section::get()->count());
     }
 
-    public function testResetDoesNotArchiveNonFixturePageSharingPrefix(): void
+    public function testResetLeavesRecordsOfAClassTheConfigDoesNotDeclare(): void
     {
-        // A plain SiteTree (neither Page nor MultiZonePage) that merely shares
-        // the "e2e-" URLSegment prefix represents unrelated content on a shared
-        // dev DB. reset() must leave it untouched: the configured
-        // fixture_page_classes allowlist, not the prefix alone, decides ownership.
+        // The scope is `Page` and its subclasses, not SiteTree: a page type
+        // outside the declared classes is not the E2E database's to delete.
+        // Narrowing or widening that entry is a deliberate act, not a detail.
         $unrelatedId = Versioned::withVersionedMode(static function (): int {
             Versioned::set_stage(Versioned::DRAFT);
 
             $page = SiteTree::create();
-            $page->Title = 'Unrelated e2e-prefixed page';
-            $page->URLSegment = URLSegmentFilter::create()->filter('e2e-unrelated');
+            $page->Title = 'Unrelated page';
+            $page->URLSegment = URLSegmentFilter::create()->filter('unrelated-page');
             $page->ClassName = SiteTree::class;
 
             return (int) $page->write();
@@ -126,39 +117,65 @@ final class FixtureEndpointTest extends FunctionalTest
 
         self::assertNotNull(
             SiteTree::get()->byID($unrelatedId),
-            'reset() must not archive a non-fixture SiteTree that only shares the e2e- prefix',
+            'reset() must not delete a class the purge scope does not declare',
         );
     }
 
-    public function testResetSweepsSharedBlocksNothingPlacesAnyMore(): void
+    public function testResetSweepsEverySharedBlockIncludingOnesAPageStillPlaces(): void
     {
-        // A SharedBlock has no page and no URLSegment, so the module's own reset
-        // never collected one: every fixture load left another behind until the
-        // library listed dozens of identical blocks.
-        $blockId = Versioned::withVersionedMode(static function (): int {
+        // A SharedBlock has no page and no URL, so nothing that infers ownership
+        // from reachability ever collected one: every fixture load and every
+        // convert-to-shared spec left another behind. Declaring the class sweeps
+        // them whatever holds them — including a block placed on live content,
+        // which is the cost of pointing the suite at this database.
+        $ids = Versioned::withVersionedMode(static function (): array {
             Versioned::set_stage(Versioned::DRAFT);
 
-            $block = SharedBlock::create();
-            $block->Title = 'Orphaned by an earlier run';
+            $orphan = SharedBlock::create();
+            $orphan->Title = 'Orphaned by an earlier run';
+            $orphanId = (int) $orphan->write();
 
-            return (int) $block->write();
+            $placed = SharedBlock::create();
+            $placed->Title = 'Placed on a page';
+            $placedId = (int) $placed->write();
+
+            // A reference to an empty block is refused by hierarchy validation,
+            // so the block needs the root that decides where it may be placed.
+            $root = Section::create();
+            $root->Title = 'Block root';
+            $root->ParentID = $placedId;
+            $root->ParentClass = SharedBlock::class;
+            $root->write();
+
+            $page = SiteTree::create();
+            $page->Title = 'Consuming page';
+            $page->URLSegment = URLSegmentFilter::create()->filter('consuming-page');
+            $page->ClassName = 'Page';
+            $pageId = (int) $page->write();
+
+            $reference = SharedBlockReference::create();
+            $reference->BlockID = $placedId;
+            $reference->ParentID = $pageId;
+            $reference->ParentClass = SiteTree::class;
+            $reference->Zone = 'main';
+            $reference->write();
+
+            return ['orphan' => $orphanId, 'placed' => $placedId];
         });
 
         FixtureLoader::create()->reset();
 
-        self::assertNull(
-            SharedBlock::get()->byID($blockId),
-            'reset() must sweep a shared block that no page places',
-        );
+        self::assertNull(SharedBlock::get()->byID($ids['orphan']));
+        self::assertNull(SharedBlock::get()->byID($ids['placed']));
     }
 
-    public function testResetSweepsABlockHeldOnlyByAPlacementWhosePageIsGone(): void
+    public function testResetSweepsAPlacementWhosePageIsGone(): void
     {
-        // Archiving a page leaves its placement rows behind, and isReferenced()
-        // counts one of those as a placement — so without dropping the debris
-        // first the sweep keeps every block any past run ever placed. This is
-        // the case that made a dev database accumulate them.
-        $blockId = Versioned::withVersionedMode(static function (): int {
+        // Debris, not content: archiving a page leaves its placement rows
+        // behind, and a placement with no page says nothing about where a block
+        // sits. Nothing reaches these from a fixture's own records — the
+        // GridElement entry in purge_classes is what collects them.
+        $referenceId = Versioned::withVersionedMode(static function (): int {
             Versioned::set_stage(Versioned::DRAFT);
 
             $block = SharedBlock::create();
@@ -177,77 +194,28 @@ final class FixtureEndpointTest extends FunctionalTest
             $reference->ParentID = 999_999;
             $reference->ParentClass = SiteTree::class;
             $reference->Zone = 'main';
-            $reference->write();
 
-            return $blockId;
+            return (int) $reference->write();
         });
 
         FixtureLoader::create()->reset();
 
         self::assertNull(
-            SharedBlock::get()->byID($blockId),
-            'reset() must sweep a block whose only placement points at a page that is gone',
+            SharedBlockReference::get()->byID($referenceId),
+            'reset() must sweep a placement whose page is gone',
         );
     }
 
-    public function testResetKeepsASharedBlockAPageStillPlaces(): void
+    public function testPurgeClassesCoversEveryFixturePageType(): void
     {
-        // The sweep is scoped by placement, not by "is a shared block": a block
-        // a developer put on a page of their own must survive a fixture reset.
-        $ids = Versioned::withVersionedMode(static function (): array {
-            Versioned::set_stage(Versioned::DRAFT);
-
-            $block = SharedBlock::create();
-            $block->Title = 'Placed on real content';
-            $blockId = (int) $block->write();
-
-            // A reference to an empty block is refused by hierarchy validation,
-            // so the block needs the root that decides where it may be placed.
-            $root = Section::create();
-            $root->Title = 'Block root';
-            $root->ParentID = $blockId;
-            $root->ParentClass = SharedBlock::class;
-            $root->write();
-
-            $page = SiteTree::create();
-            $page->Title = 'Unrelated page';
-            $page->URLSegment = URLSegmentFilter::create()->filter('unrelated-real-page');
-            $pageId = (int) $page->write();
-
-            $reference = SharedBlockReference::create();
-            $reference->BlockID = $blockId;
-            $reference->ParentID = $pageId;
-            $reference->ParentClass = SiteTree::class;
-            $reference->Zone = 'main';
-            $reference->write();
-
-            return ['block' => $blockId, 'page' => $pageId];
-        });
-
-        FixtureLoader::create()->reset();
-
-        self::assertNotNull(
-            SharedBlock::get()->byID($ids['block']),
-            'reset() must not sweep a shared block a page still places',
-        );
-
-        // Clean up the page this test created outside the e2e- prefix.
-        Versioned::withVersionedMode(static function () use ($ids): void {
-            Versioned::set_stage(Versioned::DRAFT);
-            SiteTree::get()->byID($ids['page'])?->doArchive();
-        });
-    }
-
-    public function testFixturePageClassesCoversEveryFixturePageType(): void
-    {
-        // reset() matches ClassName exactly (SilverStripe's ClassName filter is
-        // non-polymorphic), so any SiteTree page type used as a top-level key in
-        // a fixture MUST be listed in the FixtureLoader.fixture_page_classes
-        // config — or reset() silently leaves those pages behind, polluting a
-        // shared dev DB. This guard fails loudly the moment a fixture introduces
-        // a new page type that _config/dev.yml does not cover.
-        $declared = Config::inst()->get(FixtureLoader::class, 'fixture_page_classes');
-        self::assertIsArray($declared, 'fixture_page_classes must be configured');
+        // reset() only deletes what purge_classes declares, so any SiteTree page
+        // type used as a top-level key in a fixture must fall under one of those
+        // classes — or its pages survive every reset and pollute the dev DB. The
+        // match is polymorphic (unlike the 0.1.x ClassName allowlist this
+        // replaced), so `Page` covers App\MultiZonePage; a page type descending
+        // straight from SiteTree would not, and fails here.
+        $declared = Config::inst()->get(FixtureLoader::class, 'purge_classes');
+        self::assertIsArray($declared, 'purge_classes must be configured');
 
         $fixtureDir = dirname(__DIR__, 2) . '/E2E/Fixture';
         $files = glob($fixtureDir . '/*.yml');
@@ -276,14 +244,21 @@ final class FixtureEndpointTest extends FunctionalTest
         );
 
         foreach ($pageTypesInFixtures as $class => $file) {
-            self::assertContains(
-                $class,
-                $declared,
+            $covered = false;
+            foreach ($declared as $purgeClass) {
+                if (is_a($class, $purgeClass, true)) {
+                    $covered = true;
+
+                    break;
+                }
+            }
+
+            self::assertTrue(
+                $covered,
                 sprintf(
-                    'Fixture "%s" creates page type %s, which is missing from the '
-                    . 'FixtureLoader.fixture_page_classes config. reset() matches ClassName '
-                    . 'exactly, so it would silently leave these pages behind. Add %s to '
-                    . '_config/dev.yml.',
+                    'Fixture "%s" creates page type %s, which no entry in the '
+                    . 'FixtureLoader.purge_classes config covers. reset() would leave those '
+                    . 'pages behind. Add %s (or a parent of it) to _config/dev.yml.',
                     $file,
                     $class,
                     $class,
