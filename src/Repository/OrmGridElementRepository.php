@@ -6,7 +6,6 @@ namespace WeDevelop\Grid\Repository;
 
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\Deprecation;
-use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\GridElement;
@@ -96,33 +95,24 @@ final class OrmGridElementRepository implements GridElementRepositoryInterface
 
             // The Zone filter only applies to root elements (parented to a
             // page). Branch on the parent class — not merely on whether a zone
-            // was passed — so a stray zone on a non-page parent never silently
-            // swaps the query base to the root classes. Child elements (rows,
-            // columns, content) are scoped by their container parent and carry
-            // no zone of their own.
+            // was passed — so a stray zone on a non-page parent never narrows a
+            // container's children. Child elements (rows, columns, content) are
+            // scoped by their container parent and carry no zone of their own.
             if ($zone !== null && is_a($class, SiteTree::class, true)) {
                 $filter['Zone'] = $zone;
-
-                // Zone is a subclass column, so GridElement::get() cannot filter
-                // it. Query each root class in turn and let the Sort/ID pass
-                // below interleave the results into one sequence.
-                $lists = [];
-                foreach (GridElement::ROOT_ELEMENT_CLASSES as $rootClass) {
-                    /** @var DataList<GridElement> $rootList */
-                    $rootList = DataObject::get($rootClass);
-                    $lists[] = $rootList;
-                }
-            } else {
-                $lists = [GridElement::get()];
             }
 
-            foreach ($lists as $list) {
-                foreach ($list->filter($filter) as $element) {
-                    $merged[] = $element;
-                }
+            // One query per parent class, whatever the level: Zone lives on the
+            // GridElement base table, so a zone's whole root sequence — Sections
+            // and shared-block placements alike — comes back from a single
+            // indexed read rather than one query per root class.
+            foreach (GridElement::get()->filter($filter)->sort(['Sort' => 'ASC', 'ID' => 'ASC']) as $element) {
+                $merged[] = $element;
             }
         }
 
+        // The DB has ordered each parent class's own slice; this only interleaves
+        // slices when a caller passes more than one class at once.
         usort(
             $merged,
             static fn (GridElement $a, GridElement $b): int

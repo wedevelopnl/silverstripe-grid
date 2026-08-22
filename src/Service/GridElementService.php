@@ -54,9 +54,7 @@ final readonly class GridElementService
 
         // Zone scopes page roots only. A section rooting a SharedBlock is the
         // library's single subtree and belongs to no zone.
-        if ($containerType === ContainerType::Section) {
-            $newElement->Zone = $parent instanceof SiteTree ? $zone : '';
-        }
+        $newElement->Zone = $parent instanceof SiteTree ? $zone : '';
 
         return $this->writeAndPlace($newElement, $parent, $insertAfterElementID, $insertAtStart);
     }
@@ -134,7 +132,6 @@ final readonly class GridElementService
     ): Result {
         // C1: Validate target parent belongs to the claimed page/zone
         $ownershipResult = $this->validateOwnership(
-            $element,
             $targetParent,
             $targetPageId,
             $targetZone,
@@ -160,9 +157,7 @@ final readonly class GridElementService
         $clone->ParentID = $targetParentId;
         $clone->ParentClass = $targetParent::class;
 
-        if ($clone instanceof Section) {
-            $clone->Zone = $targetZone;
-        }
+        $clone->Zone = $targetParent instanceof SiteTree ? $targetZone : '';
 
         // Generate copy title (top-level only — children keep originals)
         /** @var non-empty-string $cloneTitle */
@@ -183,23 +178,25 @@ final readonly class GridElementService
     /**
      * C1: Validate that the target parent belongs to the claimed page and zone.
      *
-     * For sections, the target parent IS the page, so parentId must equal pageId.
-     * For non-sections, walks the ancestor chain to verify page ownership and
-     * finds the root section to verify zone membership.
+     * At page ROOT the target parent IS the page, so parentId must equal pageId
+     * and the zone is assigned rather than verified. Below root, walks the
+     * ancestor chain to verify page ownership and finds the root section to
+     * verify zone membership.
+     *
+     * Branched on the TARGET, not on the element's class: a shared-block
+     * placement standing in for a Section is not a Section, so a class test sent
+     * it down the nested branch and asserted the page was a GridElement.
      *
      * @param positive-int $targetPageId
      * @param non-empty-string $targetZone
      * @return Result<null>
      */
     private function validateOwnership(
-        GridElement $element,
         DataObject $targetParent,
         int $targetPageId,
         string $targetZone,
     ): Result {
-        $isSection = $element instanceof Section;
-
-        if ($isSection) {
+        if ($targetParent instanceof SiteTree) {
             /** @var positive-int $targetParentId */
             $targetParentId = $targetParent->ID;
             if ($targetParentId !== $targetPageId) {

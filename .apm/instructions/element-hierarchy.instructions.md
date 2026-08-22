@@ -44,7 +44,7 @@ Page IDs and element IDs share no namespace separation, so lookup maps must key 
 
 ## Zones
 
-Sections carry a `Zone` field (e.g., `"main"`, `"sidebar"`) scoping them within a page. Sort values are independent per zone per parent. All queries (tree loading, sort assignment, reorder) filter by zone at the root level.
+`Zone` (e.g., `"main"`, `"sidebar"`) is declared on `GridElement` and is meaningful ONLY when the element's parent is a `SiteTree` — `GridElementService` forces `''` everywhere else. Declaring it on the base is what lets one indexed query return a zone's whole root sequence (Sections and placements together); when it lived on the root subclasses, every root read and every root Sort assignment fanned out to one query per class. Sort values are independent per zone per parent. All queries (tree loading, sort assignment, reorder) filter by zone at the root level.
 
 ## Auto-Scaffolding
 
@@ -77,9 +77,9 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML (b
 
 ## Shared Blocks
 
-A `SharedBlock` is a library record owning ONE subtree via the same polymorphic parent (`ParentClass = SharedBlock::class`). A `SharedBlockReference` is the placed element; it holds only placement data (`Parent`, `Sort`, `Zone`) and a `has_one Block`.
+A `SharedBlock` is a library record owning ONE subtree via the same polymorphic parent (`ParentClass = SharedBlock::class`). A `SharedBlockReference` is the placed element; it holds only placement data (`Parent`, `Sort`, `Zone` — all inherited from `GridElement`) and a `has_one Block`.
 
-- **Effective class**: placement rules judge a reference by its block's ROOT class, never by `SharedBlockReference`. Resolved in `SharedBlockReference::getEffectiveRootClass()`, which pins the DRAFT stage — a block's shape is structural, and resolving on the ambient stage makes page publish fail whenever the block is unpublished.
+- **Effective class**: placement rules judge a reference by its block's ROOT class, never by `SharedBlockReference`. Ask `GridElement::getPlacementClass()` — it answers `static::class` for an ordinary element and the block's root class for a placement, so no caller needs an `instanceof`. A caller that reads `$element::class` directly treats a section-rooted placement as a leaf. `SharedBlockReference` implements it via `getEffectiveRootClass()`, which pins the DRAFT stage — a block's shape is structural, and resolving on the ambient stage makes page publish fail whenever the block is unpublished.
 - **Placement matrix**: section-rooted → page root; row-rooted → inside a Section; column-rooted → inside a Row; leaf-rooted → inside a Column. Same rules as the class it stands in for.
 - **No nesting**: a reference may never sit anywhere inside a shared subtree, nor root a block. This is what removes cycle detection entirely.
 - **No boundary crossing**: `ReorderValidator` rejects any move whose source and target sit on different sides of a shared boundary. Client-side collision filtering mirrors it; the validator is the backstop.

@@ -11,12 +11,12 @@ use SilverStripe\Versioned\Versioned;
 
 /**
  * A placement of a SharedBlock inside a page's grid. Carries only placement
- * data (Parent, Sort, Zone); all content lives on the block's own subtree.
+ * data (Parent, Sort, Zone — all inherited from GridElement); all content
+ * lives on the block's own subtree.
  *
  * Deliberately declares no $owns to Block: page publish must never cascade into
  * the shared source, which has its own lifecycle.
  *
- * @property string $Zone
  * @property int $BlockID
  * @method SharedBlock|null Block()
  */
@@ -32,23 +32,22 @@ class SharedBlockReference extends GridElement
 
     private static string $class_description = 'A reusable block maintained once in the shared library';
 
-    /** @var array<string, string> */
-    private static array $db = [
-        'Zone' => 'Varchar(50)',
-    ];
-
     /** @var array<string, class-string> */
     private static array $has_one = [
         'Block' => SharedBlock::class,
     ];
 
-    /** @var array<string, array<string, string|list<string>>> */
-    private static array $indexes = [
-        'Zone' => [
-            'type' => 'index',
-            'columns' => ['Zone'],
-        ],
-    ];
+    /**
+     * A placement is judged by the class its block is rooted at, never by its
+     * own — {@see getEffectiveRootClass()} resolves it.
+     *
+     * @return class-string<GridElement>|null
+     */
+    #[Override]
+    public function getPlacementClass(): ?string
+    {
+        return $this->getEffectiveRootClass();
+    }
 
     /**
      * The class placement rules must judge this element by: a reference stands

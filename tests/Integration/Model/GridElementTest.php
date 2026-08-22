@@ -17,6 +17,7 @@ use WeDevelop\Grid\Model\ContentElement;
 use SilverStripe\VersionedAdmin\Forms\HistoryViewerField;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Tests\Integration\Support\CustomSchemaContentElement;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
@@ -115,6 +116,51 @@ final class GridElementTest extends SapphireTest
     // hidden by tests that only use a single parent. The equivalent
     // isolation guarantee for placement is covered in
     // ElementPlacementServiceTest::testInsertAfterBumpsOnlySameParentSiblings.
+
+    public function testEnsureSortSetSpansBothRootClassesWithinAZone(): void
+    {
+        // At page root the Sort sequence spans every root class, so a placement
+        // must append after a Section rather than restart the sequence. Zone
+        // lives on the GridElement base table, which is what lets one query see
+        // both classes — the previous per-class fan-out is the thing this pins.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+
+        $section = GridTreeFactory::section($page, zone: 'main');
+
+        $reference = SharedBlockReference::create();
+        $reference->BlockID = (int) $block->ID;
+        $reference->ParentID = (int) $page->ID;
+        $reference->ParentClass = $page::class;
+        $reference->Zone = 'main';
+        $reference->write();
+
+        self::assertSame(1, $section->Sort);
+        self::assertSame(
+            2,
+            $reference->Sort,
+            'A placement must append after the Section already in this zone, not collide at Sort 1',
+        );
+    }
+
+    public function testEnsureSortSetStartsANewSequencePerZone(): void
+    {
+        // Each zone is its own sequence, so the first element of a second zone
+        // starts at 1 even though the page already holds elements elsewhere.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        $main = GridTreeFactory::section($page, zone: 'main');
+
+        $sidebar = Section::create();
+        $sidebar->ParentID = (int) $page->ID;
+        $sidebar->ParentClass = $page::class;
+        $sidebar->Zone = 'sidebar';
+        $sidebar->write();
+
+        self::assertSame(1, $main->Sort);
+        self::assertSame(1, $sidebar->Sort, 'A second zone must not continue the first zone\'s sequence');
+    }
 
     public function testEnsureSortSetIsolatedPerParent(): void
     {
