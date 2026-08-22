@@ -41,6 +41,7 @@ class SharedBlockService
         private readonly ReorderValidatorInterface $validator,
         private readonly ElementPlacementService $placementService,
         private readonly GridElementRepositoryInterface $elementRepository,
+        private readonly SharedBlockLocaliser $localiser,
     ) {
     }
 
@@ -94,6 +95,15 @@ class SharedBlockService
         ?int $insertAfterElementID,
         bool $insertAtStart = false,
     ): Result {
+        // Before validation, not after: a block with no content in the active
+        // locale resolves no placement class, so the validator would refuse the
+        // placement outright with BLOCK_EMPTY. Placing a block that exists only
+        // in another locale is an ordinary thing to do while translating a site,
+        // so the locale copy is materialised first and the placement then reads
+        // as a normal one. A no-op without Fluent, and when the locale already
+        // holds content.
+        $this->localiser->ensureLocalised($block);
+
         $reference = SharedBlockReference::create();
         $reference->BlockID = $block->ID;
 

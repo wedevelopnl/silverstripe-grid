@@ -53,12 +53,14 @@ When Fluent is installed, the module automatically handles two CMS operations:
 [Shared blocks](usage/shared-blocks.md) follow the same isolation model, with one wrinkle worth knowing:
 
 - The block **record** is a single cross-locale row; its **subtree** is locale-isolated like any other element.
-- Copying a **page** carries its placements, pointing at the same block — it does not duplicate the block's subtree.
+- Copying a **page** carries its placements — pointing at the same block record — and gives every block it places a subtree in the target locale if it has none. Translating a page therefore translates the blocks on it, which is why a freshly copied page renders rather than showing empty frames.
 - Copying a **block** clones that block's subtree into the target locale.
-- Clearing a locale removes that locale's block subtrees and that locale's placements; the block record survives.
-- A placement whose block has no content in the current locale renders empty on the front end.
+- Placing a block into a locale that has no content for it localises it the same way, so an author working directly in a second locale can pick any block from the library.
+- **Localising a block is additive and cross-page.** Blocks are shared: giving one content in a locale means every *other* page in that locale placing it starts rendering too. It can never overwrite a translation — the copy only ever runs into a locale that holds nothing, so a second page copy, or two pages placing the same block, add nothing.
+- Clearing a locale removes that locale's block subtrees and that locale's placements; the block record survives. Clearing a locale from a **page** does not remove block subtrees — the block may serve other pages in that locale, so copy creates but clear does not destroy.
+- A placement whose block has no content in the current locale still renders empty on the front end. That state is now reached by emptying a block after it was placed, rather than by copying a page without its blocks.
 
-`FluentSharedBlockExtension` handles the block side, sharing its clone mechanics with the page side through `LocalisedSubtreeCloner`.
+`SharedBlockLocaliser` holds the block-localisation logic and its idempotency guard; `FluentSharedBlockExtension`, `FluentGridPageExtension` and `SharedBlockService::place()` all go through it, and it shares clone mechanics with the page side via `LocalisedSubtreeCloner`.
 
 This is handled by `FluentGridPageExtension` (applied to SiteTree), `FluentSharedBlockExtension` (applied to SharedBlock) and `GridAwareDeleteLocalisationPolicy` (registered in place of Fluent's `DeleteLocalisationPolicy` via DI). All three are registered automatically in `_config/fluent.yml` when Fluent is installed.
 

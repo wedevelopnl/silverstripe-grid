@@ -36,14 +36,20 @@ class LocalisedSubtreeCloner
      * one, which no later save repairs because the caller's emptiness check
      * would then see the half-copied roots and decline to run again.
      *
+     * Returns every node written, roots and descendants alike, so a caller can
+     * act on what the copy actually contains — the page copy uses it to find the
+     * shared-block placements it just carried into the new locale.
+     *
      * @param iterable<GridElement> $roots
      * @param positive-int $targetLocaleId
-     * @return Result<null>
+     * @return Result<list<GridElement>>
      */
-    #[NoDiscard('The Result reports whether the whole clone succeeded; discarding it hides a partial copy.')]
+    #[NoDiscard('The Result reports whether the whole clone succeeded and carries the cloned nodes; discarding it hides a partial copy.')]
     public function cloneSubtrees(iterable $roots, int $targetLocaleId): Result
     {
         return Transactional::run(function () use ($roots, $targetLocaleId): Result {
+            $written = [];
+
             foreach ($roots as $root) {
                 $clone = $root->duplicate(true);
 
@@ -58,10 +64,12 @@ class LocalisedSubtreeCloner
                 foreach ($cloned as $element) {
                     $element->LocaleID = $targetLocaleId;
                     $element->write();
+
+                    $written[] = $element;
                 }
             }
 
-            return Result::ok(null);
+            return Result::ok($written);
         });
     }
 

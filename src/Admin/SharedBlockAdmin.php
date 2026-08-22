@@ -18,6 +18,19 @@ use WeDevelop\Grid\Model\SharedBlock;
  */
 class SharedBlockAdmin extends ModelAdmin
 {
+    /**
+     * The library is gated on PAGE access, not on its own section code.
+     * Managing a shared block is maintaining page content in one place
+     * ({@see SharedBlock::ADMIN_PERMISSION}, which the model checks per record);
+     * leaving this at the default would have made the screen separately
+     * grantable, so a page editor could edit blocks through the API but not
+     * open the library.
+     *
+     * The literal matches the code CMSMain registers; see
+     * {@see SharedBlock} for why the FQCN-suffixed form would deny everyone.
+     */
+    private static string|array $required_permission_codes = 'CMS_ACCESS_CMSMain';
+
     private static string $url_segment = 'shared-blocks';
 
     private static string $menu_title = 'Shared blocks';

@@ -41,6 +41,11 @@ final class SharedBlockControllerTest extends FunctionalTest
      */
     private const GRID_BASE_URL = '/admin/grid/api';
 
+    /**
+     * The library's own auto-registered section code. It no longer gates
+     * anything — managing a block requires page access — so it stands here for
+     * "a CMS grant that is not page access".
+     */
     private const LIBRARY_PERMISSION = 'CMS_ACCESS_' . SharedBlockAdmin::class;
 
     protected function setUp(): void
@@ -64,14 +69,17 @@ final class SharedBlockControllerTest extends FunctionalTest
     }
 
     /**
-     * A member who may fully edit pages but was never granted the block
-     * library.
+     * A member who may edit pages and holds no other CMS section.
      *
-     * Deliberately NOT CMS_ACCESS_LeftAndMain, which implies every section, and
-     * deliberately paired with SITETREE_EDIT_ALL so a refusal below can only
-     * come from the library gate and never from page permissions.
+     * Deliberately NOT CMS_ACCESS_LeftAndMain, which implies every section and
+     * so would prove nothing about which code actually gates the library.
+     * Paired with SITETREE_EDIT_ALL so a refusal can only come from the library
+     * gate and never from page permissions.
+     *
+     * CMS_ACCESS_CMSMain is the literal code CMSMain registers — the
+     * FQCN-suffixed variant is a code nobody holds.
      */
-    private function logInAsPageEditorOnly(): void
+    private function logInAsPageEditor(): void
     {
         $memberId = $this->logInWithPermission(['CMS_ACCESS_CMSMain', 'SITETREE_EDIT_ALL']);
         $this->session()->set('loggedInAs', $memberId);
@@ -576,30 +584,34 @@ final class SharedBlockControllerTest extends FunctionalTest
     // --- Permission gates -------------------------------------------------
     //
     // Every mutating endpoint below is guarded by one canX() call and nothing
-    // else. Without these the guards could all be deleted and the suite would
-    // stay green, which is how a page-only editor came to be able to edit and
-    // delete library records through the API.
+    // else. Managing a block requires PAGE access (CMS_ACCESS_CMSMain), not a
+    // library-specific grant: a shared block is page content maintained in one
+    // place. These tests log in with page access and NOTHING else, so they fail
+    // if the gate drifts back to a separate library code — which would also
+    // stop page localisation from localising the blocks a page places.
 
-    public function testConvertIsRefusedWithoutLibraryAccess(): void
+    public function testCreateIsRefusedWithoutPageAccess(): void
     {
-        $page = $this->page();
-        $section = GridTreeFactory::section($page, zone: 'main', title: 'Local section');
+        // The gate moved to page access; it did not disappear. A member holding
+        // a CMS grant that is not page access is still refused, which is what
+        // separates "page editors may manage blocks" from "anyone may".
+        $memberId = $this->logInWithPermission(self::LIBRARY_PERMISSION);
+        $this->session()->set('loggedInAs', $memberId);
 
-        $this->logInAsPageEditorOnly();
-
-        $response = $this->jsonRequest('POST', self::BASE_URL . '/convert', [
-            'element' => $this->ref($section),
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/create', [
+            'containerType' => 'section',
         ]);
 
         self::assertSame(403, $response->getStatusCode());
         self::assertCount(0, SharedBlock::get(), 'no block may be created');
     }
 
-    public function testDeleteIsRefusedWithoutLibraryAccess(): void
+    public function testDeleteIsRefusedWithoutPageAccess(): void
     {
         $block = $this->sectionRootedBlock();
 
-        $this->logInAsPageEditorOnly();
+        $memberId = $this->logInWithPermission(self::LIBRARY_PERMISSION);
+        $this->session()->set('loggedInAs', $memberId);
 
         $response = $this->jsonRequest(
             'DELETE',
@@ -610,18 +622,48 @@ final class SharedBlockControllerTest extends FunctionalTest
         self::assertNotNull(SharedBlock::get()->byID($block->ID), 'the block must survive');
     }
 
-    public function testSetPublishedIsRefusedWithoutLibraryAccess(): void
+    public function testConvertIsAllowedWithPageAccess(): void
+    {
+        $page = $this->page();
+        $section = GridTreeFactory::section($page, zone: 'main', title: 'Local section');
+
+        $this->logInAsPageEditor();
+
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/convert', [
+            'element' => $this->ref($section),
+        ]);
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertCount(1, SharedBlock::get(), 'the block is created');
+    }
+
+    public function testDeleteIsAllowedWithPageAccess(): void
     {
         $block = $this->sectionRootedBlock();
 
-        $this->logInAsPageEditorOnly();
+        $this->logInAsPageEditor();
+
+        $response = $this->jsonRequest(
+            'DELETE',
+            self::BASE_URL . '/delete?blockId=' . (int) $block->ID . '&mode=remove',
+        );
+
+        self::assertSame(204, $response->getStatusCode());
+        self::assertNull(SharedBlock::get()->byID($block->ID), 'the block is deleted');
+    }
+
+    public function testSetPublishedIsAllowedWithPageAccess(): void
+    {
+        $block = $this->sectionRootedBlock();
+
+        $this->logInAsPageEditor();
 
         $response = $this->jsonRequest('PATCH', self::BASE_URL . '/setPublished', [
             'blockId' => (int) $block->ID,
             'published' => true,
         ]);
 
-        self::assertSame(403, $response->getStatusCode());
+        self::assertSame(204, $response->getStatusCode());
     }
 
     public function testPlaceIsRefusedWhenThePageMayNotBeEdited(): void
@@ -629,9 +671,10 @@ final class SharedBlockControllerTest extends FunctionalTest
         $block = $this->sectionRootedBlock();
         $page = $this->page();
 
-        // Library access but no page rights: the mirror image of the tests
-        // above, pinning the OTHER guard on this endpoint.
-        $memberId = $this->logInWithPermission(self::LIBRARY_PERMISSION);
+        // Page SECTION access but no edit right on this particular page — note
+        // the absence of SITETREE_EDIT_ALL — so the refusal can only come from
+        // the per-page guard, the mirror image of the tests above.
+        $memberId = $this->logInWithPermission('CMS_ACCESS_CMSMain');
         $this->session()->set('loggedInAs', $memberId);
         $page->CanEditType = 'OnlyTheseUsers';
         $page->write();
@@ -775,16 +818,16 @@ final class SharedBlockControllerTest extends FunctionalTest
         self::assertCount(0, SharedBlock::get(), 'no block may be created');
     }
 
-    public function testCreateIsRefusedWithoutLibraryAccess(): void
+    public function testCreateIsAllowedWithPageAccess(): void
     {
-        $this->logInAsPageEditorOnly();
+        $this->logInAsPageEditor();
 
         $response = $this->jsonRequest('POST', self::BASE_URL . '/create', [
             'containerType' => 'section',
         ]);
 
-        self::assertSame(403, $response->getStatusCode());
-        self::assertCount(0, SharedBlock::get(), 'no block may be created');
+        self::assertSame(200, $response->getStatusCode());
+        self::assertCount(1, SharedBlock::get(), 'the block is created');
     }
 
     public function testCreateEndpointRequiresCsrfToken(): void
