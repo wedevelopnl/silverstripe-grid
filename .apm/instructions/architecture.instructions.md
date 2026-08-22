@@ -50,6 +50,7 @@ client/src/js/i18n/   # Internationalization utilities
 client/src/styles/    # Plain modern CSS (native nesting; tokens + fonts + a11y + typography + surfaces + publish-status are the shared layer). Class names are flat kebab-case (ssgrid-block-part; no BEM __/--); state/variants live on data-/aria- attributes; shared treatments are utility classes composed in className (ssgrid-card-surface, ssgrid-title, ssgrid-focus-ring, ssgrid-type-icon-chip, ssgrid-popover-*), parameterized via --ssgrid-* custom properties
 client/fonts/         # Self-hosted Poppins woff2 subsets + OFL licence; copied to client/dist/fonts/ at build
 client/dist/          # Vite build output (exposed, created by build)
+client/js/            # Hand-written, unbundled admin-chrome scripts (shared-block-add.js) — required by the PHP field that renders their markup, never imported by the editor bundle
 scripts/              # Build scripts (i18n collection, parity checks)
 phpstan/stubs/        # PHPStan stubs (e.g. AdminController.stub)
 .docker/              # Docker dev env: Caddy + PHP + MySQL 8

@@ -21,14 +21,14 @@ Two routes, both ending in the same place.
 
 **From the library** — go to **Shared blocks** in the CMS menu and use the split **Add new shared section** button at the head of the toolbar. The block is created immediately and opens in its own editor, ready for content; there is no empty record to save first.
 
-Its main half creates a **section-rooted** block, the common case. Its caret offers the other three shapes:
+Its main half creates a **section-rooted** block, the common case. Its caret offers the other shapes, with the available content element types listed under **Shared content element**:
 
 | Choose | You get | Placeable |
 |---|---|---|
 | *Add new shared section* | a section, scaffolded with a row and a column | at page root |
 | *Add new shared row* | a row, scaffolded with a column | inside a section |
 | *Add new shared column* | an empty column | inside a row |
-| *Add new shared content element…* | a single element of the type you pick | inside a column |
+| an element type by name | a single element of that type | inside a column |
 
 Pick the shape by where the block needs to go — see [Placing a block](#placing-a-block). The choice is made once, at creation: a block's root cannot be swapped afterwards, though everything below it is freely editable. If you picked wrong, delete the block and add another.
 

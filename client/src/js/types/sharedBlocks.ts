@@ -7,7 +7,7 @@
  */
 
 import * as v from 'valibot'
-import { editLinkWireSchema, isSafeEditLink } from './editLink'
+import { editLinkWireSchema } from './editLink'
 
 export const sharedBlockStatusSchema = v.picklist(['notPublished', 'modified', 'published'])
 
@@ -48,26 +48,12 @@ export const sharedBlockUsageSchema = v.object({
 /** Mirrors PHP's `SharedBlockDeleteMode`. */
 export const sharedBlockDeleteModeSchema = v.picklist(['remove', 'unshare'])
 
-/**
- * A block the library's add button just created. Unlike a node's `editLink`
- * this is never null — the block exists by the time it is reported — and it is
- * navigated to, so it carries the same safety guard.
- */
-export const sharedBlockCreatedSchema = v.object({
-  id: v.pipe(v.number(), v.integer(), v.minValue(1)),
-  editLink: v.pipe(
-    v.string(),
-    v.check(isSafeEditLink, 'editLink must be a relative path or an http(s) URL'),
-  ),
-})
-
 export type SharedBlockStatus = v.InferOutput<typeof sharedBlockStatusSchema>
 export type SharedBlockMeta = v.InferOutput<typeof sharedBlockMetaWireSchema>
 export type SharedBlockRootType = v.InferOutput<typeof sharedBlockRootTypeSchema>
 export type SharedBlockListEntry = v.InferOutput<typeof sharedBlockListEntrySchema>
 export type SharedBlockUsage = v.InferOutput<typeof sharedBlockUsageSchema>
 export type SharedBlockDeleteMode = v.InferOutput<typeof sharedBlockDeleteModeSchema>
-export type SharedBlockCreated = v.InferOutput<typeof sharedBlockCreatedSchema>
 
 /** The parent kinds a block can be placed under, as the list endpoint filters them. */
 export type SharedBlockParentType = 'page' | 'section' | 'row' | 'column'

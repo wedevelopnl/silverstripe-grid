@@ -7,6 +7,7 @@
   },
   "files": {
     "includes": [
+      "client/js/**/*.js",
       "client/src/js/**/*.ts",
       "client/src/js/**/*.tsx",
       "client/src/js/**/*.js",
@@ -174,7 +175,7 @@
       }
     },
     {
-      "includes": ["**/*.test.ts", "**/*.test.tsx", "client/src/js/testing/**"],
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.js", "client/src/js/testing/**"],
       "linter": {
         "rules": {
           "correctness": {

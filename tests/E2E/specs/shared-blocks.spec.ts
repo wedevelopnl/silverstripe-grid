@@ -449,26 +449,85 @@ test.describe('Shared blocks', () => {
     await expect(page.getByTestId('column-block')).toHaveCount(1)
   })
 
-  test('the library seeds a leaf-rooted block from the element picker', async ({ page }) => {
+  test('the library seeds a leaf-rooted block straight from the menu', async ({ page }) => {
     await page.goto('/admin/shared-blocks')
 
     await page.getByTestId('add-shared-block-menu-trigger').click()
-    await page
-      .getByRole('menuitem', { name: 'Add new shared content element…', exact: true })
-      .click()
 
-    // The tiles come from the element types the server renders onto the button,
-    // so an empty dialog here means that payload did not survive the trip —
-    // which is exactly how the template layer mangling JSON backslashes showed
-    // up. Asserting on the tile is what makes that visible.
-    const tile = page.getByTestId('element-type-tile').first()
-    await expect(tile).toBeVisible()
-    await tile.click()
+    // The element types are menu items the server renders, so an empty group
+    // here means the component and the placement rules have drifted apart.
+    await page.getByRole('menuitem', { name: 'Content element', exact: true }).click()
 
     await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
 
     await expect(page.getByTestId('element-card-title')).toHaveCount(1)
     await expect(page.getByTestId('section-block')).toHaveCount(0)
+  })
+
+  test('the primary half creates a section-rooted block', async ({ page }) => {
+    // The caret covers the other shapes; this is the one the toolbar leads
+    // with, and the only path that does not open the menu at all.
+    await page.goto('/admin/shared-blocks')
+
+    await page.getByTestId('add-shared-block-add').click()
+
+    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
+
+    await expect(page.getByTestId('section-block')).toHaveCount(1)
+    await expect(page.getByTestId('row-block')).toHaveCount(1)
+    await expect(page.getByTestId('column-block')).toHaveCount(1)
+  })
+
+  test('the caret menu opens, roves and dismisses by keyboard', async ({ page }) => {
+    // The admin ships Bootstrap's dropdown CSS but not its JavaScript, so all
+    // of this is client/js/shared-block-add.js. Nothing else reaches that file:
+    // it is deliberately outside the editor bundle, so no unit test can import
+    // it and this spec is its only coverage.
+    await page.goto('/admin/shared-blocks')
+
+    const trigger = page.getByTestId('add-shared-block-menu-trigger')
+    const menu = page.getByTestId('add-shared-block-menu-dropdown')
+    const items = menu.getByRole('menuitem')
+
+    await expect(menu).toBeHidden()
+
+    await trigger.focus()
+    await page.keyboard.press('ArrowDown')
+
+    await expect(menu).toBeVisible()
+    await expect(items.first()).toBeFocused()
+
+    // Wraps in both directions, so the last shape is one key from the first.
+    await page.keyboard.press('ArrowUp')
+    await expect(items.last()).toBeFocused()
+
+    await page.keyboard.press('Home')
+    await expect(items.first()).toBeFocused()
+
+    await page.keyboard.press('End')
+    await expect(items.last()).toBeFocused()
+
+    // Escape hands focus back to the control that opened the menu, rather than
+    // dropping it to the document.
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeHidden()
+    await expect(trigger).toBeFocused()
+  })
+
+  test('the caret menu closes on a click outside it', async ({ page }) => {
+    await page.goto('/admin/shared-blocks')
+
+    const menu = page.getByTestId('add-shared-block-menu-dropdown')
+
+    await page.getByTestId('add-shared-block-menu-trigger').click()
+    await expect(menu).toBeVisible()
+
+    // A bare coordinate well clear of the toolbar: the dismissal is delegated
+    // from the document, so it must not depend on hitting any element in
+    // particular — least of all one of the admin's own.
+    await page.mouse.click(400, 1400)
+
+    await expect(menu).toBeHidden()
   })
 
   test('a block root carries no archive, no duplicate and no drag handle', async ({ page }) => {

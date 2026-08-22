@@ -91,7 +91,13 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['client/src/js/**/*.{test,spec}.{ts,tsx}', 'scripts/**/*.test.mjs'],
+    include: [
+      'client/src/js/**/*.{test,spec}.{ts,tsx}',
+      // The unbundled admin-chrome scripts, which live outside the TS
+      // program on purpose and so carry plain-JS tests beside them.
+      'client/js/**/*.{test,spec}.js',
+      'scripts/**/*.test.mjs',
+    ],
     setupFiles: ['./vitest.setup.ts'],
     css: true,
     coverage: {
