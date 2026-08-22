@@ -42,21 +42,11 @@ export declare const sharedBlockUsageSchema: v.ObjectSchema<{
 }, undefined>;
 /** Mirrors PHP's `SharedBlockDeleteMode`. */
 export declare const sharedBlockDeleteModeSchema: v.PicklistSchema<["remove", "unshare"], undefined>;
-/**
- * A block the library's add button just created. Unlike a node's `editLink`
- * this is never null — the block exists by the time it is reported — and it is
- * navigated to, so it carries the same safety guard.
- */
-export declare const sharedBlockCreatedSchema: v.ObjectSchema<{
-    readonly id: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
-    readonly editLink: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.CheckAction<string, "editLink must be a relative path or an http(s) URL">]>;
-}, undefined>;
 export type SharedBlockStatus = v.InferOutput<typeof sharedBlockStatusSchema>;
 export type SharedBlockMeta = v.InferOutput<typeof sharedBlockMetaWireSchema>;
 export type SharedBlockRootType = v.InferOutput<typeof sharedBlockRootTypeSchema>;
 export type SharedBlockListEntry = v.InferOutput<typeof sharedBlockListEntrySchema>;
 export type SharedBlockUsage = v.InferOutput<typeof sharedBlockUsageSchema>;
 export type SharedBlockDeleteMode = v.InferOutput<typeof sharedBlockDeleteModeSchema>;
-export type SharedBlockCreated = v.InferOutput<typeof sharedBlockCreatedSchema>;
 /** The parent kinds a block can be placed under, as the list endpoint filters them. */
 export type SharedBlockParentType = 'page' | 'section' | 'row' | 'column';

@@ -51,6 +51,12 @@ en:
     has_many_Sections: Sections
   WeDevelop\Grid\Forms\GridFieldAddSharedBlockButton:
     ADD_BLOCK: 'Add new shared section'
+    ADD_COLUMN: 'Add new shared column'
+    ADD_ROW: 'Add new shared row'
+    CANNOT_CREATE: 'You do not have permission to add a shared block.'
+    ELEMENTS_HEADER: 'Shared content element'
+    INVALID_SHAPE: 'That is not a shape a shared block can take.'
+    MORE_SHAPES: 'More block shapes'
   WeDevelop\Grid\Forms\GridSettingsField:
     DEFAULT_TITLE: 'Grid Settings'
     HIDDEN_SUFFIX: ' (hidden)'

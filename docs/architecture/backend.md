@@ -221,7 +221,6 @@ any other element.
 |--------|-------|---------|----------|
 | GET | `api/list` | List shared blocks, optionally narrowed by `?parentType=` to those whose root type fits that parent | 200 + `{ id, title, rootType, usageCount, status }[]` |
 | GET | `api/readTree/{BlockID}` | Load a shared block's own tree, for the library editor | 200 + `{ rootParent: NodeRef, nodes: GridNode[] }` |
-| POST | `api/create` | Create a block already seeded with its root element — body `{containerType}` XOR `{className}`; the library's add-button caret | 200 + `{ id, editLink }` |
 | GET | `api/usage/{BlockID}` | How many pages place a block, and how many of those are live — the figures the delete confirmation quotes | 200 + `{ usageCount, liveUsageCount }` |
 | POST | `api/place` | Place a block under a parent | 204 |
 | POST | `api/convert` | Move an element's subtree into a new block, leaving a placement | 200 + `{ blockId }` |

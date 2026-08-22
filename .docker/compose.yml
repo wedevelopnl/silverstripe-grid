@@ -18,6 +18,7 @@ services:
       - ../_config:/module/_config:ro
       - ../phpstan:/module/phpstan:ro
       - ../client/dist:/module/client/dist:ro
+      - ../client/js:/module/client/js:ro
       - ../client/lang:/module/client/lang:ro
       - ../client/images:/module/client/images:ro
       - ../lang:/module/lang
@@ -58,6 +59,7 @@ services:
       - ../_config:/module/_config:ro
       - ../phpstan:/module/phpstan:ro
       - ../client/dist:/module/client/dist:ro
+      - ../client/js:/module/client/js:ro
       - ../client/lang:/module/client/lang:ro
       - ../client/images:/module/client/images:ro
       - ../lang:/module/lang

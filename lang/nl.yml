@@ -51,6 +51,12 @@ nl:
     has_many_Sections: Secties
   WeDevelop\Grid\Forms\GridFieldAddSharedBlockButton:
     ADD_BLOCK: 'Nieuwe gedeelde sectie'
+    ADD_COLUMN: 'Nieuwe gedeelde kolom'
+    ADD_ROW: 'Nieuwe gedeelde rij'
+    CANNOT_CREATE: 'Je hebt geen rechten om een gedeeld blok toe te voegen.'
+    ELEMENTS_HEADER: 'Gedeeld inhoudselement'
+    INVALID_SHAPE: 'Dat is geen vorm die een gedeeld blok kan aannemen.'
+    MORE_SHAPES: 'Meer blokvormen'
   WeDevelop\Grid\Forms\GridSettingsField:
     DEFAULT_TITLE: 'Grid-instellingen'
     HIDDEN_SUFFIX: ' (verborgen)'

@@ -206,54 +206,35 @@ final class SharedBlockAdminTest extends FunctionalTest
         self::assertStringNotContainsString('action_doArchive', $body);
     }
 
-    public function testListingOffersTheSplitAddControlCarryingTheLeafTypes(): void
+    public function testListingOffersTheSplitAddControlWithEveryShapeABlockMayRoot(): void
     {
         $body = (string) $this->visit('admin/shared-blocks')->getBody();
 
-        self::assertStringContainsString('data-grid-add-shared-block', $body);
+        self::assertStringContainsString('data-shared-block-add', $body);
 
-        // Decoded, not merely searched for: the payload is base64 precisely
-        // because the template layer mangles the backslashes in raw JSON class
-        // names, and a substring check would not have caught that.
-        self::assertArrayHasKey(
-            ContentElement::class,
-            $this->leafTypesFrom($body),
-            'the control carries the element types a leaf-rooted block may be seeded with',
+        // Server-rendered menu items, not a payload for a client-side picker:
+        // the element types a leaf-rooted block may take are listed by the same
+        // component that validates them.
+        self::assertStringContainsString('Add new shared row', $body);
+        self::assertStringContainsString('Add new shared column', $body);
+        self::assertStringContainsString(
+            (string) ContentElement::config()->get('singular_name'),
+            $body,
+            'the control offers the element types a leaf-rooted block may be seeded with',
         );
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function leafTypesFrom(string $body): array
-    {
-        self::assertSame(
-            1,
-            preg_match('/data-grid-leaf-types="([^"]*)"/', $body, $matches),
-            'the add control must carry a leaf-type payload',
-        );
-
-        $decoded = json_decode(
-            (string) base64_decode(html_entity_decode($matches[1]), true),
-            true,
-            512,
-            JSON_THROW_ON_ERROR,
-        );
-        self::assertIsArray($decoded);
-
-        return $decoded;
     }
 
     /**
      * One add affordance, not two. The stock button opens an unsaved record —
-     * which cannot host the grid editor — so it is removed rather than joined,
-     * and the only `new-link` left in the listing is our own fallback.
+     * which cannot host the grid editor — so it is removed rather than joined.
+     * Nothing replaces its link: every shape is a form action on our own
+     * control.
      */
     public function testStockAddButtonIsGoneFromTheListing(): void
     {
         $body = (string) $this->visit('admin/shared-blocks')->getBody();
 
-        self::assertSame(1, substr_count($body, 'new-link'));
+        self::assertStringNotContainsString('new-link', $body);
     }
 
     /**
@@ -267,7 +248,7 @@ final class SharedBlockAdminTest extends FunctionalTest
     {
         $body = (string) $this->visit('admin/shared-blocks')->getBody();
 
-        $addPosition = strpos($body, 'data-grid-add-shared-block');
+        $addPosition = strpos($body, 'data-shared-block-add');
         $exportPosition = strpos($body, 'action_export');
 
         self::assertIsInt($addPosition);
@@ -285,7 +266,7 @@ final class SharedBlockAdminTest extends FunctionalTest
 
         $body = (string) $this->visit('admin/shared-blocks')->getBody();
 
-        self::assertStringNotContainsString('data-grid-add-shared-block', $body);
+        self::assertStringNotContainsString('data-shared-block-add', $body);
         self::assertStringNotContainsString('new-link', $body);
     }
 

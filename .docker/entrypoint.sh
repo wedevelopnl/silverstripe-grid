@@ -19,6 +19,7 @@ composer vendor-expose
 _res=/app/public/_resources/vendor/wedevelopnl/silverstripe-grid
 mkdir -p "$_res/client"
 [ -d /module/client/dist ] && ln -sfn /module/client/dist "$_res/client/dist"
+[ -d /module/client/js ] && ln -sfn /module/client/js "$_res/client/js"
 [ -d /module/client/images ] && ln -sfn /module/client/images "$_res/client/images"
 [ -d /module/client/lang ] && ln -sfn /module/client/lang "$_res/client/lang"
 [ -d /module/lang ] && ln -sfn /module/lang "$_res/lang"

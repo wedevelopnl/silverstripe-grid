@@ -13,7 +13,6 @@ use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\ConvertToSharedBlockRequest;
 use WeDevelop\Grid\Value\CreateContentRequest;
 use WeDevelop\Grid\Value\CreateElementRequest;
-use WeDevelop\Grid\Value\CreateSharedBlockRequest;
 use WeDevelop\Grid\Value\DeleteSharedBlockRequest;
 use WeDevelop\Grid\Value\DuplicateToRequest;
 use WeDevelop\Grid\Value\NodeRef;
@@ -110,44 +109,6 @@ final readonly class RequestBodyParser
         }
 
         return Result::ok(new CreateContentRequest($className, $parent, $afterElementID));
-    }
-
-    /**
-     * The four shapes a library block may root, named the same way the element
-     * create body names them: a container type OR a leaf class, never both and
-     * never neither. There is no parent to parse — the block being created IS
-     * the parent.
-     *
-     * @param array<string, mixed> $data
-     * @return Result<CreateSharedBlockRequest>
-     */
-    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
-    public function parseCreateSharedBlockBody(array $data): Result
-    {
-        $hasContainerType = array_key_exists('containerType', $data);
-        $hasClassName = array_key_exists('className', $data);
-
-        if ($hasContainerType === $hasClassName) {
-            return Result::fail(new ValidationError('Exactly one of containerType or className is required.'));
-        }
-
-        if ($hasClassName) {
-            $classResult = $this->parseLeafElementClass($data['className']);
-            if ($classResult->isErr()) {
-                return Result::fail(...$classResult->errors());
-            }
-
-            return Result::ok(new CreateSharedBlockRequest($classResult->unwrap()));
-        }
-
-        $containerTypeValue = $data['containerType'];
-        $containerType = is_string($containerTypeValue) ? ContainerType::tryFrom($containerTypeValue) : null;
-
-        if ($containerType === null) {
-            return Result::fail(new ValidationError('Invalid or missing containerType.'));
-        }
-
-        return Result::ok(new CreateSharedBlockRequest($containerType->toElementClass()));
     }
 
     /**
