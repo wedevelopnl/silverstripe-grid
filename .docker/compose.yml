@@ -25,6 +25,12 @@ services:
       - ../templates:/module/templates:ro
       - ../coverage:/app/coverage
       - vendor:/app/vendor
+    # A crash mid-suite used to cost the entire remaining E2E run: the process
+    # dies, every later spec fails on ECONNREFUSED, and the job reports 25
+    # failures for one fault. Bring it back so the cost is bounded by how long a
+    # boot takes. Capped at three so a container that cannot start still fails
+    # the job promptly instead of looping until the step times out.
+    restart: on-failure:3
     healthcheck:
       test: test -f /tmp/.app-ready
       interval: 3s
@@ -66,6 +72,12 @@ services:
       - ../templates:/module/templates:ro
       - ../coverage:/app/coverage
       - vendor-fluent:/app/vendor
+    # A crash mid-suite used to cost the entire remaining E2E run: the process
+    # dies, every later spec fails on ECONNREFUSED, and the job reports 25
+    # failures for one fault. Bring it back so the cost is bounded by how long a
+    # boot takes. Capped at three so a container that cannot start still fails
+    # the job promptly instead of looping until the step times out.
+    restart: on-failure:3
     healthcheck:
       test: test -f /tmp/.app-ready
       interval: 3s
