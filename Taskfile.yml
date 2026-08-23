@@ -170,6 +170,40 @@ tasks:
     cmds:
       - npm run mutate
 
+  # --- Dependency lock ------------------------------------------------------
+
+  relock:
+    desc: Regenerate the container composer locks (both variants) and follow SS6.x
+    deps: [docker-env]
+    # Resolution happens inside the built image so the platform (PHP version and
+    # extension set) matches what will run the tests. The image COPYs the locks,
+    # so both files must exist for the build to succeed — recreate them from git
+    # rather than deleting them if one is ever damaged.
+    cmds:
+      - "{{.COMPOSE_FLUENT}} build app app-fluent"
+      - task: relock-variant
+        vars: { SERVICE: app, LOCK: composer.lock }
+      - task: relock-variant
+        vars: { SERVICE: app-fluent, LOCK: composer.fluent.lock }
+
+  relock-variant:
+    internal: true
+    # --entrypoint sh bypasses the boot install: the lock we are about to write
+    # is the one it would install from. -v mounts the destination because the
+    # lock has to reach the host, and composer's own output owns stdout.
+    cmds:
+      - >-
+        {{.COMPOSE_FLUENT}} run --rm --no-deps -T
+        -v "$PWD/.docker/app:/lock"
+        --entrypoint sh {{.SERVICE}}
+        -c "composer update --no-install --no-scripts --no-interaction && cp composer.lock /lock/{{.LOCK}}"
+
+  verify-lock:
+    desc: Fail if the committed lock no longer covers the module's requirements
+    deps: [ensure-up]
+    cmds:
+      - "{{.COMPOSE}} exec app /app/verify-lock.sh"
+
   # --- Static analysis ------------------------------------------------------
 
   analyse:

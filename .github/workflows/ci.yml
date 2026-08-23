@@ -98,6 +98,12 @@ jobs:
         run: $COMPOSE build app
       - name: Start services
         run: $COMPOSE up -d --wait app
+      # One pipeline-wide check that the committed lock still covers the module's
+      # own requires. Composer never re-checks a path package's requirements when
+      # installing from a lock, so a new module dependency would otherwise be
+      # silently absent from every job.
+      - name: Verify the lock covers the module
+        run: $COMPOSE exec app /app/verify-lock.sh
       - run: task analyse
       # Second PHPStan pass with the analysis target pinned to PHP 8.5. PHPStan gates
       # some checks on the target version rather than the runtime PHP (e.g. #[\NoDiscard],
