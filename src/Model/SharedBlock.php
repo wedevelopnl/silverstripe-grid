@@ -8,9 +8,14 @@ use Override;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
+use SilverStripe\Core\Convert;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\FieldList;
-use SilverStripe\Forms\LiteralField;
+use SilverStripe\Forms\GridField\GridField;
+use SilverStripe\Forms\GridField\GridFieldConfig_Base;
+use SilverStripe\Forms\GridField\GridFieldDataColumns;
+use SilverStripe\Forms\GridField\GridFieldFilterHeader;
+use SilverStripe\Model\List\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\Security\Member;
@@ -91,10 +96,16 @@ class SharedBlock extends DataObject
         Versioned::class,
     ];
 
-    /** @var array<string, string> */
+    /**
+     * Named without labels on purpose: {@see DataObject::summaryFields()}
+     * localises a column only while its label still equals its name, so
+     * spelling one here would pin the listing to English.
+     *
+     * @var list<string>
+     */
     private static array $summary_fields = [
-        'Title' => 'Title',
-        'getRootTypeLabel' => 'Type',
+        'Title',
+        'getRootTypeLabel',
     ];
 
     private static string $default_sort = '"Title" ASC';
@@ -144,20 +155,11 @@ class SharedBlock extends DataObject
 
         $fields->removeByName('RootElements');
 
+        // The editor is keyed by the block's id, so a record without one cannot
+        // host it. No author arrives here: blocks are created already seeded and
+        // SharedBlockItemRequest refuses the unsaved form. The singleton is not
+        // in the database either, and it is what scaffolding asks for fields.
         if (!$this->isInDB()) {
-            // The editor is keyed by the block's id, so the record must exist
-            // before it can host one. Saving once reveals it.
-            $fields->addFieldToTab(
-                'Root.Main',
-                LiteralField::create(
-                    'BlockEditorHint',
-                    '<p class="message notice">' . _t(
-                        self::class . '.SAVE_FIRST',
-                        'Save this block to start adding content to it.',
-                    ) . '</p>',
-                ),
-            );
-
             return $fields;
         }
 
@@ -170,34 +172,79 @@ class SharedBlock extends DataObject
         return $fields;
     }
 
-    /** Read-only list of the pages placing this block, each linking into the CMS. */
-    private function buildUsageField(): LiteralField
+    /**
+     * The pages placing this block, each linking into the CMS.
+     *
+     * A GridField rather than assembled markup: sorting, pagination and the
+     * casting layer's escaping all come from the framework, and the one column
+     * that builds a link builds it through `setFieldFormatting` — the same seam
+     * {@see \WeDevelop\Grid\Reports\GridElementReport} uses for its own.
+     */
+    private function buildUsageField(): GridField
     {
         $resolver = Injector::inst()->get(SharedBlockUsageResolver::class);
-        $pages = $resolver->pagesUsing($this);
 
-        if ($pages === []) {
-            return LiteralField::create(
-                'UsedOn',
-                '<p>' . _t(self::class . '.NOT_USED', 'This block is not placed on any page yet.') . '</p>',
+        /** @var ArrayList<DataObject> $pages */
+        $pages = ArrayList::create($resolver->pagesUsing($this));
+
+        $config = GridFieldConfig_Base::create();
+
+        // A search box over one block's usage is noise, and the header
+        // scaffolds its filters from the model's search context — which a list
+        // assembled in PHP has no query to apply them to.
+        $config->removeComponentsByType(GridFieldFilterHeader::class);
+
+        $config->getComponentByType(GridFieldDataColumns::class)
+            ?->setDisplayFields(['Title' => _t(self::class . '.USAGE_PAGE', 'Page')])
+            ->setFieldFormatting([
+                // $value arrives cast and escaped — GridFieldDataColumns types
+                // it a string and runs castValue() before us; only the href is
+                // ours to escape.
+                'Title' => static function (string $value, DataObject $item): string {
+                    $link = $item instanceof SiteTree ? (string) $item->getCMSEditLink() : '';
+
+                    return $link === ''
+                        ? $value
+                        : sprintf('<a href="%s">%s</a>', Convert::raw2att($link), $value);
+                },
+            ]);
+
+        $field = GridField::create(
+            'UsedOn',
+            _t(self::class . '.USED_ON', 'Used on'),
+            $pages,
+            $config,
+        );
+
+        // An empty list has no first record to infer the model from, and the
+        // sortable header asks for one on every render.
+        $field->setModelClass(SiteTree::class);
+
+        if ($pages->count() === 0) {
+            $field->setDescription(
+                _t(self::class . '.NOT_USED', 'This block is not placed on any page yet.'),
             );
         }
 
-        $items = '';
-        foreach ($pages as $page) {
-            $title = (string) $page->getTitle();
-            $link = $page instanceof SiteTree ? (string) $page->getCMSEditLink() : '';
+        return $field;
+    }
 
-            $items .= $link === ''
-                ? sprintf('<li>%s</li>', htmlspecialchars($title, ENT_QUOTES))
-                : sprintf(
-                    '<li><a href="%s">%s</a></li>',
-                    htmlspecialchars($link, ENT_QUOTES),
-                    htmlspecialchars($title, ENT_QUOTES),
-                );
-        }
+    /**
+     * `getRootTypeLabel` is a method, and the framework's automatic labels cover
+     * $db fields only — without an entry here the listing header would fall
+     * back to the raw method name.
+     *
+     * @param bool $includerelations
+     * @return array<string, string>
+     */
+    #[Override]
+    public function fieldLabels(mixed $includerelations = true): array
+    {
+        /** @var array<string, string> $labels */
+        $labels = parent::fieldLabels($includerelations);
+        $labels['getRootTypeLabel'] = _t(self::class . '.ROOT_TYPE', 'Type');
 
-        return LiteralField::create('UsedOn', '<ul class="grid-shared-block__usage">' . $items . '</ul>');
+        return $labels;
     }
 
     #[Override]

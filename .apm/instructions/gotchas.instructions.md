@@ -22,6 +22,8 @@ applyTo: "**/*"
 
 ## SilverStripe 6
 
+- **Overriding an inherited action requires re-listing it in the subclass's `allowed_actions`**: `RequestHandler::checkAccessAction()` reads the UNINHERITED `allowed_actions` of the class that DECLARES the method, so an override that only delegates to `parent::` still 403s — along with every nested route under it. `SharedBlockItemRequest` lists `ItemEditForm` for this reason.
+
 - **Extension config access**: Extensions cannot use `static::config()` in SS6 — use `$this->getOwner()->config()->get('key')` instead
 - **`ModuleResourceLoader::resolveURL()` throws on missing files**. Always check with `resolveResource()` first:
   ```php
