@@ -30,7 +30,12 @@ export default defineConfig({
   testDir: './tests/E2E/specs',
   fullyParallel: false,
   workers: 1,
-  retries: 1,
+  // Two retries in CI, one locally. The app container is set to restart on
+  // failure (.docker/compose.yml), and a restart costs roughly one test timeout
+  // to come back — so the first retry after a crash still lands on a dead port
+  // and only the second can pass. Locally a crash is visible and worth stopping
+  // on, so the extra attempt would only slow the feedback loop.
+  retries: process.env.CI ? 2 : 1,
   reporter: 'html',
 
   use: {
