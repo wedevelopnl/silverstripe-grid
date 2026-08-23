@@ -32,7 +32,13 @@ services:
     # the job promptly instead of looping until the step times out.
     restart: on-failure:3
     healthcheck:
-      test: test -f /tmp/.app-ready
+      # Both halves are needed. The marker says the bootstrap finished; the curl
+      # says frankenphp is actually accepting connections. The entrypoint writes
+      # the marker and then `exec`s the server, so the marker alone reports
+      # healthy while the port is still closed — `up --wait` returns, CI starts
+      # the browser, and the first navigation gets ERR_CONNECTION_CLOSED while
+      # Caddy is still issuing its local certificate.
+      test: test -f /tmp/.app-ready && curl -sSk -o /dev/null https://localhost/
       interval: 3s
       start_period: 60s
       retries: 20
@@ -73,14 +79,11 @@ services:
       - ../templates:/module/templates:ro
       - ../coverage:/app/coverage
       - vendor-fluent:/app/vendor
-    # A crash mid-suite used to cost the entire remaining E2E run: the process
-    # dies, every later spec fails on ECONNREFUSED, and the job reports 25
-    # failures for one fault. Bring it back so the cost is bounded by how long a
-    # boot takes. Capped at three so a container that cannot start still fails
-    # the job promptly instead of looping until the step times out.
+    # Rationale on the `app` service above.
     restart: on-failure:3
     healthcheck:
-      test: test -f /tmp/.app-ready
+      # Rationale on the `app` service above.
+      test: test -f /tmp/.app-ready && curl -sSk -o /dev/null https://localhost/
       interval: 3s
       start_period: 60s
       retries: 20
