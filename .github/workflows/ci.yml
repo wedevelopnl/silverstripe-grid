@@ -104,6 +104,11 @@ jobs:
       # which only fires at >= 8.5); the primary pass above keeps verifying the 8.3 floor.
       - run: task analyse-php85
       - run: task rector-dry
+      - name: Container diagnostics
+        if: failure()
+        uses: ./.github/actions/container-diagnostics
+        with:
+          compose: ${{ env.COMPOSE }}
 
   php-qa:
     name: PHP QA (${{ matrix.variant }} / PHP ${{ matrix.php }})
@@ -170,6 +175,11 @@ jobs:
       - if: matrix.variant == 'fluent'
         name: Check coverage threshold (90%)
         run: $COMPOSE exec ${{ matrix.service }} vendor/bin/coverage-check coverage/clover.xml 90
+      - name: Container diagnostics
+        if: failure()
+        uses: ./.github/actions/container-diagnostics
+        with:
+          compose: ${{ env.COMPOSE }}
       - uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: always()
         with:
@@ -255,6 +265,11 @@ jobs:
         run: npx playwright test --project=${{ matrix.browser }} --reporter=html,junit
         env:
           PLAYWRIGHT_JUNIT_OUTPUT_NAME: reports/playwright-junit.xml
+      - name: Container diagnostics
+        if: failure()
+        uses: ./.github/actions/container-diagnostics
+        with:
+          compose: ${{ env.COMPOSE }}
       - uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: always()
         with:
