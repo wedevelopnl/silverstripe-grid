@@ -58,6 +58,7 @@ services:
       args:
         PHP_VERSION: ${PHP_VERSION:-8.3}
         COMPOSER_FILE: app/composer.fluent.json
+        COMPOSER_LOCK: app/composer.fluent.lock
     volumes:
       - ../composer.json:/module/composer.json:ro
       - ../src:/module/src

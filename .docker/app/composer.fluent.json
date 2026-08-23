@@ -62,6 +62,10 @@
             "phpstan/extension-installer": true,
             "silverstripe/recipe-plugin": true,
             "silverstripe/vendor-plugin": true
+        },
+        "_comment_platform": "Resolve against the module's declared PHP floor. All three matrix legs (8.3/8.4/8.5) install from this one lock, so it must hold a set that is installable on the lowest; without the pin, whoever regenerates it on a newer PHP can lock a package that the 8.3 leg then refuses. It also makes `task relock` reproducible regardless of the host PHP.",
+        "platform": {
+            "php": "8.3.0"
         }
     }
 }

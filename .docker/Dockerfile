@@ -36,6 +36,13 @@ WORKDIR /app
 ARG COMPOSER_FILE=app/composer.json
 COPY ${COMPOSER_FILE} /app/composer.json
 
+# The lock is committed so the boot install replays a known set instead of
+# re-resolving the dependency graph against Packagist on every container start.
+# Regenerate both with `task relock`; a weekly workflow does it automatically so
+# the harness keeps following SS6.x. `task relock` writes it; nothing else may.
+ARG COMPOSER_LOCK=app/composer.lock
+COPY ${COMPOSER_LOCK} /app/composer.lock
+
 # SilverStripe requires Page and PageController classes in the project.
 # These are generated here (not stored in the repo) to avoid duplicate
 # class detection when the module is symlinked into vendor/.
@@ -57,6 +64,8 @@ COPY app/phpunit.xml.dist /app/phpunit.xml.dist
 COPY app/phpstan.neon.dist /app/phpstan.neon.dist
 COPY app/phpstan-php85.neon.dist /app/phpstan-php85.neon.dist
 COPY app/rector.php /app/rector.php
+COPY app/verify-lock.sh /app/verify-lock.sh
+RUN chmod +x /app/verify-lock.sh
 
 COPY assets/css/ /app/public/css/
 

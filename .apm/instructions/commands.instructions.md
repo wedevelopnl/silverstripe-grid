@@ -55,6 +55,8 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task mutate-js` | JS mutation testing (Stryker) |
 | `task analyse` | Run PHPStan static analysis |
 | `task analyse-php85` | PHPStan with the analysis target pinned to PHP 8.5 (forward-compat pass, in addition to the 8.3-range primary) |
+| `task relock` | Regenerate both container composer locks (follows SS6.x) |
+| `task verify-lock` | Fail if the committed lock no longer covers the module's requires |
 | `task rector` | Run Rector refactoring (applies changes) |
 | `task rector-dry` | Run Rector in dry-run mode (preview only) |
 | `task test-e2e` | Run Playwright E2E tests (requires Docker) |
