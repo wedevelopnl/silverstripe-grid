@@ -51,7 +51,7 @@ test.describe('Multi-zone isolation', () => {
     })
 
     await test.step('reorder within the main zone', async () => {
-      const settle1 = waitForMutationSettlement(page)
+      const settle1 = waitForMutationSettlement(page, 'reorder within the main zone')
       await performDrag(page, dragHandle(page, 'Main-Alpha'), dragHandle(page, 'Main-Beta'))
       await settle1()
 
@@ -68,7 +68,7 @@ test.describe('Multi-zone isolation', () => {
     })
 
     await test.step('reorder within the sidebar zone', async () => {
-      const settle2 = waitForMutationSettlement(page)
+      const settle2 = waitForMutationSettlement(page, 'reorder within the sidebar zone')
       await performDrag(page, dragHandle(page, 'Sidebar-Alpha'), dragHandle(page, 'Sidebar-Beta'))
       await settle2()
 

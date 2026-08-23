@@ -121,7 +121,10 @@ test.describe('Cross-container ghost preview — reaches every slot', () => {
         'Element B3',
       ])
 
-      const settle = waitForMutationSettlement(page)
+      const settle = waitForMutationSettlement(
+        page,
+        'returns to the TOP and drops there (persists the previewed order)',
+      )
       await releaseDrag(page, x, y)
       await settle()
 

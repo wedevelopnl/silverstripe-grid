@@ -109,7 +109,7 @@ test.describe('Cross-section row drop — both directions', () => {
       await expect(sectionAlpha.getByTestId('row-title').first()).toHaveText('Row A2')
 
       const pos = await rowPosition(sectionBeta, { before: 'Row B1' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Forward, before-first: A1 → Beta before B1')
       await expect(sectionBeta.getByTestId('row-title')).toHaveText([
         'Row A1',
         'Row B1',
@@ -124,7 +124,7 @@ test.describe('Cross-section row drop — both directions', () => {
       await activateDragByTitle(page, 'Row B3', { overlayTestId: 'drag-overlay-row' })
       await enterFromBelow(page, sectionAlpha, 3)
       const pos = await rowPosition(sectionAlpha, { between: ['Row A2', 'Row A3'] })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Reverse, between: B3 → Alpha between A2,A3')
       await expect(sectionAlpha.getByTestId('row-title')).toHaveText(['Row A2', 'Row B3', 'Row A3'])
     })
 
@@ -134,7 +134,7 @@ test.describe('Cross-section row drop — both directions', () => {
       await activateDragByTitle(page, 'Row B2', { overlayTestId: 'drag-overlay-row' })
       await enterFromBelow(page, sectionAlpha, 4)
       const pos = await rowPosition(sectionAlpha, { after: 'Row A3' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Reverse, after-last: B2 → Alpha after A3')
       await expect(sectionAlpha.getByTestId('row-title')).toHaveText([
         'Row A2',
         'Row B3',
@@ -149,7 +149,7 @@ test.describe('Cross-section row drop — both directions', () => {
       await activateDragByTitle(page, 'Row B2', { overlayTestId: 'drag-overlay-row' })
       await enterAtFirst(page, sectionBeta, 3)
       const pos = await rowPosition(sectionBeta, { between: ['Row A1', 'Row B1'] })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Forward, between: B2 → Beta between A1,B1')
       await expect(sectionBeta.getByTestId('row-title')).toHaveText(['Row A1', 'Row B2', 'Row B1'])
     })
 
@@ -159,7 +159,7 @@ test.describe('Cross-section row drop — both directions', () => {
       await activateDragByTitle(page, 'Row A3', { overlayTestId: 'drag-overlay-row' })
       await enterAtFirst(page, sectionBeta, 4)
       const pos = await rowPosition(sectionBeta, { after: 'Row B1' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Forward, after-last: A3 → Beta after B1')
       await expect(sectionBeta.getByTestId('row-title')).toHaveText([
         'Row A1',
         'Row B2',
@@ -172,7 +172,7 @@ test.describe('Cross-section row drop — both directions', () => {
     await test.step('Intra-container: B3 before A2 in Alpha', async () => {
       await activateDragByTitle(page, 'Row B3', { overlayTestId: 'drag-overlay-row' })
       const pos = await rowPosition(sectionAlpha, { before: 'Row A2' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Intra-container: B3 before A2 in Alpha')
       await expect(sectionAlpha.getByTestId('row-title')).toHaveText(['Row B3', 'Row A2'])
     })
 
@@ -211,7 +211,7 @@ test.describe('Cross-section row drop — source depletion and cancel', () => {
       await activateDragByTitle(page, 'Row A1', { overlayTestId: 'drag-overlay-row' })
       await enterAtFirst(page, sectionBeta, 4)
       const pos = await rowPosition(sectionBeta, { between: ['Row B1', 'Row B2'] })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Source depletion: move lone row to target')
 
       await expect(sectionAlpha.getByTestId('row-block')).toHaveCount(0)
       await expect(sectionBeta.getByTestId('row-title')).toHaveText([
@@ -245,7 +245,12 @@ test.describe('Cross-section row drop — source depletion and cancel', () => {
       await activateDragByTitle(page, 'Row B1', { overlayTestId: 'drag-overlay-row' })
       await enterFromBelow(page, sectionAlpha, 4)
       const pos = await rowPosition(sectionAlpha, { after: 'Row A3' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(
+        page,
+        pos.x,
+        pos.y,
+        'Source depletion from below: B1 → Alpha after A3 (last position)',
+      )
 
       await expect(sectionAlpha.getByTestId('row-title')).toHaveText([
         'Row A1',

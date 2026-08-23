@@ -254,17 +254,50 @@ export async function enterContainerCenter(
  * droppable rects. Without this, the next drag can start while droppable
  * positions are stale, causing collision detection to resolve incorrectly.
  */
-export function waitForMutationSettlement(page: Page) {
+export function waitForMutationSettlement(page: Page, label: string) {
+  // A healthy round-trip is sub-second against the local container, so this
+  // budget is pure headroom. Its only job is to reject before the test timeout
+  // does, so the catch below can say which drag hung and whether the drop even
+  // produced a request — a bare test timeout points at this line and no
+  // further, which is all six settlements in drag-and-drop.spec.ts look like.
+  const timeout = 10_000
+
+  let attempted = 0
+  const countReorder = (request: Request) => {
+    if (request.url().includes('/api/reorder')) attempted++
+  }
+  page.on('request', countReorder)
+
   const reorderDone = page.waitForResponse(
     (resp) => resp.url().includes('/api/reorder') && resp.ok(),
+    { timeout },
   )
   const refetchDone = page.waitForResponse(
     (resp) => resp.url().includes('/api/readTree/') && resp.ok(),
+    { timeout },
   )
 
   return async () => {
-    await reorderDone
-    await refetchDone
+    try {
+      try {
+        await reorderDone
+      } catch (cause) {
+        throw new Error(
+          attempted === 0
+            ? `${label}: the drop fired no PATCH /api/reorder. dnd-kit resolved it as a no-op move, or a pointer event was lost before onDragEnd.`
+            : `${label}: ${attempted} PATCH /api/reorder request(s) fired, none returned OK within ${timeout}ms.`,
+          { cause },
+        )
+      }
+      await refetchDone.catch((cause: unknown) => {
+        throw new Error(
+          `${label}: the reorder was accepted but no GET /api/readTree/ refetch followed within ${timeout}ms.`,
+          { cause },
+        )
+      })
+    } finally {
+      page.off('request', countReorder)
+    }
     // The PATCH + GET awaits above are the user-observable settle (the
     // network round-trip). The remaining pause covers dnd-kit re-registering
     // its droppable rects after React reconciles the refetched tree — an
@@ -294,8 +327,11 @@ export function watchReorderRequests(page: Page): { count: () => number; stop: (
  * Move the mouse to target coordinates, release, and await mutation settlement.
  * Combines the final positioning move, mouse release, and API round-trip wait
  * into a single call for cross-container drop tests.
+ *
+ * `label` names the drop in the settlement failure message — a spec that drops
+ * several times otherwise reports every hang at the same helper line.
  */
-export async function dropAndSettle(page: Page, targetX: number, targetY: number) {
+export async function dropAndSettle(page: Page, targetX: number, targetY: number, label: string) {
   await page.mouse.move(targetX, targetY, { steps: 15 })
   // The cross-container ghost preview re-renders as the pointer settles into its
   // target slot. Wait for that to quiesce before releasing: the drop commits the
@@ -305,7 +341,7 @@ export async function dropAndSettle(page: Page, targetX: number, targetY: number
   // settle, robust across browser timings where a fixed pause is not.
   await waitForPreviewStable(page)
 
-  const settle = waitForMutationSettlement(page)
+  const settle = waitForMutationSettlement(page, label)
   await releaseDrag(page, targetX, targetY)
   await settle()
 }

@@ -73,7 +73,7 @@ test.describe('Drag and drop', () => {
       await expect(elementOverlay.getByTestId('drag-overlay-element-title')).toHaveText('Block 1')
 
       // Register settlement listeners before releasing (mutation fires on drop)
-      const settle1 = waitForMutationSettlement(page)
+      const settle1 = waitForMutationSettlement(page, 'reorder elements within and across columns')
       await elementReorderDrag.release()
       await settle1()
 
@@ -85,7 +85,10 @@ test.describe('Drag and drop', () => {
       await expect(elementCards(colA1A)).toHaveCount(3)
 
       // --- CROSS-COLUMN ELEMENT MOVE (Col A1-A → Col A1-B: Block 2 → Block 4) ---
-      const settle2 = waitForMutationSettlement(page)
+      const settle2 = waitForMutationSettlement(
+        page,
+        'reorder elements within and across columns (2)',
+      )
       await performDrag(page, dragHandle(page, 'Block 2'), dragHandle(page, 'Block 4'))
       await settle2()
 
@@ -100,7 +103,7 @@ test.describe('Drag and drop', () => {
       const firstColHandle = columns.first().getByTestId('column-header').getByTestId('drag-handle')
       await expect(firstColHandle).toHaveAttribute('aria-label', 'Move Column A1-A')
 
-      const settle3 = waitForMutationSettlement(page)
+      const settle3 = waitForMutationSettlement(page, 'reorder columns and rows')
       await performDrag(page, dragHandle(page, 'Column A1-A'), dragHandle(page, 'Column A1-B'))
       await settle3()
 
@@ -120,7 +123,7 @@ test.describe('Drag and drop', () => {
       const rowOverlay = page.getByTestId('drag-overlay-row')
       await expect(rowOverlay).toBeVisible()
 
-      const settle4 = waitForMutationSettlement(page)
+      const settle4 = waitForMutationSettlement(page, 'reorder columns and rows (2)')
       await rowDrag.release()
       await settle4()
 
@@ -131,7 +134,10 @@ test.describe('Drag and drop', () => {
     await test.step('move a row across sections and reorder sections', async () => {
       // --- CROSS-SECTION ROW MOVE (Section Alpha → Section Beta) ---
       // Alpha-2 is now first in Section Alpha; move it to Section Beta
-      const settle5 = waitForMutationSettlement(page)
+      const settle5 = waitForMutationSettlement(
+        page,
+        'move a row across sections and reorder sections',
+      )
       await performDrag(page, dragHandle(page, 'Row Alpha-2'), dragHandle(page, 'Row Beta-1'))
       await settle5()
 
@@ -150,7 +156,10 @@ test.describe('Drag and drop', () => {
       const betaDrag = await startDrag(page, sectionHandleBeta, sectionHandleAlpha)
       await expect(page.getByTestId('drag-overlay-section')).toBeVisible()
       await expect(page.getByTestId('drag-overlay-section-title')).toHaveText('Section Beta')
-      const settle6 = waitForMutationSettlement(page)
+      const settle6 = waitForMutationSettlement(
+        page,
+        'move a row across sections and reorder sections (2)',
+      )
       await betaDrag.release()
       await settle6()
 
