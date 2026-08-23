@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import ViewportSwitcher from '@/components/ViewportSwitcher/ViewportSwitcher'
-import { useGridEditorContext } from '@/hooks/GridEditorContext'
+import { useEditorRoot } from '@/hooks/GridEditorContext'
 import { useCollapse } from '@/hooks/useCollapseState'
 import { t } from '@/i18n'
 import type { ElementNode } from '@/types/elements'
@@ -26,15 +26,12 @@ import type { ElementNode } from '@/types/elements'
 export default function GridAreaHeader({
   sections,
   readonly,
-  version,
 }: {
   readonly sections: ElementNode[]
   readonly readonly: boolean
-  /** Archived version being viewed, forwarded to the viewport control. */
-  readonly version?: number
 }) {
   const { isCollapsed, toggle } = useCollapse()
-  const { rootType } = useGridEditorContext()
+  const root = useEditorRoot()
 
   // When every section is already collapsed the button flips to "expand all";
   // any expanded section keeps it in "collapse all" mode.
@@ -55,7 +52,7 @@ export default function GridAreaHeader({
     ? t('WeDevelopGrid.GridEditor.ACTION_EXPAND_ALL', 'Expand all sections')
     : t('WeDevelopGrid.GridEditor.ACTION_COLLAPSE_ALL', 'Collapse all sections')
 
-  const isPageEditor = rootType === 'page'
+  const isPageEditor = root.kind === 'page'
 
   return (
     <header
@@ -65,10 +62,11 @@ export default function GridAreaHeader({
       <h1 className="ssgrid-editor-title ssgrid-visually-hidden">
         {t('WeDevelopGrid.GridEditor.AREA_TITLE', 'Grid area')}
       </h1>
-      {/* A block has no page zone, and the switcher's override counts are read
-          per page+zone — rendered here it would query the tree endpoint with a
-          block id and an empty zone, which the controller always rejects. */}
-      {isPageEditor && <ViewportSwitcher readonly={readonly} version={version} />}
+      {/* A block has no page zone, and the reset scopes the switcher offers
+          address a page + zone the server has no block equivalent for — hence
+          usePageRoot inside it, which throws rather than degrade if this gate
+          is ever removed. */}
+      {isPageEditor && <ViewportSwitcher readonly={readonly} />}
       {isPageEditor && (
         <div className="ssgrid-editor-header-actions">
           <button

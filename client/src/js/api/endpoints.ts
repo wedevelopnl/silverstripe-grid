@@ -1,4 +1,5 @@
 import type { AcceptableContainer, PageEntry } from '@/types/duplicateTo'
+import type { EditorRoot } from '@/types/editorRoot'
 import type {
   ColumnNode,
   ContainerType,
@@ -23,27 +24,26 @@ import { apiDelete, apiGet, apiPatch, apiPost, apiPostJson } from './client'
 import { getControllerLink, getSharedBlockControllerLink } from './config'
 
 /**
- * Fetch the full element tree for a CMS page.
+ * Fetch the element tree the editor renders, whichever record it is rooted at.
  *
- * When `version` is omitted, the draft tree is returned from
- * `/api/readTree/{pageId}/{zone}`. When `version` is provided, the archived
- * tree at that page version is returned from
- * `/api/readTree/{pageId}/{zone}/version/{version}` — used by the readonly
- * history viewer.
+ * A page zone reads `GridController`'s `/api/readTree/{pageId}/{zone}`, or its
+ * `/version/{version}` variant for the readonly history viewer. A block reads
+ * `SharedBlockController`'s `/api/readTree/{blockId}` — a different controller
+ * under its own admin URL. Both answer the same tree shape, so everything
+ * downstream of {@link normaliseTreeResponse} is host-agnostic.
  */
-export async function fetchElementTree(
-  pageId: number,
-  zone: string,
-  version?: number,
-): Promise<TreeApiResponse> {
-  const base = getControllerLink()
-  const encodedZone = encodeURIComponent(zone)
-  const url =
-    version !== undefined
-      ? `${base}/api/readTree/${pageId}/${encodedZone}/version/${version}`
-      : `${base}/api/readTree/${pageId}/${encodedZone}`
-  const raw = await apiGet<unknown>(url)
+export async function fetchTree(root: EditorRoot): Promise<TreeApiResponse> {
+  const raw = await apiGet<unknown>(treeUrl(root))
   return normaliseTreeResponse(raw)
+}
+
+function treeUrl(root: EditorRoot): string {
+  if (root.kind === 'sharedBlock') {
+    return `${getSharedBlockControllerLink()}/api/readTree/${root.blockId}`
+  }
+
+  const url = `${getControllerLink()}/api/readTree/${root.pageId}/${encodeURIComponent(root.zone)}`
+  return root.version !== undefined ? `${url}/version/${root.version}` : url
 }
 
 /**
@@ -84,83 +84,69 @@ function attachDerivedFields(
   const nodeKey = NodeIdentity.toKey(node.self.type, node.self.id)
   const parentKey = NodeIdentity.toKey(node.parent.type, node.parent.id)
 
+  // Built once and spread into every arm. Assembled per-arm, a new derived
+  // field only has to be missed in one of the five for that node shape to lose
+  // it silently: they are all optional on ElementNode, so nothing would fail to
+  // compile — and a node missing `sharedBlockKey` reads as page-local to drag
+  // collision filtering.
+  const derived = {
+    nodeKey,
+    parentKey,
+    ...(sharedBlockKey !== undefined ? { sharedBlockKey } : {}),
+  }
+
+  // The PHP domain layer enforces the Section→Row→Column→leaf hierarchy. The
+  // wire schema's childrenSchema is shared across all container variants and
+  // does NOT distinguish children by type, so each arm's cast below rests on
+  // the server's hierarchy invariant rather than on valibot — TypeScript cannot
+  // express the narrower per-level invariant while this returns the wide
+  // ElementNode union.
+  const mapChildren = (children: NodeWire[] | null): ElementNode[] | null =>
+    children?.map((child) => attachDerivedFields(child, allowedTypes, sharedBlockKey)) ?? null
+
   if (node.sharedBlock !== undefined) {
     // The placement itself is page-local — it is the boundary, not inside it —
     // so its own sharedBlockKey stays unset while everything below inherits it.
-    const children = node.children.map((child) => attachDerivedFields(child, allowedTypes, nodeKey))
     const { containerType: _ct, ...referenceFields } = node
     return {
       ...referenceFields,
-      nodeKey,
-      parentKey,
-      ...(sharedBlockKey !== undefined ? { sharedBlockKey } : {}),
-      sharedBlock: node.sharedBlock,
-      children: children as [ElementNode] | [],
+      ...derived,
+      children: node.children.map((child) => attachDerivedFields(child, allowedTypes, nodeKey)) as
+        | [ElementNode]
+        | [],
     } satisfies SharedBlockReferenceNode
   }
 
   if (node.containerType === 'section') {
-    // The PHP domain layer enforces the Section→Row→Column→leaf hierarchy.
-    // The wire schema's childrenSchema is shared across all container variants
-    // and does NOT distinguish children by type, so this cast relies on the
-    // server's hierarchy invariant, not on valibot. TypeScript cannot express the
-    // narrower RowNode[] invariant without a cast because attachDerivedFields
-    // returns the wide ElementNode union.
-    const children =
-      node.children !== null
-        ? (node.children.map((child) =>
-            attachDerivedFields(child, allowedTypes, sharedBlockKey),
-          ) as RowNode[])
-        : null
     return {
       ...node,
-      nodeKey,
-      parentKey,
-      ...(sharedBlockKey !== undefined ? { sharedBlockKey } : {}),
+      ...derived,
+      // Restated because section and row share ONE wire variant, whose
+      // `containerType` is the wider `'section' | 'row'`: narrowing the
+      // property does not narrow what the spread carries.
       containerType: 'section',
       allowedTypes: allowedTypes.section,
-      children,
+      children: mapChildren(node.children) as RowNode[] | null,
     } satisfies SectionNode
   }
 
   if (node.containerType === 'row') {
-    // Same cast rationale as section: the server's hierarchy invariant (not valibot)
-    // guarantees a row's children are columns.
-    const children =
-      node.children !== null
-        ? (node.children.map((child) =>
-            attachDerivedFields(child, allowedTypes, sharedBlockKey),
-          ) as ColumnNode[])
-        : null
     return {
       ...node,
-      nodeKey,
-      parentKey,
-      ...(sharedBlockKey !== undefined ? { sharedBlockKey } : {}),
+      ...derived,
+      // Restated for the same reason as section, above.
       containerType: 'row',
       allowedTypes: allowedTypes.row,
-      children,
+      children: mapChildren(node.children) as ColumnNode[] | null,
     } satisfies RowNode
   }
 
   if (node.containerType === 'column') {
-    // Same cast rationale as section: the server's hierarchy invariant (not valibot)
-    // guarantees a column's children are simple (leaf) elements.
-    const children =
-      node.children !== null
-        ? (node.children.map((child) =>
-            attachDerivedFields(child, allowedTypes, sharedBlockKey),
-          ) as SimpleElementNode[])
-        : null
     return {
       ...node,
-      nodeKey,
-      parentKey,
-      ...(sharedBlockKey !== undefined ? { sharedBlockKey } : {}),
-      containerType: 'column',
+      ...derived,
       allowedTypes: allowedTypes.column,
-      children,
-      gridSettings: node.gridSettings,
+      children: mapChildren(node.children) as SimpleElementNode[] | null,
     } satisfies ColumnNode
   }
 
@@ -169,12 +155,7 @@ function attachDerivedFields(
   // the returned object, which would conflict with SimpleElementNode's
   // `containerType?: never` declaration.
   const { containerType: _ct, ...leafFields } = node
-  return {
-    ...leafFields,
-    nodeKey,
-    parentKey,
-    ...(sharedBlockKey !== undefined ? { sharedBlockKey } : {}),
-  } satisfies SimpleElementNode
+  return { ...leafFields, ...derived } satisfies SimpleElementNode
 }
 
 export interface CreateElementParams {
@@ -309,7 +290,9 @@ export async function fetchPages(search?: string): Promise<PageEntry[]> {
 /* ------------------------------------------------------------------ *
  * Shared blocks — served by SharedBlockController, a separate admin
  * controller with its own base URL. Placements are ordinary elements and
- * stay on the grid endpoints above (archiveElement, reorderElement).
+ * stay on the grid endpoints above (archiveElement, reorderElement); the
+ * block-rooted tree is one of fetchTree's two hosts, not an endpoint of
+ * its own.
  * ------------------------------------------------------------------ */
 
 /**
@@ -322,13 +305,6 @@ export async function fetchSharedBlocks(
   const base = getSharedBlockControllerLink()
   const raw = await apiGet<unknown>(`${base}/api/list?parentType=${encodeURIComponent(parentType)}`)
   return v.parse(sharedBlockListSchema, raw)
-}
-
-/** The library editor's tree, rooted at a block instead of a page + zone. */
-export async function fetchSharedBlockTree(blockId: number): Promise<TreeApiResponse> {
-  const base = getSharedBlockControllerLink()
-  const raw = await apiGet<unknown>(`${base}/api/readTree/${blockId}`)
-  return normaliseTreeResponse(raw)
 }
 
 export interface PlaceSharedBlockParams {

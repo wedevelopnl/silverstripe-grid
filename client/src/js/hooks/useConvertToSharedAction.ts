@@ -4,7 +4,7 @@ import { t } from '@/i18n'
 import type { ElementNode } from '@/types/elements'
 import { isInsideSharedBlock, isSharedBlockReferenceNode } from '@/types/elements'
 import { containsSharedBlockPlacement } from '@/utils/sharedBlockNesting'
-import { useGridEditorContext } from './GridEditorContext'
+import { useEditorRoot } from './GridEditorContext'
 import { useConvertToSharedBlock } from './useSharedBlockMutations'
 
 export interface ConvertToSharedDialogState {
@@ -30,8 +30,8 @@ interface UseConvertToSharedActionResult {
  * never appears where it would be rejected.
  */
 export function useConvertToSharedAction(node: ElementNode): UseConvertToSharedActionResult {
-  const { pageId, zone, rootType } = useGridEditorContext()
-  const convert = useConvertToSharedBlock(pageId, zone)
+  const root = useEditorRoot()
+  const convert = useConvertToSharedBlock(root)
   const [isDialogOpen, setDialogOpen] = useState(false)
 
   const handleOpen = useCallback(() => setDialogOpen(true), [])
@@ -44,13 +44,13 @@ export function useConvertToSharedAction(node: ElementNode): UseConvertToSharedA
 
   // canCreate mirrors the server gate: converting creates a SharedBlock.
   //
-  // rootType is checked as well as isInsideSharedBlock: the library editor's
+  // The root kind is checked as well as isInsideSharedBlock: the library editor's
   // tree is rooted at the BLOCK and contains no placement node, so no node in
   // it carries `sharedBlockKey` and the per-node check sees page-local content
   // everywhere. Without this the action was offered on content already inside
   // a block, and the server refused it on confirm.
   if (
-    rootType === 'sharedBlock' ||
+    root.kind === 'sharedBlock' ||
     isSharedBlockReferenceNode(node) ||
     isInsideSharedBlock(node) ||
     containsSharedBlockPlacement(node) ||

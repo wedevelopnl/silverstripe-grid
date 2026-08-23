@@ -1,32 +1,23 @@
 import { Fragment, useMemo } from 'react'
-import { useElementTree } from '@/hooks/useElementTree'
+import { useEditorTree } from '@/hooks/useEditorTree'
 import { t } from '@/i18n'
+import type { EditorRoot } from '@/types/editorRoot'
 import GridEditorShell, { resolveGridEditorStatus } from './GridEditorShell'
 import { renderRootEntry } from './renderRootEntry'
 import { selectSections } from './selectSections'
 
 interface ReadonlyGridEditorProps {
-  readonly pageId: number
-  readonly zone: string
-  readonly version: number | undefined
+  readonly root: EditorRoot
 }
 
-export default function ReadonlyGridEditor({ pageId, zone, version }: ReadonlyGridEditorProps) {
-  const { data, error } = useElementTree(pageId, zone, version)
+export default function ReadonlyGridEditor({ root }: ReadonlyGridEditorProps) {
+  const { data, error } = useEditorTree(root)
   const sections = useMemo(() => selectSections(data), [data])
 
   const status = resolveGridEditorStatus(data, error)
 
   return (
-    <GridEditorShell
-      pageId={pageId}
-      zone={zone}
-      readonly
-      status={status}
-      error={error}
-      sections={sections}
-      version={version}
-    >
+    <GridEditorShell root={root} readonly status={status} error={error} sections={sections}>
       {sections.length > 0 ? (
         sections.map((entry) => (
           <Fragment key={entry.nodeKey}>

@@ -4,36 +4,24 @@ import { Fragment } from 'react'
 import AddChildButton from '@/components/AddChildButton/AddChildButton'
 import DragOverlayContent from '@/components/DragOverlayContent/DragOverlayContent'
 import { DragContext } from '@/hooks/useDragAndDrop'
-import { useElementTree } from '@/hooks/useElementTree'
-import { useSharedBlockTree } from '@/hooks/useSharedBlockQueries'
+import { useEditorTree } from '@/hooks/useEditorTree'
+import { type EditorRoot, rootParentRef } from '@/types/editorRoot'
 import GridEditorShell, { resolveGridEditorStatus } from './GridEditorShell'
 import { renderRootEntry } from './renderRootEntry'
 import { useGridEditorDnd } from './useGridEditorDnd'
 
 interface EditableGridEditorProps {
-  readonly pageId: number
-  readonly zone: string
-  /** 'sharedBlock' means `pageId` is a block id and the tree comes from the library route. */
-  readonly rootType?: 'page' | 'sharedBlock'
+  readonly root: EditorRoot
 }
 
-export default function EditableGridEditor({
-  pageId,
-  zone,
-  rootType = 'page',
-}: EditableGridEditorProps) {
-  const isBlockRooted = rootType === 'sharedBlock'
+export default function EditableGridEditor({ root }: EditableGridEditorProps) {
+  const isBlockRooted = root.kind === 'sharedBlock'
+  const rootId = rootParentRef(root).id
 
-  // Exactly one of these runs; the other is disabled via skipToken/enabled, so
-  // switching hosts never fires the wrong endpoint.
-  const pageTree = useElementTree(isBlockRooted ? null : pageId, zone)
-  const blockTree = useSharedBlockTree(isBlockRooted ? pageId : null)
-  const { data, error } = isBlockRooted ? blockTree : pageTree
+  const { data, error } = useEditorTree(root)
   const { sections, sectionIds, dndContextProps, dragState, dragContextValue } = useGridEditorDnd(
     data,
-    pageId,
-    zone,
-    rootType,
+    root,
   )
 
   const status = resolveGridEditorStatus(data, error)
@@ -52,13 +40,13 @@ export default function EditableGridEditor({
     sections.length > 0 ? (
       <>
         {!isBlockRooted && (
-          <AddChildButton parentId={pageId} childType="section" variant="before-first" />
+          <AddChildButton parentId={rootId} childType="section" variant="before-first" />
         )}
         {sections.map((entry, index) => (
           <Fragment key={entry.nodeKey}>
             {index > 0 && !isBlockRooted && (
               <AddChildButton
-                parentId={pageId}
+                parentId={rootId}
                 childType="section"
                 variant="between"
                 insertAfterId={sections[index - 1].self.id}
@@ -68,12 +56,12 @@ export default function EditableGridEditor({
           </Fragment>
         ))}
         {!isBlockRooted && (
-          <AddChildButton parentId={pageId} childType="section" variant="append" />
+          <AddChildButton parentId={rootId} childType="section" variant="append" />
         )}
       </>
     ) : (
       <AddChildButton
-        parentId={pageId}
+        parentId={rootId}
         childType="section"
         variant="empty-state"
         parentType={isBlockRooted ? 'sharedBlock' : undefined}
@@ -81,15 +69,7 @@ export default function EditableGridEditor({
     )
 
   return (
-    <GridEditorShell
-      pageId={pageId}
-      zone={zone}
-      readonly={false}
-      rootType={rootType}
-      status={status}
-      error={error}
-      sections={sections}
-    >
+    <GridEditorShell root={root} readonly={false} status={status} error={error} sections={sections}>
       {/* Droppable measuring stays on the default WhileDragging strategy:
           during a drag it re-measures on every registry change exactly like
           MeasuringStrategy.Always (dnd-kit only checks the strategy when NOT

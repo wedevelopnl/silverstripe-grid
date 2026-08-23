@@ -51,7 +51,11 @@ function setupWithTree(columns: ColumnNode[], viewport = 'md') {
     createTreeApiResponse({ pageId, sections: [section] }),
   )
 
-  const { wrapper } = createProviderWrapper({ pageId, zone, viewport, queryClient })
+  const { wrapper } = createProviderWrapper({
+    root: { kind: 'page', pageId, zone },
+    viewport,
+    queryClient,
+  })
 
   return { wrapper, queryClient }
 }

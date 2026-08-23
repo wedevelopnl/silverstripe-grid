@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react'
 import type { DragContextValue, UseDragAndDropReturn } from '@/hooks/useDragAndDrop'
 import { useDragAndDrop } from '@/hooks/useDragAndDrop'
 import { useReorderElement } from '@/hooks/useElementMutations'
-import type { GridEditorRootType } from '@/hooks/queryKeys'
+import { type EditorRoot, rootParentRef } from '@/types/editorRoot'
 import type { ElementNode, TreeApiResponse } from '@/types/elements'
 import { isSectionNode } from '@/types/elements'
 import type { NodeKey, NodeRef } from '@/types/identity'
@@ -23,11 +23,9 @@ export interface UseGridEditorDndReturn {
  */
 export function useGridEditorDnd(
   data: TreeApiResponse | undefined,
-  pageId: number,
-  zone: string,
-  rootType: GridEditorRootType = 'page',
+  root: EditorRoot,
 ): UseGridEditorDndReturn {
-  const reorderMutation = useReorderElement(pageId, zone, rootType)
+  const reorderMutation = useReorderElement(root)
 
   // useDragAndDrop puts onReorder in its handleDragEnd useCallback deps. An
   // inline arrow would burn that memoisation on every parent render and
@@ -53,7 +51,7 @@ export function useGridEditorDnd(
   )
 
   const { dndContextProps, dragState, pendingTree } = useDragAndDrop({
-    tree: data ?? { rootParent: { type: 'page', id: pageId }, nodes: [] },
+    tree: data ?? { rootParent: rootParentRef(root), nodes: [] },
     onReorder,
   })
 

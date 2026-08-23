@@ -3,7 +3,7 @@ import type { ActionItem } from '@/components/ActionsMenu/ActionsMenu'
 import { t } from '@/i18n'
 import type { ElementNode } from '@/types/elements'
 import { countDescendants } from '@/utils/countDescendants'
-import { useGridEditorContext } from './GridEditorContext'
+import { useEditorRoot } from './GridEditorContext'
 import { useArchiveElement } from './useElementMutations'
 
 interface ArchiveDialogState {
@@ -40,8 +40,8 @@ function buildArchiveMessage(title: string, descendantCount: number): string {
 }
 
 export function useArchiveAction(node: ElementNode): UseArchiveActionResult {
-  const { pageId, zone } = useGridEditorContext()
-  const archiveElement = useArchiveElement(pageId, zone)
+  const root = useEditorRoot()
+  const archiveElement = useArchiveElement(root)
   const [isDialogOpen, setDialogOpen] = useState(false)
 
   const descendantCount = countDescendants(node)

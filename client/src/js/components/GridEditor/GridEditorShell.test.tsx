@@ -15,8 +15,7 @@ describe('GridEditorShell', () => {
   it('renders only the loading notice in loading status', () => {
     renderWithProviders(
       <GridEditorShell
-        pageId={1}
-        zone="main"
+        root={{ kind: 'page', pageId: 1, zone: 'main' }}
         readonly={false}
         status="loading"
         error={null}
@@ -33,8 +32,7 @@ describe('GridEditorShell', () => {
   it('renders children inside the canvas in ready status', () => {
     renderWithProviders(
       <GridEditorShell
-        pageId={1}
-        zone="main"
+        root={{ kind: 'page', pageId: 1, zone: 'main' }}
         readonly={false}
         status="ready"
         error={null}
@@ -62,8 +60,7 @@ describe('GridEditorShell', () => {
     })
     renderWithProviders(
       <GridEditorShell
-        pageId={1}
-        zone="main"
+        root={{ kind: 'page', pageId: 1, zone: 'main' }}
         readonly={false}
         status="ready"
         error={null}
@@ -91,8 +88,7 @@ describe('GridEditorShell', () => {
     })
     renderWithProviders(
       <GridEditorShell
-        pageId={1}
-        zone="main"
+        root={{ kind: 'page', pageId: 1, zone: 'main' }}
         readonly={false}
         status="ready"
         error={null}
@@ -114,8 +110,7 @@ describe('GridEditorShell', () => {
     })
     renderWithProviders(
       <GridEditorShell
-        pageId={1}
-        zone="main"
+        root={{ kind: 'page', pageId: 1, zone: 'main' }}
         readonly={false}
         status="ready"
         error={null}
@@ -132,8 +127,7 @@ describe('GridEditorShell', () => {
   it('renders the error notice with the interpolated message when status is error', () => {
     renderWithProviders(
       <GridEditorShell
-        pageId={1}
-        zone="main"
+        root={{ kind: 'page', pageId: 1, zone: 'main' }}
         readonly={false}
         status="error"
         error={new ApiError(500, 'boom')}
@@ -153,8 +147,7 @@ describe('GridEditorShell', () => {
     // status but a set error, the banner must stay hidden.
     renderWithProviders(
       <GridEditorShell
-        pageId={1}
-        zone="main"
+        root={{ kind: 'page', pageId: 1, zone: 'main' }}
         readonly={false}
         status="ready"
         error={new ApiError(500, 'boom')}
@@ -171,8 +164,7 @@ describe('GridEditorShell', () => {
     // truthy: with status 'loading' and no error the banner must stay hidden.
     renderWithProviders(
       <GridEditorShell
-        pageId={1}
-        zone="main"
+        root={{ kind: 'page', pageId: 1, zone: 'main' }}
         readonly={false}
         status="loading"
         error={null}
@@ -187,8 +179,7 @@ describe('GridEditorShell', () => {
   it('sets data-page-id, data-zone and data-readonly on the root', () => {
     renderWithProviders(
       <GridEditorShell
-        pageId={7}
-        zone="sidebar"
+        root={{ kind: 'page', pageId: 7, zone: 'sidebar' }}
         readonly
         status="loading"
         error={null}

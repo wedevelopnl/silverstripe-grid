@@ -6,16 +6,34 @@ import { flushObservers } from '@/testing/flush'
 // pulls in TanStack Query, DnD, etc.) never loads during the test. We only
 // care that the bridge reaches the mount path.
 vi.mock('./Injector', () => ({
-  loadComponent: vi.fn(() => () => createElement('div', { 'data-grid-editor-stub': 'true' })),
+  loadComponent: vi.fn(
+    () => (props: { root: unknown }) =>
+      createElement('div', {
+        'data-grid-editor-stub': 'true',
+        // The parsed root, so the schema→root mapping can be asserted without
+        // rendering the real editor.
+        'data-root': JSON.stringify(props.root),
+      }),
+  ),
 }))
 
 const HOST_SELECTOR = '[data-react-mount="grid-editor"]'
 
-function createHost(): HTMLElement {
+function createHost(
+  schema: Record<string, unknown> = {
+    'grid-page-id': 1,
+    'grid-zone': 'main',
+  },
+): HTMLElement {
   const host = document.createElement('div')
   host.setAttribute('data-react-mount', 'grid-editor')
-  host.setAttribute('data-schema', JSON.stringify({ 'grid-page-id': 1, 'grid-zone': 'main' }))
+  host.setAttribute('data-schema', JSON.stringify(schema))
   return host
+}
+
+function mountedRootOf(host: HTMLElement): unknown {
+  const stub = host.querySelector('[data-grid-editor-stub="true"]')
+  return JSON.parse(stub?.getAttribute('data-root') ?? 'null')
 }
 
 describe('entwine bridge MutationObserver fallback', () => {
@@ -61,6 +79,47 @@ describe('entwine bridge MutationObserver fallback', () => {
 
     expect(host.getAttribute('data-grid-editor-mounted')).toBe('true')
     expect(host.querySelector('[data-grid-editor-stub="true"]')).not.toBeNull()
+  })
+
+  it('builds a page root from the page schema', async () => {
+    await import('./entwine')
+
+    const host = createHost({ 'grid-page-id': 4, 'grid-zone': 'sidebar', 'grid-version': 7 })
+    document.querySelector('.js-injector-boot')?.appendChild(host)
+    await flushObservers()
+
+    expect(mountedRootOf(host)).toEqual({
+      kind: 'page',
+      pageId: 4,
+      zone: 'sidebar',
+      version: 7,
+    })
+  })
+
+  it('builds a block root carrying neither zone nor version', async () => {
+    await import('./entwine')
+
+    // The library editor ships an empty zone; the block root has nowhere to put
+    // it, which is what stops an empty zone reaching the create endpoint.
+    const host = createHost({
+      'grid-page-id': 9,
+      'grid-zone': '',
+      'grid-root-type': 'sharedBlock',
+    })
+    document.querySelector('.js-injector-boot')?.appendChild(host)
+    await flushObservers()
+
+    expect(mountedRootOf(host)).toEqual({ kind: 'sharedBlock', blockId: 9 })
+  })
+
+  it('mounts a null root when the schema carries no id', async () => {
+    await import('./entwine')
+
+    const host = createHost({ 'grid-zone': 'main' })
+    document.querySelector('.js-injector-boot')?.appendChild(host)
+    await flushObservers()
+
+    expect(mountedRootOf(host)).toBeNull()
   })
 
   it('ignores mutations inside an already-mounted editor host', async () => {

@@ -1,19 +1,17 @@
 import EmptyState from '@/components/EmptyState/EmptyState'
 import { t } from '@/i18n'
+import type { EditorRoot } from '@/types/editorRoot'
 import EditableGridEditor from './EditableGridEditor'
 import ReadonlyGridEditor from './ReadonlyGridEditor'
 
 interface GridEditorProps {
-  readonly pageId: number | null
-  readonly zone: string
-  readonly readonly?: boolean
-  readonly version?: number
   /**
-   * Which record the tree is rooted at. 'sharedBlock' means `pageId` carries a
-   * SharedBlock id and the editor reads the block-rooted tree endpoint — the
-   * library hosting the same editor as a page does.
+   * What the tree is rooted at — a page zone, or a block in the library.
+   * Optional at the boundary because the entwine bridge can be mounted before
+   * `data-schema` is parsed.
    */
-  readonly rootType?: 'page' | 'sharedBlock'
+  readonly root: EditorRoot | null
+  readonly readonly?: boolean
 }
 
 /**
@@ -31,21 +29,14 @@ interface GridEditorProps {
  * `EditableGridEditor` mounts the DnD machinery; `ReadonlyGridEditor` never
  * instantiates `useSortable`/mutations and renders no `DndContext`.
  *
- * `pageId` is optional at the boundary because the entwine bridge can be
- * mounted before `data-schema` is parsed. We early-return an empty-state
- * sentinel here so every hook below this guard sees a guaranteed numeric id —
- * no `?? 0` / `?? 1` placeholders flowing into query keys or tree fabrications.
+ * The null root early-returns an empty-state sentinel, so every hook below this
+ * guard sees a guaranteed root — no `?? 0` / `?? 1` placeholders flowing into
+ * query keys or tree fabrications.
  */
-export default function GridEditor({
-  pageId,
-  zone,
-  readonly = false,
-  version,
-  rootType = 'page',
-}: GridEditorProps) {
-  if (pageId === null) {
+export default function GridEditor({ root, readonly = false }: GridEditorProps) {
+  if (root === null) {
     return (
-      <div className="grid-editor" data-zone={zone} data-testid="grid-editor">
+      <div className="grid-editor" data-testid="grid-editor">
         <EmptyState
           message={t('WeDevelopGrid.GridEditor.NO_SECTIONS', 'No sections yet')}
           variant="centered"
@@ -54,9 +45,5 @@ export default function GridEditor({
     )
   }
 
-  return readonly ? (
-    <ReadonlyGridEditor pageId={pageId} zone={zone} version={version} />
-  ) : (
-    <EditableGridEditor pageId={pageId} zone={zone} rootType={rootType} />
-  )
+  return readonly ? <ReadonlyGridEditor root={root} /> : <EditableGridEditor root={root} />
 }

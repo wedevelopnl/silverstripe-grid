@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog'
 import { ToolbarButton } from '@/components/ElementActions/ElementActions'
-import { useGridEditorContext } from '@/hooks/GridEditorContext'
+import { useEditorRoot } from '@/hooks/GridEditorContext'
 import { useRovingToolbar } from '@/hooks/useRovingToolbar'
 import { useArchiveElement } from '@/hooks/useElementMutations'
 import { t } from '@/i18n'
@@ -22,8 +22,8 @@ interface SharedPlacementActionsProps {
  * and on every other page.
  */
 export default function SharedPlacementActions({ placement }: SharedPlacementActionsProps) {
-  const { pageId, zone } = useGridEditorContext()
-  const archiveElement = useArchiveElement(pageId, zone)
+  const root = useEditorRoot()
+  const archiveElement = useArchiveElement(root)
   const [isConfirmOpen, setConfirmOpen] = useState(false)
 
   const confirmRemove = useCallback(() => {

@@ -1,6 +1,8 @@
+import { useMemo } from 'react'
 import GridEditor from '@/components/GridEditor/GridEditor'
 import GridEditorErrorBoundary from '@/components/GridEditorErrorBoundary/GridEditorErrorBoundary'
 import GridQueryProvider from '@/hooks/QueryProvider'
+import type { EditorRoot } from '@/types/editorRoot'
 
 /**
  * Shape of the schema data sub-object that PHP's
@@ -37,29 +39,36 @@ interface GridEditorFieldProps {
  * each field's `component` name in the Injector. When it finds this
  * wrapper, it renders it with the schema data as props.
  *
- * The wrapper is intentionally thin: it unpacks pageId/zone/version
- * from the nested `data` sub-object and forwards them to the existing
- * `<GridEditor>` component. The legacy entwine bridge (used by the
- * main edit view) mounts the same `<GridEditor>` via a different
- * entry point.
+ * The wrapper is intentionally thin: it assembles the page root out of the
+ * nested `data` sub-object and forwards it to the existing `<GridEditor>`.
+ * The legacy entwine bridge (used by the main edit view) builds the same root
+ * from `data-schema` attributes instead. This host only ever renders a page —
+ * the library editor mounts through the bridge.
  */
 export default function GridEditorField({ data, readOnly }: GridEditorFieldProps) {
   const pageId = typeof data?.pageId === 'number' ? data.pageId : null
   const zone = typeof data?.zone === 'string' ? data.zone : 'main'
   const version = typeof data?.version === 'number' && data.version > 0 ? data.version : undefined
 
+  // Memoised because the root IS the editor context value: a fresh object per
+  // FormBuilder render would re-render every consumer of it.
+  const root = useMemo<EditorRoot | null>(
+    () => (pageId === null ? null : { kind: 'page', pageId, zone, version }),
+    [pageId, zone, version],
+  )
+
   // FormBuilder's readOnly is the source of truth — it reflects
   // Form::makeReadonly() state. data.readonly is a safety fallback.
   const isReadonly = readOnly === true || data?.readonly === true
 
-  if (pageId === null) {
+  if (root === null) {
     return null
   }
 
   return (
     <GridQueryProvider>
       <GridEditorErrorBoundary>
-        <GridEditor pageId={pageId} zone={zone} readonly={isReadonly} version={version} />
+        <GridEditor root={root} readonly={isReadonly} />
       </GridEditorErrorBoundary>
     </GridQueryProvider>
   )

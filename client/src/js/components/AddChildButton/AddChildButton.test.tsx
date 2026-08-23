@@ -44,7 +44,7 @@ describe('AddChildButton', () => {
     mockFetchSuccess({})
 
     renderWithProviders(<AddChildButton parentId={1} childType="section" variant="append" />, {
-      zone: 'main',
+      root: { kind: 'page', pageId: 1, zone: 'main' },
     })
 
     await user.click(screen.getByTestId('add-child-button'))
@@ -168,7 +168,7 @@ describe('AddChildButton', () => {
     renderWithProviders(
       <AddChildButton parentId={1} childType="section" variant="before-first" />,
       {
-        zone: 'main',
+        root: { kind: 'page', pageId: 1, zone: 'main' },
       },
     )
 
@@ -356,7 +356,7 @@ describe('AddChildButton shared route', () => {
     'offers no shared route on a %s add strip inside the library editor',
     (childType) => {
       renderWithProviders(<AddChildButton parentId={7} childType={childType} variant="append" />, {
-        rootType: 'sharedBlock',
+        root: { kind: 'sharedBlock', blockId: 1 },
       })
 
       expect(screen.queryByTestId('add-child-shared-trigger')).toBeNull()
@@ -383,7 +383,7 @@ describe('AddChildButton shared route', () => {
         variant="empty-state"
         parentType="sharedBlock"
       />,
-      { rootType: 'sharedBlock', zone: '' },
+      { root: { kind: 'sharedBlock', blockId: 1 } },
     )
 
     await user.click(screen.getByTestId('add-child-button'))

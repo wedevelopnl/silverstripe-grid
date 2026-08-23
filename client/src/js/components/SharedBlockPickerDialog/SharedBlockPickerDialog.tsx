@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useRovingList } from '@/hooks/useRovingList'
 import { usePlaceSharedBlock } from '@/hooks/useSharedBlockMutations'
 import { useSharedBlocks } from '@/hooks/useSharedBlockQueries'
-import { useGridEditorContext } from '@/hooks/GridEditorContext'
+import { useEditorRoot } from '@/hooks/GridEditorContext'
 import { t } from '@/i18n'
 import type { NodeRef } from '@/types/identity'
 import type {
@@ -83,8 +83,8 @@ export default function SharedBlockPickerDialog({
   isOpen,
   onClose,
 }: SharedBlockPickerDialogProps) {
-  const { pageId, zone: editorZone } = useGridEditorContext()
-  const placeSharedBlock = usePlaceSharedBlock(pageId, editorZone)
+  const editorRoot = useEditorRoot()
+  const placeSharedBlock = usePlaceSharedBlock(editorRoot)
   const { data: blocks, isPending, error } = useSharedBlocks(isOpen ? parentType : null)
 
   const dialogRef = useRef<HTMLDialogElement>(null)

@@ -1,6 +1,6 @@
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog'
-import { useGridEditorContext } from '@/hooks/GridEditorContext'
-import { useViewportOverrideCounts } from '@/hooks/useElementTree'
+import { usePageRoot } from '@/hooks/GridEditorContext'
+import { useViewportOverrideCounts } from '@/hooks/useEditorTree'
 import { useResetOverridesAction } from '@/hooks/useResetOverridesAction'
 import { useViewportContext } from '@/hooks/ViewportContext'
 import { t } from '@/i18n'
@@ -9,13 +9,6 @@ import ViewportPicker from './ViewportPicker'
 
 interface ViewportSwitcherProps {
   readonly readonly?: boolean
-  /**
-   * Archived version being viewed, when the host is the history viewer. The
-   * override marks must describe the tree on screen, and the versioned tree
-   * lives under its own query key — omitting this would read the draft instead
-   * (and fetch it, since that entry need not be cached).
-   */
-  readonly version?: number
 }
 
 /**
@@ -27,13 +20,15 @@ interface ViewportSwitcherProps {
  * dialog has a host that outlives the popup, and so the editor has one place to
  * mount viewport chrome.
  */
-export default function ViewportSwitcher({ readonly = false, version }: ViewportSwitcherProps) {
+export default function ViewportSwitcher({ readonly = false }: ViewportSwitcherProps) {
   const viewports = getViewports()
   const { activeViewport, setActiveViewport } = useViewportContext()
-  const { pageId, zone } = useGridEditorContext()
+  const root = usePageRoot()
   // Reads the tree query's existing cache entry — no extra fetch. Drives the
-  // dot marking which viewports columns actually deviate at.
-  const { byViewport } = useViewportOverrideCounts(pageId, zone, version)
+  // dot marking which viewports columns actually deviate at. In the history
+  // viewer the root carries the version, so the marks describe the archived
+  // tree on screen rather than the draft.
+  const { byViewport } = useViewportOverrideCounts(root)
   const reset = useResetOverridesAction()
 
   return (

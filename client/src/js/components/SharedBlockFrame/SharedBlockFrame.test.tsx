@@ -42,7 +42,7 @@ function mutationCalls(path: string) {
 
 /**
  * Render with the page tree already in cache. The move actions bail out while
- * `useElementTree` has no data — they need it as the optimistic-rollback
+ * `useEditorTree` has no data — they need it as the optimistic-rollback
  * snapshot — so a reorder assertion only means anything once it is seeded.
  */
 function renderFrameWithTree(node: SharedBlockReferenceNode, siblings: ElementNode[]) {

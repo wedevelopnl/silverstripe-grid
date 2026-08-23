@@ -4,7 +4,7 @@ import { t } from '@/i18n'
 import { type ElementNode, isSharedBlockRootNode } from '@/types/elements'
 import type { NodeRef } from '@/types/identity'
 import { type ElementTypeKey, getElementType } from '@/utils/getElementType'
-import { useGridEditorContext } from './GridEditorContext'
+import { useEditorRoot } from './GridEditorContext'
 import { useDuplicateToElement } from './useElementMutations'
 
 interface DuplicateToDialogState {
@@ -21,8 +21,8 @@ interface UseDuplicateToActionResult {
 }
 
 export function useDuplicateToAction(node: ElementNode): UseDuplicateToActionResult {
-  const { pageId, zone } = useGridEditorContext()
-  const duplicateToElement = useDuplicateToElement(pageId, zone)
+  const root = useEditorRoot()
+  const duplicateToElement = useDuplicateToElement(root)
   const [isDialogOpen, setDialogOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

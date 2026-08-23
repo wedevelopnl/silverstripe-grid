@@ -112,7 +112,11 @@ describe('ViewportSwitcher', () => {
       [queryKeys.elementTree.byPage(1, 'main', 7), treeWithOverride('xl')],
     )
 
-    renderWithProviders(<ViewportSwitcher readonly version={7} />, { viewport: 'md', queryClient })
+    renderWithProviders(<ViewportSwitcher readonly />, {
+      viewport: 'md',
+      queryClient,
+      root: { kind: 'page', pageId: 1, zone: 'main', version: 7 },
+    })
     await user.click(trigger())
 
     expect(

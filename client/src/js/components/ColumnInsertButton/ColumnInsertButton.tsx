@@ -1,7 +1,7 @@
 import { memo, useState } from 'react'
 import PlacementMenu from '@/components/PlacementMenu/PlacementMenu'
 import SharedBlockPickerDialog from '@/components/SharedBlockPickerDialog/SharedBlockPickerDialog'
-import { useGridEditorContext } from '@/hooks/GridEditorContext'
+import { useEditorRoot } from '@/hooks/GridEditorContext'
 import { useCreateElement } from '@/hooks/useElementMutations'
 import { t } from '@/i18n'
 import type { NodeRef } from '@/types/identity'
@@ -44,10 +44,10 @@ type ColumnInsertButtonProps =
 const ColumnInsertButton = memo(function ColumnInsertButtonComponent(
   props: ColumnInsertButtonProps,
 ) {
-  const { pageId, zone, rootType } = useGridEditorContext()
+  const root = useEditorRoot()
   // A block may not contain a block — see AddChildButton for the same gate.
-  const isLibraryEditor = rootType === 'sharedBlock'
-  const { mutate, isPending } = useCreateElement(pageId, zone)
+  const isLibraryEditor = root.kind === 'sharedBlock'
+  const { mutate, isPending } = useCreateElement(root)
   const [isSharedPickerOpen, setSharedPickerOpen] = useState(false)
 
   // One source of truth for where the column lands, shared by the create call

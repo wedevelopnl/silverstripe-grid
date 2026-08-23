@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react'
 import { t } from '@/i18n'
 import { getViewports } from '@/utils/gridAdapter'
-import { useGridEditorContext } from './GridEditorContext'
+import { usePageRoot } from './GridEditorContext'
 import { useResetGridSettingsOverrides } from './useElementMutations'
-import { useViewportOverrideCounts } from './useElementTree'
+import { useViewportOverrideCounts } from './useEditorTree'
 
 export interface ResetScopeOption {
   /** Viewport to clear, or `null` for every viewport. */
@@ -57,9 +57,9 @@ interface ResetOverridesState {
  * overrides the author means to clear.
  */
 export function useResetOverridesAction(): ResetOverridesState {
-  const { pageId, zone } = useGridEditorContext()
-  const { total, byViewport } = useViewportOverrideCounts(pageId, zone)
-  const { mutate: resetOverrides } = useResetGridSettingsOverrides(pageId, zone)
+  const root = usePageRoot()
+  const { total, byViewport } = useViewportOverrideCounts(root)
+  const { mutate: resetOverrides } = useResetGridSettingsOverrides(root)
   const [pending, setPending] = useState<ResetScopeOption | null>(null)
 
   const perViewport = getViewports()
@@ -139,9 +139,11 @@ export function useResetOverridesAction(): ResetOverridesState {
     }
     setPending(null)
     resetOverrides(
-      pending.viewport === null ? { pageId, zone } : { pageId, zone, viewport: pending.viewport },
+      pending.viewport === null
+        ? { pageId: root.pageId, zone: root.zone }
+        : { pageId: root.pageId, zone: root.zone, viewport: pending.viewport },
     )
-  }, [pending, pageId, zone, resetOverrides])
+  }, [pending, root, resetOverrides])
 
   return { options, dialog, requestReset, onConfirm, onCancel }
 }

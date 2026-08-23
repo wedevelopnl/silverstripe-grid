@@ -2,7 +2,7 @@ import type { MouseEvent } from 'react'
 import ActionsMenu from '@/components/ActionsMenu/ActionsMenu'
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog'
 import DuplicateToDialog from '@/components/DuplicateToDialog/DuplicateToDialog'
-import { useGridEditorContext } from '@/hooks/GridEditorContext'
+import { useEditorRoot } from '@/hooks/GridEditorContext'
 import { useArchiveAction } from '@/hooks/useArchiveAction'
 import { useDuplicateAction } from '@/hooks/useDuplicateAction'
 import { useConvertToSharedAction } from '@/hooks/useConvertToSharedAction'
@@ -106,7 +106,7 @@ export function ToolbarButton({
 }
 
 export default function ElementActions({ node, collapse, kebabOnly = false }: ElementActionsProps) {
-  const { pageId } = useGridEditorContext()
+  const root = useEditorRoot()
   const { action: archiveAction, dialog: archiveDialog } = useArchiveAction(node)
   const { action: duplicateAction } = useDuplicateAction(node)
   const { action: duplicateToAction, dialog: duplicateToDialog } = useDuplicateToAction(node)
@@ -249,7 +249,7 @@ export default function ElementActions({ node, collapse, kebabOnly = false }: El
         <DuplicateToDialog
           isOpen={duplicateToDialog.isOpen}
           elementType={duplicateToDialog.elementType}
-          currentPageId={pageId}
+          currentPageId={root.kind === 'page' ? root.pageId : null}
           onConfirm={duplicateToDialog.onConfirm}
           onCancel={duplicateToDialog.onCancel}
           error={duplicateToDialog.error}
