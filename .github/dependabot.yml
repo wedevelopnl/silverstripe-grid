@@ -5,6 +5,40 @@ updates:
     directory: /
     schedule:
       interval: daily
+    # Peer-locked families must move as a unit. Ungrouped, Dependabot opens one
+    # PR per package, and each is unresolvable on its own: bumping
+    # @stryker-mutator/vitest-runner to 10.0.0 against a tree still holding
+    # @stryker-mutator/core@9.6.1 fails `npm ci` with ERESOLVE before a single
+    # test runs. That happened to 18 jobs in one day; re-running cannot fix it,
+    # because nothing about it is flaky.
+    #
+    # Each group below is a set whose members peer-depend on each other's exact
+    # version. Anything not listed keeps getting its own PR, which is what we
+    # want for independently versioned packages.
+    groups:
+      stryker:
+        patterns:
+          - "@stryker-mutator/*"
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      testing-library:
+        patterns:
+          - "@testing-library/*"
+      dnd-kit:
+        patterns:
+          - "@dnd-kit/*"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
     ignore:
       # react / react-dom are externalized to silverstripe/admin's runtime
       # React global (see vite.config.ts) — the CMS provides React at runtime,
