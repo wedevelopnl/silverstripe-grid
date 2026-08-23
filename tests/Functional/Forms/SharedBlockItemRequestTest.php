@@ -165,6 +165,22 @@ final class SharedBlockItemRequestTest extends FunctionalTest
         }
     }
 
+    /**
+     * Blocks are created seeded, root and all. The stock `item/new` route would
+     * produce one with no root at all, so it is closed rather than left as an
+     * undiscoverable second way in.
+     */
+    public function testTheUnsavedBlockFormIsRefused(): void
+    {
+        $sanitised = str_replace('\\', '-', SharedBlock::class);
+        $url = "admin/shared-blocks/{$sanitised}/EditForm/field/{$sanitised}/item/new";
+
+        $response = Director::test($url, null, $this->session());
+
+        self::assertSame(404, $response->getStatusCode());
+        self::assertCount(0, SharedBlock::get(), 'no block may be created');
+    }
+
     public function testRemoveModeArchivesTheBlockAndItsPlacements(): void
     {
         $block = $this->sectionRootedBlock();

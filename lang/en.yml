@@ -157,9 +157,12 @@ en:
     DELETE_DESC: 'This block is not placed on any page, so nothing else changes.'
     EMPTY_ROOT: Empty
     NOT_USED: 'This block is not placed on any page yet.'
-    SAVE_FIRST: 'Save this block to start adding content to it.'
     PLURALNAME: 'Shared blocks'
+    ROOT_TYPE: Type
     SINGULARNAME: 'Shared block'
+    USAGE_PAGE: Page
+    USED_ON: 'Used on'
+    db_Title: Title
   WeDevelop\Grid\Model\SharedBlockReference:
     PLURALNAME: 'Shared blocks'
     SINGULARNAME: 'Shared block'

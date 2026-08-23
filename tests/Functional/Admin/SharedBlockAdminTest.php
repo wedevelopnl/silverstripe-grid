@@ -76,6 +76,11 @@ final class SharedBlockAdminTest extends FunctionalTest
         $body = (string) $this->visit('admin/shared-blocks')->getBody();
 
         self::assertStringContainsString('<td class="col-Title">Typed banner', $body);
+        self::assertMatchesRegularExpression(
+            '#<th[^>]*col-getRootTypeLabel.*?>Type<#s',
+            $body,
+            'the header shows the translated label, not the raw method name',
+        );
         self::assertStringContainsString(
             '<td class="col-getRootTypeLabel">Section</td>',
             $body,
@@ -146,19 +151,38 @@ final class SharedBlockAdminTest extends FunctionalTest
         self::assertStringContainsString('Shared section', (string) $response->getBody());
     }
 
-    public function testUsedOnTabListsConsumingPages(): void
+    /**
+     * A GridField, not assembled markup: the row has to arrive through the
+     * framework's own column pipeline, which is what escapes the title and
+     * would let the list sort and paginate.
+     */
+    public function testUsedOnTabListsConsumingPagesInAGridField(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
         $block = $this->populatedBlock();
         GridTreeFactory::reference($page, $block);
 
-        $sanitised = str_replace('\\', '-', SharedBlock::class);
-        $response = $this->visit(
-            "admin/shared-blocks/{$sanitised}/EditForm/field/{$sanitised}/item/{$block->ID}/edit",
-        );
+        $response = $this->visit($this->editUrl($block));
+        $body = (string) $response->getBody();
 
         self::assertSame(200, $response->getStatusCode());
-        self::assertStringContainsString('Integration Test Page', (string) $response->getBody());
+        // Holder ids are form-prefixed, so match the suffix.
+        self::assertStringContainsString('_UsedOn', $body);
+        self::assertStringContainsString(
+            sprintf('<a href="%s">Integration Test Page</a>', $page->getCMSEditLink()),
+            $body,
+            'each row links into the CMS through the column formatter',
+        );
+    }
+
+    public function testAnUnusedBlockSaysSoInsteadOfShowingAnEmptyTable(): void
+    {
+        $block = $this->populatedBlock();
+
+        self::assertStringContainsString(
+            'This block is not placed on any page yet.',
+            (string) $this->visit($this->editUrl($block))->getBody(),
+        );
     }
 
     public function testPageElementEditLinkIsUnchanged(): void

@@ -12,6 +12,7 @@ use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\Form;
 use SilverStripe\Forms\FormAction;
 use SilverStripe\Forms\Tab;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\Versioned\VersionedGridFieldItemRequest;
 use WeDevelop\Grid\Model\SharedBlock;
@@ -39,8 +40,17 @@ use WeDevelop\Grid\Value\ValidationError;
  */
 class SharedBlockItemRequest extends VersionedGridFieldItemRequest
 {
-    /** @var list<string> */
+    /**
+     * `ItemEditForm` is listed because this class DECLARES it. Access is judged
+     * against the uninherited `allowed_actions` of the class defining the
+     * method ({@see \SilverStripe\Control\RequestHandler::checkAccessAction()}),
+     * so overriding an inherited action without re-listing it here 403s the
+     * form — and with it every nested element route underneath it.
+     *
+     * @var list<string>
+     */
     private static array $allowed_actions = [
+        'ItemEditForm',
         'doDeleteSharedBlock',
         'doUnshareSharedBlock',
     ];
@@ -54,6 +64,31 @@ class SharedBlockItemRequest extends VersionedGridFieldItemRequest
     public SharedBlockService $sharedBlockService;
 
     public SharedBlockUsageResolver $usageResolver;
+
+    /**
+     * There is no form for an unsaved block. Blocks are created already seeded —
+     * block plus root element in one transaction, the shape chosen at the add
+     * control ({@see \WeDevelop\Grid\Forms\GridFieldAddSharedBlockButton}) —
+     * and the stock `item/new` route bypasses that: it yields a rootless block
+     * which, once saved, can only ever grow a Section root. Nothing links to it,
+     * so refusing it closes a second creation path with weaker guarantees rather
+     * than taking anything away.
+     *
+     * A record that is absent entirely is left to the parent, which redirects
+     * back to the listing.
+     */
+    #[Override]
+    public function ItemEditForm(): mixed
+    {
+        /** @var DataObject|null $record */
+        $record = $this->getRecord();
+
+        if ($record !== null && !$record->isInDB()) {
+            $this->httpError(404);
+        }
+
+        return parent::ItemEditForm();
+    }
 
     /**
      * Runs after `parent::getFormActions()` rather than through the

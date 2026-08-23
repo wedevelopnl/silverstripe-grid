@@ -157,9 +157,12 @@ nl:
     DELETE_DESC: 'Dit blok staat op geen enkele pagina, dus er verandert verder niets.'
     EMPTY_ROOT: Leeg
     NOT_USED: 'Dit blok staat nog op geen enkele pagina.'
-    SAVE_FIRST: 'Sla dit blok op om er inhoud aan toe te voegen.'
     PLURALNAME: 'Gedeelde blokken'
+    ROOT_TYPE: Type
     SINGULARNAME: 'Gedeeld blok'
+    USAGE_PAGE: Pagina
+    USED_ON: 'Gebruikt op'
+    db_Title: Titel
   WeDevelop\Grid\Model\SharedBlockReference:
     PLURALNAME: 'Gedeelde blokken'
     SINGULARNAME: 'Gedeeld blok'
