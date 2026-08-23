@@ -43,7 +43,9 @@ describe('useGridEditorDnd', () => {
         createSectionNode({ id: 20, parent: { type: 'page', id: 1 }, title: 'B' }),
       ],
     })
-    const { result } = renderHook(() => useGridEditorDnd(tree, 1, 'main'))
+    const { result } = renderHook(() =>
+      useGridEditorDnd(tree, { kind: 'page', pageId: 1, zone: 'main' }),
+    )
     expect(result.current.sections).toHaveLength(2)
     expect(result.current.sectionIds).toHaveLength(2)
   })
@@ -53,7 +55,7 @@ describe('useGridEditorDnd', () => {
       pageId: 1,
       sections: [createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'A' })],
     })
-    renderHook(() => useGridEditorDnd(tree, 1, 'main'))
+    renderHook(() => useGridEditorDnd(tree, { kind: 'page', pageId: 1, zone: 'main' }))
     const clear = vi.fn()
     act(() => {
       capturedOnReorder.current?.(
@@ -77,7 +79,7 @@ describe('useGridEditorDnd', () => {
       pageId: 1,
       sections: [createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'A' })],
     })
-    renderHook(() => useGridEditorDnd(tree, 1, 'main'))
+    renderHook(() => useGridEditorDnd(tree, { kind: 'page', pageId: 1, zone: 'main' }))
     const clear = vi.fn()
     act(() => {
       capturedOnReorder.current?.(
@@ -102,7 +104,9 @@ describe('useGridEditorDnd', () => {
       pageId: 1,
       sections: [createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'A' })],
     })
-    const { result } = renderHook(() => useGridEditorDnd(tree, 1, 'main'))
+    const { result } = renderHook(() =>
+      useGridEditorDnd(tree, { kind: 'page', pageId: 1, zone: 'main' }),
+    )
     expect(result.current.dragContextValue.pendingActive).toBe(false)
   })
 
@@ -115,12 +119,14 @@ describe('useGridEditorDnd', () => {
       sections: [createSectionNode({ id: 10, parent: { type: 'page', id: 1 }, title: 'A' })],
     })
     mockPendingTree.current = tree
-    const { result } = renderHook(() => useGridEditorDnd(tree, 1, 'main'))
+    const { result } = renderHook(() =>
+      useGridEditorDnd(tree, { kind: 'page', pageId: 1, zone: 'main' }),
+    )
     expect(result.current.dragContextValue.pendingActive).toBe(true)
   })
 
   it('does not fire the mutation while the tree is undefined', () => {
-    renderHook(() => useGridEditorDnd(undefined, 1, 'main'))
+    renderHook(() => useGridEditorDnd(undefined, { kind: 'page', pageId: 1, zone: 'main' }))
     act(() => {
       capturedOnReorder.current?.({} as never, {} as never, null as never, vi.fn() as never)
     })

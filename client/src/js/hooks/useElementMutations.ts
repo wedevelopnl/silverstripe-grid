@@ -20,29 +20,29 @@ import {
   updateGridSettings,
 } from '@/api/endpoints'
 import type { ApiError } from '@/api/errors'
+import type { EditorRoot } from '@/types/editorRoot'
 import type { TreeApiResponse } from '@/types/elements'
 import { NodeIdentity, type NodeRef } from '@/types/identity'
 import { buildMaps } from '@/hooks/useElementMaps'
 import { applyReorder } from '@/utils/applyReorder'
 import { refreshPreview } from '@/utils/refreshPreview'
 import { showToast } from '@/utils/toast'
-import type { GridEditorRootType } from './queryKeys'
-import { editorTreeQueryKey, queryKeys } from './queryKeys'
+import { queryKeys, treeQueryKey } from './queryKeys'
 
 /**
- * Shared mutation defaults: invalidate the element tree on success and toast on error.
+ * Shared mutation defaults: invalidate the tree on success and toast on error.
  *
  * Centralizing onError here prevents drift — every mutation that spreads this helper
  * automatically reports failures to the user. Mutations with custom onError (e.g.
  * useReorderElement's optimistic rollback) should still call showToast explicitly.
  */
-export function useStandardMutationOptions(pageId: number, zone: string) {
+export function useStandardMutationOptions(root: EditorRoot) {
   const queryClient = useQueryClient()
 
   return {
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.elementTree.byPage(pageId, zone),
+        queryKey: treeQueryKey(root),
       })
       queryClient.invalidateQueries({
         queryKey: queryKeys.acceptableContainers.all(),
@@ -60,51 +60,51 @@ export function useStandardMutationOptions(pageId: number, zone: string) {
   }
 }
 
-export function useCreateElement(pageId: number, zone: string) {
+export function useCreateElement(root: EditorRoot) {
   return useMutation<void, ApiError, CreateElementParams>({
     mutationFn: createElement,
-    ...useStandardMutationOptions(pageId, zone),
+    ...useStandardMutationOptions(root),
   })
 }
 
-export function useCreateContentElement(pageId: number, zone: string) {
+export function useCreateContentElement(root: EditorRoot) {
   return useMutation<void, ApiError, CreateContentElementParams>({
     mutationFn: createContentElement,
-    ...useStandardMutationOptions(pageId, zone),
+    ...useStandardMutationOptions(root),
   })
 }
 
-export function usePublishElement(pageId: number, zone: string) {
+export function usePublishElement(root: EditorRoot) {
   return useMutation<void, ApiError, NodeRef>({
     mutationFn: publishElement,
-    ...useStandardMutationOptions(pageId, zone),
+    ...useStandardMutationOptions(root),
   })
 }
 
-export function useUnpublishElement(pageId: number, zone: string) {
+export function useUnpublishElement(root: EditorRoot) {
   return useMutation<void, ApiError, NodeRef>({
     mutationFn: unpublishElement,
-    ...useStandardMutationOptions(pageId, zone),
+    ...useStandardMutationOptions(root),
   })
 }
 
-export function useArchiveElement(pageId: number, zone: string) {
+export function useArchiveElement(root: EditorRoot) {
   return useMutation<void, ApiError, NodeRef>({
     mutationFn: archiveElement,
-    ...useStandardMutationOptions(pageId, zone),
+    ...useStandardMutationOptions(root),
   })
 }
 
-export function useDuplicateElement(pageId: number, zone: string) {
+export function useDuplicateElement(root: EditorRoot) {
   return useMutation<void, ApiError, NodeRef>({
     mutationFn: duplicateElement,
-    ...useStandardMutationOptions(pageId, zone),
+    ...useStandardMutationOptions(root),
   })
 }
 
-export function useDuplicateToElement(pageId: number, zone: string) {
+export function useDuplicateToElement(root: EditorRoot) {
   const queryClient = useQueryClient()
-  const standardOptions = useStandardMutationOptions(pageId, zone)
+  const standardOptions = useStandardMutationOptions(root)
 
   return useMutation<void, ApiError, DuplicateToParams>({
     mutationFn: duplicateToElement,
@@ -126,17 +126,17 @@ export function useDuplicateToElement(pageId: number, zone: string) {
   })
 }
 
-export function useUpdateGridSettings(pageId: number, zone: string) {
+export function useUpdateGridSettings(root: EditorRoot) {
   return useMutation<void, ApiError, UpdateGridSettingsParams>({
     mutationFn: updateGridSettings,
-    ...useStandardMutationOptions(pageId, zone),
+    ...useStandardMutationOptions(root),
   })
 }
 
-export function useResetGridSettingsOverrides(pageId: number, zone: string) {
+export function useResetGridSettingsOverrides(root: EditorRoot) {
   return useMutation<void, ApiError, ResetGridSettingsOverridesParams>({
     mutationFn: resetGridSettingsOverrides,
-    ...useStandardMutationOptions(pageId, zone),
+    ...useStandardMutationOptions(root),
   })
 }
 
@@ -146,16 +146,9 @@ interface ReorderMutationVariables {
   clearPendingTree?: () => void
 }
 
-export function useReorderElement(
-  pageId: number,
-  zone: string,
-  rootType: GridEditorRootType = 'page',
-) {
+export function useReorderElement(root: EditorRoot) {
   const queryClient = useQueryClient()
-  // Not elementTree unconditionally: in the library editor `pageId` is a block
-  // id and the rendered tree is `sharedBlocks.tree`, so the snapshot, the
-  // optimistic write and the invalidation below all have to target that entry.
-  const queryKey = editorTreeQueryKey(rootType, pageId, zone)
+  const queryKey = treeQueryKey(root)
 
   // onMutate (applyReorder) can throw a plain Error/TypeError, which TanStack
   // routes to onError — so the error channel is `Error | ApiError`, not just

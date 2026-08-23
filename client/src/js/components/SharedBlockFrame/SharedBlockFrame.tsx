@@ -2,8 +2,8 @@ import { type ReactNode, useCallback, useState } from 'react'
 import ActionsMenu, { type ActionItem } from '@/components/ActionsMenu/ActionsMenu'
 import { buildColumnStyle } from '@/components/ColumnBlock/buildColumnStyle'
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog'
-import { useGridEditorContext } from '@/hooks/GridEditorContext'
-import { useElementTree } from '@/hooks/useElementTree'
+import { useEditorRoot } from '@/hooks/GridEditorContext'
+import { useEditorTree } from '@/hooks/useEditorTree'
 import { useReorderElement } from '@/hooks/useElementMutations'
 import { useDetachSharedBlock, useSetSharedBlockPublished } from '@/hooks/useSharedBlockMutations'
 import { useViewportContext } from '@/hooks/ViewportContext'
@@ -50,7 +50,7 @@ export default function SharedBlockFrame({
   readonly = false,
   children,
 }: SharedBlockFrameProps) {
-  const { pageId, zone } = useGridEditorContext()
+  const editorRoot = useEditorRoot()
   const { activeViewport } = useViewportContext()
   // The same cached query the editor already holds — no extra request, and it
   // gives nested placements the rollback snapshot the reorder mutation needs.
@@ -59,10 +59,10 @@ export default function SharedBlockFrame({
   // never renders, and the history viewer's own tree is version-scoped — so an
   // unversioned fetch there is a wasted request that seeds the draft cache from
   // a read-only screen.
-  const { data: tree } = useElementTree(readonly ? null : pageId, zone)
-  const setPublished = useSetSharedBlockPublished(pageId, zone)
-  const detach = useDetachSharedBlock(pageId, zone)
-  const reorder = useReorderElement(pageId, zone)
+  const { data: tree } = useEditorTree(readonly ? null : editorRoot)
+  const setPublished = useSetSharedBlockPublished(editorRoot)
+  const detach = useDetachSharedBlock(editorRoot)
+  const reorder = useReorderElement(editorRoot)
 
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm>(null)
   const closeConfirm = useCallback(() => setPendingConfirm(null), [])

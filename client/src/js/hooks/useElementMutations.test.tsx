@@ -14,7 +14,7 @@ import {
   useUnpublishElement,
   useUpdateGridSettings,
 } from '@/hooks/useElementMutations'
-import { useElementTree } from '@/hooks/useElementTree'
+import { useEditorTree } from '@/hooks/useEditorTree'
 import { buildTree, resetIdCounter } from '@/testing/factories'
 import {
   getFetchCalls,
@@ -23,6 +23,7 @@ import {
   mockFetchSuccess,
 } from '@/testing/mockFetch'
 import { createProviderWrapper, createTestQueryClient } from '@/testing/renderWithProviders'
+import type { EditorRoot } from '@/types/editorRoot'
 import type { ContainerNode, TreeApiResponse } from '@/types/elements'
 
 /**
@@ -77,6 +78,8 @@ async function awaitErrorToast(dispatch: ReturnType<typeof vi.fn>) {
   })
 }
 
+const PAGE: EditorRoot = { kind: 'page', pageId: 1, zone: 'main' }
+
 describe('useElementMutations', () => {
   beforeEach(() => {
     resetIdCounter()
@@ -86,7 +89,7 @@ describe('useElementMutations', () => {
     it('should call create endpoint', async () => {
       mockFetchSuccess({})
       const { wrapper } = createProviderWrapper()
-      const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useCreateContentElement(PAGE), { wrapper })
 
       act(() => {
         result.current.mutate({ className: 'Content', parent: { type: 'column', id: 10 } })
@@ -105,7 +108,7 @@ describe('useElementMutations', () => {
     it('should call updateGridSettings endpoint', async () => {
       mockFetchSuccess({})
       const { wrapper } = createProviderWrapper()
-      const { result } = renderHook(() => useUpdateGridSettings(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useUpdateGridSettings(PAGE), { wrapper })
 
       act(() => {
         result.current.mutate({
@@ -130,7 +133,7 @@ describe('useElementMutations', () => {
     it('should call resetGridSettingsOverrides endpoint', async () => {
       mockFetchSuccess({})
       const { wrapper } = createProviderWrapper()
-      const { result } = renderHook(() => useResetGridSettingsOverrides(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useResetGridSettingsOverrides(PAGE), { wrapper })
 
       act(() => {
         result.current.mutate({ pageId: 1, zone: 'main' })
@@ -153,14 +156,14 @@ describe('useElementMutations', () => {
     it.each([
       {
         name: 'useCreateContentElement',
-        hook: () => useCreateContentElement(1, 'main'),
+        hook: () => useCreateContentElement(PAGE),
         variables: { className: 'Content', parent: { type: 'column', id: 10 } },
         status: 500,
         message: 'Create failed',
       },
       {
         name: 'useUpdateGridSettings',
-        hook: () => useUpdateGridSettings(1, 'main'),
+        hook: () => useUpdateGridSettings(PAGE),
         variables: {
           element: { type: 'column', id: 5 },
           viewport: 'md',
@@ -173,21 +176,21 @@ describe('useElementMutations', () => {
       },
       {
         name: 'useResetGridSettingsOverrides',
-        hook: () => useResetGridSettingsOverrides(1, 'main'),
-        variables: { pageId: 1, zone: 'main' },
+        hook: () => useResetGridSettingsOverrides(PAGE),
+        variables: { root: { kind: 'page', pageId: 1, zone: 'main' } },
         status: 500,
         message: 'Reset failed',
       },
       {
         name: 'usePublishElement',
-        hook: () => usePublishElement(1, 'main'),
+        hook: () => usePublishElement(PAGE),
         variables: { type: 'section', id: 5 },
         status: 500,
         message: 'Publish failed',
       },
       {
         name: 'useUnpublishElement',
-        hook: () => useUnpublishElement(1, 'main'),
+        hook: () => useUnpublishElement(PAGE),
         variables: { type: 'section', id: 5 },
         status: 500,
         message: 'Unpublish failed',
@@ -230,7 +233,7 @@ describe('useElementMutations', () => {
       const { queryClient, tree, column, elemA, elemB } = createReorderTree()
       const queryKey = queryKeys.elementTree.byPage(1, 'main')
       const { wrapper } = createProviderWrapper({ queryClient })
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useReorderElement(PAGE), { wrapper })
 
       await act(async () => {
         result.current.mutate({
@@ -269,7 +272,7 @@ describe('useElementMutations', () => {
       const dispatch = stubToastDispatch()
 
       const { wrapper } = createProviderWrapper({ queryClient })
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useReorderElement(PAGE), { wrapper })
 
       act(() => {
         result.current.mutate({
@@ -287,7 +290,7 @@ describe('useElementMutations', () => {
 
     it('does not refetch after an optimistic rollback', async () => {
       const { queryClient, tree, treeApiResponse, column, elemB } = createReorderTree()
-      // Prevent the mounted useElementTree observer from doing its own
+      // Prevent the mounted useEditorTree observer from doing its own
       // on-mount background refetch — we only care about the invalidation.
       queryClient.setDefaultOptions({ queries: { retry: false, gcTime: 0, staleTime: Infinity } })
       // Queue: the failed reorder POST only. If onSettled invalidates on
@@ -304,9 +307,9 @@ describe('useElementMutations', () => {
       const { wrapper } = createProviderWrapper({ queryClient })
       // Mount a reader for the tree query so it becomes an *active* query —
       // TanStack Query only refetches observed queries on invalidation.
-      renderHook(() => useElementTree(1, 'main'), { wrapper })
+      renderHook(() => useEditorTree(PAGE), { wrapper })
 
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useReorderElement(PAGE), { wrapper })
 
       await act(async () => {
         await result.current
@@ -347,7 +350,7 @@ describe('useElementMutations', () => {
       ])
 
       const { wrapper } = createProviderWrapper({ queryClient })
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useReorderElement(PAGE), { wrapper })
 
       const clearPendingTree = vi.fn()
 
@@ -386,7 +389,7 @@ describe('useElementMutations', () => {
       const dispatch = stubToastDispatch()
 
       const { wrapper } = createProviderWrapper({ queryClient })
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useReorderElement(PAGE), { wrapper })
 
       await act(async () => {
         await result.current
@@ -424,7 +427,7 @@ describe('useElementMutations', () => {
       const dispatch = stubToastDispatch()
 
       const { wrapper } = createProviderWrapper({ queryClient })
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useReorderElement(PAGE), { wrapper })
 
       await act(async () => {
         await result.current
@@ -457,7 +460,7 @@ describe('useElementMutations', () => {
       mockFetchSuccess({})
 
       const { wrapper } = createProviderWrapper({ queryClient })
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useReorderElement(PAGE), { wrapper })
 
       await act(async () => {
         result.current.mutate({
@@ -484,7 +487,7 @@ describe('useElementMutations', () => {
       mockFetchSuccess({})
 
       const { wrapper } = createProviderWrapper({ queryClient })
-      const { result } = renderHook(() => useReorderElement(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useReorderElement(PAGE), { wrapper })
 
       await act(async () => {
         await result.current.mutateAsync({
@@ -524,7 +527,7 @@ describe('useElementMutations', () => {
       const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData')
 
       const { wrapper } = createProviderWrapper({ queryClient })
-      const { result } = renderHook(() => useReorderElement(blockId, '', 'sharedBlock'), {
+      const { result } = renderHook(() => useReorderElement({ kind: 'sharedBlock', blockId }), {
         wrapper,
       })
 
@@ -565,7 +568,7 @@ describe('useElementMutations', () => {
 
       const { wrapper } = createProviderWrapper({ queryClient })
       // Source: page 1 / 'main'. Destination: page 9 / 'sidebar'.
-      const { result } = renderHook(() => useDuplicateToElement(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useDuplicateToElement(PAGE), { wrapper })
 
       await act(async () => {
         await result.current.mutateAsync({
@@ -600,7 +603,7 @@ describe('useElementMutations', () => {
       mockFetchSuccess({})
 
       const { wrapper } = createProviderWrapper({ queryClient })
-      const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useCreateContentElement(PAGE), { wrapper })
 
       await act(async () => {
         await result.current.mutateAsync({
@@ -620,7 +623,7 @@ describe('useElementMutations', () => {
       mockFetchSuccess({})
 
       const { wrapper } = createProviderWrapper({ queryClient })
-      const { result } = renderHook(() => useCreateContentElement(1, 'main'), { wrapper })
+      const { result } = renderHook(() => useCreateContentElement(PAGE), { wrapper })
 
       await act(async () => {
         await result.current.mutateAsync({

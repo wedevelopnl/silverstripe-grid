@@ -54,7 +54,11 @@ function ListLoadError({
 interface DuplicateToDialogProps {
   readonly isOpen: boolean
   readonly elementType: ElementTypeKey
-  readonly currentPageId: number
+  /**
+   * Page to preselect. Null in the library editor, which has no current page —
+   * the wizard then requires an explicit pick before it can advance.
+   */
+  readonly currentPageId: number | null
   readonly onConfirm: (targetPageId: number, targetZone: string, targetParent: NodeRef) => void
   readonly onCancel: () => void
   readonly error?: string | null
@@ -74,7 +78,7 @@ export default function DuplicateToDialog({
   const [step, setStep] = useState<Step>('page')
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [selectedPageId, setSelectedPageId] = useState<number>(currentPageId)
+  const [selectedPageId, setSelectedPageId] = useState<number | null>(currentPageId)
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
   const [selectedContainerId, setSelectedContainerId] = useState<number | null>(null)
 
@@ -170,7 +174,7 @@ export default function DuplicateToDialog({
   }, [])
 
   const handleConfirm = useCallback(() => {
-    if (selectedZone === null) return
+    if (selectedZone === null || selectedPageId === null) return
 
     if (step === 'confirm') {
       // Section duplication — page is the parent.
@@ -484,6 +488,7 @@ export default function DuplicateToDialog({
               className="ssgrid-button ssgrid-focus-ring"
               data-variant="primary"
               data-testid="duplicate-to-next"
+              disabled={selectedPageId === null}
               onClick={advanceFromPage}
             >
               {t('WeDevelopGrid.DuplicateToDialog.NEXT_BUTTON', 'Next')}

@@ -1,7 +1,7 @@
 import { memo, useState } from 'react'
 import PlacementMenu from '@/components/PlacementMenu/PlacementMenu'
 import SharedBlockPickerDialog from '@/components/SharedBlockPickerDialog/SharedBlockPickerDialog'
-import { useGridEditorContext } from '@/hooks/GridEditorContext'
+import { useEditorRoot } from '@/hooks/GridEditorContext'
 import { useCreateElement } from '@/hooks/useElementMutations'
 import { t } from '@/i18n'
 import type { ContainerType } from '@/types/elements'
@@ -105,10 +105,10 @@ function labelsFor(childType: ContainerType): {
 
 const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButtonProps) {
   const { parentId, childType, variant } = props
-  const { pageId, zone, rootType } = useGridEditorContext()
+  const root = useEditorRoot()
   // The whole library-editor tree is inside a block, root node included.
-  const isLibraryEditor = rootType === 'sharedBlock'
-  const { mutate, isPending } = useCreateElement(pageId, zone)
+  const isLibraryEditor = root.kind === 'sharedBlock'
+  const { mutate, isPending } = useCreateElement(root)
   const labels = labelsFor(childType)
   const [isSharedPickerOpen, setSharedPickerOpen] = useState(false)
 
@@ -137,10 +137,9 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
       containerType: childType,
       parent,
       ...placementParams,
-      // Zone scopes page roots only. The library editor's zone is '' (a block
-      // has none), which the server rejects as an empty string before the
-      // service — which clears the zone for a block parent anyway — is reached.
-      ...(childType === 'section' && parentType === 'page' ? { zone } : {}),
+      // Zone scopes page roots only, and a block root carries none to send —
+      // the server rejects the empty string an earlier shape had to invent.
+      ...(root.kind === 'page' && parentType === 'page' ? { zone: root.zone } : {}),
     })
   }
 
@@ -163,7 +162,7 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
   )
 
   // A block may not contain a block, so nothing in the library editor offers
-  // the shared route. `rootType` is what covers the whole tree there:
+  // the shared route. The root KIND is what covers the whole tree there:
   // `parentType` is 'sharedBlock' only on the root empty-state button, so
   // gating on it alone left every nested add strip inside a block still
   // offering a placement the server then rejected with SHARED_NESTING.
@@ -194,7 +193,7 @@ const AddChildButton = memo(function AddChildButtonComponent(props: AddChildButt
     <SharedBlockPickerDialog
       parentType={parentType}
       parent={{ type: parentType, id: parentId }}
-      zone={childType === 'section' ? zone : undefined}
+      zone={root.kind === 'page' && childType === 'section' ? root.zone : undefined}
       {...placementParams}
       isOpen={isSharedPickerOpen}
       onClose={() => setSharedPickerOpen(false)}

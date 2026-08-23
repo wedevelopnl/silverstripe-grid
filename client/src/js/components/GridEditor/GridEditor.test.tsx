@@ -72,7 +72,7 @@ describe('GridEditor', () => {
 
     mockFetchSuccess(treeResponse)
 
-    renderWithProviders(<GridEditor pageId={1} zone="main" />)
+    renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
     await waitFor(() => {
       expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
@@ -89,7 +89,7 @@ describe('GridEditor', () => {
 
     mockFetchSuccess(treeResponse)
 
-    renderWithProviders(<GridEditor pageId={1} zone="main" />)
+    renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
     await waitFor(() => {
       expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
@@ -110,7 +110,7 @@ describe('GridEditor', () => {
 
     mockFetchSuccess(treeResponse)
 
-    renderWithProviders(<GridEditor pageId={1} zone="main" />)
+    renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
     await waitFor(() => {
       expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
@@ -129,7 +129,7 @@ describe('GridEditor', () => {
     // notice (message interpolation itself is pinned in GridEditorShell tests).
     mockFetchError(500, { message: 'Internal Server Error' })
 
-    renderWithProviders(<GridEditor pageId={1} zone="main" />)
+    renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
     await waitFor(() => {
       expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
@@ -154,7 +154,7 @@ describe('GridEditor', () => {
         }),
       )
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" />)
+      renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
       const collapseAll = await screen.findByRole('button', { name: 'Collapse all sections' })
       await user.click(collapseAll)
@@ -177,7 +177,9 @@ describe('GridEditor', () => {
         }),
       )
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" readonly={true} version={5} />)
+      renderWithProviders(
+        <GridEditor readonly root={{ kind: 'page', pageId: 1, zone: 'main', version: 5 }} />,
+      )
 
       const collapseAll = await screen.findByRole('button', { name: 'Collapse all sections' })
       expect(collapseAll).toBeDisabled()
@@ -196,7 +198,9 @@ describe('GridEditor', () => {
 
       mockFetchSuccess(treeResponse)
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" readonly={true} version={5} />)
+      renderWithProviders(
+        <GridEditor readonly root={{ kind: 'page', pageId: 1, zone: 'main', version: 5 }} />,
+      )
 
       await waitFor(() => {
         expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
@@ -214,7 +218,9 @@ describe('GridEditor', () => {
 
       mockFetchSuccess(treeResponse)
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" readonly={true} version={5} />)
+      renderWithProviders(
+        <GridEditor readonly root={{ kind: 'page', pageId: 1, zone: 'main', version: 5 }} />,
+      )
 
       await waitFor(() => {
         expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
@@ -236,7 +242,9 @@ describe('GridEditor', () => {
 
       mockFetchSuccess(treeResponse)
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" readonly={true} version={5} />)
+      renderWithProviders(
+        <GridEditor readonly root={{ kind: 'page', pageId: 1, zone: 'main', version: 5 }} />,
+      )
 
       await waitFor(() => {
         expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
@@ -255,7 +263,9 @@ describe('GridEditor', () => {
 
       mockFetchSuccess(treeResponse)
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" readonly={true} version={3} />)
+      renderWithProviders(
+        <GridEditor readonly root={{ kind: 'page', pageId: 1, zone: 'main', version: 3 }} />,
+      )
 
       await waitFor(() => {
         expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
@@ -268,20 +278,21 @@ describe('GridEditor', () => {
     it('shows loading state in readonly mode with readonly class', () => {
       vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" readonly={true} version={2} />)
+      renderWithProviders(
+        <GridEditor readonly root={{ kind: 'page', pageId: 1, zone: 'main', version: 2 }} />,
+      )
 
       expect(screen.getByTestId('grid-editor-loading')).toHaveTextContent('Loading elements...')
       expect(screen.getByTestId('grid-editor')).toHaveAttribute('data-readonly', '')
     })
   })
 
-  describe('null page id sentinel', () => {
+  describe('null root sentinel', () => {
     it('renders the no-sections empty state without mounting the editor body', () => {
       // No fetch is issued — the null guard short-circuits before any hook runs.
-      renderWithProviders(<GridEditor pageId={null} zone="main" />)
+      renderWithProviders(<GridEditor root={null} />)
 
-      const editor = screen.getByTestId('grid-editor')
-      expect(editor).toHaveAttribute('data-zone', 'main')
+      screen.getByTestId('grid-editor')
       // The sentinel uses the EmptyState component with the NO_SECTIONS message.
       expect(screen.getByText('No sections yet')).toBeInTheDocument()
       // The editor body (canvas + chrome) is never mounted for a null page id.
@@ -303,7 +314,7 @@ describe('GridEditor', () => {
         }),
       )
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" />)
+      renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
       await waitFor(() => {
         expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
@@ -324,7 +335,7 @@ describe('GridEditor', () => {
         }),
       )
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" />)
+      renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
       await waitFor(() => {
         expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()
@@ -346,7 +357,7 @@ describe('GridEditor', () => {
         }),
       )
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" />)
+      renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
       const reset = await screen.findByRole('button', { name: 'Reset changes' })
       const open = screen.getByRole('button', { name: 'Open page' })
@@ -376,7 +387,7 @@ describe('GridEditor', () => {
         }),
       )
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" />)
+      renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
       expect(await screen.findByRole('heading', { name: 'Grid area' })).toBeInTheDocument()
     })
@@ -384,7 +395,7 @@ describe('GridEditor', () => {
     it('keeps the toggle-all in "collapse all" mode and disabled when there are no sections', async () => {
       mockFetchSuccess(createTreeApiResponse({ pageId: 1, sections: [] }))
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" />)
+      renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
       // With zero sections `allCollapsed` is false (the length guard fails), so
       // the toggle keeps the "collapse all" label and stays disabled.
@@ -410,7 +421,7 @@ describe('GridEditor', () => {
         }),
       )
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" />)
+      renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
       // Not every section is collapsed yet → button still offers "collapse all".
       const collapseAll = await screen.findByRole('button', { name: 'Collapse all sections' })
@@ -441,7 +452,7 @@ describe('GridEditor', () => {
 
       mockFetchSuccess(createTreeApiResponse({ pageId: 1, sections: [section] }))
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" />)
+      renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
       // The DragOverlayContent for a section renders its title preview.
       expect(await screen.findByTestId('drag-overlay-section-title')).toBeInTheDocument()
@@ -456,7 +467,7 @@ describe('GridEditor', () => {
         }),
       )
 
-      renderWithProviders(<GridEditor pageId={1} zone="main" />)
+      renderWithProviders(<GridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
       await waitFor(() => {
         expect(screen.queryByTestId('grid-editor-loading')).not.toBeInTheDocument()

@@ -229,7 +229,7 @@ describe('ColumnInsertButton', () => {
     // The caret had no suppression signal at all before: a block may not
     // contain a block, at any depth.
     renderWithProviders(<ColumnInsertButton rowId={7} placement="start" />, {
-      rootType: 'sharedBlock',
+      root: { kind: 'sharedBlock', blockId: 1 },
     })
 
     expect(screen.queryByTestId('column-insert-shared-trigger')).toBeNull()
@@ -248,7 +248,7 @@ describe('ColumnInsertButton', () => {
     unmount()
 
     renderWithProviders(<ColumnInsertButton rowId={7} placement="between" afterColumnId={9} />, {
-      rootType: 'sharedBlock',
+      root: { kind: 'sharedBlock', blockId: 1 },
     })
 
     expect(screen.getByTestId('column-insert-between')).not.toHaveAttribute('data-split')

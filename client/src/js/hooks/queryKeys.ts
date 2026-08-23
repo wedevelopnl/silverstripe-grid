@@ -1,3 +1,5 @@
+import type { EditorRoot } from '@/types/editorRoot'
+
 export const queryKeys = {
   elementTree: {
     byPage: (pageId: number, zone: string, version?: number) =>
@@ -24,21 +26,17 @@ export const queryKeys = {
   },
 } as const
 
-/** Which host the grid editor is running in. */
-export type GridEditorRootType = 'page' | 'sharedBlock'
-
 /**
- * The cache entry the editor actually renders.
+ * The cache entry the editor renders, for whichever record it is rooted at.
  *
- * The library editor is keyed by a BLOCK id and reads `sharedBlocks.tree`,
- * while a page zone reads `elementTree.byPage`. Any mutation that snapshots,
- * optimistically writes or invalidates the tree must go through this — writing
- * to `elementTree` while the library editor renders `sharedBlocks.tree` puts
- * the optimistic update in an entry nothing displays, so the drag snaps back
- * and the stale order survives until a reload.
+ * The single key builder for editor trees: anything that snapshots,
+ * optimistically writes or invalidates the tree goes through this. Writing to
+ * `elementTree` while the library editor renders `sharedBlocks.tree` puts the
+ * update in an entry nothing displays — the drag snaps back and the stale
+ * order survives until a reload.
  */
-export function editorTreeQueryKey(rootType: GridEditorRootType, id: number, zone: string) {
-  return rootType === 'sharedBlock'
-    ? queryKeys.sharedBlocks.tree(id)
-    : queryKeys.elementTree.byPage(id, zone)
+export function treeQueryKey(root: EditorRoot) {
+  return root.kind === 'sharedBlock'
+    ? queryKeys.sharedBlocks.tree(root.blockId)
+    : queryKeys.elementTree.byPage(root.pageId, root.zone, root.version)
 }

@@ -10,7 +10,7 @@ import GridSettingsPicker from '@/components/GridSettingsPicker/GridSettingsPick
 import { usePlacement } from '@/components/SharedBlockFrame/PlacementContext'
 import SharedChild from '@/components/SharedBlockFrame/SharedChild'
 import SharedBlockPickerDialog from '@/components/SharedBlockPickerDialog/SharedBlockPickerDialog'
-import { useGridEditorContext } from '@/hooks/GridEditorContext'
+import { useEditorRoot } from '@/hooks/GridEditorContext'
 import { useDragContext } from '@/hooks/useDragAndDrop'
 import { useElementCollapse } from '@/hooks/useElementCollapse'
 import { useCreateContentElement, useUpdateGridSettings } from '@/hooks/useElementMutations'
@@ -78,9 +78,9 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
   // base layout `default` settings represent — so edits target `default`.
   const { activeViewport: selectedViewport } = useViewportContext()
   const activeViewport = selectedViewport ?? getDefaultViewport()
-  const { pageId, zone, rootType } = useGridEditorContext()
+  const root = useEditorRoot()
   // A block may not contain a block — see AddChildButton for the same gate.
-  const isLibraryEditor = rootType === 'sharedBlock'
+  const isLibraryEditor = root.kind === 'sharedBlock'
   const columnCount = getColumnCount()
   // Stabilise `settings` so downstream useCallback/useMemo dependencies don't
   // see a fresh object identity on every render of an unrelated parent.
@@ -91,8 +91,8 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
   const status = column.status
   const { isCollapsed, onToggle } = useElementCollapse(column.nodeKey)
   const { activeType, pendingActive } = useDragContext()
-  const updateGridSettings = useUpdateGridSettings(pageId, zone)
-  const createContentElement = useCreateContentElement(pageId, zone)
+  const updateGridSettings = useUpdateGridSettings(root)
+  const createContentElement = useCreateContentElement(root)
   const [isPickerOpen, setPickerOpen] = useState(false)
   const [isSharedPickerOpen, setSharedPickerOpen] = useState(false)
 

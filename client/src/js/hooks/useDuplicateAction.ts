@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import type { ActionItem } from '@/components/ActionsMenu/ActionsMenu'
 import { t } from '@/i18n'
 import { type ElementNode, isSharedBlockRootNode } from '@/types/elements'
-import { useGridEditorContext } from './GridEditorContext'
+import { useEditorRoot } from './GridEditorContext'
 import { useDuplicateElement } from './useElementMutations'
 
 interface UseDuplicateActionResult {
@@ -10,8 +10,8 @@ interface UseDuplicateActionResult {
 }
 
 export function useDuplicateAction(node: ElementNode): UseDuplicateActionResult {
-  const { pageId, zone } = useGridEditorContext()
-  const duplicateElement = useDuplicateElement(pageId, zone)
+  const root = useEditorRoot()
+  const duplicateElement = useDuplicateElement(root)
 
   const handleDuplicate = useCallback(() => {
     // No mutate-level onError: useDuplicateElement already spreads the standard

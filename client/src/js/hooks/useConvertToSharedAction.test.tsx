@@ -91,7 +91,9 @@ describe('useConvertToSharedAction', () => {
     // The library editor's tree is rooted at the BLOCK, so it holds no
     // placement node and nothing in it carries `sharedBlockKey` — the per-node
     // check above sees page-local content and cannot catch this on its own.
-    expect(convertActionFor(createSectionNode(), { rootType: 'sharedBlock' }).action).toBeNull()
+    expect(
+      convertActionFor(createSectionNode(), { root: { kind: 'sharedBlock', blockId: 1 } }).action,
+    ).toBeNull()
   })
 
   it('converts the element the action was offered on, with its title', async () => {

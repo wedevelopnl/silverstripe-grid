@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { queryKeys } from '@/hooks/queryKeys'
-import { useElementTree, useViewportOverrideCounts } from '@/hooks/useElementTree'
+import { useEditorTree, useViewportOverrideCounts } from '@/hooks/useEditorTree'
 import {
   createColumnNode,
   createRowNode,
@@ -12,7 +12,10 @@ import {
 } from '@/testing/factories'
 import { getFetchCalls, mockFetchSuccess } from '@/testing/mockFetch'
 import { createProviderWrapper, createTestQueryClient } from '@/testing/renderWithProviders'
+import type { EditorRoot } from '@/types/editorRoot'
 import type { ColumnNode, TreeApiResponse, ViewportSettings } from '@/types/elements'
+
+const PAGE: EditorRoot = { kind: 'page', pageId: 1, zone: 'main' }
 
 const override: ViewportSettings = { width: 6, offset: 0, visible: true }
 const defaults: ViewportSettings = { width: 12, offset: 0, visible: true }
@@ -34,7 +37,7 @@ function treeWithOverrides(spec: Record<string, number>): TreeApiResponse {
   return createTreeApiResponse({ pageId: 1, sections: [section] })
 }
 
-describe('useElementTree', () => {
+describe('useEditorTree', () => {
   beforeEach(() => {
     resetIdCounter()
   })
@@ -42,9 +45,9 @@ describe('useElementTree', () => {
   it('should fetch and select tree when pageId is provided', async () => {
     const apiResponse = createTreeApiResponse()
     mockFetchSuccess(apiResponse)
-    const { wrapper } = createProviderWrapper({ pageId: 1, zone: 'main' })
+    const { wrapper } = createProviderWrapper()
 
-    const { result } = renderHook(() => useElementTree(1, 'main'), { wrapper })
+    const { result } = renderHook(() => useEditorTree(PAGE), { wrapper })
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -65,15 +68,15 @@ describe('useElementTree', () => {
       defaultOptions: { queries: { retry: false, gcTime: 5 * 60 * 1000, staleTime: 0 } },
     })
     mockFetchSuccess(createTreeApiResponse())
-    const { wrapper } = createProviderWrapper({ pageId: 1, zone: 'main', queryClient })
+    const { wrapper } = createProviderWrapper({ queryClient })
 
-    const first = renderHook(() => useElementTree(1, 'main', 7), { wrapper })
+    const first = renderHook(() => useEditorTree({ ...PAGE, version: 7 }), { wrapper })
     await waitFor(() => {
       expect(first.result.current.isSuccess).toBe(true)
     })
     first.unmount()
 
-    const second = renderHook(() => useElementTree(1, 'main', 7), { wrapper })
+    const second = renderHook(() => useEditorTree({ ...PAGE, version: 7 }), { wrapper })
     await waitFor(() => {
       expect(second.result.current.isSuccess).toBe(true)
     })
@@ -91,15 +94,15 @@ describe('useElementTree', () => {
       defaultOptions: { queries: { retry: false, gcTime: 5 * 60 * 1000, staleTime: 0 } },
     })
     mockFetchSuccess(createTreeApiResponse())
-    const { wrapper } = createProviderWrapper({ pageId: 1, zone: 'main', queryClient })
+    const { wrapper } = createProviderWrapper({ queryClient })
 
-    const first = renderHook(() => useElementTree(1, 'main'), { wrapper })
+    const first = renderHook(() => useEditorTree(PAGE), { wrapper })
     await waitFor(() => {
       expect(first.result.current.isSuccess).toBe(true)
     })
     first.unmount()
 
-    const second = renderHook(() => useElementTree(1, 'main'), { wrapper })
+    const second = renderHook(() => useEditorTree(PAGE), { wrapper })
     await waitFor(() => {
       expect(second.result.current.isSuccess).toBe(true)
     })
@@ -115,9 +118,9 @@ describe('useElementTree', () => {
       defaultOptions: { queries: { retry: false, gcTime: 5 * 60 * 1000, staleTime: 0 } },
     })
     mockFetchSuccess(createTreeApiResponse())
-    const { wrapper } = createProviderWrapper({ pageId: 1, zone: 'main', queryClient })
+    const { wrapper } = createProviderWrapper({ queryClient })
 
-    const { result } = renderHook(() => useElementTree(1, 'main'), { wrapper })
+    const { result } = renderHook(() => useEditorTree(PAGE), { wrapper })
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
     })
@@ -129,10 +132,30 @@ describe('useElementTree', () => {
     })
   })
 
-  it('should not fetch when pageId is null', () => {
+  it('reads the block-rooted route when the editor is rooted at a block', async () => {
+    mockFetchSuccess({
+      rootParent: { type: 'sharedBlock', id: 9 },
+      allowedTypes: { section: {}, row: {}, column: {} },
+      nodes: [],
+    })
+    const { wrapper } = createProviderWrapper()
+
+    const { result } = renderHook(() => useEditorTree({ kind: 'sharedBlock', blockId: 9 }), {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+
+    const [url] = getFetchCalls()[0]
+    expect(url).toContain('/grid-shared-blocks/api/readTree/9')
+  })
+
+  it('should not fetch when there is no root', () => {
     mockFetchSuccess({})
     const { wrapper } = createProviderWrapper()
-    const { result } = renderHook(() => useElementTree(null, 'main'), { wrapper })
+    const { result } = renderHook(() => useEditorTree(null), { wrapper })
 
     expect(result.current.isFetching).toBe(false)
     expect(result.current.data).toBeUndefined()
@@ -142,9 +165,9 @@ describe('useElementTree', () => {
   it('should append /version/N path segment when version is provided', async () => {
     const apiResponse = createTreeApiResponse()
     mockFetchSuccess(apiResponse)
-    const { wrapper } = createProviderWrapper({ pageId: 1, zone: 'main' })
+    const { wrapper } = createProviderWrapper()
 
-    const { result } = renderHook(() => useElementTree(1, 'main', 5), { wrapper })
+    const { result } = renderHook(() => useEditorTree({ ...PAGE, version: 5 }), { wrapper })
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -167,8 +190,8 @@ describe('useViewportOverrideCounts', () => {
     const queryClient = createTestQueryClient()
     queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main'), apiResponse)
 
-    const { wrapper } = createProviderWrapper({ queryClient, pageId: 1, zone: 'main' })
-    const { result } = renderHook(() => useViewportOverrideCounts(1, 'main'), { wrapper })
+    const { wrapper } = createProviderWrapper({ queryClient })
+    const { result } = renderHook(() => useViewportOverrideCounts(PAGE), { wrapper })
 
     await waitFor(() => {
       expect(result.current).toEqual({ total: 4, byViewport: { md: 3, lg: 1 } })
@@ -178,7 +201,7 @@ describe('useViewportOverrideCounts', () => {
   it('should return zero counts when no data is cached', () => {
     mockFetchSuccess({})
     const { wrapper } = createProviderWrapper()
-    const { result } = renderHook(() => useViewportOverrideCounts(null, 'main'), { wrapper })
+    const { result } = renderHook(() => useViewportOverrideCounts(null), { wrapper })
 
     expect(result.current).toEqual({ total: 0, byViewport: {} })
   })
@@ -189,8 +212,10 @@ describe('useViewportOverrideCounts', () => {
     const queryClient = createTestQueryClient()
     queryClient.setQueryData(queryKeys.elementTree.byPage(1, 'main', 5), apiResponse)
 
-    const { wrapper } = createProviderWrapper({ queryClient, pageId: 1, zone: 'main' })
-    const { result } = renderHook(() => useViewportOverrideCounts(1, 'main', 5), { wrapper })
+    const { wrapper } = createProviderWrapper({ queryClient })
+    const { result } = renderHook(() => useViewportOverrideCounts({ ...PAGE, version: 5 }), {
+      wrapper,
+    })
 
     await waitFor(() => {
       expect(result.current).toEqual({ total: 2, byViewport: { md: 2 } })

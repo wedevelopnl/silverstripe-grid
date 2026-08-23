@@ -16,10 +16,9 @@ import {
   detachSharedBlock,
   duplicateToElement,
   fetchAcceptableContainers,
-  fetchElementTree,
+  fetchTree,
   fetchPages,
   fetchSharedBlocks,
-  fetchSharedBlockTree,
   fetchZones,
   normaliseTreeResponse,
   placeSharedBlock,
@@ -73,10 +72,10 @@ beforeEach(() => {
   mockFetchSuccess({})
 })
 
-describe('fetchElementTree', () => {
+describe('fetchTree', () => {
   it('constructs correct URL with encoded zone and normalises the response', async () => {
     mockFetchSuccess(EMPTY_TREE_BODY)
-    const result = await fetchElementTree(42, 'main area')
+    const result = await fetchTree({ kind: 'page', pageId: 42, zone: 'main area' })
     const [url] = getFetchCalls()[0]
     expect(url).toBe('/admin/grid/api/readTree/42/main%20area')
     expect(result.rootParent).toEqual({ type: 'page', id: 42 })
@@ -84,16 +83,29 @@ describe('fetchElementTree', () => {
 
   it('appends /version/N path segment when version is provided', async () => {
     mockFetchSuccess(EMPTY_TREE_BODY)
-    await fetchElementTree(42, 'main', 5)
+    await fetchTree({ kind: 'page', pageId: 42, zone: 'main', version: 5 })
     const [url] = getFetchCalls()[0]
     expect(url).toBe('/admin/grid/api/readTree/42/main/version/5')
   })
 
   it('omits /version path segment when version is undefined', async () => {
     mockFetchSuccess(EMPTY_TREE_BODY)
-    await fetchElementTree(42, 'main')
+    await fetchTree({ kind: 'page', pageId: 42, zone: 'main' })
     const [url] = getFetchCalls()[0]
     expect(url).toBe('/admin/grid/api/readTree/42/main')
+  })
+
+  it('reads the block-rooted route from the shared block controller', async () => {
+    mockFetchSuccess({
+      rootParent: { type: 'sharedBlock', id: 9 },
+      allowedTypes: EMPTY_ALLOWED,
+      nodes: [],
+    })
+
+    const tree = await fetchTree({ kind: 'sharedBlock', blockId: 9 })
+
+    expect(getFetchCalls()[0][0]).toBe('/admin/grid-shared-blocks/api/readTree/9')
+    expect(tree.rootParent).toEqual({ type: 'sharedBlock', id: 9 })
   })
 })
 
@@ -482,19 +494,6 @@ describe('shared block endpoints', () => {
     ])
 
     await expect(fetchSharedBlocks('page')).resolves.toHaveLength(1)
-  })
-
-  it('fetchSharedBlockTree reads the block-rooted route', async () => {
-    mockFetchSuccess({
-      rootParent: { type: 'sharedBlock', id: 9 },
-      allowedTypes: EMPTY_ALLOWED,
-      nodes: [],
-    })
-
-    const tree = await fetchSharedBlockTree(9)
-
-    expect(getFetchCalls()[0][0]).toBe('/admin/grid-shared-blocks/api/readTree/9')
-    expect(tree.rootParent).toEqual({ type: 'sharedBlock', id: 9 })
   })
 
   it('placeSharedBlock posts the exact body', async () => {

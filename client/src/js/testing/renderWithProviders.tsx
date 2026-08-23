@@ -3,19 +3,17 @@ import { type RenderResult, render } from '@testing-library/react'
 import { type ReactNode, StrictMode } from 'react'
 import { vi } from 'vitest'
 import { GridEditorProvider } from '@/hooks/GridEditorContext'
-import type { GridEditorRootType } from '@/hooks/queryKeys'
+import type { EditorRoot } from '@/types/editorRoot'
 import { CollapseContext, type CollapseState } from '@/hooks/useCollapseState'
 import { setActiveViewport } from '@/state/activeViewport'
 import type { NodeKey } from '@/types/identity'
 
 export interface RenderOptions {
-  pageId?: number
-  zone?: string
   /**
-   * Which host the editor is running in. `'sharedBlock'` makes `pageId` a block
-   * id and is what the library-editor suppressions key off.
+   * What the editor under test is rooted at. Defaults to page 1, zone 'main';
+   * pass a `sharedBlock` root to exercise the library-editor suppressions.
    */
-  rootType?: GridEditorRootType
+  root?: EditorRoot
   viewport?: string
   queryClient?: QueryClient
   /**
@@ -89,9 +87,7 @@ export function renderWithProviders(
  */
 export function createProviderWrapper(options: RenderOptions = {}) {
   const {
-    pageId = 1,
-    zone = 'main',
-    rootType = 'page',
+    root = { kind: 'page', pageId: 1, zone: 'main' },
     viewport = 'md',
     queryClient = createTestQueryClient(),
     collapsedKeys,
@@ -107,7 +103,7 @@ export function createProviderWrapper(options: RenderOptions = {}) {
     return (
       <StrictMode>
         <QueryClientProvider client={queryClient}>
-          <GridEditorProvider value={{ pageId, zone, rootType }}>
+          <GridEditorProvider root={root}>
             <CollapseContext.Provider value={resolvedCollapse}>{children}</CollapseContext.Provider>
           </GridEditorProvider>
         </QueryClientProvider>

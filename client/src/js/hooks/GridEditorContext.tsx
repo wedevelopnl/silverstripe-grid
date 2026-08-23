@@ -1,34 +1,40 @@
 import type { ReactNode } from 'react'
 import { createContext, useContext } from 'react'
-import type { GridEditorRootType } from './queryKeys'
+import type { EditorRoot, PageRoot } from '@/types/editorRoot'
 
-export interface GridEditorContextValue {
-  readonly pageId: number
-  readonly zone: string
-  /**
-   * Which host the editor is running in. `'sharedBlock'` means `pageId` is a
-   * BLOCK id and the whole tree is that block's own subtree — so nothing in it
-   * may host or become another block, and there is no page zone for the
-   * page-scoped chrome to describe.
-   */
-  readonly rootType: GridEditorRootType
-}
-
-const GridEditorContext = createContext<GridEditorContextValue | null>(null)
+const GridEditorContext = createContext<EditorRoot | null>(null)
 
 interface GridEditorProviderProps {
-  readonly value: GridEditorContextValue
+  readonly root: EditorRoot
   readonly children: ReactNode
 }
 
-export function GridEditorProvider({ value, children }: GridEditorProviderProps) {
-  return <GridEditorContext.Provider value={value}>{children}</GridEditorContext.Provider>
+export function GridEditorProvider({ root, children }: GridEditorProviderProps) {
+  return <GridEditorContext.Provider value={root}>{children}</GridEditorContext.Provider>
 }
 
-export function useGridEditorContext(): GridEditorContextValue {
-  const value = useContext(GridEditorContext)
-  if (value === null) {
-    throw new Error('useGridEditorContext must be used within a GridEditorProvider')
+/** What this editor is rooted at — a page zone, or a block in the library. */
+export function useEditorRoot(): EditorRoot {
+  const root = useContext(GridEditorContext)
+  if (root === null) {
+    throw new Error('useEditorRoot must be used within a GridEditorProvider')
   }
-  return value
+  return root
+}
+
+/**
+ * The page root, for chrome that exists only in the page editor: the viewport
+ * control and its reset scopes, both of which address a page + zone the server
+ * has no block equivalent for.
+ *
+ * Throws rather than degrading to a no-op. The library editor renders none of
+ * this — `GridAreaHeader` hides the whole strip there — so arriving here
+ * block-rooted is a wiring mistake, and a silent empty state would hide it.
+ */
+export function usePageRoot(): PageRoot {
+  const root = useEditorRoot()
+  if (root.kind !== 'page') {
+    throw new Error('usePageRoot: this editor is rooted at a shared block, not a page')
+  }
+  return root
 }

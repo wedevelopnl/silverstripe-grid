@@ -102,7 +102,7 @@ describe('EditableGridEditor with a shared block placement', () => {
       ],
     })
 
-    renderWithProviders(<EditableGridEditor pageId={1} zone="main" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
     expect(await screen.findByTestId('shared-block-frame')).toBeInTheDocument()
 
@@ -123,7 +123,7 @@ describe('EditableGridEditor rooted at a shared block', () => {
       nodes: [],
     })
 
-    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'sharedBlock', blockId: 9 }} />)
 
     await screen.findByTestId('grid-editor')
 
@@ -139,7 +139,7 @@ describe('EditableGridEditor rooted at a shared block', () => {
       nodes: [],
     })
 
-    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'sharedBlock', blockId: 9 }} />)
 
     expect(await screen.findByTestId('add-child-button')).toBeInTheDocument()
   })
@@ -166,7 +166,7 @@ describe('EditableGridEditor rooted at a shared block', () => {
       ],
     })
 
-    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'sharedBlock', blockId: 9 }} />)
 
     expect(await screen.findByTestId(testId)).toBeInTheDocument()
     expect(screen.getByTestId(testId)).toHaveTextContent(`Shared ${shape}`)
@@ -194,7 +194,7 @@ describe('EditableGridEditor rooted at a shared block', () => {
       ],
     })
 
-    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'sharedBlock', blockId: 9 }} />)
 
     await screen.findByTestId(testId)
     expect(screen.queryByTestId('drag-handle')).toBeNull()
@@ -213,7 +213,7 @@ describe('EditableGridEditor rooted at a shared block', () => {
       ],
     })
 
-    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'sharedBlock', blockId: 9 }} />)
 
     await screen.findByTestId('section-block')
 
@@ -251,7 +251,7 @@ describe('EditableGridEditor rooted at a shared block', () => {
       ],
     })
 
-    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'sharedBlock', blockId: 9 }} />)
 
     await screen.findByTestId('row-block')
 
@@ -268,7 +268,7 @@ describe('EditableGridEditor rooted at a shared block', () => {
       nodes: [wireBase(41, 'element', { type: 'sharedBlock', id: 9 }, 'Shared paragraph')],
     })
 
-    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'sharedBlock', blockId: 9 }} />)
 
     expect(await screen.findByTestId('element-card-title')).toHaveTextContent('Shared paragraph')
     expect(screen.queryByTestId('drag-handle')).toBeNull()
@@ -358,7 +358,7 @@ describe('a placed shared block renders read-only', () => {
   it('renders no editing controls inside the frame while the local section keeps all of them', async () => {
     mockFetchSuccess(readonlySubtreePayload())
 
-    renderWithProviders(<EditableGridEditor pageId={1} zone="main" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
     const inFrame = within(await screen.findByTestId('shared-block-frame'))
 
@@ -385,7 +385,7 @@ describe('a placed shared block renders read-only', () => {
   it('keeps the column size and offset pickers visible but disabled inside the frame', async () => {
     mockFetchSuccess(readonlySubtreePayload())
 
-    renderWithProviders(<EditableGridEditor pageId={1} zone="main" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
     const inFrame = within(await screen.findByTestId('shared-block-frame'))
 
@@ -399,7 +399,7 @@ describe('a placed shared block renders read-only', () => {
   it('gives the frame bar exactly open, edit and remove, pointing at the block', async () => {
     mockFetchSuccess(readonlySubtreePayload())
 
-    renderWithProviders(<EditableGridEditor pageId={1} zone="main" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
     const inFrame = within(await screen.findByTestId('shared-block-frame'))
     const toolbar = inFrame.getByTestId('shared-placement-toolbar')
@@ -422,7 +422,7 @@ describe('a placed shared block renders read-only', () => {
     const user = userEvent.setup()
     mockFetchSuccess(readonlySubtreePayload())
 
-    renderWithProviders(<EditableGridEditor pageId={1} zone="main" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
     const inFrame = within(await screen.findByTestId('shared-block-frame'))
     await user.click(inFrame.getByTestId('element-action-remove'))
@@ -453,7 +453,7 @@ describe('a placed shared block renders read-only', () => {
       ],
     })
 
-    renderWithProviders(<EditableGridEditor pageId={5} zone="" rootType="sharedBlock" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'sharedBlock', blockId: 5 }} />)
 
     await screen.findByText('Shared hero')
 
@@ -485,7 +485,7 @@ describe('shared block placement affordances', () => {
       nodes: [],
     })
 
-    renderWithProviders(<EditableGridEditor pageId={1} zone="main" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'page', pageId: 1, zone: 'main' }} />)
 
     expect(await screen.findByTestId('add-child-shared-trigger')).toBeInTheDocument()
   })
@@ -497,7 +497,7 @@ describe('shared block placement affordances', () => {
       nodes: [],
     })
 
-    renderWithProviders(<EditableGridEditor pageId={1} zone="sidebar" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'page', pageId: 1, zone: 'sidebar' }} />)
     await userEvent.click(await screen.findByTestId('add-child-shared-trigger'))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Place shared section…' }))
 
@@ -515,7 +515,7 @@ describe('shared block placement affordances', () => {
       nodes: [],
     })
 
-    renderWithProviders(<EditableGridEditor pageId={9} zone="" rootType="sharedBlock" />)
+    renderWithProviders(<EditableGridEditor root={{ kind: 'sharedBlock', blockId: 9 }} />)
 
     await screen.findByTestId('add-child-button')
     expect(screen.queryByTestId('add-child-shared-trigger')).not.toBeInTheDocument()
