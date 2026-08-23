@@ -23,6 +23,14 @@ RUN echo 'memory_limit=512M' > /usr/local/etc/php/conf.d/99-memory.ini
 # mid-build, and the binary it copies runs against this module's composer.json.
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# Composer defaults to 12 concurrent downloads. The boot install (entrypoint.sh)
+# runs on shared-IP CI runners twelve times per pipeline; halving the concurrency
+# trades a few seconds of boot for markedly fewer resets and 429s, which cost a
+# whole job. NO_AUDIT drops one more round trip — this image is the throwaway
+# test harness, and the host-side composer install in CI still audits.
+ENV COMPOSER_MAX_PARALLEL_HTTP=6 \
+    COMPOSER_NO_AUDIT=1
+
 WORKDIR /app
 
 ARG COMPOSER_FILE=app/composer.json

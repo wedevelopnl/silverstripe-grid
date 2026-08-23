@@ -1,7 +1,31 @@
 #!/bin/sh
 set -e
 
-composer install --no-interaction
+# Retry the install: composer exits 100 on any transport failure, `set -e` then
+# kills PID 1, and the container dies before it can report anything useful. CI
+# starts this image twelve times per run over shared-IP runners, so a single
+# transient 5xx or reset anywhere in the dependency fan-out used to turn a whole
+# job red — 46 of them in one 30-day window.
+#
+# Only retry that class: 100 is transport, anything else (an unsatisfiable
+# constraint, a corrupt composer.json) will fail identically on the next attempt
+# and should surface immediately.
+composer_install() {
+    _attempt=1
+    while :; do
+        composer install --no-interaction && return 0
+        _code=$?
+        if [ "$_code" -ne 100 ] || [ "$_attempt" -ge 3 ]; then
+            echo "composer install failed (exit ${_code}) after ${_attempt} attempt(s)" >&2
+            return "$_code"
+        fi
+        echo "composer install hit a transport failure — retrying in $((_attempt * 5))s" >&2
+        sleep $((_attempt * 5))
+        _attempt=$((_attempt + 1))
+    done
+}
+
+composer_install
 
 # FrankenPHP ships a default phpinfo() index.php. Replace it with the proper
 # SilverStripe bootstrap after composer install makes the recipe available.
