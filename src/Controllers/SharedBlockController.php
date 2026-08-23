@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Controllers;
 
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use WeDevelop\Grid\Model\GridElement;
@@ -46,31 +45,26 @@ class SharedBlockController extends GridApiController
     private static array $url_handlers = [
         'GET api/list' => 'apiList',
         'GET api/readTree/$BlockID!' => 'apiReadTree',
-        'GET api/usage/$BlockID!' => 'apiUsage',
         'POST api/place' => 'apiPlace',
         'POST api/convert' => 'apiConvert',
         'POST api/detach' => 'apiDetach',
         'PATCH api/setPublished' => 'apiSetPublished',
-        'DELETE api/delete' => 'apiDelete',
     ];
 
     /** @var list<string> */
     private static array $allowed_actions = [
         'apiList',
         'apiReadTree',
-        'apiUsage',
         'apiPlace',
         'apiConvert',
         'apiDetach',
         'apiSetPublished',
-        'apiDelete',
     ];
 
     /** @var list<string> */
     protected const array READ_ONLY_ACTIONS = [
         'apilist',
         'apireadtree',
-        'apiusage',
     ];
 
     /**
@@ -122,25 +116,6 @@ class SharedBlockController extends GridApiController
         }
 
         return $this->jsonSuccess(200, $this->treeService->buildViewableTree($block, '')->jsonSerialize());
-    }
-
-    /**
-     * How widely a block is used, for the confirmation the library shows before
-     * deleting it. Live usage is reported separately because that is the half
-     * the author cannot undo by simply not publishing.
-     */
-    public function apiUsage(HTTPRequest $request): HTTPResponse
-    {
-        $block = $this->requireDraftBlock($this->requireIdParam($request, 'BlockID'));
-
-        if (!$block->canView()) {
-            $this->jsonError(403);
-        }
-
-        return $this->jsonSuccess(200, [
-            'usageCount' => $this->usageResolver->usageCount($block),
-            'liveUsageCount' => $this->usageResolver->liveUsageCount($block),
-        ]);
     }
 
     public function apiPlace(HTTPRequest $request): HTTPResponse
@@ -257,42 +232,6 @@ class SharedBlockController extends GridApiController
         $result = $this->sharedBlockService->setPublished($block, $body->published);
         if ($result->isErr()) {
             return $this->resultToResponse($result);
-        }
-
-        return $this->jsonSuccess(204);
-    }
-
-    public function apiDelete(HTTPRequest $request): HTTPResponse
-    {
-        $parseResult = $this->requestBodyParser->parseDeleteSharedBlockFromQuery(
-            $request->getVar('blockId'),
-            $request->getVar('mode'),
-        );
-        if ($parseResult->isErr()) {
-            return $this->resultToResponse($parseResult, 400);
-        }
-
-        $body = $parseResult->unwrap();
-
-        $block = $this->requireDraftBlock($body->blockId);
-
-        if (!$block->canDelete()) {
-            $this->jsonError(403);
-        }
-
-        // Resolved before the delete, which is what removes the placements the
-        // page list is derived from.
-        $pages = $this->usageResolver->pagesUsing($block);
-
-        $result = $this->sharedBlockService->delete($block, $body->mode);
-        if ($result->isErr()) {
-            return $this->resultToResponse($result);
-        }
-
-        foreach ($pages as $page) {
-            if ($page instanceof SiteTree) {
-                $this->touchOwningPage($page);
-            }
         }
 
         return $this->jsonSuccess(204);

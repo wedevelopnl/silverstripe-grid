@@ -10,13 +10,8 @@ import type {
   TreeApiResponse,
 } from '@/types/elements'
 import { NodeIdentity, type NodeKey, type NodeRef } from '@/types/identity'
-import type {
-  SharedBlockDeleteMode,
-  SharedBlockListEntry,
-  SharedBlockParentType,
-  SharedBlockUsage,
-} from '@/types/sharedBlocks'
-import { sharedBlockListSchema, sharedBlockUsageSchema } from '@/types/sharedBlocks'
+import type { SharedBlockListEntry, SharedBlockParentType } from '@/types/sharedBlocks'
+import { sharedBlockListSchema } from '@/types/sharedBlocks'
 import * as v from 'valibot'
 import {
   acceptableContainerListSchema,
@@ -368,24 +363,4 @@ export async function setSharedBlockPublished(params: {
 }): Promise<void> {
   const base = getSharedBlockControllerLink()
   await apiPatch(`${base}/api/setPublished`, params)
-}
-
-/** How many pages place this block, and how many of those are live. */
-export async function fetchSharedBlockUsage(blockId: number): Promise<SharedBlockUsage> {
-  const base = getSharedBlockControllerLink()
-  const raw = await apiGet<unknown>(`${base}/api/usage/${blockId}`)
-  return v.parse(sharedBlockUsageSchema, raw)
-}
-
-/**
- * Retire a block from the library. `mode` decides what the consuming pages are
- * left with, and has no default on either side of the wire — see
- * `SharedBlockDeleteMode`.
- */
-export async function deleteSharedBlock(params: {
-  blockId: number
-  mode: SharedBlockDeleteMode
-}): Promise<void> {
-  const base = getSharedBlockControllerLink()
-  await apiDelete(`${base}/api/delete`, params)
 }

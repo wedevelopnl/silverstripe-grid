@@ -8,7 +8,9 @@ use Override;
 use SilverStripe\Admin\ModelAdmin;
 use SilverStripe\Forms\GridField\GridFieldAddNewButton;
 use SilverStripe\Forms\GridField\GridFieldConfig;
+use SilverStripe\Forms\GridField\GridFieldDetailForm;
 use WeDevelop\Grid\Forms\GridFieldAddSharedBlockButton;
+use WeDevelop\Grid\Forms\SharedBlockItemRequest;
 use WeDevelop\Grid\Model\SharedBlock;
 
 /**
@@ -54,6 +56,10 @@ class SharedBlockAdmin extends ModelAdmin
      * `GridFieldConfig_RecordEditor` registers the stock button ahead of
      * ModelAdmin's export, print and import buttons. Appending instead would
      * land the primary action last in the row, behind Import CSV.
+     *
+     * The detail form gets its own item request for the delete action, which
+     * has to name what happens to the pages placing the block
+     * ({@see SharedBlockItemRequest}).
      */
     #[Override]
     protected function getGridFieldConfig(): GridFieldConfig
@@ -62,6 +68,9 @@ class SharedBlockAdmin extends ModelAdmin
 
         $config->addComponent(GridFieldAddSharedBlockButton::create(), GridFieldAddNewButton::class);
         $config->removeComponentsByType(GridFieldAddNewButton::class);
+
+        $config->getComponentByType(GridFieldDetailForm::class)
+            ?->setItemRequestClass(SharedBlockItemRequest::class);
 
         return $config;
     }

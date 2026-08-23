@@ -173,32 +173,22 @@ final class SharedBlockAdminTest extends FunctionalTest
         );
     }
 
-    public function testEditFormOffersTheLibraryDeleteTrigger(): void
+    public function testEditFormOffersTheLibraryDeleteAction(): void
     {
         $block = $this->populatedBlock('Deletable banner');
 
         $body = (string) $this->visit($this->editUrl($block))->getBody();
 
-        self::assertStringContainsString(
-            sprintf('data-grid-shared-block-delete="%d"', (int) $block->ID),
-            $body,
-        );
-        self::assertStringContainsString('data-grid-shared-block-title="Deletable banner"', $body);
-        // Absolute on purpose: the front end assigns it to location from a URL
-        // several segments deep, where a relative link resolves against the
-        // edit form's own path.
-        self::assertMatchesRegularExpression(
-            '#data-grid-shared-block-return="https?://[^"]*/admin/shared-blocks[^"]*"#',
-            $body,
-            'the trigger must carry an absolute link back to the library',
-        );
+        // The outcomes themselves are SharedBlockItemRequestTest's subject;
+        // this pins that the admin wires that item request in at all.
+        self::assertStringContainsString('name="action_doDeleteSharedBlock"', $body);
     }
 
     public function testEditFormDropsTheStockArchiveAction(): void
     {
-        // The stock button archives on a generic "are you sure?", which cannot
-        // convey that the delete reaches every consuming page — nor ask which
-        // of the two outcomes the author means.
+        // The stock button offers one outcome, and the delete reaches every
+        // consuming page — which of the two outcomes the author means cannot be
+        // inferred, so it is replaced by an action per outcome.
         $block = $this->populatedBlock();
 
         $body = (string) $this->visit($this->editUrl($block))->getBody();

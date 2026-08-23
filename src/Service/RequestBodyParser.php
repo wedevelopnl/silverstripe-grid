@@ -13,7 +13,6 @@ use WeDevelop\Grid\Value\ContainerType;
 use WeDevelop\Grid\Value\ConvertToSharedBlockRequest;
 use WeDevelop\Grid\Value\CreateContentRequest;
 use WeDevelop\Grid\Value\CreateElementRequest;
-use WeDevelop\Grid\Value\DeleteSharedBlockRequest;
 use WeDevelop\Grid\Value\DuplicateToRequest;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
@@ -22,7 +21,6 @@ use WeDevelop\Grid\Value\ReorderRequest;
 use WeDevelop\Grid\Value\Result;
 use WeDevelop\Grid\Value\ResetGridSettingsOverridesRequest;
 use WeDevelop\Grid\Value\SetSharedBlockPublishedRequest;
-use WeDevelop\Grid\Value\SharedBlockDeleteMode;
 use WeDevelop\Grid\Value\UpdateGridSettingsRequest;
 use WeDevelop\Grid\Value\ValidationError;
 use WeDevelop\Grid\Value\Viewport;
@@ -223,37 +221,6 @@ final readonly class RequestBodyParser
         }
 
         return Result::ok(new SetSharedBlockPublishedRequest($blockId, $published));
-    }
-
-    /**
-     * Parse a library delete request from raw query-string values.
-     *
-     * The mode is mandatory and unguessable: the two outcomes differ in whether
-     * the consuming pages keep their content, so a missing or unknown value is
-     * rejected rather than defaulted.
-     *
-     * @return Result<DeleteSharedBlockRequest>
-     */
-    #[NoDiscard('The Result carries the parsed request or validation errors; discarding it silently drops malformed-input failures.')]
-    public function parseDeleteSharedBlockFromQuery(mixed $rawBlockId, mixed $rawMode): Result
-    {
-        $blockId = filter_var($rawBlockId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-
-        if ($blockId === false) {
-            return Result::fail(new ValidationError('blockId must be a positive integer.'));
-        }
-
-        $mode = is_string($rawMode) ? SharedBlockDeleteMode::tryFrom($rawMode) : null;
-
-        if ($mode === null) {
-            return Result::fail(new ValidationError(sprintf(
-                'mode must be one of: %s.',
-                implode(', ', array_column(SharedBlockDeleteMode::cases(), 'value')),
-            )));
-        }
-
-        /** @var positive-int $blockId */
-        return Result::ok(new DeleteSharedBlockRequest($blockId, $mode));
     }
 
     /**

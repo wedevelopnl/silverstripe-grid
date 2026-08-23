@@ -146,7 +146,15 @@ nl:
     TITLE: 'Grid-elementen'
   WeDevelop\Grid\Model\SharedBlock:
     DEFAULT_TITLE: 'Nieuw gedeeld blok {count}'
-    DELETE_ACTION: 'Blok verwijderen…'
+    DELETED_MESSAGE: 'Gedeeld blok "{title}" verwijderd'
+    DELETE_ACTION: 'Blok verwijderen'
+    DELETE_AND_KEEP_ACTION: 'Verwijderen en op elke pagina een kopie behouden'
+    DELETE_AND_KEEP_DESC: 'Elke pagina behoudt als eigen kopie wat er nu staat; alleen het delen stopt.'
+    DELETE_AND_REMOVE_ACTION:
+      one: 'Verwijderen en van {count} pagina weghalen'
+      other: 'Verwijderen en van {count} pagina’s weghalen'
+    DELETE_AND_REMOVE_DESC: 'De inhoud verdwijnt van die pagina’s, ook de gepubliceerde, zonder ze opnieuw te publiceren.'
+    DELETE_DESC: 'Dit blok staat op geen enkele pagina, dus er verandert verder niets.'
     EMPTY_ROOT: Leeg
     NOT_USED: 'Dit blok staat nog op geen enkele pagina.'
     SAVE_FIRST: 'Sla dit blok op om er inhoud aan toe te voegen.'
