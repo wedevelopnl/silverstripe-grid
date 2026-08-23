@@ -8,7 +8,9 @@ use Override;
 use SilverStripe\Admin\ModelAdmin;
 use SilverStripe\Forms\GridField\GridFieldAddNewButton;
 use SilverStripe\Forms\GridField\GridFieldConfig;
+use SilverStripe\Forms\GridField\GridFieldDeleteAction;
 use SilverStripe\Forms\GridField\GridFieldDetailForm;
+use SilverStripe\Versioned\GridFieldArchiveAction;
 use WeDevelop\Grid\Forms\GridFieldAddSharedBlockButton;
 use WeDevelop\Grid\Forms\SharedBlockItemRequest;
 use WeDevelop\Grid\Model\SharedBlock;
@@ -60,6 +62,15 @@ class SharedBlockAdmin extends ModelAdmin
      * The detail form gets its own item request for the delete action, which
      * has to name what happens to the pages placing the block
      * ({@see SharedBlockItemRequest}).
+     *
+     * The row's own removal actions go with it. Deleting a block reaches every
+     * page that places it and the outcome cannot be inferred — the pages either
+     * lose the content or keep it as their own copy — so the listing, which has
+     * no room to ask, must not offer a one-click answer. Both components are
+     * removed, not just the archive: {@see GridFieldArchiveAction::augmentColumns()}
+     * is what suppresses the stock delete for a versioned model, so dropping the
+     * archive alone would promote the row action from an archive to a permanent
+     * delete. Removal lives in the edit form, behind the two named actions.
      */
     #[Override]
     protected function getGridFieldConfig(): GridFieldConfig
@@ -68,6 +79,8 @@ class SharedBlockAdmin extends ModelAdmin
 
         $config->addComponent(GridFieldAddSharedBlockButton::create(), GridFieldAddNewButton::class);
         $config->removeComponentsByType(GridFieldAddNewButton::class);
+
+        $config->removeComponentsByType([GridFieldArchiveAction::class, GridFieldDeleteAction::class]);
 
         $config->getComponentByType(GridFieldDetailForm::class)
             ?->setItemRequestClass(SharedBlockItemRequest::class);

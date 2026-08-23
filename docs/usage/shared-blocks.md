@@ -141,7 +141,7 @@ See [Fluent support](../fluent.md) for installing and configuring Fluent.
 
 ## Deleting a block
 
-**More options** in the block's edit form retires it from the library. A block that is still placed is deletable — you are not asked to clear the pages first — but the outcome is the button you press, because what happens to the content on those pages cannot be guessed:
+**More options** in the block's edit form retires it from the library — the library listing itself carries no **Archive** and no **Delete**, because a row has nowhere to ask the question below. A block that is still placed is deletable — you are not asked to clear the pages first — but the outcome is the button you press, because what happens to the content on those pages cannot be guessed:
 
 | Action | Effect |
 |---|---|

@@ -152,6 +152,28 @@ final class SharedBlockAdminTest extends FunctionalTest
     }
 
     /**
+     * Deleting a block reaches every page that places it, and which of the two
+     * outcomes applies is the author's call — so the listing, which cannot ask,
+     * offers no one-click removal at all. Both stock components have to go:
+     * the archive action is what suppresses the stock delete for a versioned
+     * model, so removing it alone would leave a permanent delete in its place.
+     */
+    public function testTheListingOffersNoOneClickRemoval(): void
+    {
+        $this->populatedBlock('Undeletable from here');
+
+        $body = (string) $this->visit('admin/shared-blocks')->getBody();
+
+        self::assertStringNotContainsString('action--archive', $body);
+        self::assertStringNotContainsString('action--delete', $body);
+        self::assertStringContainsString(
+            'edit-link',
+            $body,
+            'the row still opens the block, where the two delete actions live',
+        );
+    }
+
+    /**
      * A GridField, not assembled markup: the row has to arrive through the
      * framework's own column pipeline, which is what escapes the title and
      * would let the list sort and paginate.
