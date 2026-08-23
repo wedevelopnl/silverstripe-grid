@@ -43,16 +43,21 @@ tasks:
     cmds:
       - "{{.COMPOSE}} build"
 
+  # Both name their service. Without it the bare `up` brings the WHOLE profile
+  # up with --build, so `ensure-up-fluent` recreates the `app` container that
+  # `ensure-up` just declared ready — and any `exec app` running concurrently
+  # (`task qa` starts four) dies with exit 1 and no output. depends_on still
+  # brings db up either way.
   ensure-up:
     desc: Ensure services are running and ready
     cmds:
-      - "{{.COMPOSE}} exec app true 2>/dev/null || {{.COMPOSE}} up -d --build --wait"
+      - "{{.COMPOSE}} exec app true 2>/dev/null || {{.COMPOSE}} up -d --build --wait app"
 
   ensure-up-fluent:
     desc: Ensure Fluent services are running and ready
     deps: [docker-env]
     cmds:
-      - "{{.COMPOSE_FLUENT}} exec app-fluent true 2>/dev/null || {{.COMPOSE_FLUENT}} up -d --build --wait"
+      - "{{.COMPOSE_FLUENT}} exec app-fluent true 2>/dev/null || {{.COMPOSE_FLUENT}} up -d --build --wait app-fluent"
 
   # --- Tests ----------------------------------------------------------------
 
@@ -266,8 +271,14 @@ tasks:
 
   qa:
     desc: Run full QA suite (all checks in parallel)
-    deps: [ensure-up, ensure-up-fluent]
+    # The two bring-ups are cmds, not deps: Task runs deps concurrently, and both
+    # of these create the shared `db` container, so from a cold start they race
+    # and one loses with "container name already in use". They are near-instant
+    # once the services are up, so serialising them costs nothing.
+    deps: [docker-env]
     cmds:
+      - task: ensure-up
+      - task: ensure-up-fluent
       - task: qa-checks
 
   qa-js:
