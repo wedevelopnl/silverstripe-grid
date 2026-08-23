@@ -36,24 +36,10 @@ export const sharedBlockListEntrySchema = v.object({
 
 export const sharedBlockListSchema = v.array(sharedBlockListEntrySchema)
 
-/**
- * How far a delete would reach. `liveUsageCount` is reported separately because
- * that half of the damage is already public and does not wait for a publish.
- */
-export const sharedBlockUsageSchema = v.object({
-  usageCount: v.pipe(v.number(), v.integer(), v.minValue(0)),
-  liveUsageCount: v.pipe(v.number(), v.integer(), v.minValue(0)),
-})
-
-/** Mirrors PHP's `SharedBlockDeleteMode`. */
-export const sharedBlockDeleteModeSchema = v.picklist(['remove', 'unshare'])
-
 export type SharedBlockStatus = v.InferOutput<typeof sharedBlockStatusSchema>
 export type SharedBlockMeta = v.InferOutput<typeof sharedBlockMetaWireSchema>
 export type SharedBlockRootType = v.InferOutput<typeof sharedBlockRootTypeSchema>
 export type SharedBlockListEntry = v.InferOutput<typeof sharedBlockListEntrySchema>
-export type SharedBlockUsage = v.InferOutput<typeof sharedBlockUsageSchema>
-export type SharedBlockDeleteMode = v.InferOutput<typeof sharedBlockDeleteModeSchema>
 
 /** The parent kinds a block can be placed under, as the list endpoint filters them. */
 export type SharedBlockParentType = 'page' | 'section' | 'row' | 'column'

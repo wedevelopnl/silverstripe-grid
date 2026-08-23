@@ -491,7 +491,7 @@ class GridElement extends DataObject
         // Removing it leaves a block that resolves no effective root class:
         // every page placing it renders nothing, and later grid writes on those
         // pages fail with BLOCK_EMPTY. The block is removed as a whole instead
-        // ({@see \WeDevelop\Grid\Extensions\SharedBlockDeleteActionExtension}),
+        // ({@see \WeDevelop\Grid\Forms\SharedBlockItemRequest}),
         // which is why this sits ABOVE extendedCan — it is a structural
         // invariant, not a permission an extension may grant.
         //

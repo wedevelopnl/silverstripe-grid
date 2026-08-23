@@ -18,17 +18,41 @@ function populatedRow(page: Page): Locator {
 }
 
 /**
- * Open the library's delete confirmation for a block, from the block's own edit
- * form in the Shared blocks admin.
+ * Open a block's edit form in the Shared blocks admin with the delete actions
+ * revealed. Each outcome is its own button; the admin's confirm() guards both.
  */
-async function openLibraryDeleteDialog(page: Page, blockId: number): Promise<void> {
+async function openLibraryBlockActions(page: Page, blockId: number): Promise<void> {
   const model = 'WeDevelop-Grid-Model-SharedBlock'
 
   await page.goto(`/admin/shared-blocks/${model}/EditForm/field/${model}/item/${blockId}/edit`)
 
-  // The action lives in the CMS action bar's collapsed "More options" tab.
+  // The actions live in the CMS action bar's collapsed "More options" tab.
   await page.locator('#tab-ActionMenus_MoreOptions').click()
-  await page.locator(`[data-grid-shared-block-delete="${blockId}"]`).click()
+}
+
+/**
+ * Playwright dismisses native dialogs by default, which would cancel the
+ * delete the admin is asking about.
+ */
+function acceptNextConfirm(page: Page): void {
+  page.once('dialog', (dialog) => {
+    void dialog.accept()
+  })
+}
+
+/**
+ * Wait for the library listing after a delete.
+ *
+ * Deliberately not a URL assertion: a block's own edit form lives under
+ * /admin/shared-blocks/ too, so matching the URL passes before the submit has
+ * even landed and lets the test read a page that still places the block. The
+ * add control exists only on the listing, and a surviving row proves the table
+ * rendered — without which the deleted row's absence would mean nothing.
+ */
+async function expectLibraryListingWithout(page: Page, deletedTitle: string): Promise<void> {
+  await expect(page.locator('[data-shared-block-add]')).toBeVisible({ timeout: 15_000 })
+  await expect(page.locator('td.col-Title', { hasText: 'Shared Card' })).toHaveCount(1)
+  await expect(page.locator('td.col-Title', { hasText: deletedTitle })).toHaveCount(0)
 }
 
 test.describe('Shared blocks', () => {
@@ -159,19 +183,20 @@ test.describe('Shared blocks', () => {
     const pageBId = fixture.fixtureMap.Page.e2e_shared_b
     const blockId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\SharedBlock'].block1
 
-    await test.step('the library offers the delete and states its reach', async () => {
-      await openLibraryDeleteDialog(page, blockId)
+    await test.step('the library offers both outcomes and states the reach', async () => {
+      await openLibraryBlockActions(page, blockId)
 
       // Two pages place this block, neither published.
-      await expect(page.getByTestId('shared-block-delete-usage')).toContainText('2')
+      await expect(
+        page.getByRole('button', { name: 'Delete and remove from 2 pages' }),
+      ).toBeVisible()
     })
 
     await test.step('choosing to keep the content deletes the block and returns to the library', async () => {
-      await page.getByRole('radio', { name: /own copy/i }).click()
-      await page.getByTestId('shared-block-delete-confirm').click()
+      acceptNextConfirm(page)
+      await page.getByRole('button', { name: 'Delete and keep a copy on each page' }).click()
 
-      await expect(page).toHaveURL(/admin\/shared-blocks/, { timeout: 15_000 })
-      await expect(page.getByTestId('shared-block-delete-dialog')).toBeHidden()
+      await expectLibraryListingWithout(page, 'Shared Banner')
     })
 
     for (const [label, pageId] of [
@@ -200,12 +225,12 @@ test.describe('Shared blocks', () => {
     const blockId = fixture.fixtureMap['WeDevelop\\Grid\\Model\\SharedBlock'].block1
 
     await test.step('choosing to remove the content deletes the block and returns to the library', async () => {
-      await openLibraryDeleteDialog(page, blockId)
+      await openLibraryBlockActions(page, blockId)
 
-      await page.getByRole('radio', { name: /remove it/i }).click()
-      await page.getByTestId('shared-block-delete-confirm').click()
+      acceptNextConfirm(page)
+      await page.getByRole('button', { name: 'Delete and remove from 2 pages' }).click()
 
-      await expect(page).toHaveURL(/admin\/shared-blocks/, { timeout: 15_000 })
+      await expectLibraryListingWithout(page, 'Shared Banner')
     })
 
     await test.step('page A loses the placement and keeps everything it owns itself', async () => {

@@ -32,21 +32,9 @@ export declare const sharedBlockListSchema: v.ArraySchema<v.ObjectSchema<{
     readonly usageCount: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 0, undefined>]>;
     readonly status: v.PicklistSchema<["notPublished", "modified", "published"], undefined>;
 }, undefined>, undefined>;
-/**
- * How far a delete would reach. `liveUsageCount` is reported separately because
- * that half of the damage is already public and does not wait for a publish.
- */
-export declare const sharedBlockUsageSchema: v.ObjectSchema<{
-    readonly usageCount: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 0, undefined>]>;
-    readonly liveUsageCount: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 0, undefined>]>;
-}, undefined>;
-/** Mirrors PHP's `SharedBlockDeleteMode`. */
-export declare const sharedBlockDeleteModeSchema: v.PicklistSchema<["remove", "unshare"], undefined>;
 export type SharedBlockStatus = v.InferOutput<typeof sharedBlockStatusSchema>;
 export type SharedBlockMeta = v.InferOutput<typeof sharedBlockMetaWireSchema>;
 export type SharedBlockRootType = v.InferOutput<typeof sharedBlockRootTypeSchema>;
 export type SharedBlockListEntry = v.InferOutput<typeof sharedBlockListEntrySchema>;
-export type SharedBlockUsage = v.InferOutput<typeof sharedBlockUsageSchema>;
-export type SharedBlockDeleteMode = v.InferOutput<typeof sharedBlockDeleteModeSchema>;
 /** The parent kinds a block can be placed under, as the list endpoint filters them. */
 export type SharedBlockParentType = 'page' | 'section' | 'row' | 'column';

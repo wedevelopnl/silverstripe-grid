@@ -3,7 +3,6 @@ import '../bridge/entwine'
 import '../bridge/gridSettingsField'
 
 import { registerCmsPreviewBridge } from '../bridge/cmsPreviewBridge'
-import { registerSharedBlockDeleteBridge } from '../bridge/sharedBlockDelete'
 
 // Boot system — registers components with Injector on DOMContentLoaded
 import '../boot'
@@ -19,7 +18,4 @@ if (typeof document !== 'undefined') {
   } else {
     registerCmsPreviewBridge()
   }
-
-  // Delegated from the document, so it needs no DOM-ready wait of its own.
-  registerSharedBlockDeleteBridge()
 }

@@ -146,7 +146,15 @@ en:
     TITLE: 'Grid Elements'
   WeDevelop\Grid\Model\SharedBlock:
     DEFAULT_TITLE: 'New shared block {count}'
-    DELETE_ACTION: 'Delete block…'
+    DELETED_MESSAGE: 'Deleted shared block "{title}"'
+    DELETE_ACTION: 'Delete block'
+    DELETE_AND_KEEP_ACTION: 'Delete and keep a copy on each page'
+    DELETE_AND_KEEP_DESC: 'Each page keeps what it shows today as its own copy; only the sharing ends.'
+    DELETE_AND_REMOVE_ACTION:
+      one: 'Delete and remove from {count} page'
+      other: 'Delete and remove from {count} pages'
+    DELETE_AND_REMOVE_DESC: 'The content disappears from those pages, published ones included, without republishing them.'
+    DELETE_DESC: 'This block is not placed on any page, so nothing else changes.'
     EMPTY_ROOT: Empty
     NOT_USED: 'This block is not placed on any page yet.'
     SAVE_FIRST: 'Save this block to start adding content to it.'

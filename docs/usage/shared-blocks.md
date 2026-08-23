@@ -141,14 +141,14 @@ See [Fluent support](../fluent.md) for installing and configuring Fluent.
 
 ## Deleting a block
 
-**Delete block…** in the block's edit form retires it from the library. A block that is still placed is deletable — you are not asked to clear the pages first — but you must say what happens to the content on them:
+**More options** in the block's edit form retires it from the library. A block that is still placed is deletable — you are not asked to clear the pages first — but the outcome is the button you press, because what happens to the content on those pages cannot be guessed:
 
-| Choice | Effect |
+| Action | Effect |
 |---|---|
-| **Remove it from all N pages** | The placements go, and the content with them. |
-| **Keep it on each page as its own copy** | Each page gets an independent copy of the block's current content. Nothing visibly changes; the copies are no longer linked, so editing one no longer updates the others. |
+| **Delete and remove from N pages** | The placements go, and the content with them. |
+| **Delete and keep a copy on each page** | Each page gets an independent copy of the block's current content. Nothing visibly changes; the copies are no longer linked, so editing one no longer updates the others. |
 
-The confirmation quotes how many pages place the block and how many of those are published. Both choices reach live immediately, on every consuming page at once, without those pages being republished — the same reach as unpublishing the block.
+The label counts the pages placing the block, and the CMS asks for confirmation before either fires. Both reach live immediately, on every consuming page at once, without those pages being republished — the same reach as unpublishing the block.
 
 The **Usage** tab of the block's edit form lists the consuming pages, and the **Shared blocks** report shows usage across the site.
 
@@ -156,8 +156,8 @@ Deleting the block is the *only* way to remove its content: the root element of 
 
 Three things worth knowing:
 
-- **The choice is not offered for an unplaced block** — there is nothing to decide, so the delete is one click.
-- **A block with no content left cannot be kept.** "Keep it on each page as its own copy" needs something to copy; a block emptied outside the CMS — by a migration or a dev task — refuses that choice, and you have to remove the placements instead.
+- **An unplaced block shows a single Delete block** — there is nothing to decide, so no choice is offered.
+- **A block with no content left cannot be kept.** "Delete and keep a copy on each page" needs something to copy; a block emptied outside the CMS — by a migration or a dev task — refuses that choice, and you have to remove the placements instead.
 - **The copies are made from the block's draft content.** If the block had unpublished changes, unsharing publishes them onto the pages that were showing the older version. Publish the block first if that matters.
 
 Deleting a *placement* is a different operation entirely: it removes that page's reference and leaves the block untouched. **Detach** goes one step further, replacing the placement with a local copy on that page alone.

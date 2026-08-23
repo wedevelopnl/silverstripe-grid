@@ -221,12 +221,10 @@ any other element.
 |--------|-------|---------|----------|
 | GET | `api/list` | List shared blocks, optionally narrowed by `?parentType=` to those whose root type fits that parent | 200 + `{ id, title, rootType, usageCount, status }[]` |
 | GET | `api/readTree/{BlockID}` | Load a shared block's own tree, for the library editor | 200 + `{ rootParent: NodeRef, nodes: GridNode[] }` |
-| GET | `api/usage/{BlockID}` | How many pages place a block, and how many of those are live — the figures the delete confirmation quotes | 200 + `{ usageCount, liveUsageCount }` |
 | POST | `api/place` | Place a block under a parent | 204 |
 | POST | `api/convert` | Move an element's subtree into a new block, leaving a placement | 200 + `{ blockId }` |
 | POST | `api/detach` | Replace a placement with an independent deep copy | 204 |
 | PATCH | `api/setPublished` | Publish or unpublish a block, and with it every page that places it | 204 |
-| DELETE | `api/delete` | Delete a block (`?blockId=&mode=remove\|unshare`); the mode decides whether consuming pages lose the content or keep an independent copy | 204 |
 
 Both controllers publish their own `controllerLink` into the CMS client config,
 keyed by FQCN; the frontend reads them via `getControllerLink()` and
