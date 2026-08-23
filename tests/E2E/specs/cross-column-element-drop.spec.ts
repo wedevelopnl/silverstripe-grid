@@ -93,7 +93,7 @@ test.describe('Cross-column element drop — both directions', () => {
       await activateDragByTitle(page, 'Element A1', { overlayTestId: 'drag-overlay-element' })
       await enterContainerCenter(page, colB, 'element-card', 4)
       const pos = await elPosition(colB, { before: 'Element B1' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Forward, before-first: A1 → Col B before B1')
       await expect(colB.getByTestId('element-card-title')).toHaveText([
         'Element A1',
         'Element B1',
@@ -108,7 +108,7 @@ test.describe('Cross-column element drop — both directions', () => {
       await activateDragByTitle(page, 'Element B3', { overlayTestId: 'drag-overlay-element' })
       await enterContainerCenter(page, colA, 'element-card', 3)
       const pos = await elPosition(colA, { between: ['Element A2', 'Element A3'] })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Reverse, between: B3 → Col A between A2,A3')
       await expect(colA.getByTestId('element-card-title')).toHaveText([
         'Element A2',
         'Element B3',
@@ -122,7 +122,7 @@ test.describe('Cross-column element drop — both directions', () => {
       await activateDragByTitle(page, 'Element B2', { overlayTestId: 'drag-overlay-element' })
       await enterContainerCenter(page, colA, 'element-card', 4)
       const pos = await elPosition(colA, { after: 'Element A3' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Reverse, after-last: B2 → Col A after A3')
       await expect(colA.getByTestId('element-card-title')).toHaveText([
         'Element A2',
         'Element B3',
@@ -137,7 +137,7 @@ test.describe('Cross-column element drop — both directions', () => {
       await activateDragByTitle(page, 'Element B2', { overlayTestId: 'drag-overlay-element' })
       await enterContainerCenter(page, colB, 'element-card', 3)
       const pos = await elPosition(colB, { between: ['Element A1', 'Element B1'] })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Forward, between: B2 → Col B between A1,B1')
       await expect(colB.getByTestId('element-card-title')).toHaveText([
         'Element A1',
         'Element B2',
@@ -151,7 +151,7 @@ test.describe('Cross-column element drop — both directions', () => {
       await activateDragByTitle(page, 'Element A3', { overlayTestId: 'drag-overlay-element' })
       await enterContainerCenter(page, colB, 'element-card', 4)
       const pos = await elPosition(colB, { after: 'Element B1' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Forward, after-last: A3 → Col B after B1')
       await expect(colB.getByTestId('element-card-title')).toHaveText([
         'Element A1',
         'Element B2',
@@ -164,7 +164,7 @@ test.describe('Cross-column element drop — both directions', () => {
     await test.step('Intra-container: B3 before A2 in Col A', async () => {
       await activateDragByTitle(page, 'Element B3', { overlayTestId: 'drag-overlay-element' })
       const pos = await elPosition(colA, { before: 'Element A2' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Intra-container: B3 before A2 in Col A')
       await expect(colA.getByTestId('element-card-title')).toHaveText(['Element B3', 'Element A2'])
     })
 
@@ -206,7 +206,7 @@ test.describe('Cross-column element drop — source depletion and cancel', () =>
       await activateDragByTitle(page, 'Element A1', { overlayTestId: 'drag-overlay-element' })
       await enterContainerCenter(page, colB, 'element-card', 4)
       const pos = await elPosition(colB, { between: ['Element B1', 'Element B2'] })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Source depletion: move lone element to target')
 
       await expect(colA.getByTestId('element-card')).toHaveCount(0)
       await expect(colB.getByTestId('element-card-title')).toHaveText([
@@ -240,7 +240,12 @@ test.describe('Cross-column element drop — source depletion and cancel', () =>
       await activateDragByTitle(page, 'Element B1', { overlayTestId: 'drag-overlay-element' })
       await enterContainerCenter(page, colA, 'element-card', 4)
       const pos = await elPosition(colA, { after: 'Element A3' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(
+        page,
+        pos.x,
+        pos.y,
+        'Source depletion reverse: lone element B1 → Col A after A3',
+      )
 
       await expect(colA.getByTestId('element-card-title')).toHaveText([
         'Element A1',

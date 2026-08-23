@@ -89,7 +89,7 @@ test.describe('Cross-row column drop — both directions', () => {
       })
       await enterContainerCenter(page, rowB, 'column-block', 4)
       const pos = await colPosition(page, rowB, { before: 'Col B1' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Forward, before-first: A1 → Row B before B1')
       await expect(rowB.getByTestId('column-title')).toHaveText([
         'Col A1',
         'Col B1',
@@ -107,7 +107,7 @@ test.describe('Cross-row column drop — both directions', () => {
       })
       await enterContainerCenter(page, rowA, 'column-block', 3)
       const pos = await colPosition(page, rowA, { between: ['Col A2', 'Col A3'] })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Reverse, between: B3 → Row A between A2,A3')
       await expect(rowA.getByTestId('column-title')).toHaveText(['Col A2', 'Col B3', 'Col A3'])
     })
 
@@ -120,7 +120,7 @@ test.describe('Cross-row column drop — both directions', () => {
       })
       await enterContainerCenter(page, rowA, 'column-block', 4)
       const pos = await colPosition(page, rowA, { after: 'Col A3' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Reverse, after-last: B2 → Row A after A3')
       await expect(rowA.getByTestId('column-title')).toHaveText([
         'Col A2',
         'Col B3',
@@ -138,7 +138,7 @@ test.describe('Cross-row column drop — both directions', () => {
       })
       await enterContainerCenter(page, rowB, 'column-block', 3)
       const pos = await colPosition(page, rowB, { between: ['Col A1', 'Col B1'] })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Forward, between: B2 → Row B between A1,B1')
       await expect(rowB.getByTestId('column-title')).toHaveText(['Col A1', 'Col B2', 'Col B1'])
     })
 
@@ -151,7 +151,7 @@ test.describe('Cross-row column drop — both directions', () => {
       })
       await enterContainerCenter(page, rowB, 'column-block', 4)
       const pos = await colPosition(page, rowB, { after: 'Col B1' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Forward, after-last: A3 → Row B after B1')
       await expect(rowB.getByTestId('column-title')).toHaveText([
         'Col A1',
         'Col B2',
@@ -167,7 +167,7 @@ test.describe('Cross-row column drop — both directions', () => {
         overlayTestId: 'drag-overlay-column',
       })
       const pos = await colPosition(page, rowA, { before: 'Col A2' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Intra-container: B3 before A2 in Row A')
       await expect(rowA.getByTestId('column-title')).toHaveText(['Col B3', 'Col A2'])
     })
 
@@ -209,7 +209,7 @@ test.describe('Cross-row column drop — source depletion and cancel', () => {
       })
       await enterContainerCenter(page, rowB, 'column-block', 4)
       const pos = await colPosition(page, rowB, { between: ['Col B1', 'Col B2'] })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(page, pos.x, pos.y, 'Source depletion: move lone column to target')
 
       await expect(rowA.getByTestId('column-block')).toHaveCount(0)
       await expect(rowB.getByTestId('column-title')).toHaveText([
@@ -246,7 +246,12 @@ test.describe('Cross-row column drop — source depletion and cancel', () => {
       })
       await enterContainerCenter(page, rowA, 'column-block', 4)
       const pos = await colPosition(page, rowA, { after: 'Col A3' })
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(
+        page,
+        pos.x,
+        pos.y,
+        'Source depletion reverse: lone column B1 → Row A after A3',
+      )
 
       await expect(rowA.getByTestId('column-title')).toHaveText([
         'Col A1',

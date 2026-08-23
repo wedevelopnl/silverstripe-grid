@@ -104,7 +104,10 @@ test.describe('Ghost jump regression', () => {
       // The release commits the swap (Row 2 crossed Row 1's center above), so
       // treat it as a real drop: releaseDrag for Firefox pointerup delivery,
       // then settle the mutation and verify the swap actually landed.
-      const settle = waitForMutationSettlement(page)
+      const settle = waitForMutationSettlement(
+        page,
+        'row swaps only after the dragged center crosses the sibling center',
+      )
       await releaseDrag(page, fromX, aboveCenterY)
       await expect(page.getByTestId('drag-overlay-row')).toBeHidden()
       await settle()

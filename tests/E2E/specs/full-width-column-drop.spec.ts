@@ -70,7 +70,12 @@ test.describe('Adaptive drop axis — full-width and narrow column targets', () 
       })
       await enterContainerCenter(page, rowTwo, 'column-block', 2)
       const pos = await colCorner(page, rowTwo, 'Full Col', 'bottom-left')
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(
+        page,
+        pos.x,
+        pos.y,
+        'Y-below: bottom-LEFT of Full Col → Narrow A lands BELOW it',
+      )
       await expect(rowTwo.getByTestId('column-title')).toHaveText(['Full Col', 'Narrow A'])
     })
 
@@ -81,7 +86,12 @@ test.describe('Adaptive drop axis — full-width and narrow column targets', () 
       })
       await enterContainerCenter(page, rowTwo, 'column-block', 3)
       const pos = await colCorner(page, rowTwo, 'Full Col', 'top-right')
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(
+        page,
+        pos.x,
+        pos.y,
+        'Y-above: top-RIGHT of Full Col → Narrow B lands ABOVE it',
+      )
       await expect(rowTwo.getByTestId('column-title')).toHaveText([
         'Narrow B',
         'Full Col',
@@ -98,7 +108,12 @@ test.describe('Adaptive drop axis — full-width and narrow column targets', () 
       })
       await enterContainerCenter(page, rowTwo, 'column-block', 4)
       const pos = await colCorner(page, rowTwo, 'Narrow B', 'bottom-left')
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(
+        page,
+        pos.x,
+        pos.y,
+        'X-before: bottom-LEFT of Narrow B → Narrow C lands LEFT of it',
+      )
       await expect(rowTwo.getByTestId('column-title')).toHaveText([
         'Narrow C',
         'Narrow B',
@@ -114,7 +129,12 @@ test.describe('Adaptive drop axis — full-width and narrow column targets', () 
       })
       await enterContainerCenter(page, rowTwo, 'column-block', 5)
       const pos = await colCorner(page, rowTwo, 'Narrow A', 'top-right')
-      await dropAndSettle(page, pos.x, pos.y)
+      await dropAndSettle(
+        page,
+        pos.x,
+        pos.y,
+        'X-after: top-RIGHT of Narrow A → Narrow D lands RIGHT of it',
+      )
       await expect(rowTwo.getByTestId('column-title')).toHaveText([
         'Narrow C',
         'Narrow B',
