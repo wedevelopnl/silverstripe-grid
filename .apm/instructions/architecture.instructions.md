@@ -53,11 +53,13 @@ client/dist/          # Vite build output (exposed, created by build)
 client/js/            # Hand-written, unbundled admin-chrome scripts (shared-block-add.js) — required by the PHP field that renders their markup, never imported by the editor bundle
 scripts/              # Build scripts (i18n collection, parity checks)
 phpstan/stubs/        # PHPStan stubs (e.g. AdminController.stub)
+.github/workflows/    # CI: ci.yml (js-qa, static-analysis, php-qa matrix, e2e matrix) + relock.yml (weekly harness lock refresh)
 .docker/              # Docker dev env: Caddy + PHP + MySQL 8
 .docker/app/src/      # Harness-owned page types (App\MultiZonePage — the E2E multi-zone page); COPYed to /app/src at image build
 docs/                 # User documentation; docs/README.md is the index
 docs/usage/           # Usage guides (grid-editor, shared-blocks, custom-elements, templates, i18n)
 docs/architecture/    # Architecture documents (backend, drag-and-drop, grid-adapter)
+docs/testing/         # Testing protocol docs (e2e-fixtures)
 docs/images/          # Generated doc screenshots — regenerate, never hand-edit
 ```
 
