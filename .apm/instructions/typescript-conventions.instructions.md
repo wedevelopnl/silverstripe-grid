@@ -15,7 +15,7 @@ applyTo: "**/*.{ts,tsx}"
 ## Structure
 
 - `client/src/js/` is the frontend root
-- `@` path alias maps to `client/src/js` (configured in `vite.config.ts` and `tsconfig.json`)
+- `@` path alias maps to `client/src/js` (configured in `vite.config.mts` and `tsconfig.json`)
 - Entry points in `client/src/js/bundles/`
 - SilverStripe CMS integration via entwine and Injector in `client/src/js/bridge/`
 
