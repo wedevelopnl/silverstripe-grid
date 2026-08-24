@@ -16,7 +16,7 @@
       "client/src/styles/**/*.css",
       "tests/E2E/**/*.ts",
       "scripts/**/*.mjs",
-      "vite.config.ts",
+      "vite.config.mts",
       "vitest.setup.ts",
       "playwright.config.ts"
     ]
@@ -232,7 +232,7 @@
       }
     },
     {
-      "includes": ["vite.config.ts", "vitest.setup.ts", "playwright.config.ts"],
+      "includes": ["vite.config.mts", "vitest.setup.ts", "playwright.config.ts"],
       "linter": {
         "rules": {
           "style": {

@@ -70,7 +70,7 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 
 ## Key Files
 
-- `vite.config.ts` — Build config + Vitest test config, `@` alias → `client/src/js`
+- `vite.config.mts` — Build config + Vitest test config, `@` alias → `client/src/js`
 - `tsconfig.json` — TypeScript config
 - `playwright.config.ts` — Playwright E2E test config (base URL from `.docker/.env` or `E2E_BASE_URL`)
 - `playwright.docs.config.ts` — Doc screenshot config. Separate file on purpose: `task test-e2e` runs `npx playwright test` with no project filter, so a screenshot project in the main config would rewrite `docs/images/` on every E2E run.
