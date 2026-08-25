@@ -9,7 +9,7 @@ A grid-based content block system for SilverStripe 6. Editors compose pages from
 Elemental-style modules give editors a flat list of blocks and leave layout to the developer. Page builders give editors full layout control and leave the design system behind. This module sits between the two: the hierarchy is fixed and validated on the server, but within it editors control widths, offsets, and per-breakpoint visibility — and every choice resolves to classes your theme already ships.
 
 - **A hierarchy that cannot be broken.** Sections hold rows, rows hold columns, columns hold content. Enforced at write time and at drop time, not just in the UI.
-- **Framework-agnostic output.** One config-driven adapter turns a column of width 8 at the `md` breakpoint into `col-md-8` (Bootstrap), `md:col-span-8` (Tailwind), `is-8-md` (Bulma), or whatever your own framework spells it.
+- **Framework-agnostic output.** One config-driven adapter turns a column of width 8 into `col-md-8` (Bootstrap), `md:col-span-8` (Tailwind), `is-8-tablet` (Bulma), or whatever your own framework spells it — each at that framework's own breakpoint, since the viewport names come from the adapter too.
 - **Responsive per column.** One default layout per column, plus overrides only for the breakpoints that differ.
 - **Versioned like the rest of the CMS.** Draft/live, publish-with-the-page, per-element history, and a read-only grid in the history viewer.
 - **Drag and drop across containers.** Move a block into another column, a column into another row, a row into another section — with optimistic updates and rollback on failure.
@@ -51,7 +51,7 @@ The [grid editor guide](docs/usage/grid-editor.md) walks through the rest of the
 
 Optional:
 
-- `silverstripe/reports` — adds the Grid Elements report to CMS Reports
+- `silverstripe/reports` — adds the Grid Elements and Shared Blocks reports to CMS Reports
 - `tractorcow/silverstripe-fluent` — multi-locale support, one isolated grid per locale ([guide](docs/fluent.md))
 
 > **Conflict:** this module conflicts with `dnadesign/silverstripe-elemental` and replaces its functionality. Coming from Elemental? See the [migration guide](docs/migration.md).
@@ -88,7 +88,7 @@ Page:
 **5. Build the database.**
 
 ```bash
-vendor/bin/sake dev/build flush=1
+vendor/bin/sake db:build --flush
 ```
 
 That is a complete integration. Open a page in the CMS and the grid editor is on its Content tab.

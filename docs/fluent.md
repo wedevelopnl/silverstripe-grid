@@ -30,7 +30,7 @@ WeDevelop\Grid\Model\GridElement:
 Then run a dev/build:
 
 ```bash
-vendor/bin/sake dev/build flush=1
+vendor/bin/sake db:build --flush
 ```
 
 ## How It Works
@@ -81,28 +81,55 @@ If you enable Fluent on a site that *already* has grid content, those records wi
 Create a `BuildTask` in your project to assign the default locale to unassigned elements:
 
 ```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tasks;
+
+use Override;
 use SilverStripe\Dev\BuildTask;
+use SilverStripe\PolyExecution\PolyOutput;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
 use TractorCow\Fluent\Model\Locale;
 use WeDevelop\Grid\Model\GridElement;
 
 class AssignGridLocaleTask extends BuildTask
 {
-    public function run($request): void
+    protected static string $commandName = 'assign-grid-locale';
+
+    protected string $title = 'Assign the default locale to locale-blind grid elements';
+
+    protected static string $description = 'Sets LocaleID on grid elements left at 0 after enabling Fluent.';
+
+    #[Override]
+    protected function execute(InputInterface $input, PolyOutput $output): int
     {
         $default = Locale::getDefault();
+
+        if ($default === null) {
+            $output->writeln('<error>No default locale is configured.</error>');
+
+            return Command::FAILURE;
+        }
 
         foreach (GridElement::get()->filter('LocaleID', 0) as $element) {
             $element->LocaleID = $default->ID;
             $element->write();
         }
+
+        return Command::SUCCESS;
     }
 }
 ```
 
-Run it via the CMS at `/dev/tasks/AssignGridLocaleTask` or via CLI:
+`BuildTask` in SilverStripe 6 is a Symfony Console command: `execute()` is the abstract method to implement (the old `run($request)` signature is gone), and `$commandName` — not the class name — is what names the task on the CLI and in the URL.
+
+Run it via the CMS at `/dev/tasks/assign-grid-locale` or via CLI:
 
 ```bash
-vendor/bin/sake dev/tasks/AssignGridLocaleTask
+vendor/bin/sake tasks:assign-grid-locale
 ```
 
 ## See also
