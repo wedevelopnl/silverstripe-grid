@@ -94,6 +94,7 @@
   "WeDevelopGrid.SharedBlockFrame.ACTION_MOVE_UP": "Move up",
   "WeDevelopGrid.SharedBlockFrame.ACTION_PUBLISH": "Publish shared block",
   "WeDevelopGrid.SharedBlockFrame.CHIP": "Shared · {title} · used on {count} pages",
+  "WeDevelopGrid.SharedBlockFrame.CHIP_ONE": "Shared · {title} · used on {count} page",
   "WeDevelopGrid.SharedBlockFrame.DETACH_CONFIRM": "Detach",
   "WeDevelopGrid.SharedBlockFrame.DETACH_MESSAGE": "This page gets its own copy of \"{title}\". Later changes to the shared block will no longer reach it.",
   "WeDevelopGrid.SharedBlockFrame.DETACH_TITLE": "Detach shared block",

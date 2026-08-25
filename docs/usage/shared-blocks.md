@@ -23,6 +23,8 @@ Two routes, both ending in the same place.
 
 Its main half creates a **section-rooted** block, the common case. Its caret offers the other shapes, with the available content element types listed under **Shared content element**:
 
+![The split "Add new shared section" button with its caret menu open, listing "Add new shared row", "Add new shared column", and the content element types under a "Shared content element" heading](../images/shared-block-library.png)
+
 | Choose | You get | Placeable |
 |---|---|---|
 | *Add new shared section* | a section, scaffolded with a row and a column | at page root |
@@ -67,6 +69,8 @@ So nothing the chooser offers can be rejected when you pick it.
 ## Editing a placed block
 
 A placed block is **read-only on the page**. An inline edit inside a block would change every page that places it, and on a page that reach is easy to miss — so all editing happens in the library, where it is explicit. The frame makes the boundary visible: a chip naming the block and how many pages it reaches, plus a status marker when live has not caught up.
+
+![A placed shared block: a dashed frame whose bar carries the chip "Shared · Newsletter call to action · used on 1 page", a "Not published yet" marker, and the frame's own actions. Inside, the block's section, row and column render with no drag handles and with the column size and offset pickers greyed out](../images/shared-block-frame.png)
 
 Inside the frame there is nothing to drag, add, remove or configure. The column size and offset selectors stay visible — they carry layout information — but are disabled.
 
@@ -147,6 +151,8 @@ See [Fluent support](../fluent.md) for installing and configuring Fluent.
 |---|---|
 | **Delete and remove from N pages** | The placements go, and the content with them. |
 | **Delete and keep a copy on each page** | Each page gets an independent copy of the block's current content. Nothing visibly changes; the copies are no longer linked, so editing one no longer updates the others. |
+
+![The block edit form's "More options" menu open, showing the two delete actions side by side: "Delete and remove from 1 page" and "Delete and keep a copy on each page"](../images/shared-block-delete.png)
 
 The label counts the pages placing the block, and the CMS asks for confirmation before either fires. Both reach live immediately, on every consuming page at once, without those pages being republished — the same reach as unpublishing the block.
 

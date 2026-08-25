@@ -223,6 +223,13 @@ WeDevelop\E2e\Fixtures\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
+        # The placement page too, so it carries no DRAFT badge in the page tree
+        # behind the README's full-window capture. It does NOT publish the block
+        # it places — that is the independent lifecycle, and the frame capture
+        # wants the "Not published yet" marker showing.
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_placement_page
         - action: unpublish
           class: 'WeDevelop\Grid\Model\ContentElement'
           identifier: opening_hours_block

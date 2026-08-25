@@ -170,10 +170,19 @@ export default function SharedBlockFrame({
     >
       <div className="ssgrid-shared-block-bar" data-testid="shared-block-actions">
         <span className="ssgrid-shared-block-chip" data-testid="shared-block-chip">
-          {t('WeDevelopGrid.SharedBlockFrame.CHIP', 'Shared · {title} · used on {count} pages', {
-            title,
-            count: usageCount,
-          })}
+          {usageCount === 1
+            ? t(
+                'WeDevelopGrid.SharedBlockFrame.CHIP_ONE',
+                'Shared · {title} · used on {count} page',
+                {
+                  title,
+                  count: usageCount,
+                },
+              )
+            : t('WeDevelopGrid.SharedBlockFrame.CHIP', 'Shared · {title} · used on {count} pages', {
+                title,
+                count: usageCount,
+              })}
         </span>
 
         {statusLabel !== null && (

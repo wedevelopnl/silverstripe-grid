@@ -81,7 +81,29 @@ describe('SharedBlockFrame', () => {
     )
 
     expect(screen.getByTestId('shared-block-chip')).toHaveTextContent('Banner')
-    expect(screen.getByTestId('shared-block-chip')).toHaveTextContent('4')
+    expect(screen.getByTestId('shared-block-chip')).toHaveTextContent('used on 4 pages')
+  })
+
+  // Anchored: an unpluralised "used on 1 pages" CONTAINS "used on 1 page", so a
+  // substring assertion here would pass against the bug it exists to catch.
+  it.each([
+    [1, /used on 1 page$/],
+    [2, /used on 2 pages$/],
+    [0, /used on 0 pages$/],
+  ])('says "page" for %i placement(s), not "pages"', (usageCount, expected) => {
+    renderFrame(
+      createSharedBlockReferenceNode({
+        sharedBlock: {
+          blockId: 3,
+          title: 'Banner',
+          usageCount,
+          status: 'published',
+          editLink: '/admin/shared-blocks/item/3/edit',
+        },
+      }),
+    )
+
+    expect(screen.getByTestId('shared-block-chip')).toHaveTextContent(expected)
   })
 
   it('renders its children inside the frame', () => {

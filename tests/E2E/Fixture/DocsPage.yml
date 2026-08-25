@@ -23,6 +23,15 @@ Page:
   e2e_page:
     Title: 'Home'
     URLSegment: 'e2e-docs-home'
+  # Declared AFTER the home page on purpose: the fixture endpoint opens the
+  # first page of the first SiteTree class it finds, so every existing capture
+  # keeps landing on Home. This page exists only to give the library shots a
+  # block with real usage behind it — a block's delete form offers the two-mode
+  # choice only while something places it, and the read-only frame needs a
+  # placement to be a frame at all.
+  e2e_placement_page:
+    Title: 'Newsletter'
+    URLSegment: 'e2e-docs-newsletter'
 
 # --- Shared block library ---
 # Section-rooted, and deliberately NOT placed on the page: it exists so the
@@ -167,3 +176,12 @@ WeDevelop\Grid\Model\ContentElement:
     HTML: '<p>Stationsplein 1, Utrecht.</p>'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Column.contact_aside_col
+
+# --- The placement (onto the second page, never onto Home) ---
+WeDevelop\Grid\Model\SharedBlockReference:
+  cta_placement:
+    Title: 'Newsletter call to action'
+    Sort: 1
+    Zone: main
+    Block: =>WeDevelop\Grid\Model\SharedBlock.cta_block
+    Parent: =>Page.e2e_placement_page

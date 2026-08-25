@@ -1,6 +1,9 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
 import { readAdapterConfig } from '../helpers/adapter'
-import { loadAndNavigate } from '../helpers/fixtures'
+import { type FixtureLoadResponse, loadAndNavigate } from '../helpers/fixtures'
+
+/** The Shared blocks admin's model segment, as it appears in its URLs. */
+const BLOCK_MODEL = 'WeDevelop-Grid-Model-SharedBlock'
 
 /**
  * Regenerates the images embedded in README.md, docs/usage/grid-editor.md and
@@ -40,8 +43,8 @@ const TALL = { width: 1500, height: 1400 }
  * so the value has to be set against a loaded CMS origin and picked up by a
  * reload.
  */
-async function openDocsPage(page: Page): Promise<void> {
-  await loadAndNavigate(page, 'docs-page')
+async function openDocsPage(page: Page): Promise<FixtureLoadResponse> {
+  const fixture = await loadAndNavigate(page, 'docs-page')
   await page.evaluate(() => {
     window.localStorage.setItem('cms-preview-state-mode', 'content')
   })
@@ -49,6 +52,23 @@ async function openDocsPage(page: Page): Promise<void> {
   await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
   await expect(page.getByTestId('grid-editor')).toBeVisible()
   await assertBootstrapAdapter(page)
+
+  return fixture
+}
+
+/**
+ * Open the second fixture page — the one carrying the placement — in the CMS.
+ *
+ * `loadAndNavigate` always opens the fixture's first page, so the placement
+ * page is reached by id afterwards. The preview panel is already closed by
+ * then: the setting is per-origin in localStorage, not per-page.
+ */
+async function openPlacementPage(page: Page): Promise<void> {
+  const fixture = await openDocsPage(page)
+
+  await page.goto(`/admin/pages/edit/show/${String(fixture.fixtureMap.Page.e2e_placement_page)}`)
+  await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
+  await expect(page.getByTestId('shared-block-frame')).toBeVisible()
 }
 
 /**
@@ -194,6 +214,66 @@ test('publish status badges', async ({ page }) => {
   await expect(section.getByTestId('element-card').first()).toBeVisible()
 
   await shoot(page, 'status-badges', [section])
+})
+
+test('shared block library', async ({ page }) => {
+  await page.setViewportSize(TALL)
+  await openDocsPage(page)
+
+  await page.goto(`/admin/shared-blocks/${BLOCK_MODEL}`)
+
+  const control = page.getByTestId('add-shared-block')
+  await expect(control).toBeVisible({ timeout: 15_000 })
+  await expect(page.locator('td.col-Title', { hasText: 'Newsletter call to action' })).toHaveCount(
+    1,
+  )
+
+  // The caret half of the split control: its menu is what names the four root
+  // shapes, which is the part the guide describes and cannot otherwise show.
+  //
+  // Cropped to the control and its menu, deliberately NOT to the listing: the
+  // menu is anchored under the button and covers the first row whatever the
+  // scroll position, so including the table yields a wide band of whitespace
+  // with the one row it was meant to show hidden behind the menu.
+  await page.getByTestId('add-shared-block-menu-trigger').click()
+  const shapes = page.getByTestId('add-shared-block-menu-dropdown')
+  await expect(shapes).toBeVisible()
+
+  await shoot(page, 'shared-block-library', [control, shapes])
+})
+
+test('shared block frame', async ({ page }) => {
+  await page.setViewportSize(TALL)
+  await openPlacementPage(page)
+
+  const frame = page.getByTestId('shared-block-frame')
+  await frame.scrollIntoViewIfNeeded()
+  await expect(page.getByTestId('shared-block-chip')).toBeVisible()
+
+  await shoot(page, 'shared-block-frame', [frame])
+})
+
+test('shared block delete modes', async ({ page }) => {
+  await page.setViewportSize(TALL)
+  const fixture = await openDocsPage(page)
+  const blockId = String(fixture.fixtureMap['WeDevelop\\Grid\\Model\\SharedBlock'].cta_block)
+
+  await page.goto(
+    `/admin/shared-blocks/${BLOCK_MODEL}/EditForm/field/${BLOCK_MODEL}/item/${blockId}/edit`,
+  )
+
+  // Both delete actions live in the CMS action bar's collapsed "More options"
+  // tab. The two-outcome pair only renders while the block is placed, which is
+  // what the fixture's second page is for.
+  const moreOptions = page.locator('#tab-ActionMenus_MoreOptions')
+  await moreOptions.click()
+
+  const remove = page.getByRole('button', { name: /^Delete and remove from/ })
+  const keep = page.getByRole('button', { name: 'Delete and keep a copy on each page' })
+  await expect(remove).toBeVisible()
+  await expect(keep).toBeVisible()
+
+  await shoot(page, 'shared-block-delete', [moreOptions, remove, keep])
 })
 
 test('element actions menu', async ({ page }) => {

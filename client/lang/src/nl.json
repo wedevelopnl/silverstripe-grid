@@ -94,6 +94,7 @@
   "WeDevelopGrid.SharedBlockFrame.ACTION_MOVE_UP": "Omhoog verplaatsen",
   "WeDevelopGrid.SharedBlockFrame.ACTION_PUBLISH": "Gedeeld blok publiceren",
   "WeDevelopGrid.SharedBlockFrame.CHIP": "Gedeeld · {title} · gebruikt op {count} pagina's",
+  "WeDevelopGrid.SharedBlockFrame.CHIP_ONE": "Gedeeld · {title} · gebruikt op {count} pagina",
   "WeDevelopGrid.SharedBlockFrame.DETACH_CONFIRM": "Loskoppelen",
   "WeDevelopGrid.SharedBlockFrame.DETACH_MESSAGE": "Deze pagina krijgt een eigen kopie van \"{title}\". Latere wijzigingen aan het gedeelde blok komen hier niet meer terecht.",
   "WeDevelopGrid.SharedBlockFrame.DETACH_TITLE": "Gedeeld blok loskoppelen",
