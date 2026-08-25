@@ -118,19 +118,19 @@ Page "About Us"
 
 ```bash
 # Dry run — writes nothing, logs what would be created (no confirmation prompt)
-vendor/bin/sake dev/tasks/migrate-grid \
+vendor/bin/sake tasks:migrate-grid \
     --default-viewport=MD --zone=main --strategy=sections --dry-run
 
 # Full migration — prompts for confirmation before writing anything
-vendor/bin/sake dev/tasks/migrate-grid \
+vendor/bin/sake tasks:migrate-grid \
     --default-viewport=MD --zone=main --strategy=sections
 
 # Full migration, non-interactive (CI, scripts): --force skips the confirmation prompt
-vendor/bin/sake dev/tasks/migrate-grid \
+vendor/bin/sake tasks:migrate-grid \
     --default-viewport=MD --zone=main --strategy=sections --force
 
 # Migrate specific pages only (useful for staged rollouts)
-vendor/bin/sake dev/tasks/migrate-grid \
+vendor/bin/sake tasks:migrate-grid \
     --default-viewport=MD --zone=main --strategy=sections --page-ids=1,5,12 --force
 ```
 
@@ -162,7 +162,7 @@ If a run finishes with failures, the task exits with a non-zero status and the f
 On a Fluent site, run `migrate-grid-with-fluent` instead of `migrate-grid`. The plain task **refuses to run** when it detects either a locale-isolated target grid (`GridElement` carrying Fluent's isolated extension) or localised legacy tables, and points you here. The isolation check catches even single-locale legacy content, which table-shape detection alone cannot see.
 
 ```bash
-vendor/bin/sake dev/tasks/migrate-grid-with-fluent \
+vendor/bin/sake tasks:migrate-grid-with-fluent \
     --default-viewport=MD --zone=main --strategy=sections --dry-run
 ```
 
@@ -415,7 +415,7 @@ For field-level tweaks on individual element subclasses, `updateElementFieldMapp
 
 ## After Migration
 
-1. Run `dev/build flush=1` to make sure the schema is consistent.
+1. Run `sake db:build --flush` to make sure the schema is consistent.
 2. Spot-check a handful of migrated pages in the CMS and on the frontend. Pay particular attention to:
    - Section and Row titles (Sections are always created untitled).
    - Elements that shared grid settings and now share a parent Column.
