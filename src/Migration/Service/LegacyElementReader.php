@@ -420,9 +420,7 @@ final class LegacyElementReader
         foreach ($result as $row) {
             /** @var array<string, int|string|null> $row */
             $recordId = (int) $row['RecordID'];
-            if (!isset($map[$recordId])) {
-                $map[$recordId] = $row;
-            }
+            $map[$recordId] ??= $row;
         }
 
         return $map;

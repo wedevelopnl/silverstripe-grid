@@ -73,12 +73,10 @@ class SharedBlockLocaliser
         $targetLocaleId = (int) $targetLocaleRecord->ID;
         $targetLocale = (string) $targetLocaleRecord->Locale;
 
-        if ($sourceLocale === null) {
-            $sourceLocale = $this->cloner()->findSourceLocale(
-                fn (): int => $this->countRootsInLocale($blockId),
-                $targetLocale,
-            );
-        }
+        $sourceLocale ??= $this->cloner()->findSourceLocale(
+            fn (): int => $this->countRootsInLocale($blockId),
+            $targetLocale,
+        );
 
         // No locale holds content for this block: it is empty everywhere, and
         // there is nothing to copy. Not an error — an author may place a block
