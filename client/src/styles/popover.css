@@ -158,6 +158,10 @@
   text-align: left;
   cursor: pointer;
 
+  /* biome-ignore lint/style/noDescendingSpecificity: compared against the
+     disabled-row `:hover` above, which is (0,3,0). The two never match the same
+     element — this is the picker's trigger button, that one is an option row —
+     so there is no cascade to lose. */
   &:hover,
   &[aria-expanded='true'] {
     background: var(--ssgrid-surface-hover);
