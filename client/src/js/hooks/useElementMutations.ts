@@ -41,15 +41,15 @@ export function useStandardMutationOptions(root: EditorRoot) {
 
   return {
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: treeQueryKey(root),
       })
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.acceptableContainers.all(),
       })
       // An edit inside a shared block changes its status and, after a detach or
       // convert, its usage — both of which every other page's chip reads.
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.sharedBlocks.all(),
       })
       refreshPreview()
@@ -115,7 +115,7 @@ export function useDuplicateToElement(root: EditorRoot) {
     // reading the target from the mutation variables.
     onSuccess: (_data, variables) => {
       standardOptions.onSuccess()
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.elementTree.byPage(variables.targetPageId, variables.targetZone),
       })
     },
