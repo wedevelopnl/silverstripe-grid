@@ -37,7 +37,7 @@
     "valibot": "^1.4.2"
   },
   "overrides": {
-    "qs": "^6.15.2"
+    "qs": "^6.16.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
