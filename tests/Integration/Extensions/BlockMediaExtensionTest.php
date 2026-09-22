@@ -610,10 +610,11 @@ final class BlockMediaExtensionTest extends SapphireTest
         // Full-width (0) prepended plus range [4..8] from getContentColumnOptions
         self::assertSame([0, 4, 5, 6, 7, 8], $keys);
 
-        // Label format '%d/%d (content/media)' — kills Minus at 449 ($total-$i → $total+$i)
-        self::assertSame('4/8 (content/media)', $source[4]);
-        self::assertSame('5/7 (content/media)', $source[5]);
-        self::assertSame('8/4 (content/media)', $source[8]);
+        // Media first, matching the option's diagram; the key stays the content
+        // width. Kills Minus at 449 ($total-$i → $total+$i).
+        self::assertSame('8/4 (media/content)', $source[4]);
+        self::assertSame('7/5 (media/content)', $source[5]);
+        self::assertSame('4/8 (media/content)', $source[8]);
     }
 
     public function testContentColumnOptionsReserveTwoMediaColumns(): void

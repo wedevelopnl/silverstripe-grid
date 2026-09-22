@@ -472,7 +472,13 @@ class BlockMediaExtension extends Extension
 
         for ($i = 4; $i <= min(8, $total - 2); ++$i) {
             $media = $total - $i;
-            $options[$i] = sprintf('%d/%d (content/media)', $i, $media);
+            // Media first, so the ratio reads in the same order as the option's
+            // diagram. The stored value stays the content width.
+            $options[$i] = _t(
+                self::class . '.SPLIT_RATIO',
+                '{media}/{content} (media/content)',
+                ['media' => $media, 'content' => $i],
+            );
         }
 
         return $options;

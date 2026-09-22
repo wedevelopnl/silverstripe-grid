@@ -13,16 +13,13 @@
       <% if $ImageURL %>
         <img class="ssgrid-column-width-picker-image" src="$ImageURL" alt="$Title" />
       <% else %>
+        <%-- Media bar first, mirroring the PNG diagrams and MediaPosition::First. --%>
         <div class="ssgrid-column-width-picker-diagram">
-          <div class="ssgrid-column-width-picker-bar-content" style="width: $ContentPercent%"></div>
           <div class="ssgrid-column-width-picker-bar-media" style="width: $MediaPercent%"></div>
+          <div class="ssgrid-column-width-picker-bar-content" style="width: $ContentPercent%"></div>
         </div>
       <% end_if %>
-      <% if $Value == 0 %>
-        <span class="ssgrid-column-width-picker-label">$Title</span>
-      <% else %>
-        <span class="ssgrid-column-width-picker-label">$Value/$MediaColumns</span>
-      <% end_if %>
+      <span class="ssgrid-column-width-picker-label">$Title</span>
     </label>
   <% end_loop %>
 </div>
