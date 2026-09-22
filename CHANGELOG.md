@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The content column width picker showed the mirror image of the split it produced.** Each option's diagram is a PNG named after what it draws, left to right, and every one puts the media column first — matching `MediaPosition::First`, the default. `ColumnWidthPickerField` built the filename content-first, so picking the option that drew a narrow image beside wide text published a wide image beside narrow text, and the other way round. Only the previews were wrong: `ContentColumns`, the content layout adapter and the rendered page always agreed with each other, so nothing about how a page renders has changed and no stored content is affected.
+
+  The CSS fallback diagram, used for splits that ship no PNG, drew its two bars content-first and is now media-first for the same reason.
+
+  **Pages laid out through the old picker keep their stored value and still render what that value means** — the fix stops the picker misrepresenting the split, it does not reinterpret content. A page whose author picked by the picture rather than the label is laid out the opposite way round from what they intended, and only its author can say which one they wanted; there is no migration that can tell the two apart.
+
+### Changed
+
+- **Split options are labelled media-first** — `8/4 (media/content)` where the label read a bare `4/8`, so the ratio reads in the same order as the option's diagram. The stored value is still the content column width, the option keys are unchanged, and the label is now translatable (`SPLIT_RATIO`, shipped in `en` and `nl`). Projects asserting on the old label text in their own tests need updating.
+
 ## [6.0.0-beta.4] - 2026-08-24
 
 The headline is **shared blocks**: a library of grid subtrees maintained in one place and placed on any number of pages. Alongside it, `Zone` moves to the `GridElement` base table — a schema change that needs a one-time task run on every existing install.

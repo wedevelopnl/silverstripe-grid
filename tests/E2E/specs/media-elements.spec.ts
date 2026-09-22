@@ -58,18 +58,18 @@ test.describe('Media elements', () => {
     await test.step('Verify column width picker UX behavior', async () => {
       await page.getByRole('tab', { name: 'Layout', exact: true }).click()
 
-      // The picker renders one radio per width option. Its accessible name is
-      // composed of the option's descriptive label plus the split ratio (e.g.
-      // "8/4 (content/media) 8/4", "Full width (no side-by-side) ..."), so we
-      // match the ratio as a substring via regex rather than an exact string.
-      // The radios are visually hidden (opacity:0) and toggled by clicking the
-      // visible label text, so we drive the selection by clicking that text.
+      // The picker renders one radio per width option, labelled with the split
+      // read media-first ("8/4 (media/content)") to match the option's diagram.
+      // The radio's accessible name repeats that label, so we match the ratio
+      // as a substring via regex rather than an exact string. The radios are
+      // visually hidden (opacity:0) and toggled by clicking the visible label
+      // text, so we drive the selection by clicking that text.
       const fullWidthOption = page.getByRole('radio', { name: /Full width/ })
       const splitOption8 = page.getByRole('radio', { name: /8\/4/ })
       const splitOption6 = page.getByRole('radio', { name: /6\/6/ })
       const fullWidthLabel = page.getByText(/Full width/)
-      const splitLabel8 = page.getByText('8/4', { exact: true })
-      const splitLabel6 = page.getByText('6/6', { exact: true })
+      const splitLabel8 = page.getByText('8/4 (media/content)', { exact: true })
+      const splitLabel6 = page.getByText('6/6 (media/content)', { exact: true })
 
       await expect(fullWidthLabel).toBeVisible()
 
@@ -111,9 +111,9 @@ test.describe('Media elements', () => {
     })
 
     await test.step('Configure layout settings', async () => {
-      // Select 8/4 split for the save+render test (click the visible label;
+      // Select the 8/4 split for the save+render test (click the visible label;
       // the underlying radio is opacity:0).
-      await page.getByText('8/4', { exact: true }).click()
+      await page.getByText('8/4 (media/content)', { exact: true }).click()
       await expect(page.locator('[id$="_MediaPosition_Holder"]')).toBeVisible()
 
       await selectChosenValue(page, 'MediaPosition', 'last')

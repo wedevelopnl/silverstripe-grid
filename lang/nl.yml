@@ -20,6 +20,7 @@ nl:
     RATIO_1X1: 'Vierkant (1:1)'
     RATIO_4X3: '4:3'
     RATIO_AUTO: Automatisch
+    SPLIT_RATIO: '{media}/{content} (media/inhoud)'
     VERTICAL_ALIGNMENT: 'Verticale uitlijning'
     VIDEO_EMBED_CREATED: Aangemaakt
     VIDEO_EMBED_DESCRIPTION: Omschrijving

@@ -20,6 +20,7 @@ en:
     RATIO_1X1: 'Square (1:1)'
     RATIO_4X3: '4:3'
     RATIO_AUTO: Auto
+    SPLIT_RATIO: '{media}/{content} (media/content)'
     VERTICAL_ALIGNMENT: 'Vertical alignment'
     VIDEO_EMBED_CREATED: Created
     VIDEO_EMBED_DESCRIPTION: Description

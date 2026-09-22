@@ -81,7 +81,15 @@ final class ColumnWidthPickerField extends OptionsetField
      */
     private function resolveImageUrl(bool $isFullWidth, int $contentColumns, int $mediaColumns): string
     {
-        $filename = $isFullWidth ? 'vertical.png' : sprintf('horizontal_%d-%d.png', $contentColumns, $mediaColumns);
+        // The diagrams are named after what they draw, left to right, and each
+        // one puts the media column first — matching MediaPosition::First, the
+        // default. Every other layer (the ContentColumns DB column, the content
+        // layout adapter, this field's label) counts content first, so the pair
+        // is swapped here on purpose. Passing them through in declaration order
+        // resolves the mirror image of the split the editor picked.
+        $filename = $isFullWidth
+            ? 'vertical.png'
+            : sprintf('horizontal_%d-%d.png', $mediaColumns, $contentColumns);
 
         $resourcePath = self::IMAGE_BASE . $filename;
         $loader = ModuleResourceLoader::singleton();
