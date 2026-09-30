@@ -10,6 +10,21 @@ version: '3'
 vars:
   COMPOSE: docker compose -f .docker/compose.yml
   COMPOSE_FLUENT: docker compose -f .docker/compose.yml --profile fluent
+  # class-leak only parses PHP, so every class SilverStripe reaches by config
+  # (YAML) or by type (manifest discovery) reads as unused. The first five skip
+  # those by parent type; the last three are YAML-only Injector bindings with no
+  # such parent. Skip types are resolved with is_a(), so this must run where the
+  # framework autoloads — inside the container.
+  CLASS_LEAK: >-
+    vendor/bin/class-leak check /module/src
+    --skip-type='SilverStripe\Admin\AdminController'
+    --skip-type='SilverStripe\Core\Extension'
+    --skip-type='SilverStripe\Core\Injector\Factory'
+    --skip-type='SilverStripe\Dev\BuildTask'
+    --skip-type='SilverStripe\Reports\Report'
+    --skip-type='WeDevelop\Grid\Forms\GridAwareVersionFormFactory'
+    --skip-type='WeDevelop\Grid\Service\GridAwareDeleteLocalisationPolicy'
+    --skip-type='WeDevelop\Grid\Validation\HierarchyValidationService'
 
 tasks:
   # --- Docker environment ---------------------------------------------------
@@ -235,6 +250,12 @@ tasks:
     cmds:
       - "{{.COMPOSE}} exec app vendor/bin/rector process --dry-run"
 
+  class-leak:
+    desc: Find classes in src/ that nothing references (class-leak)
+    deps: [ensure-up]
+    cmds:
+      - "{{.COMPOSE}} exec app {{.CLASS_LEAK}}"
+
   # --- SilverStripe helpers -------------------------------------------------
 
   flush:
@@ -298,6 +319,7 @@ tasks:
       - qa-analyse
       - qa-analyse-php85
       - qa-rector
+      - qa-class-leak
       - qa-coverage
       - qa-lint
       - qa-format
@@ -326,6 +348,13 @@ tasks:
       - 'echo "==> [rector] running Rector (dry-run)..."'
       - "{{.COMPOSE}} exec -T app vendor/bin/rector process --dry-run --no-progress-bar"
       - 'echo "==> [rector] done"'
+
+  qa-class-leak:
+    internal: true
+    cmds:
+      - 'echo "==> [class-leak] checking for unreferenced classes..."'
+      - "{{.COMPOSE}} exec -T app {{.CLASS_LEAK}}"
+      - 'echo "==> [class-leak] done"'
 
   qa-coverage:
     internal: true

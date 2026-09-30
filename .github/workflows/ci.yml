@@ -110,6 +110,7 @@ jobs:
       # which only fires at >= 8.5); the primary pass above keeps verifying the 8.3 floor.
       - run: task analyse-php85
       - run: task rector-dry
+      - run: task class-leak
       - name: Container diagnostics
         if: failure()
         uses: ./.github/actions/container-diagnostics
