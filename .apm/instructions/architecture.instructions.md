@@ -98,6 +98,13 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 - 100% type coverage enforced: return, param, property, constant, declare
 - Runs inside Docker via `task analyse`
 
+## Class Leak
+
+- `tomasvotruba/class-leak` over `src/`; args live in the `CLASS_LEAK` var in `Taskfile.yml` (no config file). QA gate via `qa-class-leak`; CI via `task class-leak`
+- Parses PHP only — a class reached solely through YAML or manifest discovery reads as unused. New YAML-only Injector binding with no skipped parent type → add its FQCN as a `--skip-type`
+- `--skip-type` resolves via `is_a()` → must run inside the container, where the framework autoloads
+- Tests are not scanned: a class only tests reference is still reported
+
 ## Rector
 
 - Config: `.docker/app/rector.php` (COPYed into the image at build, **not** volume-mounted — after editing, rebuild the image with `task build` or push the file with `docker compose -f .docker/compose.yml cp .docker/app/rector.php app:/app/rector.php`)
