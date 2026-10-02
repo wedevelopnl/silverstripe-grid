@@ -33,10 +33,32 @@ function copyFonts(): Plugin {
   }
 }
 
+/**
+ * Ship the admin-toolbar Grid menu's stylesheet as its own file.
+ *
+ * The toolbar requires it on front-end pages, which never load `bundle.css`
+ * (CMS-only), and lib mode with an iife format allows a single entry — so it
+ * is copied as written rather than built. `closeBundle` runs after Vite has
+ * emptied `client/dist`.
+ */
+function copyAdminToolbarMenu(): Plugin {
+  return {
+    name: 'ssgrid-copy-admin-toolbar-menu',
+    apply: 'build',
+    closeBundle() {
+      cpSync(
+        resolve(__dirname, 'client/src/styles/admin-toolbar-menu.css'),
+        resolve(__dirname, 'client/dist/styles/admin-toolbar-menu.css'),
+      )
+    },
+  }
+}
+
 export default defineConfig({
   plugins: [
     react(),
     copyFonts(),
+    copyAdminToolbarMenu(),
     dts({
       include: ['client/src/js/types/**/*.ts'],
       exclude: ['client/src/js/types/silverstripe.d.ts'],

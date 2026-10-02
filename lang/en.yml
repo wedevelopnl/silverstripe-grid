@@ -1,4 +1,7 @@
 en:
+  WeDevelop\Grid\AdminToolbar\GridMenu:
+    TITLE: Grid
+    ZONE: 'Zone: {name}'
   WeDevelop\Grid\Extensions\BlockMediaExtension:
     ALIGN_BOTTOM: Bottom
     ALIGN_CENTER: Center

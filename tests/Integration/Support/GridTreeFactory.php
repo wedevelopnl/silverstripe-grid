@@ -80,9 +80,10 @@ final class GridTreeFactory
         return $row;
     }
 
-    public static function column(Row $row, int $sort = 0, ?GridSettings $gridSettings = null): Column
+    public static function column(Row $row, int $sort = 0, ?GridSettings $gridSettings = null, string $title = ''): Column
     {
         $column = Column::create();
+        $column->Title = $title;
         $column->Sort = $sort;
         $column->ParentID = $row->ID;
         $column->ParentClass = $row::class;
