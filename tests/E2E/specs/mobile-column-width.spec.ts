@@ -52,7 +52,8 @@ test.describe('Rendered column width across the first breakpoint', () => {
     await test.step('phone: the smallest-viewport override halves each column', async () => {
       await page.setViewportSize(PHONE)
       await page.goto(fixture.pageUrl)
-      await expect(page.getByText('Content element 1')).toBeVisible()
+      // By role: the admin toolbar's Grid menu lists the same title as a link.
+      await expect(page.getByRole('heading', { name: 'Content element 1' })).toBeVisible()
 
       const ratios = await columnWidthRatios(page)
 
