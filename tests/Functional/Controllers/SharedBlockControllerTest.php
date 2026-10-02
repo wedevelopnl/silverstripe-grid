@@ -17,6 +17,7 @@ use WeDevelop\Grid\Admin\SharedBlockAdmin;
 use WeDevelop\Grid\Controllers\GridController;
 use WeDevelop\Grid\Controllers\SharedBlockController;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Model\SharedBlock;
 use WeDevelop\Grid\Model\SharedBlockReference;
@@ -208,6 +209,26 @@ final class SharedBlockControllerTest extends FunctionalTest
         $reference = SharedBlockReference::get()->filter(['BlockID' => $block->ID])->first();
         self::assertInstanceOf(SharedBlockReference::class, $reference);
         self::assertSame('main', (string) $reference->Zone);
+    }
+
+    public function testPlaceEndpointRefusesAPageRootPlacementWithoutAZone(): void
+    {
+        $page = $this->page();
+        $block = $this->sectionRootedBlock();
+        $blockElementsBefore = GridElement::get()->count();
+
+        $response = $this->jsonRequest('POST', self::BASE_URL . '/place', [
+            'blockId' => (int) $block->ID,
+            'parent' => $this->ref($page),
+        ]);
+
+        self::assertSame(422, $response->getStatusCode());
+        self::assertSame(
+            'A shared block placed directly on a page needs a page area.',
+            $this->parseJson($response)['errors'][0]['value'] ?? null,
+        );
+        self::assertSame(0, SharedBlockReference::get()->filter(['BlockID' => $block->ID])->count());
+        self::assertSame($blockElementsBefore, GridElement::get()->count(), 'the block is left unchanged');
     }
 
     public function testPlaceEndpointRejectsUnknownBlock(): void
