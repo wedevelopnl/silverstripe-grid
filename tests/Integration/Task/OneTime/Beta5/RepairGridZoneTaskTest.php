@@ -212,22 +212,40 @@ final class RepairGridZoneTaskTest extends SapphireTest
         self::assertStringContainsString('Done: 4 row(s) repaired, 0 row(s) left for manual review.', $result['output']);
     }
 
-    public function testAppendsRepairedRootsAfterTheZoneKeepingTheirRelativeOrder(): void
+    public function testAppendsRepairedRootsAfterEachStagesZoneKeepingTheirRelativeOrder(): void
     {
+        // Draft holds a root live has not seen yet, so each stage's zone ends
+        // at a different Sort. Appending after the draft's end on live would
+        // leave a gap there; history rows follow the record they belong to.
         $page = $this->page();
         $kept = GridTreeFactory::section($page, sort: 1);
         $later = GridTreeFactory::section($page, sort: 5);
         $earlier = GridTreeFactory::section($page, sort: 3);
         GridTreeFactory::section($page, zone: 'sidebar', sort: 9);
+        $page->publishRecursive();
+        $draftOnly = GridTreeFactory::section($page, sort: 6);
+        $later->Title = 'Second version';
+        $later->write();
 
-        $this->corruptZone($later, null);
-        $this->corruptZone($earlier, null);
+        $this->corruptZone($later, null, ['', '_Live', '_Versions']);
+        $this->corruptZone($earlier, null, ['', '_Live', '_Versions']);
 
         $this->runTask();
 
-        self::assertSame(1, $this->sortOf((int) $kept->ID));
-        self::assertSame(2, $this->sortOf((int) $earlier->ID));
-        self::assertSame(3, $this->sortOf((int) $later->ID));
+        self::assertSame(
+            [1, 6, 7, 8],
+            array_map($this->sortOf(...), [(int) $kept->ID, (int) $draftOnly->ID, (int) $earlier->ID, (int) $later->ID]),
+            'draft',
+        );
+        self::assertSame(
+            [1, 2, 3],
+            array_map(fn (int $id): int => $this->sortOf($id, '_Live'), [(int) $kept->ID, (int) $earlier->ID, (int) $later->ID]),
+            'live',
+        );
+        foreach ([7 => $earlier, 8 => $later] as $sort => $section) {
+            $versionSorts = $this->versionSortsOf((int) $section->ID);
+            self::assertSame(array_fill(0, count($versionSorts), $sort), $versionSorts, 'every history row of #' . $section->ID);
+        }
     }
 
     public function testClearsTheZoneOfEveryElementNotDirectlyOnAPage(): void
