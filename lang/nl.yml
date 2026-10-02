@@ -207,6 +207,7 @@ nl:
     NOT_PLACED: 'Alleen een element dat op een pagina staat kan gedeeld worden.'
     UNSHARE_EMPTY_BLOCK: 'Dit blok heeft geen inhoud meer om te behouden. Verwijder het blok en haal de plaatsingen weg.'
     SHARED_NESTING: 'Inhoud binnen een gedeeld blok kan niet nogmaals gedeeld worden.'
+    ZONE_REQUIRED: 'Een gedeeld blok dat direct op een pagina staat, heeft een paginagebied nodig.'
   WeDevelop\Grid\Validation\HierarchyValidationService:
     PAGE_LEVEL_REJECTED: 'Een {element} kan niet op paginaniveau worden geplaatst.'
     PARENT_REJECTED: 'Een {element} kan niet in een {parent} worden geplaatst.'
