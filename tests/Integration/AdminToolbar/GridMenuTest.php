@@ -114,9 +114,9 @@ final class GridMenuTest extends SapphireTest
 
     public function testUnsupportedWhenEveryRootLacksAZone(): void
     {
-        // Zone-less roots predate zones (see BackfillGridZoneTask) and are not listed.
+        // A zone-less root breaks the zone rule; until repair-grid-zone fixes it, the menu skips it.
         $page = $this->page();
-        GridTreeFactory::section($page, zone: '', title: 'Only Unzoned');
+        $this->unzonedRoot($page, 0, 'Only Unzoned');
 
         self::assertFalse($this->menu($page)->isSupported());
     }
@@ -340,7 +340,7 @@ final class GridMenuTest extends SapphireTest
     {
         $page = $this->page();
         $hero = GridTreeFactory::section($page, sort: 1, title: 'Hero');
-        GridTreeFactory::section($page, zone: '', sort: 1, title: 'Unzoned');
+        $this->unzonedRoot($page, 1, 'Unzoned');
         $row = GridTreeFactory::row($hero, title: 'Hero Row');
         $wide = GridTreeFactory::column($row, 1, new GridSettings(new ViewportConfig(8, 0, true)), 'Wide');
         $narrow = GridTreeFactory::column($row, 2, new GridSettings(new ViewportConfig(4, 0, true)), 'Narrow');
@@ -353,6 +353,16 @@ final class GridMenuTest extends SapphireTest
         SQLUpdate::create('"WeDevelop_Grid_GridElement"', ['"Title"' => ''], ['"ID"' => $aside->ID])->execute();
 
         return $page;
+    }
+
+    /**
+     * A root the zone rule refuses to write, as unrepaired legacy data leaves
+     * it: written valid, then stripped of its Zone in the database.
+     */
+    private function unzonedRoot(Page $page, int $sort, string $title): void
+    {
+        $section = GridTreeFactory::section($page, sort: $sort, title: $title);
+        SQLUpdate::create('"WeDevelop_Grid_GridElement"', ['"Zone"' => null], ['"ID"' => $section->ID])->execute();
     }
 
     private function multiZonePage(): MultiZonePage

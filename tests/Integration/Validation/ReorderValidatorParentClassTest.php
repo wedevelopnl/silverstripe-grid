@@ -44,6 +44,7 @@ final class ReorderValidatorParentClassTest extends SapphireTest
         $section = Section::create();
         $section->ParentID = $page->ID;
         $section->ParentClass = SiteTree::class;
+        $section->Zone = 'main';
         $section->write();
 
         // Row lives under the Section. row->ParentID === section->ID.

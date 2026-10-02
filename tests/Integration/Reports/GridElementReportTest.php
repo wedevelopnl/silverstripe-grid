@@ -329,6 +329,7 @@ final class GridElementReportTest extends SapphireTest
         $orphan->Title = 'Orphan Section';
         $orphan->ParentID = 987654;
         $orphan->ParentClass = Page::class;
+        $orphan->Zone = 'main';
         $orphan->write();
 
         self::assertNull($orphan->getCMSEditLink());
