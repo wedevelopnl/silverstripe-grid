@@ -191,6 +191,24 @@ final class BackfillGridZoneTaskTest extends SapphireTest
         self::assertSame('sidebar', $this->zoneOf($sectionId));
     }
 
+    public function testLeavesTheLegacyZoneOffAnElementNoLongerOnAPage(): void
+    {
+        // Converted to a shared block's root after the hoist: its empty base
+        // zone is correct now, and copying the legacy one would break the
+        // rule GridElement::validate() enforces.
+        $blockRoot = GridTreeFactory::section(GridTreeFactory::sharedBlock());
+        $blockRootId = (int) $blockRoot->ID;
+        $this->seedObsoleteTable(self::OBSOLETE_SECTION_TABLE, [$blockRootId => 'main']);
+
+        $dryRun = $this->runTask(dryRun: true);
+        $result = $this->runTask();
+
+        self::assertStringContainsString('Dry run: 0 row(s) would be updated.', $dryRun['output']);
+        self::assertStringContainsString('Done: 0 row(s) updated.', $result['output']);
+        self::assertSame('', $this->zoneOf($blockRootId));
+        self::assertSame(0, BackfillGridZoneTask::singleton()->pendingCopyCount());
+    }
+
     public function testIsIdempotent(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
