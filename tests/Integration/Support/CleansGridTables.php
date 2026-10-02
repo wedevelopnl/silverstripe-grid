@@ -16,8 +16,8 @@ use WeDevelop\Grid\Model\GridElement;
  * into the next test (intermittently, since `executionOrder=random`).
  *
  * The table list is derived from the class manifest — every `GridElement`
- * subclass plus the test class's own `$extra_dataobjects`, each with its base
- * and `_Live` table. A new element table or test DataObject is therefore
+ * subclass plus the test class's own `$extra_dataobjects`, each with its base,
+ * `_Live` and `_Versions` table. A new element table or test DataObject is therefore
  * cleaned automatically; the hardcoded lists this replaces had already drifted
  * apart from one another.
  */
@@ -41,7 +41,7 @@ trait CleansGridTables
                 continue;
             }
 
-            foreach ([$table, $table . '_Live'] as $candidate) {
+            foreach ([$table, $table . '_Live', $table . '_Versions'] as $candidate) {
                 if (\array_key_exists(\strtolower($candidate), $allTables)) {
                     DB::query("DELETE FROM \"{$candidate}\"");
                 }
