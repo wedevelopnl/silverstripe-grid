@@ -226,6 +226,34 @@ tasks:
     cmds:
       - "{{.COMPOSE}} exec app /app/verify-lock.sh"
 
+  verify-no-toolbar:
+    desc: Prove the module builds and renders a grid page without the admin toolbar installed
+    deps: [ensure-up]
+    # The toolbar is a harness dependency only; GridMenu's class_exists() guard
+    # is what keeps a site without it working. This runs in a disposable
+    # container on a COPY of /app, because /app/vendor is the named volume the
+    # dev container shares, and against its own database, because dev/build
+    # would otherwise rewrite the dev schema without the toolbar's fields. The
+    # index.php swap mirrors entrypoint.sh: the image ships FrankenPHP's own.
+    cmds:
+      - >-
+        {{.COMPOSE}} run --rm --no-deps -T
+        -e SS_DATABASE_NAME=silverstripe_notoolbar
+        --entrypoint sh app -c '
+        set -e;
+        cp -R /app /tmp/app && cd /tmp/app;
+        composer remove --no-interaction wedevelopnl/silverstripe-admintoolbar;
+        cp -f vendor/silverstripe/recipe-core/public/index.php public/index.php;
+        vendor/bin/sake dev/build flush=1;
+        php -S 127.0.0.1:8080 -t public public/index.php > /tmp/server.log 2>&1 &
+        until curl -s -o /dev/null http://127.0.0.1:8080/; do sleep 1; done;
+        curl -sS -X POST -d fixture=grid-page http://127.0.0.1:8080/dev/e2e-fixtures/load | grep -q "\"success\":true";
+        code=$(curl -sS -o /tmp/page.html -w "%{http_code}" http://127.0.0.1:8080/e2e-grid);
+        echo "GET /e2e-grid -> $code";
+        test "$code" = 200;
+        grep -q "data-element=\"section\"" /tmp/page.html;
+        echo "Grid page renders without the admin toolbar."'
+
   # --- Static analysis ------------------------------------------------------
 
   analyse:

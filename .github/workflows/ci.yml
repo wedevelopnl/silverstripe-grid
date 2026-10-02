@@ -111,6 +111,10 @@ jobs:
       - run: task analyse-php85
       - run: task rector-dry
       - run: task class-leak
+      # The admin toolbar is optional; this proves a site without it still
+      # builds and renders a grid page. Last, because class-leak above resolves
+      # the toolbar's types. It runs in a disposable container, not the one above.
+      - run: task verify-no-toolbar
       - name: Container diagnostics
         if: failure()
         uses: ./.github/actions/container-diagnostics
