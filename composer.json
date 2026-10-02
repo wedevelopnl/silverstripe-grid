@@ -42,7 +42,8 @@
   },
   "suggest": {
     "silverstripe/reports": "Enables the Grid Elements and Shared Blocks reports in CMS → Reports",
-    "tractorcow/silverstripe-fluent": "Required for multi-locale support with isolated element records per locale"
+    "tractorcow/silverstripe-fluent": "Required for multi-locale support with isolated element records per locale",
+    "wedevelopnl/silverstripe-admintoolbar": "Adds a Grid menu to the front-end admin toolbar listing the page's sections, rows, columns and blocks with edit links"
   },
   "require-dev": {
     "cambis/silverstan": "^2.1",
@@ -53,6 +54,7 @@
     "phpunit/phpunit": "^12.0",
     "tomasvotruba/class-leak": "^2.3",
     "tomasvotruba/type-coverage": "^2.0",
+    "wedevelopnl/silverstripe-admintoolbar": "^6.0",
     "wedevelopnl/silverstripe-e2e": "0.2.0",
     "wernerkrauss/silverstripe-rector": "^1.0"
   },
