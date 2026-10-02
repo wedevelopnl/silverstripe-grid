@@ -7,6 +7,7 @@
     $MetaTags
 </head>
 <body>
+    $AdminToolbar
     $Layout
 </body>
 </html>
