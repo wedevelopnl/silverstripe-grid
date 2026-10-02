@@ -641,6 +641,7 @@ final class GridElementTest extends SapphireTest
         $section = Section::create();
         $section->ParentID = 987654;
         $section->ParentClass = Page::class;
+        $section->Zone = 'main';
         $section->write();
 
         self::assertNull($section->getPage());
@@ -658,11 +659,13 @@ final class GridElementTest extends SapphireTest
         $first = Section::create();
         $first->ParentID = $page->ID;
         $first->ParentClass = $page::class;
+        $first->Zone = 'main';
         $first->write();
 
         $second = Section::create();
         $second->ParentID = $page->ID;
         $second->ParentClass = $page::class;
+        $second->Zone = 'main';
         $second->write();
 
         self::assertCount(1, $first->getChildren());

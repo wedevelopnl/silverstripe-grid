@@ -32,6 +32,7 @@ final class SectionConcurrentScaffoldTest extends SapphireTest
         $section = Section::create();
         $section->ParentID = $page->ID;
         $section->ParentClass = SiteTree::class;
+        $section->Zone = 'main';
         $section->write();
 
         // First write already scaffolded one Row. Pre-materialise the relation
@@ -59,6 +60,7 @@ final class SectionConcurrentScaffoldTest extends SapphireTest
             $section = Section::create();
             $section->ParentID = $page->ID;
             $section->ParentClass = SiteTree::class;
+            $section->Zone = 'main';
             $section->write();
             DB::get_conn()->transactionRollback();
         } catch (Throwable $e) {

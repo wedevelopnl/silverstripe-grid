@@ -25,18 +25,27 @@ use WeDevelop\Grid\Value\GridSettings;
  */
 final class GridTreeFactory
 {
-    /** $parent is a SiteTree page, or a SharedBlock when the section roots a shared subtree. */
-    public static function section(DataObject $parent, string $zone = 'main', int $sort = 0, string $title = ''): Section
+    /**
+     * $parent is a SiteTree page, or a SharedBlock when the section roots a shared subtree.
+     * $zone defaults to what the position requires: 'main' on a page, none elsewhere.
+     */
+    public static function section(DataObject $parent, ?string $zone = null, int $sort = 0, string $title = ''): Section
     {
         $section = Section::create();
         $section->Title = $title;
-        $section->Zone = $zone;
+        $section->Zone = $zone ?? self::defaultZoneFor($parent);
         $section->Sort = $sort;
         $section->ParentID = $parent->ID;
         $section->ParentClass = $parent::class;
         $section->write();
 
         return $section;
+    }
+
+    /** Keeps the factory from producing rows the zone rule refuses. */
+    private static function defaultZoneFor(DataObject $parent): string
+    {
+        return $parent instanceof SiteTree ? 'main' : '';
     }
 
     public static function sharedBlock(string $title = 'Shared block'): SharedBlock
@@ -48,17 +57,20 @@ final class GridTreeFactory
         return $block;
     }
 
-    /** $parent is the placement target: a page (zone applies) or a container element. */
+    /**
+     * $parent is the placement target: a page (zone applies) or a container element.
+     * $zone defaults as for {@see section()}.
+     */
     public static function reference(
         DataObject $parent,
         SharedBlock $block,
-        string $zone = 'main',
+        ?string $zone = null,
         int $sort = 0,
         string $title = '',
     ): SharedBlockReference {
         $reference = SharedBlockReference::create();
         $reference->Title = $title;
-        $reference->Zone = $zone;
+        $reference->Zone = $zone ?? self::defaultZoneFor($parent);
         $reference->Sort = $sort;
         $reference->BlockID = $block->ID;
         $reference->ParentID = $parent->ID;

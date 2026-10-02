@@ -38,6 +38,7 @@ final class OrmGridElementRepositoryPairMatchTest extends SapphireTest
         $section = Section::create();
         $section->ParentID = $pageA->ID;
         $section->ParentClass = Page::class;
+        $section->Zone = 'main';
         $section->write();
 
         $row = $section->getChildren()->first();
@@ -78,6 +79,7 @@ final class OrmGridElementRepositoryPairMatchTest extends SapphireTest
         $section = Section::create();
         $section->ParentID = $page->ID;
         $section->ParentClass = Page::class;
+        $section->Zone = 'main';
         $section->write();
 
         $repo = new OrmGridElementRepository();

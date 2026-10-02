@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading
+
+Run the zone repair after deploying. In order:
+
+1. **`sake tasks:backfill-grid-zone`** — only if upgrading from before `6.0.0-beta.4`, as described under that release. The repair refuses to run while the backfill still has legacy zones to copy, because once a base row holds a zone the backfill no longer restores the legacy one over it.
+2. **`sake tasks:repair-grid-zone`** (add `--dry-run` to preview). A grid element's `Zone` must now be non-empty exactly when it sits directly on a page — see Changed. Rows written before the rule can break it either way, and **a page holding such a row cannot be published, duplicated, copied to another locale, reordered next to, or reverted until the repair runs**: each of those re-validates every element it touches and is atomic, so one bad row blocks the whole operation. The task fixes what it can decide on all three stages (draft, `_Live`, `_Versions`): a zone-less root on a page that declares exactly one zone gets that zone, appended after the zone's existing roots; a zoned element anywhere below page level (or rooting a shared block) has its zone cleared. Live rows are fixed in place, never by publishing, so pending draft edits stay unpublished. Everything else — a page with several zones, with no grid area, with `UseGrid = 0`, a page that no longer exists, a parent class that no longer exists — is listed with its page for manual review, and the task then exits non-zero. It is idempotent, and like the backfill its SQL is MySQL syntax.
+
+### Added
+
+- **`RepairGridZoneTask`** (`sake tasks:repair-grid-zone`) — the one-time repair described under Upgrading, in `src/Task/OneTime/Beta5/`. It reads each page's zones through the new `GridZoneResolver` service, which `api/zones` now uses too.
+
+### Changed
+
+- **A grid element's `Zone` must match its position, and a write that breaks this is refused.** `GridElement::validate()` refuses a root (an element directly on a page) without a zone — it used to be stored and then render in no zone at all — and refuses a zone anywhere else, where every zone read skips it. Both messages name the element and are translated (`GridElement.ZONE_MISSING`, `GridElement.ZONE_NOT_ALLOWED`, in `en` and `nl`); the missing-zone message also names the repair task, because a page publish shows it as a form-level error. The rule sits on the model, not in `HierarchyValidationExtension`, so it holds even where a project detaches that extension, and it applies to every stage: an existing bad row blocks the operations listed under Upgrading until `repair-grid-zone` has run. The editor never wrote such rows; code that writes page roots directly must now set a `Zone`.
+- **`backfill-grid-zone` no longer copies a legacy zone onto an element that is no longer directly on a page.** A Section converted to a shared block's root since the `6.0.0-beta.4` upgrade, or a placement moved into a Column, has a correctly empty `Zone`; copying the legacy value onto it broke the rule above, and the row counted as pending forever, so `repair-grid-zone` refused to run. Each stage's row is judged by its own current parent.
+- **`api/place` refuses a page-root placement without a zone** with a 422 and a translated message (`SharedBlockService.ZONE_REQUIRED`), before anything is written — including the block's localisation into the active locale, which used to happen for a placement that then never landed.
+- **Split options are labelled media-first** — `8/4 (media/content)` where the label read a bare `4/8`, so the ratio reads in the same order as the option's diagram. The stored value is still the content column width, the option keys are unchanged, and the label is now translatable (`SPLIT_RATIO`, shipped in `en` and `nl`). Projects asserting on the old label text in their own tests need updating.
+
 ### Fixed
 
 - **The content column width picker showed the mirror image of the split it produced.** Each option's diagram is a PNG named after what it draws, left to right, and every one puts the media column first — matching `MediaPosition::First`, the default. `ColumnWidthPickerField` built the filename content-first, so picking the option that drew a narrow image beside wide text published a wide image beside narrow text, and the other way round. Only the previews were wrong: `ContentColumns`, the content layout adapter and the rendered page always agreed with each other, so nothing about how a page renders has changed and no stored content is affected.
@@ -14,10 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The CSS fallback diagram, used for splits that ship no PNG, drew its two bars content-first and is now media-first for the same reason.
 
   **Pages laid out through the old picker keep their stored value and still render what that value means** — the fix stops the picker misrepresenting the split, it does not reinterpret content. A page whose author picked by the picture rather than the label is laid out the opposite way round from what they intended, and only its author can say which one they wanted; there is no migration that can tell the two apart.
-
-### Changed
-
-- **Split options are labelled media-first** — `8/4 (media/content)` where the label read a bare `4/8`, so the ratio reads in the same order as the option's diagram. The stored value is still the content column width, the option keys are unchanged, and the label is now translatable (`SPLIT_RATIO`, shipped in `en` and `nl`). Projects asserting on the old label text in their own tests need updating.
 
 ## [6.0.0-beta.4] - 2026-08-24
 

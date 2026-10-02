@@ -95,6 +95,18 @@ class SharedBlockService
         ?int $insertAfterElementID,
         bool $insertAtStart = false,
     ): Result {
+        // Refused here rather than left to the model's own zone rule, which
+        // would only fire on write — after the localiser below has already
+        // given the block content in this locale for a placement that never
+        // lands. The parser cannot do it: it does not know the parent's class.
+        if ($parent instanceof SiteTree && $zone === '') {
+            return Result::fail(new ValidationError(
+                message: 'A shared block placed directly on a page needs a page area.',
+                field: 'zone',
+                key: self::class . '.ZONE_REQUIRED',
+            ));
+        }
+
         // Before validation, not after: a block with no content in the active
         // locale resolves no placement class, so the validator would refuse the
         // placement outright with BLOCK_EMPTY. Placing a block that exists only

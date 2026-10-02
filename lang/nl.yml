@@ -110,6 +110,8 @@ nl:
     TITLE_SETTINGS: Titel
     TITLE_TAG: Titeltag
     UNTITLED: '(zonder titel)'
+    ZONE_MISSING: 'Een blok op het hoogste niveau heeft een paginagebied nodig, maar {type} "{title}" (ID {id}) heeft er geen. Bestaande inhoud zoals deze herstel je met "sake tasks:repair-grid-zone".'
+    ZONE_NOT_ALLOWED: 'Alleen blokken op het hoogste niveau horen bij een paginagebied, maar {type} "{title}" (ID {id}) staat niet direct op een pagina en heeft paginagebied "{zone}".'
     db_ExtraClass: 'Extra class'
     db_ShowTitle: 'Titel tonen'
     db_Sort: Volgorde
@@ -184,6 +186,7 @@ nl:
     NOT_PLACED: 'Alleen een element dat op een pagina staat kan gedeeld worden.'
     UNSHARE_EMPTY_BLOCK: 'Dit blok heeft geen inhoud meer om te behouden. Verwijder het blok en haal de plaatsingen weg.'
     SHARED_NESTING: 'Inhoud binnen een gedeeld blok kan niet nogmaals gedeeld worden.'
+    ZONE_REQUIRED: 'Een gedeeld blok dat direct op een pagina staat, heeft een paginagebied nodig.'
   WeDevelop\Grid\Validation\HierarchyValidationService:
     PAGE_LEVEL_REJECTED: 'Een {element} kan niet op paginaniveau worden geplaatst.'
     PARENT_REJECTED: 'Een {element} kan niet in een {parent} worden geplaatst.'

@@ -10,6 +10,7 @@ use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Core\ClassInfo;
+use SilverStripe\Core\Validation\ValidationResult;
 use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldGroup;
@@ -41,7 +42,7 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
  * @property string $Style
  * @property int $ParentID
  * @property string $ParentClass
- * @property string $Zone
+ * @property string|null $Zone
  * @method DataObject|null Parent()
  * @mixin Versioned
  */
@@ -645,6 +646,57 @@ class GridElement extends DataObject
         );
 
         return $title;
+    }
+
+    /**
+     * Zone is non-empty exactly when this element sits directly on a page.
+     *
+     * Enforced here, on the model, rather than in HierarchyValidationExtension:
+     * that extension passes orphans early and a project may detach it, while
+     * this is an invariant on the element's own column. A root without a zone
+     * renders in no zone at all, and a nested element with one is skipped by
+     * every root read — both used to be stored silently.
+     *
+     * The (string) cast covers NULL: Varchar stores an empty Zone as NULL.
+     */
+    #[Override]
+    public function validate(): ValidationResult
+    {
+        $result = parent::validate();
+        $zone = (string) $this->Zone;
+        $zoneScoped = $this->isZoneScoped();
+
+        if ($zoneScoped && $zone === '') {
+            // Names the repair task because a page publish surfaces this as a
+            // form-level error, with nothing pointing at the offending row.
+            $result->addError(_t(
+                self::class . '.ZONE_MISSING',
+                'A top-level block needs a page area, but {type} "{title}" (ID {id}) has none. '
+                . 'Existing content like this is repaired by running "sake tasks:repair-grid-zone".',
+                $this->zoneMessageParams(),
+            ));
+        }
+
+        if (!$zoneScoped && $zone !== '') {
+            $result->addError(_t(
+                self::class . '.ZONE_NOT_ALLOWED',
+                'Only top-level blocks belong to a page area, but {type} "{title}" (ID {id}) is not directly '
+                . 'on a page and has page area "{zone}".',
+                [...$this->zoneMessageParams(), 'zone' => $zone],
+            ));
+        }
+
+        return $result;
+    }
+
+    /** @return array{type: string, title: string, id: int} */
+    private function zoneMessageParams(): array
+    {
+        return [
+            'type' => $this->getType(),
+            'title' => $this->getDisplayTitle(),
+            'id' => (int) $this->ID,
+        ];
     }
 
     #[Override]
