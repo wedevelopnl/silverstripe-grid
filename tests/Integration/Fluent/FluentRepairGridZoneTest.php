@@ -10,6 +10,8 @@ use SilverStripe\ORM\DB;
 use Symfony\Component\Console\Command\Command;
 use TractorCow\Fluent\Service\CopyToLocaleService;
 use WeDevelop\Grid\Task\OneTime\Beta5\RepairGridZoneTask;
+use WeDevelop\Grid\Task\OneTime\Beta5\StageRow;
+use WeDevelop\Grid\Task\OneTime\Beta5\StageTable;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Tests\Integration\Support\ManipulatesGridZoneTables;
 use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
@@ -20,6 +22,8 @@ use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
  * while resolving the page's zones in a locale the page actually exists in.
  */
 #[CoversClass(RepairGridZoneTask::class)]
+#[CoversClass(StageTable::class)]
+#[CoversClass(StageRow::class)]
 final class FluentRepairGridZoneTest extends FluentGridTestCase
 {
     use ManipulatesGridZoneTables;
