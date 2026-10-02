@@ -60,6 +60,7 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task rector` | Run Rector refactoring (applies changes) |
 | `task rector-dry` | Run Rector in dry-run mode (preview only) |
 | `task class-leak` | Fail on any class in `src/` that nothing references |
+| `task verify-no-toolbar` | Disposable container without the admin toolbar: dev/build + a grid page must return 200 |
 | `task test-e2e` | Run Playwright E2E tests (requires Docker) |
 | `task test-e2e-ui` | Playwright E2E with interactive UI |
 | `task flush` | Clear SilverStripe cache |

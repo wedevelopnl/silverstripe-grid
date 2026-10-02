@@ -18,6 +18,7 @@ src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaEx
 src/Forms/            # Form field implementations (GridEditorField, GridAwareVersionFormFactory) + the library's GridField add control (GridFieldAddSharedBlockButton) and its detail-form handler (SharedBlockItemRequest — the two delete actions)
 src/Migration/        # SS5→SS6 migration (DTOs, strategies, tasks, services); src/Migration/Service/ holds GridMigrationService (orchestration), DraftHierarchyWriter, LivePublisher, PageGridFlagWriter, LegacyPageDiscovery, LegacyElementReader, LegacyDataReader (facade)
 src/Admin/            # ModelAdmin screens (SharedBlockAdmin — the shared block library)
+src/AdminToolbar/     # Optional wedevelopnl/silverstripe-admintoolbar integration (GridMenu — class_exists()-guarded; templates under templates/WeDevelop/Grid/AdminToolbar/, styles in client/src/styles/admin-toolbar-menu.css)
 src/Reports/          # CMS reports (GridElementReport, SharedBlockReport)
 src/Value/            # Value objects, DTOs, and request objects (NodeRef, NodeType, ElementStatus, GridNode, Result, MigrationIdMap, ...)
 src/Service/          # Domain services (GridTreeService, GridNodeMapper, ElementPlacementService, GridElementService, GridSettingsService, GridSettingsResolver, TitleGenerator, RequestBodyParser, ColumnClassResolver, GridAwareDeleteLocalisationPolicy, SharedBlockService, SharedBlockUsageResolver, LocalisedSubtreeCloner, SharedBlockLocaliser)
