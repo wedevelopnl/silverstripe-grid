@@ -89,6 +89,7 @@ final class OrmGridElementRepositoryTest extends SapphireTest
         $sectionOfPage = Section::create();
         $sectionOfPage->ParentID = $parentId;
         $sectionOfPage->ParentClass = Page::class;
+        $sectionOfPage->Zone = 'main';
         $sectionOfPage->write();
 
         $rowOfSection = Row::create();
@@ -101,6 +102,7 @@ final class OrmGridElementRepositoryTest extends SapphireTest
         $sectionOfOtherPage = Section::create();
         $sectionOfOtherPage->ParentID = $parentId + 1;
         $sectionOfOtherPage->ParentClass = Page::class;
+        $sectionOfOtherPage->Zone = 'main';
         $sectionOfOtherPage->write();
 
         // Each query must match the (ParentID, ParentClass) pair, never one alone.

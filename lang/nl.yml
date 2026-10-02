@@ -110,6 +110,8 @@ nl:
     TITLE_SETTINGS: Titel
     TITLE_TAG: Titeltag
     UNTITLED: '(zonder titel)'
+    ZONE_MISSING: 'Een blok op het hoogste niveau heeft een paginagebied nodig, maar {type} "{title}" (ID {id}) heeft er geen. Bestaande inhoud zoals deze herstel je met "sake tasks:repair-grid-zone".'
+    ZONE_NOT_ALLOWED: 'Alleen blokken op het hoogste niveau horen bij een paginagebied, maar {type} "{title}" (ID {id}) staat niet direct op een pagina en heeft paginagebied "{zone}".'
     db_ExtraClass: 'Extra class'
     db_ShowTitle: 'Titel tonen'
     db_Sort: Volgorde
