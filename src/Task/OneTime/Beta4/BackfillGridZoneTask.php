@@ -42,6 +42,9 @@ class BackfillGridZoneTask extends BuildTask
     /** @var list<string> */
     private const array STAGE_SUFFIXES = ['', '_Live', '_Versions'];
 
+    /** A base row (t) still lacking the Zone its legacy row (s) holds. */
+    private const string PENDING_CONDITION = '(t."Zone" IS NULL OR t."Zone" = \'\') AND s."Zone" IS NOT NULL AND s."Zone" != \'\'';
+
     protected static string $commandName = 'backfill-grid-zone';
 
     protected string $title = 'Backfill grid Zone';
@@ -71,24 +74,17 @@ class BackfillGridZoneTask extends BuildTask
 
         $total = 0;
 
-        foreach ([Section::class, SharedBlockReference::class] as $sourceClass) {
-            $source = $schema->tableName($sourceClass);
+        foreach ($this->stagePairs($target) as [$sourceTable, $targetTable, $suffix, $legacyTable]) {
+            if ($sourceTable === null) {
+                $output->writeln(sprintf(
+                    '<comment>No Zone column found for %s — nothing to copy.</comment>',
+                    $legacyTable,
+                ));
 
-            // Unreachable while both classes declare a $table_name; guarded
-            // because tableName() is nullable for classes that do not.
-            if ($source === null) {
                 continue;
             }
 
-            foreach (self::STAGE_SUFFIXES as $suffix) {
-                $sourceTable = $this->resolveSourceTable($source, $suffix, $output);
-
-                if ($sourceTable === null) {
-                    continue;
-                }
-
-                $total += $this->copyStage($sourceTable, $target . $suffix, $suffix, $dryRun, $output);
-            }
+            $total += $this->copyStage($sourceTable, $targetTable, $suffix, $dryRun, $output);
         }
 
         $output->writeln($dryRun
@@ -118,7 +114,7 @@ class BackfillGridZoneTask extends BuildTask
      * Checking only the live name would silently find nothing for Section and
      * strand every page's zone assignment.
      */
-    private function resolveSourceTable(string $baseTable, string $suffix, PolyOutput $output): ?string
+    private function resolveSourceTable(string $baseTable, string $suffix): ?string
     {
         $dbSchema = $this->dbSchema();
 
@@ -132,13 +128,88 @@ class BackfillGridZoneTask extends BuildTask
             }
         }
 
-        $output->writeln(sprintf(
-            '<comment>No Zone column found for %s%s — nothing to copy.</comment>',
-            $baseTable,
-            $suffix,
-        ));
-
         return null;
+    }
+
+    /**
+     * How many base rows still lack a Zone that a legacy source table holds.
+     *
+     * Non-zero means this task has not run yet (or not to completion). Anything
+     * that rewrites base Zones — {@see \WeDevelop\Grid\Task\OneTime\Beta5\RepairGridZoneTask}
+     * — must refuse to run until it is zero: once the base row holds a zone,
+     * this task no longer copies the legacy one over it.
+     *
+     * @return int<0, max>
+     */
+    public function pendingCopyCount(): int
+    {
+        $target = DataObject::getSchema()->tableName(GridElement::class);
+
+        if ($target === null) {
+            return 0;
+        }
+
+        $pending = 0;
+
+        foreach ($this->stagePairs($target) as [$sourceTable, $targetTable, $suffix]) {
+            if ($sourceTable !== null && $this->dbSchema()->hasTable($targetTable)) {
+                $pending += $this->countPending($sourceTable, $targetTable, $suffix);
+            }
+        }
+
+        return $pending;
+    }
+
+    /**
+     * Every (legacy source, base target) table pair, one per root class and
+     * stage: the resolved source (null where no legacy Zone column survives),
+     * the target, the stage suffix, and the source's un-renamed table name.
+     *
+     * @return list<array{string|null, string, string, string}>
+     */
+    private function stagePairs(string $target): array
+    {
+        $pairs = [];
+
+        foreach ([Section::class, SharedBlockReference::class] as $sourceClass) {
+            $source = DataObject::getSchema()->tableName($sourceClass);
+
+            // Unreachable while both classes declare a $table_name; guarded
+            // because tableName() is nullable for classes that do not.
+            if ($source === null) {
+                continue;
+            }
+
+            foreach (self::STAGE_SUFFIXES as $suffix) {
+                $pairs[] = [$this->resolveSourceTable($source, $suffix), $target . $suffix, $suffix, $source . $suffix];
+            }
+        }
+
+        return $pairs;
+    }
+
+    /** @return int<0, max> */
+    private function countPending(string $sourceTable, string $targetTable, string $suffix): int
+    {
+        return max(0, (int) DB::query(sprintf(
+            'SELECT COUNT(*) FROM "%s" s INNER JOIN "%s" t ON %s WHERE %s',
+            $sourceTable,
+            $targetTable,
+            $this->joinCondition($suffix),
+            self::PENDING_CONDITION,
+        ))->value());
+    }
+
+    /**
+     * _Versions rows carry their own surrogate ID; the record they describe
+     * is identified by (RecordID, Version). Joining on ID there would pair
+     * unrelated versions of unrelated elements.
+     */
+    private function joinCondition(string $suffix): string
+    {
+        return $suffix === '_Versions'
+            ? 's."RecordID" = t."RecordID" AND s."Version" = t."Version"'
+            : 's."ID" = t."ID"';
     }
 
     private function copyStage(
@@ -152,22 +223,7 @@ class BackfillGridZoneTask extends BuildTask
             return 0;
         }
 
-        // _Versions rows carry their own surrogate ID; the record they describe
-        // is identified by (RecordID, Version). Joining on ID there would pair
-        // unrelated versions of unrelated elements.
-        $join = $suffix === '_Versions'
-            ? 's."RecordID" = t."RecordID" AND s."Version" = t."Version"'
-            : 's."ID" = t."ID"';
-
-        $where = '(t."Zone" IS NULL OR t."Zone" = \'\') AND s."Zone" IS NOT NULL AND s."Zone" != \'\'';
-
-        $count = (int) DB::query(sprintf(
-            'SELECT COUNT(*) FROM "%s" s INNER JOIN "%s" t ON %s WHERE %s',
-            $sourceTable,
-            $targetTable,
-            $join,
-            $where,
-        ))->value();
+        $count = $this->countPending($sourceTable, $targetTable, $suffix);
 
         if ($count === 0) {
             return 0;
@@ -186,8 +242,8 @@ class BackfillGridZoneTask extends BuildTask
                 'UPDATE "%s" t INNER JOIN "%s" s ON %s SET t."Zone" = s."Zone" WHERE %s',
                 $targetTable,
                 $sourceTable,
-                $join,
-                $where,
+                $this->joinCondition($suffix),
+                self::PENDING_CONDITION,
             ));
         }
 
