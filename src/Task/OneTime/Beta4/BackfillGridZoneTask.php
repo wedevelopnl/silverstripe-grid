@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Task\OneTime\Beta4;
 
 use Override;
+use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Core\ClassInfo;
 use SilverStripe\Dev\BuildTask;
 use SilverStripe\ORM\Connect\DBSchemaManager;
 use SilverStripe\ORM\DataObject;
@@ -29,7 +31,9 @@ use WeDevelop\Grid\Model\SharedBlockReference;
  *
  * Idempotent: it only fills base rows whose Zone is still empty, so a second
  * run is a no-op and an operator who has already re-zoned a page by hand is
- * not overwritten.
+ * not overwritten. Only rows whose parent on that stage is still a page are
+ * filled: anywhere else a zone breaks the rule GridElement::validate()
+ * enforces.
  *
  * The copy is a multi-table UPDATE ... INNER JOIN, which is MySQL syntax —
  * matching the only database this module is developed and tested against. On
@@ -42,8 +46,15 @@ class BackfillGridZoneTask extends BuildTask
     /** @var list<string> */
     private const array STAGE_SUFFIXES = ['', '_Live', '_Versions'];
 
-    /** A base row (t) still lacking the Zone its legacy row (s) holds. */
-    private const string PENDING_CONDITION = '(t."Zone" IS NULL OR t."Zone" = \'\') AND s."Zone" IS NOT NULL AND s."Zone" != \'\'';
+    /**
+     * A base row (t) still lacking the Zone its legacy row (s) holds, and
+     * still directly on a page. An element moved below page level since the
+     * hoist — a Section converted to a shared block's root, a placement moved
+     * into a Column — has a correctly empty Zone that copying would break.
+     * The placeholders take {@see pageClasses()}.
+     */
+    private const string PENDING_CONDITION = '(t."Zone" IS NULL OR t."Zone" = \'\') AND s."Zone" IS NOT NULL AND s."Zone" != \'\''
+        . ' AND t."ParentClass" IN (%s)';
 
     protected static string $commandName = 'backfill-grid-zone';
 
@@ -191,13 +202,33 @@ class BackfillGridZoneTask extends BuildTask
     /** @return int<0, max> */
     private function countPending(string $sourceTable, string $targetTable, string $suffix): int
     {
-        return max(0, (int) DB::query(sprintf(
+        $pageClasses = self::pageClasses();
+
+        return max(0, (int) DB::prepared_query(sprintf(
             'SELECT COUNT(*) FROM "%s" s INNER JOIN "%s" t ON %s WHERE %s',
             $sourceTable,
             $targetTable,
             $this->joinCondition($suffix),
-            self::PENDING_CONDITION,
-        ))->value());
+            $this->pendingCondition($pageClasses),
+        ), $pageClasses)->value());
+    }
+
+    /** @param non-empty-list<string> $pageClasses */
+    private function pendingCondition(array $pageClasses): string
+    {
+        return sprintf(self::PENDING_CONDITION, DB::placeholders($pageClasses));
+    }
+
+    /**
+     * Every SiteTree class, the only parents a zone belongs under. Bound as
+     * an IN list rather than matched by pattern: ParentClass is an ENUM.
+     *
+     * @return non-empty-list<string>
+     */
+    public static function pageClasses(): array
+    {
+        /** @var non-empty-list<string> */
+        return array_values(ClassInfo::subclassesFor(SiteTree::class));
     }
 
     /**
@@ -238,13 +269,15 @@ class BackfillGridZoneTask extends BuildTask
         ));
 
         if (!$dryRun) {
-            DB::query(sprintf(
+            $pageClasses = self::pageClasses();
+
+            DB::prepared_query(sprintf(
                 'UPDATE "%s" t INNER JOIN "%s" s ON %s SET t."Zone" = s."Zone" WHERE %s',
                 $targetTable,
                 $sourceTable,
                 $this->joinCondition($suffix),
-                self::PENDING_CONDITION,
-            ));
+                $this->pendingCondition($pageClasses),
+            ), $pageClasses);
         }
 
         return $count;
