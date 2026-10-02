@@ -61,7 +61,7 @@ class GridMenu extends Menu
     /**
      * Zones in display order: `main` first, the rest alphabetically. A zone
      * without a root the member can view is left out, as are zone-less roots
-     * (they predate zones; see BackfillGridZoneTask). Built once per menu,
+     * (they break the zone rule; sake tasks:repair-grid-zone fixes them). Built once per menu,
      * which lives for one toolbar render.
      *
      * @return ArrayList<ArrayData>
