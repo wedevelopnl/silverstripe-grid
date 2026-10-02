@@ -78,7 +78,9 @@ Legacy `dnadesign/silverstripe-elemental` (or `wedevelopnl/silverstripe-elementa
 
 If you enable Fluent on a site that *already* has grid content, those records will have `LocaleID = 0` and become invisible in every locale. You must assign a locale to them. (If you are coming from an installation that ran Fluent previously, verify your orphaned records really do have `LocaleID = 0` first — records created under a different setup may use other sentinel values.)
 
-Create a `BuildTask` in your project to assign the default locale to unassigned elements:
+Run `sake tasks:repair-grid-zone` first. The recipe below re-saves every element with `write()`, which validates it, and a write is refused while an element's `Zone` does not match its position — a leftover from before that rule. The repair task fixes those rows with raw SQL across every locale and lists the ones it cannot decide; resolve those before continuing.
+
+Then create a `BuildTask` in your project to assign the default locale to unassigned elements:
 
 ```php
 <?php

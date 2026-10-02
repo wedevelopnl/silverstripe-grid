@@ -416,12 +416,13 @@ For field-level tweaks on individual element subclasses, `updateElementFieldMapp
 ## After Migration
 
 1. Run `sake db:build --flush` to make sure the schema is consistent.
-2. Spot-check a handful of migrated pages in the CMS and on the frontend. Pay particular attention to:
+2. Run `sake tasks:repair-grid-zone --dry-run`. Every migrated root should already carry its zone, so this is a check: it should report nothing to repair. If it lists rows, run it without `--dry-run`, and resolve what it leaves for manual review — a page holding such a row cannot be published until then.
+3. Spot-check a handful of migrated pages in the CMS and on the frontend. Pay particular attention to:
    - Section and Row titles (Sections are always created untitled).
    - Elements that shared grid settings and now share a parent Column.
    - Media blocks that relied on Bootstrap CSS classes for alignment or ordering.
-3. Review the log output for `warning` entries — each one corresponds to a clamp, an unresolved mapping, or a `customSectionClass` conflict resolved by Strategy B.
-4. Once you are satisfied, drop the legacy tables manually (`BaseElement`, `BaseElement_Live`, `ElementRow`, `ElementRow_Live`, `ElementContent`, `ElementContent_Live`, `ElementalArea`, `ElementalArea_Live`, and any legacy subclass tables) in a separate migration step.
+4. Review the log output for `warning` entries — each one corresponds to a clamp, an unresolved mapping, or a `customSectionClass` conflict resolved by Strategy B.
+5. Once you are satisfied, drop the legacy tables manually (`BaseElement`, `BaseElement_Live`, `ElementRow`, `ElementRow_Live`, `ElementContent`, `ElementContent_Live`, `ElementalArea`, `ElementalArea_Live`, and any legacy subclass tables) in a separate migration step.
 
 ## Related Migrations
 
