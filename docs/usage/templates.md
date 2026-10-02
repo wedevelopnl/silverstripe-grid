@@ -190,6 +190,21 @@ When `BlockMediaExtension` is applied to a content element, the template receive
 
 The include handles image/video discrimination, aspect-ratio wrapping, captions, and responsive image sizing via the grid adapter's `getContainerMaxWidth()` + `getColumnPixelWidth()` methods. Override the include's template in your theme to customise wrapping markup; `BlockMediaExtension` itself doesn't need to change.
 
+## Admin toolbar menu
+
+With [`wedevelopnl/silverstripe-admintoolbar`](https://packagist.org/packages/wedevelopnl/silverstripe-admintoolbar) installed, the front-end toolbar gains a **Grid** menu. It maps the current page's grid zone by zone — sections, rows, columns drawn at their default widths, content elements and shared-block placements — with a link to each item's editor. A placement is one item and links to its block in the shared-block library.
+
+- Nothing to configure: the toolbar discovers the menu on its own. Render `$AdminToolbar` in your page template as the toolbar's README describes. Without the toolbar the module needs nothing and the menu simply does not exist.
+- The menu shows only to members the toolbar shows itself to, and only on pages that use the grid by the same rule the CMS editor applies: always, unless the page type enables the [editor toggle](#per-page-editor-toggle) and `UseGrid` is off. It is left out when the member can view no element on the page.
+- Elements the member cannot view are left out; links appear only where the member can edit. With more than one zone, each gets a heading, `main` first.
+- The menu's styles ship as `client/dist/styles/admin-toolbar-menu.css` and build on the toolbar's own `--ssat-*` custom properties, so it follows the toolbar's look.
+- To switch it off:
+
+  ```yaml
+  WeDevelop\Grid\AdminToolbar\GridMenu:
+    enabled: false
+  ```
+
 ## Frontend asset pipeline
 
 The module ships a compiled bundle at `client/dist/` (exposed via composer's `extra.expose`). CMS pages serve it automatically. Project-level CSS is outside the module's scope — import the shipped CSS variables and ship your own styles.

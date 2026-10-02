@@ -53,6 +53,7 @@ Optional:
 
 - `silverstripe/reports` — adds the Grid Elements and Shared Blocks reports to CMS Reports
 - `tractorcow/silverstripe-fluent` — multi-locale support, one isolated grid per locale ([guide](docs/fluent.md))
+- `wedevelopnl/silverstripe-admintoolbar` — adds a Grid menu to the front-end admin toolbar, mapping the page's grid with edit links ([guide](docs/usage/templates.md#admin-toolbar-menu))
 
 > **Conflict:** this module conflicts with `dnadesign/silverstripe-elemental` and replaces its functionality. Coming from Elemental? See the [migration guide](docs/migration.md).
 

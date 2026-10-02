@@ -22,6 +22,7 @@ applyTo: "**/*"
 
 ## SilverStripe 6
 
+- **A class extending an OPTIONAL dependency's type needs a `class_exists()` guard before its declaration**: the config manifest's `PrivateStaticTransformer` calls `class_exists()` on every manifest class, which autoloads the file, so an unguarded `extends` of a missing class fatals on flush. `src/AdminToolbar/GridMenu.php` returns early when `WeDevelop\AdminToolbar\Model\Menu` is absent; do the same for any test support class extending or implementing a toolbar type. `task verify-no-toolbar` (CI, Static Analysis job) proves it.
 - **Overriding an inherited action requires re-listing it in the subclass's `allowed_actions`**: `RequestHandler::checkAccessAction()` reads the UNINHERITED `allowed_actions` of the class that DECLARES the method, so an override that only delegates to `parent::` still 403s — along with every nested route under it. `SharedBlockItemRequest` lists `ItemEditForm` for this reason.
 
 - **Extension config access**: Extensions cannot use `static::config()` in SS6 — use `$this->getOwner()->config()->get('key')` instead
