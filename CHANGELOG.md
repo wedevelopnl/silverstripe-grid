@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   The CSS fallback diagram, used for splits that ship no PNG, drew its two bars content-first and is now media-first for the same reason.
 
+- **JS mutation testing ran no tests per mutant** ([#489](https://github.com/wedevelopnl/silverstripe-grid/issues/489)) — `@stryker-mutator/vitest-runner` 10.0.0 does not support Vitest 5: the initial run maps the tests, then every mutant run executes none, so every mutant survived and the score read 0. `vitest` and `@vitest/coverage-v8` go back to `^4.1.11`, and Dependabot holds their major until a runner release supports Vitest 5. CI never ran Stryker, which is how this went unnoticed; the JavaScript QA job now mutates one file (`applyReorder.ts`) and fails on the break threshold when its mutants stop being killed.
+
   **Pages laid out through the old picker keep their stored value and still render what that value means** — the fix stops the picker misrepresenting the split, it does not reinterpret content. A page whose author picked by the picture rather than the label is laid out the opposite way round from what they intended, and only its author can say which one they wanted; there is no migration that can tell the two apart.
 
 ### Changed
