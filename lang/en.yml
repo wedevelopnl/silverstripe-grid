@@ -111,6 +111,8 @@ en:
     TITLE_SETTINGS: Title
     TITLE_TAG: 'Title tag'
     UNTITLED: (untitled)
+    ZONE_MISSING: 'A top-level block needs a page area, but {type} "{title}" (ID {id}) has none. Existing content like this is repaired by running "sake tasks:repair-grid-zone".'
+    ZONE_NOT_ALLOWED: 'Only top-level blocks belong to a page area, but {type} "{title}" (ID {id}) is not directly on a page and has page area "{zone}".'
     db_ExtraClass: 'Extra class'
     db_ShowTitle: 'Show title'
     db_Sort: Sort
