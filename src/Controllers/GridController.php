@@ -21,11 +21,11 @@ use WeDevelop\Grid\Value\GridTree;
 use WeDevelop\Grid\Value\NodeRef;
 use WeDevelop\Grid\Value\NodeType;
 use WeDevelop\Grid\Value\ValidationErrorCode;
-use WeDevelop\Grid\Forms\GridEditorField;
 use WeDevelop\Grid\Service\ElementPlacementService;
 use WeDevelop\Grid\Service\GridElementService;
 use WeDevelop\Grid\Service\GridSettingsService;
 use WeDevelop\Grid\Service\GridTreeService;
+use WeDevelop\Grid\Service\GridZoneResolver;
 
 /**
  * The JSON API for a page's grid: reading a zone's tree and every operation on
@@ -47,6 +47,7 @@ class GridController extends GridApiController
         'gridAdapter' => '%$' . GridAdapterInterface::class,
         'elementService' => '%$' . GridElementService::class,
         'settingsService' => '%$' . GridSettingsService::class,
+        'zoneResolver' => '%$' . GridZoneResolver::class,
     ];
 
     public GridTreeService $treeService;
@@ -58,6 +59,8 @@ class GridController extends GridApiController
     public GridElementService $elementService;
 
     public GridSettingsService $settingsService;
+
+    public GridZoneResolver $zoneResolver;
 
     /** @var array<string, string> */
     private static array $url_handlers = [
@@ -644,17 +647,7 @@ class GridController extends GridApiController
             $this->jsonError(403);
         }
 
-        $fields = $page->getCMSFields();
-
-        /** @var list<non-empty-string> $zones */
-        $zones = [];
-        foreach ($fields->flattenFields() as $field) {
-            if ($field instanceof GridEditorField) {
-                $zones[] = $field->getZone();
-            }
-        }
-
-        return $this->jsonSuccess(200, array_values(array_unique($zones)));
+        return $this->jsonSuccess(200, $this->zoneResolver->zonesFor($page));
     }
 
     /**
