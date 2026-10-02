@@ -73,6 +73,7 @@ final class FixtureEndpointTest extends FunctionalTest
         self::assertContains('element-tree', $names);
         self::assertContains('empty-page', $names);
         self::assertContains('multi-zone', $names);
+        self::assertContains('grid-page', $names);
     }
 
     public function testResetRemovesLoadedGridFixtures(): void

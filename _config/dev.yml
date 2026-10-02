@@ -76,6 +76,15 @@ WeDevelop\E2e\Fixtures\FixtureLoader:
         - action: publish_recursive
           class: 'App\MultiZonePage'
           identifier: e2e_multi_zone_page
+    grid-page:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/GridPage.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_grid
+        - action: publish_recursive
+          class: 'WeDevelop\Grid\Model\SharedBlock'
+          identifier: e2e_banner
     content-elements:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/ContentElements.yml'
       post_actions:
