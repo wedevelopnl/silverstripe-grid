@@ -86,6 +86,22 @@ trait ManipulatesGridZoneTables
         )->value();
     }
 
+    /** @return list<int> The Sort of each of an element's history rows, oldest first. */
+    private function versionSortsOf(int $elementId): array
+    {
+        $sorts = [];
+        $query = DB::prepared_query(
+            sprintf('SELECT "Sort" FROM "%s_Versions" WHERE "RecordID" = ? ORDER BY "Version" ASC', self::GRID_ELEMENT_TABLE),
+            [$elementId],
+        );
+
+        foreach ($query as $row) {
+            $sorts[] = (int) $row['Sort'];
+        }
+
+        return $sorts;
+    }
+
     /**
      * Overwrites the Zone of an element's row on one stage table, or of every
      * one of its history rows for '_Versions'.
