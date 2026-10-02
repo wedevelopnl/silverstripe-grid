@@ -323,6 +323,22 @@ final class FluentSharedBlockTest extends FluentGridTestCase
         self::assertSame(1, $this->rootCount($block), 'the block gained Dutch content');
     }
 
+    public function testRefusingAPageRootPlacementWithoutAZoneLocalisesNothing(): void
+    {
+        // The refusal must precede the localiser: a placement that is never
+        // stored must not leave the block with content in a new locale.
+        $block = $this->populatedBlock();
+
+        FluentState::singleton()->setLocale('nl_NL');
+        $page = $this->createPage('Dutch page');
+
+        $result = Injector::inst()->get(SharedBlockService::class)
+            ->place($block, $page, '', null);
+
+        self::assertTrue($result->isErr());
+        self::assertSame(0, $this->rootCount($block), 'the block gained no Dutch content');
+    }
+
     public function testPlacingTheSameBlockTwiceInALocaleAddsOneSubtree(): void
     {
         $block = $this->populatedBlock();

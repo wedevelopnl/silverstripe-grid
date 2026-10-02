@@ -186,6 +186,7 @@ en:
     UNSHARE_EMPTY_BLOCK: 'This block has no content left to keep. Delete it and remove the placements instead.'
     NOT_PLACED: 'Only an element that sits on a page can be shared.'
     SHARED_NESTING: 'Content inside a shared block cannot be shared again.'
+    ZONE_REQUIRED: 'A shared block placed directly on a page needs a page area.'
   WeDevelop\Grid\Validation\HierarchyValidationService:
     PAGE_LEVEL_REJECTED: 'A {element} cannot be placed at the page level.'
     PARENT_REJECTED: 'A {element} cannot be placed inside a {parent}.'
