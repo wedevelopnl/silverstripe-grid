@@ -17,6 +17,8 @@ use WeDevelop\Grid\Model\SharedBlock;
 use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Task\OneTime\Beta4\BackfillGridZoneTask;
 use WeDevelop\Grid\Task\OneTime\Beta5\RepairGridZoneTask;
+use WeDevelop\Grid\Task\OneTime\Beta5\StageRow;
+use WeDevelop\Grid\Task\OneTime\Beta5\StageTable;
 use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\FieldsFailingTestPage;
@@ -33,6 +35,8 @@ use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
  * the only way left to reach those states.
  */
 #[CoversClass(RepairGridZoneTask::class)]
+#[CoversClass(StageTable::class)]
+#[CoversClass(StageRow::class)]
 #[CoversClass(BackfillGridZoneTask::class)]
 final class RepairGridZoneTaskTest extends SapphireTest
 {
