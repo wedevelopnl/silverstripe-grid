@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Extensions;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Page;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
@@ -213,6 +214,25 @@ final class GridPageExtensionTest extends SapphireTest
         self::assertNull($fields->dataFieldByName('GridEditor'), 'GridEditor should not be present when grid is disabled');
         self::assertNull($fields->dataFieldByName('Sections'), 'Sections relation field should always be removed');
         self::assertInstanceOf(CheckboxField::class, $fields->dataFieldByName('UseGrid'));
+    }
+
+    /** @return iterable<string, array{bool, bool, bool}> */
+    public static function usesGridCases(): iterable
+    {
+        yield 'toggle disabled ignores a stored UseGrid=false' => [false, false, true];
+        yield 'toggle enabled honours UseGrid=false' => [true, false, false];
+        yield 'toggle enabled honours UseGrid=true' => [true, true, true];
+    }
+
+    #[DataProvider('usesGridCases')]
+    public function testUsesGridFollowsTheEditorToggle(bool $toggle, bool $useGrid, bool $expected): void
+    {
+        Config::modify()->set(Page::class, 'enable_editor_toggle', $toggle);
+
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $page->UseGrid = $useGrid;
+
+        self::assertSame($expected, $page->usesGrid());
     }
 
     public function testGridEditorFieldIsInsideRootMainTab(): void

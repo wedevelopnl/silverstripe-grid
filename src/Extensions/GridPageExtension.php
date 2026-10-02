@@ -112,6 +112,17 @@ class GridPageExtension extends Extension
         $owner->UseGrid = $useGrid;
     }
 
+    /** A stored `UseGrid` counts only while the editor toggle is enabled; it is not, by default. */
+    public function usesGrid(): bool
+    {
+        $owner = $this->getOwner();
+
+        /** @var bool $enableToggle */
+        $enableToggle = $owner->config()->get('enable_editor_toggle');
+
+        return !$enableToggle || (bool) $owner->UseGrid;
+    }
+
     public function updateCMSFields(FieldList $fields): void
     {
         $owner = $this->getOwner();
@@ -122,9 +133,8 @@ class GridPageExtension extends Extension
 
         /** @var bool $enableToggle */
         $enableToggle = $owner->config()->get('enable_editor_toggle');
-        $useGrid = !$enableToggle || (bool) $owner->UseGrid;
 
-        if ($useGrid) {
+        if ($this->usesGrid()) {
             $fields->removeByName('Content');
             $fields->insertAfter(
                 'MenuTitle',
