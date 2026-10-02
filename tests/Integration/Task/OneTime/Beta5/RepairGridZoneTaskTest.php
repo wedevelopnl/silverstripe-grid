@@ -271,6 +271,27 @@ final class RepairGridZoneTaskTest extends SapphireTest
         );
     }
 
+    public function testRunsWhenTheOnlyLegacyZoneBelongsToAnElementNoLongerOnAPage(): void
+    {
+        // The section had zone "main" before the beta4 hoist and was converted
+        // to a shared block's root afterwards, which correctly cleared its
+        // base zone. Counting it as an uncopied legacy zone blocked the repair,
+        // and copying it made the backfill break the rule the repair enforces
+        // — each task undoing the other.
+        $blockRoot = GridTreeFactory::section(GridTreeFactory::sharedBlock());
+        $this->seedObsoleteTable(self::OBSOLETE_SECTION_TABLE, [(int) $blockRoot->ID => 'main']);
+
+        $repair = $this->runTask();
+        $backfill = TaskRunner::run(BackfillGridZoneTask::singleton(), []);
+        $secondRepair = $this->runTask();
+
+        self::assertSame(Command::SUCCESS, $repair['exitCode'], 'the repair runs instead of refusing');
+        self::assertStringContainsString('Done: 0 row(s) updated.', $backfill['output'], 'the backfill leaves it alone');
+        self::assertSame(Command::SUCCESS, $secondRepair['exitCode']);
+        self::assertStringContainsString('Done: 0 row(s) repaired, 0 row(s) left for manual review.', $secondRepair['output']);
+        self::assertSame('', $this->zoneOf((int) $blockRoot->ID));
+    }
+
     public function testLeavesARootOnAPageWithSeveralZonesForManualReview(): void
     {
         $page = $this->multiZonePage();

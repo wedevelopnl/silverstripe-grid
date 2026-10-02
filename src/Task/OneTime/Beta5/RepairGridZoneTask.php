@@ -134,7 +134,7 @@ class RepairGridZoneTask extends BuildTask
     /** Zoned rows whose parent is not a page: clear the zone where the parent class still exists. */
     private function clearMisplacedZones(StageTable $table, bool $dryRun, PolyOutput $output): int
     {
-        $pageClasses = $this->pageClasses();
+        $pageClasses = BackfillGridZoneTask::pageClasses();
         $rows = $table->select(
             sprintf(
                 '"Zone" IS NOT NULL AND "Zone" != \'\' AND ("ParentClass" IS NULL OR "ParentClass" NOT IN (%s))',
@@ -178,7 +178,7 @@ class RepairGridZoneTask extends BuildTask
     /** Zone-less rows directly on a page: give them the page's zone when it has exactly one. */
     private function assignMissingZones(StageTable $table, bool $dryRun, PolyOutput $output): int
     {
-        $pageClasses = $this->pageClasses();
+        $pageClasses = BackfillGridZoneTask::pageClasses();
         $rows = $table->select(
             sprintf('("Zone" IS NULL OR "Zone" = \'\') AND "ParentClass" IN (%s)', DB::placeholders($pageClasses)),
             $pageClasses,
@@ -344,13 +344,6 @@ class RepairGridZoneTask extends BuildTask
         $page = $this->draftPage($pageId);
 
         return $page !== null && $page->hasExtension(GridPageExtension::class) && !$page->usesGrid();
-    }
-
-    /** @return non-empty-list<string> Every SiteTree class, the only parents a zone belongs under. */
-    private function pageClasses(): array
-    {
-        /** @var non-empty-list<string> */
-        return array_values(ClassInfo::subclassesFor(SiteTree::class));
     }
 
     private function report(int $repaired, bool $dryRun, PolyOutput $output): void
