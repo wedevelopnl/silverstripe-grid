@@ -10,6 +10,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
@@ -108,6 +109,28 @@ final class GridElementZoneRuleTest extends SapphireTest
         self::assertSame('', (string) $tree['content']->Zone);
     }
 
+    public function testRefusesToPublishARootThatLostItsZone(): void
+    {
+        // The draft write that stored this row predates the rule, so only the
+        // LIVE write of the publish can still catch it.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $section = GridTreeFactory::section($page, title: 'Under test');
+        DB::prepared_query('UPDATE "WeDevelop_Grid_GridElement" SET "Zone" = NULL WHERE "ID" = ?', [$section->ID]);
+
+        try {
+            $page->publishRecursive();
+            self::fail('The publish was expected to be refused.');
+        } catch (ValidationException $exception) {
+            self::assertSame(
+                [$this->expectedMessage(self::MISSING, Section::class, null, (int) $section->ID)],
+                array_column($exception->getResult()->getMessages(), 'message'),
+            );
+        }
+
+        $live = Versioned::get_by_stage(Section::class, Versioned::LIVE)->byID($section->ID);
+        self::assertNull($live, 'the zone-less root never reaches live');
+    }
+
     private function parentOfKind(string $kind): DataObject
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -122,20 +145,22 @@ final class GridElementZoneRuleTest extends SapphireTest
     }
 
     /** @param class-string<GridElement> $class */
-    private function expectedMessage(string $expected, string $class, ?string $zone): string
+    private function expectedMessage(string $expected, string $class, ?string $zone, int $id = 0): string
     {
         $type = $class::singleton()->getType();
 
         return $expected === self::MISSING
             ? sprintf(
-                'A top-level block needs a page area, but %s "Under test" (ID 0) has none. '
+                'A top-level block needs a page area, but %s "Under test" (ID %d) has none. '
                 . 'Existing content like this is repaired by running "sake tasks:repair-grid-zone".',
                 $type,
+                $id,
             )
             : sprintf(
-                'Only top-level blocks belong to a page area, but %s "Under test" (ID 0) is not directly '
+                'Only top-level blocks belong to a page area, but %s "Under test" (ID %d) is not directly '
                 . 'on a page and has page area "%s".',
                 $type,
+                $id,
                 $zone,
             );
     }
