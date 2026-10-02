@@ -13,6 +13,7 @@ use Symfony\Component\Console\Command\Command;
 use WeDevelop\Grid\Task\OneTime\Beta4\BackfillGridZoneTask;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Tests\Integration\Support\ManipulatesGridZoneTables;
 use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 
 /**
@@ -32,17 +33,13 @@ use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 final class BackfillGridZoneTaskTest extends SapphireTest
 {
     use DisablesAutoScaffolding;
-
-    private const string BASE_TABLE = 'WeDevelop_Grid_GridElement';
+    use ManipulatesGridZoneTables;
 
     private const string OBSOLETE_SECTION_TABLE = '_obsolete_WeDevelop_Grid_Section';
 
     private const string REFERENCE_TABLE = 'WeDevelop_Grid_SharedBlockReference';
 
     protected static $fixture_file = __DIR__ . '/../../../Fixture/page.yml';
-
-    /** @var list<string> */
-    private array $droppableTables = [];
 
     private bool $addedReferenceZoneColumn = false;
 
@@ -56,10 +53,7 @@ final class BackfillGridZoneTaskTest extends SapphireTest
 
     protected function tearDown(): void
     {
-        foreach ($this->droppableTables as $table) {
-            DB::query(sprintf('DROP TABLE IF EXISTS "%s"', $table));
-        }
-        $this->droppableTables = [];
+        $this->dropSeededTables();
 
         if ($this->addedReferenceZoneColumn) {
             DB::query(sprintf('ALTER TABLE "%s" DROP COLUMN "Zone"', self::REFERENCE_TABLE));
@@ -67,22 +61,6 @@ final class BackfillGridZoneTaskTest extends SapphireTest
         }
 
         parent::tearDown();
-    }
-
-    /**
-     * The shape left behind when a vacated subclass table is renamed whole.
-     *
-     * @param array<int, string> $zonesById
-     */
-    private function seedObsoleteTable(string $table, array $zonesById): void
-    {
-        DB::query(sprintf('DROP TABLE IF EXISTS "%s"', $table));
-        DB::query(sprintf('CREATE TABLE "%s" ("ID" INT NOT NULL, "Zone" VARCHAR(50), PRIMARY KEY ("ID"))', $table));
-        $this->droppableTables[] = $table;
-
-        foreach ($zonesById as $id => $zone) {
-            DB::prepared_query(sprintf('INSERT INTO "%s" ("ID", "Zone") VALUES (?, ?)', $table), [$id, $zone]);
-        }
     }
 
     /**
@@ -131,46 +109,6 @@ final class BackfillGridZoneTaskTest extends SapphireTest
         }
     }
 
-    /** @return list<array{Version: int}> */
-    private function versionRowsFor(int $elementId): array
-    {
-        $rows = [];
-        $query = DB::prepared_query(
-            sprintf('SELECT "Version" FROM "%s" WHERE "RecordID" = ? ORDER BY "Version" ASC', self::BASE_TABLE . '_Versions'),
-            [$elementId],
-        );
-
-        foreach ($query as $row) {
-            $rows[] = ['Version' => (int) $row['Version']];
-        }
-
-        return $rows;
-    }
-
-    private function versionZoneOf(int $elementId, int $version): string
-    {
-        return (string) DB::prepared_query(
-            sprintf('SELECT "Zone" FROM "%s" WHERE "RecordID" = ? AND "Version" = ?', self::BASE_TABLE . '_Versions'),
-            [$elementId, $version],
-        )->value();
-    }
-
-    private function blankBaseZone(int $elementId): void
-    {
-        DB::prepared_query(
-            sprintf('UPDATE "%s" SET "Zone" = \'\' WHERE "ID" = ?', self::BASE_TABLE),
-            [$elementId],
-        );
-    }
-
-    private function baseZoneOf(int $elementId): string
-    {
-        return (string) DB::prepared_query(
-            sprintf('SELECT "Zone" FROM "%s" WHERE "ID" = ?', self::BASE_TABLE),
-            [$elementId],
-        )->value();
-    }
-
     /** @return array{exitCode: int, output: string} */
     private function runTask(bool $dryRun = false): array
     {
@@ -183,13 +121,13 @@ final class BackfillGridZoneTaskTest extends SapphireTest
         $section = GridTreeFactory::section($page, zone: 'main');
         $sectionId = (int) $section->ID;
 
-        $this->blankBaseZone($sectionId);
+        $this->setZone($sectionId, '');
         $this->seedObsoleteTable(self::OBSOLETE_SECTION_TABLE, [$sectionId => 'main']);
 
         $result = $this->runTask();
 
         self::assertSame(Command::SUCCESS, $result['exitCode']);
-        self::assertSame('main', $this->baseZoneOf($sectionId));
+        self::assertSame('main', $this->zoneOf($sectionId));
     }
 
     public function testCopiesZoneFromASurvivingTableWithAnOrphanedColumn(): void
@@ -200,12 +138,12 @@ final class BackfillGridZoneTaskTest extends SapphireTest
         $reference = GridTreeFactory::reference($page, $block, zone: 'sidebar');
         $referenceId = (int) $reference->ID;
 
-        $this->blankBaseZone($referenceId);
+        $this->setZone($referenceId, '');
         $this->orphanZoneColumnOnReferenceTable([$referenceId => 'sidebar']);
 
         $this->runTask();
 
-        self::assertSame('sidebar', $this->baseZoneOf($referenceId));
+        self::assertSame('sidebar', $this->zoneOf($referenceId));
     }
 
     public function testCopiesZonePerVersionRowNotPerRecord(): void
@@ -225,10 +163,7 @@ final class BackfillGridZoneTaskTest extends SapphireTest
         $versions = $this->versionRowsFor($sectionId);
         self::assertCount(2, $versions, 'precondition: the section has two versions');
 
-        DB::prepared_query(
-            sprintf('UPDATE "%s" SET "Zone" = \'\' WHERE "RecordID" = ?', self::BASE_TABLE . '_Versions'),
-            [$sectionId],
-        );
+        $this->setZone($sectionId, '', '_Versions');
 
         $this->seedObsoleteVersionsTable(self::OBSOLETE_SECTION_TABLE . '_Versions', [
             ['RecordID' => $sectionId, 'Version' => $versions[0]['Version'], 'Zone' => 'main'],
@@ -253,7 +188,7 @@ final class BackfillGridZoneTaskTest extends SapphireTest
 
         $this->runTask();
 
-        self::assertSame('sidebar', $this->baseZoneOf($sectionId));
+        self::assertSame('sidebar', $this->zoneOf($sectionId));
     }
 
     public function testIsIdempotent(): void
@@ -262,13 +197,13 @@ final class BackfillGridZoneTaskTest extends SapphireTest
         $section = GridTreeFactory::section($page, zone: 'main');
         $sectionId = (int) $section->ID;
 
-        $this->blankBaseZone($sectionId);
+        $this->setZone($sectionId, '');
         $this->seedObsoleteTable(self::OBSOLETE_SECTION_TABLE, [$sectionId => 'main']);
 
         $this->runTask();
         $secondRun = $this->runTask();
 
-        self::assertSame('main', $this->baseZoneOf($sectionId));
+        self::assertSame('main', $this->zoneOf($sectionId));
         self::assertStringContainsString('0 row(s) updated', $secondRun['output']);
     }
 
@@ -278,12 +213,12 @@ final class BackfillGridZoneTaskTest extends SapphireTest
         $section = GridTreeFactory::section($page, zone: 'main');
         $sectionId = (int) $section->ID;
 
-        $this->blankBaseZone($sectionId);
+        $this->setZone($sectionId, '');
         $this->seedObsoleteTable(self::OBSOLETE_SECTION_TABLE, [$sectionId => 'main']);
 
         $result = $this->runTask(dryRun: true);
 
-        self::assertSame('', $this->baseZoneOf($sectionId), 'a dry run must not write');
+        self::assertSame('', $this->zoneOf($sectionId), 'a dry run must not write');
         self::assertStringContainsString('1 row(s) would be updated', $result['output']);
     }
 
@@ -297,7 +232,7 @@ final class BackfillGridZoneTaskTest extends SapphireTest
         $result = $this->runTask();
 
         self::assertSame(Command::SUCCESS, $result['exitCode']);
-        self::assertSame('main', $this->baseZoneOf((int) $section->ID));
+        self::assertSame('main', $this->zoneOf((int) $section->ID));
         self::assertStringContainsString('0 row(s) updated', $result['output']);
     }
 }
