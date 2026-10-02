@@ -164,6 +164,21 @@ final class RepairGridZoneTaskTest extends SapphireTest
         return $rows;
     }
 
+    /** @return array{string, string} The element's draft and live zone. */
+    private function zonesOnEveryStage(GridElement $element): array
+    {
+        return [$this->zoneOf((int) $element->ID), $this->zoneOf((int) $element->ID, '_Live')];
+    }
+
+    /** @return list<string> The zone of each of the element's history rows, oldest first. */
+    private function historyZonesOf(GridElement $element): array
+    {
+        return array_map(
+            fn (array $row): string => $this->versionZoneOf((int) $element->ID, $row['Version']),
+            $this->versionRowsFor((int) $element->ID),
+        );
+    }
+
     private static function setLine(GridElement $element, string $stage, DataObject $page, bool $dryRun = false): string
     {
         return sprintf(
@@ -248,27 +263,38 @@ final class RepairGridZoneTaskTest extends SapphireTest
         }
     }
 
-    public function testClearsTheZoneOfEveryElementNotDirectlyOnAPage(): void
+    public function testClearsTheZoneOfEveryElementNotDirectlyOnAPageOnEveryStage(): void
     {
         $page = $this->page();
         $tree = GridTreeFactory::treeFor($page);
-        $blockRoot = GridTreeFactory::section(GridTreeFactory::sharedBlock());
+        $page->publishRecursive();
+        $block = GridTreeFactory::sharedBlock();
+        $blockRoot = GridTreeFactory::section($block);
+        $block->publishRecursive();
+        $nested = [$tree['row'], $tree['column'], $tree['content'], $blockRoot];
 
-        foreach ([$tree['row'], $tree['column'], $tree['content'], $blockRoot] as $element) {
-            $this->corruptZone($element, 'main');
+        foreach ($nested as $element) {
+            $this->corruptZone($element, 'main', ['', '_Live', '_Versions']);
         }
 
         $result = $this->runTask();
 
         self::assertSame(Command::SUCCESS, $result['exitCode']);
-        foreach ([$tree['row'], $tree['column'], $tree['content'], $blockRoot] as $element) {
-            self::assertSame('', $this->zoneOf((int) $element->ID), $element::class . ' loses its zone');
+        foreach ($nested as $element) {
+            self::assertSame(['', ''], $this->zonesOnEveryStage($element), $element::class . ' loses its zone on draft and live');
+            self::assertSame(
+                array_fill(0, count($this->versionRowsFor((int) $element->ID)), ''),
+                $this->historyZonesOf($element),
+                $element::class . ' loses its zone on every history row',
+            );
         }
-        self::assertSame('main', $this->zoneOf((int) $tree['section']->ID), 'the root keeps its zone');
-        self::assertStringContainsString(
-            sprintf('Cleared zone "main" on %s #%d (draft), parent %s #%d', $blockRoot::class, $blockRoot->ID, SharedBlock::class, $blockRoot->ParentID),
-            $result['output'],
-        );
+        self::assertSame(['main', 'main'], $this->zonesOnEveryStage($tree['section']), 'the root keeps its zone');
+        foreach (['draft', 'live', 'history, version 1'] as $stage) {
+            self::assertStringContainsString(
+                sprintf('Cleared zone "main" on %s #%d (%s), parent %s #%d', $blockRoot::class, $blockRoot->ID, $stage, SharedBlock::class, $blockRoot->ParentID),
+                $result['output'],
+            );
+        }
     }
 
     public function testRunsWhenTheOnlyLegacyZoneBelongsToAnElementNoLongerOnAPage(): void
