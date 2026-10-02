@@ -47,6 +47,13 @@ jobs:
       # branches 85, functions 90, lines 90) — without it the JS gate only
       # exists locally while PHP QA carries a CI-enforced 90% gate.
       - run: npx vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
+      - name: Mutation testing smoke probe
+        # The full Stryker run is too slow for CI, which let a runner that
+        # executed no tests per mutant go unnoticed (#489): every mutant
+        # survived and the score read 0. One well-tested file is enough to
+        # prove mutants still get killed; the break threshold in
+        # stryker.config.mjs fails the step when they don't.
+        run: npx stryker run --mutate client/src/js/utils/applyReorder.ts --reporters clear-text
       - name: Verify generated files are up to date
         # `npm run build` regenerates client/dist and (via i18n:collect) client/lang;
         # both are committed artifacts. `git diff` only sees tracked paths, so a
