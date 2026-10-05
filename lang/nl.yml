@@ -7,37 +7,43 @@ nl:
     ALIGN_CENTER: Midden
     ALIGN_TOP: Boven
     CONTENT_COLUMNS: 'Breedte van inhoudskolom'
-    CUSTOM_VIDEO_THUMBNAIL: 'Aangepaste videothumbnail'
     FULL_WIDTH: 'Volle breedte (niet naast elkaar)'
     GAP_SIZE: Tussenruimte
     LAYOUT_TAB: Layout
-    MEDIA_CAPTION: Bijschrift
     MEDIA_POSITION: 'Positie van media'
-    MEDIA_RATIO: Beeldverhouding
-    MEDIA_TAB: Media
-    OVERWRITES_DEFAULT_THUMBNAIL: 'Dit overschrijft de standaardthumbnail van het videoplatform'
     POSITION_FIRST: 'Voor de inhoud'
     POSITION_LAST: 'Na de inhoud'
     POSITION_LAST_DESKTOP: 'Na de inhoud op desktop'
+    SPLIT_RATIO: '{media}/{content} (media/inhoud)'
+    VERTICAL_ALIGNMENT: 'Verticale uitlijning'
+    db_ContentColumns: 'Inhoudskolommen'
+    db_GapSize: Tussenruimte
+    db_MediaPosition: 'Positie van media'
+    db_VerticalAlignment: 'Verticale uitlijning'
+  WeDevelop\Grid\Extensions\GridPageExtension:
+    USE_GRID: 'Gebruik grid op deze pagina'
+    USE_GRID_DESCRIPTION: 'Sla de pagina op nadat je deze instelling hebt gewijzigd'
+    db_UseGrid: 'Gebruik grid'
+    has_many_Sections: Secties
+  WeDevelop\Grid\Extensions\MediaExtension:
+    CUSTOM_VIDEO_THUMBNAIL: 'Aangepaste videothumbnail'
+    MEDIA_CAPTION: Bijschrift
+    MEDIA_RATIO: Beeldverhouding
+    MEDIA_TAB: Media
+    OVERWRITES_DEFAULT_THUMBNAIL: 'Dit overschrijft de standaardthumbnail van het videoplatform'
     RATIO_16X9: '16:9'
     RATIO_1X1: 'Vierkant (1:1)'
     RATIO_4X3: '4:3'
     RATIO_AUTO: Automatisch
-    SPLIT_RATIO: '{media}/{content} (media/inhoud)'
-    VERTICAL_ALIGNMENT: 'Verticale uitlijning'
     VIDEO_EMBED_CREATED: Aangemaakt
     VIDEO_EMBED_DESCRIPTION: Omschrijving
     VIDEO_EMBED_NAME: Naam
     VIDEO_EMBED_TAB: 'Video-embed'
     VIDEO_EMBED_THUMBNAIL: Thumbnail
     VIDEO_EMBED_URL: URL
-    db_ContentColumns: 'Inhoudskolommen'
-    db_GapSize: Tussenruimte
     db_MediaCaption: 'Mediabijschrift'
-    db_MediaPosition: 'Positie van media'
     db_MediaRatio: 'Beeldverhouding van media'
     db_MediaType: 'Type media'
-    db_VerticalAlignment: 'Verticale uitlijning'
     db_VideoEmbedCreated: 'Video-embed aangemaakt'
     db_VideoEmbedDescription: 'Video-embed omschrijving'
     db_VideoEmbedName: 'Video-embed naam'
@@ -48,11 +54,6 @@ nl:
     db_VideoURL: Video-URL
     has_one_MediaImage: 'Media-afbeelding'
     has_one_VideoCustomThumbnail: 'Aangepaste videothumbnail'
-  WeDevelop\Grid\Extensions\GridPageExtension:
-    USE_GRID: 'Gebruik grid op deze pagina'
-    USE_GRID_DESCRIPTION: 'Sla de pagina op nadat je deze instelling hebt gewijzigd'
-    db_UseGrid: 'Gebruik grid'
-    has_many_Sections: Secties
   WeDevelop\Grid\Forms\GridFieldAddSharedBlockButton:
     ADD_BLOCK: 'Nieuwe gedeelde sectie'
     ADD_COLUMN: 'Nieuwe gedeelde kolom'

@@ -7,37 +7,43 @@ en:
     ALIGN_CENTER: Center
     ALIGN_TOP: Top
     CONTENT_COLUMNS: 'Content column width'
-    CUSTOM_VIDEO_THUMBNAIL: 'Custom video thumbnail'
     FULL_WIDTH: 'Full width (no side-by-side)'
     GAP_SIZE: 'Gap size'
     LAYOUT_TAB: Layout
-    MEDIA_CAPTION: Caption
     MEDIA_POSITION: 'Media position'
-    MEDIA_RATIO: 'Aspect ratio'
-    MEDIA_TAB: Media
-    OVERWRITES_DEFAULT_THUMBNAIL: 'This overwrites the default thumbnail provided by the video platform'
     POSITION_FIRST: 'Before content'
     POSITION_LAST: 'After content'
     POSITION_LAST_DESKTOP: 'After content on desktop'
+    SPLIT_RATIO: '{media}/{content} (media/content)'
+    VERTICAL_ALIGNMENT: 'Vertical alignment'
+    db_ContentColumns: 'Content columns'
+    db_GapSize: 'Gap size'
+    db_MediaPosition: 'Media position'
+    db_VerticalAlignment: 'Vertical alignment'
+  WeDevelop\Grid\Extensions\GridPageExtension:
+    USE_GRID: 'Use grid on this page'
+    USE_GRID_DESCRIPTION: 'Save the page after changing this setting'
+    db_UseGrid: 'Use grid'
+    has_many_Sections: Sections
+  WeDevelop\Grid\Extensions\MediaExtension:
+    CUSTOM_VIDEO_THUMBNAIL: 'Custom video thumbnail'
+    MEDIA_CAPTION: Caption
+    MEDIA_RATIO: 'Aspect ratio'
+    MEDIA_TAB: Media
+    OVERWRITES_DEFAULT_THUMBNAIL: 'This overwrites the default thumbnail provided by the video platform'
     RATIO_16X9: '16:9'
     RATIO_1X1: 'Square (1:1)'
     RATIO_4X3: '4:3'
     RATIO_AUTO: Auto
-    SPLIT_RATIO: '{media}/{content} (media/content)'
-    VERTICAL_ALIGNMENT: 'Vertical alignment'
     VIDEO_EMBED_CREATED: Created
     VIDEO_EMBED_DESCRIPTION: Description
     VIDEO_EMBED_NAME: Name
     VIDEO_EMBED_TAB: 'Video Embed'
     VIDEO_EMBED_THUMBNAIL: Thumbnail
     VIDEO_EMBED_URL: URL
-    db_ContentColumns: 'Content columns'
-    db_GapSize: 'Gap size'
     db_MediaCaption: 'Media caption'
-    db_MediaPosition: 'Media position'
     db_MediaRatio: 'Media ratio'
     db_MediaType: 'Media type'
-    db_VerticalAlignment: 'Vertical alignment'
     db_VideoEmbedCreated: 'Video embed created'
     db_VideoEmbedDescription: 'Video embed description'
     db_VideoEmbedName: 'Video embed name'
@@ -48,11 +54,6 @@ en:
     db_VideoURL: 'Video URL'
     has_one_MediaImage: 'Media image'
     has_one_VideoCustomThumbnail: 'Video custom thumbnail'
-  WeDevelop\Grid\Extensions\GridPageExtension:
-    USE_GRID: 'Use grid on this page'
-    USE_GRID_DESCRIPTION: 'Save the page after changing this setting'
-    db_UseGrid: 'Use grid'
-    has_many_Sections: Sections
   WeDevelop\Grid\Forms\GridFieldAddSharedBlockButton:
     ADD_BLOCK: 'Add new shared section'
     ADD_COLUMN: 'Add new shared column'

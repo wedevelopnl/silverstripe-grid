@@ -12,10 +12,12 @@ use SilverStripe\Assets\Image;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Extensions\BlockMediaExtension;
+use WeDevelop\Grid\Extensions\MediaExtension;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
@@ -25,6 +27,7 @@ use WeDevelop\Grid\Value\MediaPosition;
 use WeDevelop\Grid\Value\VerticalAlignment;
 
 #[CoversClass(BlockMediaExtension::class)]
+#[CoversClass(MediaExtension::class)]
 final class BlockMediaExtensionTest extends SapphireTest
 {
     use DisablesAutoScaffolding;
@@ -93,6 +96,25 @@ final class BlockMediaExtensionTest extends SapphireTest
         ['column' => $column] = GridTreeFactory::containerTree($page);
 
         return GridTreeFactory::contentElement($column, title: 'Media Test');
+    }
+
+    /**
+     * The media columns are declared on the parent MediaExtension; SilverStripe
+     * merges an extension's statics along its ancestry, so the owner must still
+     * carry both sets.
+     */
+    public function testOwnerCarriesTheMediaAndTheLayoutColumns(): void
+    {
+        $columns = array_keys(DataObject::getSchema()->databaseFields(ContentElement::class, false));
+        sort($columns);
+
+        self::assertSame([
+            'ContentColumns', 'GapSize', 'HTML', 'ID',
+            'MediaCaption', 'MediaImageID', 'MediaPosition', 'MediaRatio', 'MediaType',
+            'VerticalAlignment', 'VideoCustomThumbnailID',
+            'VideoEmbedCreated', 'VideoEmbedDescription', 'VideoEmbedName', 'VideoEmbedThumbnail', 'VideoEmbedURL',
+            'VideoHasOverlay', 'VideoProvider', 'VideoURL',
+        ], $columns);
     }
 
     public function testGetMediaPositionEnumReturnsStoredValue(): void
