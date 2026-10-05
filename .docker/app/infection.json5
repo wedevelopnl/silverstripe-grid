@@ -224,11 +224,11 @@
                 // Task CLI output (writeln) is user feedback, not business logic.
                 // Tests assert return codes and DB state, not output text.
                 ".*->writeln\\(.*",
-                // BlockMediaExtension L403: warning log on embed-resolve failure; observability only
+                // MediaExtension::onBeforeWrite: warning log on embed-resolve failure; observability only
                 // (NullLogger). Scoped to the multi-line call form so it does NOT match the inline
                 // DBGridSettings L198 ->warning($message) whose removal may be killable.
                 ".*LoggerInterface::class\\)->warning\\($",
-                // BlockMediaExtension L413: synchronous oEmbed network call; only observable via live
+                // MediaExtension::resolveVideoEmbed: synchronous oEmbed network call; only observable via live
                 // network (out of bounds for the test suite)
                 ".*MediaField::saveEmbed\\(.*",
                 // GridTreeBuilder L218: N+1 pre-seed of an already-loaded parent; canView resolves
@@ -312,9 +312,7 @@
                 // max(0, ...)), and `columnCount - 1` → `- 0` only raises the min() ceiling, which
                 // the `width + offset > columnCount` reclamp on the next lines immediately undoes.
                 ".*\\\\max\\(0, \\\\min\\(\\$config->offset.*",
-                // BlockMediaExtension L495: columnCount is positive-int, so max(1,n) == max(0,n)
-                ".*return max\\(1, \\$columnCount\\);.*",
-                // BlockMediaExtension L554/L562: ContentColumns/GapSize are Int NOT NULL DEFAULT 0; ?? 0 is dead
+                // BlockMediaExtension getContentColumnsValue/getGapSizeValue: ContentColumns/GapSize are Int NOT NULL DEFAULT 0; ?? 0 is dead
                 ".*\\$this->getOwner\\(\\)->(?:ContentColumns|GapSize)\\s*\\?\\?\\s*0.*",
                 // GridEditorField L148 (Decrement only — the GridController twin is separately scoped):
                 // Version is always >= 1, so the min_range floor of 1 vs 0 is unobservable
@@ -351,10 +349,7 @@
                 ".*array_fill\\(\\d+.*'\\?'.*",
                 // Legacy DB reader null-coalesce defaults (see DecrementInteger comment)
                 ".*\\(int\\)\\s*\\(\\$row\\[.*\\]\\s*\\?\\?\\s*0\\).*",
-                // BlockMediaExtension L495 (Increment): differs only at columnCount == 1 (a degenerate,
-                // unusable layout); inert for any usable config
-                ".*return max\\(1, \\$columnCount\\);.*",
-                // BlockMediaExtension L554/L562 (see DecrementInteger comment)
+                // BlockMediaExtension getContentColumnsValue/getGapSizeValue (see DecrementInteger comment)
                 ".*\\$this->getOwner\\(\\)->(?:ContentColumns|GapSize)\\s*\\?\\?\\s*0.*",
                 // DBGridSettings L76 (Increment, see DecrementInteger comment)
                 ".*getField\\('DefaultOffset'\\)\\s*\\?\\?\\s*0.*",
@@ -502,10 +497,10 @@
             ignore: ["WeDevelop\\Grid\\Migration\\Task\\AbstractMigrationTask::resolveViewportKeyMap"],
         },
         "LessThanOrEqualTo": {
-            // BlockMediaExtension::getColSize — equivalent: ContentColumns is `Int NOT NULL
+            // BlockMediaExtension::getMediaColumnSpan — equivalent: ContentColumns is `Int NOT NULL
             // DEFAULT 0`, so the only value the `<= 0` vs `< 0` boundary can differ on is 0,
-            // and there max(1, $columnCount) === max(1, $columnCount - 0).
-            ignore: ["WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getColSize"],
+            // and there $columnCount === max(1, $columnCount - 0) for a positive-int column count.
+            ignore: ["WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getMediaColumnSpan"],
         },
         "Plus": {
             // createLiveOnlyHierarchy: `$migrationSection->sort + $sortOffset`. With one
@@ -529,12 +524,12 @@
                 // isOk() early return iterates errors(), which is empty for an ok Result.
                 // Method-scoped because the bare `return;` text recurs across the codebase.
                 "WeDevelop\\Grid\\Validation\\HierarchyValidationExtension::updateValidate",
-                // BlockMediaExtension::getMediaImageSourceURL line 233 — equivalent: the
+                // MediaExtension::getMediaImageSourceURL line 148 — equivalent: the
                 // `!$image->exists()` early return is a fast path. Falling through, Fill()/
                 // ScaleWidth() on a non-existent image both return null, which the
                 // `$resized === null` guard below turns into the same null result.
                 // Line-scoped so that guard's own `return null;` stays exposed.
-                "WeDevelop\\Grid\\Extensions\\BlockMediaExtension::getMediaImageSourceURL::233",
+                "WeDevelop\\Grid\\Extensions\\MediaExtension::getMediaImageSourceURL::148",
                 // ReorderValidator::validate line 29 — equivalent: a same-parent move satisfies
                 // checkHierarchyRules() trivially, so the shortcut and the fallthrough both return
                 // an ok Result. Line-scoped: the method's other return IS killable, and the
