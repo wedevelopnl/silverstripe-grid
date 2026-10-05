@@ -1,0 +1,45 @@
+# E2E fixture for the shipped media-only block (MediaElement).
+#
+# Structure:
+#   Page → Section → Row → 2 Columns
+#     - media_col: one MediaElement, image attached via post-action
+#     - empty_col: no elements (target for adding a Media block from the picker)
+#
+# Top-down ordering: parents before children. FixtureLoader suppresses auto-scaffolding.
+
+Page:
+  e2e_page:
+    Title: 'E2E Media Block Page'
+    URLSegment: 'e2e-media-block'
+
+WeDevelop\Grid\Model\Section:
+  media_section:
+    Title: 'Media Section'
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+
+WeDevelop\Grid\Model\Row:
+  media_row:
+    Title: 'Media Row'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.media_section
+
+WeDevelop\Grid\Model\Column:
+  media_col:
+    Title: 'Media Column'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.media_row
+    GridSettings: '{"default":{"width":6,"offset":0,"visible":true},"overrides":{}}'
+  empty_col:
+    Title: 'Empty Column'
+    Sort: 2
+    Parent: =>WeDevelop\Grid\Model\Row.media_row
+    GridSettings: '{"default":{"width":6,"offset":0,"visible":true},"overrides":{}}'
+
+WeDevelop\Grid\Model\MediaElement:
+  media_block:
+    Title: 'Hero Image'
+    MediaType: image
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.media_col

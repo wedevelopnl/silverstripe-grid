@@ -25,6 +25,7 @@ vars:
     --skip-type='SilverStripe\Reports\Report'
     --skip-type='WeDevelop\AdminToolbar\Model\Component'
     --skip-type='WeDevelop\Grid\Forms\GridAwareVersionFormFactory'
+    --skip-type='WeDevelop\Grid\Model\MediaElement'
     --skip-type='WeDevelop\Grid\Service\GridAwareDeleteLocalisationPolicy'
     --skip-type='WeDevelop\Grid\Validation\HierarchyValidationService'
 

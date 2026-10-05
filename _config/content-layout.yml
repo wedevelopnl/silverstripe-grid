@@ -9,9 +9,10 @@ SilverStripe\Core\Injector\Injector:
     factory: WeDevelop\Grid\Factory\GridAdapterFactory
 
 # BlockMediaExtension is intentionally NOT applied here. ContentElement ships
-# lean (HTML only); image/video capability is opt-in. Projects that want the
-# side-by-side media block apply the extension to ContentElement (or their own
-# content subclass) in their app config:
+# lean (HTML only); a lone image or video is the shipped MediaElement (which
+# carries MediaExtension itself). Projects that want media beside the HTML apply
+# the extension to ContentElement (or their own content subclass) in their app
+# config:
 #
 #   WeDevelop\Grid\Model\ContentElement:
 #     extensions:

@@ -120,6 +120,26 @@ nl:
     db_TitleTag: Titeltag
     db_Version: Versie
     has_one_Parent: 'Bovenliggend element'
+  WeDevelop\Grid\Model\MediaElement:
+    CLASS_DESCRIPTION: 'Eén afbeelding of video'
+    PLURALNAME: Media
+    PLURALS:
+      one: 'Een Media'
+      other: '{count} Media'
+    SINGULARNAME: Media
+    db_MediaCaption: Mediabijschrift
+    db_MediaRatio: 'Beeldverhouding van media'
+    db_MediaType: 'Type media'
+    db_VideoEmbedCreated: 'Video-embed aangemaakt'
+    db_VideoEmbedDescription: 'Video-embed omschrijving'
+    db_VideoEmbedName: 'Video-embed naam'
+    db_VideoEmbedThumbnail: 'Video-embed thumbnail'
+    db_VideoEmbedURL: 'Video-embed URL'
+    db_VideoHasOverlay: 'Video heeft overlay'
+    db_VideoProvider: Videoaanbieder
+    db_VideoURL: Video-URL
+    has_one_MediaImage: 'Media-afbeelding'
+    has_one_VideoCustomThumbnail: 'Aangepaste videothumbnail'
   WeDevelop\Grid\Model\Row:
     CLASS_DESCRIPTION: 'Horizontale container voor kolommen binnen een sectie'
     PLURALNAME: Rijen

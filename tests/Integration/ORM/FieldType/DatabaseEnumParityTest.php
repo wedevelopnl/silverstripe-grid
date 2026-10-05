@@ -11,6 +11,7 @@ use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBEnum;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\MediaElement;
 use WeDevelop\Grid\Value\AspectRatio;
 use WeDevelop\Grid\Value\MediaPosition;
 use WeDevelop\Grid\Value\VerticalAlignment;
@@ -45,6 +46,7 @@ final class DatabaseEnumParityTest extends SapphireTest
         yield 'ContentElement.VerticalAlignment' => [ContentElement::class, 'VerticalAlignment', VerticalAlignment::class];
         yield 'ContentElement.MediaRatio' => [ContentElement::class, 'MediaRatio', AspectRatio::class];
         yield 'ContentElement.MediaPosition' => [ContentElement::class, 'MediaPosition', MediaPosition::class];
+        yield 'MediaElement.MediaRatio' => [MediaElement::class, 'MediaRatio', AspectRatio::class];
     }
 
     /**

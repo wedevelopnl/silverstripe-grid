@@ -175,4 +175,77 @@ test.describe('Media elements', () => {
       await expect(page.getByText('Text element body content', { exact: true })).toBeVisible()
     })
   })
+
+  test('content editor adds a media block, captions its image and sees it on the live page', async ({
+    page,
+  }) => {
+    const fixture = await loadFixture(page.request, 'media-block')
+    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`)
+    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
+
+    const elementCards = page.getByTestId('element-card')
+
+    await test.step('Add a Media block to the empty column from the type picker', async () => {
+      await expect(elementCards).toHaveCount(1)
+
+      await page
+        .getByTestId('column-block')
+        .filter({ hasText: 'Empty Column' })
+        .getByTestId('add-content-button')
+        .click()
+
+      const picker = page.getByRole('dialog')
+      await picker
+        .getByTestId('element-type-tile')
+        .filter({ has: page.getByText('Media', { exact: true }) })
+        .click()
+      await expect(picker).toBeHidden()
+
+      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
+      await expect(elementCards).toHaveCount(2)
+    })
+
+    await test.step('Open the media block: media fields only, no side-by-side layout', async () => {
+      await elementCards.filter({ hasText: 'Hero Image' }).click()
+      await expect(page).toHaveURL(
+        /\/admin\/pages\/edit\/EditForm\/\d+\/field\/GridEditor\/item\/\d+\/edit/,
+      )
+      await page.getByRole('textbox', { name: 'Title', exact: true }).waitFor({ timeout: 15_000 })
+
+      await expect(page.getByRole('tab', { name: 'Layout', exact: true })).toHaveCount(0)
+
+      await page.getByRole('tab', { name: 'Media', exact: true }).click()
+      const mediaPanel = page.getByRole('tabpanel', { name: 'Media' })
+      // UploadField's Remove control appears as soon as a file is attached (see
+      // the side-by-side journey above for why this is the stable signal).
+      await expect(mediaPanel.getByRole('button', { name: 'Remove', exact: true })).toBeVisible({
+        timeout: 15_000,
+      })
+    })
+
+    await test.step('Caption the image and save', async () => {
+      await page.getByLabel('Caption', { exact: true }).fill('Harbour at dusk')
+
+      await page.getByRole('button', { name: /Save/ }).first().click()
+      await expect(page.getByText(/Saved/).first()).toBeVisible({ timeout: 15_000 })
+    })
+
+    await test.step('Navigate back and publish the page', async () => {
+      await page.getByRole('link', { name: 'E2E Media Block Page', exact: true }).click()
+      await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
+
+      await page.getByRole('button', { name: /Publish/ }).click()
+      await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({
+        timeout: 15_000,
+      })
+    })
+
+    await test.step('The live page shows the captioned image', async () => {
+      await page.goto(fixture.pageUrl.split('?')[0])
+
+      const img = page.getByRole('img', { name: 'Harbour at dusk', exact: true })
+      await expect(img).toBeVisible()
+      await expect(page.getByRole('figure').filter({ has: img })).toContainText('Harbour at dusk')
+    })
+  })
 })

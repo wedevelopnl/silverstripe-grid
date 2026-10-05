@@ -23,7 +23,7 @@ Page
 └── Section          zone-scoped band; the only thing allowed at page level
     └── Row          horizontal group
         └── Column   carries width / offset / visibility per viewport
-            └── Content block   any ContentElement subclass
+            └── Content block   HTML or media (shipped), or your own
 ```
 
 Writing a Section automatically creates the Row and Column beneath it, so a new section is usable immediately. Sections carry a **zone** (`main`, `sidebar`, …), which is how one page can host several independent grids.

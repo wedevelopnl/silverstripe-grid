@@ -175,6 +175,18 @@ WeDevelop\E2e\Fixtures\FixtureLoader:
         - action: publish_recursive
           class: Page
           identifier: e2e_page
+    media-block:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/MediaBlock.yml'
+      post_actions:
+        - action: attach_image
+          class: 'WeDevelop\Grid\Model\MediaElement'
+          identifier: media_block
+          fields:
+            relation: MediaImage
+            source: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/assets/test-image.png'
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page
     duplicate-test:
       path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/DuplicateTest.yml'
       post_actions:
