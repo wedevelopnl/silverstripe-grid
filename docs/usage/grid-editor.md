@@ -48,7 +48,7 @@ The *Save* button still governs the ordinary page fields (page name, URL segment
 
 ![The "Add content element" dialog listing the available block types](../images/element-type-picker.png)
 
-Each tile is one `ContentElement` subclass, showing its `$singular_name`, icon, and description. The module ships a single generic block; projects add their own, and each new subclass appears here automatically with no registration step. See [Building a custom content element](custom-elements.md).
+Each tile is one content element type, showing its `$singular_name`, icon, and description. The module ships two blocks — *Content element* (HTML) and *Media* (a single image or video); projects add their own, and each new subclass appears here automatically with no registration step. See [Building a custom content element](custom-elements.md).
 
 Picking a tile creates the block and drops it into the column. Open it with the pencil (**Edit**) action to fill in its fields.
 

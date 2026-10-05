@@ -1,6 +1,8 @@
 # Building a Custom Content Element
 
-Every real site eventually needs content blocks beyond the generic HTML element shipped as `ContentElement`. This guide walks through adding a custom block — the primary extension point of this module.
+Every real site eventually needs content blocks beyond the two the module ships: the generic HTML `ContentElement` and the image-or-video `MediaElement`. This guide walks through adding a custom block — the primary extension point of this module.
+
+A block that only needs one image or video doesn't need its own class — that is `MediaElement`. A block that needs media *alongside* its own fields can apply `WeDevelop\Grid\Extensions\MediaExtension` (media only) or `BlockMediaExtension` (media plus the side-by-side layout) instead of declaring its own image field.
 
 ## What you'll build
 

@@ -171,7 +171,8 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 │    ├── GridAdapter (config-driven base, implements both)    │
 │    ├── GridAdapterFactory (DI alias factory)                │
 │    ├── Presets: Bootstrap, Tailwind, Bulma (zero-method)    │
-│    └── BlockMediaExtension (media/video on content elts)    │
+│    ├── MediaExtension (image/video; MediaElement)           │
+│    └── BlockMediaExtension (+ side-by-side layout)          │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -527,14 +528,15 @@ See [Grid Adapter System](grid-adapter.md) for the full selection and configurat
 
 ## Content Layout System
 
-The content layout system adds media (image/video) capability with side-by-side layout to content elements. It complements the grid adapter system: grid handles column widths and offsets, content layout handles aspect ratios, ordering, alignment, and directional padding.
+The content layout system adds media (image/video) capability, optionally laid out side by side with an element's own content. It complements the grid adapter system: grid handles column widths and offsets, content layout handles aspect ratios, ordering, alignment, and directional padding.
 
 ### Architecture
 
 ```
-BlockMediaExtension (opt-in — applied to ContentElement by the project)
-  └── ContentLayoutAdapterInterface
-        └── GridAdapter (same instance as GridAdapterInterface)
+MediaExtension (image/video — applied by MediaElement)
+  └── BlockMediaExtension (adds side-by-side layout — opt-in, applied to ContentElement by the project)
+        └── ContentLayoutAdapterInterface
+              └── GridAdapter (same instance as GridAdapterInterface)
 ```
 
 Content layout is implemented directly by `GridAdapter` — the same adapter instance serves both `GridAdapterInterface` and `ContentLayoutAdapterInterface`. Content layout CSS strings are Configurable statics on the adapter alongside grid CSS strings. No separate adapter or data bag needed.
@@ -554,26 +556,35 @@ Content layout is implemented directly by `GridAdapter` — the same adapter ins
 
 Width classes delegate to `getWidthClass()` on the same adapter — `getMediaWidthClass()` computes `totalColumns - contentColumns`. Order classes use the adapter's default viewport for responsive breakpoint resolution.
 
-### BlockMediaExtension
+### MediaExtension and BlockMediaExtension
 
-**Opt-in.** The module deliberately does *not* apply this extension — `ContentElement` ships lean (HTML only), and `_config/content-layout.yml` carries the opt-in snippet as a comment. Apply it from your own project config to add media attachment and layout controls to `ContentElement` (or to your own content subclass).
+The media and its layout are two extensions, one subclassing the other:
+
+| Extension | Adds | Applied by |
+|-----------|------|------------|
+| `MediaExtension` | One image or video: `MediaType`, `MediaImage`, caption, aspect ratio, video embed resolution, responsive image sizing | `MediaElement` (shipped, in every picker) |
+| `BlockMediaExtension extends MediaExtension` | The side-by-side layout: `ContentColumns`, `VerticalAlignment`, `GapSize`, `MediaPosition`, and the row/column/padding classes | The project, opt-in (below) |
+
+SilverStripe merges an extension's statics along its ancestry (`ExtensionMiddleware::getExtraConfig()`), so an owner of `BlockMediaExtension` gets both column sets. Apply one or the other to a class, never both. `MediaElement` declares `MediaExtension` in its own `$extensions` rather than in YAML: the block is meaningless without it.
+
+**`BlockMediaExtension` is opt-in.** The module deliberately does *not* apply this extension — `ContentElement` ships lean (HTML only), and `_config/content-layout.yml` carries the opt-in snippet as a comment. Apply it from your own project config to add media attachment and layout controls to `ContentElement` (or to your own content subclass).
 
 Note for migrations: the SS5→SS6 default class map targets `ContentElement`, so a project migrating media data must opt the extension in first, or remap `FieldMapper::classNameMap` to its own media class. See [migration.md](../migration.md).
 
-**Database fields** (15 fields via `$db`):
+**Database fields** (15 fields via `$db`; `MediaExtension` alone declares all but the Layout group):
 
 | Group | Fields |
 |-------|--------|
-| Layout | `ContentColumns` (int), `VerticalAlignment`, `GapSize` (int), `MediaPosition` |
+| Layout (`BlockMediaExtension`) | `ContentColumns` (int), `VerticalAlignment`, `GapSize` (int), `MediaPosition` |
 | Image | `MediaCaption`, `MediaRatio` |
 | Video | `VideoURL`, `VideoProvider`, `VideoHasOverlay`, `VideoEmbedName`, `VideoEmbedURL`, `VideoEmbedDescription`, `VideoEmbedThumbnail`, `VideoEmbedCreated` |
 | Media type | `MediaType` (image/video discriminator) |
 
 **Relationships**: `has_one` to `MediaImage` and `VideoCustomThumbnail` (both `Image`), with `owns`, `cascade_deletes`, and `cascade_duplicates`.
 
-**Responsive image sizing**: Calculates pixel width from the ratio of content columns to total grid columns, multiplied by `GridAdapterInterface::getContainerMaxWidth()`. Resizes images via SilverStripe's `Fill()` (when aspect ratio set) or `ScaleWidth()` (auto ratio).
+**Responsive image sizing**: Calculates pixel width from the media's column span via `GridAdapterInterface::getColumnPixelWidth()`. `MediaExtension` spans the full grid (an element cannot see its containing column's width); `BlockMediaExtension` overrides `getMediaColumnSpan()` to subtract the content columns. Resizes images via SilverStripe's `Fill()` (when aspect ratio set) or `ScaleWidth()` (auto ratio).
 
-**Template integration**: The `WeDevelop/Grid/Includes/MediaBlock` template renders the side-by-side layout with content and media columns, aspect ratio wrapper, and `<figure>/<figcaption>` markup.
+**Template integration**: The `WeDevelop/Grid/Includes/MediaBlock` include renders the media itself — aspect ratio wrapper and `<figure>/<figcaption>` markup. `MediaElement.ss` renders it alone; `ContentElement.ss` wraps it in the side-by-side row when `$IsLayoutMode`.
 
 ### DI Configuration
 
@@ -704,7 +715,7 @@ See `docs/fluent.md` for full setup.
 | `updateElementData` | GridNodeMapper | Inject extra data into tree nodes |
 | `extendedCan` | GridElement | Override permission checks |
 | `updateValidate` | HierarchyValidationExtension | Intercept validation lifecycle |
-| `updateCMSFields` | BlockMediaExtension | Inject media/layout fields into CMS form |
+| `updateCMSFields` | MediaExtension / BlockMediaExtension | Inject the Media tab / the Layout tab into the CMS form |
 
 Migration hooks fire from the extracted collaborators, not from
 `GridMigrationService` — register extensions on the class named here:

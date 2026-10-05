@@ -120,6 +120,26 @@ en:
     db_TitleTag: 'Title tag'
     db_Version: Version
     has_one_Parent: Parent
+  WeDevelop\Grid\Model\MediaElement:
+    CLASS_DESCRIPTION: 'A single image or video'
+    PLURALNAME: Media
+    PLURALS:
+      one: 'A Media'
+      other: '{count} Media'
+    SINGULARNAME: Media
+    db_MediaCaption: 'Media caption'
+    db_MediaRatio: 'Media ratio'
+    db_MediaType: 'Media type'
+    db_VideoEmbedCreated: 'Video embed created'
+    db_VideoEmbedDescription: 'Video embed description'
+    db_VideoEmbedName: 'Video embed name'
+    db_VideoEmbedThumbnail: 'Video embed thumbnail'
+    db_VideoEmbedURL: 'Video embed URL'
+    db_VideoHasOverlay: 'Video has overlay'
+    db_VideoProvider: 'Video provider'
+    db_VideoURL: 'Video URL'
+    has_one_MediaImage: 'Media image'
+    has_one_VideoCustomThumbnail: 'Video custom thumbnail'
   WeDevelop\Grid\Model\Row:
     CLASS_DESCRIPTION: 'Horizontal container that holds columns within a section'
     PLURALNAME: Rows

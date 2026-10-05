@@ -47,12 +47,13 @@ test.describe('Content elements — add, edit, publish, render', () => {
       // Modal should open — use getByRole('dialog') since only one dialog is open at a time
       await expect(picker).toBeVisible()
 
-      // At least one type tile should be available
-      const tiles = picker.getByTestId('element-type-tile')
-      await expect(tiles.first()).toBeVisible()
-
-      // Select the first type
-      await tiles.first().click()
+      // The rest of this journey fills in an HTML body, so pick the HTML block
+      // by name — the module ships more than one type.
+      const contentTile = picker
+        .getByTestId('element-type-tile')
+        .filter({ hasText: 'Content element' })
+      await expect(contentTile).toBeVisible()
+      await contentTile.click()
 
       // Modal should close
       await expect(picker).toBeHidden()

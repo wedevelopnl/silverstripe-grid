@@ -137,6 +137,7 @@ SilverStripe resolves templates by namespace. The module's templates live under 
 ```
 themes/my-theme/templates/WeDevelop/Grid/Model/Section_holder.ss
 themes/my-theme/templates/WeDevelop/Grid/Model/Column.ss
+themes/my-theme/templates/WeDevelop/Grid/Model/MediaElement.ss
 themes/my-theme/templates/WeDevelop/Grid/Includes/MediaBlock.ss
 ```
 
@@ -192,15 +193,15 @@ $GridZone('main')                      {# each root → Section_holder.ss → Se
 
 `Section.ss` loops `$Rows`, `Row.ss` loops `$Columns`, `Column.ss` loops `$Elements`. The loops are `has_many` relations defined on the container models — if you need to filter (e.g. hide unpublished children on live), do it in a getter on the model, not in the template.
 
-## Responsive images (BlockMediaExtension)
+## Responsive images (MediaExtension)
 
-When `BlockMediaExtension` is applied to a content element, the template receives a `MediaBlock` include:
+An element carrying `MediaExtension` — the shipped `MediaElement`, or any element you apply it (or `BlockMediaExtension`) to — renders its media through the `MediaBlock` include:
 
 ```silverstripe
 <% include WeDevelop/Grid/Includes/MediaBlock %>
 ```
 
-The include handles image/video discrimination, aspect-ratio wrapping, captions, and responsive image sizing via the grid adapter's `getContainerMaxWidth()` + `getColumnPixelWidth()` methods. Override the include's template in your theme to customise wrapping markup; `BlockMediaExtension` itself doesn't need to change.
+The include handles image/video discrimination, aspect-ratio wrapping, captions, and responsive image sizing via the grid adapter's `getContainerMaxWidth()` + `getColumnPixelWidth()` methods. Override the include's template in your theme to customise wrapping markup; neither extension needs to change.
 
 ## Admin toolbar menu
 
