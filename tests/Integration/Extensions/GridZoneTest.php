@@ -7,9 +7,12 @@ namespace WeDevelop\Grid\Tests\Integration\Extensions;
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\TemplateEngine\SSTemplateEngine;
 use SilverStripe\Versioned\Versioned;
+use SilverStripe\View\ViewLayerData;
 use WeDevelop\Grid\Extensions\GridPageExtension;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Model\GridZoneList;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Model\SharedBlock;
 use WeDevelop\Grid\Model\SharedBlockReference;
@@ -17,6 +20,7 @@ use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 
 #[CoversClass(GridPageExtension::class)]
+#[CoversClass(GridZoneList::class)]
 final class GridZoneTest extends SapphireTest
 {
     use DisablesAutoScaffolding;
@@ -93,6 +97,32 @@ final class GridZoneTest extends SapphireTest
         GridTreeFactory::reference($pageB, $this->populatedBlock(), zone: 'main');
 
         self::assertSame([(int) $onA->ID], $this->zoneIds($pageA, 'main'));
+    }
+
+    private function render(Page $page, string $template): string
+    {
+        return SSTemplateEngine::create()->renderString($template, ViewLayerData::create($page), cache: false);
+    }
+
+    public function testGridZoneRendersEveryRootWithoutALoop(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        GridTreeFactory::section($page, zone: 'main', sort: 1);
+        GridTreeFactory::reference($page, $this->populatedBlock(), zone: 'main', sort: 2);
+
+        $looped = $this->render($page, '<% loop $GridZone(\'main\') %>$Me<% end_loop %>');
+
+        self::assertSame(2, substr_count($looped, '<section'));
+        self::assertSame($looped, $this->render($page, '$GridZone(\'main\')'));
+    }
+
+    public function testGridZoneIsFalsyInATemplateIfOnlyWhenTheZoneIsEmpty(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        GridTreeFactory::section($page, zone: 'main');
+
+        self::assertSame('filled', $this->render($page, '<% if $GridZone(\'main\') %>filled<% else %>empty<% end_if %>'));
+        self::assertSame('empty', $this->render($page, '<% if $GridZone(\'footer\') %>filled<% else %>empty<% end_if %>'));
     }
 
     public function testSectionsRelationStillReturnsOnlySections(): void

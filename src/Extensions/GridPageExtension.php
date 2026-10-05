@@ -9,9 +9,9 @@ use SilverStripe\Core\Extension;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\FieldList;
-use SilverStripe\Model\List\ArrayList;
 use SilverStripe\ORM\HasManyList;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Model\GridZoneList;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Forms\GridEditorField;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
@@ -77,15 +77,12 @@ class GridPageExtension extends Extension
 
     /**
      * Every root element of a zone, in Sort order — Sections and shared-block
-     * placements merged into the single list a template should loop over.
+     * placements merged into one list, which renders itself as `$GridZone('main')`.
      *
      * `$Sections` still works and is still supported, but it is a Section-only
-     * relation and so never includes shared blocks. Templates that want them
-     * use `<% loop $GridZone('main') %>$Me<% end_loop %>`.
-     *
-     * @return ArrayList<GridElement>
+     * relation and so never includes shared blocks.
      */
-    public function GridZone(string $zone): ArrayList
+    public function GridZone(string $zone): GridZoneList
     {
         $owner = $this->getOwner();
 
@@ -100,7 +97,7 @@ class GridPageExtension extends Extension
             ->get(GridElementRepositoryInterface::class)
             ->findByParents([$owner::class => [$ownerId]], $zone);
 
-        return ArrayList::create($roots);
+        return GridZoneList::create($roots);
     }
 
     public function onAfterPopulateDefaults(): void

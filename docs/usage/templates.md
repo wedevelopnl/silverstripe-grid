@@ -8,17 +8,17 @@ Page types with `GridPageExtension` expose `$UseGrid`, `$GridZone(<zone>)` and `
 
 ```silverstripe
 <% if $UseGrid %>
-    <% loop $GridZone('main') %>$Me<% end_loop %>
+    $GridZone('main')
 <% else %>
     $Content
 <% end_if %>
 ```
 
-The frontend template renders the raw stored `$UseGrid` field unconditionally — there is no separate render-time gate. The stored value is seeded from `use_grid_by_default` when a page is created (see [Default editor on new pages](#default-editor-on-new-pages)), so with the default (`true`) the `<% else %>` branch never fires and you can simplify to `<% loop $GridZone('main') %>$Me<% end_loop %>`. The per-page editor toggle (see [below](#per-page-editor-toggle)) only governs which editor the CMS shows; it does not change how the template reads `$UseGrid`.
+The frontend template renders the raw stored `$UseGrid` field unconditionally — there is no separate render-time gate. The stored value is seeded from `use_grid_by_default` when a page is created (see [Default editor on new pages](#default-editor-on-new-pages)), so with the default (`true`) the `<% else %>` branch never fires and you can simplify to `$GridZone('main')`. The per-page editor toggle (see [below](#per-page-editor-toggle)) only governs which editor the CMS shows; it does not change how the template reads `$UseGrid`.
 
 ### `$GridZone` vs `$Sections`
 
-`$GridZone(<zone>)` returns **every** root element of a zone in Sort order. `$Sections` is a Section-only relation, so it never includes [shared blocks](shared-blocks.md) — a page that places one renders it only through `$GridZone`.
+`$GridZone(<zone>)` returns **every** root element of a zone in Sort order and renders them in place — there is nothing to loop. `$Sections` is a Section-only relation, so it never includes [shared blocks](shared-blocks.md) — a page that places one renders it only through `$GridZone`.
 
 | | `$GridZone('main')` | `$Sections` |
 |---|---|---|
@@ -27,6 +27,18 @@ The frontend template renders the raw stored `$UseGrid` field unconditionally �
 | Zone filtering | built in | `.Filter('Zone', …)` |
 
 `$Sections` remains supported for backwards compatibility. Use `$GridZone` in new templates, and switch existing ones before placing a shared block on a page they render.
+
+### Looping a zone
+
+`$GridZone` is still a list. Loop it when each root element needs markup of its own, such as a wrapper or a `$Pos`-based class:
+
+```silverstripe
+<% loop $GridZone('main') %>
+    <div class="zone-item zone-item-$Pos">$Me</div>
+<% end_loop %>
+```
+
+`$Me` renders the element through its holder chain, exactly as the bare `$GridZone('main')` does. Templates written as `<% loop $GridZone('main') %>$Me<% end_loop %>` keep working, but the loop adds nothing there.
 
 ## Multi-zone pages
 
@@ -37,15 +49,15 @@ $fields->addFieldToTab('Root.Main', GridEditorField::create('GridEditorMain', (i
 $fields->addFieldToTab('Root.Main', GridEditorField::create('GridEditorSidebar', (int) $this->ID, 'sidebar'));
 ```
 
-`$GridZone` takes the zone name, so each region loops its own call:
+`$GridZone` takes the zone name, so each region renders its own call. It is falsy for an empty zone, so a region can be left out when it has no content:
 
 ```silverstripe
 <div class="main">
-    <% loop $GridZone('main') %>$Me<% end_loop %>
+    $GridZone('main')
 </div>
-<aside>
-    <% loop $GridZone('sidebar') %>$Me<% end_loop %>
-</aside>
+<% if $GridZone('sidebar') %>
+    <aside>$GridZone('sidebar')</aside>
+<% end_if %>
 ```
 
 The older `$Sections.Filter('Zone', 'main')` form still works, but it omits shared block placements.
@@ -169,13 +181,13 @@ class SectionThemeExtension extends Extension
 
 ## The `$Me` loop pattern
 
-Using `$Me` in loops lets the element pick its own template chain:
+The container templates loop their children with `$Me`, which lets each element pick its own template chain. `$GridZone` does the same for a zone's root elements without a loop:
 
 ```silverstripe
-<% loop $GridZone('main') %>$Me<% end_loop %>  {# → Section_holder.ss → Section.ss          #}
-<% loop $Rows %>$Me<% end_loop %>              {# → Row_holder.ss → Row.ss                  #}
-<% loop $Columns %>$Me<% end_loop %>           {# → Column_holder.ss → Column.ss            #}
-<% loop $Elements %>$Me<% end_loop %>          {# → {ClassName}_holder.ss → {ClassName}.ss  #}
+$GridZone('main')                      {# each root → Section_holder.ss → Section.ss  #}
+<% loop $Rows %>$Me<% end_loop %>      {# → Row_holder.ss → Row.ss                    #}
+<% loop $Columns %>$Me<% end_loop %>   {# → Column_holder.ss → Column.ss              #}
+<% loop $Elements %>$Me<% end_loop %>  {# → {ClassName}_holder.ss → {ClassName}.ss    #}
 ```
 
 `Section.ss` loops `$Rows`, `Row.ss` loops `$Columns`, `Column.ss` loops `$Elements`. The loops are `has_many` relations defined on the container models — if you need to filter (e.g. hide unpublished children on live), do it in a getter on the model, not in the template.

@@ -13,7 +13,7 @@ src/Adapter/          # Grid framework adapters: GridAdapter base class + framew
 src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderValidatorInterface)
 src/Controllers/      # API controllers: GridApiController (abstract base — CSRF gate, draft lookups, NodeRef resolution) + GridController (page elements, /admin/grid) + SharedBlockController (block library, /admin/grid-shared-blocks)
 src/Factory/          # Factories (GridAdapterFactory)
-src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement, SharedBlock, SharedBlockReference) + ContainerElementTrait
+src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement, SharedBlock, SharedBlockReference) + ContainerElementTrait + GridZoneList (`$GridZone`'s self-rendering root list)
 src/Extensions/       # SilverStripe extensions (GridPageExtension, BlockMediaExtension, FluentGridPageExtension, FluentSharedBlockExtension)
 src/Forms/            # Form field implementations (GridEditorField, GridAwareVersionFormFactory) + the library's GridField add control (GridFieldAddSharedBlockButton) and its detail-form handler (SharedBlockItemRequest — the two delete actions)
 src/Migration/        # SS5→SS6 migration (DTOs, strategies, tasks, services); src/Migration/Service/ holds GridMigrationService (orchestration), DraftHierarchyWriter, LivePublisher, PageGridFlagWriter, LegacyPageDiscovery, LegacyElementReader, LegacyDataReader (facade)

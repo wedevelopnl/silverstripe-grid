@@ -83,7 +83,7 @@ Page:
 **4. Render the grid in the page template.**
 
 ```silverstripe
-<% loop $GridZone('main') %>$Me<% end_loop %>
+$GridZone('main')
 ```
 
 **5. Build the database.**

@@ -122,7 +122,7 @@ A placement renders its block's root element directly, with no wrapper of its ow
 It does, however, need a template that knows to look for it:
 
 ```silverstripe
-<% loop $GridZone('main') %>$Me<% end_loop %>
+$GridZone('main')
 ```
 
 `$Sections` is a Section-only relation and **never** includes placements. It still works and is still supported, but a page rendered through it will silently omit any shared block. See [Template integration](templates.md#gridzone-vs-sections).

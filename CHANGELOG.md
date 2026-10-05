@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`$GridZone('main')` renders the zone on its own.** It returns a `GridZoneList`, which renders each root element through its holder chain, so a page template no longer loops a list whose body is only `$Me`. It is still a list: `<% loop $GridZone('main') %>` works where each root needs its own wrapper, and `<% if $GridZone('sidebar') %>` is false for an empty zone. Existing `<% loop $GridZone('main') %>$Me<% end_loop %>` templates render unchanged and need no update.
+
 ### Fixed
 
 - **The content column width picker showed the mirror image of the split it produced.** Each option's diagram is a PNG named after what it draws, left to right, and every one puts the media column first — matching `MediaPosition::First`, the default. `ColumnWidthPickerField` built the filename content-first, so picking the option that drew a narrow image beside wide text published a wide image beside narrow text, and the other way round. Only the previews were wrong: `ContentColumns`, the content layout adapter and the rendered page always agreed with each other, so nothing about how a page renders has changed and no stored content is affected.
