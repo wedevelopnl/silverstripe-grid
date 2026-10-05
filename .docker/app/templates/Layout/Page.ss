@@ -1,6 +1,6 @@
 <h1>$Title</h1>
 <% if $UseGrid %>
-    <% loop $GridZone('main') %>$Me<% end_loop %>
+    $GridZone('main')
 <% else %>
     $Content
 <% end_if %>

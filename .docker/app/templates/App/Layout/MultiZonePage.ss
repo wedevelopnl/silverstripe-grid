@@ -1,8 +1,8 @@
 <h1>$Title</h1>
 <main>
-    <% loop $GridZone('main') %>$Me<% end_loop %>
+    $GridZone('main')
 </main>
 <aside>
-    <% loop $GridZone('sidebar') %>$Me<% end_loop %>
+    $GridZone('sidebar')
 </aside>
 $Form
