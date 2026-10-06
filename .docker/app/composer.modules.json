@@ -22,19 +22,19 @@
             "src/"
         ]
     },
-    "_comment_require_dev": "QA toolchain is pinned to exact versions so CI's lock-less `composer install` cannot silently float into a rule/behavior change that breaks the build. Runtime deps (recipe-cms, fluent) stay on ranges so the module keeps testing against the latest SS6.x. Bump these manually when adopting a new tool release. Pins must resolve on php 8.3 (the module's floor): tomasvotruba/type-coverage is held at 2.2.1 because 2.2.2 requires php ^8.4, and phpunit/phpcov is held on the 11.x line that matches phpunit 12 (12.x requires php >= 8.4).",
+    "_comment_require_dev": "QA toolchain is pinned to exact versions so CI's lock-less `composer install` cannot silently float into a rule/behavior change that breaks the build. Runtime deps (recipe-cms, fluent) stay on ranges so the module keeps testing against the latest SS6.x. Bump these manually when adopting a new tool release. Pins must resolve on php 8.3 (the module's floor): phpunit/phpcov is held on the 11.x line that matches phpunit 12 (12.x requires php >= 8.4).",
     "require-dev": {
         "cambis/silverstan": "2.2.0",
-        "infection/infection": "0.35.0",
+        "infection/infection": "0.35.6",
         "phpstan/extension-installer": "1.4.3",
-        "phpstan/phpstan": "2.2.8",
+        "phpstan/phpstan": "2.3.0",
         "phpstan/phpstan-deprecation-rules": "2.0.5",
         "phpunit/phpcov": "11.0.4",
-        "phpunit/phpunit": "12.5.33",
+        "phpunit/phpunit": "12.5.38",
         "rregeer/phpunit-coverage-check": "0.3.1",
         "tomasvotruba/class-leak": "2.3.0",
-        "tomasvotruba/type-coverage": "2.2.1",
-        "wedevelopnl/silverstripe-e2e": "0.2.0",
+        "tomasvotruba/type-coverage": "2.5.0",
+        "wedevelopnl/silverstripe-e2e": "0.2.1",
         "wernerkrauss/silverstripe-rector": "1.3.0"
     },
     "autoload-dev": {
