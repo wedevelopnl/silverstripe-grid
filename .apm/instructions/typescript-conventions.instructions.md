@@ -5,26 +5,11 @@ applyTo: "**/*.{ts,tsx}"
 
 # TypeScript & React Conventions
 
-## Stack
-
-- React 18, TypeScript 6, Vite 8, plain modern CSS (no Sass)
-- dnd-kit for drag & drop
-- TanStack Query for data fetching
-- Valibot for runtime validation and schema definitions
-
-## Structure
-
-- `client/src/js/` is the frontend root
-- `@` path alias maps to `client/src/js` (configured in `vite.config.mts` and `tsconfig.json`)
-- Entry points in `client/src/js/bundles/`
-- SilverStripe CMS integration via entwine and Injector in `client/src/js/bridge/`
+Stack, directory layout and the `@` alias: see Project Overview and Architecture.
 
 ## Testing
 
-- Vitest + React Testing Library with jsdom environment
-- Test files co-located next to source (`.test.ts`/`.test.tsx`)
-- Shared test infrastructure in `client/src/js/testing/` (factories, helpers, mocks)
-- Stryker for mutation testing
+- Test files co-located next to source (`.test.ts`/`.test.tsx`); shared infrastructure in `client/src/js/testing/`
 
 ## Key Patterns
 

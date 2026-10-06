@@ -44,7 +44,7 @@ Page IDs and element IDs share no namespace separation, so lookup maps must key 
 
 ## Zones
 
-`Zone` (e.g., `"main"`, `"sidebar"`) is declared on `GridElement` and is meaningful ONLY when the element's parent is a `SiteTree` — `GridElementService` forces `''` everywhere else. **Invariant: Zone is non-empty exactly when the parent is a `SiteTree`**, enforced on every write and every stage by `GridElement::validate()` (via `isZoneScoped()`) — NOT by `HierarchyValidationExtension`, which a project may detach. Code writing a page root directly must set a `Zone`; `api/place` refuses a page-root placement without one before localising the block. Older rows breaking it block publish/duplicate/copy-to-locale of their page until `sake tasks:repair-grid-zone` (`Task\OneTime\Beta5\RepairGridZoneTask`) runs; a page's zones are read through `GridZoneResolver`. Declaring it on the base is what lets one indexed query return a zone's whole root sequence (Sections and placements together); when it lived on the root subclasses, every root read and every root Sort assignment fanned out to one query per class. Sort values are independent per zone per parent. All queries (tree loading, sort assignment, reorder) filter by zone at the root level.
+`Zone` (e.g., `"main"`, `"sidebar"`) is declared on `GridElement` and is meaningful ONLY when the element's parent is a `SiteTree` — `GridElementService` forces `''` everywhere else. **Invariant: Zone is non-empty exactly when the parent is a `SiteTree`**, enforced on every write and every stage by `GridElement::validate()` (via `isZoneScoped()`) — NOT by `HierarchyValidationExtension`, which a project may detach. Code writing a page root directly must set a `Zone`; `api/place` refuses a page-root placement without one before localising the block. Older rows breaking it block publish/duplicate/copy-to-locale of their page until `sake tasks:repair-grid-zone` (`Task\OneTime\Beta5\RepairGridZoneTask`) runs; a page's zones are read through `GridZoneResolver`. It lives on the base so one indexed query returns a zone's whole root sequence (Sections and placements together) — never move it back onto a subclass. Sort values are independent per zone per parent. All queries (tree loading, sort assignment, reorder) filter by zone at the root level.
 
 ## Auto-Scaffolding
 
@@ -130,22 +130,7 @@ Called by `ElementPlacementService` (used for both `reorder()` and `insertAfter(
 
 ### Auto-Scaffolding Awareness
 
-Tests creating container elements **must** account for auto-scaffolded children:
-
-```php
-// Creating a Section produces Section + Row + Column (3 elements total)
-$section = Section::create();
-$section->ParentID = $page->ID;
-$section->ParentClass = $page::class;
-$section->write();
-
-// The section now has 1 Row child
-$this->assertCount(1, $section->getChildren());
-
-// That Row has 1 Column child
-$row = $section->getChildren()->first();
-$this->assertCount(1, $row->getChildren());
-```
+Tests creating container elements **must** account for auto-scaffolded children: one `Section` write yields Section → Row → Column (three elements).
 
 ### Stage Setup Required
 
