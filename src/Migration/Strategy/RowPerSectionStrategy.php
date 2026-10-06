@@ -25,9 +25,9 @@ final readonly class RowPerSectionStrategy extends AbstractRowMappingStrategy
             $row = $group['row'];
             $rowData = $group['rowData'];
 
-            $extraClass = $rowData !== null ? $rowData->customSectionClass : '';
-            $rowTitle = $row !== null ? $row->title : '';
-            $rowExtraClass = $row !== null ? $row->extraClass : '';
+            $extraClass = $rowData->customSectionClass ?? '';
+            $rowTitle = $row->title ?? '';
+            $rowExtraClass = $row->extraClass ?? '';
 
             $columns = $this->buildColumns($group['elements']);
 
