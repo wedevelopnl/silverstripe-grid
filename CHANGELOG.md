@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The toolbar's Grid menu drew every column flush left** — it passed only a column's default width to the template, so an offset column (an 8/12 intro offset by 2, say) sat on the first track, and a column hidden at the default viewport looked like any other. Columns now sit on their row's tracks at their width and offset, wrapping with their offset as on the front end; each row draws its tracks as faint stripes so skipped and unused tracks read as such, and a hidden column is drawn dashed and faded and marked `hidden`. The menu also names each row (with its edit link, previously dropped), heads each column with its span (`8/12`) so its title no longer reads as its first element, and tags shared-block placements. New translation keys: `GridMenu.HIDDEN`, `GridMenu.SHARED`, `GridMenu.SPAN`.
+
 ## [6.0.0-beta.5] - 2026-10-06
 
 The headline is the **zone invariant**: a grid element's `Zone` must now be set exactly when it sits directly on a page, and existing installs need a one-time repair task before pages with older rows can be published again. Alongside it come a media-only content block and a Grid menu for the front-end admin toolbar.
