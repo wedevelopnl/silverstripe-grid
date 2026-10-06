@@ -130,7 +130,7 @@ class GridMenu extends Menu
             $element instanceof SharedBlockReference => $this->sharedNode($element, $member),
             $element instanceof Section => ['Kind' => 'section'],
             $element instanceof Row => ['Kind' => 'row', 'Of' => $this->gridAdapter->getColumnCount()],
-            $element instanceof Column => ['Kind' => 'column', 'Span' => $element->getGridSettings()->default->width],
+            $element instanceof Column => ['Kind' => 'column'] + $this->layout($element),
             default => ['Kind' => 'element'],
         };
 
@@ -160,10 +160,10 @@ class GridMenu extends Menu
 
     /**
      * A placement is one leaf, edited in the shared-block library rather than
-     * on the page. Standing in for a column, it spans what that column spans.
+     * on the page. Standing in for a column, it is laid out as that column.
      * A stranded placement resolves an unsaved block, which has no root and no link.
      *
-     * @return array{Kind: 'shared', Link: string|null, Span?: positive-int}
+     * @return array{Kind: 'shared', Link: string|null, Span?: positive-int, Offset?: int<0, max>, Track?: positive-int, Of?: positive-int, Hidden?: bool}
      */
     private function sharedNode(SharedBlockReference $reference, Member $member): array
     {
@@ -171,6 +171,25 @@ class GridMenu extends Menu
         $root = $block?->getRootElement();
         $node = ['Kind' => 'shared', 'Link' => $block?->canEdit($member) ? $block->getCMSEditLink() : null];
 
-        return $root instanceof Column ? $node + ['Span' => $root->getGridSettings()->default->width] : $node;
+        return $root instanceof Column ? $node + $this->layout($root) : $node;
+    }
+
+    /**
+     * The column's default-viewport layout. It occupies `Track` = offset + width
+     * row tracks, so an offset column wraps as one unit, as the front end does.
+     *
+     * @return array{Span: positive-int, Offset: int<0, max>, Track: positive-int, Of: positive-int, Hidden: bool}
+     */
+    private function layout(Column $column): array
+    {
+        $default = $column->getGridSettings()->default;
+
+        return [
+            'Span' => $default->width,
+            'Offset' => $default->offset,
+            'Track' => $default->offset + $default->width,
+            'Of' => $this->gridAdapter->getColumnCount(),
+            'Hidden' => !$default->visible,
+        ];
     }
 }
