@@ -59,7 +59,7 @@ phpstan/stubs/        # PHPStan stubs (e.g. AdminController.stub)
 .docker/app/src/      # Harness-owned page types (App\MultiZonePage — the E2E multi-zone page); COPYed to /app/src at image build
 docs/                 # User documentation; docs/README.md is the index
 docs/usage/           # Usage guides (grid-editor, shared-blocks, custom-elements, templates, i18n)
-docs/architecture/    # Architecture documents (backend, drag-and-drop, grid-adapter)
+docs/architecture/    # Architecture documents (backend, drag-and-drop, grid-adapter, shared-blocks)
 docs/testing/         # Testing protocol docs (e2e-fixtures)
 docs/images/          # Generated doc screenshots — regenerate, never hand-edit
 ```
