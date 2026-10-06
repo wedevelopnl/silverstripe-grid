@@ -24,7 +24,12 @@ class SubmittedFormHostPageExtension extends Extension
         'HostPage' => SiteTree::class,
     ];
 
-    protected function onBeforeWrite(): void
+    /**
+     * Runs from onBeforeWrite() for a saved submission, and from
+     * {@see UserFormEmailDataExtension} for every one: with
+     * DisableSaveSubmissions on, userforms never writes the submission.
+     */
+    public function recordHostPage(): void
     {
         $submission = $this->getOwner();
 
@@ -41,5 +46,10 @@ class SubmittedFormHostPageExtension extends Extension
         if ($page instanceof SiteTree) {
             $submission->HostPageID = (int) $page->ID;
         }
+    }
+
+    protected function onBeforeWrite(): void
+    {
+        $this->recordHostPage();
     }
 }

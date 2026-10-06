@@ -40,6 +40,8 @@ Each submission records the page it was submitted from. The **Submissions** tab 
 Sent from: $SubmittedForm.HostPage.Title ($SubmittedForm.HostPage.AbsoluteLink)
 ```
 
+The emails name the page even when the form does not store submissions (**Disable Saving Submissions to Server**).
+
 Visitors who are not logged in can use a shared form. Content inside a shared block is viewable by anyone who may view a page that places the block, while the block record in the library stays limited to CMS users.
 
 ## What the visitor sees
