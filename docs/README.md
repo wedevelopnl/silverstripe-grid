@@ -29,6 +29,7 @@ Reference material for working on the module itself, or for extending it beyond 
 |----------|--------|
 | [Backend architecture](architecture/backend.md) | Data model, polymorphic parents, grid settings, API layer, services, validation, repositories, DI |
 | [Grid Adapter System](architecture/grid-adapter.md) | The config-driven adapter base class, preset reference, writing an adapter for another framework |
+| [Shared Blocks](architecture/shared-blocks.md) | The block/placement model, its invariants, ownership and publishing, lifecycle operations, permissions, Fluent, the read-only editor frame |
 | [Drag and Drop](architecture/drag-and-drop.md) | Coordinate spaces, collision detection, the optimistic update pipeline, the backend reorder pipeline |
 
 ## Contributing

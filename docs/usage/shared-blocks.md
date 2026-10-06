@@ -171,4 +171,4 @@ Deleting a *placement* is a different operation entirely: it removes that page's
 ## Reference
 
 - Usage counts are **distinct pages**, not placements: a page using a block in two zones counts once, and under Fluent a page's per-locale placements count once.
-- The model, the invariants that keep it tractable, and the publishing rules are described in [the backend architecture doc](../architecture/backend.md).
+- The model, the invariants that keep it tractable, and the publishing rules are described in [the shared blocks architecture doc](../architecture/shared-blocks.md).

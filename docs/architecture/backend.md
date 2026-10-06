@@ -29,7 +29,7 @@ GridElement
 
 Elements link to their parent via `ParentID + ParentClass`. A Section's parent is a `SiteTree` page; a Row's parent is a `Section`; a Column's parent is a `Row`; a content element's parent is a `Column`. This removes the need for intermediary ownership tables — the parent chain is a direct object graph.
 
-The same polymorphic parent is what makes [shared blocks](../usage/shared-blocks.md) cheap: a `SharedBlock` is simply another parent record, holding one subtree whose root points at it instead of at a page. A `SharedBlockReference` is an ordinary element carrying only placement data, judged by its block's root class wherever the hierarchy rules apply. A page zone therefore has two root classes — `Section` and `SharedBlockReference` — and anything enumerating a page's roots must cover both.
+The same polymorphic parent is what makes [shared blocks](../usage/shared-blocks.md) cheap: a `SharedBlock` is simply another parent record, holding one subtree whose root points at it instead of at a page. A `SharedBlockReference` is an ordinary element carrying only placement data, judged by its block's root class wherever the hierarchy rules apply. A page zone therefore has two root classes — `Section` and `SharedBlockReference` — and anything enumerating a page's roots must cover both. The full model is in [Shared Blocks Architecture](shared-blocks.md).
 
 The tradeoff: page IDs and element IDs share no namespace separation, so lookup maps must key by the composite `"ParentClass:ParentID"` string, not by `ParentID` alone.
 
