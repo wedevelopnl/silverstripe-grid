@@ -163,6 +163,10 @@ class UserFormElement extends GridElement
         $controller = UserDefinedFormController::create($this);
         $controller->setRequest($current->getRequest());
 
+        if ($current instanceof UserFormElementController && $current->showsReceivedFor($this)) {
+            return $controller->renderWith(UserDefinedFormController::class . '_ReceivedFormSubmission');
+        }
+
         // Loads userforms' CSS/JS and runs ContentController::init()'s
         // canView() check on this element — see GridElement::canView().
         $controller->doInit();
