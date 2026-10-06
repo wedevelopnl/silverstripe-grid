@@ -180,6 +180,9 @@ final class GridMenuTest extends SapphireTest
 
     public function testTreeShape(): void
     {
+        $page = $this->gridPage();
+        $this->unzonedRoot($page, 1, 'Unzoned');
+
         self::assertSame(
             [
                 ['Kind' => 'section', 'Title' => 'Hero', 'Span' => null, 'Of' => null, 'Children' => [
@@ -194,7 +197,7 @@ final class GridMenuTest extends SapphireTest
                 ]],
                 ['Kind' => 'shared', 'Title' => 'Banner', 'Span' => null, 'Of' => null, 'Children' => []],
             ],
-            $this->tree($this->mainNodes($this->gridPage(), $this->admin)),
+            $this->tree($this->mainNodes($page, $this->admin)),
         );
     }
 
@@ -334,13 +337,12 @@ final class GridMenuTest extends SapphireTest
     /**
      * Zone main: Section Hero → Row → Column Wide (8) → Intro
      *                                → Column Narrow (4) → an untitled element
-     *            then the Banner placement. A zone-less Unzoned section is never listed.
+     *            then the Banner placement.
      */
     private function gridPage(): Page
     {
         $page = $this->page();
         $hero = GridTreeFactory::section($page, sort: 1, title: 'Hero');
-        $this->unzonedRoot($page, 1, 'Unzoned');
         $row = GridTreeFactory::row($hero, title: 'Hero Row');
         $wide = GridTreeFactory::column($row, 1, new GridSettings(new ViewportConfig(8, 0, true)), 'Wide');
         $narrow = GridTreeFactory::column($row, 2, new GridSettings(new ViewportConfig(4, 0, true)), 'Narrow');
@@ -357,7 +359,8 @@ final class GridMenuTest extends SapphireTest
 
     /**
      * A root the zone rule refuses to write, as unrepaired legacy data leaves
-     * it: written valid, then stripped of its Zone in the database.
+     * it: written valid, then stripped of its Zone in the database. It also
+     * blocks the page's publish, so it stays out of gridPage().
      */
     private function unzonedRoot(Page $page, int $sort, string $title): void
     {
