@@ -7,14 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0-beta.5] - 2026-10-06
+
+The headline is the **zone invariant**: a grid element's `Zone` must now be set exactly when it sits directly on a page, and existing installs need a one-time repair task before pages with older rows can be published again. Alongside it come a media-only content block and a Grid menu for the front-end admin toolbar.
+
 ### Upgrading
 
-Run the zone repair after deploying. In order:
+Three steps, in order:
 
-1. **`sake tasks:backfill-grid-zone`** — only if upgrading from before `6.0.0-beta.4`, as described under that release. The repair refuses to run while the backfill still has legacy zones to copy, because once a base row holds a zone the backfill no longer restores the legacy one over it.
-2. **`sake tasks:repair-grid-zone`** (add `--dry-run` to preview). A grid element's `Zone` must now be non-empty exactly when it sits directly on a page — see Changed. Rows written before the rule can break it either way, and **a page holding such a row cannot be published, duplicated, copied to another locale, reordered next to, or reverted until the repair runs**: each of those re-validates every element it touches and is atomic, so one bad row blocks the whole operation. The task fixes what it can decide on all three stages (draft, `_Live`, `_Versions`): a zone-less root on a page that declares exactly one zone gets that zone, appended after the zone's existing roots; a zoned element anywhere below page level (or rooting a shared block) has its zone cleared. Live rows are fixed in place, never by publishing, so pending draft edits stay unpublished. Everything else — a page with several zones, with no grid area, with `UseGrid = 0`, a page that no longer exists, a parent class that no longer exists — is listed with its page for manual review, and the task then exits non-zero. It is idempotent, and like the backfill its SQL is MySQL syntax.
+1. **`sake db:build --flush`** — `MediaElement` adds a table and `MediaType` becomes a native enum column (see Added and Changed).
+2. **`sake tasks:backfill-grid-zone`** — only if upgrading from before `6.0.0-beta.4`, as described under that release. The repair refuses to run while the backfill still has legacy zones to copy, because once a base row holds a zone the backfill no longer restores the legacy one over it.
+3. **`sake tasks:repair-grid-zone`** (add `--dry-run` to preview). A grid element's `Zone` must now be non-empty exactly when it sits directly on a page — see Changed. Rows written before the rule can break it either way, and **a page holding such a row cannot be published, duplicated, copied to another locale, reordered next to, or reverted until the repair runs**: each of those re-validates every element it touches and is atomic, so one bad row blocks the whole operation. The task fixes what it can decide on all three stages (draft, `_Live`, `_Versions`): a zone-less root on a page that declares exactly one zone gets that zone, appended after the zone's existing roots; a zoned element anywhere below page level (or rooting a shared block) has its zone cleared. Live rows are fixed in place, never by publishing, so pending draft edits stay unpublished. Everything else — a page with several zones, with no grid area, with `UseGrid = 0`, a page that no longer exists, a parent class that no longer exists — is listed with its page for manual review, and the task then exits non-zero. It is idempotent, and like the backfill its SQL is MySQL syntax.
+
+Four further changes need attention only if they apply to you; each is described under Changed:
+
+- **Code that writes page roots directly** must set a `Zone`, and code writing `''` to `MediaType` to mean "no media" should write `null`.
+- **Translation overrides** of the media keys under `BlockMediaExtension` must move to `MediaExtension`, or they silently fall back to the module's strings.
+- **Tailwind projects safelisting `aspect-[4/3]`** must safelist `aspect-4/3` instead.
+- **Tests asserting on the split option labels** need the new media-first text.
 
 ### Added
+
+- **A Grid menu for the front-end admin toolbar.** With [`wedevelopnl/silverstripe-admintoolbar`](https://packagist.org/packages/wedevelopnl/silverstripe-admintoolbar) installed, the toolbar gains a **Grid** menu that maps the current page's grid zone by zone — sections, rows, columns drawn at their default widths, content elements and shared-block placements — with a link to each item's editor; a placement links to its block in the library. Under Fluent it lists the current locale's elements. It shows only on pages that use the grid, leaves out elements the member cannot view, and links only where the member can edit. Its styles ship as `client/dist/styles/admin-toolbar-menu.css`, built on the toolbar's `--ssat-*` custom properties. The toolbar discovers the menu on its own; switch it off with `WeDevelop\Grid\AdminToolbar\GridMenu.enabled: false`. The toolbar is a `suggest`, not a requirement — without it the menu class is skipped and nothing else changes. See [Template integration](docs/usage/templates.md#admin-toolbar-menu).
+- **`GridPageExtension::usesGrid()`** — the rule the CMS editor applies to decide whether a page uses the grid (always, unless the page type enables `enable_editor_toggle` and `UseGrid` is off), now public so templates and integrations ask the same question. The Grid menu uses it.
 
 - **`MediaElement`, a media-only content block** (*Media* in the type picker): one image or video with a caption and an aspect ratio. It appears in every project's picker by default and renders through the existing `MediaBlock` include, so a theme overriding that include restyles it too. Its media fields come from the new `MediaExtension`, which any element can apply to get the same fields without the side-by-side layout. `BlockMediaExtension` now extends it and adds only the layout controls, so its owners keep exactly the same columns.
 - **`$GridZone('main')` renders the zone on its own.** It returns a `GridZoneList`, which renders each root element through its holder chain, so a page template no longer loops a list whose body is only `$Me`. It is still a list: `<% loop $GridZone('main') %>` works where each root needs its own wrapper, and `<% if $GridZone('sidebar') %>` is false for an empty zone. Existing `<% loop $GridZone('main') %>$Me<% end_loop %>` templates render unchanged and need no update.
@@ -29,7 +44,6 @@ Run the zone repair after deploying. In order:
 - **`MediaType` is a native DB Enum** (`'image','video'`, `NULL` for no media) instead of a `Varchar(5)`, so the database rejects any other value. `dev/build` alters the column on every class carrying `MediaExtension` or `BlockMediaExtension`. Existing `image`/`video` rows are kept. A row holding anything else already rendered no media, and MySQL stores it as `''`, which still reads as no media. Code that writes `''` to mean "no media" should write `null`. The SS5 migration now maps a legacy `''` to `NULL` and logs any other unrecognised value.
 - **The media translation keys moved from `WeDevelop\Grid\Extensions\BlockMediaExtension` to `WeDevelop\Grid\Extensions\MediaExtension`** in `lang/*.yml`: the media tab, caption, aspect ratio and its options, the custom video thumbnail, the video embed tab and its fields, and the `db_Media*`/`db_Video*`/`has_one_*` field labels. The layout keys (`CONTENT_COLUMNS`, `GAP_SIZE`, `MEDIA_POSITION`, `POSITION_*`, `SPLIT_RATIO`, `VERTICAL_ALIGNMENT`, …) stay under `BlockMediaExtension`. A project overriding a moved key under the old namespace silently falls back to the module's string: move those overrides to `MediaExtension`.
 - **Split options are labelled media-first** — `8/4 (media/content)` where the label read a bare `4/8`, so the ratio reads in the same order as the option's diagram. The stored value is still the content column width, the option keys are unchanged, and the label is now translatable (`SPLIT_RATIO`, shipped in `en` and `nl`). Projects asserting on the old label text in their own tests need updating.
-- **The Fluent test harness is now the optional-modules harness** (contributors only) — the second app container installs every optional module the grid integrates with, so the next integration joins it instead of adding a third container. `app-fluent` → `app-modules`, profile `fluent` → `modules`, `composer.fluent.{json,lock}` → `composer.modules.{json,lock}`, database `silverstripe_fluent` → `silverstripe_modules`, `task test-fluent` / `ensure-up-fluent` → `task test-modules` / `ensure-up-modules`, and the CI `fluent` variant → `modules`. The `fluent` PHPUnit suite keeps its name. An existing dev volume needs no reset — the database user's grant already covers the new name — but the old container and `vendor-fluent` volume are left behind: remove them with `docker compose -f .docker/compose.yml up -d --remove-orphans` and `docker volume rm <project>_vendor-fluent`.
 
 ### Fixed
 
@@ -38,6 +52,31 @@ Run the zone repair after deploying. In order:
   The CSS fallback diagram, used for splits that ship no PNG, drew its two bars content-first and is now media-first for the same reason.
 
   **Pages laid out through the old picker keep their stored value and still render what that value means** — the fix stops the picker misrepresenting the split, it does not reinterpret content. A page whose author picked by the picture rather than the label is laid out the opposite way round from what they intended, and only its author can say which one they wanted; there is no migration that can tell the two apart.
+
+### Security
+
+- **`qs` override raised to `^6.16.0`** — GHSA-x5fp-wj9c-mxmx (array-limit bypass via bracket-key comma parsing) and GHSA-4mjr-xmp4-gh2g (DoS via an attacker-controlled `isBuffer`). Dev-only: it reaches the tree solely through `@stryker-mutator/core` → `typed-rest-client`, which pins `qs` at 6.15.1, so the override is the only lever. Dependabot auto-dismissed both alerts on dev scope. Nothing in the shipped bundle is affected.
+- `source-map-js` 1.2.2 via the lock refresh (GHSA-68fv-2mgg-jv7q) — dev-only, through the Tailwind CLI and Vitest coverage tooling.
+
+### Dependencies
+
+- `wedevelopnl/silverstripe-admintoolbar` `^6.0` added to `suggest` (see Added), to `require-dev` and to both container manifests
+- `wedevelopnl/silverstripe-e2e` 0.2.0 → 0.2.1 (all three pins)
+- Container QA pins: PHPStan 2.2.8 → 2.3.0, PHPUnit 12.5.33 → 12.5.38, `infection/infection` 0.35.0 → 0.35.6, `tomasvotruba/type-coverage` 2.2.1 → 2.5.0 (the 2.2.1 hold is lifted: 2.5.0 installs on PHP 8.3 again), and new `tomasvotruba/class-leak` 2.3.0. The relocks carry Rector 2.6.3 → 2.7.0 and `silverstripe/framework` 6.2.4 → 6.2.11
+- `@tanstack/react-query` 5.101.4 → 5.104.1, `valibot` 1.4.2 → 1.5.0
+- Vitest / `@vitest/coverage-v8` 4.1.11 → 5.0.3, Vite 8.2.2 → 8.3.3, `vite-plugin-dts` 5.0.3 → 5.1.2, `@vitejs/plugin-react` 6.1.0 → 6.1.2
+- `@biomejs/biome` 2.5.10 → 2.5.15, `@playwright/test` 1.62.1 → 1.63.0, `@testing-library/react` 16.3.2 → 16.3.3, `@testing-library/user-event` 14.6.5 → 14.6.7, `@types/node` 26.2.0 → 26.6.4, `js-yaml` 5.3.0 → 5.4.3, `jsdom` 30.0.1 → 30.1.2
+- npm `overrides`: `qs` ^6.15.2 → ^6.16.0 (see Security)
+- Held back deliberately: React 19 (`silverstripe/admin` 3 still ships React 18), TypeScript 7 (no compiler API, which `vite-plugin-dts` and the Stryker checker need), PHPUnit 13 (requires PHP >= 8.4.1, above the module's floor)
+
+### Developer Experience
+
+- **The Fluent test harness is now the optional-modules harness** (contributors only) — the second app container installs every optional module the grid integrates with, so the next integration joins it instead of adding a third container. `app-fluent` → `app-modules`, profile `fluent` → `modules`, `composer.fluent.{json,lock}` → `composer.modules.{json,lock}`, database `silverstripe_fluent` → `silverstripe_modules`, `task test-fluent` / `ensure-up-fluent` → `task test-modules` / `ensure-up-modules`, and the CI `fluent` variant → `modules`. The `fluent` PHPUnit suite keeps its name. An existing dev volume needs no reset — the database user's grant already covers the new name — but the old container and `vendor-fluent` volume are left behind: remove them with `docker compose -f .docker/compose.yml up -d --remove-orphans` and `docker volume rm <project>_vendor-fluent`.
+- **Unreferenced classes fail QA** — `tomasvotruba/class-leak` runs over `src/` in `task qa` and in the CI static-analysis job (`task class-leak`). It parses PHP only, so classes SilverStripe reaches through YAML or manifest discovery are skipped by parent type, and YAML-only Injector bindings by FQCN. Skip types resolve through `is_a()`, so it runs inside the container.
+- **CI proves the grid works without the admin toolbar** — the harness now installs the toolbar to test the Grid menu, which would hide an unguarded reference to it from every other job. `task verify-no-toolbar` builds a disposable container without it, runs `dev/build` and requires a grid page to return 200.
+- **`task qa` runs `check:icons`** — the icon check already ran in CI and `npm run qa`, but not in the local gate, so `task qa` could pass on a tree CI then failed.
+- **`type_coverage.declare` is gone** from the PHPStan config: type-coverage 2.5.0 deprecated it and it had no effect. `declare(strict_types=1)` stays enforced over `src/` by Rector's `DeclareStrictTypesRector`, which the `rector-dry` gate runs.
+- **A shared blocks architecture document** — `docs/architecture/shared-blocks.md` covers the block/placement model, its invariants, ownership and publishing, the lifecycle operations, permissions, Fluent and the read-only editor frame. That material previously lived only in the generated agent instructions.
 
 ## [6.0.0-beta.4] - 2026-08-24
 
@@ -152,7 +191,7 @@ Two further changes need attention only if they apply to you:
 - `wedevelopnl/silverstripe-e2e` 0.1.2 → 0.2.0 (see Changed; pinned in three places — the module's `composer.json` and both container manifests)
 - PHPUnit 11.5.56 → 12.5.33, `phpunit/phpcov` 10.0.1 → 11.0.4 (held on the 11.x line: 12.x requires PHP 8.4 against this module's 8.3 floor), `infection/infection` 0.34.0 → 0.35.0, PHPStan 2.2.5 → 2.2.8, `phpstan/phpstan-deprecation-rules` 2.0.4 → 2.0.5. The module's own range moves to `phpunit/phpunit ^12.0` and `infection/infection ^0.35`.
 - Stryker 9.x → 10.0.0 (core, `typescript-checker` and `vitest-runner` move together — the plugins peer-pin core's exact version)
-- `@biomejs/biome` 2.5.8 → 2.5.9, `vitest` / `@vitest/coverage-v8` 4.1.10 → 4.1.11, `@testing-library/jest-dom` 7.0.0 → 7.0.1, `@testing-library/user-event` 14.6.3 → 14.6.5, `@vitejs/plugin-react` 6.0.5 → 6.1.0, `js-yaml` 5.2.3 → 5.3.0, Vite 8.2.1 → 8.2.2
+- `@biomejs/biome` 2.5.8 → 2.5.10, `vitest` / `@vitest/coverage-v8` 4.1.10 → 4.1.11, `@testing-library/jest-dom` 7.0.0 → 7.0.1, `@testing-library/user-event` 14.6.3 → 14.6.5, `@vitejs/plugin-react` 6.0.5 → 6.1.0, `js-yaml` 5.2.3 → 5.3.0, Vite 8.2.1 → 8.2.2
 - Removed: `sass-embedded`, `stylelint`, `stylelint-config-standard-scss`
 - `client/js` joins the `expose` list — it carries the standalone admin-chrome script the library's add control renders markup for
 
@@ -758,6 +797,7 @@ Ground-up rewrite for SilverStripe 6. This is a new package (`wedevelopnl/silver
 - Makefile with targets for testing, coverage, static analysis, and mutation testing
 - Pre-push QA gate hook
 
+[6.0.0-beta.5]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-beta.5
 [6.0.0-beta.4]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-beta.4
 [6.0.0-beta.3]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-beta.3
 [6.0.0-beta.2]: https://github.com/wedevelopnl/silverstripe-grid/releases/tag/6.0.0-beta.2
