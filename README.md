@@ -120,6 +120,7 @@ The full map, with a line on what each document covers, is in [`docs/`](docs/REA
 
 - [Backend architecture](docs/architecture/backend.md) — data model, API layer, services, validation
 - [Grid Adapter System](docs/architecture/grid-adapter.md) — writing an adapter for another CSS framework
+- [Shared Blocks](docs/architecture/shared-blocks.md) — the block/placement model, its invariants and publishing rules
 - [Drag and Drop](docs/architecture/drag-and-drop.md) — the frontend dnd-kit integration and backend reorder pipeline
 
 **Contributing**
