@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Value;
 
+use WeDevelop\Grid\Contract\UnavailableElementInterface;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Model\Row;
@@ -87,7 +88,8 @@ enum ContainerType: string
      * which must first be shown to name an element at all — the API hands it
      * straight to `Injector::create()`. A subclass, never the `GridElement` base
      * itself: that is the scaffold every element inherits, not an authorable type,
-     * and the type picker never offers it.
+     * and the type picker never offers it. Nor a stand-in for an element whose
+     * dependency is missing ({@see UnavailableElementInterface}).
      *
      * Type rules only; whether the current member may create one stays a
      * separate `canCreate()` check at the controller.
@@ -97,6 +99,7 @@ enum ContainerType: string
     public function isChildCreatable(string $class): bool
     {
         return is_subclass_of($class, GridElement::class)
+            && !is_a($class, UnavailableElementInterface::class, true)
             && $this->isChildAllowed($class);
     }
 }

@@ -1,0 +1,7 @@
+<?php
+
+namespace SilverStripe\UserForms\Form;
+
+class UserForm extends \SilverStripe\Forms\Form
+{
+}

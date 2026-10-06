@@ -16,12 +16,18 @@
         <testsuite name="integration">
             <directory>vendor/wedevelopnl/silverstripe-grid/tests/Integration</directory>
             <exclude>vendor/wedevelopnl/silverstripe-grid/tests/Integration/Fluent</exclude>
+            <exclude>vendor/wedevelopnl/silverstripe-grid/tests/Integration/UserForms</exclude>
         </testsuite>
         <testsuite name="functional">
             <directory>vendor/wedevelopnl/silverstripe-grid/tests/Functional</directory>
+            <exclude>vendor/wedevelopnl/silverstripe-grid/tests/Functional/UserForms</exclude>
         </testsuite>
         <testsuite name="fluent">
             <directory>vendor/wedevelopnl/silverstripe-grid/tests/Integration/Fluent</directory>
+        </testsuite>
+        <testsuite name="userforms">
+            <directory>vendor/wedevelopnl/silverstripe-grid/tests/Integration/UserForms</directory>
+            <directory>vendor/wedevelopnl/silverstripe-grid/tests/Functional/UserForms</directory>
         </testsuite>
     </testsuites>
     <source>

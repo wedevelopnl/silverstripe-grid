@@ -211,6 +211,19 @@ nl:
     UNSHARE_EMPTY_BLOCK: 'Dit blok heeft geen inhoud meer om te behouden. Verwijder het blok en haal de plaatsingen weg.'
     SHARED_NESTING: 'Inhoud binnen een gedeeld blok kan niet nogmaals gedeeld worden.'
     ZONE_REQUIRED: 'Een gedeeld blok dat direct op een pagina staat, heeft een paginagebied nodig.'
+  WeDevelop\Grid\UserForms\UserFormElement:
+    CLASS_DESCRIPTION: 'Een formulier dat in het CMS wordt opgebouwd; de inzendingen worden bij het blok bewaard.'
+    PLURALNAME: Formulieren
+    PLURALS:
+      one: 'Een formulier'
+      other: '{count} formulieren'
+    REDIRECT_PAGE: 'Na verzenden doorsturen naar'
+    REDIRECT_PAGE_DESCRIPTION: 'Laat leeg om het bevestigingsbericht op de plek van het formulier te tonen.'
+    SINGULARNAME: Formulier
+    SUBMISSION_PAGE: Pagina
+    SUMMARY_FIELDS:
+      one: '{count} veld'
+      other: '{count} velden'
   WeDevelop\Grid\Validation\HierarchyValidationService:
     PAGE_LEVEL_REJECTED: 'Een {element} kan niet op paginaniveau worden geplaatst.'
     PARENT_REJECTED: 'Een {element} kan niet in een {parent} worden geplaatst.'

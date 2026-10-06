@@ -42,6 +42,7 @@
   },
   "suggest": {
     "silverstripe/reports": "Enables the Grid Elements and Shared Blocks reports in CMS → Reports",
+    "silverstripe/userforms": "Adds a Form grid element: a CMS-built form whose fields, recipients and submissions belong to the block",
     "tractorcow/silverstripe-fluent": "Required for multi-locale support with isolated element records per locale",
     "wedevelopnl/silverstripe-admintoolbar": "Adds a Grid menu to the front-end admin toolbar listing the page's sections, rows, columns and blocks with edit links"
   },

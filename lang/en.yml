@@ -211,6 +211,19 @@ en:
     NOT_PLACED: 'Only an element that sits on a page can be shared.'
     SHARED_NESTING: 'Content inside a shared block cannot be shared again.'
     ZONE_REQUIRED: 'A shared block placed directly on a page needs a page area.'
+  WeDevelop\Grid\UserForms\UserFormElement:
+    CLASS_DESCRIPTION: 'A form built in the CMS; its submissions are kept with the block.'
+    PLURALNAME: Forms
+    PLURALS:
+      one: 'A Form'
+      other: '{count} Forms'
+    REDIRECT_PAGE: 'After submitting, go to'
+    REDIRECT_PAGE_DESCRIPTION: 'Leave empty to show the on-complete message in place of the form.'
+    SINGULARNAME: Form
+    SUBMISSION_PAGE: Page
+    SUMMARY_FIELDS:
+      one: '{count} field'
+      other: '{count} fields'
   WeDevelop\Grid\Validation\HierarchyValidationService:
     PAGE_LEVEL_REJECTED: 'A {element} cannot be placed at the page level.'
     PARENT_REJECTED: 'A {element} cannot be placed inside a {parent}.'
