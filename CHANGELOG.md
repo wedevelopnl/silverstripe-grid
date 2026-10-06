@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The content column width picker lists its splits from the narrowest media column to the widest** — `4/8`, `5/7`, `6/6`, `7/5`, `8/4` after *Full width* — so the options read in the same direction as their media-first labels and diagrams. Only the order changes: each option keeps its stored `ContentColumns` value, so existing blocks render and show as selected exactly as before.
+
 ### Fixed
 
 - **The toolbar's Grid menu drew every column flush left** — it passed only a column's default width to the template, so an offset column (an 8/12 intro offset by 2, say) sat on the first track, and a column hidden at the default viewport looked like any other. Columns now sit on their row's tracks at their width and offset, wrapping with their offset as on the front end; each row draws its tracks as faint stripes so skipped and unused tracks read as such, and a hidden column is drawn dashed and faded and marked `hidden`. The menu also names each row (with its edit link, previously dropped), heads each column with its span (`8/12`) so its title no longer reads as its first element, and tags shared-block placements. New translation keys: `GridMenu.HIDDEN`, `GridMenu.SHARED`, `GridMenu.SPAN`.
