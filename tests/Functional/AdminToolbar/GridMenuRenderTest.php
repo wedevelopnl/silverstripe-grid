@@ -90,7 +90,20 @@ final class GridMenuRenderTest extends FunctionalTest
         $page->publishRecursive();
 
         self::assertMatchesRegularExpression(
-            '#data-grid-node="shared"[^>]*style="grid-column: span 5 / span 5;"#',
+            '#data-grid-node="shared"[^>]*style="--ssgrid-offset: 0; grid-column: span 5 / span 5;"#',
+            $this->body($page),
+        );
+    }
+
+    public function testOffsetColumnSpansItsOffsetAndHiddenColumnIsMarked(): void
+    {
+        $page = $this->page();
+        $row = GridTreeFactory::row(GridTreeFactory::section($page, title: 'Host'));
+        GridTreeFactory::column($row, 1, new GridSettings(new ViewportConfig(8, 2, false)));
+        $page->publishRecursive();
+
+        self::assertMatchesRegularExpression(
+            '#data-grid-node="column" class="ssgrid-toolbar-box" data-hidden style="--ssgrid-offset: 2; grid-column: span 10 / span 10;"#',
             $this->body($page),
         );
     }
