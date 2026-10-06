@@ -16,16 +16,6 @@ applyTo: "**/*.php"
 - Used in `ElementPlacementService`, `GridElementService`, `GridSettingsService`, `WriteResult`, and controller response flows.
 - Check with `$result->isOk()` / `$result->isErr()`, access value via `$result->unwrap()`, errors via `$result->errors()`.
 
-## Container Auto-Scaffolding
-
-- `GridElement::onAfterWrite()` is the single scaffolding site. The child class to create is derived via `ContainerType::allowedChildClass()`:
-  - `ContainerType::Section` → creates a `Row`
-  - `ContainerType::Row` → creates a `Column`
-  - `ContainerType::Column` → `allowedChildClass()` returns `null`; no scaffolding
-- Runs only on DRAFT stage and only when the container has no children.
-- Ensures the Section → Row → Column hierarchy is always complete. Integration tests creating elements must account for these auto-created children.
-- Per-class `auto_scaffold: false` static disables scaffolding on a subclass.
-
 ## PHPStan
 
 - **`positive-int` narrowing**: `!== 0` does not narrow `int` to `positive-int`; use `> 0` (or `<= 0` for the guard clause) instead.
