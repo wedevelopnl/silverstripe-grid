@@ -207,6 +207,8 @@ The include handles image/video discrimination, aspect-ratio wrapping, captions,
 
 With [`wedevelopnl/silverstripe-admintoolbar`](https://packagist.org/packages/wedevelopnl/silverstripe-admintoolbar) installed, the front-end toolbar gains a **Grid** menu. It maps the current page's grid zone by zone — sections, rows, columns drawn at their default widths, content elements and shared-block placements — with a link to each item's editor. A placement is one item and links to its block in the shared-block library.
 
+![The toolbar's Grid menu open on a page with three sections: "Hero" with one full-width column, "What we do" with an 8-of-12 intro column above three equal card columns, and "Get in touch" split 7 and 5 — each section, column and content element a link to its editor](../images/admin-toolbar-grid-menu.png)
+
 - Nothing to configure: the toolbar discovers the menu on its own. Render `$AdminToolbar` in your page template as the toolbar's README describes. Without the toolbar the module needs nothing and the menu simply does not exist.
 - The menu shows only to members the toolbar shows itself to, and only on pages that use the grid by the same rule the CMS editor applies: always, unless the page type enables the [editor toggle](#per-page-editor-toggle) and `UseGrid` is off. It is left out when the member can view no element on the page.
 - Elements the member cannot view are left out; links appear only where the member can edit. With more than one zone, each gets a heading, `main` first.

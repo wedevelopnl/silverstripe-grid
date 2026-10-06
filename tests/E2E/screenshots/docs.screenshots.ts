@@ -1,13 +1,14 @@
 import { expect, type Locator, type Page, test } from '@playwright/test'
 import { readAdapterConfig } from '../helpers/adapter'
 import { type FixtureLoadResponse, loadAndNavigate } from '../helpers/fixtures'
+import { openMenu } from '../helpers/toolbar'
 
 /** The Shared blocks admin's model segment, as it appears in its URLs. */
 const BLOCK_MODEL = 'WeDevelop-Grid-Model-SharedBlock'
 
 /**
- * Regenerates the images embedded in README.md, docs/usage/grid-editor.md and
- * docs/usage/shared-blocks.md.
+ * Regenerates the images embedded in README.md, docs/usage/grid-editor.md,
+ * docs/usage/shared-blocks.md and docs/usage/templates.md.
  *
  * Run with `npm run docs:screenshots` (not part of `task test-e2e` — see
  * playwright.docs.config.ts). Every capture comes from the `docs-page`
@@ -274,6 +275,20 @@ test('shared block delete modes', async ({ page }) => {
   await expect(keep).toBeVisible()
 
   await shoot(page, 'shared-block-delete', [moreOptions, remove, keep])
+})
+
+test('admin toolbar grid menu', async ({ page }) => {
+  await page.setViewportSize(TALL)
+  await openDocsPage(page)
+
+  // The front end of Home, not the CMS: the menu lives in the admin toolbar
+  // the harness's Page.ss renders. Home rather than the placement page because
+  // its three sections show the proportional column map the guide describes.
+  await page.goto('/e2e-docs-home')
+  const menu = await openMenu(page, 'GridMenu')
+  await expect(menu.locator('[data-grid-node="section"]')).toHaveCount(3)
+
+  await shoot(page, 'admin-toolbar-grid-menu', [menu.locator('.dialog-inner')])
 })
 
 test('element actions menu', async ({ page }) => {
