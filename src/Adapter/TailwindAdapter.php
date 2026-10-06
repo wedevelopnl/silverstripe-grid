@@ -84,7 +84,7 @@ final class TailwindAdapter extends GridAdapter
     private static array $aspect_ratio_classes = [
         'auto' => null,
         '1x1' => 'aspect-square',
-        '4x3' => 'aspect-[4/3]',
+        '4x3' => 'aspect-4/3',
         '16x9' => 'aspect-video',
     ];
 
