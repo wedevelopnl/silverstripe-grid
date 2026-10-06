@@ -1,5 +1,8 @@
 en:
   WeDevelop\Grid\AdminToolbar\GridMenu:
+    HIDDEN: hidden
+    SHARED: Shared
+    SPAN: '{span} of {of} columns'
     TITLE: Grid
     ZONE: 'Zone: {name}'
   WeDevelop\Grid\Extensions\BlockMediaExtension:

@@ -1,5 +1,8 @@
 nl:
   WeDevelop\Grid\AdminToolbar\GridMenu:
+    HIDDEN: verborgen
+    SHARED: Gedeeld
+    SPAN: '{span} van {of} kolommen'
     TITLE: Grid
     ZONE: 'Zone: {name}'
   WeDevelop\Grid\Extensions\BlockMediaExtension:

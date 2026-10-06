@@ -187,10 +187,10 @@ final class GridMenuTest extends SapphireTest
             [
                 ['Kind' => 'section', 'Title' => 'Hero', 'Span' => null, 'Of' => null, 'Children' => [
                     ['Kind' => 'row', 'Title' => 'Hero Row', 'Span' => null, 'Of' => 12, 'Children' => [
-                        ['Kind' => 'column', 'Title' => 'Wide', 'Span' => 8, 'Of' => null, 'Children' => [
+                        ['Kind' => 'column', 'Title' => 'Wide', 'Span' => 8, 'Of' => 12, 'Children' => [
                             ['Kind' => 'element', 'Title' => 'Intro', 'Span' => null, 'Of' => null, 'Children' => []],
                         ]],
-                        ['Kind' => 'column', 'Title' => 'Narrow', 'Span' => 4, 'Of' => null, 'Children' => [
+                        ['Kind' => 'column', 'Title' => 'Narrow', 'Span' => 4, 'Of' => 12, 'Children' => [
                             ['Kind' => 'element', 'Title' => ContentElement::singleton()->getType(), 'Span' => null, 'Of' => null, 'Children' => []],
                         ]],
                     ]],
@@ -234,10 +234,24 @@ final class GridMenuTest extends SapphireTest
         self::assertSame($block->getCMSEditLink(), $host->Children->first()?->Link);
     }
 
-    public function testColumnRootedPlacementInsideARowTakesItsColumnSpan(): void
+    public function testColumnCarriesItsDefaultViewportLayout(): void
+    {
+        $page = $this->page();
+        $row = GridTreeFactory::row(GridTreeFactory::section($page, title: 'Host'));
+        GridTreeFactory::column($row, 1, new GridSettings(new ViewportConfig(6, 3, false)), 'Indented');
+
+        $column = $this->find($this->mainNodes($page, $this->admin), ['section', 'row', 'column'], 0);
+
+        self::assertSame(
+            ['Span' => 6, 'Offset' => 3, 'Track' => 9, 'Of' => 12, 'Hidden' => true],
+            ['Span' => $column->Span, 'Offset' => $column->Offset, 'Track' => $column->Track, 'Of' => $column->Of, 'Hidden' => $column->Hidden],
+        );
+    }
+
+    public function testColumnRootedPlacementInsideARowTakesItsColumnLayout(): void
     {
         $root = Column::create();
-        $root->setGridSettings(new GridSettings(new ViewportConfig(5, 0, true)));
+        $root->setGridSettings(new GridSettings(new ViewportConfig(5, 1, true)));
         $block = $this->blockRootedAt($root, 'Column block');
         $page = $this->page();
         $row = GridTreeFactory::row(GridTreeFactory::section($page, title: 'Host'), title: 'Host Row');
@@ -254,6 +268,7 @@ final class GridMenuTest extends SapphireTest
             ),
         );
         self::assertSame($block->getCMSEditLink(), $hostRow->Children->last()?->Link);
+        self::assertSame(6, $hostRow->Children->last()?->Track);
     }
 
     public function testPlacementWhoseBlockIsGoneHasNoLink(): void

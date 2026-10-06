@@ -9,63 +9,174 @@
  */
 
 .ssgrid-toolbar-zone {
+  --ssgrid-toolbar-muted: color-mix(in srgb, var(--ssat-color-text) 65%, var(--ssat-color-white));
+
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--ssat-spacing) * 3);
   margin-bottom: calc(var(--ssat-spacing) * 4);
 }
 
 .ssgrid-toolbar-zone-heading {
-  margin-bottom: calc(var(--ssat-spacing) * 2);
   font-size: var(--ssat-text-sm);
   line-height: var(--ssat-text-sm--line-height);
   font-weight: var(--ssat-font-weight-semibold);
 }
 
-/* A section or a shared-block placement */
-.ssgrid-toolbar-box {
-  margin-bottom: calc(var(--ssat-spacing) * 3);
-  padding: calc(var(--ssat-spacing) * 3);
-  border: 1px solid var(--ssat-color-silverstripe-300);
-  border-radius: var(--ssat-radius-lg);
-}
-
-.ssgrid-toolbar-row {
-  display: grid;
-  gap: calc(var(--ssat-spacing) * 3);
-}
-
-.ssgrid-toolbar-column {
-  padding: calc(var(--ssat-spacing) * 2);
-  border: 1px solid var(--ssat-color-silverstripe-300);
-  border-radius: var(--ssat-radius-md);
-}
-
-.ssgrid-toolbar-element {
-  padding-block: var(--ssat-spacing);
-}
-
 .ssgrid-toolbar-label {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: calc(var(--ssat-spacing) * 2);
-  margin-bottom: calc(var(--ssat-spacing) * 2);
+  column-gap: calc(var(--ssat-spacing) * 2);
+  row-gap: var(--ssat-spacing);
+  min-width: 0;
   font-size: var(--ssat-text-sm);
   line-height: var(--ssat-text-sm--line-height);
 }
 
 .ssgrid-toolbar-icon {
   display: inline-flex;
+  flex: none;
   align-items: center;
+  justify-content: center;
+  width: 1em;
   height: 1em;
   line-height: 1;
   opacity: 0.5;
 }
 
+/*
+ * min-content basis: the text wraps beside the icon instead of dropping below
+ * it. break-word, not anywhere: anywhere shrinks min-content to one character
+ * and splits short titles mid-word.
+ */
+.ssgrid-toolbar-link,
+.ssgrid-toolbar-title {
+  flex: 1 1 min-content;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
 .ssgrid-toolbar-link {
-  color: var(--ssat-color-black);
+  color: inherit;
   text-decoration-line: underline;
+  text-decoration-color: var(--ssgrid-toolbar-muted);
+  text-underline-offset: 0.2em;
+
+  &:focus-visible {
+    outline: 2px solid var(--ssat-color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 
   @media (hover: hover) {
     &:hover {
       color: var(--ssat-color-primary);
+      text-decoration-color: currentColor;
     }
+  }
+}
+
+.ssgrid-toolbar-meta {
+  margin-inline-start: auto;
+  color: var(--ssgrid-toolbar-muted);
+  font-size: var(--ssat-text-xs);
+  font-weight: normal;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ssgrid-toolbar-tag {
+  margin-inline-start: auto;
+  padding-inline: calc(var(--ssat-spacing) * 1.5);
+  border: 1px solid var(--ssat-color-silverstripe-300);
+  border-radius: var(--ssat-radius-md);
+  background: var(--ssat-color-silverstripe-100);
+  color: var(--ssgrid-toolbar-muted);
+  font-size: var(--ssat-text-xs);
+  line-height: var(--ssat-text-xs--line-height);
+  font-weight: var(--ssat-font-weight-medium);
+}
+.ssgrid-toolbar-row {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--ssat-spacing) * 1.5);
+
+  /* The row's name, ruled across to mark where the row starts */
+  & > .ssgrid-toolbar-label {
+    color: var(--ssgrid-toolbar-muted);
+    font-size: var(--ssat-text-xs);
+    line-height: var(--ssat-text-xs--line-height);
+
+    & > :is(.ssgrid-toolbar-link, .ssgrid-toolbar-title) {
+      flex: 0 1 auto;
+    }
+
+    &::after {
+      content: '';
+      flex: 1;
+      border-top: 1px solid var(--ssat-color-silverstripe-200);
+    }
+  }
+}
+
+/* Every track drawn as a faint stripe, so offsets and unused tracks read as such */
+.ssgrid-toolbar-tracks {
+  --ssgrid-gap: calc(var(--ssat-spacing) * 2);
+  --ssgrid-track: calc((100% - (var(--ssgrid-of) - 1) * var(--ssgrid-gap)) / var(--ssgrid-of));
+
+  container-type: inline-size;
+  display: grid;
+  gap: var(--ssgrid-gap);
+  border-radius: var(--ssat-radius-md);
+  background: repeating-linear-gradient(
+    to right,
+    var(--ssat-color-silverstripe-100) 0 var(--ssgrid-track),
+    transparent var(--ssgrid-track) calc((100% + var(--ssgrid-gap)) / var(--ssgrid-of))
+  );
+}
+
+/* A section, a column or a shared-block placement */
+.ssgrid-toolbar-box {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--ssat-spacing) * 3);
+  min-width: 0;
+  padding: calc(var(--ssat-spacing) * 3);
+  border: 1px solid var(--ssat-color-silverstripe-300);
+  border-radius: var(--ssat-radius-lg);
+  background: var(--ssat-color-white);
+
+  &[data-grid-node='section'] > .ssgrid-toolbar-label {
+    font-weight: var(--ssat-font-weight-semibold);
+  }
+
+  &[data-grid-node='shared'] {
+    border-style: dashed;
+  }
+
+  /* Within a row: a card standing on the row's tracks, past its offset ones */
+  .ssgrid-toolbar-tracks > & {
+    gap: calc(var(--ssat-spacing) * 1.5);
+    margin-inline-start: calc(
+      var(--ssgrid-offset) *
+      (100cqi + var(--ssgrid-gap)) /
+      var(--ssgrid-of)
+    );
+    padding: calc(var(--ssat-spacing) * 2);
+    border-radius: var(--ssat-radius-md);
+
+    & > .ssgrid-toolbar-label {
+      padding-bottom: calc(var(--ssat-spacing) * 1.5);
+      border-bottom: 1px solid var(--ssat-color-silverstripe-200);
+      font-size: var(--ssat-text-xs);
+      line-height: var(--ssat-text-xs--line-height);
+      font-weight: var(--ssat-font-weight-medium);
+    }
+  }
+
+  &[data-hidden] {
+    border-style: dashed;
+    opacity: 0.7;
   }
 }
