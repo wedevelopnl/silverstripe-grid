@@ -1,9 +1,10 @@
 {
-    "_comment": "Optional-modules variant of composer.json — keep in sync; the only difference is the optional modules the grid integrates with (currently tractorcow/silverstripe-fluent) in require",
+    "_comment": "Optional-modules variant of composer.json — keep in sync; the only difference is the optional modules the grid integrates with (currently tractorcow/silverstripe-fluent and silverstripe/userforms) in require",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
         "silverstripe/recipe-cms": "^6.0",
+        "silverstripe/userforms": "^7.1",
         "tractorcow/silverstripe-fluent": "^8.0",
         "wedevelopnl/silverstripe-admintoolbar": "^6.0",
         "wedevelopnl/silverstripe-grid": "*"

@@ -1,0 +1,9 @@
+<?php
+
+namespace SilverStripe\UserForms;
+
+trait UserForm
+{
+    /** @return \SilverStripe\Forms\FieldList */
+    public function getCMSFields() {}
+}

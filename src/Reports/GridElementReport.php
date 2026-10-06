@@ -13,6 +13,7 @@ use SilverStripe\Forms\FieldList;
 use SilverStripe\Model\List\ArrayList;
 use SilverStripe\Model\List\SS_List;
 use SilverStripe\Reports\Report;
+use WeDevelop\Grid\Contract\UnavailableElementInterface;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Service\GridTreeService;
 use WeDevelop\Grid\Value\TrailSegment;
@@ -153,6 +154,10 @@ class GridElementReport extends Report
         /** @var array<class-string<GridElement>, class-string<GridElement>> $subclasses */
         $subclasses = ClassInfo::subclassesFor(GridElement::class, includeBaseClass: false);
         foreach ($subclasses as $class) {
+            if (is_a($class, UnavailableElementInterface::class, true)) {
+                continue;
+            }
+
             $elementTypes[$class] = singleton($class)->getType();
         }
 

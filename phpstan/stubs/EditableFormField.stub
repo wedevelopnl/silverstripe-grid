@@ -1,0 +1,9 @@
+<?php
+
+namespace SilverStripe\UserForms\Model;
+
+class EditableFormField extends \SilverStripe\ORM\DataObject
+{
+    /** @return bool */
+    public function showInReports() {}
+}

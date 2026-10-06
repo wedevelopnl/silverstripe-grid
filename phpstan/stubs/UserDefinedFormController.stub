@@ -1,0 +1,12 @@
+<?php
+
+namespace SilverStripe\UserForms\Control;
+
+class UserDefinedFormController extends \SilverStripe\CMS\Controllers\ContentController
+{
+    /** @return \SilverStripe\UserForms\Form\UserForm */
+    public function Form() {}
+
+    /** @return \SilverStripe\Control\HTTPResponse|\SilverStripe\Model\ModelData */
+    public function finished() {}
+}
