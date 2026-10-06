@@ -43,7 +43,7 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task test-unit` | Run PHP unit tests (no database/framework) |
 | `task test-integration` | Run PHP integration tests (full SilverStripe env) |
 | `task test-functional` | Run PHP functional tests (HTTP/controller tests) |
-| `task test-modules` | Run integration + functional + fluent tests in the optional-modules env (Fluent installed) |
+| `task test-modules` | Run integration + functional + fluent + userforms tests in the optional-modules env (Fluent + userforms installed) |
 | `task test-js` | Run JavaScript tests (Vitest, no Docker needed) |
 | `task coverage` | Merged PHP coverage report (HTML + Clover) |
 | `task coverage-unit` | PHP unit test coverage only |
