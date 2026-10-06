@@ -205,9 +205,11 @@ The include handles image/video discrimination, aspect-ratio wrapping, captions,
 
 ## Admin toolbar menu
 
-With [`wedevelopnl/silverstripe-admintoolbar`](https://packagist.org/packages/wedevelopnl/silverstripe-admintoolbar) installed, the front-end toolbar gains a **Grid** menu. It maps the current page's grid zone by zone — sections, rows, columns drawn at their default widths, content elements and shared-block placements — with a link to each item's editor. A placement is one item and links to its block in the shared-block library.
+With [`wedevelopnl/silverstripe-admintoolbar`](https://packagist.org/packages/wedevelopnl/silverstripe-admintoolbar) installed, the front-end toolbar gains a **Grid** menu. It maps the current page's grid zone by zone — sections, rows, columns, content elements and shared-block placements — with a link to each item's editor. A placement is one item and links to its block in the shared-block library.
 
-![The toolbar's Grid menu open on a page with three sections: "Hero" with one full-width column, "What we do" with an 8-of-12 intro column above three equal card columns, and "Get in touch" split 7 and 5 — each section, column and content element a link to its editor](../images/admin-toolbar-grid-menu.png)
+![The toolbar's Grid menu open on a page with three sections: "Hero" with one full-width column, "What we do" with an 8-of-12 intro column offset by two tracks above three equal card columns, and "Get in touch" split 7 and 5 — each row named above its faint 12-track ruler, each column headed with its span, and each section, row, column and content element a link to its editor](../images/admin-toolbar-grid-menu.png)
+
+- Columns are laid out as at the **default viewport**: on their row's tracks, at their width and offset, with the span (`8/12`) in the column's header. Per-viewport overrides are not shown. A column hidden at the default viewport is drawn dashed and faded and marked `hidden`.
 
 - Nothing to configure: the toolbar discovers the menu on its own. Render `$AdminToolbar` in your page template as the toolbar's README describes. Without the toolbar the module needs nothing and the menu simply does not exist.
 - The menu shows only to members the toolbar shows itself to, and only on pages that use the grid by the same rule the CMS editor applies: always, unless the page type enables the [editor toggle](#per-page-editor-toggle) and `UseGrid` is off. It is left out when the member can view no element on the page.
