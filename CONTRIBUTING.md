@@ -33,7 +33,7 @@ Run `composer install` on the host too, not only in the container: the Playwrigh
 - **Admin:** `<that URL>/admin`, login `admin` / `admin`
 - **Database:** MySQL 8 on `127.0.0.1:<DB_PORT>` (also in `.docker/.env`); database `silverstripe`, user `silverstripe`, password `silverstripe`
 - **Grid adapter:** `SS_GRID_ADAPTER` is seeded into `.docker/.env` by `.docker/env.sh`. Change it there (or in your shell) to develop against another CSS framework.
-- **Multi-language profile:** `task ensure-up-fluent` boots a second app container with Fluent installed, against database `silverstripe_fluent`
+- **Optional-modules profile:** `task ensure-up-modules` boots a second app container with the optional integrations (Fluent) installed, against database `silverstripe_modules`
 
 ### Day-to-day
 
@@ -55,7 +55,7 @@ Run `composer install` on the host too, not only in the container: the Playwrigh
 | `task test-unit` | PHP unit tests only (no database/framework) |
 | `task test-integration` | PHP integration tests (full SilverStripe env) |
 | `task test-functional` | PHP functional/HTTP controller tests |
-| `task test-fluent` | Integration + functional + fluent tests in the Fluent environment |
+| `task test-modules` | Integration + functional + fluent tests in the optional-modules environment (Fluent installed) |
 | `npm run test` | JavaScript tests (Vitest) |
 | `npm run test:watch` | Vitest in watch mode |
 | `task test-e2e` | Playwright E2E tests (auto-starts Docker if needed) |
@@ -190,7 +190,7 @@ Both are gated by `Director::isDev()` and refuse to run outside the dev environm
 
 **Container logs** — `docker compose -f .docker/compose.yml logs -f app`
 
-**Bumping `wedevelopnl/silverstripe-e2e`** — the version is pinned in three places: `composer.json` (host vendor) and `.docker/app/composer.json` + `.docker/app/composer.fluent.json` (container vendor). Update all three together, then rebuild with `task build`.
+**Bumping `wedevelopnl/silverstripe-e2e`** — the version is pinned in three places: `composer.json` (host vendor) and `.docker/app/composer.json` + `.docker/app/composer.modules.json` (container vendor). Update all three together, then rebuild with `task build`.
 
 ## License
 

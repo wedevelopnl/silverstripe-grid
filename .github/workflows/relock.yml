@@ -49,7 +49,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if git diff --quiet -- .docker/app/composer.lock .docker/app/composer.fluent.lock; then
+          if git diff --quiet -- .docker/app/composer.lock .docker/app/composer.modules.lock; then
             echo "Locks already current — nothing to raise."
             exit 0
           fi
@@ -58,7 +58,7 @@ jobs:
           git config user.name  'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git switch -c "$branch"
-          git add .docker/app/composer.lock .docker/app/composer.fluent.lock
+          git add .docker/app/composer.lock .docker/app/composer.modules.lock
           git commit -m 'build(deps): relock the container harness'
           git push --force-with-lease origin "$branch"
 

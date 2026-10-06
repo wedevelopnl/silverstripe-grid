@@ -1,5 +1,5 @@
 {
-    "_comment": "Fluent variant of composer.json — keep in sync, only difference is tractorcow/silverstripe-fluent in require",
+    "_comment": "Optional-modules variant of composer.json — keep in sync; the only difference is the optional modules the grid integrates with (currently tractorcow/silverstripe-fluent) in require",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {

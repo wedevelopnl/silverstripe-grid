@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Split options are labelled media-first** — `8/4 (media/content)` where the label read a bare `4/8`, so the ratio reads in the same order as the option's diagram. The stored value is still the content column width, the option keys are unchanged, and the label is now translatable (`SPLIT_RATIO`, shipped in `en` and `nl`). Projects asserting on the old label text in their own tests need updating.
+- **The Fluent test harness is now the optional-modules harness** (contributors only) — the second app container installs every optional module the grid integrates with, so the next integration joins it instead of adding a third container. `app-fluent` → `app-modules`, profile `fluent` → `modules`, `composer.fluent.{json,lock}` → `composer.modules.{json,lock}`, database `silverstripe_fluent` → `silverstripe_modules`, `task test-fluent` / `ensure-up-fluent` → `task test-modules` / `ensure-up-modules`, and the CI `fluent` variant → `modules`. The `fluent` PHPUnit suite keeps its name. An existing dev volume needs no reset — the database user's grant already covers the new name — but the old container and `vendor-fluent` volume are left behind: remove them with `docker compose -f .docker/compose.yml up -d --remove-orphans` and `docker volume rm <project>_vendor-fluent`.
 
 ## [6.0.0-beta.4] - 2026-08-24
 
