@@ -229,7 +229,8 @@ class BlockMediaExtension extends MediaExtension
     }
 
     /**
-     * Content column width options from 4 to 8 (of total grid columns).
+     * Content column width options from 8 down to 4 (of total grid columns),
+     * so the options run from the narrowest media column to the widest.
      *
      * @return array<int, string>
      */
@@ -238,7 +239,7 @@ class BlockMediaExtension extends MediaExtension
         $total = $this->getOwner()->gridAdapter->getColumnCount();
         $options = [];
 
-        for ($i = 4; $i <= min(8, $total - 2); ++$i) {
+        for ($i = min(8, $total - 2); $i >= 4; --$i) {
             $media = $total - $i;
             // Media first, so the ratio reads in the same order as the option's
             // diagram. The stored value stays the content width.

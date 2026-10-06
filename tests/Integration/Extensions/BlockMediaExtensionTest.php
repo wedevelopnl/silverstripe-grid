@@ -626,8 +626,9 @@ final class BlockMediaExtensionTest extends SapphireTest
 
     /**
      * With the default adapter's column_count of 12, getContentColumnOptions
-     * produces keys [4..8] → assertArrayHasKey/NotHasKey pins each loop boundary.
-     * The ColumnWidthPickerField source also includes 0 (full-width).
+     * produces keys [8..4] → asserting the unsorted keys pins both loop
+     * boundaries and the order. The ColumnWidthPickerField source also
+     * includes 0 (full-width).
      */
     public function testContentColumnsFieldOptionsForDefaultColumnCount(): void
     {
@@ -639,11 +640,10 @@ final class BlockMediaExtensionTest extends SapphireTest
 
         /** @var array<int, string> $source */
         $source = $field->getSource();
-        $keys = array_keys($source);
-        sort($keys);
 
-        // Full-width (0) prepended plus range [4..8] from getContentColumnOptions
-        self::assertSame([0, 4, 5, 6, 7, 8], $keys);
+        // Full-width (0) first, then the splits from narrowest to widest media
+        // column: 4/8, 5/7, 6/6, 7/5, 8/4.
+        self::assertSame([0, 8, 7, 6, 5, 4], array_keys($source));
 
         // Media first, matching the option's diagram; the key stays the content
         // width. Kills Minus at 449 ($total-$i → $total+$i).
