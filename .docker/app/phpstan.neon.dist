@@ -19,4 +19,3 @@ parameters:
         param_type: 100
         property_type: 100
         constant_type: 100
-        declare: 100

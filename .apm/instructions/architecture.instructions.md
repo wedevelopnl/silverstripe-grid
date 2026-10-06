@@ -96,7 +96,7 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 ## Static Analysis
 
 - PHPStan level max with Silverstan (SilverStripe-aware rules)
-- 100% type coverage enforced: return, param, property, constant, declare
+- 100% type coverage enforced: return, param, property, constant; `declare(strict_types=1)` is enforced by Rector (`DeclareStrictTypesRector` via `rectorPreset`)
 - Runs inside Docker via `task analyse`
 
 ## Class Leak
