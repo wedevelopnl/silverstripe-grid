@@ -116,8 +116,8 @@ final readonly class AllRowsInSectionStrategy extends AbstractRowMappingStrategy
             }
 
             $rows[] = new MigrationRow(
-                title: $row !== null ? $row->title : '',
-                extraClass: $row !== null ? $row->extraClass : '',
+                title: $row->title ?? '',
+                extraClass: $row->extraClass ?? '',
                 sort: $rowSort,
                 columns: $columns,
             );
