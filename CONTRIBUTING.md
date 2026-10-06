@@ -33,7 +33,7 @@ Run `composer install` on the host too, not only in the container: the Playwrigh
 - **Admin:** `<that URL>/admin`, login `admin` / `admin`
 - **Database:** MySQL 8 on `127.0.0.1:<DB_PORT>` (also in `.docker/.env`); database `silverstripe`, user `silverstripe`, password `silverstripe`
 - **Grid adapter:** `SS_GRID_ADAPTER` is seeded into `.docker/.env` by `.docker/env.sh`. Change it there (or in your shell) to develop against another CSS framework.
-- **Optional-modules profile:** `task ensure-up-modules` boots a second app container with the optional integrations (Fluent) installed, against database `silverstripe_modules`
+- **Optional-modules profile:** `task ensure-up-modules` boots a second app container with the optional integrations (Fluent, userforms) installed, against database `silverstripe_modules`
 
 ### Day-to-day
 
@@ -55,7 +55,7 @@ Run `composer install` on the host too, not only in the container: the Playwrigh
 | `task test-unit` | PHP unit tests only (no database/framework) |
 | `task test-integration` | PHP integration tests (full SilverStripe env) |
 | `task test-functional` | PHP functional/HTTP controller tests |
-| `task test-modules` | Integration + functional + fluent tests in the optional-modules environment (Fluent installed) |
+| `task test-modules` | Integration + functional + fluent + userforms tests in the optional-modules environment (Fluent + userforms installed) |
 | `npm run test` | JavaScript tests (Vitest) |
 | `npm run test:watch` | Vitest in watch mode |
 | `task test-e2e` | Playwright E2E tests (auto-starts Docker if needed) |
