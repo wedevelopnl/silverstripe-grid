@@ -15,6 +15,7 @@ use WeDevelop\Grid\Model\MediaElement;
 use WeDevelop\Grid\Value\AspectRatio;
 use WeDevelop\Grid\Value\MediaPosition;
 use WeDevelop\Grid\Value\VerticalAlignment;
+use WeDevelop\MediaField\Form\MediaType;
 
 /**
  * Sanity invariant, not a unit test of any one class: every DB Enum column
@@ -46,7 +47,9 @@ final class DatabaseEnumParityTest extends SapphireTest
         yield 'ContentElement.VerticalAlignment' => [ContentElement::class, 'VerticalAlignment', VerticalAlignment::class];
         yield 'ContentElement.MediaRatio' => [ContentElement::class, 'MediaRatio', AspectRatio::class];
         yield 'ContentElement.MediaPosition' => [ContentElement::class, 'MediaPosition', MediaPosition::class];
+        yield 'ContentElement.MediaType' => [ContentElement::class, 'MediaType', MediaType::class];
         yield 'MediaElement.MediaRatio' => [MediaElement::class, 'MediaRatio', AspectRatio::class];
+        yield 'MediaElement.MediaType' => [MediaElement::class, 'MediaType', MediaType::class];
     }
 
     /**
