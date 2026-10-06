@@ -9,7 +9,7 @@ version: '3'
 
 vars:
   COMPOSE: docker compose -f .docker/compose.yml
-  COMPOSE_FLUENT: docker compose -f .docker/compose.yml --profile fluent
+  COMPOSE_MODULES: docker compose -f .docker/compose.yml --profile modules
   # class-leak only parses PHP, so every class SilverStripe reaches by config
   # (YAML) or by type (manifest discovery) reads as unused. The first six skip
   # those by parent type (the admin toolbar discovers its Components); the last
@@ -61,7 +61,7 @@ tasks:
       - "{{.COMPOSE}} build"
 
   # Both name their service. Without it the bare `up` brings the WHOLE profile
-  # up with --build, so `ensure-up-fluent` recreates the `app` container that
+  # up with --build, so `ensure-up-modules` recreates the `app` container that
   # `ensure-up` just declared ready — and any `exec app` running concurrently
   # (`task qa` starts four) dies with exit 1 and no output. depends_on still
   # brings db up either way.
@@ -70,11 +70,11 @@ tasks:
     cmds:
       - "{{.COMPOSE}} exec app true 2>/dev/null || {{.COMPOSE}} up -d --build --wait app"
 
-  ensure-up-fluent:
-    desc: Ensure Fluent services are running and ready
+  ensure-up-modules:
+    desc: Ensure optional-module services are running and ready
     deps: [docker-env]
     cmds:
-      - "{{.COMPOSE_FLUENT}} exec app-fluent true 2>/dev/null || {{.COMPOSE_FLUENT}} up -d --build --wait app-fluent"
+      - "{{.COMPOSE_MODULES}} exec app-modules true 2>/dev/null || {{.COMPOSE_MODULES}} up -d --build --wait app-modules"
 
   # --- Tests ----------------------------------------------------------------
 
@@ -106,11 +106,11 @@ tasks:
     cmds:
       - "{{.COMPOSE}} exec app vendor/bin/phpunit --testsuite functional"
 
-  test-fluent:
-    desc: Run integration + functional + fluent tests in Fluent environment
-    deps: [ensure-up-fluent]
+  test-modules:
+    desc: Run integration + functional + fluent tests in the optional-modules environment
+    deps: [ensure-up-modules]
     cmds:
-      - "{{.COMPOSE_FLUENT}} exec app-fluent vendor/bin/phpunit --testsuite integration,functional,fluent"
+      - "{{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,functional,fluent"
 
   test-js:
     desc: Run JavaScript tests (Vitest)
@@ -134,10 +134,10 @@ tasks:
 
   coverage:
     desc: Run all tests with merged coverage (HTML + Clover XML)
-    deps: [ensure-up-fluent]
+    deps: [ensure-up-modules]
     cmds:
       - >-
-        {{.COMPOSE_FLUENT}} exec app-fluent vendor/bin/phpunit
+        {{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit
         --coverage-html coverage/combined/html
         --coverage-clover coverage/combined/clover.xml
 
@@ -152,10 +152,10 @@ tasks:
 
   coverage-integration:
     desc: Run integration tests with coverage (individual report)
-    deps: [ensure-up-fluent]
+    deps: [ensure-up-modules]
     cmds:
       - >-
-        {{.COMPOSE_FLUENT}} exec app-fluent vendor/bin/phpunit --testsuite integration,fluent
+        {{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,fluent
         --coverage-html coverage/integration/html
         --coverage-clover coverage/integration/clover.xml
 
@@ -182,10 +182,10 @@ tasks:
   # --- Mutation testing -----------------------------------------------------
 
   mutate:
-    desc: Run PHP mutation testing (Infection) — uses Fluent container so all tests run
-    deps: [ensure-up-fluent]
+    desc: Run PHP mutation testing (Infection) — uses the optional-modules container so all tests run
+    deps: [ensure-up-modules]
     cmds:
-      - "{{.COMPOSE_FLUENT}} exec app-fluent php -d memory_limit=1G vendor/bin/infection --threads=4"
+      - "{{.COMPOSE_MODULES}} exec app-modules php -d memory_limit=1G vendor/bin/infection --threads=4"
 
   mutate-js:
     desc: Run JavaScript mutation testing (Stryker)
@@ -202,11 +202,11 @@ tasks:
     # so both files must exist for the build to succeed — recreate them from git
     # rather than deleting them if one is ever damaged.
     cmds:
-      - "{{.COMPOSE_FLUENT}} build app app-fluent"
+      - "{{.COMPOSE_MODULES}} build app app-modules"
       - task: relock-variant
         vars: { SERVICE: app, LOCK: composer.lock }
       - task: relock-variant
-        vars: { SERVICE: app-fluent, LOCK: composer.fluent.lock }
+        vars: { SERVICE: app-modules, LOCK: composer.modules.lock }
 
   relock-variant:
     internal: true
@@ -215,7 +215,7 @@ tasks:
     # lock has to reach the host, and composer's own output owns stdout.
     cmds:
       - >-
-        {{.COMPOSE_FLUENT}} run --rm --no-deps -T
+        {{.COMPOSE_MODULES}} run --rm --no-deps -T
         -v "$PWD/.docker/app:/lock"
         --entrypoint sh {{.SERVICE}}
         -c "composer update --no-install --no-scripts --no-interaction && cp composer.lock /lock/{{.LOCK}}"
@@ -329,7 +329,7 @@ tasks:
     deps: [docker-env]
     cmds:
       - task: ensure-up
-      - task: ensure-up-fluent
+      - task: ensure-up-modules
       - task: qa-checks
 
   qa-js:
@@ -391,10 +391,10 @@ tasks:
     cmds:
       - 'echo "==> [coverage] running PHPUnit with coverage (slow, several minutes)..."'
       - >-
-        {{.COMPOSE_FLUENT}} exec -T app-fluent vendor/bin/phpunit
+        {{.COMPOSE_MODULES}} exec -T app-modules vendor/bin/phpunit
         --coverage-html coverage/combined/html
         --coverage-clover coverage/combined/clover.xml
-      - "{{.COMPOSE_FLUENT}} exec -T app-fluent vendor/bin/coverage-check coverage/combined/clover.xml 90"
+      - "{{.COMPOSE_MODULES}} exec -T app-modules vendor/bin/coverage-check coverage/combined/clover.xml 90"
       - 'echo "==> [coverage] done"'
 
   qa-lint:

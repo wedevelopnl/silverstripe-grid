@@ -11,7 +11,7 @@
 # and don't need the buildx `gha` cache backend (which only exists inside GHA).
 #
 # CACHE_SCOPE namespaces the cache per built image (service + PHP version) so the
-# base and Fluent variants — and the different PHP versions — don't clobber each
+# base and optional-modules variants — and the different PHP versions — don't clobber each
 # other's manifests. CI sets it per job; the `:-` fallbacks keep manual runs sane.
 #
 # cache_to uses ignore-error=true so fork/Dependabot PRs (read-only token, no
@@ -32,9 +32,9 @@ services:
       cache_to:
         - type=gha,mode=max,scope=${CACHE_SCOPE:-app},ignore-error=true
 
-  app-fluent:
+  app-modules:
     build:
       cache_from:
-        - type=gha,scope=${CACHE_SCOPE:-app-fluent}
+        - type=gha,scope=${CACHE_SCOPE:-app-modules}
       cache_to:
-        - type=gha,mode=max,scope=${CACHE_SCOPE:-app-fluent},ignore-error=true
+        - type=gha,mode=max,scope=${CACHE_SCOPE:-app-modules},ignore-error=true

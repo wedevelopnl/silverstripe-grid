@@ -124,7 +124,7 @@ jobs:
   php-qa:
     name: PHP QA (${{ matrix.variant }} / PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
-    # A healthy run takes ~9 min (base) / ~11 min (fluent with coverage); a
+    # A healthy run takes ~9 min (base) / ~11 min (modules with coverage); a
     # degraded hosted runner has been seen stretching that to 32 min. Fail fast
     # instead of burning 3x the minutes — a re-run lands on a fresh runner.
     timeout-minutes: 20
@@ -134,14 +134,15 @@ jobs:
     strategy:
       fail-fast: false
       # Explicit combinations: both variants run the full PHP matrix. The
-      # Fluent variant runs all suites and owns the 90% coverage gate; the
-      # base (non-Fluent) variant runs unit+integration+functional only, to
-      # catch regressions that Fluent's extensions would otherwise mask.
+      # modules variant installs the optional integrations (Fluent), runs all
+      # suites and owns the 90% coverage gate; the base variant runs
+      # unit+integration+functional only, to catch regressions that those
+      # modules' extensions would otherwise mask.
       matrix:
         include:
-          - { variant: fluent, php: '8.3', profile: '--profile fluent', service: app-fluent }
-          - { variant: fluent, php: '8.4', profile: '--profile fluent', service: app-fluent }
-          - { variant: fluent, php: '8.5', profile: '--profile fluent', service: app-fluent }
+          - { variant: modules, php: '8.3', profile: '--profile modules', service: app-modules }
+          - { variant: modules, php: '8.4', profile: '--profile modules', service: app-modules }
+          - { variant: modules, php: '8.5', profile: '--profile modules', service: app-modules }
           - { variant: base, php: '8.3', profile: '', service: app }
           - { variant: base, php: '8.4', profile: '', service: app }
           - { variant: base, php: '8.5', profile: '', service: app }
@@ -169,21 +170,21 @@ jobs:
         run: $COMPOSE build ${{ matrix.service }}
       - name: Start services
         run: $COMPOSE up -d --wait ${{ matrix.service }}
-      # Base variant: non-Fluent suites only (mirrors `task test`), no coverage gate.
+      # Base variant: no optional modules, non-module suites only (mirrors `task test`), no coverage gate.
       - if: matrix.variant == 'base'
-        name: Run tests (no Fluent)
+        name: Run tests (no optional modules)
         run: >-
           $COMPOSE exec ${{ matrix.service }} vendor/bin/phpunit
           --testsuite unit,integration,functional
           --log-junit coverage/junit.xml
-      # Fluent variant: all suites with coverage + 90% threshold gate.
-      - if: matrix.variant == 'fluent'
+      # Modules variant: all suites with coverage + 90% threshold gate.
+      - if: matrix.variant == 'modules'
         name: Run all tests with coverage
         run: >-
           $COMPOSE exec ${{ matrix.service }} vendor/bin/phpunit
           --log-junit coverage/junit.xml
           --coverage-clover coverage/clover.xml
-      - if: matrix.variant == 'fluent'
+      - if: matrix.variant == 'modules'
         name: Check coverage threshold (90%)
         run: $COMPOSE exec ${{ matrix.service }} vendor/bin/coverage-check coverage/clover.xml 90
       - name: Container diagnostics
