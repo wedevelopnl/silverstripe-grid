@@ -47,7 +47,7 @@ test.describe('Admin toolbar Grid menu', () => {
   test("the menu's own stylesheet lays it out", async ({ page }) => {
     const menu = await openMenu(page, 'GridMenu')
 
-    await expect(menu.locator('[data-grid-node="row"]')).toHaveCSS('display', 'grid')
+    await expect(menu.locator('[data-grid-node="row"]')).toHaveCSS('display', 'flex')
     await expect(menu.getByRole('link', { name: 'Intro' })).toHaveCSS(
       'text-decoration-line',
       'underline',
