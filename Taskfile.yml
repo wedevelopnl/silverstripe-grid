@@ -356,6 +356,7 @@ tasks:
       - qa-format
       - qa-typecheck
       - qa-i18n
+      - qa-icons
       - qa-test-js
       - qa-build
 
@@ -411,6 +412,13 @@ tasks:
       - 'echo "==> [i18n] checking collected strings + locale parity..."'
       - npm run i18n:check
       - 'echo "==> [i18n] done"'
+
+  qa-icons:
+    internal: true
+    cmds:
+      - 'echo "==> [icons] checking font-icon-* classes against the admin font..."'
+      - npm run check:icons
+      - 'echo "==> [icons] done"'
 
   qa-format:
     internal: true
