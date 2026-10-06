@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A Form element, available automatically when `silverstripe/userforms` (^7.1) is installed.** The block is the form: its fields, recipients and submissions belong to it, so a shared block is how one form is reused across pages. Visitors stay on the page they submitted from and see the on-complete message in place of the form, or are sent to a chosen page. Each submission records the page it came from, shown in the Submissions list and available to recipient emails as `$SubmittedForm.HostPage`. Sites without userforms see no element and no route, but `db:build` creates an empty `WeDevelop_Grid_UserFormElement` table for an inert stand-in class, until the framework stops instantiating classes it cannot load ([silverstripe/silverstripe-framework#12030](https://github.com/silverstripe/silverstripe-framework/issues/12030)). See [Forms (userforms)](docs/usage/userforms.md).
+
 ### Changed
 
 - **The content column width picker lists its splits from the narrowest media column to the widest** — `4/8`, `5/7`, `6/6`, `7/5`, `8/4` after *Full width* — so the options read in the same direction as their media-first labels and diagrams. Only the order changes: each option keeps its stored `ContentColumns` value, so existing blocks render and show as selected exactly as before.

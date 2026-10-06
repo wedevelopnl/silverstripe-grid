@@ -19,6 +19,7 @@ src/Forms/            # Form field implementations (GridEditorField, GridAwareVe
 src/Migration/        # SS5→SS6 migration (DTOs, strategies, tasks, services); src/Migration/Service/ holds GridMigrationService (orchestration), DraftHierarchyWriter, LivePublisher, PageGridFlagWriter, LegacyPageDiscovery, LegacyElementReader, LegacyDataReader (facade)
 src/Admin/            # ModelAdmin screens (SharedBlockAdmin — the shared block library)
 src/AdminToolbar/     # Optional wedevelopnl/silverstripe-admintoolbar integration (GridMenu — class_exists()-guarded; templates under templates/WeDevelop/Grid/AdminToolbar/, styles in client/src/styles/admin-toolbar-menu.css)
+src/UserForms/          # Optional silverstripe/userforms integration (UserFormElement — trait_exists()-guarded, inert stand-in declared when userforms is absent; UserFormRouteExtension + UserFormElementController serve /{page}/grid-form/{id}; UserFormElementResolver; SubmittedFormHostPageExtension). Config: _config/userforms.yml (classexists-guarded)
 src/Reports/          # CMS reports (GridElementReport, SharedBlockReport)
 src/Value/            # Value objects, DTOs, and request objects (NodeRef, NodeType, ElementStatus, GridNode, Result, MigrationIdMap, ...)
 src/Service/          # Domain services (GridTreeService, GridNodeMapper, ElementPlacementService, GridElementService, GridSettingsService, GridSettingsResolver, TitleGenerator, RequestBodyParser, ColumnClassResolver, GridAwareDeleteLocalisationPolicy, SharedBlockService, SharedBlockUsageResolver, LocalisedSubtreeCloner, SharedBlockLocaliser, GridZoneResolver)
@@ -89,7 +90,7 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 ## PHP Testing
 
 - PHPUnit 12 — runs inside Docker via `task test`
-- PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, and `fluent` testsuites, selected via `--testsuite` flag). COPYed into the image at build, **not** volume-mounted — after editing, rebuild with `task build` or push it with `docker compose -f .docker/compose.yml cp .docker/app/phpunit.xml.dist app:/app/phpunit.xml.dist` (and the same to `app-modules`)
+- PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, `fluent`, and `userforms` testsuites — `fluent`/`userforms` run in `app-modules` only, selected via `--testsuite` flag). COPYed into the image at build, **not** volume-mounted — after editing, rebuild with `task build` or push it with `docker compose -f .docker/compose.yml cp .docker/app/phpunit.xml.dist app:/app/phpunit.xml.dist` (and the same to `app-modules`)
 - `failOnRisky` + `failOnWarning` are on: a test that asserts nothing fails the run rather than being reported as risky and exiting 0
 - Test namespace: `WeDevelop\Grid\Tests\` → `tests/` (mirrors the subdirectory: `Tests\Functional\Controllers` → `tests/Functional/Controllers/`)
 
