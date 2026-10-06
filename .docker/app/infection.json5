@@ -524,12 +524,12 @@
                 // isOk() early return iterates errors(), which is empty for an ok Result.
                 // Method-scoped because the bare `return;` text recurs across the codebase.
                 "WeDevelop\\Grid\\Validation\\HierarchyValidationExtension::updateValidate",
-                // MediaExtension::getMediaImageSourceURL line 148 — equivalent: the
+                // MediaExtension::getMediaImageSourceURL line 140 — equivalent: the
                 // `!$image->exists()` early return is a fast path. Falling through, Fill()/
                 // ScaleWidth() on a non-existent image both return null, which the
                 // `$resized === null` guard below turns into the same null result.
                 // Line-scoped so that guard's own `return null;` stays exposed.
-                "WeDevelop\\Grid\\Extensions\\MediaExtension::getMediaImageSourceURL::148",
+                "WeDevelop\\Grid\\Extensions\\MediaExtension::getMediaImageSourceURL::140",
                 // ReorderValidator::validate line 29 — equivalent: a same-parent move satisfies
                 // checkHierarchyRules() trivially, so the shortcut and the fallthrough both return
                 // an ok Result. Line-scoped: the method's other return IS killable, and the

@@ -42,10 +42,9 @@ class MediaExtension extends Extension
 {
     /** @var array<string, string> */
     private static array $db = [
-        // MediaType stays a Varchar, not an Enum: '' (no media selected) is a
-        // meaningful tri-state value that getHasMedia() relies on, so the column
-        // is {image, video, ∅} — not the two-case MediaField enum alone.
-        'MediaType' => 'Varchar(5)',
+        // Members mirror MediaField's MediaType enum (see parity test); NULL is
+        // "no media selected".
+        'MediaType' => "Enum('image,video', null)",
         'MediaCaption' => 'Varchar(255)',
         // Members mirror the AspectRatio value enum exactly (see parity test).
         'MediaRatio' => "Enum('auto,1x1,4x3,16x9', 'auto')",
@@ -91,22 +90,15 @@ class MediaExtension extends Extension
     /** Whether an image is attached or a video URL is present. */
     public function hasMedia(): bool
     {
-        $owner = $this->getOwner();
-
+        // tryFrom, not from: a value the Enum column could not hold reads back as
+        // MySQL's '' error value (e.g. a stray Varchar value left by the ALTER).
         /** @var string|null $type */
-        $type = $owner->MediaType;
-        if ($type === '' || $type === null) {
-            return false;
-        }
+        $type = $this->getOwner()->MediaType;
 
-        $mediaType = MediaType::tryFrom($type);
-        if ($mediaType === null) {
-            return false;
-        }
-
-        return match ($mediaType) {
+        return match (MediaType::tryFrom($type ?? '')) {
             MediaType::Image => $this->getMediaImage()->exists(),
             MediaType::Video => $this->getVideoURL() !== '',
+            null => false,
         };
     }
 

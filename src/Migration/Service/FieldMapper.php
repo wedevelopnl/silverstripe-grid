@@ -11,6 +11,7 @@ use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
 use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\ViewportConfig;
+use WeDevelop\MediaField\Form\MediaType;
 
 /**
  * Mapping class that converts legacy elemental field structures to the new
@@ -226,6 +227,19 @@ final class FieldMapper
             );
         }
 
+        // MediaType: '' is the legacy "no media" and maps to NULL. Anything else
+        // outside MediaField's cases cannot be stored in the Enum column.
+        /** @var string $type */
+        $type = $fields['MediaType'] ?? '';
+        $mediaType = MediaType::tryFrom($type);
+
+        if ($type !== '' && $mediaType === null) {
+            $this->logger?->warning(
+                'Unrecognised MediaType value "{value}"; migrating the element without media.',
+                ['value' => $type],
+            );
+        }
+
         // ExtraColumnGap → GapSize using discrete scale mapping
         /** @var int $gap */
         $gap = $fields['ExtraColumnGap'] ?? 0;
@@ -236,7 +250,7 @@ final class FieldMapper
             ContentColumns: $colsIsNumeric ? (int) $cols : 0,
             VerticalAlignment: $this->verticalAlignMap[$align] ?? 'top',
             GapSize: $this->gapSizeMap[$gap] ?? 0,
-            MediaType: (string) ($fields['MediaType'] ?? ''),
+            MediaType: $mediaType?->value,
             MediaCaption: (string) ($fields['MediaCaption'] ?? ''),
             MediaImageID: (int) ($fields['MediaImageID'] ?? 0),
             MediaRatio: ($ratio === '' || $ratio === null) ? 'auto' : (string) $ratio,

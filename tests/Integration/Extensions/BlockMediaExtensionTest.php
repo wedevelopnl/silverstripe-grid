@@ -13,6 +13,7 @@ use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
@@ -168,7 +169,7 @@ final class BlockMediaExtensionTest extends SapphireTest
     public function testHasMediaReturnsFalseWhenNoMediaType(): void
     {
         $element = $this->createContentElement();
-        $element->MediaType = '';
+        $element->MediaType = null;
 
         self::assertFalse($element->hasMedia());
     }
@@ -216,15 +217,27 @@ final class BlockMediaExtensionTest extends SapphireTest
         self::assertFalse($element->hasMedia());
     }
 
-    public function testHasMediaReturnsFalseForUnrecognisedMediaType(): void
+    public function testHasMediaReturnsFalseForTheEnumErrorValue(): void
     {
-        // A stored Varchar value that does not map to any MediaType case must
-        // not crash page rendering. tryFrom() returns null → hasMedia() returns
-        // false instead of throwing \ValueError (which MediaType::from would).
+        // The Varchar → Enum ALTER stores any stray legacy value as MySQL's ''
+        // error value; the ORM's own Enum validation keeps it out on write, so
+        // plant it directly. It must read as "no media", not throw \ValueError.
         $element = $this->createContentElement();
-        $element->MediaType = 'bogus';
+        $element->write();
 
-        self::assertFalse($element->hasMedia());
+        DB::prepared_query(
+            sprintf(
+                'UPDATE "%s" SET "MediaType" = ? WHERE "ID" = ?',
+                DataObject::getSchema()->tableName(ContentElement::class),
+            ),
+            ['', $element->ID],
+        );
+
+        $reloaded = ContentElement::get()->byID($element->ID);
+
+        self::assertNotNull($reloaded);
+        self::assertSame('', $reloaded->MediaType);
+        self::assertFalse($reloaded->hasMedia());
     }
 
     public function testIsLayoutModeRequiresBothColumnsAndMedia(): void

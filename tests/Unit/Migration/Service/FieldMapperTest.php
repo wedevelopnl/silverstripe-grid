@@ -918,6 +918,36 @@ final class FieldMapperTest extends TestCase
         self::assertSame('Hero shot', $result->MediaCaption);
     }
 
+    public function testEmptyMediaTypeMapsToNullWithoutWarning(): void
+    {
+        // Legacy stores "no media" as ''; the Enum column stores it as NULL.
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::never())->method('warning');
+
+        $mapper = new FieldMapper(logger: $logger);
+        $result = $mapper->mapMediaFields(new LegacyMediaData(self::allMediaFieldsPresent()));
+
+        self::assertNull($result->MediaType);
+    }
+
+    public function testUnrecognisedMediaTypeLogsWarningAndMapsToNull(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())
+            ->method('warning')
+            ->with(
+                self::stringContains('MediaType'),
+                self::callback(static fn (array $ctx): bool => ($ctx['value'] ?? null) === 'audio'),
+            );
+
+        $mapper = new FieldMapper(logger: $logger);
+        $result = $mapper->mapMediaFields(new LegacyMediaData(
+            \array_merge(self::allMediaFieldsPresent(), ['MediaType' => 'audio'])
+        ));
+
+        self::assertNull($result->MediaType);
+    }
+
     public function testMissingMediaColumnLogsWarning(): void
     {
         // Keys entirely absent from fields (schema-missing) must trigger a warning
