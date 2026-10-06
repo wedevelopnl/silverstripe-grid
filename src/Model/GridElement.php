@@ -26,6 +26,7 @@ use SilverStripe\Versioned\Versioned;
 use SilverStripe\VersionedAdmin\Forms\HistoryViewerField;
 use WeDevelop\Grid\Contract\ContainerInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Service\SharedBlockUsageResolver;
 
 /**
  * Abstract base for all grid elements (containers and content).
@@ -79,9 +80,12 @@ class GridElement extends DataObject
     /** @var array<string, string> */
     private static array $dependencies = [
         'gridAdapter' => '%$' . GridAdapterInterface::class,
+        'sharedBlockUsageResolver' => '%$' . SharedBlockUsageResolver::class,
     ];
 
     public GridAdapterInterface $gridAdapter;
+
+    public SharedBlockUsageResolver $sharedBlockUsageResolver;
 
     /** @var array<string, string> */
     private static array $db = [
@@ -445,6 +449,10 @@ class GridElement extends DataObject
 
         $page = $this->getPage();
 
+        if ($page instanceof SharedBlock) {
+            return $page->canView($member) || $this->isViewableWherePlaced($page, $member);
+        }
+
         if ($page instanceof DataObject) {
             return $page->canView($member);
         }
@@ -453,6 +461,23 @@ class GridElement extends DataObject
         assert(is_bool($result));
 
         return $result;
+    }
+
+    /**
+     * A block's content is page content wherever it is placed, so whoever may
+     * view a page placing the block may view what it renders. The block
+     * record's own canView() stays the library gate; this widens element
+     * visibility only.
+     */
+    private function isViewableWherePlaced(SharedBlock $block, ?Member $member): bool
+    {
+        foreach ($this->sharedBlockUsageResolver->pagesUsing($block) as $page) {
+            if ($page->canView($member)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
