@@ -555,7 +555,7 @@ final class GridAdapterTest extends SapphireTest
         yield 'bootstrap 4x3' => [BootstrapAdapter::class, AspectRatio::FourByThree, 'ratio ratio-4x3'];
         yield 'bootstrap 16x9' => [BootstrapAdapter::class, AspectRatio::SixteenByNine, 'ratio ratio-16x9'];
         yield 'tailwind 1x1' => [TailwindAdapter::class, AspectRatio::Square, 'aspect-square'];
-        yield 'tailwind 4x3' => [TailwindAdapter::class, AspectRatio::FourByThree, 'aspect-[4/3]'];
+        yield 'tailwind 4x3' => [TailwindAdapter::class, AspectRatio::FourByThree, 'aspect-4/3'];
         yield 'tailwind 16x9' => [TailwindAdapter::class, AspectRatio::SixteenByNine, 'aspect-video'];
         yield 'bulma 1x1' => [BulmaAdapter::class, AspectRatio::Square, 'is-1by1'];
         yield 'bulma 4x3' => [BulmaAdapter::class, AspectRatio::FourByThree, 'is-4by3'];

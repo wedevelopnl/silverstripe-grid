@@ -7,6 +7,8 @@
  * (which renders server-side, with no source for Tailwind to scan) needs these
  * classes force-generated. @source inline() safelists them — including the full
  * numeric range, so project YAML overrides (e.g. total_columns: 16) still render.
+ * source(none) turns off scanning the repo, whose tests and docs name classes the
+ * grid never emits; the safelist below is the whole output.
  *
  * Ranges are deliberately wider than the default 12-column / 5-viewport topology
  * so any in-range override works without regenerating. Tailwind v4 emits dynamic
@@ -18,7 +20,7 @@
  *     -o .docker/assets/css/tailwind.min.css --minify
  */
 
-@import "tailwindcss";
+@import "tailwindcss" source(none);
 
 /* Row container + column grid (base only — row_class_format has no responsive variant). */
 @source inline("grid");
@@ -50,7 +52,7 @@
 /* Content layout: aspect ratios. */
 @source inline("aspect-square");
 @source inline("aspect-video");
-@source inline("aspect-[4/3]");
+@source inline("aspect-4/3");
 
 /* Content layout: vertical alignment. */
 @source inline("items-start");

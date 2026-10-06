@@ -10,7 +10,7 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single `abstrac
 - `src/Contract/ContentLayoutAdapterInterface.php` — the content layout CSS contract
 - `src/Adapter/GridAdapter.php` — Config-driven base class implementing both interfaces
 - `src/Adapter/BootstrapAdapter.php` — Bootstrap 5 preset (zero methods, only statics)
-- `src/Adapter/TailwindAdapter.php` — Tailwind CSS preset (zero methods, only statics)
+- `src/Adapter/TailwindAdapter.php` — Tailwind CSS v4 preset (zero methods, only statics)
 - `src/Adapter/BulmaAdapter.php` — Bulma preset (zero methods, only statics)
 - `src/Factory/GridAdapterFactory.php` — Injector factory that aliases `ContentLayoutAdapterInterface` to the `GridAdapterInterface` singleton
 - `src/Factory/GridAdapterResolver.php` — Injector factory that selects the adapter from the `SS_GRID_ADAPTER` env var (preset name or FQCN)
@@ -33,6 +33,12 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single `abstrac
 > A Bulma project using the side-by-side media layout of `BlockMediaExtension` must
 > either supply that CSS itself or override both formats with its own utility names.
 > Every other class the Bulma preset emits is a real Bulma helper.
+
+> **Tailwind targets v4 and emits no arbitrary values.** Every class
+> `TailwindAdapter` emits is a scale or named utility (`aspect-4/3`, not
+> `aspect-[4/3]`). Some of them, such as the bare `aspect-<ratio>` form, exist
+> only in v4, so a Tailwind v3 project gets no CSS for them. Keep overrides on
+> the scale too: prefer `min-h-80` to `min-h-[320px]`.
 
 ## Implementing a New Adapter
 
@@ -88,7 +94,7 @@ final class YourAdapter extends GridAdapter
     private static array $aspect_ratio_classes = [
         'auto' => null,
         '1x1' => 'aspect-square',
-        '4x3' => 'aspect-[4/3]',
+        '4x3' => 'aspect-4/3',
         '16x9' => 'aspect-video',
     ];
     /** @var array<string, string> */
