@@ -12,8 +12,10 @@ use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Dev\FunctionalTest;
+use SilverStripe\UserForms\Control\UserDefinedFormController;
 use SilverStripe\UserForms\Model\EditableFormField;
 use SilverStripe\UserForms\Model\EditableFormField\EditableTextField;
+use SilverStripe\UserForms\Model\Recipient\EmailRecipient;
 use SilverStripe\UserForms\Model\Submission\SubmittedForm;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
@@ -21,7 +23,9 @@ use WeDevelop\Grid\Model\SharedBlock;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\UserForms\UserFormElement;
+use WeDevelop\Grid\UserForms\SubmittedFormHostPageExtension;
 use WeDevelop\Grid\UserForms\UserFormElementController;
+use WeDevelop\Grid\UserForms\UserFormEmailDataExtension;
 use WeDevelop\Grid\UserForms\UserFormRouteExtension;
 
 /**
@@ -32,15 +36,24 @@ use WeDevelop\Grid\UserForms\UserFormRouteExtension;
 #[CoversClass(UserFormRouteExtension::class)]
 #[CoversClass(UserFormElementController::class)]
 #[CoversClass(UserFormElement::class)]
+#[CoversClass(SubmittedFormHostPageExtension::class)]
+#[CoversClass(UserFormEmailDataExtension::class)]
 final class UserFormElementSubmissionTest extends FunctionalTest
 {
     use DisablesAutoScaffolding;
 
     protected static $fixture_file = __DIR__ . '/../../Integration/Fixture/page.yml';
 
+    /** @var array<class-string, list<class-string>> */
+    protected static $required_extensions = [
+        UserDefinedFormController::class => [CapturesRecipientEmails::class],
+    ];
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        CapturesRecipientEmails::$emails = [];
 
         Versioned::set_stage(Versioned::DRAFT);
         $this->disableAutoScaffolding();
@@ -200,6 +213,37 @@ final class UserFormElementSubmissionTest extends FunctionalTest
             [(int) $first->ID, (int) $second->ID],
             array_map('intval', SubmittedForm::get()->filter('ParentID', $form->ID)->column('HostPageID')),
         );
+    }
+
+    #[DataProvider('saveSubmissionsProvider')]
+    public function testRecipientEmailNamesTheHostPage(bool $disableSaveSubmissions): void
+    {
+        $page = $this->page('test_page');
+        $form = $this->formIn($this->columnIn($page));
+        $form->DisableSaveSubmissions = $disableSaveSubmissions;
+        $form->write();
+        $recipient = EmailRecipient::create();
+        $recipient->EmailAddress = 'recipient@example.com';
+        $recipient->EmailFrom = 'website@example.com';
+        $recipient->EmailSubject = 'New submission';
+        $form->EmailRecipients()->add($recipient);
+        $page->publishRecursive();
+
+        $this->visit($page);
+        $this->post($this->liveLink($page, 'grid-form', $form->ID, 'Form'), $this->validData($form));
+
+        self::assertCount(1, CapturesRecipientEmails::$emails);
+        $submission = CapturesRecipientEmails::$emails[0]->getData()->SubmittedForm;
+        self::assertInstanceOf(SubmittedForm::class, $submission);
+        self::assertSame((int) $page->ID, (int) $submission->HostPage()->ID);
+        self::assertSame($disableSaveSubmissions ? 0 : 1, SubmittedForm::get()->count());
+    }
+
+    /** @return iterable<string, array{bool}> */
+    public static function saveSubmissionsProvider(): iterable
+    {
+        yield 'saved' => [false];
+        yield 'not saved' => [true];
     }
 
     #[DataProvider('unreachableIdProvider')]
