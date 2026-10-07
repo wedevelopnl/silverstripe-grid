@@ -24,9 +24,9 @@ final class GridAdapterStub implements GridAdapterInterface
      * @param list<Viewport>|null $viewports
      * @param bool $cascadeVisibility When true (default) the stub mimics
      *     Bootstrap/Tailwind — hides cascade upward and expose a restore class.
-     *     When false it mimics Bulma — hides are viewport-scoped, restore is null.
-     * @param string|null $baseColumnClass Framework class every column carries,
-     *     as Bulma's `column`. Null (default) mimics Bootstrap/Tailwind.
+     *     When false hides are viewport-scoped and restore is null.
+     * @param string|null $baseColumnClass Framework class every column carries
+     *     (e.g. `column`). Null (default) mimics Bootstrap/Tailwind.
      */
     public function __construct(
         ?array $viewports = null,
@@ -76,7 +76,7 @@ final class GridAdapterStub implements GridAdapterInterface
     public function getRestoreClass(string $viewport): ?string
     {
         // Cascade stub (Bootstrap/Tailwind): hides cascade upward and are undone with
-        // a restore class where visibility returns. Non-cascade stub (Bulma): hides
+        // a restore class where visibility returns. Non-cascade stub: hides
         // are viewport-scoped, so there is no restore utility.
         return $this->cascadeVisibility ? sprintf('visible-%s', $viewport) : null;
     }

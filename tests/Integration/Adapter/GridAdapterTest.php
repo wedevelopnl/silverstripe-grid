@@ -9,7 +9,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
-use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Adapter\GridAdapter;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Exception\InvalidGridValueException;
@@ -24,7 +23,7 @@ use WeDevelop\Grid\Value\Viewport;
  * every shipped preset.
  *
  * These methods emit framework-specific CSS classes and topology, so each output
- * is parametrised over all three presets (Bootstrap, Tailwind, Bulma) with the
+ * is parametrised over both presets (Bootstrap, Tailwind) with the
  * expected value per preset. A new preset added to this matrix is verified end to
  * end; a base-class change that breaks one framework's output fails loudly here.
  *
@@ -32,16 +31,15 @@ use WeDevelop\Grid\Value\Viewport;
  * data providers before the SilverStripe config manifest is booted, and the
  * adapter constructor reads config, so each test instantiates inside its body.
  *
- * Every preset declares a base viewport — Bootstrap (`xs`), Tailwind (`base`), Bulma
- * (`mobile`) — so all three exercise both arms of `$viewport === base_viewport_key`.
+ * Every preset declares a base viewport — Bootstrap (`xs`), Tailwind (`base`) — so
+ * each exercises both arms of `$viewport === base_viewport_key`.
  * Generic base-class validation (malformed config, pixel rounding) is not
  * framework-specific output, so it is asserted once against the default preset
- * (Tailwind) rather than redundantly across all three.
+ * (Tailwind) rather than redundantly across both.
  */
 #[CoversClass(GridAdapter::class)]
 #[CoversClass(BootstrapAdapter::class)]
 #[CoversClass(TailwindAdapter::class)]
-#[CoversClass(BulmaAdapter::class)]
 #[CoversClass(Viewport::class)]
 #[CoversClass(OffsetStrategy::class)]
 #[CoversClass(AspectRatio::class)]
@@ -59,7 +57,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, ['xs', 'sm', 'md', 'lg', 'xl', 'xxl']];
         yield 'tailwind' => [TailwindAdapter::class, ['base', 'sm', 'md', 'lg', 'xl', '2xl']];
-        yield 'bulma' => [BulmaAdapter::class, ['mobile', 'tablet', 'desktop', 'widescreen', 'fullhd']];
     }
 
     /**
@@ -84,7 +81,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, ['xs' => 0, 'sm' => 576, 'md' => 768, 'lg' => 992, 'xl' => 1200, 'xxl' => 1400]];
         yield 'tailwind' => [TailwindAdapter::class, ['base' => 0, 'sm' => 640, 'md' => 768, 'lg' => 1024, 'xl' => 1280, '2xl' => 1536]];
-        yield 'bulma' => [BulmaAdapter::class, ['mobile' => 0, 'tablet' => 769, 'desktop' => 1024, 'widescreen' => 1216, 'fullhd' => 1408]];
     }
 
     /**
@@ -109,7 +105,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class];
         yield 'tailwind' => [TailwindAdapter::class];
-        yield 'bulma' => [BulmaAdapter::class];
     }
 
     /**
@@ -147,7 +142,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'md', 'Medium'];
         yield 'tailwind' => [TailwindAdapter::class, 'sm', 'Small'];
-        yield 'bulma' => [BulmaAdapter::class, 'desktop', 'Desktop'];
     }
 
     /**
@@ -169,7 +163,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 1320];
         yield 'tailwind' => [TailwindAdapter::class, 1536];
-        yield 'bulma' => [BulmaAdapter::class, 1344];
     }
 
     /**
@@ -190,7 +183,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 660, 1320];
         yield 'tailwind' => [TailwindAdapter::class, 768, 1536];
-        yield 'bulma' => [BulmaAdapter::class, 672, 1344];
     }
 
     /**
@@ -229,7 +221,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'md', 'col-md-6'];
         yield 'tailwind' => [TailwindAdapter::class, 'md', 'md:col-span-6'];
-        yield 'bulma' => [BulmaAdapter::class, 'tablet', 'is-6-tablet'];
     }
 
     /**
@@ -242,9 +233,7 @@ final class GridAdapterTest extends SapphireTest
     }
 
     /**
-     * Width class for the base viewport, width 6. Bootstrap and Tailwind drop the
-     * infix; Bulma pairs its `-mobile` form (max-width 768px) with the unsuffixed
-     * one (min-width 769px), because neither covers 0px upwards on its own.
+     * Width class for the base viewport, width 6. Both presets drop the infix.
      *
      * @return iterable<string, array{class-string<GridAdapter>, string, string}>
      */
@@ -252,7 +241,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'xs', 'col-6'];
         yield 'tailwind' => [TailwindAdapter::class, 'base', 'col-span-6'];
-        yield 'bulma' => [BulmaAdapter::class, 'mobile', 'is-6-mobile is-6'];
     }
 
     /**
@@ -274,7 +262,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'md', 'offset-md-3'];
         yield 'tailwind' => [TailwindAdapter::class, 'md', 'md:col-start-4'];
-        yield 'bulma' => [BulmaAdapter::class, 'tablet', 'is-offset-3-tablet'];
     }
 
     /**
@@ -288,8 +275,7 @@ final class GridAdapterTest extends SapphireTest
 
     /**
      * Offset class for the base viewport, offset 3. Tailwind's offset_adjustment
-     * of 1 applies to the base arm too, so 3 becomes 4; Bulma emits the same
-     * `-mobile` + unsuffixed pair as the width arm.
+     * of 1 applies to the base arm too, so 3 becomes 4.
      *
      * @return iterable<string, array{class-string<GridAdapter>, string, string}>
      */
@@ -297,7 +283,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'xs', 'offset-3'];
         yield 'tailwind' => [TailwindAdapter::class, 'base', 'col-start-4'];
-        yield 'bulma' => [BulmaAdapter::class, 'mobile', 'is-offset-3-mobile is-offset-3'];
     }
 
     /**
@@ -320,9 +305,8 @@ final class GridAdapterTest extends SapphireTest
     }
 
     /**
-     * The hide class per viewport. Cascade frameworks (Bootstrap/Tailwind) use a
-     * viewport-infixed hide; Bulma uses a viewport-scoped `-only` hide. The no-infix
-     * base viewport (Bootstrap xs, Tailwind base, Bulma mobile) uses base_hide_class.
+     * The hide class per viewport. Both presets use a viewport-infixed hide; the
+     * no-infix base viewport (Bootstrap xs, Tailwind base) uses base_hide_class.
      *
      * @return iterable<string, array{class-string<GridAdapter>, string, string}>
      */
@@ -334,9 +318,6 @@ final class GridAdapterTest extends SapphireTest
         yield 'tailwind middle' => [TailwindAdapter::class, 'md', 'md:hidden'];
         yield 'tailwind last' => [TailwindAdapter::class, '2xl', '2xl:hidden'];
         yield 'tailwind base' => [TailwindAdapter::class, 'base', 'hidden'];
-        yield 'bulma middle' => [BulmaAdapter::class, 'tablet', 'is-hidden-tablet-only'];
-        yield 'bulma last' => [BulmaAdapter::class, 'fullhd', 'is-hidden-fullhd'];
-        yield 'bulma base' => [BulmaAdapter::class, 'mobile', 'is-hidden-mobile'];
     }
 
     /**
@@ -349,9 +330,8 @@ final class GridAdapterTest extends SapphireTest
     }
 
     /**
-     * The restore class per viewport. Cascade frameworks return a viewport-infixed
-     * restore utility; Bulma has no restore utility (its hides are viewport-scoped)
-     * and returns null.
+     * The restore class per viewport. Both presets cascade their hides and return a
+     * viewport-infixed restore utility.
      *
      * @return iterable<string, array{class-string<GridAdapter>, string, string|null}>
      */
@@ -359,7 +339,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'md', 'd-md-block'];
         yield 'tailwind' => [TailwindAdapter::class, 'md', 'md:block'];
-        yield 'bulma has no restore utility' => [BulmaAdapter::class, 'tablet', null];
     }
 
     /**
@@ -369,6 +348,33 @@ final class GridAdapterTest extends SapphireTest
     public function testGetRestoreClass(string $adapterClass, string $viewport, ?string $expected): void
     {
         self::assertSame($expected, (new $adapterClass())->getRestoreClass($viewport));
+    }
+
+    // No bundled preset uses the options below, but custom adapters may, so they
+    // are asserted against the default preset (Tailwind) with the config overridden.
+
+    public function testHideClassOverrideTakesPrecedenceOverFormat(): void
+    {
+        Config::modify()->set(TailwindAdapter::class, 'hide_class_overrides', ['2xl' => 'is-hidden-2xl']);
+        $adapter = new TailwindAdapter();
+
+        self::assertSame('is-hidden-2xl', $adapter->getHideClass('2xl'));
+        self::assertSame('md:hidden', $adapter->getHideClass('md'));
+    }
+
+    public function testGetRestoreClassIsNullWithoutRestoreFormat(): void
+    {
+        // Viewport-scoped hides need no restore; '' must not leak into the class list.
+        Config::modify()->set(TailwindAdapter::class, 'responsive_restore_format', '');
+
+        self::assertNull((new TailwindAdapter())->getRestoreClass('md'));
+    }
+
+    public function testGetBaseColumnClassReturnsConfiguredClass(): void
+    {
+        Config::modify()->set(TailwindAdapter::class, 'base_column_class', 'column');
+
+        self::assertSame('column', (new TailwindAdapter())->getBaseColumnClass());
     }
 
     /**
@@ -422,7 +428,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'row'];
         yield 'tailwind' => [TailwindAdapter::class, 'grid grid-cols-12'];
-        yield 'bulma' => [BulmaAdapter::class, 'columns is-multiline'];
     }
 
     /**
@@ -441,7 +446,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'container', 'container-fluid'];
         yield 'tailwind' => [TailwindAdapter::class, 'container mx-auto', 'w-full'];
-        yield 'bulma' => [BulmaAdapter::class, 'container', 'container is-fluid'];
     }
 
     /**
@@ -475,7 +479,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'col-6'];
         yield 'tailwind' => [TailwindAdapter::class, 'col-span-6'];
-        yield 'bulma' => [BulmaAdapter::class, 'is-6-mobile is-6'];
     }
 
     /**
@@ -496,7 +499,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'offset-3'];
         yield 'tailwind' => [TailwindAdapter::class, 'col-start-4'];
-        yield 'bulma' => [BulmaAdapter::class, 'is-offset-3-mobile is-offset-3'];
     }
 
     /**
@@ -525,7 +527,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, OffsetStrategy::Margin];
         yield 'tailwind' => [TailwindAdapter::class, OffsetStrategy::GridPlacement];
-        yield 'bulma' => [BulmaAdapter::class, OffsetStrategy::Margin];
     }
 
     /**
@@ -557,9 +558,6 @@ final class GridAdapterTest extends SapphireTest
         yield 'tailwind 1x1' => [TailwindAdapter::class, AspectRatio::Square, 'aspect-square'];
         yield 'tailwind 4x3' => [TailwindAdapter::class, AspectRatio::FourByThree, 'aspect-4/3'];
         yield 'tailwind 16x9' => [TailwindAdapter::class, AspectRatio::SixteenByNine, 'aspect-video'];
-        yield 'bulma 1x1' => [BulmaAdapter::class, AspectRatio::Square, 'is-1by1'];
-        yield 'bulma 4x3' => [BulmaAdapter::class, AspectRatio::FourByThree, 'is-4by3'];
-        yield 'bulma 16x9' => [BulmaAdapter::class, AspectRatio::SixteenByNine, 'is-16by9'];
     }
 
     /**
@@ -595,9 +593,6 @@ final class GridAdapterTest extends SapphireTest
         yield 'tailwind top' => [TailwindAdapter::class, VerticalAlignment::Top, 'items-start'];
         yield 'tailwind center' => [TailwindAdapter::class, VerticalAlignment::Center, 'items-center'];
         yield 'tailwind bottom' => [TailwindAdapter::class, VerticalAlignment::Bottom, 'items-end'];
-        yield 'bulma top' => [BulmaAdapter::class, VerticalAlignment::Top, 'is-align-items-flex-start'];
-        yield 'bulma center' => [BulmaAdapter::class, VerticalAlignment::Center, 'is-align-items-center'];
-        yield 'bulma bottom' => [BulmaAdapter::class, VerticalAlignment::Bottom, 'is-align-items-flex-end'];
     }
 
     /**
@@ -626,7 +621,7 @@ final class GridAdapterTest extends SapphireTest
 
     /**
      * LastOnDesktop appends the responsive override at each preset's default viewport
-     * (Bootstrap md, Tailwind sm, Bulma desktop).
+     * (Bootstrap md, Tailwind sm).
      *
      * @return iterable<string, array{class-string<GridAdapter>, MediaPosition, string, string}>
      */
@@ -638,9 +633,6 @@ final class GridAdapterTest extends SapphireTest
         yield 'tailwind First' => [TailwindAdapter::class, MediaPosition::First, 'order-1', 'order-2'];
         yield 'tailwind Last' => [TailwindAdapter::class, MediaPosition::Last, 'order-2', 'order-1'];
         yield 'tailwind LastOnDesktop' => [TailwindAdapter::class, MediaPosition::LastOnDesktop, 'order-1 sm:order-2', 'order-2 sm:order-1'];
-        yield 'bulma First' => [BulmaAdapter::class, MediaPosition::First, 'has-order-1', 'has-order-2'];
-        yield 'bulma Last' => [BulmaAdapter::class, MediaPosition::Last, 'has-order-2', 'has-order-1'];
-        yield 'bulma LastOnDesktop' => [BulmaAdapter::class, MediaPosition::LastOnDesktop, 'has-order-1 has-order-2-desktop', 'has-order-2 has-order-1-desktop'];
     }
 
     /**
@@ -671,7 +663,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'col-md-6'];
         yield 'tailwind' => [TailwindAdapter::class, 'sm:col-span-6'];
-        yield 'bulma' => [BulmaAdapter::class, 'is-6-desktop'];
     }
 
     /**
@@ -701,7 +692,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, 'ps-md-3', 'pe-md-3'];
         yield 'tailwind' => [TailwindAdapter::class, 'sm:pl-3', 'sm:pr-3'];
-        yield 'bulma' => [BulmaAdapter::class, 'pl-3-desktop', 'pr-3-desktop'];
     }
 
     /**
@@ -732,8 +722,7 @@ final class GridAdapterTest extends SapphireTest
     }
 
     /**
-     * Bulma requires a `column` base class on every grid column; Bootstrap and
-     * Tailwind need none (null).
+     * Neither preset needs a base class on its grid columns.
      *
      * @return iterable<string, array{class-string<GridAdapter>, string|null}>
      */
@@ -741,7 +730,6 @@ final class GridAdapterTest extends SapphireTest
     {
         yield 'bootstrap' => [BootstrapAdapter::class, null];
         yield 'tailwind' => [TailwindAdapter::class, null];
-        yield 'bulma' => [BulmaAdapter::class, 'column'];
     }
 
     /**

@@ -56,8 +56,8 @@ interface ContentLayoutAdapterInterface
     public function getPaddingClass(string $direction, int $size): string;
 
     /**
-     * Base column class required by some frameworks (e.g. Bulma's 'column').
-     * Null if not needed.
+     * Base column class required by some frameworks (e.g. a `column` class every
+     * width helper is scoped to). Null if not needed.
      *
      * Also declared by {@see GridAdapterInterface}, which needs it for the grid's
      * own columns — one implementation serves both.

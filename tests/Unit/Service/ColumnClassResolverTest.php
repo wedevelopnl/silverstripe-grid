@@ -47,7 +47,7 @@ final class ColumnClassResolverTest extends TestCase
     }
 
     /**
-     * Bulma-style adapter: hides are scoped to a single viewport, so there is no
+     * Non-cascading adapter: hides are scoped to a single viewport, so there is no
      * restore utility. Each hidden viewport must therefore emit its own hide class.
      */
     private static function nonCascadeFourViewportStub(): GridAdapterStub
@@ -64,7 +64,7 @@ final class ColumnClassResolverTest extends TestCase
     }
 
     /**
-     * Bulma-style adapter: every column carries a framework base class, without
+     * Adapter with a base column class: every column carries a framework base class, without
      * which none of the width helpers match.
      */
     private static function baseColumnClassStub(): GridAdapterStub

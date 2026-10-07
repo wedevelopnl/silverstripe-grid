@@ -49,7 +49,7 @@ This project is a SilverStripe 6 ground-up rewrite of `wedevelopnl/silverstripe-
 ### Grid Adapter System
 - `GridAdapterInterface` + `ContentLayoutAdapterInterface`, both implemented by the config-driven `GridAdapter` base class, whose `private static` Configurable properties are the YAML-overridable surface.
 - `Viewport` is a `final readonly class` (NOT an enum). Each adapter defines its own viewport set.
-- Three adapters: Bootstrap (default), Tailwind, Bulma — all follow identical constructor pattern.
+- Two bundled presets: Bootstrap, Tailwind — zero-method subclasses, selected by the required `SS_GRID_ADAPTER` env var.
 - DI binding in `_config/grid.yml`, consumers depend on interface only.
 
 ### E2E Test Fixtures

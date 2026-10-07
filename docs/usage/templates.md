@@ -226,7 +226,7 @@ With [`wedevelopnl/silverstripe-admintoolbar`](https://packagist.org/packages/we
 
 The module ships a compiled bundle at `client/dist/` (exposed via composer's `extra.expose`). CMS pages serve it automatically. Project-level CSS is outside the module's scope — import the shipped CSS variables and ship your own styles.
 
-The grid requires the `SS_GRID_ADAPTER` env var to be set (a preset name — `bootstrap`, `tailwind`, or `bulma` — or a custom adapter FQCN); it selects which CSS framework's width/offset/visibility classes the Row and Column holders emit. An unset or invalid value throws at container boot. See [Grid Adapter System](../architecture/grid-adapter.md).
+The grid requires the `SS_GRID_ADAPTER` env var to be set (a preset name — `bootstrap` or `tailwind` — or a custom adapter FQCN); it selects which CSS framework's width/offset/visibility classes the Row and Column holders emit. An unset or invalid value throws at container boot. See [Grid Adapter System](../architecture/grid-adapter.md).
 
 ## See also
 

@@ -10,7 +10,6 @@ use RuntimeException;
 use SilverStripe\Core\Environment;
 use SilverStripe\Dev\SapphireTest;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
-use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Factory\GridAdapterResolver;
@@ -67,9 +66,8 @@ final class GridAdapterResolverTest extends SapphireTest
     {
         yield 'bootstrap' => ['bootstrap', BootstrapAdapter::class];
         yield 'tailwind' => ['tailwind', TailwindAdapter::class];
-        yield 'bulma' => ['bulma', BulmaAdapter::class];
         yield 'mixed case is normalised' => ['Tailwind', TailwindAdapter::class];
-        yield 'upper case is normalised' => ['BULMA', BulmaAdapter::class];
+        yield 'upper case is normalised' => ['BOOTSTRAP', BootstrapAdapter::class];
     }
 
     public function testFqcnResolvesToAdapter(): void
@@ -83,10 +81,12 @@ final class GridAdapterResolverTest extends SapphireTest
 
     public function testUnknownPresetNameThrows(): void
     {
-        Environment::putEnv('SS_GRID_ADAPTER=foundation');
+        // `bulma` was a bundled preset until it was retired; a site still set to
+        // it must fail at boot with the presets it can switch to.
+        Environment::putEnv('SS_GRID_ADAPTER=bulma');
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Invalid SS_GRID_ADAPTER value "foundation"');
+        $this->expectExceptionMessage('Invalid SS_GRID_ADAPTER value "bulma". Expected a preset (bootstrap|tailwind)');
 
         (new GridAdapterResolver())->create(GridAdapterInterface::class);
     }

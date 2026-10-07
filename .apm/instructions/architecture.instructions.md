@@ -9,7 +9,7 @@ applyTo: "**/*"
 _config/              # YAML config (DI bindings, element hierarchy, grid adapter)
 templates/            # SilverStripe .ss templates (element holders + form fields)
 src/                  # PHP source (PSR-4: WeDevelop\Grid\)
-src/Adapter/          # Grid framework adapters: GridAdapter base class + framework presets (Bootstrap, Tailwind, Bulma)
+src/Adapter/          # Grid framework adapters: GridAdapter base class + framework presets (Bootstrap, Tailwind)
 src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderValidatorInterface)
 src/Controllers/      # API controllers: GridApiController (abstract base — CSRF gate, draft lookups, NodeRef resolution) + GridController (page elements, /admin/grid) + SharedBlockController (block library, /admin/grid-shared-blocks)
 src/Factory/          # Factories (GridAdapterFactory)

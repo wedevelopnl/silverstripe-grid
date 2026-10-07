@@ -15,7 +15,7 @@ SilverStripe\Core\Injector\Injector:
       overrideStrategy: isolated
 
 # The active adapter is selected by the SS_GRID_ADAPTER environment variable.
-# The value is either a bundled preset name (bootstrap|tailwind|bulma,
+# The value is either a bundled preset name (bootstrap|tailwind,
 # case-insensitive) or the FQCN of a custom adapter that implements
 # GridAdapterInterface. The variable is required — unset or invalid values
 # throw at container boot.

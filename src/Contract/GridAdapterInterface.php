@@ -46,7 +46,6 @@ interface GridAdapterInterface
      *
      * @example Bootstrap: getWidthClass('md', 6) → 'col-md-6'
      * @example Tailwind:  getWidthClass('md', 6) → 'md:col-span-6'
-     * @example Bulma:     getWidthClass('desktop', 6) → 'is-6-desktop'
      */
     public function getWidthClass(string $viewport, int $width): string;
 
@@ -58,7 +57,6 @@ interface GridAdapterInterface
      *
      * @example Bootstrap: getOffsetClass('md', 3) → 'offset-md-3'
      * @example Tailwind:  getOffsetClass('md', 3) → 'md:col-start-4'
-     * @example Bulma:     getOffsetClass('desktop', 3) → 'is-offset-3-desktop'
      */
     public function getOffsetClass(string $viewport, int $offset): string;
 
@@ -69,7 +67,7 @@ interface GridAdapterInterface
      * signalled by {@see self::getRestoreClass()}: frameworks that return a restore
      * class (Bootstrap `d-md-none`, Tailwind `md:hidden`) cascade upward and are
      * undone with the restore class, so callers emit the hide once at the point a
-     * column turns hidden; frameworks that return null (Bulma `is-hidden-md-only`)
+     * column turns hidden; frameworks that return null (an `-only` style hide)
      * scope each hide to a single viewport, so callers emit a hide at every hidden
      * viewport. The caller (ColumnClassResolver) owns that sequencing decision — it
      * is the only place that knows the per-viewport visibility sequence.
@@ -91,7 +89,6 @@ interface GridAdapterInterface
      *
      * @example Bootstrap md: 'd-md-block'
      * @example Tailwind  md: 'md:block'
-     * @example Bulma     tablet: null
      *
      * @param non-empty-string $viewport
      */
@@ -102,21 +99,19 @@ interface GridAdapterInterface
      *
      * @example Bootstrap: 'row'
      * @example Tailwind:  'grid grid-cols-12'
-     * @example Bulma:     'columns is-multiline'
      */
     public function getRowClasses(): string;
 
     /**
      * Base class every column inside a row carries, or null when the framework
-     * needs none. Bulma's width helpers are all written `.column.is-{n}`, so
-     * without it none of them match.
+     * needs none — for frameworks whose width helpers only match in
+     * combination with a column class (`.column.is-{n}`).
      *
      * Also declared by {@see ContentLayoutAdapterInterface}, whose media block
      * builds column elements of its own. Both interfaces resolve to the same
      * singleton, so `GridAdapter` implements it once for both.
      *
      * @example Bootstrap: null
-     * @example Bulma:     'column'
      */
     public function getBaseColumnClass(): ?string;
 
@@ -148,13 +143,12 @@ interface GridAdapterInterface
      * without requiring a specific screen width.
      *
      * Space-separated when the framework needs more than one class to span the
-     * whole range, as Bulma does.
+     * whole range (e.g. a max-width-scoped class paired with a min-width-scoped one).
      *
      * @param positive-int $width
      *
      * @example Bootstrap: getBaseWidthClass(6) → 'col-6'
      * @example Tailwind:  getBaseWidthClass(6) → 'col-span-6'
-     * @example Bulma:     getBaseWidthClass(6) → 'is-6-mobile is-6'
      */
     public function getBaseWidthClass(int $width): string;
 
@@ -165,14 +159,13 @@ interface GridAdapterInterface
      *
      * @example Bootstrap: getBaseOffsetClass(3) → 'offset-3'
      * @example Tailwind:  getBaseOffsetClass(3) → 'col-start-4'
-     * @example Bulma:     getBaseOffsetClass(3) → 'is-offset-3-mobile is-offset-3'
      */
     public function getBaseOffsetClass(int $offset): string;
 
     /**
      * How the CSS framework implements column offsets.
      *
-     * Margin-based frameworks (Bootstrap, Bulma) use flow-relative `margin-left`.
+     * Margin-based frameworks (Bootstrap) use flow-relative `margin-left`.
      * Grid-placement frameworks (Tailwind) use `grid-column-start`.
      * The CMS editor uses this to choose between flex and grid layout for preview.
      */

@@ -5,7 +5,7 @@ applyTo: "**/*"
 
 # Project Overview
 
-SilverStripe Grid — a grid-based content block system for SilverStripe 6 CMS providing structured Section > Row > Column layouts with configurable CSS framework adapters (Bootstrap, Tailwind, Bulma).
+SilverStripe Grid — a grid-based content block system for SilverStripe 6 CMS providing structured Section > Row > Column layouts with configurable CSS framework adapters (Bootstrap, Tailwind).
 
 Package: `wedevelopnl/silverstripe-grid` (type: `silverstripe-vendormodule`)
 

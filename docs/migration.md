@@ -12,7 +12,7 @@ The migration runs as a `BuildTask`, is idempotent, supports dry-runs, and handl
 - **The source site must be a working SilverStripe 5 site.** This migration does not support a SilverStripe 4 database that has skipped the SS4→SS5 upgrade. If you are on SS4, perform SilverStripe's standard SS4→SS5 upgrade first, then upgrade to SS6 and run this migration.
 - This module is installed, configured and `dev/build` has been run successfully.
 - The legacy database tables (`BaseElement`, `ElementalArea`, `ElementContent`, optionally `ElementRow`) are still present in the database. The old PHP code does **not** need to be installed — the migration reads the old tables via raw SQL.
-- The `SS_GRID_ADAPTER` environment variable **must** be set to a bundled preset (`bootstrap`, `tailwind`, or `bulma`, case-insensitive) or to the fully-qualified class name of a custom adapter implementing `GridAdapterInterface`. There is no default: when the variable is unset, empty, or invalid the container throws a `RuntimeException` at boot, which aborts `dev/build` **and** every migration task before any work is done. Set it in your environment (e.g. `.env`) before migrating.
+- The `SS_GRID_ADAPTER` environment variable **must** be set to a bundled preset (`bootstrap` or `tailwind`, case-insensitive) or to the fully-qualified class name of a custom adapter implementing `GridAdapterInterface`. There is no default: when the variable is unset, empty, or invalid the container throws a `RuntimeException` at boot, which aborts `dev/build` **and** every migration task before any work is done. Set it in your environment (e.g. `.env`) before migrating.
 
 ## Before You Begin
 
@@ -444,11 +444,11 @@ Carry the block link FK fields across during the grid pass with the `updateEleme
 
 **Media blocks show the wrong alignment or order.** — The default CSS-class lookups expect Bootstrap values (`align-items-center`, `order-1 order-md-2`, …). Register an `updateFieldMapperConfig` extension (option 5 above) to supply your own lookup tables, or use `updateElementFieldMapping` (option 2) for per-element fixes after the default mapping has run.
 
-**Viewport overrides are missing after migration.** — The automatic viewport-key mapping is case-insensitive but requires at least a case-insensitive match between legacy keys (`XS`, `SM`, `MD`, `LG`, `XL`) and the active adapter's viewport keys. Migrating to an adapter with different names (for example Bulma's `mobile`, `tablet`, `desktop`) requires an explicit `--viewport-map` argument.
+**Viewport overrides are missing after migration.** — The automatic viewport-key mapping is case-insensitive but requires at least a case-insensitive match between legacy keys (`XS`, `SM`, `MD`, `LG`, `XL`) and the active adapter's viewport keys. Migrating to an adapter with different names (for example a custom adapter keyed `mobile`, `tablet`, `desktop`) requires an explicit `--viewport-map` argument.
 
 **Draft-deleted content reappeared on draft.** — This is expected. Live-only elements are recreated on both stages to preserve Versioned integrity.
 
-**"SS_GRID_ADAPTER environment variable is not set" (or "Invalid SS_GRID_ADAPTER value …").** — The active grid adapter is selected from the required `SS_GRID_ADAPTER` environment variable and there is no default. The container throws this `RuntimeException` at boot, so it surfaces during `dev/build` and on every migration task before any data is read or written. Set `SS_GRID_ADAPTER` to a preset (`bootstrap`, `tailwind`, `bulma`) or an FQCN implementing `GridAdapterInterface` — see [Requirements](#requirements) — then re-run the task.
+**"SS_GRID_ADAPTER environment variable is not set" (or "Invalid SS_GRID_ADAPTER value …").** — The active grid adapter is selected from the required `SS_GRID_ADAPTER` environment variable and there is no default. The container throws this `RuntimeException` at boot, so it surfaces during `dev/build` and on every migration task before any data is read or written. Set `SS_GRID_ADAPTER` to a preset (`bootstrap`, `tailwind`) or an FQCN implementing `GridAdapterInterface` — see [Requirements](#requirements) — then re-run the task.
 
 ## See also
 

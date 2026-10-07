@@ -148,8 +148,8 @@ abstract class AbstractMigrationTask extends BuildTask
         }
 
         // An empty map drops every responsive override silently. This happens when
-        // the active adapter shares no key names with the legacy set (e.g. Bulma:
-        // mobile/tablet/desktop) and no explicit --viewport-map was given.
+        // the active adapter shares no key names with the legacy set (e.g. a custom
+        // adapter keyed mobile/tablet/desktop) and no explicit --viewport-map was given.
         if ($viewportKeyMap === []) {
             $output->writeln(\sprintf(
                 '<error>Could not derive a viewport map: no legacy key (%s) matches an active adapter viewport (%s). '

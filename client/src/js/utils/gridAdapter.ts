@@ -60,8 +60,8 @@ export function getOffsetStartLine(offset: number): number {
 /**
  * Human label for a column offset, e.g. "Offset 2" or "Start 3".
  *
- * Which reading is correct depends on the adapter. Margin strategies (Bootstrap,
- * Bulma) push the column with `offset-N`, so the number is an offset. Grid
+ * Which reading is correct depends on the adapter. Margin strategies
+ * (Bootstrap) push the column with `offset-N`, so the number is an offset. Grid
  * placement (Tailwind) emits `col-start-N`, where the meaningful number is the
  * line the column starts on — labelling that "Offset 2" would contradict the
  * `col-start-3` it generates.
