@@ -265,3 +265,20 @@ WeDevelop\E2e\Fixtures\FixtureLoader:
       # via user actions (publish, edit, publish again) so each version
       # in the resulting history is the validated result of a real
       # interaction, not a fixture side-effect.
+---
+Name: grid-dev-userforms
+After: grid-dev
+Only:
+  environment: dev
+  classexists: SilverStripe\UserForms\Model\UserDefinedForm
+---
+# Fixtures that need silverstripe/userforms: only the optional-modules testbed
+# registers them, and only playwright.modules.config.ts loads them.
+WeDevelop\E2e\Fixtures\FixtureLoader:
+  fixtures:
+    userform-element:
+      path: 'wedevelopnl/silverstripe-grid:tests/E2E/Fixture/UserFormElement.yml'
+      post_actions:
+        - action: publish_recursive
+          class: Page
+          identifier: e2e_page

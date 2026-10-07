@@ -3,19 +3,14 @@ import { resolve } from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
 
 /**
- * Resolve the base URL from environment or .docker/.env.
- *
- * Priority: E2E_BASE_URL env var > WEB_PORT from .docker/.env
+ * Resolve a testbed's base URL from its port key in .docker/.env
+ * (WEB_PORT for `app`, MODULES_WEB_PORT for `app-modules`).
  */
-function resolveBaseUrl(): string {
-  if (process.env.E2E_BASE_URL) {
-    return process.env.E2E_BASE_URL
-  }
-
+export function resolveBaseUrl(portKey: string): string {
   const envPath = resolve(__dirname, '.docker/.env')
   try {
     const envContent = readFileSync(envPath, 'utf-8')
-    const match = envContent.match(/^WEB_PORT=(\d+)$/m)
+    const match = envContent.match(new RegExp(`^${portKey}=(\\d+)$`, 'm'))
     if (match) {
       return `https://localhost:${match[1]}`
     }
@@ -23,7 +18,9 @@ function resolveBaseUrl(): string {
     // .docker/.env not generated yet — fall through
   }
 
-  throw new Error('Cannot determine base URL. Set E2E_BASE_URL or run .docker/env.sh first.')
+  throw new Error(
+    `Cannot determine base URL: no ${portKey} in .docker/.env. Run .docker/env.sh first.`,
+  )
 }
 
 export default defineConfig({
@@ -39,7 +36,7 @@ export default defineConfig({
   reporter: 'html',
 
   use: {
-    baseURL: resolveBaseUrl(),
+    baseURL: process.env.E2E_BASE_URL ?? resolveBaseUrl('WEB_PORT'),
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     // Dev environment uses self-signed certificates

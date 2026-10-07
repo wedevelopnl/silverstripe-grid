@@ -143,6 +143,12 @@ tasks:
     cmds:
       - npx playwright test
 
+  test-e2e-modules:
+    desc: Run E2E tests against the optional-modules testbed (Playwright; wipes that testbed's pages and blocks)
+    deps: [ensure-up-modules]
+    cmds:
+      - npx playwright test --config playwright.modules.config.ts
+
   test-e2e-ui:
     desc: Run E2E tests with interactive UI
     deps: [ensure-up]
