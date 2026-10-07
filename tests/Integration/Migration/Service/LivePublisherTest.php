@@ -24,7 +24,6 @@ use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
-use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
@@ -42,18 +41,12 @@ use WeDevelop\Grid\Value\ViewportConfig;
 #[CoversClass(LivePublisher::class)]
 final class LivePublisherTest extends SapphireTest
 {
-    use CleansGridTables;
     use DisablesAutoScaffolding;
 
     /** $extra_dataobjects alone does not provision the temp DB — this test writes records. */
     protected $usesDatabase = true;
 
     protected static $extra_dataobjects = [TestCustomElement::class, TestPage::class];
-
-    // The publisher is only ever invoked from GridMigrationService::run(), which
-    // manages its own transactions; mirror that by disabling SapphireTest's
-    // per-test transaction wrapping (its DDL/savepoint nesting is incompatible).
-    protected $usesTransactions = false;
 
     private const string ZONE = 'main';
 
@@ -89,10 +82,6 @@ final class LivePublisherTest extends SapphireTest
         // Section/Row auto-scaffolding for the batch; replicate that so a single
         // Section write does not also scaffold an extra Row + Column.
         $this->disableAutoScaffolding();
-
-        // No DDL/transaction rollback runs (usesTransactions = false), so purge any
-        // grid records leaked from a previous test before each method.
-        $this->cleanGridTables();
 
         $this->mapper = new FieldMapper();
         $this->draftWriter = new DraftHierarchyWriter($this->mapper);

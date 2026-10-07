@@ -30,6 +30,25 @@ final class LegacyTableSeeder
     ];
 
     /**
+     * Refuse DDL while a SapphireTest transaction is open.
+     *
+     * MySQL DDL implicitly commits, after which the test's ROLLBACK is a silent
+     * no-op and its rows leak into the next test. A class that needs DDL inside
+     * a test body must declare `$usesTransactions = false`; per-class DDL
+     * belongs in `onBeforeLoadFixtures()`, which runs before the transaction.
+     */
+    private function assertNoOpenTransaction(string $operation): void
+    {
+        if (DB::get_conn()->transactionDepth() > 0) {
+            throw new \LogicException(\sprintf(
+                'LegacyTableSeeder::%s() issues DDL inside an open transaction, which MySQL would implicitly commit. '
+                . 'Declare $usesTransactions = false on the test class, or move the DDL to onBeforeLoadFixtures().',
+                $operation,
+            ));
+        }
+    }
+
+    /**
      * Create all legacy tables (idempotent — uses IF NOT EXISTS).
      *
      * Does NOT add extension columns to any page table. Call
@@ -38,6 +57,7 @@ final class LegacyTableSeeder
      */
     public function createTables(): void
     {
+        $this->assertNoOpenTransaction('createTables');
         $this->ensureDatabaseSelected();
         $this->createBaseElementTable('BaseElement');
         $this->createBaseElementTable('BaseElement_Live');
@@ -118,6 +138,7 @@ final class LegacyTableSeeder
      */
     public function dropTables(): void
     {
+        $this->assertNoOpenTransaction('dropTables');
         foreach (self::LEGACY_TABLES as $table) {
             DB::query("DROP TABLE IF EXISTS \"{$table}\"");
         }
@@ -133,6 +154,7 @@ final class LegacyTableSeeder
      */
     public function addExtensionColumns(string $table): void
     {
+        $this->assertNoOpenTransaction('addExtensionColumns');
         foreach ([$table, $table . '_Live'] as $target) {
             $columns = DB::field_list($target);
 
@@ -151,6 +173,7 @@ final class LegacyTableSeeder
      */
     public function removeExtensionColumns(string $table): void
     {
+        $this->assertNoOpenTransaction('removeExtensionColumns');
         foreach ([$table, $table . '_Live'] as $target) {
             $columns = DB::field_list($target);
 
@@ -173,6 +196,7 @@ final class LegacyTableSeeder
      */
     public function addElementalAreaColumn(string $table): void
     {
+        $this->assertNoOpenTransaction('addElementalAreaColumn');
         foreach ([$table, $table . '_Live'] as $target) {
             $columns = DB::field_list($target);
 
@@ -187,6 +211,7 @@ final class LegacyTableSeeder
      */
     public function removeElementalAreaColumn(string $table): void
     {
+        $this->assertNoOpenTransaction('removeElementalAreaColumn');
         foreach ([$table, $table . '_Live'] as $target) {
             $columns = DB::field_list($target);
 
@@ -367,6 +392,7 @@ final class LegacyTableSeeder
 
     public function addFieldLocalisedTables(): void
     {
+        $this->assertNoOpenTransaction('addFieldLocalisedTables');
         foreach (['BaseElement_Localised', 'BaseElement_Localised_Live'] as $target) {
             DB::query(<<<SQL
                 CREATE TABLE IF NOT EXISTS "{$target}" (
@@ -392,6 +418,7 @@ final class LegacyTableSeeder
 
     public function removeFieldLocalisedTables(): void
     {
+        $this->assertNoOpenTransaction('removeFieldLocalisedTables');
         foreach ([
             'BaseElement_Localised', 'BaseElement_Localised_Live',
             'ElementContent_Localised', 'ElementContent_Localised_Live',
@@ -402,6 +429,7 @@ final class LegacyTableSeeder
 
     public function addLocaleIdColumn(): void
     {
+        $this->assertNoOpenTransaction('addLocaleIdColumn');
         foreach (['BaseElement', 'BaseElement_Live'] as $target) {
             $columns = DB::field_list($target);
             if (!\array_key_exists('LocaleID', $columns)) {
@@ -412,6 +440,7 @@ final class LegacyTableSeeder
 
     public function removeLocaleIdColumn(): void
     {
+        $this->assertNoOpenTransaction('removeLocaleIdColumn');
         foreach (['BaseElement', 'BaseElement_Live'] as $target) {
             $columns = DB::field_list($target);
             if (\array_key_exists('LocaleID', $columns)) {

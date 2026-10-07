@@ -1144,6 +1144,10 @@ final class GridMigrationServiceTest extends MigrationTestCase
 
         DraftHierarchyWriter::add_extension(TestErrorThrowingMigrationExtension::class);
 
+        // SapphireTest wraps each test in its own transaction, so "no leaked
+        // transaction" means the depth is back where it was before run().
+        $depthBefore = DB::get_conn()->transactionDepth();
+
         try {
             $service = $this->createService();
             $service->run(
@@ -1167,7 +1171,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
             ])->count());
 
             // The connection must be left with no open transaction.
-            self::assertSame(0, DB::get_conn()->transactionDepth());
+            self::assertSame($depthBefore, DB::get_conn()->transactionDepth());
 
             // The error should have been logged.
             $errors = $this->logger->messagesAt('error');
