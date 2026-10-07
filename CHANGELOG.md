@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **The toolbar's Grid menu drew every column flush left** — it passed only a column's default width to the template, so an offset column (an 8/12 intro offset by 2, say) sat on the first track, and a column hidden at the default viewport looked like any other. Columns now sit on their row's tracks at their width and offset, wrapping with their offset as on the front end; each row draws its tracks as faint stripes so skipped and unused tracks read as such, and a hidden column is drawn dashed and faded and marked `hidden`. The menu also names each row (with its edit link, previously dropped), heads each column with its span (`8/12`) so its title no longer reads as its first element, and tags shared-block placements. New translation keys: `GridMenu.HIDDEN`, `GridMenu.SHARED`, `GridMenu.SPAN`.
 
+### Developer Experience
+
+- **The optional-modules container is now a browsable testbed** (contributors only) — `task up-modules` starts it next to the base testbed and prints its URL, so an integration (Fluent, userforms) can be tried by hand in the CMS, not only through its tests. It serves on `MODULES_WEB_PORT` (`18000` + the worktree's port offset), with its own database `silverstripe_modules` and admin `admin`/`admin`. An existing `.docker/.env` is regenerated with the new port on the next `task` run, keeping its `SS_GRID_ADAPTER`.
+
 ## [6.0.0-beta.5] - 2026-10-06
 
 The headline is the **zone invariant**: a grid element's `Zone` must now be set exactly when it sits directly on a page, and existing installs need a one-time repair task before pages with older rows can be published again. Alongside it come a media-only content block and a Grid menu for the front-end admin toolbar.
