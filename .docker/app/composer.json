@@ -4,7 +4,6 @@
     "prefer-stable": true,
     "require": {
         "silverstripe/recipe-cms": "^6.0",
-        "wedevelopnl/silverstripe-admintoolbar": "^6.0",
         "wedevelopnl/silverstripe-grid": "*"
     },
     "repositories": [

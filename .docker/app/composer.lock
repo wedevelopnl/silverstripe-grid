@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ab1095a3cbefb0abfeec43e0fd7b6155",
+    "content-hash": "10a513ec98dc7068f694331e522ea06d",
     "packages": [
         {
             "name": "composer/ca-bundle",
@@ -6179,71 +6179,12 @@
             "time": "2025-06-12T03:26:02+00:00"
         },
         {
-            "name": "wedevelopnl/silverstripe-admintoolbar",
-            "version": "6.0.0-rc.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/wedevelopnl/silverstripe-admintoolbar.git",
-                "reference": "61f023bb3d5d6dfc4d5ebf9a6f5249b3954019a9"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/wedevelopnl/silverstripe-admintoolbar/zipball/61f023bb3d5d6dfc4d5ebf9a6f5249b3954019a9",
-                "reference": "61f023bb3d5d6dfc4d5ebf9a6f5249b3954019a9",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^8.3",
-                "silverstripe/admin": "^3.0",
-                "silverstripe/cms": "^6.0",
-                "silverstripe/framework": "^6.0",
-                "silverstripe/vendor-plugin": "^3.0",
-                "silverstripe/versioned": "^3.0"
-            },
-            "require-dev": {
-                "wedevelopnl/silverstripe-e2e": "0.2.0"
-            },
-            "type": "silverstripe-vendormodule",
-            "extra": {
-                "expose": [
-                    "client/dist"
-                ]
-            },
-            "autoload": {
-                "psr-4": {
-                    "WeDevelop\\AdminToolbar\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "WeDevelop",
-                    "email": "development@wedevelop.nl"
-                }
-            ],
-            "description": "Frontend admin toolbar for Silverstripe CMS: page actions, CMS menu, user menu and diagnostics",
-            "keywords": [
-                "admin",
-                "frontend",
-                "silverstripe",
-                "toolbar"
-            ],
-            "support": {
-                "issues": "https://github.com/wedevelopnl/silverstripe-admintoolbar/issues",
-                "source": "https://github.com/wedevelopnl/silverstripe-admintoolbar/tree/6.0.0-rc.1"
-            },
-            "time": "2026-10-02T10:15:05+00:00"
-        },
-        {
             "name": "wedevelopnl/silverstripe-grid",
             "version": "dev-main",
             "dist": {
                 "type": "path",
                 "url": "/module",
-                "reference": "58912048dccb13b1fdd58b137135a59f24753a44"
+                "reference": "b6159a763227507d43a4b806c6270f19539012c8"
             },
             "require": {
                 "php": "^8.3",
@@ -6273,6 +6214,7 @@
             },
             "suggest": {
                 "silverstripe/reports": "Enables the Grid Elements and Shared Blocks reports in CMS → Reports",
+                "silverstripe/userforms": "Adds a Form grid element: a CMS-built form whose fields, recipients and submissions belong to the block",
                 "tractorcow/silverstripe-fluent": "Required for multi-locale support with isolated element records per locale",
                 "wedevelopnl/silverstripe-admintoolbar": "Adds a Grid menu to the front-end admin toolbar listing the page's sections, rows, columns and blocks with edit links"
             },

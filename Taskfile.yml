@@ -11,11 +11,12 @@ vars:
   COMPOSE: docker compose -f .docker/compose.yml
   COMPOSE_MODULES: docker compose -f .docker/compose.yml --profile modules
   # class-leak only parses PHP, so every class SilverStripe reaches by config
-  # (YAML) or by type (manifest discovery) reads as unused. The first six skip
-  # those by parent type (the admin toolbar discovers its Components); the last
-  # three are YAML-only Injector bindings with no such parent. Skip types are
-  # resolved with is_a(), so this must run where the framework autoloads —
-  # inside the container.
+  # (YAML) or by type (manifest discovery) reads as unused. The first five skip
+  # those by parent type; the next four are YAML-only Injector bindings with no
+  # such parent. src/AdminToolbar is skipped by path: the toolbar discovers its
+  # Components by type, and it is not installed here to resolve that type. Skip
+  # types are resolved with is_a(), so this must run where the framework
+  # autoloads — inside the container.
   CLASS_LEAK: >-
     vendor/bin/class-leak check /module/src
     --skip-type='SilverStripe\Admin\AdminController'
@@ -23,11 +24,11 @@ vars:
     --skip-type='SilverStripe\Core\Injector\Factory'
     --skip-type='SilverStripe\Dev\BuildTask'
     --skip-type='SilverStripe\Reports\Report'
-    --skip-type='WeDevelop\AdminToolbar\Model\Component'
     --skip-type='WeDevelop\Grid\Forms\GridAwareVersionFormFactory'
     --skip-type='WeDevelop\Grid\Model\MediaElement'
     --skip-type='WeDevelop\Grid\Service\GridAwareDeleteLocalisationPolicy'
     --skip-type='WeDevelop\Grid\Validation\HierarchyValidationService'
+    --skip-path='/module/src/AdminToolbar'
 
 tasks:
   # --- Docker environment ---------------------------------------------------
@@ -127,10 +128,10 @@ tasks:
       - "{{.COMPOSE}} exec app vendor/bin/phpunit --testsuite functional"
 
   test-modules:
-    desc: Run integration + functional + fluent + userforms tests in the optional-modules environment
+    desc: Run integration + functional + fluent + userforms + admintoolbar tests in the optional-modules environment
     deps: [ensure-up-modules]
     cmds:
-      - "{{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,functional,fluent,userforms"
+      - "{{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,functional,fluent,userforms,admintoolbar"
 
   test-js:
     desc: Run JavaScript tests (Vitest)
@@ -181,7 +182,7 @@ tasks:
     deps: [ensure-up-modules]
     cmds:
       - >-
-        {{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,fluent,userforms
+        {{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,fluent,userforms,admintoolbar
         --coverage-html coverage/integration/html
         --coverage-clover coverage/integration/clover.xml
 
@@ -251,34 +252,6 @@ tasks:
     deps: [ensure-up]
     cmds:
       - "{{.COMPOSE}} exec app /app/verify-lock.sh"
-
-  verify-no-toolbar:
-    desc: Prove the module builds and renders a grid page without the admin toolbar installed
-    deps: [ensure-up]
-    # The toolbar is a harness dependency only; GridMenu's class_exists() guard
-    # is what keeps a site without it working. This runs in a disposable
-    # container on a COPY of /app, because /app/vendor is the named volume the
-    # dev container shares, and against its own database, because dev/build
-    # would otherwise rewrite the dev schema without the toolbar's fields. The
-    # index.php swap mirrors entrypoint.sh: the image ships FrankenPHP's own.
-    cmds:
-      - >-
-        {{.COMPOSE}} run --rm --no-deps -T
-        -e SS_DATABASE_NAME=silverstripe_notoolbar
-        --entrypoint sh app -c '
-        set -e;
-        cp -R /app /tmp/app && cd /tmp/app;
-        composer remove --no-interaction wedevelopnl/silverstripe-admintoolbar;
-        cp -f vendor/silverstripe/recipe-core/public/index.php public/index.php;
-        vendor/bin/sake dev/build flush=1;
-        php -S 127.0.0.1:8080 -t public public/index.php > /tmp/server.log 2>&1 &
-        until curl -s -o /dev/null http://127.0.0.1:8080/; do sleep 1; done;
-        curl -sS -X POST -d fixture=grid-page http://127.0.0.1:8080/dev/e2e-fixtures/load | grep -q "\"success\":true";
-        code=$(curl -sS -o /tmp/page.html -w "%{http_code}" http://127.0.0.1:8080/e2e-grid);
-        echo "GET /e2e-grid -> $code";
-        test "$code" = 200;
-        grep -q "data-element=\"section\"" /tmp/page.html;
-        echo "Grid page renders without the admin toolbar."'
 
   # --- Static analysis ------------------------------------------------------
 

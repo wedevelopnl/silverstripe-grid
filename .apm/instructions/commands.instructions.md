@@ -45,7 +45,7 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task test-unit` | Run PHP unit tests (no database/framework) |
 | `task test-integration` | Run PHP integration tests (full SilverStripe env) |
 | `task test-functional` | Run PHP functional tests (HTTP/controller tests) |
-| `task test-modules` | Run integration + functional + fluent + userforms tests in the optional-modules env (Fluent + userforms installed) |
+| `task test-modules` | Run integration + functional + fluent + userforms + admintoolbar tests in the optional-modules env (Fluent + userforms + admin toolbar installed) |
 | `task test-js` | Run JavaScript tests (Vitest, no Docker needed) |
 | `task coverage` | Merged PHP coverage report (HTML + Clover) |
 | `task coverage-unit` | PHP unit test coverage only |
@@ -62,7 +62,6 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task rector` | Run Rector refactoring (applies changes) |
 | `task rector-dry` | Run Rector in dry-run mode (preview only) |
 | `task class-leak` | Fail on any class in `src/` that nothing references |
-| `task verify-no-toolbar` | Disposable container without the admin toolbar: dev/build + a grid page must return 200 |
 | `task test-e2e` | Run Playwright E2E tests (requires Docker) |
 | `task test-e2e-modules` | Run `tests/E2E/modules/` against the optional-modules testbed |
 | `task test-e2e-ui` | Playwright E2E with interactive UI |

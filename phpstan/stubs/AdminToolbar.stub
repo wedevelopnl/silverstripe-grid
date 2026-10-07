@@ -1,0 +1,38 @@
+<?php
+
+// The toolbar is optional and absent from the container PHPStan runs in;
+// declares only the API src/AdminToolbar/GridMenu.php reaches.
+
+namespace WeDevelop\AdminToolbar {
+    use SilverStripe\CMS\Model\SiteTree;
+    use SilverStripe\Control\HTTPRequest;
+    use SilverStripe\Security\Member;
+
+    final readonly class ToolbarContext
+    {
+        public function __construct(
+            public ?SiteTree $page,
+            public Member $member,
+            public HTTPRequest $request,
+        ) {}
+    }
+}
+
+namespace WeDevelop\AdminToolbar\Model {
+    use SilverStripe\Model\ModelData;
+    use WeDevelop\AdminToolbar\ToolbarContext;
+
+    abstract class Component extends ModelData
+    {
+        /** @return $this */
+        public function setContext(ToolbarContext $context) {}
+
+        public function getContext(): ToolbarContext {}
+
+        public function isSupported(): bool {}
+    }
+
+    abstract class Menu extends Component
+    {
+    }
+}

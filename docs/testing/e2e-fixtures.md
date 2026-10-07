@@ -106,13 +106,15 @@ One registered fixture, `docs-page` (`tests/E2E/Fixture/DocsPage.yml`), is refer
 
 ### Fixtures for optional modules
 
-A fixture whose YAML names an optional module's classes (userforms, Fluent) cannot load in the base `app` testbed. Register it in the `grid-dev-userforms` fragment of `_config/dev.yml`, which applies only when userforms is installed, and load it only from specs under `tests/E2E/modules/`. Those run against the optional-modules testbed through their own config:
+The base `app` testbed installs no optional module. A spec that needs one (userforms, Fluent, the admin toolbar) lives under `tests/E2E/modules/` and runs against the optional-modules testbed through its own config. A fixture whose YAML names an optional module's classes goes in the `grid-dev-userforms` fragment of `_config/dev.yml`, which applies only when userforms is installed:
 
 ```bash
 task test-e2e-modules   # starts app-modules if needed, then runs playwright.modules.config.ts
 ```
 
-The specs there drive the site as an anonymous visitor, so that config has no admin login. Like every fixture load, the run wipes the testbed's pages and shared blocks.
+That config logs in as admin with its own session file, since the testbed has its own database. A visitor journey opts out with `test.use({ storageState: { cookies: [], origins: [] } })`. Like every fixture load, the run wipes the testbed's pages and shared blocks.
+
+`npm run docs:screenshots` needs both testbeds up: captures tagged `@modules` (the admin toolbar menu) run against the optional-modules one.
 
 ## YAML schema
 
