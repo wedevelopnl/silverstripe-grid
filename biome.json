@@ -18,7 +18,8 @@
       "scripts/**/*.mjs",
       "vite.config.mts",
       "vitest.setup.ts",
-      "playwright.config.ts"
+      "playwright.config.ts",
+      "playwright.modules.config.ts"
     ]
   },
   "formatter": {

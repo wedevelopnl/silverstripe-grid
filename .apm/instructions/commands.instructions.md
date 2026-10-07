@@ -26,6 +26,7 @@ applyTo: "**/*"
 | `npm run test:e2e` | Run Playwright E2E tests |
 | `npm run test:e2e:ui` | Playwright with interactive UI |
 | `npm run test:e2e:debug` | Playwright in debug mode |
+| `npm run test:e2e:modules` | Playwright against the optional-modules testbed (`playwright.modules.config.ts`) |
 | `npm run docs:screenshots` | Regenerate `docs/images/` from the `docs-page` fixture (separate config; not part of `test:e2e`) |
 | `npm run qa` | Full QA: lint + format:check + typecheck + test + i18n:check + check:icons + vite build |
 
@@ -63,6 +64,7 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task class-leak` | Fail on any class in `src/` that nothing references |
 | `task verify-no-toolbar` | Disposable container without the admin toolbar: dev/build + a grid page must return 200 |
 | `task test-e2e` | Run Playwright E2E tests (requires Docker) |
+| `task test-e2e-modules` | Run `tests/E2E/modules/` against the optional-modules testbed |
 | `task test-e2e-ui` | Playwright E2E with interactive UI |
 | `task flush` | Clear SilverStripe cache |
 | `task dev-build` | Run dev/build to rebuild database and manifest |
