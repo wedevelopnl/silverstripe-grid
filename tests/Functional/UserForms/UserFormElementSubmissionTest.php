@@ -8,6 +8,7 @@ use Override;
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
+use SilverStripe\CMS\Controllers\RootURLController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPResponse;
@@ -102,6 +103,24 @@ final class UserFormElementSubmissionTest extends FunctionalTest
         $submission = SubmittedForm::get()->filter(['ParentID' => $form->ID, 'ParentClass' => UserFormElement::class])->first();
         self::assertInstanceOf(SubmittedForm::class, $submission);
         self::assertSame((int) $page->ID, (int) $submission->getField('HostPageID'));
+    }
+
+    public function testFormOnTheHomepageAcceptsASubmission(): void
+    {
+        $home = Page::create();
+        $home->Title = 'Home';
+        $home->URLSegment = RootURLController::get_homepage_link();
+        $home->write();
+        $form = $this->formIn($this->columnIn($home), 'Thanks for writing');
+        $home->publishRecursive();
+
+        $body = (string) $this->get('/')->getBody();
+        self::assertSame(1, preg_match('/<form[^>]* action="([^"]+)"/', $body, $action), 'The homepage renders the form');
+        $response = $this->post(html_entity_decode($action[1]), $this->validData($form));
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringContainsString('Thanks for writing', (string) $response->getBody());
+        self::assertSame(1, SubmittedForm::get()->count());
     }
 
     public function testFinishedShowsOnlyTheSubmittedFormAsReceived(): void
@@ -383,7 +402,7 @@ final class UserFormElementSubmissionTest extends FunctionalTest
             $live = SiteTree::get()->byID($page->ID);
             self::assertInstanceOf(SiteTree::class, $live, 'The page must be published before its live link is built');
 
-            return (string) Controller::join_links($live->Link(), ...array_map('strval', $segments));
+            return (string) $live->Link(Controller::join_links(...array_map('strval', $segments)));
         });
     }
 }
