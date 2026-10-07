@@ -26,6 +26,7 @@ applyTo: "**/*"
 | `npm run test:e2e` | Run Playwright E2E tests |
 | `npm run test:e2e:ui` | Playwright with interactive UI |
 | `npm run test:e2e:debug` | Playwright in debug mode |
+| `npm run test:e2e:modules` | Playwright against the optional-modules testbed (`playwright.modules.config.ts`) |
 | `npm run docs:screenshots` | Regenerate `docs/images/` from the `docs-page` fixture (separate config; not part of `test:e2e`) |
 | `npm run qa` | Full QA: lint + format:check + typecheck + test + i18n:check + check:icons + vite build |
 
@@ -36,6 +37,7 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | Command | Description |
 |---------|-------------|
 | `task up` | Start Docker services (build if needed) |
+| `task up-modules` | Start the optional-modules testbed (Fluent + userforms + admin toolbar) on `MODULES_WEB_PORT` |
 | `task down` | Stop Docker services |
 | `task destroy` | Stop services and remove volumes |
 | `task build` | Build Docker images without starting |
@@ -43,7 +45,7 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task test-unit` | Run PHP unit tests (no database/framework) |
 | `task test-integration` | Run PHP integration tests (full SilverStripe env) |
 | `task test-functional` | Run PHP functional tests (HTTP/controller tests) |
-| `task test-modules` | Run integration + functional + fluent tests in the optional-modules env (Fluent installed) |
+| `task test-modules` | Run integration + functional + fluent + userforms + admintoolbar tests in the optional-modules env (Fluent + userforms + admin toolbar installed) |
 | `task test-js` | Run JavaScript tests (Vitest, no Docker needed) |
 | `task coverage` | Merged PHP coverage report (HTML + Clover) |
 | `task coverage-unit` | PHP unit test coverage only |
@@ -60,11 +62,12 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task rector` | Run Rector refactoring (applies changes) |
 | `task rector-dry` | Run Rector in dry-run mode (preview only) |
 | `task class-leak` | Fail on any class in `src/` that nothing references |
-| `task verify-no-toolbar` | Disposable container without the admin toolbar: dev/build + a grid page must return 200 |
 | `task test-e2e` | Run Playwright E2E tests (requires Docker) |
+| `task test-e2e-modules` | Run `tests/E2E/modules/` against the optional-modules testbed |
 | `task test-e2e-ui` | Playwright E2E with interactive UI |
 | `task flush` | Clear SilverStripe cache |
 | `task dev-build` | Run dev/build to rebuild database and manifest |
 | `task seed-fixture` | Seed the dev DB with an E2E fixture (`FIXTURE=<name>`, default `complex-page`; idempotent) |
+| `task flush-modules` / `dev-build-modules` / `seed-fixture-modules` | Same as the unsuffixed task, against the optional-modules testbed |
 | `task qa` | Full QA suite (PHPStan 8.3 + 8.5 + Rector + class-leak + PHP coverage + JS QA + i18n + icons, parallel) |
 | `task qa-js` | JavaScript QA (Biome + typecheck + Vitest + vite build) |

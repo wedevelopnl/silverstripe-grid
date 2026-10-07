@@ -111,10 +111,6 @@ jobs:
       - run: task analyse-php85
       - run: task rector-dry
       - run: task class-leak
-      # The admin toolbar is optional; this proves a site without it still
-      # builds and renders a grid page. Last, because class-leak above resolves
-      # the toolbar's types. It runs in a disposable container, not the one above.
-      - run: task verify-no-toolbar
       - name: Container diagnostics
         if: failure()
         uses: ./.github/actions/container-diagnostics
@@ -200,7 +196,9 @@ jobs:
           reporter: java-junit
 
   e2e:
-    name: E2E (${{ matrix.browser }} / ${{ matrix.adapter }})
+    # The suffix appears on the modules leg only, so the base legs keep the
+    # check names branch protection may require.
+    name: E2E (${{ matrix.browser }} / ${{ matrix.adapter }}${{ matrix.testbed == 'modules' && ' / modules' || '' }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -210,11 +208,22 @@ jobs:
       matrix:
         browser: [chromium, firefox]
         adapter: [bootstrap, tailwind]
+        # A one-value axis so the modules entry below, which sets testbed to
+        # something else, becomes its own leg instead of merging into
+        # chromium/tailwind.
+        testbed: [base]
+        include:
+          # Merges into every base leg above: it overwrites none of their values.
+          - { testbed: base, service: app, profile: '', config: playwright.config.ts }
+          # The optional-modules testbed (userforms, Fluent) and its own specs
+          # (tests/E2E/modules/). One leg: those specs drive server-rendered
+          # frontend pages, not adapter- or browser-specific editor behavior.
+          - { browser: chromium, adapter: tailwind, testbed: modules, service: app-modules, profile: '--profile modules', config: playwright.modules.config.ts }
     env:
       SS_GRID_ADAPTER: ${{ matrix.adapter }}
-      COMPOSE: docker compose -f .docker/compose.yml -f .docker/compose.ci.yml
+      COMPOSE: docker compose -f .docker/compose.yml -f .docker/compose.ci.yml ${{ matrix.profile }}
       COMPOSE_BAKE: 'true'
-      CACHE_SCOPE: app-php8.3
+      CACHE_SCOPE: ${{ matrix.service }}-php8.3
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - uses: actions/checkout@v7
@@ -263,11 +272,11 @@ jobs:
       - uses: ./.github/actions/setup-docker-mirror
       - run: task docker-env
       - name: Build image (GHA layer cache)
-        run: $COMPOSE build app
+        run: $COMPOSE build ${{ matrix.service }}
       - name: Start services
-        run: $COMPOSE up -d --wait app
+        run: $COMPOSE up -d --wait ${{ matrix.service }}
       - name: Run Playwright
-        run: npx playwright test --project=${{ matrix.browser }} --reporter=html,junit
+        run: npx playwright test --config ${{ matrix.config }} --project=${{ matrix.browser }} --reporter=html,junit
         env:
           PLAYWRIGHT_JUNIT_OUTPUT_NAME: reports/playwright-junit.xml
       - name: Container diagnostics
@@ -278,12 +287,12 @@ jobs:
       - uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: always()
         with:
-          name: E2E Results (${{ matrix.browser }} / ${{ matrix.adapter }})
+          name: E2E Results (${{ matrix.browser }} / ${{ matrix.adapter }}${{ matrix.testbed == 'modules' && ' / modules' || '' }})
           path: reports/playwright-junit.xml
           reporter: java-junit
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report-${{ matrix.browser }}-${{ matrix.adapter }}
+          name: playwright-report-${{ matrix.testbed }}-${{ matrix.browser }}-${{ matrix.adapter }}
           path: playwright-report/
           retention-days: 7

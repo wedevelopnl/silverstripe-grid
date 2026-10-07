@@ -7,9 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A Form element, available automatically when `silverstripe/userforms` (^7.1) is installed.** The block is the form: its fields, recipients and submissions belong to it, so a shared block is how one form is reused across pages. After submitting, visitors see the page they submitted from again, under the form's own `finished` URL, with the on-complete message in place of the form, or are sent to a chosen page. Each submission records the page it came from, shown in the Submissions list and available to recipient emails as `$SubmittedForm.HostPage`. Sites without userforms see no element and no route, but `db:build` creates an empty `WeDevelop_Grid_UserFormElement` table for an inert stand-in class, until the framework stops instantiating classes it cannot load ([silverstripe/silverstripe-framework#12030](https://github.com/silverstripe/silverstripe-framework/issues/12030)). See [Forms (userforms)](docs/usage/userforms.md).
+
 ### Changed
 
 - **The content column width picker lists its splits from the narrowest media column to the widest** — `4/8`, `5/7`, `6/6`, `7/5`, `8/4` after *Full width* — so the options read in the same direction as their media-first labels and diagrams. Only the order changes: each option keeps its stored `ContentColumns` value, so existing blocks render and show as selected exactly as before.
+
+- **Elements inside a shared block are now viewable by anyone who may view a page that places the block.** Previously `canView()` on such an element followed the block record, which requires CMS access, so an anonymous visitor could not view content they were already seeing on the page. The block record itself is unchanged. Projects relying on `canView()` to hide placed block content from visitors should veto it with an `updateCanView` extension instead.
 
 ### Removed
 
@@ -18,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **The toolbar's Grid menu drew every column flush left** — it passed only a column's default width to the template, so an offset column (an 8/12 intro offset by 2, say) sat on the first track, and a column hidden at the default viewport looked like any other. Columns now sit on their row's tracks at their width and offset, wrapping with their offset as on the front end; each row draws its tracks as faint stripes so skipped and unused tracks read as such, and a hidden column is drawn dashed and faded and marked `hidden`. The menu also names each row (with its edit link, previously dropped), heads each column with its span (`8/12`) so its title no longer reads as its first element, and tags shared-block placements. New translation keys: `GridMenu.HIDDEN`, `GridMenu.SHARED`, `GridMenu.SPAN`.
+
+### Developer Experience
+
+- **The optional-modules container is now a browsable testbed** (contributors only) — `task up-modules` starts it next to the base testbed and prints its URL, so an integration (Fluent, userforms) can be tried by hand in the CMS, not only through its tests. It serves on `MODULES_WEB_PORT` (`18000` + the worktree's port offset), with its own database `silverstripe_modules` and admin `admin`/`admin`; `task dev-build-modules`, `flush-modules` and `seed-fixture-modules` are its counterparts of the base helpers. An existing `.docker/.env` is regenerated with the new port on the next `task` run, keeping its `SS_GRID_ADAPTER`.
+- **E2E runs against the optional-modules testbed too** (contributors only) — specs under `tests/E2E/modules/` run through `playwright.modules.config.ts` (`task test-e2e-modules`, `npm run test:e2e:modules`) and as one extra chromium leg of the CI E2E matrix. The first covers the Form element: a visitor corrects a missing required field and reads the on-complete message on the page.
+- **The base test container no longer installs the admin toolbar** (contributors only) — it moved to the optional-modules container with the other optional integrations, so every base-testbed job (the PHP suites, E2E, PHPStan, class-leak) now runs without it, instead of one smoke check. The toolbar's PHP tests are the `admintoolbar` testsuite and its E2E spec runs in `tests/E2E/modules/`; PHPStan reads the toolbar API from `phpstan/stubs/AdminToolbar.stub`. `task verify-no-toolbar` is gone. `npm run docs:screenshots` now needs both testbeds up, as the toolbar menu capture runs on the modules one.
 
 ## [6.0.0-beta.5] - 2026-10-06
 

@@ -277,7 +277,9 @@ test('shared block delete modes', async ({ page }) => {
   await shoot(page, 'shared-block-delete', [moreOptions, remove, keep])
 })
 
-test('admin toolbar grid menu', async ({ page }) => {
+// Tagged for the optional-modules testbed, the only one with the toolbar
+// installed: playwright.docs.config.ts runs it there.
+test('admin toolbar grid menu', { tag: '@modules' }, async ({ page }) => {
   await page.setViewportSize(TALL)
   await openDocsPage(page)
 

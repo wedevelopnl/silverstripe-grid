@@ -1,21 +1,16 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices, type Project } from '@playwright/test'
 
 /**
- * Resolve the base URL from environment or .docker/.env.
- *
- * Priority: E2E_BASE_URL env var > WEB_PORT from .docker/.env
+ * Resolve a testbed's base URL from its port key in .docker/.env
+ * (WEB_PORT for `app`, MODULES_WEB_PORT for `app-modules`).
  */
-function resolveBaseUrl(): string {
-  if (process.env.E2E_BASE_URL) {
-    return process.env.E2E_BASE_URL
-  }
-
+export function resolveBaseUrl(portKey: string): string {
   const envPath = resolve(__dirname, '.docker/.env')
   try {
     const envContent = readFileSync(envPath, 'utf-8')
-    const match = envContent.match(/^WEB_PORT=(\d+)$/m)
+    const match = envContent.match(new RegExp(`^${portKey}=(\\d+)$`, 'm'))
     if (match) {
       return `https://localhost:${match[1]}`
     }
@@ -23,7 +18,24 @@ function resolveBaseUrl(): string {
     // .docker/.env not generated yet — fall through
   }
 
-  throw new Error('Cannot determine base URL. Set E2E_BASE_URL or run .docker/env.sh first.')
+  throw new Error(
+    `Cannot determine base URL: no ${portKey} in .docker/.env. Run .docker/env.sh first.`,
+  )
+}
+
+/** One admin session per testbed: each has its own database. */
+export const AUTH_FILE = 'tests/E2E/.auth/admin.json'
+export const MODULES_AUTH_FILE = 'tests/E2E/.auth/admin-modules.json'
+
+/** Logs in as admin and saves the session to `authFile` (read by global.setup.ts). */
+export function setupProject(name: string, use: Project['use'], authFile: string): Project {
+  return {
+    name,
+    testDir: './tests/E2E',
+    testMatch: /global\.setup\.ts/,
+    use,
+    metadata: { authFile },
+  }
 }
 
 export default defineConfig({
@@ -39,7 +51,7 @@ export default defineConfig({
   reporter: 'html',
 
   use: {
-    baseURL: resolveBaseUrl(),
+    baseURL: process.env.E2E_BASE_URL ?? resolveBaseUrl('WEB_PORT'),
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     // Dev environment uses self-signed certificates
@@ -47,34 +59,24 @@ export default defineConfig({
   },
 
   projects: [
-    {
-      name: 'setup-chromium',
-      testDir: './tests/E2E',
-      testMatch: /global\.setup\.ts/,
-      use: devices['Desktop Chrome'],
-    },
+    setupProject('setup-chromium', devices['Desktop Chrome'], AUTH_FILE),
     {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: 'tests/E2E/.auth/admin.json',
+        storageState: AUTH_FILE,
       },
       dependencies: ['setup-chromium'],
     },
     // Firefox only runs in CI (via --project flag)
     ...(process.env.CI
       ? [
-          {
-            name: 'setup-firefox',
-            testDir: './tests/E2E',
-            testMatch: /global\.setup\.ts/,
-            use: devices['Desktop Firefox'],
-          },
+          setupProject('setup-firefox', devices['Desktop Firefox'], AUTH_FILE),
           {
             name: 'firefox',
             use: {
               ...devices['Desktop Firefox'],
-              storageState: 'tests/E2E/.auth/admin.json',
+              storageState: AUTH_FILE,
             },
             dependencies: ['setup-firefox'],
           },

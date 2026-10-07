@@ -25,6 +25,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
+    "test:e2e:modules": "playwright test --config playwright.modules.config.ts",
     "docs:screenshots": "playwright test --config playwright.docs.config.ts"
   },
   "dependencies": {

@@ -1,8 +1,8 @@
 import { test as setup } from '@playwright/test'
 import { authenticateAdmin } from '@wedevelop/e2e'
 
-const AUTH_FILE = 'tests/E2E/.auth/admin.json'
-
 setup('authenticate as admin', async ({ page }) => {
-  await authenticateAdmin(page, { storageStatePath: AUTH_FILE })
+  // Set per setup project by setupProject() in playwright.config.ts.
+  const authFile: string = setup.info().project.metadata.authFile
+  await authenticateAdmin(page, { storageStatePath: authFile })
 })

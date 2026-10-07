@@ -104,6 +104,18 @@ Most reorder and visibility specs follow this pattern — load the YAML, then pu
 
 One registered fixture, `docs-page` (`tests/E2E/Fixture/DocsPage.yml`), is referenced by no spec. It backs `npm run docs:screenshots`, which regenerates the images in `docs/images/` used by the README and the [grid editor guide](../usage/grid-editor.md). Leave it registered, and re-run that command if you change the page it produces.
 
+### Fixtures for optional modules
+
+The base `app` testbed installs no optional module. A spec that needs one (userforms, Fluent, the admin toolbar) lives under `tests/E2E/modules/` and runs against the optional-modules testbed through its own config. A fixture whose YAML names an optional module's classes goes in the `grid-dev-userforms` fragment of `_config/dev.yml`, which applies only when userforms is installed:
+
+```bash
+task test-e2e-modules   # starts app-modules if needed, then runs playwright.modules.config.ts
+```
+
+That config logs in as admin with its own session file, since the testbed has its own database. A visitor journey opts out with `test.use({ storageState: { cookies: [], origins: [] } })`. Like every fixture load, the run wipes the testbed's pages and shared blocks.
+
+`npm run docs:screenshots` needs both testbeds up: captures tagged `@modules` (the admin toolbar menu) run against the optional-modules one.
+
 ## YAML schema
 
 Fixtures use SilverStripe's standard `YamlFixture` syntax. Example (`tests/E2E/Fixture/ElementTree.yml`):

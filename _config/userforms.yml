@@ -1,0 +1,21 @@
+---
+Name: grid-userforms
+Only:
+  classexists: SilverStripe\UserForms\Model\UserDefinedForm
+---
+SilverStripe\CMS\Controllers\ContentController:
+  extensions:
+    GridUserFormRoute: WeDevelop\Grid\UserForms\UserFormRouteExtension
+
+SilverStripe\UserForms\Control\UserDefinedFormController:
+  extensions:
+    GridHostPageEmailData: WeDevelop\Grid\UserForms\UserFormEmailDataExtension
+
+SilverStripe\UserForms\Model\Submission\SubmittedForm:
+  extensions:
+    GridHostPage: WeDevelop\Grid\UserForms\SubmittedFormHostPageExtension
+
+SilverStripe\Core\Injector\Injector:
+  WeDevelop\Grid\UserForms\UserFormElementResolver:
+    constructor:
+      usageResolver: '%$WeDevelop\Grid\Service\SharedBlockUsageResolver'

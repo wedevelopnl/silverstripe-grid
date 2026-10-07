@@ -1,0 +1,18 @@
+<?php
+
+namespace WeDevelop\Grid\UserForms;
+
+/**
+ * src/UserForms/UserFormElement.php declares this class twice: an inert
+ * stand-in while userforms is missing, and the real element. PHPStan runs in
+ * the env without userforms and reflects the stand-in; a stub file can only
+ * add PHPDoc, so the real element's API that other classes call is restated
+ * here as @method tags. Delete with the stand-in
+ * (https://github.com/silverstripe/silverstripe-framework/issues/12030).
+ *
+ * @method \SilverStripe\CMS\Model\SiteTree RedirectPage()
+ * @method string Link(string|bool|null $action = null)
+ */
+class UserFormElement
+{
+}

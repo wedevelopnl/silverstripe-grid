@@ -11,11 +11,12 @@ vars:
   COMPOSE: docker compose -f .docker/compose.yml
   COMPOSE_MODULES: docker compose -f .docker/compose.yml --profile modules
   # class-leak only parses PHP, so every class SilverStripe reaches by config
-  # (YAML) or by type (manifest discovery) reads as unused. The first six skip
-  # those by parent type (the admin toolbar discovers its Components); the last
-  # three are YAML-only Injector bindings with no such parent. Skip types are
-  # resolved with is_a(), so this must run where the framework autoloads —
-  # inside the container.
+  # (YAML) or by type (manifest discovery) reads as unused. The first five skip
+  # those by parent type; the next four are YAML-only Injector bindings with no
+  # such parent. src/AdminToolbar is skipped by path: the toolbar discovers its
+  # Components by type, and it is not installed here to resolve that type. Skip
+  # types are resolved with is_a(), so this must run where the framework
+  # autoloads — inside the container.
   CLASS_LEAK: >-
     vendor/bin/class-leak check /module/src
     --skip-type='SilverStripe\Admin\AdminController'
@@ -23,41 +24,62 @@ vars:
     --skip-type='SilverStripe\Core\Injector\Factory'
     --skip-type='SilverStripe\Dev\BuildTask'
     --skip-type='SilverStripe\Reports\Report'
-    --skip-type='WeDevelop\AdminToolbar\Model\Component'
     --skip-type='WeDevelop\Grid\Forms\GridAwareVersionFormFactory'
     --skip-type='WeDevelop\Grid\Model\MediaElement'
     --skip-type='WeDevelop\Grid\Service\GridAwareDeleteLocalisationPolicy'
     --skip-type='WeDevelop\Grid\Validation\HierarchyValidationService'
+    --skip-path='/module/src/AdminToolbar'
 
 tasks:
   # --- Docker environment ---------------------------------------------------
 
   docker-env:
-    desc: Generate .docker/.env with deterministic ports (only if missing)
+    desc: Generate .docker/.env with deterministic ports (only if missing or outdated)
     cmds:
       - .docker/env.sh
+    # The grep regenerates a file that predates the modules testbed's port;
+    # env.sh keeps the SS_GRID_ADAPTER already in it.
     status:
       - test -f .docker/.env
+      - grep -q '^MODULES_WEB_PORT=' .docker/.env
 
   up:
     desc: Start services (build if needed)
     deps: [docker-env]
     cmds:
       - "{{.COMPOSE}} up -d --build"
-      - 'port=$(grep WEB_PORT .docker/.env | cut -d= -f2); printf "\n  Testbed running at \033]8;;https://localhost:%s\ahttps://localhost:%s\033]8;;\a\n\n" "$port" "$port"'
+      - task: print-url
+        vars: { LABEL: Testbed, PORT_KEY: WEB_PORT }
+
+  up-modules:
+    desc: Start the optional-modules testbed (Fluent + userforms + admin toolbar installed) next to the base one
+    deps: [docker-env]
+    # Names its service for the reason given above ensure-up.
+    cmds:
+      - "{{.COMPOSE_MODULES}} up -d --build --wait app-modules"
+      - task: print-url
+        vars: { LABEL: Optional-modules testbed, PORT_KEY: MODULES_WEB_PORT }
+
+  print-url:
+    internal: true
+    cmds:
+      - 'port=$(grep "^{{.PORT_KEY}}=" .docker/.env | cut -d= -f2); printf "\n  {{.LABEL}} running at \033]8;;https://localhost:%s\ahttps://localhost:%s\033]8;;\a\n\n" "$port" "$port"'
 
   down:
     desc: Stop services
+    deps: [docker-env]
     cmds:
-      - "{{.COMPOSE}} down"
+      - "{{.COMPOSE_MODULES}} down"
 
   destroy:
     desc: Stop services and remove volumes
+    deps: [docker-env]
     cmds:
-      - "{{.COMPOSE}} down -v"
+      - "{{.COMPOSE_MODULES}} down -v"
 
   build:
     desc: Build images without starting
+    deps: [docker-env]
     cmds:
       - "{{.COMPOSE}} build"
 
@@ -68,6 +90,7 @@ tasks:
   # brings db up either way.
   ensure-up:
     desc: Ensure services are running and ready
+    deps: [docker-env]
     cmds:
       - "{{.COMPOSE}} exec app true 2>/dev/null || {{.COMPOSE}} up -d --build --wait app"
 
@@ -108,10 +131,10 @@ tasks:
       - "{{.COMPOSE}} exec app vendor/bin/phpunit --testsuite functional"
 
   test-modules:
-    desc: Run integration + functional + fluent tests in the optional-modules environment
+    desc: Run integration + functional + fluent + userforms + admintoolbar tests in the optional-modules environment
     deps: [ensure-up-modules]
     cmds:
-      - "{{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,functional,fluent"
+      - "{{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,functional,fluent,userforms,admintoolbar"
 
   test-js:
     desc: Run JavaScript tests (Vitest)
@@ -123,6 +146,12 @@ tasks:
     deps: [ensure-up]
     cmds:
       - npx playwright test
+
+  test-e2e-modules:
+    desc: Run E2E tests against the optional-modules testbed (Playwright; wipes that testbed's pages and blocks)
+    deps: [ensure-up-modules]
+    cmds:
+      - npx playwright test --config playwright.modules.config.ts
 
   test-e2e-ui:
     desc: Run E2E tests with interactive UI
@@ -156,7 +185,7 @@ tasks:
     deps: [ensure-up-modules]
     cmds:
       - >-
-        {{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,fluent
+        {{.COMPOSE_MODULES}} exec app-modules vendor/bin/phpunit --testsuite integration,fluent,userforms,admintoolbar
         --coverage-html coverage/integration/html
         --coverage-clover coverage/integration/clover.xml
 
@@ -227,34 +256,6 @@ tasks:
     cmds:
       - "{{.COMPOSE}} exec app /app/verify-lock.sh"
 
-  verify-no-toolbar:
-    desc: Prove the module builds and renders a grid page without the admin toolbar installed
-    deps: [ensure-up]
-    # The toolbar is a harness dependency only; GridMenu's class_exists() guard
-    # is what keeps a site without it working. This runs in a disposable
-    # container on a COPY of /app, because /app/vendor is the named volume the
-    # dev container shares, and against its own database, because dev/build
-    # would otherwise rewrite the dev schema without the toolbar's fields. The
-    # index.php swap mirrors entrypoint.sh: the image ships FrankenPHP's own.
-    cmds:
-      - >-
-        {{.COMPOSE}} run --rm --no-deps -T
-        -e SS_DATABASE_NAME=silverstripe_notoolbar
-        --entrypoint sh app -c '
-        set -e;
-        cp -R /app /tmp/app && cd /tmp/app;
-        composer remove --no-interaction wedevelopnl/silverstripe-admintoolbar;
-        cp -f vendor/silverstripe/recipe-core/public/index.php public/index.php;
-        vendor/bin/sake dev/build flush=1;
-        php -S 127.0.0.1:8080 -t public public/index.php > /tmp/server.log 2>&1 &
-        until curl -s -o /dev/null http://127.0.0.1:8080/; do sleep 1; done;
-        curl -sS -X POST -d fixture=grid-page http://127.0.0.1:8080/dev/e2e-fixtures/load | grep -q "\"success\":true";
-        code=$(curl -sS -o /tmp/page.html -w "%{http_code}" http://127.0.0.1:8080/e2e-grid);
-        echo "GET /e2e-grid -> $code";
-        test "$code" = 200;
-        grep -q "data-element=\"section\"" /tmp/page.html;
-        echo "Grid page renders without the admin toolbar."'
-
   # --- Static analysis ------------------------------------------------------
 
   analyse:
@@ -295,29 +296,57 @@ tasks:
     cmds:
       - "{{.COMPOSE}} exec app vendor/bin/sake flush"
 
+  flush-modules:
+    desc: Clear the optional-modules testbed's SilverStripe cache
+    deps: [ensure-up-modules]
+    cmds:
+      - "{{.COMPOSE_MODULES}} exec app-modules vendor/bin/sake flush"
+
   dev-build:
     desc: Run dev/build to rebuild the database and manifest
     deps: [ensure-up]
     cmds:
       - "{{.COMPOSE}} exec app vendor/bin/sake dev/build flush=1"
 
+  dev-build-modules:
+    desc: Run dev/build in the optional-modules testbed
+    deps: [ensure-up-modules]
+    cmds:
+      - "{{.COMPOSE_MODULES}} exec app-modules vendor/bin/sake dev/build flush=1"
+
   seed-fixture:
     desc: Seed the dev database with an E2E fixture (override with FIXTURE=<name>; default complex-page)
+    deps: [ensure-up]
+    cmds:
+      - task: seed
+        vars: { PORT_KEY: WEB_PORT }
+
+  seed-fixture-modules:
+    desc: Seed the optional-modules testbed's database with an E2E fixture (FIXTURE=<name>; default complex-page)
+    deps: [ensure-up-modules]
+    cmds:
+      - task: seed
+        vars: { PORT_KEY: MODULES_WEB_PORT }
+
+  seed:
+    internal: true
     # Hits the same dev-only endpoint the Playwright suite uses. Loading is
     # idempotent: the loader archives previously-seeded e2e-* pages first, so a
     # re-run (or switching FIXTURE) never stacks residue. Fixture names are
     # registered in _config/dev.yml under FixtureLoader.fixtures. -k because the
-    # dev testbed serves a self-signed certificate.
-    deps: [ensure-up]
+    # dev testbed serves a self-signed certificate. The key is anchored because
+    # WEB_PORT is a suffix of MODULES_WEB_PORT.
     vars:
       FIXTURE: '{{.FIXTURE | default "complex-page"}}'
+      PORT:
+        sh: grep "^{{.PORT_KEY}}=" .docker/.env | cut -d= -f2
     cmds:
       - 'echo "==> [seed] loading fixture: {{.FIXTURE}}"'
       - >-
         curl -sS -k --fail-with-body -X POST
         -d "fixture={{.FIXTURE}}"
-        "https://localhost:$(grep WEB_PORT .docker/.env | cut -d= -f2)/dev/e2e-fixtures/load"
-      - 'printf "\n\n==> [seed] done — open https://localhost:%s/admin/pages\n\n" "$(grep WEB_PORT .docker/.env | cut -d= -f2)"'
+        "https://localhost:{{.PORT}}/dev/e2e-fixtures/load"
+      - 'printf "\n\n==> [seed] done — open https://localhost:%s/admin/pages\n\n" "{{.PORT}}"'
 
   # --- QA -------------------------------------------------------------------
 

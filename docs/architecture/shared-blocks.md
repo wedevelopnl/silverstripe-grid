@@ -174,6 +174,8 @@ A shared block is page content maintained in one place, so managing one requires
 
 `canView` stays broad on purpose — seeing what is in the library is not editing it. Narrow it per project with `updateCanView`.
 
+The block's **content** follows a different rule. `GridElement::canView()` on an element inside a block answers the block's own `canView()`, or `canView()` on any page that places the block (`SharedBlockUsageResolver::pagesUsing()`, on the current stage). A visitor who may see a page may therefore see the shared content rendered on it, without CMS access. Anything that runs `ContentController::init()` on an element depends on this, such as the userforms Form element: without it, an anonymous visitor to a page with a shared form is sent to the login screen. To hide placed content from visitors, veto it with an `updateCanView` extension on the element, not by narrowing the block.
+
 ## Fluent
 
 The block record is one cross-locale row; its subtree is locale-isolated like every other grid element; placements are per-locale page content pointing at the same block.

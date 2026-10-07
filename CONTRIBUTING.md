@@ -33,7 +33,7 @@ Run `composer install` on the host too, not only in the container: the Playwrigh
 - **Admin:** `<that URL>/admin`, login `admin` / `admin`
 - **Database:** MySQL 8 on `127.0.0.1:<DB_PORT>` (also in `.docker/.env`); database `silverstripe`, user `silverstripe`, password `silverstripe`
 - **Grid adapter:** `SS_GRID_ADAPTER` is seeded into `.docker/.env` by `.docker/env.sh`. Change it there (or in your shell) to develop against another CSS framework.
-- **Optional-modules profile:** `task ensure-up-modules` boots a second app container with the optional integrations (Fluent) installed, against database `silverstripe_modules`
+- **Optional-modules testbed:** `task up-modules` boots a second app container with the optional integrations (Fluent, userforms, the admin toolbar) installed, against database `silverstripe_modules`, and prints its URL — `https://localhost:<MODULES_WEB_PORT>` (also in `.docker/.env`), login `admin` / `admin`. Use it to try an integration by hand; the base testbed stays the one without them. `task down` stops both.
 
 ### Day-to-day
 
@@ -43,6 +43,8 @@ Run `composer install` on the host too, not only in the container: the Playwrigh
 | `task dev-build` | Run `dev/build flush=1` inside the container |
 | `task flush` | Clear the SilverStripe cache |
 | `task up` | Start (or resume) services |
+| `task up-modules` | Start (or resume) the optional-modules testbed |
+| `task dev-build-modules`, `task flush-modules`, `task seed-fixture-modules` | The same helpers against the optional-modules testbed |
 | `task down` | Stop services (keeps the DB volume) |
 | `task destroy` | Stop services and drop volumes (full reset — wipes the DB) |
 | `task seed-fixture` | Load an E2E fixture into the dev database for manual exploration (`FIXTURE=<name>`, default `complex-page`) |
@@ -55,7 +57,7 @@ Run `composer install` on the host too, not only in the container: the Playwrigh
 | `task test-unit` | PHP unit tests only (no database/framework) |
 | `task test-integration` | PHP integration tests (full SilverStripe env) |
 | `task test-functional` | PHP functional/HTTP controller tests |
-| `task test-modules` | Integration + functional + fluent tests in the optional-modules environment (Fluent installed) |
+| `task test-modules` | Integration + functional + fluent + userforms + admintoolbar tests in the optional-modules environment (Fluent + userforms + admin toolbar installed) |
 | `npm run test` | JavaScript tests (Vitest) |
 | `npm run test:watch` | Vitest in watch mode |
 | `task test-e2e` | Playwright E2E tests (auto-starts Docker if needed) |

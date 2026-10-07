@@ -1,0 +1,13 @@
+<?php
+
+namespace SilverStripe\UserForms\Model\Submission;
+
+/**
+ * @property string $ParentClass
+ * @property int $ParentID
+ * @property int $HostPageID Added by WeDevelop\Grid\UserForms\SubmittedFormHostPageExtension
+ * @method void recordHostPage() Added by WeDevelop\Grid\UserForms\SubmittedFormHostPageExtension
+ */
+class SubmittedForm extends \SilverStripe\ORM\DataObject
+{
+}
