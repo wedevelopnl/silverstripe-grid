@@ -120,6 +120,21 @@ final class UserFormElementSubmissionTest extends FunctionalTest
         self::assertStringContainsString($this->liveLink($page, 'grid-form', $other->ID, 'Form'), $body);
     }
 
+    public function testOnCompleteMessageRendersUserformsReceivedSubmissionData(): void
+    {
+        UserDefinedFormController::add_extension(NamesTheReceivedSubmission::class);
+        $page = $this->page('test_page');
+        $form = $this->formIn($this->columnIn($page), 'Thanks for writing');
+        $page->publishRecursive();
+
+        $this->visit($page);
+        $body = (string) $this->post($this->liveLink($page, 'grid-form', $form->ID, 'Form'), $this->validData($form))->getBody();
+
+        $submission = SubmittedForm::get()->filter('ParentID', $form->ID)->first();
+        self::assertInstanceOf(SubmittedForm::class, $submission);
+        self::assertStringContainsString(sprintf('Received submission %d', $submission->ID), $body);
+    }
+
     public function testDirectVisitToFinishedBouncesToTheHostPage(): void
     {
         $page = $this->page('test_page');

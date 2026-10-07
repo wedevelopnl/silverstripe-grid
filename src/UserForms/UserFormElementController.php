@@ -23,7 +23,7 @@ class UserFormElementController extends Controller
     /** @var list<string> */
     private static array $allowed_actions = ['index', 'Form', 'finished'];
 
-    private bool $showsReceived = false;
+    private ?DBHTMLText $receivedMessage = null;
 
     private ?UserDefinedFormController $userFormController = null;
 
@@ -47,11 +47,13 @@ class UserFormElementController extends Controller
 
     public function finished(): HTTPResponse|DBHTMLText
     {
-        // Run userforms' finished() for its session guard only.
-        $guarded = $this->userFormController()->finished();
+        // userforms' finished() runs the session guard, then renders the
+        // received template with its $Submission/$Link data and the
+        // updateReceivedFormSubmissionData hook into Content.
+        $finished = $this->userFormController()->finished();
 
-        if ($guarded instanceof HTTPResponse) {
-            return $guarded;
+        if ($finished instanceof HTTPResponse) {
+            return $finished;
         }
 
         $redirectPage = $this->element->RedirectPage();
@@ -61,10 +63,12 @@ class UserFormElementController extends Controller
         }
 
         // Render the host page while this controller stays current:
-        // UserFormElement::Form() asks it showsReceivedFor() and renders the
-        // on-complete message in place of the form. Returning the page
-        // controller instead would make IT current and hide that answer.
-        $this->showsReceived = true;
+        // UserFormElement::Form() asks it receivedMessageFor() and shows the
+        // message in place of the form. Returning the page controller
+        // instead would make IT current and hide that answer.
+        /** @var DBHTMLText $receivedMessage renderWith() output, set by finished() */
+        $receivedMessage = $finished->obj('Content');
+        $this->receivedMessage = $receivedMessage;
         $page = ModelAsController::controller_for($this->hostPage);
         $page->setRequest($this->getRequest());
         $page->doInit();
@@ -72,9 +76,9 @@ class UserFormElementController extends Controller
         return $page->getViewer('index')->process($page);
     }
 
-    public function showsReceivedFor(UserFormElement $element): bool
+    public function receivedMessageFor(UserFormElement $element): ?DBHTMLText
     {
-        return $this->showsReceived && (int) $element->ID === (int) $this->element->ID;
+        return (int) $element->ID === (int) $this->element->ID ? $this->receivedMessage : null;
     }
 
     #[Override]
