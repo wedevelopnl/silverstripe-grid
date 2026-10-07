@@ -49,12 +49,12 @@ tasks:
   down:
     desc: Stop services
     cmds:
-      - "{{.COMPOSE}} down"
+      - "{{.COMPOSE_MODULES}} down"
 
   destroy:
     desc: Stop services and remove volumes
     cmds:
-      - "{{.COMPOSE}} down -v"
+      - "{{.COMPOSE_MODULES}} down -v"
 
   build:
     desc: Build images without starting
