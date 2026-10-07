@@ -26,7 +26,7 @@ Add a **Form** from the type picker inside a column, then open it. Next to the u
 | **Recipients** | Email recipients, each with its own conditions and template |
 | **Submissions** | Every submission received, with a **Page** column showing where it was sent from |
 
-**After submitting, go to** picks a page to send the visitor to once the form is accepted. Leave it empty and the visitor stays on the page they were on, with the on-complete message shown in place of the form. If the chosen page is later deleted, the form falls back to the on-complete message.
+**After submitting, go to** picks a page to send the visitor to once the form is accepted. Leave it empty and the visitor sees the page they were on again, with the on-complete message shown in place of the form. The address changes to the form's `finished` URL (see [What the visitor sees](#what-the-visitor-sees)), just as a userforms page lands on its own `/finished`, which gives analytics a distinct address to count completed forms on. If the chosen page is later deleted, the form falls back to the on-complete message.
 
 The editor card shows how many input fields the form has (*4 fields*). Steps, field groups and headings hidden from reports are not counted.
 
