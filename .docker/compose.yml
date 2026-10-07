@@ -103,6 +103,16 @@ services:
 
   db:
     image: mysql:8
+    # Throwaway test/dev data: every fixture load wipes it and SapphireTest
+    # creates ~100 temp databases per run, so trade crash-safety for speed.
+    # Without these, every CREATE TABLE and commit waits on an fsync; measured
+    # 24% faster on a 229-test subset (92s -> 70s).
+    command:
+      - --skip-log-bin
+      - --innodb-flush-log-at-trx-commit=0
+      - --sync-binlog=0
+      - --innodb-doublewrite=0
+      - --performance-schema=0
     ports:
       # Loopback only — the credentials below are fixed dev defaults, so this
       # port must never be reachable from off-host. The app reaches the database
