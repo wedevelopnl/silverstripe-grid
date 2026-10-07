@@ -9,7 +9,6 @@ use SilverStripe\Core\Environment;
 use SilverStripe\Core\Injector\Factory;
 use SilverStripe\Core\Injector\Injector;
 use WeDevelop\Grid\Adapter\BootstrapAdapter;
-use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Adapter\TailwindAdapter;
 use WeDevelop\Grid\Contract\ContentLayoutAdapterInterface;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
@@ -18,7 +17,7 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
  * Resolves the active {@see GridAdapterInterface} binding from the SS_GRID_ADAPTER
  * environment variable.
  *
- * Accepts either a bundled preset name (bootstrap|tailwind|bulma, case-insensitive)
+ * Accepts either a bundled preset name (bootstrap|tailwind, case-insensitive)
  * or the fully-qualified class name of a custom adapter that implements BOTH
  * {@see GridAdapterInterface} and {@see ContentLayoutAdapterInterface} — the same
  * singleton is aliased to ContentLayoutAdapterInterface in content-layout.yml, so
@@ -33,7 +32,6 @@ final class GridAdapterResolver implements Factory
     private const array PRESETS = [
         'bootstrap' => BootstrapAdapter::class,
         'tailwind' => TailwindAdapter::class,
-        'bulma' => BulmaAdapter::class,
     ];
 
     /** @param array<int|string, mixed> $params */

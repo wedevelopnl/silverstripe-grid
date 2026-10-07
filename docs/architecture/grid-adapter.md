@@ -2,7 +2,7 @@
 
 Grid adapters translate the abstract grid model (viewports, column widths, offsets, visibility) into CSS framework-specific class names. All consumers depend on `GridAdapterInterface`, never on a concrete adapter.
 
-The adapter is entirely configuration-driven. `GridAdapter` is a single `abstract` base class that reads CSS format strings, class maps, and scalar values from SilverStripe `Configurable` statics. Framework presets (BootstrapAdapter, TailwindAdapter, BulmaAdapter) are zero-method subclasses that only declare `private static` property overrides.
+The adapter is entirely configuration-driven. `GridAdapter` is a single `abstract` base class that reads CSS format strings, class maps, and scalar values from SilverStripe `Configurable` statics. Framework presets (BootstrapAdapter, TailwindAdapter) are zero-method subclasses that only declare `private static` property overrides.
 
 ## Key Files
 
@@ -11,7 +11,6 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single `abstrac
 - `src/Adapter/GridAdapter.php` — Config-driven base class implementing both interfaces
 - `src/Adapter/BootstrapAdapter.php` — Bootstrap 5 preset (zero methods, only statics)
 - `src/Adapter/TailwindAdapter.php` — Tailwind CSS v4 preset (zero methods, only statics)
-- `src/Adapter/BulmaAdapter.php` — Bulma preset (zero methods, only statics)
 - `src/Factory/GridAdapterFactory.php` — Injector factory that aliases `ContentLayoutAdapterInterface` to the `GridAdapterInterface` singleton
 - `src/Factory/GridAdapterResolver.php` — Injector factory that selects the adapter from the `SS_GRID_ADAPTER` env var (preset name or FQCN)
 - `src/Value/Viewport.php` — Value object (`final readonly class`, not an enum)
@@ -25,14 +24,6 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single `abstrac
 |--------|----------------|------------------|-----------|
 | `BootstrapAdapter` | 12 | `md` | xs, sm, md, lg, xl, xxl |
 | `TailwindAdapter` | 12 | `sm` | base, sm, md, lg, xl, 2xl |
-| `BulmaAdapter` | 12 | `desktop` | mobile, tablet, desktop, widescreen, fullhd |
-
-> **Bulma and media order classes.** Bulma ships no flex-order utilities, so
-> `BulmaAdapter`'s `order_class_format` / `responsive_order_format` emit a module
-> convention (`has-order-1`, `has-order-2-desktop`, …) that no framework CSS backs.
-> A Bulma project using the side-by-side media layout of `BlockMediaExtension` must
-> either supply that CSS itself or override both formats with its own utility names.
-> Every other class the Bulma preset emits is a real Bulma helper.
 
 > **Tailwind targets v4 and emits no arbitrary values.** Every class
 > `TailwindAdapter` emits is a scale or named utility (`aspect-4/3`, not
@@ -143,8 +134,8 @@ All properties are `private static` on `GridAdapter`. Preset subclasses override
 |----------|------|---------|
 | `base_hide_class` | `string` | Hide class for base viewport |
 | `responsive_hide_format` | `string` | Hide class for other viewports |
-| `hide_class_overrides` | `array<string, string>` | Literal hide class per viewport key, for viewports the format cannot express. Takes precedence over both properties above. Bulma uses it for `fullhd`, which has no `-only` variant. |
-| `responsive_restore_format` | `string` | Restore class |
+| `hide_class_overrides` | `array<string, string>` | Literal hide class per viewport key, for viewports the format cannot express. Takes precedence over both properties above — e.g. a largest breakpoint with no `-only` variant. |
+| `responsive_restore_format` | `string` | Restore class; `''` when hides are viewport-scoped and need none (`getRestoreClass()` then returns null) |
 
 **Container & structure:**
 
@@ -166,7 +157,7 @@ All properties are `private static` on `GridAdapter`. Preset subclasses override
 | `responsive_order_format` | `string` | Responsive order (`%1$s` = viewport, `%2$d` = position) |
 | `padding_direction_map` | `array<string, string>` | `'left'\|'right'` → CSS prefix |
 | `padding_format` | `string` | Padding (`%1$s` = prefix, `%2$s` = viewport, `%3$d` = size) |
-| `base_column_class` | `?string` | Framework base class (e.g. Bulma's `'column'`), null if not needed. Not content-layout-only: `ColumnClassResolver` emits it on every grid column too, ahead of the width classes |
+| `base_column_class` | `?string` | Framework base class (e.g. `'column'`), null if not needed. Not content-layout-only: `ColumnClassResolver` emits it on every grid column too, ahead of the width classes |
 
 ### 3. Base Viewport Pattern
 
@@ -174,17 +165,15 @@ Every adapter needs a "base" viewport: the smallest one, with `min_width` 0, nam
 
 **This is not optional.** The row wrapper's `row_class_format` has no responsive variant, so the grid is declared from 0px up. `ColumnClassResolver` always emits a width class at the smallest viewport — if that class carries a breakpoint prefix, it matches nothing below the breakpoint and every column falls back to `grid-column: auto`, one track out of `total_columns`. Leaving `base_viewport_key` at `null`, or filtering the named key out via `enabled_viewports`, produces columns crushed to ~8% width on phones.
 
-Frameworks that name their zero-width tier expose it directly (Bootstrap's `xs`, Bulma's `mobile`). Tailwind does not name it — an unprefixed utility *is* the 0px tier — so `TailwindAdapter` models it as a synthetic `base` viewport sitting below `sm` (640px).
+Frameworks that name their zero-width tier expose it directly (Bootstrap's `xs`). Tailwind does not name it — an unprefixed utility *is* the 0px tier — so `TailwindAdapter` models it as a synthetic `base` viewport sitting below `sm` (640px).
 
-**Naming the tier is not enough — the emitted class has to apply there.** What matters is the media query the class ends up in, not whether it carries an infix. Bootstrap's `col-6` and Tailwind's `col-span-6` are unscoped and cascade upward, so one class covers 0px→∞. Bulma splits the same range in two: `is-6` lives in `@media (min-width: 769px)` and `is-6-mobile` in `@media (max-width: 768px)`. `BulmaAdapter` therefore sets `base_width_format` to `'is-%1$d-mobile is-%1$d'` — a base format may emit several space-separated classes, and Bulma's must, or the phone band gets no width rule and every column renders full width.
-
-Bulma also rules out raising the base arm's specificity to compensate. Its `is-{n}-{vp}` classes share a media block and a specificity with the unsuffixed `is-{n}`, so adding an `is-mobile` modifier to `row_class_format` — which brings in the unscoped `.columns.is-mobile > .column.is-{n}` rule at one class higher — makes the base width outrank every override above it. The consequence is that Bulma columns are *sized* from 0px up but still stack below 769px, since `.columns` only becomes a flex container there.
+**Naming the tier is not enough — the emitted class has to apply there.** What matters is the media query the class ends up in, not whether it carries an infix. Bootstrap's `col-6` and Tailwind's `col-span-6` are unscoped and cascade upward, so one class covers 0px→∞. A framework that splits that range in two — an unsuffixed class scoped to `min-width` and a suffixed one scoped to `max-width` — needs both: a base format may emit several space-separated classes (`'is-%1$d-mobile is-%1$d'`), or the phone band gets no width rule.
 
 `getBaseWidthClass()` / `getBaseOffsetClass()` use the same base format strings for the CMS editor preview, independent of which viewport is the base one.
 
 ### 4. Register the Adapter
 
-`GridAdapterInterface` resolves through `GridAdapterResolver`, which reads the required `SS_GRID_ADAPTER` environment variable. The value is either a bundled preset name (`bootstrap`|`tailwind`|`bulma`, case-insensitive) or the FQCN of an adapter that implements **both** `GridAdapterInterface` and `ContentLayoutAdapterInterface`. Both interfaces are aliased to the same singleton (see `_config/content-layout.yml`), so an adapter implementing only the former would boot cleanly and fail later at render — the resolver rejects it up front instead. Subclassing `GridAdapter` satisfies both. Unset, empty, or invalid values throw at container boot.
+`GridAdapterInterface` resolves through `GridAdapterResolver`, which reads the required `SS_GRID_ADAPTER` environment variable. The value is either a bundled preset name (`bootstrap`|`tailwind`, case-insensitive) or the FQCN of an adapter that implements **both** `GridAdapterInterface` and `ContentLayoutAdapterInterface`. Both interfaces are aliased to the same singleton (see `_config/content-layout.yml`), so an adapter implementing only the former would boot cleanly and fail later at render — the resolver rejects it up front instead. Subclassing `GridAdapter` satisfies both. Unset, empty, or invalid values throw at container boot.
 
 For a bundled preset:
 
@@ -240,7 +229,7 @@ Content layout (aspect ratios, media ordering, vertical alignment, directional p
 | `getMediaWidthClass(int)` | `string` | Width class for media column |
 | `getContentWidthClass(int)` | `string` | Width class for content column |
 | `getPaddingClass(direction, size)` | `string` | Directional padding/margin for gap |
-| `getBaseColumnClass()` | `?string` | Framework base class (e.g. Bulma's `column`). Also declared on `GridAdapterInterface`, which needs it for the grid's own columns — one implementation serves both |
+| `getBaseColumnClass()` | `?string` | Framework base class (e.g. `column`), or null. Also declared on `GridAdapterInterface`, which needs it for the grid's own columns — one implementation serves both |
 
 ### How the content layout adapter is resolved
 

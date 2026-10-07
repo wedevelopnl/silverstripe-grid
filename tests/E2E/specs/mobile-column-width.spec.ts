@@ -14,8 +14,8 @@ import { loadFixture, resetFixtures } from '../helpers/fixtures'
  * The fixture's columns are half width at the smallest viewport and full width
  * by default, so the ratio flips across the second breakpoint. Both widths are
  * well below every preset's second breakpoint (Bootstrap `sm` 576, Tailwind
- * `sm` 640, Bulma `tablet` 769) and well above it respectively, so the same
- * assertions hold for whichever adapter the CI matrix is running.
+ * `sm` 640) and well above it respectively, so the same assertions hold for
+ * whichever adapter the CI matrix is running.
  */
 const PHONE = { width: 390, height: 844 }
 const DESKTOP = { width: 1280, height: 900 }

@@ -1,7 +1,7 @@
 /**
  * Pick a SilverStripe Admin font-icon glyph that approximates the device
  * category for a viewport's minimum width. The cutoffs are chosen so the
- * common framework breakpoints (Bootstrap, Tailwind, Bulma) land in the
+ * common framework breakpoints (Bootstrap, Tailwind) land in the
  * device category a designer would expect.
  */
 export function getViewportIcon(minWidth: number): string {

@@ -154,7 +154,7 @@ final class AbstractMigrationTaskTest extends TestCase
             ['SM' => 'sm', 'MD' => 'md', 'LG' => 'lg', 'XL' => 'xl'],
         ];
 
-        yield 'Bulma — no overlap with Bootstrap legacy keys' => [
+        yield 'Named viewports — no overlap with Bootstrap legacy keys' => [
             ['mobile', 'tablet', 'desktop', 'widescreen', 'fullhd'],
             [],
         ];

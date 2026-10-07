@@ -1,6 +1,6 @@
 # SilverStripe Grid
 
-A grid-based content block system for SilverStripe 6. Editors compose pages from **Section → Row → Column → content block** instead of one long HTML field, and the column widths they pick are emitted as your CSS framework's own classes — Bootstrap, Tailwind, Bulma, or an adapter you write yourself.
+A grid-based content block system for SilverStripe 6. Editors compose pages from **Section → Row → Column → content block** instead of one long HTML field, and the column widths they pick are emitted as your CSS framework's own classes — Bootstrap, Tailwind, or an adapter you write yourself.
 
 ![The grid editor on the Content tab of the SilverStripe page edit form, replacing the usual single HTML content field](docs/images/cms-context.png)
 
@@ -9,7 +9,7 @@ A grid-based content block system for SilverStripe 6. Editors compose pages from
 Elemental-style modules give editors a flat list of blocks and leave layout to the developer. Page builders give editors full layout control and leave the design system behind. This module sits between the two: the hierarchy is fixed and validated on the server, but within it editors control widths, offsets, and per-breakpoint visibility — and every choice resolves to classes your theme already ships.
 
 - **A hierarchy that cannot be broken.** Sections hold rows, rows hold columns, columns hold content. Enforced at write time and at drop time, not just in the UI.
-- **Framework-agnostic output.** One config-driven adapter turns a column of width 8 into `col-md-8` (Bootstrap), `md:col-span-8` (Tailwind), `is-8-tablet` (Bulma), or whatever your own framework spells it — each at that framework's own breakpoint, since the viewport names come from the adapter too.
+- **Framework-agnostic output.** One config-driven adapter turns a column of width 8 into `col-md-8` (Bootstrap), `md:col-span-8` (Tailwind), or whatever your own framework spells it — each at that framework's own breakpoint, since the viewport names come from the adapter too.
 - **Responsive per column.** One default layout per column, plus overrides only for the breakpoints that differ.
 - **Versioned like the rest of the CMS.** Draft/live, publish-with-the-page, per-element history, and a read-only grid in the history viewer.
 - **Drag and drop across containers.** Move a block into another column, a column into another row, a row into another section — with optimistic updates and rollback on failure.
@@ -65,7 +65,7 @@ Optional:
 composer require wedevelopnl/silverstripe-grid
 ```
 
-**2. Choose a CSS framework adapter.** `SS_GRID_ADAPTER` is required and has no default — an unset, empty, or invalid value throws when the container boots, which will also abort `dev/build`. Set it to a bundled preset (`bootstrap`, `tailwind`, or `bulma`, case-insensitive) or to the FQCN of your own adapter:
+**2. Choose a CSS framework adapter.** `SS_GRID_ADAPTER` is required and has no default — an unset, empty, or invalid value throws when the container boots, which will also abort `dev/build`. Set it to a bundled preset (`bootstrap` or `tailwind`, case-insensitive) or to the FQCN of your own adapter:
 
 ```dotenv
 SS_GRID_ADAPTER="bootstrap"

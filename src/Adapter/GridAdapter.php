@@ -22,7 +22,7 @@ use WeDevelop\Grid\Value\Viewport;
  * contains only shared logic: sprintf formatting, enum lookups, and config
  * validation.
  *
- * Concrete framework presets (BootstrapAdapter, TailwindAdapter, BulmaAdapter)
+ * Concrete framework presets (BootstrapAdapter, TailwindAdapter)
  * extend this class with zero methods — they only override the static properties
  * to declare their CSS vocabulary. Projects can override any property via YAML.
  *
@@ -80,9 +80,9 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
 
     /**
      * Literal hide classes for viewports the format cannot express, keyed by
-     * viewport key. Frameworks rarely ship a fully symmetric utility set — Bulma
-     * has `is-hidden-{vp}-only` for its middle breakpoints but only the plain
-     * `is-hidden-fullhd` for its largest. Takes precedence over the format.
+     * viewport key. Frameworks rarely ship a fully symmetric utility set — one may
+     * have `is-hidden-{vp}-only` for its middle breakpoints but only a plain
+     * `is-hidden-{vp}` for its largest. Takes precedence over the format.
      *
      * @var array<string, string> viewport key → literal CSS class
      */
@@ -122,7 +122,7 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
     /** sprintf: %1$s = direction prefix, %2$s = viewport, %3$d = size */
     private static string $padding_format = '';
 
-    /** Framework base column class (e.g. Bulma's 'column'); null if not needed */
+    /** Framework base column class (e.g. 'column'); null if not needed */
     private static ?string $base_column_class = null;
 
     /** @var array<string, Viewport> */
@@ -248,7 +248,7 @@ abstract class GridAdapter implements GridAdapterInterface, ContentLayoutAdapter
         /** @var string $restoreFormat */
         $restoreFormat = static::config()->get('responsive_restore_format');
 
-        // Frameworks without a per-viewport restore utility (e.g. Bulma) set
+        // Frameworks without a per-viewport restore utility set
         // `responsive_restore_format` to '' — their hides are viewport-scoped and
         // need no restore. Signal that to the caller with null rather than an
         // empty string that would pollute the class list.

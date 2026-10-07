@@ -15,8 +15,8 @@ use WeDevelop\Grid\Value\ViewportConfig;
  * where the effective value changes from the previous breakpoint. The first
  * viewport always emits a width class.
  *
- * The framework's base column class, when it has one, leads the list — Bulma's
- * width helpers are all scoped `.column.is-{n}` and match nothing without it.
+ * The framework's base column class, when it has one, leads the list — width
+ * helpers scoped to it (`.column.is-{n}`) match nothing without it.
  */
 final class ColumnClassResolver
 {
@@ -55,7 +55,7 @@ final class ColumnClassResolver
                 // Emit a hide class when the column is hidden. Frameworks whose hide
                 // utilities cascade to larger breakpoints expose a restore class, so
                 // one hide at the visible→hidden transition suffices; frameworks with
-                // per-viewport-scoped hides (no restore class, e.g. Bulma) need a hide
+                // per-viewport-scoped hides (no restore class) need a hide
                 // at every hidden viewport, or the run would only hide its first one.
                 if ($prevVisible || $adapter->getRestoreClass($key) === null) {
                     $parts[] = $adapter->getHideClass($key);

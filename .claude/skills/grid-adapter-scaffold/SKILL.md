@@ -13,7 +13,7 @@ Ask the user for:
 3. **Default viewport**: Which viewport is the default for the CMS editor
 4. **Column count**: Total grid columns (typically 12)
 5. **Container max width**: Max container width in px at the largest breakpoint
-6. **Base viewport**: Does the framework have a viewport with no prefix in class names? (like Bootstrap's `xs` or Bulma's `mobile`). Set to `null` if all viewports use the same responsive format.
+6. **Base viewport**: The smallest viewport (`min_width` 0), whose classes carry no prefix (like Bootstrap's `xs`). Required — never `null`; if the framework does not name that tier, add a synthetic one (like Tailwind's `base`).
 7. **Class name patterns** — ask for examples of:
    - Width class at the base viewport and at a responsive viewport
    - Offset class (and whether it uses 0-based or 1-based positioning)
@@ -22,7 +22,7 @@ Ask the user for:
    - Container class (fixed and fluid variants)
 8. **Title class options**: What heading/display classes does the framework offer?
 9. **Content layout classes**: Aspect ratio, vertical alignment, ordering, padding patterns
-10. **Offset strategy**: Margin-based (like Bootstrap/Bulma) or grid-placement (like Tailwind)?
+10. **Offset strategy**: Margin-based (like Bootstrap) or grid-placement (like Tailwind)?
 
 ## Step 2: Generate the Preset Class
 
@@ -30,8 +30,7 @@ Create `src/Adapter/{Name}Adapter.php` — a zero-method subclass of `GridAdapte
 
 Use the existing presets as reference:
 - `src/Adapter/BootstrapAdapter.php` — Bootstrap 5 (base viewport: `xs`)
-- `src/Adapter/TailwindAdapter.php` — Tailwind CSS (no base viewport, offset adjustment: 1)
-- `src/Adapter/BulmaAdapter.php` — Bulma (base viewport: `mobile`, base column class: `column`)
+- `src/Adapter/TailwindAdapter.php` — Tailwind CSS (synthetic `base` viewport, offset adjustment: 1)
 
 ### Format String Conventions
 
@@ -75,7 +74,7 @@ Create `tests/Integration/Adapter/{Name}AdapterTest.php` extending `SapphireTest
 - Visibility class pairs (full set + filtered viewports)
 - Content layout: aspect ratios, alignment, ordering, padding, base column class
 
-Use the existing adapter tests as reference (BootstrapAdapterTest, TailwindAdapterTest, BulmaAdapterTest).
+Use `tests/Integration/Adapter/GridAdapterTest.php` as reference.
 
 ## Reference
 

@@ -172,7 +172,7 @@ Auto-scaffolding can be disabled per class via `auto_scaffold: false` in YAML.
 │    ├── ContentLayoutAdapterInterface                        │
 │    ├── GridAdapter (config-driven base, implements both)    │
 │    ├── GridAdapterFactory (DI alias factory)                │
-│    ├── Presets: Bootstrap, Tailwind, Bulma (zero-method)    │
+│    ├── Presets: Bootstrap, Tailwind (zero-method)           │
 │    ├── MediaExtension (image/video; MediaElement)           │
 │    └── BlockMediaExtension (+ side-by-side layout)          │
 │                                                             │
@@ -471,9 +471,9 @@ Grid adapters translate the abstract layout model (viewports, column widths, off
 | `getBaseWidthClass(width)` | `string` | Width class for base viewport |
 | `getBaseOffsetClass(offset)` | `string` | Offset class for base viewport |
 | `getHideClass(viewport)` | `string` | Hide class for viewport |
-| `getRestoreClass(viewport)` | `?string` | Restore-visibility class, or null when the framework's hides are viewport-scoped (e.g. Bulma) |
+| `getRestoreClass(viewport)` | `?string` | Restore-visibility class, or null when the framework's hides are viewport-scoped |
 | `getRowClasses()` | `string` | Row container classes |
-| `getBaseColumnClass()` | `?string` | Class every column carries (Bulma's `column`), or null. `ColumnClassResolver` emits it first. Also on `ContentLayoutAdapterInterface` — one implementation serves both |
+| `getBaseColumnClass()` | `?string` | Class every column carries (e.g. `column`), or null. `ColumnClassResolver` emits it first. Also on `ContentLayoutAdapterInterface` — one implementation serves both |
 | `getContainerClass(fluid)` | `string` | Container wrapper classes |
 | `getTitleClassOptions()` | `array<string, string>` | CSS class to label mapping |
 | `getOffsetStrategy()` | `OffsetStrategy` | Margin-based vs grid-placement |
@@ -482,7 +482,7 @@ Grid adapters translate the abstract layout model (viewports, column widths, off
 
 ### Config-Driven Base Class
 
-`GridAdapter` is the single `abstract` base class implementing both `GridAdapterInterface` and `ContentLayoutAdapterInterface`. All CSS class generation is driven by Configurable static properties — format strings, class maps, and scalar values. Framework presets (BootstrapAdapter, TailwindAdapter, BulmaAdapter) are zero-method subclasses that only override static properties, and are the only concrete (instantiable) adapters.
+`GridAdapter` is the single `abstract` base class implementing both `GridAdapterInterface` and `ContentLayoutAdapterInterface`. All CSS class generation is driven by Configurable static properties — format strings, class maps, and scalar values. Framework presets (BootstrapAdapter, TailwindAdapter) are zero-method subclasses that only override static properties, and are the only concrete (instantiable) adapters.
 
 YAML-configurable properties (set on the concrete preset class):
 
@@ -516,9 +516,8 @@ WeDevelop\Grid\Service\GridSettingsResolver:
 |---------|-----------|--------------|---------------|
 | Bootstrap | xs, sm, md, lg, xl, xxl | xs (no infix) | `col-{vp}-{n}` |
 | Tailwind | base, sm, md, lg, xl, 2xl | base (no prefix) | `{vp}:col-span-{n}` |
-| Bulma | mobile, tablet, desktop, widescreen, fullhd | mobile (`is-{n}-mobile is-{n}`) | `is-{n}-{vp}` |
 
-There is no compile-time default. `GridAdapterInterface` is bound through a factory that selects the active adapter from the **required** `SS_GRID_ADAPTER` env var — a bundled preset name (`bootstrap`, `tailwind`, or `bulma`, case-insensitive) or the FQCN of a custom adapter implementing `GridAdapterInterface`. Unset, empty, or invalid values throw at container boot:
+There is no compile-time default. `GridAdapterInterface` is bound through a factory that selects the active adapter from the **required** `SS_GRID_ADAPTER` env var — a bundled preset name (`bootstrap` or `tailwind`, case-insensitive) or the FQCN of a custom adapter implementing `GridAdapterInterface`. Unset, empty, or invalid values throw at container boot:
 
 ```yaml
 SilverStripe\Core\Injector\Injector:
@@ -554,7 +553,7 @@ Content layout is implemented directly by `GridAdapter` — the same adapter ins
 | `getMediaWidthClass(int)` | `string` | Width class for media column |
 | `getContentWidthClass(int)` | `string` | Width class for content column |
 | `getPaddingClass(direction, size)` | `string` | Directional padding/margin for gap |
-| `getBaseColumnClass()` | `?string` | Framework base class (e.g. Bulma's `column`) |
+| `getBaseColumnClass()` | `?string` | Framework base class (e.g. `column`), or null |
 
 Width classes delegate to `getWidthClass()` on the same adapter — `getMediaWidthClass()` computes `totalColumns - contentColumns`. Order classes use the adapter's default viewport for responsive breakpoint resolution.
 

@@ -3,7 +3,7 @@ import { getDefaultViewport, getViewports } from '@/utils/gridAdapter'
 
 /**
  * Pixel width used when previewing a mobile-first viewport (Bootstrap's
- * `xs`, Bulma's `mobile`) whose `minWidth` is 0. Chosen to match the
+ * `xs`, Tailwind's `base`) whose `minWidth` is 0. Chosen to match the
  * common iPhone portrait / Chrome devtools default.
  */
 export const MOBILE_FIRST_PREVIEW_WIDTH = 375

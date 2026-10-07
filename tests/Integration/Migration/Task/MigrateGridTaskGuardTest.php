@@ -8,11 +8,12 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use Symfony\Component\Console\Command\Command;
-use WeDevelop\Grid\Adapter\BulmaAdapter;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
 use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
+use WeDevelop\Grid\Tests\Unit\Support\GridAdapterStub;
+use WeDevelop\Grid\Value\Viewport;
 
 #[CoversClass(MigrateGridTask::class)]
 final class MigrateGridTaskGuardTest extends SapphireTest
@@ -57,10 +58,15 @@ final class MigrateGridTaskGuardTest extends SapphireTest
 
     public function testFailsWhenNoLegacyKeyMatchesAnAdapterViewport(): void
     {
-        // Bulma's viewports (mobile/tablet/desktop/...) share no names with the
-        // legacy XS/SM/MD/LG/XL set, so the derived map is empty. Migrating with an
+        // Viewports named mobile/tablet/desktop share no names with the legacy
+        // XS/SM/MD/LG/XL set, so the derived map is empty. Migrating with an
         // empty map would silently drop every responsive override.
-        Injector::inst()->registerService(new BulmaAdapter(), GridAdapterInterface::class);
+        $adapter = new GridAdapterStub([
+            new Viewport('mobile', 'Mobile', 0),
+            new Viewport('tablet', 'Tablet', 769),
+            new Viewport('desktop', 'Desktop', 1024),
+        ]);
+        Injector::inst()->registerService($adapter, GridAdapterInterface::class);
 
         $result = TaskRunner::run(
             new MigrateGridTask(),
