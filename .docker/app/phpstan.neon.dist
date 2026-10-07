@@ -6,6 +6,7 @@ parameters:
     paths:
         - /module/src
     scanFiles:
+        - /module/phpstan/stubs/AdminToolbar.stub
         - /module/phpstan/stubs/DeleteLocalisationPolicy.stub
         - /module/phpstan/stubs/FluentIsolatedExtension.stub
         - /module/phpstan/stubs/FluentLocale.stub

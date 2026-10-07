@@ -34,7 +34,7 @@ tests/Functional/     # PHPUnit functional tests (HTTP/controller)
 tests/E2E/            # Playwright E2E tests
 tests/E2E/Fixture/    # YAML fixtures for E2E test data
 tests/E2E/specs/      # E2E test specs
-tests/E2E/modules/    # E2E specs needing an optional module (userforms); run by test-e2e-modules against app-modules, NOT by test-e2e
+tests/E2E/modules/    # E2E specs needing an optional module (userforms, admin toolbar); run by test-e2e-modules against app-modules, NOT by test-e2e
 tests/E2E/helpers/    # Shared E2E test utilities
 tests/E2E/screenshots/ # Doc screenshot captures (npm run docs:screenshots); NOT run by test-e2e
 client/src/           # Frontend source (React/TS/CSS): js/ + styles/
@@ -78,7 +78,7 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 - `vite.config.mts` — Build config + Vitest test config, `@` alias → `client/src/js`
 - `tsconfig.json` — TypeScript config
 - `playwright.config.ts` — Playwright E2E test config (base URL from `E2E_BASE_URL`, else `WEB_PORT` in `.docker/.env`)
-- `playwright.modules.config.ts` — Optional-modules testbed config (`MODULES_WEB_PORT`, `tests/E2E/modules/`, no admin login). Separate file for the same reason as the docs config below.
+- `playwright.modules.config.ts` — Optional-modules testbed config (`MODULES_WEB_PORT`, `tests/E2E/modules/`, its own admin session file). Separate file for the same reason as the docs config below. Docs captures tagged `@modules` run there too.
 - `playwright.docs.config.ts` — Doc screenshot config. Separate file on purpose: `task test-e2e` runs `npx playwright test` with no project filter, so a screenshot project in the main config would rewrite `docs/images/` on every E2E run.
 - `stryker.config.mjs` — Stryker JS mutation testing config
 - `Taskfile.yml` — Docker-based PHP test/coverage commands (run via [Task](https://taskfile.dev))
@@ -92,7 +92,7 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 ## PHP Testing
 
 - PHPUnit 12 — runs inside Docker via `task test`
-- PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, `fluent`, and `userforms` testsuites — `fluent`/`userforms` run in `app-modules` only, selected via `--testsuite` flag). COPYed into the image at build, **not** volume-mounted — after editing, rebuild with `task build` or push it with `docker compose -f .docker/compose.yml cp .docker/app/phpunit.xml.dist app:/app/phpunit.xml.dist` (and the same to `app-modules`)
+- PHPUnit config: `.docker/app/phpunit.xml.dist` (defines `unit`, `integration`, `functional`, `fluent`, `userforms` and `admintoolbar` testsuites — the last three run in `app-modules` only, selected via `--testsuite` flag). COPYed into the image at build, **not** volume-mounted — after editing, rebuild with `task build` or push it with `docker compose -f .docker/compose.yml cp .docker/app/phpunit.xml.dist app:/app/phpunit.xml.dist` (and the same to `app-modules`)
 - `failOnRisky` + `failOnWarning` are on: a test that asserts nothing fails the run rather than being reported as risky and exiting 0
 - Test namespace: `WeDevelop\Grid\Tests\` → `tests/` (mirrors the subdirectory: `Tests\Functional\Controllers` → `tests/Functional/Controllers/`)
 

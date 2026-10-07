@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices, type Project } from '@playwright/test'
 
 /**
  * Resolve a testbed's base URL from its port key in .docker/.env
@@ -21,6 +21,21 @@ export function resolveBaseUrl(portKey: string): string {
   throw new Error(
     `Cannot determine base URL: no ${portKey} in .docker/.env. Run .docker/env.sh first.`,
   )
+}
+
+/** One admin session per testbed: each has its own database. */
+export const AUTH_FILE = 'tests/E2E/.auth/admin.json'
+export const MODULES_AUTH_FILE = 'tests/E2E/.auth/admin-modules.json'
+
+/** Logs in as admin and saves the session to `authFile` (read by global.setup.ts). */
+export function setupProject(name: string, use: Project['use'], authFile: string): Project {
+  return {
+    name,
+    testDir: './tests/E2E',
+    testMatch: /global\.setup\.ts/,
+    use,
+    metadata: { authFile },
+  }
 }
 
 export default defineConfig({
@@ -44,34 +59,24 @@ export default defineConfig({
   },
 
   projects: [
-    {
-      name: 'setup-chromium',
-      testDir: './tests/E2E',
-      testMatch: /global\.setup\.ts/,
-      use: devices['Desktop Chrome'],
-    },
+    setupProject('setup-chromium', devices['Desktop Chrome'], AUTH_FILE),
     {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: 'tests/E2E/.auth/admin.json',
+        storageState: AUTH_FILE,
       },
       dependencies: ['setup-chromium'],
     },
     // Firefox only runs in CI (via --project flag)
     ...(process.env.CI
       ? [
-          {
-            name: 'setup-firefox',
-            testDir: './tests/E2E',
-            testMatch: /global\.setup\.ts/,
-            use: devices['Desktop Firefox'],
-          },
+          setupProject('setup-firefox', devices['Desktop Firefox'], AUTH_FILE),
           {
             name: 'firefox',
             use: {
               ...devices['Desktop Firefox'],
-              storageState: 'tests/E2E/.auth/admin.json',
+              storageState: AUTH_FILE,
             },
             dependencies: ['setup-firefox'],
           },
