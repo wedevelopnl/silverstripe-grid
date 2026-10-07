@@ -1,0 +1,59 @@
+# E2E fixture for the userforms Form element. Needs silverstripe/userforms, so
+# it is registered only in the optional-modules testbed (_config/dev.yml,
+# grid-dev-userforms) and loaded only by the specs under tests/E2E/modules/.
+#
+# Structure:
+#   Page → Section → Row → Column
+#     ContentElement: copy beside the form, proving the host page is rendered
+#     UserFormElement: one required text field, no "After submitting, go to" page
+#
+# Top-down ordering: parents before children. FixtureLoader suppresses auto-scaffolding.
+
+Page:
+  e2e_page:
+    Title: 'E2E Contact Page'
+    URLSegment: 'e2e-contact'
+
+WeDevelop\Grid\Model\Section:
+  contact_section:
+    Title: 'Contact Section'
+    Sort: 1
+    Zone: main
+    Parent: =>Page.e2e_page
+
+WeDevelop\Grid\Model\Row:
+  contact_row:
+    Title: 'Contact Row'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Section.contact_section
+
+WeDevelop\Grid\Model\Column:
+  contact_col:
+    Title: 'Contact Column'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Row.contact_row
+    GridSettings: '{"default":{"width":12,"offset":0,"visible":true},"overrides":{}}'
+
+WeDevelop\Grid\Model\ContentElement:
+  intro:
+    Title: 'Opening hours'
+    HTML: '<p>We answer every message on weekdays.</p>'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\Model\Column.contact_col
+
+WeDevelop\Grid\UserForms\UserFormElement:
+  contact_form:
+    Title: 'Contact form'
+    Sort: 2
+    SubmitButtonText: 'Send message'
+    OnCompleteMessage: '<p>Thanks, we will get back to you.</p>'
+    Parent: =>WeDevelop\Grid\Model\Column.contact_col
+
+SilverStripe\UserForms\Model\EditableFormField\EditableTextField:
+  name_field:
+    Name: 'EditableTextField_name'
+    Title: 'Your name'
+    Required: 1
+    CustomErrorMessage: 'Please tell us your name'
+    Sort: 1
+    Parent: =>WeDevelop\Grid\UserForms\UserFormElement.contact_form

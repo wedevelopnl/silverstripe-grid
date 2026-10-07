@@ -34,6 +34,7 @@ tests/Functional/     # PHPUnit functional tests (HTTP/controller)
 tests/E2E/            # Playwright E2E tests
 tests/E2E/Fixture/    # YAML fixtures for E2E test data
 tests/E2E/specs/      # E2E test specs
+tests/E2E/modules/    # E2E specs needing an optional module (userforms); run by test-e2e-modules against app-modules, NOT by test-e2e
 tests/E2E/helpers/    # Shared E2E test utilities
 tests/E2E/screenshots/ # Doc screenshot captures (npm run docs:screenshots); NOT run by test-e2e
 client/src/           # Frontend source (React/TS/CSS): js/ + styles/
@@ -76,7 +77,8 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 
 - `vite.config.mts` — Build config + Vitest test config, `@` alias → `client/src/js`
 - `tsconfig.json` — TypeScript config
-- `playwright.config.ts` — Playwright E2E test config (base URL from `.docker/.env` or `E2E_BASE_URL`)
+- `playwright.config.ts` — Playwright E2E test config (base URL from `E2E_BASE_URL`, else `WEB_PORT` in `.docker/.env`)
+- `playwright.modules.config.ts` — Optional-modules testbed config (`MODULES_WEB_PORT`, `tests/E2E/modules/`, no admin login). Separate file for the same reason as the docs config below.
 - `playwright.docs.config.ts` — Doc screenshot config. Separate file on purpose: `task test-e2e` runs `npx playwright test` with no project filter, so a screenshot project in the main config would rewrite `docs/images/` on every E2E run.
 - `stryker.config.mjs` — Stryker JS mutation testing config
 - `Taskfile.yml` — Docker-based PHP test/coverage commands (run via [Task](https://taskfile.dev))
