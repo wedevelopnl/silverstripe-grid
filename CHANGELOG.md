@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **A Form element, available automatically when `silverstripe/userforms` (^7.1) is installed.** The block is the form: its fields, recipients and submissions belong to it, so a shared block is how one form is reused across pages. Visitors stay on the page they submitted from and see the on-complete message in place of the form, or are sent to a chosen page. Each submission records the page it came from, shown in the Submissions list and available to recipient emails as `$SubmittedForm.HostPage`. Sites without userforms see no element and no route, but `db:build` creates an empty `WeDevelop_Grid_UserFormElement` table for an inert stand-in class, until the framework stops instantiating classes it cannot load ([silverstripe/silverstripe-framework#12030](https://github.com/silverstripe/silverstripe-framework/issues/12030)). See [Forms (userforms)](docs/usage/userforms.md).
+- **A Form element, available automatically when `silverstripe/userforms` (^7.1) is installed.** The block is the form: its fields, recipients and submissions belong to it, so a shared block is how one form is reused across pages. After submitting, visitors see the page they submitted from again, under the form's own `finished` URL, with the on-complete message in place of the form, or are sent to a chosen page. Each submission records the page it came from, shown in the Submissions list and available to recipient emails as `$SubmittedForm.HostPage`. Sites without userforms see no element and no route, but `db:build` creates an empty `WeDevelop_Grid_UserFormElement` table for an inert stand-in class, until the framework stops instantiating classes it cannot load ([silverstripe/silverstripe-framework#12030](https://github.com/silverstripe/silverstripe-framework/issues/12030)). See [Forms (userforms)](docs/usage/userforms.md).
 
 ### Changed
 
@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Developer Experience
 
 - **The optional-modules container is now a browsable testbed** (contributors only) — `task up-modules` starts it next to the base testbed and prints its URL, so an integration (Fluent, userforms) can be tried by hand in the CMS, not only through its tests. It serves on `MODULES_WEB_PORT` (`18000` + the worktree's port offset), with its own database `silverstripe_modules` and admin `admin`/`admin`; `task dev-build-modules`, `flush-modules` and `seed-fixture-modules` are its counterparts of the base helpers. An existing `.docker/.env` is regenerated with the new port on the next `task` run, keeping its `SS_GRID_ADAPTER`.
+- **E2E runs against the optional-modules testbed too** (contributors only) — specs under `tests/E2E/modules/` run through `playwright.modules.config.ts` (`task test-e2e-modules`, `npm run test:e2e:modules`) and as one extra chromium leg of the CI E2E matrix. The first covers the Form element: a visitor corrects a missing required field and reads the on-complete message on the page.
 
 ## [6.0.0-beta.5] - 2026-10-06
 
