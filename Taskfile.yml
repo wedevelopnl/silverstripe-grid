@@ -33,18 +33,36 @@ tasks:
   # --- Docker environment ---------------------------------------------------
 
   docker-env:
-    desc: Generate .docker/.env with deterministic ports (only if missing)
+    desc: Generate .docker/.env with deterministic ports (only if missing or outdated)
     cmds:
       - .docker/env.sh
+    # The grep regenerates a file that predates the modules testbed's port;
+    # env.sh keeps the SS_GRID_ADAPTER already in it.
     status:
       - test -f .docker/.env
+      - grep -q '^MODULES_WEB_PORT=' .docker/.env
 
   up:
     desc: Start services (build if needed)
     deps: [docker-env]
     cmds:
       - "{{.COMPOSE}} up -d --build"
-      - 'port=$(grep WEB_PORT .docker/.env | cut -d= -f2); printf "\n  Testbed running at \033]8;;https://localhost:%s\ahttps://localhost:%s\033]8;;\a\n\n" "$port" "$port"'
+      - task: print-url
+        vars: { LABEL: Testbed, PORT_KEY: WEB_PORT }
+
+  up-modules:
+    desc: Start the optional-modules testbed (Fluent + userforms installed) next to the base one
+    deps: [docker-env]
+    # Names its service for the reason given above ensure-up.
+    cmds:
+      - "{{.COMPOSE_MODULES}} up -d --build --wait app-modules"
+      - task: print-url
+        vars: { LABEL: Optional-modules testbed, PORT_KEY: MODULES_WEB_PORT }
+
+  print-url:
+    internal: true
+    cmds:
+      - 'port=$(grep "^{{.PORT_KEY}}=" .docker/.env | cut -d= -f2); printf "\n  {{.LABEL}} running at \033]8;;https://localhost:%s\ahttps://localhost:%s\033]8;;\a\n\n" "$port" "$port"'
 
   down:
     desc: Stop services
@@ -68,6 +86,7 @@ tasks:
   # brings db up either way.
   ensure-up:
     desc: Ensure services are running and ready
+    deps: [docker-env]
     cmds:
       - "{{.COMPOSE}} exec app true 2>/dev/null || {{.COMPOSE}} up -d --build --wait app"
 

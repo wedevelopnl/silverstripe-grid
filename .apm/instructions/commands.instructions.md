@@ -36,6 +36,7 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | Command | Description |
 |---------|-------------|
 | `task up` | Start Docker services (build if needed) |
+| `task up-modules` | Start the optional-modules testbed (Fluent + userforms) on `MODULES_WEB_PORT` |
 | `task down` | Stop Docker services |
 | `task destroy` | Stop services and remove volumes |
 | `task build` | Build Docker images without starting |
