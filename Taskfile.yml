@@ -52,7 +52,7 @@ tasks:
         vars: { LABEL: Testbed, PORT_KEY: WEB_PORT }
 
   up-modules:
-    desc: Start the optional-modules testbed (Fluent + userforms installed) next to the base one
+    desc: Start the optional-modules testbed (Fluent + userforms + admin toolbar installed) next to the base one
     deps: [docker-env]
     # Names its service for the reason given above ensure-up.
     cmds:
