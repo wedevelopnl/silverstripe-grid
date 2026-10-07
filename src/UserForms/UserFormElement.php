@@ -136,7 +136,9 @@ class UserFormElement extends GridElement
     /**
      * Every userforms URL derives from this: the form action is Link() + 'Form',
      * success redirects to Link('finished'), the replay guard bounces to Link().
-     * ContentController::Link(null) passes `true`, hence the bool.
+     * ContentController::Link(null) passes `true`, hence the bool. The route goes
+     * through the page's Link() as its action: a bare Link() drops the homepage's
+     * URLSegment, and /grid-form/{id} matches no page.
      */
     public function Link(string|bool|null $action = null): string
     {
@@ -146,9 +148,7 @@ class UserFormElement extends GridElement
             return '';
         }
 
-        $base = Controller::join_links($page->Link(), 'grid-form', $this->ID);
-
-        return is_string($action) ? Controller::join_links($base, $action) : $base;
+        return $page->Link(Controller::join_links('grid-form', $this->ID, is_string($action) ? $action : null));
     }
 
     /** The form for the template; null outside a page request, where no route can receive it. */
