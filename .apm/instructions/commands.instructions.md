@@ -67,5 +67,6 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task flush` | Clear SilverStripe cache |
 | `task dev-build` | Run dev/build to rebuild database and manifest |
 | `task seed-fixture` | Seed the dev DB with an E2E fixture (`FIXTURE=<name>`, default `complex-page`; idempotent) |
+| `task flush-modules` / `dev-build-modules` / `seed-fixture-modules` | Same as the unsuffixed task, against the optional-modules testbed |
 | `task qa` | Full QA suite (PHPStan 8.3 + 8.5 + Rector + class-leak + PHP coverage + JS QA + i18n + icons, parallel) |
 | `task qa-js` | JavaScript QA (Biome + typecheck + Vitest + vite build) |

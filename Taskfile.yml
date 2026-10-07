@@ -314,29 +314,57 @@ tasks:
     cmds:
       - "{{.COMPOSE}} exec app vendor/bin/sake flush"
 
+  flush-modules:
+    desc: Clear the optional-modules testbed's SilverStripe cache
+    deps: [ensure-up-modules]
+    cmds:
+      - "{{.COMPOSE_MODULES}} exec app-modules vendor/bin/sake flush"
+
   dev-build:
     desc: Run dev/build to rebuild the database and manifest
     deps: [ensure-up]
     cmds:
       - "{{.COMPOSE}} exec app vendor/bin/sake dev/build flush=1"
 
+  dev-build-modules:
+    desc: Run dev/build in the optional-modules testbed
+    deps: [ensure-up-modules]
+    cmds:
+      - "{{.COMPOSE_MODULES}} exec app-modules vendor/bin/sake dev/build flush=1"
+
   seed-fixture:
     desc: Seed the dev database with an E2E fixture (override with FIXTURE=<name>; default complex-page)
+    deps: [ensure-up]
+    cmds:
+      - task: seed
+        vars: { PORT_KEY: WEB_PORT }
+
+  seed-fixture-modules:
+    desc: Seed the optional-modules testbed's database with an E2E fixture (FIXTURE=<name>; default complex-page)
+    deps: [ensure-up-modules]
+    cmds:
+      - task: seed
+        vars: { PORT_KEY: MODULES_WEB_PORT }
+
+  seed:
+    internal: true
     # Hits the same dev-only endpoint the Playwright suite uses. Loading is
     # idempotent: the loader archives previously-seeded e2e-* pages first, so a
     # re-run (or switching FIXTURE) never stacks residue. Fixture names are
     # registered in _config/dev.yml under FixtureLoader.fixtures. -k because the
-    # dev testbed serves a self-signed certificate.
-    deps: [ensure-up]
+    # dev testbed serves a self-signed certificate. The key is anchored because
+    # WEB_PORT is a suffix of MODULES_WEB_PORT.
     vars:
       FIXTURE: '{{.FIXTURE | default "complex-page"}}'
+      PORT:
+        sh: grep "^{{.PORT_KEY}}=" .docker/.env | cut -d= -f2
     cmds:
       - 'echo "==> [seed] loading fixture: {{.FIXTURE}}"'
       - >-
         curl -sS -k --fail-with-body -X POST
         -d "fixture={{.FIXTURE}}"
-        "https://localhost:$(grep WEB_PORT .docker/.env | cut -d= -f2)/dev/e2e-fixtures/load"
-      - 'printf "\n\n==> [seed] done — open https://localhost:%s/admin/pages\n\n" "$(grep WEB_PORT .docker/.env | cut -d= -f2)"'
+        "https://localhost:{{.PORT}}/dev/e2e-fixtures/load"
+      - 'printf "\n\n==> [seed] done — open https://localhost:%s/admin/pages\n\n" "{{.PORT}}"'
 
   # --- QA -------------------------------------------------------------------
 

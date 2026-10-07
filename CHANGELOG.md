@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Developer Experience
 
-- **The optional-modules container is now a browsable testbed** (contributors only) — `task up-modules` starts it next to the base testbed and prints its URL, so an integration (Fluent, userforms) can be tried by hand in the CMS, not only through its tests. It serves on `MODULES_WEB_PORT` (`18000` + the worktree's port offset), with its own database `silverstripe_modules` and admin `admin`/`admin`. An existing `.docker/.env` is regenerated with the new port on the next `task` run, keeping its `SS_GRID_ADAPTER`.
+- **The optional-modules container is now a browsable testbed** (contributors only) — `task up-modules` starts it next to the base testbed and prints its URL, so an integration (Fluent, userforms) can be tried by hand in the CMS, not only through its tests. It serves on `MODULES_WEB_PORT` (`18000` + the worktree's port offset), with its own database `silverstripe_modules` and admin `admin`/`admin`; `task dev-build-modules`, `flush-modules` and `seed-fixture-modules` are its counterparts of the base helpers. An existing `.docker/.env` is regenerated with the new port on the next `task` run, keeping its `SS_GRID_ADAPTER`.
 
 ## [6.0.0-beta.5] - 2026-10-06
 

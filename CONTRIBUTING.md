@@ -44,6 +44,7 @@ Run `composer install` on the host too, not only in the container: the Playwrigh
 | `task flush` | Clear the SilverStripe cache |
 | `task up` | Start (or resume) services |
 | `task up-modules` | Start (or resume) the optional-modules testbed |
+| `task dev-build-modules`, `task flush-modules`, `task seed-fixture-modules` | The same helpers against the optional-modules testbed |
 | `task down` | Stop services (keeps the DB volume) |
 | `task destroy` | Stop services and drop volumes (full reset — wipes the DB) |
 | `task seed-fixture` | Load an E2E fixture into the dev database for manual exploration (`FIXTURE=<name>`, default `complex-page`) |
