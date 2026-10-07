@@ -2,6 +2,9 @@ import { expect, test } from '@playwright/test'
 import { loadFixture, resetFixtures } from '../helpers/fixtures'
 
 test.describe('Form element', () => {
+  // A visitor, not the admin the config logs in.
+  test.use({ storageState: { cookies: [], origins: [] } })
+
   test.afterAll(async ({ request }) => {
     await resetFixtures(request)
   })
