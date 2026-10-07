@@ -67,16 +67,19 @@ tasks:
 
   down:
     desc: Stop services
+    deps: [docker-env]
     cmds:
       - "{{.COMPOSE_MODULES}} down"
 
   destroy:
     desc: Stop services and remove volumes
+    deps: [docker-env]
     cmds:
       - "{{.COMPOSE_MODULES}} down -v"
 
   build:
     desc: Build images without starting
+    deps: [docker-env]
     cmds:
       - "{{.COMPOSE}} build"
 
