@@ -19,7 +19,6 @@ use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
-use WeDevelop\Grid\Tests\Integration\Support\CleansGridTables;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 use WeDevelop\Grid\Value\GridSettings;
@@ -35,18 +34,12 @@ use WeDevelop\Grid\Value\ViewportConfig;
 #[CoversClass(DraftHierarchyWriter::class)]
 final class DraftHierarchyWriterTest extends SapphireTest
 {
-    use CleansGridTables;
     use DisablesAutoScaffolding;
 
     /** $extra_dataobjects alone does not provision the temp DB — this test writes records. */
     protected $usesDatabase = true;
 
     protected static $extra_dataobjects = [TestCustomElement::class, TestPage::class];
-
-    // The writer is only ever invoked from GridMigrationService::run(), which
-    // manages its own transactions; mirror that by disabling SapphireTest's
-    // per-test transaction wrapping.
-    protected $usesTransactions = false;
 
     private const string ZONE = 'main';
 
@@ -64,10 +57,6 @@ final class DraftHierarchyWriterTest extends SapphireTest
         // Section/Row auto-scaffolding for the batch; replicate that precondition
         // so a single Section write does not also scaffold an extra Row + Column.
         $this->disableAutoScaffolding();
-
-        // No DDL/transaction rollback runs (usesTransactions = false), so purge any
-        // grid records leaked from a previous test before each method.
-        $this->cleanGridTables();
 
         $this->writer = new DraftHierarchyWriter(new FieldMapper());
     }

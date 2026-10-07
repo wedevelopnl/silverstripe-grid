@@ -16,6 +16,10 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\TestLegacyReaderFilterExt
 #[CoversClass(LegacyDataReader::class)]
 final class LegacyDataReaderTest extends MigrationTestCase
 {
+    // Issues seeder DDL inside test bodies. MySQL commits DDL implicitly, so
+    // the per-test rollback cannot be trusted here; keep the per-test rebuild.
+    protected $usesTransactions = false;
+
     protected static $extra_dataobjects = [TestPage::class];
 
     private LegacyDataReader $reader;

@@ -37,6 +37,10 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\TestCustomElementReaderEx
 #[CoversNothing]
 final class MigrationAcceptanceTest extends MigrationTestCase
 {
+    // Issues seeder DDL inside test bodies. MySQL commits DDL implicitly, so
+    // the per-test rollback cannot be trusted here; keep the per-test rebuild.
+    protected $usesTransactions = false;
+
     /** @var list<class-string> */
     protected static $extra_dataobjects = [
         TestCustomElement::class,
