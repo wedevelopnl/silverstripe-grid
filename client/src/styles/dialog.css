@@ -22,6 +22,15 @@
     background: rgb(0 0 0 / 35%);
   }
 
+  /* A column so the body, not the dialog, takes the overflow: as a block box
+     the body grows to fit its content and the dialog's overflow clips it
+     unreachably. Scoped to [open] because an author `display` beats the UA's
+     `dialog:not([open]) { display: none }` and would show closed dialogs. */
+  &[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
   /* Wider variant for the multi-step "duplicate to" flow. */
   &[data-variant='wide'] {
     width: min(720px, calc(100vw - 32px));
@@ -67,6 +76,8 @@
 }
 
 .ssgrid-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 20px;
   overflow-y: auto;
 
