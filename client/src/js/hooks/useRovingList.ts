@@ -17,7 +17,7 @@ export interface UseRovingListReturn {
    * consumed, so the caller can `return` early and keep its own Enter/Space
    * handling (which differs per list).
    */
-  readonly handleNavigationKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => boolean
+  readonly handleNavigationKeyDown: (e: React.KeyboardEvent<HTMLElement>) => boolean
 }
 
 /**
@@ -51,7 +51,7 @@ export function useRovingList({ itemCount }: UseRovingListOptions): UseRovingLis
   }, [activeIndex, getItemId])
 
   const handleNavigationKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>): boolean => {
+    (e: React.KeyboardEvent<HTMLElement>): boolean => {
       // Floored at 0: on an empty list `itemCount - 1` is -1, and the clamp
       // effect above only ever lowers the index, so a negative one would stick
       // once items returned — pointing aria-activedescendant at a dead id.

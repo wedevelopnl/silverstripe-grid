@@ -196,7 +196,7 @@ test.describe('Media elements', () => {
 
       const picker = page.getByRole('dialog')
       await picker
-        .getByTestId('element-type-tile')
+        .getByTestId('element-type-option')
         .filter({ has: page.getByText('Media', { exact: true }) })
         .click()
       await expect(picker).toBeHidden()
