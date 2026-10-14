@@ -106,6 +106,7 @@
   "WeDevelopGrid.SharedBlockFrame.PUBLISH_CONFIRM": "Publish",
   "WeDevelopGrid.SharedBlockFrame.PUBLISH_MESSAGE": "Publishing \"{title}\" updates it on {count} pages at once.",
   "WeDevelopGrid.SharedBlockFrame.PUBLISH_TITLE": "Publish shared block",
+  "WeDevelopGrid.SharedBlockPickerDialog.BACK_BUTTON": "Back",
   "WeDevelopGrid.SharedBlockPickerDialog.CLOSE_LABEL": "Close",
   "WeDevelopGrid.SharedBlockPickerDialog.EMPTY": "No shared block fits here yet. Create one from an existing element with \"Convert to shared block\".",
   "WeDevelopGrid.SharedBlockPickerDialog.ERROR": "Failed to load shared blocks: {message}",
