@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **The content column width picker lists its splits from the narrowest media column to the widest** — `4/8`, `5/7`, `6/6`, `7/5`, `8/4` after *Full width* — so the options read in the same direction as their media-first labels and diagrams. Only the order changes: each option keeps its stored `ContentColumns` value, so existing blocks render and show as selected exactly as before.
+- **The content type picker is a searchable list** — the search field has focus on open and narrows the list to types whose name or description contains the text; `↑` `↓` move through the matches and `Enter` adds one. Types are sorted by name instead of arriving in class discovery order. The *Shared block* tile became a **Place shared block…** button in the footer, and the shared block chooser it opens has a **Back** button that returns to the picker. Translation keys: new `ElementTypePicker.LIST_LABEL`, `NO_MATCH`, `PLACE_SHARED_BLOCK`, `SEARCH_LABEL`, `SEARCH_PLACEHOLDER` and `SharedBlockPickerDialog.BACK_BUTTON`; `ElementTypePicker.SHARED_BLOCK` and `SHARED_BLOCK_DESCRIPTION` are gone. E2E suites that select picker entries by `element-type-tile` need `element-type-option`.
 
 ### Removed
 
@@ -17,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Dialogs taller than the window could not scroll** — the dialog clipped its body instead of letting it scroll, so on a project with more than about ten content types the ones below the fold could not be reached by mouse or keyboard. The body now scrolls between a fixed header and footer, in every dialog.
 - **The toolbar's Grid menu drew every column flush left** — it passed only a column's default width to the template, so an offset column (an 8/12 intro offset by 2, say) sat on the first track, and a column hidden at the default viewport looked like any other. Columns now sit on their row's tracks at their width and offset, wrapping with their offset as on the front end; each row draws its tracks as faint stripes so skipped and unused tracks read as such, and a hidden column is drawn dashed and faded and marked `hidden`. The menu also names each row (with its edit link, previously dropped), heads each column with its span (`8/12`) so its title no longer reads as its first element, and tags shared-block placements. New translation keys: `GridMenu.HIDDEN`, `GridMenu.SHARED`, `GridMenu.SPAN`.
 
 ## [6.0.0-beta.5] - 2026-10-06

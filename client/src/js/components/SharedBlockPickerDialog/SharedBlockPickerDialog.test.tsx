@@ -121,6 +121,24 @@ describe('SharedBlockPickerDialog', () => {
     expect(getFetchCalls()).toHaveLength(0)
   })
 
+  it('goes back to the dialog it was opened from instead of closing', async () => {
+    const user = userEvent.setup()
+    const onBack = vi.fn()
+    const onClose = vi.fn()
+    renderPicker({ onBack, onClose })
+
+    await user.click(screen.getByTestId('shared-block-picker-back'))
+
+    expect(onBack).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('offers no Back button when opened straight from the canvas', () => {
+    renderPicker()
+
+    expect(screen.queryByTestId('shared-block-picker-back')).not.toBeInTheDocument()
+  })
+
   describe('keyboard', () => {
     it('names the dialog by its heading', async () => {
       renderPicker()

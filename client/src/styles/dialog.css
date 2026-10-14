@@ -22,6 +22,15 @@
     background: rgb(0 0 0 / 35%);
   }
 
+  /* A column so the body, not the dialog, takes the overflow: as a block box
+     the body grows to fit its content and the dialog's overflow clips it
+     unreachably. Scoped to [open] because an author `display` beats the UA's
+     `dialog:not([open]) { display: none }` and would show closed dialogs. */
+  &[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
   /* Wider variant for the multi-step "duplicate to" flow. */
   &[data-variant='wide'] {
     width: min(720px, calc(100vw - 32px));
@@ -67,6 +76,8 @@
 }
 
 .ssgrid-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 20px;
   overflow-y: auto;
 
@@ -256,47 +267,42 @@
   white-space: nowrap;
 }
 
-/* --- Element type picker tile grid ------------------------------------------- */
+/* --- Element type picker -------------------------------------------------------
+   The search field sits in its own band between header and body, so it stays
+   put while the list scrolls under it. The list scrolls with the dialog body
+   rather than in a nested 320px box: a project can register dozens of types,
+   and the whole dialog height is theirs. */
 
-.ssgrid-dialog-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: var(--ssgrid-space-3);
-}
+.ssgrid-dialog-toolbar {
+  flex: 0 0 auto;
+  padding: var(--ssgrid-space-4) 20px;
+  border-bottom: 1px solid var(--ssgrid-border-default);
 
-.ssgrid-dialog-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--ssgrid-space-2);
-  padding: var(--ssgrid-space-4);
-  text-align: left;
-  background: var(--ssgrid-surface-muted);
-  border: 1px solid var(--ssgrid-border-default);
-  border-radius: var(--ssgrid-radius-md);
-  color: var(--ssgrid-text-default);
-  font: inherit;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--ssgrid-surface-selected);
-    border-color: var(--ssgrid-border-focus);
+  & .ssgrid-dialog-search {
+    margin-bottom: 0;
   }
 }
 
-/* The picker tile shows the same chip as the placed card
-   (`.ssgrid-type-icon-chip` in the markup), one step up the control scale
-   because the tile is a browsing target rather than a header ornament. */
-.ssgrid-dialog-tile-icon {
-  --ssgrid-chip-size: var(--ssgrid-size-control);
-  --ssgrid-chip-glyph: 18px;
+.ssgrid-dialog-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.ssgrid-dialog-tile-label {
-  font-weight: var(--ssgrid-font-weight-medium);
+.ssgrid-dialog-option-type {
+  justify-content: flex-start;
+  gap: var(--ssgrid-space-3);
+  padding: 10px;
+
+  /* The same chip as the placed card, one step up the control scale because
+     the row is a browsing target rather than a header ornament. */
+  & .ssgrid-type-icon-chip {
+    --ssgrid-chip-size: var(--ssgrid-size-control);
+    --ssgrid-chip-glyph: 18px;
+  }
 }
 
-.ssgrid-dialog-tile-description {
+.ssgrid-dialog-option-description {
   color: var(--ssgrid-text-muted);
   font-size: 13px;
   line-height: 1.4;

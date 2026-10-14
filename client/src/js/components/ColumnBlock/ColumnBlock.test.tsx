@@ -452,8 +452,8 @@ describe('EditableColumnBlock', () => {
       await user.click(screen.getByTestId('add-content-button'))
       await screen.findByTestId('element-type-picker')
 
-      // Click the tile
-      await user.click(screen.getByTestId('element-type-tile'))
+      // Click the option
+      await user.click(screen.getByTestId('element-type-option'))
 
       await waitFor(() => {
         expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()
@@ -515,6 +515,30 @@ describe('EditableColumnBlock', () => {
       await waitFor(() => {
         expect(screen.queryByTestId('element-type-picker')).not.toBeInTheDocument()
       })
+    })
+
+    it('returns from the shared block chooser to the type picker', async () => {
+      const user = userEvent.setup()
+      const column = createColumnNode({
+        children: null,
+        childCount: 0,
+        allowedTypes: {
+          'App\\Model\\TextBlock': {
+            label: 'Text Block',
+            icon: 'font-icon-text',
+            description: 'A text block',
+          },
+        },
+      })
+
+      renderWithProviders(<EditableColumnBlock column={column} />)
+
+      await user.click(screen.getByTestId('add-content-button'))
+      await user.click(await screen.findByTestId('element-type-picker-shared'))
+      await user.click(await screen.findByTestId('shared-block-picker-back'))
+
+      expect(await screen.findByTestId('element-type-picker')).toBeInTheDocument()
+      expect(screen.queryByTestId('shared-block-picker')).not.toBeInTheDocument()
     })
   })
 

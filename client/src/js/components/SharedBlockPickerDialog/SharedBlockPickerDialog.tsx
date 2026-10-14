@@ -64,6 +64,11 @@ interface SharedBlockPickerDialogProps {
   readonly insertAtStart?: boolean
   readonly isOpen: boolean
   readonly onClose: () => void
+  /**
+   * Adds a Back button, for callers that reach this dialog from another one
+   * (the content type picker) rather than from a button on the canvas.
+   */
+  readonly onBack?: () => void
 }
 
 /**
@@ -82,6 +87,7 @@ export default function SharedBlockPickerDialog({
   insertAtStart,
   isOpen,
   onClose,
+  onBack,
 }: SharedBlockPickerDialogProps) {
   const editorRoot = useEditorRoot()
   const placeSharedBlock = usePlaceSharedBlock(editorRoot)
@@ -248,6 +254,22 @@ export default function SharedBlockPickerDialog({
           </div>
         )}
       </div>
+
+      {onBack !== undefined && (
+        <div className="ssgrid-dialog-footer">
+          <div className="ssgrid-dialog-actions">
+            <button
+              type="button"
+              className="ssgrid-button ssgrid-focus-ring"
+              data-variant="ghost"
+              data-testid="shared-block-picker-back"
+              onClick={onBack}
+            >
+              {t('WeDevelopGrid.SharedBlockPickerDialog.BACK_BUTTON', 'Back')}
+            </button>
+          </div>
+        </div>
+      )}
     </dialog>
   )
 }

@@ -50,7 +50,7 @@ test.describe('Content elements — add, edit, publish, render', () => {
       // The rest of this journey fills in an HTML body, so pick the HTML block
       // by name — the module ships more than one type.
       const contentTile = picker
-        .getByTestId('element-type-tile')
+        .getByTestId('element-type-option')
         .filter({ hasText: 'Content element' })
       await expect(contentTile).toBeVisible()
       await contentTile.click()

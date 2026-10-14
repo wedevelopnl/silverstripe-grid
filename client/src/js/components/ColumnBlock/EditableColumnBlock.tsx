@@ -201,6 +201,11 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
     setSharedPickerOpen(false)
   }, [])
 
+  const handleBackToPicker = useCallback(() => {
+    setSharedPickerOpen(false)
+    setPickerOpen(true)
+  }, [])
+
   const children = column.children ?? []
   const allowedTypes = column.allowedTypes ?? {}
   const hasChildren = children.length > 0
@@ -218,6 +223,7 @@ const EditableColumnBlock = memo(function EditableColumnBlockComponent({
           parent={column.self}
           isOpen={isSharedPickerOpen}
           onClose={handleCloseSharedPicker}
+          onBack={handleBackToPicker}
         />
       )
     }
