@@ -52,6 +52,8 @@ Each row is one content element type, showing its `$singular_name`, icon, and de
 
 The search field has focus when the picker opens. Typing narrows the list to types whose name or description contains the text, so a project with dozens of types stays a few keystrokes deep. Picking a type, by click or with `Enter`, creates the block and drops it into the column. Open it with the pencil (**Edit**) action to fill in its fields.
 
+**Place shared block…** swaps the picker for the shared block chooser; its **Back** button returns to the type picker.
+
 ## Column width and offset
 
 Every column header carries two pickers — width and offset — that write straight to the column's grid settings.
