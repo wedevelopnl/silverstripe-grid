@@ -50,7 +50,11 @@ The *Save* button still governs the ordinary page fields (page name, URL segment
 
 Each row is one content element type, showing its `$singular_name`, icon, and description, sorted by name. The module ships two blocks — *Content element* (HTML) and *Media* (a single image or video); projects add their own, and each new subclass appears here automatically with no registration step. See [Building a custom content element](custom-elements.md).
 
-The search field has focus when the picker opens. Typing narrows the list to types whose name or description contains the text, so a project with dozens of types stays a few keystrokes deep. Picking a type, by click or with `Enter`, creates the block and drops it into the column. Open it with the pencil (**Edit**) action to fill in its fields.
+The search field has focus when the picker opens. Typing narrows the list to types whose name or description contains the text, so a project with dozens of types stays a few keystrokes deep:
+
+![The picker filtered on "image", leaving only Media, which matches on its description](../images/element-type-picker-filtered.png)
+
+Picking a type, by click or with `Enter`, creates the block and drops it into the column. Open it with the pencil (**Edit**) action to fill in its fields.
 
 **Place shared block…** swaps the picker for the shared block chooser; its **Back** button returns to the type picker.
 
