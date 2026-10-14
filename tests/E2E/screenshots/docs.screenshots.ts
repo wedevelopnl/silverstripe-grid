@@ -167,6 +167,18 @@ test('element type picker', async ({ page }) => {
   await shoot(page, 'element-type-picker', [picker])
 })
 
+test('element type picker filtered', async ({ page }) => {
+  await openDocsPage(page)
+
+  await page.getByTestId('add-content-button').first().click()
+  const picker = page.getByTestId('element-type-picker')
+  // Matches Media through its description, not its name.
+  await picker.getByTestId('element-type-picker-search').fill('image')
+  await expect(picker.getByTestId('element-type-option')).toHaveCount(1)
+
+  await shoot(page, 'element-type-picker-filtered', [picker])
+})
+
 test('shared block placement', async ({ page }) => {
   await openDocsPage(page)
 
