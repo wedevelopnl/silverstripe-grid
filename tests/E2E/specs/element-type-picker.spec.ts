@@ -55,4 +55,25 @@ test.describe('Element type picker', () => {
     await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
     await expect(elementCards).toHaveCount(3)
   })
+
+  test('editor steps into the shared block chooser and back to the type picker', async ({
+    page,
+  }) => {
+    const fixture = await loadFixture(page.request, 'content-elements')
+    await page.goto(`/admin/pages/edit/show/${fixture.pageId}`)
+    await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
+
+    await page.getByTestId('add-content-button').first().click()
+    const picker = page.getByTestId('element-type-picker')
+    await picker.getByTestId('element-type-picker-shared').click()
+
+    const chooser = page.getByTestId('shared-block-picker')
+    await expect(chooser).toBeVisible()
+    await expect(picker).toBeHidden()
+
+    await chooser.getByTestId('shared-block-picker-back').click()
+
+    await expect(chooser).toBeHidden()
+    await expect(picker.getByTestId('element-type-picker-search')).toBeFocused()
+  })
 })

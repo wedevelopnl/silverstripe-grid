@@ -106,6 +106,7 @@
   "WeDevelopGrid.SharedBlockFrame.PUBLISH_CONFIRM": "Publiceren",
   "WeDevelopGrid.SharedBlockFrame.PUBLISH_MESSAGE": "\"{title}\" publiceren werkt het blok op {count} pagina's tegelijk bij.",
   "WeDevelopGrid.SharedBlockFrame.PUBLISH_TITLE": "Gedeeld blok publiceren",
+  "WeDevelopGrid.SharedBlockPickerDialog.BACK_BUTTON": "Terug",
   "WeDevelopGrid.SharedBlockPickerDialog.CLOSE_LABEL": "Sluiten",
   "WeDevelopGrid.SharedBlockPickerDialog.EMPTY": "Er past hier nog geen gedeeld blok. Maak er een via \"Omzetten naar gedeeld blok\" op een bestaand element.",
   "WeDevelopGrid.SharedBlockPickerDialog.ERROR": "Gedeelde blokken laden mislukt: {message}",
