@@ -452,8 +452,8 @@ describe('EditableColumnBlock', () => {
       await user.click(screen.getByTestId('add-content-button'))
       await screen.findByTestId('element-type-picker')
 
-      // Click the tile
-      await user.click(screen.getByTestId('element-type-tile'))
+      // Click the option
+      await user.click(screen.getByTestId('element-type-option'))
 
       await waitFor(() => {
         expect(vi.mocked(globalThis.fetch)).toHaveBeenCalled()

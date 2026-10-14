@@ -27,7 +27,7 @@ Reading the screenshot from the outside in:
 | **Column** (`Centred intro`, `Design`, …) | A slot in the grid, with its own width and offset pickers. |
 | **Content block** (the white cards) | The actual content. Each card shows its type icon, title, and a short text summary. |
 | **`Add Section` / `Add Row`** | Insert a new child at that level. The caret at the button's right-hand end offers [placing a shared block](shared-blocks.md#placing-a-block) there instead. |
-| **`+ Add content`** | Opens the type picker for a column's content. The picker's **Shared block** tile [places a shared block](shared-blocks.md#placing-a-block) instead of creating a new element; this button carries no caret. |
+| **`+ Add content`** | Opens the type picker for a column's content. The picker's **Place shared block…** button [places a shared block](shared-blocks.md#placing-a-block) instead of creating a new element; this button carries no caret. |
 | **The `⊕` buttons flanking a row** | Insert a column before or after the ones already there — likewise with a caret for a shared column. |
 
 The hierarchy is fixed and enforced on the server: **Section → Row → Column → content**. A section only ever holds rows, a row only ever holds columns, and a column holds any content block. You cannot nest a section inside a column.
@@ -48,9 +48,9 @@ The *Save* button still governs the ordinary page fields (page name, URL segment
 
 ![The "Add content element" dialog listing the available block types](../images/element-type-picker.png)
 
-Each tile is one content element type, showing its `$singular_name`, icon, and description. The module ships two blocks — *Content element* (HTML) and *Media* (a single image or video); projects add their own, and each new subclass appears here automatically with no registration step. See [Building a custom content element](custom-elements.md).
+Each row is one content element type, showing its `$singular_name`, icon, and description, sorted by name. The module ships two blocks — *Content element* (HTML) and *Media* (a single image or video); projects add their own, and each new subclass appears here automatically with no registration step. See [Building a custom content element](custom-elements.md).
 
-Picking a tile creates the block and drops it into the column. Open it with the pencil (**Edit**) action to fill in its fields.
+The search field has focus when the picker opens. Typing narrows the list to types whose name or description contains the text, so a project with dozens of types stays a few keystrokes deep. Picking a type, by click or with `Enter`, creates the block and drops it into the column. Open it with the pencil (**Edit**) action to fill in its fields.
 
 ## Column width and offset
 
@@ -138,7 +138,7 @@ Grouped controls follow the W3C toolbar and listbox patterns: the **group** is a
 | `⋯` overflow menu | its trigger, the row's last stop | `↑` `↓` between items, `Home` / `End` | runs the item | closes it, focus returns to `⋯` |
 | Width and offset pickers | the trigger | `↑` `↓` between values, `Home` / `End` | picks the value | closes it, focus returns to the trigger |
 | **Duplicate to…** lists | each list, once | `↑` `↓` between options, `Home` / `End` | selects it and moves to the next step | closes the dialog |
-| **Add content** tiles | each tile | — | adds the block | closes the dialog |
+| **Add content** picker | the search field (focused on open) | `↑` `↓` between matching types while typing | `Enter` adds the block | closes the dialog |
 
 Navigation stops at the ends rather than wrapping. Entries you cannot use stay reachable so the list still reads completely — they simply refuse to activate, which is how a page with no grid zones behaves in **Duplicate to…**.
 
