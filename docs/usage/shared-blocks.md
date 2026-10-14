@@ -48,7 +48,7 @@ Wherever you can add content you can also place a block:
   *Add Section* / *Add Row* / *Add Column* button and choose **Place shared section / row /
   column**. Every insertion point offers it, so a block can land before the first child, in
   any gap, or at the end — no dragging afterwards.
-- **Inside a column** — the **Shared block** tile in the content type picker.
+- **Inside a column** — the **Place shared block…** button at the foot of the content type picker.
 
 ![The Add Section strip with its caret menu open, offering "Place shared section…"](../images/shared-block-placement.png)
 
