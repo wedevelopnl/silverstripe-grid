@@ -31,7 +31,7 @@ jobs:
       # The E2E helpers typecheck against the Playwright client shipped inside
       # vendor/wedevelopnl/silverstripe-e2e, so composer deps must exist on the
       # runner (not just inside the Docker image).
-      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
         with:
           php-version: '8.3'
           extensions: intl
@@ -235,7 +235,7 @@ jobs:
       # Playwright runs on the runner and imports the fixture client from
       # vendor/wedevelopnl/silverstripe-e2e, so composer deps must exist on the
       # runner (the Docker image's vendor volume is not visible to the host).
-      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
         with:
           php-version: '8.3'
           extensions: intl
