@@ -409,7 +409,7 @@ final class LegacyElementReader
         }
 
         $localisedTable = $this->localisedTable($baseTable, $stage);
-        if (!\array_key_exists(\strtolower($localisedTable), DB::table_list())) {
+        if (!LegacyTables::exists($localisedTable)) {
             return [];
         }
 
@@ -493,7 +493,7 @@ final class LegacyElementReader
     private function overlayLocalised(array $row, string $baseTable, int $recordId, string $localeCode, string $stage): array
     {
         $localisedTable = $this->localisedTable($baseTable, $stage);
-        if (!\array_key_exists(\strtolower($localisedTable), DB::table_list())) {
+        if (!LegacyTables::exists($localisedTable)) {
             return $row;
         }
 
