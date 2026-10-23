@@ -24,6 +24,7 @@ use WeDevelop\Grid\Migration\Service\LivePublisher;
 use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\MediaElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
@@ -357,6 +358,40 @@ final class LivePublisherTest extends SapphireTest
                 static fn (string $field): string => (string) $liveContent->getField($field),
                 $fields,
             )),
+        );
+    }
+
+    public function testLiveContentOverwriteSkipsTextFieldsWhenTheMappedClassIsNoTextBlock(): void
+    {
+        // MediaElement holds the media columns but is no ContentElement: the draft
+        // path sets none of the legacy text block's media on it, so live must not either.
+        $this->mapper = new FieldMapper([self::CONTENT_CLASS => MediaElement::class]);
+        $this->draftWriter = new DraftHierarchyWriter($this->mapper, new DroppedMediaCollector());
+        $this->publisher = new LivePublisher(
+            $this->mapper,
+            $this->draftWriter,
+            $this->logger,
+            new RowPerSectionStrategy(new ElementGrouper(), $this->mapper, self::DEFAULT_VIEWPORT, self::VIEWPORT_KEY_MAP),
+            new DroppedMediaCollector(),
+        );
+
+        $pageId = $this->createPage();
+        $idMap = new MigrationIdMap();
+        $media = new LegacyMediaData(['HTML' => '<p>Text</p>', 'MediaType' => 'image', 'MediaImageID' => 41]);
+
+        $this->writeDraft(
+            $pageId,
+            [$this->section($this->legacyElement(5000, 'Draft', media: $media), $this->gridSettings(8))],
+            $idMap,
+        );
+        $this->publish($pageId, Page::class, [$this->legacyElement(5000, 'Live', media: $media)], [5000 => true], $idMap);
+
+        $live = $this->liveById(MediaElement::class, $idMap->newElementId(5000));
+        self::assertInstanceOf(MediaElement::class, $live);
+        self::assertSame(
+            ['Live', '', 0],
+            [(string) $live->Title, (string) $live->MediaType, (int) $live->MediaImageID],
+            'the live base fields are written, the text block media is not',
         );
     }
 
