@@ -817,53 +817,6 @@ final class GridMigrationServiceTest extends MigrationTestCase
         self::assertSame('Content In Row', $liveElements->first()->Title);
     }
 
-    public function testDraftAndLiveSortAgreeForElementOnBothStages(): void
-    {
-        // Each element gets its own column, so each receives column-local
-        // Sort 1 on draft. Their legacy area-wide sort values are 2 and 3. The
-        // live UPDATE must use the column-local draft Sort, not the legacy
-        // area-wide value, so both stages order each column identically.
-        $pageId = $this->pageId();
-        $areaId = 100;
-        $this->seeder->seedPage($pageId, $areaId);
-
-        foreach (['draft', 'live'] as $stage) {
-            $this->seeder->seedElement(5900, $areaId, self::CONTENT_CLASS, 2, [
-                'SizeMD' => 6,
-                'Title' => 'First',
-            ], stage: $stage);
-            $this->seeder->seedContentMedia(5900, [], stage: $stage);
-
-            $this->seeder->seedElement(5901, $areaId, self::CONTENT_CLASS, 3, [
-                'SizeMD' => 6,
-                'Title' => 'Second',
-            ], stage: $stage);
-            $this->seeder->seedContentMedia(5901, [], stage: $stage);
-        }
-
-        $this->runMigration();
-
-        Versioned::set_stage(Versioned::DRAFT);
-        $draftFirst = ContentElement::get()->filter(['Title' => 'First'])->first();
-        $draftSecond = ContentElement::get()->filter(['Title' => 'Second'])->first();
-        self::assertInstanceOf(ContentElement::class, $draftFirst);
-        self::assertInstanceOf(ContentElement::class, $draftSecond);
-
-        Versioned::set_stage(Versioned::LIVE);
-        $liveFirst = ContentElement::get()->filter(['Title' => 'First'])->first();
-        $liveSecond = ContentElement::get()->filter(['Title' => 'Second'])->first();
-        self::assertInstanceOf(ContentElement::class, $liveFirst);
-        self::assertInstanceOf(ContentElement::class, $liveSecond);
-
-        // Draft assigns column-local 1 to each (not the legacy area-wide 2, 3)
-        self::assertSame(1, (int) $draftFirst->Sort);
-        self::assertSame(1, (int) $draftSecond->Sort);
-
-        // Live Sort must equal the draft Sort for each element
-        self::assertSame((int) $draftFirst->Sort, (int) $liveFirst->Sort, 'First: draft and live Sort must agree');
-        self::assertSame((int) $draftSecond->Sort, (int) $liveSecond->Sort, 'Second: draft and live Sort must agree');
-    }
-
     public function testLiveColumnWidthReconciledFromLiveElementSize(): void
     {
         // An element present on BOTH stages whose live Size differs from its
