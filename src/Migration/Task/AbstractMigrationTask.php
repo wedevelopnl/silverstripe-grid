@@ -9,6 +9,7 @@ use Override;
 use Psr\Log\LoggerInterface;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\BuildTask;
+use SilverStripe\ORM\DB;
 use SilverStripe\PolyExecution\PolyOutput;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\QuestionHelper;
@@ -123,7 +124,7 @@ abstract class AbstractMigrationTask extends BuildTask
         // confirmation so operators are not asked to confirm and then immediately
         // refused. Both implementations depend only on DB table shape or class
         // existence, not on the adapter, viewport map, or page-ids resolved below.
-        $preflightError = $this->preflight();
+        $preflightError = $this->missingLegacyElementTablesError() ?? $this->preflight();
         if ($preflightError !== null) {
             $output->writeln(\sprintf('<error>%s</error>', $preflightError));
             return Command::FAILURE;
@@ -275,6 +276,31 @@ abstract class AbstractMigrationTask extends BuildTask
             'single-section' => new AllRowsInSectionStrategy($grouper, $mapper, $defaultViewport, $viewportKeyMap, $logger),
             default => new RowPerSectionStrategy($grouper, $mapper, $defaultViewport, $viewportKeyMap),
         };
+    }
+
+    /**
+     * Refuse when the elemental 5.x element tables are absent: every read
+     * targets them, so without them the run has nothing to start from.
+     */
+    private function missingLegacyElementTablesError(): ?string
+    {
+        // DB::table_list() keys are lowercase.
+        $tables = DB::table_list();
+        $missing = \array_values(\array_filter(
+            [LegacyElementReader::ELEMENT_TABLE, LegacyElementReader::ELEMENT_TABLE . '_Live'],
+            static fn (string $table): bool => !\array_key_exists(\strtolower($table), $tables),
+        ));
+
+        if ($missing === []) {
+            return null;
+        }
+
+        return \sprintf(
+            'Legacy element %s "%s" not found. The migration reads the elemental tables of a SilverStripe 5 site '
+            . 'running wedevelopnl/silverstripe-elemental-grid 5.1.5; nothing was changed.',
+            \count($missing) === 1 ? 'table' : 'tables',
+            \implode('", "', $missing),
+        );
     }
 
     /**
