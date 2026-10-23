@@ -17,21 +17,26 @@ use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
  */
 final class LegacyLocalisationDetector
 {
+    private const string LOCALISED_TABLE = LegacyElementReader::ELEMENT_TABLE . '_Localised';
+
     public function detect(): LegacyLocalisationModel
     {
         // DB::table_list() keys are lowercase; DB::field_list() keys are case-preserving.
-        $hasLocalisedTable = \array_key_exists('baseelement_localised', DB::table_list());
+        $tables = DB::table_list();
+        $hasLocalisedTable = \array_key_exists(\strtolower(self::LOCALISED_TABLE), $tables);
 
         $hasLocaleIdColumn = false;
-        if (\array_key_exists('baseelement', DB::table_list())) {
-            $hasLocaleIdColumn = \array_key_exists('LocaleID', DB::field_list('BaseElement'));
+        if (\array_key_exists(\strtolower(LegacyElementReader::ELEMENT_TABLE), $tables)) {
+            $hasLocaleIdColumn = \array_key_exists('LocaleID', DB::field_list(LegacyElementReader::ELEMENT_TABLE));
         }
 
         if ($hasLocalisedTable && $hasLocaleIdColumn) {
-            throw new RuntimeException(
-                'Ambiguous legacy localisation: both BaseElement_Localised and '
-                . 'BaseElement.LocaleID exist. This mixed Fluent configuration is unsupported.',
-            );
+            throw new RuntimeException(\sprintf(
+                'Ambiguous legacy localisation: both %s and %s.LocaleID exist. '
+                . 'This mixed Fluent configuration is unsupported.',
+                self::LOCALISED_TABLE,
+                LegacyElementReader::ELEMENT_TABLE,
+            ));
         }
 
         if ($hasLocalisedTable) {

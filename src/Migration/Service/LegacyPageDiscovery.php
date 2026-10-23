@@ -13,7 +13,7 @@ use SilverStripe\ORM\DB;
 /**
  * Discovers legacy elemental pages from old database tables using raw SQL.
  *
- * The old dnadesign/silverstripe-elemental tables (BaseElement, ElementRow,
+ * The old dnadesign/silverstripe-elemental tables (Element, ElementRow,
  * ElementContent, ElementalArea) remain in the database after the module is
  * removed. This discovery service locates eligible pages and grid-toggle state
  * from those page tables without requiring any ORM classes for the old schema.

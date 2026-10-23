@@ -10,7 +10,7 @@ use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
 
 /**
  * Migration of the Isolated legacy localisation model: each locale carries its
- * own BaseElement rows, distinguished by a LocaleID column, and migrates into
+ * own Element rows, distinguished by a LocaleID column, and migrates into
  * its own locale-isolated grid independently of the others.
  */
 #[CoversClass(FluentMigrationOrchestrator::class)]

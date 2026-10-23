@@ -15,7 +15,7 @@ use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
 /**
  * Reads and hydrates legacy elemental elements from old database tables using raw SQL.
  *
- * The old dnadesign/silverstripe-elemental tables (BaseElement, ElementRow,
+ * The old dnadesign/silverstripe-elemental tables (Element, ElementRow,
  * ElementContent) remain in the database after the module is removed. This
  * reader extracts element data from those tables without requiring any ORM
  * classes for the old schema.
@@ -29,6 +29,13 @@ use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
  */
 final class LegacyElementReader
 {
+    /**
+     * The table dnadesign/silverstripe-elemental 5.x stores every element's base
+     * record in (its base class's `table_name`). The `_Live` and `_Localised`
+     * names derive from it.
+     */
+    public const string ELEMENT_TABLE = 'Element';
+
     private const string ROW_CLASS_NAME = 'WeDevelop\\ElementalGrid\\Models\\ElementRow';
 
     /**
@@ -72,7 +79,7 @@ final class LegacyElementReader
      */
     public function getElementsForArea(int $areaId, string $stage): array
     {
-        $table = $this->stageTable('BaseElement', $stage);
+        $table = $this->stageTable(self::ELEMENT_TABLE, $stage);
 
         $result = DB::prepared_query(
             "SELECT * FROM \"{$table}\" WHERE \"ParentID\" = ? ORDER BY \"Sort\" ASC",
@@ -123,7 +130,7 @@ final class LegacyElementReader
      *
      * Companion reads (and the per-locale _Localised overlays) are batched the
      * same way as the base read; the FieldLocalised model overlays
-     * BaseElement_Localised onto each base row before classification, mirroring
+     * Element_Localised onto each base row before classification, mirroring
      * the per-element overlay precedence exactly.
      *
      * @param non-empty-string $localeCode Fluent locale code (e.g. 'nl_NL')
@@ -141,7 +148,7 @@ final class LegacyElementReader
             return $this->getElementsForArea($areaId, $stage);
         }
 
-        $table = $this->stageTable('BaseElement', $stage);
+        $table = $this->stageTable(self::ELEMENT_TABLE, $stage);
 
         if ($model === LegacyLocalisationModel::Isolated) {
             $result = DB::prepared_query(
@@ -171,10 +178,10 @@ final class LegacyElementReader
             $allIds[] = $elementId;
         }
 
-        // Overlay BaseElement_Localised first so classification (isRow) and
+        // Overlay Element_Localised first so classification (isRow) and
         // every downstream read see the same values the per-element path did.
         $baseLocalisedMap = $overlayLocale !== null
-            ? $this->prefetchLocalised('BaseElement', $allIds, $overlayLocale, $stage)
+            ? $this->prefetchLocalised(self::ELEMENT_TABLE, $allIds, $overlayLocale, $stage)
             : [];
 
         /** @var list<array{array<string, int|string|null>, positive-int, string, bool}> $prepared */
@@ -427,7 +434,7 @@ final class LegacyElementReader
     }
 
     /**
-     * Build a LegacyElement from a (possibly overlaid) BaseElement row plus its
+     * Build a LegacyElement from a (possibly overlaid) Element row plus its
      * prefetched companion data.
      *
      * @param array<string, int|string|null> $row

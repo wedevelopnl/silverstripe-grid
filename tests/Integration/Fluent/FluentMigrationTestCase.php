@@ -115,6 +115,18 @@ abstract class FluentMigrationTestCase extends SapphireTest
         });
     }
 
+    /** @return list<string> */
+    protected function contentHtmlInLocale(string $localeCode): array
+    {
+        return FluentState::singleton()->withState(function (FluentState $state) use ($localeCode): array {
+            $state->setLocale($localeCode);
+            /** @var list<string> $html */
+            $html = ContentElement::get()->filter(['ParentClass' => Column::class])->column('HTML');
+
+            return $html;
+        });
+    }
+
     protected function sectionCountInLocale(int $pageId, string $localeCode): int
     {
         return FluentState::singleton()->withState(function (FluentState $state) use ($pageId, $localeCode): int {

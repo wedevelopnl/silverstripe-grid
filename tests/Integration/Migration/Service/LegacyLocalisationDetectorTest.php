@@ -47,7 +47,7 @@ final class LegacyLocalisationDetectorTest extends SapphireTest
 
     public function testNoneWhenTheLegacyElementTableIsAbsentEntirely(): void
     {
-        // With no BaseElement table the LocaleID probe never runs, so the detector
+        // With no Element table the LocaleID probe never runs, so the detector
         // must fall back to "no locale column" rather than assuming one exists.
         $this->seeder->dropTables();
 
@@ -79,8 +79,8 @@ final class LegacyLocalisationDetectorTest extends SapphireTest
         $this->seeder->addLocaleIdColumn();
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage(
-            'Ambiguous legacy localisation: both BaseElement_Localised and '
-            . 'BaseElement.LocaleID exist. This mixed Fluent configuration is unsupported.',
+            'Ambiguous legacy localisation: both Element_Localised and '
+            . 'Element.LocaleID exist. This mixed Fluent configuration is unsupported.',
         );
         $this->detector->detect();
     }

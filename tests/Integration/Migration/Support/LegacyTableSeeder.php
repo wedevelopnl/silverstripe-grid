@@ -8,6 +8,7 @@ use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
+use WeDevelop\Grid\Migration\Service\LegacyElementReader;
 
 /**
  * Creates and seeds old elemental module tables for integration tests.
@@ -18,9 +19,11 @@ use SilverStripe\ORM\DB;
  */
 final class LegacyTableSeeder
 {
+    private const string ELEMENT_LOCALISED = LegacyElementReader::ELEMENT_TABLE . '_Localised';
+
     private const array LEGACY_TABLES = [
-        'BaseElement',
-        'BaseElement_Live',
+        LegacyElementReader::ELEMENT_TABLE,
+        LegacyElementReader::ELEMENT_TABLE . '_Live',
         'ElementRow',
         'ElementRow_Live',
         'ElementContent',
@@ -59,8 +62,8 @@ final class LegacyTableSeeder
     {
         $this->assertNoOpenTransaction('createTables');
         $this->ensureDatabaseSelected();
-        $this->createBaseElementTable('BaseElement');
-        $this->createBaseElementTable('BaseElement_Live');
+        $this->createElementTable(LegacyElementReader::ELEMENT_TABLE);
+        $this->createElementTable(LegacyElementReader::ELEMENT_TABLE . '_Live');
         $this->createElementRowTable('ElementRow');
         $this->createElementRowTable('ElementRow_Live');
         $this->createElementContentTable('ElementContent');
@@ -276,7 +279,7 @@ final class LegacyTableSeeder
     }
 
     /**
-     * Seed a BaseElement row.
+     * Seed a legacy element row (the elemental `Element` table).
      *
      * @param array<string, mixed> $overrides Column overrides (e.g. SizeMD, OffsetLG, VisibilityXS)
      */
@@ -288,7 +291,7 @@ final class LegacyTableSeeder
         array $overrides = [],
         string $stage = 'draft',
     ): void {
-        $table = $this->stageTable('BaseElement', $stage);
+        $table = $this->stageTable(LegacyElementReader::ELEMENT_TABLE, $stage);
 
         $defaults = [
             'ID' => $id,
@@ -393,7 +396,7 @@ final class LegacyTableSeeder
     public function addFieldLocalisedTables(): void
     {
         $this->assertNoOpenTransaction('addFieldLocalisedTables');
-        foreach (['BaseElement_Localised', 'BaseElement_Localised_Live'] as $target) {
+        foreach ([self::ELEMENT_LOCALISED, self::ELEMENT_LOCALISED . '_Live'] as $target) {
             DB::query(<<<SQL
                 CREATE TABLE IF NOT EXISTS "{$target}" (
                     "ID" int NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -420,7 +423,7 @@ final class LegacyTableSeeder
     {
         $this->assertNoOpenTransaction('removeFieldLocalisedTables');
         foreach ([
-            'BaseElement_Localised', 'BaseElement_Localised_Live',
+            self::ELEMENT_LOCALISED, self::ELEMENT_LOCALISED . '_Live',
             'ElementContent_Localised', 'ElementContent_Localised_Live',
         ] as $target) {
             DB::query("DROP TABLE IF EXISTS \"{$target}\"");
@@ -430,7 +433,7 @@ final class LegacyTableSeeder
     public function addLocaleIdColumn(): void
     {
         $this->assertNoOpenTransaction('addLocaleIdColumn');
-        foreach (['BaseElement', 'BaseElement_Live'] as $target) {
+        foreach ([LegacyElementReader::ELEMENT_TABLE, LegacyElementReader::ELEMENT_TABLE . '_Live'] as $target) {
             $columns = DB::field_list($target);
             if (!\array_key_exists('LocaleID', $columns)) {
                 DB::query("ALTER TABLE \"{$target}\" ADD COLUMN \"LocaleID\" int NOT NULL DEFAULT 0");
@@ -441,7 +444,7 @@ final class LegacyTableSeeder
     public function removeLocaleIdColumn(): void
     {
         $this->assertNoOpenTransaction('removeLocaleIdColumn');
-        foreach (['BaseElement', 'BaseElement_Live'] as $target) {
+        foreach ([LegacyElementReader::ELEMENT_TABLE, LegacyElementReader::ELEMENT_TABLE . '_Live'] as $target) {
             $columns = DB::field_list($target);
             if (\array_key_exists('LocaleID', $columns)) {
                 DB::query("ALTER TABLE \"{$target}\" DROP COLUMN \"LocaleID\"");
@@ -454,7 +457,7 @@ final class LegacyTableSeeder
      */
     public function seedLocalisedElement(int $recordId, string $locale, array $fields, string $stage = 'draft'): void
     {
-        $target = \strtolower($stage) === 'live' ? 'BaseElement_Localised_Live' : 'BaseElement_Localised';
+        $target = $this->stageTable(self::ELEMENT_LOCALISED, $stage);
         $data = \array_merge(['RecordID' => $recordId, 'Locale' => $locale], $fields);
         $columns = \implode('", "', \array_keys($data));
         $placeholders = \implode(', ', \array_fill(0, \count($data), '?'));
@@ -479,7 +482,7 @@ final class LegacyTableSeeder
         );
     }
 
-    private function createBaseElementTable(string $name): void
+    private function createElementTable(string $name): void
     {
         DB::query(<<<SQL
             CREATE TABLE IF NOT EXISTS "{$name}" (
