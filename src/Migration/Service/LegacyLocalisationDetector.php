@@ -21,12 +21,11 @@ final class LegacyLocalisationDetector
 
     public function detect(): LegacyLocalisationModel
     {
-        // DB::table_list() keys are lowercase; DB::field_list() keys are case-preserving.
-        $tables = DB::table_list();
-        $hasLocalisedTable = \array_key_exists(\strtolower(self::LOCALISED_TABLE), $tables);
+        $hasLocalisedTable = LegacyTables::exists(self::LOCALISED_TABLE);
 
         $hasLocaleIdColumn = false;
-        if (\array_key_exists(\strtolower(LegacyElementReader::ELEMENT_TABLE), $tables)) {
+        if (LegacyTables::exists(LegacyElementReader::ELEMENT_TABLE)) {
+            // DB::field_list() keys are case-preserving.
             $hasLocaleIdColumn = \array_key_exists('LocaleID', DB::field_list(LegacyElementReader::ELEMENT_TABLE));
         }
 

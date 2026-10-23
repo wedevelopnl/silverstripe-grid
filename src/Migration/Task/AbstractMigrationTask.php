@@ -9,7 +9,6 @@ use Override;
 use Psr\Log\LoggerInterface;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\BuildTask;
-use SilverStripe\ORM\DB;
 use SilverStripe\PolyExecution\PolyOutput;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\QuestionHelper;
@@ -22,6 +21,7 @@ use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Migration\Service\LegacyElementReader;
+use WeDevelop\Grid\Migration\Service\LegacyTables;
 use WeDevelop\Grid\Migration\Strategy\AllRowsInSectionStrategy;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
@@ -284,11 +284,9 @@ abstract class AbstractMigrationTask extends BuildTask
      */
     private function missingLegacyElementTablesError(): ?string
     {
-        // DB::table_list() keys are lowercase.
-        $tables = DB::table_list();
         $missing = \array_values(\array_filter(
             [LegacyElementReader::ELEMENT_TABLE, LegacyElementReader::ELEMENT_TABLE . '_Live'],
-            static fn (string $table): bool => !\array_key_exists(\strtolower($table), $tables),
+            static fn (string $table): bool => !LegacyTables::exists($table),
         ));
 
         if ($missing === []) {
