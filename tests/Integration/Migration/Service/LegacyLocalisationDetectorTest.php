@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 use PHPUnit\Framework\Attributes\CoversClass;
 use RuntimeException;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Migration\Service\LegacyLocalisationDetector;
 use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\LegacyTableSeeder;
@@ -64,6 +65,19 @@ final class LegacyLocalisationDetectorTest extends SapphireTest
         $this->seeder->addFieldLocalisedTables();
         self::assertSame(LegacyLocalisationModel::FieldLocalised, $this->detector->detect());
         self::assertTrue($this->detector->hasLocalisedContent());
+    }
+
+    public function testNoneWhenOnlyAHandMadeBaseElementLocalisedTableExists(): void
+    {
+        // A hand-added workaround copy under the old wrong name is not the
+        // elemental 5.x table and must not make the site read as field-localised.
+        DB::query('CREATE TABLE IF NOT EXISTS "BaseElement_Localised" ("ID" int NOT NULL PRIMARY KEY)');
+
+        try {
+            self::assertSame(LegacyLocalisationModel::None, $this->detector->detect());
+        } finally {
+            DB::query('DROP TABLE IF EXISTS "BaseElement_Localised"');
+        }
     }
 
     public function testIsolatedWhenLocaleIdColumnPresent(): void
