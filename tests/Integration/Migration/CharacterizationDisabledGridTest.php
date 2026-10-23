@@ -82,7 +82,7 @@ final class CharacterizationDisabledGridTest extends CharacterizationTestCase
             dryRun: false,
             pageIds: [$pageId1, $pageId2],
             reconcileDisabledPages: true,
-        );
+        )->pagesFailed;
         self::assertSame(0, $failures, 'Both pages process without failures');
 
         // ── Page 2: grid-disabled — no content on EITHER stage ───────

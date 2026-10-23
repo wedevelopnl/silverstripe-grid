@@ -67,9 +67,9 @@ class MigrateGridTask extends AbstractMigrationTask
         bool $dryRun,
         ?array $pageIds,
         bool $stopOnFirstFailure,
-    ): int {
+    ): array {
         $service = new GridMigrationService($reader, $mapper, $strategy, $logger);
 
-        return $service->run($defaultViewport, $zone, $viewportKeyMap, $dryRun, $pageIds, stopOnFirstFailure: $stopOnFirstFailure);
+        return ['' => $service->run($defaultViewport, $zone, $viewportKeyMap, $dryRun, $pageIds, stopOnFirstFailure: $stopOnFirstFailure)];
     }
 }

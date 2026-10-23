@@ -80,7 +80,7 @@ abstract class CharacterizationTestCase extends MigrationTestCase
             self::VIEWPORT_KEY_MAP,
             dryRun: false,
             pageIds: [$pageId],
-        );
+        )->pagesFailed;
 
         self::assertSame(0, $failures, 'Migration should complete without failures');
     }

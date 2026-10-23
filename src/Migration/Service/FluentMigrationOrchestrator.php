@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Migration\Service;
 use Psr\Log\LoggerInterface;
 use TractorCow\Fluent\Model\Locale;
 use TractorCow\Fluent\State\FluentState;
+use WeDevelop\Grid\Migration\DTO\MigrationSummary;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
 
@@ -44,7 +45,8 @@ final readonly class FluentMigrationOrchestrator
      * @param list<int>|null $pageIds
      * @param bool $stopOnFirstFailure When true, halt the batch after the first page that
      *     fails to migrate. Forwarded to each per-locale {@see GridMigrationService::run()}.
-     * @return int<0, max> Total pages that failed to migrate across all locales
+     * @return array<non-empty-string, MigrationSummary> One summary per locale pass, keyed by
+     *     locale code in pass order. Never summed: a page converted in two locales is not two pages.
      */
     public function run(
         string $defaultViewport,
@@ -53,16 +55,16 @@ final readonly class FluentMigrationOrchestrator
         bool $dryRun = false,
         ?array $pageIds = null,
         bool $stopOnFirstFailure = false,
-    ): int {
+    ): array {
         $model = $this->detector->detect();
 
         $default = Locale::getDefault();
         $defaultCode = $default?->Locale;
 
-        $failures = 0;
+        $summaries = [];
         foreach ($this->localePlan($model) as $localeCode => $localeId) {
             $isDefault = $localeCode === $defaultCode;
-            $failures += FluentState::singleton()->withState(
+            $summaries[$localeCode] = FluentState::singleton()->withState(
                 function (FluentState $state) use (
                     $localeCode,
                     $localeId,
@@ -74,7 +76,7 @@ final readonly class FluentMigrationOrchestrator
                     $pageIds,
                     $isDefault,
                     $stopOnFirstFailure,
-                ): int {
+                ): MigrationSummary {
                     $state->setLocale($localeCode);
 
                     $this->logger->info('Migrating locale {locale}{default}.', [
@@ -93,7 +95,7 @@ final readonly class FluentMigrationOrchestrator
             );
         }
 
-        return $failures;
+        return $summaries;
     }
 
     /**

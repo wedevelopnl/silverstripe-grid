@@ -82,7 +82,7 @@ final class CharacterizationSharedElementsTest extends CharacterizationTestCase
             dryRun: false,
             pageIds: [$pageId1, $pageId2],
             reconcileDisabledPages: true,
-        );
+        )->pagesFailed;
         self::assertSame(0, $failures, 'Both pages migrate without failures');
 
         $page1Draft = MigrationTreeSnapshot::snapshotTree($pageId1, Page::class, self::ZONE, Versioned::DRAFT);

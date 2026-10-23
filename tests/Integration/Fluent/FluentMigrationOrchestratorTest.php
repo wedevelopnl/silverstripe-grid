@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use TractorCow\Fluent\Model\Locale;
+use WeDevelop\Grid\Migration\DTO\MigrationSummary;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
@@ -69,7 +70,7 @@ final class FluentMigrationOrchestratorTest extends FluentMigrationTestCase
         );
     }
 
-    public function testFailuresAreAccumulatedAcrossEveryPageAndEveryLocalePass(): void
+    public function testFailuresAreCountedPerLocalePassAcrossEveryPage(): void
     {
         $firstPageId = $this->pageId();
         $this->seeder->seedPage($firstPageId, 100);
@@ -84,33 +85,37 @@ final class FluentMigrationOrchestratorTest extends FluentMigrationTestCase
 
         $this->seeder->addFieldLocalisedTables();
 
-        // Every element write is rejected, so both pages fail in both locales. The
-        // expected total of 4 pins three defaults at once: the batch does not stop at the
-        // first failing page, and the per-locale counts are summed (not overwritten or
-        // subtracted).
+        // Every element write is rejected, so both pages fail in both locales. Two
+        // failures per locale pins both defaults at once: the batch does not stop at the
+        // first failing page, and every locale pass reports its own count (a page that
+        // fails in two locales is not two pages).
         GridElement::add_extension(RejectAllWritesExtension::class);
 
         try {
-            $failures = $this->makeOrchestrator(new NullLogger())
+            $summaries = $this->makeOrchestrator(new NullLogger())
                 ->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$firstPageId, $secondPageId]);
         } finally {
             GridElement::remove_extension(RejectAllWritesExtension::class);
         }
 
-        self::assertSame(4, $failures, '2 pages x 2 locales, accumulated');
+        self::assertSame(
+            ['en_US' => 2, 'nl_NL' => 2],
+            \array_map(static fn (MigrationSummary $summary): int => $summary->pagesFailed, $summaries),
+            '2 pages fail in each locale pass',
+        );
     }
 
-    public function testRunReturnsZeroWhenNoDefaultLocaleResolves(): void
+    public function testRunReturnsNoPassWhenNoDefaultLocaleResolves(): void
     {
         // No locales at all: the default-locale lookup returns null and the plan is empty.
         // The reader of $default->Locale must tolerate that rather than dereference null.
         Locale::get()->removeAll();
         Locale::clearCached();
 
-        $failures = $this->makeOrchestrator(new NullLogger())
+        $summaries = $this->makeOrchestrator(new NullLogger())
             ->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP);
 
-        self::assertSame(0, $failures);
+        self::assertSame([], $summaries);
     }
 
     public function testRunWritesByDefaultRatherThanDryRunning(): void
@@ -120,10 +125,10 @@ final class FluentMigrationOrchestratorTest extends FluentMigrationTestCase
         $this->seeder->seedElement(1, 100, self::CONTENT_CLASS, 1, ['Title' => 'Hello']);
 
         // dryRun is not passed: the default must be "actually write".
-        $failures = $this->makeOrchestrator(new NullLogger())
+        $summaries = $this->makeOrchestrator(new NullLogger())
             ->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP);
 
-        self::assertSame(0, $failures);
+        self::assertSame(0, $summaries['en_US']->pagesFailed);
         self::assertGreaterThan(0, Section::get()->count(), 'a non-dry run must persist the migrated hierarchy');
     }
 }

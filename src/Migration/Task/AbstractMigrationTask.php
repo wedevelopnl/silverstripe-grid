@@ -16,6 +16,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
+use WeDevelop\Grid\Migration\DTO\MigrationSummary;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
@@ -177,7 +178,7 @@ abstract class AbstractMigrationTask extends BuildTask
 
         $strategy = $this->createStrategy($strategyName, $grouper, $mapper, $defaultViewport, $viewportKeyMap, $logger);
 
-        $failures = $this->performMigration(
+        $summaries = $this->performMigration(
             $reader,
             $mapper,
             $strategy,
@@ -190,12 +191,25 @@ abstract class AbstractMigrationTask extends BuildTask
             $stopOnFirstFailure,
         );
 
-        if ($failures > 0) {
-            $output->writeln(\sprintf('%d page(s) failed to migrate. Check logs for details.', $failures));
-            return Command::FAILURE;
+        $exitCode = Command::SUCCESS;
+        foreach ($summaries as $localeCode => $summary) {
+            $output->writeln(\sprintf(
+                '%s%s %d page(s) and %d content block(s); %d page(s) skipped as already migrated, %d failed.',
+                $localeCode === '' ? '' : "[{$localeCode}] ",
+                $dryRun ? 'Would migrate' : 'Migrated',
+                $summary->pagesMigrated,
+                $summary->blocksMigrated,
+                $summary->pagesSkipped,
+                $summary->pagesFailed,
+            ));
+
+            if ($summary->pagesFailed > 0) {
+                $output->writeln('Check logs for details.');
+                $exitCode = Command::FAILURE;
+            }
         }
 
-        return Command::SUCCESS;
+        return $exitCode;
     }
 
     private function writeRequirementsBanner(PolyOutput $output): void
@@ -278,7 +292,8 @@ abstract class AbstractMigrationTask extends BuildTask
      *
      * @param array<string, string> $viewportKeyMap
      * @param list<int>|null $pageIds
-     * @return int<0, max> Number of pages that failed to migrate
+     * @return array<string, MigrationSummary> One summary per migration pass, keyed by locale
+     *     code; a pass without locale context is keyed by ''
      */
     abstract protected function performMigration(
         LegacyDataReader $reader,
@@ -291,7 +306,7 @@ abstract class AbstractMigrationTask extends BuildTask
         bool $dryRun,
         ?array $pageIds,
         bool $stopOnFirstFailure,
-    ): int;
+    ): array;
 
     /**
      * Build the FieldMapper used for the migration, allowing extensions to
