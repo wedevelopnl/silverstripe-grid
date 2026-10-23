@@ -9,6 +9,7 @@ use SilverStripe\Dev\Deprecation;
 use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
+use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
 use WeDevelop\Grid\Migration\DTO\LegacyRowData;
 use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
 
@@ -47,26 +48,7 @@ final class LegacyElementReader
      */
     public const array VIEWPORT_KEYS = ['XS', 'SM', 'MD', 'LG', 'XL'];
 
-    private const array MEDIA_FIELDS = [
-        'HTML',
-        'ContentColumns',
-        'ContentVerticalAlign',
-        'ExtraColumnGap',
-        'MediaType',
-        'MediaCaption',
-        'MediaRatio',
-        'MediaPosition',
-        'MediaImageID',
-        'MediaVideoFullURL',
-        'MediaVideoProvider',
-        'MediaVideoHasOverlay',
-        'MediaVideoCustomThumbnailID',
-        'MediaVideoEmbeddedName',
-        'MediaVideoEmbeddedURL',
-        'MediaVideoEmbeddedDescription',
-        'MediaVideoEmbeddedThumbnail',
-        'MediaVideoEmbeddedCreated',
-    ];
+    private const array MEDIA_FIELDS = ['HTML', ...MappedMediaFields::LEGACY_COLUMNS];
 
     /**
      * Load all legacy elements for an ElementalArea, sorted by position.

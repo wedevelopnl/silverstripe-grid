@@ -10,7 +10,9 @@ namespace WeDevelop\Grid\Migration\DTO;
 final readonly class MappedMediaFields
 {
     /**
-     * Legacy ElementContentExtension column each field is mapped from.
+     * Legacy ElementContentExtension column each field is mapped from — the one
+     * list of legacy media columns: LegacyElementReader reads these, FieldMapper
+     * warns when one is absent, DroppedMediaCollector reports them.
      *
      * @var array<non-empty-string, non-empty-string>
      */

@@ -55,31 +55,6 @@ final class FieldMapper
     /** Ordered list of old viewport keys the mapper iterates over for overrides. */
     private const array OLD_VIEWPORTS = ['XS', 'SM', 'MD', 'LG', 'XL'];
 
-    /**
-     * Subset of LegacyElementReader::MEDIA_FIELDS that mapMediaFields() actually reads.
-     * HTML is excluded — it is carried by LegacyElement->extraData, not mapped here.
-     * Used to detect schema-missing columns (key entirely absent from LegacyMediaData::$fields).
-     */
-    private const array EXPECTED_MEDIA_KEYS = [
-        'ContentColumns',
-        'ContentVerticalAlign',
-        'ExtraColumnGap',
-        'MediaType',
-        'MediaCaption',
-        'MediaRatio',
-        'MediaPosition',
-        'MediaImageID',
-        'MediaVideoFullURL',
-        'MediaVideoProvider',
-        'MediaVideoHasOverlay',
-        'MediaVideoCustomThumbnailID',
-        'MediaVideoEmbeddedName',
-        'MediaVideoEmbeddedURL',
-        'MediaVideoEmbeddedDescription',
-        'MediaVideoEmbeddedThumbnail',
-        'MediaVideoEmbeddedCreated',
-    ];
-
     /** @var array<string, string> */
     private array $classNameMap;
 
@@ -188,7 +163,7 @@ final class FieldMapper
         // present in the row). An empty/null value is normal data and must not warn.
         /** @var list<string> $absentColumns */
         $absentColumns = \array_values(\array_filter(
-            self::EXPECTED_MEDIA_KEYS,
+            MappedMediaFields::LEGACY_COLUMNS,
             static fn (string $key): bool => !\array_key_exists($key, $fields),
         ));
 
