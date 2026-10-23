@@ -28,11 +28,13 @@ use WeDevelop\Grid\Value\Viewport;
 abstract class AbstractMigrationTask extends BuildTask
 {
     /**
-     * The only source the migration is built and tested against. Older
-     * elemental-grid releases store a different legacy schema; supporting them
-     * would multiply the mapping paths, so the operator upgrades the source first.
+     * The only source the migration is built and tested against, for both plain
+     * Elemental and elemental-grid sites. Older releases store a different legacy
+     * schema; supporting them would multiply the mapping paths, so the operator
+     * upgrades the source first.
      */
-    public const string SUPPORTED_SOURCE = 'SilverStripe 5.4.x with wedevelopnl/silverstripe-elemental-grid 5.1.5';
+    public const string SUPPORTED_SOURCE = 'SilverStripe 5.4.x with dnadesign/silverstripe-elemental 5.4.x '
+        . '(and wedevelopnl/silverstripe-elemental-grid 5.1.5, if the site uses it)';
 
     /**
      * Each destructive run needs every acknowledgement, from its flag or an
