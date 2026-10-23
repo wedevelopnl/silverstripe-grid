@@ -22,11 +22,11 @@ final class MigrateGridSingleSectionTaskTest extends MigrationTestCase
      */
     private function executeTask(array $options): int
     {
-        // Inject --force so the new confirmation gate doesn't block non-interactive tests,
-        // and --strategy=single-section to select the AllRowsInSection strategy (the
+        // Inject the acknowledgements so the confirmation gate doesn't block non-interactive
+        // tests, and --strategy=single-section to select the AllRowsInSection strategy (the
         // behaviour the former MigrateRowsToSingleSectionTask hard-coded).
         // Using += preserves any per-test override (e.g. --dry-run).
-        $options += ['--force' => true, '--strategy' => 'single-section'];
+        $options += TaskRunner::ACKNOWLEDGED + ['--strategy' => 'single-section'];
 
         return TaskRunner::run(new MigrateGridTask(), $options)['exitCode'];
     }

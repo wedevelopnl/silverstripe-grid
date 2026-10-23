@@ -27,15 +27,15 @@ final class MigrateGridTaskTest extends MigrationTestCase
      */
     private function executeTask(array $options): int
     {
-        // Inject --force so the new confirmation gate doesn't block non-interactive tests.
-        // Using += preserves any per-test override.
-        $options += ['--force' => true];
+        // Inject the acknowledgements so the confirmation gate doesn't block non-interactive
+        // tests. Using += preserves any per-test override.
+        $options += TaskRunner::ACKNOWLEDGED;
 
         return $this->executeTaskRaw($options)['exitCode'];
     }
 
     /**
-     * Execute the task without injecting --force, non-interactively.
+     * Execute the task without injecting the acknowledgements, non-interactively.
      *
      * @param array<string, mixed> $options
      * @return array{exitCode: int, output: string}
@@ -47,11 +47,11 @@ final class MigrateGridTaskTest extends MigrationTestCase
 
     /**
      * Execute the task with an interactive STDIN-style stream so the destructive
-     * confirmation prompt is actually answered (rather than skipped via --force or
-     * --dry-run), exercising the real [y/N] gate.
+     * confirmation prompts are actually answered (rather than skipped via the
+     * acknowledgement flags or --dry-run), exercising the real [y/N] gate.
      *
      * @param array<string, mixed> $options
-     * @param string               $answer Raw stream content fed to the prompt (e.g. "y\n" or "n\n")
+     * @param string               $answer Raw stream content fed to the prompts, one line per question (e.g. "y\ny\n")
      * @return array{exitCode: int, output: string}
      */
     private function executeTaskInteractive(array $options, string $answer): array
@@ -108,7 +108,7 @@ final class MigrateGridTaskTest extends MigrationTestCase
             '--default-viewport' => 'MD',
             '--zone' => 'main',
             '--strategy' => 'single',
-            '--force' => true,
+            ...TaskRunner::ACKNOWLEDGED,
         ]);
 
         self::assertSame(Command::FAILURE, $result['exitCode']);
@@ -186,7 +186,7 @@ final class MigrateGridTaskTest extends MigrationTestCase
         self::assertCount(2, $sections);
     }
 
-    public function testNonInteractiveRefusesWithoutForce(): void
+    public function testNonInteractiveRefusesWithoutAcknowledgementsAndNamesEveryMissingFlag(): void
     {
         $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
@@ -198,12 +198,30 @@ final class MigrateGridTaskTest extends MigrationTestCase
 
         self::assertSame(Command::FAILURE, $result['exitCode']);
         self::assertStringContainsString('Refusing to run', $result['output']);
+        self::assertStringContainsString('--confirm-source-up-to-date --confirm-backup', $result['output']);
         self::assertCount(0, Section::get());
         self::assertCount(0, Row::get());
         self::assertCount(0, Column::get());
     }
 
-    public function testDryRunBypassesConfirmationGateWithoutForce(): void
+    public function testNonInteractiveRefusesWithOnlyOneAcknowledgement(): void
+    {
+        $pageId = $this->pageId();
+        $this->seedStandardPage($pageId);
+
+        // Each acknowledgement guards a different precondition; one never stands in for the other.
+        $result = $this->executeTaskRaw([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--confirm-source-up-to-date' => true,
+        ]);
+
+        self::assertSame(Command::FAILURE, $result['exitCode']);
+        self::assertStringContainsString('acknowledge with --confirm-backup to run', $result['output']);
+        self::assertCount(0, Section::get());
+    }
+
+    public function testDryRunShowsTheRequirementsBannerAndNeedsNoAcknowledgement(): void
     {
         $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
@@ -215,23 +233,44 @@ final class MigrateGridTaskTest extends MigrationTestCase
         ]);
 
         self::assertSame(Command::SUCCESS, $result['exitCode']);
+        self::assertStringContainsString(MigrateGridTask::SUPPORTED_SOURCE, $result['output']);
+        self::assertStringContainsString('Back up the database first', $result['output']);
         self::assertCount(0, Section::get());
         self::assertCount(0, Row::get());
         self::assertCount(0, Column::get());
     }
 
-    public function testInteractiveConfirmationAcceptedRunsMigration(): void
+    public function testInteractiveConfirmationOfBothQuestionsRunsMigration(): void
     {
         $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
-        // Answering "y" at the [y/N] prompt proceeds with the destructive write.
         $result = $this->executeTaskInteractive([
             '--default-viewport' => 'MD',
             '--zone' => 'main',
+        ], "y\ny\n");
+
+        self::assertSame(Command::SUCCESS, $result['exitCode']);
+        self::assertStringContainsString(MigrateGridTask::SUPPORTED_SOURCE . '?', $result['output']);
+        self::assertStringContainsString('restorable backup', $result['output']);
+        self::assertCount(1, Section::get()->filter(['ParentID' => $pageId, 'Zone' => 'main']));
+    }
+
+    public function testInteractiveRunAsksOnlyTheQuestionItsFlagsLeaveOpen(): void
+    {
+        $pageId = $this->pageId();
+        $this->seedStandardPage($pageId);
+
+        // The flag answers the version question, so the single "y" answers the backup one.
+        $result = $this->executeTaskInteractive([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--confirm-source-up-to-date' => true,
         ], "y\n");
 
         self::assertSame(Command::SUCCESS, $result['exitCode']);
+        self::assertStringNotContainsString(MigrateGridTask::SUPPORTED_SOURCE . '?', $result['output']);
+        self::assertStringContainsString('restorable backup', $result['output']);
         self::assertCount(1, Section::get()->filter(['ParentID' => $pageId, 'Zone' => 'main']));
     }
 
@@ -257,7 +296,7 @@ final class MigrateGridTaskTest extends MigrationTestCase
         $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
 
-        // Answering "n" at the [y/N] prompt aborts without writing anything.
+        // Answering "n" at the version question aborts without asking about the backup.
         $result = $this->executeTaskInteractive([
             '--default-viewport' => 'MD',
             '--zone' => 'main',
@@ -265,9 +304,25 @@ final class MigrateGridTaskTest extends MigrationTestCase
 
         self::assertSame(Command::SUCCESS, $result['exitCode']);
         self::assertStringContainsString('Migration aborted.', $result['output']);
+        self::assertStringNotContainsString('restorable backup', $result['output']);
         self::assertCount(0, Section::get());
         self::assertCount(0, Row::get());
         self::assertCount(0, Column::get());
+    }
+
+    public function testDecliningTheBackupQuestionAbortsAfterTheVersionWasConfirmed(): void
+    {
+        $pageId = $this->pageId();
+        $this->seedStandardPage($pageId);
+
+        $result = $this->executeTaskInteractive([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+        ], "y\nn\n");
+
+        self::assertSame(Command::SUCCESS, $result['exitCode']);
+        self::assertStringContainsString('Migration aborted.', $result['output']);
+        self::assertCount(0, Section::get());
     }
 
     public function testFailedPageMigrationReportsFailureCount(): void
@@ -289,7 +344,7 @@ final class MigrateGridTaskTest extends MigrationTestCase
             $result = $this->executeTaskRaw([
                 '--default-viewport' => 'MD',
                 '--zone' => 'main',
-                '--force' => true,
+                ...TaskRunner::ACKNOWLEDGED,
             ]);
 
             self::assertSame(Command::FAILURE, $result['exitCode']);
@@ -590,7 +645,7 @@ final class MigrateGridTaskTest extends MigrationTestCase
             '--default-viewport' => 'MD',
             '--zone' => 'main',
             '--viewport-map' => 'MD=md,BROKEN,XL=xl',
-            '--force' => true,
+            ...TaskRunner::ACKNOWLEDGED,
         ]);
 
         self::assertSame(Command::FAILURE, $result['exitCode']);
@@ -653,7 +708,7 @@ final class MigrateGridTaskTest extends MigrationTestCase
             $result = $this->executeTaskRaw([
                 '--default-viewport' => 'MD',
                 '--zone' => 'main',
-                '--force' => true,
+                ...TaskRunner::ACKNOWLEDGED,
                 '--stop-on-first-failure' => true,
             ]);
 
@@ -692,7 +747,7 @@ final class MigrateGridTaskTest extends MigrationTestCase
             $result = $this->executeTaskRaw([
                 '--default-viewport' => 'MD',
                 '--zone' => 'main',
-                '--force' => true,
+                ...TaskRunner::ACKNOWLEDGED,
                 // --stop-on-first-failure is absent — both pages must be attempted
             ]);
 

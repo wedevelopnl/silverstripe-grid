@@ -9,7 +9,7 @@ The migration runs as a `BuildTask`, is idempotent, supports dry-runs, and handl
 
 ## Requirements
 
-- **The source site must be a working SilverStripe 5 site.** This migration does not support a SilverStripe 4 database that has skipped the SS4→SS5 upgrade. If you are on SS4, perform SilverStripe's standard SS4→SS5 upgrade first, then upgrade to SS6 and run this migration.
+- **The source site must run SilverStripe 5.4.x with `wedevelopnl/silverstripe-elemental-grid` 5.1.5.** The migration is built and tested against the legacy schema of exactly those versions; older elemental-grid releases store their content differently and are not supported. Upgrade the source site to both versions (and run `dev/build` there) before you upgrade it to SS6. A SilverStripe 4 site performs SilverStripe's standard SS4→SS5 upgrade first. The task cannot read these versions from the database, so it asks you to confirm them — see [Confirmation prompts](#confirmation-prompts).
 - This module is installed, configured and `dev/build` has been run successfully.
 - The legacy database tables (`BaseElement`, `ElementalArea`, `ElementContent`, optionally `ElementRow`) are still present in the database. The old PHP code does **not** need to be installed — the migration reads the old tables via raw SQL.
 - The `SS_GRID_ADAPTER` environment variable **must** be set to a bundled preset (`bootstrap` or `tailwind`, case-insensitive) or to the fully-qualified class name of a custom adapter implementing `GridAdapterInterface`. There is no default: when the variable is unset, empty, or invalid the container throws a `RuntimeException` at boot, which aborts `dev/build` **and** every migration task before any work is done. Set it in your environment (e.g. `.env`) before migrating.
@@ -18,7 +18,7 @@ The migration runs as a `BuildTask`, is idempotent, supports dry-runs, and handl
 
 Read this section before running the task on a production database.
 
-- **Back up your database.** The migration writes into `GridElement`, `GridElement_Live`, `Section`, `Row`, `Column` and `ContentElement` tables and performs Versioned draft/live reconciliation. A bad run is difficult to unwind without a backup.
+- **Back up your database.** The migration writes into `GridElement`, `GridElement_Live`, `Section`, `Row`, `Column` and `ContentElement` tables and performs Versioned draft/live reconciliation. A bad run is difficult to unwind without a backup. The task asks you to confirm the backup exists before it writes anything.
 - **Element IDs change.** Migrated content elements receive new primary keys when inserted into `GridElement`. External references to the old `BaseElement` IDs (shortcodes in other content, custom reports, outbound links) will not follow automatically.
 - **Legacy tables are left intact.** The tool does not drop `BaseElement`, `ElementRow`, `ElementContent`, or `ElementalArea`. Orphaned rows in those tables let you re-run the migration if something looks wrong. Drop them manually once you are satisfied with the result.
 - **Only `ElementContent` is mapped by default.** The built-in field mapper converts `DNADesign\Elemental\Models\ElementContent` to `WeDevelop\Grid\Model\ContentElement`. Any custom element subclass must either already extend `GridElement`, or be registered via the `updateClassNameMapping` extension hook described in [Customising the Migration](#customising-the-migration).
@@ -121,26 +121,35 @@ Page "About Us"
 vendor/bin/sake tasks:migrate-grid \
     --default-viewport=MD --zone=main --strategy=sections --dry-run
 
-# Full migration — prompts for confirmation before writing anything
+# Full migration — asks you to confirm the source versions and your backup before writing anything
 vendor/bin/sake tasks:migrate-grid \
     --default-viewport=MD --zone=main --strategy=sections
 
-# Full migration, non-interactive (CI, scripts): --force skips the confirmation prompt
+# Full migration, non-interactive (CI, scripts): both acknowledgements are required
 vendor/bin/sake tasks:migrate-grid \
-    --default-viewport=MD --zone=main --strategy=sections --force
+    --default-viewport=MD --zone=main --strategy=sections \
+    --confirm-source-up-to-date --confirm-backup
 
 # Migrate specific pages only (useful for staged rollouts)
 vendor/bin/sake tasks:migrate-grid \
-    --default-viewport=MD --zone=main --strategy=sections --page-ids=1,5,12 --force
+    --default-viewport=MD --zone=main --strategy=sections --page-ids=1,5,12 \
+    --confirm-source-up-to-date --confirm-backup
 ```
 
 Replace `--strategy=sections` with `--strategy=single-section` to use Strategy B. The `--strategy` option defaults to `sections` when omitted.
 
-### Confirmation prompt
+### Confirmation prompts
 
-Because the migration writes into live tables, a run without `--dry-run` asks for an interactive `[y/N]` confirmation before any data is written. Answering anything other than `y`/`yes` aborts the run with a successful exit code and no database changes.
+Every run, dry runs included, opens with a banner restating the two preconditions: the supported source versions, and that the migration cannot be undone without a backup.
 
-When stdin is not a TTY (CI pipelines, `sake` called from a script), there is nothing to prompt — the task refuses to run and exits with a failure code. Pass `--force` in those contexts to acknowledge that the run is intentional. `--force` has **no short form**: `sake` reserves `-f` for its global `--flush`, so passing `-f` does not set `--force` and the non-interactive run is still refused. `--dry-run` always bypasses the prompt.
+A run without `--dry-run` then asks two `[y/N]` questions before any data is written:
+
+1. Is the source site on SilverStripe 5.4.x with `wedevelopnl/silverstripe-elemental-grid` 5.1.5?
+2. Do you have a restorable backup of this database?
+
+Answering anything other than `y`/`yes` to either aborts the run with a successful exit code and no database changes. Passing `--confirm-source-up-to-date` or `--confirm-backup` answers its question in advance, so only the remaining one is asked.
+
+When stdin is not a TTY (CI pipelines, `sake` called from a script), there is nothing to prompt: the task refuses to run, names the missing flags and exits with a failure code unless **both** flags are passed. There is deliberately no single flag that skips both questions. `--dry-run` never asks.
 
 ### Options Reference
 
@@ -149,8 +158,9 @@ When stdin is not a TTY (CI pipelines, `sake` called from a script), there is no
 | `--default-viewport` | yes | — | Legacy viewport key used as the default for the new `GridSettings`. The element's value in this viewport becomes `default`; other viewports are written as overrides only when they differ. |
 | `--zone` | yes | — | Zone name for the created Sections. Sort order is scoped per zone. |
 | `--strategy` | no | `sections` | Row mapping strategy: `sections` (one Section per legacy ElementRow) or `single-section` (all rows under one Section per page). Default `sections`. |
-| `--dry-run` | no | (flag) | Log planned writes and skip all database changes. Bypasses the confirmation prompt. Exit code is 0 on success even when nothing was written. |
-| `--force` | no | (flag) | Skip the interactive confirmation prompt. Required for non-interactive runs (CI, piped invocations) when not using `--dry-run`. No short form (`-f` is reserved by `sake` for `--flush`). |
+| `--dry-run` | no | (flag) | Log planned writes and skip all database changes. Asks no confirmation questions. Exit code is 0 on success even when nothing was written. |
+| `--confirm-source-up-to-date` | no | (flag) | Acknowledge the source site is on SilverStripe 5.4.x with `wedevelopnl/silverstripe-elemental-grid` 5.1.5, answering that question in advance. Required, together with `--confirm-backup`, for non-interactive runs when not using `--dry-run`. |
+| `--confirm-backup` | no | (flag) | Acknowledge a restorable database backup exists, answering that question in advance. Required, together with `--confirm-source-up-to-date`, for non-interactive runs when not using `--dry-run`. |
 | `--viewport-map` | no | — | Map legacy viewport keys to the active adapter's viewport keys, as comma-separated `OLD=new` pairs (e.g. `MD=desktop,LG=widescreen`). Derived automatically via case-insensitive matching when omitted — provide this explicitly when migrating across CSS frameworks with different viewport names. A pair that is malformed, names an unknown legacy key, or names a viewport the active adapter does not expose aborts the run. |
 | `--page-ids` | no | — | Comma-separated page IDs to migrate. If omitted, all eligible pages are migrated. |
 | `--stop-on-first-failure` | no | (flag) | Halt the batch on the first page that fails to migrate. By default the task continues past failures and logs the failing page IDs at the end. |
