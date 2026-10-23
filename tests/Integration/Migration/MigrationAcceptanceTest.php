@@ -10,6 +10,7 @@ use Psr\Log\NullLogger;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
+use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\GridMigrationService;
@@ -1491,7 +1492,7 @@ final class MigrationAcceptanceTest extends MigrationTestCase
         $mapper = new FieldMapper();
         $grouper = new ElementGrouper();
         $strategy = new RowPerSectionStrategy($grouper, $mapper, $viewport, $keyMap);
-        $service = new GridMigrationService($reader, $mapper, $strategy, new NullLogger());
+        $service = new GridMigrationService($reader, $mapper, $strategy, new NullLogger(), new DroppedMediaCollector());
         $failures = $service->run($viewport, self::ZONE, $keyMap, false, [$pageId])->pagesFailed;
         self::assertSame(0, $failures, 'Migration should complete without failures');
     }
@@ -1507,7 +1508,7 @@ final class MigrationAcceptanceTest extends MigrationTestCase
         $mapper = new FieldMapper();
         $grouper = new ElementGrouper();
         $strategy = new AllRowsInSectionStrategy($grouper, $mapper, $viewport, $keyMap, new NullLogger());
-        $service = new GridMigrationService($reader, $mapper, $strategy, new NullLogger());
+        $service = new GridMigrationService($reader, $mapper, $strategy, new NullLogger(), new DroppedMediaCollector());
         $failures = $service->run($viewport, self::ZONE, $keyMap, false, [$pageId])->pagesFailed;
         self::assertSame(0, $failures, 'Migration should complete without failures');
     }

@@ -8,6 +8,7 @@ use Psr\Log\LoggerInterface;
 use RuntimeException;
 use TractorCow\Fluent\Model\Locale;
 use TractorCow\Fluent\State\FluentState;
+use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
@@ -73,6 +74,7 @@ class MigrateGridWithFluentTask extends AbstractMigrationTask
         bool $dryRun,
         ?array $pageIds,
         bool $stopOnFirstFailure,
+        DroppedMediaCollector $droppedMedia,
     ): array {
         $orchestrator = new FluentMigrationOrchestrator(
             $reader,
@@ -80,6 +82,7 @@ class MigrateGridWithFluentTask extends AbstractMigrationTask
             $mapper,
             $strategy,
             $logger,
+            $droppedMedia,
         );
 
         return $orchestrator->run($defaultViewport, $zone, $viewportKeyMap, $dryRun, $pageIds, $stopOnFirstFailure);

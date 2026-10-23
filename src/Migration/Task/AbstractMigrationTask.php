@@ -17,6 +17,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\DTO\MigrationSummary;
+use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
@@ -178,6 +179,7 @@ abstract class AbstractMigrationTask extends BuildTask
         $grouper = new ElementGrouper();
 
         $strategy = $this->createStrategy($strategyName, $grouper, $mapper, $defaultViewport, $viewportKeyMap, $logger);
+        $droppedMedia = new DroppedMediaCollector();
 
         $summaries = $this->performMigration(
             $reader,
@@ -190,6 +192,7 @@ abstract class AbstractMigrationTask extends BuildTask
             $dryRun,
             $pageIds,
             $stopOnFirstFailure,
+            $droppedMedia,
         );
 
         $exitCode = Command::SUCCESS;
@@ -210,7 +213,31 @@ abstract class AbstractMigrationTask extends BuildTask
             }
         }
 
+        $this->reportDroppedMedia($droppedMedia, $output, $logger);
+
         return $exitCode;
+    }
+
+    /**
+     * One line for the whole run, after every per-locale summary: the values
+     * stay in the legacy tables, so the settings are named by their legacy columns.
+     */
+    private function reportDroppedMedia(DroppedMediaCollector $droppedMedia, PolyOutput $output, LoggerInterface $logger): void
+    {
+        $blockCount = $droppedMedia->blockCount();
+        if ($blockCount === 0) {
+            return;
+        }
+
+        $message = \sprintf(
+            '%d text block(s) had media settings that were not carried over: %s. '
+            . 'No column holds them; the values remain in the legacy ElementContent tables.',
+            $blockCount,
+            \implode(', ', $droppedMedia->columns()),
+        );
+
+        $logger->warning($message);
+        $output->writeln(\sprintf('<comment>%s</comment>', $message));
     }
 
     private function writeRequirementsBanner(PolyOutput $output): void
@@ -330,6 +357,7 @@ abstract class AbstractMigrationTask extends BuildTask
         bool $dryRun,
         ?array $pageIds,
         bool $stopOnFirstFailure,
+        DroppedMediaCollector $droppedMedia,
     ): array;
 
     /**

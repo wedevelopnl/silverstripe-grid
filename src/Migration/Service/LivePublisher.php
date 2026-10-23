@@ -41,6 +41,7 @@ final class LivePublisher
         private readonly DraftHierarchyWriter $draftWriter,
         private readonly LoggerInterface $logger,
         private readonly RowMappingStrategy $strategy,
+        private readonly DroppedMediaCollector $droppedMedia,
     ) {}
 
     /**
@@ -123,7 +124,7 @@ final class LivePublisher
                 // since writeToStage copied draft content to live. The Sort is
                 // the column-local value assigned on draft (not the legacy
                 // area-wide value) so both stages order the column identically.
-                $this->overwriteLiveContent($newElementId, $liveElement, $idMap->draftSort($oldId));
+                $this->overwriteLiveContent($element, $liveElement, $idMap->draftSort($oldId));
 
                 // Reconciliation point for project fields mapped via
                 // updateElementFieldMapping, which overwriteLiveContent does not
@@ -290,9 +291,10 @@ final class LivePublisher
      *
      * @param int $draftSort Column-local Sort assigned to this element on draft
      */
-    private function overwriteLiveContent(int $newElementId, LegacyElement $liveElement, int $draftSort): void
+    private function overwriteLiveContent(GridElement $element, LegacyElement $liveElement, int $draftSort): void
     {
         $schema = DataObject::getSchema();
+        $newElementId = $element->ID;
 
         // Base fields on the GridElement live table
         /** @var 'h1'|'h2'|'h3'|'h4'|'h5'|'h6' $titleTag */
@@ -321,41 +323,38 @@ final class LivePublisher
             ],
         );
 
-        // Subclass fields on the ContentElement live table (HTML + media)
-        if ($liveElement->mediaData === null) {
+        // Text-block fields (HTML + media), mirroring the draft path's ContentElement gate
+        if ($liveElement->mediaData === null || !$element instanceof ContentElement) {
             return;
         }
 
-        /** @var array<string, mixed> $liveFields */
-        $liveFields = ['HTML' => ''];
-
         $html = $liveElement->mediaData->fields['HTML'] ?? null;
-        if (\is_string($html)) {
-            $liveFields['HTML'] = $html;
-        }
+        $liveFields = [
+            'HTML' => \is_string($html) ? $html : '',
+            ...$this->mapper->mapMediaFields($liveElement->mediaData)->toArray(),
+        ];
 
-        $mappedMedia = $this->mapper->mapMediaFields($liveElement->mediaData);
-        foreach ($mappedMedia->toArray() as $field => $value) {
-            $liveFields[$field] = $value;
-        }
+        // The media fields live wherever the site applied BlockMediaExtension (or
+        // nowhere); write each to the table holding it and leave the rest behind.
+        $resolved = FieldTableResolver::resolve($element::class, \array_keys($liveFields));
+        $this->droppedMedia->record($liveElement->id, $liveElement->mediaData, $resolved['missing']);
 
-        // Field names are compile-time constants from MappedMediaFields::toArray(), not user input.
-        $setClauses = [];
-        $params = [];
-        foreach ($liveFields as $field => $value) {
-            $setClauses[] = \sprintf('"%s" = ?', $field);
-            $params[] = $value;
-        }
-        $params[] = $newElementId;
+        // Field names are compile-time constants from MappedMediaFields::toArray(),
+        // table names come from the schema; neither is user input.
+        foreach ($resolved['byTable'] as $table => $fields) {
+            $setClauses = [];
+            $params = [];
+            foreach ($fields as $field) {
+                $setClauses[] = \sprintf('"%s" = ?', $field);
+                $params[] = $liveFields[$field];
+            }
+            $params[] = $newElementId;
 
-        DB::prepared_query(
-            \sprintf(
-                'UPDATE "%s_Live" SET %s WHERE "ID" = ?',
-                $schema->tableName(ContentElement::class),
-                \implode(', ', $setClauses),
-            ),
-            $params,
-        );
+            DB::prepared_query(
+                \sprintf('UPDATE "%s_Live" SET %s WHERE "ID" = ?', $table, \implode(', ', $setClauses)),
+                $params,
+            );
+        }
     }
 
     /**

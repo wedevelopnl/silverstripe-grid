@@ -28,6 +28,7 @@ final readonly class FluentMigrationOrchestrator
         private FieldMapper $mapper,
         private RowMappingStrategy $strategy,
         private LoggerInterface $logger,
+        private DroppedMediaCollector $droppedMedia,
     ) {}
 
     /**
@@ -85,7 +86,7 @@ final readonly class FluentMigrationOrchestrator
                     ]);
 
                     $source = new LocaleScopedLegacySource($this->reader, $model, $localeCode, $localeId);
-                    $service = new GridMigrationService($source, $this->mapper, $this->strategy, $this->logger);
+                    $service = new GridMigrationService($source, $this->mapper, $this->strategy, $this->logger, $this->droppedMedia);
 
                     // Reconcile grid-disabled pages once: the UseGrid writes hit
                     // locale-invariant base tables, so only the default-locale pass
