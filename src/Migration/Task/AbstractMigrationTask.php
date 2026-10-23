@@ -296,10 +296,10 @@ abstract class AbstractMigrationTask extends BuildTask
         }
 
         return \sprintf(
-            'Legacy element %s "%s" not found. The migration reads the elemental tables of a SilverStripe 5 site '
-            . 'running wedevelopnl/silverstripe-elemental-grid 5.1.5; nothing was changed.',
+            'Legacy element %s "%s" not found. The migration reads the elemental tables of a site on %s; nothing was changed.',
             \count($missing) === 1 ? 'table' : 'tables',
             \implode('", "', $missing),
+            self::SUPPORTED_SOURCE,
         );
     }
 
