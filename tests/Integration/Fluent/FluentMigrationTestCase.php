@@ -10,6 +10,7 @@ use SilverStripe\Versioned\Versioned;
 use TractorCow\Fluent\Extension\FluentIsolatedExtension;
 use TractorCow\Fluent\Model\Locale;
 use TractorCow\Fluent\State\FluentState;
+use WeDevelop\Grid\Migration\DTO\MigrationSummary;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
@@ -86,7 +87,7 @@ abstract class FluentMigrationTestCase extends SapphireTest
 
     /**
      * Run the locale-aware orchestrator with the default RowPerSection strategy
-     * for a single page. Returns the cross-locale failure count.
+     * for a single page. Returns the failure count of every locale pass together.
      */
     protected function runMigration(int $pageId): int
     {
@@ -100,7 +101,9 @@ abstract class FluentMigrationTestCase extends SapphireTest
             new NullLogger(),
         );
 
-        return $orchestrator->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);
+        $summaries = $orchestrator->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);
+
+        return \array_sum(\array_map(static fn (MigrationSummary $summary): int => $summary->pagesFailed, $summaries));
     }
 
     /** @return list<string> */

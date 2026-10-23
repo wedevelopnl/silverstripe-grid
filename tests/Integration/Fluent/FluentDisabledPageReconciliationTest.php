@@ -58,9 +58,9 @@ final class FluentDisabledPageReconciliationTest extends FluentMigrationTestCase
             $logger,
         );
 
-        $failures = $orchestrator->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);
+        $summaries = $orchestrator->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);
 
-        self::assertSame(0, $failures);
+        self::assertSame(0, $summaries['en_US']->pagesFailed);
         self::assertFalse($this->useGridInLocale($pageId, 'en_US'), 'disabled page UseGrid carried forward to 0');
         self::assertFalse(
             $this->useGridInLocale($pageId, 'nl_NL'),

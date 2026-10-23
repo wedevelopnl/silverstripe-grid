@@ -1,0 +1,10 @@
+Page:
+  page_one:
+    Title: 'Migration Page One'
+    URLSegment: 'migration-page-one'
+  page_two:
+    Title: 'Migration Page Two'
+    URLSegment: 'migration-page-two'
+  page_three:
+    Title: 'Migration Page Three'
+    URLSegment: 'migration-page-three'

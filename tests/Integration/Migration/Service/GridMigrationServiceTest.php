@@ -89,7 +89,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
             self::VIEWPORT_KEY_MAP,
             dryRun: false,
             pageIds: [$targetPageId],
-        );
+        )->pagesFailed;
         self::assertSame(0, $failures, 'Migration should complete without failures');
     }
 
@@ -1870,7 +1870,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
                 self::VIEWPORT_KEY_MAP,
                 dryRun: false,
                 pageIds: [$pageId],
-            );
+            )->pagesFailed;
             self::assertSame(1, $failures, 'Failing extension should cause one page failure');
 
             $errors = $this->logger->messagesAt('error');
@@ -2116,7 +2116,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
                 dryRun: false,
                 pageIds: [$pageId1, $pageId2],
                 stopOnFirstFailure: true,
-            );
+            )->pagesFailed;
 
             // Only the first page in the loop was attempted; the break halted the rest
             self::assertSame(1, $failures, 'stop-on-first-failure must halt after the first failing page');
@@ -2172,7 +2172,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
                 dryRun: false,
                 pageIds: [$pageId1, $pageId2],
                 // stopOnFirstFailure defaults to false — loop must continue
-            );
+            )->pagesFailed;
 
             self::assertSame(2, $failures, 'Without stop-on-first-failure, both failing pages must be attempted');
 
@@ -2230,7 +2230,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
             self::VIEWPORT_KEY_MAP,
             dryRun: false,
             pageIds: [$pageId1, $pageId2],
-        );
+        )->pagesFailed;
         self::assertSame(0, $failures, 'Both pages must migrate without failures');
 
         // Auto-scaffold config must be restored to its original values after run()

@@ -73,7 +73,7 @@ class MigrateGridWithFluentTask extends AbstractMigrationTask
         bool $dryRun,
         ?array $pageIds,
         bool $stopOnFirstFailure,
-    ): int {
+    ): array {
         $orchestrator = new FluentMigrationOrchestrator(
             $reader,
             new LegacyLocalisationDetector(),

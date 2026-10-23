@@ -348,7 +348,11 @@ final class MigrateGridTaskTest extends MigrationTestCase
             ]);
 
             self::assertSame(Command::FAILURE, $result['exitCode']);
-            self::assertStringContainsString('failed to migrate', $result['output']);
+            self::assertSame(
+                "Migrated 0 page(s) and 0 content block(s); 0 page(s) skipped as already migrated, 1 failed.\n"
+                . "Check logs for details.\n",
+                $result['output'],
+            );
             // The deliberate failure rolled back — no partial hierarchy persisted.
             self::assertCount(0, Section::get()->filter(['ParentID' => $pageId, 'Zone' => 'main']));
         } finally {
@@ -714,7 +718,11 @@ final class MigrateGridTaskTest extends MigrationTestCase
 
             self::assertSame(Command::FAILURE, $result['exitCode']);
             // Only 1 page was attempted before the loop broke
-            self::assertStringContainsString('1 page(s) failed to migrate', $result['output']);
+            self::assertSame(
+                "Migrated 0 page(s) and 0 content block(s); 0 page(s) skipped as already migrated, 1 failed.\n"
+                . "Check logs for details.\n",
+                $result['output'],
+            );
         } finally {
             DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         }
@@ -752,7 +760,11 @@ final class MigrateGridTaskTest extends MigrationTestCase
             ]);
 
             self::assertSame(Command::FAILURE, $result['exitCode']);
-            self::assertStringContainsString('2 page(s) failed to migrate', $result['output']);
+            self::assertSame(
+                "Migrated 0 page(s) and 0 content block(s); 0 page(s) skipped as already migrated, 2 failed.\n"
+                . "Check logs for details.\n",
+                $result['output'],
+            );
         } finally {
             DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         }

@@ -12,6 +12,7 @@ use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
+use WeDevelop\Grid\Migration\DTO\MigrationSummary;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
@@ -70,7 +71,7 @@ final class GridMigrationService
      *     re-run via the idempotency guard. Note: halts only the per-page loop —
      *     {@see migrateDisabledGridPages()} still runs afterward (it writes UseGrid = 0
      *     only on already-disabled pages, a disjoint set, so it is safe to continue).
-     * @return int<0, max> Number of pages that failed to migrate
+     * @return MigrationSummary What the batch migrated (or, in a dry run, would migrate)
      */
     public function run(
         string $defaultViewport,
@@ -80,9 +81,10 @@ final class GridMigrationService
         ?array $pageIds = null,
         bool $reconcileDisabledPages = true,
         bool $stopOnFirstFailure = false,
-    ): int {
+    ): MigrationSummary {
         $eligiblePages = $this->reader->getEligiblePages('draft', $pageIds);
-        $failures = 0;
+        $blocks = 0;
+        $skipped = 0;
         /** @var list<int> $succeeded */
         $succeeded = [];
         /** @var list<int> $failed */
@@ -112,10 +114,14 @@ final class GridMigrationService
                 $pageClassName = $pageInfo['pageClassName'];
 
                 try {
-                    $this->migratePage($pageId, $areaId, $pageClassName, $zone, $dryRun, $defaultViewport, $viewportKeyMap);
-                    $succeeded[] = $pageId;
+                    $pageBlocks = $this->migratePage($pageId, $areaId, $pageClassName, $zone, $dryRun, $defaultViewport, $viewportKeyMap);
+                    if ($pageBlocks === null) {
+                        ++$skipped;
+                    } else {
+                        $succeeded[] = $pageId;
+                        $blocks += $pageBlocks;
+                    }
                 } catch (Throwable $exception) {
-                    $failures++;
                     $failed[] = $pageId;
                     $this->logger->error('Migration failed for page {pageId}: {message}', [
                         'pageId' => $pageId,
@@ -154,7 +160,7 @@ final class GridMigrationService
             Row::config()->set('auto_scaffold', $rowAutoScaffold);
         }
 
-        return $failures;
+        return new MigrationSummary(\count($succeeded), $blocks, $skipped, \count($failed));
     }
 
     /**
@@ -167,6 +173,7 @@ final class GridMigrationService
      * @param class-string $pageClassName Concrete page class (e.g. 'Page', not 'SiteTree')
      * @param string $defaultViewport Old viewport key used as default (e.g. 'MD'), for live grid-settings reconciliation
      * @param array<string, string> $viewportKeyMap Old viewport key → new key, for live grid-settings reconciliation
+     * @return int<0, max>|null Content blocks migrated, or null when the page was already migrated
      */
     private function migratePage(
         int $pageId,
@@ -176,14 +183,14 @@ final class GridMigrationService
         bool $dryRun,
         string $defaultViewport,
         array $viewportKeyMap,
-    ): void {
+    ): ?int {
         // Step 1: Idempotency — skip if Sections already exist for this page + zone
         if ($this->hasExistingSections($pageId, $pageClassName, $zone)) {
             $this->logger->info('Page {pageId} already migrated for zone "{zone}", skipping.', [
                 'pageId' => $pageId,
                 'zone' => $zone,
             ]);
-            return;
+            return null;
         }
 
         // Step 2: Read DRAFT legacy elements
@@ -200,19 +207,16 @@ final class GridMigrationService
             // live area has live-only elements that the real run creates as their
             // own hierarchy on both stages. Without this the preview reports
             // "no elements to migrate" and understates what the real run writes.
-            $liveOnlyCount = $this->countLiveOnlyElements(
-                $draftElements,
-                $this->reader->getElementsForArea($areaId, 'live'),
-            );
-            $this->logDryRun($pageId, $sections, $liveOnlyCount);
-            return;
+            $liveElements = $this->reader->getElementsForArea($areaId, 'live');
+            $this->logDryRun($pageId, $sections, $this->countLiveOnlyElements($draftElements, $liveElements));
+            return $this->countContentBlocks($draftElements, $liveElements);
         }
 
         // No draft sections and no live elements means nothing to migrate
         $liveElements = $this->reader->getElementsForArea($areaId, 'live');
         if ($sections === [] && $liveElements === []) {
             $this->logger->info('Page {pageId} has no elements to migrate.', ['pageId' => $pageId]);
-            return;
+            return 0;
         }
 
         // Steps 6-8: Transaction-wrapped write.
@@ -263,6 +267,8 @@ final class GridMigrationService
         }
 
         $this->logger->info('Successfully migrated page {pageId}.', ['pageId' => $pageId]);
+
+        return $this->countContentBlocks($draftElements, $liveElements);
     }
 
     /**
@@ -393,6 +399,27 @@ final class GridMigrationService
         }
 
         return $count;
+    }
+
+    /**
+     * Count the distinct legacy content blocks (non-row elements) across both
+     * stages: an element on draft and live is one block, a live-only one counts too.
+     *
+     * @param list<LegacyElement> $draftElements
+     * @param list<LegacyElement> $liveElements
+     * @return int<0, max>
+     */
+    private function countContentBlocks(array $draftElements, array $liveElements): int
+    {
+        /** @var array<int, true> $blockIds */
+        $blockIds = [];
+        foreach ([...$draftElements, ...$liveElements] as $element) {
+            if (!$element->isRow) {
+                $blockIds[$element->id] = true;
+            }
+        }
+
+        return \count($blockIds);
     }
 
     /**
