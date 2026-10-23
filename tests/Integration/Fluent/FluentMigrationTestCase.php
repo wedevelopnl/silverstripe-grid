@@ -11,6 +11,7 @@ use TractorCow\Fluent\Extension\FluentIsolatedExtension;
 use TractorCow\Fluent\Model\Locale;
 use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Migration\DTO\MigrationSummary;
+use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
@@ -99,6 +100,7 @@ abstract class FluentMigrationTestCase extends SapphireTest
             $mapper,
             $strategy,
             new NullLogger(),
+            new DroppedMediaCollector(),
         );
 
         $summaries = $orchestrator->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);

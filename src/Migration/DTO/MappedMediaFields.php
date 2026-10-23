@@ -9,6 +9,33 @@ namespace WeDevelop\Grid\Migration\DTO;
  */
 final readonly class MappedMediaFields
 {
+    /**
+     * Legacy ElementContentExtension column each field is mapped from — the one
+     * list of legacy media columns: LegacyElementReader reads these, FieldMapper
+     * warns when one is absent, DroppedMediaCollector reports them.
+     *
+     * @var array<non-empty-string, non-empty-string>
+     */
+    public const array LEGACY_COLUMNS = [
+        'ContentColumns' => 'ContentColumns',
+        'VerticalAlignment' => 'ContentVerticalAlign',
+        'GapSize' => 'ExtraColumnGap',
+        'MediaType' => 'MediaType',
+        'MediaCaption' => 'MediaCaption',
+        'MediaImageID' => 'MediaImageID',
+        'MediaRatio' => 'MediaRatio',
+        'MediaPosition' => 'MediaPosition',
+        'VideoURL' => 'MediaVideoFullURL',
+        'VideoProvider' => 'MediaVideoProvider',
+        'VideoHasOverlay' => 'MediaVideoHasOverlay',
+        'VideoCustomThumbnailID' => 'MediaVideoCustomThumbnailID',
+        'VideoEmbedName' => 'MediaVideoEmbeddedName',
+        'VideoEmbedURL' => 'MediaVideoEmbeddedURL',
+        'VideoEmbedDescription' => 'MediaVideoEmbeddedDescription',
+        'VideoEmbedThumbnail' => 'MediaVideoEmbeddedThumbnail',
+        'VideoEmbedCreated' => 'MediaVideoEmbeddedCreated',
+    ];
+
     public function __construct(
         public int $ContentColumns,
         public string $VerticalAlignment,

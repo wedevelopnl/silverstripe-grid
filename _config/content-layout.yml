@@ -18,6 +18,8 @@ SilverStripe\Core\Injector\Injector:
 #     extensions:
 #       - WeDevelop\Grid\Extensions\BlockMediaExtension
 #
-# The SS5->SS6 migration's default class map targets ContentElement, so a
-# project running the migration with media data must opt the extension in first
-# (or remap FieldMapper::classNameMap to its own media class). See docs/migration.md.
+# The SS5->SS6 migration runs with or without it: media settings the target
+# class has no column for stay in the legacy tables and are reported at the end
+# of the run. A project that wants its legacy media carried over opts the
+# extension in (on ContentElement, or on the subclass it remaps to) before
+# migrating. See docs/migration.md.

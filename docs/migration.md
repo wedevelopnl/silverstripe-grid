@@ -23,7 +23,13 @@ Read this section before running the task on a production database.
 - **Element IDs change.** Migrated content elements receive new primary keys when inserted into `GridElement`. External references to the old `Element` IDs (shortcodes in other content, custom reports, outbound links) will not follow automatically.
 - **Legacy tables are left intact.** The tool does not drop `Element`, `ElementRow`, `ElementContent`, or `ElementalArea`. Orphaned rows in those tables let you re-run the migration if something looks wrong. Drop them manually once you are satisfied with the result.
 - **Only `ElementContent` is mapped by default.** The built-in field mapper converts `DNADesign\Elemental\Models\ElementContent` to `WeDevelop\Grid\Model\ContentElement`. Any custom element subclass must either already extend `GridElement`, or be registered via the `updateClassNameMapping` extension hook described in [Customising the Migration](#customising-the-migration).
-- **Apply `BlockMediaExtension` before migrating media.** Media capability is opt-in: `ContentElement` ships lean (HTML only), so the media columns (`MediaType`, `MediaImage`, video fields, …) only exist once you apply `BlockMediaExtension` to it (or to your own content subclass). If your legacy content used media and the extension is not applied to the destination class, those fields have nowhere to land. Add it in your app config before running the task:
+- **Media without a column to land in stays behind.** Media capability is opt-in: `ContentElement` ships lean (HTML only), so the media columns (`MediaType`, `MediaImage`, video fields, …) only exist once you apply `BlockMediaExtension` to it (or to your own content subclass). The migration runs either way: without the extension every text block keeps its HTML on draft and live, and the media settings, which have no column to go to, stay in the legacy `ElementContent` tables. The run then ends with one warning that counts the text blocks affected and names the legacy columns that held a value, for example:
+
+  ```
+  3 text block(s) had media settings that were not carried over: MediaType, MediaImageID, MediaVideoFullURL. No column holds them; the values remain in the legacy ElementContent tables.
+  ```
+
+  The same line goes to the log at warning level. A block present on both draft and live, or in several locales, counts once; plain-text blocks never trigger it. To keep the media, apply the extension in your app config **before** running the task:
 
   ```yaml
   WeDevelop\Grid\Model\ContentElement:
@@ -31,7 +37,7 @@ Read this section before running the task on a production database.
       - WeDevelop\Grid\Extensions\BlockMediaExtension
   ```
 
-  When you remap to a custom class via `updateClassNameMapping`, apply the extension to that class instead.
+  Switching it on afterwards does **not** backfill the media: a re-run skips every page that already has Sections. When you remap legacy text blocks to your own `ContentElement` subclass via `updateClassNameMapping` and apply the extension to that subclass only, the media lands in that subclass's table.
 - **Media-field CSS values are Bootstrap-specific.** Field values like `ContentVerticalAlign` (`align-items-center` → `center`) and `MediaPosition` (`order-1 order-md-2` → `last-on-desktop`) are translated using hardcoded Bootstrap class names. Sites that used the old module with a different CSS framework need a custom `FieldMapper` — see [Customising the Migration](#customising-the-migration).
 - **Draft-deleted content will reappear on draft.** To keep the Versioned contract intact, elements that only exist on live are inserted on **both** draft and live. If your editors had deleted content from draft without publishing, those elements will become visible on draft again after migration.
 
@@ -239,7 +245,7 @@ It inspects the database table shape to determine which Fluent strategy the Silv
 - **Element metadata.** `Title`, `ShowTitle`, `TitleClass`, `ExtraClass`, `Sort`. `TitleTag` defaults to `h2` when the legacy value is empty.
 - **Row metadata.** `ElementRow.Title` and `ElementRow.ExtraClass` map to the new `Row`. `ElementRow.CustomSectionClass` maps to the parent `Section.ExtraClass`.
 - **Content body.** `ElementContent.HTML` is copied directly onto `ContentElement.HTML` on both draft and live.
-- **Media fields.** Fields added by `ElementContentExtension` (`ContentColumns`, `ContentVerticalAlign`, `ExtraColumnGap`, `MediaType`, `MediaCaption`, `MediaRatio`, `MediaPosition`, `MediaImage`, video fields) are translated into the equivalent fields on `BlockMediaExtension` — including CSS-class → enum conversions and a discrete scale mapping for `ExtraColumnGap`.
+- **Media fields.** Fields added by `ElementContentExtension` (`ContentColumns`, `ContentVerticalAlign`, `ExtraColumnGap`, `MediaType`, `MediaCaption`, `MediaRatio`, `MediaPosition`, `MediaImage`, video fields) are translated into the equivalent fields on `BlockMediaExtension` — including CSS-class → enum conversions and a discrete scale mapping for `ExtraColumnGap`. Each field goes to the table of the target class that holds it; a field no table holds is skipped and reported at the end of the run (see [Before You Begin](#before-you-begin)).
 - **Draft and live stages.** The migration writes the draft hierarchy first, then reconciles the live stage. Elements that exist on both stages reuse the draft IDs; elements that only exist on live get new records on both stages to preserve Versioned integrity.
 - **`UseGrid` flag.** Pages that successfully migrate get `UseGrid = true` so `GridPageExtension` renders the new grid editor immediately. Legacy pages that had `UseElementalGrid = false` on the old extension are carried over as `UseGrid = false` (and are not migrated structurally) so projects with the per-page editor toggle (`enable_editor_toggle: true`) keep their opt-out. The `UseGrid` write happens inside the same transaction as the grid hierarchy writes so partial failures never leave a page flagged as grid-enabled without content.
 

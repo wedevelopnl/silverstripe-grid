@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Task;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
+use SilverStripe\Versioned\Versioned;
 use Symfony\Component\Console\Command\Command;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
 use WeDevelop\Grid\Migration\Task\MigrateGridTask;
@@ -16,12 +17,15 @@ use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Migration\Service\TestFailingMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\FieldMapperConfigStubExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\SeedsPublishedLegacyContent;
 use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 use WeDevelop\Grid\Value\VerticalAlignment;
 
 #[CoversClass(MigrateGridTask::class)]
 final class MigrateGridTaskTest extends MigrationTestCase
 {
+    use SeedsPublishedLegacyContent;
+
     /**
      * @param array<string, mixed> $options
      */
@@ -82,6 +86,29 @@ final class MigrateGridTaskTest extends MigrationTestCase
             'SizeMD' => 4,
         ]);
         $this->seeder->seedContentMedia(1002, ['HTML' => '<p>World</p>']);
+    }
+
+    public function testCarriesAnImagePlacedAfterTheTextOverOnBothStages(): void
+    {
+        $this->seedPublishedPage('test_page', 100);
+        $this->seedPublishedBlock(100, 1001, 1, '<p>Text</p>', [
+            'MediaType' => 'image',
+            'MediaImageID' => 7,
+            'MediaPosition' => 'order-2',
+        ]);
+
+        $result = $this->migrate();
+
+        self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
+        foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
+            $blocks = $this->migratedBlocks($stage);
+            self::assertCount(1, $blocks, "one block on {$stage}");
+            self::assertSame(
+                ['image', 7, 'last'],
+                [$blocks[0]->getField('MediaType'), (int) $blocks[0]->getField('MediaImageID'), $blocks[0]->getField('MediaPosition')],
+                "image and its position on {$stage}",
+            );
+        }
     }
 
     public function testMissingDefaultViewportReturnsFailure(): void

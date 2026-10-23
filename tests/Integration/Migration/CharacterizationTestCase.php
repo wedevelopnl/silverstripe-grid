@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Tests\Integration\Migration;
 
 use Page;
 use SilverStripe\ORM\DB;
+use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\GridMigrationService;
@@ -64,6 +65,7 @@ abstract class CharacterizationTestCase extends MigrationTestCase
             $this->mapper,
             $strategy ?? $this->createStrategy(),
             $this->logger,
+            new DroppedMediaCollector(),
         );
     }
 

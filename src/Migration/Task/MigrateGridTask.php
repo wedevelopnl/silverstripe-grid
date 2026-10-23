@@ -8,6 +8,7 @@ use Psr\Log\LoggerInterface;
 use RuntimeException;
 use TractorCow\Fluent\Extension\FluentIsolatedExtension;
 use TractorCow\Fluent\State\FluentState;
+use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\GridMigrationService;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
@@ -67,8 +68,9 @@ class MigrateGridTask extends AbstractMigrationTask
         bool $dryRun,
         ?array $pageIds,
         bool $stopOnFirstFailure,
+        DroppedMediaCollector $droppedMedia,
     ): array {
-        $service = new GridMigrationService($reader, $mapper, $strategy, $logger);
+        $service = new GridMigrationService($reader, $mapper, $strategy, $logger, $droppedMedia);
 
         return ['' => $service->run($defaultViewport, $zone, $viewportKeyMap, $dryRun, $pageIds, stopOnFirstFailure: $stopOnFirstFailure)];
     }
