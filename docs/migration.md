@@ -9,7 +9,7 @@ The migration runs as a `BuildTask`, is idempotent, supports dry-runs, and handl
 
 ## Requirements
 
-- **The source site must run SilverStripe 5.4.x with `wedevelopnl/silverstripe-elemental-grid` 5.1.5.** The migration is built and tested against the legacy schema of exactly those versions; older elemental-grid releases store their content differently and are not supported. Upgrade the source site to both versions (and run `dev/build` there) before you upgrade it to SS6. A SilverStripe 4 site performs SilverStripe's standard SS4→SS5 upgrade first. The task cannot read these versions from the database, so it asks you to confirm them — see [Confirmation prompts](#confirmation-prompts).
+- **The source site must run SilverStripe 5.4.x with `dnadesign/silverstripe-elemental` 5.4.x, and — on an ElementalGrid site — `wedevelopnl/silverstripe-elemental-grid` 5.1.5.** The migration is built and tested against the legacy schema of exactly those versions, for both supported sources; older releases store their content differently and are not supported. Upgrade the source site to these versions (and run `dev/build` there) before you upgrade it to SS6. A SilverStripe 4 site performs SilverStripe's standard SS4→SS5 upgrade first. The task cannot read these versions from the database, so it asks you to confirm them — see [Confirmation prompts](#confirmation-prompts).
 - This module is installed, configured and `dev/build` has been run successfully.
 - The legacy database tables (`BaseElement`, `ElementalArea`, `ElementContent`, optionally `ElementRow`) are still present in the database. The old PHP code does **not** need to be installed — the migration reads the old tables via raw SQL.
 - The `SS_GRID_ADAPTER` environment variable **must** be set to a bundled preset (`bootstrap` or `tailwind`, case-insensitive) or to the fully-qualified class name of a custom adapter implementing `GridAdapterInterface`. There is no default: when the variable is unset, empty, or invalid the container throws a `RuntimeException` at boot, which aborts `dev/build` **and** every migration task before any work is done. Set it in your environment (e.g. `.env`) before migrating.
@@ -144,7 +144,7 @@ Every run, dry runs included, opens with a banner restating the two precondition
 
 A run without `--dry-run` then asks two `[y/N]` questions before any data is written:
 
-1. Is the source site on SilverStripe 5.4.x with `wedevelopnl/silverstripe-elemental-grid` 5.1.5?
+1. Is the source site on SilverStripe 5.4.x with `dnadesign/silverstripe-elemental` 5.4.x (and `wedevelopnl/silverstripe-elemental-grid` 5.1.5, if the site uses it)?
 2. Do you have a restorable backup of this database?
 
 Answering anything other than `y`/`yes` to either aborts the run with a successful exit code and no database changes. Passing `--confirm-source-up-to-date` or `--confirm-backup` answers its question in advance, so only the remaining one is asked.
@@ -159,7 +159,7 @@ When stdin is not a TTY (CI pipelines, `sake` called from a script), there is no
 | `--zone` | yes | — | Zone name for the created Sections. Sort order is scoped per zone. |
 | `--strategy` | no | `sections` | Row mapping strategy: `sections` (one Section per legacy ElementRow) or `single-section` (all rows under one Section per page). Default `sections`. |
 | `--dry-run` | no | (flag) | Log planned writes and skip all database changes. Asks no confirmation questions. Exit code is 0 on success even when nothing was written. |
-| `--confirm-source-up-to-date` | no | (flag) | Acknowledge the source site is on SilverStripe 5.4.x with `wedevelopnl/silverstripe-elemental-grid` 5.1.5, answering that question in advance. Required, together with `--confirm-backup`, for non-interactive runs when not using `--dry-run`. |
+| `--confirm-source-up-to-date` | no | (flag) | Acknowledge the source site is on the supported versions (see [Requirements](#requirements)), answering that question in advance. Required, together with `--confirm-backup`, for non-interactive runs when not using `--dry-run`. |
 | `--confirm-backup` | no | (flag) | Acknowledge a restorable database backup exists, answering that question in advance. Required, together with `--confirm-source-up-to-date`, for non-interactive runs when not using `--dry-run`. |
 | `--viewport-map` | no | — | Map legacy viewport keys to the active adapter's viewport keys, as comma-separated `OLD=new` pairs (e.g. `MD=desktop,LG=widescreen`). Derived automatically via case-insensitive matching when omitted — provide this explicitly when migrating across CSS frameworks with different viewport names. A pair that is malformed, names an unknown legacy key, or names a viewport the active adapter does not expose aborts the run. |
 | `--page-ids` | no | — | Comma-separated page IDs to migrate. If omitted, all eligible pages are migrated. |
