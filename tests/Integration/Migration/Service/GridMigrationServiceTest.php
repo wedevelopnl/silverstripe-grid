@@ -266,7 +266,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
-        // Two rows with elements — use distinct grid settings so they don't group
+        // Two rows with elements
         $this->seeder->seedElement(3000, $areaId, self::ROW_CLASS, 1);
         $this->seeder->seedRow(3000);
         $this->seeder->seedElement(3001, $areaId, self::CONTENT_CLASS, 2, ['SizeMD' => 6, 'Title' => 'First']);
@@ -290,7 +290,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
         self::assertSame(1, (int) $sections->first()->Sort);
         self::assertSame(2, (int) $sections->last()->Sort);
 
-        // Verify columns in first row maintain sort (distinct widths → 2 columns)
+        // Verify columns in first row maintain sort (one column per element)
         $firstRow = Row::get()->filter(['ParentID' => $sections->first()->ID])->first();
         self::assertInstanceOf(Row::class, $firstRow);
         $columns = Column::get()->filter(['ParentID' => $firstRow->ID])->sort('Sort', 'ASC');
@@ -1226,7 +1226,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
-        // No row elements at all — distinct widths to prevent grouping
+        // No row elements at all
         $this->seeder->seedElement(7200, $areaId, self::CONTENT_CLASS, 1, [
             'SizeMD' => 8,
             'Title' => 'Orphan 1',
@@ -1247,7 +1247,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
         ]);
         self::assertCount(1, $sections);
 
-        // With one row containing both columns (distinct widths → no grouping)
+        // With one row holding one column per element
         $row = Row::get()->filter(['ParentID' => $sections->first()->ID])->first();
         self::assertInstanceOf(Row::class, $row);
         $columns = Column::get()->filter(['ParentID' => $row->ID]);
@@ -1849,7 +1849,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
         $this->seeder->seedElement(9001, $areaId, self::CONTENT_CLASS, 2, ['SizeMD' => 12]);
         $this->seeder->seedContentMedia(9001);
 
-        // Row 2 with 2 elements of different widths (prevent grouping)
+        // Row 2 with 2 elements
         $this->seeder->seedElement(9010, $areaId, self::ROW_CLASS, 3);
         $this->seeder->seedRow(9010);
         $this->seeder->seedElement(9011, $areaId, self::CONTENT_CLASS, 4, ['SizeMD' => 6]);
