@@ -81,9 +81,11 @@ Page "About Us"
 │
 └── Section  (zone=main, sort=2)
     └── Row  "Team row"                     (sort=1)
-        └── Column  md=4    ◄── consolidated: three siblings share one Column
-            ├── Content "Team member A"
-            ├── Content "Team member B"
+        ├── Column  md=4    ◄── one Column per block: the three sit side by side
+        │   └── Content "Team member A"
+        ├── Column  md=4
+        │   └── Content "Team member B"
+        └── Column  md=4
             └── Content "Team member C"
 ```
 
@@ -103,9 +105,11 @@ Page "About Us"
     │       └── Content "Subheadline"
     │
     └── Row  "Team row"                     (sort=2)
-        └── Column  md=4    ◄── consolidated: three siblings share one Column
-            ├── Content "Team member A"
-            ├── Content "Team member B"
+        ├── Column  md=4    ◄── one Column per block: the three sit side by side
+        │   └── Content "Team member A"
+        ├── Column  md=4
+        │   └── Content "Team member B"
+        └── Column  md=4
             └── Content "Team member C"
 ```
 
@@ -213,7 +217,7 @@ It inspects the database table shape to determine which Fluent strategy the Silv
 
 ### What differs per locale
 
-**Layout is locale-invariant.** Column grouping and `Size`/`Offset`/`Visibility` grid settings are derived from the base element rows and applied equally across all locales. Per-locale layout differences present in the legacy data are not honoured — an accepted limitation of a one-shot migration. Only content fields (`Title`, `HTML`, media text) differ per locale.
+**Layout is locale-invariant.** The Columns (one per block) and their `Size`/`Offset`/`Visibility` grid settings are derived from the base element rows and applied equally across all locales. Per-locale layout differences present in the legacy data are not honoured — an accepted limitation of a one-shot migration. Only content fields (`Title`, `HTML`, media text) differ per locale.
 
 **Untranslated elements fall back to base content.** In the field-localised model, an element with no `*_Localised` row for a given locale is migrated using its base content. This matches Fluent's render-time fallback and ensures nothing is silently omitted.
 
@@ -246,45 +250,33 @@ It inspects the database table shape to determine which Fluent strategy the Silv
 - The legacy `Element` / `ElementRow` / `ElementContent` / `ElementalArea` rows themselves. They are left in the database for manual cleanup.
 - Custom element subclasses that are not configured via an extension hook.
 
-## Grid Settings Consolidation
+## One Column per Block
 
-When a run of consecutive elements share **identical** `GridSettings` (same default and overrides), the migration groups them into a single `Column`. This keeps migrated hierarchies close to what a human would build.
+Every legacy content block becomes its own `Column`, carrying that block's own width, offset and visibility. Blocks are never combined into a shared Column — not even consecutive blocks with identical settings, and not full-width blocks either. A row of blocks therefore keeps its legacy side-by-side layout:
 
 ```
-BEFORE — three legacy elements with identical grid settings
+BEFORE — three legacy blocks at one third width
 
 ElementRow "Team row"
 ├── ElementContent "Team member A"  (md=4)
 ├── ElementContent "Team member B"  (md=4)
 └── ElementContent "Team member C"  (md=4)
 
-AFTER — grouped into a single Column
+AFTER — three Columns, left to right
 
 Row
-└── Column  md=4
-    ├── Content "Team member A"
-    ├── Content "Team member B"
-    └── Content "Team member C"
+├── Column  md=4  →  Content "Team member A"
+├── Column  md=4  →  Content "Team member B"
+└── Column  md=4  →  Content "Team member C"
 ```
 
-Grouping only applies to **consecutive runs**. A single element with different settings breaks the run:
+The original order is always preserved. When the widths in a row add up to more than the grid's column count (say 1/3, 1/2, 1/3, or six blocks at one third), the Columns that do not fit wrap to a new line — the grid adapters already lay rows out that way, so the result matches the legacy page.
 
-```
-BEFORE — middle element breaks the run
+Things to be aware of:
 
-ElementContent "A"  (md=4)
-ElementContent "B"  (md=6)   ◄── differs
-ElementContent "C"  (md=4)
-
-AFTER — three separate Columns
-
-Row
-├── Column md=4  →  Content "A"
-├── Column md=6  →  Content "B"
-└── Column md=4  →  Content "C"
-```
-
-The original sort order is always preserved. The side effect is that sibling elements sharing settings will share a parent `Column` after migration; any code or shortcode that assumes one element per column will need to be adapted.
+- **Full-width blocks each get their own Column wrapper.** Two consecutive `md=12` blocks become two full-width Columns, one below the other. Vertical margins your theme puts on the blocks no longer collapse between them, so spacing between stacked full-width blocks can grow.
+- **Offsets on Tailwind targets.** Legacy offsets are copied as-is. Tailwind reads an offset as an absolute column start (`col-start-N`) rather than a gap after the previous Column, so a Column with an offset that sits after another Column in the same Row drops to a new line. Giving every block its own Column makes this more common than before. Translating legacy offsets into Tailwind start positions is planned as a follow-up; until then, review rows that combine several Columns with offsets.
+- **Pages migrated with an earlier release are not changed.** Releases before this behaviour combined consecutive blocks with identical settings into one Column. The migration only runs once per page (see below), so those pages keep their combined Columns.
 
 ## Idempotency and Re-running
 
@@ -442,7 +434,9 @@ For field-level tweaks on individual element subclasses, `updateElementFieldMapp
 2. Run `sake tasks:repair-grid-zone --dry-run`. Every migrated root should already carry its zone, so this is a check: it should report nothing to repair. If it lists rows, run it without `--dry-run`, and resolve what it leaves for manual review — a page holding such a row cannot be published until then.
 3. Spot-check a handful of migrated pages in the CMS and on the frontend. Pay particular attention to:
    - Section and Row titles (Sections are always created untitled).
-   - Elements that shared grid settings and now share a parent Column.
+   - Rows with more Columns than fit on one line — they wrap, as on the legacy page.
+   - Stacked full-width blocks, which now each sit in their own Column, so theme margins between them no longer collapse.
+   - On Tailwind targets, Columns with an offset that follow another Column in the same Row (they drop to a new line).
    - Media blocks that relied on Bootstrap CSS classes for alignment or ordering.
 4. Review the log output for `warning` entries — each one corresponds to a clamp, an unresolved mapping, or a `customSectionClass` conflict resolved by Strategy B.
 5. Once you are satisfied, drop the legacy tables manually (`Element`, `Element_Live`, `Element_Versions`, `ElementRow`, `ElementRow_Live`, `ElementContent`, `ElementContent_Live`, `ElementalArea`, `ElementalArea_Live`, any `*_Localised` tables of a Fluent site, any legacy subclass tables, and a hand-added `BaseElement` copy if the site has one) in a separate migration step.
