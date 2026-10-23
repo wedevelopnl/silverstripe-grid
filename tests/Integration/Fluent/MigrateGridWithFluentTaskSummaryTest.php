@@ -28,7 +28,7 @@ final class MigrateGridWithFluentTaskSummaryTest extends FluentMigrationTestCase
         $result = TaskRunner::run(new MigrateGridWithFluentTask(), [
             '--default-viewport' => self::DEFAULT_VIEWPORT,
             '--zone' => self::ZONE,
-            '--force' => true,
+            ...TaskRunner::ACKNOWLEDGED,
         ]);
 
         self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
