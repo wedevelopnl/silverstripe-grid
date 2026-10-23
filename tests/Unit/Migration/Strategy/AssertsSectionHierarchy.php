@@ -4,29 +4,35 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Unit\Migration\Strategy;
 
+use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
 
 /**
  * Shared spec-walking assertions for the strategy hierarchy tests.
  *
- * Column spec: ['w' => width, 'o' => offset, 'n' => element count];
- * offset defaults to 0 and element count to 1 when omitted.
+ * Column spec: ['w' => width, 'o' => offset]; offset defaults to 0 when omitted.
+ * Every column must carry exactly one content element, and the columns, read
+ * in tree order, must carry the input's content elements in input order.
  */
 trait AssertsSectionHierarchy
 {
     /**
+     * @param list<LegacyElement> $elements the strategy's input
      * @param list<MigrationSection> $sections
-     * @param list<array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int, n?: int}>}>}> $expectedSections
+     * @param list<array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int}>}>}> $expectedSections
      * @param bool $rowSortFollowsIndex true when rows sort sequentially within their section (AllRows);
      *                                  false when every row sorts at 1 (RowPerSection)
      */
     private static function assertSectionsMatchSpec(
+        array $elements,
         array $sections,
         string $zone,
         array $expectedSections,
         bool $rowSortFollowsIndex,
     ): void {
         self::assertCount(\count($expectedSections), $sections, 'Section count');
+
+        $columnElementIds = [];
 
         foreach ($sections as $si => $section) {
             $expected = $expectedSections[$si];
@@ -57,9 +63,17 @@ trait AssertsSectionHierarchy
                     self::assertSame($ci + 1, $column->sort, "{$colPath}: sort");
                     self::assertSame($expectedCol['w'], $column->gridSettings->default->width, "{$colPath}: width");
                     self::assertSame($expectedCol['o'] ?? 0, $column->gridSettings->default->offset, "{$colPath}: offset");
-                    self::assertCount($expectedCol['n'] ?? 1, $column->elements, "{$colPath}: element count");
+                    $columnElementIds[] = $column->element->id;
                 }
             }
         }
+
+        $contentElementIds = [];
+        foreach ($elements as $element) {
+            if (!$element->isRow) {
+                $contentElementIds[] = $element->id;
+            }
+        }
+        self::assertSame($contentElementIds, $columnElementIds, 'One column per content element, in input order');
     }
 }

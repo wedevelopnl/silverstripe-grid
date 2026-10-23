@@ -27,7 +27,7 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTreeSnapshot;
  *  (a) {@see GridMigrationService::reconcileColumnLiveGridSettings} were dropped
  *      or short-circuited (a real WS6 `LivePublisher` extraction risk): the live
  *      Column would keep the draft-derived width and the LIVE-width=10 assertion
- *      (and the divergent-grouping width/overrides assertions) would fail.
+ *      (and the divergent-sizes width/overrides assertions) would fail.
  *  (b) {@see GridMigrationService::overwriteLiveContent} were skipped: the
  *      published live element would keep the draft Title/HTML and the X live
  *      Title/HTML assertions would flip back to the draft values.
@@ -35,8 +35,15 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTreeSnapshot;
  *      instead of being published from its draft record: the shared-ID assertion
  *      would fail (the draft and live element would carry different IDs) and a
  *      spurious extra Section would appear on LIVE.
- *  (d) The live-only grouping in {@see GridMigrationService::createLiveOnlyHierarchy}
+ *  (d) The live-only build in {@see GridMigrationService::createLiveOnlyHierarchy}
  *      stopped writing to both stages: element Z would vanish from the DRAFT tree.
+ *
+ * WDVLP-764 intentionally changed column formation: every legacy block now
+ * becomes its own Column, so consecutive blocks with identical settings no
+ * longer share one, and a Column's live width is no longer the first of
+ * several elements' live widths. This golden master was updated in that change,
+ * with the diff visible in review — the divergent-sizes case below used to pin
+ * one shared Column taking P's live settings plus a divergence warning.
  */
 #[CoversNothing]
 final class CharacterizationDraftLiveTest extends CharacterizationTestCase
@@ -44,7 +51,7 @@ final class CharacterizationDraftLiveTest extends CharacterizationTestCase
     private const int AREA_ID = 100;
 
     /**
-     * Sentinel substituted for the divergent-grouping live Column's
+     * Sentinel substituted for the divergent-sizes live Column's
      * `overridesColumnRaw` before structural inspection: only the decoded
      * content is pinned, not the JSON byte layout (key order, spacing).
      */
@@ -114,63 +121,61 @@ final class CharacterizationDraftLiveTest extends CharacterizationTestCase
     }
 
     /**
-     * Two elements sharing the same DRAFT size group into ONE Column; their LIVE
-     * sizes diverge. A single Column cannot express two widths, so the live
-     * reconciliation takes the FIRST element's live settings (current behaviour
-     * of reconcileGridSettings) and a divergence warning is logged.
+     * Two elements sharing the same DRAFT size each get their own Column; their
+     * LIVE sizes diverge, so each live Column is reconciled from its own
+     * element's live settings and nothing is logged as divergent.
      */
-    public function testDivergentGroupingLiveColumnTakesFirstElementSettings(): void
+    public function testDivergentLiveSizesReconcileEachColumnFromItsOwnElement(): void
     {
         $pageId = $this->pageId();
-        $this->seedDivergentGroupingPage($pageId);
+        $this->seedDivergentSizesPage($pageId);
 
         $this->runMigration($pageId);
 
-        // DRAFT: both elements share one column (same draft Size 6).
+        // DRAFT: one Column per element, both at the shared draft Size 6.
         $draftTree = MigrationTreeSnapshot::snapshotTree($pageId, Page::class, self::ZONE, Versioned::DRAFT);
-        $draftColumn = MigrationTreeSnapshot::findColumnContaining($draftTree, 'Draft P');
-        self::assertNotNull($draftColumn);
-        self::assertSame(6, $draftColumn['gridDefault']['width'], 'Draft column width derives from the shared draft Size');
-        $draftTitles = MigrationTreeSnapshot::columnElementTitles($draftColumn);
-        self::assertSame(['Draft P', 'Draft Q'], $draftTitles, 'Both elements group into the one draft column');
-
-        // LIVE: the column takes the FIRST element (P) live settings — width 10
-        // and P's per-viewport lg override — not Q's divergent live width.
-        $liveTree = MigrationTreeSnapshot::snapshotTree($pageId, Page::class, self::ZONE, Versioned::LIVE);
-        $liveColumn = MigrationTreeSnapshot::findColumnContaining($liveTree, 'Live P');
-        self::assertNotNull($liveColumn);
-        self::assertSame(10, $liveColumn['gridDefault']['width'], 'Live column takes the first element P live width');
-
-        // OBSERVED-AND-PINNED (truth #2): the live column's raw overrides reflect
-        // P's live settings. Assert the decoded content, then normalise the
-        // format-sensitive JSON to a sentinel and pin the FULL live column struct.
-        MigrationTreeSnapshot::assertLgOverrideWidth($liveColumn['overridesColumnRaw'], 5);
-
-        // Substitute the sentinel, then pin the whole live column — both shared
-        // elements P and Q are published into the one column, P first, with P's
-        // reconciled gridDefault. This catches element/sort/gridDefault drift too,
-        // not just the override content.
-        $liveColumn['overridesColumnRaw'] = self::DIVERGENT_LIVE_OVERRIDES;
-        self::assertSame($this->expectedDivergentLiveColumn(), $liveColumn);
-
-        // A divergence warning naming the column was logged (Q diverges from P).
-        $warnings = $this->logMessages('warning');
-        self::assertNotEmpty(
-            array_filter($warnings, static fn (string $message): bool => str_contains($message, 'diverge')),
-            'Divergent live grid settings log a warning',
+        self::assertCount(1, $draftTree);
+        self::assertCount(1, $draftTree[0]['rows']);
+        $draftColumns = $draftTree[0]['rows'][0]['columns'];
+        self::assertSame(
+            [[6, ['Draft P']], [6, ['Draft Q']]],
+            array_map(
+                static fn (array $column): array => [
+                    $column['gridDefault']['width'],
+                    MigrationTreeSnapshot::columnElementTitles($column),
+                ],
+                $draftColumns,
+            ),
+            'Each draft element gets its own column',
         );
+
+        // LIVE: P's column takes P's live width 10 and lg override 5; Q's column
+        // takes Q's live width 4 with no override.
+        $liveTree = MigrationTreeSnapshot::snapshotTree($pageId, Page::class, self::ZONE, Versioned::LIVE);
+        self::assertCount(1, $liveTree);
+        self::assertCount(1, $liveTree[0]['rows']);
+        $liveColumns = $liveTree[0]['rows'][0]['columns'];
+        self::assertCount(2, $liveColumns);
+
+        // OBSERVED-AND-PINNED (truth #2): P's live column raw overrides reflect
+        // P's live settings. Assert the decoded content, then normalise the
+        // format-sensitive JSON to a sentinel and pin the FULL live columns.
+        MigrationTreeSnapshot::assertLgOverrideWidth($liveColumns[0]['overridesColumnRaw'], 5);
+        $liveColumns[0]['overridesColumnRaw'] = self::DIVERGENT_LIVE_OVERRIDES;
+        self::assertSame($this->expectedDivergentLiveColumns(), $liveColumns);
+
+        self::assertSame([], $this->logMessages('warning'), 'Divergent live sizes no longer log a warning');
     }
 
     /**
-     * Pinned LIVE column for the divergent-grouping case: width reconciled to the
-     * first element's live Size (10), `overridesColumnRaw` normalised to the
-     * sentinel, and both shared elements published in order (P then Q) with their
-     * live Titles/HTML.
+     * Pinned LIVE columns for the divergent-sizes case: one per element, each
+     * reconciled to its own element's live Size, P's `overridesColumnRaw`
+     * normalised to the sentinel, with the live Titles/HTML.
      *
-     * @return array{
+     * @return list<array{
      *     sort: int,
      *     gridDefault: array{width: positive-int, offset: int<0, max>, visible: bool},
-     *     overridesColumnRaw: string,
+     *     overridesColumnRaw: string|null,
      *     elements: list<array{
      *         title: string,
      *         showTitle: bool,
@@ -181,34 +186,43 @@ final class CharacterizationDraftLiveTest extends CharacterizationTestCase
      *         className: string,
      *         html: string|null,
      *     }>,
-     * }
+     * }>
      */
-    private function expectedDivergentLiveColumn(): array
+    private function expectedDivergentLiveColumns(): array
     {
         return [
-            'sort' => 1,
-            'gridDefault' => ['width' => 10, 'offset' => 0, 'visible' => true],
-            'overridesColumnRaw' => self::DIVERGENT_LIVE_OVERRIDES,
-            'elements' => [
-                [
-                    'title' => 'Live P',
-                    'showTitle' => false,
-                    'titleTag' => 'h2',
-                    'titleClass' => '',
-                    'extraClass' => '',
-                    'sort' => 1,
-                    'className' => ContentElement::class,
-                    'html' => '<p>p-live</p>',
+            [
+                'sort' => 1,
+                'gridDefault' => ['width' => 10, 'offset' => 0, 'visible' => true],
+                'overridesColumnRaw' => self::DIVERGENT_LIVE_OVERRIDES,
+                'elements' => [
+                    [
+                        'title' => 'Live P',
+                        'showTitle' => false,
+                        'titleTag' => 'h2',
+                        'titleClass' => '',
+                        'extraClass' => '',
+                        'sort' => 1,
+                        'className' => ContentElement::class,
+                        'html' => '<p>p-live</p>',
+                    ],
                 ],
-                [
-                    'title' => 'Live Q',
-                    'showTitle' => false,
-                    'titleTag' => 'h2',
-                    'titleClass' => '',
-                    'extraClass' => '',
-                    'sort' => 2,
-                    'className' => ContentElement::class,
-                    'html' => '<p>q-live</p>',
+            ],
+            [
+                'sort' => 2,
+                'gridDefault' => ['width' => 4, 'offset' => 0, 'visible' => true],
+                'overridesColumnRaw' => null,
+                'elements' => [
+                    [
+                        'title' => 'Live Q',
+                        'showTitle' => false,
+                        'titleTag' => 'h2',
+                        'titleClass' => '',
+                        'extraClass' => '',
+                        'sort' => 1,
+                        'className' => ContentElement::class,
+                        'html' => '<p>q-live</p>',
+                    ],
                 ],
             ],
         ];
@@ -238,7 +252,7 @@ final class CharacterizationDraftLiveTest extends CharacterizationTestCase
         ], 'live');
         $this->seeder->seedContentMedia(5000, ['HTML' => '<p>live</p>'], 'live');
 
-        // Draft-only element Y — distinct width 4 so it does not group with X.
+        // Draft-only element Y — distinct width 4.
         $this->seeder->seedElement(5001, self::AREA_ID, self::CONTENT_CLASS, 2, [
             'SizeMD' => 4,
             'Title' => 'Draft Y',
@@ -254,17 +268,17 @@ final class CharacterizationDraftLiveTest extends CharacterizationTestCase
     }
 
     /**
-     * Seed (BOTH stages): two elements P and Q sharing the same draft Size (group
-     * into one Column) whose live Sizes diverge — P gains a per-viewport lg
-     * override; Q's live width differs.
+     * Seed (BOTH stages): two elements P and Q sharing the same draft Size whose
+     * live Sizes diverge — P gains a per-viewport lg override; Q's live width
+     * differs.
      *
      * @param positive-int $pageId
      */
-    private function seedDivergentGroupingPage(int $pageId): void
+    private function seedDivergentSizesPage(int $pageId): void
     {
         $this->seeder->seedPage($pageId, self::AREA_ID);
 
-        // Draft: both SizeMD 6 → group into one column.
+        // Draft: both SizeMD 6.
         $this->seeder->seedElement(6300, self::AREA_ID, self::CONTENT_CLASS, 1, [
             'SizeMD' => 6,
             'Title' => 'Draft P',
@@ -276,7 +290,7 @@ final class CharacterizationDraftLiveTest extends CharacterizationTestCase
         ], 'draft');
         $this->seeder->seedContentMedia(6301, ['HTML' => '<p>q</p>'], 'draft');
 
-        // Live: P → width 10 with lg override 5; Q → width 4. The column takes P.
+        // Live: P → width 10 with lg override 5; Q → width 4.
         $this->seeder->seedElement(6300, self::AREA_ID, self::CONTENT_CLASS, 1, [
             'SizeMD' => 10,
             'SizeLG' => 5,

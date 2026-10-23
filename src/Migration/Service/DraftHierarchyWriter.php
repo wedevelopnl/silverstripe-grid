@@ -56,16 +56,13 @@ final class DraftHierarchyWriter
                     /** @var positive-int $columnId */
                     $columnId = (int) $column->ID;
 
-                    $elementSort = 1;
-                    foreach ($migrationColumn->elements as $legacyElement) {
-                        $newElement = $this->buildContentElement($legacyElement, $columnId, $elementSort);
-                        $newElement->write();
+                    $legacyElement = $migrationColumn->element;
+                    $newElement = $this->buildContentElement($legacyElement, $columnId, 1);
+                    $newElement->write();
 
-                        /** @var positive-int $newElementId */
-                        $newElementId = (int) $newElement->ID;
-                        $idMap->recordElement($legacyElement->id, $newElementId, $columnId, $elementSort);
-                        $elementSort++;
-                    }
+                    /** @var positive-int $newElementId */
+                    $newElementId = (int) $newElement->ID;
+                    $idMap->recordElement($legacyElement->id, $newElementId, $columnId, 1);
                 }
             }
         }
