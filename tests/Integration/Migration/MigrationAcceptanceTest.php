@@ -899,7 +899,7 @@ final class MigrationAcceptanceTest extends MigrationTestCase
         ]);
         $this->seeder->seedContentMedia(1601, ['HTML' => '<p>Normal text block.</p>']);
 
-        // Custom HeroBlock (stored in BaseElement with custom ClassName)
+        // Custom HeroBlock (stored in Element with custom ClassName)
         $this->seeder->seedElement(1602, $areaId, $heroClassName, 3, [
             'SizeMD' => 4, 'Title' => 'Hero CTA', 'ShowTitle' => 1, 'TitleTag' => 'h3',
             'ExtraClass' => 'hero-cta',

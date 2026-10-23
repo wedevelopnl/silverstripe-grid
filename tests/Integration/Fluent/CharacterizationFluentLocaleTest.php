@@ -15,7 +15,7 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTreeSnapshot;
 /**
  * Golden-master (characterization) test for the Fluent multi-locale migration
  * scenario. It seeds the Isolated legacy localisation model — each locale owns
- * its own BaseElement rows, distinguished by a LocaleID column — and pins the
+ * its own Element rows, distinguished by a LocaleID column — and pins the
  * CURRENT observed per-locale migration output: column default widths and the
  * `GridSettingsOverrides` NULL-vs-JSON tri-state, captured independently in each
  * locale.

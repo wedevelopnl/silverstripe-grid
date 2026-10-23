@@ -13,7 +13,7 @@ use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
 /**
  * Public entry point for reading legacy elemental data from the old database tables.
  *
- * The old dnadesign/silverstripe-elemental tables (BaseElement, ElementRow,
+ * The old dnadesign/silverstripe-elemental tables (Element, ElementRow,
  * ElementContent, ElementalArea) remain in the database after the module is
  * removed. This facade composes two collaborators and delegates to them:
  * - {@see LegacyPageDiscovery} — eligible-page and grid-toggle discovery

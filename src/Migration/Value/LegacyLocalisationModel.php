@@ -11,10 +11,10 @@ namespace WeDevelop\Grid\Migration\Value;
  */
 enum LegacyLocalisationModel
 {
-    /** BaseElement_Localised present: shared rows, per-locale field values. */
+    /** Element_Localised present: shared rows, per-locale field values. */
     case FieldLocalised;
 
-    /** BaseElement.LocaleID present: separate element rows per locale. */
+    /** Element.LocaleID present: separate element rows per locale. */
     case Isolated;
 
     /** No localisation artifacts: single-locale legacy content. */

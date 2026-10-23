@@ -17,8 +17,8 @@ final class LegacyTableSeederTest extends SapphireTest
     protected $usesTransactions = false;
 
     private const array LEGACY_TABLES = [
-        'BaseElement',
-        'BaseElement_Live',
+        'Element',
+        'Element_Live',
         'ElementRow',
         'ElementRow_Live',
         'ElementContent',
@@ -69,11 +69,11 @@ final class LegacyTableSeederTest extends SapphireTest
         }
     }
 
-    public function testBaseElementTableHasExpectedColumns(): void
+    public function testElementTableHasExpectedColumns(): void
     {
         $this->seeder->createTables();
 
-        $columns = \array_keys(DB::field_list('BaseElement'));
+        $columns = \array_keys(DB::field_list('Element'));
 
         $expected = [
             'ID', 'ClassName', 'Title', 'ShowTitle', 'TitleTag', 'TitleClass',
@@ -84,7 +84,7 @@ final class LegacyTableSeederTest extends SapphireTest
         ];
 
         foreach ($expected as $column) {
-            self::assertContains($column, $columns, "BaseElement should have column {$column}");
+            self::assertContains($column, $columns, "Element should have column {$column}");
         }
     }
 
@@ -245,7 +245,7 @@ final class LegacyTableSeederTest extends SapphireTest
 
         $this->seeder->seedElement(1, 500, 'App\\Model\\TestElement', 3);
 
-        $row = DB::query('SELECT * FROM "BaseElement" WHERE "ID" = 1')->record();
+        $row = DB::query('SELECT * FROM "Element" WHERE "ID" = 1')->record();
 
         self::assertNotEmpty($row);
         self::assertSame(500, (int) $row['ParentID']);
@@ -261,10 +261,10 @@ final class LegacyTableSeederTest extends SapphireTest
 
         $this->seeder->seedElement(2, 500, 'App\\Model\\TestElement', 1, stage: 'live');
 
-        $liveRow = DB::query('SELECT "ID" FROM "BaseElement_Live" WHERE "ID" = 2')->record();
+        $liveRow = DB::query('SELECT "ID" FROM "Element_Live" WHERE "ID" = 2')->record();
         self::assertNotEmpty($liveRow);
 
-        $draftRow = DB::query('SELECT "ID" FROM "BaseElement" WHERE "ID" = 2')->record();
+        $draftRow = DB::query('SELECT "ID" FROM "Element" WHERE "ID" = 2')->record();
         self::assertEmpty($draftRow);
     }
 
@@ -279,7 +279,7 @@ final class LegacyTableSeederTest extends SapphireTest
             'Title' => 'Custom Title',
         ]);
 
-        $row = DB::query('SELECT * FROM "BaseElement" WHERE "ID" = 3')->record();
+        $row = DB::query('SELECT * FROM "Element" WHERE "ID" = 3')->record();
 
         self::assertSame(8, (int) $row['SizeMD']);
         self::assertSame(2, (int) $row['OffsetLG']);

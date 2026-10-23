@@ -343,15 +343,15 @@ final class GridMigrationServiceTest extends MigrationTestCase
         }
     }
 
-    public function testOldBaseElementRecordsLeftUntouched(): void
+    public function testLegacyElementRecordsLeftUntouched(): void
     {
         $pageId = $this->pageId();
         $this->seedStandardPage($pageId);
         $this->runMigration();
 
-        // Old BaseElement records should still exist
+        // Legacy Element records should still exist
         $result = \SilverStripe\ORM\DB::prepared_query(
-            'SELECT COUNT(*) AS cnt FROM "BaseElement" WHERE "ParentID" = ?',
+            'SELECT COUNT(*) AS cnt FROM "Element" WHERE "ParentID" = ?',
             [100],
         );
         $count = (int) $result->record()['cnt'];

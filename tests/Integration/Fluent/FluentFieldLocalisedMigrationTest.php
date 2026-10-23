@@ -9,8 +9,8 @@ use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
 
 /**
  * Migration of the FieldLocalised legacy localisation model: a single base
- * BaseElement row holds the default-locale values, and per-locale
- * BaseElement_Localised / ElementContent_Localised overlay tables carry the
+ * Element row holds the default-locale values, and per-locale
+ * Element_Localised / ElementContent_Localised overlay tables carry the
  * translated field values that override the base on a per-locale basis.
  */
 #[CoversClass(FluentMigrationOrchestrator::class)]
@@ -40,6 +40,8 @@ final class FluentFieldLocalisedMigrationTest extends FluentMigrationTestCase
         self::assertSame(0, $failures);
         self::assertSame(['EN One'], $this->contentTitlesInLocale('en_US'));
         self::assertSame(['NL One'], $this->contentTitlesInLocale('nl_NL'), 'nl locale gets the overlaid title');
+        self::assertSame(['<p>EN</p>'], $this->contentHtmlInLocale('en_US'), 'en locale keeps the base HTML');
+        self::assertSame(['<p>NL</p>'], $this->contentHtmlInLocale('nl_NL'), 'nl locale gets the overlaid HTML');
     }
 
     public function testReRunIsIdempotentPerLocale(): void
