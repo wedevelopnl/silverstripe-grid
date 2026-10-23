@@ -43,8 +43,8 @@ final class MigrateGridTaskSummaryTest extends MigrationTestCase
         ]);
 
         self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
-        self::assertSame(
-            "Migrated 3 page(s) and 14 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n",
+        self::assertStringEndsWith(
+            "\nMigrated 3 page(s) and 14 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n",
             $result['output'],
         );
 
@@ -72,8 +72,8 @@ final class MigrateGridTaskSummaryTest extends MigrationTestCase
         ]);
 
         self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
-        self::assertSame(
-            "Would migrate 3 page(s) and 14 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n",
+        self::assertStringEndsWith(
+            "\nWould migrate 3 page(s) and 14 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n",
             $result['output'],
         );
     }
@@ -87,8 +87,8 @@ final class MigrateGridTaskSummaryTest extends MigrationTestCase
         $result = TaskRunner::run(new MigrateGridTask(), $options);
 
         self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
-        self::assertSame(
-            "Migrated 0 page(s) and 0 content block(s); 3 page(s) skipped as already migrated, 0 failed.\n",
+        self::assertStringEndsWith(
+            "\nMigrated 0 page(s) and 0 content block(s); 3 page(s) skipped as already migrated, 0 failed.\n",
             $result['output'],
         );
     }

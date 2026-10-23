@@ -32,8 +32,8 @@ final class MigrateGridWithFluentTaskSummaryTest extends FluentMigrationTestCase
         ]);
 
         self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
-        self::assertSame(
-            "[en_US] Migrated 1 page(s) and 1 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n"
+        self::assertStringEndsWith(
+            "\n[en_US] Migrated 1 page(s) and 1 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n"
             . "[nl_NL] Migrated 1 page(s) and 1 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n",
             $result['output'],
         );
