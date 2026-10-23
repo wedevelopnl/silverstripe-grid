@@ -11,7 +11,8 @@ The migration runs as a `BuildTask`, is idempotent, supports dry-runs, and handl
 
 - **The source site must run SilverStripe 5.4.x with `dnadesign/silverstripe-elemental` 5.4.x, and — on an ElementalGrid site — `wedevelopnl/silverstripe-elemental-grid` 5.1.5.** The migration is built and tested against the legacy schema of exactly those versions, for both supported sources; older releases store their content differently and are not supported. Upgrade the source site to these versions (and run `dev/build` there) before you upgrade it to SS6. A SilverStripe 4 site performs SilverStripe's standard SS4→SS5 upgrade first. The task cannot read these versions from the database, so it asks you to confirm them — see [Confirmation prompts](#confirmation-prompts).
 - This module is installed, configured and `dev/build` has been run successfully.
-- The legacy database tables (`BaseElement`, `ElementalArea`, `ElementContent`, optionally `ElementRow`) are still present in the database. The old PHP code does **not** need to be installed — the migration reads the old tables via raw SQL.
+- The legacy database tables are still present in the database: `Element` and `Element_Live` (where `dnadesign/silverstripe-elemental` 5.x stores every element's base record), `ElementalArea`, `ElementContent`, and optionally `ElementRow`, each with its `_Live` table. The old PHP code does **not** need to be installed — the migration reads the old tables via raw SQL. When `Element` or `Element_Live` is missing, the task refuses to start and changes nothing.
+- **A hand-added `BaseElement` table or view is not read.** Some sites worked around an earlier release of this tool, which looked for the legacy elements under `BaseElement`, by adding a `BaseElement` (or `BaseElement_Localised`) copy or view of `Element`. The migration reads `Element` only, so such a copy is ignored and can be dropped. On a Fluent site the workaround could also hide the translations: with a `BaseElement` view and no `BaseElement_Localised` table, the earlier release detected no localised content and migrated the default locale only. If you migrated a Fluent site that way, check its translations.
 - The `SS_GRID_ADAPTER` environment variable **must** be set to a bundled preset (`bootstrap` or `tailwind`, case-insensitive) or to the fully-qualified class name of a custom adapter implementing `GridAdapterInterface`. There is no default: when the variable is unset, empty, or invalid the container throws a `RuntimeException` at boot, which aborts `dev/build` **and** every migration task before any work is done. Set it in your environment (e.g. `.env`) before migrating.
 
 ## Before You Begin
@@ -19,8 +20,8 @@ The migration runs as a `BuildTask`, is idempotent, supports dry-runs, and handl
 Read this section before running the task on a production database.
 
 - **Back up your database.** The migration writes into `GridElement`, `GridElement_Live`, `Section`, `Row`, `Column` and `ContentElement` tables and performs Versioned draft/live reconciliation. A bad run is difficult to unwind without a backup. The task asks you to confirm the backup exists before it writes anything.
-- **Element IDs change.** Migrated content elements receive new primary keys when inserted into `GridElement`. External references to the old `BaseElement` IDs (shortcodes in other content, custom reports, outbound links) will not follow automatically.
-- **Legacy tables are left intact.** The tool does not drop `BaseElement`, `ElementRow`, `ElementContent`, or `ElementalArea`. Orphaned rows in those tables let you re-run the migration if something looks wrong. Drop them manually once you are satisfied with the result.
+- **Element IDs change.** Migrated content elements receive new primary keys when inserted into `GridElement`. External references to the old `Element` IDs (shortcodes in other content, custom reports, outbound links) will not follow automatically.
+- **Legacy tables are left intact.** The tool does not drop `Element`, `ElementRow`, `ElementContent`, or `ElementalArea`. Orphaned rows in those tables let you re-run the migration if something looks wrong. Drop them manually once you are satisfied with the result.
 - **Only `ElementContent` is mapped by default.** The built-in field mapper converts `DNADesign\Elemental\Models\ElementContent` to `WeDevelop\Grid\Model\ContentElement`. Any custom element subclass must either already extend `GridElement`, or be registered via the `updateClassNameMapping` extension hook described in [Customising the Migration](#customising-the-migration).
 - **Apply `BlockMediaExtension` before migrating media.** Media capability is opt-in: `ContentElement` ships lean (HTML only), so the media columns (`MediaType`, `MediaImage`, video fields, …) only exist once you apply `BlockMediaExtension` to it (or to your own content subclass). If your legacy content used media and the extension is not applied to the destination class, those fields have nowhere to land. Add it in your app config before running the task:
 
@@ -165,7 +166,19 @@ When stdin is not a TTY (CI pipelines, `sake` called from a script), there is no
 | `--page-ids` | no | — | Comma-separated page IDs to migrate. If omitted, all eligible pages are migrated. |
 | `--stop-on-first-failure` | no | (flag) | Halt the batch on the first page that fails to migrate. By default the task continues past failures and logs the failing page IDs at the end. |
 
-If a run finishes with failures, the task exits with a non-zero status and the failing page IDs are logged as errors. Pages that failed remain un-migrated and can be re-run after the cause is fixed.
+### Summary line
+
+Every run that gets past the up-front checks ends with one summary line:
+
+```
+Migrated 3 page(s) and 14 content block(s); 0 page(s) skipped as already migrated, 0 failed.
+```
+
+A content block is a legacy element that is not an `ElementRow` (rows become the Section/Row/Column structure). An element present on both draft and live counts once. Pages skipped by the idempotency check and pages that failed contribute no blocks. A dry run prints the same counts as `Would migrate …`.
+
+`migrate-grid-with-fluent` prints one line per locale pass, prefixed with the locale code (`[nl_NL] Migrated …`). The lines are not added up: a page converted in two locales is one page in each line.
+
+If a run finishes with failures, the summary line is followed by `Check logs for details.`, the task exits with a non-zero status and the failing page IDs are logged as errors. Pages that failed remain un-migrated and can be re-run after the cause is fixed.
 
 ## Multi-locale (Fluent) sites
 
@@ -180,7 +193,7 @@ The task accepts the same options as `migrate-grid` (see the [Options Reference]
 
 ### Additional prerequisites
 
-- **The legacy `BaseElement_Localised` / `*_Localised` (and `_Live`) tables must still be present.** If `dev/build` moved them to `_obsolete_*` after the old element relation was dropped, rename them back first — the migration reads legacy tables by name.
+- **The legacy `Element_Localised` / `*_Localised` (and `_Live`) tables must still be present.** If `dev/build` moved them to `_obsolete_*` after the old element relation was dropped, rename them back first — the migration reads legacy tables by name.
 - Fluent must be installed and wired into the grid as described in [Fluent (multi-locale) support](fluent.md).
 
 ### How the task works
@@ -191,8 +204,8 @@ It inspects the database table shape to determine which Fluent strategy the Silv
 
 | Legacy table shape | Detected model | Behaviour |
 |--------------------|----------------|-----------|
-| `BaseElement_Localised` present | Field-localised | Shared element structure; per-locale content read from `*_Localised` tables and overlaid onto the base row. |
-| `BaseElement.LocaleID` column present | Isolated | Separate element rows exist per locale; each locale's rows are filtered by `LocaleID`. |
+| `Element_Localised` present | Field-localised | Shared element structure; per-locale content read from `*_Localised` tables and overlaid onto the base row. |
+| `Element.LocaleID` column present | Isolated | Separate element rows exist per locale; each locale's rows are filtered by `LocaleID`. |
 | Neither | Single-locale | No locale-specific data; elements are migrated once into the default locale only. |
 | Both | Unsupported | Ambiguous mixed configuration — the task aborts with an error. |
 
@@ -230,7 +243,7 @@ It inspects the database table shape to determine which Fluent strategy the Silv
 
 - `ElementRow.IsFluid`. This was a per-row flag in the old module and has no per-instance equivalent in the new Section model.
 - `ElementRow.TitleTag` and `ElementRow.TitleClass`.
-- The legacy `BaseElement` / `ElementRow` / `ElementContent` / `ElementalArea` rows themselves. They are left in the database for manual cleanup.
+- The legacy `Element` / `ElementRow` / `ElementContent` / `ElementalArea` rows themselves. They are left in the database for manual cleanup.
 - Custom element subclasses that are not configured via an extension hook.
 
 ## Grid Settings Consolidation
@@ -432,7 +445,7 @@ For field-level tweaks on individual element subclasses, `updateElementFieldMapp
    - Elements that shared grid settings and now share a parent Column.
    - Media blocks that relied on Bootstrap CSS classes for alignment or ordering.
 4. Review the log output for `warning` entries — each one corresponds to a clamp, an unresolved mapping, or a `customSectionClass` conflict resolved by Strategy B.
-5. Once you are satisfied, drop the legacy tables manually (`BaseElement`, `BaseElement_Live`, `ElementRow`, `ElementRow_Live`, `ElementContent`, `ElementContent_Live`, `ElementalArea`, `ElementalArea_Live`, and any legacy subclass tables) in a separate migration step.
+5. Once you are satisfied, drop the legacy tables manually (`Element`, `Element_Live`, `Element_Versions`, `ElementRow`, `ElementRow_Live`, `ElementContent`, `ElementContent_Live`, `ElementalArea`, `ElementalArea_Live`, any `*_Localised` tables of a Fluent site, any legacy subclass tables, and a hand-added `BaseElement` copy if the site has one) in a separate migration step.
 
 ## Related Migrations
 
@@ -447,6 +460,8 @@ Many SS4/SS5 sites store element link fields with `gorriecoe/silverstripe-link`.
 Carry the block link FK fields across during the grid pass with the `updateElementFieldMapping` hook (see [Customising the Migration](#customising-the-migration)), then run the link conversion last.
 
 ## Troubleshooting
+
+**"Legacy element table "Element" not found."** — The database does not hold the elemental tables of a site on the supported source (see [Requirements](#requirements)), so the task refuses before the banner and the confirmation prompts and changes nothing. The message names every missing table (`Element`, `Element_Live`). Check that you run the task against the upgraded copy of the SS5 database, and that `dev/build` did not rename the tables to `_obsolete_*`; rename them back if it did.
 
 **"Page X already migrated for zone Y, skipping."** — The idempotency check found at least one `Section` for that page and zone on draft. If you need to redo the page, delete its new Section tree first.
 
