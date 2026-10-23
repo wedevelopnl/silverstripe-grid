@@ -27,7 +27,10 @@ final class DraftHierarchyWriter
 {
     use Extensible;
 
-    public function __construct(private readonly FieldMapper $mapper) {}
+    public function __construct(
+        private readonly FieldMapper $mapper,
+        private readonly DroppedMediaCollector $droppedMedia,
+    ) {}
 
     /**
      * @param class-string $pageClassName
@@ -169,7 +172,13 @@ final class DraftHierarchyWriter
                 $newElement->HTML = $html;
             }
 
-            foreach ($this->mapper->mapMediaFields($legacyElement->mediaData)->toArray() as $field => $value) {
+            // The ORM would silently drop a field without a column; resolve
+            // them up front so the ones left behind get reported.
+            $mediaFields = $this->mapper->mapMediaFields($legacyElement->mediaData)->toArray();
+            $resolved = FieldTableResolver::resolve($newElement::class, \array_keys($mediaFields));
+            $this->droppedMedia->record($legacyElement->id, $legacyElement->mediaData, $resolved['missing']);
+
+            foreach (\array_diff_key($mediaFields, \array_flip($resolved['missing'])) as $field => $value) {
                 $newElement->__set($field, $value);
             }
         }

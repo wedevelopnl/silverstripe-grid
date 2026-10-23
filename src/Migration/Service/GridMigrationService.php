@@ -41,9 +41,10 @@ final class GridMigrationService
         FieldMapper $mapper,
         private readonly RowMappingStrategy $strategy,
         private readonly LoggerInterface $logger,
+        DroppedMediaCollector $droppedMedia,
     ) {
-        $this->draftWriter = new DraftHierarchyWriter($mapper);
-        $this->livePublisher = new LivePublisher($mapper, $this->draftWriter, $logger, $strategy);
+        $this->draftWriter = new DraftHierarchyWriter($mapper, $droppedMedia);
+        $this->livePublisher = new LivePublisher($mapper, $this->draftWriter, $logger, $strategy, $droppedMedia);
         $this->pageFlagWriter = new PageGridFlagWriter($reader, $logger);
     }
 

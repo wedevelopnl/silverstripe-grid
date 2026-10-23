@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Page;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
+use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
@@ -77,6 +78,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
             $this->mapper,
             $strategy ?? $this->createStrategy(),
             $this->logger,
+            new DroppedMediaCollector(),
         );
     }
 

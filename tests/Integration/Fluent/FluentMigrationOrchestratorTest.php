@@ -9,6 +9,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use TractorCow\Fluent\Model\Locale;
 use WeDevelop\Grid\Migration\DTO\MigrationSummary;
+use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
@@ -38,6 +39,7 @@ final class FluentMigrationOrchestratorTest extends FluentMigrationTestCase
             $mapper,
             new RowPerSectionStrategy(new ElementGrouper(), $mapper, self::DEFAULT_VIEWPORT, self::VIEWPORT_KEY_MAP),
             $logger,
+            new DroppedMediaCollector(),
         );
     }
 

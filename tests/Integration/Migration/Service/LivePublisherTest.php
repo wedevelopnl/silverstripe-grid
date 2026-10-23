@@ -12,10 +12,12 @@ use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
+use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
 use WeDevelop\Grid\Migration\DTO\MigrationColumn;
 use WeDevelop\Grid\Migration\DTO\MigrationRow;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
+use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\LivePublisher;
@@ -84,7 +86,7 @@ final class LivePublisherTest extends SapphireTest
         $this->disableAutoScaffolding();
 
         $this->mapper = new FieldMapper();
-        $this->draftWriter = new DraftHierarchyWriter($this->mapper);
+        $this->draftWriter = new DraftHierarchyWriter($this->mapper, new DroppedMediaCollector());
         $this->logger = new RecordingLogger();
 
         $strategy = new RowPerSectionStrategy(
@@ -94,7 +96,7 @@ final class LivePublisherTest extends SapphireTest
             self::VIEWPORT_KEY_MAP,
         );
 
-        $this->publisher = new LivePublisher($this->mapper, $this->draftWriter, $this->logger, $strategy);
+        $this->publisher = new LivePublisher($this->mapper, $this->draftWriter, $this->logger, $strategy, new DroppedMediaCollector());
     }
 
     public function testSharedElementIsPublishedToLiveWithLiveValuesAndContainerChain(): void
@@ -297,6 +299,67 @@ final class LivePublisherTest extends SapphireTest
         self::assertSame(3, (int) $liveContent->ContentColumns, 'mapped media fields must be written to live');
     }
 
+    public function testLiveContentOverwriteWritesEveryMappedMediaFieldToLive(): void
+    {
+        $pageId = $this->createPage();
+        $idMap = new MigrationIdMap();
+
+        $draftElement = $this->legacyElement(5000, 'Draft Title', media: new LegacyMediaData(['HTML' => '<p>Draft</p>']));
+        $this->writeDraft($pageId, [$this->section($draftElement, $this->gridSettings(8))], $idMap);
+
+        $liveElement = $this->legacyElement(5000, 'Live Title', media: new LegacyMediaData([
+            'HTML' => '<p>Live</p>',
+            'ContentColumns' => '6',
+            'ContentVerticalAlign' => 'align-items-end',
+            'ExtraColumnGap' => 5,
+            'MediaType' => 'video',
+            'MediaCaption' => 'Caption',
+            'MediaRatio' => '16x9',
+            'MediaPosition' => 'order-1 order-md-2',
+            'MediaImageID' => 41,
+            'MediaVideoFullURL' => 'https://example.com/watch?v=1',
+            'MediaVideoProvider' => 'youtube',
+            'MediaVideoHasOverlay' => 1,
+            'MediaVideoCustomThumbnailID' => 42,
+            'MediaVideoEmbeddedName' => 'Embed name',
+            'MediaVideoEmbeddedURL' => 'https://example.com/embed/1',
+            'MediaVideoEmbeddedDescription' => 'Embed description',
+            'MediaVideoEmbeddedThumbnail' => 'https://example.com/thumb.jpg',
+            'MediaVideoEmbeddedCreated' => '2024-01-02',
+        ]));
+
+        $this->publish($pageId, Page::class, [$liveElement], [5000 => true], $idMap);
+
+        $liveContent = $this->liveById(ContentElement::class, $idMap->newElementId(5000));
+        self::assertInstanceOf(ContentElement::class, $liveContent);
+        $fields = \array_keys(MappedMediaFields::LEGACY_COLUMNS);
+        self::assertSame(
+            [
+                'ContentColumns' => '6',
+                'VerticalAlignment' => 'bottom',
+                'GapSize' => '2',
+                'MediaType' => 'video',
+                'MediaCaption' => 'Caption',
+                'MediaImageID' => '41',
+                'MediaRatio' => '16x9',
+                'MediaPosition' => 'last-on-desktop',
+                'VideoURL' => 'https://example.com/watch?v=1',
+                'VideoProvider' => 'youtube',
+                'VideoHasOverlay' => '1',
+                'VideoCustomThumbnailID' => '42',
+                'VideoEmbedName' => 'Embed name',
+                'VideoEmbedURL' => 'https://example.com/embed/1',
+                'VideoEmbedDescription' => 'Embed description',
+                'VideoEmbedThumbnail' => 'https://example.com/thumb.jpg',
+                'VideoEmbedCreated' => '2024-01-02',
+            ],
+            \array_combine($fields, \array_map(
+                static fn (string $field): string => (string) $liveContent->getField($field),
+                $fields,
+            )),
+        );
+    }
+
     public function testUpdateLiveElementFieldMappingHookFiresAfterTheStockLiveOverwrite(): void
     {
         // Fields a project maps via updateElementFieldMapping are set from the
@@ -316,6 +379,7 @@ final class LivePublisherTest extends SapphireTest
                     self::DEFAULT_VIEWPORT,
                     self::VIEWPORT_KEY_MAP,
                 ),
+                new DroppedMediaCollector(),
             );
 
             $pageId = $this->createPage();

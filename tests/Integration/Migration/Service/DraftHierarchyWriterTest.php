@@ -14,6 +14,7 @@ use WeDevelop\Grid\Migration\DTO\MigrationColumn;
 use WeDevelop\Grid\Migration\DTO\MigrationRow;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
+use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
@@ -58,7 +59,7 @@ final class DraftHierarchyWriterTest extends SapphireTest
         // so a single Section write does not also scaffold an extra Row + Column.
         $this->disableAutoScaffolding();
 
-        $this->writer = new DraftHierarchyWriter(new FieldMapper());
+        $this->writer = new DraftHierarchyWriter(new FieldMapper(), new DroppedMediaCollector());
     }
 
     public function testWritesFullHierarchyToDraftUnderParentChain(): void
@@ -206,7 +207,7 @@ final class DraftHierarchyWriterTest extends SapphireTest
 
         try {
             // Fresh writer so the extension is wired onto this instance.
-            $writer = new DraftHierarchyWriter(new FieldMapper());
+            $writer = new DraftHierarchyWriter(new FieldMapper(), new DroppedMediaCollector());
             $pageId = $this->createPage();
             $idMap = new MigrationIdMap();
 

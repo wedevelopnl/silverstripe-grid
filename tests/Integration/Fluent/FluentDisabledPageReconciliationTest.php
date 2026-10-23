@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
+use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
@@ -56,6 +57,7 @@ final class FluentDisabledPageReconciliationTest extends FluentMigrationTestCase
             $mapper,
             $strategy,
             $logger,
+            new DroppedMediaCollector(),
         );
 
         $summaries = $orchestrator->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);
