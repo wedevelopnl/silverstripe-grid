@@ -10,11 +10,10 @@ final readonly class MigrationColumn
 {
     /**
      * @param positive-int $sort
-     * @param list<LegacyElement> $elements
      */
     public function __construct(
         public GridSettings $gridSettings,
         public int $sort,
-        public array $elements,
+        public LegacyElement $element,
     ) {}
 }

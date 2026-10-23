@@ -727,8 +727,7 @@ final class MigrationAcceptanceTest extends MigrationTestCase
             // The two leading empty row delimiters are dropped (an empty Row with no
             // Column violates the complete-hierarchy invariant); only the content
             // row survives as a single section.
-            // Row with 2 media-rich elements sharing a column (both SizeMD=6, no
-            // overrides — grouping produces 1 column).
+            // Row with 2 media-rich elements, one column each (both SizeMD=6).
             [
                 'rows' => [
                     [
@@ -736,30 +735,32 @@ final class MigrationAcceptanceTest extends MigrationTestCase
                             [
                                 'gridDefault' => ['width' => 6, 'offset' => 0, 'visible' => true],
                                 'gridOverrides' => [],
-                                'elements' => [
-                                    [
-                                        'className' => ContentElement::class,
-                                        'title' => 'Gallery Left',
-                                        'html' => '<p>Left panel.</p>',
-                                        'mediaType' => 'image',
-                                        'mediaImageID' => 99,
-                                        'mediaRatio' => '1x1',
-                                        'mediaPosition' => 'first',
-                                        'contentColumns' => 4,
-                                        'verticalAlignment' => 'bottom',
-                                        'gapSize' => 1,
-                                    ],
-                                    [
-                                        'className' => ContentElement::class,
-                                        'title' => 'Gallery Right',
-                                        'html' => '<p>Right panel.</p>',
-                                        'mediaType' => 'image',
-                                        'mediaImageID' => 100,
-                                        'mediaRatio' => '4x3',
-                                        'mediaPosition' => 'last',
-                                        'verticalAlignment' => 'top',
-                                        'gapSize' => 0,
-                                    ],
+                                'element' => [
+                                    'className' => ContentElement::class,
+                                    'title' => 'Gallery Left',
+                                    'html' => '<p>Left panel.</p>',
+                                    'mediaType' => 'image',
+                                    'mediaImageID' => 99,
+                                    'mediaRatio' => '1x1',
+                                    'mediaPosition' => 'first',
+                                    'contentColumns' => 4,
+                                    'verticalAlignment' => 'bottom',
+                                    'gapSize' => 1,
+                                ],
+                            ],
+                            [
+                                'gridDefault' => ['width' => 6, 'offset' => 0, 'visible' => true],
+                                'gridOverrides' => [],
+                                'element' => [
+                                    'className' => ContentElement::class,
+                                    'title' => 'Gallery Right',
+                                    'html' => '<p>Right panel.</p>',
+                                    'mediaType' => 'image',
+                                    'mediaImageID' => 100,
+                                    'mediaRatio' => '4x3',
+                                    'mediaPosition' => 'last',
+                                    'verticalAlignment' => 'top',
+                                    'gapSize' => 0,
                                 ],
                             ],
                         ],
@@ -991,15 +992,16 @@ final class MigrationAcceptanceTest extends MigrationTestCase
                         'columns' => [
                             [
                                 'gridDefault' => ['width' => 6, 'offset' => 0, 'visible' => true],
-                                'elements' => [
-                                    [
-                                        'title' => 'Subclass Element',
-                                        'showTitle' => true,
-                                        'html' => '<p>Subclass content</p>',
-                                    ],
-                                    [
-                                        'html' => '<p>Second</p>',
-                                    ],
+                                'element' => [
+                                    'title' => 'Subclass Element',
+                                    'showTitle' => true,
+                                    'html' => '<p>Subclass content</p>',
+                                ],
+                            ],
+                            [
+                                'gridDefault' => ['width' => 6, 'offset' => 0, 'visible' => true],
+                                'element' => [
+                                    'html' => '<p>Second</p>',
                                 ],
                             ],
                         ],
@@ -1046,19 +1048,21 @@ final class MigrationAcceptanceTest extends MigrationTestCase
                                 [
                                     'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
                                     'gridOverrides' => [],
-                                    'elements' => [
-                                        [
-                                            'className' => ContentElement::class,
-                                            'title' => 'First Block',
-                                            'html' => '<p>Hello from plain elemental.</p>',
-                                        ],
-                                        [
-                                            'className' => ContentElement::class,
-                                            'title' => 'Second Block',
-                                            'showTitle' => true,
-                                            'titleTag' => 'h3',
-                                            'html' => '<p>Another content block.</p>',
-                                        ],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'First Block',
+                                        'html' => '<p>Hello from plain elemental.</p>',
+                                    ],
+                                ],
+                                [
+                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Second Block',
+                                        'showTitle' => true,
+                                        'titleTag' => 'h3',
+                                        'html' => '<p>Another content block.</p>',
                                     ],
                                 ],
                             ],
@@ -1105,22 +1109,28 @@ final class MigrationAcceptanceTest extends MigrationTestCase
                                 [
                                     'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
                                     'gridOverrides' => [],
-                                    'elements' => [
-                                        [
-                                            'className' => ContentElement::class,
-                                            'title' => 'Block A',
-                                            'html' => '<p>Content A.</p>',
-                                        ],
-                                        [
-                                            'className' => ContentElement::class,
-                                            'title' => 'Block B',
-                                            'html' => '<p>Content B.</p>',
-                                        ],
-                                        [
-                                            'className' => ContentElement::class,
-                                            'title' => 'Block C',
-                                            'html' => '<p>Content C.</p>',
-                                        ],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Block A',
+                                        'html' => '<p>Content A.</p>',
+                                    ],
+                                ],
+                                [
+                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Block B',
+                                        'html' => '<p>Content B.</p>',
+                                    ],
+                                ],
+                                [
+                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Block C',
+                                        'html' => '<p>Content C.</p>',
                                     ],
                                 ],
                             ],
@@ -1161,8 +1171,7 @@ final class MigrationAcceptanceTest extends MigrationTestCase
 
             $this->runRowPerSection($pageId);
 
-            // Assert draft: 1 Section > 1 Row > 1 Column with 2 grouped elements
-            // (both are width=12, visible, no overrides — grouping merges them)
+            // Assert draft: 1 Section > 1 Row > 2 full-width Columns, one per element
             $this->assertMigratedHierarchy($pageId, self::ZONE, Versioned::DRAFT, [
                 [
                     'rows' => [
@@ -1171,17 +1180,19 @@ final class MigrationAcceptanceTest extends MigrationTestCase
                                 [
                                     'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
                                     'gridOverrides' => [],
-                                    'elements' => [
-                                        [
-                                            'className' => ContentElement::class,
-                                            'title' => 'Draft Title',
-                                            'html' => '<p>Draft content</p>',
-                                        ],
-                                        [
-                                            'className' => ContentElement::class,
-                                            'title' => 'Draft Only Block',
-                                            'html' => '<p>Not yet published</p>',
-                                        ],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Draft Title',
+                                        'html' => '<p>Draft content</p>',
+                                    ],
+                                ],
+                                [
+                                    'gridDefault' => ['width' => 12, 'offset' => 0, 'visible' => true],
+                                    'gridOverrides' => [],
+                                    'element' => [
+                                        'className' => ContentElement::class,
+                                        'title' => 'Draft Only Block',
+                                        'html' => '<p>Not yet published</p>',
                                     ],
                                 ],
                             ],
@@ -1336,13 +1347,7 @@ final class MigrationAcceptanceTest extends MigrationTestCase
 
                         $this->assertColumnGridSettings($column, $expectedCol, $colPath);
 
-                        // Support 'element' (single) or 'elements' (list) — multi-element
-                        // columns are produced by grouping consecutive elements with
-                        // identical grid settings.
-                        $expectedElements = isset($expectedCol['elements'])
-                            ? $expectedCol['elements']
-                            : [$expectedCol['element']];
-                        $this->assertContentElements($column, $expectedElements, $colPath);
+                        $this->assertColumnElement($column, $expectedCol['element'], $colPath);
                     }
                 }
             }
@@ -1388,29 +1393,22 @@ final class MigrationAcceptanceTest extends MigrationTestCase
     }
 
     /**
-     * Assert content elements (one or more) inside a column, in sort order.
+     * Assert a column holds exactly one content element, matching $expectedEl.
      *
-     * @param list<array<string, mixed>> $expectedElements
+     * @param array<string, mixed> $expectedEl
      */
-    private function assertContentElements(Column $column, array $expectedElements, string $colPath): void
+    private function assertColumnElement(Column $column, array $expectedEl, string $colPath): void
     {
         $elements = GridElement::get()->filter([
             'ParentID' => $column->ID,
             'ParentClass' => Column::class,
-        ])->sort('Sort', 'ASC');
+        ]);
 
-        self::assertCount(
-            \count($expectedElements),
-            $elements,
-            \sprintf('%s: expected %d content element(s)', $colPath, \count($expectedElements)),
-        );
+        self::assertCount(1, $elements, "$colPath: one content element per column");
 
-        $index = 0;
-        foreach ($elements as $element) {
-            $expectedEl = $expectedElements[$index];
-            $this->assertContentElement($element, $expectedEl, "$colPath > Element " . ($index + 1));
-            $index++;
-        }
+        $element = $elements->first();
+        self::assertInstanceOf(GridElement::class, $element);
+        $this->assertContentElement($element, $expectedEl, "$colPath > Element");
     }
 
     /**

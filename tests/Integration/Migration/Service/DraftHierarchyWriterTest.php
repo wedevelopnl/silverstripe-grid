@@ -124,27 +124,6 @@ final class DraftHierarchyWriterTest extends SapphireTest
         self::assertSame(1, $idMap->draftSort(self::LEGACY_ID));
     }
 
-    public function testElementSortAdvancesAcrossEveryElementInAColumn(): void
-    {
-        $pageId = $this->createPage();
-        $idMap = new MigrationIdMap();
-
-        $first = $this->legacyContent(5001, 'First');
-        $second = $this->legacyContent(5002, 'Second');
-        $column = new MigrationColumn($this->gridSettings(), 1, [$first, $second]);
-        $section = new MigrationSection('', self::ZONE, '', 1, [new MigrationRow('', '', 1, [$column])]);
-
-        $this->write($pageId, [$section], $idMap);
-
-        // The recorded draft Sort is what the live pass replays; a non-advancing counter
-        // would record 0 for the second element even though ensureSortSet() repairs the row.
-        self::assertSame(1, $idMap->draftSort(5001));
-        self::assertSame(2, $idMap->draftSort(5002));
-
-        $sorts = ContentElement::get()->sort('Sort')->column('Sort');
-        self::assertSame([1, 2], array_map('intval', $sorts));
-    }
-
     public function testCreateSectionUsesTheExplicitSortOverrideWhenGiven(): void
     {
         $pageId = $this->createPage();
@@ -184,7 +163,7 @@ final class DraftHierarchyWriterTest extends SapphireTest
             'With media',
             new LegacyMediaData(['HTML' => '<p>Body</p>', 'ContentColumns' => '3']),
         );
-        $column = new MigrationColumn($this->gridSettings(), 1, [$element]);
+        $column = new MigrationColumn($this->gridSettings(), 1, $element);
         $section = new MigrationSection('', self::ZONE, '', 1, [new MigrationRow('', '', 1, [$column])]);
 
         $this->write($pageId, [$section], new MigrationIdMap());
@@ -283,7 +262,7 @@ final class DraftHierarchyWriterTest extends SapphireTest
             'extraClass' => 'el-extra',
         ]);
 
-        $column = new MigrationColumn($gridSettings, 1, [$element]);
+        $column = new MigrationColumn($gridSettings, 1, $element);
         $row = new MigrationRow('Row title', 'row-extra', 1, [$column]);
 
         return new MigrationSection('', self::ZONE, 'section-extra', 1, [$row]);

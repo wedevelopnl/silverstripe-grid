@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Page;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
@@ -23,6 +24,7 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTreeSnapshot;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestLegacyReaderFilterExtension;
 use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 
@@ -457,20 +459,20 @@ final class GridMigrationServiceTest extends MigrationTestCase
         self::assertCount(0, $liveElements);
     }
 
-    public function testLiveOnlyContentGetsSameGroupedStructureAsDraftPath(): void
+    public function testLiveOnlyContentGetsSameRowStructureAsDraftPath(): void
     {
         // Live-only content must flow through the same ElementGrouper + strategy
         // as the draft path, NOT a flat one-element-per-section chain.
         //
         // Layout (live-only): [E1(w6), E2(w6)] then a row boundary then [E3(w12)].
-        // Expected grouped structure (RowPerSectionStrategy):
-        //   Section 1 → Row → Column [E1, E2]  (consecutive identical width=6 grouped)
-        //   Section 2 → Row → Column [E3]      (row delimiter starts a new section)
+        // Expected structure (RowPerSectionStrategy):
+        //   Section 1 → Row → Column [E1] + Column [E2]  (one column per element)
+        //   Section 2 → Row → Column [E3]                (row delimiter starts a new section)
         $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
 
-        // Two consecutive content elements with identical grid settings (live-only)
+        // Two consecutive content elements in one row (live-only)
         $this->seeder->seedElement(6200, $areaId, self::CONTENT_CLASS, 1, [
             'SizeMD' => 6,
             'Title' => 'LO First',
@@ -493,7 +495,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
 
         $this->runMigration();
 
-        // The grouped structure must exist on BOTH stages (Versioned integrity)
+        // The structure must exist on BOTH stages (Versioned integrity)
         foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
             Versioned::set_stage($stage);
 
@@ -505,20 +507,21 @@ final class GridMigrationServiceTest extends MigrationTestCase
 
             $sectionList = $sections->toArray();
 
-            // Section 1: one row, one column holding BOTH grouped elements
+            // Section 1: one row, one width-6 column per element, in order
             $firstRow = Row::get()->filter(['ParentID' => $sectionList[0]->ID])->first();
             self::assertInstanceOf(Row::class, $firstRow);
-            $firstColumns = Column::get()->filter(['ParentID' => $firstRow->ID]);
-            self::assertCount(1, $firstColumns, "Stage {$stage}: identical-grid elements should share one column");
-            $firstColumn = $firstColumns->first();
-            self::assertInstanceOf(Column::class, $firstColumn);
-            self::assertSame(6, $firstColumn->getGridSettings()->default->width);
-            $firstColumnElements = ContentElement::get()
-                ->filter(['ParentID' => $firstColumn->ID])
-                ->sort('Sort', 'ASC');
-            self::assertCount(2, $firstColumnElements, "Stage {$stage}: both grouped elements live in the shared column");
-            self::assertSame('LO First', $firstColumnElements->first()->Title);
-            self::assertSame('LO Second', $firstColumnElements->last()->Title);
+            $firstColumns = [];
+            foreach (Column::get()->filter(['ParentID' => $firstRow->ID])->sort('Sort', 'ASC') as $column) {
+                $firstColumns[] = [
+                    $column->getGridSettings()->default->width,
+                    ContentElement::get()->filter(['ParentID' => $column->ID])->column('Title'),
+                ];
+            }
+            self::assertSame(
+                [[6, ['LO First']], [6, ['LO Second']]],
+                $firstColumns,
+                "Stage {$stage}: each element gets its own column",
+            );
 
             // Section 2: separate section (created by the row boundary), width=12
             $secondRow = Row::get()->filter(['ParentID' => $sectionList[1]->ID])->first();
@@ -578,7 +581,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
     {
         // Positive case: a page with live-only elements must emit an info log
         // naming the page ID and element count so an operator can spot-check
-        // that the adjacent same-settings grouping produced the expected layout.
+        // the live layout (live-only content is appended after the draft content).
         $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
@@ -609,7 +612,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
         self::assertStringContainsString('2 live-only', $liveOnlyLog, 'The log must name the live-only element count');
 
         // Negative case: a page with only shared elements (draft + live) must
-        // not emit a live-only info log — the grouping caveat does not apply.
+        // not emit a live-only info log — the caveat does not apply.
         $this->logger->messages = [];
 
         $pageId2 = $this->pageId('test_page_2');
@@ -816,11 +819,10 @@ final class GridMigrationServiceTest extends MigrationTestCase
 
     public function testDraftAndLiveSortAgreeForElementOnBothStages(): void
     {
-        // Two elements with identical grid settings group into ONE column, so
-        // they receive column-local Sort 1 and 2 on draft. Their legacy
-        // area-wide sort values are 2 and 3. The live UPDATE must use the
-        // column-local draft Sort (1, 2), not the legacy area-wide value (2, 3),
-        // so both stages order the column's children identically.
+        // Each element gets its own column, so each receives column-local
+        // Sort 1 on draft. Their legacy area-wide sort values are 2 and 3. The
+        // live UPDATE must use the column-local draft Sort, not the legacy
+        // area-wide value, so both stages order each column identically.
         $pageId = $this->pageId();
         $areaId = 100;
         $this->seeder->seedPage($pageId, $areaId);
@@ -853,9 +855,9 @@ final class GridMigrationServiceTest extends MigrationTestCase
         self::assertInstanceOf(ContentElement::class, $liveFirst);
         self::assertInstanceOf(ContentElement::class, $liveSecond);
 
-        // Draft assigns column-local 1, 2 (not the legacy area-wide 2, 3)
+        // Draft assigns column-local 1 to each (not the legacy area-wide 2, 3)
         self::assertSame(1, (int) $draftFirst->Sort);
-        self::assertSame(2, (int) $draftSecond->Sort);
+        self::assertSame(1, (int) $draftSecond->Sort);
 
         // Live Sort must equal the draft Sort for each element
         self::assertSame((int) $draftFirst->Sort, (int) $liveFirst->Sort, 'First: draft and live Sort must agree');
@@ -1300,62 +1302,135 @@ final class GridMigrationServiceTest extends MigrationTestCase
     }
 
     /**
-     * Four elements where only the 3rd has a different grid configuration produce
-     * exactly 3 columns: [e1, e2] | [e3] | [e4]. Elements 1 and 2 share a column,
-     * element 3 breaks the group, and element 4 starts a new column (it is not
-     * merged with e1+e2 because grouping is strictly consecutive).
+     * Legacy row layouts for the column-per-block rule: every block becomes its
+     * own Column at its own width, in legacy order. Rows wider than the grid
+     * wrap at render time; the migration must not prevent that by merging.
+     *
+     * @return iterable<string, array{non-empty-list<positive-int>}>
      */
-    public function testGroupsConsecutiveElementsWithSameGridSettings(): void
+    public static function blockWidthsProvider(): iterable
+    {
+        yield 'three one-third blocks sit side by side' => [[4, 4, 4]];
+        yield 'two full-width blocks each get their own column' => [[12, 12]];
+        yield 'mixed widths keep their own width and order' => [[4, 6, 4]];
+        yield 'six one-third blocks keep their order' => [[4, 4, 4, 4, 4, 4]];
+    }
+
+    /**
+     * @param non-empty-list<positive-int> $widths
+     */
+    #[DataProvider('blockWidthsProvider')]
+    public function testDraftBlocksEachBecomeTheirOwnColumn(array $widths): void
     {
         $pageId = $this->pageId();
-        $areaId = 100;
-        $this->seeder->seedPage($pageId, $areaId);
-
-        $this->seeder->seedElement(4000, $areaId, self::ROW_CLASS, 1);
-        $this->seeder->seedRow(4000);
-
-        // e1 + e2: identical width=6
-        $this->seeder->seedElement(4001, $areaId, self::CONTENT_CLASS, 2, ['SizeMD' => 6, 'Title' => 'E1']);
-        $this->seeder->seedContentMedia(4001);
-        $this->seeder->seedElement(4002, $areaId, self::CONTENT_CLASS, 3, ['SizeMD' => 6, 'Title' => 'E2']);
-        $this->seeder->seedContentMedia(4002);
-        // e3: different width
-        $this->seeder->seedElement(4003, $areaId, self::CONTENT_CLASS, 4, ['SizeMD' => 4, 'Title' => 'E3']);
-        $this->seeder->seedContentMedia(4003);
-        // e4: back to width=6 — not merged with e1+e2 because grouping is consecutive
-        $this->seeder->seedElement(4004, $areaId, self::CONTENT_CLASS, 5, ['SizeMD' => 6, 'Title' => 'E4']);
-        $this->seeder->seedContentMedia(4004);
+        $this->seeder->seedPage($pageId, 100);
+        $this->seedRowOfBlocks(100, $widths, 'draft');
 
         $this->runMigration();
 
-        $section = Section::get()->filter(['ParentID' => $pageId, 'Zone' => self::ZONE])->first();
-        self::assertInstanceOf(Section::class, $section);
-        $row = Row::get()->filter(['ParentID' => $section->ID])->first();
-        self::assertInstanceOf(Row::class, $row);
+        self::assertSame($this->expectedBlockColumns($widths), $this->singleRowColumns($pageId, Versioned::DRAFT));
+    }
 
-        $columns = Column::get()->filter(['ParentID' => $row->ID])->sort('Sort', 'ASC');
-        self::assertCount(3, $columns, '[e1,e2][e3][e4] → 3 columns');
+    /**
+     * The blocks are full width on draft and take the provider's widths on live,
+     * so each published Column must be reconciled from its own block's live Size.
+     *
+     * @param non-empty-list<positive-int> $widths
+     */
+    #[DataProvider('blockWidthsProvider')]
+    public function testPublishedBlocksEachKeepTheirOwnLiveWidth(array $widths): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 100);
+        $this->seedRowOfBlocks(100, \array_fill(0, \count($widths), 12), 'draft');
+        $this->seedRowOfBlocks(100, $widths, 'live');
 
-        $columnsArray = $columns->toArray();
+        $this->runMigration();
 
-        // Column 1: e1 + e2 (both width=6)
-        self::assertSame(6, $columnsArray[0]->getGridSettings()->default->width);
-        $col1Elements = ContentElement::get()->filter(['ParentID' => $columnsArray[0]->ID])->sort('Sort', 'ASC');
-        self::assertCount(2, $col1Elements);
-        self::assertSame('E1', $col1Elements->first()->Title);
-        self::assertSame('E2', $col1Elements->last()->Title);
+        self::assertSame(
+            $this->expectedBlockColumns(\array_fill(0, \count($widths), 12)),
+            $this->singleRowColumns($pageId, Versioned::DRAFT),
+        );
+        self::assertSame($this->expectedBlockColumns($widths), $this->singleRowColumns($pageId, Versioned::LIVE));
+    }
 
-        // Column 2: e3 alone (width=4)
-        self::assertSame(4, $columnsArray[1]->getGridSettings()->default->width);
-        $col2Elements = ContentElement::get()->filter(['ParentID' => $columnsArray[1]->ID]);
-        self::assertCount(1, $col2Elements);
-        self::assertSame('E3', $col2Elements->first()->Title);
+    /**
+     * @param non-empty-list<positive-int> $widths
+     */
+    #[DataProvider('blockWidthsProvider')]
+    public function testLiveOnlyBlocksEachBecomeTheirOwnColumn(array $widths): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 100);
+        $this->seedRowOfBlocks(100, $widths, 'live');
 
-        // Column 3: e4 alone (width=6 but separate from e1+e2 due to e3 boundary)
-        self::assertSame(6, $columnsArray[2]->getGridSettings()->default->width);
-        $col3Elements = ContentElement::get()->filter(['ParentID' => $columnsArray[2]->ID]);
-        self::assertCount(1, $col3Elements);
-        self::assertSame('E4', $col3Elements->first()->Title);
+        $this->runMigration();
+
+        // Live-only content is written to both stages.
+        self::assertSame($this->expectedBlockColumns($widths), $this->singleRowColumns($pageId, Versioned::DRAFT));
+        self::assertSame($this->expectedBlockColumns($widths), $this->singleRowColumns($pageId, Versioned::LIVE));
+    }
+
+    /**
+     * Seed one legacy row delimiter followed by one content block per width,
+     * titled "Block 1", "Block 2", … in order.
+     *
+     * @param non-empty-list<positive-int> $widths
+     * @param 'draft'|'live' $stage
+     */
+    private function seedRowOfBlocks(int $areaId, array $widths, string $stage): void
+    {
+        $this->seeder->seedElement(8000, $areaId, self::ROW_CLASS, 1, stage: $stage);
+        $this->seeder->seedRow(8000, stage: $stage);
+
+        foreach ($widths as $index => $width) {
+            $id = 8001 + $index;
+            $this->seeder->seedElement($id, $areaId, self::CONTENT_CLASS, $index + 2, [
+                'SizeMD' => $width,
+                'Title' => 'Block ' . ($index + 1),
+            ], stage: $stage);
+            $this->seeder->seedContentMedia($id, [], stage: $stage);
+        }
+    }
+
+    /**
+     * @param non-empty-list<positive-int> $widths
+     *
+     * @return list<array{width: int, titles: list<string>}>
+     */
+    private function expectedBlockColumns(array $widths): array
+    {
+        $columns = [];
+        foreach ($widths as $index => $width) {
+            $columns[] = ['width' => $width, 'titles' => ['Block ' . ($index + 1)]];
+        }
+
+        return $columns;
+    }
+
+    /**
+     * Width and element titles of every Column in the page's only Row, in order.
+     *
+     * @param positive-int     $pageId
+     * @param non-empty-string $stage
+     *
+     * @return list<array{width: int, titles: list<string>}>
+     */
+    private function singleRowColumns(int $pageId, string $stage): array
+    {
+        $tree = MigrationTreeSnapshot::snapshotTree($pageId, Page::class, self::ZONE, $stage);
+        self::assertCount(1, $tree, "{$stage}: one Section");
+        self::assertCount(1, $tree[0]['rows'], "{$stage}: one Row");
+
+        $columns = [];
+        foreach ($tree[0]['rows'][0]['columns'] as $column) {
+            $columns[] = [
+                'width' => $column['gridDefault']['width'],
+                'titles' => MigrationTreeSnapshot::columnElementTitles($column),
+            ];
+        }
+
+        return $columns;
     }
 
     public function testRowPerSectionMapsFieldsCorrectly(): void

@@ -130,18 +130,39 @@ final class AllRowsInSectionStrategyTest extends TestCase
     /**
      * Each case yields: [elements, zone, expected section spec].
      *
-     * AllRows always produces exactly 1 section. Column spec: ['w' => width, 'o' => offset, 'n' => element count].
-     * Offset defaults to 0 and element count defaults to 1 if omitted.
+     * AllRows always produces exactly 1 section. Column spec: ['w' => width, 'o' => offset];
+     * offset defaults to 0 if omitted. Every content element becomes its own column, in input order.
      *
-     * @return iterable<string, array{list<LegacyElement>, string, array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int, n?: int}>}>}}>
+     * @return iterable<string, array{list<LegacyElement>, string, array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int}>}>}}>
      */
     public static function hierarchyProvider(): iterable
     {
         $b = new LegacyElementBuilder();
-        yield 'single row, three elements with same width are grouped' => [
+        yield 'three one-third elements sit side by side' => [
             [$b->r(), $b->e(4), $b->e(4), $b->e(4)],
             'main',
-            ['rows' => [['columns' => [['w' => 4, 'n' => 3]]]]],
+            ['rows' => [['columns' => [['w' => 4], ['w' => 4], ['w' => 4]]]]],
+        ];
+
+        $b = new LegacyElementBuilder();
+        yield 'two full-width elements each get their own column' => [
+            [$b->r(), $b->e(12), $b->e(12)],
+            'main',
+            ['rows' => [['columns' => [['w' => 12], ['w' => 12]]]]],
+        ];
+
+        $b = new LegacyElementBuilder();
+        yield 'mixed widths keep their own width and order' => [
+            [$b->r(), $b->e(4), $b->e(6), $b->e(4)],
+            'main',
+            ['rows' => [['columns' => [['w' => 4], ['w' => 6], ['w' => 4]]]]],
+        ];
+
+        $b = new LegacyElementBuilder();
+        yield 'six one-third elements become six columns' => [
+            [$b->r(), $b->e(4), $b->e(4), $b->e(4), $b->e(4), $b->e(4), $b->e(4)],
+            'main',
+            ['rows' => [['columns' => [['w' => 4], ['w' => 4], ['w' => 4], ['w' => 4], ['w' => 4], ['w' => 4]]]]],
         ];
 
         $b = new LegacyElementBuilder();
@@ -159,18 +180,18 @@ final class AllRowsInSectionStrategyTest extends TestCase
         ];
 
         $b = new LegacyElementBuilder();
-        yield 'orphans only with same width are grouped' => [
+        yield 'orphans only with same width each get their own column' => [
             [$b->e(6), $b->e(6)],
             'main',
-            ['rows' => [['columns' => [['w' => 6, 'n' => 2]]]]],
+            ['rows' => [['columns' => [['w' => 6], ['w' => 6]]]]],
         ];
 
         $b = new LegacyElementBuilder();
-        yield 'three rows: 3 same elements grouped, 1 element, trailing empty row dropped' => [
+        yield 'three rows: 3 elements, 1 element, trailing empty row dropped' => [
             [$b->r(), $b->e(4), $b->e(4), $b->e(4), $b->r(), $b->e(12), $b->r()],
             'main',
             // The trailing empty row delimiter produces no columns and is dropped.
-            ['rows' => [['columns' => [['w' => 4, 'n' => 3]]], ['columns' => [['w' => 12]]]]],
+            ['rows' => [['columns' => [['w' => 4], ['w' => 4], ['w' => 4]]], ['columns' => [['w' => 12]]]]],
         ];
 
         $b = new LegacyElementBuilder();
@@ -187,28 +208,9 @@ final class AllRowsInSectionStrategyTest extends TestCase
             [
                 'rows' => [
                     ['columns' => [['w' => 6, 'o' => 3]]],
-                    ['columns' => [['w' => 4, 'o' => 1, 'n' => 2]]],
+                    ['columns' => [['w' => 4, 'o' => 1], ['w' => 4, 'o' => 1]]],
                 ],
             ],
-        ];
-
-        $b = new LegacyElementBuilder();
-        yield 'consecutive same then different then same splits correctly' => [
-            [$b->r(), $b->e(6), $b->e(6), $b->e(4), $b->e(6), $b->e(6)],
-            'main',
-            ['rows' => [['columns' => [['w' => 6, 'n' => 2], ['w' => 4], ['w' => 6, 'n' => 2]]]]],
-        ];
-
-        $b = new LegacyElementBuilder();
-        yield 'viewport override difference prevents grouping' => [
-            [
-                $b->r(),
-                $b->e(6, 0, ['MD' => 6], ['MD' => 0]),
-                $b->e(6, 0, ['MD' => 6], ['MD' => 0], ['SM' => 'hidden']),
-                $b->e(6, 0, ['MD' => 6], ['MD' => 0]),
-            ],
-            'main',
-            ['rows' => [['columns' => [['w' => 6], ['w' => 6], ['w' => 6]]]]],
         ];
 
         $b = new LegacyElementBuilder();
@@ -254,7 +256,7 @@ final class AllRowsInSectionStrategyTest extends TestCase
 
     /**
      * @param list<LegacyElement> $elements
-     * @param array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int, n?: int}>}>} $expectedSection
+     * @param array{extraClass?: string, rows: list<array{title?: string, extraClass?: string, columns: list<array{w: int, o?: int}>}>} $expectedSection
      */
     #[DataProvider('hierarchyProvider')]
     public function testHierarchy(array $elements, string $zone, array $expectedSection): void
@@ -262,6 +264,6 @@ final class AllRowsInSectionStrategyTest extends TestCase
         $sections = $this->strategy->buildHierarchy($elements, pageId: 1, zone: $zone);
 
         // AllRows always produces exactly 1 section; rows sort sequentially within it.
-        self::assertSectionsMatchSpec($sections, $zone, [$expectedSection], rowSortFollowsIndex: true);
+        self::assertSectionsMatchSpec($elements, $sections, $zone, [$expectedSection], rowSortFollowsIndex: true);
     }
 }

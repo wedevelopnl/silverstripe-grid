@@ -104,7 +104,7 @@ final class LivePublisherTest extends SapphireTest
 
         // Draft: one element (legacy id 5000), Column width 8.
         $draftElement = $this->legacyElement(5000, 'Draft Title');
-        $this->writeDraft($pageId, [$this->section([$draftElement], $this->gridSettings(8))], $idMap);
+        $this->writeDraft($pageId, [$this->section($draftElement, $this->gridSettings(8))], $idMap);
 
         $newElementId = $idMap->newElementId(5000);
         $newColumnId = $idMap->newColumnId(5000);
@@ -141,7 +141,7 @@ final class LivePublisherTest extends SapphireTest
         $idMap = new MigrationIdMap();
 
         $draftElement = $this->legacyElement(5000, 'Draft Title');
-        $this->writeDraft($pageId, [$this->section([$draftElement], $this->gridSettings(8))], $idMap);
+        $this->writeDraft($pageId, [$this->section($draftElement, $this->gridSettings(8))], $idMap);
 
         // A shared row delimiter (id 6000) sits in draftLegacyIds but never in the
         // id map (rows are grouping boundaries, never written as records).
@@ -181,7 +181,7 @@ final class LivePublisherTest extends SapphireTest
 
         // Draft section (Sort = 1) for a shared element that we will NOT publish.
         $draftElement = $this->legacyElement(5000, 'Draft Title');
-        $this->writeDraft($pageId, [$this->section([$draftElement], $this->gridSettings(8), sort: 1)], $idMap);
+        $this->writeDraft($pageId, [$this->section($draftElement, $this->gridSettings(8), sort: 1)], $idMap);
 
         // A live-only element (id 8000, absent from draftLegacyIds).
         $liveOnly = $this->legacyElement(8000, 'Live Only', sizeFields: ['MD' => 12]);
@@ -216,7 +216,7 @@ final class LivePublisherTest extends SapphireTest
 
         // Draft Column width 8.
         $draftElement = $this->legacyElement(5000, 'Draft Title');
-        $this->writeDraft($pageId, [$this->section([$draftElement], $this->gridSettings(8))], $idMap);
+        $this->writeDraft($pageId, [$this->section($draftElement, $this->gridSettings(8))], $idMap);
 
         $newColumnId = $idMap->newColumnId(5000);
 
@@ -234,39 +234,6 @@ final class LivePublisherTest extends SapphireTest
         self::assertSame(4, $liveColumn->getGridSettings()->default->width, 'LIVE Column width derived from live Size');
     }
 
-    public function testDivergentLiveSettingsWithinColumnLogWarningAndUseFirstElement(): void
-    {
-        $pageId = $this->createPage();
-        $idMap = new MigrationIdMap();
-
-        // Draft: two elements grouped into ONE column (Column width 12).
-        $draftA = $this->legacyElement(9001, 'Draft A');
-        $draftB = $this->legacyElement(9002, 'Draft B');
-        $this->writeDraft($pageId, [$this->section([$draftA, $draftB], $this->gridSettings(12))], $idMap);
-
-        $newColumnId = $idMap->newColumnId(9001);
-        self::assertSame($newColumnId, $idMap->newColumnId(9002), 'Both draft elements share one Column');
-
-        // Live: same two elements, divergent live widths (6 then 4) → first wins.
-        $liveA = $this->legacyElement(9001, 'Live A', sizeFields: ['MD' => 6]);
-        $liveB = $this->legacyElement(9002, 'Live B', sizeFields: ['MD' => 4]);
-
-        $this->publish($pageId, Page::class, [$liveA, $liveB], [9001 => true, 9002 => true], $idMap);
-
-        $warnings = $this->logger->entriesAt('warning');
-        self::assertCount(1, $warnings);
-        self::assertSame(
-            'Live grid settings diverge within migrated column {columnId}; '
-            . 'using the first element\'s settings (a single column cannot express multiple widths).',
-            $warnings[0]['message'],
-        );
-        self::assertSame(['columnId' => $newColumnId], $warnings[0]['context']);
-
-        $liveColumn = $this->liveById(Column::class, $newColumnId);
-        self::assertInstanceOf(Column::class, $liveColumn);
-        self::assertSame(6, $liveColumn->getGridSettings()->default->width, "First live element's width wins");
-    }
-
     public function testLiveContentOverwriteWritesShowTitleFlagAndTitleTagFallback(): void
     {
         $pageId = $this->createPage();
@@ -274,7 +241,14 @@ final class LivePublisherTest extends SapphireTest
 
         $draftA = $this->legacyElement(5000, 'Draft A');
         $draftB = $this->legacyElement(5001, 'Draft B');
-        $this->writeDraft($pageId, [$this->section([$draftA, $draftB], $this->gridSettings(8))], $idMap);
+        $this->writeDraft(
+            $pageId,
+            [
+                $this->section($draftA, $this->gridSettings(8), sort: 1),
+                $this->section($draftB, $this->gridSettings(8), sort: 2),
+            ],
+            $idMap,
+        );
 
         // 5000: hidden title and a blank tag (must fall back to h2).
         // 5001: shown title with an explicit tag (must be preserved verbatim).
@@ -304,7 +278,7 @@ final class LivePublisherTest extends SapphireTest
             'Draft Title',
             media: new LegacyMediaData(['HTML' => '<p>Draft HTML</p>', 'ContentColumns' => '1']),
         );
-        $this->writeDraft($pageId, [$this->section([$draftElement], $this->gridSettings(8))], $idMap);
+        $this->writeDraft($pageId, [$this->section($draftElement, $this->gridSettings(8))], $idMap);
 
         // The live row carries no HTML key at all: HTML must be reset to '' rather than
         // inheriting the draft copy that writeToStage() just made. ContentColumns proves
@@ -349,7 +323,7 @@ final class LivePublisherTest extends SapphireTest
 
             $this->writeDraft(
                 $pageId,
-                [$this->section([$this->legacyElement(5000, 'Draft')], $this->gridSettings(8))],
+                [$this->section($this->legacyElement(5000, 'Draft'), $this->gridSettings(8))],
                 $idMap,
             );
             $this->publish($pageId, Page::class, [$this->legacyElement(5000, 'Live')], [5000 => true], $idMap);
@@ -378,7 +352,7 @@ final class LivePublisherTest extends SapphireTest
         $idMap = new MigrationIdMap();
 
         $draftElement = $this->legacyElement(5000, 'Draft Title');
-        $this->writeDraft($pageId, [$this->section([$draftElement], $this->gridSettings(8))], $idMap);
+        $this->writeDraft($pageId, [$this->section($draftElement, $this->gridSettings(8))], $idMap);
 
         $columnId = $idMap->newColumnId(5000);
         $column = Column::get()->byID($columnId);
@@ -391,7 +365,7 @@ final class LivePublisherTest extends SapphireTest
         $this->publish($pageId, Page::class, [$this->legacyElement(5000, 'Live')], [5000 => true], $idMap);
 
         // The published-container bookkeeping is what stops the chain being re-published
-        // once per shared element in the same column.
+        // once per shared element in the same row or section.
         self::assertTrue($idMap->isContainerPublished($columnId), 'column marked published');
         self::assertTrue($idMap->isContainerPublished($rowId), 'row marked published');
         self::assertTrue($idMap->isContainerPublished($sectionId), 'section marked published');
@@ -403,7 +377,7 @@ final class LivePublisherTest extends SapphireTest
         $idMap = new MigrationIdMap();
 
         $draftElement = $this->legacyElement(5000, 'Draft Title');
-        $this->writeDraft($pageId, [$this->section([$draftElement], $this->gridSettings(8))], $idMap);
+        $this->writeDraft($pageId, [$this->section($draftElement, $this->gridSettings(8))], $idMap);
 
         $columnId = $idMap->newColumnId(5000);
         $column = Column::get()->byID($columnId);
@@ -431,7 +405,7 @@ final class LivePublisherTest extends SapphireTest
         $idMap = new MigrationIdMap();
 
         $draftElement = $this->legacyElement(5000, 'Draft Title');
-        $this->writeDraft($pageId, [$this->section([$draftElement], $this->gridSettings(8))], $idMap);
+        $this->writeDraft($pageId, [$this->section($draftElement, $this->gridSettings(8))], $idMap);
 
         // The live-only element is collected and skipped; the shared element behind it
         // must still be published rather than the loop terminating.
@@ -458,7 +432,7 @@ final class LivePublisherTest extends SapphireTest
         self::assertCount(1, $infos);
         self::assertSame(
             'Page {pageId}: {liveOnlyCount} live-only legacy element(s) found; '
-            . 'adjacent same-settings elements may be grouped into shared columns — verify live layout.',
+            . 'they are appended after the draft content — verify live layout.',
             $infos[0]['message'],
         );
         self::assertSame(['pageId' => $pageId, 'liveOnlyCount' => 1], $infos[0]['context']);
@@ -504,7 +478,7 @@ final class LivePublisherTest extends SapphireTest
         // A draft section on an unrelated page, sorted high. The next-sort lookup must
         // scope to the target page, otherwise the live-only section is pushed past it.
         $otherElement = $this->legacyElement(5000, 'Other Page Draft');
-        $this->writeDraft($otherPageId, [$this->section([$otherElement], $this->gridSettings(8), sort: 7)], $idMap);
+        $this->writeDraft($otherPageId, [$this->section($otherElement, $this->gridSettings(8), sort: 7)], $idMap);
 
         $liveOnly = $this->legacyElement(8000, 'Live Only');
         $this->publish($targetPageId, Page::class, [$liveOnly], [], $idMap);
@@ -527,8 +501,8 @@ final class LivePublisherTest extends SapphireTest
         $this->writeDraft(
             $pageId,
             [
-                $this->section([$draftA], $this->gridSettings(8), sort: 1),
-                $this->section([$draftB], $this->gridSettings(8), sort: 2),
+                $this->section($draftA, $this->gridSettings(8), sort: 1),
+                $this->section($draftB, $this->gridSettings(8), sort: 2),
             ],
             $idMap,
         );
@@ -562,8 +536,8 @@ final class LivePublisherTest extends SapphireTest
         $this->writeDraft(
             $pageId,
             [
-                $this->section([$draftA], $this->gridSettings(8), sort: 1),
-                $this->section([$draftB], $this->gridSettings(8), sort: 2),
+                $this->section($draftA, $this->gridSettings(8), sort: 1),
+                $this->section($draftB, $this->gridSettings(8), sort: 2),
             ],
             $idMap,
         );
@@ -587,7 +561,7 @@ final class LivePublisherTest extends SapphireTest
         $idMap = new MigrationIdMap();
 
         $draftElement = $this->legacyElement(5000, 'Draft Title');
-        $this->writeDraft($pageId, [$this->section([$draftElement], $this->gridSettings(8))], $idMap);
+        $this->writeDraft($pageId, [$this->section($draftElement, $this->gridSettings(8))], $idMap);
 
         $newColumnId = $idMap->newColumnId(5000);
 
@@ -648,13 +622,11 @@ final class LivePublisherTest extends SapphireTest
     }
 
     /**
-     * Build a single Section → Row → Column DTO holding the given draft elements.
-     *
-     * @param non-empty-list<LegacyElement> $elements
+     * Build a single Section → Row → Column DTO holding the given draft element.
      */
-    private function section(array $elements, GridSettings $gridSettings, int $sort = 1): MigrationSection
+    private function section(LegacyElement $element, GridSettings $gridSettings, int $sort = 1): MigrationSection
     {
-        $column = new MigrationColumn($gridSettings, 1, $elements);
+        $column = new MigrationColumn($gridSettings, 1, $element);
         $row = new MigrationRow('', '', 1, [$column]);
 
         return new MigrationSection('', self::ZONE, '', $sort, [$row]);

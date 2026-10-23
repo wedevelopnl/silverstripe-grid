@@ -17,7 +17,6 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
-use WeDevelop\Grid\Value\GridSettings;
 use WeDevelop\Grid\Value\MigrationIdMap;
 
 /**
@@ -27,7 +26,7 @@ use WeDevelop\Grid\Value\MigrationIdMap;
  *
  * Reuses {@see DraftHierarchyWriter} for the live-only hierarchy build (so the
  * `updateClassNameMapping` / `updateElementFieldMapping` extension hooks still
- * fire) and the {@see RowMappingStrategy} to group live-only elements the same
+ * fire) and the {@see RowMappingStrategy} to lay out live-only elements the same
  * way the draft path does.
  *
  * Carries the `updateLiveElementFieldMapping` extension hook (shared-element
@@ -67,12 +66,6 @@ final class LivePublisher
         string $defaultViewport,
         array $viewportKeyMap,
     ): void {
-        // Live elements grouped by their target (new) Column ID, so the Column's
-        // live GridSettings can be reconciled from the live Size after publish.
-        // Every value is appended to on creation, so no bucket is ever empty.
-        /** @var array<int, non-empty-list<LegacyElement>> $liveElementsByColumn */
-        $liveElementsByColumn = [];
-
         // Live-only elements are collected and processed as a single grouped
         // hierarchy after the loop, mirroring the draft path. Row delimiters are
         // retained in the collection so ElementGrouper can honour row boundaries.
@@ -117,9 +110,8 @@ final class LivePublisher
             $newElementId = $idMap->newElementId($oldId);
             $newColumnId = $idMap->newColumnId($oldId);
 
-            $liveElementsByColumn[$newColumnId][] = $liveElement;
-
             $this->publishContainerChain($newColumnId, $idMap);
+            $this->reconcileColumnLiveGridSettings($newColumnId, $liveElement, $defaultViewport, $viewportKeyMap);
 
             $element = GridElement::get()->byID($newElementId);
             if ($element instanceof GridElement) {
@@ -140,16 +132,10 @@ final class LivePublisher
             }
         }
 
-        // Reconcile each published Column's live GridSettings from the live
-        // element Size. The Column width was derived from the draft Size and
-        // copied to live by writeToStage(); without this pass a draft↔live Size
-        // difference leaves the wrong width on the published front-end.
-        $this->reconcileColumnLiveGridSettings($liveElementsByColumn, $defaultViewport, $viewportKeyMap);
-
         if ($liveOnlyElements !== []) {
             $this->logger->info(
                 'Page {pageId}: {liveOnlyCount} live-only legacy element(s) found; '
-                . 'adjacent same-settings elements may be grouped into shared columns — verify live layout.',
+                . 'they are appended after the draft content — verify live layout.',
                 [
                     'pageId' => $pageId,
                     'liveOnlyCount' => \count($liveOnlyElements),
@@ -166,16 +152,17 @@ final class LivePublisher
     }
 
     /**
-     * Reconcile published Columns' live GridSettings from the live element Size.
+     * Reconcile a published Column's live GridSettings from its element's live Size.
      *
      * The Column's GridSettings is derived from the DRAFT element Size in
      * {@see DraftHierarchyWriter::createColumn()} and copied to the live table by
      * writeToStage(LIVE). For an element shared between draft and live whose
      * legacy Size differs, this would leave the live Column showing the
      * draft-derived width. Here the live settings are recomputed from the live
-     * Size (using the same mapper and viewport configuration the draft grouping
+     * Size (using the same mapper and viewport configuration the draft path
      * used) and written to the live stage only when they differ from the
-     * published (draft-derived) settings.
+     * published (draft-derived) settings. Each Column holds exactly one element,
+     * so its live settings are that element's.
      *
      * The live row is updated with raw SQL (mirroring {@see overwriteLiveContent()})
      * rather than `setGridSettings()` + `writeToStage(LIVE)`: the ORM path,
@@ -183,96 +170,55 @@ final class LivePublisher
      * which would corrupt the draft Column width. A targeted `_Live` UPDATE keeps
      * the draft untouched.
      *
-     * @param array<int, non-empty-list<LegacyElement>> $liveElementsByColumn New Column ID → live elements published into it
      * @param array<string, string> $viewportKeyMap Old viewport key → new key
      */
     private function reconcileColumnLiveGridSettings(
-        array $liveElementsByColumn,
+        int $columnId,
+        LegacyElement $liveElement,
         string $defaultViewport,
         array $viewportKeyMap,
     ): void {
+        $column = Column::get()->byID($columnId);
+        if (!$column instanceof Column) {
+            return;
+        }
+
+        $liveSettings = $this->mapper->mapGridSettings($liveElement, $defaultViewport, $viewportKeyMap);
+
+        // The loaded column is on the draft stage and carries the
+        // draft-derived settings (also just copied to live by writeToStage).
+        // Skip the write when the live Size produces the same settings — the
+        // common case, and keeps the pass idempotent.
+        if ($liveSettings->equals($column->getGridSettings())) {
+            return;
+        }
+
+        // DBGridSettings stores the VO across four prefixed columns; Overrides
+        // is NULL when empty, else JSON — matching DBGridSettings::applyGridSettings.
+        $overrides = $liveSettings->overrides === []
+            ? null
+            : \json_encode($liveSettings->overrides, \JSON_THROW_ON_ERROR);
+
         $columnLiveTable = DataObject::getSchema()->tableName(Column::class) . '_Live';
 
-        foreach ($liveElementsByColumn as $columnId => $liveElements) {
-            $column = Column::get()->byID($columnId);
-            if (!$column instanceof Column) {
-                continue;
-            }
-
-            $liveSettings = $this->reconcileGridSettings($liveElements, $defaultViewport, $viewportKeyMap, $columnId);
-
-            // The loaded column is on the draft stage and carries the
-            // draft-derived settings (also just copied to live by writeToStage).
-            // Skip the write when the live Size produces the same settings — the
-            // common case, and keeps the pass idempotent.
-            if ($liveSettings->equals($column->getGridSettings())) {
-                continue;
-            }
-
-            // DBGridSettings stores the VO across four prefixed columns; Overrides
-            // is NULL when empty, else JSON — matching DBGridSettings::applyGridSettings.
-            $overrides = $liveSettings->overrides === []
-                ? null
-                : \json_encode($liveSettings->overrides, \JSON_THROW_ON_ERROR);
-
-            DB::prepared_query(
-                \sprintf(
-                    'UPDATE "%s" SET
-                        "GridSettingsDefaultWidth" = ?,
-                        "GridSettingsDefaultOffset" = ?,
-                        "GridSettingsDefaultVisible" = ?,
-                        "GridSettingsOverrides" = ?
-                    WHERE "ID" = ?',
-                    $columnLiveTable,
-                ),
-                [
-                    $liveSettings->default->width,
-                    $liveSettings->default->offset,
-                    $liveSettings->default->visible ? 1 : 0,
-                    $overrides,
-                    $columnId,
-                ],
-            );
-        }
-    }
-
-    /**
-     * Resolve a single GridSettings for a Column from its live elements.
-     *
-     * Draft grouping keys on the draft settings, so the live settings of the
-     * elements in one Column can diverge. A Column can only carry one width, so
-     * the first element's live settings win; any divergence is logged.
-     *
-     * @param non-empty-list<LegacyElement> $liveElements
-     * @param array<string, string> $viewportKeyMap Old viewport key → new key
-     */
-    private function reconcileGridSettings(
-        array $liveElements,
-        string $defaultViewport,
-        array $viewportKeyMap,
-        int $columnId,
-    ): GridSettings {
-        $settings = null;
-
-        foreach ($liveElements as $liveElement) {
-            $candidate = $this->mapper->mapGridSettings($liveElement, $defaultViewport, $viewportKeyMap);
-
-            if ($settings === null) {
-                $settings = $candidate;
-                continue;
-            }
-
-            if (!$candidate->equals($settings)) {
-                $this->logger->warning(
-                    'Live grid settings diverge within migrated column {columnId}; '
-                    . 'using the first element\'s settings (a single column cannot express multiple widths).',
-                    ['columnId' => $columnId],
-                );
-            }
-        }
-
-        /** @var GridSettings $settings Non-null: callers only pass non-empty element lists. */
-        return $settings;
+        DB::prepared_query(
+            \sprintf(
+                'UPDATE "%s" SET
+                    "GridSettingsDefaultWidth" = ?,
+                    "GridSettingsDefaultOffset" = ?,
+                    "GridSettingsDefaultVisible" = ?,
+                    "GridSettingsOverrides" = ?
+                WHERE "ID" = ?',
+                $columnLiveTable,
+            ),
+            [
+                $liveSettings->default->width,
+                $liveSettings->default->offset,
+                $liveSettings->default->visible ? 1 : 0,
+                $overrides,
+                $columnId,
+            ],
+        );
     }
 
     /**
@@ -433,20 +379,12 @@ final class LivePublisher
      * is published from its existing draft record, not duplicated as a new section.
      *
      * To match the layout the draft path produces, the elements are run through the
-     * same configured strategy (ElementGrouper + grid-settings grouping + row
-     * boundaries) rather than given a dedicated chain each. Records are written
+     * same configured strategy (ElementGrouper row boundaries + one Column per
+     * element) rather than given a dedicated chain each. Records are written
      * top-down (Section → Row → Column → Element) so each child can reference its
      * just-written parent ID. The resulting Sections are sorted after any Sections
      * already created on this page + zone from the draft path; both stages share one
      * Sort sequence, so the draft max-Sort yields the correct live append offset.
-     *
-     * Known limitation: the live-only collection is the original live order with the
-     * shared elements removed, so a shared element that sat between two live-only
-     * elements with identical grid settings no longer separates them. The grouping
-     * pass may then collapse those two into a single column they did not share on the
-     * legacy live stage. This is an accepted layout nuance of a one-shot migration —
-     * no content is lost or reordered; only the column grouping of adjacent
-     * same-settings live-only elements can differ from the legacy layout.
      *
      * @param list<LegacyElement> $liveOnlyElements Live-only elements (may include row delimiters), in original order
      * @param class-string $pageClassName
@@ -485,13 +423,9 @@ final class LivePublisher
                     /** @var positive-int $columnId */
                     $columnId = (int) $column->ID;
 
-                    $elementSort = 1;
-                    foreach ($migrationColumn->elements as $legacyElement) {
-                        $newElement = $this->draftWriter->buildContentElement($legacyElement, $columnId, $elementSort);
-                        $newElement->write();
-                        $newElement->writeToStage(Versioned::LIVE);
-                        $elementSort++;
-                    }
+                    $newElement = $this->draftWriter->buildContentElement($migrationColumn->element, $columnId, 1);
+                    $newElement->write();
+                    $newElement->writeToStage(Versioned::LIVE);
 
                     $column->writeToStage(Versioned::LIVE);
                     $idMap->markContainerPublished($columnId);
