@@ -10,10 +10,10 @@ use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use Symfony\Component\Console\Command\Command;
 use WeDevelop\Grid\Migration\Service\LegacyElementReader;
+use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTreeSnapshot;
 use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
-use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 
 /**
  * A site that worked around the old table-name bug by hand-adding a
