@@ -39,7 +39,7 @@ final class MigrateGridTaskSummaryTest extends MigrationTestCase
         $result = TaskRunner::run(new MigrateGridTask(), [
             '--default-viewport' => 'MD',
             '--zone' => self::ZONE,
-            '--force' => true,
+            ...TaskRunner::ACKNOWLEDGED,
         ]);
 
         self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
@@ -81,7 +81,7 @@ final class MigrateGridTaskSummaryTest extends MigrationTestCase
     public function testCountsAnAlreadyMigratedPageAsSkippedWithNoBlocks(): void
     {
         $this->seedPublishedPages();
-        $options = ['--default-viewport' => 'MD', '--zone' => self::ZONE, '--force' => true];
+        $options = ['--default-viewport' => 'MD', '--zone' => self::ZONE, ...TaskRunner::ACKNOWLEDGED];
         TaskRunner::run(new MigrateGridTask(), $options);
 
         $result = TaskRunner::run(new MigrateGridTask(), $options);

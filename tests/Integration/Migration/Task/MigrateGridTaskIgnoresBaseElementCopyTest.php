@@ -70,7 +70,7 @@ final class MigrateGridTaskIgnoresBaseElementCopyTest extends MigrationTestCase
         $result = TaskRunner::run(new MigrateGridTask(), [
             '--default-viewport' => 'MD',
             '--zone' => self::ZONE,
-            '--force' => true,
+            ...TaskRunner::ACKNOWLEDGED,
         ]);
 
         self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
