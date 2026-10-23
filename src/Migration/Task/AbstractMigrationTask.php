@@ -28,12 +28,31 @@ use WeDevelop\Grid\Value\Viewport;
 abstract class AbstractMigrationTask extends BuildTask
 {
     /**
+     * The only source the migration is built and tested against. Older
+     * elemental-grid releases store a different legacy schema; supporting them
+     * would multiply the mapping paths, so the operator upgrades the source first.
+     */
+    public const string SUPPORTED_SOURCE = 'SilverStripe 5.4.x with wedevelopnl/silverstripe-elemental-grid 5.1.5';
+
+    /**
+     * Each destructive run needs every acknowledgement, from its flag or an
+     * interactive answer. There is deliberately no option that grants them all:
+     * a single bypass flag copied into a script would skip both checks unread.
+     *
+     * @var array<non-empty-string, non-empty-string> option name → question
+     */
+    private const array ACKNOWLEDGEMENTS = [
+        'confirm-source-up-to-date' => 'Is the source site on ' . self::SUPPORTED_SOURCE . '? [y/N] ',
+        'confirm-backup' => 'Do you have a restorable backup of this database? [y/N] ',
+    ];
+
+    /**
      * CLI only. The migration writes and publishes the whole hierarchy across
      * every eligible page and cannot be undone, and /dev/tasks carries no CSRF
-     * token: over HTTP, options come straight from request vars, so --force
-     * would defeat the confirmation prompt below on a request the operator
-     * never made. Note that dev mode bypasses this by framework design
-     * (PolyCommand::canRunInBrowser()).
+     * token: over HTTP, options come straight from request vars, so the
+     * acknowledgement flags would defeat the confirmation prompts below on a
+     * request the operator never made. Note that dev mode bypasses this by
+     * framework design (PolyCommand::canRunInBrowser()).
      */
     private static bool $can_run_in_browser = false;
 
@@ -45,10 +64,8 @@ abstract class AbstractMigrationTask extends BuildTask
             new InputOption('default-viewport', null, InputOption::VALUE_REQUIRED, 'Old module default viewport (e.g. MD)'),
             new InputOption('zone', null, InputOption::VALUE_REQUIRED, 'Target zone for new Sections (e.g. main)'),
             new InputOption('dry-run', null, InputOption::VALUE_NONE, 'Log what would be migrated without writing'),
-            // No short flag: sake reserves "-f" for its global --flush, so a task
-            // option claiming "-f" makes Symfony Console throw "An option with
-            // shortcut \"f\" already exists" and aborts every `sake dev/tasks/...` run.
-            new InputOption('force', null, InputOption::VALUE_NONE, 'Skip the interactive confirmation prompt (required for non-interactive runs)'),
+            new InputOption('confirm-source-up-to-date', null, InputOption::VALUE_NONE, 'Acknowledge the source site is on ' . self::SUPPORTED_SOURCE . ' (required for non-interactive runs)'),
+            new InputOption('confirm-backup', null, InputOption::VALUE_NONE, 'Acknowledge a restorable database backup exists (required for non-interactive runs)'),
             new InputOption('viewport-map', null, InputOption::VALUE_REQUIRED, 'Comma-separated old=new viewport key pairs'),
             new InputOption('page-ids', null, InputOption::VALUE_REQUIRED, 'Comma-separated page IDs to migrate'),
             new InputOption('strategy', null, InputOption::VALUE_REQUIRED, 'Row mapping strategy: "sections" (default) or "single-section"', 'sections'),
@@ -110,23 +127,14 @@ abstract class AbstractMigrationTask extends BuildTask
         }
 
         $dryRun = (bool) $input->getOption('dry-run');
-        $force = (bool) $input->getOption('force');
         $stopOnFirstFailure = (bool) $input->getOption('stop-on-first-failure');
 
-        if (!$dryRun && !$force) {
-            if (!$input->isInteractive()) {
-                $output->writeln('<error>Refusing to run: migration is destructive. Pass --dry-run to preview, or --force to run non-interactively.</error>');
-                return Command::FAILURE;
-            }
+        $this->writeRequirementsBanner($output);
 
-            $question = new ConfirmationQuestion(
-                'This will write Section/Row/Column elements derived from the legacy Elemental tables. Continue? [y/N] ',
-                false,
-            );
-
-            if (!(new QuestionHelper())->ask($input, $output, $question)) {
-                $output->writeln('Migration aborted.');
-                return Command::SUCCESS;
+        if (!$dryRun) {
+            $gateExitCode = $this->requireAcknowledgements($input, $output);
+            if ($gateExitCode !== null) {
+                return $gateExitCode;
             }
         }
 
@@ -186,6 +194,53 @@ abstract class AbstractMigrationTask extends BuildTask
         }
 
         return Command::SUCCESS;
+    }
+
+    private function writeRequirementsBanner(PolyOutput $output): void
+    {
+        $output->writeln('<comment>Before you migrate:</comment>');
+        $output->startList();
+        $output->writeListItem([
+            \sprintf('The source site must be on %s. Upgrade it first; older versions are not supported.', self::SUPPORTED_SOURCE),
+            'The migration writes and publishes the grid on every eligible page and cannot be undone. Back up the database first.',
+        ]);
+        $output->stopList();
+    }
+
+    /**
+     * Ask for every acknowledgement its flag did not already give.
+     *
+     * @return int|null the exit code to stop with, or null to proceed
+     */
+    private function requireAcknowledgements(InputInterface $input, PolyOutput $output): ?int
+    {
+        $missing = \array_filter(
+            self::ACKNOWLEDGEMENTS,
+            static fn (string $option): bool => !$input->getOption($option),
+            \ARRAY_FILTER_USE_KEY,
+        );
+
+        if ($missing === []) {
+            return null;
+        }
+
+        if (!$input->isInteractive()) {
+            $output->writeln(\sprintf(
+                '<error>Refusing to run: migration is destructive. Pass --dry-run to preview, or acknowledge with %s to run non-interactively.</error>',
+                \implode(' ', \array_map(static fn (string $option): string => '--' . $option, \array_keys($missing))),
+            ));
+            return Command::FAILURE;
+        }
+
+        $helper = new QuestionHelper();
+        foreach ($missing as $question) {
+            if (!$helper->ask($input, $output, new ConfirmationQuestion($question, false))) {
+                $output->writeln('Migration aborted.');
+                return Command::SUCCESS;
+            }
+        }
+
+        return null;
     }
 
     /**

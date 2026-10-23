@@ -63,7 +63,7 @@ final class FluentStrategySelectionMigrationTest extends FluentMigrationTestCase
             '--zone' => self::ZONE,
             '--strategy' => 'single-section',
             '--page-ids' => (string) $pageId,
-            '--force' => true,
+            ...TaskRunner::ACKNOWLEDGED,
         ]);
 
         self::assertSame(Command::SUCCESS, $result['exitCode']);

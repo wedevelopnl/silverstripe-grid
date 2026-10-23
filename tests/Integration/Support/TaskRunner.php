@@ -15,6 +15,12 @@ use Symfony\Component\Console\Output\BufferedOutput;
  */
 final class TaskRunner
 {
+    /** Every acknowledgement a destructive migration run requires. */
+    public const array ACKNOWLEDGED = [
+        '--confirm-source-up-to-date' => true,
+        '--confirm-backup' => true,
+    ];
+
     /**
      * Run non-interactively (prompts are skipped or must be answered via options).
      *

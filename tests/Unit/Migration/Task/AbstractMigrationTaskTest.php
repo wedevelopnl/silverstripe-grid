@@ -32,7 +32,7 @@ final class AbstractMigrationTaskTest extends TestCase
     public function testMigrationTasksAreNotRunnableFromTheBrowser(): void
     {
         // /dev/tasks has no CSRF token and populates options from request vars,
-        // so over HTTP `--force` would skip the confirmation prompt on a request
+        // so over HTTP the acknowledgement flags would skip the confirmation prompts on a request
         // the operator never made — on an irreversible mass write. Asserts the
         // declared default via reflection: this tier has no Config bootstrap.
         $canRunInBrowser = new ReflectionProperty(AbstractMigrationTask::class, 'can_run_in_browser');
