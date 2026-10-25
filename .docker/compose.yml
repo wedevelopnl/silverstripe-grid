@@ -15,6 +15,7 @@ services:
       - ../composer.json:/module/composer.json:ro
       - ../src:/module/src
       - ../tests:/module/tests:ro
+      - ../docs:/module/docs:ro
       - ../_config:/module/_config:ro
       - ../phpstan:/module/phpstan:ro
       - ../client/dist:/module/client/dist:ro
@@ -69,6 +70,7 @@ services:
       - ../composer.json:/module/composer.json:ro
       - ../src:/module/src
       - ../tests:/module/tests:ro
+      - ../docs:/module/docs:ro
       - ../_config:/module/_config:ro
       - ../phpstan:/module/phpstan:ro
       - ../client/dist:/module/client/dist:ro

@@ -27,6 +27,7 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\MediaElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestLiveRowHookRecorder;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestLiveRowSettingsMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestRowSettingsExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestRowSettingsMigrationExtension;
@@ -96,13 +97,14 @@ final class LivePublisherTest extends SapphireTest
         $this->mapper = new FieldMapper();
         $this->logger = new RecordingLogger();
         $this->buildCollaborators();
-        TestLiveRowSettingsMigrationExtension::$fired = [];
+        TestLiveRowHookRecorder::$fired = [];
     }
 
     protected function tearDown(): void
     {
         DraftHierarchyWriter::remove_extension(TestRowSettingsMigrationExtension::class);
         LivePublisher::remove_extension(TestLiveRowSettingsMigrationExtension::class);
+        LivePublisher::remove_extension(TestLiveRowHookRecorder::class);
 
         parent::tearDown();
     }
@@ -729,6 +731,7 @@ final class LivePublisherTest extends SapphireTest
 
         [$row, $section] = $this->writtenContainers($idMap, 6000, Versioned::LIVE);
         self::assertSame(['white', ''], [$row->getField('BackgroundColour'), (string) $section->Style]);
+        self::assertSame(['Row:' . $row->ID, 'Section:' . $section->ID], TestLiveRowHookRecorder::$fired);
         [$row, $section] = $this->writtenContainers($idMap, 6000, Versioned::DRAFT);
         self::assertSame(['navy', 'card'], [$row->getField('BackgroundColour'), (string) $section->Style]);
     }
@@ -749,7 +752,7 @@ final class LivePublisherTest extends SapphireTest
             ['Rooms', 'row-draft', 'navy', 'section-draft', 'card'],
             [(string) $row->Title, (string) $row->ExtraClass, $row->getField('BackgroundColour'), (string) $section->ExtraClass, (string) $section->Style],
         );
-        self::assertSame([], TestLiveRowSettingsMigrationExtension::$fired);
+        self::assertSame([], TestLiveRowHookRecorder::$fired);
     }
 
     public function testNoLiveHookFiresForARowWhoseContainersAreNotOnLive(): void
@@ -763,7 +766,7 @@ final class LivePublisherTest extends SapphireTest
         $this->publish($pageId, Page::class, [$this->legacyRow(6000, 'Live title')], [6000 => true, 5000 => true], $idMap);
 
         self::assertSame(0, $this->liveRowCount());
-        self::assertSame([], TestLiveRowSettingsMigrationExtension::$fired);
+        self::assertSame([], TestLiveRowHookRecorder::$fired);
     }
 
     public function testALiveOnlyRowIsMappedByTheDraftHooksWithItsLiveValues(): void
@@ -781,13 +784,14 @@ final class LivePublisherTest extends SapphireTest
             self::assertInstanceOf(Section::class, $section);
             self::assertSame(['white', 'card'], [$row->getField('BackgroundColour'), (string) $section->Style], "mapped values on {$stage}");
         }
-        self::assertSame([], TestLiveRowSettingsMigrationExtension::$fired, 'the live hooks are for draft records only');
+        self::assertSame([], TestLiveRowHookRecorder::$fired, 'the live hooks are for draft records only');
     }
 
     private function registerRowSettingsMapping(): void
     {
         DraftHierarchyWriter::add_extension(TestRowSettingsMigrationExtension::class);
         LivePublisher::add_extension(TestLiveRowSettingsMigrationExtension::class);
+        LivePublisher::add_extension(TestLiveRowHookRecorder::class);
         $this->buildCollaborators();
     }
 
