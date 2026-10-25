@@ -21,7 +21,8 @@ use WeDevelop\Grid\Value\MigrationIdMap;
  * Writes the Section → Row → Column → content hierarchy to the DRAFT stage and
  * records the legacy→new id/sort mapping in a {@see MigrationIdMap}.
  *
- * Carries the `updateClassNameMapping` and `updateElementFieldMapping` extension hooks.
+ * Carries the `updateClassNameMapping`, `updateElementFieldMapping`,
+ * `updateRowFieldMapping` and `updateSectionFieldMapping` extension hooks.
  */
 final class DraftHierarchyWriter
 {
@@ -48,11 +49,17 @@ final class DraftHierarchyWriter
             // Freshly written records carry a valid (positive) ID.
             /** @var positive-int $sectionId */
             $sectionId = (int) $section->ID;
+            if ($migrationSection->legacyRow !== null) {
+                $idMap->recordSection($migrationSection->legacyRow->id, $sectionId);
+            }
 
             foreach ($migrationSection->rows as $migrationRow) {
                 $row = $this->createRow($migrationRow, $sectionId);
                 /** @var positive-int $rowId */
                 $rowId = (int) $row->ID;
+                if ($migrationRow->legacyRow !== null) {
+                    $idMap->recordRow($migrationRow->legacyRow->id, $rowId);
+                }
 
                 foreach ($migrationRow->columns as $migrationColumn) {
                     $column = $this->createColumn($migrationColumn, $rowId);
@@ -90,6 +97,9 @@ final class DraftHierarchyWriter
         $section->Sort = $sort ?? $migration->sort;
         $section->ParentID = $pageId;
         $section->ParentClass = $pageClassName;
+        if ($migration->legacyRow !== null) {
+            $this->extend('updateSectionFieldMapping', $section, $migration->legacyRow);
+        }
         $section->write();
 
         return $section;
@@ -106,6 +116,9 @@ final class DraftHierarchyWriter
         $row->Sort = $migration->sort;
         $row->ParentID = $sectionId;
         $row->ParentClass = Section::class;
+        if ($migration->legacyRow !== null) {
+            $this->extend('updateRowFieldMapping', $row, $migration->legacyRow);
+        }
         $row->write();
 
         return $row;
