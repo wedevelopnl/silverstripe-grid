@@ -40,6 +40,7 @@ final class DroppedMediaCollectorTest extends TestCase
         $collector = new DroppedMediaCollector();
 
         $collector->record(1, new LegacyMediaData($legacyFields), [...self::allMediaFields(), 'HTML']);
+        $collector->commit();
 
         self::assertSame(0, $collector->blockCount());
     }
@@ -53,6 +54,7 @@ final class DroppedMediaCollectorTest extends TestCase
             'MediaImageID' => '7',
             'MediaCaption' => 'Kept caption',
         ]), ['MediaType', 'MediaImageID']);
+        $collector->commit();
 
         self::assertSame([1, ['MediaType', 'MediaImageID']], [$collector->blockCount(), $collector->columns()]);
     }
@@ -62,14 +64,30 @@ final class DroppedMediaCollectorTest extends TestCase
         $collector = new DroppedMediaCollector();
 
         $collector->record(1, new LegacyMediaData(['MediaVideoFullURL' => 'https://example.com/v']), self::allMediaFields());
+        $collector->commit();
         $collector->record(1, new LegacyMediaData(['MediaType' => 'video']), self::allMediaFields());
         $collector->record(2, new LegacyMediaData(['MediaType' => 'image']), self::allMediaFields());
+        $collector->commit();
 
         self::assertSame(
             [2, ['MediaType', 'MediaVideoFullURL']],
             [$collector->blockCount(), $collector->columns()],
             'one count per legacy element; columns deduplicated in legacy schema order',
         );
+    }
+
+    public function testForgetsWhatAPageThatRolledBackRecorded(): void
+    {
+        $collector = new DroppedMediaCollector();
+
+        $collector->record(1, new LegacyMediaData(['MediaType' => 'image']), self::allMediaFields());
+        $collector->commit();
+        $collector->record(1, new LegacyMediaData(['MediaCaption' => 'Rolled back']), self::allMediaFields());
+        $collector->record(2, new LegacyMediaData(['MediaType' => 'video']), self::allMediaFields());
+        $collector->rollback();
+        $collector->commit();
+
+        self::assertSame([1, ['MediaType']], [$collector->blockCount(), $collector->columns()]);
     }
 
     public function testKnowsTheLegacyColumnOfEveryMappedMediaField(): void

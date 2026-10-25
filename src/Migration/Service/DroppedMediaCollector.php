@@ -13,6 +13,10 @@ use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
  *
  * Keyed by legacy element ID: a block written on both stages, or in several
  * locale passes, counts once.
+ *
+ * Records are held per page until its transaction settles: {@see commit()}
+ * counts them, {@see rollback()} forgets them, so a page that failed and rolled
+ * back reports none of the blocks it never migrated.
  */
 final class DroppedMediaCollector
 {
@@ -28,6 +32,9 @@ final class DroppedMediaCollector
     /** @var array<int, array<non-empty-string, true>> legacy element ID → legacy columns left behind */
     private array $leftBehind = [];
 
+    /** @var array<int, array<non-empty-string, true>> as $leftBehind, for the page whose transaction is open */
+    private array $pending = [];
+
     /**
      * @param list<non-empty-string> $droppedFields mapped field names no table holds
      */
@@ -36,9 +43,23 @@ final class DroppedMediaCollector
         foreach ($droppedFields as $field) {
             $column = MappedMediaFields::LEGACY_COLUMNS[$field] ?? null;
             if ($column !== null && $this->isChosen($column, $mediaData->fields[$column] ?? null)) {
-                $this->leftBehind[$legacyElementId][$column] = true;
+                $this->pending[$legacyElementId][$column] = true;
             }
         }
+    }
+
+    public function commit(): void
+    {
+        foreach ($this->pending as $legacyElementId => $columns) {
+            $this->leftBehind[$legacyElementId] = ($this->leftBehind[$legacyElementId] ?? []) + $columns;
+        }
+
+        $this->pending = [];
+    }
+
+    public function rollback(): void
+    {
+        $this->pending = [];
     }
 
     public function blockCount(): int
