@@ -86,7 +86,7 @@ final class LegacyElementReader
             }
         }
 
-        $rowDataMap = $this->prefetchRowData($rowDelimiterIds, $stage);
+        $rowRecordMap = $this->prefetchRowRecords($rowDelimiterIds, $stage);
         $contentRowMap = $this->prefetchContentRows($contentIds, $stage);
 
         $elements = [];
@@ -96,12 +96,11 @@ final class LegacyElementReader
             $className = (string) ($row['ClassName'] ?? '');
             $isRow = $className === self::ROW_CLASS_NAME;
 
-            $rowData = $isRow ? ($rowDataMap[$elementId] ?? null) : null;
             $mediaData = isset($contentRowMap[$elementId])
                 ? $this->projectMediaFields($contentRowMap[$elementId])
                 : null;
 
-            $elements[] = $this->buildElement($row, $elementId, $className, $isRow, $rowData, $mediaData);
+            $elements[] = $this->buildElement($row, $elementId, $className, $isRow, $rowRecordMap[$elementId] ?? null, $mediaData);
         }
 
         return $elements;
@@ -188,7 +187,7 @@ final class LegacyElementReader
             $prepared[] = [$row, $elementId, $className, $isRow];
         }
 
-        $rowDataMap = $this->prefetchRowData($rowDelimiterIds, $stage);
+        $rowRecordMap = $this->prefetchRowRecords($rowDelimiterIds, $stage);
         $contentRowMap = $this->prefetchContentRows($contentIds, $stage);
         $contentLocalisedMap = $overlayLocale !== null
             ? $this->prefetchLocalised('ElementContent', $contentIds, $overlayLocale, $stage)
@@ -196,8 +195,6 @@ final class LegacyElementReader
 
         $elements = [];
         foreach ($prepared as [$row, $elementId, $className, $isRow]) {
-            $rowData = $isRow ? ($rowDataMap[$elementId] ?? null) : null;
-
             if (isset($contentRowMap[$elementId])) {
                 $contentRow = $contentRowMap[$elementId];
                 if ($overlayLocale !== null && isset($contentLocalisedMap[$elementId])) {
@@ -208,7 +205,7 @@ final class LegacyElementReader
                 $mediaData = null;
             }
 
-            $elements[] = $this->buildElement($row, $elementId, $className, $isRow, $rowData, $mediaData);
+            $elements[] = $this->buildElement($row, $elementId, $className, $isRow, $rowRecordMap[$elementId] ?? null, $mediaData);
         }
 
         return $elements;
@@ -216,7 +213,7 @@ final class LegacyElementReader
 
     /**
      * @deprecated 6.0.0 The hydration path batches these reads via
-     *     {@see prefetchRowData()}; this per-element query has no caller.
+     *     {@see prefetchRowRecords()}; this per-element query has no caller.
      *     Use {@see getElementsForArea()} instead. Will be removed in 7.0.0.
      */
     public function getRowData(int $elementId, string $stage): ?LegacyRowData
@@ -304,16 +301,16 @@ final class LegacyElementReader
     }
 
     /**
-     * Batch-load row data for the given element IDs from the ElementRow table.
+     * Batch-load raw ElementRow records for the given element IDs.
      *
      * Issues a single `IN (…)` query and keys the result by element ID. Returns
      * an empty map (and skips the query) when no IDs are supplied — an empty
      * `IN ()` clause is invalid SQL.
      *
      * @param list<positive-int> $ids
-     * @return array<int, LegacyRowData>
+     * @return array<int, array<string, int|string|null>>
      */
-    private function prefetchRowData(array $ids, string $stage): array
+    private function prefetchRowRecords(array $ids, string $stage): array
     {
         if ($ids === []) {
             return [];
@@ -331,9 +328,7 @@ final class LegacyElementReader
         foreach ($result as $row) {
             /** @var array<string, int|string|null> $row */
             $id = (int) $row['ID'];
-            $map[$id] = new LegacyRowData(
-                customSectionClass: (string) ($row['CustomSectionClass'] ?? ''),
-            );
+            $map[$id] = $row;
         }
 
         return $map;
@@ -419,17 +414,26 @@ final class LegacyElementReader
      * Build a LegacyElement from a (possibly overlaid) Element row plus its
      * prefetched companion data.
      *
+     * A row delimiter carries its merged Element + ElementRow record in
+     * `extraData`, so a project's row and section field-mapping hooks can read
+     * any column of that stage without querying again.
+     *
      * @param array<string, int|string|null> $row
      * @param positive-int $elementId
+     * @param array<string, int|string|null>|null $rowRecord The ElementRow record, for a row delimiter that has one
      */
     private function buildElement(
         array $row,
         int $elementId,
         string $className,
         bool $isRow,
-        ?LegacyRowData $rowData,
+        ?array $rowRecord,
         ?LegacyMediaData $mediaData,
     ): LegacyElement {
+        $rowData = $isRow && $rowRecord !== null
+            ? new LegacyRowData(customSectionClass: (string) ($rowRecord['CustomSectionClass'] ?? ''))
+            : null;
+
         return new LegacyElement(
             id: $elementId,
             className: $className,
@@ -445,6 +449,7 @@ final class LegacyElementReader
             visibilityFields: $this->extractVisibilityFields($row),
             rowData: $rowData,
             mediaData: $mediaData,
+            extraData: $isRow ? [...$row, ...($rowRecord ?? [])] : [],
         );
     }
 

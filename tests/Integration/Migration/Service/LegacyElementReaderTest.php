@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\Service\LegacyElementReader;
 use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
@@ -255,6 +256,49 @@ final class LegacyElementReaderTest extends SapphireTest
         $draft = $this->reader->getElementsForArea(100, 'draft');
         self::assertCount(1, $draft);
         self::assertSame('Draft Title', $draft[0]->title);
+    }
+
+    public function testARowCarriesEveryColumnOfItsStagesElementAndElementRowRecordsInExtraData(): void
+    {
+        $this->seeder->seedElement(7300, 100, self::ROW_CLASS, 1, ['Title' => 'Rooms', 'ExtraClass' => 'navy']);
+        $this->seeder->seedRow(7300, isFluid: true, customSectionClass: 'card');
+        $this->seeder->seedElement(7300, 100, self::ROW_CLASS, 1, ['Title' => 'Our rooms', 'ExtraClass' => 'white'], 'live');
+        $this->seeder->seedRow(7300, customSectionClass: 'plain', stage: 'live');
+
+        $draft = $this->reader->getElementsForArea(100, 'draft')[0]->extraData;
+        $live = $this->reader->getElementsForArea(100, 'live')[0]->extraData;
+
+        $expectedColumns = \array_values(\array_unique([
+            ...\array_keys(DB::field_list(LegacyElementReader::ELEMENT_TABLE)),
+            ...\array_keys(DB::field_list('ElementRow')),
+        ]));
+        self::assertEqualsCanonicalizing($expectedColumns, \array_keys($draft));
+        self::assertEqualsCanonicalizing($expectedColumns, \array_keys($live));
+
+        self::assertSame(['Rooms', 'navy', 'card'], [$draft['Title'], $draft['ExtraClass'], $draft['CustomSectionClass']]);
+        self::assertEquals(1, $draft['IsFluid']);
+        self::assertSame(['Our rooms', 'white', 'plain'], [$live['Title'], $live['ExtraClass'], $live['CustomSectionClass']]);
+        self::assertEquals(0, $live['IsFluid']);
+    }
+
+    public function testAContentElementCarriesNoExtraData(): void
+    {
+        $this->seeder->seedElement(7310, 100, self::CONTENT_CLASS, 1, ['Title' => 'Text']);
+        $this->seeder->seedContentMedia(7310);
+
+        self::assertSame([], $this->reader->getElementsForArea(100, 'draft')[0]->extraData);
+    }
+
+    public function testALocaleAwareReadCarriesTheRowRecordInExtraData(): void
+    {
+        $this->seeder->addLocaleIdColumn();
+        $this->seeder->seedElement(7320, 100, self::ROW_CLASS, 1, ['Title' => 'EN row', 'LocaleID' => 1]);
+        $this->seeder->seedRow(7320, customSectionClass: 'card');
+
+        $elements = $this->reader->getElementsForAreaInLocale(100, 'draft', LegacyLocalisationModel::Isolated, 'en_US', 1);
+
+        self::assertSame('EN row', $elements[0]->extraData['Title']);
+        self::assertSame('card', $elements[0]->extraData['CustomSectionClass']);
     }
 
     public function testGetElementsForAreaStageNameIsCaseInsensitive(): void
