@@ -46,13 +46,16 @@ trait SeedsPublishedLegacyContent
     }
 
     /**
+     * @param array<string, string> $options extra task options, e.g. `--strategy`
+     *
      * @return array{exitCode: int, output: string}
      */
-    private function migrate(): array
+    private function migrate(array $options = []): array
     {
         return TaskRunner::run(new MigrateGridTask(), [
             '--default-viewport' => self::DEFAULT_VIEWPORT,
             '--zone' => self::ZONE,
+            ...$options,
             ...TaskRunner::ACKNOWLEDGED,
         ]);
     }

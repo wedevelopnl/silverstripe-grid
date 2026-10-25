@@ -19,7 +19,6 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\SeedsPublishedLegacyConte
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestLiveRowSettingsMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestRowSettingsExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestRowSettingsMigrationExtension;
-use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 
 /**
  * A converting site carries its own legacy row settings — a background colour
@@ -72,9 +71,9 @@ final class MigrateGridRowSettingsTest extends MigrationTestCase
         $this->seedPublishedRow(1000, 1, 'Rooms', 'navy');
         $this->seedPublishedBlock(self::AREA_ID, 1001, 2, '<p>Rooms</p>');
 
-        $this->migrate();
+        $this->migrateSuccessfully();
 
-        self::assertSame(['navy'], $this->rowColours(Versioned::DRAFT));
+        self::assertSame([['Rooms', 'navy']], $this->rowTitlesAndColours(Versioned::DRAFT));
     }
 
     public function testDraftAndLiveRowSettingsEachLandOnTheirOwnStage(): void
@@ -83,7 +82,7 @@ final class MigrateGridRowSettingsTest extends MigrationTestCase
         $this->seedRow(1000, 1, 'Our rooms', 'white', stage: 'live');
         $this->seedPublishedBlock(self::AREA_ID, 1001, 2, '<p>Rooms</p>');
 
-        $this->migrate();
+        $this->migrateSuccessfully();
 
         self::assertSame([['Rooms', 'navy']], $this->rowTitlesAndColours(Versioned::DRAFT));
         self::assertSame([['Our rooms', 'white']], $this->rowTitlesAndColours(Versioned::LIVE));
@@ -95,7 +94,7 @@ final class MigrateGridRowSettingsTest extends MigrationTestCase
         $this->seedRow(1000, 1, 'Rooms', rowImageId: 12, stage: 'live');
         $this->seedPublishedBlock(self::AREA_ID, 1001, 2, '<p>Rooms</p>');
 
-        $this->migrate();
+        $this->migrateSuccessfully();
 
         foreach ([Versioned::DRAFT => 11, Versioned::LIVE => 12] as $stage => $imageId) {
             $row = Versioned::get_by_stage(Row::class, $stage)->first();
@@ -111,7 +110,7 @@ final class MigrateGridRowSettingsTest extends MigrationTestCase
         $this->seedPublishedRow(1010, 3, 'Plain');
         $this->seedPublishedBlock(self::AREA_ID, 1011, 4, '<p>Plain</p>');
 
-        $this->migrate('sections');
+        $this->migrateSuccessfully('sections');
 
         foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
             self::assertSame(['card', ''], $this->sectionStyles($stage), "section styles on {$stage}");
@@ -138,7 +137,7 @@ final class MigrateGridRowSettingsTest extends MigrationTestCase
         $this->seedPublishedRow(1010, 3, 'Second', isCardRow: $secondIsCard);
         $this->seedPublishedBlock(self::AREA_ID, 1011, 4, '<p>Second</p>');
 
-        $this->migrate('single-section');
+        $this->migrateSuccessfully('single-section');
 
         foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
             self::assertSame([$expectedStyle], $this->sectionStyles($stage), "section style on {$stage}");
@@ -150,7 +149,7 @@ final class MigrateGridRowSettingsTest extends MigrationTestCase
         $this->seedRow(1000, 1, 'Rooms', 'navy', stage: 'draft');
         $this->seedPublishedBlock(self::AREA_ID, 1001, 2, '<p>Rooms</p>');
 
-        $this->migrate();
+        $this->migrateSuccessfully();
 
         self::assertSame([['Rooms', 'navy']], $this->rowTitlesAndColours(Versioned::LIVE));
     }
@@ -160,7 +159,7 @@ final class MigrateGridRowSettingsTest extends MigrationTestCase
         $this->seedPublishedRow(1000, 1, '');
         $this->seedPublishedBlock(self::AREA_ID, 1001, 2, '<p>Rooms</p>');
 
-        $this->migrate();
+        $this->migrateSuccessfully();
 
         self::assertSame([['Row 1', '']], $this->rowTitlesAndColours(Versioned::DRAFT));
         self::assertSame([['Row 1', '']], $this->rowTitlesAndColours(Versioned::LIVE));
@@ -190,24 +189,11 @@ final class MigrateGridRowSettingsTest extends MigrationTestCase
         );
     }
 
-    private function migrate(string $strategy = 'sections'): void
+    private function migrateSuccessfully(string $strategy = 'sections'): void
     {
-        $result = TaskRunner::run(new MigrateGridTask(), [
-            '--default-viewport' => self::DEFAULT_VIEWPORT,
-            '--zone' => self::ZONE,
-            '--strategy' => $strategy,
-            ...TaskRunner::ACKNOWLEDGED,
-        ]);
+        $result = $this->migrate(['--strategy' => $strategy]);
 
         self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function rowColours(string $stage): array
-    {
-        return \array_column($this->rowTitlesAndColours($stage), 1);
     }
 
     /**
