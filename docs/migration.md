@@ -223,7 +223,7 @@ It inspects the database table shape to determine which Fluent strategy the Silv
 
 ### What differs per locale
 
-**Layout is locale-invariant.** The Columns (one per block) and their `Size`/`Offset`/`Visibility` grid settings are derived from the base element rows and applied equally across all locales. Per-locale layout differences present in the legacy data are not honoured — an accepted limitation of a one-shot migration. Only content fields (`Title`, `HTML`, media text) differ per locale.
+**Layout is locale-invariant.** The Columns (one per block) and their `Size`/`Offset`/`Visibility` grid settings are derived from the base element rows and applied equally across all locales. Per-locale layout differences present in the legacy data are not honoured — an accepted limitation of a one-shot migration. Only content fields (`Title`, `HTML`, media text) and row fields (a Row's `Title` and `ExtraClass`, a Section's `ExtraClass` from `CustomSectionClass`, and your own `ElementRow` columns) differ per locale, on draft and live alike. In the field-localised model a row's `Element_Localised` and `ElementRow_Localised` values are overlaid onto its base record.
 
 **Untranslated elements fall back to base content.** In the field-localised model, an element with no `*_Localised` row for a given locale is migrated using its base content. This matches Fluent's render-time fallback and ensures nothing is silently omitted.
 
@@ -256,7 +256,6 @@ It inspects the database table shape to determine which Fluent strategy the Silv
 - The legacy `Element` / `ElementRow` / `ElementContent` / `ElementalArea` rows themselves. They are left in the database for manual cleanup.
 - Custom element subclasses that are not configured via an extension hook.
 - Project row settings (your own `ElementRow` columns) that no row or section hook maps — see [hooks 6–9](#6-mapping-your-own-row-settings-onto-rows).
-- Translated row settings. `ElementRow_Localised` is not read, so on a Fluent site the row and section hooks see the base `ElementRow` values in every locale.
 - Rows whose structure differs between draft and live. The Rows and Sections are built from the draft layout; a row the live area does not have keeps its draft values on live, and a row that only the live area has goes through the live-only path (appended after the draft content).
 
 ## One Column per Block
@@ -445,7 +444,8 @@ row image, a "card row" switch. `DraftHierarchyWriter` calls
 right before writing it. `$legacyRow` is the legacy row delimiter the Row is built
 from; its `extraData` holds every column of that stage's legacy `Element` +
 `ElementRow` record, your own columns included. Set the values on `$row`; the
-writer writes it.
+writer writes it. On a Fluent site the hook runs once per locale, and `extraData`
+holds that locale's values (see [What differs per locale](#what-differs-per-locale)).
 
 ```php
 use SilverStripe\Core\Extension;

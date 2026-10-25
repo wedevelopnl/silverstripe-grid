@@ -188,6 +188,13 @@ final class LegacyElementReader
         }
 
         $rowRecordMap = $this->prefetchRowRecords($rowDelimiterIds, $stage);
+        if ($overlayLocale !== null) {
+            foreach ($this->prefetchLocalised('ElementRow', $rowDelimiterIds, $overlayLocale, $stage) as $rowId => $localised) {
+                if (isset($rowRecordMap[$rowId])) {
+                    $rowRecordMap[$rowId] = $this->applyLocalisedOverlay($rowRecordMap[$rowId], $localised);
+                }
+            }
+        }
         $contentRowMap = $this->prefetchContentRows($contentIds, $stage);
         $contentLocalisedMap = $overlayLocale !== null
             ? $this->prefetchLocalised('ElementContent', $contentIds, $overlayLocale, $stage)
