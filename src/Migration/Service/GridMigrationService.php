@@ -325,9 +325,10 @@ final class GridMigrationService
         // both legacy stages are "shared" and must be published from the
         // draft records, never re-created as a live-only hierarchy.
         //
-        // The id map cannot be used for this test: it only holds content
-        // elements (row delimiters are grouping boundaries and are never
-        // written as records), so a shared row would be misread as
+        // The id map cannot be used for this test: its element entries hold
+        // content elements only, and a row is recorded only when the strategy
+        // handed it to a MigrationRow/MigrationSection as its legacy row (a
+        // project strategy may not), so a shared row could be misread as
         // live-only and spawn a spurious section.
         /** @var array<int, true> $draftLegacyIds */
         $draftLegacyIds = [];
