@@ -243,7 +243,7 @@ It inspects the database table shape to determine which Fluent strategy the Silv
   - `Size = 0` is treated as "not set" and promoted to the full column width (required for plain `dnadesign/silverstripe-elemental` sites where Size columns do not exist).
   - Every clamp is logged as a warning so you can review the migration log and decide whether to correct data in the CMS.
 - **Element metadata.** `Title`, `ShowTitle`, `TitleClass`, `ExtraClass`, `Sort`. `TitleTag` defaults to `h2` when the legacy value is empty.
-- **Row metadata.** `ElementRow.Title` and `ElementRow.ExtraClass` map to the new `Row`. `ElementRow.CustomSectionClass` maps to the parent `Section.ExtraClass`.
+- **Row metadata.** `ElementRow.Title` and `ElementRow.ExtraClass` map to the new `Row`. `ElementRow.CustomSectionClass` maps to the parent `Section.ExtraClass`. Each stage gets the values of its own legacy row: the live Row and Section carry the published row's values, not the draft ones. Your own row fields can be carried across too — see [hooks 6–9](#6-mapping-your-own-row-settings-onto-rows).
 - **Content body.** `ElementContent.HTML` is copied directly onto `ContentElement.HTML` on both draft and live.
 - **Media fields.** Fields added by `ElementContentExtension` (`ContentColumns`, `ContentVerticalAlign`, `ExtraColumnGap`, `MediaType`, `MediaCaption`, `MediaRatio`, `MediaPosition`, `MediaImage`, video fields) are translated into the equivalent fields on `BlockMediaExtension` — including CSS-class → enum conversions and a discrete scale mapping for `ExtraColumnGap`. Each field goes to the table of the target class that holds it; a field no table holds is skipped and reported at the end of the run (see [Before You Begin](#before-you-begin)).
 - **Draft and live stages.** The migration writes the draft hierarchy first, then reconciles the live stage. Elements that exist on both stages reuse the draft IDs; elements that only exist on live get new records on both stages to preserve Versioned integrity.
@@ -255,6 +255,9 @@ It inspects the database table shape to determine which Fluent strategy the Silv
 - `ElementRow.TitleTag` and `ElementRow.TitleClass`.
 - The legacy `Element` / `ElementRow` / `ElementContent` / `ElementalArea` rows themselves. They are left in the database for manual cleanup.
 - Custom element subclasses that are not configured via an extension hook.
+- Project row settings (your own `ElementRow` columns) that no row or section hook maps — see [hooks 6–9](#6-mapping-your-own-row-settings-onto-rows).
+- Translated row settings. `ElementRow_Localised` is not read, so on a Fluent site the row and section hooks see the base `ElementRow` values in every locale.
+- Rows whose structure differs between draft and live. The Rows and Sections are built from the draft layout; a row the live area does not have keeps its draft values on live, and a row that only the live area has goes through the live-only path (appended after the draft content).
 
 ## One Column per Block
 
@@ -292,7 +295,7 @@ A partial migration (draft written, live reconciliation failed) will not be retr
 
 ## Customising the Migration
 
-Four extension points are available via `SilverStripe\Core\Extensible`. Register an `Extension` (`SilverStripe\Core\Extension`) on the service or task class listed in each section.
+Nine extension points are available via `SilverStripe\Core\Extensible`. Register an `Extension` (`SilverStripe\Core\Extension`) on the service or task class listed in each section.
 
 ### 1. Custom element class mapping
 
@@ -433,6 +436,143 @@ WeDevelop\Grid\Migration\Task\AbstractMigrationTask:
 ```
 
 For field-level tweaks on individual element subclasses, `updateElementFieldMapping` (option 2 above) remains the right hook — it runs after the default mapping and lets you overwrite specific fields on the new element.
+
+### 6. Mapping your own row settings onto Rows
+
+A legacy site often added its own fields to `ElementRow` — a background colour, a
+row image, a "card row" switch. `DraftHierarchyWriter` calls
+`updateRowFieldMapping(Row $row, LegacyElement $legacyRow)` for each new `Row`,
+right before writing it. `$legacyRow` is the legacy row delimiter the Row is built
+from; its `extraData` holds every column of that stage's legacy `Element` +
+`ElementRow` record, your own columns included. Set the values on `$row`; the
+writer writes it.
+
+```php
+use SilverStripe\Core\Extension;
+use WeDevelop\Grid\Migration\DTO\LegacyElement;
+use WeDevelop\Grid\Model\Row;
+
+class RowSettingsMigrationExtension extends Extension
+{
+    public function updateRowFieldMapping(Row $row, LegacyElement $legacyRow): void
+    {
+        $row->BackgroundColour = (string) ($legacyRow->extraData['BackgroundColour'] ?? '');
+        // A has_one copies as its ID. Publishing the file is the project's job.
+        $row->RowImageID = (int) ($legacyRow->extraData['RowImageID'] ?? 0);
+    }
+}
+```
+
+```yaml
+WeDevelop\Grid\Migration\Service\DraftHierarchyWriter:
+  extensions:
+    - App\Migration\RowSettingsMigrationExtension
+```
+
+No row or section hook fires for a container without a legacy row: the elements
+before a page's first row form a Row (and, under `--strategy=sections`, a Section)
+of their own, and none of hooks 6–9 see it. The same holds for a project strategy
+that builds `MigrationRow` / `MigrationSection` DTOs without a legacy row — pass
+the group's row as the `legacyRow` constructor argument to keep these hooks working.
+
+The fields you map onto, and the mapping itself, must exist before the first run:
+the migration skips a page that already has a Section on draft (see
+[Idempotency](#idempotency-and-re-running)), so a field or mapping added afterwards
+does not reach pages already migrated.
+
+### 7. Mapping your own row settings onto Sections
+
+`DraftHierarchyWriter` calls
+`updateSectionFieldMapping(Section $section, LegacyElement $legacyRow)` for each new
+`Section`, right before writing it, with the same kind of `$legacyRow` as hook 6.
+Which legacy row a Section gets depends on the strategy: with `--strategy=sections`
+each Section gets the row it was made from; with `--strategy=single-section` the
+page's one Section gets the **first** explicit row — the row its `ExtraClass` comes
+from.
+
+```php
+use WeDevelop\Grid\Model\Section;
+
+public function updateSectionFieldMapping(Section $section, LegacyElement $legacyRow): void
+{
+    $section->Style = (bool) ($legacyRow->extraData['IsCardRow'] ?? false) ? 'card' : '';
+}
+```
+
+Register it on `WeDevelop\Grid\Migration\Service\DraftHierarchyWriter`, like hook 6
+(one extension class can carry both).
+
+### 8. Reconciling your own row settings on the live Row
+
+Like `updateElementFieldMapping`, hooks 6 and 7 run on the DRAFT build only: the
+published Row and Section start as a `writeToStage(LIVE)` copy of the draft record.
+Once the stock live values are in place (Row `Title` and `ExtraClass`, Section
+`ExtraClass` from the live `CustomSectionClass`), `LivePublisher` calls
+`updateLiveRowFieldMapping(Row $row, LegacyElement $liveRow)`. `$liveRow` is the
+**live** legacy row, its `extraData` read from `Element_Live` + `ElementRow_Live`.
+
+`$row` is the draft record. Write to the LIVE stage only; a plain `write()` would
+push live values back onto draft:
+
+```php
+use SilverStripe\Core\Extension;
+use SilverStripe\ORM\DB;
+use WeDevelop\Grid\Migration\DTO\LegacyElement;
+use WeDevelop\Grid\Model\Row;
+
+class LiveRowSettingsMigrationExtension extends Extension
+{
+    public function updateLiveRowFieldMapping(Row $row, LegacyElement $liveRow): void
+    {
+        DB::prepared_query(
+            'UPDATE "WeDevelop_Grid_Row_Live" SET "BackgroundColour" = ?, "RowImageID" = ? WHERE "ID" = ?',
+            [
+                (string) ($liveRow->extraData['BackgroundColour'] ?? ''),
+                (int) ($liveRow->extraData['RowImageID'] ?? 0),
+                $row->ID,
+            ],
+        );
+    }
+}
+```
+
+```yaml
+WeDevelop\Grid\Migration\Service\LivePublisher:
+  extensions:
+    - App\Migration\LiveRowSettingsMigrationExtension
+```
+
+A field lives in the table of the class its extension is applied to (here
+`WeDevelop_Grid_Row`); `DataObject::getSchema()->tableForField(Row::class, 'BackgroundColour')`
+resolves it.
+
+A live hook fires only for a container that is on live and whose legacy row is on
+the live area too; a row the live area lacks keeps its draft values on live. A
+live-**only** row needs no live hook: its Row and Section are built from the live
+data by `DraftHierarchyWriter`, so hooks 6 and 7 already see live values for them.
+A hook that throws rolls the page back, like the element hooks.
+
+### 9. Reconciling your own row settings on the live Section
+
+`LivePublisher` calls
+`updateLiveSectionFieldMapping(Section $section, LegacyElement $liveRow)` for each
+published Section, under the same rules as hook 8. Under
+`--strategy=single-section`, `$liveRow` is the live copy of the first explicit row.
+
+```php
+use WeDevelop\Grid\Model\Section;
+
+public function updateLiveSectionFieldMapping(Section $section, LegacyElement $liveRow): void
+{
+    DB::prepared_query(
+        'UPDATE "WeDevelop_Grid_GridElement_Live" SET "Style" = ? WHERE "ID" = ?',
+        [(bool) ($liveRow->extraData['IsCardRow'] ?? false) ? 'card' : '', $section->ID],
+    );
+}
+```
+
+`Style` is a column of the base `WeDevelop_Grid_GridElement` table. Register the
+extension on `WeDevelop\Grid\Migration\Service\LivePublisher`, like hook 8.
 
 ## After Migration
 
