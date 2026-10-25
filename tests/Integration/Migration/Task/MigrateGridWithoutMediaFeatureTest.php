@@ -156,7 +156,13 @@ final class MigrateGridWithoutMediaFeatureTest extends MigrationTestCase
             . "Check logs for details.\n{$warning}\n",
             $result['output'],
         );
-        self::assertSame([$warning], $this->logger->messagesAt('warning'));
+        self::assertSame(
+            [
+                \sprintf('Migration batch complete: 1 page(s) succeeded, 1 failed (page IDs: %d).', $this->pageId('test_page')),
+                $warning,
+            ],
+            $this->logger->messagesAt('warning'),
+        );
     }
 
     public function testPrintsNoMediaWarningWhenTheLegacyBlocksHoldOnlyText(): void
