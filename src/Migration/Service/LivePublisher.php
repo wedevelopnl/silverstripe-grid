@@ -29,8 +29,9 @@ use WeDevelop\Grid\Value\MigrationIdMap;
  * fire) and the {@see RowMappingStrategy} to lay out live-only elements the same
  * way the draft path does.
  *
- * Carries the `updateLiveElementFieldMapping` extension hook (shared-element
- * path only — see {@see overwriteLiveContent()}).
+ * Carries the `updateLiveElementFieldMapping`, `updateLiveRowFieldMapping` and
+ * `updateLiveSectionFieldMapping` extension hooks (shared-record path only — see
+ * {@see overwriteLiveContent()} and {@see reconcileLiveContainers()}).
  */
 final class LivePublisher
 {
@@ -133,6 +134,8 @@ final class LivePublisher
             }
         }
 
+        $this->reconcileLiveContainers($liveElements, $idMap);
+
         if ($liveOnlyElements !== []) {
             $this->logger->info(
                 'Page {pageId}: {liveOnlyCount} live-only legacy element(s) found; '
@@ -150,6 +153,65 @@ final class LivePublisher
                 $idMap,
             );
         }
+    }
+
+    /**
+     * Give each published Row and Section the values of its legacy row on live.
+     *
+     * writeToStage(LIVE) in {@see publishContainerChain()} copied the containers'
+     * DRAFT values to live. For every legacy row on the live area that the draft
+     * pass recorded against a Row or Section that is now on live, the stock
+     * fields (Row Title and ExtraClass, Section ExtraClass from the row's
+     * CustomSectionClass) are corrected with a raw `_Live` UPDATE, then the
+     * `updateLiveRowFieldMapping` / `updateLiveSectionFieldMapping` hook fires
+     * for the project's own fields. Like `updateLiveElementFieldMapping`, the
+     * hook receives the DRAFT record and must write to the LIVE stage only.
+     *
+     * A container whose legacy row is missing from the live area keeps its draft
+     * values on live. Live-only rows never reach this method: they are not in the
+     * id map, and {@see createLiveOnlyHierarchy()} builds them from live data.
+     *
+     * @param list<LegacyElement> $liveElements
+     */
+    private function reconcileLiveContainers(array $liveElements, MigrationIdMap $idMap): void
+    {
+        foreach ($liveElements as $liveRow) {
+            if (!$liveRow->isRow) {
+                continue;
+            }
+
+            $rowId = $idMap->newRowId($liveRow->id);
+            $row = $rowId !== null ? Row::get()->byID($rowId) : null;
+            if ($row instanceof Row && $row->isPublished()) {
+                $this->overwriteLiveGridElementFields((int) $row->ID, ['Title' => $liveRow->title, 'ExtraClass' => $liveRow->extraClass]);
+                $this->extend('updateLiveRowFieldMapping', $row, $liveRow);
+                /** @var LegacyElement $liveRow */
+            }
+
+            $sectionId = $idMap->newSectionId($liveRow->id);
+            $section = $sectionId !== null ? Section::get()->byID($sectionId) : null;
+            if ($section instanceof Section && $section->isPublished()) {
+                $this->overwriteLiveGridElementFields((int) $section->ID, ['ExtraClass' => $liveRow->rowData->customSectionClass ?? '']);
+                $this->extend('updateLiveSectionFieldMapping', $section, $liveRow);
+            }
+        }
+    }
+
+    /**
+     * @param non-empty-array<'Title'|'ExtraClass', string> $values
+     */
+    private function overwriteLiveGridElementFields(int $id, array $values): void
+    {
+        $setClauses = \array_map(static fn (string $field): string => \sprintf('"%s" = ?', $field), \array_keys($values));
+
+        DB::prepared_query(
+            \sprintf(
+                'UPDATE "%s_Live" SET %s WHERE "ID" = ?',
+                DataObject::getSchema()->tableName(GridElement::class),
+                \implode(', ', $setClauses),
+            ),
+            [...\array_values($values), $id],
+        );
     }
 
     /**

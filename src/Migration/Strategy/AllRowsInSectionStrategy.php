@@ -51,7 +51,7 @@ final readonly class AllRowsInSectionStrategy extends AbstractRowMappingStrategy
             new MigrationSection(
                 title: '',
                 zone: $zone,
-                extraClass: $sectionRow?->rowData?->customSectionClass ?? '',
+                extraClass: $sectionRow?->rowData->customSectionClass ?? '',
                 sort: 1,
                 rows: $rows,
                 legacyRow: $sectionRow,
