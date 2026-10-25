@@ -20,6 +20,8 @@ use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestRowSettingsExtension;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestRowSettingsMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 use WeDevelop\Grid\Value\GridSettings;
@@ -41,6 +43,10 @@ final class DraftHierarchyWriterTest extends SapphireTest
     protected $usesDatabase = true;
 
     protected static $extra_dataobjects = [TestCustomElement::class, TestPage::class];
+
+    protected static $required_extensions = [
+        Row::class => [TestRowSettingsExtension::class],
+    ];
 
     private const string ZONE = 'main';
 
@@ -234,6 +240,51 @@ final class DraftHierarchyWriterTest extends SapphireTest
         }
     }
 
+    public function testRowAndSectionMappingHooksReceiveTheLegacyRowBeforeTheWrite(): void
+    {
+        $legacyRow = $this->legacyRow(6001, ['BackgroundColour' => 'navy', 'IsCardRow' => 1]);
+        $row = new MigrationRow('', '', 1, [$this->column()], $legacyRow);
+
+        $this->writeWithRowMapping([new MigrationSection('', self::ZONE, '', 1, [$row], $legacyRow)], new MigrationIdMap());
+
+        self::assertSame('navy', $this->firstRow()->getField('BackgroundColour'));
+        self::assertSame('card', (string) $this->firstSection()->Style);
+    }
+
+    public function testNoRowOrSectionHookFiresWithoutALegacyRow(): void
+    {
+        // The hooks type their legacy row as non-nullable, so firing either one
+        // here would throw a TypeError instead of writing the hierarchy.
+        $row = new MigrationRow('Implicit', '', 1, [$this->column()]);
+
+        $this->writeWithRowMapping([new MigrationSection('', self::ZONE, '', 1, [$row])], new MigrationIdMap());
+
+        self::assertSame('Implicit', (string) $this->firstRow()->Title);
+        self::assertSame('', (string) $this->firstRow()->getField('BackgroundColour'));
+        self::assertSame('', (string) $this->firstSection()->Style);
+    }
+
+    public function testRecordsEachLegacyRowAgainstTheRowAndSectionItWasWrittenTo(): void
+    {
+        // The single-section layout: the Section takes its fields from the first
+        // row only, so only that row is recorded against it.
+        $first = $this->legacyRow(6001);
+        $second = $this->legacyRow(6002);
+        $rows = [
+            new MigrationRow('', '', 1, [$this->column(5001)], $first),
+            new MigrationRow('', '', 2, [$this->column(5002)], $second),
+            new MigrationRow('', '', 3, [$this->column(5003)]),
+        ];
+        $idMap = new MigrationIdMap();
+
+        $this->write($this->createPage(), [new MigrationSection('', self::ZONE, '', 1, $rows, $first)], $idMap);
+
+        $rowIds = Row::get()->sort('Sort')->column('ID');
+        self::assertSame([(int) $rowIds[0], (int) $rowIds[1]], [$idMap->newRowId(6001), $idMap->newRowId(6002)]);
+        self::assertSame((int) $this->firstSection()->ID, $idMap->newSectionId(6001));
+        self::assertNull($idMap->newSectionId(6002));
+    }
+
     private function createPage(): int
     {
         $page = Page::create();
@@ -267,6 +318,51 @@ final class DraftHierarchyWriterTest extends SapphireTest
         $row = new MigrationRow('Row title', 'row-extra', 1, [$column]);
 
         return new MigrationSection('', self::ZONE, 'section-extra', 1, [$row]);
+    }
+
+    /**
+     * @param array<string, mixed> $extraData
+     */
+    private function legacyRow(int $id, array $extraData = []): LegacyElement
+    {
+        return LegacyElementFactory::row($id, $id, null, ['extraData' => $extraData]);
+    }
+
+    private function column(int $legacyId = self::LEGACY_ID): MigrationColumn
+    {
+        return new MigrationColumn($this->gridSettings(), 1, $this->legacyContent($legacyId, "Block {$legacyId}"));
+    }
+
+    private function firstRow(): Row
+    {
+        $row = Row::get()->sort('ID')->first();
+        self::assertInstanceOf(Row::class, $row);
+
+        return $row;
+    }
+
+    private function firstSection(): Section
+    {
+        $section = Section::get()->sort('ID')->first();
+        self::assertInstanceOf(Section::class, $section);
+
+        return $section;
+    }
+
+    /**
+     * @param list<MigrationSection> $sections
+     */
+    private function writeWithRowMapping(array $sections, MigrationIdMap $idMap): void
+    {
+        DraftHierarchyWriter::add_extension(TestRowSettingsMigrationExtension::class);
+
+        try {
+            // Fresh writer so the extension is wired onto this instance.
+            $this->writer = new DraftHierarchyWriter(new FieldMapper(), new DroppedMediaCollector());
+            $this->write($this->createPage(), $sections, $idMap);
+        } finally {
+            DraftHierarchyWriter::remove_extension(TestRowSettingsMigrationExtension::class);
+        }
     }
 
     /**

@@ -8,7 +8,7 @@ namespace WeDevelop\Grid\Value;
  * Carries the id/sort maps threaded through a single page's migration.
  *
  * The draft writer ({@see \WeDevelop\Grid\Migration\Service\DraftHierarchyWriter})
- * populates the three legacy-id-keyed maps; the live publisher
+ * populates the legacy-id-keyed maps; the live publisher
  * ({@see \WeDevelop\Grid\Migration\Service\LivePublisher}) reads them to publish
  * shared draft records to live. `publishedContainers` is publisher-internal
  * bookkeeping (dedupes writeToStage(LIVE) calls) and starts empty.
@@ -26,6 +26,12 @@ final class MigrationIdMap
 
     /** @var array<int, positive-int> legacy element id → column-local draft Sort */
     private array $oldToDraftSort = [];
+
+    /** @var array<int, positive-int> legacy row id → new Row ID */
+    private array $oldRowToNewRowId = [];
+
+    /** @var array<int, positive-int> legacy row id → new Section ID it supplied the fields of */
+    private array $oldRowToNewSectionId = [];
 
     /** @var array<int, true> container ID → published flag (publisher-internal) */
     private array $publishedContainers = [];
@@ -63,6 +69,30 @@ final class MigrationIdMap
     public function draftSort(int $legacyId): int
     {
         return $this->oldToDraftSort[$legacyId];
+    }
+
+    /** @param positive-int $rowId */
+    public function recordRow(int $legacyRowId, int $rowId): void
+    {
+        $this->oldRowToNewRowId[$legacyRowId] = $rowId;
+    }
+
+    /** @param positive-int $sectionId */
+    public function recordSection(int $legacyRowId, int $sectionId): void
+    {
+        $this->oldRowToNewSectionId[$legacyRowId] = $sectionId;
+    }
+
+    /** @return positive-int|null */
+    public function newRowId(int $legacyRowId): ?int
+    {
+        return $this->oldRowToNewRowId[$legacyRowId] ?? null;
+    }
+
+    /** @return positive-int|null */
+    public function newSectionId(int $legacyRowId): ?int
+    {
+        return $this->oldRowToNewSectionId[$legacyRowId] ?? null;
     }
 
     public function isContainerPublished(int $containerId): bool
