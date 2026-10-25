@@ -45,30 +45,35 @@ final readonly class AllRowsInSectionStrategy extends AbstractRowMappingStrategy
             return [];
         }
 
+        $sectionRow = $this->resolveSectionRow($groups);
+
         return [
             new MigrationSection(
                 title: '',
                 zone: $zone,
-                extraClass: $this->resolveSectionExtraClass($groups),
+                extraClass: $sectionRow?->rowData?->customSectionClass ?? '',
                 sort: 1,
                 rows: $rows,
+                legacyRow: $sectionRow,
             ),
         ];
     }
 
     /**
-     * Resolve section-level extraClass from the first explicit row group.
+     * Resolve the legacy row that section-level fields are taken from: the
+     * first explicit row group's row.
      *
      * Implicit groups (no row element) contribute no section-level data.
      * IsFluid is not migrated — it's a class-level config on Section,
-     * not a per-instance field. Only customSectionClass is carried over.
+     * not a per-instance field. Of the stock fields only customSectionClass
+     * is carried over; later rows with a conflicting value are logged.
      *
      * @param list<array{row: ?LegacyElement, rowData: ?LegacyRowData, elements: list<LegacyElement>}> $groups
      */
-    private function resolveSectionExtraClass(array $groups): string
+    private function resolveSectionRow(array $groups): ?LegacyElement
     {
+        $sectionRow = null;
         $sectionExtraClass = '';
-        $resolved = false;
 
         foreach ($groups as $group) {
             $rowData = $group['rowData'];
@@ -77,9 +82,9 @@ final readonly class AllRowsInSectionStrategy extends AbstractRowMappingStrategy
                 continue;
             }
 
-            if (!$resolved) {
+            if ($sectionRow === null) {
+                $sectionRow = $group['row'];
                 $sectionExtraClass = $rowData->customSectionClass;
-                $resolved = true;
 
                 continue;
             }
@@ -92,7 +97,7 @@ final readonly class AllRowsInSectionStrategy extends AbstractRowMappingStrategy
             }
         }
 
-        return $sectionExtraClass;
+        return $sectionRow;
     }
 
     /**
@@ -120,6 +125,7 @@ final readonly class AllRowsInSectionStrategy extends AbstractRowMappingStrategy
                 extraClass: $row->extraClass ?? '',
                 sort: $rowSort,
                 columns: $columns,
+                legacyRow: $row,
             );
 
             $rowSort++;

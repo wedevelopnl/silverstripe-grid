@@ -122,6 +122,47 @@ final class AllRowsInSectionStrategyTest extends TestCase
         $this->strategyLogging($logger)->buildHierarchy([$row1, $this->builder->e(6), $row2, $this->builder->e(4)], pageId: 10, zone: 'main');
     }
 
+    public function testEachRowCarriesItsOwnLegacyRowAndTheImplicitGroupNone(): void
+    {
+        $first = $this->builder->r('First');
+        $second = $this->builder->r('Second');
+
+        $sections = $this->strategy->buildHierarchy(
+            [$this->builder->e(12), $first, $this->builder->e(6), $second, $this->builder->e(4)],
+            pageId: 10,
+            zone: 'main',
+        );
+
+        self::assertNull($sections[0]->rows[0]->legacyRow);
+        self::assertSame($first, $sections[0]->rows[1]->legacyRow);
+        self::assertSame($second, $sections[0]->rows[2]->legacyRow);
+    }
+
+    public function testSectionCarriesTheFirstExplicitLegacyRowEvenWhenItsGroupIsEmpty(): void
+    {
+        // The first delimiter has no content, so it yields no Row — but it is the row
+        // the section class has always been taken from, so the Section carries it too.
+        $empty = $this->builder->r('', '', 'empty-class');
+        $filled = $this->builder->r('', '', 'filled-class');
+
+        $sections = $this->strategy->buildHierarchy(
+            [$this->builder->e(12), $empty, $filled, $this->builder->e(6)],
+            pageId: 10,
+            zone: 'main',
+        );
+
+        self::assertSame($empty, $sections[0]->legacyRow);
+        self::assertSame('empty-class', $sections[0]->extraClass);
+        self::assertSame($filled, $sections[0]->rows[1]->legacyRow);
+    }
+
+    public function testSectionCarriesNoLegacyRowWhenThePageHasNoExplicitRow(): void
+    {
+        $sections = $this->strategy->buildHierarchy([$this->builder->e(12)], pageId: 10, zone: 'main');
+
+        self::assertNull($sections[0]->legacyRow);
+    }
+
     public function testEmptyElementsReturnsNoSections(): void
     {
         self::assertSame([], $this->strategy->buildHierarchy([], pageId: 1, zone: 'main'));
