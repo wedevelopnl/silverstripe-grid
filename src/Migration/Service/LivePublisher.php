@@ -86,10 +86,10 @@ final class LivePublisher
                 continue;
             }
 
-            // Row delimiters that exist on both stages are not written as
-            // records on either stage — skip publishing them. (Shared rows live
-            // in $draftLegacyIds but never in the id map, so they reach this
-            // branch rather than the live-only collection above.)
+            // A row delimiter that exists on both stages has no record of its
+            // own to publish — skip it here. Its Row and Section go live with
+            // their content's container chain, and reconcileLiveContainers()
+            // then gives them the live row's values.
             if ($liveElement->isRow) {
                 continue;
             }
