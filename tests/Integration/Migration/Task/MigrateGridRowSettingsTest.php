@@ -45,6 +45,7 @@ final class MigrateGridRowSettingsTest extends MigrationTestCase
             if (!\array_key_exists('BackgroundColour', DB::field_list($table))) {
                 DB::query("ALTER TABLE \"{$table}\" ADD COLUMN \"BackgroundColour\" varchar(50) NOT NULL DEFAULT ''");
                 DB::query("ALTER TABLE \"{$table}\" ADD COLUMN \"IsCardRow\" tinyint NOT NULL DEFAULT 0");
+                DB::query("ALTER TABLE \"{$table}\" ADD COLUMN \"RowImageID\" int NOT NULL DEFAULT 0");
             }
         }
     }
@@ -86,6 +87,21 @@ final class MigrateGridRowSettingsTest extends MigrationTestCase
 
         self::assertSame([['Rooms', 'navy']], $this->rowTitlesAndColours(Versioned::DRAFT));
         self::assertSame([['Our rooms', 'white']], $this->rowTitlesAndColours(Versioned::LIVE));
+    }
+
+    public function testARowImageIsCarriedAsItsIdOntoEachStage(): void
+    {
+        $this->seedRow(1000, 1, 'Rooms', rowImageId: 11, stage: 'draft');
+        $this->seedRow(1000, 1, 'Rooms', rowImageId: 12, stage: 'live');
+        $this->seedPublishedBlock(self::AREA_ID, 1001, 2, '<p>Rooms</p>');
+
+        $this->migrate();
+
+        foreach ([Versioned::DRAFT => 11, Versioned::LIVE => 12] as $stage => $imageId) {
+            $row = Versioned::get_by_stage(Row::class, $stage)->first();
+            self::assertInstanceOf(Row::class, $row);
+            self::assertSame($imageId, (int) $row->getField('RowImageID'), "row image on {$stage}");
+        }
     }
 
     public function testEachSectionTakesItsStyleFromItsOwnRowUnderTheSectionsStrategy(): void
@@ -146,13 +162,20 @@ final class MigrateGridRowSettingsTest extends MigrationTestCase
         }
     }
 
-    private function seedRow(int $id, int $sort, string $title, string $colour = '', bool $isCardRow = false, string $stage = 'draft'): void
-    {
+    private function seedRow(
+        int $id,
+        int $sort,
+        string $title,
+        string $colour = '',
+        bool $isCardRow = false,
+        string $stage = 'draft',
+        int $rowImageId = 0,
+    ): void {
         $this->seeder->seedElement($id, self::AREA_ID, self::ROW_CLASS, $sort, ['Title' => $title], $stage);
         $this->seeder->seedRow($id, stage: $stage);
         DB::prepared_query(
-            \sprintf('UPDATE "%s" SET "BackgroundColour" = ?, "IsCardRow" = ? WHERE "ID" = ?', $stage === 'live' ? 'ElementRow_Live' : 'ElementRow'),
-            [$colour, $isCardRow ? 1 : 0, $id],
+            \sprintf('UPDATE "%s" SET "BackgroundColour" = ?, "IsCardRow" = ?, "RowImageID" = ? WHERE "ID" = ?', $stage === 'live' ? 'ElementRow_Live' : 'ElementRow'),
+            [$colour, $isCardRow ? 1 : 0, $rowImageId, $id],
         );
     }
 

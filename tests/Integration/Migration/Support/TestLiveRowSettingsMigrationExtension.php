@@ -6,7 +6,6 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Support;
 
 use SilverStripe\Core\Extension;
 use SilverStripe\Dev\TestOnly;
-use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Model\Row;
@@ -17,33 +16,30 @@ use WeDevelop\Grid\Model\Section;
  * documented contract requires: a targeted `_Live` UPDATE, never a write() on
  * the passed draft record.
  *
+ * The method bodies are the examples of hooks 8 and 9 in docs/migration.md;
+ * {@see \WeDevelop\Grid\Tests\Integration\Migration\MigrationDocsRowHookExamplesTest}
+ * fails when the two drift apart.
+ *
  * @extends Extension<\WeDevelop\Grid\Migration\Service\LivePublisher>
  */
 final class TestLiveRowSettingsMigrationExtension extends Extension implements TestOnly
 {
-    /** @var list<string> one `<Class>:<ID>` entry per fired hook, so a test can see one did NOT fire */
-    public static array $fired = [];
-
     public function updateLiveRowFieldMapping(Row $row, LegacyElement $liveRow): void
     {
-        self::$fired[] = 'Row:' . $row->ID;
         DB::prepared_query(
-            \sprintf(
-                'UPDATE "%s_Live" SET "BackgroundColour" = ? WHERE "ID" = ?',
-                DataObject::getSchema()->tableForField(Row::class, 'BackgroundColour'),
-            ),
-            [(string) ($liveRow->extraData['BackgroundColour'] ?? ''), $row->ID],
+            'UPDATE "WeDevelop_Grid_Row_Live" SET "BackgroundColour" = ?, "RowImageID" = ? WHERE "ID" = ?',
+            [
+                (string) ($liveRow->extraData['BackgroundColour'] ?? ''),
+                (int) ($liveRow->extraData['RowImageID'] ?? 0),
+                $row->ID,
+            ],
         );
     }
 
     public function updateLiveSectionFieldMapping(Section $section, LegacyElement $liveRow): void
     {
-        self::$fired[] = 'Section:' . $section->ID;
         DB::prepared_query(
-            \sprintf(
-                'UPDATE "%s_Live" SET "Style" = ? WHERE "ID" = ?',
-                DataObject::getSchema()->tableForField(Section::class, 'Style'),
-            ),
+            'UPDATE "WeDevelop_Grid_GridElement_Live" SET "Style" = ? WHERE "ID" = ?',
             [(bool) ($liveRow->extraData['IsCardRow'] ?? false) ? 'card' : '', $section->ID],
         );
     }
