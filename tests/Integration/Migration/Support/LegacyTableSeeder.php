@@ -403,7 +403,12 @@ final class LegacyTableSeeder
                     "RecordID" int NOT NULL DEFAULT 0,
                     "Locale" varchar(10) NOT NULL DEFAULT '',
                     "Title" varchar(255) DEFAULT NULL,
-                    "ExtraClass" varchar(255) DEFAULT NULL
+                    "ExtraClass" varchar(255) DEFAULT NULL,
+                    "VisibilityXS" varchar(50) DEFAULT NULL,
+                    "VisibilitySM" varchar(50) DEFAULT NULL,
+                    "VisibilityMD" varchar(50) DEFAULT NULL,
+                    "VisibilityLG" varchar(50) DEFAULT NULL,
+                    "VisibilityXL" varchar(50) DEFAULT NULL
                 )
                 SQL);
         }

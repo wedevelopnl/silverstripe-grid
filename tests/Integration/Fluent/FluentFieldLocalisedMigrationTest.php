@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
+use WeDevelop\Grid\Model\Column;
 
 /**
  * Migration of the FieldLocalised legacy localisation model: a single base
@@ -44,6 +46,20 @@ final class FluentFieldLocalisedMigrationTest extends FluentMigrationTestCase
         self::assertSame(['<p>NL</p>'], $this->contentHtmlInLocale('nl_NL'), 'nl locale gets the overlaid HTML');
     }
 
+    public function testABlocksVisibilityFollowsTheLocale(): void
+    {
+        $pageId = $this->pageId();
+        $this->seedFieldLocalisedPage($pageId, 7500);
+        $this->seeder->seedElement(7501, 100, self::CONTENT_CLASS, 2, ['Title' => 'EN Two', 'VisibilityMD' => 'visible']);
+        $this->seeder->seedContentMedia(7501, ['HTML' => '<p>EN Two</p>']);
+        $this->seeder->seedLocalisedElement(7501, 'nl_NL', ['VisibilityMD' => 'hidden']);
+
+        self::assertSame(0, $this->runMigration($pageId));
+
+        self::assertSame([true, true], $this->columnVisibilityInLocale('en_US'));
+        self::assertSame([true, false], $this->columnVisibilityInLocale('nl_NL'), 'nl locale hides the second block');
+    }
+
     public function testReRunIsIdempotentPerLocale(): void
     {
         $pageId = $this->pageId();
@@ -65,5 +81,18 @@ final class FluentFieldLocalisedMigrationTest extends FluentMigrationTestCase
 
         self::assertTrue($this->useGridInLocale($pageId, 'en_US'), 'UseGrid must be set in en_US');
         self::assertTrue($this->useGridInLocale($pageId, 'nl_NL'), 'UseGrid must be set in nl_NL (non-localised shared flag)');
+    }
+
+    /**
+     * @return list<bool> each Column's default-viewport visibility in the locale, in creation order
+     */
+    private function columnVisibilityInLocale(string $localeCode): array
+    {
+        return FluentState::singleton()->withState(function (FluentState $state) use ($localeCode): array {
+            $state->setLocale($localeCode);
+            $columns = Column::get()->sort('ID')->toArray();
+
+            return \array_values(\array_map(static fn (Column $column): bool => $column->getGridSettings()->default->visible, $columns));
+        });
     }
 }
