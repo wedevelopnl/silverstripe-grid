@@ -14,6 +14,7 @@ use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
 use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Tests\Integration\Migration\Service\TestClassNameMappingExtension;
+use WeDevelop\Grid\Tests\Integration\Migration\Service\TestFailingMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\SeedsPublishedLegacyContent;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestMediaContentElement;
@@ -61,6 +62,7 @@ final class MigrateGridWithoutMediaFeatureTest extends MigrationTestCase
     protected function tearDown(): void
     {
         DraftHierarchyWriter::remove_extension(TestClassNameMappingExtension::class);
+        DraftHierarchyWriter::remove_extension(TestFailingMigrationExtension::class);
         TestClassNameMappingExtension::$targetClass = '';
 
         parent::tearDown();
@@ -131,6 +133,30 @@ final class MigrateGridWithoutMediaFeatureTest extends MigrationTestCase
         foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
             self::assertSame(['<p>Image block</p>', '<p>Video block</p>', '<p>Second video</p>'], $this->blockHtml($stage), "HTML on {$stage}");
         }
+    }
+
+    public function testLeavesTheBlocksOfAPageThatRolledBackOutOfTheMediaWarning(): void
+    {
+        // The FAIL_ME block's media is recorded before the extension throws, so
+        // only the rollback can keep it out of the warning.
+        DraftHierarchyWriter::add_extension(TestFailingMigrationExtension::class);
+        $this->seedPublishedPage('test_page', 100);
+        $this->seeder->seedElement(1001, 100, self::CONTENT_CLASS, 1, ['Title' => 'FAIL_ME']);
+        $this->seeder->seedContentMedia(1001, ['HTML' => '<p>Image block</p>', 'MediaType' => 'image', 'MediaImageID' => 7, ...self::LEGACY_TEXT_ONLY]);
+        $this->seedPublishedPage('test_page_2', 200);
+        $this->seedPublishedBlock(200, 2001, 1, '<p>Video block</p>', ['MediaType' => 'video', 'MediaVideoFullURL' => 'https://example.com/watch?v=1', ...self::LEGACY_TEXT_ONLY]);
+
+        $result = $this->migrate();
+
+        $warning = '1 text block(s) had media settings that were not carried over: MediaType, MediaVideoFullURL. '
+            . 'No column holds them; the values remain in the legacy ElementContent tables.';
+        self::assertSame(Command::FAILURE, $result['exitCode'], $result['output']);
+        self::assertStringEndsWith(
+            "\nMigrated 1 page(s) and 1 content block(s); 0 page(s) skipped as already migrated, 1 failed.\n"
+            . "Check logs for details.\n{$warning}\n",
+            $result['output'],
+        );
+        self::assertSame([$warning], $this->logger->messagesAt('warning'));
     }
 
     public function testPrintsNoMediaWarningWhenTheLegacyBlocksHoldOnlyText(): void

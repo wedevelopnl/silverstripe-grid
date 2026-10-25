@@ -41,7 +41,7 @@ final class GridMigrationService
         FieldMapper $mapper,
         private readonly RowMappingStrategy $strategy,
         private readonly LoggerInterface $logger,
-        DroppedMediaCollector $droppedMedia,
+        private readonly DroppedMediaCollector $droppedMedia,
     ) {
         $this->draftWriter = new DraftHierarchyWriter($mapper, $droppedMedia);
         $this->livePublisher = new LivePublisher($mapper, $this->draftWriter, $logger, $strategy, $droppedMedia);
@@ -261,8 +261,10 @@ final class GridMigrationService
             $this->pageFlagWriter->setUseGridOnPage($pageId, true, includeLive: $liveElements !== []);
 
             $conn->transactionEnd();
+            $this->droppedMedia->commit();
         } catch (Throwable $exception) {
             $conn->transactionRollback();
+            $this->droppedMedia->rollback();
 
             throw $exception;
         }
