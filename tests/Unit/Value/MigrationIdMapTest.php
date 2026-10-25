@@ -47,4 +47,17 @@ final class MigrationIdMapTest extends TestCase
         self::assertTrue($map->isContainerPublished(5));
         self::assertFalse($map->hasElement(5));
     }
+
+    public function testALegacyRowIsRecordedAgainstItsRowAndSectionSeparately(): void
+    {
+        $map = new MigrationIdMap();
+        $map->recordRow(legacyRowId: 8, rowId: 20);
+        $map->recordRow(legacyRowId: 9, rowId: 21);
+        $map->recordSection(legacyRowId: 8, sectionId: 30);
+
+        self::assertSame([20, 21], [$map->newRowId(8), $map->newRowId(9)]);
+        self::assertSame(30, $map->newSectionId(8));
+        self::assertNull($map->newSectionId(9));
+        self::assertNull($map->newRowId(99));
+    }
 }
