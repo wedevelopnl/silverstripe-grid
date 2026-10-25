@@ -15,6 +15,7 @@ use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
 use WeDevelop\Grid\Migration\Service\GridMigrationService;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
+use WeDevelop\Grid\Migration\Service\LivePublisher;
 use WeDevelop\Grid\Migration\Strategy\AllRowsInSectionStrategy;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
@@ -1136,6 +1137,94 @@ final class GridMigrationServiceTest extends MigrationTestCase
             self::assertStringContainsString('non-Exception Throwable', $errors[0]);
         } finally {
             DraftHierarchyWriter::remove_extension(TestErrorThrowingMigrationExtension::class);
+        }
+    }
+
+    /**
+     * @return iterable<string, array{class-string, class-string, string, string, string}>
+     */
+    public static function failingRowHooks(): iterable
+    {
+        yield 'draft row hook' => [
+            DraftHierarchyWriter::class,
+            TestFailingRowMigrationExtension::class,
+            'FAIL_ME',
+            'FAIL_ME',
+            'Deliberate row hook failure',
+        ];
+        // The live pass runs after the draft hierarchy is written: its rollback
+        // must undo that draft write too.
+        yield 'live row hook' => [
+            LivePublisher::class,
+            TestFailingLiveRowMigrationExtension::class,
+            'Rooms',
+            'FAIL_ME',
+            'Deliberate live row hook failure',
+        ];
+    }
+
+    /**
+     * @param class-string $host
+     * @param class-string $extension
+     */
+    #[DataProvider('failingRowHooks')]
+    public function testAThrowingRowHookRollsBackThatPageOnBothStages(
+        string $host,
+        string $extension,
+        string $draftRowTitle,
+        string $liveRowTitle,
+        string $expectedMessage,
+    ): void {
+        $pageId1 = $this->pageId();
+        $pageId2 = $this->pageId('test_page_2');
+
+        $this->seeder->seedPage($pageId1, 100);
+        $this->seedPublishedRowWithBlock(100, 6400, $draftRowTitle, $liveRowTitle);
+        $this->seeder->seedPage($pageId2, 200);
+        $this->seedPublishedRowWithBlock(200, 6500, 'Normal Row', 'Normal Row');
+
+        $host::add_extension($extension);
+
+        try {
+            $summary = $this->createService()->run(
+                self::DEFAULT_VIEWPORT,
+                self::ZONE,
+                self::VIEWPORT_KEY_MAP,
+                dryRun: false,
+                pageIds: [$pageId1, $pageId2],
+            );
+
+            self::assertSame(1, $summary->pagesFailed);
+            self::assertSame(1, $summary->pagesMigrated);
+
+            foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
+                $sections = Versioned::get_by_stage(Section::class, $stage);
+                self::assertCount(0, $sections->filter('ParentID', $pageId1), "page 1 sections on {$stage}");
+                self::assertCount(1, $sections->filter('ParentID', $pageId2), "page 2 sections on {$stage}");
+                // Page 2's Section → Row → Column → block is all that is left.
+                self::assertCount(4, Versioned::get_by_stage(GridElement::class, $stage), "grid elements on {$stage}");
+            }
+
+            $errors = $this->logger->entriesAt('error');
+            self::assertCount(1, $errors);
+            self::assertSame($pageId1, $errors[0]['context']['pageId']);
+            self::assertStringContainsString($expectedMessage, $this->logger->messagesAt('error')[0]);
+        } finally {
+            $host::remove_extension($extension);
+        }
+    }
+
+    /**
+     * Seed a legacy row (its Title may differ per stage) followed by one text
+     * block, on both stages.
+     */
+    private function seedPublishedRowWithBlock(int $areaId, int $rowId, string $draftTitle, string $liveTitle): void
+    {
+        foreach (['draft' => $draftTitle, 'live' => $liveTitle] as $stage => $title) {
+            $this->seeder->seedElement($rowId, $areaId, self::ROW_CLASS, 1, ['Title' => $title], stage: $stage);
+            $this->seeder->seedRow($rowId, stage: $stage);
+            $this->seeder->seedElement($rowId + 1, $areaId, self::CONTENT_CLASS, 2, ['SizeMD' => 12], stage: $stage);
+            $this->seeder->seedContentMedia($rowId + 1, [], stage: $stage);
         }
     }
 
