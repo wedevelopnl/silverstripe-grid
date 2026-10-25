@@ -155,6 +155,17 @@ final class MigrateGridRowSettingsTest extends MigrationTestCase
         self::assertSame([['Rooms', 'navy']], $this->rowTitlesAndColours(Versioned::LIVE));
     }
 
+    public function testAnUntitledRowCarriesItsDefaultTitleOntoLive(): void
+    {
+        $this->seedPublishedRow(1000, 1, '');
+        $this->seedPublishedBlock(self::AREA_ID, 1001, 2, '<p>Rooms</p>');
+
+        $this->migrate();
+
+        self::assertSame([['Row 1', '']], $this->rowTitlesAndColours(Versioned::DRAFT));
+        self::assertSame([['Row 1', '']], $this->rowTitlesAndColours(Versioned::LIVE));
+    }
+
     private function seedPublishedRow(int $id, int $sort, string $title, string $colour = '', bool $isCardRow = false): void
     {
         foreach (['draft', 'live'] as $stage) {
