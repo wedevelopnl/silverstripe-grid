@@ -185,9 +185,9 @@ final class LivePublisher
             if ($row instanceof Row && $row->isPublished()) {
                 $this->overwriteLiveGridElementFields((int) $row->ID, ['Title' => $liveRow->title, 'ExtraClass' => $liveRow->extraClass]);
                 $this->extend('updateLiveRowFieldMapping', $row, $liveRow);
-                /** @var LegacyElement $liveRow */
             }
 
+            /** @var LegacyElement $liveRow */
             $sectionId = $idMap->newSectionId($liveRow->id);
             $section = $sectionId !== null ? Section::get()->byID($sectionId) : null;
             if ($section instanceof Section && $section->isPublished()) {
