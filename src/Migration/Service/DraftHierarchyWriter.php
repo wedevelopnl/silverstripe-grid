@@ -100,8 +100,8 @@ final class DraftHierarchyWriter
         $legacyRow = $migration->legacyRow;
         if ($legacyRow !== null) {
             $this->extend('updateSectionFieldMapping', $section, $legacyRow);
-            /** @var Section $section */
         }
+        /** @var Section $section */
         $section->write();
 
         return $section;
@@ -121,8 +121,8 @@ final class DraftHierarchyWriter
         $legacyRow = $migration->legacyRow;
         if ($legacyRow !== null) {
             $this->extend('updateRowFieldMapping', $row, $legacyRow);
-            /** @var Row $row */
         }
+        /** @var Row $row */
         $row->write();
 
         return $row;
