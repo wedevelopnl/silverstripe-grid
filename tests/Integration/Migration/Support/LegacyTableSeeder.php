@@ -402,7 +402,21 @@ final class LegacyTableSeeder
                     "ID" int NOT NULL PRIMARY KEY AUTO_INCREMENT,
                     "RecordID" int NOT NULL DEFAULT 0,
                     "Locale" varchar(10) NOT NULL DEFAULT '',
-                    "Title" varchar(255) DEFAULT NULL
+                    "Title" varchar(255) DEFAULT NULL,
+                    "ExtraClass" varchar(255) DEFAULT NULL
+                )
+                SQL);
+        }
+
+        // Fluent's default data_include localises every Varchar, so a legacy
+        // site with Fluent on BaseElement also has ElementRow_Localised.
+        foreach (['ElementRow_Localised', 'ElementRow_Localised_Live'] as $target) {
+            DB::query(<<<SQL
+                CREATE TABLE IF NOT EXISTS "{$target}" (
+                    "ID" int NOT NULL PRIMARY KEY AUTO_INCREMENT,
+                    "RecordID" int NOT NULL DEFAULT 0,
+                    "Locale" varchar(10) NOT NULL DEFAULT '',
+                    "CustomSectionClass" varchar(255) DEFAULT NULL
                 )
                 SQL);
         }
@@ -424,6 +438,7 @@ final class LegacyTableSeeder
         $this->assertNoOpenTransaction('removeFieldLocalisedTables');
         foreach ([
             self::ELEMENT_LOCALISED, self::ELEMENT_LOCALISED . '_Live',
+            'ElementRow_Localised', 'ElementRow_Localised_Live',
             'ElementContent_Localised', 'ElementContent_Localised_Live',
         ] as $target) {
             DB::query("DROP TABLE IF EXISTS \"{$target}\"");
@@ -457,14 +472,15 @@ final class LegacyTableSeeder
      */
     public function seedLocalisedElement(int $recordId, string $locale, array $fields, string $stage = 'draft'): void
     {
-        $target = $this->stageTable(self::ELEMENT_LOCALISED, $stage);
-        $data = \array_merge(['RecordID' => $recordId, 'Locale' => $locale], $fields);
-        $columns = \implode('", "', \array_keys($data));
-        $placeholders = \implode(', ', \array_fill(0, \count($data), '?'));
-        DB::prepared_query(
-            "INSERT INTO \"{$target}\" (\"{$columns}\") VALUES ({$placeholders})",
-            \array_values($data),
-        );
+        $this->seedLocalised(self::ELEMENT_LOCALISED, $recordId, $locale, $fields, $stage);
+    }
+
+    /**
+     * @param array<string, mixed> $fields Localised column overrides (e.g. ['CustomSectionClass' => 'nl-section'])
+     */
+    public function seedLocalisedRow(int $recordId, string $locale, array $fields, string $stage = 'draft'): void
+    {
+        $this->seedLocalised('ElementRow_Localised', $recordId, $locale, $fields, $stage);
     }
 
     /**
@@ -472,7 +488,15 @@ final class LegacyTableSeeder
      */
     public function seedLocalisedContent(int $recordId, string $locale, array $fields, string $stage = 'draft'): void
     {
-        $target = \strtolower($stage) === 'live' ? 'ElementContent_Localised_Live' : 'ElementContent_Localised';
+        $this->seedLocalised('ElementContent_Localised', $recordId, $locale, $fields, $stage);
+    }
+
+    /**
+     * @param array<string, mixed> $fields
+     */
+    private function seedLocalised(string $localisedTable, int $recordId, string $locale, array $fields, string $stage): void
+    {
+        $target = $this->stageTable($localisedTable, $stage);
         $data = \array_merge(['RecordID' => $recordId, 'Locale' => $locale], $fields);
         $columns = \implode('", "', \array_keys($data));
         $placeholders = \implode(', ', \array_fill(0, \count($data), '?'));
