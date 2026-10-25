@@ -78,9 +78,7 @@ final class MigrationDocsRowHookExamplesTest extends SapphireTest
         self::assertCount(1, $config[$firingClass]['extensions']);
 
         // The docs name the project's class; the tests run the same code under the support class's name.
-        foreach ($config as $class => $settings) {
-            Config::modify()->merge($class, 'extensions', [$supportClass]);
-        }
+        Config::modify()->merge($firingClass, 'extensions', [$supportClass]);
 
         self::assertTrue($firingClass::has_extension($supportClass));
     }
