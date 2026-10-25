@@ -162,7 +162,8 @@ final class LivePublisher
      * DRAFT values to live. For every legacy row on the live area that the draft
      * pass recorded against a Row or Section that is now on live, the stock
      * fields (Row Title and ExtraClass, Section ExtraClass from the row's
-     * CustomSectionClass) are corrected with a raw `_Live` UPDATE, then the
+     * CustomSectionClass) are corrected with a raw `_Live` UPDATE — except an
+     * empty legacy Title, which keeps the published draft Title — then the
      * `updateLiveRowFieldMapping` / `updateLiveSectionFieldMapping` hook fires
      * for the project's own fields. Like `updateLiveElementFieldMapping`, the
      * hook receives the DRAFT record and must write to the LIVE stage only.
@@ -183,7 +184,12 @@ final class LivePublisher
             $rowId = $idMap->newRowId($liveRow->id);
             $row = $rowId !== null ? Row::get()->byID($rowId) : null;
             if ($row instanceof Row && $row->isPublished()) {
-                $this->overwriteLiveGridElementFields((int) $row->ID, ['Title' => $liveRow->title, 'ExtraClass' => $liveRow->extraClass]);
+                // An empty legacy title keeps the published one: the draft write
+                // persisted its "Row N" default, which live must not lose.
+                $values = $liveRow->title !== ''
+                    ? ['Title' => $liveRow->title, 'ExtraClass' => $liveRow->extraClass]
+                    : ['ExtraClass' => $liveRow->extraClass];
+                $this->overwriteLiveGridElementFields((int) $row->ID, $values);
                 $this->extend('updateLiveRowFieldMapping', $row, $liveRow);
             }
 
