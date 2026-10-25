@@ -45,6 +45,7 @@ final readonly class RowPerSectionStrategy extends AbstractRowMappingStrategy
                 extraClass: $rowExtraClass,
                 sort: 1,
                 columns: $columns,
+                legacyRow: $row,
             );
 
             $sections[] = new MigrationSection(
@@ -53,6 +54,7 @@ final readonly class RowPerSectionStrategy extends AbstractRowMappingStrategy
                 extraClass: $extraClass,
                 sort: $sectionSort,
                 rows: [$migrationRow],
+                legacyRow: $row,
             );
 
             $sectionSort++;

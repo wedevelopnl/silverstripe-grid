@@ -226,4 +226,30 @@ final class RowPerSectionStrategyTest extends TestCase
         // RowPerSection wraps each row in its own section, so every row sorts at 1.
         self::assertSectionsMatchSpec($elements, $sections, $zone, $expectedSections, rowSortFollowsIndex: false);
     }
+
+    public function testEachSectionAndItsRowCarryTheirOwnLegacyRow(): void
+    {
+        $b = new LegacyElementBuilder();
+        $first = $b->r('First');
+        $firstContent = $b->e(12);
+        $second = $b->r('Second');
+
+        $sections = $this->strategy->buildHierarchy([$first, $firstContent, $second, $b->e(6)], pageId: 1, zone: 'main');
+
+        self::assertSame($first, $sections[0]->legacyRow);
+        self::assertSame($first, $sections[0]->rows[0]->legacyRow);
+        self::assertSame($second, $sections[1]->legacyRow);
+        self::assertSame($second, $sections[1]->rows[0]->legacyRow);
+    }
+
+    public function testImplicitGroupCarriesNoLegacyRow(): void
+    {
+        $b = new LegacyElementBuilder();
+
+        $sections = $this->strategy->buildHierarchy([$b->e(12), $b->r(), $b->e(6)], pageId: 1, zone: 'main');
+
+        self::assertNull($sections[0]->legacyRow);
+        self::assertNull($sections[0]->rows[0]->legacyRow);
+        self::assertNotNull($sections[1]->legacyRow);
+    }
 }
