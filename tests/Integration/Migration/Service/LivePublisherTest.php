@@ -27,6 +27,9 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\MediaElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestLiveRowSettingsMigrationExtension;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestRowSettingsExtension;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestRowSettingsMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
@@ -50,6 +53,10 @@ final class LivePublisherTest extends SapphireTest
     protected $usesDatabase = true;
 
     protected static $extra_dataobjects = [TestCustomElement::class, TestPage::class];
+
+    protected static $required_extensions = [
+        Row::class => [TestRowSettingsExtension::class],
+    ];
 
     private const string ZONE = 'main';
 
@@ -87,8 +94,25 @@ final class LivePublisherTest extends SapphireTest
         $this->disableAutoScaffolding();
 
         $this->mapper = new FieldMapper();
-        $this->draftWriter = new DraftHierarchyWriter($this->mapper, new DroppedMediaCollector());
         $this->logger = new RecordingLogger();
+        $this->buildCollaborators();
+        TestLiveRowSettingsMigrationExtension::$fired = [];
+    }
+
+    protected function tearDown(): void
+    {
+        DraftHierarchyWriter::remove_extension(TestRowSettingsMigrationExtension::class);
+        LivePublisher::remove_extension(TestLiveRowSettingsMigrationExtension::class);
+
+        parent::tearDown();
+    }
+
+    /**
+     * (Re)build the writer and publisher, so extensions registered since are wired onto them.
+     */
+    private function buildCollaborators(): void
+    {
+        $this->draftWriter = new DraftHierarchyWriter($this->mapper, new DroppedMediaCollector());
 
         $strategy = new RowPerSectionStrategy(
             new ElementGrouper(),
@@ -676,6 +700,140 @@ final class LivePublisherTest extends SapphireTest
         self::assertArrayHasKey('lg', $overrides, 'non-empty overrides must be persisted as JSON, not NULL');
         self::assertSame(4, $overrides['lg']->width);
     }
+    public function testASharedRowAndItsSectionTakeTheLiveTitleAndClassesOnLive(): void
+    {
+        $pageId = $this->createPage();
+        $idMap = new MigrationIdMap();
+        $draftRow = $this->legacyRow(6000, 'Rooms', 'row-draft', 'section-draft');
+        $this->writeDraft($pageId, [$this->rowSection($draftRow, $this->legacyElement(5000, 'Block'))], $idMap);
+
+        $liveRow = $this->legacyRow(6000, 'Our rooms', 'row-live', 'section-live');
+        $this->publish($pageId, Page::class, [$liveRow, $this->legacyElement(5000, 'Block')], [6000 => true, 5000 => true], $idMap);
+
+        [$row, $section] = $this->writtenContainers($idMap, 6000, Versioned::LIVE);
+        self::assertSame(['Our rooms', 'row-live', 'section-live'], [(string) $row->Title, (string) $row->ExtraClass, (string) $section->ExtraClass]);
+        [$row, $section] = $this->writtenContainers($idMap, 6000, Versioned::DRAFT);
+        self::assertSame(['Rooms', 'row-draft', 'section-draft'], [(string) $row->Title, (string) $row->ExtraClass, (string) $section->ExtraClass]);
+    }
+
+    public function testLiveRowAndSectionHooksMapTheLiveRowOntoLiveLeavingDraftUntouched(): void
+    {
+        $this->registerRowSettingsMapping();
+        $pageId = $this->createPage();
+        $idMap = new MigrationIdMap();
+        $draftRow = $this->legacyRow(6000, extraData: ['BackgroundColour' => 'navy', 'IsCardRow' => 1]);
+        $this->writeDraft($pageId, [$this->rowSection($draftRow, $this->legacyElement(5000, 'Block'))], $idMap);
+
+        $liveRow = $this->legacyRow(6000, extraData: ['BackgroundColour' => 'white', 'IsCardRow' => 0]);
+        $this->publish($pageId, Page::class, [$liveRow, $this->legacyElement(5000, 'Block')], [6000 => true, 5000 => true], $idMap);
+
+        [$row, $section] = $this->writtenContainers($idMap, 6000, Versioned::LIVE);
+        self::assertSame(['white', ''], [$row->getField('BackgroundColour'), (string) $section->Style]);
+        [$row, $section] = $this->writtenContainers($idMap, 6000, Versioned::DRAFT);
+        self::assertSame(['navy', 'card'], [$row->getField('BackgroundColour'), (string) $section->Style]);
+    }
+
+    public function testARowMissingFromTheLiveAreaKeepsItsDraftValuesOnLive(): void
+    {
+        $this->registerRowSettingsMapping();
+        $pageId = $this->createPage();
+        $idMap = new MigrationIdMap();
+        $draftRow = $this->legacyRow(6000, 'Rooms', 'row-draft', 'section-draft', ['BackgroundColour' => 'navy', 'IsCardRow' => 1]);
+        $this->writeDraft($pageId, [$this->rowSection($draftRow, $this->legacyElement(5000, 'Block'))], $idMap);
+
+        // The block is published, the row delimiter before it is not.
+        $this->publish($pageId, Page::class, [$this->legacyElement(5000, 'Block')], [6000 => true, 5000 => true], $idMap);
+
+        [$row, $section] = $this->writtenContainers($idMap, 6000, Versioned::LIVE);
+        self::assertSame(
+            ['Rooms', 'row-draft', 'navy', 'section-draft', 'card'],
+            [(string) $row->Title, (string) $row->ExtraClass, $row->getField('BackgroundColour'), (string) $section->ExtraClass, (string) $section->Style],
+        );
+        self::assertSame([], TestLiveRowSettingsMigrationExtension::$fired);
+    }
+
+    public function testNoLiveHookFiresForARowWhoseContainersAreNotOnLive(): void
+    {
+        $this->registerRowSettingsMapping();
+        $pageId = $this->createPage();
+        $idMap = new MigrationIdMap();
+        $this->writeDraft($pageId, [$this->rowSection($this->legacyRow(6000), $this->legacyElement(5000, 'Draft-only block'))], $idMap);
+
+        // The row is published, but nothing in it is, so its Row and Section never reach live.
+        $this->publish($pageId, Page::class, [$this->legacyRow(6000, 'Live title')], [6000 => true, 5000 => true], $idMap);
+
+        self::assertSame(0, $this->liveRowCount());
+        self::assertSame([], TestLiveRowSettingsMigrationExtension::$fired);
+    }
+
+    public function testALiveOnlyRowIsMappedByTheDraftHooksWithItsLiveValues(): void
+    {
+        $this->registerRowSettingsMapping();
+        $pageId = $this->createPage();
+        $liveRow = $this->legacyRow(6000, extraData: ['BackgroundColour' => 'white', 'IsCardRow' => 1]);
+
+        $this->publish($pageId, Page::class, [$liveRow, $this->legacyElement(5000, 'Live-only block')], [], new MigrationIdMap());
+
+        foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
+            $row = Versioned::get_by_stage(Row::class, $stage)->first();
+            $section = Versioned::get_by_stage(Section::class, $stage)->first();
+            self::assertInstanceOf(Row::class, $row);
+            self::assertInstanceOf(Section::class, $section);
+            self::assertSame(['white', 'card'], [$row->getField('BackgroundColour'), (string) $section->Style], "mapped values on {$stage}");
+        }
+        self::assertSame([], TestLiveRowSettingsMigrationExtension::$fired, 'the live hooks are for draft records only');
+    }
+
+    private function registerRowSettingsMapping(): void
+    {
+        DraftHierarchyWriter::add_extension(TestRowSettingsMigrationExtension::class);
+        LivePublisher::add_extension(TestLiveRowSettingsMigrationExtension::class);
+        $this->buildCollaborators();
+    }
+
+    /**
+     * @param array<string, mixed> $extraData
+     */
+    private function legacyRow(
+        int $id,
+        string $title = '',
+        string $extraClass = '',
+        string $sectionClass = '',
+        array $extraData = [],
+    ): LegacyElement {
+        return LegacyElementFactory::row($id, $id, overrides: [
+            'className' => self::ROW_CLASS,
+            'title' => $title,
+            'extraClass' => $extraClass,
+            'sectionClass' => $sectionClass,
+            'extraData' => $extraData,
+        ]);
+    }
+
+    /**
+     * A Section → Row → Column DTO built from one legacy row, as the sections strategy builds it.
+     */
+    private function rowSection(LegacyElement $legacyRow, LegacyElement $element): MigrationSection
+    {
+        $column = new MigrationColumn($this->gridSettings(8), 1, $element);
+        $row = new MigrationRow($legacyRow->title, $legacyRow->extraClass, 1, [$column], $legacyRow);
+
+        return new MigrationSection('', self::ZONE, $legacyRow->rowData->customSectionClass ?? '', 1, [$row], $legacyRow);
+    }
+
+    /**
+     * @return array{Row, Section} the Row and Section a legacy row was written to, read on one stage
+     */
+    private function writtenContainers(MigrationIdMap $idMap, int $legacyRowId, string $stage): array
+    {
+        $row = Versioned::get_by_stage(Row::class, $stage)->byID((int) $idMap->newRowId($legacyRowId));
+        $section = Versioned::get_by_stage(Section::class, $stage)->byID((int) $idMap->newSectionId($legacyRowId));
+        self::assertInstanceOf(Row::class, $row, "Row on {$stage}");
+        self::assertInstanceOf(Section::class, $section, "Section on {$stage}");
+
+        return [$row, $section];
+    }
+
     private function createPage(): int
     {
         $page = Page::create();

@@ -97,8 +97,10 @@ final class DraftHierarchyWriter
         $section->Sort = $sort ?? $migration->sort;
         $section->ParentID = $pageId;
         $section->ParentClass = $pageClassName;
-        if ($migration->legacyRow !== null) {
-            $this->extend('updateSectionFieldMapping', $section, $migration->legacyRow);
+        $legacyRow = $migration->legacyRow;
+        if ($legacyRow !== null) {
+            $this->extend('updateSectionFieldMapping', $section, $legacyRow);
+            /** @var Section $section */
         }
         $section->write();
 
@@ -116,8 +118,10 @@ final class DraftHierarchyWriter
         $row->Sort = $migration->sort;
         $row->ParentID = $sectionId;
         $row->ParentClass = Section::class;
-        if ($migration->legacyRow !== null) {
-            $this->extend('updateRowFieldMapping', $row, $migration->legacyRow);
+        $legacyRow = $migration->legacyRow;
+        if ($legacyRow !== null) {
+            $this->extend('updateRowFieldMapping', $row, $legacyRow);
+            /** @var Row $row */
         }
         $row->write();
 

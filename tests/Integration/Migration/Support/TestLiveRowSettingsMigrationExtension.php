@@ -21,8 +21,12 @@ use WeDevelop\Grid\Model\Section;
  */
 final class TestLiveRowSettingsMigrationExtension extends Extension implements TestOnly
 {
+    /** @var list<string> one `<Class>:<ID>` entry per fired hook, so a test can see one did NOT fire */
+    public static array $fired = [];
+
     public function updateLiveRowFieldMapping(Row $row, LegacyElement $liveRow): void
     {
+        self::$fired[] = 'Row:' . $row->ID;
         DB::prepared_query(
             \sprintf(
                 'UPDATE "%s_Live" SET "BackgroundColour" = ? WHERE "ID" = ?',
@@ -34,6 +38,7 @@ final class TestLiveRowSettingsMigrationExtension extends Extension implements T
 
     public function updateLiveSectionFieldMapping(Section $section, LegacyElement $liveRow): void
     {
+        self::$fired[] = 'Section:' . $section->ID;
         DB::prepared_query(
             \sprintf(
                 'UPDATE "%s_Live" SET "Style" = ? WHERE "ID" = ?',
