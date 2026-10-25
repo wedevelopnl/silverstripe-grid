@@ -55,8 +55,8 @@ applyTo: "**/*"
 
 ## Migration
 
-- **Migration extension hooks fire from extracted collaborators, not `GridMigrationService`**: `updateClassNameMapping` and `updateElementFieldMapping` fire from `DraftHierarchyWriter`; `updateLiveElementFieldMapping` fires from `LivePublisher`; `updateLegacyElements` still fires from `LegacyDataReader` (the facade). Extensions targeting these hooks must be registered on the class that fires the hook, not on `GridMigrationService`.
-- **`updateElementFieldMapping` sees DRAFT legacy values only**: for an element shared between both stages, `writeToStage(LIVE)` copies those draft values to live and `LivePublisher::overwriteLiveContent()` corrects only the stock fields. Project fields must be reconciled in `updateLiveElementFieldMapping`, which must write to LIVE only (raw `_Live` UPDATE or `Versioned::withVersionedMode()`) — the record it receives is the draft one.
+- **Migration extension hooks fire from extracted collaborators, not `GridMigrationService`**: `updateClassNameMapping`, `updateElementFieldMapping`, `updateRowFieldMapping` and `updateSectionFieldMapping` fire from `DraftHierarchyWriter`; `updateLiveElementFieldMapping`, `updateLiveRowFieldMapping` and `updateLiveSectionFieldMapping` fire from `LivePublisher`; `updateLegacyElements` still fires from `LegacyDataReader` (the facade). Extensions targeting these hooks must be registered on the class that fires the hook, not on `GridMigrationService`.
+- **`updateElementFieldMapping` sees DRAFT legacy values only**: for an element shared between both stages, `writeToStage(LIVE)` copies those draft values to live and `LivePublisher::overwriteLiveContent()` corrects only the stock fields. Project fields must be reconciled in `updateLiveElementFieldMapping`, which must write to LIVE only (raw `_Live` UPDATE or `Versioned::withVersionedMode()`) — the record it receives is the draft one. The same holds for rows and sections: `updateRowFieldMapping`/`updateSectionFieldMapping` set draft values, and `updateLiveRowFieldMapping`/`updateLiveSectionFieldMapping` receive the DRAFT `Row`/`Section` and must write LIVE only.
 
 ## Tooling
 
