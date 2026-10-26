@@ -13,6 +13,7 @@ use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\DTO\MigrationColumn;
 use WeDevelop\Grid\Migration\DTO\MigrationRow;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
+use WeDevelop\Grid\Migration\Service\AfterMigrateHook;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
 use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
@@ -25,6 +26,7 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\TestRowSettingsMigrationE
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Value\FirstCopyRegistry;
 use WeDevelop\Grid\Value\MigrationIdMap;
 use WeDevelop\Grid\Value\ViewportConfig;
 
@@ -225,6 +227,7 @@ final class DraftHierarchyWriterTest extends SapphireTest
                     self::ZONE,
                     [$this->buildSection($this->gridSettings())],
                     $idMap,
+                    new AfterMigrateHook($pageId, 0, null, [], new FirstCopyRegistry()),
                 );
             });
 
@@ -372,7 +375,7 @@ final class DraftHierarchyWriterTest extends SapphireTest
     {
         Versioned::withVersionedMode(function () use ($pageId, $sections, $idMap): void {
             Versioned::set_stage(Versioned::DRAFT);
-            $this->writer->writeDraftHierarchy($pageId, Page::class, self::ZONE, $sections, $idMap);
+            $this->writer->writeDraftHierarchy($pageId, Page::class, self::ZONE, $sections, $idMap, new AfterMigrateHook($pageId, 0, null, [], new FirstCopyRegistry()));
         });
     }
 }

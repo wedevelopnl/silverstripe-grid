@@ -11,6 +11,7 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
+use WeDevelop\Grid\Migration\DTO\MigratedElementContext;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
@@ -31,7 +32,9 @@ use WeDevelop\Grid\Value\MigrationIdMap;
  *
  * Carries the `updateLiveElementFieldMapping`, `updateLiveRowFieldMapping` and
  * `updateLiveSectionFieldMapping` extension hooks (shared-record path only — see
- * {@see overwriteLiveContent()} and {@see reconcileLiveContainers()}).
+ * {@see overwriteLiveContent()} and {@see reconcileLiveContainers()}), and fires
+ * `onAfterMigrate` on every content element it writes to live — plus on draft
+ * for the live-only elements it creates there.
  */
 final class LivePublisher
 {
@@ -67,6 +70,7 @@ final class LivePublisher
         MigrationIdMap $idMap,
         string $defaultViewport,
         array $viewportKeyMap,
+        AfterMigrateHook $afterMigrate,
     ): void {
         // Live-only elements are collected and processed as a single grouped
         // hierarchy after the loop, mirroring the draft path. Row delimiters are
@@ -131,6 +135,7 @@ final class LivePublisher
                 // updateElementFieldMapping, which overwriteLiveContent does not
                 // know about and writeToStage() copied from draft.
                 $this->extend('updateLiveElementFieldMapping', $element, $liveElement);
+                $afterMigrate->fire($element, $liveElement, MigratedElementContext::LIVE);
             }
         }
 
@@ -151,6 +156,7 @@ final class LivePublisher
                 $pageClassName,
                 $zone,
                 $idMap,
+                $afterMigrate,
             );
         }
     }
@@ -454,6 +460,9 @@ final class LivePublisher
      * already created on this page + zone from the draft path; both stages share one
      * Sort sequence, so the draft max-Sort yields the correct live append offset.
      *
+     * Each element is recorded in the id map like a draft-path element, so a
+     * later copy of it in the same run is handed it as its first copy.
+     *
      * @param list<LegacyElement> $liveOnlyElements Live-only elements (may include row delimiters), in original order
      * @param class-string $pageClassName
      */
@@ -463,6 +472,7 @@ final class LivePublisher
         string $pageClassName,
         string $zone,
         MigrationIdMap $idMap,
+        AfterMigrateHook $afterMigrate,
     ): void {
         $sections = $this->strategy->buildHierarchy($liveOnlyElements, $pageId, $zone);
         if ($sections === []) {
@@ -491,9 +501,15 @@ final class LivePublisher
                     /** @var positive-int $columnId */
                     $columnId = (int) $column->ID;
 
-                    $newElement = $this->draftWriter->buildContentElement($migrationColumn->element, $columnId, 1);
+                    $legacyElement = $migrationColumn->element;
+                    $newElement = $this->draftWriter->buildContentElement($legacyElement, $columnId, 1);
                     $newElement->write();
+                    /** @var positive-int $newElementId */
+                    $newElementId = (int) $newElement->ID;
+                    $idMap->recordElement($legacyElement->id, $newElementId, $columnId, 1);
+                    $afterMigrate->fire($newElement, $legacyElement, MigratedElementContext::DRAFT);
                     $newElement->writeToStage(Versioned::LIVE);
+                    $afterMigrate->fire($newElement, $legacyElement, MigratedElementContext::LIVE);
 
                     $column->writeToStage(Versioned::LIVE);
                     $idMap->markContainerPublished($columnId);

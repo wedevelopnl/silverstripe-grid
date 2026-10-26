@@ -16,6 +16,7 @@ use WeDevelop\Grid\Migration\DTO\MigrationSummary;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Value\FirstCopyRegistry;
 use WeDevelop\Grid\Value\MigrationIdMap;
 
 /**
@@ -36,12 +37,19 @@ final class GridMigrationService
 
     private readonly PageGridFlagWriter $pageFlagWriter;
 
+    /**
+     * @param non-empty-string|null $locale the Fluent locale pass this service migrates, null without Fluent
+     * @param FirstCopyRegistry $firstCopies shared by every pass of one run, so a later locale pass
+     *     finds the copies an earlier one wrote
+     */
     public function __construct(
         private readonly LegacyElementSource $reader,
         FieldMapper $mapper,
         private readonly RowMappingStrategy $strategy,
         private readonly LoggerInterface $logger,
         private readonly DroppedMediaCollector $droppedMedia,
+        private readonly ?string $locale = null,
+        private readonly FirstCopyRegistry $firstCopies = new FirstCopyRegistry(),
     ) {
         $this->draftWriter = new DraftHierarchyWriter($mapper, $droppedMedia);
         $this->livePublisher = new LivePublisher($mapper, $this->draftWriter, $logger, $strategy, $droppedMedia);
@@ -84,6 +92,7 @@ final class GridMigrationService
         bool $stopOnFirstFailure = false,
     ): MigrationSummary {
         $eligiblePages = $this->reader->getEligiblePages('draft', $pageIds);
+        $sharedAreas = $dryRun ? [] : $this->reader->getSharedAreas();
         $blocks = 0;
         $skipped = 0;
         /** @var list<int> $succeeded */
@@ -113,9 +122,16 @@ final class GridMigrationService
                 $pageId = $pageInfo['pageId'];
                 $areaId = $pageInfo['areaId'];
                 $pageClassName = $pageInfo['pageClassName'];
+                $afterMigrate = new AfterMigrateHook(
+                    $pageId,
+                    $areaId,
+                    $this->locale,
+                    \array_values(\array_diff($sharedAreas[$areaId] ?? [], [$pageId])),
+                    $this->firstCopies,
+                );
 
                 try {
-                    $pageBlocks = $this->migratePage($pageId, $areaId, $pageClassName, $zone, $dryRun, $defaultViewport, $viewportKeyMap);
+                    $pageBlocks = $this->migratePage($pageId, $areaId, $pageClassName, $zone, $dryRun, $defaultViewport, $viewportKeyMap, $afterMigrate);
                     if ($pageBlocks === null) {
                         ++$skipped;
                     } else {
@@ -184,6 +200,7 @@ final class GridMigrationService
         bool $dryRun,
         string $defaultViewport,
         array $viewportKeyMap,
+        AfterMigrateHook $afterMigrate,
     ): ?int {
         // Step 1: Idempotency — skip if Sections already exist for this page + zone
         if ($this->hasExistingSections($pageId, $pageClassName, $zone)) {
@@ -243,7 +260,7 @@ final class GridMigrationService
             // publish stage (previously four shared by-ref arrays).
             $idMap = new MigrationIdMap();
 
-            $this->writeDraftStage($pageId, $pageClassName, $zone, $sections, $idMap);
+            $this->writeDraftStage($pageId, $pageClassName, $zone, $sections, $idMap, $afterMigrate);
 
             if ($liveElements !== []) {
                 $this->publishLiveStage(
@@ -255,6 +272,7 @@ final class GridMigrationService
                     $idMap,
                     $defaultViewport,
                     $viewportKeyMap,
+                    $afterMigrate,
                 );
             }
 
@@ -262,6 +280,7 @@ final class GridMigrationService
 
             $conn->transactionEnd();
             $this->droppedMedia->commit();
+            $this->firstCopies->commit($idMap, $this->locale);
         } catch (Throwable $exception) {
             $conn->transactionRollback();
             $this->droppedMedia->rollback();
@@ -284,6 +303,7 @@ final class GridMigrationService
         string $zone,
         array $sections,
         MigrationIdMap $idMap,
+        AfterMigrateHook $afterMigrate,
     ): void {
         Versioned::withVersionedMode(function () use (
             $pageId,
@@ -291,9 +311,10 @@ final class GridMigrationService
             $zone,
             $sections,
             $idMap,
+            $afterMigrate,
         ): void {
             Versioned::set_stage(Versioned::DRAFT);
-            $this->draftWriter->writeDraftHierarchy($pageId, $pageClassName, $zone, $sections, $idMap);
+            $this->draftWriter->writeDraftHierarchy($pageId, $pageClassName, $zone, $sections, $idMap, $afterMigrate);
         });
     }
 
@@ -318,6 +339,7 @@ final class GridMigrationService
         MigrationIdMap $idMap,
         string $defaultViewport,
         array $viewportKeyMap,
+        AfterMigrateHook $afterMigrate,
     ): void {
         // Build the set of legacy DRAFT element IDs (rows AND content
         // elements). A live element is "live-only" only when its legacy
@@ -345,6 +367,7 @@ final class GridMigrationService
             $idMap,
             $defaultViewport,
             $viewportKeyMap,
+            $afterMigrate,
         ): void {
             Versioned::set_stage(Versioned::DRAFT);
             $this->livePublisher->publishToLive(
@@ -356,6 +379,7 @@ final class GridMigrationService
                 $idMap,
                 $defaultViewport,
                 $viewportKeyMap,
+                $afterMigrate,
             );
         });
     }

@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Migration\Service;
 use RuntimeException;
 use SilverStripe\Core\Extensible;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
+use WeDevelop\Grid\Migration\DTO\MigratedElementContext;
 use WeDevelop\Grid\Migration\DTO\MigrationColumn;
 use WeDevelop\Grid\Migration\DTO\MigrationRow;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
@@ -22,7 +23,8 @@ use WeDevelop\Grid\Value\MigrationIdMap;
  * records the legacy→new id/sort mapping in a {@see MigrationIdMap}.
  *
  * Carries the `updateClassNameMapping`, `updateElementFieldMapping`,
- * `updateRowFieldMapping` and `updateSectionFieldMapping` extension hooks.
+ * `updateRowFieldMapping` and `updateSectionFieldMapping` extension hooks, and
+ * fires `onAfterMigrate` on each content element it writes.
  */
 final class DraftHierarchyWriter
 {
@@ -43,6 +45,7 @@ final class DraftHierarchyWriter
         string $zone,
         array $sections,
         MigrationIdMap $idMap,
+        AfterMigrateHook $afterMigrate,
     ): void {
         foreach ($sections as $migrationSection) {
             $section = $this->createSection($migrationSection, $pageId, $pageClassName, $zone);
@@ -75,6 +78,7 @@ final class DraftHierarchyWriter
                     /** @var positive-int $newElementId */
                     $newElementId = (int) $newElement->ID;
                     $idMap->recordElement($legacyElement->id, $newElementId, $columnId, 1);
+                    $afterMigrate->fire($newElement, $legacyElement, MigratedElementContext::DRAFT);
                 }
             }
         }
