@@ -119,6 +119,41 @@ final class OwnedItemsMigrationAcceptanceTest extends MigrationTestCase
         self::assertStringContainsString("pages {$pageA}, {$pageB}", $warnings[0]);
     }
 
+    public function testAPageSharingAnAreaWithAPageAnEarlierRunMigratedGetsTheSlidesToo(): void
+    {
+        $this->seedSharedArea();
+        $this->seedSlides(501, ['One', 'Two', 'Three', 'Four']);
+
+        $this->migrateSucceeds(['--page-ids' => (string) $this->pageId()]);
+        $this->migrateSucceeds(['--page-ids' => (string) $this->pageId('test_page_2')]);
+
+        $this->assertEverySliderShows(['One', 'Two', 'Three', 'Four'], ['One', 'Two', 'Three', 'Four']);
+    }
+
+    public function testEachPageSharingAnAreaKeepsAGalleryOnlyOnLiveOnLive(): void
+    {
+        $this->seedSharedArea();
+        $this->seedSlides(501, ['A', 'B', 'C'], liveOnly: true);
+
+        $this->migrateSucceeds();
+
+        $this->assertEverySliderShows([], ['A', 'B', 'C']);
+    }
+
+    public function testEachPageSharingAnAreaKeepsAnUnpublishedSlideEditOffLive(): void
+    {
+        $this->seedSharedArea();
+        $this->seedSlides(501, ['One', 'Two']);
+        $slide = Slide::get()->find('Title', 'Two');
+        self::assertInstanceOf(Slide::class, $slide);
+        $slide->Title = 'Two, edited';
+        $slide->write();
+
+        $this->migrateSucceeds();
+
+        $this->assertEverySliderShows(['One', 'Two, edited'], ['One', 'Two']);
+    }
+
     public function testEachBlockKeepsOnlyItsOwnItemsWhenANewIdEqualsALaterLegacyId(): void
     {
         // Without the numbering guard, page 1's slider would be written as the
