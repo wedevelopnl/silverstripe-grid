@@ -53,6 +53,11 @@ final class LegacyDataReader implements LegacyElementSource
         return $this->discovery->getEligiblePages($stage, $pageIds);
     }
 
+    public function getSharedAreas(): array
+    {
+        return $this->discovery->getSharedAreas();
+    }
+
     /**
      * @return list<array{pageId: int}>
      */

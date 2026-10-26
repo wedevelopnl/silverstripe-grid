@@ -260,6 +260,18 @@ final class LegacyTableSeeder
     }
 
     /**
+     * Point another page at an area {@see seedPage()} already created, the way
+     * a content area shared by several pages is stored.
+     */
+    public function seedPageSharingArea(int $pageId, int $areaId): void
+    {
+        DB::prepared_query(
+            'UPDATE "Page" SET "UseElementalGrid" = 1, "ElementalAreaID" = ? WHERE "ID" = ?',
+            [$areaId, $pageId],
+        );
+    }
+
+    /**
      * Seed eligible page data on a specific table.
      *
      * Updates the extension columns on the given table and creates the

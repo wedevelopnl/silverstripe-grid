@@ -136,6 +136,32 @@ final class LegacyPageDiscovery
     }
 
     /**
+     * Every legacy area that more than one eligible draft page uses, with all
+     * of those pages. Each page migrates its own copy of such an area.
+     *
+     * Structural: it ignores any page filter, so a run over some of the pages
+     * still sees the pages it leaves out.
+     *
+     * @return array<int, list<int>> area ID → page IDs, ascending
+     */
+    public function getSharedAreas(): array
+    {
+        $pagesByArea = [];
+        foreach ($this->getEligiblePages('draft') as $page) {
+            $pagesByArea[$page['areaId']][] = $page['pageId'];
+        }
+
+        $shared = \array_filter($pagesByArea, static fn (array $pageIds): bool => \count($pageIds) > 1);
+        \ksort($shared);
+
+        return \array_map(static function (array $pageIds): array {
+            \sort($pageIds);
+
+            return $pageIds;
+        }, $shared);
+    }
+
+    /**
      * Find pages that have UseElementalGrid explicitly disabled (= 0).
      *
      * Used during migration to preserve the toggle state: pages that opted out

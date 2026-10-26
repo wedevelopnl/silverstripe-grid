@@ -21,6 +21,13 @@ interface LegacyElementSource
     public function getEligiblePages(string $stage, ?array $pageIds = null): array;
 
     /**
+     * Every legacy area more than one eligible page uses, whatever pages a run selects.
+     *
+     * @return array<int, list<int>> area ID → page IDs, ascending
+     */
+    public function getSharedAreas(): array;
+
+    /**
      * @return list<LegacyElement>
      */
     public function getElementsForArea(int $areaId, string $stage): array;

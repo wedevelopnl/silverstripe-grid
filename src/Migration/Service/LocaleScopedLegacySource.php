@@ -31,6 +31,11 @@ final readonly class LocaleScopedLegacySource implements LegacyElementSource
         return $this->reader->getEligiblePages($stage, $pageIds);
     }
 
+    public function getSharedAreas(): array
+    {
+        return $this->reader->getSharedAreas();
+    }
+
     public function getElementsForArea(int $areaId, string $stage): array
     {
         return $this->reader->getElementsForAreaInLocale(
