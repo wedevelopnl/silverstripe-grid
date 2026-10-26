@@ -197,4 +197,24 @@ final class LegacyPageDiscoveryTest extends MigrationTestCase
 
         self::assertNotContains((int) $page->ID, $pageIds);
     }
+
+    public function testGetSharedAreasListsEveryAreaUsedByMoreThanOnePageWithAllItsPages(): void
+    {
+        $first = (int) $this->objFromFixture(Page::class, 'test_page')->ID;
+        $second = (int) $this->objFromFixture(Page::class, 'test_page_2')->ID;
+        $third = (int) Page::create(['Title' => 'Own area'])->write();
+        $this->seeder->seedPage($first, 100);
+        $this->seeder->seedPageSharingArea($second, 100);
+        $this->seeder->seedPage($third, 200);
+
+        self::assertSame([100 => [$first, $second]], $this->discovery->getSharedAreas());
+    }
+
+    public function testGetSharedAreasIsEmptyWhenEveryPageHasItsOwnArea(): void
+    {
+        $this->seeder->seedPage((int) $this->objFromFixture(Page::class, 'test_page')->ID, 100);
+        $this->seeder->seedPage((int) $this->objFromFixture(Page::class, 'test_page_2')->ID, 200);
+
+        self::assertSame([], $this->discovery->getSharedAreas());
+    }
 }
