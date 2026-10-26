@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use TractorCow\Fluent\Extension\FluentIsolatedExtension;
 use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
 use WeDevelop\Grid\Model\Column;
+use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestAfterMigrateRecorder;
 
 /**
  * Migration of the FieldLocalised legacy localisation model: a single base
@@ -18,6 +22,18 @@ use WeDevelop\Grid\Model\Column;
 #[CoversClass(FluentMigrationOrchestrator::class)]
 final class FluentFieldLocalisedMigrationTest extends FluentMigrationTestCase
 {
+    /** @var array<class-string, list<class-string>> */
+    protected static $required_extensions = [
+        GridElement::class => [FluentIsolatedExtension::class],
+        ContentElement::class => [TestAfterMigrateRecorder::class],
+    ];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        TestAfterMigrateRecorder::reset();
+    }
+
     /**
      * Seed a base EN element plus an nl_NL overlay for both the element title
      * and its content HTML.
@@ -44,6 +60,22 @@ final class FluentFieldLocalisedMigrationTest extends FluentMigrationTestCase
         self::assertSame(['NL One'], $this->contentTitlesInLocale('nl_NL'), 'nl locale gets the overlaid title');
         self::assertSame(['<p>EN</p>'], $this->contentHtmlInLocale('en_US'), 'en locale keeps the base HTML');
         self::assertSame(['<p>NL</p>'], $this->contentHtmlInLocale('nl_NL'), 'nl locale gets the overlaid HTML');
+    }
+
+    public function testTheCopyOfASecondLocaleIsHandedTheFirstLocalesCopy(): void
+    {
+        $pageId = $this->pageId();
+        $this->seedFieldLocalisedPage($pageId, 7000);
+
+        self::assertSame(0, $this->runMigration($pageId));
+
+        [$first, $second] = TestAfterMigrateRecorder::$calls;
+        self::assertSame(['en_US', null], [$first['context']->locale, $first['context']->firstCopy]);
+        self::assertSame('nl_NL', $second['context']->locale);
+        self::assertInstanceOf(ContentElement::class, $second['context']->firstCopy);
+        self::assertSame($first['element'], (int) $second['context']->firstCopy->ID);
+        self::assertSame('EN One', $second['context']->firstCopy->Title, 'read in the locale it was written in');
+        self::assertNotSame($first['element'], $second['element']);
     }
 
     public function testABlocksVisibilityFollowsTheLocale(): void
