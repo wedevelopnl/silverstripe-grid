@@ -135,6 +135,9 @@ final class LivePublisher
                 // updateElementFieldMapping, which overwriteLiveContent does not
                 // know about and writeToStage() copied from draft.
                 $this->extend('updateLiveElementFieldMapping', $element, $liveElement);
+                // extend() passes by reference, which widens both for PHPStan.
+                /** @var GridElement $element */
+                /** @var LegacyElement $liveElement */
                 $afterMigrate->fire($element, $liveElement, MigratedElementContext::LIVE);
             }
         }

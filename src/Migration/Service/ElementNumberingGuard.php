@@ -29,7 +29,7 @@ final class ElementNumberingGuard
     public function raiseAboveLegacyIds(): void
     {
         $highest = $this->highestLegacyId();
-        $table = DataObject::getSchema()->tableName(GridElement::class);
+        $table = DataObject::getSchema()->baseDataTable(GridElement::class);
 
         if ($highest === 0 || $this->hasRow($table, $highest)) {
             return;
@@ -75,6 +75,6 @@ final class ElementNumberingGuard
 
     private function hasRow(string $table, int $id): bool
     {
-        return DB::prepared_query(\sprintf('SELECT 1 FROM "%s" WHERE "ID" = ?', $table), [$id])->value() !== null;
+        return DB::prepared_query(\sprintf('SELECT 1 FROM "%s" WHERE "ID" = ?', $table), [$id])->numRecords() > 0;
     }
 }
