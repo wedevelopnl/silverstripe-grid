@@ -10,6 +10,7 @@ use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Migration\DTO\MigrationSummary;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
+use WeDevelop\Grid\Value\FirstCopyRegistry;
 
 /**
  * Locale-aware migration orchestration for Fluent sites.
@@ -62,6 +63,10 @@ final readonly class FluentMigrationOrchestrator
         $default = Locale::getDefault();
         $defaultCode = $default?->Locale;
 
+        // One registry for every pass: a locale's copy of a legacy element is
+        // handed the copy an earlier pass wrote (the default locale's first).
+        $firstCopies = new FirstCopyRegistry();
+
         $summaries = [];
         foreach ($this->localePlan($model) as $localeCode => $localeId) {
             $isDefault = $localeCode === $defaultCode;
@@ -77,6 +82,7 @@ final readonly class FluentMigrationOrchestrator
                     $pageIds,
                     $isDefault,
                     $stopOnFirstFailure,
+                    $firstCopies,
                 ): MigrationSummary {
                     $state->setLocale($localeCode);
 
@@ -86,7 +92,15 @@ final readonly class FluentMigrationOrchestrator
                     ]);
 
                     $source = new LocaleScopedLegacySource($this->reader, $model, $localeCode, $localeId);
-                    $service = new GridMigrationService($source, $this->mapper, $this->strategy, $this->logger, $this->droppedMedia);
+                    $service = new GridMigrationService(
+                        $source,
+                        $this->mapper,
+                        $this->strategy,
+                        $this->logger,
+                        $this->droppedMedia,
+                        $localeCode,
+                        $firstCopies,
+                    );
 
                     // Reconcile grid-disabled pages once: the UseGrid writes hit
                     // locale-invariant base tables, so only the default-locale pass
