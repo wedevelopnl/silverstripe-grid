@@ -6,7 +6,6 @@ namespace WeDevelop\Grid\Tests\Integration\Migration;
 
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
-use SilverStripe\Core\Config\Config;
 use SilverStripe\Dev\SapphireTest;
 use Symfony\Component\Yaml\Yaml;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
@@ -17,8 +16,8 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\TestRowSettingsMigrationE
 /**
  * Keeps the row and section hook examples in docs/migration.md (hooks 6–9) the
  * code the migration tests run: each documented method must be the support
- * extension's method, and each registration example must register on the class
- * that fires the hook. {@see Task\MigrateGridRowSettingsTest} runs that code end to end.
+ * extension's method, and each registration example must register the example's
+ * extension on the class that fires the hook. {@see Task\MigrateGridRowSettingsTest} runs that code end to end.
  */
 #[CoversNothing]
 final class MigrationDocsRowHookExamplesTest extends SapphireTest
@@ -52,24 +51,20 @@ final class MigrationDocsRowHookExamplesTest extends SapphireTest
     }
 
     /**
-     * @return iterable<string, array{string, class-string, class-string}>
+     * @return iterable<string, array{string, class-string}>
      */
     public static function registrationExamples(): iterable
     {
-        yield 'hook 6' => ['6', DraftHierarchyWriter::class, TestRowSettingsMigrationExtension::class];
-        yield 'hook 8' => ['8', LivePublisher::class, TestLiveRowSettingsMigrationExtension::class];
+        yield 'hook 6' => ['6', DraftHierarchyWriter::class];
+        yield 'hook 8' => ['8', LivePublisher::class];
     }
 
     /**
      * @param class-string $firingClass
-     * @param class-string $supportClass
      */
     #[DataProvider('registrationExamples')]
-    public function testTheDocumentedRegistrationAppliesTheExtensionToTheClassThatFiresTheHook(
-        string $hook,
-        string $firingClass,
-        string $supportClass,
-    ): void {
+    public function testTheDocumentedRegistrationAppliesTheExampleExtensionToTheClassThatFiresTheHook(string $hook, string $firingClass): void
+    {
         $fences = self::fences($hook, 'yaml');
         self::assertCount(1, $fences);
         /** @var array<string, array{extensions: list<string>}> $config */
@@ -77,10 +72,10 @@ final class MigrationDocsRowHookExamplesTest extends SapphireTest
         self::assertSame([$firingClass], \array_keys($config));
         self::assertCount(1, $config[$firingClass]['extensions']);
 
-        // The docs name the project's class; the tests run the same code under the support class's name.
-        Config::modify()->merge($firingClass, 'extensions', [$supportClass]);
-
-        self::assertTrue($firingClass::has_extension($supportClass));
+        // The registered class is the project's own and cannot load here; what ties it to the
+        // tested code is that it names the class the hook's PHP example declares.
+        self::assertSame(1, \preg_match('/^class (\w+) extends Extension$/m', \implode("\n", self::fences($hook, 'php')), $declared));
+        self::assertStringEndsWith('\\' . $declared[1], $config[$firingClass]['extensions'][0]);
     }
 
     /**
