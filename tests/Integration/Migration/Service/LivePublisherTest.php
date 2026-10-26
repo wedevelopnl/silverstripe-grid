@@ -718,6 +718,40 @@ final class LivePublisherTest extends SapphireTest
         self::assertSame(['Rooms', 'row-draft', 'section-draft'], [(string) $row->Title, (string) $row->ExtraClass, (string) $section->ExtraClass]);
     }
 
+    public function testALiveRowWithoutASectionClassClearsTheDraftSectionClassOnLive(): void
+    {
+        $pageId = $this->createPage();
+        $idMap = new MigrationIdMap();
+        $this->writeDraft($pageId, [$this->rowSection($this->legacyRow(6000, sectionClass: 'section-draft'), $this->legacyElement(5000, 'Block'))], $idMap);
+
+        $this->publish($pageId, Page::class, [$this->legacyRow(6000), $this->legacyElement(5000, 'Block')], [6000 => true, 5000 => true], $idMap);
+
+        [, $section] = $this->writtenContainers($idMap, 6000, Versioned::LIVE);
+        self::assertSame('', (string) $section->ExtraClass);
+    }
+
+    public function testARowPublishedWithoutItsSectionIsReconciledAloneOnLive(): void
+    {
+        $this->registerRowSettingsMapping();
+        $pageId = $this->createPage();
+        $idMap = new MigrationIdMap();
+        $this->writeDraft($pageId, [$this->rowSection($this->legacyRow(6000, 'Rooms'), $this->legacyElement(5000, 'Block'))], $idMap);
+
+        // Dangle the Row's parent, so the chain walk publishes the Row and leaves its Section draft-only.
+        $row = Row::get()->byID((int) $idMap->newRowId(6000));
+        self::assertInstanceOf(Row::class, $row);
+        $row->ParentID = 987654;
+        $row->write();
+
+        $this->publish($pageId, Page::class, [$this->legacyRow(6000, 'Our rooms'), $this->legacyElement(5000, 'Block')], [6000 => true, 5000 => true], $idMap);
+
+        $liveRow = $this->liveById(Row::class, (int) $row->ID);
+        self::assertInstanceOf(Row::class, $liveRow);
+        self::assertSame('Our rooms', (string) $liveRow->Title);
+        self::assertNull($this->liveById(Section::class, (int) $idMap->newSectionId(6000)));
+        self::assertSame(['Row:' . $row->ID], TestLiveRowHookRecorder::$fired);
+    }
+
     public function testLiveRowAndSectionHooksMapTheLiveRowOntoLiveLeavingDraftUntouched(): void
     {
         $this->registerRowSettingsMapping();
