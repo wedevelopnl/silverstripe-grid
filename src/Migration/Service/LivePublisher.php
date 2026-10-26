@@ -463,8 +463,8 @@ final class LivePublisher
      * already created on this page + zone from the draft path; both stages share one
      * Sort sequence, so the draft max-Sort yields the correct live append offset.
      *
-     * Each element is recorded in the id map like a draft-path element, so a
-     * later copy of it in the same run is handed it as its first copy.
+     * Each element is recorded in the id map like a draft-path element, so it is
+     * recorded as a first copy like one.
      *
      * @param list<LegacyElement> $liveOnlyElements Live-only elements (may include row delimiters), in original order
      * @param class-string $pageClassName

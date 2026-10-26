@@ -36,7 +36,6 @@ use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 use WeDevelop\Grid\Value\GridSettings;
-use WeDevelop\Grid\Value\FirstCopyRegistry;
 use WeDevelop\Grid\Value\MigrationIdMap;
 use WeDevelop\Grid\Value\ViewportConfig;
 
@@ -988,7 +987,7 @@ final class LivePublisherTest extends SapphireTest
 
     private function afterMigrate(int $pageId): AfterMigrateHook
     {
-        return new AfterMigrateHook($pageId, 0, null, [], new FirstCopyRegistry());
+        return new AfterMigrateHook($pageId, 0, null, []);
     }
 
     /**

@@ -93,7 +93,7 @@ final class MigrateGridTaskSummaryTest extends MigrationTestCase
         );
     }
 
-    public function testADryRunListsTheSharedAreasAndFlagsOneThePageSelectionSplits(): void
+    public function testADryRunListsEachSharedAreaWithThePagesTheSelectionLeftOut(): void
     {
         $pageOne = $this->pageId('page_one');
         $pageTwo = $this->pageId('page_two');
@@ -112,7 +112,7 @@ final class MigrateGridTaskSummaryTest extends MigrationTestCase
 
         self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
         self::assertStringEndsWith(
-            "\nShared content areas:\n  Area 100: pages {$pageOne}, {$pageTwo}, {$pageThree} (only partly in this run)\n",
+            "\nShared content areas:\n  Area 100: pages {$pageOne}, {$pageTwo}, {$pageThree}\n",
             $result['output'],
         );
     }
