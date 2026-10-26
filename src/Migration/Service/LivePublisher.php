@@ -162,8 +162,8 @@ final class LivePublisher
      * DRAFT values to live. For every legacy row on the live area that the draft
      * pass recorded against a Row or Section that is now on live, the stock
      * fields (Row Title and ExtraClass, Section ExtraClass from the row's
-     * CustomSectionClass) are corrected with a raw `_Live` UPDATE — except an
-     * empty legacy Title, which keeps the published draft Title — then the
+     * CustomSectionClass) are corrected with a raw `_Live` UPDATE — an empty
+     * legacy Title becomes the Row's "Row N" default for its position — then the
      * `updateLiveRowFieldMapping` / `updateLiveSectionFieldMapping` hook fires
      * for the project's own fields. Like `updateLiveElementFieldMapping`, the
      * hook receives the DRAFT record and must write to the LIVE stage only.
@@ -184,12 +184,13 @@ final class LivePublisher
             $rowId = $idMap->newRowId($liveRow->id);
             $row = $rowId !== null ? Row::get()->byID($rowId) : null;
             if ($row instanceof Row && $row->isPublished()) {
-                // An empty legacy title keeps the published one: the draft write
-                // persisted its "Row N" default, which live must not lose.
-                $values = $liveRow->title !== ''
-                    ? ['Title' => $liveRow->title, 'ExtraClass' => $liveRow->extraClass]
-                    : ['ExtraClass' => $liveRow->extraClass];
-                $this->overwriteLiveGridElementFields((int) $row->ID, $values);
+                // An empty legacy title takes the "Row N" default for the Row's
+                // position, never the published draft Title: that is the draft
+                // row's own title whenever only the draft was titled.
+                $this->overwriteLiveGridElementFields((int) $row->ID, [
+                    'Title' => $liveRow->title !== '' ? $liveRow->title : $idMap->rowDefaultTitle($liveRow->id),
+                    'ExtraClass' => $liveRow->extraClass,
+                ]);
                 $this->extend('updateLiveRowFieldMapping', $row, $liveRow);
             }
 

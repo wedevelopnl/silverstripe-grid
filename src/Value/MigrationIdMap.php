@@ -30,6 +30,9 @@ final class MigrationIdMap
     /** @var array<int, positive-int> legacy row id → new Row ID */
     private array $oldRowToNewRowId = [];
 
+    /** @var array<int, string> legacy row id → the default title its new Row's position gives it */
+    private array $oldRowToDefaultTitle = [];
+
     /** @var array<int, positive-int> legacy row id → new Section ID it supplied the fields of */
     private array $oldRowToNewSectionId = [];
 
@@ -72,9 +75,10 @@ final class MigrationIdMap
     }
 
     /** @param positive-int $rowId */
-    public function recordRow(int $legacyRowId, int $rowId): void
+    public function recordRow(int $legacyRowId, int $rowId, string $defaultTitle): void
     {
         $this->oldRowToNewRowId[$legacyRowId] = $rowId;
+        $this->oldRowToDefaultTitle[$legacyRowId] = $defaultTitle;
     }
 
     /** @param positive-int $sectionId */
@@ -87,6 +91,11 @@ final class MigrationIdMap
     public function newRowId(int $legacyRowId): ?int
     {
         return $this->oldRowToNewRowId[$legacyRowId] ?? null;
+    }
+
+    public function rowDefaultTitle(int $legacyRowId): string
+    {
+        return $this->oldRowToDefaultTitle[$legacyRowId];
     }
 
     /** @return positive-int|null */
