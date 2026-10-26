@@ -26,6 +26,16 @@ trait SeedsPublishedLegacyContent
     private function seedPublishedPage(string $handle, int $areaId): void
     {
         $this->seeder->seedPage($this->pageId($handle), $areaId);
+        $this->publishPageOnArea($handle, $areaId);
+    }
+
+    /**
+     * Publish a page already seeded on a legacy area.
+     *
+     * @param non-empty-string $handle fixture handle
+     */
+    private function publishPageOnArea(string $handle, int $areaId): void
+    {
         $page = $this->objFromFixture(Page::class, $handle);
         $page->publishSingle();
         DB::prepared_query(

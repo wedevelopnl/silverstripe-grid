@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Migration;
 
-use Page;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use Psr\Log\LoggerInterface;
 use SilverStripe\Core\Injector\Injector;
@@ -13,15 +12,14 @@ use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use Symfony\Component\Console\Command\Command;
 use WeDevelop\Grid\Migration\Service\LivePublisher;
-use WeDevelop\Grid\Migration\Task\MigrateGridTask;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Tests\Integration\Migration\Service\TestFailingLiveRowMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\SeedsPublishedLegacyContent;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\Slide;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestSlideRecipe;
 use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
-use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 
 /**
  * Items a legacy block owns (slides, gallery images) follow the block to its
@@ -31,6 +29,8 @@ use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 #[CoversNothing]
 final class OwnedItemsMigrationAcceptanceTest extends MigrationTestCase
 {
+    use SeedsPublishedLegacyContent;
+
     protected static $fixture_file = __DIR__ . '/../Fixture/page.yml';
 
     /** @var list<class-string> */
@@ -103,21 +103,12 @@ final class OwnedItemsMigrationAcceptanceTest extends MigrationTestCase
     {
         $pageA = $this->pageId();
         $pageB = $this->pageId('test_page_2');
-        $this->seedPublishedPage('test_page', 100);
-        $this->seeder->seedPageSharingArea($pageB, 100);
-        $this->publishPageOnArea('test_page_2', 100);
-        $this->seedBlock(100, 501, 'Slider', ['draft', 'live']);
+        $this->seedSharedArea();
         $this->seedSlides(501, ['One', 'Two', 'Three', 'Four']);
 
         $output = $this->migrateSucceeds();
 
-        $sliders = ContentElement::get()->filter('Title', 'Slider')->column('ID');
-        self::assertCount(2, $sliders);
-        foreach ($sliders as $slider) {
-            foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
-                self::assertSame(['One', 'Two', 'Three', 'Four'], $this->slideTitles((int) $slider, $stage), "slider {$slider} on {$stage}");
-            }
-        }
+        $this->assertEverySliderShows(['One', 'Two', 'Three', 'Four'], ['One', 'Two', 'Three', 'Four']);
 
         self::assertStringContainsString("Shared content areas:\n  Area 100: pages {$pageA}, {$pageB}\n", $output);
         $warnings = \array_values(\array_filter(
@@ -151,28 +142,6 @@ final class OwnedItemsMigrationAcceptanceTest extends MigrationTestCase
     }
 
     /**
-     * @param non-empty-string $handle fixture handle
-     */
-    private function seedPublishedPage(string $handle, int $areaId): void
-    {
-        $this->seeder->seedPage($this->pageId($handle), $areaId);
-        $this->publishPageOnArea($handle, $areaId);
-    }
-
-    /**
-     * @param non-empty-string $handle fixture handle
-     */
-    private function publishPageOnArea(string $handle, int $areaId): void
-    {
-        $page = $this->objFromFixture(Page::class, $handle);
-        $page->publishSingle();
-        DB::prepared_query(
-            'UPDATE "Page_Live" SET "UseElementalGrid" = 1, "ElementalAreaID" = ? WHERE "ID" = ?',
-            [$areaId, $page->ID],
-        );
-    }
-
-    /**
      * @param list<'draft'|'live'> $stages
      */
     private function seedBlock(int $areaId, int $legacyId, string $title, array $stages, int $sort = 1): void
@@ -180,6 +149,31 @@ final class OwnedItemsMigrationAcceptanceTest extends MigrationTestCase
         foreach ($stages as $stage) {
             $this->seeder->seedElement($legacyId, $areaId, self::CONTENT_CLASS, $sort, ['Title' => $title], $stage);
             $this->seeder->seedContentMedia($legacyId, [], $stage);
+        }
+    }
+
+    /**
+     * Two published pages on legacy area 100, which holds published slider 501.
+     */
+    private function seedSharedArea(): void
+    {
+        $this->seedPublishedPage('test_page', 100);
+        $this->seeder->seedPageSharingArea($this->pageId('test_page_2'), 100);
+        $this->publishPageOnArea('test_page_2', 100);
+        $this->seedBlock(100, 501, 'Slider', ['draft', 'live']);
+    }
+
+    /**
+     * @param list<string> $draft slide titles every migrated slider shows on draft
+     * @param list<string> $live slide titles every migrated slider shows on live
+     */
+    private function assertEverySliderShows(array $draft, array $live): void
+    {
+        $sliders = ContentElement::get()->filter('Title', 'Slider')->column('ID');
+        self::assertCount(2, $sliders);
+        foreach ($sliders as $slider) {
+            self::assertSame($draft, $this->slideTitles((int) $slider, Versioned::DRAFT), "slider {$slider} on draft");
+            self::assertSame($live, $this->slideTitles((int) $slider, Versioned::LIVE), "slider {$slider} on live");
         }
     }
 
@@ -232,20 +226,11 @@ final class OwnedItemsMigrationAcceptanceTest extends MigrationTestCase
     }
 
     /**
-     * @return array{exitCode: int, output: string}
+     * @param array<string, string> $options extra task options
      */
-    private function migrate(): array
+    private function migrateSucceeds(array $options = []): string
     {
-        return TaskRunner::run(new MigrateGridTask(), [
-            '--default-viewport' => self::DEFAULT_VIEWPORT,
-            '--zone' => self::ZONE,
-            ...TaskRunner::ACKNOWLEDGED,
-        ]);
-    }
-
-    private function migrateSucceeds(): string
-    {
-        $result = $this->migrate();
+        $result = $this->migrate($options);
         self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
 
         return $result['output'];
