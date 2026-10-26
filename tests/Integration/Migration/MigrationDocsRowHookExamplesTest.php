@@ -12,12 +12,15 @@ use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
 use WeDevelop\Grid\Migration\Service\LivePublisher;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestLiveRowSettingsMigrationExtension;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestRowSettingsMigrationExtension;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestSlideRecipe;
 
 /**
- * Keeps the row and section hook examples in docs/migration.md (hooks 6–9) the
- * code the migration tests run: each documented method must be the support
- * extension's method, and each registration example must register the example's
- * extension on the class that fires the hook. {@see Task\MigrateGridRowSettingsTest} runs that code end to end.
+ * Keeps the row and section hook examples in docs/migration.md (hooks 6–9) and the
+ * owned-items recipe (hook 10) the code the migration tests run: each documented
+ * method must be the support extension's method, and each registration example must
+ * register the example's extension on the class that fires the hook.
+ * {@see Task\MigrateGridRowSettingsTest} and {@see OwnedItemsMigrationAcceptanceTest}
+ * run that code end to end.
  */
 #[CoversNothing]
 final class MigrationDocsRowHookExamplesTest extends SapphireTest
@@ -35,6 +38,7 @@ final class MigrationDocsRowHookExamplesTest extends SapphireTest
         yield 'hook 7' => ['7', TestRowSettingsMigrationExtension::class, 'updateSectionFieldMapping'];
         yield 'hook 8' => ['8', TestLiveRowSettingsMigrationExtension::class, 'updateLiveRowFieldMapping'];
         yield 'hook 9' => ['9', TestLiveRowSettingsMigrationExtension::class, 'updateLiveSectionFieldMapping'];
+        yield 'hook 10' => ['10', TestSlideRecipe::class, 'onAfterMigrate'];
     }
 
     /**

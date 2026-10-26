@@ -719,10 +719,20 @@ See `docs/fluent.md` for full setup.
 | `updateCMSFields` | MediaExtension / BlockMediaExtension | Inject the Media tab / the Layout tab into the CMS form |
 
 Migration hooks fire from the extracted collaborators, not from
-`GridMigrationService` — register extensions on the class named here:
+`GridMigrationService` — register extensions on the class named here.
+`onAfterMigrate` is the exception: it fires on the migrated element itself, so
+it lives on the project's block class or an Extension of it. Usage and examples:
+[migration.md](../migration.md#customising-the-migration).
 
 | Hook | Location | Purpose |
 |------|----------|---------|
 | `updateClassNameMapping` | DraftHierarchyWriter | Remap a legacy class to its replacement |
-| `updateElementFieldMapping` | DraftHierarchyWriter | Map custom fields onto the new element |
+| `updateElementFieldMapping` | DraftHierarchyWriter | Map custom fields onto the new element (draft values) |
+| `updateRowFieldMapping` | DraftHierarchyWriter | Map project row fields onto a new Row (draft values) |
+| `updateSectionFieldMapping` | DraftHierarchyWriter | Map project row fields onto a new Section (draft values) |
+| `updateLiveElementFieldMapping` | LivePublisher | Reconcile custom element fields on live; write `_Live` only |
+| `updateLiveRowFieldMapping` | LivePublisher | Reconcile project row fields on the live Row; write `_Live` only |
+| `updateLiveSectionFieldMapping` | LivePublisher | Reconcile project row fields on the live Section; write `_Live` only |
 | `updateLegacyElements` | LegacyDataReader | Adjust the legacy elements read for an area |
+| `updateFieldMapperConfig` | AbstractMigrationTask | Replace the FieldMapper lookup tables |
+| `onAfterMigrate` | the migrated GridElement | Re-attach items the legacy block owns; once per stage written, inside the page transaction |

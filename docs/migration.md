@@ -11,7 +11,7 @@ The migration runs as a `BuildTask`, is idempotent, supports dry-runs, and handl
 
 - **The source site must run SilverStripe 5.4.x with `dnadesign/silverstripe-elemental` 5.4.x, and — on an ElementalGrid site — `wedevelopnl/silverstripe-elemental-grid` 5.1.5.** The migration is built and tested against the legacy schema of exactly those versions, for both supported sources; older releases store their content differently and are not supported. Upgrade the source site to these versions (and run `dev/build` there) before you upgrade it to SS6. A SilverStripe 4 site performs SilverStripe's standard SS4→SS5 upgrade first. The task cannot read these versions from the database, so it asks you to confirm them — see [Confirmation prompts](#confirmation-prompts).
 - This module is installed, configured and `dev/build` has been run successfully.
-- The legacy database tables are still present in the database: `Element` and `Element_Live` (where `dnadesign/silverstripe-elemental` 5.x stores every element's base record), `ElementalArea`, `ElementContent`, and optionally `ElementRow`, each with its `_Live` table. The old PHP code does **not** need to be installed — the migration reads the old tables via raw SQL. When `Element` or `Element_Live` is missing, the task refuses to start and changes nothing.
+- The legacy database tables are still present in the database: `Element` and `Element_Live` (where `dnadesign/silverstripe-elemental` 5.x stores every element's base record), `Element_Versions`, `ElementalArea`, `ElementContent`, and optionally `ElementRow`, each with its `_Live` table. The old PHP code does **not** need to be installed — the migration reads the old tables via raw SQL. When `Element` or `Element_Live` is missing, the task refuses to start and changes nothing; when `Element_Versions` is missing, a run that writes stops before the first page (see [Before You Begin](#before-you-begin)).
 - **A hand-added `BaseElement` table or view is not read.** Some sites worked around an earlier release of this tool, which looked for the legacy elements under `BaseElement`, by adding a `BaseElement` (or `BaseElement_Localised`) copy or view of `Element`. The migration reads `Element` only, so such a copy is ignored and can be dropped. On a Fluent site the workaround could also hide the translations: with a `BaseElement` view and no `BaseElement_Localised` table, the earlier release detected no localised content and migrated the default locale only. If you migrated a Fluent site that way, check its translations.
 - The `SS_GRID_ADAPTER` environment variable **must** be set to a bundled preset (`bootstrap` or `tailwind`, case-insensitive) or to the fully-qualified class name of a custom adapter implementing `GridAdapterInterface`. There is no default: when the variable is unset, empty, or invalid the container throws a `RuntimeException` at boot, which aborts `dev/build` **and** every migration task before any work is done. Set it in your environment (e.g. `.env`) before migrating.
 
@@ -20,7 +20,8 @@ The migration runs as a `BuildTask`, is idempotent, supports dry-runs, and handl
 Read this section before running the task on a production database.
 
 - **Back up your database.** The migration writes into `GridElement`, `GridElement_Live`, `Section`, `Row`, `Column` and `ContentElement` tables and performs Versioned draft/live reconciliation. A bad run is difficult to unwind without a backup. The task asks you to confirm the backup exists before it writes anything.
-- **Element IDs change.** Migrated content elements receive new primary keys when inserted into `GridElement`. External references to the old `Element` IDs (shortcodes in other content, custom reports, outbound links) will not follow automatically.
+- **Element IDs change.** Migrated content elements receive new primary keys when inserted into `GridElement`. External references to the old `Element` IDs (shortcodes in other content, custom reports, outbound links) will not follow automatically. Items a block owns (slides, gallery images) can follow it during the run — see [hook 10](#10-re-attaching-items-a-block-owns).
+- **New element IDs start above the legacy ones.** Before the first page, a run that writes raises the numbering of `GridElement` above the highest legacy element ID found in `Element`, `Element_Live` and `Element_Versions`. A new ID can then never equal a legacy one, so an item that still points at a legacy number has not been moved yet. Only the counter moves, and only upward; a dry run leaves it alone. MySQL only.
 - **Legacy tables are left intact.** The tool does not drop `Element`, `ElementRow`, `ElementContent`, or `ElementalArea`. Orphaned rows in those tables let you re-run the migration if something looks wrong. Drop them manually once you are satisfied with the result.
 - **Only `ElementContent` is mapped by default.** The built-in field mapper converts `DNADesign\Elemental\Models\ElementContent` to `WeDevelop\Grid\Model\ContentElement`. Any custom element subclass must either already extend `GridElement`, or be registered via the `updateClassNameMapping` extension hook described in [Customising the Migration](#customising-the-migration).
 - **Media without a column to land in stays behind.** Media capability is opt-in: `ContentElement` ships lean (HTML only), so the media columns (`MediaType`, `MediaImage`, video fields, …) only exist once you apply `BlockMediaExtension` to it (or to your own content subclass). The migration runs either way: without the extension every text block keeps its HTML on draft and live, and the media settings, which have no column to go to, stay in the legacy `ElementContent` tables. The run then ends with one warning that counts the text blocks affected and names the legacy columns that held a value, for example:
@@ -188,6 +189,16 @@ A content block is a legacy element that is not an `ElementRow` (rows become the
 
 `migrate-grid-with-fluent` prints one line per locale pass, prefixed with the locale code (`[nl_NL] Migrated …`). The lines are not added up: a page converted in two locales is one page in each line.
 
+When legacy content areas are shared by several pages, the run then lists them, each with all of its pages, and logs one warning per area. Every page gets its own copy of a shared area's blocks:
+
+```
+Shared content areas:
+  Area 100: pages 4, 9
+  Area 230: pages 12, 13 (only partly in this run)
+```
+
+`(only partly in this run)` marks an area with a page `--page-ids` left out. That page's copy is written by a later run, which cannot hand it the items the first copy took (see [hook 10](#10-re-attaching-items-a-block-owns)): migrate all pages of a shared area in one run.
+
 If a run finishes with failures, the summary line is followed by `Check logs for details.`, the task exits with a non-zero status and the failing page IDs are logged as errors. Pages that failed remain un-migrated and can be re-run after the cause is fixed.
 
 ## Multi-locale (Fluent) sites
@@ -294,7 +305,7 @@ A partial migration (draft written, live reconciliation failed) will not be retr
 
 ## Customising the Migration
 
-Nine extension points are available via `SilverStripe\Core\Extensible`. Register an `Extension` (`SilverStripe\Core\Extension`) on the service or task class listed in each section.
+Ten extension points are available via `SilverStripe\Core\Extensible`. Register an `Extension` (`SilverStripe\Core\Extension`) on the service or task class listed in each section; hook 10 fires on the migrated block itself.
 
 ### 1. Custom element class mapping
 
@@ -574,6 +585,105 @@ public function updateLiveSectionFieldMapping(Section $section, LegacyElement $l
 `Style` is a column of the base `WeDevelop_Grid_GridElement` table. Register the
 extension on `WeDevelop\Grid\Migration\Service\LivePublisher`, like hook 8.
 
+### 10. Re-attaching items a block owns
+
+A legacy slider owns its slides, a gallery its images, a card block its cards: each
+item points at the legacy block's ID. The migrated block has a new ID, so those
+items must be re-pointed to it. Right after a new element is written to a stage,
+the migration calls `onAfterMigrate(LegacyElement $legacy, MigratedElementContext $context)`
+on **that element**, through `invokeWithExtensions()`. Implement it on your own block
+class, or on an Extension of it — not on a migration service.
+
+It fires once per stage the element is written to: on draft for every element, and
+on live for every element that is on the live page, live-only elements included.
+`$context` (`WeDevelop\Grid\Migration\DTO\MigratedElementContext`) carries:
+
+| Property | Value |
+|----------|-------|
+| `stage` | `MigratedElementContext::DRAFT` or `MigratedElementContext::LIVE`: the stage just written |
+| `pageId`, `legacyAreaId` | The page being migrated and the legacy `ElementalArea` it reads |
+| `locale` | The Fluent locale pass, `null` outside `migrate-grid-with-fluent` |
+| `sharedWithPageIds` | The other pages that use the same legacy area; empty when it is not shared |
+| `firstCopy` | `null` when this element is the first written for `$legacy`. Otherwise the element an earlier page (shared area) or locale pass wrote for it — the one that took the items |
+
+The first copy re-points the legacy block's items, on each stage's table; every later
+copy duplicates the first copy's items. With a `has_many` from the block to a
+versioned `Slide` (`has_one Slider`):
+
+```php
+use App\Model\Slide;
+use SilverStripe\Core\Extension;
+use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DB;
+use WeDevelop\Grid\Migration\DTO\LegacyElement;
+use WeDevelop\Grid\Migration\DTO\MigratedElementContext;
+
+class SliderMigrationExtension extends Extension
+{
+    public function onAfterMigrate(LegacyElement $legacy, MigratedElementContext $context): void
+    {
+        $slider = $this->getOwner();
+        $firstCopy = $context->firstCopy;
+
+        if ($firstCopy === null) {
+            // Re-point the legacy block's slides on the stage just written.
+            $table = DataObject::getSchema()->tableName(Slide::class);
+            if ($context->stage === MigratedElementContext::LIVE) {
+                $table .= '_Live';
+            }
+
+            DB::prepared_query(
+                \sprintf('UPDATE "%s" SET "SliderID" = ? WHERE "SliderID" = ?', $table),
+                [$slider->ID, $legacy->id],
+            );
+
+            return;
+        }
+
+        // A later copy duplicates the first copy's slides once, on the draft call.
+        if ($context->stage === MigratedElementContext::DRAFT) {
+            foreach (Slide::get()->filter('SliderID', $firstCopy->ID) as $slide) {
+                $copy = $slide->duplicate(false);
+                $copy->SliderID = $slider->ID;
+                $copy->write();
+                if ($slide->isPublished()) {
+                    $copy->publishSingle();
+                }
+            }
+        }
+    }
+}
+```
+
+```yaml
+App\Grid\SliderBlock:
+  extensions:
+    - App\Migration\SliderMigrationExtension
+```
+
+The "parent = legacy ID" match is exact because new element IDs start above every
+legacy one (see [Before You Begin](#before-you-begin)): a slide still pointing at a
+legacy number was not moved, also when page 1's new slider has the number page 2's
+legacy gallery had.
+
+Rules for an implementation:
+
+- It runs inside the page's transaction. Use the default database connection (`DB::`
+  or the ORM), issue no DDL (it would commit the page half-way), and touch no files:
+  a file change does not roll back with the page.
+- It may throw. The page then rolls back, its moved items with it, and is reported as
+  failed like any other page failure. The items still point at the legacy number, so
+  a re-run after the fix attaches them.
+- The recipe re-points the base and `_Live` rows only. The items' version history
+  (`Slide_Versions`) keeps the legacy parent.
+- On a Fluent site each locale pass commits on its own, the default locale first. When
+  a later pass fails, the earlier locales stay migrated and re-attached; a re-run
+  retries the failed locale only (it has no Sections yet).
+- A shared area migrated over several runs (`--page-ids`) leaves the later run's copy
+  with `firstCopy` `null` and no legacy items left to find. The run flags such an area
+  `(only partly in this run)`; migrate all its pages in one run, or attach the items
+  by hand.
+
 ## After Migration
 
 1. Run `sake db:build --flush` to make sure the schema is consistent.
@@ -593,7 +703,7 @@ extension on `WeDevelop\Grid\Migration\Service\LivePublisher`, like hook 8.
 
 Many SS4/SS5 sites store element link fields with `gorriecoe/silverstripe-link`. On SS6 those become `silverstripe/linkfield` links. This conversion is **not** part of the grid migration — it is owned by `silverstripe/linkfield`, which ships its own `SilverStripe\LinkField\Tasks\GorriecoeMigrationTask`. The only thing that matters for the grid is the **ordering**:
 
-- Run `GorriecoeMigrationTask` **after** the grid migration (and after any project-specific step that re-parents block relations onto the new element IDs).
+- Run `GorriecoeMigrationTask` **after** the grid migration. Block relations a project re-attaches through [hook 10](#10-re-attaching-items-a-block-owns) are already on the new element IDs by then.
 - The task **preserves Link IDs**, so any link foreign keys copied onto migrated content elements (for example a block's `PrimaryLinkID`) keep resolving once the links are converted.
 - Running it **before** the grid migration leaves the grid pass copying link FKs that point at rows the link conversion later moves, so button labels render as placeholders.
 
@@ -602,6 +712,8 @@ Carry the block link FK fields across during the grid pass with the `updateEleme
 ## Troubleshooting
 
 **"Legacy element table "Element" not found."** — The database does not hold the elemental tables of a site on the supported source (see [Requirements](#requirements)), so the task refuses before the banner and the confirmation prompts and changes nothing. The message names every missing table (`Element`, `Element_Live`). Check that you run the task against the upgraded copy of the SS5 database, and that `dev/build` did not rename the tables to `_obsolete_*`; rename them back if it did.
+
+**"Legacy element table "Element_Versions" not found; new grid elements cannot be numbered above the legacy ones."** — A run that writes raises the new element numbering above every legacy ID first (see [Before You Begin](#before-you-begin)) and reads all three legacy element tables for it. It stops before the first page and changes nothing. Restore the table from the SS5 database, or rename it back from `_obsolete_*`.
 
 **"Page X already migrated for zone Y, skipping."** — The idempotency check found at least one `Section` for that page and zone on draft. If you need to redo the page, delete its new Section tree first.
 
