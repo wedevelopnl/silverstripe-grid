@@ -2500,21 +2500,30 @@ final class GridMigrationServiceTest extends MigrationTestCase
         self::assertNotSame($first['element'], $later['element']);
     }
 
-    public function testAPageThatRolledBackLeavesTheNextCopyWithoutAFirstCopy(): void
+    public function testAPageWhoseHookThrowsRollsBackOnBothStagesAndRecordsNoFirstCopy(): void
     {
         $pageA = $this->pageId();
         $pageB = $this->pageId('test_page_2');
         $this->seeder->seedPage($pageA, 100);
         $this->seeder->seedPageSharingArea($pageB, 100);
-        $this->seeder->seedElement(1001, 100, self::CONTENT_CLASS, 1, ['Title' => 'Shared']);
+        foreach (['draft', 'live'] as $stage) {
+            $this->seeder->seedElement(1001, 100, self::CONTENT_CLASS, 1, ['Title' => 'Shared'], $stage);
+        }
         TestAfterMigrateRecorder::$failOnPage = $pageA;
 
         $summary = $this->createService()->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, pageIds: [$pageA, $pageB]);
 
         self::assertSame(1, $summary->pagesFailed);
-        $later = TestAfterMigrateRecorder::$calls[1];
+        foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
+            // Page B's Section, Row, Column and block: nothing of page A's survived.
+            self::assertCount(4, Versioned::get_by_stage(GridElement::class, $stage), "grid elements on {$stage}");
+            self::assertCount(0, Versioned::get_by_stage(Section::class, $stage)->filter('ParentID', $pageA), "page A's sections on {$stage}");
+        }
+
+        $later = TestAfterMigrateRecorder::$calls[2];
         self::assertSame($pageB, $later['context']->pageId);
         self::assertNull($later['context']->firstCopy);
+        self::assertSame($later['element'], (int) MigratedFirstCopy::of(1001)?->ID, "page B's copy is the first copy");
     }
 
     public function testACopyWrittenByALaterRunIsHandedTheFirstCopyAnEarlierRunWrote(): void
