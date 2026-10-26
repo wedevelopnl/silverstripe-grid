@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Migration\Task;
 use InvalidArgumentException;
 use Override;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\BuildTask;
 use SilverStripe\PolyExecution\PolyOutput;
@@ -19,6 +20,7 @@ use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\DTO\MigrationSummary;
 use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
+use WeDevelop\Grid\Migration\Service\ElementNumberingGuard;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Migration\Service\LegacyElementReader;
@@ -171,6 +173,15 @@ abstract class AbstractMigrationTask extends BuildTask
                 \implode(', ', \array_map(static fn (Viewport $v): string => $v->key, $adapter->getViewports())),
             ));
             return Command::FAILURE;
+        }
+
+        if (!$dryRun) {
+            try {
+                (new ElementNumberingGuard())->raiseAboveLegacyIds();
+            } catch (RuntimeException $e) {
+                $output->writeln(\sprintf('<error>%s</error>', $e->getMessage()));
+                return Command::FAILURE;
+            }
         }
 
         $logger = Injector::inst()->get(LoggerInterface::class);

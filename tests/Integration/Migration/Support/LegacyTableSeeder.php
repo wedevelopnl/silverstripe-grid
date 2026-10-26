@@ -24,6 +24,7 @@ final class LegacyTableSeeder
     private const array LEGACY_TABLES = [
         LegacyElementReader::ELEMENT_TABLE,
         LegacyElementReader::ELEMENT_TABLE . '_Live',
+        LegacyElementReader::ELEMENT_TABLE . '_Versions',
         'ElementRow',
         'ElementRow_Live',
         'ElementContent',
@@ -64,6 +65,7 @@ final class LegacyTableSeeder
         $this->ensureDatabaseSelected();
         $this->createElementTable(LegacyElementReader::ELEMENT_TABLE);
         $this->createElementTable(LegacyElementReader::ELEMENT_TABLE . '_Live');
+        $this->createElementVersionsTable();
         $this->createElementRowTable('ElementRow');
         $this->createElementRowTable('ElementRow_Live');
         $this->createElementContentTable('ElementContent');
@@ -344,6 +346,18 @@ final class LegacyTableSeeder
     }
 
     /**
+     * Seed a version record of a legacy element, which outlives the element
+     * itself once it is archived.
+     */
+    public function seedElementVersion(int $recordId, int $version = 1): void
+    {
+        DB::prepared_query(
+            \sprintf('INSERT INTO "%s_Versions" ("RecordID", "Version") VALUES (?, ?)', LegacyElementReader::ELEMENT_TABLE),
+            [$recordId, $version],
+        );
+    }
+
+    /**
      * Seed an ElementRow row.
      */
     public function seedRow(
@@ -551,6 +565,18 @@ final class LegacyTableSeeder
                 "VisibilityMD" varchar(50) DEFAULT NULL,
                 "VisibilityLG" varchar(50) DEFAULT NULL,
                 "VisibilityXL" varchar(50) DEFAULT NULL
+            )
+            SQL);
+    }
+
+    private function createElementVersionsTable(): void
+    {
+        $name = LegacyElementReader::ELEMENT_TABLE . '_Versions';
+        DB::query(<<<SQL
+            CREATE TABLE IF NOT EXISTS "{$name}" (
+                "ID" int NOT NULL PRIMARY KEY AUTO_INCREMENT,
+                "RecordID" int NOT NULL DEFAULT 0,
+                "Version" int NOT NULL DEFAULT 0
             )
             SQL);
     }
