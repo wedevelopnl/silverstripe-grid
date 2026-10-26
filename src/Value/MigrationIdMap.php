@@ -62,6 +62,12 @@ final class MigrationIdMap
         return $this->oldToNewElementId[$legacyId];
     }
 
+    /** @return array<int, positive-int> legacy element id → new element ID */
+    public function elementIds(): array
+    {
+        return $this->oldToNewElementId;
+    }
+
     /** @return positive-int */
     public function newColumnId(int $legacyId): int
     {
