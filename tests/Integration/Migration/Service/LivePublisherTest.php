@@ -16,6 +16,7 @@ use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
 use WeDevelop\Grid\Migration\DTO\MigrationColumn;
 use WeDevelop\Grid\Migration\DTO\MigrationRow;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
+use WeDevelop\Grid\Migration\Service\AfterMigrateHook;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
 use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
@@ -35,6 +36,7 @@ use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 use WeDevelop\Grid\Value\GridSettings;
+use WeDevelop\Grid\Value\FirstCopyRegistry;
 use WeDevelop\Grid\Value\MigrationIdMap;
 use WeDevelop\Grid\Value\ViewportConfig;
 
@@ -236,6 +238,18 @@ final class LivePublisherTest extends SapphireTest
             $this->liveById(ContentElement::class, (int) $draftContent->ID),
             'Live-only content element is published to LIVE',
         );
+    }
+
+    public function testALiveOnlyElementIsRecordedAgainstItsNewElement(): void
+    {
+        $pageId = $this->createPage();
+        $idMap = new MigrationIdMap();
+
+        $this->publish($pageId, Page::class, [$this->legacyElement(8000, 'Live Only')], [], $idMap);
+
+        $liveOnly = ContentElement::get()->filter(['Title' => 'Live Only'])->first();
+        self::assertInstanceOf(ContentElement::class, $liveOnly);
+        self::assertSame([8000 => (int) $liveOnly->ID], $idMap->elementIds());
     }
 
     public function testLiveGridSettingsReconciledOnLiveColumnLeavingDraftUntouched(): void
@@ -934,7 +948,7 @@ final class LivePublisherTest extends SapphireTest
     {
         Versioned::withVersionedMode(function () use ($pageId, $sections, $idMap): void {
             Versioned::set_stage(Versioned::DRAFT);
-            $this->draftWriter->writeDraftHierarchy($pageId, Page::class, self::ZONE, $sections, $idMap);
+            $this->draftWriter->writeDraftHierarchy($pageId, Page::class, self::ZONE, $sections, $idMap, $this->afterMigrate($pageId));
         });
     }
 
@@ -967,8 +981,14 @@ final class LivePublisherTest extends SapphireTest
                 $idMap,
                 self::DEFAULT_VIEWPORT,
                 self::VIEWPORT_KEY_MAP,
+                $this->afterMigrate($pageId),
             );
         });
+    }
+
+    private function afterMigrate(int $pageId): AfterMigrateHook
+    {
+        return new AfterMigrateHook($pageId, 0, null, [], new FirstCopyRegistry());
     }
 
     /**

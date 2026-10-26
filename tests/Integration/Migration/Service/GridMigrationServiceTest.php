@@ -25,7 +25,9 @@ use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
+use WeDevelop\Grid\Migration\DTO\MigratedElementContext;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestAfterMigrateRecorder;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTreeSnapshot;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestLegacyReaderFilterExtension;
 use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
@@ -35,6 +37,11 @@ use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 final class GridMigrationServiceTest extends MigrationTestCase
 {
     protected static $extra_dataobjects = [TestCustomElement::class, TestPage::class];
+
+    /** @var array<class-string, list<class-string>> */
+    protected static $required_extensions = [
+        ContentElement::class => [TestAfterMigrateRecorder::class],
+    ];
 
     private LegacyDataReader $reader;
 
@@ -49,6 +56,7 @@ final class GridMigrationServiceTest extends MigrationTestCase
         $this->reader = new LegacyDataReader();
         $this->mapper = new FieldMapper();
         $this->logger = new RecordingLogger();
+        TestAfterMigrateRecorder::reset();
     }
 
     private function createStrategy(): RowPerSectionStrategy
@@ -2425,5 +2433,105 @@ final class GridMigrationServiceTest extends MigrationTestCase
                 "Page {$pageId}: exactly 1 content element expected from strategy output",
             );
         }
+    }
+
+    public function testAfterMigrateFiresOnTheNewElementOncePerStageItWasWrittenTo(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 100);
+        foreach (['draft', 'live'] as $stage) {
+            $this->seeder->seedElement(1001, 100, self::CONTENT_CLASS, 1, ['Title' => 'Published'], $stage);
+        }
+        $this->seeder->seedElement(1002, 100, self::CONTENT_CLASS, 2, ['Title' => 'Draft only']);
+
+        $this->runMigration();
+
+        $published = $this->migratedElementId('Published');
+        self::assertSame(
+            [
+                [$published, 1001, MigratedElementContext::DRAFT],
+                [$this->migratedElementId('Draft only'), 1002, MigratedElementContext::DRAFT],
+                [$published, 1001, MigratedElementContext::LIVE],
+            ],
+            self::recordedCalls(),
+        );
+        foreach (TestAfterMigrateRecorder::$calls as $call) {
+            self::assertSame($pageId, $call['context']->pageId);
+            self::assertSame(100, $call['context']->legacyAreaId);
+            self::assertNull($call['context']->locale);
+            self::assertSame([], $call['context']->sharedWithPageIds);
+            self::assertNull($call['context']->firstCopy);
+        }
+    }
+
+    public function testAfterMigrateFiresOnBothStagesForALiveOnlyElement(): void
+    {
+        $this->seeder->seedPage($this->pageId(), 100);
+        $this->seeder->seedElement(1001, 100, self::CONTENT_CLASS, 1, ['Title' => 'Live only'], 'live');
+
+        $this->runMigration();
+
+        $liveOnly = $this->migratedElementId('Live only');
+        self::assertSame(
+            [
+                [$liveOnly, 1001, MigratedElementContext::DRAFT],
+                [$liveOnly, 1001, MigratedElementContext::LIVE],
+            ],
+            self::recordedCalls(),
+        );
+    }
+
+    public function testALaterCopyOfASharedAreaIsHandedTheFirstCopy(): void
+    {
+        $pageA = $this->pageId();
+        $pageB = $this->pageId('test_page_2');
+        $this->seeder->seedPage($pageA, 100);
+        $this->seeder->seedPageSharingArea($pageB, 100);
+        $this->seeder->seedElement(1001, 100, self::CONTENT_CLASS, 1, ['Title' => 'Shared']);
+
+        $this->createService()->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, pageIds: [$pageA, $pageB]);
+
+        [$first, $later] = TestAfterMigrateRecorder::$calls;
+        self::assertSame([$pageA, [$pageB], null], [$first['context']->pageId, $first['context']->sharedWithPageIds, $first['context']->firstCopy]);
+        self::assertSame([$pageB, [$pageA]], [$later['context']->pageId, $later['context']->sharedWithPageIds]);
+        self::assertInstanceOf(ContentElement::class, $later['context']->firstCopy);
+        self::assertSame($first['element'], (int) $later['context']->firstCopy->ID);
+        self::assertNotSame($first['element'], $later['element']);
+    }
+
+    public function testAPageThatRolledBackLeavesTheNextCopyWithoutAFirstCopy(): void
+    {
+        $pageA = $this->pageId();
+        $pageB = $this->pageId('test_page_2');
+        $this->seeder->seedPage($pageA, 100);
+        $this->seeder->seedPageSharingArea($pageB, 100);
+        $this->seeder->seedElement(1001, 100, self::CONTENT_CLASS, 1, ['Title' => 'Shared']);
+        TestAfterMigrateRecorder::$failOnPage = $pageA;
+
+        $summary = $this->createService()->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, pageIds: [$pageA, $pageB]);
+
+        self::assertSame(1, $summary->pagesFailed);
+        $later = TestAfterMigrateRecorder::$calls[1];
+        self::assertSame($pageB, $later['context']->pageId);
+        self::assertNull($later['context']->firstCopy);
+    }
+
+    /**
+     * @return list<array{int, int, string}> element ID, legacy ID and stage of each call
+     */
+    private static function recordedCalls(): array
+    {
+        return \array_map(
+            static fn (array $call): array => [$call['element'], $call['legacy'], $call['context']->stage],
+            TestAfterMigrateRecorder::$calls,
+        );
+    }
+
+    private function migratedElementId(string $title): int
+    {
+        $element = ContentElement::get()->find('Title', $title);
+        self::assertInstanceOf(ContentElement::class, $element);
+
+        return (int) $element->ID;
     }
 }
